@@ -286,17 +286,6 @@ static keyname_t keynames[] =
 	{KEY_2MOUSEWHEELUP, "Wheel 2 UP"},
 	{KEY_2MOUSEWHEELDOWN, "Wheel 2 Down"},
 
-#if defined (_NDS)
-	{KEY_JOY1+0, "JOYA"},
-	{KEY_JOY1+1, "JOYB"},
-	{KEY_JOY1+2, "JOYX"},
-	{KEY_JOY1+3, "JOYY"},
-	{KEY_JOY1+4, "JOYL"},
-	{KEY_JOY1+5, "JOYR"},
-	{KEY_JOY1+6, "JOYSTART"},
-	{KEY_JOY1+7, "JOYSELECT"},
-#define NOMOREJOYBTN_1S
-#else
 	{KEY_JOY1+0, "JOY1"},
 	{KEY_JOY1+1, "JOY2"},
 	{KEY_JOY1+2, "JOY3"},
@@ -306,7 +295,6 @@ static keyname_t keynames[] =
 	{KEY_JOY1+6, "JOY7"},
 	{KEY_JOY1+7, "JOY8"},
 	{KEY_JOY1+8, "JOY9"},
-#endif
 #if !defined (NOMOREJOYBTN_1S)
 	// we use up to 32 buttons in DirectInput
 	{KEY_JOY1+9, "JOY10"},
@@ -368,17 +356,6 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+6, "DBLSEC_MOUSE7"},
 	{KEY_DBL2MOUSE1+7, "DBLSEC_MOUSE8"},
 
-#if defined (_NDS)
-	{KEY_DBLJOY1+0, "DBLJOYA"},
-	{KEY_DBLJOY1+1, "DBLJOYB"},
-	{KEY_DBLJOY1+2, "DBLJOYX"},
-	{KEY_DBLJOY1+3, "DBLJOYY"},
-	{KEY_DBLJOY1+4, "DBLJOYL"},
-	{KEY_DBLJOY1+5, "DBLJOYR"},
-	{KEY_DBLJOY1+6, "DBLJOYSTART"},
-	{KEY_DBLJOY1+7, "DBLJOYSELECT"},
-#define NOMOREJOYBTN_1DBL
-#else
 	{KEY_DBLJOY1+0, "DBLJOY1"},
 	{KEY_DBLJOY1+1, "DBLJOY2"},
 	{KEY_DBLJOY1+2, "DBLJOY3"},
@@ -387,7 +364,6 @@ static keyname_t keynames[] =
 	{KEY_DBLJOY1+5, "DBLJOY6"},
 	{KEY_DBLJOY1+6, "DBLJOY7"},
 	{KEY_DBLJOY1+7, "DBLJOY8"},
-#endif
 #if !defined (NOMOREJOYBTN_1DBL)
 	{KEY_DBLJOY1+8, "DBLJOY9"},
 	{KEY_DBLJOY1+9, "DBLJOY10"},
@@ -635,22 +611,6 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	return 0;
 }
 
-#if defined (_NDS)
-void G_Controldefault(void)
-{
-	gamecontrol[gc_fire       ][0] = KEY_JOY1+2; //X
-	gamecontrol[gc_forward    ][0] = KEY_UPARROW;
-	gamecontrol[gc_backward   ][0] = KEY_DOWNARROW;
-	gamecontrol[gc_jump       ][0] = KEY_JOY1+0; //A
-	gamecontrol[gc_use        ][0] = KEY_JOY1+3; //Y
-	gamecontrol[gc_strafeleft ][0] = KEY_JOY1+4; //L
-	gamecontrol[gc_straferight][0] = KEY_JOY1+5; //R
-	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
-	gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+6; //Start
-	gamecontrol[gc_weaponnext ][0] = KEY_JOY1+7; //Select
-}
-#else
 void G_Controldefault(void)
 {
 	gamecontrol[gc_forward    ][0] = 'w';
@@ -688,7 +648,6 @@ void G_Controldefault(void)
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
 }
-#endif
 
 void G_SaveKeySetting(FILE *f)
 {

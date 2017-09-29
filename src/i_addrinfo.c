@@ -22,9 +22,7 @@
 #endif
 #elif !defined (__DJGPP__)
 #include <sys/socket.h>
-#ifndef _NDS
 #include <arpa/inet.h>
-#endif
 #include <netdb.h>
 #endif
 

@@ -104,12 +104,6 @@ ifdef HAIKU
 SDL=1
 endif
 
-ifdef NDS
-# Include this before the main Makefile.cfg
-EXENAME?=srb2.elf
-include nds/Makefile.cfg
-endif
-
 include Makefile.cfg
 
 ifdef DUMMY
@@ -170,18 +164,6 @@ endif
 
 ifdef MACOSX
 UNIXCOMMON=1
-endif
-
-ifdef NDS
-NOPNG=1
-NONET=1
-#NOHW=1
-NOHS=1
-NOASM=1
-NOIPX=1
-NONX86=1
-OBJS+=$(OBJDIR)/i_video.o
-LIBS+=-lm
 endif
 
 ifdef SDL
@@ -508,10 +490,6 @@ ifdef SDL
 all:	 pre-build $(BIN)/$(EXENAME)
 endif
 
-ifdef NDS
-all:	$(BIN)/$(EXENAME:.elf=.nds)
-endif
-
 ifdef DUMMY
 all:	$(BIN)/$(EXENAME)
 endif
@@ -728,13 +706,6 @@ $(OBJDIR)/%.o: %.s
 $(OBJDIR)/SRB2.res: win32/Srb2win.rc win32/afxres.h win32/resource.h
 	$(WINDRES) -i $< -O rc $(WINDRESFLAGS) --include-dir=win32 -o $@ -O coff
 
-ifdef NDS
-$(BIN)/$(EXENAME:.elf=.nds): $(BIN)/$(EXENAME:.elf=.arm9)
-	$(NDSTOOL) -c $@ -9 $(BIN)/$(EXENAME:.elf=.arm9)
-
-%.arm9: %.elf
-	$(OBJCOPY) -O binary $< $@
-endif
 
 ifdef MINGW
 ifndef SDL

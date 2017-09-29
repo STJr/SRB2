@@ -43,7 +43,7 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#if defined (_WIN32_WCE) || defined (_NDS)
+#if defined (_WIN32_WCE)
 #define MAXVIDWIDTH 320
 #define MAXVIDHEIGHT 200
 #else
