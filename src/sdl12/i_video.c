@@ -190,11 +190,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	else return;
 	realwidth = (Uint16)width;
 	realheight = (Uint16)height;
-#ifdef HAVE_DCSDL
-	//SDL_DC_SetWindow(320,200);
-	SDL_DC_EmulateMouse(SDL_FALSE);
-	SDL_DC_EmulateKeyboard(SDL_TRUE);
-#endif
 #ifdef FILTERS
 	if (vidSurface && preSurface && f2xSurface)
 	{
