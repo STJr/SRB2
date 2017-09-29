@@ -54,7 +54,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elseif !(defined (_WIN32_WCE) || defined (PSP) || defined(GP2X))
+#elseif !(defined (_WIN32_WCE) || defined(GP2X))
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -105,7 +105,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#if defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined(GP2X)
 #define MAXWINMODES (1)
 #elif defined (WII)
 #define MAXWINMODES (8)
@@ -163,14 +163,10 @@ static const Uint32      surfaceFlagsW = SDL_HWPALETTE; //Can't handle WinCE cha
 #else
 static const Uint32      surfaceFlagsW = SDL_HWPALETTE/*|SDL_RESIZABLE*/;
 #endif
-#ifdef _PSP
-static const Uint32      surfaceFlagsF = SDL_HWSURFACE|SDL_FULLSCREEN;
-#else
 static const Uint32      surfaceFlagsF = SDL_HWPALETTE|SDL_FULLSCREEN;
-#endif
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouse((Uint16)(x/2),(Uint16)(y/2))
-#if defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined(GP2X)
 static       SDL_bool    videoblitok = SDL_TRUE;
 #else
 static       SDL_bool    videoblitok = SDL_FALSE;
@@ -180,7 +176,7 @@ static       SDL_bool    exposevideo = SDL_FALSE;
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
-#if !(defined (_WIN32_WCE) || defined (PSP) || defined (GP2X))
+#if !(defined (_WIN32_WCE) || defined (GP2X))
 #ifndef WII
 	{1920,1200}, // 1.60,6.00
 	{1680,1050}, // 1.60,5.25
@@ -222,9 +218,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 #endif
 #ifdef _WII
 	bpp = 16; // 8-bit mode poo
-#endif
-#ifdef PSP
-	bpp = 16;
 #endif
 #ifdef GP2X
 	bpp = 16;
@@ -628,7 +621,7 @@ static void VID_Command_Info_f (void)
 
 static void VID_Command_ModeList_f(void)
 {
-#if !defined (_WIN32_WCE) && !defined (_PSP) &&  !defined(GP2X)
+#if !defined (_WIN32_WCE) && !defined(GP2X)
 	INT32 i;
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -901,21 +894,6 @@ static inline void SDLJoyRemap(event_t *event)
 		}
 		//I_OutputMsg("Button %i: event key %i and type: %i\n", button, event->data1, event->type);
 	}
-#elif defined(_PSP)
-	if (event->data1 > KEY_JOY1 + 9 + 2) // All button after D-Pad and Select/Start
-		event->data1 -= 4; // remap D-pad to Hats, offset of -4
-	else if (event->data1 == KEY_JOY1 + 6) // Down
-		event->data1 = KEY_HAT1+1;
-	else if (event->data1 == KEY_JOY1 + 7) // Left
-		event->data1 = KEY_HAT1+2;
-	else if (event->data1 == KEY_JOY1 + 8) // Up
-		event->data1 = KEY_HAT1+0;
-	else if (event->data1 == KEY_JOY1 + 9) // Right
-		event->data1 = KEY_HAT1+3;
-	else if (event->data1 == KEY_JOY1 + 10) // Select
-		event->data1 = KEY_TAB;
-	else if (event->data1 == KEY_JOY1 + 11) // Start
-		event->data1 = KEY_ESCAPE;
 #else
 	(void)event;
 #endif
@@ -1262,7 +1240,7 @@ static inline boolean I_SkipFrame(void)
 
 	skip = !skip;
 
-#if 0 //(defined (GP2X) || defined (PSP))
+#if 0 //defined (GP2X)
 	return skip;
 #endif
 
@@ -1833,11 +1811,7 @@ void I_StartupGraphics(void)
 #ifdef FILTERS
 	CV_RegisterVar (&cv_filter);
 #endif
-#ifdef _PSP // pitch is 0, mod of 0 crash
-	disable_mouse = true;
-#else
 	disable_mouse = M_CheckParm("-nomouse");
-#endif
 	if (disable_mouse)
 		I_PutEnv(SDLNOMOUSE);
 	if (!I_GetEnv("SDL_VIDEO_CENTERED"))

@@ -220,7 +220,7 @@ static void *xm(size_t size)
 
 		if (p == NULL)
 		{
-#if defined (_NDS) | defined (_PSP)
+#if defined (_NDS)
 			// Temporary-ish debugging measure
 			Command_Memfree_f();
 #endif

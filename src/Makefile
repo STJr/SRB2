@@ -528,16 +528,10 @@ ifdef PANDORA
 all:	pre-build $(BIN)/$(PNDNAME)
 endif
 
-ifdef PSP
-all:	 pre-build $(BIN)/$(BINNAME) post-build
-endif
 
-
-ifndef PSP
 ifdef MINGW
 ifndef SDL
 all:	 pre-build $(BIN)/$(EXENAME) dll
-endif
 endif
 endif
 
@@ -601,11 +595,9 @@ endif
 
 # mac os x lsdlsrb2 does not like objcopy
 ifndef MACOSX
-ifndef PSP
 	$(OBJCOPY) $(BIN)/$(EXENAME) $(BIN)/$(DBGNAME)
 	$(OBJCOPY) --strip-debug $(BIN)/$(EXENAME)
 	-$(OBJCOPY) --add-gnu-debuglink=$(BIN)/$(DBGNAME) $(BIN)/$(EXENAME)
-endif
 endif
 ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)

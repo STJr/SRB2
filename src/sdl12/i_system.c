@@ -78,9 +78,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define HAVE_SDLCPUINFO
 #endif
 
-#ifdef _PSP
-//#include <pspiofilemgr.h>
-#else
 #if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
 #if defined (__linux__)
 #include <sys/vfs.h>
@@ -96,9 +93,8 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #include <sys/vmmeter.h>
 #endif
 #endif
-#endif
 
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (_PSP) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -147,13 +143,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define DEFAULTWADLOCATION2 "usb:/srb2wii"
 #define DEFAULTSEARCHPATH1 "sd:/srb2wii"
 #define DEFAULTSEARCHPATH2 "usb:/srb2wii"
-#elif defined (_PSP)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "host0:/bin/Resources"
-#define DEFAULTWADLOCATION2 "ms0:/PSP/GAME/SRB2PSP"
-#define DEFAULTSEARCHPATH1 "host0:/"
-#define DEFAULTSEARCHPATH2 "ms0:/PSP/GAME/SRB2PSP"
 #elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
@@ -972,11 +961,6 @@ void I_GetJoystickEvents(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-#ifdef _PSP
-				if (i == 12)
-					event.data1 = KEY_ESCAPE;
-				else
-#endif
 				event.data1 = KEY_JOY1 + i;
 				D_PostEvent(&event);
 			}
@@ -2436,9 +2420,7 @@ void I_ShutdownSystem(void)
 
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
-#if defined (_PSP)
-	*freespace = 0;
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII)
 	*freespace = INT32_MAX;
 	return;
@@ -2484,9 +2466,6 @@ char *I_GetUserName(void)
 {
 #ifdef GP2X
 	static char username[MAXPLAYERNAME] = "GP2XUSER";
-	return username;
-#elif defined (PSP)
-	static char username[MAXPLAYERNAME] = "PSPUSER";
 	return username;
 #elif !defined (_WIN32_WCE)
 	static char username[MAXPLAYERNAME];
@@ -2667,7 +2646,7 @@ static const char *locateWad(void)
 	if (((envstr = I_GetEnv("SRB2WADDIR")) != NULL) && isWadPathOk(envstr))
 		return envstr;
 
-#if defined(_WIN32_WCE) || defined(_PSP)
+#if defined(_WIN32_WCE)
 	// examine argv[0]
 	strcpy(returnWadPath, myargv[0]);
 	pathonly(returnWadPath);
@@ -2792,12 +2771,7 @@ const char *I_LocateWad(void)
 // quick fix for compil
 UINT32 I_GetFreeMem(UINT32 *total)
 {
-#if defined (_PSP)
-	// PSP
-	if (total)
-		*total = 32<<20;
-	return 16<<20;
-#elif defined (FREEBSD)
+#if defined (FREEBSD)
 	struct vmmeter sum;
 	kvm_t *kd;
 	struct nlist namelist[] =

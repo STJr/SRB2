@@ -64,7 +64,7 @@ consvar_t sndserver_arg = {"sndserver_arg", "-quiet", CV_SAVE, NULL, 0, NULL, NU
 
 #if defined (_WIN32_WCE) || defined(GP2X)
 consvar_t cv_samplerate = {"samplerate", "11025", 0, CV_Unsigned, NULL, 11025, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
-#elif defined(_PSP) || defined(_WINDOWS)
+#elif defined(_WINDOWS)
 consvar_t cv_samplerate = {"samplerate", "44100", 0, CV_Unsigned, NULL, 44100, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #elif defined(_WII)
 consvar_t cv_samplerate = {"samplerate", "32000", 0, CV_Unsigned, NULL, 32000, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
@@ -93,7 +93,7 @@ static void Captioning_OnChange(void)
 consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // number of channels available
-#if defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined(GP2X)
 consvar_t cv_numChannels = {"snd_channels", "8", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
 #else
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
@@ -1379,7 +1379,7 @@ static boolean S_DigMusic(const char *mname, boolean looping)
 
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 {
-#if defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined(GP2X)
 	S_ClearSfx();
 #endif
 

@@ -39,15 +39,6 @@ static char gateway[16] = {0};
 static char netmask[16] = {0};
 #endif
 
-#ifdef _PSP
-#include <pspmoduleinfo.h>
-#include <pspthreadman.h>
-PSP_HEAP_SIZE_KB(24*1024);
-PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
-PSP_MAIN_THREAD_NAME("SRB2");
-PSP_MAIN_THREAD_STACK_SIZE_KB(256);
-#endif
-
 #ifdef HAVE_SDL
 
 #ifdef HAVE_TTF

@@ -1255,7 +1255,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
 		return;
 	}
-#if 0 //defined (GP2X) || defined (PSP)
+#if 0 //defined (GP2X)
 	CONS_Printf("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue);
 #endif
 	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));

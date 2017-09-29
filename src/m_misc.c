@@ -58,7 +58,7 @@ typedef off_t off64_t;
 
 #if defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (_PSP) || defined (DJGPP) || defined (_WII) || defined (_NDS)
+#elif defined (DJGPP) || defined (_WII) || defined (_NDS)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
