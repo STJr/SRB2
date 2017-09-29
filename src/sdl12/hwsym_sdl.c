@@ -37,7 +37,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (_XBOX) || defined (_arch_dreamcast) || defined(GP2X)
+#if defined (_XBOX) || defined(GP2X)
 #define NOLOADSO
 #endif
 

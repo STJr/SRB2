@@ -28,7 +28,7 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(DC) && !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
+    //#if !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
@@ -381,7 +381,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_arch_dreamcast) && !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
+#if !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else

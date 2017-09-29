@@ -56,17 +56,9 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #include <fcntl.h>
 #endif
 
-#ifdef _arch_dreamcast
-#include <arch/gdb.h>
-#include <arch/timer.h>
-#include <conio/conio.h>
-#include <dc/pvr.h>
-void __set_fpscr(long); // in libgcc / kernel's startup.s?
-#else
 #include <stdio.h>
 #if defined (_WIN32) && !defined (_WIN32_WCE) && !defined (_XBOX)
 #include <conio.h>
-#endif
 #endif
 
 #ifdef _MSC_VER
@@ -85,7 +77,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,7) && !defined (DC)
+#if SDL_VERSION_ATLEAST(1,2,7)
 #include "SDL_cpuinfo.h" // 1.2.7 or greater
 #define HAVE_SDLCPUINFO
 #endif
@@ -93,7 +85,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #ifdef _PSP
 //#include <pspiofilemgr.h>
 #elif !defined(_PS3)
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (_arch_dreamcast) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
 #if defined (__linux__)
 #include <sys/vfs.h>
 #else
@@ -111,7 +103,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 #ifndef _PS3
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (_arch_dreamcast) && !defined (_PSP) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (_PSP) && !defined (__HAIKU__) && !defined (_WII))
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -146,14 +138,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 // Locations for searching the srb2.srb
-#ifdef _arch_dreamcast
-#define DEFAULTWADLOCATION1 "/cd"
-#define DEFAULTWADLOCATION2 "/pc"
-#define DEFAULTWADLOCATION3 "/pc/home/alam/srb2code/data"
-#define DEFAULTSEARCHPATH1 "/cd"
-#define DEFAULTSEARCHPATH2 "/pc"
-//#define DEFAULTSEARCHPATH3 "/pc/home/alam/srb2code/data"
-#elif defined (GP2X)
+#ifdef GP2X
 #define DEFAULTWADLOCATION1 "/mnt/sd"
 #define DEFAULTWADLOCATION2 "/mnt/sd/SRB2"
 #define DEFAULTWADLOCATION3 "/tmp/mnt/sd"
@@ -345,7 +330,7 @@ static void signal_handler(INT32 num)
 }
 #endif
 
-#if defined (NDEBUG) && !defined (DC) && !defined (_WIN32_WCE)
+#if defined (NDEBUG) && !defined (_WIN32_WCE)
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
 	signal(num, SIG_DFL); //default signal action
@@ -707,17 +692,6 @@ static inline void I_ShutdownConsole(void){}
 void I_GetConsoleEvents(void){}
 static inline void I_StartupConsole(void)
 {
-#ifdef _arch_dreamcast
-	char title[] = "SRB2 for Dreamcast!\n";
-	__set_fpscr(0x00040000); /* ignore FPU underflow */
-	//printf("\nHello world!\n\n");
-	pvr_init_defaults();
-	conio_init(CONIO_TTY_PVR, CONIO_INPUT_LINE);
-	conio_set_theme(CONIO_THEME_MATRIX);
-	conio_clear();
-	conio_putstr(title);
-	//printf("\nHello world!\n\n");
-#endif
 #ifdef _DEBUG
 	consolevent = !M_CheckParm("-noconsole");
 #else
@@ -737,7 +711,7 @@ static inline void I_ShutdownConsole(void){}
 //
 void I_StartupKeyboard (void)
 {
-#if defined (NDEBUG) && !defined (DC)
+#if defined (NDEBUG)
 #ifdef SIGILL
 //	signal(SIGILL , signal_handler);
 #endif
@@ -767,10 +741,6 @@ void I_OutputMsg(const char *fmt, ...)
 	size_t len;
 	XBOXSTATIC char txt[8192];
 	va_list  argptr;
-
-#ifdef _arch_dreamcast
-	if (!keyboard_started) conio_printf(fmt);
-#endif
 
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
@@ -1084,13 +1054,9 @@ void I_GetJoystickEvents(void)
 			axisy = SDL_JoystickGetAxis(JoyInfo.dev, i*2 + 1);
 		else axisy = 0;
 
-#ifdef _arch_dreamcast // -128 to 127
-		axisx = axisx*8;
-		axisy = axisy*8;
-#else // -32768 to 32767
+		// -32768 to 32767
 		axisx = axisx/32;
 		axisy = axisy/32;
-#endif
 
 		if (Joystick.bGamepadStyle)
 		{
@@ -1209,15 +1175,11 @@ static int joy_open(const char *fname)
 		if (JoyInfo.buttons > JOYBUTTONS)
 			JoyInfo.buttons = JOYBUTTONS;
 
-#ifdef DC
-		JoyInfo.hats = 0;
-#else
 		JoyInfo.hats = SDL_JoystickNumHats(JoyInfo.dev);
 		if (JoyInfo.hats > JOYHATS)
 			JoyInfo.hats = JOYHATS;
 
 		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
-#endif
 
 		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo.dev)), "pad");
 
@@ -1375,13 +1337,9 @@ void I_GetJoystick2Events(void)
 			axisy = SDL_JoystickGetAxis(JoyInfo2.dev, i*2 + 1);
 		else axisy = 0;
 
-#ifdef _arch_dreamcast // -128 to 127
-		axisx = axisx*8;
-		axisy = axisy*8;
-#else // -32768 to 32767
+		// -32768 to 32767
 		axisx = axisx/32;
 		axisy = axisy/32;
-#endif
 
 		if (Joystick2.bGamepadStyle)
 		{
@@ -1501,15 +1459,11 @@ static int joy_open2(const char *fname)
 		if (JoyInfo2.buttons > JOYBUTTONS)
 			JoyInfo2.buttons = JOYBUTTONS;
 
-#ifdef DC
-		JoyInfo2.hats = 0;
-#else
 		JoyInfo2.hats = SDL_JoystickNumHats(JoyInfo2.dev);
 		if (JoyInfo2.hats > JOYHATS)
 			JoyInfo2.hats = JOYHATS;
 
 		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
-#endif
 
 		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo2.dev)), "pad");
 
@@ -2154,13 +2108,8 @@ static void I_ShutdownTimer(void)
 //
 tic_t I_GetTime (void)
 {
-#ifdef _arch_dreamcast
-	static Uint64 basetime = 0;
-	       Uint64 ticks = timer_ms_gettime64(); //using timer_ms_gettime64 instand of SDL_GetTicks for the Dreamcast
-#else
 	static Uint32 basetime = 0;
 	       Uint32 ticks = SDL_GetTicks();
-#endif
 
 	if (!basetime)
 		basetime = ticks;
@@ -2200,7 +2149,7 @@ void I_StartupTimer(void)
 		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
-#elif 0 //#elif !defined (_arch_dreamcast) && !defined(GP2X) // the DC have it own timer and GP2X have broken pthreads?
+#elif 0 //#elif !defined(GP2X) // GP2X have broken pthreads?
 	if (SDL_InitSubSystem(SDL_INIT_TIMER) < 0)
 		I_Error("SRB2: Needs SDL_Timer, Error: %s", SDL_GetError());
 #endif
@@ -2210,7 +2159,7 @@ void I_StartupTimer(void)
 
 void I_Sleep(void)
 {
-#if !(defined (_arch_dreamcast) || defined (_XBOX))
+#if !(defined (_XBOX))
 	if (cv_sleep.value != -1)
 		SDL_Delay(cv_sleep.value);
 #endif
@@ -2229,15 +2178,6 @@ INT32 I_StartupSystem(void)
 	freopen("e:/Games/SRB2/stdout.txt", "w+", stdout);
 	unlink("e:/Games/SRB2/stderr.txt");
 	freopen("e:/Games/SRB2/stderr.txt", "w+", stderr);
-#endif
-#ifdef _arch_dreamcast
-#ifdef _DEBUG
-	//gdb_init();
-#endif
-	printf(__FILE__":%i\n",__LINE__);
-#ifdef _DEBUG
-	//gdb_breakpoint();
-#endif
 #endif
 	SDL_VERSION(&SDLcompiled)
 	SDLlinked = SDL_Linked_Version();
@@ -2292,9 +2232,7 @@ void I_Quit(void)
 	I_ShutdownGraphics();
 	I_ShutdownInput();
 	I_ShutdownSystem();
-#ifndef _arch_dreamcast
 	SDL_Quit();
-#endif
 	/* if option -noendtxt is set, don't print the text */
 	if (!M_CheckParm("-noendtxt") && W_CheckNumForName("ENDOOM") != LUMPERROR)
 	{
@@ -2361,10 +2299,8 @@ void I_Error(const char *error, ...)
 			I_ShutdownInput();
 		if (errorcount == 7)
 			I_ShutdownSystem();
-#ifndef _arch_dreamcast
 		if (errorcount == 8)
 			SDL_Quit();
-#endif
 		if (errorcount == 9)
 		{
 			M_SaveConfig(NULL);
@@ -2448,9 +2384,7 @@ void I_Error(const char *error, ...)
 	I_ShutdownGraphics();
 	I_ShutdownInput();
 	I_ShutdownSystem();
-#ifndef _arch_dreamcast
 	SDL_Quit();
-#endif
 #ifdef MAC_ALERT
 	va_start(argptr, error);
 	vsprintf(buffer, error, argptr);
@@ -2540,7 +2474,7 @@ void I_ShutdownSystem(void)
 
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
-#if defined (_arch_dreamcast) || defined (_PSP)
+#if defined (_PSP)
 	*freespace = 0;
 #elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII) || defined (_PS3)
@@ -2896,12 +2830,7 @@ const char *I_LocateWad(void)
 // quick fix for compil
 UINT32 I_GetFreeMem(UINT32 *total)
 {
-#if defined (_arch_dreamcast)
-	//Dreamcast!
-	if (total)
-		*total = 16<<20;
-	return 8<<20;
-#elif defined (_PSP)
+#if defined (_PSP)
 	// PSP
 	if (total)
 		*total = 32<<20;

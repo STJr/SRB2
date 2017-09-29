@@ -28,7 +28,7 @@
 #endif
 
 // quickhack for V_Init()... to be cleaned up
-#if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined (NOPOSTPROCESSING)
+#if defined (_WIN32_WCE) || defined (PSP) || defined (NOPOSTPROCESSING)
 #define NUMSCREENS 2
 #else
 #define NUMSCREENS 5
@@ -43,7 +43,7 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#if defined (_WIN32_WCE) || defined (DC) || defined (_PSP) || defined (_NDS)
+#if defined (_WIN32_WCE) || defined (_PSP) || defined (_NDS)
 #define MAXVIDWIDTH 320
 #define MAXVIDHEIGHT 200
 #elif defined (GP2X)

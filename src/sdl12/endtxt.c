@@ -33,7 +33,7 @@
 
 void ShowEndTxt(void)
 {
-#if !(defined (_WIN32_WCE) || defined (_XBOX) || defined (_arch_dreamcast))
+#if !(defined (_WIN32_WCE) || defined (_XBOX))
 	INT32 i;
 	UINT16 j, att = 0;
 	INT32 nlflag = 1;

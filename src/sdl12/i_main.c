@@ -80,17 +80,6 @@ FILE *logstream = NULL;
 typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 #endif
 
-#ifdef _arch_dreamcast
-#include <arch/arch.h>
-KOS_INIT_FLAGS(INIT_DEFAULT
-//| INIT_NET
-//| INIT_MALLOCSTATS
-//| INIT_QUIET
-//| INIT_OCRAM
-//| INIT_NO_DCLOAD
-);
-#endif
-
 #if defined (_WIN32) && !defined (_XBOX) && !defined (_WIN32_WCE)
 static inline VOID MakeCodeWritable(VOID)
 {

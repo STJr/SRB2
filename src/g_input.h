@@ -23,12 +23,7 @@
 #define NUMKEYS 256
 
 
-#ifdef _arch_dreamcast
-#define MOUSEBUTTONS 5
-#define JOYBUTTONS   8 //  8 buttons
-#define JOYHATS      2  // 2 hats
-#define JOYAXISSET   3  // 3 Sets of 2 axises
-#elif defined (_XBOX)
+#ifdef _XBOX
 #define MOUSEBUTTONS 5
 #define JOYBUTTONS   12 // 12 buttons
 #define JOYHATS      1  // 1 hat

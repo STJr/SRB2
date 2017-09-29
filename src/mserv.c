@@ -42,12 +42,6 @@
 #include <sys/types.h>
 #endif // __OS2__
 
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#include <kos/net.h>
-#include <lwip/lwip.h>
-#define ioctl lwip_ioctl
-#else
 #include <arpa/inet.h>
 #ifdef __APPLE_CC__
 #ifndef _BSD_SOCKLEN_T_
@@ -58,14 +52,9 @@
 #include <netinet/in.h> // sockaddr_in
 #ifdef _PS3
 #include <net/select.h>
-#elif !defined(_arch_dreamcast)
+#else
 #include <netdb.h> // getaddrinfo(),...
 #include <sys/ioctl.h>
-#endif
-#endif
-
-#ifdef _arch_dreamcast
-#include "sdl12/SRB2DC/dchelp.h"
 #endif
 
 #include <sys/time.h> // timeval,... (TIMEOUT)

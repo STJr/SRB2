@@ -27,7 +27,7 @@
 #endif
 #ifdef _PS3
 #include <net/netdb.h>
-#elif ! defined (_arch_dreamcast)
+#else
 #include <netdb.h>
 #endif
 #endif

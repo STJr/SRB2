@@ -332,11 +332,7 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #endif
 #else
 {1, "X-Axis"}, {2, "Y-Axis"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
-#ifdef _arch_dreamcast
-{3, "R-Trig"}, {4, "L-Trig"}, {-3, "R-Trig-"}, {-4, "L-Trig-"},
-{5, "Alt X-Axis"}, {6, "Alt Y-Axis"}, {-5, "Alt X-Axis-"}, {-6, "Alt Y-Axis-"},
-{7, "Triggers"}, {-7,"Triggers-"},
-#elif defined (_XBOX)
+#ifdef _XBOX
 {3, "Alt X-Axis"}, {4, "Alt Y-Axis"}, {-3, "Alt X-Axis-"}, {-4, "Alt Y-Axis-"},
 #else
 #if JOYAXISSET > 1
@@ -371,13 +367,8 @@ consvar_t cv_mousemove = {"mousemove", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, N
 consvar_t cv_mousemove2 = {"mousemove2", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_analog = {"analog", "Off", CV_CALL, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_analog2 = {"analog2", "Off", CV_CALL, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-#ifdef DC
-consvar_t cv_useranalog = {"useranalog", "On", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog2 = {"useranalog2", "On", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_useranalog = {"useranalog", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_useranalog2 = {"useranalog2", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-#endif
 
 static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
 
@@ -413,9 +404,7 @@ consvar_t cv_moveaxis = {"joyaxis_move", "None", CV_SAVE, joyaxis_cons_t, NULL, 
 #else
 consvar_t cv_moveaxis = {"joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
-#ifdef _arch_dreamcast
-consvar_t cv_sideaxis = {"joyaxis_side", "Triggers", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#elif defined (_XBOX)
+#ifdef _XBOX
 consvar_t cv_sideaxis = {"joyaxis_side", "Alt X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_lookaxis = {"joyaxis_look", "Alt Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #elif defined (PSP)
@@ -444,9 +433,7 @@ consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "RAnalog", CV_SAVE, joyaxis_co
 #else
 consvar_t cv_turnaxis2 = {"joyaxis2_turn", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_moveaxis2 = {"joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#ifdef _arch_dreamcast
-consvar_t cv_sideaxis2 = {"joyaxis2_side", "Triggers", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#elif defined (_XBOX)
+#ifdef _XBOX
 consvar_t cv_sideaxis2 = {"joyaxis2_side", "Alt X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_lookaxis2 = {"joyaxis2_look", "Alt Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #elif defined (_PSP)
@@ -838,14 +825,6 @@ static INT32 JoyAxis(axis_input_e axissel)
 		axisval = -axisval;
 		flp = true;
 	}
-#ifdef _arch_dreamcast
-	if (axisval == 7) // special case
-	{
-		retaxis = joyxmove[1] - joyymove[1];
-		goto skipDC;
-	}
-	else
-#endif
 	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
 		return 0;
 
@@ -860,10 +839,6 @@ static INT32 JoyAxis(axis_input_e axissel)
 		axisval /= 2;
 		retaxis = joyymove[axisval];
 	}
-
-#ifdef _arch_dreamcast
-	skipDC:
-#endif
 
 	if (retaxis < (-JOYAXISRANGE))
 		retaxis = -JOYAXISRANGE;
@@ -916,14 +891,7 @@ static INT32 Joy2Axis(axis_input_e axissel)
 		axisval = -axisval;
 		flp = true;
 	}
-#ifdef _arch_dreamcast
-	if (axisval == 7) // special case
-	{
-		retaxis = joy2xmove[1] - joy2ymove[1];
-		goto skipDC;
-	}
-	else
-#endif
+
 	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
 		return 0;
 
@@ -938,10 +906,6 @@ static INT32 Joy2Axis(axis_input_e axissel)
 		axisval /= 2;
 		retaxis = joy2ymove[axisval];
 	}
-
-#ifdef _arch_dreamcast
-	skipDC:
-#endif
 
 	if (retaxis < (-JOYAXISRANGE))
 		retaxis = -JOYAXISRANGE;

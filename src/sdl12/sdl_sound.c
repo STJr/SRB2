@@ -85,7 +85,7 @@
 //  mixing buffer, and the samplerate of the raw data.
 
 // Needed for calling the actual sound output.
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
 #define NUM_CHANNELS            MIX_CHANNELS
 #else
 #define NUM_CHANNELS            MIX_CHANNELS*4
@@ -93,7 +93,7 @@
 
 #define INDEXOFSFX(x) ((sfxinfo_t *)x - S_sfx)
 
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP)
+#if defined (_WIN32_WCE) || defined (PSP)
 static Uint16 samplecount = 512; //Alam: .5KB samplecount at 11025hz is 46.439909297052154195011337868481ms of buffer
 #elif defined(GP2X)
 static Uint16 samplecount = 128;
@@ -151,9 +151,7 @@ static SDL_bool musicStarted = SDL_FALSE;
 #ifdef HAVE_MIXER
 static SDL_mutex *Msc_Mutex = NULL;
 /* FIXME: Make this file instance-specific */
-#ifdef _arch_dreamcast
-#define MIDI_PATH     "/ram"
-#elif defined(GP2X)
+#ifdef GP2X
 #define MIDI_PATH     "/mnt/sd/srb2"
 #define MIDI_PATH2    "/tmp/mnt/sd/srb2"
 #else
@@ -176,7 +174,7 @@ static SDL_bool canlooping = SDL_TRUE;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,7)
 #define USE_RWOPS // ok, USE_RWOPS is in here
-#if defined (DC) || defined (_WIN32_WCE) || defined (_XBOX) //|| defined(_WIN32) || defined(GP2X)
+#if defined (_WIN32_WCE) || defined (_XBOX) //|| defined(_WIN32) || defined(GP2X)
 #undef USE_RWOPS
 #endif
 #endif
@@ -1190,13 +1188,6 @@ void I_StartupSound(void)
 #ifndef HAVE_MIXER
 	nomidimusic = nodigimusic = true;
 #endif
-#ifdef DC
-	//nosound = true;
-#ifdef HAVE_MIXER
-	nomidimusic = true;
-	nodigimusic = true;
-#endif
-#endif
 
 	memset(channels, 0, sizeof (channels)); //Alam: Clean it
 
@@ -1522,7 +1513,7 @@ void I_InitMusic(void)
 #endif
 	I_OutputMsg("Linked with SDL_mixer version: %d.%d.%d\n",
 	            MIXlinked->major, MIXlinked->minor, MIXlinked->patch);
-#if !(defined (DC) || defined (PSP) || defined(GP2X) || defined (WII))
+#if !(defined (PSP) || defined(GP2X) || defined (WII))
 	if (audio.freq < 44100 && !M_CheckParm ("-freq")) //I want atleast 44Khz
 	{
 		audio.samples = (Uint16)(audio.samples*(INT32)(44100/audio.freq));

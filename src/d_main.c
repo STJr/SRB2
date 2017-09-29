@@ -140,13 +140,8 @@ boolean advancedemo;
 INT32 debugload = 0;
 #endif
 
-#ifdef _arch_dreamcast
-char srb2home[256] = "/cd";
-char srb2path[256] = "/cd";
-#else
 char srb2home[256] = ".";
 char srb2path[256] = ".";
-#endif
 boolean usehome = true;
 const char *pandf = "%s" PATHSEP "%s";
 
@@ -822,11 +817,7 @@ static void IdentifyVersion(void)
 		else
 #endif
 		{
-#ifdef _arch_dreamcast
-			srb2waddir = "/cd";
-#else
 			srb2waddir = ".";
-#endif
 		}
 	}
 
@@ -881,11 +872,7 @@ static void IdentifyVersion(void)
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-#if defined (DC) && 0
-		const char *musicfile = "music_dc.dta";
-#else
 		const char *musicfile = "music.dta";
-#endif
 		const char *musicpath = va(pandf,srb2waddir,musicfile);
 		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
 		if (ms == 1)
@@ -1029,7 +1016,7 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (DC) && !defined (PSP) && !defined(GP2X)
+#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (PSP) && !defined(GP2X)
 			I_Error("Please set $HOME to your home directory\n");
 #elif defined (_WIN32_WCE) && 0
 			if (dedicated)
@@ -1072,10 +1059,6 @@ void D_SRB2Main(void)
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
-
-#ifdef _arch_dreamcast
-	strcpy(downloaddir, "/ram"); // the dreamcast's TMP
-#endif
 	}
 
 	// rand() needs seeded regardless of password
@@ -1446,10 +1429,6 @@ const char *D_Home(void)
 
 #ifdef ANDROID
 	return "/data/data/org.srb2/";
-#endif
-#ifdef _arch_dreamcast
-	char VMUHOME[] = "HOME=/vmu/a1";
-	putenv(VMUHOME); //don't use I_PutEnv
 #endif
 
 	if (M_CheckParm("-home") && M_IsNextParm())
