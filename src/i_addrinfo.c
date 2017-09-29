@@ -20,7 +20,7 @@
 #else
 #include <winsock.h>
 #endif
-#elif !defined (__DJGPP__) && !defined(_WII)
+#elif !defined (__DJGPP__)
 #include <sys/socket.h>
 #ifndef _NDS
 #include <arpa/inet.h>

@@ -78,7 +78,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define HAVE_SDLCPUINFO
 #endif
 
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #if defined (__linux__)
 #include <sys/vfs.h>
 #else
@@ -94,7 +94,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #endif
 #endif
 
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
+#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -135,14 +135,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define DEFAULTWADLOCATION4 "/tmp/mnt/sd/SRB2"
 #define DEFAULTSEARCHPATH1 "/mnt/sd"
 #define DEFAULTSEARCHPATH2 "/tmp/mnt/sd"
-#elif defined (_WII)
-#define NOCWD
-#define NOHOME
-#define NEED_SDL_GETENV
-#define DEFAULTWADLOCATION1 "sd:/srb2wii"
-#define DEFAULTWADLOCATION2 "usb:/srb2wii"
-#define DEFAULTSEARCHPATH1 "sd:/srb2wii"
-#define DEFAULTSEARCHPATH2 "usb:/srb2wii"
 #elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
@@ -2421,7 +2413,7 @@ void I_ShutdownSystem(void)
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII)
+#if defined (SOLARIS) || defined (__HAIKU__)
 	*freespace = INT32_MAX;
 	return;
 #else // Both Linux and BSD have this, apparently.

@@ -381,7 +381,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII)
+#if !defined(_WIN32_WCE) && !defined(GP2X)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else

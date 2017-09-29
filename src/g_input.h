@@ -22,18 +22,10 @@
 // keys (mousebuttons and joybuttons becomes keys)
 #define NUMKEYS 256
 
-
-#if defined (_WII)
-#define MOUSEBUTTONS 3
-#define JOYBUTTONS   20 // 20 buttons
-#define JOYHATS      1  // 1 hat
-#define JOYAXISSET   5  // 5 Sets of 2 axises
-#else
 #define MOUSEBUTTONS 8
 #define JOYBUTTONS   32 // 32 buttons
 #define JOYHATS      4  // 4 hats
 #define JOYAXISSET   4  // 4 Sets of 2 axises
-#endif
 
 //
 // mouse and joystick buttons are handled as 'virtual' keys

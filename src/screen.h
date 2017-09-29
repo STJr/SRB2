@@ -49,9 +49,6 @@
 #elif defined (GP2X)
 #define MAXVIDWIDTH 320 //720
 #define MAXVIDHEIGHT 240 //576
-#elif defined (WII) // Wii, VGA/640x480
-#define MAXVIDWIDTH 640
-#define MAXVIDHEIGHT 480
 #else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.

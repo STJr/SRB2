@@ -1496,9 +1496,7 @@ void I_InitMusic(void)
 	I_OutputMsg("Compiled for SDL_mixer version: %d.%d.%d\n",
 	            MIXcompiled.major, MIXcompiled.minor, MIXcompiled.patch);
 #ifdef MIXER_POS
-#ifndef _WII
 	if (MIXlinked->major == 1 && MIXlinked->minor == 2 && MIXlinked->patch < 7)
-#endif
 		canlooping = SDL_FALSE;
 #endif
 #ifdef USE_RWOPS
@@ -1507,7 +1505,7 @@ void I_InitMusic(void)
 #endif
 	I_OutputMsg("Linked with SDL_mixer version: %d.%d.%d\n",
 	            MIXlinked->major, MIXlinked->minor, MIXlinked->patch);
-#if !(defined(GP2X) || defined (WII))
+#if !defined(GP2X)
 	if (audio.freq < 44100 && !M_CheckParm ("-freq")) //I want atleast 44Khz
 	{
 		audio.samples = (Uint16)(audio.samples*(INT32)(44100/audio.freq));

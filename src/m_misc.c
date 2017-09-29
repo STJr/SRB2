@@ -58,7 +58,7 @@ typedef off_t off64_t;
 
 #if defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (DJGPP) || defined (_WII) || defined (_NDS)
+#elif defined (DJGPP) || defined (_NDS)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
@@ -67,10 +67,8 @@ typedef off_t off64_t;
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 
@@ -191,7 +189,7 @@ INT32 M_MapNumber(char first, char second)
 // ==========================================================================
 
 // some libcs has no access function, make our own
-#if defined (_WIN32_WCE) || defined (_WII)
+#if defined (_WIN32_WCE)
 int access(const char *path, int amode)
 {
 	int accesshandle = -1;
