@@ -342,14 +342,6 @@ else
 	OBJS:=$(OBJDIR)/md5.o $(OBJS)
 endif
 
-ifdef FAKEDC
-	OPTS+=-DDC
-endif
-
-ifdef FAKEPSP
-	OPTS+=-DPSP
-endif
-
 ifdef NOPOSTPROCESSING
 	OPTS+=-DNOPOSTPROCESSING
 endif
