@@ -18,10 +18,7 @@
 /// \brief SRB2 graphics stuff for SDL
 
 #include <stdlib.h>
-
-#ifndef _WIN32_WCE
 #include <signal.h>
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
@@ -49,7 +46,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elseif !defined (_WIN32_WCE)
+#else
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -94,11 +91,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#if defined (_WIN32_WCE)
-#define MAXWINMODES (1)
-#else
 #define MAXWINMODES (27)
-#endif
 
 /**	\brief
 */
@@ -141,25 +134,16 @@ static      SDL_Rect   **modeList = NULL;
 static       Uint8       BitsPerPixel = 16;
 static       Uint16      realwidth = BASEVIDWIDTH;
 static       Uint16      realheight = BASEVIDHEIGHT;
-#ifdef _WIN32_WCE
-static const Uint32      surfaceFlagsW = SDL_HWPALETTE; //Can't handle WinCE changing sides
-#else
 static const Uint32      surfaceFlagsW = SDL_HWPALETTE/*|SDL_RESIZABLE*/;
-#endif
 static const Uint32      surfaceFlagsF = SDL_HWPALETTE|SDL_FULLSCREEN;
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouse((Uint16)(x/2),(Uint16)(y/2))
-#if defined (_WIN32_WCE)
-static       SDL_bool    videoblitok = SDL_TRUE;
-#else
 static       SDL_bool    videoblitok = SDL_FALSE;
-#endif
 static       SDL_bool    exposevideo = SDL_FALSE;
 
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
-#if !defined (_WIN32_WCE)
 	{1920,1200}, // 1.60,6.00
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33,5.00
@@ -186,17 +170,12 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{ 416, 312}, // 1.33,1.30
 	{ 400, 300}, // 1.33,1.25
 	{ 320, 240}, // 1.33,1.00
-#endif
 	{ 320, 200}, // 1.60,1.00
 };
 
 static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 {
 	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
-#ifdef _WIN32_WCE
-	if (bpp < 16)
-		bpp = 16; // 256 mode poo
-#endif
 #ifdef FILTERS
 	bpp = Setupf2x(width, height, bpp);
 #endif
@@ -232,17 +211,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 static INT32 SDLatekey(SDLKey sym)
 {
 	INT32 rc = sym + 0x80;
-
-#ifdef _WIN32_WCE
-	if (sym == SDLK_KP8)
-		sym = SDLK_UP;
-	else if (sym == SDLK_KP4)
-		sym = SDLK_LEFT;
-	else if (sym == SDLK_KP6)
-		sym = SDLK_RIGHT;
-	else if (sym == SDLK_KP2)
-		sym = SDLK_DOWN;
-#endif
 
 	switch (sym)
 	{
@@ -586,7 +554,6 @@ static void VID_Command_Info_f (void)
 
 static void VID_Command_ModeList_f(void)
 {
-#if !defined (_WIN32_WCE)
 	INT32 i;
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -620,7 +587,6 @@ static void VID_Command_ModeList_f(void)
 				modeList[modeNum]->h);
 	}
 	CONS_Printf("%s", M_GetText("None\n"));
-#endif
 }
 
 static void VID_Command_Mode_f (void)
@@ -641,7 +607,7 @@ static void VID_Command_Mode_f (void)
 		setmodeneeded = modenum+1; // request vid mode change
 }
 
-#if defined(RPC_NO_WINDOWS_H) && !defined(_WIN32_WCE)
+#ifdef RPC_NO_WINDOWS_H
 static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(hWnd);
@@ -962,7 +928,6 @@ void I_GetEvent(void)
 				SDLJoyRemap(&event);
 				if (event.type != ev_console) D_PostEvent(&event);
 				break;
-#ifndef  _WIN32_WCE
 			case SDL_QUIT:
 				if (!sdlquit)
 				{
@@ -970,8 +935,7 @@ void I_GetEvent(void)
 					M_QuitResponse('y');
 				}
 				break;
-#endif
-#if defined(RPC_NO_WINDOWS_H) && !defined(_WIN32_WCE)
+#ifdef RPC_NO_WINDOWS_H
 			case SDL_SYSWMEVENT:
 				MainWndproc(inputEvent.syswm.msg->hwnd,
 					inputEvent.syswm.msg->msg,
@@ -1492,9 +1456,7 @@ static void SDLWMSet(void)
 		SetFocus(vid.WndParent);
 		ShowWindow(vid.WndParent, SW_SHOW);
 	}
-#ifndef _WIN32_WCE
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
 #endif
 	SDL_EventState(SDL_VIDEORESIZE, SDL_IGNORE);
 }
@@ -1513,9 +1475,6 @@ static void* SDLGetDirect(void)
 
 INT32 VID_SetMode(INT32 modeNum)
 {
-#ifdef _WIN32_WCE
-	(void)modeNum;
-#else
 	SDLdoUngrabMouse();
 	vid.recalc = true;
 	BitsPerPixel = (Uint8)cv_scr_depth.value;
@@ -1615,7 +1574,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	if (!cv_stretch.value && (float)vid.width/vid.height != ((float)BASEVIDWIDTH/BASEVIDHEIGHT))
 		vid.height = (INT32)(vid.width * ((float)BASEVIDHEIGHT/BASEVIDWIDTH));// Adjust the height to match
 #endif
-#endif
 	I_StartupMouse();
 
 	SDLWMSet();
@@ -1696,11 +1654,7 @@ void I_StartupGraphics(void)
 #endif
 
 	// Window title
-#ifdef _WIN32_WCE
-	SDL_WM_SetCaption("SRB2 "VERSIONSTRING, "SRB2");
-#else
 	SDL_WM_SetCaption("SRB2: Starting up", "SRB2");
-#endif
 
 	// Window icon
 #ifdef HAVE_IMAGE
@@ -1744,7 +1698,7 @@ void I_StartupGraphics(void)
 		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
-#if 1 //#ifdef  _WIN32_WCE
+#if 1 //
 		vid.width = BASEVIDWIDTH;
 		vid.height = BASEVIDHEIGHT;
 #else

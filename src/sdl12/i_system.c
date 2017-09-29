@@ -20,15 +20,12 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
-#ifndef _WIN32_WCE
 #include <signal.h>
-#endif
 
 #ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
 #include "../doomtype.h"
-#ifndef _WIN32_WCE
 typedef BOOL (WINAPI *p_GetDiskFreeSpaceExA)(LPCSTR, PULARGE_INTEGER, PULARGE_INTEGER, PULARGE_INTEGER);
 typedef BOOL (WINAPI *p_IsProcessorFeaturePresent) (DWORD);
 typedef DWORD (WINAPI *p_timeGetTime) (void);
@@ -38,7 +35,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 typedef HANDLE (WINAPI *p_GetCurrentProcess) (VOID);
 typedef BOOL (WINAPI *p_GetProcessAffinityMask) (HANDLE, PDWORD_PTR, PDWORD_PTR);
 typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
-#endif
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +49,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #endif
 
 #include <stdio.h>
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 #include <conio.h>
 #endif
 
@@ -111,17 +107,13 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #include <wchar.h>
 #endif
 
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 #define HAVE_MUMBLE
 #define WINMUMBLE
 #elif defined (HAVE_SHM)
 #define HAVE_MUMBLE
 #endif
 #endif // NOMUMBLE
-
-#ifdef _WIN32_WCE
-#include "SRB2CE/cehelp.h"
-#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -136,11 +128,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define DEFAULTSEARCHPATH1 "/usr/local/games"
 #define DEFAULTSEARCHPATH2 "/usr/games"
 #define DEFAULTSEARCHPATH3 "/usr/local"
-#elif defined (_WIN32_WCE)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "\\Storage Card\\SRB2DEMO"
-#define DEFAULTSEARCHPATH1 "\\Storage Card"
 #elif defined (_WIN32)
 #define DEFAULTWADLOCATION1 "c:\\games\\srb2"
 #define DEFAULTWADLOCATION2 "\\games\\srb2"
@@ -275,7 +262,7 @@ static void signal_handler(INT32 num)
 }
 #endif
 
-#if defined (NDEBUG) && !defined (_WIN32_WCE)
+#if defined (NDEBUG)
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
 	signal(num, SIG_DFL); //default signal action
@@ -495,7 +482,7 @@ void I_GetConsoleEvents(void)
 	(void)d;
 }
 
-#elif defined (_WIN32) && !defined (_WIN32_WCE)
+#elif defined (_WIN32)
 static BOOL I_ReadyConsole(HANDLE ci)
 {
 	DWORD gotinput;
@@ -709,7 +696,7 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #endif
 
-#if defined (_WIN32) && !defined(_WIN32_WCE)
+#ifdef _WIN32
 #ifdef DEBUGFILE
 	if (debugfile != stderr)
 #endif
@@ -1966,7 +1953,7 @@ ticcmd_t *I_BaseTiccmd2(void)
 	return &emptycmd2;
 }
 
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 static HMODULE winmm = NULL;
 static DWORD starttickcount = 0; // hack for win2k time bug
 static p_timeGetTime pfntimeGetTime = NULL;
@@ -2045,12 +2032,7 @@ tic_t I_GetTime (void)
 	ticks -= basetime;
 
 	ticks = (ticks*TICRATE);
-
-#if 0 //#ifdef _WIN32_WCE
-	ticks = (ticks/10);
-#else
 	ticks = (ticks/1000);
-#endif
 
 	return (tic_t)ticks;
 }
@@ -2061,7 +2043,7 @@ tic_t I_GetTime (void)
 //
 void I_StartupTimer(void)
 {
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 	// for win2k time bug
 	if (M_CheckParm("-gettickcount"))
 	{
@@ -2184,7 +2166,7 @@ static boolean shutdowning = false;
 void I_Error(const char *error, ...)
 {
 	va_list argptr;
-#if defined (MAC_ALERT) || defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+#if defined (MAC_ALERT) || defined (_WIN32)
 	char buffer[8192];
 #endif
 
@@ -2222,11 +2204,10 @@ void I_Error(const char *error, ...)
 			va_end(argptr);
 			// 2004-03-03 AJR Since the Mac user is most likely double clicking to run the game, give them a panel.
 			MacShowAlert("Recursive Error", buffer, "Quit", NULL, NULL);
-#elif defined (_WIN32) || (defined (_WIN32_WCE)) && !defined (__GNUC__)
+#elif defined (_WIN32)
 			va_start(argptr,error);
 			vsprintf(buffer, error, argptr);
 			va_end(argptr);
-#ifndef _WIN32_WCE
 			{
 				HANDLE co = GetStdHandle(STD_OUTPUT_HANDLE);
 				DWORD bytesWritten;
@@ -2238,7 +2219,6 @@ void I_Error(const char *error, ...)
 						WriteFile(co, buffer, (DWORD)strlen(buffer), &bytesWritten, NULL);
 				}
 			}
-#endif
 			OutputDebugStringA(buffer);
 			MessageBoxA(vid.WndParent, buffer, "SRB2 Recursive Error", MB_OK|MB_ICONERROR);
 #else
@@ -2387,7 +2367,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	}
 	*freespace = stfs.f_bavail * stfs.f_bsize;
 #endif
-#elif defined (_WIN32) && !defined (_WIN32_WCE)
+#elif defined (_WIN32)
 	static p_GetDiskFreeSpaceExA pfnGetDiskFreeSpaceEx = NULL;
 	static boolean testwin95 = false;
 	ULARGE_INTEGER usedbytes, lfreespace;
@@ -2418,7 +2398,6 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 char *I_GetUserName(void)
 {
-#if !defined (_WIN32_WCE)
 	static char username[MAXPLAYERNAME];
 	char *p;
 #ifdef _WIN32
@@ -2450,7 +2429,6 @@ char *I_GetUserName(void)
 
 	if (strcmp(username, "") != 0)
 		return username;
-#endif
 	return NULL; // dummy for platform independent version
 }
 
@@ -2459,7 +2437,7 @@ INT32 I_mkdir(const char *dirname, INT32 unixright)
 //[segabor]
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__) || defined (__OS2__)
 	return mkdir(dirname, unixright);
-#elif defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+#elif defined (_WIN32)
 	UNREFERENCED_PARAMETER(unixright); /// \todo should implement ntright under nt...
 	return CreateDirectoryA(dirname, NULL);
 #else
@@ -2473,9 +2451,6 @@ char *I_GetEnv(const char *name)
 {
 #ifdef NEED_SDL_GETENV
 	return SDL_getenv(name);
-#elif defined(_WIN32_WCE)
-	(void)name;
-	return NULL;
 #else
 	return getenv(name);
 #endif
@@ -2485,8 +2460,6 @@ INT32 I_PutEnv(char *variable)
 {
 #ifdef NEED_SDL_GETENV
 	return SDL_putenv(variable);
-#elif defined(_WIN32_WCE)
-	return ((variable)?-1:0);
 #else
 	return putenv(variable);
 #endif
@@ -2597,15 +2570,6 @@ static const char *locateWad(void)
 	if (((envstr = I_GetEnv("SRB2WADDIR")) != NULL) && isWadPathOk(envstr))
 		return envstr;
 
-#if defined(_WIN32_WCE)
-	// examine argv[0]
-	strcpy(returnWadPath, myargv[0]);
-	pathonly(returnWadPath);
-	I_PutEnv(va("HOME=%s",returnWadPath));
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-
 #ifndef NOCWD
 	I_OutputMsg(",.");
 	// examine current dir
@@ -2703,9 +2667,9 @@ const char *I_LocateWad(void)
 	if (waddir)
 	{
 		// change to the directory where we found srb2.srb
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 		SetCurrentDirectoryA(waddir);
-#elif !defined (_WIN32_WCE)
+#else
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -2803,7 +2767,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = totalKBytes << 10;
 	return freeKBytes << 10;
-#elif defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+#elif defined (_WIN32)
 	MEMORYSTATUS info;
 
 	info.dwLength = sizeof (MEMORYSTATUS);
@@ -2831,7 +2795,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 
 const CPUInfoFlags *I_CPUInfo(void)
 {
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
 	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
@@ -2892,7 +2856,7 @@ const CPUInfoFlags *I_CPUInfo(void)
 #endif
 }
 
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 static void CPUAffinity_OnChange(void);
 static consvar_t cv_cpuaffinity = {"cpuaffinity", "-1", CV_SAVE | CV_CALL, NULL, CPUAffinity_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
@@ -2935,7 +2899,7 @@ static void CPUAffinity_OnChange(void)
 
 void I_RegisterSysCommands(void)
 {
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 	GetAffinityFuncs();
 	CV_RegisterVar(&cv_cpuaffinity);
 #endif

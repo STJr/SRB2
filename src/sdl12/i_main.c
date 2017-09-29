@@ -58,7 +58,7 @@ FILE *logstream = NULL;
 typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 #endif
 
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 static inline VOID MakeCodeWritable(VOID)
 {
 #ifdef USEASM // Disable write-protection of code segment
@@ -121,9 +121,7 @@ int main(int argc, char **argv)
 	logdir = D_Home();
 
 #ifdef LOGMESSAGES
-#if defined(_WIN32_WCE)
-	logstream = fopen(va("%s.log",argv[0]), "a");
-#elif defined (DEFAULTDIR)
+#ifdef DEFAULTDIR
 	if (logdir)
 		logstream = fopen(va("%s/"DEFAULTDIR"/srb2log.txt",logdir), "a");
 	else
@@ -134,7 +132,6 @@ int main(int argc, char **argv)
 	//I_OutputMsg("I_StartupSystem() ...\n");
 	I_StartupSystem();
 #ifdef _WIN32
-#ifndef _WIN32_WCE
 	{
 		p_IsDebuggerPresent pfnIsDebuggerPresent = (p_IsDebuggerPresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsDebuggerPresent");
 		if ((!pfnIsDebuggerPresent || !pfnIsDebuggerPresent())
@@ -146,11 +143,8 @@ int main(int argc, char **argv)
 			LoadLibraryA("exchndl.dll");
 		}
 	}
-#endif
 	prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
-#ifndef _WIN32_WCE
 	MakeCodeWritable();
-#endif
 #endif
 	// startup SRB2
 	CONS_Printf("%s", M_GetText("Setting up SRB2...\n"));

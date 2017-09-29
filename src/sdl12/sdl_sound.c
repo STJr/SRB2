@@ -49,7 +49,7 @@
 #define MIX_CHANNELS 8
 #endif
 
-#if defined (_WIN32) && !defined (_WIN32_WCE)
+#ifdef _WIN32
 #include <direct.h>
 #elif defined (__GNUC__)
 #include <unistd.h>
@@ -85,19 +85,11 @@
 //  mixing buffer, and the samplerate of the raw data.
 
 // Needed for calling the actual sound output.
-#if defined (_WIN32_WCE)
-#define NUM_CHANNELS            MIX_CHANNELS
-#else
 #define NUM_CHANNELS            MIX_CHANNELS*4
-#endif
 
 #define INDEXOFSFX(x) ((sfxinfo_t *)x - S_sfx)
 
-#if defined (_WIN32_WCE)
-static Uint16 samplecount = 512; //Alam: .5KB samplecount at 11025hz is 46.439909297052154195011337868481ms of buffer
-#else
 static Uint16 samplecount = 1024; //Alam: 1KB samplecount at 22050hz is 46.439909297052154195011337868481ms of buffer
-#endif
 
 typedef struct chan_struct
 {
@@ -167,9 +159,6 @@ static SDL_bool canlooping = SDL_TRUE;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,7)
 #define USE_RWOPS // ok, USE_RWOPS is in here
-#if defined (_WIN32_WCE) //|| defined(_WIN32)
-#undef USE_RWOPS
-#endif
 #endif
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,10)

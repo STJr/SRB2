@@ -16,9 +16,7 @@
 #include <errno.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
 #if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET)
 #define NONET
@@ -30,7 +28,7 @@
 #define HAVE_IPV6
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #ifdef HAVE_IPV6
 #include <ws2tcpip.h>
@@ -55,7 +53,7 @@
 
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
-#endif // _WIN32/_WIN32_WCE
+#endif // _WIN32
 
 #ifdef __OS2__
 #include <errno.h>
@@ -75,10 +73,6 @@
 #include "m_menu.h"
 #include "m_argv.h" // Alam is going to kill me <3
 #include "m_misc.h" //  GetRevisionString()
-
-#ifdef _WIN32_WCE
-#include "sdl12/SRB2CE/cehelp.h"
-#endif
 
 #include "i_addrinfo.h"
 
@@ -168,13 +162,13 @@ typedef struct
 #endif
 
 // win32 or djgpp
-#if defined (_WIN32) || defined (_WIN32_WCE) || defined (__DJGPP__)
+#if defined (_WIN32) || defined (__DJGPP__)
 #define ioctl ioctlsocket
 #define close closesocket
 #ifdef WATTCP
 #define strerror strerror_s
 #endif
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #undef errno
 #define errno h_errno // some very strange things happen when not using h_error
 #endif
@@ -200,7 +194,7 @@ static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state 
 static INT32 msnode = -1;
 UINT16 current_port = 0;
 
-#if (defined (_WIN32) || defined (_WIN32_WCE) || defined (_WIN32)) && !defined (NONET)
+#if defined (_WIN32) && !defined (NONET)
 typedef SOCKET SOCKET_TYPE;
 #define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)

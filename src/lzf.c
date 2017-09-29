@@ -157,7 +157,7 @@ typedef const u8 *LZF_STATE[1 << (HLOG)];
  * lzfP.h ends here. lzf_d.c follows.
  */
 
-#if AVOID_ERRNO || defined(_WIN32_WCE)
+#if AVOID_ERRNO
 # define SET_ERRNO(n)
 #else
 # include <errno.h>

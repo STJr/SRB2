@@ -17,7 +17,7 @@
 #ifndef __DOOMTYPE__
 #define __DOOMTYPE__
 
-#if defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+#ifdef _WIN32
 //#define WIN32_LEAN_AND_MEAN
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
@@ -107,15 +107,6 @@ typedef long ssize_t;
 	#undef strnicmp
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
 #endif
-#ifdef _WIN32_WCE
-#ifndef __GNUC__
-	#define stricmp(x,y)            _stricmp(x,y)
-	#define strnicmp                _strnicmp
-#endif
-	#define strdup                  _strdup
-	#define strupr                  _strupr
-	#define strlwr                  _strlwr
-#endif
 
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
@@ -167,7 +158,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	//faB: clean that up !!
 	#if defined( _MSC_VER)  && (_MSC_VER >= 1800) // MSVC 2013 and forward
 	#include "stdbool.h"
-	#elif defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+	#elif defined (_WIN32)
 		#define false   FALSE           // use windows types
 		#define true    TRUE
 		#define boolean BOOL

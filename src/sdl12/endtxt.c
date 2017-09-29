@@ -33,7 +33,6 @@
 
 void ShowEndTxt(void)
 {
-#ifndef _WIN32_WCE
 	INT32 i;
 	UINT16 j, att = 0;
 	INT32 nlflag = 1;
@@ -232,5 +231,4 @@ void ShowEndTxt(void)
 		printf("\n");
 
 	Z_Free(data);
-#endif
 }

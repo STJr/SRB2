@@ -19,10 +19,6 @@
 
 #ifdef HAVE_SDL
 
-#if defined (_WIN32_WCE)
-#define NOSDLCD
-#endif
-
 #include <stdlib.h>
 #ifndef NOSDLCD
 

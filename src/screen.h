@@ -15,20 +15,16 @@
 
 #include "command.h"
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (__CYGWIN__)
-#if defined (_WIN32_WCE) && defined (__GNUC__)
-#include <sys/wcetypes.h>
-#else
+#if defined (_WIN32) && !defined (__CYGWIN__)
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
-#endif
 #define DNWH HWND
 #else
 #define DNWH void * // unused in DOS version
 #endif
 
 // quickhack for V_Init()... to be cleaned up
-#if defined (_WIN32_WCE) || defined (NOPOSTPROCESSING)
+#ifdef NOPOSTPROCESSING
 #define NUMSCREENS 2
 #else
 #define NUMSCREENS 5
