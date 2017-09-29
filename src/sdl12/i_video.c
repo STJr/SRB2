@@ -66,12 +66,8 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 #include "SDL_syswm.h"
-#endif
-
-#if defined (_XBOX) && defined (__GNUC__)
-#include <openxdk/debug.h>
 #endif
 
 #include "../doomstat.h"

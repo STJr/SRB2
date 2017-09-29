@@ -28,7 +28,7 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
+    //#if !defined(_WIN32_WCE) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
@@ -116,7 +116,7 @@
 #endif
 #include <ctype.h>
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if (defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)
 #include <io.h>
 #endif
 

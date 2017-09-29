@@ -40,12 +40,6 @@
 #endif
 #endif //WIN32 OS
 
-#ifdef _XBOX // XBox have on WinSock API?
-#undef USE_WINSOCK
-#undef USE_WINSOCK1
-#undef USE_WINSOCK2
-#endif
-
 #ifdef USE_WINSOCK2
 #include <ws2tcpip.h>
 #endif

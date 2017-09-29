@@ -75,12 +75,12 @@ FILE *logstream = NULL;
 #endif
 #endif
 
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 #include "../win32/win_dbg.h"
 typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 #endif
 
-#if defined (_WIN32) && !defined (_XBOX) && !defined (_WIN32_WCE)
+#if defined (_WIN32) && !defined (_WIN32_WCE)
 static inline VOID MakeCodeWritable(VOID)
 {
 #ifdef USEASM // Disable write-protection of code segment
@@ -122,13 +122,6 @@ static inline VOID MakeCodeWritable(VOID)
 	\return	int
 */
 FUNCNORETURN
-#if defined (_XBOX) && defined (__GNUC__)
-void XBoxStartup()
-{
-	const char *logdir = NULL;
-	myargc = -1;
-	myargv = NULL;
-#else
 #ifdef FORCESDLMAIN
 int SDL_main(int argc, char **argv)
 #else
@@ -138,7 +131,6 @@ int main(int argc, char **argv)
 	const char *logdir = NULL;
 	myargc = argc;
 	myargv = argv; /// \todo pull out path to exe from this string
-#endif
 
 #ifdef HAVE_TTF
 #ifdef _PS3
@@ -197,7 +189,7 @@ int main(int argc, char **argv)
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
 	I_StartupSystem();
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 #ifndef _WIN32_WCE
 	{
 		p_IsDebuggerPresent pfnIsDebuggerPresent = (p_IsDebuggerPresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsDebuggerPresent");

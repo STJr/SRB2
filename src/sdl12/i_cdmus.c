@@ -46,18 +46,6 @@
 
 #define MAX_CD_TRACKS 256
 
-#ifdef _XBOX
-INT32  SDL_SYS_CDInit(void)
-{
-	return(0);
-}
-
-void SDL_SYS_CDQuit(void)
-{
-	return;
-}
-#endif
-
 UINT8 cdaudio_started = 0;   // for system startup/shutdown
 
 consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};

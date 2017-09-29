@@ -37,7 +37,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (_XBOX) || defined(GP2X)
+#ifdef GP2X
 #define NOLOADSO
 #endif
 

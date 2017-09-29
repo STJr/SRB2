@@ -30,7 +30,7 @@
 #define HAVE_IPV6
 #endif
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (_WIN32_WCE)
 #define RPC_NO_WINDOWS_H
 #ifdef HAVE_IPV6
 #include <ws2tcpip.h>

@@ -12,9 +12,6 @@
 
 #ifdef __GNUC__
 #include <unistd.h>
-#ifdef _XBOX
-#include <openxdk/debug.h>
-#endif
 #endif
 
 #include "doomdef.h"
@@ -1211,9 +1208,6 @@ void CONS_Printf(const char *fmt, ...)
 
 	if (!con_started)
 	{
-#if defined (_XBOX) && defined (__GNUC__)
-		if (!keyboard_started) debugPrint(txt);
-#endif
 #ifdef PC_DOS
 		CON_LogMessage(txt);
 		free(txt);

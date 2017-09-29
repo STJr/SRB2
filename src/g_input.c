@@ -268,7 +268,7 @@ static keyname_t keynames[] =
 	{KEY_MOUSE1+0,"MOUSE1"},
 	{KEY_MOUSE1+1,"MOUSE2"},
 	{KEY_MOUSE1+2,"MOUSE3"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_MOUSE1+3,"MOUSE4"},
 	{KEY_MOUSE1+4,"MOUSE5"},
 	{KEY_MOUSE1+5,"MOUSE6"},
@@ -278,7 +278,7 @@ static keyname_t keynames[] =
 	{KEY_2MOUSE1+0,"SEC_MOUSE2"}, // BP: sorry my mouse handler swap button 1 and 2
 	{KEY_2MOUSE1+1,"SEC_MOUSE1"},
 	{KEY_2MOUSE1+2,"SEC_MOUSE3"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_2MOUSE1+3,"SEC_MOUSE4"},
 	{KEY_2MOUSE1+4,"SEC_MOUSE5"},
 	{KEY_2MOUSE1+5,"SEC_MOUSE6"},
@@ -290,21 +290,7 @@ static keyname_t keynames[] =
 	{KEY_2MOUSEWHEELUP, "Wheel 2 UP"},
 	{KEY_2MOUSEWHEELDOWN, "Wheel 2 Down"},
 
-#ifdef _XBOX
-	{KEY_JOY1+0, "JOYA"},
-	{KEY_JOY1+1, "JOYB"},
-	{KEY_JOY1+2, "JOYX"},
-	{KEY_JOY1+3, "JOYY"},
-	{KEY_JOY1+4, "JOYG"},
-	{KEY_JOY1+5, "JOYW"},
-	{KEY_JOY1+6, "JOYL"},
-	{KEY_JOY1+7, "JOYR"},
-	{KEY_JOY1+8, "JOYS"},
-	{KEY_JOY1+9, "JOYN"},
-	{KEY_JOY1+10,"JOYW"},
-	{KEY_JOY1+11,"JOYE"},
-#define NOMOREJOYBTN_1S
-#elif defined (_PSP)
+#ifdef _PSP
 	{KEY_JOY1+0, "TRIANGLE"},
 	{KEY_JOY1+1, "CIRCLE"  },
 	{KEY_JOY1+2, "CROSS"   },
@@ -434,7 +420,7 @@ static keyname_t keynames[] =
 	{KEY_HAT1+1, "HATDOWN"},
 	{KEY_HAT1+2, "HATLEFT"},
 	{KEY_HAT1+3, "HATRIGHT"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_HAT1+4, "HATUP2"},
 	{KEY_HAT1+5, "HATDOWN2"},
 	{KEY_HAT1+6, "HATLEFT2"},
@@ -452,7 +438,7 @@ static keyname_t keynames[] =
 	{KEY_DBLMOUSE1+0, "DBLMOUSE1"},
 	{KEY_DBLMOUSE1+1, "DBLMOUSE2"},
 	{KEY_DBLMOUSE1+2, "DBLMOUSE3"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_DBLMOUSE1+3, "DBLMOUSE4"},
 	{KEY_DBLMOUSE1+4, "DBLMOUSE5"},
 	{KEY_DBLMOUSE1+5, "DBLMOUSE6"},
@@ -462,7 +448,7 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+0, "DBLSEC_MOUSE2"}, // BP: sorry my mouse handler swap button 1 and 2
 	{KEY_DBL2MOUSE1+1, "DBLSEC_MOUSE1"},
 	{KEY_DBL2MOUSE1+2, "DBLSEC_MOUSE3"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_DBL2MOUSE1+3, "DBLSEC_MOUSE4"},
 	{KEY_DBL2MOUSE1+4, "DBLSEC_MOUSE5"},
 	{KEY_DBL2MOUSE1+5, "DBLSEC_MOUSE6"},
@@ -470,21 +456,7 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+7, "DBLSEC_MOUSE8"},
 #endif
 
-#ifdef _XBOX
-	{KEY_DBLJOY1+0, "DBLJOYA"},
-	{KEY_DBLJOY1+1, "DBLJOYB"},
-	{KEY_DBLJOY1+2, "DBLJOYX"},
-	{KEY_DBLJOY1+3, "DBLJOYY"},
-	{KEY_DBLJOY1+4, "DBLJOYG"},
-	{KEY_DBLJOY1+5, "DBLJOYW"},
-	{KEY_DBLJOY1+6, "DBLJOYL"},
-	{KEY_DBLJOY1+7, "DBLJOYR"},
-	{KEY_DBLJOY1+8, "DBLJOYS"},
-	{KEY_DBLJOY1+9, "DBLJOYN"},
-	{KEY_DBLJOY1+10,"DBLJOYW"},
-	{KEY_DBLJOY1+11,"DBLJOYE"},
-#define NOMOREJOYBTN_1DBL
-#elif defined (_PSP)
+#ifdef _PSP
 	{KEY_DBLJOY1+0, "DBLTRIANGLE"},
 	{KEY_DBLJOY1+1, "DBLCIRCLE"  },
 	{KEY_DBLJOY1+2, "DBLCROSS"   },
@@ -612,7 +584,7 @@ static keyname_t keynames[] =
 	{KEY_DBLHAT1+1, "DBLHATDOWN"},
 	{KEY_DBLHAT1+2, "DBLHATLEFT"},
 	{KEY_DBLHAT1+3, "DBLHATRIGHT"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_DBLHAT1+4, "DBLHATUP2"},
 	{KEY_DBLHAT1+5, "DBLHATDOWN2"},
 	{KEY_DBLHAT1+6, "DBLHATLEFT2"},
@@ -627,21 +599,7 @@ static keyname_t keynames[] =
 	{KEY_DBLHAT1+15, "DBLHATRIGHT4"},
 #endif
 
-#ifdef _XBOX
-	{KEY_2JOY1+0, "SEC_JOYA"},
-	{KEY_2JOY1+1, "SEC_JOYB"},
-	{KEY_2JOY1+2, "SEC_JOYX"},
-	{KEY_2JOY1+3, "SEC_JOYY"},
-	{KEY_2JOY1+4, "SEC_JOYG"},
-	{KEY_2JOY1+5, "SEC_JOYW"},
-	{KEY_2JOY1+6, "SEC_JOYL"},
-	{KEY_2JOY1+7, "SEC_JOYR"},
-	{KEY_2JOY1+8, "SEC_JOYS"},
-	{KEY_2JOY1+9, "SEC_JOYN"},
-	{KEY_2JOY1+10,"SEC_JOYW"},
-	{KEY_2JOY1+11,"SEC_JOYE"},
-#define NOMOREJOYBTN_2S
-#elif defined (_PSP)
+#ifdef _PSP
 	{KEY_2JOY1+0, "SEC_TRIANGLE"},
 	{KEY_2JOY1+1, "SEC_CIRCLE"  },
 	{KEY_2JOY1+2, "SEC_CROSS"   },
@@ -751,7 +709,7 @@ static keyname_t keynames[] =
 	{KEY_2HAT1+1,  "SEC_HATDOWN"},
 	{KEY_2HAT1+2,  "SEC_HATLEFT"},
 	{KEY_2HAT1+3,  "SEC_HATRIGHT"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_2HAT1+4, "SEC_HATUP2"},
 	{KEY_2HAT1+5, "SEC_HATDOWN2"},
 	{KEY_2HAT1+6, "SEC_HATLEFT2"},
@@ -766,21 +724,7 @@ static keyname_t keynames[] =
 	{KEY_2HAT1+15, "SEC_HATRIGHT4"},
 #endif
 
-#ifdef _XBOX
-	{KEY_DBL2JOY1+0, "DBLSEC_JOYA"},
-	{KEY_DBL2JOY1+1, "DBLSEC_JOYB"},
-	{KEY_DBL2JOY1+2, "DBLSEC_JOYX"},
-	{KEY_DBL2JOY1+3, "DBLSEC_JOYY"},
-	{KEY_DBL2JOY1+4, "DBLSEC_JOYG"},
-	{KEY_DBL2JOY1+5, "DBLSEC_JOYW"},
-	{KEY_DBL2JOY1+6, "DBLSEC_JOYL"},
-	{KEY_DBL2JOY1+7, "DBLSEC_JOYR"},
-	{KEY_DBL2JOY1+8, "DBLSEC_JOYS"},
-	{KEY_DBL2JOY1+9, "DBLSEC_JOYN"},
-	{KEY_DBL2JOY1+10,"DBLSEC_JOYW"},
-	{KEY_DBL2JOY1+11,"DBLSEC_JOYE"},
-#define NOMOREJOYBTN_2DBL
-#elif defined (_PSP)
+#ifdef _PSP
 	{KEY_DBL2JOY1+0, "DBLSEC_TRIANGLE"},
 	{KEY_DBL2JOY1+1, "DBLSEC_CIRCLE"  },
 	{KEY_DBL2JOY1+2, "DBLSEC_CROSS"   },
@@ -888,7 +832,7 @@ static keyname_t keynames[] =
 	{KEY_DBL2HAT1+1, "DBLSEC_HATDOWN"},
 	{KEY_DBL2HAT1+2, "DBLSEC_HATLEFT"},
 	{KEY_DBL2HAT1+3, "DBLSEC_HATRIGHT"},
-#if !defined (_XBOX) && !defined (_PSP) && !defined (_WII)
+#if !defined (_PSP) && !defined (_WII)
 	{KEY_DBL2HAT1+4, "DBLSEC_HATUP2"},
 	{KEY_DBL2HAT1+5, "DBLSEC_HATDOWN2"},
 	{KEY_DBL2HAT1+6, "DBLSEC_HATLEFT2"},

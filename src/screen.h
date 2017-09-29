@@ -15,7 +15,7 @@
 
 #include "command.h"
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (__CYGWIN__) && !defined (_XBOX)
+#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (__CYGWIN__)
 #if defined (_WIN32_WCE) && defined (__GNUC__)
 #include <sys/wcetypes.h>
 #else
@@ -110,7 +110,7 @@ typedef struct vmode_s
 	INT32 windowed; // if true this is a windowed mode
 	INT32 numpages;
 	vesa_extra_t *pextradata; // vesa mode extra data
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 	INT32 (WINAPI *setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
 #else
 	INT32 (*setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);

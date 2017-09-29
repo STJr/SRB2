@@ -23,12 +23,7 @@
 #define NUMKEYS 256
 
 
-#ifdef _XBOX
-#define MOUSEBUTTONS 5
-#define JOYBUTTONS   12 // 12 buttons
-#define JOYHATS      1  // 1 hat
-#define JOYAXISSET   2  // 2 Sets of 2 axises
-#elif defined (_PSP)
+#ifdef _PSP
 #define MOUSEBUTTONS 3
 #define JOYBUTTONS   14 // 10 buttons
 #define JOYHATS      1  // 1 hat

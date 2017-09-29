@@ -33,7 +33,7 @@
 
 void ShowEndTxt(void)
 {
-#if !(defined (_WIN32_WCE) || defined (_XBOX))
+#ifndef _WIN32_WCE
 	INT32 i;
 	UINT16 j, att = 0;
 	INT32 nlflag = 1;

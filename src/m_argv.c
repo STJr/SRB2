@@ -124,7 +124,7 @@ void M_PushSpecialParameters(void)
 
 /// \brief max args
 
-#if defined (_XBOX) || defined (_WII)
+#ifdef _WII
 #define MAXARGVS 1
 #else
 #define MAXARGVS 256
