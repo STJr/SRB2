@@ -192,36 +192,36 @@ matrix:
               - clang-3.9
           compiler: clang-3.9
           #clang version 3.9.X
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - llvm-toolchain-precise-4.0
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - clang-4.0
-          compiler: clang-4.0
-          #clang version 4.0.X
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - llvm-toolchain-precise-5.0
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - clang-5.0
-          compiler: clang-5.0
-          #clang version 5.0.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-4.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-4.0
+#          compiler: clang-4.0
+#          #clang version 4.0.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-5.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-5.0
+#          compiler: clang-5.0
+#          #clang version 5.0.X
 #        - os: osx
 #          osx_image: beta-xcode6.1
 #          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
