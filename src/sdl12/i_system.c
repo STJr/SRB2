@@ -80,7 +80,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 
 #ifdef _PSP
 //#include <pspiofilemgr.h>
-#elif !defined(_PS3)
+#else
 #if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__) && !defined (_WII))
 #if defined (__linux__)
 #include <sys/vfs.h>
@@ -98,7 +98,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #endif
 #endif
 
-#ifndef _PS3
 #if defined (__linux__) || (defined (UNIXCOMMON) && !defined (_PSP) && !defined (__HAIKU__) && !defined (_WII))
 #ifndef NOTERMIOS
 #include <termios.h>
@@ -106,10 +105,9 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define HAVE_TERMIOS
 #endif
 #endif
-#endif
 
 #ifndef NOMUMBLE
-#if defined (__linux__) && !defined(_PS3) // need -lrt
+#ifdef __linux__ // need -lrt
 #include <sys/mman.h>
 #ifdef MAP_FAILED
 #define HAVE_SHM
@@ -149,14 +147,6 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #define DEFAULTWADLOCATION2 "usb:/srb2wii"
 #define DEFAULTSEARCHPATH1 "sd:/srb2wii"
 #define DEFAULTSEARCHPATH2 "usb:/srb2wii"
-// PS3: TODO: this will need modification most likely
-#elif defined (_PS3)
-#define NOCWD
-#define NOHOME
-#define DEFAULTWADLOCATION1 "/dev_hdd0/game/SRB2-PS3_/USRDIR/etc"
-#define DEFAULTWADLOCATION2 "/dev_usb/SRB2PS3"
-#define DEFAULTSEARCHPATH1 "/dev_hdd0/game/SRB2-PS3_/USRDIR/etc"
-#define DEFAULTSEARCHPATH2 "/dev_usb/SRB2PS3"
 #elif defined (_PSP)
 #define NOCWD
 #define NOHOME
@@ -2449,7 +2439,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 #if defined (_PSP)
 	*freespace = 0;
 #elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII) || defined (_PS3)
+#if defined (SOLARIS) || defined (__HAIKU__) || defined (_WII)
 	*freespace = INT32_MAX;
 	return;
 #else // Both Linux and BSD have this, apparently.
@@ -2677,7 +2667,7 @@ static const char *locateWad(void)
 	if (((envstr = I_GetEnv("SRB2WADDIR")) != NULL) && isWadPathOk(envstr))
 		return envstr;
 
-#if defined(_WIN32_WCE) || defined(_PS3) || defined(_PSP)
+#if defined(_WIN32_WCE) || defined(_PSP)
 	// examine argv[0]
 	strcpy(returnWadPath, myargv[0]);
 	pathonly(returnWadPath);
@@ -2785,7 +2775,7 @@ const char *I_LocateWad(void)
 		// change to the directory where we found srb2.srb
 #if defined (_WIN32) && !defined (_WIN32_WCE)
 		SetCurrentDirectoryA(waddir);
-#elif !defined (_WIN32_WCE) && !defined (_PS3)
+#elif !defined (_WIN32_WCE)
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif

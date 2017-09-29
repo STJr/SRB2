@@ -160,11 +160,6 @@ NOHW=1
 NOPOSTPROCESSING=1
 endif
 
-ifdef PS3N
-NONX86=1
-NOHW=1
-endif
-
 ifdef DJGPPDOS
 include djgppdos/Makefile.cfg
 endif
@@ -523,10 +518,6 @@ endif
 
 ifdef DJGPPDOS
 all:	 pre-build $(BIN)/$(EXENAME)
-endif
-
-ifdef PS3N
-all:	 pre-build $(BIN)/$(PKGNAME)
 endif
 
 ifdef WII

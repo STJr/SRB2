@@ -800,7 +800,7 @@ static void IdentifyVersion(void)
 	}
 	else
 	{
-#if !defined(_WIN32_WCE) && !defined(_PS3)
+#ifndef _WIN32_WCE
 		if (getcwd(srb2path, 256) != NULL)
 			srb2waddir = srb2path;
 		else

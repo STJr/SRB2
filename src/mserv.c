@@ -50,12 +50,8 @@
 #endif
 #include <sys/socket.h> // socket(),...
 #include <netinet/in.h> // sockaddr_in
-#ifdef _PS3
-#include <net/select.h>
-#else
 #include <netdb.h> // getaddrinfo(),...
 #include <sys/ioctl.h>
-#endif
 
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
@@ -209,7 +205,7 @@ typedef SOCKET SOCKET_TYPE;
 #define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined (_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;

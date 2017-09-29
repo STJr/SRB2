@@ -141,7 +141,7 @@ typedef long ssize_t;
 	#endif
 #endif //macintosh
 
-#if defined (PC_DOS) || defined (_WIN32) || defined (_WII) || defined (_PSP) || defined (__HAIKU__) || defined(_NDS)  || defined(_PS3)
+#if defined (PC_DOS) || defined (_WIN32) || defined (_WII) || defined (_PSP) || defined (__HAIKU__) || defined(_NDS)
 #define HAVE_DOSSTR_FUNCS
 #endif
 
@@ -178,9 +178,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 		#define true    TRUE
 		#define boolean BOOL
 	#elif defined(_NDS)
-		#define boolean bool
-	#elif defined(_PS3) // defined(__GNUC__)?
-		#include <stdbool.h>  //_bool_true_false_are_defined?
 		#define boolean bool
 	#else
 		typedef enum {false, true} boolean;

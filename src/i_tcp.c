@@ -23,10 +23,6 @@
 #include <sys/time.h>
 #endif // __OS2__
 
-#ifdef _PS3
-#define NO_IPV6 // PSL1GHT v2 do not have IPv6 support
-#endif
-
 #ifndef NO_IPV6
 #define HAVE_IPV6
 #endif
@@ -70,10 +66,7 @@
 #include <netinet/in.h>
 #endif //normal BSD API
 
-#if defined (_PS3)
-#include <net/select.h>
-#include <net/net.h>
-#elif !defined(USE_WINSOCK)
+#ifndef USE_WINSOCK
 #include <netdb.h>
 #include <sys/ioctl.h>
 #endif //normal BSD API
@@ -197,7 +190,7 @@ typedef SOCKET SOCKET_TYPE;
 #define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined(_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;
@@ -1196,9 +1189,6 @@ boolean I_InitTcpDriver(void)
 			CONS_Debug(DBG_NETPLAY, "No TCP/IP driver detected\n");
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-		netInitialize();
-#endif
 #ifndef __DJGPP__
 		init_tcp_driver = true;
 #endif
@@ -1255,9 +1245,6 @@ void I_ShutdownTcpDriver(void)
 	__lsck_uninit();
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-	netDeinitialize();
-#endif
 	CONS_Printf("shut down\n");
 	init_tcp_driver = false;
 #endif

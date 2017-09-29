@@ -133,20 +133,11 @@ int main(int argc, char **argv)
 	myargv = argv; /// \todo pull out path to exe from this string
 
 #ifdef HAVE_TTF
-#ifdef _PS3
-	// apparently there is a bug in SDL_PSL1GHT which needs this to be set to work around
-	SDL_setenv("SDL_VIDEODRIVER", "psl1ght", 1);
-	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO, SDL_SWSURFACE|SDL_DOUBLEBUF);
-#elif defined(_WIN32)
+#ifdef _WIN32
 	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO|SDL_INIT_AUDIO, SDL_SWSURFACE);
 #else
 	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO, SDL_SWSURFACE);
 #endif
-#endif
-
-#ifdef _PS3
-	// initialise controllers.
-	//ioPadInit(7);
 #endif
 
 // init Wii-specific stuff

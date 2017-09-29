@@ -57,13 +57,11 @@ int currentfonthinting;
 int currentfontoutline;
 #endif
 
-#ifndef _PS3
 typedef struct
 {
 	UINT16 width;
 	UINT16 height;
 } VideoResolution;
-#endif
 UINT8 bitsperpixel;
 
 typedef enum

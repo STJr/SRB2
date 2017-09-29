@@ -109,8 +109,6 @@
 #define MAXWINMODES (1)
 #elif defined (WII)
 #define MAXWINMODES (8)
-#elif defined (_PS3)
-#define MAXWINMODES (26)
 #else
 #define MAXWINMODES (27)
 #endif
@@ -184,9 +182,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 {
 #if !(defined (_WIN32_WCE) || defined (PSP) || defined (GP2X))
 #ifndef WII
-#ifndef _PS3
 	{1920,1200}, // 1.60,6.00
-#endif
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33,5.00
 	{1600,1000}, // 1.60,5.00
@@ -1976,9 +1972,6 @@ void I_StartupGraphics(void)
 	{
 #if defined(_WII)
 		vid.width = 640;
-		vid.height = 480;
-#elif defined(_PS3)
-		vid.width = 720;
 		vid.height = 480;
 #else
 		vid.width = BASEVIDWIDTH;
