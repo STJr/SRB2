@@ -46,9 +46,6 @@
 #if defined (_WIN32_WCE) || defined (_NDS)
 #define MAXVIDWIDTH 320
 #define MAXVIDHEIGHT 200
-#elif defined (GP2X)
-#define MAXVIDWIDTH 320 //720
-#define MAXVIDHEIGHT 240 //576
 #else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.

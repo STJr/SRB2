@@ -19,7 +19,7 @@
 
 #ifdef HAVE_SDL
 
-#if defined (_WIN32_WCE) || defined(GP2X)
+#if defined (_WIN32_WCE)
 #define NOSDLCD
 #endif
 

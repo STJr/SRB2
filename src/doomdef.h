@@ -28,7 +28,7 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(_WIN32_WCE) && !defined(GP2X)
+    //#if !defined(_WIN32_WCE)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
@@ -381,7 +381,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_WIN32_WCE) && !defined(GP2X)
+#if !defined(_WIN32_WCE)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else

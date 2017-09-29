@@ -35,11 +35,6 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,9) && defined (GP2X)
-#define HAVE_GP2XSDL
-#include "SDL_gp2x.h"
-#endif
-
 #if SDL_VERSION_ATLEAST(1,3,0)
 #define SDLK_EQUALS SDLK_KP_EQUALSAS400
 #define SDLK_LMETA SDLK_LGUI
@@ -54,7 +49,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elseif !(defined (_WIN32_WCE) || defined(GP2X))
+#elseif !defined (_WIN32_WCE)
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -99,7 +94,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#if defined (_WIN32_WCE) || defined(GP2X)
+#if defined (_WIN32_WCE)
 #define MAXWINMODES (1)
 #else
 #define MAXWINMODES (27)
@@ -118,11 +113,7 @@ rendermode_t rendermode=render_soft;
 boolean highcolor = false;
 
 // synchronize page flipping with screen refresh
-#if defined(GP2X) && !defined(HAVE_GP2XSDL)
-consvar_t cv_vidwait = {"vid_wait", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
@@ -158,7 +149,7 @@ static const Uint32      surfaceFlagsW = SDL_HWPALETTE/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = SDL_HWPALETTE|SDL_FULLSCREEN;
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouse((Uint16)(x/2),(Uint16)(y/2))
-#if defined (_WIN32_WCE) || defined(GP2X)
+#if defined (_WIN32_WCE)
 static       SDL_bool    videoblitok = SDL_TRUE;
 #else
 static       SDL_bool    videoblitok = SDL_FALSE;
@@ -168,7 +159,7 @@ static       SDL_bool    exposevideo = SDL_FALSE;
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
-#if !(defined (_WIN32_WCE) || defined (GP2X))
+#if !defined (_WIN32_WCE)
 	{1920,1200}, // 1.60,6.00
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33,5.00
@@ -206,12 +197,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	if (bpp < 16)
 		bpp = 16; // 256 mode poo
 #endif
-#ifdef GP2X
-	bpp = 16;
-#ifdef HAVE_GP2XSDL
-	height = 240;
-#endif
-#endif
 #ifdef FILTERS
 	bpp = Setupf2x(width, height, bpp);
 #endif
@@ -230,9 +215,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	//SDL_DC_SetWindow(320,200);
 	SDL_DC_EmulateMouse(SDL_FALSE);
 	SDL_DC_EmulateKeyboard(SDL_TRUE);
-#endif
-#ifdef HAVE_GP2XSDL
-	SDL_ShowCursor(SDL_DISABLE); //For GP2X Open2x
 #endif
 #ifdef FILTERS
 	if (vidSurface && preSurface && f2xSurface)
@@ -604,7 +586,7 @@ static void VID_Command_Info_f (void)
 
 static void VID_Command_ModeList_f(void)
 {
-#if !defined (_WIN32_WCE) && !defined(GP2X)
+#if !defined (_WIN32_WCE)
 	INT32 i;
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -752,134 +734,7 @@ static inline VOID ResetAero(VOID)
 
 static inline void SDLJoyRemap(event_t *event)
 {
-#if defined(GP2X)
-#define GP2X_BUTTON_UP              (0)
-#define GP2X_BUTTON_DOWN            (4)
-#define GP2X_BUTTON_LEFT            (2)
-#define GP2X_BUTTON_RIGHT           (6)
-#define GP2X_BUTTON_UPLEFT          (1)
-#define GP2X_BUTTON_UPRIGHT         (7)
-#define GP2X_BUTTON_DOWNLEFT        (3)
-#define GP2X_BUTTON_DOWNRIGHT       (5)
-#define GP2X_BUTTON_CLICK           (18)
-#define GP2X_BUTTON_A               (12)
-#define GP2X_BUTTON_B               (13)
-#define GP2X_BUTTON_X               (14)
-#define GP2X_BUTTON_Y               (15)
-#define GP2X_BUTTON_L               (10)
-#define GP2X_BUTTON_R               (11)
-#define GP2X_BUTTON_START           (8)
-#define GP2X_BUTTON_SELECT          (9)
-#define GP2X_BUTTON_VOLUP           (16)
-#define GP2X_BUTTON_VOLDOWN         (17)
-	if ((event->type == ev_keydown || event->type == ev_keyup) && (KEY_JOY1 <= event->data1 && event->data1 <= KEY_JOY1+JOYBUTTONS))
-	{
-		INT32 button = event->data1-KEY_JOY1;
-		if (button <= 7)
-		{
-			static UINT8 DPAD = 0;
-			if (event->type == ev_keyup)
-			{
-				event->type = ev_console;
-				DPAD &= ~(1<<button);
-			}
-			else
-			{
-				event->type = ev_joystick;
-				DPAD |= 1<<button;
-			}
-			event->data2 = event->data3 = INT32_MAX;
-			if ((DPAD & (1<<GP2X_BUTTON_UP)) && ((DPAD & (1<<GP2X_BUTTON_UPLEFT)) || (DPAD & (1<<GP2X_BUTTON_UPRIGHT))))
-				button = GP2X_BUTTON_UP;
-			if ((DPAD & (1<<GP2X_BUTTON_LEFT)) && ((DPAD & (1<<GP2X_BUTTON_UPLEFT)) || (DPAD & (1<<GP2X_BUTTON_DOWNLEFT))))
-				button = GP2X_BUTTON_LEFT;
-			if ((DPAD & (1<<GP2X_BUTTON_DOWN)) && ((DPAD & (1<<GP2X_BUTTON_DOWNLEFT)) || (DPAD & (1<<GP2X_BUTTON_DOWNRIGHT))))
-				button = GP2X_BUTTON_DOWN;
-			if ((DPAD & (1<<GP2X_BUTTON_RIGHT)) && ((DPAD & (1<<GP2X_BUTTON_UPRIGHT)) || (DPAD & (1<<GP2X_BUTTON_DOWNRIGHT))))
-				button = GP2X_BUTTON_RIGHT;
-			if (DPAD == 0)
-			{
-				event->type = ev_joystick;
-				event->data2 = event->data3 = 0;
-			}
-			else switch (button)
-			{
-				case GP2X_BUTTON_UP:
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_DOWN:
-					event->data3 = 1;
-					break;
-				case GP2X_BUTTON_LEFT:
-					event->data2 = -1;
-					break;
-				case GP2X_BUTTON_RIGHT:
-					event->data2 = 1;
-					break;
-				case GP2X_BUTTON_UPLEFT:
-					event->data2 = -1;
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_UPRIGHT:
-					event->data2 = 1;
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_DOWNLEFT:
-					event->data2 = -1;
-					event->data3 = 1;
-					break;
-				case GP2X_BUTTON_DOWNRIGHT:
-					event->data2 = 1;
-					event->data3 = 1;
-				default:
-					break;
-			}
-			event->data1 = 0;
-			return;
-		}
-		else switch (button)
-		{
-			case GP2X_BUTTON_CLICK:
-				event->data1 = KEY_ENTER;
-				break;
-			case GP2X_BUTTON_A:
-				event->data1 = KEY_JOY1+0;
-				break;
-			case GP2X_BUTTON_B:
-				event->data1 = KEY_JOY1+2;
-				break;
-			case GP2X_BUTTON_X:
-				event->data1 = KEY_JOY1+3;
-				break;
-			case GP2X_BUTTON_Y:
-				event->data1 = KEY_JOY1+1;
-				break;
-			case GP2X_BUTTON_L:
-				event->data1 = KEY_JOY1+4;
-				break;
-			case GP2X_BUTTON_R:
-				event->data1 = KEY_JOY1+5;
-				break;
-			case GP2X_BUTTON_START:
-				event->data1 = KEY_ESCAPE;
-				break;
-			case GP2X_BUTTON_SELECT:
-				event->data1 = KEY_JOY1+8;
-				break;
-			case GP2X_BUTTON_VOLUP:
-				event->data1 = KEY_JOY1+6;
-				break;
-			case GP2X_BUTTON_VOLDOWN:
-				event->data1 = KEY_JOY1+7;
-				break;
-			default:
-				break;
-		}
-		//I_OutputMsg("Button %i: event key %i and type: %i\n", button, event->data1, event->type);
-	}
-#else
 	(void)event;
-#endif
 }
 
 static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
@@ -1222,10 +1077,6 @@ static inline boolean I_SkipFrame(void)
 		return false;
 
 	skip = !skip;
-
-#if 0 //defined (GP2X)
-	return skip;
-#endif
 
 	switch (gamestate)
 	{

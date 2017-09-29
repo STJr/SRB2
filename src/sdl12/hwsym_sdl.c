@@ -37,10 +37,6 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#ifdef GP2X
-#define NOLOADSO
-#endif
-
 #if SDL_VERSION_ATLEAST(1,2,6) && !defined (NOLOADSO)
 #include "SDL_loadso.h" // 1.2.6+
 #elif !defined (NOLOADSO)

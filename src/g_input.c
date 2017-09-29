@@ -286,17 +286,7 @@ static keyname_t keynames[] =
 	{KEY_2MOUSEWHEELUP, "Wheel 2 UP"},
 	{KEY_2MOUSEWHEELDOWN, "Wheel 2 Down"},
 
-#if defined (GP2X)
-	{KEY_JOY1+0, "JOYA"},
-	{KEY_JOY1+1, "JOYY"},
-	{KEY_JOY1+2, "JOYB"},
-	{KEY_JOY1+3, "JOYX"},
-	{KEY_JOY1+4, "JOYL"},
-	{KEY_JOY1+5, "JOYR"},
-	{KEY_JOY1+6, "JOYVOLUP"},
-	{KEY_JOY1+7, "JOYVOLDOWN"},
-	{KEY_JOY1+8, "JOYSELECT"},
-#elif defined (_NDS)
+#if defined (_NDS)
 	{KEY_JOY1+0, "JOYA"},
 	{KEY_JOY1+1, "JOYB"},
 	{KEY_JOY1+2, "JOYX"},
@@ -378,18 +368,7 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+6, "DBLSEC_MOUSE7"},
 	{KEY_DBL2MOUSE1+7, "DBLSEC_MOUSE8"},
 
-#if defined (GP2X)
-	{KEY_DBLJOY1+0, "DBLJOYA"},
-	{KEY_DBLJOY1+1, "DBLJOYY"},
-	{KEY_DBLJOY1+2, "DBLJOYB"},
-	{KEY_DBLJOY1+3, "DBLJOYX"},
-	{KEY_DBLJOY1+4, "DBLJOYL"},
-	{KEY_DBLJOY1+5, "DBLJOYR"},
-	{KEY_DBLJOY1+6, "DBLJOYVOLUP"},
-	{KEY_DBLJOY1+7, "DBLJOYVOLDOWN"},
-	{KEY_DBLJOY1+8, "DBLJOYSELECT"},
-#define NOMOREJOYBTN_1DBL
-#elif defined (_NDS)
+#if defined (_NDS)
 	{KEY_DBLJOY1+0, "DBLJOYA"},
 	{KEY_DBLJOY1+1, "DBLJOYB"},
 	{KEY_DBLJOY1+2, "DBLJOYX"},
@@ -656,20 +635,7 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	return 0;
 }
 
-#if defined (GP2X)
-void G_Controldefault(void)
-{
-	gamecontrol[gc_fire       ][0] = KEY_JOY1+0; //A
-	gamecontrol[gc_forward    ][0] = KEY_JOY1+1; //Y
-	gamecontrol[gc_jump       ][0] = KEY_JOY1+2; //B
-	gamecontrol[gc_use        ][0] = KEY_JOY1+3; //X
-	gamecontrol[gc_strafeleft ][0] = KEY_JOY1+4; //L
-	gamecontrol[gc_straferight][0] = KEY_JOY1+5; //R
-	gamecontrol[gc_lookup     ][0] = KEY_JOY1+6; //U
-	gamecontrol[gc_lookdown   ][0] = KEY_JOY1+7; //D
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+8; //S
-}
-#elif defined (_NDS)
+#if defined (_NDS)
 void G_Controldefault(void)
 {
 	gamecontrol[gc_fire       ][0] = KEY_JOY1+2; //X

@@ -128,14 +128,7 @@ typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #endif
 
 // Locations for searching the srb2.srb
-#ifdef GP2X
-#define DEFAULTWADLOCATION1 "/mnt/sd"
-#define DEFAULTWADLOCATION2 "/mnt/sd/SRB2"
-#define DEFAULTWADLOCATION3 "/tmp/mnt/sd"
-#define DEFAULTWADLOCATION4 "/tmp/mnt/sd/SRB2"
-#define DEFAULTSEARCHPATH1 "/mnt/sd"
-#define DEFAULTSEARCHPATH2 "/tmp/mnt/sd"
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
 #define DEFAULTWADLOCATION3 "/usr/share/games/SRB2"
@@ -203,9 +196,6 @@ static void JoyReset(SDLJoyInfo_t *JoySet)
 {
 	if (JoySet->dev)
 	{
-#ifdef GP2X //GP2X's SDL does an illegal free on the 1st joystick...
-		if (SDL_JoystickIndex(JoySet->dev) != 0)
-#endif
 		SDL_JoystickClose(JoySet->dev);
 	}
 	JoySet->dev = NULL;
@@ -417,9 +407,7 @@ static void I_StartupConsole(void)
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 
-#if !defined(GP2X) //read is bad on GP2X
 	consolevent = !M_CheckParm("-noconsole");
-#endif
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
@@ -835,22 +823,12 @@ INT32 I_GetKey (void)
 //
 void I_JoyScale(void)
 {
-#ifdef GP2X
-	if (JoyInfo.dev && SDL_JoystickIndex(JoyInfo.dev) == 0)
-		Joystick.bGamepadStyle = true;
-	else
-#endif
 	Joystick.bGamepadStyle = cv_joyscale.value==0;
 	JoyInfo.scale = Joystick.bGamepadStyle?1:cv_joyscale.value;
 }
 
 void I_JoyScale2(void)
 {
-#ifdef GP2X
-	if (JoyInfo2.dev && SDL_JoystickIndex(JoyInfo2.dev) == 0)
-		Joystick.bGamepadStyle = true;
-	else
-#endif
 	Joystick2.bGamepadStyle = cv_joyscale2.value==0;
 	JoyInfo2.scale = Joystick2.bGamepadStyle?1:cv_joyscale2.value;
 }
@@ -2099,7 +2077,7 @@ void I_StartupTimer(void)
 		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
-#elif 0 //#elif !defined(GP2X) // GP2X have broken pthreads?
+#elif 0
 	if (SDL_InitSubSystem(SDL_INIT_TIMER) < 0)
 		I_Error("SRB2: Needs SDL_Timer, Error: %s", SDL_GetError());
 #endif
@@ -2124,11 +2102,7 @@ INT32 I_StartupSystem(void)
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
 	 SDLlinked->major, SDLlinked->minor, SDLlinked->patch);
-#if 0 //#ifdef GP2X //start up everything
-	if (SDL_Init(SDL_INIT_NOPARACHUTE|SDL_INIT_EVERYTHING) < 0)
-#else
 	if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0)
-#endif
 		I_Error("SRB2: SDL System Error: %s", SDL_GetError()); //Alam: Oh no....
 #ifndef NOMUMBLE
 	I_SetupMumble();
@@ -2179,10 +2153,6 @@ void I_Quit(void)
 	}
 death:
 	W_Shutdown();
-#ifdef GP2X
-	chdir("/usr/gp2x");
-	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
-#endif
 	exit(0);
 }
 
@@ -2279,10 +2249,6 @@ void I_Error(const char *error, ...)
 			va_end(argptr);
 #endif
 			W_Shutdown();
-#ifdef GP2X
-			chdir("/usr/gp2x");
-			execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
-#endif
 			exit(-1); // recursive errors detected
 		}
 	}
@@ -2333,10 +2299,6 @@ void I_Error(const char *error, ...)
 	W_Shutdown();
 #if defined (PARANOIA) && defined (__CYGWIN__)
 		*(INT32 *)2 = 4; //Alam: Debug!
-#endif
-#ifdef GP2X
-	chdir("/usr/gp2x");
-	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
 #endif
 	exit(-1);
 }
@@ -2456,10 +2418,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 char *I_GetUserName(void)
 {
-#ifdef GP2X
-	static char username[MAXPLAYERNAME] = "GP2XUSER";
-	return username;
-#elif !defined (_WIN32_WCE)
+#if !defined (_WIN32_WCE)
 	static char username[MAXPLAYERNAME];
 	char *p;
 #ifdef _WIN32

@@ -85,7 +85,7 @@
 //  mixing buffer, and the samplerate of the raw data.
 
 // Needed for calling the actual sound output.
-#if defined (_WIN32_WCE) || defined(GP2X)
+#if defined (_WIN32_WCE)
 #define NUM_CHANNELS            MIX_CHANNELS
 #else
 #define NUM_CHANNELS            MIX_CHANNELS*4
@@ -95,8 +95,6 @@
 
 #if defined (_WIN32_WCE)
 static Uint16 samplecount = 512; //Alam: .5KB samplecount at 11025hz is 46.439909297052154195011337868481ms of buffer
-#elif defined(GP2X)
-static Uint16 samplecount = 128;
 #else
 static Uint16 samplecount = 1024; //Alam: 1KB samplecount at 22050hz is 46.439909297052154195011337868481ms of buffer
 #endif
@@ -151,14 +149,9 @@ static SDL_bool musicStarted = SDL_FALSE;
 #ifdef HAVE_MIXER
 static SDL_mutex *Msc_Mutex = NULL;
 /* FIXME: Make this file instance-specific */
-#ifdef GP2X
-#define MIDI_PATH     "/mnt/sd/srb2"
-#define MIDI_PATH2    "/tmp/mnt/sd/srb2"
-#else
 #define MIDI_PATH     srb2home
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define MIDI_PATH2    "/tmp"
-#endif
 #endif
 #define MIDI_TMPFILE  "srb2music"
 #define MIDI_TMPFILE2 "srb2wav"
@@ -174,7 +167,7 @@ static SDL_bool canlooping = SDL_TRUE;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,7)
 #define USE_RWOPS // ok, USE_RWOPS is in here
-#if defined (_WIN32_WCE) //|| defined(_WIN32) || defined(GP2X)
+#if defined (_WIN32_WCE) //|| defined(_WIN32)
 #undef USE_RWOPS
 #endif
 #endif
@@ -1505,13 +1498,11 @@ void I_InitMusic(void)
 #endif
 	I_OutputMsg("Linked with SDL_mixer version: %d.%d.%d\n",
 	            MIXlinked->major, MIXlinked->minor, MIXlinked->patch);
-#if !defined(GP2X)
 	if (audio.freq < 44100 && !M_CheckParm ("-freq")) //I want atleast 44Khz
 	{
 		audio.samples = (Uint16)(audio.samples*(INT32)(44100/audio.freq));
 		audio.freq = 44100; //Alam: to keep it around the same XX ms
 	}
-#endif
 
 	if (sound_started
 #ifdef HW3SOUND

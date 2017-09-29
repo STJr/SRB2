@@ -121,7 +121,7 @@ int main(int argc, char **argv)
 	logdir = D_Home();
 
 #ifdef LOGMESSAGES
-#if defined(_WIN32_WCE) || defined(GP2X)
+#if defined(_WIN32_WCE)
 	logstream = fopen(va("%s.log",argv[0]), "a");
 #elif defined (DEFAULTDIR)
 	if (logdir)
