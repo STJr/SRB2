@@ -1739,7 +1739,7 @@ static void I_CleanupGME(void *userdata)
 static boolean I_StartGMESong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_LIBGME
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1792,7 +1792,7 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 boolean I_StartDigSong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_MIXER
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1834,7 +1834,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	{
 		size_t scan;
 		const char *dataum = data;
-		XBOXSTATIC char looplength[64];
+		char looplength[64];
 		UINT32 loopstart = 0;
 		UINT8 newcount = 0;
 

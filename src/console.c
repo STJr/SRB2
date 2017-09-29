@@ -1029,10 +1029,10 @@ boolean CON_Responder(event_t *ev)
 	// allow people to use keypad in console (good for typing IP addresses) - Calum
 	if (key >= KEY_KEYPAD7 && key <= KEY_KPADDEL)
 	{
-		XBOXSTATIC char keypad_translation[] = {'7','8','9','-',
-		                                        '4','5','6','+',
-		                                        '1','2','3',
-		                                        '0','.'};
+		char keypad_translation[] = {'7','8','9','-',
+		                             '4','5','6','+',
+		                             '1','2','3',
+		                             '0','.'};
 
 		key = keypad_translation[key - KEY_KEYPAD7];
 	}
@@ -1168,7 +1168,7 @@ static void CON_Print(char *msg)
 
 void CON_LogMessage(const char *msg)
 {
-	XBOXSTATIC char txt[8192], *t;
+	char txt[8192], *t;
 	const char *p = msg, *e = txt+sizeof (txt)-2;
 
 	for (t = txt; *p != '\0'; p++)

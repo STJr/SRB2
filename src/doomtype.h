@@ -357,10 +357,4 @@ typedef UINT32 tic_t;
 #ifndef ATTRNOINLINE
 #define ATTRNOINLINE
 #endif
-#ifndef XBOXSTATIC
-#define XBOXSTATIC
-#endif
-#ifndef FILESTAMP
-#define FILESTAMP
-#endif
 #endif //__DOOMTYPE__

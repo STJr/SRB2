@@ -1884,7 +1884,7 @@ static void readframe(MYFILE *f, INT32 num)
 			{
 				size_t z;
 				boolean found = false;
-				XBOXSTATIC char actiontocompare[32];
+				char actiontocompare[32];
 
 				memset(actiontocompare, 0x00, sizeof(actiontocompare));
 				strlcpy(actiontocompare, word2, sizeof (actiontocompare));
@@ -3032,7 +3032,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 	dbg_line = -1; // start at -1 so the first line is 0.
 	while (!myfeof(f))
 	{
-		XBOXSTATIC char origpos[128];
+		char origpos[128];
 		INT32 size = 0;
 		char *traverse;
 
