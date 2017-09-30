@@ -928,9 +928,7 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 static void Clamp2D(GLenum pname)
 {
 	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP); // fallback clamp
-#ifdef GL_CLAMP_TO_EDGE
 	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP_TO_EDGE);
-#endif
 }
 
 
@@ -957,11 +955,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 					pglBlendFunc(GL_SRC_ALPHA, GL_ZERO);                // 0 alpha = holes in texture
 					break;
 				case PF_Additive & PF_Blending:
-#ifdef ATI_RAGE_PRO_COMPATIBILITY
-					pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
-#else
 					pglBlendFunc(GL_SRC_ALPHA, GL_ONE);                 // src * alpha + dest
-#endif
 					break;
 				case PF_Environment & PF_Blending:
 					pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -1215,15 +1209,11 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 			if (MipMap)
 			{
 				pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
-#ifdef GL_TEXTURE_MIN_LOD
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
-#endif
-#ifdef GL_TEXTURE_MAX_LOD
 				if (pTexInfo->flags & TF_TRANSPARENT)
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
 				else
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
-#endif
 				//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 			}
 			else
@@ -1235,15 +1225,11 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 			if (MipMap)
 			{
 				pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_ALPHA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
-#ifdef GL_TEXTURE_MIN_LOD
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
-#endif
-#ifdef GL_TEXTURE_MAX_LOD
 				if (pTexInfo->flags & TF_TRANSPARENT)
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
 				else
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
-#endif
 				//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 			}
 			else
@@ -1255,15 +1241,11 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 			{
 				pgluBuild2DMipmaps(GL_TEXTURE_2D, textureformatGL, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 				// Control the mipmap level of detail
-#ifdef GL_TEXTURE_MIN_LOD
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0); // the lower the number, the higer the detail
-#endif
-#ifdef GL_TEXTURE_MAX_LOD
 				if (pTexInfo->flags & TF_TRANSPARENT)
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
 				else
 					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 5);
-#endif
 			}
 			else
 				pglTexImage2D(GL_TEXTURE_2D, 0, textureformatGL, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
