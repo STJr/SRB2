@@ -33,8 +33,6 @@
 #       compile all HW render and 3D sound DLLs for the set
 #     opengl_dll
 #       Pure Mingw only, compile OpenGL HW render DLL
-#     minigl_dll
-#       Pure Mingw only, compile MiniGL HW render DLL
 #     ds3d_dll
 #       Pure Mingw only, compile DirectX DirectSound HW sound DLL
 #     fmod_dll
@@ -570,7 +568,7 @@ else
 dll : opengl_dll
 endif
 ifdef MINGW
-all_dll: opengl_dll minigl_dll ds3d_dll fmod_dll openal_dll
+all_dll: opengl_dll ds3d_dll fmod_dll openal_dll
 
 opengl_dll: $(BIN)/r_opengl.dll
 $(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
@@ -580,12 +578,6 @@ $(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
 ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $@
 endif
-
-minigl_dll: $(BIN)/r_minigl.dll
-$(BIN)/r_minigl.dll: $(OBJDIR)/r_minigl.o
-	-$(MKDIR) $(BIN)
-	@echo Linking R_MiniGL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32
 
 ds3d_dll: $(BIN)/s_ds3d.dll
 $(BIN)/s_ds3d.dll: $(OBJDIR)/s_ds3d.o
@@ -719,14 +711,6 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
 
 $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
- doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
- d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
- p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
-	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
-
-$(OBJDIR)/r_minigl.o: hardware/r_minigl/r_minigl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
  hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
