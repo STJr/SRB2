@@ -756,7 +756,7 @@ void G_SetGameModified(boolean silent)
   */
 const char *G_BuildMapName(INT32 map)
 {
-	static char mapname[9] = "MAPXX"; // internal map name (wad resource name)
+	static char mapname[10] = "MAPXX"; // internal map name (wad resource name)
 
 	I_Assert(map > 0);
 	I_Assert(map <= NUMMAPS);
@@ -2105,6 +2105,7 @@ void G_Ticker(boolean run)
 
 		case GS_TITLESCREEN:
 			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
+			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 			F_TitleScreenTicker(run);
 			break;

@@ -2536,7 +2536,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			error = true;
 			break;
 		}
-		//fall down
+		/* FALLTHRU */
 	case GT_TAG:
 		switch (NetPacket.packet.newteam)
 		{

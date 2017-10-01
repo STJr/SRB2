@@ -316,6 +316,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -364,6 +365,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;

@@ -483,9 +483,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_REDTEAMRING:
 			if (player->ctfteam != 1)
 				return;
+			/* FALLTHRU */
 		case MT_BLUETEAMRING: // Yes, I'm lazy. Oh well, deal with it.
 			if (special->type == MT_BLUETEAMRING && player->ctfteam != 2)
 				return;
+			/* FALLTHRU */
 		case MT_RING:
 		case MT_FLINGRING:
 			if (!(P_CanPickupItem(player, false)))
@@ -3396,7 +3398,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 				break;
 			}
-			// fallthrough
+			/* FALLTHRU */
 		default:
 			P_SetMobjState(target, target->info->painstate);
 			break;

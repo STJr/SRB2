@@ -4824,9 +4824,11 @@ void A_UnidusBall(mobj_t *actor)
 		case 0: // at least one frame where not dashing
 			if (!skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 1: // at least one frame where ARE dashing
 			if (skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 2: // not dashing again?
 			if (skull) break;
 			// launch.
@@ -6065,7 +6067,7 @@ void A_Boss7Chase(mobj_t *actor)
 					break;
 				}
 				actor->threshold++;
-				// fall into...
+				/* FALLTHRU */
 			case 1: // Chaingun Goop
 				A_FaceTarget(actor);
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
@@ -10191,7 +10193,7 @@ void A_FlickyAim(mobj_t *actor)
 	{
 		angle_t posvar;
 		fixed_t chasevar, chasex, chasey;
-		
+
 		if (flickyhitwall)
 			actor->movedir *= -1;
 
