@@ -174,6 +174,10 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->spinitem);
 	else if (fastcmp(field,"revitem"))
 		lua_pushinteger(L, plr->revitem);
+	else if (fastcmp(field,"followitem"))
+		lua_pushinteger(L, plr->followitem);
+	else if (fastcmp(field,"followmobj"))
+		LUA_PushUserdata(L, plr->followmobj, META_MOBJ);
 	else if (fastcmp(field,"actionspd"))
 		lua_pushfixed(L, plr->actionspd);
 	else if (fastcmp(field,"mindash"))
@@ -441,6 +445,10 @@ static int player_set(lua_State *L)
 		plr->spinitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"revitem"))
 		plr->revitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followitem"))
+		plr->followitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followmobj"))
+		plr->followmobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))

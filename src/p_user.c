@@ -591,6 +591,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->mo->flags &= ~MF_NOGRAVITY;
 
 	player->mo->skin = &skins[player->skin];
+	player->followitem = skins[player->skin].followitem;
 	player->mo->color = player->skincolor;
 
 	// Restore aiming angle
@@ -666,6 +667,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 		player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
+		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
 	player->nightstime = player->startedtime = nighttime*TICRATE;
@@ -10165,6 +10167,11 @@ void P_PlayerAfterThink(player_t *player)
 			if (thiscam && thiscam->chase)
 				P_MoveChaseCamera(player, thiscam, false);
 		}
+		if (player->followmobj)
+		{
+			P_RemoveMobj(player->followmobj);
+			player->followmobj = NULL;
+		}
 		return;
 	}
 
@@ -10456,4 +10463,31 @@ void P_PlayerAfterThink(player_t *player)
 
 	if (P_IsObjectOnGround(player->mo))
 		player->mo->pmomz = 0;
+
+	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))
+	{
+		P_RemoveMobj(player->followmobj);
+		player->followmobj = NULL;
+	}
+
+	if (!player->spectator && player->mo->health && player->followitem)
+	{
+		if (!player->followmobj || P_MobjWasRemoved(player->followmobj))
+			player->followmobj = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, player->followitem);
+
+		if (player->followmobj)
+		{
+#ifdef HAVE_BLUA
+			if (LUAh_FollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
+				{;}
+			//else
+#endif
+			/*switch (player->followmobj->type)
+			{
+				case MT_ALTVIEWMAN:
+					break;
+				;
+			}*/
+		}
+	}
 }
