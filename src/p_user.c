@@ -1553,9 +1553,7 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 //
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 {
-	mobj_t *ghost;
-
-	ghost = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_GHOST);
+	mobj_t *ghost = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_GHOST);
 
 	P_SetScale(ghost, mobj->scale);
 	ghost->destscale = mobj->scale;
@@ -1580,6 +1578,16 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	if (mobj->flags2 & MF2_OBJECTFLIP)
 		ghost->flags |= MF2_OBJECTFLIP;
+
+	if (mobj->player && mobj->player->followmobj)
+	{
+		// can't do right now - followmobjs update at the end of the frame, so the ghost would be in the wrong position...
+		//mobj->player->followmobj->flags2 |= MF2_BOSSNOTRAP;
+		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
+		P_SetTarget(&ghost2->tracer, ghost);
+		P_SetTarget(&ghost->tracer, ghost2);
+		ghost2->flags2 |= MF2_LINKDRAW;
+	}
 
 	return ghost;
 }
@@ -9898,10 +9906,17 @@ void P_PlayerThink(player_t *player)
 	{
 		mobj_t *gmobj = P_SpawnGhostMobj(player->mo);
 		gmobj->fuse = 2;
+		if (gmobj->tracer)
+			gmobj->tracer->fuse = 2;
 		if (leveltime & 1)
 		{
 			gmobj->frame &= ~FF_TRANSMASK;
 			gmobj->frame |= tr_trans70<<FF_TRANSSHIFT;
+			if (gmobj->tracer)
+			{
+				gmobj->tracer->frame &= ~FF_TRANSMASK;
+				gmobj->tracer->frame |= tr_trans70<<FF_TRANSSHIFT;
+			}
 		}
 
 		// Hide the mobj from our sights if we're the displayplayer and chasecam is off,
@@ -10473,21 +10488,31 @@ void P_PlayerAfterThink(player_t *player)
 	if (!player->spectator && player->mo->health && player->followitem)
 	{
 		if (!player->followmobj || P_MobjWasRemoved(player->followmobj))
+		{
 			player->followmobj = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, player->followitem);
+			P_SetTarget(&player->followmobj->tracer, player->mo);
+			player->followmobj->flags2 |= MF2_LINKDRAW;
+		}
 
 		if (player->followmobj)
 		{
 #ifdef HAVE_BLUA
 			if (LUAh_FollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
 				{;}
-			//else
+			else
 #endif
-			/*switch (player->followmobj->type)
 			{
-				case MT_ALTVIEWMAN:
-					break;
-				;
-			}*/
+				/*switch (player->followmobj->type)
+				{
+					case MT_ALTVIEWMAN:
+						break;
+					;
+				}*/
+				if (player->followmobj && !P_MobjWasRemoved(player->followmobj))
+				{
+					player->followmobj->flags2 = (player->followmobj->flags2 & ~(MF2_SHADOW|MF2_DONTDRAW))|(player->mo->flags2 & (MF2_SHADOW|MF2_DONTDRAW));
+				}
+			}
 		}
 	}
 }
