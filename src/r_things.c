@@ -1385,12 +1385,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	// specific translucency
 	if (!cv_translucency.value)
 		; // no translucency
-	else if (oldthing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
+	else if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
 		vis->transmap = transtables + (oldthing->frame & FF_TRANSMASK) - 0x10000;
 
-	if ((oldthing->frame & FF_FULLBRIGHT) || (oldthing->flags2 & MF2_SHADOW))
+	if (oldthing->frame & FF_FULLBRIGHT || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;
 
 	if (vis->cut & SC_FULLBRIGHT
@@ -2438,7 +2438,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND
-		&& ++i != 32) // recursion limiter
+		&& ++i < 32) // recursion limiter
 	{
 		if (spr2 & FF_SPR2SUPER)
 		{

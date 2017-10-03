@@ -479,6 +479,19 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"DRLB",
 	"DRLC",
 
+	"TAL0",
+	"TAL1",
+	"TAL2",
+	"TAL3",
+	"TAL4",
+	"TAL5",
+	"TAL6",
+	"TAL7",
+	"TAL8",
+	"TAL9",
+	"TALA",
+	"TALB",
+
 	"SIGN",
 	"LIFE"
 };
@@ -562,8 +575,21 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_NGTB, // SPR2_DRLB,
 	SPR2_NGTC, // SPR2_DRLC,
 
+	0, // SPR2_TAL0,
+	SPR2_TAL0, // SPR2_TAL1,
+	SPR2_TAL1, // SPR2_TAL2,
+	SPR2_TAL2, // SPR2_TAL3,
+	SPR2_TAL1, // SPR2_TAL4,
+	SPR2_TAL4, // SPR2_TAL5,
+	SPR2_TAL0, // SPR2_TAL6,
+	SPR2_TAL3, // SPR2_TAL7,
+	SPR2_TAL7, // SPR2_TAL8,
+	SPR2_TAL0, // SPR2_TAL9,
+	SPR2_TAL9, // SPR2_TALA,
+	SPR2_TAL0, // SPR2_TALB,
+
 	0, // SPR2_SIGN,
-	0, // SPR2_LIFE
+	0, // SPR2_LIFE,
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -711,6 +737,20 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_DRLB, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLB}, // S_PLAY_NIGHTS_DRILLB
 	{SPR_PLAY, SPR2_NGTC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_FLYC},   // S_PLAY_NIGHTS_FLYC
 	{SPR_PLAY, SPR2_DRLC, 2, {NULL}, 0, 0, S_PLAY_NIGHTS_DRILLC}, // S_PLAY_NIGHTS_DRILLC
+
+	// c:
+	{SPR_PLAY, SPR2_TAL0|FF_SPR2MIDSTART,  5, {NULL}, 0, 0, S_TAILSOVERLAY_STAND}, // S_TAILSOVERLAY_STAND
+	{SPR_PLAY, SPR2_TAL1|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_0DEGREES}, // S_TAILSOVERLAY_0DEGREES
+	{SPR_PLAY, SPR2_TAL2|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_PLUS30DEGREES}, // S_TAILSOVERLAY_PLUS30DEGREES
+	{SPR_PLAY, SPR2_TAL3|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_PLUS60DEGREES}, // S_TAILSOVERLAY_PLUS60DEGREES
+	{SPR_PLAY, SPR2_TAL4|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_MINUS30DEGREES}, // S_TAILSOVERLAY_MINUS30DEGREES
+	{SPR_PLAY, SPR2_TAL5|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_MINUS60DEGREES}, // S_TAILSOVERLAY_MINUS60DEGREES
+	{SPR_PLAY, SPR2_TAL6|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_RUN}, // S_TAILSOVERLAY_RUN
+	{SPR_PLAY, SPR2_TAL7|FF_SPR2MIDSTART,  4, {NULL}, 0, 0, S_TAILSOVERLAY_FLY}, // S_TAILSOVERLAY_FLY
+	{SPR_PLAY, SPR2_TAL8|FF_SPR2MIDSTART,  4, {NULL}, 0, 0, S_TAILSOVERLAY_TIRE}, // S_TAILSOVERLAY_TIRE
+	{SPR_PLAY, SPR2_TAL9|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_PAIN}, // S_TAILSOVERLAY_PAIN
+	{SPR_PLAY, SPR2_TALA|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_GASP}, // S_TAILSOVERLAY_GASP
+	{SPR_PLAY, SPR2_TALB                , 35, {NULL}, 0, 0, S_TAILSOVERLAY_EDGE}, // S_TAILSOVERLAY_EDGE
 
 	// Blue Crawla
 	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},   // S_POSS_STND
@@ -3233,6 +3273,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE, // flags
 		(statenum_t)MT_NULL // raisestate
+	},
+
+	{           // MT_TAILSOVERLAY
+		-1,             // doomednum
+		S_INVISIBLE,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		16*FRACUNIT,    // radius
+		48*FRACUNIT,    // height
+		1,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
 	},
 
 	{           // MT_BLUECRAWLA

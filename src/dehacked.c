@@ -2831,6 +2831,11 @@ static void readmaincfg(MYFILE *f)
 				bootmap = (INT16)value;
 				//titlechanged = true;
 			}
+			else if (fastcmp(word, "STARTCHAR"))
+			{
+				startchar = (INT16)value;
+				char_on = -1;
+			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
 		}
@@ -3526,6 +3531,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_NIGHTS_DRILLB",
 	"S_PLAY_NIGHTS_FLYC",
 	"S_PLAY_NIGHTS_DRILLC",
+
+	// c:
+	"S_TAILSOVERLAY_STAND",
+	"S_TAILSOVERLAY_0DEGREES",
+	"S_TAILSOVERLAY_PLUS30DEGREES",
+	"S_TAILSOVERLAY_PLUS60DEGREES",
+	"S_TAILSOVERLAY_MINUS30DEGREES",
+	"S_TAILSOVERLAY_MINUS60DEGREES",
+	"S_TAILSOVERLAY_RUN",
+	"S_TAILSOVERLAY_FLY",
+	"S_TAILSOVERLAY_TIRE",
+	"S_TAILSOVERLAY_PAIN",
+	"S_TAILSOVERLAY_GASP",
+	"S_TAILSOVERLAY_EDGE",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -5881,6 +5900,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
+	"MT_TAILSOVERLAY", // c:
 
 	// Enemies
 	"MT_BLUECRAWLA",

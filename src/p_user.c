@@ -10502,15 +10502,201 @@ void P_PlayerAfterThink(player_t *player)
 			else
 #endif
 			{
-				/*switch (player->followmobj->type)
+				switch (player->followmobj->type)
 				{
-					case MT_ALTVIEWMAN:
+					case MT_TAILSOVERLAY: // c:
+						{
+							// init...
+							boolean smilesonground = P_IsObjectOnGround(player->mo);
+							angle_t horizangle = player->drawangle;
+							fixed_t zoffs = 0;
+							fixed_t backwards = -1*FRACUNIT;
+							boolean doroll = (player->panim == PA_ROLL || player->panim == PA_JUMP);
+							angle_t rollangle;
+							boolean panimchange;
+							INT32 ticnum = 0;
+							statenum_t chosenstate;
+
+							if (!player->followmobj->skin)
+							{
+								player->followmobj->skin = player->mo->skin;
+								P_SetMobjState(player->followmobj, S_TAILSOVERLAY_STAND);
+								player->followmobj->movecount = -1;
+							}
+
+							panimchange = (player->followmobj->movecount != (INT32)player->panim);
+
+							// initial position...
+							if (doroll)
+							{
+								fixed_t testval, zdist;
+								if (player->speed < FRACUNIT)
+									testval = FRACUNIT;
+								else
+								{
+									testval = (FixedMul(player->speed, FINECOSINE((horizangle - R_PointToAngle2(0, 0, player->rmomx, player->rmomy)) >> ANGLETOFINESHIFT)));
+									if (testval < FRACUNIT)
+										testval = FRACUNIT;
+								}
+								if (smilesonground && !player->mo->reactiontime)
+									zdist = (player->mo->z - player->followmobj->threshold);
+								else
+									zdist = player->mo->momz;
+								rollangle = R_PointToAngle2(0, 0, testval, -P_MobjFlip(player->mo)*zdist);
+								zoffs = 3*FRACUNIT + 12*FINESINE(rollangle >> ANGLETOFINESHIFT);
+								backwards = -12*FINECOSINE(rollangle >> ANGLETOFINESHIFT);
+							}
+							else if (player->panim == PA_RUN)
+								backwards = -5*FRACUNIT;
+							else if (player->panim == PA_SPRING)
+							{
+								zoffs += 4*FRACUNIT;
+								backwards /= 2;
+							}
+							else if (player->panim == PA_PAIN)
+								backwards /= 16;
+							else if (player->mo->state-states == S_PLAY_GASP)
+							{
+								backwards /= 16;
+								zoffs += 12*FRACUNIT;
+							}
+							else if (player->mo->state-states == S_PLAY_EDGE)
+							{
+								backwards /= 16;
+								zoffs = 3*FRACUNIT;
+							}
+							else if (player->panim == PA_ABILITY2)
+							{
+								zoffs = -7*FRACUNIT;
+								backwards = -9*FRACUNIT;
+							}
+							else if (player->mo->sprite2 == SPR2_FLY || player->mo->sprite2 == SPR2_TIRE)
+								backwards = -5*FRACUNIT;
+
+							// sprite...
+							if (doroll)
+							{
+								statenum_t add = ((rollangle > ANGLE_180) ? 2 : 0);
+								if (add)
+									rollangle = InvAngle(rollangle);
+								rollangle += ANG15; // modify the thresholds to be nice clean numbers
+								if (rollangle > ANG60)
+									chosenstate = S_TAILSOVERLAY_PLUS60DEGREES + add;
+								else if (rollangle > ANG30)
+									chosenstate = S_TAILSOVERLAY_PLUS30DEGREES + add;
+								else
+									chosenstate = S_TAILSOVERLAY_0DEGREES;
+							}
+							else if (player->panim == PA_SPRING)
+								chosenstate = S_TAILSOVERLAY_MINUS60DEGREES;
+							else if (player->panim == PA_FALL || player->mo->state-states == S_PLAY_RIDE)
+								chosenstate = S_TAILSOVERLAY_PLUS60DEGREES;
+							else if (player->panim == PA_PAIN)
+								chosenstate = S_TAILSOVERLAY_PAIN;
+							else if (player->mo->state-states == S_PLAY_GASP)
+								chosenstate = S_TAILSOVERLAY_GASP;
+							else if (player->mo->state-states == S_PLAY_EDGE)
+								chosenstate = S_TAILSOVERLAY_EDGE;
+							else if (player->panim == PA_RUN)
+								chosenstate = S_TAILSOVERLAY_RUN;
+							else if (player->panim == PA_WALK)
+							{
+								if (player->speed >= FixedMul(player->runspeed/2, player->mo->scale))
+									chosenstate = S_TAILSOVERLAY_0DEGREES;
+								else
+									chosenstate = S_TAILSOVERLAY_MINUS30DEGREES;
+							}
+							else if (player->mo->sprite2 == SPR2_FLY)
+								chosenstate = S_TAILSOVERLAY_FLY;
+							else if (player->mo->sprite2 == SPR2_TIRE)
+								chosenstate = S_TAILSOVERLAY_TIRE;
+							else if (player->panim == PA_ABILITY2)
+								chosenstate = S_TAILSOVERLAY_PLUS30DEGREES;
+							else if (player->panim == PA_IDLE)
+								chosenstate = S_TAILSOVERLAY_STAND;
+							else
+								chosenstate = S_INVISIBLE;
+
+							// state...
+							if (panimchange)
+							{
+								player->followmobj->sprite2 = -1;
+								P_SetMobjState(player->followmobj, chosenstate);
+							}
+							else
+							{
+								if (player->followmobj->state != states+chosenstate)
+								{
+									if (states[chosenstate].sprite == SPR_PLAY)
+										player->followmobj->sprite2 = P_GetSkinSprite2(((skin_t *)player->followmobj->skin), (states[chosenstate].frame & FF_FRAMEMASK), player);
+									P_SetMobjState(player->followmobj, chosenstate);
+								}
+							}
+
+							if (player->fly1 != 0 && player->powers[pw_tailsfly] != 0 && !smilesonground)
+								P_SetMobjState(player->followmobj, chosenstate);
+
+							// animation...
+							if (player->panim == PA_SPRING || player->panim == PA_FALL || player->mo->state-states == S_PLAY_RIDE)
+							{
+								if (FixedDiv(abs(player->mo->momz), player->mo->scale) < 20<<FRACBITS)
+									ticnum = 2;
+								else
+									ticnum = 1;
+							}
+							else if (player->panim == PA_PAIN)
+								ticnum = 2;
+							else if (player->mo->state-states == S_PLAY_GASP)
+								player->followmobj->tics = -1;
+							else if (player->mo->sprite2 == SPR2_TIRE)
+								ticnum = 4;
+							else if (player->panim != PA_IDLE)
+								ticnum = player->mo->tics;
+
+							if (ticnum && player->followmobj->tics > ticnum)
+								player->followmobj->tics = ticnum;
+
+							// final handling...
+							player->followmobj->color = player->mo->color;
+							player->followmobj->threshold = player->mo->z;
+							player->followmobj->movecount = player->panim;
+							player->followmobj->angle = horizangle;
+							player->followmobj->scale = player->mo->scale;
+							P_SetScale(player->followmobj, player->mo->scale);
+							player->followmobj->destscale = player->mo->destscale;
+							player->followmobj->radius = player->mo->radius;
+							player->followmobj->height = player->mo->height;
+							zoffs = FixedMul(zoffs, player->followmobj->scale);
+
+							if (player->mo->eflags & MFE_VERTICALFLIP)
+							{
+								player->followmobj->eflags |= MFE_VERTICALFLIP;
+								player->followmobj->flags2 |= MF2_OBJECTFLIP;
+								zoffs = player->mo->height - player->followmobj->height - zoffs;
+							}
+							else
+							{
+								player->followmobj->eflags &= ~MFE_VERTICALFLIP;
+								player->followmobj->flags2 &= ~MF2_OBJECTFLIP;
+							}
+
+							P_UnsetThingPosition(player->followmobj);
+							player->followmobj->x = player->mo->x + P_ReturnThrustX(player->followmobj, player->followmobj->angle, FixedMul(backwards, player->followmobj->scale));
+							player->followmobj->y = player->mo->y + P_ReturnThrustY(player->followmobj, player->followmobj->angle, FixedMul(backwards, player->followmobj->scale));
+							player->followmobj->z = player->mo->z + zoffs;
+							P_SetThingPosition(player->followmobj);
+						}
 						break;
-					;
-				}*/
+					default:
+						var1 = 1;
+						var2 = 0;
+						A_CapeChase(player->followmobj);
+						break;
+				}
+
 				if (player->followmobj && !P_MobjWasRemoved(player->followmobj))
 				{
-					player->followmobj->flags2 = (player->followmobj->flags2 & ~(MF2_SHADOW|MF2_DONTDRAW))|(player->mo->flags2 & (MF2_SHADOW|MF2_DONTDRAW));
+					player->followmobj->flags2 = (player->followmobj->flags2 & ~MF2_DONTDRAW)|(player->mo->flags2 & MF2_DONTDRAW);
 				}
 			}
 		}
