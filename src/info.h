@@ -216,6 +216,7 @@ void A_FlickyCheck();
 void A_FlickyHeightCheck();
 void A_FlickyFlutter();
 void A_FlameParticle();
+void A_FadeOverlay();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -777,15 +778,12 @@ typedef enum state
 	S_PLAY_MELEE_LANDING,
 
 	// SF_SUPER
-	S_PLAY_SUPER_TRANS,
+	S_PLAY_SUPER_TRANS1,
 	S_PLAY_SUPER_TRANS2,
 	S_PLAY_SUPER_TRANS3,
 	S_PLAY_SUPER_TRANS4,
 	S_PLAY_SUPER_TRANS5,
 	S_PLAY_SUPER_TRANS6,
-	S_PLAY_SUPER_TRANS7,
-	S_PLAY_SUPER_TRANS8,
-	S_PLAY_SUPER_TRANS9,
 
 	// technically the player goes here but it's an infinite tic state
 	S_OBJPLACE_DUMMY,
@@ -801,15 +799,12 @@ typedef enum state
 	S_PLAY_SIGN,
 
 	// NiGHTS character (uses player sprite)
-	S_PLAY_NIGHTS_TRANS,
+	S_PLAY_NIGHTS_TRANS1,
 	S_PLAY_NIGHTS_TRANS2,
 	S_PLAY_NIGHTS_TRANS3,
 	S_PLAY_NIGHTS_TRANS4,
 	S_PLAY_NIGHTS_TRANS5,
 	S_PLAY_NIGHTS_TRANS6,
-	S_PLAY_NIGHTS_TRANS7,
-	S_PLAY_NIGHTS_TRANS8,
-	S_PLAY_NIGHTS_TRANS9,
 
 	S_PLAY_NIGHTS_STAND,
 	S_PLAY_NIGHTS_FLOAT,

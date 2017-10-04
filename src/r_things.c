@@ -2677,8 +2677,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
-				newcolor = skin->prefcolor; // will be updated in thinker to flashing
 				player->followitem = skin->followitem;
+				if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+					newcolor = skin->prefcolor; // will be updated in thinker to flashing
 			}
 			player->mo->skin = skin;
 			if (newcolor)

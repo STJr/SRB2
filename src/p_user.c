@@ -666,7 +666,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 	{
 		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
-		player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
+		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+			player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
@@ -674,7 +675,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
-	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS);
+	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
 	{
@@ -1001,10 +1002,10 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
 
 	// Transformation animation
-	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS);
+	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
-	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+	player->pflags |= PF_NOJUMPDAMAGE; // just to avoid recurling but still allow thok
 
 	if (giverings)
 		player->rings = 50;
@@ -3658,9 +3659,8 @@ static void P_DoSuperStuff(player_t *player)
 {
 	mobj_t *spark;
 	ticcmd_t *cmd = &player->cmd;
-	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS]
-	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS9]
-	|| (player->mo->state == &states[S_PLAY_SUPER_TRANS9] && player->mo->tics > 1))) // needed to prevent one-frame old colour...
+	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS1]
+	&& player->mo->state < &states[S_PLAY_SUPER_TRANS6])
 		return; // don't do anything right now, we're in the middle of transforming!
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -3697,13 +3697,18 @@ static void P_DoSuperStuff(player_t *player)
 			return;
 		}
 
+		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
+		? (SKINCOLOR_SUPERSILVER1 + 5*(((signed)leveltime >> 1) % 7)) // A wholesome easter egg.
+		: skins[player->skin].supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
+
+		G_GhostAddColor(GHC_SUPER);
+
+		if (player->mo->state == &states[S_PLAY_SUPER_TRANS6]) // stop here for now
+			return;
+
 		// Deplete one ring every second while super
 		if ((leveltime % TICRATE == 0) && !(player->exiting))
 			player->rings--;
-
-		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
-		? (SKINCOLOR_SUPERSILVER1 + 5*((leveltime >> 1) % 7)) // A wholesome easter egg.
-		: skins[player->skin].supercolor + (unsigned)abs( ( (signed)(leveltime >> 1) % 9) - 4); // This is where super flashing is handled.
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->powers[pw_carry])
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
@@ -3712,8 +3717,6 @@ static void P_DoSuperStuff(player_t *player)
 			spark->destscale = player->mo->scale;
 			P_SetScale(spark, player->mo->scale);
 		}
-
-		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
 		if (player->rings <= 0 || player->exiting)
@@ -6091,14 +6094,14 @@ static void P_NiGHTSMovement(player_t *player)
 			&& (players[i].capsule && players[i].capsule->reactiontime))
 				capsule = true;
 		if (!capsule
-		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
-			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
+		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 		&& !player->exiting)
 			player->nightstime--;
 	}
 	else if (gametype != GT_RACE && gametype != GT_COMPETITION
-	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
-			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
+	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
 	&& !player->exiting)
 		player->nightstime--;
@@ -6237,8 +6240,8 @@ static void P_NiGHTSMovement(player_t *player)
 		return;
 	}
 
-	if (player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
-		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
+	if (player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
 		return;
@@ -6842,7 +6845,7 @@ static void P_MovePlayer(player_t *player)
 
 	fixed_t runspd;
 
-	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS] && player->mo->state <= &states[S_PLAY_SUPER_TRANS9])
+	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS1] && player->mo->state <= &states[S_PLAY_SUPER_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
 		return;
@@ -6911,12 +6914,12 @@ static void P_MovePlayer(player_t *player)
 	else if (maptol & TOL_NIGHTS)
 	{
 		if ((player->powers[pw_carry] == CR_NIGHTSMODE)
-		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
-		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6] // NOT 9 - it's 6 when the player turns their supercolor.
-		&& !(player->exiting)))
+		&& (player->exiting
+		|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + (unsigned)abs(((signed)(leveltime >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
+			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
 		}
 
 		if (!player->capsule && !player->bonustime)
@@ -9990,7 +9993,9 @@ void P_PlayerThink(player_t *player)
 		player->powers[pw_nocontrol] = 0;
 
 	//pw_super acts as a timer now
-	if (player->powers[pw_super])
+	if (player->powers[pw_super]
+	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
+	|| player->mo->state > &states[S_PLAY_SUPER_TRANS6]))
 		player->powers[pw_super]++;
 
 	if (player->powers[pw_carry] == CR_BRAKGOOP)
