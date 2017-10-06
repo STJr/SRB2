@@ -3288,7 +3288,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8,              // speed
 		16*FRACUNIT,    // radius
 		48*FRACUNIT,    // height
-		1,              // display offset
+		2,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11764,7 +11764,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_ELEMENTAL,   // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11791,7 +11791,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_ATTRACT,     // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11818,7 +11818,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_FORCE,       // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11845,7 +11845,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_ARMAGEDDON,  // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11872,7 +11872,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_WHIRLWIND,        // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11899,7 +11899,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_PITY,        // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11926,7 +11926,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_FLAMEAURA,   // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		-2,             // display offset
+		-4,             // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11953,7 +11953,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_BUBBLEWRAP,  // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		2,              // display offset
+		4,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
@@ -11980,7 +11980,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_THUNDERCOIN, // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		-2,             // display offset
+		-4,             // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
