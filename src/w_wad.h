@@ -43,7 +43,13 @@ typedef struct
 } ATTRPACK filelump_t;
 
 // Available compression methods for lumps.
-enum compmethod{CM_NONE, CM_DEFLATE, CM_LZF, CM_UNSUPPORTED};
+typedef enum 
+{
+	CM_NOCOMPRESSION, 
+	CM_DEFLATE, 
+	CM_LZF, 
+	CM_UNSUPPORTED
+} compmethod;
 
 //  a memory entry of the wad directory
 typedef struct
@@ -54,7 +60,7 @@ typedef struct
 	char *name2; // Used by PK3s. Dynamically allocated name.
 	size_t size; // real (uncompressed) size
 	INT32 compressed; // i
-	enum compmethod compression; // lump compression method
+	compmethod compression; // lump compression method
 } lumpinfo_t;
 
 // =========================================================================

@@ -553,7 +553,7 @@ UINT16 W_InitFile(const char *filename)
 				switch(eCompression)
 				{
 				case 0:
-					lump_p->compression = CM_NONE;
+					lump_p->compression = CM_NOCOMPRESSION;
 					break;
 				case 8:
 					lump_p->compression = CM_DEFLATE;
@@ -584,7 +584,7 @@ UINT16 W_InitFile(const char *filename)
 				lumpinfo[numlumps].position = 0;
 				lumpinfo[numlumps].size = 0;
 				lumpinfo[numlumps].disksize = 0;
-				lumpinfo[numlumps].compression = CM_NONE;
+				lumpinfo[numlumps].compression = CM_NOCOMPRESSION;
 				numlumps++;*/
 				break;
 			}
@@ -670,7 +670,7 @@ UINT16 W_InitFile(const char *filename)
 				else
 				{
 					lump_p->size -= 4;
-					lump_p->compression = CM_NONE;
+					lump_p->compression = CM_NOCOMPRESSION;
 				}
 
 				lump_p->position += 4;
@@ -678,7 +678,7 @@ UINT16 W_InitFile(const char *filename)
 			}
 			else
 			{
-				lump_p->compression = CM_NONE;
+				lump_p->compression = CM_NOCOMPRESSION;
 			}
 			memset(lump_p->name, 0x00, 9);
 			strncpy(lump_p->name, fileinfo->name, 8);
@@ -1092,7 +1092,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	// But let's not copy it yet. We support different compression formats on lumps, so we need to take that into account.
 	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
-	case CM_NONE:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
+	case CM_NOCOMPRESSION:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
 		return fread(dest, 1, size, handle);
 	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
