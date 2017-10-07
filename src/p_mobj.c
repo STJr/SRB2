@@ -6890,9 +6890,9 @@ void P_MobjThinker(mobj_t *mobj)
 				P_SetScale(mobj, mobj->target->scale);
 
 				if (!(mobj->eflags & MFE_VERTICALFLIP))
-					mobj->z = mobj->target->z + mobj->target->height + FixedMul((16 + abs((leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale);
+					mobj->z = mobj->target->z + mobj->target->height + FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale);
 				else
-					mobj->z = mobj->target->z - FixedMul((16 + abs((leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale) - mobj->height;
+					mobj->z = mobj->target->z - FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale) - mobj->height;
 				break;
 			case MT_DROWNNUMBERS:
 				if (!mobj->target)
