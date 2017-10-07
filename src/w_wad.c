@@ -439,7 +439,7 @@ UINT16 W_InitFile(const char *filename)
 		char *s;
 		int c;
 		UINT32 position;
-		boolean matched = FALSE;
+		boolean matched = false;
 		lumpinfo_t *lump_p;
 
 		type = RET_PK3;
@@ -463,7 +463,7 @@ UINT16 W_InitFile(const char *filename)
 				s++;
 				if (*s == 0x00) // The array pointer has reached the key char which marks the end. It means we have matched the signature.
 				{
-					matched = TRUE;
+					matched = true;
 					CONS_Debug(DBG_SETUP, "Found PK3 central directory at position %ld.\n", ftell(handle));
 					break;
 				}
@@ -471,7 +471,7 @@ UINT16 W_InitFile(const char *filename)
 		}
 
 		// Error if we couldn't find the central directory at all. It likely means this is not a ZIP/PK3 file.
-		if (matched == FALSE)
+		if (matched == false)
 		{
 			CONS_Alert(CONS_ERROR, "No central directory inside PK3! File may be corrupted or incomplete.\n");
 			return INT16_MAX;
