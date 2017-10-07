@@ -4753,8 +4753,6 @@ static polyplaneinfo_t *polyplaneinfo = NULL;
 #ifndef SORTING
 size_t numfloors = 0;
 #else
-//static floorinfo_t *floorinfo = NULL;
-//static size_t numfloors = 0;
 //Hurdler: 3D water sutffs
 typedef struct gr_drawnode_s
 {
@@ -5241,7 +5239,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		// Note: DO NOT do this in software mode version, it actually
 		// makes papersprites look WORSE there (I know, I've tried)
 		// Monster Iestyn - 13/05/17
-		ang = dup_viewangle - thing->angle;
+		ang = dup_viewangle - (thing->player ? thing->player->drawangle : thing->angle);
 		ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
 		ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
 
@@ -5252,7 +5250,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		}
 	}
 	else if (sprframe->rotate != SRF_SINGLE)
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{

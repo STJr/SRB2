@@ -34,6 +34,7 @@
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
+#include "f_finale.h"
 
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
@@ -250,6 +251,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
+	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
 		player->panim = PA_WALK;
 		break;
@@ -1964,6 +1966,8 @@ void P_XYMovement(mobj_t *mo)
 #endif
 
 			P_SlideMove(mo);
+			if (player)
+				player->powers[pw_pushing] = 3;
 			xmove = ymove = 0;
 
 #ifdef ESLOPE
@@ -3040,110 +3044,9 @@ static void P_PlayerZMovement(mobj_t *mo)
 					}
 				}
 
-				if (mo->health && !mo->player->spectator && !P_CheckDeathPitCollide(mo))
-				{
-					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
-					{
-						mo->player->pflags |= PF_SPINNING;
-						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
-						S_StartSound(mo, sfx_spin);
-					}
-					else
-						mo->player->pflags &= ~PF_SPINNING;
-
-					if (mo->player->pflags & PF_GLIDING) // ground gliding
-					{
-						mo->player->skidtime = TICRATE;
-						mo->tics = -1;
-					}
-					else if (mo->player->charability2 == CA2_MELEE && (mo->player->panim == PA_ABILITY2 && mo->state-states != S_PLAY_MELEE_LANDING))
-					{
-						P_SetPlayerMobjState(mo, S_PLAY_MELEE_LANDING);
-						mo->tics = (mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(mo->movefactor)))>>FRACBITS;
-						S_StartSound(mo, sfx_s3k8b);
-						mo->player->pflags |= PF_FULLSTASIS;
-					}
-					else if (mo->player->pflags & PF_JUMPED || !(mo->player->pflags & PF_SPINNING)
-					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
-					{
-						if (mo->player->cmomx || mo->player->cmomy)
-						{
-							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
-								P_SetPlayerMobjState(mo, S_PLAY_DASH);
-							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN))
-								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->player->rmomx || mo->player->rmomy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT))
-								P_SetPlayerMobjState(mo, S_PLAY_WALK);
-							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
-								P_SetPlayerMobjState(mo, S_PLAY_STND);
-						}
-						else
-						{
-							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
-								P_SetPlayerMobjState(mo, S_PLAY_DASH);
-							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN))
-								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->momx || mo->momy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT))
-								P_SetPlayerMobjState(mo, S_PLAY_WALK);
-							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
-								P_SetPlayerMobjState(mo, S_PLAY_STND);
-						}
-					}
-
-					if (!(mo->player->pflags & PF_GLIDING))
-						mo->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-
-					mo->player->pflags &= ~(PF_STARTJUMP|PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
-					mo->player->secondjump = 0;
-					mo->player->glidetime = 0;
-					mo->player->climbing = 0;
-					mo->player->powers[pw_tailsfly] = 0;
-
-					if (mo->player->pflags & PF_SHIELDABILITY)
-					{
-						mo->player->pflags &= ~PF_SHIELDABILITY;
-
-						if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
-						{
-							if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
-								S_StartSound(mo, sfx_s3k4c);
-							else // create a fire pattern on the ground
-							{
-								S_StartSound(mo, sfx_s3k47);
-								P_ElementalFire(mo->player, true);
-							}
-							P_SetObjectMomZ(mo,
-							(mo->eflags & MFE_UNDERWATER)
-							? 6*FRACUNIT/5
-							: 5*FRACUNIT/2,
-							false);
-							P_SetPlayerMobjState(mo, S_PLAY_FALL);
-							mo->momx = mo->momy = 0;
-							clipmomz = false;
-						}
-						else if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
-						{
-							P_DoBubbleBounce(mo->player);
-							clipmomz = false;
-						}
-					}
-
-					if (mo->player->pflags & PF_BOUNCING)
-					{
-						P_MobjCheckWater(mo);
-						mo->momz *= -1;
-						P_DoAbilityBounce(mo->player, true);
-						if (mo->player->scoreadd)
-							mo->player->scoreadd--;
-						clipmomz = false;
-					}
-				}
+				clipmomz = P_PlayerHitFloor(mo->player);
 			}
-			if (!(mo->player->pflags & PF_SPINNING))
+			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
 
 			if (clipmomz)
@@ -6878,6 +6781,7 @@ void P_MobjThinker(mobj_t *mobj)
 					whoosh->momz = mobj->target->momz; // Stay reasonably centered for a few frames
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
 				}
+				/* FALLTHRU */
 			case MT_FLAMEAURA_ORB:
 				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
@@ -7365,7 +7269,7 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_AQUABUZZ:
 			P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
-			// no break here on purpose
+			/* FALLTHRU */
 		case MT_BIGAIRMINE:
 			{
 				if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -7849,7 +7753,7 @@ void P_MobjThinker(mobj_t *mobj)
 				else
 					mobj->z = mobj->floorz;
 			}
-			// THERE IS NO BREAK HERE ON PURPOSE
+			/* FALLTHRU */
 		default:
 			// check mobj against possible water content, before movement code
 			P_MobjCheckWater(mobj);
@@ -8415,6 +8319,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 #endif
 	switch (mobj->type)
 	{
+		case MT_ALTVIEWMAN:
+			if (titlemapinaction) mobj->flags &= ~MF_NOTHINK;
+			break;
 		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
 			mobj->fuse = mobj->info->mass;
 			break;
@@ -8883,6 +8790,7 @@ void P_PrecipitationEffects(void)
 	{
 		case PRECIP_RAIN: // no lightning or thunder whatsoever
 			sounds_thunder = false;
+			/* FALLTHRU */
 		case PRECIP_STORM_NOSTRIKES: // no lightning strikes specifically
 			effects_lightning = false;
 			break;
@@ -9199,6 +9107,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	}
 
 	SV_SpawnPlayer(playernum, mobj->x, mobj->y, mobj->angle);
+	p->drawangle = mobj->angle;
 
 	if (camera.chase)
 	{

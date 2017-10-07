@@ -51,7 +51,7 @@
 #endif
 
 #ifdef _XBOX
-#include "sdl/SRB2XBOX/xboxhelp.h"
+#include "sdl12/SRB2XBOX/xboxhelp.h"
 #endif
 
 //
@@ -1903,6 +1903,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 				break; // exit the case
 
 			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
+			/* FALLTHRU */
 
 		case CL_ASKJOIN:
 			CL_LoadServerFiles();
@@ -2253,7 +2254,8 @@ static void Command_connect(void)
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"
 			"Connect ANY: connect to the first lan server found\n"
-			"Connect SELF: connect to your own server.\n"));
+			//"Connect SELF: connect to your own server.\n"
+			));
 		return;
 	}
 
@@ -2267,7 +2269,7 @@ static void Command_connect(void)
 	// we don't request a restart unless the filelist differs
 
 	server = false;
-
+/*
 	if (!stricmp(COM_Argv(1), "self"))
 	{
 		servernode = 0;
@@ -2276,6 +2278,7 @@ static void Command_connect(void)
 		//SV_SpawnServer();
 	}
 	else
+*/
 	{
 		// used in menu to connect to a server in the list
 		if (netgame && !stricmp(COM_Argv(1), "node"))
@@ -2299,10 +2302,13 @@ static void Command_connect(void)
 
 			if (!stricmp(COM_Argv(1), "any"))
 				servernode = BROADCASTADDR;
-			else if (I_NetMakeNodewPort && COM_Argc() >= 3)
-				servernode = I_NetMakeNodewPort(COM_Argv(1), COM_Argv(2));
 			else if (I_NetMakeNodewPort)
-				servernode = I_NetMakeNode(COM_Argv(1));
+			{
+				if (COM_Argc() >= 3) // address AND port
+					servernode = I_NetMakeNodewPort(COM_Argv(1), COM_Argv(2));
+				else // address only, or address:port
+					servernode = I_NetMakeNode(COM_Argv(1));
+			}
 			else
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("There is no server identification with this network driver\n"));
@@ -3097,11 +3103,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
 			// Apply player flags as soon as possible!
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
 			if (cv_flipcam.value)
 				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
+			if (cv_directionchar.value)
+				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
+			if (cv_autobrake.value)
+				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		else
 		{
@@ -3110,11 +3120,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			if (botingame)
 				players[newplayernum].bot = 1;
 			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
 			if (cv_flipcam2.value)
 				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog2.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
+			if (cv_directionchar2.value)
+				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
+			if (cv_autobrake2.value)
+				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		D_SendPlayerConfig();
 		addedtogame = true;
@@ -3622,6 +3636,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			// Do not remove my own server (we have just get a out of order packet)
 			if (node == servernode)
 				break;
+			/* FALLTHRU */
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
@@ -3778,6 +3793,7 @@ FILESTAMP
 			break;
 		case PT_TEXTCMD2: // splitscreen special
 			netconsole = nodetoplayer2[node];
+			/* FALLTHRU */
 		case PT_TEXTCMD:
 			if (client)
 				break;
@@ -4132,7 +4148,10 @@ static INT16 Consistancy(void)
 
 #ifdef MOBJCONSISTANCY
 	if (!thinkercap.next)
+	{
+		DEBFILE(va("Consistancy = %u\n", ret));
 		return ret;
+	}
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -4200,6 +4219,8 @@ static INT16 Consistancy(void)
 		}
 	}
 #endif
+
+	DEBFILE(va("Consistancy = %u\n", (ret & 0xFFFF)));
 
 	return (INT16)(ret & 0xFFFF);
 }

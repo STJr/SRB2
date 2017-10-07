@@ -3663,31 +3663,14 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				S_StartSound(player->mo, sfx_itemup);
 			}
 			break;
-		case 11: // Special Stage Damage - Kind of like a mini-P_DamageMobj()
-			if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || player->exiting || player->bot)
+		case 11: // Special Stage Damage
+			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
 				break;
 
 			if (!(player->powers[pw_shield] || player->rings > 0)) // Don't do anything if no shield or rings anyway
 				break;
 
-			if (player->powers[pw_shield])
-			{
-				P_RemoveShield(player);
-				S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
-			}
-			else if (player->rings > 0)
-			{
-				P_PlayRinglossSound(player->mo);
-				if (player->rings >= 10)
-					player->rings -= 10;
-				else
-					player->rings = 0;
-			}
-
-			P_DoPlayerPain(player, NULL, NULL); // this does basically everything that was here before
-
-			if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
-				P_PlayerFlagBurst(player, false);
+			P_SpecialStageDamage(player, NULL, NULL);
 			break;
 		case 12: // Space Countdown
 			if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
@@ -3763,6 +3746,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 							goto DoneSection2;
 					}
 				}
+			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -4123,7 +4107,7 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_ROLL)
@@ -4203,7 +4187,7 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_ROLL)
@@ -4511,7 +4495,7 @@ DoneSection2:
 
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
@@ -4805,6 +4789,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 				// requires touching floor.
 				break;
 			}
+			/* FALLTHRU */
+
 		case 1: // Starpost activator
 		case 5: // Fan sector
 		case 6: // Super Sonic Transform
@@ -5961,6 +5947,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloor);
 				if (lines[i].special == 54)
 					break;
+				/* FALLTHRU */
+
 			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
 					EV_DoCeiling(&lines[i], bounceCeiling);
@@ -5972,7 +5960,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloorCrush);
 
 				if (lines[i].special == 57)
-						break; //only move the floor
+					break; //only move the floor
+				/* FALLTHRU */
 
 			case 58: // New super cool and awesome moving ceiling crush type
 				if (lines[i].backsector)
@@ -7060,6 +7049,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 533)
 					break;
+				/* FALLTHRU */
 
 			case 523:	// carry objects on ceiling
 				dx = FixedMul(dx, CARRYFACTOR);
@@ -7074,6 +7064,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 530)
 					break;
+				/* FALLTHRU */
 
 			case 520:	// carry objects on floor
 				dx = FixedMul(dx, CARRYFACTOR);

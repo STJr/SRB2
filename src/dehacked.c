@@ -11,6 +11,7 @@
 /// \brief Load dehacked file and change tables and text
 
 #include "doomdef.h"
+#include "d_main.h" // for srb2home
 #include "g_game.h"
 #include "sounds.h"
 #include "info.h"
@@ -64,6 +65,7 @@ memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
 static mobjtype_t get_mobjtype(const char *word);
 static statenum_t get_state(const char *word);
 static spritenum_t get_sprite(const char *word);
+static playersprite_t get_sprite2(const char *word);
 static sfxenum_t get_sfx(const char *word);
 #ifdef MUSICSLOT_COMPATIBILITY
 static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
@@ -77,6 +79,8 @@ boolean deh_loaded = false;
 static int dbg_line;
 
 static boolean gamedataadded = false;
+static boolean titlechanged = false;
+static boolean introchanged = false;
 
 ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 {
@@ -768,6 +772,49 @@ static void readspritelight(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 #endif // HWRENDER
+
+static void readsprite2(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word, *word2;
+	char *tmp;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+				strupr(word2);
+			else
+				break;
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+
+			if (fastcmp(word, "DEFAULT"))
+				spr2defaults[num] = get_number(word2);
+			else
+				deh_warning("Sprite2 %s: unknown word '%s'", spr2names[num], word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
 
 static const struct {
 	const char *name;
@@ -2667,14 +2714,36 @@ static void readmaincfg(MYFILE *f)
 				// range check, you morons.
 				if (introtoplay > 128)
 					introtoplay = 128;
+				introchanged = true;
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				titlemap = (INT16)value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
 				titlescrollspeed = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
 			{
@@ -2690,14 +2759,17 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
 				numDemos = (UINT8)get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "DEMODELAYTIME"))
 			{
 				demoDelayTime = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "DEMOIDLETIME"))
 			{
 				demoIdleTime = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "USE1UPSOUND"))
 			{
@@ -2729,16 +2801,35 @@ static void readmaincfg(MYFILE *f)
 
 				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
+				// can't use sprintf since there is %u in savegamename
+				strcatbf(savegamename, srb2home, PATHSEP);
 
 				gamedataadded = true;
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "RESETDATA"))
 			{
 				P_ResetData(value);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "CUSTOMVERSION"))
 			{
 				strlcpy(customversionstring, word2, sizeof (customversionstring));
+				//titlechanged = true;
+			}
+			else if (fastcmp(word, "BOOTMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				bootmap = (INT16)value;
+				//titlechanged = true;
 			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
@@ -2935,7 +3026,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 	deh_num_warning = 0;
 
-	gamedataadded = false;
+	gamedataadded = titlechanged = introchanged = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
 	dbg_line = -1; // start at -1 so the first line is 0.
@@ -3020,9 +3111,21 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						ignorelines(f);
 					}
 				}
+				else if (fastcmp(word, "SPRITE2"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_sprite2(word2); // find a sprite by name
+					if (i < (INT32)free_spr2 && i >= (INT32)SPR2_FIRSTFREESLOT)
+						readsprite2(f, i);
+					else
+					{
+						deh_warning("Sprite2 number %d out of range (%d - %d)", i, SPR2_FIRSTFREESLOT, free_spr2-1);
+						ignorelines(f);
+					}
+				}
+#ifdef HWRENDER
 				else if (fastcmp(word, "LIGHT"))
 				{
-#ifdef HWRENDER
 					// TODO: Read lights by name
 					if (i > 0 && i < NUMLIGHTS)
 						readlight(f, i);
@@ -3031,22 +3134,20 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Light number %d out of range (1 - %d)", i, NUMLIGHTS-1);
 						ignorelines(f);
 					}
-#endif
 				}
 				else if (fastcmp(word, "SPRITE"))
 				{
-#ifdef HWRENDER
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
-					if (i < NUMSPRITES && i >= 0)
+					if (i < NUMSPRITES && i > 0)
 						readspritelight(f, i);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
-#endif
 				}
+#endif
 				else if (fastcmp(word, "LEVEL"))
 				{
 					// Support using the actual map name,
@@ -3236,6 +3337,14 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 	if (gamedataadded)
 		G_LoadGameData();
 
+	if (gamestate == GS_TITLESCREEN)
+	{
+		if (introchanged)
+			COM_BufAddText("playintro");
+		else if (titlechanged)
+			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
+	}
+
 	dbg_line = -1;
 	if (deh_num_warning)
 	{
@@ -3302,6 +3411,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_STND",
 	"S_PLAY_WAIT",
 	"S_PLAY_WALK",
+	"S_PLAY_SKID",
 	"S_PLAY_RUN",
 	"S_PLAY_DASH",
 	"S_PLAY_PAIN",
@@ -6422,8 +6532,12 @@ static const char *const MAPTHINGFLAG_LIST[4] = {
 #endif
 
 static const char *const PLAYERFLAG_LIST[] = {
-	// Flip camera angle with gravity flip prefrence.
-	"FLIPCAM",
+
+	// Cvars
+	"FLIPCAM", // Flip camera angle with gravity flip prefrence.
+	"ANALOGMODE", // Analog mode?
+	"DIRECTIONCHAR", // Directional character sprites?
+	"AUTOBRAKE", // Autobrake?
 
 	// Cheats
 	"GODMODE",
@@ -6441,41 +6555,36 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"JUMPSTASIS", // and that includes jumping.
 	// (we don't include FULLSTASIS here I guess because it's just those two together...?)
 
-	// Did you get a time-over?
-	"TIMEOVER",
+	// Applying autobrake?
+	"APPLYAUTOBRAKE",
 
 	// Character action status
 	"STARTJUMP",
 	"JUMPED",
+	"NOJUMPDAMAGE",
+
 	"SPINNING",
 	"STARTDASH",
-	"THOKKED",
 
-	// Are you gliding?
+	"THOKKED",
+	"SHIELDABILITY",
 	"GLIDING",
+	"BOUNCING",
 
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
 
-	// Bouncing
-	"BOUNCING",
-
-	/*** NIGHTS STUFF ***/
+	// NiGHTS stuff
 	"TRANSFERTOCLOSEST",
-	"NIGHTSFALL",
 	"DRILLING",
-	"SKIDDOWN",
 
-	/*** TAG STUFF ***/
-	"TAGGED", // Player has been tagged and awaits the next round in hide and seek.
+	// Gametype-specific stuff
+	"GAMETYPEOVER", // Race time over, or H&S out-of-game
 	"TAGIT", // The player is it! For Tag Mode
 
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
-	"ANALOGMODE", // Analog mode?
 	"CANCARRY", // Can carry?
-	"SHIELDABILITY", // Thokked with shield ability
-	"NOJUMPDAMAGE", // No jump damage
 
 	NULL // stop loop here.
 };
@@ -6641,6 +6750,7 @@ static const char *const POWERS_LIST[] = {
 	"UNDERWATER", // underwater timer
 	"SPACETIME", // In space, no one can hear you spin!
 	"EXTRALIFE", // Extra Life timer
+	"PUSHING",
 
 	"SUPER", // Are you super?
 	"GRAVITYBOOTS", // gravity boots
@@ -6891,6 +7001,7 @@ struct {
 	{"CR_GENERIC",CR_GENERIC},
 	{"CR_PLAYER",CR_PLAYER},
 	{"CR_NIGHTSMODE",CR_NIGHTSMODE},
+	{"CR_NIGHTSFALL",CR_NIGHTSFALL},
 	{"CR_BRAKGOOP",CR_BRAKGOOP},
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
@@ -6963,7 +7074,7 @@ struct {
 	{"ME_ALLEMERALDS",ME_ALLEMERALDS},
 	{"ME_ULTIMATE",ME_ULTIMATE},
 	{"ME_PERFECT",ME_PERFECT},
-	
+
 #ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
@@ -7288,6 +7399,20 @@ static spritenum_t get_sprite(const char *word)
 			return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
+}
+
+static playersprite_t get_sprite2(const char *word)
+{ // Returns the value of SPR2_ enumerations
+	playersprite_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("SPR2_",word,5))
+		word += 5; // take off the SPR2_
+	for (i = 0; i < NUMPLAYERSPRITES; i++)
+		if (!spr2names[i][4] && memcmp(word,spr2names[i],4)==0)
+			return i;
+	deh_warning("Couldn't find sprite named 'SPR2_%s'",word);
+	return SPR2_STND;
 }
 
 static sfxenum_t get_sfx(const char *word)
@@ -7735,7 +7860,7 @@ static inline int lib_freeslot(lua_State *L)
 		else if (fastcmp(type, "SPR2"))
 		{
 			// Search if we already have an SPR2 by that name...
-			enum playersprite i;
+			playersprite_t i;
 			for (i = SPR2_FIRSTFREESLOT; i < free_spr2; i++)
 				if (memcmp(spr2names[i],word,4) == 0)
 					break;
@@ -7914,7 +8039,7 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("SPR2_",word,4)) {
+	else if (fastncmp("SPR2_",word,5)) {
 		p = word+5;
 		for (i = 0; i < (fixed_t)free_spr2; i++)
 			if (!spr2names[i][4])
@@ -8118,6 +8243,12 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
+		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
 		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);

@@ -30,14 +30,13 @@ mobj_t *P_FindNewPosition(UINT32 oldposition);
 
 typedef struct
 {
-	UINT8 skincolor;
 	UINT8 skin;
 	UINT8 botskin;
-	UINT8 botcolor;
 	INT32 score;
 	INT32 lives;
 	INT32 continues;
 	UINT16 emeralds;
+	UINT8 numgameovers;
 } savedata_t;
 
 extern savedata_t savedata;

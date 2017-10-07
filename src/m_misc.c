@@ -1086,7 +1086,7 @@ void M_StartMovie(void)
 				moviemode = M_StartMovieGIF(pathname);
 				break;
 			}
-			// fall thru
+			/* FALLTHRU */
 		case MM_APNG:
 			moviemode = M_StartMovieAPNG(pathname);
 			break;

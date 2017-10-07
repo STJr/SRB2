@@ -4644,6 +4644,7 @@ void A_CapeChase(mobj_t *actor)
 	fixed_t foffsetx, foffsety, boffsetx, boffsety;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	angle_t angle;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_CapeChase", actor))
 		return;
@@ -4665,11 +4666,13 @@ void A_CapeChase(mobj_t *actor)
 		return;
 	}
 
-	foffsetx = P_ReturnThrustX(chaser, chaser->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
-	foffsety = P_ReturnThrustY(chaser, chaser->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+	angle = (chaser->player ? chaser->player->drawangle : chaser->angle);
 
-	boffsetx = P_ReturnThrustX(chaser, chaser->angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
-	boffsety = P_ReturnThrustY(chaser, chaser->angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
+	foffsetx = P_ReturnThrustX(chaser, angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+	foffsety = P_ReturnThrustY(chaser, angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+
+	boffsetx = P_ReturnThrustX(chaser, angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
+	boffsety = P_ReturnThrustY(chaser, angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
 
 	P_UnsetThingPosition(actor);
 	actor->x = chaser->x + foffsetx + boffsetx;
@@ -4686,7 +4689,7 @@ void A_CapeChase(mobj_t *actor)
 		actor->flags2 &= ~MF2_OBJECTFLIP;
 		actor->z = chaser->z + FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale);
 	}
-	actor->angle = chaser->angle;
+	actor->angle = angle;
 	P_SetThingPosition(actor);
 }
 
@@ -4821,9 +4824,11 @@ void A_UnidusBall(mobj_t *actor)
 		case 0: // at least one frame where not dashing
 			if (!skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 1: // at least one frame where ARE dashing
 			if (skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 2: // not dashing again?
 			if (skull) break;
 			// launch.
@@ -6062,7 +6067,7 @@ void A_Boss7Chase(mobj_t *actor)
 					break;
 				}
 				actor->threshold++;
-				// fall into...
+				/* FALLTHRU */
 			case 1: // Chaingun Goop
 				A_FaceTarget(actor);
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
@@ -10184,7 +10189,7 @@ void A_FlickyAim(mobj_t *actor)
 	{
 		angle_t posvar;
 		fixed_t chasevar, chasex, chasey;
-		
+
 		if (flickyhitwall)
 			actor->movedir *= -1;
 

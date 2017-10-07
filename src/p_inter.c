@@ -483,9 +483,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_REDTEAMRING:
 			if (player->ctfteam != 1)
 				return;
+			/* FALLTHRU */
 		case MT_BLUETEAMRING: // Yes, I'm lazy. Oh well, deal with it.
 			if (special->type == MT_BLUETEAMRING && player->ctfteam != 2)
 				return;
+			/* FALLTHRU */
 		case MT_RING:
 		case MT_FLINGRING:
 			if (!(P_CanPickupItem(player, false)))
@@ -1532,30 +1534,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_SetMobjState(special, special->info->deathstate);
 			return;
 		case MT_SPECIALSPIKEBALL:
-			if (!(!useNightsSS && G_IsSpecialStage(gamemap))) // Only for old special stages
-			{
-				P_DamageMobj(toucher, special, special, 1, 0);
-				return;
-			}
-
-			if (player->powers[pw_invulnerability] || player->powers[pw_flashing]
-			|| player->powers[pw_super])
-				return;
-			if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
-			{
-				P_RemoveShield(player);
-				S_StartSound(toucher, sfx_shldls); // Ba-Dum! Shield loss.
-			}
+			if (!useNightsSS && G_IsSpecialStage(gamemap)) // Only for old special stages
+				P_SpecialStageDamage(player, special, NULL);
 			else
-			{
-				P_PlayRinglossSound(toucher);
-				if (player->rings >= 10)
-					player->rings -= 10;
-				else
-					player->rings = 0;
-			}
-
-			P_DoPlayerPain(player, special, NULL);
+				P_DamageMobj(toucher, special, special, 1, 0);
 			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
@@ -1871,7 +1853,7 @@ void P_CheckTimeLimit(void)
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i] || players[i].spectator
-				 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
+				 || (players[i].pflags & PF_GAMETYPEOVER) || (players[i].pflags & PF_TAGIT))
 					continue;
 
 				CONS_Printf(M_GetText("%s received double points for surviving the round.\n"), player_names[i]);
@@ -2018,7 +2000,7 @@ void P_CheckSurvivors(void)
 				spectators++;
 			else if (players[i].pflags & PF_TAGIT)
 				taggers++;
-			else if (!(players[i].pflags & PF_TAGGED))
+			else if (!(players[i].pflags & PF_GAMETYPEOVER))
 			{
 				survivorarray[survivors] = i;
 				survivors++;
@@ -2259,7 +2241,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
 			;
-		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap)
+		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != 0x7f)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
@@ -2288,6 +2270,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
+				}
+
+				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
+				{
+					numgameovers++;
+					if ((!modifiedgame || savemoddata) && cursaveslot > 0)
+						G_SaveGameOver((UINT32)cursaveslot, (target->player->continues <= 0));
 				}
 			}
 		}
@@ -2325,7 +2314,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 				else
 				{
-					if (!(target->player->pflags & PF_TAGGED))
+					if (!(target->player->pflags & PF_GAMETYPEOVER))
 					{
 						//otherwise, increment the tagger's score.
 						//in hide and seek, suiciding players are counted as found.
@@ -2337,7 +2326,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 								P_AddPlayerScore(&players[w], 100);
 						}
 
-						target->player->pflags |= PF_TAGGED;
+						target->player->pflags |= PF_GAMETYPEOVER;
 						CONS_Printf(M_GetText("%s was found!\n"), player_names[target->player-players]);
 						P_CheckSurvivors();
 					}
@@ -2793,7 +2782,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		}
 		else
 		{
-			player->pflags |= PF_TAGGED; //in hide and seek, the player is tagged and stays stationary.
+			player->pflags |= PF_GAMETYPEOVER; //in hide and seek, the player is tagged and stays stationary.
 			CONS_Printf(M_GetText("%s was found!\n"), player_names[player-players]); // Tell everyone who is it!
 		}
 
@@ -2979,7 +2968,17 @@ void P_RemoveShield(player_t *player)
 		else
 			player->powers[pw_shield] &= SH_STACK;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
+	else if (player->powers[pw_shield] & SH_NOSTACK)
+	{ // First layer shields
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
+		{
+			P_BlackOw(player); // BAM!
+			player->pflags |= PF_JUMPDOWN;
+		}
+		else
+			player->powers[pw_shield] &= SH_STACK;
+	}
+	else
 	{ // Second layer shields
 		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
@@ -2988,13 +2987,6 @@ void P_RemoveShield(player_t *player)
 		}
 		player->powers[pw_shield] = SH_NONE;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
-	{
-		P_BlackOw(player); // BAM!
-		player->pflags |= PF_JUMPDOWN;
-	}
-	else
-		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
@@ -3062,6 +3054,38 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	player->rings -= damage;
 	if (player->rings < 0)
 		player->rings = 0;
+}
+
+//
+// P_SpecialStageDamage
+//
+// Do old special stage-style damaging
+// Removes 10 rings from the player, or knocks off their shield if they have one.
+// If they don't have anything, just knock the player back anyway (this doesn't kill them).
+//
+void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
+{
+	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
+		return;
+
+	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+	{
+		P_RemoveShield(player);
+		S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
+	}
+	else
+	{
+		P_PlayRinglossSound(player->mo);
+		if (player->rings >= 10)
+			player->rings -= 10;
+		else
+			player->rings = 0;
+	}
+
+	P_DoPlayerPain(player, inflictor, source);
+
+	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+		P_PlayerFlagBurst(player, false);
 }
 
 /** Damages an object, which may or may not be a player.
@@ -3208,7 +3232,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (player->pflags & PF_GODMODE)
 				return false;
 
-			if (!(target->player->powers[pw_carry] == CR_NIGHTSMODE || target->player->pflags & PF_NIGHTSFALL) && (maptol & TOL_NIGHTS))
+			if ((maptol & TOL_NIGHTS) && target->player->powers[pw_carry] != CR_NIGHTSMODE && target->player->powers[pw_carry] != CR_NIGHTSFALL)
 				return false;
 
 			switch (damagetype)
@@ -3368,7 +3392,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 				break;
 			}
-			// fallthrough
+			/* FALLTHRU */
 		default:
 			P_SetMobjState(target, target->info->painstate);
 			break;
@@ -3409,7 +3433,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	if (player->rings <= 0)
 		num_rings = 0;
 
-	if (num_rings > 32 && !(player->pflags & PF_NIGHTSFALL))
+	if (num_rings > 32 && player->powers[pw_carry] != CR_NIGHTSFALL)
 		num_rings = 32;
 
 	if (player->powers[pw_emeralds])
@@ -3441,7 +3465,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.
-		if (player->pflags & PF_NIGHTSFALL)
+		if (player->powers[pw_carry] == CR_NIGHTSFALL)
 		{
 			ns = FixedMul(((i*FRACUNIT)/16)+2*FRACUNIT, mo->scale);
 			mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -3481,12 +3505,12 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		}
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mo->momz *= -1;
+
+		if (P_IsObjectOnGround(player->mo))
+			player->powers[pw_carry] = CR_NONE;
 	}
 
 	player->losstime += 10*TICRATE;
-
-	if (P_IsObjectOnGround(player->mo))
-		player->pflags &= ~PF_NIGHTSFALL;
 
 	return;
 }

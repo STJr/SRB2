@@ -135,7 +135,7 @@ static const struct {
 };
 
 // goes through the above list and returns the utype string for the userdata type
-// returns "unknown" instead if we couldn't find the right userdata type 
+// returns "unknown" instead if we couldn't find the right userdata type
 static const char *GetUserdataUType(lua_State *L)
 {
 	UINT8 i;
@@ -462,6 +462,8 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
+	if (state >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
 	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
