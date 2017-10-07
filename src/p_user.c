@@ -10703,11 +10703,6 @@ void P_PlayerAfterThink(player_t *player)
 						A_CapeChase(player->followmobj);
 						break;
 				}
-
-				if (player->followmobj && !P_MobjWasRemoved(player->followmobj))
-				{
-					player->followmobj->flags2 = (player->followmobj->flags2 & ~MF2_DONTDRAW)|(player->mo->flags2 & MF2_DONTDRAW);
-				}
 			}
 		}
 	}
