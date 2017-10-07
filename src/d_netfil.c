@@ -11,9 +11,6 @@
 /// \brief Transfer a file using HSendPacket.
 
 #include <stdio.h>
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
 #include <sys/stat.h>
 
 #include <time.h>

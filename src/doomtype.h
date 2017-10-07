@@ -80,14 +80,12 @@ typedef long ssize_t;
 #define NOIPX
 #endif
 
-#if defined (_MSC_VER) || defined (__OS2__)
-	// Microsoft VisualC++
 #ifdef _MSC_VER
+	// Microsoft VisualC++
 #if (_MSC_VER <= 1800) // MSVC 2013 and back
 	#define snprintf                _snprintf
 #if (_MSC_VER <= 1200) // MSVC 2012 and back
 	#define vsnprintf               _vsnprintf
-#endif
 #endif
 #endif
 	#define strncasecmp             strnicmp

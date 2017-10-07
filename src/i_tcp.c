@@ -18,10 +18,6 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
-#ifdef __OS2__
-#include <sys/types.h>
-#include <sys/time.h>
-#endif // __OS2__
 
 #ifndef NO_IPV6
 #define HAVE_IPV6
@@ -51,7 +47,7 @@
 #else
 #ifdef USE_WINSOCK1
 #include <winsock.h>
-#elif !defined (SCOUW2) && !defined (SCOUW7) && !defined (__OS2__)
+#elif !defined (SCOUW2) && !defined (SCOUW7)
 #ifndef USE_WINSOCK
 #include <arpa/inet.h>
 #endif //normal BSD API

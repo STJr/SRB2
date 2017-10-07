@@ -36,10 +36,6 @@
 #include <winsock.h>     // socket(),...
 #endif //!HAVE_IPV6
 #else
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
-
 #include <arpa/inet.h>
 #ifdef __APPLE_CC__
 #ifndef _BSD_SOCKLEN_T_
@@ -54,10 +50,6 @@
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
 #endif // _WIN32
-
-#ifdef __OS2__
-#include <errno.h>
-#endif // __OS2__
 #endif // !NONET
 
 #include "doomstat.h"

@@ -1223,7 +1223,7 @@ void CONS_Printf(const char *fmt, ...)
 	// if not in display loop, force screen update
 	if (con_startup)
 	{
-#if (defined (_WINDOWS)) || (defined (__OS2__) && !defined (HAVE_SDL))
+#ifdef _WINDOWS
 		static lumpnum_t con_backpic_lumpnum = UINT32_MAX;
 		patch_t *con_backpic;
 
