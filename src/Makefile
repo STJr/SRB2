@@ -760,25 +760,6 @@ $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
 	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
-
-ifdef FILTERS
-$(OBJDIR)/%.o: $(INTERFACE)/filter/%.c
-	@echo $< needs deps
-	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
-
-$(OBJDIR)/filters.o: $(INTERFACE)/filter/filters.c $(INTERFACE)/filter/filters.c \
- $(INTERFACE)/filter/filters.h
-	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
-
-$(OBJDIR)/hq2x.o: $(INTERFACE)/filter/hq2x.c $(INTERFACE)/filter/hq2x.c \
- $(INTERFACE)/filter/filters.h
-	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
-
-$(OBJDIR)/lq2x.o: $(INTERFACE)/filter/lq2x.c $(INTERFACE)/filter/lq2x.c \
- $(INTERFACE)/filter/filters.h $(INTERFACE)/filter/interp.h \
- $(INTERFACE)/filter/hq2x.h $(INTERFACE)/filter/lq2x.h
-	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
-endif
 endif
 
 #############################################################
