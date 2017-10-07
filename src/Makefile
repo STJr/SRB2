@@ -165,13 +165,7 @@ UNIXCOMMON=1
 endif
 
 ifdef SDL
-#SDL 2.0
-ifndef SDL12
 	include sdl/Makefile.cfg
-#SDL 1.2
-else
-	include sdl12/Makefile.cfg
-endif #ifndef SDL12
 endif #ifdef SDL
 
 ifdef DISTCC
