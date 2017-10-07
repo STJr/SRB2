@@ -1582,8 +1582,6 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	if (mobj->player && mobj->player->followmobj)
 	{
-		// can't do right now - followmobjs update at the end of the frame, so the ghost would be in the wrong position...
-		//mobj->player->followmobj->flags2 |= MF2_BOSSNOTRAP;
 		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
 		P_SetTarget(&ghost2->tracer, ghost);
 		P_SetTarget(&ghost->tracer, ghost2);
@@ -9738,7 +9736,8 @@ void P_PlayerThink(player_t *player)
 				ticmiss++;
 
 			P_DoRopeHang(player);
-			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+			if (player->mo->state-states != S_PLAY_RIDE)
+				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 			P_DoJumpStuff(player, &player->cmd);
 		}
 		else //if (player->powers[pw_carry] == CR_ZOOMTUBE)
@@ -10370,7 +10369,10 @@ void P_PlayerAfterThink(player_t *player)
 			player->powers[pw_carry] = CR_NONE;
 
 		if (player->powers[pw_carry] != CR_NONE)
-			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+		{
+			if (player->mo->state-states != S_PLAY_RIDE)
+				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+		}
 		else
 			P_SetTarget(&player->mo->tracer, NULL);
 
@@ -10389,7 +10391,8 @@ void P_PlayerAfterThink(player_t *player)
 			player->mo->z = player->mo->tracer->z - FixedDiv(player->mo->height, 3*FRACUNIT/2);
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
 		P_SetThingPosition(player->mo);
-		P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+		if (player->mo->state-states != S_PLAY_RIDE)
+			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 
 		// Controllable missile
 		if (player->mo->tracer->type == MT_BLACKEGGMAN_MISSILE)
@@ -10606,7 +10609,9 @@ void P_PlayerAfterThink(player_t *player)
 								chosenstate = S_TAILSOVERLAY_RUN;
 							else if (player->panim == PA_WALK)
 							{
-								if (player->speed >= FixedMul(player->runspeed/2, player->mo->scale))
+								if (!smilesonground)
+									chosenstate = S_TAILSOVERLAY_PLUS30DEGREES;
+								else if (player->speed >= FixedMul(player->runspeed/2, player->mo->scale))
 									chosenstate = S_TAILSOVERLAY_0DEGREES;
 								else
 									chosenstate = S_TAILSOVERLAY_MINUS30DEGREES;
