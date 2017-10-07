@@ -2066,7 +2066,7 @@ static void ST_overlayDrawer(void)
 						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 12 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
 				}
 			}
-			else if (!gametype == GT_COOP)
+			else if (gametype != GT_COOP)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
 			if (!splitscreen)
 			{

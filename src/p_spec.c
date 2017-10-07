@@ -3746,6 +3746,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 							goto DoneSection2;
 					}
 				}
+			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -4788,6 +4789,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 				// requires touching floor.
 				break;
 			}
+			/* FALLTHRU */
+
 		case 1: // Starpost activator
 		case 5: // Fan sector
 		case 6: // Super Sonic Transform
@@ -5944,6 +5947,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloor);
 				if (lines[i].special == 54)
 					break;
+				/* FALLTHRU */
+
 			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
 					EV_DoCeiling(&lines[i], bounceCeiling);
@@ -5955,7 +5960,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloorCrush);
 
 				if (lines[i].special == 57)
-						break; //only move the floor
+					break; //only move the floor
+				/* FALLTHRU */
 
 			case 58: // New super cool and awesome moving ceiling crush type
 				if (lines[i].backsector)
@@ -7043,6 +7049,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 533)
 					break;
+				/* FALLTHRU */
 
 			case 523:	// carry objects on ceiling
 				dx = FixedMul(dx, CARRYFACTOR);
@@ -7057,6 +7064,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 530)
 					break;
+				/* FALLTHRU */
 
 			case 520:	// carry objects on floor
 				dx = FixedMul(dx, CARRYFACTOR);

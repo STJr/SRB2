@@ -3256,6 +3256,7 @@ static void M_DrawGenericMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3314,6 +3315,7 @@ static void M_DrawGenericMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -3326,6 +3328,7 @@ static void M_DrawGenericMenu(void)
 			case IT_TRANSTEXT:
 				if (currentMenu->menuitems[i].alphaKey)
 					y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
+				/* FALLTHRU */
 			case IT_TRANSTEXT2:
 				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
 				y += SMALLLINEHEIGHT;
@@ -3675,6 +3678,7 @@ static void M_DrawCenteredMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3732,6 +3736,7 @@ static void M_DrawCenteredMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawCenteredString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -4883,6 +4888,10 @@ static boolean M_AddonsRefresh(void)
 
 #define offs 1
 
+#ifdef __GNUC__
+#pragma GCC optimize ("0")
+#endif
+
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
@@ -5003,6 +5012,10 @@ static void M_DrawAddons(void)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
 #undef CANSAVE
 }
+
+#ifdef __GNUC__
+#pragma GCC reset_options
+#endif
 
 #undef offs
 
@@ -6117,7 +6130,7 @@ static void M_DrawLoadGameData(void)
 				V_DrawFill(x+6, y+64, 72, 50, col);
 			}
 		}
-			
+
 		V_DrawSmallScaledPatch(x, y, 0, savselp[0]);
 		x += 2;
 		y += 1;
@@ -6149,7 +6162,7 @@ static void M_DrawLoadGameData(void)
 				else
 					patch = savselp[5];
 			}
-				
+
 			V_DrawSmallScaledPatch(x, y, flags, patch);
 
 			y += 41;
@@ -8719,6 +8732,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				COM_BufAddText (va("%s %s\n",setupm_cvdefaultname->name,setupm_name));
 				break;
 			}
+			/* FALLTHRU */
 		case KEY_RIGHTARROW:
 			if (itemOn == 1)       //player skin
 			{
@@ -9165,7 +9179,7 @@ static void M_DrawControl(void)
 
 		y += SMALLLINEHEIGHT;
 	}
-	
+
 	V_DrawScaledPatch(currentMenu->x - 20, cursory, 0,
 		W_CachePatchName("M_CURSOR", PU_CACHE));
 }

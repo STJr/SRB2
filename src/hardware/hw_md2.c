@@ -428,7 +428,7 @@ static md2_model_t *md2_readModel(const char *filename)
 							spr2 |= FF_SPR2SUPER;
 						if (model->spr2frames[spr2*2 + 1]++ == 0) // numspr2frames
 							model->spr2frames[spr2*2] = i; // starting frame
-						CONS_Debug(DBG_RENDER, "frame %s, sprite2 %s - starting frame %d, number of frames %d\n", frame->name, spr2names[spr2 & ~FF_SPR2SUPER], model->spr2frames[spr2*2], model->spr2frames[spr2*2 + 1]);
+						CONS_Debug(DBG_RENDER, "frame %s, sprite2 %s - starting frame %s, number of frames %s\n", frame->name, spr2names[spr2 & ~FF_SPR2SUPER], sizeu1(model->spr2frames[spr2*2]), sizeu2(model->spr2frames[spr2*2 + 1]));
 					}
 				}
 			}
