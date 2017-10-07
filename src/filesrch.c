@@ -520,7 +520,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 
 char exttable[NUM_EXT_TABLE][5] = {
 	".txt", ".cfg", // exec
-	".wad", ".soc", ".lua"}; // addfile
+	".wad", ".pk3", ".soc", ".lua"}; // addfile
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
