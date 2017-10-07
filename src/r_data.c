@@ -1198,8 +1198,17 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
-		// WAD type? use markers.
-		if (wadfiles[i]->type == RET_WAD)
+		
+		if (wadfiles[i]->type == RET_PK3)
+		{
+			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);
+			if (start == INT16_MAX)
+				continue;
+			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
+			if (end == INT16_MAX)
+				continue;
+		}
+		else // WAD type? use markers.
 		{
 			// Find the ranges to work with.
 			start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0);
@@ -1221,15 +1230,6 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 				if (end == INT16_MAX)
 					continue;
 			}
-		}
-		else if (wadfiles[i]->type == RET_PK3)
-		{
-			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);
-			if (start == INT16_MAX)
-				continue;
-			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
-			if (end == INT16_MAX)
-				continue;
 		}
 		// Now find lump with specified name in that range.
 		lump = W_CheckNumForNamePwad(name, (UINT16)i, start);

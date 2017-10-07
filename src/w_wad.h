@@ -110,9 +110,6 @@ void W_Shutdown(void);
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_InitFile(const char *filename);
-#ifdef DELFILE
-void W_UnloadWadFile(UINT16 num);
-#endif
 
 // W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
 // so that it stops with a message if a file was not found, but not if all is okay.
@@ -135,6 +132,8 @@ UINT8 W_LumpExists(const char *name); // Lua uses this.
 
 size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump);
 size_t W_LumpLength(lumpnum_t lumpnum);
+
+void zerr(int ret); // zlib error checking
 
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset);
 size_t W_ReadLumpHeader(lumpnum_t lump, void *dest, size_t size, size_t offest); // read all or a part of a lump

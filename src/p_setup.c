@@ -2796,7 +2796,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
+		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
 
 		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
 		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
@@ -3233,7 +3234,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 //	UINT16 socPos, socNum = 0;
 	UINT16 sfxPos, sfxNum = 0;
 	UINT16 musPos, musNum = 0;
-	UINT16 sprPos, sprNum = 0;
+//	UINT16 sprPos, sprNum = 0;
 	UINT16 texPos, texNum = 0;
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
@@ -3254,7 +3255,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	case RET_PK3:
 		{
 			// Auxiliary function - input a folder name and gives us the resource markers positions.
-			void FindFolder(char *folName, UINT16 *start, UINT16 *end)
+			void FindFolder(const char *folName, UINT16 *start, UINT16 *end)
 			{
 				if (!stricmp(lumpinfo->name2, folName))
 				{

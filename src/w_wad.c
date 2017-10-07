@@ -25,6 +25,19 @@
 #endif
 #include "lzf.h"
 #endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
 //#ifdef HAVE_ZLIB
 #include "zlib.h"
 //#endif // HAVE_ZLIB
@@ -181,14 +194,14 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		for (posStart; posStart < posEnd; posStart++)
+		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
 	posStart = W_CheckNumForFolderStartPK3("SOCs/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
-		for(posStart; posStart < posEnd; posStart++)
+		for(; posStart < posEnd; posStart++)
 			DEH_LoadDehackedLumpPwad(wadnum, posStart);
 	}
 }
@@ -604,12 +617,12 @@ UINT16 W_InitFile(const char *filename)
 	// assume wad file
 	else
 	{
-		type = RET_WAD;
-
 		wadinfo_t header;
 		lumpinfo_t *lump_p;
 		filelump_t *fileinfo;
 		void *fileinfov;
+		
+		type = RET_WAD;
 
 		// read the header
 		if (fread(&header, 1, sizeof header, handle) < sizeof header)
@@ -925,7 +938,7 @@ lumpnum_t W_CheckNumForMap(const char *name)
 {
 	UINT16 lumpNum, end;
 	UINT32 i;
-	for (i = numwadfiles - 1; i >= 0; i--)
+	for (i = numwadfiles - 1; i < numwadfiles; i--)
 	{
 		if (wadfiles[i]->type == RET_WAD)
 		{

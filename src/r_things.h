@@ -51,11 +51,6 @@ void R_SortVisSprites(void);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
-
-#ifdef DELFILE
-void R_DelSpriteDefs(UINT16 wadnum);
-#endif
-
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
@@ -217,11 +212,10 @@ void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
+void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
 
-#ifdef DELFILE
-void R_DelSkins(UINT16 wadnum);
-#endif
+UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 
 void R_InitDrawNodes(void);
 
@@ -236,7 +230,7 @@ char *GetPlayerFacePic(INT32 skinnum);
 // Future: [[ ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@ ]]
 FUNCMATH FUNCINLINE static ATTRINLINE char R_Frame2Char(UINT8 frame)
 {
-#if 0 // 2.1 compat
+#if 1 // 2.1 compat
 	return 'A' + frame;
 #else
 	if (frame < 26) return 'A' + frame;
@@ -250,7 +244,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE char R_Frame2Char(UINT8 frame)
 
 FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 {
-#if 0 // 2.1 compat
+#if 1 // 2.1 compat
 	return cn - 'A';
 #else
 	if (cn >= 'A' && cn <= 'Z') return cn - 'A';
