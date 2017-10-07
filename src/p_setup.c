@@ -3233,7 +3233,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 //	UINT16 luaPos, luaNum = 0;
 //	UINT16 socPos, socNum = 0;
 	UINT16 sfxPos, sfxNum = 0;
-	UINT16 musPos, musNum = 0;
+	UINT16 musPos = 0, musNum = 0;
 //	UINT16 sprPos, sprNum = 0;
 	UINT16 texPos, texNum = 0;
 //	UINT16 patPos, patNum = 0;
