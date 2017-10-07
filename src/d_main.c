@@ -301,7 +301,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (gamestate != GS_LEVEL // fades to black on its own timing, always
+			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
 				F_WipeStartScreen();
@@ -317,6 +317,12 @@ static void D_Display(void)
 	// do buffered drawing
 	switch (gamestate)
 	{
+		case GS_TITLESCREEN:
+			if (!titlemapinaction) {
+				F_TitleScreenDrawer();
+				break;
+			}
+			// Intentional fall-through
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -365,10 +371,6 @@ static void D_Display(void)
 			HU_Drawer();
 			break;
 
-		case GS_TITLESCREEN:
-			F_TitleScreenDrawer();
-			break;
-
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
 		case GS_DEDICATEDSERVER:
@@ -378,9 +380,10 @@ static void D_Display(void)
 
 	// clean up border stuff
 	// see if the border needs to be initially drawn
-	if (gamestate == GS_LEVEL)
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
 	{
 		// draw the view directly
+
 		if (!automapactive && !dedicated && cv_renderview.value)
 		{
 			if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
@@ -438,9 +441,13 @@ static void D_Display(void)
 			lastdraw = false;
 		}
 
-		ST_Drawer();
-
-		HU_Drawer();
+		if (gamestate == GS_LEVEL)
+		{
+			ST_Drawer();
+			HU_Drawer();
+		}
+		else
+			F_TitleScreenDrawer();
 	}
 
 	// change gamma if needed
@@ -680,6 +687,9 @@ void D_AdvanceDemo(void)
 void D_StartTitle(void)
 {
 	INT32 i;
+
+	S_StopMusic();
+
 	if (netgame)
 	{
 		if (gametype == GT_COOP)
@@ -1339,6 +1349,19 @@ void D_SRB2Main(void)
 	{
 		autostart = true;
 		ultimatemode = true;
+	}
+
+	// rei/miru: bootmap (Idea: starts the game on a predefined map)
+	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
+	{
+		pstartmap = bootmap;
+
+		if (pstartmap < 1 || pstartmap > NUMMAPS)
+			I_Error("Cannot warp to map %d (out of range)\n", pstartmap);
+		else
+		{
+			autostart = true;
+		}
 	}
 
 	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))

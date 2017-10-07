@@ -76,10 +76,13 @@ INT16 gamemap = 1;
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
-INT32 cursaveslot = -1; // Auto-save 1p savegame slot
+INT32 cursaveslot = 0; // Auto-save 1p savegame slot
 //INT16 lastmapsaved = 0; // Last map we auto-saved at
 INT16 lastmaploaded = 0; // Last map the game loaded
 boolean gamecomplete = false;
+
+UINT8 numgameovers = 0; // for startinglives balance
+SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40, 50, 75, 99, 0x7F};
 
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
@@ -120,6 +123,10 @@ tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 INT16 spstage_start;
 INT16 sstage_start;
 INT16 sstage_end;
+
+INT16 titlemap = 0;
+boolean hidetitlepics = false;
+INT16 bootmap; //bootmap for loading a map on startup
 
 boolean looptitle = false;
 boolean useNightsSS = false;
@@ -286,6 +293,10 @@ static void UserAnalog_OnChange(void);
 static void UserAnalog2_OnChange(void);
 static void Analog_OnChange(void);
 static void Analog2_OnChange(void);
+static void DirectionChar_OnChange(void);
+static void DirectionChar2_OnChange(void);
+static void AutoBrake_OnChange(void);
+static void AutoBrake2_OnChange(void);
 void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
@@ -367,6 +378,14 @@ consvar_t cv_useranalog2 = {"useranalog2", "On", CV_SAVE|CV_CALL, CV_OnOff, User
 consvar_t cv_useranalog = {"useranalog", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_useranalog2 = {"useranalog2", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
+
+static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
+
+// deez New User eXperiences
+consvar_t cv_directionchar = {"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 typedef enum
 {
@@ -1615,6 +1634,46 @@ static void Analog2_OnChange(void)
 	SendWeaponPref2();
 }
 
+static void DirectionChar_OnChange(void)
+{
+	if (cv_directionchar.value)
+		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
+	else
+		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
+
+	SendWeaponPref();
+}
+
+static void DirectionChar2_OnChange(void)
+{
+	if (cv_directionchar2.value)
+		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
+
+	SendWeaponPref2();
+}
+
+static void AutoBrake_OnChange(void)
+{
+	if (cv_autobrake.value)
+		players[consoleplayer].pflags |= PF_AUTOBRAKE;
+	else
+		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
+
+	SendWeaponPref();
+}
+
+static void AutoBrake2_OnChange(void)
+{
+	if (cv_autobrake2.value)
+		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
+
+	SendWeaponPref2();
+}
+
 //
 // G_DoLoadLevel
 //
@@ -1633,6 +1692,21 @@ void G_DoLoadLevel(boolean resetplayer)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
+	// cleanup
+	if (titlemapinaction == TITLEMAP_LOADING)
+	{
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+		{
+			titlemap = 0; // let's not infinite recursion ok
+			Command_ExitGame_f();
+			return;
+		}
+
+		titlemapinaction = TITLEMAP_RUNNING;
+	}
+	else
+		titlemapinaction = TITLEMAP_OFF;
+
 	G_SetGamestate(GS_LEVEL);
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1642,7 +1716,7 @@ void G_DoLoadLevel(boolean resetplayer)
 	}
 
 	// Setup the level.
-	if (!P_SetupLevel(false))
+	if (!P_SetupLevel(false)) // this never returns false?
 	{
 		// fail so reset game stuff
 		Command_ExitGame_f();
@@ -1991,6 +2065,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
+			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
 		case GS_WAITINGPLAYERS:
 			F_TitleScreenTicker(run);
 			break;
@@ -2103,7 +2178,7 @@ void G_PlayerReborn(INT32 player)
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
-	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
+	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -3129,8 +3204,11 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot > 0)
+		G_SaveGameOver((UINT32)cursaveslot, true);
+
 	// Reset # of lives
-	pl->lives = (ultimatemode) ? 1 : 3;
+	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
 
 	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
 
@@ -3469,59 +3547,6 @@ void G_SaveGameData(void)
 
 #define VERSIONSIZE 16
 
-#ifdef SAVEGAMES_OTHERVERSIONS
-static INT16 startonmapnum = 0;
-
-//
-// User wants to load a savegame from a different version?
-//
-static void M_ForceLoadGameResponse(INT32 ch)
-{
-	if (ch != 'y' && ch != KEY_ENTER)
-	{
-		//refused
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-		M_SetupNextMenu(&SP_LoadDef);
-		return;
-	}
-
-	// pick up where we left off.
-	save_p += VERSIONSIZE;
-	if (!P_LoadGame(startonmapnum))
-	{
-		M_ClearMenus(true); // so ESC backs out to title
-		M_StartMessage(M_GetText("Savegame file corrupted\n\nPress ESC\n"), NULL, MM_NOTHING);
-		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-
-		// no cheating!
-		memset(&savedata, 0, sizeof(savedata));
-		return;
-	}
-
-	// done
-	Z_Free(savebuffer);
-	save_p = savebuffer = NULL;
-	startonmapnum = 0;
-
-	//set cursaveslot to -1 so nothing gets saved.
-	cursaveslot = -1;
-
-	displayplayer = consoleplayer;
-	multiplayer = splitscreen = false;
-
-	if (setsizeneeded)
-		R_ExecuteSetViewSize();
-
-	M_ClearMenus(true);
-	CON_ToggleOff();
-}
-#endif
-
 //
 // G_InitFromSavegame
 // Can be called by the startup code or the menu task.
@@ -3614,13 +3639,13 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 // G_SaveGame
 // Saves your game.
 //
-void G_SaveGame(UINT32 savegameslot)
+void G_SaveGame(UINT32 slot)
 {
 	boolean saved;
 	char savename[256] = "";
 	const char *backup;
 
-	sprintf(savename, savegamename, savegameslot);
+	sprintf(savename, savegamename, slot);
 	backup = va("%s",savename);
 
 	// save during evaluation or credits? game's over, folks!
@@ -3656,8 +3681,90 @@ void G_SaveGame(UINT32 savegameslot)
 	if (cv_debug && saved)
 		CONS_Printf(M_GetText("Game saved.\n"));
 	else if (!saved)
-		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, savegameslot, savegamename);
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
 }
+
+#define BADSAVE goto cleanup;
+#define CHECKPOS if (save_p >= end_p) BADSAVE
+void G_SaveGameOver(UINT32 slot, boolean modifylives)
+{
+	boolean saved = false;
+	size_t length;
+	char vcheck[VERSIONSIZE];
+	char savename[255];
+	const char *backup;
+
+	sprintf(savename, savegamename, slot);
+	backup = va("%s",savename);
+
+	length = FIL_ReadFile(savename, &savebuffer);
+	if (!length)
+	{
+		CONS_Printf(M_GetText("Couldn't read file %s\n"), savename);
+		return;
+	}
+
+	{
+		char temp[sizeof(timeattackfolder)];
+		UINT8 *end_p = savebuffer + length;
+		UINT8 *lives_p;
+		SINT8 pllives;
+
+		save_p = savebuffer;
+		// Version check
+		memset(vcheck, 0, sizeof (vcheck));
+		sprintf(vcheck, "version %d", VERSION);
+		if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
+		save_p += VERSIONSIZE;
+
+		// P_UnArchiveMisc()
+		(void)READINT16(save_p);
+		CHECKPOS
+		(void)READUINT16(save_p); // emeralds
+		CHECKPOS
+		READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
+		if (strcmp(temp, timeattackfolder)) BADSAVE
+
+		// P_UnArchivePlayer()
+		CHECKPOS
+		(void)READUINT16(save_p);
+		CHECKPOS
+
+		WRITEUINT8(save_p, numgameovers);
+		CHECKPOS
+
+		lives_p = save_p;
+		pllives = READSINT8(save_p); // lives
+		CHECKPOS
+		if (modifylives && pllives < startinglivesbalance[numgameovers])
+		{
+			pllives = startinglivesbalance[numgameovers];
+			WRITESINT8(lives_p, pllives);
+		}
+
+		(void)READINT32(save_p); // Score
+		CHECKPOS
+		(void)READINT32(save_p); // continues
+
+		// File end marker check
+		CHECKPOS
+		if (READUINT8(save_p) != 0x1d) BADSAVE;
+
+		// done
+		saved = FIL_WriteFile(backup, savebuffer, length);
+	}
+
+cleanup:
+	if (cv_debug && saved)
+		CONS_Printf(M_GetText("Game saved.\n"));
+	else if (!saved)
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
+	Z_Free(savebuffer);
+	save_p = savebuffer = NULL;
+
+}
+#undef CHECKPOS
+#undef BADSAVE
 
 //
 // G_DeferedInitNew
@@ -3666,7 +3773,7 @@ void G_SaveGame(UINT32 savegameslot)
 //
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
 {
-	UINT8 color = 0;
+	UINT8 color = skins[pickedchar].prefcolor;
 	paused = false;
 
 	if (demoplayback)
@@ -3678,10 +3785,8 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 
 	if (savedata.lives > 0)
 	{
-		color = savedata.skincolor;
-		botskin = savedata.botskin;
-		botcolor = savedata.botcolor;
-		botingame = (botskin != 0);
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
 	}
 	else if (splitscreen != SSSG)
 	{
@@ -3689,8 +3794,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		SplitScreen_OnChange();
 	}
 
-	if (!color)
-		color = skins[pickedchar].prefcolor;
+	color = skins[pickedchar].prefcolor;
 	SetPlayerSkinByNum(consoleplayer, pickedchar);
 	CV_StealthSet(&cv_skin, skins[pickedchar].name);
 	CV_StealthSetValue(&cv_playercolor, color);
@@ -3722,7 +3826,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (resetplayer)
 	{
 		// Clear a bunch of variables
-		tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
+		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3737,22 +3841,17 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}
-			else if (pultmode)
-			{
-				players[i].lives = 1;
-				players[i].continues = 0;
-			}
 			else
 			{
-				players[i].lives = 3;
-				players[i].continues = 1;
+				players[i].lives = (pultmode) ? 1 : startinglivesbalance[0];
+				players[i].continues = (pultmode) ? 0 : 1;
 			}
 
 			if (!((netgame || multiplayer) && (FLS)))
 				players[i].score = 0;
 
 			// The latter two should clear by themselves, but just in case
-			players[i].pflags &= ~(PF_TAGIT|PF_TAGGED|PF_FULLSTASIS);
+			players[i].pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
 
 			// Clear cheatcodes too, just in case.
 			players[i].pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);

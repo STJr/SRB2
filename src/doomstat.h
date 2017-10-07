@@ -45,6 +45,10 @@ extern INT32 cursaveslot;
 extern INT16 lastmaploaded;
 extern boolean gamecomplete;
 
+#define maxgameovers 13
+extern UINT8 numgameovers;
+extern SINT8 startinglivesbalance[maxgameovers+1];
+
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
 #define PRECIP_SNOW  2
@@ -124,6 +128,10 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 extern INT16 spstage_start;
 extern INT16 sstage_start;
 extern INT16 sstage_end;
+
+extern INT16 titlemap;
+extern boolean hidetitlepics;
+extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
 extern boolean useNightsSS;

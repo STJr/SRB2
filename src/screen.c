@@ -173,6 +173,9 @@ void SCR_SetMode(void)
 	if (SCR_IsAspectCorrect(vid.width, vid.height))
 		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
 #endif*/
+
+	wallcolfunc = walldrawerfunc;
+
 	// set the apprpriate drawer for the sky (tall or INT16)
 	setmodeneeded = 0;
 }

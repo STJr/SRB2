@@ -684,6 +684,8 @@ static inline void ST_drawRings(void)
 static void ST_drawLives(void)
 {
 	const INT32 v_splitflag = (splitscreen && stplyr == &players[displayplayer] ? V_SPLITSCREEN : 0);
+	INT32 livescount;
+	boolean notgreyedout;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
@@ -723,66 +725,47 @@ static void ST_drawLives(void)
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, stlivex);
 
 	// lives number
-	if ((netgame || multiplayer) && gametype == GT_COOP)
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
 	{
-		switch (cv_cooplives.value)
+		INT32 i;
+		livescount = 0;
+		notgreyedout = (stplyr->lives > 0);
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			case 0:
-				V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0), '\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, false);
-				return;
-			case 3:
-				{
-					INT32 i, sum = 0;
-					boolean canrespawn = (stplyr->lives > 0);
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i])
-							continue;
+			if (!playeringame[i])
+				continue;
 
-						if (players[i].lives < 1)
-							continue;
+			if (players[i].lives < 1)
+				continue;
 
-						if (players[i].lives > 1)
-							canrespawn = true;
+			if (players[i].lives > 1)
+				notgreyedout = true;
 
-						sum += (players[i].lives);
-					}
-					V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-						V_SNAPTOLEFT|V_SNAPTOBOTTOM|(canrespawn ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
-						va("%d",sum));
-					return;
-				}
-#if 0 // render the number of lives you COULD steal
-			case 2:
-				{
-					INT32 i, sum = 0;
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i])
-							continue;
-
-						if (&players[i] == stplyr)
-							continue;
-
-						if (players[i].lives < 2)
-							continue;
-
-						sum += (players[i].lives - 1);
-					}
-					V_DrawString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-						V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF|v_splitflag, va("/%d",sum));
-				}
-				// intentional fallthrough
-#endif
-			default:
-				// don't return so the SP one can be drawn below
+			if (players[i].lives == 0x7f)
+			{
+				livescount = 0x7f;
 				break;
+			}
+			else if (livescount < 99)
+				livescount += (players[i].lives);
 		}
 	}
+	else
+	{
+		livescount = stplyr->lives;
+		notgreyedout = true;
+	}
 
-	V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,
-		va("%d",stplyr->lives));
+	if (livescount == 0x7f)
+		V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0), '\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, false);
+	else
+	{
+		if (livescount > 99)
+			livescount = 99;
+		V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
+			((livescount > 99) ? "!!" : va("%d",livescount)));
+	}
 }
 
 static void ST_drawLevelTitle(void)
