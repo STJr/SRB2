@@ -3976,9 +3976,9 @@ static ticcmd_t oldcmd;
 #define GZT_ANGLE  0x08
 // Not used for Metal Sonic
 #define GZT_SPRITE 0x10 // Animation frame
-#define GZT_EXTRA  0x20
-#define GZT_NIGHTS 0x40 // NiGHTS Mode stuff!
-#define GZT_SPR2   0x80 // Player animations
+#define GZT_SPR2   0x20 // Player animations
+// spare GZT slot  0x40
+#define GZT_EXTRA  0x80
 
 // GZT_EXTRA flags
 #define EZT_THOK   0x01 // Spawned a thok object
@@ -4188,9 +4188,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->powers[pw_carry] == CR_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
-		ziptic |= GZT_NIGHTS;
-
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
 	#define MAXMOM (0xFFFF<<8)
@@ -4335,7 +4332,6 @@ void G_ConsGhostTic(void)
 	UINT8 ziptic;
 	UINT16 px,py,pz,gx,gy,gz;
 	mobj_t *testmo;
-	boolean nightsfail = false;
 
 	if (!demo_p || !demo_start)
 		return;
@@ -4371,10 +4367,6 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
 		demo_p++;
-	if (ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->powers[pw_carry] == CR_NIGHTSMODE))
-			nightsfail = true;
-	}
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -4436,7 +4428,7 @@ void G_ConsGhostTic(void)
 	gy = oldghost.y>>FRACBITS;
 	gz = oldghost.z>>FRACBITS;
 
-	if (nightsfail || px != gx || py != gy || pz != gz)
+	if (px != gx || py != gy || pz != gz)
 	{
 		if (demosynced)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
