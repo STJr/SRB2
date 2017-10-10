@@ -4963,8 +4963,6 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Stats
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
 	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
@@ -4977,6 +4975,8 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEUINT8(demo_p,player->height>>FRACBITS);
 	WRITEUINT8(demo_p,player->spinheight>>FRACBITS);
+	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
+	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -5011,7 +5011,7 @@ void G_BeginRecording(void)
 		oldghost.x = player->mo->x;
 		oldghost.y = player->mo->y;
 		oldghost.z = player->mo->z;
-		oldghost.angle = player->drawangle>>24;
+		oldghost.angle = player->mo->angle>>24;
 
 		// preticker started us gravity flipped
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -5044,8 +5044,7 @@ void G_BeginMetal(void)
 	oldmetal.x = mo->x;
 	oldmetal.y = mo->y;
 	oldmetal.z = mo->z;
-	if (mo->player)
-		oldmetal.angle = mo->player->drawangle>>24;
+	oldmetal.angle = mo->angle>>24;
 }
 
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
@@ -5353,8 +5352,6 @@ void G_DoPlayDemo(char *defdemoname)
 	M_Memcpy(color,demo_p,16);
 	demo_p += 16;
 
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
 	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
@@ -5367,6 +5364,8 @@ void G_DoPlayDemo(char *defdemoname)
 	acceleration = READUINT8(demo_p);
 	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
 
 	// pflag data
@@ -5601,9 +5600,11 @@ void G_AddGhost(char *defdemoname)
 	p++; // acceleration
 	p++; // height
 	p++; // spinheight
+	p++; // camerascale
+	p++; // shieldscale
 	p += 4; // jumpfactor
 
-	// p++; // pflag data -- this should theoretically be here, but for some reason the ghosts only play back if it isn't. don't blame me for these black majyks if they suddenly fall apart later - toast 10/10/17
+	p++; // pflag data
 
 	// net var data
 	count = READUINT16(p);
