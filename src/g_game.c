@@ -3950,7 +3950,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0009
+#define DEMOVERSION 0x000a
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -4244,9 +4244,9 @@ void G_WriteGhostTic(mobj_t *ghost)
 	// Only store the 8 most relevant bits of angle
 	// because exact values aren't too easy to discern to begin with when only 8 angles have different sprites
 	// and it does not affect this mode of movement at all anyway.
-	if (ghost->angle>>24 != oldghost.angle)
+	if (ghost->player && ghost->player->drawangle>>24 != oldghost.angle)
 	{
-		oldghost.angle = ghost->angle>>24;
+		oldghost.angle = ghost->player->drawangle>>24;
 		ziptic |= GZT_ANGLE;
 		WRITEUINT8(demo_p,oldghost.angle);
 	}
@@ -4818,11 +4818,11 @@ void G_WriteMetalTic(mobj_t *metal)
 	// Only store the 8 most relevant bits of angle
 	// because exact values aren't too easy to discern to begin with when only 8 angles have different sprites
 	// and it does not affect movement at all anyway.
-	if (metal->angle>>24 != oldmetal.angle)
+	if (metal->player && metal->player->drawangle>>24 != oldmetal.angle)
 	{
-		oldmetal.angle = metal->angle>>24;
-		WRITEUINT8(demo_p,oldmetal.angle);
+		oldmetal.angle = metal->player->drawangle>>24;
 		ziptic |= GZT_ANGLE;
+		WRITEUINT8(demo_p,oldmetal.angle);
 	}
 
 	// Metal Sonic does not need our state changes.
@@ -4990,6 +4990,21 @@ void G_BeginRecording(void)
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
 
+	// Save pflag data
+	{
+		UINT8 buf = 0;
+		if (player->pflags & PF_FLIPCAM)
+			buf |= 1;
+		if (player->pflags & PF_ANALOGMODE)
+			buf |= 2;
+		if (player->pflags & PF_DIRECTIONCHAR)
+			buf |= 4;
+		if (player->pflags & PF_AUTOBRAKE)
+			buf |= 8;
+
+		WRITEUINT8(demo_p,buf);
+	}
+
 	// Save netvar data
 	CV_SaveNetVars(&demo_p);
 
@@ -5004,7 +5019,7 @@ void G_BeginRecording(void)
 		oldghost.x = player->mo->x;
 		oldghost.y = player->mo->y;
 		oldghost.z = player->mo->z;
-		oldghost.angle = player->mo->angle;
+		oldghost.angle = player->drawangle>>24;
 
 		// preticker started us gravity flipped
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -5037,7 +5052,8 @@ void G_BeginMetal(void)
 	oldmetal.x = mo->x;
 	oldmetal.y = mo->y;
 	oldmetal.z = mo->z;
-	oldmetal.angle = mo->angle;
+	if (mo->player)
+		oldmetal.angle = mo->player->drawangle>>24;
 }
 
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
@@ -5137,8 +5153,6 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5214,6 +5228,7 @@ void G_DoPlayDemo(char *defdemoname)
 	lumpnum_t l;
 	char skin[17],color[17],*n,*pdemoname;
 	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
+	pflags_t pflags;
 	UINT32 randseed;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
@@ -5277,8 +5292,6 @@ void G_DoPlayDemo(char *defdemoname)
 	switch(demoversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5304,10 +5317,7 @@ void G_DoPlayDemo(char *defdemoname)
 		return;
 	}
 	demo_p += 4; // "PLAY"
-	if (demoversion <= 0x0008)
-		gamemap = READUINT8(demo_p);
-	else
-		gamemap = READINT16(demo_p);
+	gamemap = READINT16(demo_p);
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);
@@ -5366,6 +5376,20 @@ void G_DoPlayDemo(char *defdemoname)
 	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
+
+	// pflag data
+	{
+		UINT8 buf = READUINT8(demo_p);
+		pflags = 0;
+		if (buf & 1)
+			pflags |= PF_FLIPCAM;
+		if (buf & 2)
+			pflags |= PF_ANALOGMODE;
+		if (buf & 4)
+			pflags |= PF_DIRECTIONCHAR;
+		if (buf & 8)
+			pflags |= PF_AUTOBRAKE;
+	}
 
 	// net var data
 	CV_LoadNetVars(&demo_p);
@@ -5440,9 +5464,10 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].thrustfactor = thrustfactor;
 	players[0].accelstart = accelstart;
 	players[0].acceleration = acceleration;
-	players[0].jumpfactor = jumpfactor;
 	players[0].height = height;
 	players[0].spinheight = spinheight;
+	players[0].jumpfactor = jumpfactor;
+	players[0].pflags = pflags;
 
 	demo_start = true;
 }
@@ -5506,8 +5531,6 @@ void G_AddGhost(char *defdemoname)
 	switch(ghostversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5584,7 +5607,11 @@ void G_AddGhost(char *defdemoname)
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
+	p++; // height
+	p++; // spinheight
 	p += 4; // jumpfactor
+
+	// p++; // pflag data -- this should theoretically be here, but for some reason the ghosts only play back if it isn't. don't blame me for these black majyks if they suddenly fall apart later - toast 10/10/17
 
 	// net var data
 	count = READUINT16(p);
@@ -5732,8 +5759,6 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:

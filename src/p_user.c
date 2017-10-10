@@ -592,6 +592,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->skin = &skins[player->skin];
 	player->mo->color = player->skincolor;
+	G_GhostAddColor(GHC_NORMAL);
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -6906,6 +6907,8 @@ static void P_MovePlayer(player_t *player)
 		&& !(player->exiting)))
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
+			if (skin->flags & SF_SUPER && player->mo->color < MAXSKINCOLORS)
+				G_GhostAddColor(GHC_SUPER);
 			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + (unsigned)abs(((signed)(leveltime >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
 		}
 
