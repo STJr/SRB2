@@ -385,9 +385,9 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	else
 	{
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
-		if (start == UINT16_MAX)
+		if (start == INT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-		if (start == UINT16_MAX)
+		if (start == INT16_MAX)
 			start = 0; //let say S_START is lump 0
 		else
 			start++;   // just after S_START
@@ -402,11 +402,11 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	else
 	{
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
-		if (end == UINT16_MAX)
+		if (end == INT16_MAX)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 	}
 
-	if (end == UINT16_MAX)
+	if (end == INT16_MAX)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
 		return;
