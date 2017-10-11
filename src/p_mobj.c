@@ -9844,7 +9844,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			mmin = mnumspokes;
 
 		// Make the links the same type as the end - repeated below
-		if ((mobj->type != MT_CHAINPOINT) && (!(lines[line].flags & ML_EFFECT2) == (mobj->type == MT_FIREBARPOINT))) // exclusive or
+		if ((mobj->type != MT_CHAINPOINT) && ((lines[line].flags & ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
 		{
 			linktype = macetype;
 			radiusfactor = 2; // Double the radius.
