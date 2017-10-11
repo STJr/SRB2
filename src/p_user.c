@@ -3675,7 +3675,7 @@ static void P_DoSuperStuff(player_t *player)
 			P_SpawnShieldOrb(player);
 
 			// Restore color
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
 			{
 				player->mo->color = SKINCOLOR_WHITE;
 				G_GhostAddColor(GHC_FIREFLOWER);
@@ -3725,7 +3725,7 @@ static void P_DoSuperStuff(player_t *player)
 			player->powers[pw_super] = 0;
 
 			// Restore color
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
 			{
 				player->mo->color = SKINCOLOR_WHITE;
 				G_GhostAddColor(GHC_FIREFLOWER);
