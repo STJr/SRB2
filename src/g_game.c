@@ -4985,6 +4985,9 @@ void G_BeginRecording(void)
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
 
+	// And mobjtype_t is best with UINT32 too...
+	WRITEUINT32(demo_p, player->followitem);
+
 	// Save pflag data
 	{
 		UINT8 buf = 0;
@@ -5223,7 +5226,7 @@ void G_DoPlayDemo(char *defdemoname)
 	char skin[17],color[17],*n,*pdemoname;
 	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
 	pflags_t pflags;
-	UINT32 randseed;
+	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
 
@@ -5370,6 +5373,7 @@ void G_DoPlayDemo(char *defdemoname)
 	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
+	followitem = READUINT32(demo_p);
 
 	// pflag data
 	{
@@ -5461,6 +5465,7 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].height = height;
 	players[0].spinheight = spinheight;
 	players[0].jumpfactor = jumpfactor;
+	players[0].followitem = followitem;
 	players[0].pflags = pflags;
 
 	demo_start = true;
@@ -5606,6 +5611,7 @@ void G_AddGhost(char *defdemoname)
 	p++; // camerascale
 	p++; // shieldscale
 	p += 4; // jumpfactor
+	p += 4; // followitem
 
 	p++; // pflag data
 
