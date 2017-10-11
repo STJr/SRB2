@@ -6917,7 +6917,7 @@ static void P_MovePlayer(player_t *player)
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
+			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((signed)(player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
 		}
 
 		if (!player->capsule && !player->bonustime)
