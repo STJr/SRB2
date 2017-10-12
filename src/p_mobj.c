@@ -8587,6 +8587,12 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->type == MT_OVERLAY)
 		P_RemoveOverlay(mobj);
 
+	if (mobj->player && mobj->player->followmobj)
+	{
+		P_RemoveMobj(mobj->player->followmobj);
+		mobj->player->followmobj = NULL;
+	}
+
 	mobj->health = 0; // Just because
 
 	// unlink from sector and block lists
