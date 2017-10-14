@@ -1311,10 +1311,8 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
-
-	// Default viewheight is changeable,
-	// initialized to standard viewheight
-	CV_RegisterVar(&cv_viewheight);
+	
+	CV_RegisterVar(&cv_movebob);
 
 #ifdef HWRENDER
 	// GL-specific Commands

@@ -188,11 +188,12 @@ void P_CalcHeight(player_t *player)
 	// Note: a LUT allows for effects
 	//  like a ramp with low health.
 
-	player->bob = (FixedMul(player->rmomx,player->rmomx)
-		+ FixedMul(player->rmomy,player->rmomy))>>2;
+	player->bob = FixedMul(cv_movebob.value,
+		(FixedMul(player->rmomx,player->rmomx)
+		+ FixedMul(player->rmomy,player->rmomy))>>2);
 
-	if (player->bob > FixedMul(MAXBOB, mo->scale))
-		player->bob = FixedMul(MAXBOB, mo->scale);
+	if (player->bob > FixedMul(cv_movebob.value, FixedMul(MAXBOB, mo->scale)))
+		player->bob = FixedMul(cv_movebob.value, FixedMul(MAXBOB, mo->scale));
 
 	if (!P_IsObjectOnGround(mo))
 	{
@@ -215,7 +216,7 @@ void P_CalcHeight(player_t *player)
 	bob = FixedMul(player->bob/2, FINESINE(angle));
 
 	// move viewheight
-	pviewheight = FixedMul(cv_viewheight.value << FRACBITS, mo->scale); // default eye view height
+	pviewheight = FixedMul(41*player->height/48, mo->scale); // default eye view height
 
 	if (player->playerstate == PST_LIVE)
 	{
@@ -8606,9 +8607,9 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	x = player->mo->x - P_ReturnThrustX(player->mo, thiscam->angle, player->mo->radius);
 	y = player->mo->y - P_ReturnThrustY(player->mo, thiscam->angle, player->mo->radius);
 	if (player->mo->eflags & MFE_VERTICALFLIP)
-		z = player->mo->z + player->mo->height - (cv_viewheight.value<<FRACBITS) - 16*FRACUNIT;
+		z = player->mo->z + player->mo->height - (41*player->height/48) - 16*FRACUNIT;
 	else
-		z = player->mo->z + (cv_viewheight.value<<FRACBITS);
+		z = player->mo->z + (41*player->height/48);
 
 	// set bits for the camera
 	thiscam->x = x;
@@ -8876,7 +8877,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 #endif // bad 2D camera code
 
-	pviewheight = FixedMul(cv_viewheight.value<<FRACBITS, mo->scale);
+	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
 		z = mo->z + mo->height - pviewheight - height;
@@ -10427,7 +10428,7 @@ void P_PlayerAfterThink(player_t *player)
 		{
 			// defaults to make sure 1st person cam doesn't do anything weird on startup
 			player->deltaviewheight = 0;
-			player->viewheight = FixedMul(cv_viewheight.value << FRACBITS, player->mo->scale);
+			player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
 			if (player->mo->eflags & MFE_VERTICALFLIP)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else

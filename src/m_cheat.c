@@ -1129,7 +1129,7 @@ void OP_ObjectplaceMovement(player_t *player)
 
 	// make sure viewz follows player if in 1st person mode
 	player->deltaviewheight = 0;
-	player->viewheight = FixedMul(cv_viewheight.value << FRACBITS, player->mo->scale);
+	player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		player->viewz = player->mo->z + player->mo->height - player->viewheight;
 	else

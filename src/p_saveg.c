@@ -413,7 +413,7 @@ static void P_NetUnArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			players[i].awayviewmobj = (mobj_t *)(size_t)READUINT32(save_p);
 
-		players[i].viewheight = cv_viewheight.value<<FRACBITS;
+		players[i].viewheight = READFIXED(save_p);
 
 		players[i].camerascale = READFIXED(save_p);
 		players[i].shieldscale = READFIXED(save_p);
