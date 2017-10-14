@@ -113,7 +113,7 @@ matrix:
               - p7zip-full
               - gcc-7
           compiler: gcc-7
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough"
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
           compiler: clang
@@ -177,6 +177,51 @@ matrix:
               - clang-3.8
           compiler: clang-3.8
           #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.9
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.9
+          compiler: clang-3.9
+          #clang version 3.9.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-4.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-4.0
+#          compiler: clang-4.0
+#          #clang version 4.0.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-5.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-5.0
+#          compiler: clang-5.0
+#          #clang version 5.0.X
 #        - os: osx
 #          osx_image: beta-xcode6.1
 #          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
@@ -207,6 +252,9 @@ matrix:
       - compiler: clang-3.6
       - compiler: clang-3.7
       - compiler: clang-3.8
+      - compiler: clang-3.9
+      - compiler: clang-4.0
+      - compiler: clang-5.0
 
 cache:
   apt: true

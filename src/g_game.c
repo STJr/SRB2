@@ -2023,6 +2023,7 @@ void G_PlayerReborn(INT32 player)
 	UINT32 thokitem;
 	UINT32 spinitem;
 	UINT32 revitem;
+	UINT32 followitem;
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;
@@ -2094,6 +2095,7 @@ void G_PlayerReborn(INT32 player)
 	thokitem = players[player].thokitem;
 	spinitem = players[player].spinitem;
 	revitem = players[player].revitem;
+	followitem = players[player].followitem;
 	actionspd = players[player].actionspd;
 	mindash = players[player].mindash;
 	maxdash = players[player].maxdash;
@@ -2131,6 +2133,7 @@ void G_PlayerReborn(INT32 player)
 	p->thokitem = thokitem;
 	p->spinitem = spinitem;
 	p->revitem = revitem;
+	p->followitem = followitem;
 	p->actionspd = actionspd;
 	p->mindash = mindash;
 	p->maxdash = maxdash;

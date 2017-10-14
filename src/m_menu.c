@@ -149,7 +149,7 @@ description_t description[32] =
 	{false, "???", "", "", 0, 0},
 	{false, "???", "", "", 0, 0}
 };
-static INT16 char_on = 0;
+INT16 char_on = -1, startchar = 1;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -6735,7 +6735,15 @@ static void M_SetupChoosePlayer(INT32 choice)
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
 	if (!allowed)
+	{
 		char_on = firstvalid;
+		if (startchar > 0 && startchar < 32)
+		{
+			INT16 workchar = startchar;
+			while (workchar--)
+				char_on = description[char_on].next;
+		}
+	}
 	char_scroll = 0; // finish scrolling the menu
 	Z_Free(char_notes);
 	char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);

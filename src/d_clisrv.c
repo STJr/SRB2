@@ -538,6 +538,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->thokitem = (UINT32)LONG(players[i].thokitem); //mobjtype_t
 	rsp->spinitem = (UINT32)LONG(players[i].spinitem); //mobjtype_t
 	rsp->revitem = (UINT32)LONG(players[i].revitem); //mobjtype_t
+	rsp->followitem = (UINT32)LONG(players[i].followitem); //mobjtype_t
 	rsp->actionspd = (fixed_t)LONG(players[i].actionspd);
 	rsp->mindash = (fixed_t)LONG(players[i].mindash);
 	rsp->maxdash = (fixed_t)LONG(players[i].maxdash);
@@ -667,6 +668,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].thokitem = (UINT32)LONG(rsp->thokitem); //mobjtype_t
 	players[i].spinitem = (UINT32)LONG(rsp->spinitem); //mobjtype_t
 	players[i].revitem = (UINT32)LONG(rsp->revitem); //mobjtype_t
+	players[i].followitem = (UINT32)LONG(rsp->followitem); //mobjtype_t
 	players[i].actionspd = (fixed_t)LONG(rsp->actionspd);
 	players[i].mindash = (fixed_t)LONG(rsp->mindash);
 	players[i].maxdash = (fixed_t)LONG(rsp->maxdash);

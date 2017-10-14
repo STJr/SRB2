@@ -700,10 +700,21 @@ static void ST_drawLives(void)
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
-		if ((stplyr->powers[pw_super] && (stplyr->mo->state < &states[S_PLAY_SUPER_TRANS] || stplyr->mo->state > &states[S_PLAY_SUPER_TRANS9])) || (stplyr->powers[pw_carry] == CR_NIGHTSMODE && skins[stplyr->skin].flags & SF_SUPER))
+		if (stplyr->powers[pw_super])
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
+		if (cv_translucenthud.value == 10 && stplyr->powers[pw_super] == 1 && stplyr->mo->tracer)
+		{
+			INT32 v_supertrans = (stplyr->mo->tracer->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+			if (v_supertrans < 10)
+			{
+				v_supertrans <<= V_ALPHASHIFT;
+				colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->tracer->color, GTC_CACHE);
+				V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
+					V_SNAPTOLEFT|V_SNAPTOBOTTOM|v_supertrans|v_splitflag,face, colormap);
+			}
+		}
 	}
 	else if (stplyr->skincolor)
 	{
@@ -2066,7 +2077,7 @@ static void ST_overlayDrawer(void)
 						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 12 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
 				}
 			}
-			else if (!gametype == GT_COOP)
+			else if (gametype != GT_COOP)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
 			if (!splitscreen)
 			{

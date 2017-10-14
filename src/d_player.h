@@ -369,6 +369,8 @@ typedef struct player_s
 	mobjtype_t thokitem; // Object # to spawn for the thok
 	mobjtype_t spinitem; // Object # to spawn for spindash/spinning
 	mobjtype_t revitem; // Object # to spawn for spindash/spinning
+	mobjtype_t followitem; // Object # to spawn for Smiles
+	mobj_t *followmobj; // Smiles all around
 
 	fixed_t actionspd; // Speed of thok/glide/fly
 	fixed_t mindash; // Minimum spindash speed
