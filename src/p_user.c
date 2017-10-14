@@ -3676,7 +3676,7 @@ static void P_DoSuperStuff(player_t *player)
 			P_SpawnShieldOrb(player);
 
 			// Restore color
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
 			{
 				player->mo->color = SKINCOLOR_WHITE;
 				G_GhostAddColor(GHC_FIREFLOWER);
@@ -3726,7 +3726,7 @@ static void P_DoSuperStuff(player_t *player)
 			player->powers[pw_super] = 0;
 
 			// Restore color
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
 			{
 				player->mo->color = SKINCOLOR_WHITE;
 				G_GhostAddColor(GHC_FIREFLOWER);
@@ -6920,7 +6920,7 @@ static void P_MovePlayer(player_t *player)
 			skin_t *skin = ((skin_t *)(player->mo->skin));
 			if (skin->flags & SF_SUPER && player->mo->color < MAXSKINCOLORS)
 				G_GhostAddColor(GHC_SUPER);
-			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
+			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((signed)(player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
 		}
 
 		if (!player->capsule && !player->bonustime)
