@@ -1804,6 +1804,7 @@ static actionpointer_t actionpointers[] =
 	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
 	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
 	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
+	{{A_FadeOverlay},          "A_FADEOVERLAY"},
 
 	{{NULL},                   "NONE"},
 
@@ -2831,6 +2832,11 @@ static void readmaincfg(MYFILE *f)
 				bootmap = (INT16)value;
 				//titlechanged = true;
 			}
+			else if (fastcmp(word, "STARTCHAR"))
+			{
+				startchar = (INT16)value;
+				char_on = -1;
+			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
 		}
@@ -3460,15 +3466,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_MELEE_LANDING",
 
 	// SF_SUPER
-	"S_PLAY_SUPERTRANS1",
-	"S_PLAY_SUPERTRANS2",
-	"S_PLAY_SUPERTRANS3",
-	"S_PLAY_SUPERTRANS4",
-	"S_PLAY_SUPERTRANS5",
-	"S_PLAY_SUPERTRANS6",
-	"S_PLAY_SUPERTRANS7",
-	"S_PLAY_SUPERTRANS8",
-	"S_PLAY_SUPERTRANS9", // This has special significance in the code. If you add more frames, search for it and make the appropriate changes.
+	"S_PLAY_SUPER_TRANS1",
+	"S_PLAY_SUPER_TRANS2",
+	"S_PLAY_SUPER_TRANS3",
+	"S_PLAY_SUPER_TRANS4",
+	"S_PLAY_SUPER_TRANS5",
+	"S_PLAY_SUPER_TRANS6", // This has special significance in the code. If you add more frames, search for it and make the appropriate changes.
 
 	// technically the player goes here but it's an infinite tic state
 	"S_OBJPLACE_DUMMY",
@@ -3484,15 +3487,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SIGN",
 
 	// NiGHTS character (uses player sprite)
-	"S_PLAY_NIGHTS_TRANS",
+	"S_PLAY_NIGHTS_TRANS1",
 	"S_PLAY_NIGHTS_TRANS2",
 	"S_PLAY_NIGHTS_TRANS3",
 	"S_PLAY_NIGHTS_TRANS4",
 	"S_PLAY_NIGHTS_TRANS5",
 	"S_PLAY_NIGHTS_TRANS6",
-	"S_PLAY_NIGHTS_TRANS7",
-	"S_PLAY_NIGHTS_TRANS8",
-	"S_PLAY_NIGHTS_TRANS9",
 
 	"S_PLAY_NIGHTS_STAND",
 	"S_PLAY_NIGHTS_FLOAT",
@@ -3526,6 +3526,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_NIGHTS_DRILLB",
 	"S_PLAY_NIGHTS_FLYC",
 	"S_PLAY_NIGHTS_DRILLC",
+
+	// c:
+	"S_TAILSOVERLAY_STAND",
+	"S_TAILSOVERLAY_0DEGREES",
+	"S_TAILSOVERLAY_PLUS30DEGREES",
+	"S_TAILSOVERLAY_PLUS60DEGREES",
+	"S_TAILSOVERLAY_MINUS30DEGREES",
+	"S_TAILSOVERLAY_MINUS60DEGREES",
+	"S_TAILSOVERLAY_RUN",
+	"S_TAILSOVERLAY_FLY",
+	"S_TAILSOVERLAY_TIRE",
+	"S_TAILSOVERLAY_PAIN",
+	"S_TAILSOVERLAY_GASP",
+	"S_TAILSOVERLAY_EDGE",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -5881,6 +5895,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
+	"MT_TAILSOVERLAY", // c:
 
 	// Enemies
 	"MT_BLUECRAWLA",

@@ -189,6 +189,7 @@ typedef struct
 	UINT32 thokitem; // mobjtype_t
 	UINT32 spinitem; // mobjtype_t
 	UINT32 revitem; // mobjtype_t
+	UINT32 followitem; // mobjtype_t
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;
