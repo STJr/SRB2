@@ -10612,7 +10612,7 @@ void P_PlayerAfterThink(player_t *player)
 								chosenstate = S_TAILSOVERLAY_RUN;
 							else if (player->panim == PA_WALK)
 							{
-								if (!smilesonground)
+								if (!smilesonground || player->mo->state-states == S_PLAY_SKID)
 									chosenstate = S_TAILSOVERLAY_PLUS30DEGREES;
 								else if (player->speed >= FixedMul(player->runspeed/2, player->mo->scale))
 									chosenstate = S_TAILSOVERLAY_0DEGREES;
