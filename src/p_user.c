@@ -9849,7 +9849,7 @@ void P_PlayerThink(player_t *player)
 			}
 		}
 
-		// Autobrake!
+		// Autobrake! check ST_drawInput if you modify this
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 

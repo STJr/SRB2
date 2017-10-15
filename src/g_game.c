@@ -5067,13 +5067,16 @@ void G_BeginRecording(void)
 	{
 		UINT8 buf = 0;
 		if (player->pflags & PF_FLIPCAM)
-			buf |= 1;
+			buf |= 0x01;
 		if (player->pflags & PF_ANALOGMODE)
-			buf |= 2;
+			buf |= 0x02;
 		if (player->pflags & PF_DIRECTIONCHAR)
-			buf |= 4;
+			buf |= 0x04;
 		if (player->pflags & PF_AUTOBRAKE)
-			buf |= 8;
+			buf |= 0x08;
+		if (cv_usejoystick.value)
+			buf |= 0x10;
+		CV_SetValue(&cv_showinputjoy, !!(cv_usejoystick.value));
 
 		WRITEUINT8(demo_p,buf);
 	}
@@ -5454,14 +5457,15 @@ void G_DoPlayDemo(char *defdemoname)
 	{
 		UINT8 buf = READUINT8(demo_p);
 		pflags = 0;
-		if (buf & 1)
+		if (buf & 0x01)
 			pflags |= PF_FLIPCAM;
-		if (buf & 2)
+		if (buf & 0x02)
 			pflags |= PF_ANALOGMODE;
-		if (buf & 4)
+		if (buf & 0x04)
 			pflags |= PF_DIRECTIONCHAR;
-		if (buf & 8)
+		if (buf & 0x08)
 			pflags |= PF_AUTOBRAKE;
+		CV_SetValue(&cv_showinputjoy, !!(buf & 0x10));
 	}
 
 	// net var data
