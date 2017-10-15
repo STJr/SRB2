@@ -1890,6 +1890,13 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (resetplayer && !FLS)
 		emeralds = 0;
 
+	if (modeattacking)
+	{
+		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
+		players[0].skincolor = skins[players[0].skin].prefcolor;
+		CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
+	}
+
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
 #endif
@@ -1901,16 +1908,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (timingdemo)
 		G_DoneLevelLoad();
 
-	if (modeattacking)
-	{
-		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
-		players[0].skincolor = skins[players[0].skin].prefcolor;
-		CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
-
-		// a copy of color
-		if (players[0].mo)
-			players[0].mo->color = players[0].skincolor;
-	}
 	if (metalrecording)
 		G_BeginMetal();
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
