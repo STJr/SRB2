@@ -787,6 +787,9 @@ static void ST_drawInput(void)
 
 	INT32 x = hudinfo[HUD_LIVESPIC].x, y = hudinfo[HUD_LIVESPIC].y;
 
+	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
+		y -= 16;
+
 	// O backing
 	V_DrawFill(x, y-1, 16, 16, 20);
 	V_DrawFill(x, y+15, 16, 1, 29);
@@ -911,22 +914,23 @@ static void ST_drawInput(void)
 	drawbutt( 4,-3, BT_JUMP, 'J');
 	drawbutt(15,-3, BT_USE,  'S');
 
+	V_DrawFill(x+16+4, y+8, 21, 10, 20); // sundial backing
 	if (stplyr->mo)
 	{
 		UINT8 i, precision;
-		angle_t ang = (stplyr->mo->angle - R_PointToAngle(stplyr->mo->x, stplyr->mo->y))>>ANGLETOFINESHIFT;
+		angle_t ang = (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
+		? (FixedAngle((stplyr->flyangle-90)<<FRACBITS)>>ANGLETOFINESHIFT)
+		: (stplyr->mo->angle - R_PointToAngle(stplyr->mo->x, stplyr->mo->y))>>ANGLETOFINESHIFT;
 		fixed_t xcomp = FINESINE(ang)>>13;
 		fixed_t ycomp = FINECOSINE(ang)>>14;
 		if (ycomp == 4)
 			ycomp = 3;
 
-		V_DrawFill(x+16+4, y+8, 21, 10, 20); // sundial backing
-
 		if (ycomp > 0)
 			V_DrawFill(x+16+13-xcomp, y+11-ycomp, 3, 3, accent); // point (behind)
 
 		precision = max(3, abs(xcomp));
-		for (i = 0; i < precision; i++)
+		for (i = 0; i < precision; i++) // line
 		{
 			V_DrawFill(x+16+14-(i*xcomp)/precision,
 				y+12-(i*ycomp)/precision,
@@ -942,21 +946,24 @@ static void ST_drawInput(void)
 	// text above
 	x -= 2;
 	y -= 13;
-	if (stplyr->pflags & PF_AUTOBRAKE)
+	if (!stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 	{
-		V_DrawThinString(x, y,
-			((!stplyr->powers[pw_carry]
-			&& (stplyr->pflags & PF_APPLYAUTOBRAKE)
-			&& !(stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
-			&& (stplyr->rmomx || stplyr->rmomy))
-			? 0 : V_GRAYMAP),
-			"AUTOBRAKE");
-		y -= 8;
-	}
-	if (stplyr->pflags & PF_ANALOGMODE)
-	{
-		V_DrawThinString(x, y, 0, "ANALOG");
-		y -= 8;
+		if (stplyr->pflags & PF_AUTOBRAKE)
+		{
+			V_DrawThinString(x, y,
+				((!stplyr->powers[pw_carry]
+				&& (stplyr->pflags & PF_APPLYAUTOBRAKE)
+				&& !(stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
+				&& (stplyr->rmomx || stplyr->rmomy))
+				? 0 : V_GRAYMAP),
+				"AUTOBRAKE");
+			y -= 8;
+		}
+		if (stplyr->pflags & PF_ANALOGMODE)
+		{
+			V_DrawThinString(x, y, 0, "ANALOG");
+			y -= 8;
+		}
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
 		V_DrawThinString(x, y, ((leveltime & 2) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
@@ -2051,8 +2058,6 @@ static void ST_overlayDrawer(void)
 #endif
 			)
 				ST_drawLives();
-			else if (modeattacking)
-				ST_drawInput();
 		}
 	}
 
@@ -2273,6 +2278,9 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(136), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}
+
+	if (modeattacking)
+		ST_drawInput();
 
 	ST_drawDebugInfo();
 }
