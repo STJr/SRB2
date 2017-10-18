@@ -248,7 +248,7 @@ static UINT8 demoflags;
 static UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
-static boolean demosynced = true; // console warning message
+boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
 mobj_t *metalplayback;
@@ -1683,6 +1683,7 @@ void G_DoLoadLevel(boolean resetplayer)
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
+	demosynced = true;
 
 	levelstarttic = gametic; // for time calculation
 
@@ -5491,9 +5492,6 @@ void G_DoPlayDemo(char *defdemoname)
 
 	if (VERSION != version || SUBVERSION != subversion)
 		CONS_Alert(CONS_WARNING, M_GetText("Demo version does not match game version. Desyncs may occur.\n"));
-
-	// console warning messages
-	demosynced = true;
 
 	// didn't start recording right away.
 	demo_start = false;
