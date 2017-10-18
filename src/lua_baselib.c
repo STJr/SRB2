@@ -135,7 +135,7 @@ static const struct {
 };
 
 // goes through the above list and returns the utype string for the userdata type
-// returns "unknown" instead if we couldn't find the right userdata type 
+// returns "unknown" instead if we couldn't find the right userdata type
 static const char *GetUserdataUType(lua_State *L)
 {
 	UINT8 i;

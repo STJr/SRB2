@@ -980,18 +980,18 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 		levelnum = emblemlocations[i].level;
 		embtype = emblemlocations[i].var;
 		flags = MV_BEATEN;
-		
+
 		if (embtype & ME_ALLEMERALDS)
 			flags |= MV_ALLEMERALDS;
-		
+
 		if (embtype & ME_ULTIMATE)
 			flags |= MV_ULTIMATE;
-		
+
 		if (embtype & ME_PERFECT)
 			flags |= MV_PERFECT;
-		
+
 		res = ((mapvisited[levelnum - 1] & flags) == flags);
-		
+
 		emblemlocations[i].collected = res;
 		if (res)
 			++somethingUnlocked;

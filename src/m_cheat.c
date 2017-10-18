@@ -1261,7 +1261,7 @@ void Command_ObjectPlace_f(void)
 	{
 		objectplacing = true;
 
-		if ((players[0].powers[pw_carry] == CR_NIGHTSMODE))
+		if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
 			return;
 
 		if (!COM_CheckParm("-silent"))

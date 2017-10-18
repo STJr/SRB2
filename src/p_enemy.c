@@ -244,6 +244,7 @@ void A_FlickyCheck(mobj_t *actor);
 void A_FlickyHeightCheck(mobj_t *actor);
 void A_FlickyFlutter(mobj_t *actor);
 void A_FlameParticle(mobj_t *actor);
+void A_FadeOverlay(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -4824,9 +4825,11 @@ void A_UnidusBall(mobj_t *actor)
 		case 0: // at least one frame where not dashing
 			if (!skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 1: // at least one frame where ARE dashing
 			if (skull) ++actor->extravalue2;
 			else break;
+			/* FALLTHRU */
 		case 2: // not dashing again?
 			if (skull) break;
 			// launch.
@@ -6065,7 +6068,7 @@ void A_Boss7Chase(mobj_t *actor)
 					break;
 				}
 				actor->threshold++;
-				// fall into...
+				/* FALLTHRU */
 			case 1: // Chaingun Goop
 				A_FaceTarget(actor);
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
@@ -10187,7 +10190,7 @@ void A_FlickyAim(mobj_t *actor)
 	{
 		angle_t posvar;
 		fixed_t chasevar, chasex, chasey;
-		
+
 		if (flickyhitwall)
 			actor->movedir *= -1;
 
@@ -10489,4 +10492,40 @@ void A_FlameParticle(mobj_t *actor)
 		P_RandomRange(hei/2, hei)<<FRACBITS,
 		type);
 	P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+}
+
+// Function: A_FadeOverlay
+//
+// Description: Makes a pretty overlay (primarily for super/NiGHTS transformation).
+//
+// var1 = bit 1 = don't halt momentum, bit 2 = don't make fast, bit 3 = don't set tracer
+// var2 = unused
+//
+void A_FadeOverlay(mobj_t *actor)
+{
+	mobj_t *fade;
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FadeOverlay", actor))
+		return;
+#endif
+
+	if (!(locvar1 & 1))
+		actor->momx = actor->momy = actor->momz = 0;
+
+	fade = P_SpawnGhostMobj(actor);
+	fade->frame = actor->frame;
+
+	if (!(locvar1 & 2))
+	{
+		fade->fuse = 15;
+		fade->flags2 |= MF2_BOSSNOTRAP;
+	}
+	else
+		fade->fuse = 20;
+
+	if (!(locvar1 & 4))
+		P_SetTarget(&actor->tracer, fade);
 }

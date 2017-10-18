@@ -16,9 +16,7 @@
 #include <errno.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
 #if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET)
 #define NONET
@@ -30,23 +28,13 @@
 #define HAVE_IPV6
 #endif
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #ifdef HAVE_IPV6
 #include <ws2tcpip.h>
 #else
 #include <winsock.h>     // socket(),...
 #endif //!HAVE_IPV6
-#else
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
-
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#include <kos/net.h>
-#include <lwip/lwip.h>
-#define ioctl lwip_ioctl
 #else
 #include <arpa/inet.h>
 #ifdef __APPLE_CC__
@@ -56,25 +44,12 @@
 #endif
 #include <sys/socket.h> // socket(),...
 #include <netinet/in.h> // sockaddr_in
-#ifdef _PS3
-#include <net/select.h>
-#elif !defined(_arch_dreamcast)
 #include <netdb.h> // getaddrinfo(),...
 #include <sys/ioctl.h>
-#endif
-#endif
-
-#ifdef _arch_dreamcast
-#include "sdl/SRB2DC/dchelp.h"
-#endif
 
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
-#endif // _WIN32/_WIN32_WCE
-
-#ifdef __OS2__
-#include <errno.h>
-#endif // __OS2__
+#endif // _WIN32
 #endif // !NONET
 
 #include "doomstat.h"
@@ -90,10 +65,6 @@
 #include "m_menu.h"
 #include "m_argv.h" // Alam is going to kill me <3
 #include "m_misc.h" //  GetRevisionString()
-
-#ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
-#endif
 
 #include "i_addrinfo.h"
 
@@ -183,13 +154,13 @@ typedef struct
 #endif
 
 // win32 or djgpp
-#if defined (_WIN32) || defined (_WIN32_WCE) || defined (__DJGPP__)
+#if defined (_WIN32) || defined (__DJGPP__)
 #define ioctl ioctlsocket
 #define close closesocket
 #ifdef WATTCP
 #define strerror strerror_s
 #endif
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #undef errno
 #define errno h_errno // some very strange things happen when not using h_error
 #endif
@@ -215,12 +186,12 @@ static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state 
 static INT32 msnode = -1;
 UINT16 current_port = 0;
 
-#if (defined (_WIN32) || defined (_WIN32_WCE) || defined (_WIN32)) && !defined (NONET)
+#if defined (_WIN32) && !defined (NONET)
 typedef SOCKET SOCKET_TYPE;
 #define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined (_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;

@@ -338,7 +338,7 @@ angle_t gld_FrustumAngle(void)
 	}
 
 	// If the pitch is larger than this you can look all around at a FOV of 90
-	if (abs(aimingangle) > 46 * ANG1)
+	if (aimingangle > (ANGLE_45+ANG1) && (ANGLE_315-ANG1) > aimingangle)
 		return 0xffffffff;
 
 	// ok, this is a gross hack that barely works...

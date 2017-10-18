@@ -49,7 +49,7 @@
 #define MIX_CHANNELS 8
 #endif
 
-#if defined (_WIN32) && !defined (_WIN32_WCE) && !defined (_XBOX)
+#ifdef _WIN32
 #include <direct.h>
 #elif defined (__GNUC__)
 #include <unistd.h>
@@ -85,21 +85,11 @@
 //  mixing buffer, and the samplerate of the raw data.
 
 // Needed for calling the actual sound output.
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
-#define NUM_CHANNELS            MIX_CHANNELS
-#else
 #define NUM_CHANNELS            MIX_CHANNELS*4
-#endif
 
 #define INDEXOFSFX(x) ((sfxinfo_t *)x - S_sfx)
 
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP)
-static Uint16 samplecount = 512; //Alam: .5KB samplecount at 11025hz is 46.439909297052154195011337868481ms of buffer
-#elif defined(GP2X)
-static Uint16 samplecount = 128;
-#else
 static Uint16 samplecount = 1024; //Alam: 1KB samplecount at 22050hz is 46.439909297052154195011337868481ms of buffer
-#endif
 
 typedef struct chan_struct
 {
@@ -151,16 +141,9 @@ static SDL_bool musicStarted = SDL_FALSE;
 #ifdef HAVE_MIXER
 static SDL_mutex *Msc_Mutex = NULL;
 /* FIXME: Make this file instance-specific */
-#ifdef _arch_dreamcast
-#define MIDI_PATH     "/ram"
-#elif defined(GP2X)
-#define MIDI_PATH     "/mnt/sd/srb2"
-#define MIDI_PATH2    "/tmp/mnt/sd/srb2"
-#else
 #define MIDI_PATH     srb2home
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define MIDI_PATH2    "/tmp"
-#endif
 #endif
 #define MIDI_TMPFILE  "srb2music"
 #define MIDI_TMPFILE2 "srb2wav"
@@ -176,7 +159,7 @@ static SDL_bool canlooping = SDL_TRUE;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,7)
 #define USE_RWOPS // ok, USE_RWOPS is in here
-#if defined (DC) || defined (_WIN32_WCE) || defined (_XBOX) //|| defined(_WIN32) || defined(GP2X)
+#if 0 // defined(_WIN32)
 #undef USE_RWOPS
 #endif
 #endif
@@ -1189,13 +1172,6 @@ void I_StartupSound(void)
 #ifndef HAVE_MIXER
 	nomidimusic = nodigimusic = true;
 #endif
-#ifdef DC
-	//nosound = true;
-#ifdef HAVE_MIXER
-	nomidimusic = true;
-	nodigimusic = true;
-#endif
-#endif
 
 	memset(channels, 0, sizeof (channels)); //Alam: Clean it
 
@@ -1243,13 +1219,7 @@ void I_StartupSound(void)
 		audio.samples /= 2;
 	}
 
-#if defined (_PSP)  && defined (HAVE_MIXER) // Bug in PSP's SDL_OpenAudio, can not open twice
-	I_SetChannels();
-	sound_started = true;
-	Snd_Mutex = SDL_CreateMutex();
-#else
 	if (nosound)
-#endif
 		return;
 
 #ifdef HW3SOUND
@@ -1302,7 +1272,7 @@ void I_StartupSound(void)
 			snddev.bps = 16;
 			snddev.sample_rate = audio.freq;
 			snddev.numsfxs = NUMSFX;
-#if defined (_WIN32) && !defined (_XBOX)
+#if defined (_WIN32)
 			snddev.cooplevel = 0x00000002;
 			snddev.hWnd = vid.WndParent;
 #endif
@@ -1520,9 +1490,7 @@ void I_InitMusic(void)
 	I_OutputMsg("Compiled for SDL_mixer version: %d.%d.%d\n",
 	            MIXcompiled.major, MIXcompiled.minor, MIXcompiled.patch);
 #ifdef MIXER_POS
-#ifndef _WII
 	if (MIXlinked->major == 1 && MIXlinked->minor == 2 && MIXlinked->patch < 7)
-#endif
 		canlooping = SDL_FALSE;
 #endif
 #ifdef USE_RWOPS
@@ -1531,13 +1499,11 @@ void I_InitMusic(void)
 #endif
 	I_OutputMsg("Linked with SDL_mixer version: %d.%d.%d\n",
 	            MIXlinked->major, MIXlinked->minor, MIXlinked->patch);
-#if !(defined (DC) || defined (PSP) || defined(GP2X) || defined (WII))
 	if (audio.freq < 44100 && !M_CheckParm ("-freq")) //I want atleast 44Khz
 	{
 		audio.samples = (Uint16)(audio.samples*(INT32)(44100/audio.freq));
 		audio.freq = 44100; //Alam: to keep it around the same XX ms
 	}
-#endif
 
 	if (sound_started
 #ifdef HW3SOUND
@@ -1757,7 +1723,7 @@ static void I_CleanupGME(void *userdata)
 static boolean I_StartGMESong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_LIBGME
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1812,7 +1778,7 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 boolean I_StartDigSong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_MIXER
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1854,7 +1820,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	{
 		size_t scan;
 		const char *dataum = data;
-		XBOXSTATIC char looplength[64];
+		char looplength[64];
 		UINT32 loopstart = 0;
 		UINT8 newcount = 0;
 
@@ -1929,7 +1895,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		if (loopstart > 0)
 		{
 			loopstartDig = (double)((44.1l+loopstart) / 44100.0l); //8 PCM chucks off and PCM to secs
-//#ifdef GP2X//#ifdef PARANOIA
+//#ifdef PARANOIA
 			//I_OutputMsg("I_StartDigSong: setting looping point to %ul PCMs(%f seconds)\n", loopstart, loopstartDig);
 //#endif
 		}

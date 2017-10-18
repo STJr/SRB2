@@ -41,14 +41,8 @@ typedef unsigned char   FBOOLEAN;
 // ==========================================================================
 
 // byte value for paletted graphics, which represent the transparent color
-#ifdef _NDS
-// NDS is hardwired to use zero as transparent color
-#define HWR_PATCHES_CHROMAKEY_COLORINDEX   0
-#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 1
-#else
 #define HWR_PATCHES_CHROMAKEY_COLORINDEX   255
 #define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 130
-#endif
 
 // the chroma key color shows on border sprites, set it to black
 #define HWR_PATCHES_CHROMAKEY_COLORVALUE     (0x00000000)    //RGBA format as in grSstWinOpen()

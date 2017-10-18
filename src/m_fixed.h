@@ -20,10 +20,6 @@
 #include <stdlib.h>
 #endif
 
-#ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
-#endif
-
 /*!
   \brief bits of the fraction
 */

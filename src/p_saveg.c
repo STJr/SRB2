@@ -56,6 +56,7 @@ typedef enum
 	AWAYVIEW   = 0x08,
 	FIRSTAXIS  = 0x10,
 	SECONDAXIS = 0x20,
+	FOLLOW     = 0x40,
 } player_saveflags;
 
 //
@@ -220,6 +221,9 @@ static void P_NetArchivePlayers(void)
 		if (players[i].axis2)
 			flags |= SECONDAXIS;
 
+		if (players[i].followmobj)
+			flags |= FOLLOW;
+
 		WRITEINT16(save_p, players[i].lastsidehit);
 		WRITEINT16(save_p, players[i].lastlinehit);
 
@@ -245,6 +249,9 @@ static void P_NetArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			WRITEUINT32(save_p, players[i].awayviewmobj->mobjnum);
 
+		if (flags & FOLLOW)
+			WRITEUINT32(save_p, players[i].followmobj->mobjnum);
+
 		WRITEFIXED(save_p, players[i].camerascale);
 		WRITEFIXED(save_p, players[i].shieldscale);
 
@@ -254,6 +261,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, (UINT32)players[i].thokitem);
 		WRITEUINT32(save_p, (UINT32)players[i].spinitem);
 		WRITEUINT32(save_p, (UINT32)players[i].revitem);
+		WRITEUINT32(save_p, (UINT32)players[i].followitem);
 		WRITEFIXED(save_p, players[i].actionspd);
 		WRITEFIXED(save_p, players[i].mindash);
 		WRITEFIXED(save_p, players[i].maxdash);
@@ -413,6 +421,9 @@ static void P_NetUnArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			players[i].awayviewmobj = (mobj_t *)(size_t)READUINT32(save_p);
 
+		if (flags & FOLLOW)
+			players[i].followmobj = (mobj_t *)(size_t)READUINT32(save_p);
+
 		players[i].viewheight = cv_viewheight.value<<FRACBITS;
 
 		players[i].camerascale = READFIXED(save_p);
@@ -425,6 +436,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].thokitem = (mobjtype_t)READUINT32(save_p);
 		players[i].spinitem = (mobjtype_t)READUINT32(save_p);
 		players[i].revitem = (mobjtype_t)READUINT32(save_p);
+		players[i].followitem = (mobjtype_t)READUINT32(save_p);
 		players[i].actionspd = READFIXED(save_p);
 		players[i].mindash = READFIXED(save_p);
 		players[i].maxdash = READFIXED(save_p);
@@ -1670,12 +1682,18 @@ static inline void SaveWhatThinker(const thinker_t *th, const UINT8 type)
 static void P_NetArchiveThinkers(void)
 {
 	const thinker_t *th;
+	UINT32 numsaved = 0;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_THINKERS);
 
 	// save off the current thinkers
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
+		if (!(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed
+		 || th->function.acp1 == (actionf_p1)P_RainThinker
+		 || th->function.acp1 == (actionf_p1)P_SnowThinker))
+			numsaved++;
+
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{
 			SaveMobjThinker(th, tc_mobj);
@@ -1868,6 +1886,8 @@ static void P_NetArchiveThinkers(void)
 			I_Error("unknown thinker type %p", th->function.acp1);
 #endif
 	}
+
+	CONS_Debug(DBG_NETPLAY, "%u thinkers saved\n", numsaved);
 
 	WRITEUINT8(save_p, tc_end);
 }
@@ -2656,6 +2676,7 @@ static void P_NetUnArchiveThinkers(void)
 	UINT8 tclass;
 	UINT8 restoreNum = false;
 	UINT32 i;
+	UINT32 numloaded = 0;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2689,6 +2710,7 @@ static void P_NetUnArchiveThinkers(void)
 
 		if (tclass == tc_end)
 			break; // leave the saved thinker reading loop
+		numloaded++;
 
 		switch (tclass)
 		{
@@ -2843,6 +2865,8 @@ static void P_NetUnArchiveThinkers(void)
 				I_Error("P_UnarchiveSpecials: Unknown tclass %d in savegame", tclass);
 		}
 	}
+
+	CONS_Debug(DBG_NETPLAY, "%u thinkers loaded\n", numloaded);
 
 	if (restoreNum)
 	{
@@ -3047,6 +3071,13 @@ static void P_RelinkPointers(void)
 				mobj->player->awayviewmobj = NULL;
 				if (!P_SetTarget(&mobj->player->awayviewmobj, P_FindNewPosition(temp)))
 					CONS_Debug(DBG_GAMELOGIC, "awayviewmobj not found on %d\n", mobj->type);
+			}
+			if (mobj->player && mobj->player->followmobj)
+			{
+				temp = (UINT32)(size_t)mobj->player->followmobj;
+				mobj->player->followmobj = NULL;
+				if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(temp)))
+					CONS_Debug(DBG_GAMELOGIC, "followmobj not found on %d\n", mobj->type);
 			}
 		}
 	}
