@@ -636,7 +636,7 @@ static const gtdesc_t gametypedesc[] =
 	{{ 66,  66}, "Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
 	{{153,  37}, "Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
 	{{123, 123}, "Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
-	{{135, 135}, "Try and find a good hiding place in these maps - we dare you."},
+	{{150, 150}, "Try and find a good hiding place in these maps - we dare you."},
 	{{ 37, 153}, "Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
 };
 
@@ -4438,7 +4438,7 @@ static void M_DrawLevelPlatterMenu(void)
 
 	// draw cursor box
 	if (levellistmode != LLM_CREATESERVER || lsrow)
-		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
+		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey+lsoffs[0], 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
 #if 0
 	if (levelselect.rows[lsrow].maplist[lscol] > 0)
