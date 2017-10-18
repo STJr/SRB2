@@ -966,7 +966,7 @@ static void ST_drawInput(void)
 		}
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
-		V_DrawThinString(x, y, ((leveltime & 2) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
+		V_DrawThinString(x, y, ((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
 static void ST_drawLevelTitle(void)
