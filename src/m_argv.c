@@ -123,12 +123,7 @@ void M_PushSpecialParameters(void)
 }
 
 /// \brief max args
-
-#if defined (_arch_dreamcast) || defined (_XBOX) || defined (_WII)
-#define MAXARGVS 1
-#else
 #define MAXARGVS 256
-#endif
 
 /**	\brief the M_FindResponseFile function
 	Find a response file

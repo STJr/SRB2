@@ -60,7 +60,7 @@ C(vidwidth):    .long   0       //use this one out of the inner loops
                                 //so you don't need to patch everywhere...
 
 #ifdef USEASM
-#if !defined( LINUX) && !defined( __OS2__)
+#if !defined( LINUX)
     .text
 #endif
 .globl C(ASM_PatchRowBytes)
@@ -616,7 +616,7 @@ vskydone:
 ystep:          .long   0
 xstep:          .long   0
 C(texwidth):    .long   64      // texture width
-#if !defined( LINUX) && !defined( __OS2__)
+#if !defined( LINUX)
     .text
 #endif
 #ifdef LINUX
@@ -1338,7 +1338,7 @@ wdone:
     .data
 
 advancetable:   .long   0, 0
-#if !defined( LINUX) && !defined( __OS2__)
+#if !defined( LINUX)
     .text
 #endif
 #ifdef LINUX

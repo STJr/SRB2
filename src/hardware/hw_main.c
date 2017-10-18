@@ -5726,12 +5726,8 @@ if (0)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
 }
 
-#ifndef _NDS
 	if (drawsky)
 		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;
@@ -5970,12 +5966,8 @@ if (0)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
 }
 
-#ifndef _NDS
 	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
 		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;
@@ -6225,12 +6217,7 @@ void HWR_Startup(void)
 	}
 
 	if (rendermode == render_opengl)
-		textureformat = patchformat =
-#ifdef _NDS
-			GR_TEXFMT_P_8;
-#else
-			GR_RGBA;
-#endif
+		textureformat = patchformat = GR_RGBA;
 
 	startupdone = true;
 }
