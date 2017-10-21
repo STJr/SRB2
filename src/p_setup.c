@@ -65,7 +65,7 @@
 #include "lua_script.h"
 #include "lua_hook.h"
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #include <malloc.h>
 #include <math.h>
 #endif

@@ -16,16 +16,12 @@
 #ifdef __GNUC__
 #include <dirent.h>
 #endif
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 //#define WIN32_LEAN_AND_MEAN
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
 #endif
-#ifdef _WIN32_WCE
-#include "sdl12/SRB2CE/cehelp.h"
-#else
 #include <sys/stat.h>
-#endif
 #include <string.h>
 
 #include "filesrch.h"
@@ -34,7 +30,7 @@
 #include "z_zone.h"
 #include "m_menu.h" // Addons_option_Onchange
 
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && defined (_MSC_VER) && !defined (_XBOX)
+#if defined (_WIN32) && defined (_MSC_VER)
 
 #include <errno.h>
 #include <io.h>
@@ -338,81 +334,6 @@ UINT8 refreshdirmenu = 0;
 size_t packetsizetally = 0;
 size_t mainwadstally = 0;
 
-#if defined (_XBOX) && defined (_MSC_VER)
-filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
-	boolean completepath, int maxsearchdepth)
-{
-//NONE?
-	startpath = filename = NULL;
-	wantedmd5sum = NULL;
-	maxsearchdepth = 0;
-	completepath = false;
-	return FS_NOTFOUND;
-}
-
-boolean preparefilemenu(boolean samedepth)
-{
-	(void)samedepth;
-	return false;
-}
-
-#elif defined (_WIN32_WCE)
-filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
-	boolean completepath, int maxsearchdepth)
-{
-#ifdef __GNUC__
-//NONE?
-	startpath = filename = NULL;
-	wantedmd5sum = NULL;
-	maxsearchdepth = 0;
-	completepath = false;
-#else
-	WIN32_FIND_DATA dta;
-	HANDLE searchhandle = INVALID_HANDLE_VALUE;
-	const wchar_t wm[4] = L"*.*";
-
-	//if (startpath) SetCurrentDirectory(startpath);
-	if (FIL_ReadFileOK(filename))
-	{
-		// checkfilemd5 returns an FS_* value, either FS_FOUND or FS_MD5SUMBAD
-		return checkfilemd5(filename, wantedmd5sum);
-	}
-	ZeroMemory(&dta,sizeof (dta));
-	if (maxsearchdepth)
-		searchhandle = FindFirstFile(wm,&dta);
-	if (searchhandle != INVALID_HANDLE_VALUE)
-	{
-		do
-		{
-			if ((dta.cFileName[0]!='.') && (dta.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-			{
-				//if (SetCurrentDirectory(dta.cFileName))
-				{ // can fail if we haven't the right
-					filestatus_t found;
-					found = filesearch(filename,NULL,wantedmd5sum,completepath,maxsearchdepth-1);
-					//SetCurrentDirectory("..");
-					if (found == FS_FOUND || found == FS_MD5SUMBAD)
-					{
-						if (completepath)
-							strcatbf(filename,(char *)dta.cFileName,"\\");
-						FindClose(searchhandle);
-						return found;
-					}
-				}
-			}
-		} while (FindNextFile(searchhandle,&dta)==0);
-		FindClose(searchhandle);
-	}
-#endif
-	return FS_NOTFOUND;
-}
-
-boolean preparefilemenu(boolean samedepth)
-{
-	(void)samedepth;
-	return false;
-}
-#else
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum, boolean completepath, int maxsearchdepth)
 {
 	filestatus_t retval = FS_NOTFOUND;
@@ -765,4 +686,3 @@ boolean preparefilemenu(boolean samedepth)
 
 	return true;
 }
-#endif

@@ -10,9 +10,7 @@
 /// \file  d_clisrv.c
 /// \brief SRB2 Network game communication and protocol, all OS independent parts.
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 #ifdef __GNUC__
 #include <unistd.h> //for unlink
 #endif
@@ -48,10 +46,6 @@
 // cl loading screen
 #include "v_video.h"
 #include "f_finale.h"
-#endif
-
-#ifdef _XBOX
-#include "sdl12/SRB2XBOX/xboxhelp.h"
 #endif
 
 //
@@ -393,7 +387,7 @@ static void ExtraDataTicker(void)
 					{
 						if (server)
 						{
-							XBOXSTATIC UINT8 buf[3];
+							UINT8 buf[3];
 
 							buf[0] = (UINT8)i;
 							buf[1] = KICK_MSG_CON_FAIL;
@@ -544,6 +538,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->thokitem = (UINT32)LONG(players[i].thokitem); //mobjtype_t
 	rsp->spinitem = (UINT32)LONG(players[i].spinitem); //mobjtype_t
 	rsp->revitem = (UINT32)LONG(players[i].revitem); //mobjtype_t
+	rsp->followitem = (UINT32)LONG(players[i].followitem); //mobjtype_t
 	rsp->actionspd = (fixed_t)LONG(players[i].actionspd);
 	rsp->mindash = (fixed_t)LONG(players[i].mindash);
 	rsp->maxdash = (fixed_t)LONG(players[i].maxdash);
@@ -673,6 +668,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].thokitem = (UINT32)LONG(rsp->thokitem); //mobjtype_t
 	players[i].spinitem = (UINT32)LONG(rsp->spinitem); //mobjtype_t
 	players[i].revitem = (UINT32)LONG(rsp->revitem); //mobjtype_t
+	players[i].followitem = (UINT32)LONG(rsp->followitem); //mobjtype_t
 	players[i].actionspd = (fixed_t)LONG(rsp->actionspd);
 	players[i].mindash = (fixed_t)LONG(rsp->mindash);
 	players[i].maxdash = (fixed_t)LONG(rsp->maxdash);
@@ -1027,7 +1023,7 @@ static void SV_SendResynch(INT32 node)
 
 	if (resynch_score[node] > (unsigned)cv_resynchattempts.value*250)
 	{
-		XBOXSTATIC UINT8 buf[2];
+		UINT8 buf[2];
 		buf[0] = (UINT8)nodetoplayer[node];
 		buf[1] = KICK_MSG_CON_FAIL;
 		SendNetXCmd(XD_KICK, &buf, 2);
@@ -1503,7 +1499,7 @@ static void SV_SavedGame(void)
 {
 	size_t length;
 	UINT8 *savebuffer;
-	XBOXSTATIC char tmpsave[256];
+	char tmpsave[256];
 
 	if (!cv_dumpconsistency.value)
 		return;
@@ -1545,7 +1541,7 @@ static void CL_LoadReceivedSavegame(void)
 {
 	UINT8 *savebuffer = NULL;
 	size_t length, decompressedlen;
-	XBOXSTATIC char tmpsave[256];
+	char tmpsave[256];
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 
@@ -2003,7 +1999,7 @@ static void CL_ConnectToServer(boolean viams)
 	tic_t asksent;
 #endif
 #ifdef JOININGAME
-	XBOXSTATIC char tmpsave[256];
+	char tmpsave[256];
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 #endif
@@ -2560,7 +2556,7 @@ static void Command_Ban(void)
 
 	if (server || adminplayer == consoleplayer)
 	{
-		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
+		UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
 		const INT32 node = playernode[(INT32)pn];
@@ -2626,7 +2622,7 @@ static void Command_Kick(void)
 
 	if (server || adminplayer == consoleplayer)
 	{
-		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
+		UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
 
@@ -2675,7 +2671,7 @@ static void Command_Kick(void)
 static void Got_KickCmd(UINT8 **p, INT32 playernum)
 {
 	INT32 pnum, msg;
-	XBOXSTATIC char buf[3 + MAX_REASONLENGTH];
+	char buf[3 + MAX_REASONLENGTH];
 	char *reason = buf;
 
 	pnum = READUINT8(*p);
@@ -3066,7 +3062,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal add player command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -3151,7 +3147,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 static boolean SV_AddWaitingPlayers(void)
 {
 	INT32 node, n, newplayer = false;
-	XBOXSTATIC UINT8 buf[2];
+	UINT8 buf[2];
 	UINT8 newplayernum = 0;
 
 	// What is the reason for this? Why can't newplayernum always be 0?
@@ -3212,7 +3208,7 @@ void CL_AddSplitscreenPlayer(void)
 
 void CL_RemoveSplitscreenPlayer(void)
 {
-	XBOXSTATIC UINT8 buf[2];
+	UINT8 buf[2];
 
 	if (cl_mode != CL_CONNECTED)
 		return;
@@ -3656,11 +3652,10 @@ static void HandlePacketFromAwayNode(SINT8 node)
   *
   */
 static void HandlePacketFromPlayer(SINT8 node)
-{FILESTAMP
-	XBOXSTATIC INT32 netconsole;
-	XBOXSTATIC tic_t realend, realstart;
-	XBOXSTATIC UINT8 *pak, *txtpak, numtxtpak;
-FILESTAMP
+{
+	INT32 netconsole;
+	tic_t realend, realstart;
+	UINT8 *pak, *txtpak, numtxtpak;
 
 	txtpak = NULL;
 
@@ -3734,7 +3729,7 @@ FILESTAMP
 			if (netcmds[maketic%BACKUPTICS][netconsole].forwardmove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].forwardmove < -MAXPLMOVE
 				|| netcmds[maketic%BACKUPTICS][netconsole].sidemove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].sidemove < -MAXPLMOVE)
 			{
-				XBOXSTATIC char buf[2];
+				char buf[2];
 				CONS_Alert(CONS_WARNING, M_GetText("Illegal movement value received from node %d\n"), netconsole);
 				//D_Clearticcmd(k);
 
@@ -3777,7 +3772,7 @@ FILESTAMP
 				}
 				else
 				{
-					XBOXSTATIC UINT8 buf[3];
+					UINT8 buf[3];
 
 					buf[0] = (UINT8)netconsole;
 					buf[1] = KICK_MSG_CON_FAIL;
@@ -3868,7 +3863,7 @@ FILESTAMP
 			nodewaiting[node] = 0;
 			if (netconsole != -1 && playeringame[netconsole])
 			{
-				XBOXSTATIC UINT8 buf[2];
+				UINT8 buf[2];
 				buf[0] = (UINT8)netconsole;
 				if (netbuffer->packettype == PT_NODETIMEOUT)
 					buf[1] = KICK_MSG_TIMEOUT;
@@ -3896,7 +3891,7 @@ FILESTAMP
 
 				if (server)
 				{
-					XBOXSTATIC UINT8 buf[2];
+					UINT8 buf[2];
 					buf[0] = (UINT8)node;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
@@ -3921,7 +3916,7 @@ FILESTAMP
 
 				if (server)
 				{
-					XBOXSTATIC UINT8 buf[2];
+					UINT8 buf[2];
 					buf[0] = (UINT8)node;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
@@ -3987,7 +3982,7 @@ FILESTAMP
 
 				if (server)
 				{
-					XBOXSTATIC char buf[2];
+					char buf[2];
 					buf[0] = (char)node;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
@@ -4007,7 +4002,7 @@ FILESTAMP
 
 				if (server)
 				{
-					XBOXSTATIC char buf[2];
+					char buf[2];
 					buf[0] = (char)node;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
@@ -4037,7 +4032,7 @@ FILESTAMP
 
 				if (server)
 				{
-					XBOXSTATIC UINT8 buf[2];
+					UINT8 buf[2];
 					buf[0] = (UINT8)node;
 					buf[1] = KICK_MSG_CON_FAIL;
 					SendNetXCmd(XD_KICK, &buf, 2);
@@ -4060,9 +4055,8 @@ FILESTAMP
   *
   */
 static void GetPackets(void)
-{FILESTAMP
-	XBOXSTATIC SINT8 node; // The packet sender
-FILESTAMP
+{
+	SINT8 node; // The packet sender
 
 	player_joining = false;
 
@@ -4562,7 +4556,7 @@ static inline void PingUpdate(void)
 			{
 				if (playeringame[i] && laggers[i])
 				{
-					XBOXSTATIC char buf[2];
+					char buf[2];
 
 					buf[0] = (char)i;
 					buf[1] = KICK_MSG_PING_HIGH;
@@ -4634,9 +4628,9 @@ void NetUpdate(void)
 
 	if (server)
 		CL_SendClientCmd(); // send it
-FILESTAMP
+
 	GetPackets(); // get packet from client or from server
-FILESTAMP
+
 	// client send the command after a receive of the server
 	// the server send before because in single player is beter
 

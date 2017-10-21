@@ -152,7 +152,7 @@ description_t description[32] =
 	{false, "???", "", "", 0, 0},
 	{false, "???", "", "", 0, 0}
 };
-static INT16 char_on = 0;
+INT16 char_on = -1, startchar = 1;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -2435,7 +2435,6 @@ boolean M_Responder(event_t *ev)
 				itemOn = 0;
 				return true;
 
-#ifndef DC
 			case KEY_F5: // Video Mode
 				if (modeattacking)
 					return true;
@@ -2443,7 +2442,6 @@ boolean M_Responder(event_t *ev)
 				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
-#endif
 
 			case KEY_F6: // Empty
 				return true;
@@ -2831,9 +2829,8 @@ void M_ClearMenus(boolean callexitmenufunc)
 	if (currentMenu->quitroutine && callexitmenufunc && !currentMenu->quitroutine())
 		return; // we can't quit this menu (also used to set parameter from the menu)
 
-#ifndef DC // Save the config file. I'm sick of crashing the game later and losing all my changes!
+	// Save the config file. I'm sick of crashing the game later and losing all my changes!
 	COM_BufAddText(va("saveconfig \"%s\" -silent\n", configfile));
-#endif //Alam: But not on the Dreamcast's VMUs
 
 	if (currentMenu == &MessageDef) // Oh sod off!
 		currentMenu = &MainDef; // Not like it matters
@@ -6743,7 +6740,15 @@ static void M_SetupChoosePlayer(INT32 choice)
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
 	if (!allowed)
+	{
 		char_on = firstvalid;
+		if (startchar > 0 && startchar < 32)
+		{
+			INT16 workchar = startchar;
+			while (workchar--)
+				char_on = description[char_on].next;
+		}
+	}
 	char_scroll = 0; // finish scrolling the menu
 	Z_Free(char_notes);
 	char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
@@ -8466,7 +8471,7 @@ static void M_HandleConnectIP(INT32 choice)
 			}
 			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
 			{
-				XBOXSTATIC char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
+				char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
 				choice = keypad_translation[choice - 199];
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;

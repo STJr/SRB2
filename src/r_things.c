@@ -1394,12 +1394,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	// specific translucency
 	if (!cv_translucency.value)
 		; // no translucency
-	else if (oldthing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
+	else if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
 		vis->transmap = transtables + (oldthing->frame & FF_TRANSMASK) - 0x10000;
 
-	if ((oldthing->frame & FF_FULLBRIGHT) || (oldthing->flags2 & MF2_SHADOW))
+	if (oldthing->frame & FF_FULLBRIGHT || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;
 
 	if (vis->cut & SC_FULLBRIGHT
@@ -2447,7 +2447,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND
-		&& ++i != 32) // recursion limiter
+		&& ++i < 32) // recursion limiter
 	{
 		if (spr2 & FF_SPR2SUPER)
 		{
@@ -2534,6 +2534,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->thokitem = -1;
 	skin->spinitem = -1;
 	skin->revitem = -1;
+	skin->followitem = 0;
 
 	skin->highresscale = FRACUNIT;
 
@@ -2647,6 +2648,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		player->thokitem = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
 		player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
 		player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
+		player->followitem = skin->followitem;
 
 		player->actionspd = skin->actionspd;
 		player->mindash = skin->mindash;
@@ -2672,13 +2674,21 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			player->skincolor = newcolor = skin->prefcolor;
 		}
 
+		if (player->followmobj)
+		{
+			P_RemoveMobj(player->followmobj);
+			player->followmobj = NULL;
+		}
+
 		if (player->mo)
 		{
 			fixed_t radius = FixedMul(skin->radius, player->mo->scale);
 			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
-				newcolor = skin->prefcolor; // will be updated in thinker to flashing
+				player->followitem = skin->followitem;
+				if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+					newcolor = skin->prefcolor; // will be updated in thinker to flashing
 			}
 			player->mo->skin = skin;
 			if (newcolor)
@@ -2812,6 +2822,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	FULLPROCESS(thokitem)
 	FULLPROCESS(spinitem)
 	FULLPROCESS(revitem)
+	FULLPROCESS(followitem)
 #undef FULLPROCESS
 
 #define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;

@@ -1359,11 +1359,6 @@ boolean D_CheckNetGame(void)
 	netbuffer = (doomdata_t *)(void *)&doomcom->data;
 
 #ifdef DEBUGFILE
-#ifdef _arch_dreamcast
-	//debugfile = stderr;
-	if (debugfile)
-			CONS_Printf(M_GetText("debug output to: %s\n"), "STDERR");
-#else
 	if (M_CheckParm("-debugfile"))
 	{
 		char filename[21];
@@ -1381,7 +1376,6 @@ boolean D_CheckNetGame(void)
 		else
 			CONS_Alert(CONS_WARNING, M_GetText("cannot debug output to file %s!\n"), filename);
 	}
-#endif
 #endif
 
 	D_ClientServerInit();

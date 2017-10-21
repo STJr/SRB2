@@ -82,6 +82,7 @@ typedef struct
 	INT32 thokitem;
 	INT32 spinitem;
 	INT32 revitem;
+	INT32 followitem;
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;

@@ -322,7 +322,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->tics = st->tics;
 
 		// Adjust the player's animation speed to match their velocity.
-		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+		if (state == S_PLAY_STND && player->powers[pw_super] && skins[player->skin].sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0) // if no super wait, don't wait at all
+			mobj->tics = -1;
+		else if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
 			mobj->tics = 2;
 		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
@@ -6646,10 +6648,21 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 	}
 
-	if ((mobj->type == MT_GHOST || mobj->type == MT_THOK) && mobj->fuse > 0 // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
-	&& (signed)(mobj->frame >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
-		// fade out when nearing the end of fuse...
-		mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
+	if ((mobj->type == MT_GHOST || mobj->type == MT_THOK) && mobj->fuse > 0) // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
+	{
+		if (mobj->flags2 & MF2_BOSSNOTRAP) // "fast" flag
+		{
+			if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - (2*mobj->fuse)/3)
+				// fade out when nearing the end of fuse...
+				mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - (2*mobj->fuse)/3) << FF_TRANSSHIFT);
+		}
+		else
+		{
+			if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
+				// fade out when nearing the end of fuse...
+				mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
+		}
+	}
 
 	if (mobj->flags2 & MF2_MACEROTATE)
 	{
@@ -9831,7 +9844,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			mmin = mnumspokes;
 
 		// Make the links the same type as the end - repeated below
-		if ((mobj->type != MT_CHAINPOINT) && (!(lines[line].flags & ML_EFFECT2) == (mobj->type == MT_FIREBARPOINT))) // exclusive or
+		if ((mobj->type != MT_CHAINPOINT) && ((lines[line].flags & ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
 		{
 			linktype = macetype;
 			radiusfactor = 2; // Double the radius.
