@@ -56,6 +56,7 @@ typedef enum
 	AWAYVIEW   = 0x08,
 	FIRSTAXIS  = 0x10,
 	SECONDAXIS = 0x20,
+	FOLLOW     = 0x40,
 } player_saveflags;
 
 //
@@ -64,22 +65,16 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
-	INT32 pllives = player->lives;
-	if (pllives < 3) // Bump up to 3 lives if the player
-		pllives = 3; // has less than that.
+	INT16 skininfo = player->skin + (botskin<<5);
+	SINT8 pllives = player->lives;
+	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
+		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
-	WRITEUINT8(save_p, player->skincolor);
-	WRITEUINT8(save_p, player->skin);
-
+	WRITEUINT16(save_p, skininfo);
+	WRITEUINT8(save_p, numgameovers);
+	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
-	WRITEINT32(save_p, pllives);
 	WRITEINT32(save_p, player->continues);
-
-	if (botskin)
-	{
-		WRITEUINT8(save_p, botskin);
-		WRITEUINT8(save_p, botcolor);
-	}
 }
 
 //
@@ -87,22 +82,14 @@ static inline void P_ArchivePlayer(void)
 //
 static inline void P_UnArchivePlayer(void)
 {
-	savedata.skincolor = READUINT8(save_p);
-	savedata.skin = READUINT8(save_p);
+	INT16 skininfo = READUINT16(save_p);
+	savedata.skin = skininfo & ((1<<5) - 1);
+	savedata.botskin = skininfo >> 5;
 
-	savedata.score = READINT32(save_p);
-	savedata.lives = READINT32(save_p);
+	savedata.numgameovers = READUINT8(save_p);
+	savedata.lives = READSINT8(save_p);
+	savedata.score = READUINT32(save_p);
 	savedata.continues = READINT32(save_p);
-
-	if (savedata.botcolor)
-	{
-		savedata.botskin = READUINT8(save_p);
-		if (savedata.botskin-1 >= numskins)
-			savedata.botskin = 0;
-		savedata.botcolor = READUINT8(save_p);
-	}
-	else
-		savedata.botskin = 0;
 }
 
 //
@@ -126,6 +113,7 @@ static void P_NetArchivePlayers(void)
 		// no longer send ticcmds, player name, skin, or color
 
 		WRITEANGLE(save_p, players[i].aiming);
+		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
 		WRITEINT32(save_p, players[i].rings);
@@ -233,6 +221,9 @@ static void P_NetArchivePlayers(void)
 		if (players[i].axis2)
 			flags |= SECONDAXIS;
 
+		if (players[i].followmobj)
+			flags |= FOLLOW;
+
 		WRITEINT16(save_p, players[i].lastsidehit);
 		WRITEINT16(save_p, players[i].lastlinehit);
 
@@ -258,6 +249,9 @@ static void P_NetArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			WRITEUINT32(save_p, players[i].awayviewmobj->mobjnum);
 
+		if (flags & FOLLOW)
+			WRITEUINT32(save_p, players[i].followmobj->mobjnum);
+
 		WRITEFIXED(save_p, players[i].camerascale);
 		WRITEFIXED(save_p, players[i].shieldscale);
 
@@ -267,6 +261,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, (UINT32)players[i].thokitem);
 		WRITEUINT32(save_p, (UINT32)players[i].spinitem);
 		WRITEUINT32(save_p, (UINT32)players[i].revitem);
+		WRITEUINT32(save_p, (UINT32)players[i].followitem);
 		WRITEFIXED(save_p, players[i].actionspd);
 		WRITEFIXED(save_p, players[i].mindash);
 		WRITEFIXED(save_p, players[i].maxdash);
@@ -305,6 +300,7 @@ static void P_NetUnArchivePlayers(void)
 		// (that data is handled in the server config now)
 
 		players[i].aiming = READANGLE(save_p);
+		players[i].drawangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
 		players[i].rings = READINT32(save_p);
@@ -425,6 +421,9 @@ static void P_NetUnArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			players[i].awayviewmobj = (mobj_t *)(size_t)READUINT32(save_p);
 
+		if (flags & FOLLOW)
+			players[i].followmobj = (mobj_t *)(size_t)READUINT32(save_p);
+
 		players[i].viewheight = cv_viewheight.value<<FRACBITS;
 
 		players[i].camerascale = READFIXED(save_p);
@@ -437,6 +436,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].thokitem = (mobjtype_t)READUINT32(save_p);
 		players[i].spinitem = (mobjtype_t)READUINT32(save_p);
 		players[i].revitem = (mobjtype_t)READUINT32(save_p);
+		players[i].followitem = (mobjtype_t)READUINT32(save_p);
 		players[i].actionspd = READFIXED(save_p);
 		players[i].mindash = READFIXED(save_p);
 		players[i].maxdash = READFIXED(save_p);
@@ -1682,12 +1682,18 @@ static inline void SaveWhatThinker(const thinker_t *th, const UINT8 type)
 static void P_NetArchiveThinkers(void)
 {
 	const thinker_t *th;
+	UINT32 numsaved = 0;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_THINKERS);
 
 	// save off the current thinkers
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
+		if (!(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed
+		 || th->function.acp1 == (actionf_p1)P_RainThinker
+		 || th->function.acp1 == (actionf_p1)P_SnowThinker))
+			numsaved++;
+
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{
 			SaveMobjThinker(th, tc_mobj);
@@ -1880,6 +1886,8 @@ static void P_NetArchiveThinkers(void)
 			I_Error("unknown thinker type %p", th->function.acp1);
 #endif
 	}
+
+	CONS_Debug(DBG_NETPLAY, "%u thinkers saved\n", numsaved);
 
 	WRITEUINT8(save_p, tc_end);
 }
@@ -2668,6 +2676,7 @@ static void P_NetUnArchiveThinkers(void)
 	UINT8 tclass;
 	UINT8 restoreNum = false;
 	UINT32 i;
+	UINT32 numloaded = 0;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2701,6 +2710,7 @@ static void P_NetUnArchiveThinkers(void)
 
 		if (tclass == tc_end)
 			break; // leave the saved thinker reading loop
+		numloaded++;
 
 		switch (tclass)
 		{
@@ -2855,6 +2865,8 @@ static void P_NetUnArchiveThinkers(void)
 				I_Error("P_UnarchiveSpecials: Unknown tclass %d in savegame", tclass);
 		}
 	}
+
+	CONS_Debug(DBG_NETPLAY, "%u thinkers loaded\n", numloaded);
 
 	if (restoreNum)
 	{
@@ -3060,6 +3072,13 @@ static void P_RelinkPointers(void)
 				if (!P_SetTarget(&mobj->player->awayviewmobj, P_FindNewPosition(temp)))
 					CONS_Debug(DBG_GAMELOGIC, "awayviewmobj not found on %d\n", mobj->type);
 			}
+			if (mobj->player && mobj->player->followmobj)
+			{
+				temp = (UINT32)(size_t)mobj->player->followmobj;
+				mobj->player->followmobj = NULL;
+				if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(temp)))
+					CONS_Debug(DBG_GAMELOGIC, "followmobj not found on %d\n", mobj->type);
+			}
 		}
 	}
 }
@@ -3159,9 +3178,10 @@ static inline void P_ArchiveMisc(void)
 	else
 		WRITEINT16(save_p, gamemap);
 
-	lastmapsaved = gamemap;
+	//lastmapsaved = gamemap;
+	lastmaploaded = gamemap;
 
-	WRITEUINT16(save_p, (botskin ? (emeralds|(1<<10)) : emeralds)+357);
+	WRITEUINT16(save_p, emeralds+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
 
@@ -3184,15 +3204,13 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
-	lastmapsaved = gamemap;
+	//lastmapsaved = gamemap;
+	lastmaploaded = gamemap;
 
 	tokenlist = 0;
 	token = 0;
 
 	savedata.emeralds = READUINT16(save_p)-357;
-	if (savedata.emeralds & (1<<10))
-		savedata.botcolor = 0xFF;
-	savedata.emeralds &= 0xff;
 
 	READSTRINGN(save_p, testname, sizeof(testname));
 

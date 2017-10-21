@@ -445,18 +445,36 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 	if (slope); else // Don't mess with this right now if a slope is involved
 #endif
-	if (plangle != 0)
-	{
-		// Add the view offset, rotated by the plane angle.
-		angle_t angle = plangle>>ANGLETOFINESHIFT;
-		xoff += FixedMul(viewx,FINECOSINE(angle))-FixedMul(viewy,FINESINE(angle));
-		yoff += -FixedMul(viewx,FINESINE(angle))-FixedMul(viewy,FINECOSINE(angle));
-	}
-	else
 	{
 		xoff += viewx;
 		yoff -= viewy;
+		if (plangle != 0)
+		{
+			// Add the view offset, rotated by the plane angle.
+			fixed_t cosinecomponent = FINECOSINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t sinecomponent = FINESINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t oldxoff = xoff;
+			xoff = FixedMul(xoff,cosinecomponent)+FixedMul(yoff,sinecomponent);
+			yoff = -FixedMul(oldxoff,sinecomponent)+FixedMul(yoff,cosinecomponent);
+		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	if (polyobj)
+	{
+		if (polyobj->angle != 0)
+		{
+			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
+			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
+			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+		}
+		else
+		{
+			xoff -= polyobj->centerPt.x;
+			yoff += polyobj->centerPt.y;
+		}
+	}
+#endif
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -483,6 +501,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& !pfloor && !check->ffloor
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
+			&& check->plangle == plangle
 #ifdef ESLOPE
 			&& check->slope == slope
 #endif
@@ -951,19 +970,57 @@ void R_DrawSinglePlane(visplane_t *pl)
 		floatv3_t p, m, n;
 		float ang;
 		float vx, vy, vz;
-		float fudge;
 		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 		// use this as a temp var to store P_GetZAt's return value each time
 		fixed_t temp;
-
-		xoffs &= ((1 << (32-nflatshiftup))-1);
-		yoffs &= ((1 << (32-nflatshiftup))-1);
-
-		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+		const float fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+
+		angle_t hack = (pl->plangle & (ANGLE_90-1));
+
+		yoffs *= 1;
+
+		if (hack)
+		{
+			/*
+			Essentially: We can't & the components along the regular axes when the plane is rotated.
+			This is because the distance on each regular axis in order to loop is different.
+			We rotate them, & the components, add them together, & them again, and then rotate them back.
+			These three seperate & operations are done per axis in order to prevent overflows.
+			toast 10/04/17
+			*/
+			const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
+			const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
+
+			const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
+
+			fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
+			fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
+
+			temp = ox & modmask;
+			oy &= modmask;
+			ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+			oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+
+			temp = xoffs;
+			xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
+			yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
+
+			temp = xoffs & modmask;
+			yoffs &= modmask;
+			xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+			yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+
+			xoffs -= (pl->slope->o.x - ox);
+			yoffs += (pl->slope->o.y + oy);
+		}
+		else
+		{
+			xoffs &= ((1 << (32-nflatshiftup))-1);
+			yoffs &= ((1 << (32-nflatshiftup))-1);
+			xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		}
 
 		xoffs = (fixed_t)(xoffs*fudge);
 		yoffs = (fixed_t)(yoffs/fudge);

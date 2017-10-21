@@ -38,6 +38,8 @@
 void LUA_ClearExtVars(void);
 #endif
 
+extern boolean lua_lumploading; // is LUA_LoadLump being called?
+
 void LUA_LoadLump(UINT16 wad, UINT16 lump);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);

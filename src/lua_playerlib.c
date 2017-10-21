@@ -126,6 +126,8 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->bob);
 	else if (fastcmp(field,"aiming"))
 		lua_pushangle(L, plr->aiming);
+	else if (fastcmp(field,"drawangle"))
+		lua_pushangle(L, plr->drawangle);
 	else if (fastcmp(field,"rings"))
 		lua_pushinteger(L, plr->rings);
 	else if (fastcmp(field,"pity"))
@@ -172,6 +174,10 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->spinitem);
 	else if (fastcmp(field,"revitem"))
 		lua_pushinteger(L, plr->revitem);
+	else if (fastcmp(field,"followitem"))
+		lua_pushinteger(L, plr->followitem);
+	else if (fastcmp(field,"followmobj"))
+		LUA_PushUserdata(L, plr->followmobj, META_MOBJ);
 	else if (fastcmp(field,"actionspd"))
 		lua_pushfixed(L, plr->actionspd);
 	else if (fastcmp(field,"mindash"))
@@ -320,6 +326,8 @@ static int player_get(lua_State *L)
 		lua_pushangle(L, plr->awayviewaiming);
 	else if (fastcmp(field,"spectator"))
 		lua_pushboolean(L, plr->spectator);
+	else if (fastcmp(field,"outofcoop"))
+		lua_pushboolean(L, plr->outofcoop);
 	else if (fastcmp(field,"bot"))
 		lua_pushinteger(L, plr->bot);
 	else if (fastcmp(field,"jointime"))
@@ -384,6 +392,8 @@ static int player_set(lua_State *L)
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
 	}
+	else if (fastcmp(field,"drawangle"))
+		plr->drawangle = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"rings"))
 		plr->rings = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
@@ -435,6 +445,10 @@ static int player_set(lua_State *L)
 		plr->spinitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"revitem"))
 		plr->revitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followitem"))
+		plr->followitem = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"followmobj"))
+		plr->followmobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))
@@ -597,6 +611,8 @@ static int player_set(lua_State *L)
 		plr->awayviewaiming = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"spectator"))
 		plr->spectator = lua_toboolean(L, 3);
+	else if (fastcmp(field,"outofcoop"))
+		plr->outofcoop = lua_toboolean(L, 3);
 	else if (fastcmp(field,"bot"))
 		return NOSET;
 	else if (fastcmp(field,"jointime"))

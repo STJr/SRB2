@@ -20,16 +20,10 @@
 #else
 #include <winsock.h>
 #endif
-#elif !defined (__DJGPP__) && !defined(_WII)
+#elif !defined (__DJGPP__)
 #include <sys/socket.h>
-#ifndef _NDS
 #include <arpa/inet.h>
-#endif
-#ifdef _PS3
-#include <net/netdb.h>
-#elif ! defined (_arch_dreamcast)
 #include <netdb.h>
-#endif
 #endif
 
 #include "i_addrinfo.h"
@@ -262,9 +256,6 @@ int I_getaddrinfo(const char *node, const char *service,
 	for (i = 0, j = 0; i < ailen; i++, j++)
 	{
 		ai = *res+i;
-#ifdef _PS3
-		addr[i].sin_len = famsize;
-#endif
 		addr[i].sin_port = htons((UINT16)sockport);
 		if (nodename)
 		{

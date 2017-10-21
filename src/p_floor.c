@@ -316,6 +316,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -364,6 +365,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -1749,6 +1751,7 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		{
 		case MT_NULL:
 		case MT_UNKNOWN:
+		case MT_TAILSOVERLAY:
 		case MT_THOK:
 		case MT_GHOST:
 		case MT_OVERLAY:
@@ -2062,6 +2065,33 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 }
 
 //
+// P_IsObjectOnRealGround
+//
+// Helper function for T_EachTimeThinker
+// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
+// I'll consider whether to make this a more globally accessible function or whatever in future
+// -- Monster Iestyn
+//
+static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+{
+	// Is the object in reverse gravity?
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		// Detect if the player is on the ceiling.
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
+			return true;
+	}
+	// Nope!
+	else
+	{
+		// Detect if the player is on the floor.
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
+			return true;
+	}
+	return false;
+}
+
+//
 // P_HavePlayersEnteredArea
 //
 // Helper function for T_EachTimeThinker
@@ -2264,7 +2294,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
 					continue;
 
-				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
+				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
 					if (i & 1)
 						eachtime->var2s[i/2] |= 1;
@@ -3283,14 +3313,6 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		}
 		else
 		{
-			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
-			{
-				mobj_t *tokenobj = P_SpawnMobj(sector->soundorg.x, sector->soundorg.y, topheight, MT_TOKEN);
-				P_SetTarget(&thing->tracer, tokenobj);
-				P_SetTarget(&tokenobj->target, thing);
-				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);
-			}
-
 			// "Powerup rise" sound
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}

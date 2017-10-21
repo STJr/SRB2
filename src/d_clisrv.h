@@ -136,6 +136,7 @@ typedef struct
 	fixed_t flagz[2];
 
 	UINT32 ingame;  // Spectator bit for each player
+	UINT32 outofcoop;  // outofcoop bit for each player
 	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
 
 	// Resynch game scores and the like all at once
@@ -188,6 +189,7 @@ typedef struct
 	UINT32 thokitem; // mobjtype_t
 	UINT32 spinitem; // mobjtype_t
 	UINT32 revitem; // mobjtype_t
+	UINT32 followitem; // mobjtype_t
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;
@@ -315,6 +317,7 @@ typedef struct
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
+#define MAXFILENEEDED 915
 // This packet is too large
 typedef struct
 {
@@ -336,7 +339,7 @@ typedef struct
 	unsigned char mapmd5[16];
 	UINT8 actnum;
 	UINT8 iszone;
-	UINT8 fileneeded[915]; // is filled with writexxx (byteptr.h)
+	UINT8 fileneeded[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK serverinfo_pak;
 
 typedef struct

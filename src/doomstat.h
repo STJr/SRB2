@@ -41,8 +41,13 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
+extern INT16 lastmaploaded;
 extern boolean gamecomplete;
+
+#define maxgameovers 13
+extern UINT8 numgameovers;
+extern SINT8 startinglivesbalance[maxgameovers+1];
 
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
@@ -123,6 +128,10 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 extern INT16 spstage_start;
 extern INT16 sstage_start;
 extern INT16 sstage_end;
+
+extern INT16 titlemap;
+extern boolean hidetitlepics;
+extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
 extern boolean useNightsSS;
@@ -263,6 +272,7 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME      32 ///< Save the game upon loading this level
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen

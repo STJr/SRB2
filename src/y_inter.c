@@ -57,7 +57,7 @@ typedef union
 {
 	struct
 	{
-		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[21]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
@@ -77,7 +77,7 @@ typedef union
 
 	struct
 	{
-		char passed1[SKINNAMESIZE+1]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
@@ -475,7 +475,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152, y, 0, va("%i", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime,
@@ -493,7 +493,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152+BASEVIDWIDTH/2, y, 0, va("%u", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime, "%i:%02i.%02i", G_TicsToMinutes(data.match.scores[i], true),
@@ -643,7 +643,7 @@ void Y_IntermissionDrawer(void)
 				// already constrained to 8 characters
 				V_DrawString(x+36, y, V_ALLOWLOWERCASE, data.competition.name[i]);
 
-				if (players[data.competition.num[i]].pflags & PF_TIMEOVER)
+				if (players[data.competition.num[i]].pflags & PF_GAMETYPEOVER)
 					snprintf(sstrtime, sizeof sstrtime, "Time Over");
 				else if (players[data.competition.num[i]].lives <= 0)
 					snprintf(sstrtime, sizeof sstrtime, "Game Over");
@@ -972,7 +972,7 @@ void Y_StartIntermission(void)
 {
 	INT32 i;
 	UINT8 completionEmblems = M_CompletionEmblems();
-	
+
 	intertic = -1;
 
 #ifdef PARANOIA
@@ -1047,6 +1047,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the coop intermission for now
 			intertype = int_coop;
+			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1068,7 +1069,7 @@ void Y_StartIntermission(void)
 
 				if (modeattacking == ATTACKING_RECORD)
 					Y_UpdateRecordReplays();
-				
+
 				if (completionEmblems)
 					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
 			}
@@ -1163,6 +1164,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the special stage intermission for now
 			intertype = int_spec;
+			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
 			// Update visitation flags?
@@ -1170,7 +1172,7 @@ void Y_StartIntermission(void)
 			{
 				if (!stagefailed)
 					mapvisited[gamemap-1] |= MV_BEATEN;
-				
+
 				// all emeralds/ultimate/perfect emblems won't be possible in ss, oh well?
 				if (completionEmblems)
 					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");

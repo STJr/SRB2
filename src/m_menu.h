@@ -124,6 +124,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_HEADER      (IT_SPACE  +IT_HEADERTEXT)
 #define IT_SECRET      (IT_SPACE  +IT_QUESTIONMARKS)
 
+#define MAXSTRINGLENGTH 32
+
 typedef union
 {
 	struct menu_s *submenu;      // IT_SUBMENU
@@ -213,18 +215,14 @@ typedef struct
 // savegame struct for save game menu
 typedef struct
 {
-	char playername[32];
 	char levelname[32];
-	UINT8 actnum;
-	UINT8 skincolor;
 	UINT8 skinnum;
 	UINT8 botskin;
-	UINT8 botcolor;
 	UINT8 numemeralds;
+	UINT8 numgameovers;
 	INT32 lives;
 	INT32 continues;
 	INT32 gamemap;
-	UINT8 netgame;
 } saveinfo_t;
 
 extern description_t description[32];
@@ -234,9 +232,12 @@ extern CV_PossibleValue_t gametype_cons_t[];
 
 extern INT16 startmap;
 extern INT32 ultimate_selectable;
+extern INT16 char_on, startchar;
 
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
-#define NOSAVESLOT MAXSAVEGAMES-1 //slot where Play Without Saving appears
+#define NOSAVESLOT 0 //slot where Play Without Saving appears
+
+#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
 void M_ForceSaveSlotSelected(INT32 sslot);
 
@@ -249,6 +250,9 @@ void Nextmap_OnChange(void);
 void Moviemode_mode_Onchange(void);
 void Screenshot_option_Onchange(void);
 
+// Addons menu updating
+void Addons_option_Onchange(void);
+
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(header, source, prev, x, y)\
 {\
@@ -257,6 +261,18 @@ void Screenshot_option_Onchange(void);
 	prev,\
 	source,\
 	M_DrawGenericMenu,\
+	x, y,\
+	0,\
+	NULL\
+}
+
+#define DEFAULTSCROLLMENUSTYLE(header, source, prev, x, y)\
+{\
+	header,\
+	sizeof(source)/sizeof(menuitem_t),\
+	prev,\
+	source,\
+	M_DrawGenericScrollMenu,\
 	x, y,\
 	0,\
 	NULL\
