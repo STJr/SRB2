@@ -1481,12 +1481,12 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
 		return -1;
 
-	// detect dehacked file with the "soc" extension
-	if (stricmp(&filename[strlen(filename) - 4], ".soc") != 0
+	// detect wad file by the absence of the other supported extensions
+	if (stricmp(&filename[strlen(filename) - 4], ".soc")
 #ifdef HAVE_BLUA
-	&& stricmp(&filename[strlen(filename) - 4], ".lua") != 0
+	&& stricmp(&filename[strlen(filename) - 4], ".lua")
 #endif
-	)
+	&& stricmp(&filename[strlen(filename) - 4], ".pk3"))
 	{
 		// assume wad file
 		wadinfo_t header;
