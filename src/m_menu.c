@@ -5045,7 +5045,7 @@ static void M_DrawAddons(void)
 	x = BASEVIDWIDTH - x - 16;
 	V_DrawSmallScaledPatch(x, y + 4, (CANSAVE ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
 
-	if CANSAVE
+	if (modifiedgame)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
 #undef CANSAVE
 }
