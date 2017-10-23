@@ -946,7 +946,7 @@ static void ST_drawInput(void)
 	// text above
 	x -= 2;
 	y -= 13;
-	if (!stplyr->powers[pw_carry] == CR_NIGHTSMODE)
+	if (stplyr->powers[pw_carry] != CR_NIGHTSMODE)
 	{
 		if (stplyr->pflags & PF_AUTOBRAKE)
 		{
