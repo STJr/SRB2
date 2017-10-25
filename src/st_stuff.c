@@ -654,7 +654,7 @@ static void ST_drawTime(void)
 		ST_DrawPatchFromHudWS(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
 		ST_DrawPadNumFromHudWS(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
 
-		if (!splitscreen && (cv_timetic.value == 2 || modeattacking)) // there's not enough room for tics in splitscreen, don't even bother trying!
+		if (!splitscreen && (cv_timetic.value == 2 || cv_timetic.value == 3 || modeattacking)) // there's not enough room for tics in splitscreen, don't even bother trying!
 		{
 			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod, V_HUDTRANS); // Period
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2, V_HUDTRANS); // Tics
@@ -681,7 +681,7 @@ static inline void ST_drawRings(void)
 	else
 		ringnum = max(stplyr->rings, 0);
 
-	if (!splitscreen && (cv_timetic.value == 2 || modeattacking))
+	if (!splitscreen && cv_timetic.value == 3) // Yes, even in modeattacking
 		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 	else
 		ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
