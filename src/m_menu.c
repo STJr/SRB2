@@ -3085,6 +3085,26 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 */
 }
 
+#define scale FRACUNIT/2
+
+static fixed_t staticalong = 0;
+
+static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
+{
+	patch_t *patch = W_CachePatchName("LSSTATIC", PU_CACHE);
+	INT32 pw = SHORT(patch->width);
+	fixed_t sw = FixedDiv(w, scale);
+
+	if (staticalong >= (pw - sw))
+		staticalong = 0;
+
+	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, scale, flags, patch, staticalong, 0, sw, FixedDiv(h, scale));
+
+	staticalong += P_RandomRange(sw/2, 2*sw);
+}
+
+#undef scale
+
 //
 // Draw border for the savegame description
 //
@@ -4323,7 +4343,10 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[1][2]); // static - make secret maps look ENTICING
+	{
+		V_DrawSmallScaledPatch(x, y, 0, levselp[1][2]);
+		M_DrawStaticBox(x, y, V_80TRANS, 282, 50);
+	}
 	else
 	{
 		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
@@ -4351,7 +4374,10 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[0][2]); // static - make secret maps look ENTICING
+	{
+		V_DrawSmallScaledPatch(x, y, 0, levselp[0][2]);
+		M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
+	}
 	else
 	{
 		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
@@ -6134,12 +6160,14 @@ static void M_DrawLoadGameData(void)
 			if (savetodraw == saveSlotSelected)
 				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
 			y += 11;
-			V_DrawSmallScaledPatch(x, y, V_STATIC, savselp[4]);
+			V_DrawSmallScaledPatch(x, y, 0, savselp[4]);
+			M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 			y += 41;
 			if (ultimate_selectable)
 				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
 			else
 				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "DON'T SAVE!");
+
 			continue;
 		}
 
@@ -6197,27 +6225,27 @@ static void M_DrawLoadGameData(void)
 
 		// level image area
 		{
-			patch_t *patch;
-			INT32 flags = 0;
-
 			if ((savegameinfo[savetodraw].lives == -42)
 			|| (savegameinfo[savetodraw].lives == -666))
 			{
-				patch = savselp[3];
-				flags = V_STATIC;
+				V_DrawFill(x, y, 80, 50, 31);
+				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 			}
-			else if (savegameinfo[savetodraw].gamemap & 8192)
-				patch = savselp[6];
 			else
 			{
-				lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
-				if (lumpnum != LUMPERROR)
-					patch = W_CachePatchNum(lumpnum, PU_CACHE);
+				patch_t *patch;
+				if (savegameinfo[savetodraw].gamemap & 8192)
+					patch = savselp[3];
 				else
-					patch = savselp[5];
+				{
+					lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
+					if (lumpnum != LUMPERROR)
+						patch = W_CachePatchNum(lumpnum, PU_CACHE);
+					else
+						patch = savselp[5];
+				}
+				V_DrawSmallScaledPatch(x, y, 0, patch);
 			}
-
-			V_DrawSmallScaledPatch(x, y, flags, patch);
 
 			y += 41;
 
@@ -6569,17 +6597,15 @@ static void M_ReadSaveStrings(void)
 		W_UnlockCachedPatch(savselp[3]);
 		W_UnlockCachedPatch(savselp[4]);
 		W_UnlockCachedPatch(savselp[5]);
-		W_UnlockCachedPatch(savselp[6]);
 	}
 
 	savselp[0] = W_CachePatchName("SAVEBACK", PU_STATIC);
 	savselp[1] = W_CachePatchName("SAVENONE", PU_STATIC);
 	savselp[2] = W_CachePatchName("ULTIMATE", PU_STATIC);
 
-	savselp[3] = W_CachePatchName("BLACKLVL", PU_STATIC);
+	savselp[3] = W_CachePatchName("GAMEDONE", PU_STATIC);
 	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
 	savselp[5] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	savselp[6] = W_CachePatchName("GAMEDONE", PU_STATIC);
 }
 
 //

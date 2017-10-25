@@ -205,7 +205,7 @@ static void Y_IntermissionTokenDrawer(void)
 	calc = (lowy - y)*2;
 
 	if (calc > 0)
-		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 32*FRACUNIT, y<<FRACBITS, SHORT(tokenicon->width), calc);
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 32<<FRACBITS, y<<FRACBITS, SHORT(tokenicon->width), calc);
 }
 
 //
