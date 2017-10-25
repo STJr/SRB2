@@ -498,8 +498,7 @@ static void cleanupnodes(void)
 
 	// Why can't I start at zero?
 	for (j = 1; j < MAXNETNODES; j++)
-		//if (!(nodeingame[j] || SV_SendingFile(j)))
-		if (!nodeingame[j])
+		if (!(nodeingame[j] || SV_SendingFile(j)))
 			nodeconnected[j] = false;
 }
 

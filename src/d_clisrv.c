@@ -3120,16 +3120,19 @@ static boolean SV_AddWaitingPlayers(void)
 		{
 			newplayer = true;
 
-			// search for a free playernum
-			// we can't use playeringame since it is not updated here
-			for (; newplayernum < MAXPLAYERS; newplayernum++)
-			{
-				for (n = 0; n < MAXNETNODES; n++)
-					if (nodetoplayer[n] == newplayernum || nodetoplayer2[n] == newplayernum)
+			if (netgame)
+				newplayernum = node; // OMFG SAY WELCOME TO TEH NEW HACK FOR FIX FIL DOWNLOAD!!1!
+			else
+				// search for a free playernum
+				// we can't use playeringame since it is not updated here
+				for (; newplayernum < MAXPLAYERS; newplayernum++)
+				{
+					for (n = 0; n < MAXNETNODES; n++)
+						if (nodetoplayer[n] == newplayernum || nodetoplayer2[n] == newplayernum)
+							break;
+					if (n == MAXNETNODES)
 						break;
-				if (n == MAXNETNODES)
-					break;
-			}
+				}
 
 			// should never happen since we check the playernum
 			// before accepting the join
