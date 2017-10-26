@@ -571,20 +571,18 @@ void R_LoadTextures(void)
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-			while (texturesLumpPos != INT16_MAX)
-			{
-				numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
-				texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
-			}
 		}
 		else
 		{
 			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-			if (texturesLumpPos != INT16_MAX)
-				numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+		}
+
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+		while (texturesLumpPos != INT16_MAX)
+		{
+			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
 		}
 
 		// Add all the textures between TX_START and TX_END

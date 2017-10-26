@@ -148,20 +148,17 @@ void P_InitPicAnims(void)
 	
 	maxanims = 0;
 
-	if (W_CheckNumForName("ANIMDEFS") != LUMPERROR)
+	for (w = numwadfiles-1; w >= 0; w--)
 	{
-		for (w = numwadfiles-1; w >= 0; w--)
-		{
-			UINT16 animdefsLumpNum;
+		UINT16 animdefsLumpNum;
 
-			// Find ANIMDEFS lump in the WAD
-			if (wadfiles[w]->type == RET_PK3)
-				animdefsLumpNum = W_CheckNumForFullNamePK3("ANIMDEFS", w, 0);
-			else
-				animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
-			
-			if (animdefsLumpNum != INT16_MAX)
-				P_ParseANIMDEFSLump(w, animdefsLumpNum);
+		// Find ANIMDEFS lump in the WAD
+		animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+
+		while (animdefsLumpNum != INT16_MAX)
+		{
+			P_ParseANIMDEFSLump(w, animdefsLumpNum);
+			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
 		}
 	}
 	
