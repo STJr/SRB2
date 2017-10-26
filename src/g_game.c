@@ -5496,6 +5496,9 @@ void G_DoPlayDemo(char *defdemoname)
 	// didn't start recording right away.
 	demo_start = false;
 
+	// Set skin
+	SetPlayerSkin(0, skin);
+
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
 #endif
@@ -5504,9 +5507,6 @@ void G_DoPlayDemo(char *defdemoname)
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
-
-	// Set skin
-	SetPlayerSkin(0, skin);
 
 	// Set color
 	for (i = 0; i < MAXSKINCOLORS; i++)
