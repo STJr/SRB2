@@ -9503,10 +9503,6 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if (i == MT_STARPOST)
 			return;
 
-		// Emerald Tokens -->> Score Tokens
-		else if (i == MT_TOKEN)
-			return; /// \todo
-
 		// 1UPs -->> Score TVs
 		else if (i == MT_1UP_BOX) // 1UP
 		{

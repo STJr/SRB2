@@ -581,18 +581,21 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			P_AddPlayerScore(player, 1000);
 
-			if (ALL7EMERALDS(emeralds)) // Got all 7
+			if (!modeattacking) // score only there...
 			{
-				if (!(netgame || multiplayer))
+				if (ALL7EMERALDS(emeralds)) // Got all 7
 				{
-					player->continues += 1;
-					players->gotcontinue = true;
-					if (P_IsLocalPlayer(player))
-						S_StartSound(NULL, sfx_s3kac);
+					if (!(netgame || multiplayer))
+					{
+						player->continues += 1;
+						players->gotcontinue = true;
+						if (P_IsLocalPlayer(player))
+							S_StartSound(NULL, sfx_s3kac);
+					}
 				}
+				else
+					token++;
 			}
-			else
-				token++;
 			break;
 
 		// Emerald Hunt
