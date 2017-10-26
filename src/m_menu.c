@@ -3100,7 +3100,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 
 	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, scale, flags, patch, staticalong, 0, sw, FixedDiv(h, scale));
 
-	staticalong += P_RandomRange(sw/2, 2*sw);
+	staticalong += M_RandomRange(sw/2, 2*sw);
 }
 
 #undef scale
