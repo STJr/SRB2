@@ -3085,25 +3085,33 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 */
 }
 
-#define scale FRACUNIT/2
-
 static fixed_t staticalong = 0;
 
 static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
 {
-	patch_t *patch = W_CachePatchName("LSSTATIC", PU_CACHE);
-	INT32 pw = SHORT(patch->width);
-	fixed_t sw = FixedDiv(w, scale);
+	patch_t *patch;
+	fixed_t sw, pw;
 
-	if (staticalong >= (pw - sw))
-		staticalong = 0;
+	patch = W_CachePatchName("LSSTATIC", PU_CACHE);
+	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
-	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, scale, flags, patch, staticalong, 0, sw, FixedDiv(h, scale));
+	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
+	{
+		if (staticalong > pw)
+			staticalong -= pw;
+	}
+	else
+		staticalong = 0;*/
 
-	staticalong += M_RandomRange(sw/2, 2*sw);
+	if (staticalong > pw) // simplified for base LSSTATIC
+		staticalong -= pw;
+
+	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, flags, patch, staticalong, 0, sw, h*2); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
+
+	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
+
+	W_UnlockCachedPatch(patch);
 }
-
-#undef scale
 
 //
 // Draw border for the savegame description
@@ -6946,9 +6954,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 32 - o);
 			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
 			W_UnlockCachedPatch(patch);
 		}
 
@@ -6957,7 +6965,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[next].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width)/2, o);
 			else
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 			W_UnlockCachedPatch(patch);
@@ -6975,9 +6983,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else
 	{
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width)/2, SHORT(patch->height)/2 - (o-32));
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height) - (o-32));
 	}
 	W_UnlockCachedPatch(patch);
 
