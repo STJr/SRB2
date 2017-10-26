@@ -6954,7 +6954,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 32 - o);
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
 			else
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
 			W_UnlockCachedPatch(patch);
@@ -6965,7 +6965,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[next].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width)/2, o);
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
 			else
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 			W_UnlockCachedPatch(patch);
@@ -6983,7 +6983,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else
 	{
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width)/2, SHORT(patch->height)/2 - (o-32));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height) - 2*(o-32));
 		else
 			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height) - (o-32));
 	}
