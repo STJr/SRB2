@@ -3346,9 +3346,15 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 	if (gamestate == GS_TITLESCREEN)
 	{
 		if (introchanged)
+		{
+			menuactive = false;
 			COM_BufAddText("playintro");
+		}
 		else if (titlechanged)
+		{
+			menuactive = false;
 			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
+		}
 	}
 
 	dbg_line = -1;
