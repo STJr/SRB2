@@ -2334,10 +2334,6 @@ static void CL_RemovePlayer(INT32 playernum)
 	if (!playeringame[playernum])
 		return;
 	
-#ifdef HAVE_BLUA
-	LUAh_PlayerExit(playernum);
-#endif
-	
 	if (server && !demoplayback)
 	{
 		INT32 node = playernode[playernum];
