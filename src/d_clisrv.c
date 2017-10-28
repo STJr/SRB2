@@ -2988,6 +2988,10 @@ void D_QuitNetGame(void)
 	        "                  Quitting Game, closing connection\n"
 	        "===========================================================================\n");
 
+#ifdef HAVE_BLUA
+	LUAh_PlayerExit();
+#endif
+
 	// abort send/receive of files
 	CloseNetFile();
 
