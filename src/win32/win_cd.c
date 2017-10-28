@@ -180,9 +180,9 @@ static LPSTR hms(UINT seconds)
 	hours = minutes / 60;
 	minutes %= 60;
 	if (hours > 0)
-		sprintf (s, "%lu:%02lu:%02lu", (long unsigned int)hours, (long unsigned int)minutes, (long unsigned int)seconds);
+		sprintf (s, "%lu:%02u:%02u", (long unsigned int)hours, (unsigned char)minutes, (unsigned char)seconds);
 	else
-		sprintf (s, "%2lu:%02lu", (long unsigned int)minutes, (long unsigned int)seconds);
+		sprintf (s, "%2u:%02u", (unsigned char)minutes, (unsigned char)seconds);
 	return s;
 }
 
