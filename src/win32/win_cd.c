@@ -171,7 +171,7 @@ consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0,
 
 #if (__GNUC__ > 6)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror=format-overflow"
+#pragma GCC diagnostic ignored "-Wformat-overflow"
 #endif
 // hour,minutes,seconds
 static LPSTR hms(UINT seconds)
