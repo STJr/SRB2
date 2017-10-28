@@ -39,6 +39,10 @@ configuration:
 - SDL
 - DD
 
+matrix:
+  allow_failures:
+    - configuration: DD
+
 before_build:
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
