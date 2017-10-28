@@ -2335,7 +2335,7 @@ static void CL_RemovePlayer(INT32 playernum)
 		return;
 	
 #ifdef HAVE_BLUA
-	LUAh_PlayerExit(&players[playernum]);
+	LUAh_PlayerExit(playernum);
 #endif
 	
 	if (server && !demoplayback)
