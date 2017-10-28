@@ -2333,7 +2333,11 @@ static void CL_RemovePlayer(INT32 playernum)
 	// kick commands to be issued for the same player.
 	if (!playeringame[playernum])
 		return;
-
+	
+#ifdef HAVE_BLUA
+	LUAh_PlayerExit(&players[playernum]);
+#endif
+	
 	if (server && !demoplayback)
 	{
 		INT32 node = playernode[playernum];
