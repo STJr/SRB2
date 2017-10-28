@@ -47,7 +47,7 @@ before_build:
 - upx -V
 - ccache -V
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC72=1 CCACHE=1 NOOBJDUMP=1
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC72=1 CCACHE=1 NOOBJDUMP=1 ECHO=1
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
