@@ -1061,4 +1061,26 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 	// stack: tables
 }
 
+// Hook for players that are leaving the game
+void LUAh_PlayerExit(int playernum)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_PlayerExit/8] & (1<<(hook_PlayerExit%8))))
+		return;
+
+	lua_settop(gL, 0);
+	lua_pushinteger(gL, playernum);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_PlayerExit)
+		{
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -2);
+			LUA_Call(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+}
+
 #endif
