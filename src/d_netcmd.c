@@ -26,6 +26,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "s_sound.h"
+#include "i_sound.h"
 #include "m_misc.h"
 #include "am_map.h"
 #include "byteptr.h"
@@ -128,6 +129,7 @@ static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
+static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -670,6 +672,7 @@ void D_RegisterClientCommands(void)
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
 	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
@@ -3907,6 +3910,20 @@ static void Command_Tunes_f(void)
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
+}
+
+static void Command_RestartAudio_f(void)
+{
+	I_ShutdownMusic();
+	I_ShutdownSound();
+	I_StartupSound();
+	I_InitMusic();
+	
+// These must be called or everthing will be muted for the user until next volume change.
+	
+	I_SetSfxVolume(cv_soundvolume.value);
+	I_SetDigMusicVolume(cv_digmusicvolume.value);
+	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
 }
 
 /** Quits a game and returns to the title screen.
