@@ -6,7 +6,7 @@ environment:
  CCACHE_CC: i686-w64-mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
- CFLAGS: -Wall -W -Werror
+ CFLAGS: -Wall -W -Werror -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3 -Wno-tautological-compare -Wno-error=suggest-attribute=noreturn
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
  UPX_ZIP: upx391w
@@ -39,6 +39,10 @@ configuration:
 - SDL
 - DD
 
+matrix:
+  allow_failures:
+    - configuration: DD
+
 before_build:
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
@@ -47,7 +51,7 @@ before_build:
 - upx -V
 - ccache -V
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC63=1 CCACHE=1 NOOBJDUMP=1
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC72=1 CCACHE=1 NOOBJDUMP=1
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean

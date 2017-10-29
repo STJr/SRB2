@@ -47,7 +47,7 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32)
+#ifdef _WIN32
 #include "SDL_syswm.h"
 #endif
 
@@ -941,6 +941,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
+			/* FALLTHRU */
 		case GS_TIMEATTACK:
 		case GS_WAITINGPLAYERS:
 			return skip; // Skip odd frames

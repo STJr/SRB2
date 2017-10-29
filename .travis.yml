@@ -101,6 +101,21 @@ matrix:
           env: WFLAGS="-Wno-tautological-compare"
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-7
+          compiler: gcc-7
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
+          #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
+        - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux
@@ -162,6 +177,51 @@ matrix:
               - clang-3.8
           compiler: clang-3.8
           #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.9
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.9
+          compiler: clang-3.9
+          #clang version 3.9.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-4.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-4.0
+#          compiler: clang-4.0
+#          #clang version 4.0.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-5.0
+#              - ubuntu-toolchain-r-test
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - p7zip-full
+#              - clang-5.0
+#          compiler: clang-5.0
+#          #clang version 5.0.X
 #        - os: osx
 #          osx_image: beta-xcode6.1
 #          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
@@ -192,6 +252,9 @@ matrix:
       - compiler: clang-3.6
       - compiler: clang-3.7
       - compiler: clang-3.8
+      - compiler: clang-3.9
+      - compiler: clang-4.0
+      - compiler: clang-5.0
 
 cache:
   apt: true
@@ -219,9 +282,9 @@ before_script:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2_mixer game-music-emu p7zip; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2 sdl2_mixer game-music-emu p7zip; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake||true; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.4.dmg; hdiutil attach SDL2-2.0.4.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
   - mkdir -p $HOME/srb2_cache
 

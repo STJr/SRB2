@@ -82,7 +82,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #endif
 
 #ifdef _XBOX
-#include "sdl/SRB2XBOX/xboxhelp.h"
+#include "sdl12/SRB2XBOX/xboxhelp.h"
 #endif
 
 #ifdef HWRENDER

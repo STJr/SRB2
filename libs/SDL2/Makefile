@@ -6,7 +6,7 @@ ARCHITECTURES := i686-w64-mingw32 x86_64-w64-mingw32
 
 all install:
 	@echo "Type \"make native\" to install 32-bit to /usr"
-	@echo "Type \"make cross\" to install 32-bit and 64-bit to $(CROSS_PATH)"
+	@echo "Type \"make cross\" to install 32-bit and 64-bit to CROSS_PATH ($(CROSS_PATH))"
 
 native:
 	make install-package arch=i686-w64-mingw32 prefix=/usr

@@ -57,7 +57,7 @@ typedef union
 {
 	struct
 	{
-		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[21]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
@@ -77,7 +77,7 @@ typedef union
 
 	struct
 	{
-		char passed1[SKINNAMESIZE+1]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
@@ -1004,6 +1004,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the coop intermission for now
 			intertype = int_coop;
+			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1117,6 +1118,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the special stage intermission for now
 			intertype = int_spec;
+			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
 			// Update visitation flags?
