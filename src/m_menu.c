@@ -64,9 +64,6 @@
 // And just some randomness for the exits.
 #include "m_random.h"
 
-// P_GetSkinSprite2
-#include "r_things.h"
-
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
 int	snprintf(char *str, size_t n, const char *fmt, ...);

@@ -354,39 +354,6 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
   * \param lump VERTEXES lump number.
   * \sa ML_VERTEXES
   */
-static inline void P_LoadVertexes(lumpnum_t lumpnum)
-{
-	UINT8 *data;
-	size_t i;
-	mapvertex_t *ml;
-	vertex_t *li;
-
-	// Determine number of lumps:
-	//  total lump length / vertex record length.
-	numvertexes = W_LumpLength(lumpnum) / sizeof (mapvertex_t);
-
-	if (numvertexes <= 0)
-		I_Error("Level has no vertices"); // instead of crashing
-
-	// Allocate zone memory for buffer.
-	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-
-	// Load data into cache.
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
-
-	ml = (mapvertex_t *)data;
-	li = vertexes;
-
-	// Copy and convert vertex coordinates, internal representation as fixed.
-	for (i = 0; i < numvertexes; i++, li++, ml++)
-	{
-		li->x = SHORT(ml->x)<<FRACBITS;
-		li->y = SHORT(ml->y)<<FRACBITS;
-	}
-
-	// Free buffer memory.
-	Z_Free(data);
-}
 
 static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
 {
@@ -410,6 +377,13 @@ static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
 		li->x = SHORT(ml->x)<<FRACBITS;
 		li->y = SHORT(ml->y)<<FRACBITS;
 	}
+}
+
+static inline void P_LoadVertexes(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawVertexes(data, W_LumpLength(lumpnum));
+	Z_Free(data);
 }
 
 
@@ -1262,7 +1236,7 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 				{
 					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
+					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
 				}
 			}
 		}
@@ -1277,14 +1251,14 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 		{
 			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 		{
 			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if (ld->sidenum[0] != 0xffff && ld->special)
@@ -1438,7 +1412,7 @@ static void P_LoadRawSideDefs2(void *data)
 
 			if (sector_num >= numsectors)
 			{
-				CONS_Debug(DBG_SETUP, "P_LoadSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
+				CONS_Debug(DBG_SETUP, "P_LoadRawSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
 				sector_num = 0;
 			}
 			sd->sector = sec = &sectors[sector_num];
@@ -1661,7 +1635,6 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
 	P_LoadRawSideDefs2(data);
 	Z_Free(data);
-	R_ClearTextureNumCache(true);
 }
 
 
@@ -3349,10 +3322,10 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
-	// TEXTURE1/PNAMES/etc. list.
+	// TEXTURES/etc. list.
 	R_LoadTextures(); // numtexture changes
 
-	// Reload ANIMATED / ANIMDEFS
+	// Reload ANIMDEFS
 	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
