@@ -28,13 +28,11 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(DC) && !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
-    //#endif
 #endif
 
 // Use generic SDL interface.
@@ -70,7 +68,7 @@
 #endif
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define ASMCALL __cdecl
 #else
 #define ASMCALL
@@ -86,13 +84,6 @@
 // warning C4127: conditional expression is constant
 // warning C4152: nonstandard extension, function/data pointer conversion in expression
 // warning C4213: nonstandard extension used : cast on l-value
-
-#if defined (_WIN32_WCE) && defined (DEBUG) && defined (ARM)
-#if defined (ARMV4) || defined (ARMV4I)
-//#pragma warning(disable : 1166)
-// warning LNK1166: cannot adjust code at offset=
-#endif
-#endif
 
 
 #include "doomtype.h"
@@ -110,13 +101,11 @@
 #include <locale.h>
 #endif
 
-#if !defined (_WIN32_WCE)
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <ctype.h>
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #endif
 
@@ -381,12 +370,10 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_arch_dreamcast) && !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
-#endif
 #endif
 
 #include "g_state.h"
@@ -548,19 +535,15 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	Most modifications should probably enable this.
 //#define SAVEGAME_OTHERVERSIONS
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
-#endif
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
-#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.

@@ -20,11 +20,6 @@
 #include <stdlib.h>
 #endif
 
-// Was this just for the #define USEASM?
-//#ifdef _WIN32_WCE
-//#include "sdl12/SRB2CE/cehelp.h"
-//#endif
-
 /*!
   \brief bits of the fraction
 */

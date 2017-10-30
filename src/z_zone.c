@@ -220,10 +220,6 @@ static void *xm(size_t size)
 
 		if (p == NULL)
 		{
-#if defined (_NDS) | defined (_PSP)
-			// Temporary-ish debugging measure
-			Command_Memfree_f();
-#endif
 			I_Error("Out of memory allocating %s bytes", sizeu1(size));
 		}
 	}

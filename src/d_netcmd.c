@@ -244,22 +244,10 @@ INT32 cv_debug;
 consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
 
-#if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) //joystick 1 and 2
-consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
-#elif defined (PSP) || defined (GP2X) || defined (_NDS) //only one joystick
-consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usejoystick2 = {"use_joystick2", "0", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
-#else //all esle, no joystick
 consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usejoystick2 = {"use_joystick2", "0", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
-#endif
 #if (defined (LJOYSTICK) || defined (HAVE_SDL))
 #ifdef LJOYSTICK
 consvar_t cv_joyport = {"joyport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1048,7 +1036,7 @@ static void SetPlayerName(INT32 playernum, char *newname)
 		CONS_Printf(M_GetText("Player %d sent a bad name change\n"), playernum+1);
 		if (server && netgame)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1128,7 +1116,7 @@ static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 //
 static void SendNameAndColor(void)
 {
-	XBOXSTATIC char buf[MAXPLAYERNAME+2];
+	char buf[MAXPLAYERNAME+2];
 	char *p;
 
 	p = buf;
@@ -1409,7 +1397,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 
 		if (kick)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal color change received from %s (team: %d), color: %d)\n"), player_names[playernum], p->ctfteam, p->skincolor);
 
 			buf[0] = (UINT8)playernum;
@@ -1436,7 +1424,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 
 void SendWeaponPref(void)
 {
-	XBOXSTATIC UINT8 buf[1];
+	UINT8 buf[1];
 
 	buf[0] = 0;
 	if (players[consoleplayer].pflags & PF_FLIPCAM)
@@ -1452,7 +1440,7 @@ void SendWeaponPref(void)
 
 void SendWeaponPref2(void)
 {
-	XBOXSTATIC UINT8 buf[1];
+	UINT8 buf[1];
 
 	buf[0] = 0;
 	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
@@ -1847,7 +1835,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal map change received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1924,7 +1912,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 static void Command_Pause(void)
 {
-	XBOXSTATIC UINT8 buf[2];
+	UINT8 buf[2];
 	UINT8 *cp = buf;
 
 	if (COM_Argc() > 1)
@@ -1960,7 +1948,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal pause command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2003,7 +1991,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 // Command for stuck characters in netgames, griefing, etc.
 static void Command_Suicide(void)
 {
-	XBOXSTATIC UINT8 buf[4];
+	UINT8 buf[4];
 	UINT8 *cp = buf;
 
 	WRITEINT32(cp, consoleplayer);
@@ -2040,7 +2028,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2109,7 +2097,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal clear scores command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2462,7 +2450,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2477,7 +2465,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
 			{
-				XBOXSTATIC UINT8 buf[2];
+				UINT8 buf[2];
 
 				buf[0] = (UINT8)playernum;
 				buf[1] = KICK_MSG_CON_FAIL;
@@ -2516,7 +2504,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
 			{
-				XBOXSTATIC UINT8 buf[2];
+				UINT8 buf[2];
 
 				buf[0] = (UINT8)playernum;
 				buf[1] = KICK_MSG_CON_FAIL;
@@ -2569,7 +2557,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 	if (server && ((NetPacket.packet.newteam < 0 || NetPacket.packet.newteam > 3) || error))
 	{
-		XBOXSTATIC UINT8 buf[2];
+		UINT8 buf[2];
 
 		buf[0] = (UINT8)playernum;
 		buf[1] = KICK_MSG_CON_FAIL;
@@ -2720,7 +2708,7 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 	(void)salt;
 	memset(dest, 0, 16);
 #else
-	XBOXSTATIC char tmpbuf[256];
+	char tmpbuf[256];
 	const size_t sl = strlen(salt);
 
 	if (len > 256-sl)
@@ -2775,7 +2763,7 @@ static void Command_Login_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	XBOXSTATIC UINT8 finalmd5[16];
+	UINT8 finalmd5[16];
 	const char *pw;
 
 	// If the server uses login, it will effectively just remove admin privileges
@@ -2829,7 +2817,7 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 static void Command_Verify_f(void)
 {
-	XBOXSTATIC char buf[8]; // Should be plenty
+	char buf[8]; // Should be plenty
 	char *temp;
 	INT32 playernum;
 
@@ -2866,7 +2854,7 @@ static void Got_Verification(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal verification received from %s (serverplayer is %s)\n"), player_names[playernum], player_names[serverplayer]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2946,7 +2934,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal motd change received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -2967,7 +2955,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum)
 static void Command_RunSOC(void)
 {
 	const char *fn;
-	XBOXSTATIC char buf[255];
+	char buf[255];
 	size_t length = 0;
 
 	if (COM_Argc() != 2)
@@ -3009,7 +2997,7 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal runsoc command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -3052,7 +3040,7 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 static void Command_Addfile(void)
 {
 	const char *fn, *p;
-	XBOXSTATIC char buf[256];
+	char buf[256];
 	char *buf_p = buf;
 	INT32 i;
 	int musiconly; // W_VerifyNMUSlumps isn't boolean
@@ -3152,7 +3140,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 
 	if ((playernum != serverplayer && playernum != adminplayer) || kick)
 	{
-		XBOXSTATIC UINT8 buf[2];
+		UINT8 buf[2];
 
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfile command received from %s\n"), player_names[playernum]);
 
@@ -3212,7 +3200,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfile command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -3933,7 +3921,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal exitlevel command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;

@@ -11,21 +11,14 @@
 /// \brief Transfer a file using HSendPacket.
 
 #include <stdio.h>
-#ifndef _WIN32_WCE
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
 #include <sys/stat.h>
-#endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #include <direct.h>
-#elif !defined (_WIN32_WCE) && !(defined (_XBOX) && !defined (__GNUC__))
+#else
 #include <sys/types.h>
 #include <dirent.h>
 #include <utime.h>
@@ -34,7 +27,7 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #include <limits.h>
-#elif defined (_WIN32) && !defined (_WIN32_WCE)
+#elif defined (_WIN32)
 #include <sys/utime.h>
 #endif
 #ifdef __DJGPP__
@@ -932,7 +925,7 @@ size_t nameonlylength(const char *s)
 
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 {
-#if defined (NOMD5) || defined (_arch_dreamcast)
+#if defined (NOMD5)
 	(void)wantedmd5sum;
 	(void)filename;
 #else
@@ -967,9 +960,5 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 	if (homecheck == FS_FOUND)
 		return filesearch(filename, srb2path, wantedmd5sum, completepath, 10);
 
-#ifdef _arch_dreamcast
-	return filesearch(filename, "/cd", wantedmd5sum, completepath, 10);
-#else
 	return filesearch(filename, ".", wantedmd5sum, completepath, 10);
-#endif
 }

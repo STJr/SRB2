@@ -30,16 +30,12 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 #include <direct.h>
 #include <malloc.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#elif defined (_XBOX)
-#define NO_TIME
-#endif
 
 #include "doomdef.h"
 #include "am_map.h"
@@ -82,10 +78,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "config.h.in"
 #endif
 
-#ifdef _XBOX
-#include "sdl12/SRB2XBOX/xboxhelp.h"
-#endif
-
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // 3D View Rendering
 #endif
@@ -120,13 +112,8 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-#ifdef _XBOX
-boolean nomidimusic = true, nosound = true;
-boolean nodigimusic = true;
-#else
 boolean nomidimusic = false, nosound = false;
 boolean nodigimusic = false; // No fmod-based music
-#endif
 
 // These variables are only true if
 // the respective sound system is initialized
@@ -140,13 +127,8 @@ boolean advancedemo;
 INT32 debugload = 0;
 #endif
 
-#ifdef _arch_dreamcast
-char srb2home[256] = "/cd";
-char srb2path[256] = "/cd";
-#else
 char srb2home[256] = ".";
 char srb2path[256] = ".";
-#endif
 boolean usehome = true;
 const char *pandf = "%s" PATHSEP "%s";
 
@@ -816,17 +798,11 @@ static void IdentifyVersion(void)
 	}
 	else
 	{
-#if !defined(_WIN32_WCE) && !defined(_PS3)
 		if (getcwd(srb2path, 256) != NULL)
 			srb2waddir = srb2path;
 		else
-#endif
 		{
-#ifdef _arch_dreamcast
-			srb2waddir = "/cd";
-#else
 			srb2waddir = ".";
-#endif
 		}
 	}
 
@@ -881,11 +857,7 @@ static void IdentifyVersion(void)
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-#if defined (DC) && 0
-		const char *musicfile = "music_dc.dta";
-#else
 		const char *musicfile = "music.dta";
-#endif
 		const char *musicpath = va(pandf,srb2waddir,musicfile);
 		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
 		if (ms == 1)
@@ -977,7 +949,7 @@ void D_SRB2Main(void)
 	boolean autostart = false;
 
 	// keep error messages until the final flush(stderr)
-#if !defined (PC_DOS) && !defined (_WIN32_WCE) && !defined(NOTERMIOS)
+#if !defined (PC_DOS) && !defined(NOTERMIOS)
 	if (setvbuf(stderr, NULL, _IOFBF, 1000))
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
@@ -999,11 +971,11 @@ void D_SRB2Main(void)
 	// identify the main IWAD file to use
 	IdentifyVersion();
 
-#if !defined (_WIN32_WCE) && !defined(NOTERMIOS)
+#if !defined(NOTERMIOS)
 	setbuf(stdout, NULL); // non-buffered output
 #endif
 
-#if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
+#if 0 //defined (_DEBUG)
 	devparm = M_CheckParm("-nodebug") == 0;
 #else
 	devparm = M_CheckParm("-debug") != 0;
@@ -1029,13 +1001,8 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (DC) && !defined (PSP) && !defined(GP2X)
+#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
 			I_Error("Please set $HOME to your home directory\n");
-#elif defined (_WIN32_WCE) && 0
-			if (dedicated)
-				snprintf(configfile, sizeof configfile, "/Storage Card/SRB2DEMO/d"CONFIGFILENAME);
-			else
-				snprintf(configfile, sizeof configfile, "/Storage Card/SRB2DEMO/"CONFIGFILENAME);
 #else
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "d"CONFIGFILENAME);
@@ -1072,10 +1039,6 @@ void D_SRB2Main(void)
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
-
-#ifdef _arch_dreamcast
-	strcpy(downloaddir, "/ram"); // the dreamcast's TMP
-#endif
 	}
 
 	// rand() needs seeded regardless of password
@@ -1210,12 +1173,7 @@ void D_SRB2Main(void)
 	HU_Init();
 
 	COM_Init();
-	// libogc has a CON_Init function, we must rename SRB2's CON_Init in WII/libogc
-#ifndef _WII
 	CON_Init();
-#else
-	CON_InitWii();
-#endif
 
 	D_RegisterServerCommands();
 	D_RegisterClientCommands(); // be sure that this is called before D_CheckNetGame
@@ -1447,26 +1405,19 @@ const char *D_Home(void)
 #ifdef ANDROID
 	return "/data/data/org.srb2/";
 #endif
-#ifdef _arch_dreamcast
-	char VMUHOME[] = "HOME=/vmu/a1";
-	putenv(VMUHOME); //don't use I_PutEnv
-#endif
 
 	if (M_CheckParm("-home") && M_IsNextParm())
 		userhome = M_GetNextParm();
 	else
 	{
-#if defined (GP2X)
-		usehome = false; //let use the CWD
-		return NULL;
-#elif !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__) && !defined(_WIN32_WCE)
+#if !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__)
 		if (FIL_FileOK(CONFIGFILENAME))
 			usehome = false; // Let's NOT use home
 		else
 #endif
 			userhome = I_GetEnv("HOME"); //Alam: my new HOME for srb2
 	}
-#if defined (_WIN32) && !defined(_WIN32_WCE) //Alam: only Win32 have APPDATA and USERPROFILE
+#ifdef _WIN32 //Alam: only Win32 have APPDATA and USERPROFILE
 	if (!userhome && usehome) //Alam: Still not?
 	{
 		char *testhome = NULL;
