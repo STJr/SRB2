@@ -1026,7 +1026,7 @@ static int joy_open(const char *fname)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			CONS_Printf(M_GetText("Couldn't initialize gamepad: %s\n"), SDL_GetError());
 			return -1;
 		}
 		else
@@ -1036,7 +1036,7 @@ static int joy_open(const char *fname)
 
 		if (num_joy < joyindex)
 		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
+			CONS_Printf("Cannot use gamepad #%d/(%s), it doesn't exist\n",joyindex,fname);
 			for (i = 0; i < num_joy; i++)
 				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick();
@@ -1310,7 +1310,7 @@ static int joy_open2(const char *fname)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			CONS_Printf(M_GetText("Couldn't initialize gamepad: %s\n"), SDL_GetError());
 			return -1;
 		}
 		else
@@ -1318,7 +1318,7 @@ static int joy_open2(const char *fname)
 
 		if (num_joy < joyindex)
 		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
+			CONS_Printf("Cannot use gamepad #%d/(%s), it doesn't exist\n",joyindex,fname);
 			for (i = 0; i < num_joy; i++)
 				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick2();
