@@ -524,12 +524,21 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 {
 	return *(v_translevel + (((*(v_colormap + source[ofs>>FRACBITS]))<<8)&0xff00) + (*dest&0xff));
 }
+
+static UINT8 staticstep = 0;
+static fixed_t staticval = 0;
+
 static inline UINT8 staticpdraw(const UINT8 *dest, const UINT8 *source, fixed_t ofs)
 {
 	UINT8 val = source[ofs>>FRACBITS];
 	(void)dest;
+	if ((++staticstep) >= 4)
+	{
+		staticstep = 0;
+		staticval = M_RandomFixed();
+	}
 	if (val < 7) return val;
-	return M_RandomKey(7+1)+(val-7);//M_RandomByte();
+	return ((staticval>>staticstep)&7)+(val-7);
 }
 
 // Draws a patch scaled to arbitrary size.
@@ -660,30 +669,10 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		y = FixedMul(y,dupy<<FRACBITS);
 		x >>= FRACBITS;
 		y >>= FRACBITS;
-		desttop += (y*vid.width) + x;
 
 		// Center it if necessary
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
-			if (vid.width != BASEVIDWIDTH * dupx)
-			{
-				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
-				// so center this imaginary screen
-				if (scrn & V_SNAPTORIGHT)
-					desttop += (vid.width - (BASEVIDWIDTH * dupx));
-				else if (!(scrn & V_SNAPTOLEFT))
-					desttop += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
-			}
-			if (vid.height != BASEVIDHEIGHT * dupy)
-			{
-				// same thing here
-				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
-					desttop += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy)) * vid.width;
-				else if (scrn & V_SNAPTOBOTTOM)
-					desttop += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width;
-				else if (!(scrn & V_SNAPTOTOP))
-					desttop += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width / 2;
-			}
 			// if it's meant to cover the whole screen, black out the rest
 			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
 			{
@@ -691,7 +680,29 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 				source = (const UINT8 *)(column) + 3;
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
 			}
+
+			if (vid.width != BASEVIDWIDTH * dupx)
+			{
+				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+				// so center this imaginary screen
+				if (scrn & V_SNAPTORIGHT)
+					x += (vid.width - (BASEVIDWIDTH * dupx));
+				else if (!(scrn & V_SNAPTOLEFT))
+					x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			}
+			if (vid.height != BASEVIDHEIGHT * dupy)
+			{
+				// same thing here
+				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
+					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
+				else if (scrn & V_SNAPTOBOTTOM)
+					y += (vid.height - (BASEVIDHEIGHT * dupy));
+				else if (!(scrn & V_SNAPTOTOP))
+					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			}
 		}
+
+		desttop += (y*vid.width) + x;
 	}
 
 	if (pscale != FRACUNIT) // scale width properly
@@ -797,28 +808,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		y = FixedMul(y,dupy<<FRACBITS);
 		x >>= FRACBITS;
 		y >>= FRACBITS;
-		desttop += (y*vid.width) + x;
 
 		// Center it if necessary
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
-			if (vid.width != BASEVIDWIDTH * dupx)
-			{
-				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
-				// so center this imaginary screen
-				if (scrn & V_SNAPTORIGHT)
-					desttop += (vid.width - (BASEVIDWIDTH * dupx));
-				else if (!(scrn & V_SNAPTOLEFT))
-					desttop += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
-			}
-			if (vid.height != BASEVIDHEIGHT * dupy)
-			{
-				// same thing here
-				if (scrn & V_SNAPTOBOTTOM)
-					desttop += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width;
-				else if (!(scrn & V_SNAPTOTOP))
-					desttop += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width / 2;
-			}
 			// if it's meant to cover the whole screen, black out the rest
 			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
 			{
@@ -826,7 +819,29 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				source = (const UINT8 *)(column) + 3;
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
 			}
+
+			if (vid.width != BASEVIDWIDTH * dupx)
+			{
+				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+				// so center this imaginary screen
+				if (scrn & V_SNAPTORIGHT)
+					x += (vid.width - (BASEVIDWIDTH * dupx));
+				else if (!(scrn & V_SNAPTOLEFT))
+					x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			}
+			if (vid.height != BASEVIDHEIGHT * dupy)
+			{
+				// same thing here
+				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
+					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
+				else if (scrn & V_SNAPTOBOTTOM)
+					y += (vid.height - (BASEVIDHEIGHT * dupy));
+				else if (!(scrn & V_SNAPTOTOP))
+					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+			}
 		}
+
+		desttop += (y*vid.width) + x;
 	}
 
 	for (col = sx<<FRACBITS; (col>>FRACBITS) < SHORT(patch->width) && (col>>FRACBITS) < w; col += colfrac, ++x, desttop++)
@@ -865,11 +880,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skins[skinnum].flags & SF_HIRES
-#ifdef HWRENDER
-//	|| (rendermode != render_soft && rendermode != render_none)
-#endif
-	)
+	if (skins[skinnum].flags & SF_HIRES)
 		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
 	else
 	{
@@ -1297,6 +1308,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1350,7 +1362,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 //
 void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth = BASEVIDWIDTH, center = 0;
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
 	INT32 charflags = 0;
 	const UINT8 *colormap = NULL;
@@ -1366,7 +1378,11 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth = vid.width;
 	}
 	else
+	{
 		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+	}
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -1374,6 +1390,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1426,9 +1443,9 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = SHORT(hu_font[c]->width) * dupx;
 
-		if (cx + w > scrwidth)
+		if (cx+left > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -1459,7 +1476,7 @@ void V_DrawRightAlignedString(INT32 x, INT32 y, INT32 option, const char *string
 //
 void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth = BASEVIDWIDTH, center = 0;
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
 	INT32 charflags = 0;
 	const UINT8 *colormap = NULL;
@@ -1475,7 +1492,11 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth = vid.width;
 	}
 	else
+	{
 		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+	}
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -1483,6 +1504,7 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 4;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 4;
 			break;
@@ -1533,9 +1555,9 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		}
 		else
 			w = SHORT(hu_font[c]->width) * dupx / 2;
-		if (cx + w > scrwidth)
+		if (cx+left > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -1560,7 +1582,7 @@ void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *s
 //
 void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth = BASEVIDWIDTH;
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
 	INT32 charflags = 0;
 	const UINT8 *colormap = NULL;
@@ -1576,7 +1598,11 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth = vid.width;
 	}
 	else
+	{
 		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+	}
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -1584,6 +1610,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 5;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 5;
 			break;
@@ -1632,9 +1659,9 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = (SHORT(tny_font[c]->width) * dupx);
 
-		if (cx + w > scrwidth)
+		if (cx+left > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -1657,7 +1684,7 @@ void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *st
 void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 {
 	fixed_t cx = x, cy = y;
-	INT32 w, c, dupx, dupy, scrwidth = BASEVIDWIDTH, center = 0;
+	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
 	INT32 spacewidth = 4, charwidth = 0;
 
@@ -1671,12 +1698,17 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		scrwidth = vid.width;
 	}
 	else
+	{
 		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+	}
 
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1724,9 +1756,9 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		else
 			w = SHORT(hu_font[c]->width) * dupx;
 
-		if ((cx>>FRACBITS) + w > scrwidth)
+		if ((cx>>FRACBITS)+left > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w<<FRACBITS;
 			continue;
@@ -1961,6 +1993,7 @@ INT32 V_StringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -2002,6 +2035,7 @@ INT32 V_SmallStringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 4;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 4;
 			break;
@@ -2040,6 +2074,7 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 5;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 5;
 			break;

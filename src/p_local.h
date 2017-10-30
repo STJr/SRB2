@@ -140,6 +140,7 @@ boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
+boolean P_PlayerHitFloor(player_t *player);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
@@ -148,6 +149,7 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
+void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
 void P_GiveEmerald(boolean spawnObj);
 #if 0
@@ -198,6 +200,9 @@ void P_PlayLivesJingle(player_t *player);
 #define P_PlayDeathSound(s)		S_StartSound(s, sfx_altdi1 + P_RandomKey(4));
 #define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
 
+boolean P_GetLives(player_t *player);
+boolean P_SpectatorJoinGame(player_t *player);
+void P_RestoreMultiMusic(player_t *player);
 
 //
 // P_MOBJ
@@ -224,7 +229,6 @@ void P_PrecipitationEffects(void);
 void P_RemoveMobj(mobj_t *th);
 boolean P_MobjWasRemoved(mobj_t *th);
 void P_RemoveSavegameMobj(mobj_t *th);
-UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
@@ -414,6 +418,7 @@ void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duratio
 void P_ForceConstant(const BasicFF_t *FFInfo);
 void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End);
 void P_RemoveShield(player_t *player);
+void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source);
 boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c

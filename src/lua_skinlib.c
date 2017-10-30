@@ -35,6 +35,7 @@ enum skin {
 	skin_thokitem,
 	skin_spinitem,
 	skin_revitem,
+	skin_followitem,
 	skin_actionspd,
 	skin_mindash,
 	skin_maxdash,
@@ -73,6 +74,7 @@ static const char *const skin_opt[] = {
 	"thokitem",
 	"spinitem",
 	"revitem",
+	"followitem",
 	"actionspd",
 	"mindash",
 	"maxdash",
@@ -161,6 +163,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_revitem:
 		lua_pushinteger(L, skin->revitem);
+		break;
+	case skin_followitem:
+		lua_pushinteger(L, skin->followitem);
 		break;
 	case skin_actionspd:
 		lua_pushfixed(L, skin->actionspd);

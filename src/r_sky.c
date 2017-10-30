@@ -64,10 +64,6 @@ void R_SetupSkyDraw(void)
 	// the horizon line in a 256x128 sky texture
 	skytexturemid = (textures[skytexture]->height/2)<<FRACBITS;
 
-	// get the right drawer, it was set by screen.c, depending on the
-	// current video mode bytes per pixel (quick fix)
-	wallcolfunc = walldrawerfunc;
-
 	R_SetSkyScale();
 }
 

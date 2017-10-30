@@ -83,6 +83,7 @@ patch_t *rmatcico;
 patch_t *bmatcico;
 patch_t *tagico;
 patch_t *tallminus;
+patch_t *tallinfin;
 
 //-------------------------------------------
 //              coop hud
@@ -92,6 +93,7 @@ patch_t *emeraldpics[7];
 patch_t *tinyemeraldpics[7];
 static patch_t *emblemicon;
 patch_t *tokenicon;
+static patch_t *exiticon;
 
 //-------------------------------------------
 //              misc vars
@@ -234,6 +236,7 @@ void HU_LoadGraphics(void)
 
 	// minus for negative tallnums
 	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
+	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
@@ -245,6 +248,7 @@ void HU_LoadGraphics(void)
 
 	emblemicon = W_CachePatchName("EMBLICON", PU_HUDGFX);
 	tokenicon = W_CachePatchName("TOKNICON", PU_HUDGFX);
+	exiticon = W_CachePatchName("EXITICON", PU_HUDGFX);
 
 	emeraldpics[0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
 	emeraldpics[1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
@@ -324,7 +328,7 @@ void HU_Start(void)
   */
 static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 {
-	XBOXSTATIC char buf[254];
+	char buf[254];
 	size_t numwords, ix;
 	char *msg = &buf[2];
 	const size_t msgspace = sizeof buf - 2;
@@ -469,7 +473,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -489,7 +493,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				CONS_Alert(CONS_WARNING, M_GetText("Illegal say command received from %s containing invalid characters\n"), player_names[playernum]);
 				if (server)
 				{
-					XBOXSTATIC char buf[2];
+					char buf[2];
 
 					buf[0] = (char)playernum;
 					buf[1] = KICK_MSG_CON_FAIL;
@@ -1174,6 +1178,9 @@ void HU_Erase(void)
 //                   IN-LEVEL MULTIPLAYER RANKINGS
 //======================================================================
 
+#define supercheckdef ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER))
+#define greycheckdef ((players[tab[i].num].mo && players[tab[i].num].mo->health <= 0) || players[tab[i].num].spectator)
+
 //
 // HU_DrawTabRankings
 //
@@ -1181,6 +1188,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 {
 	INT32 i;
 	const UINT8 *colormap;
+	boolean greycheck, supercheck;
 
 	//this function is designed for 9 or less score lines only
 	I_Assert(scorelines <= 9);
@@ -1189,12 +1197,15 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 
 	for (i = 0; i < scorelines; i++)
 	{
-		if (players[tab[i].num].spectator)
+		if (players[tab[i].num].spectator && gametype != GT_COOP)
 			continue; //ignore them.
+
+		greycheck = greycheckdef;
+		supercheck = supercheckdef;
 
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS)
+		             | (greycheck ? V_60TRANS : 0)
 		             | V_ALLOWLOWERCASE, tab[i].name);
 
 		// Draw emeralds
@@ -1204,7 +1215,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
 		}
 
-		if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
+		if (greycheck)
 			V_DrawSmallTranslucentPatch (x, y-4, V_80TRANS, livesback);
 		else
 			V_DrawSmallScaledPatch (x, y-4, 0, livesback);
@@ -1212,11 +1223,11 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		if (tab[i].color == 0)
 		{
 			colormap = colormaps;
-			if (players[tab[i].num].powers[pw_super])
+			if (supercheck)
 				V_DrawSmallScaledPatch(x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
+				if (greycheck)
 					V_DrawSmallTranslucentPatch(x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin]);
 				else
 					V_DrawSmallScaledPatch(x, y-4, 0, faceprefix[players[tab[i].num].skin]);
@@ -1224,7 +1235,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		}
 		else
 		{
-			if (players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS] || players[tab[i].num].mo->state > &states[S_PLAY_SUPER_TRANS9]))
+			if (supercheck)
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo->color, GTC_CACHE);
 				V_DrawSmallMappedPatch (x, y-4, 0, superprefix[players[tab[i].num].skin], colormap);
@@ -1232,22 +1243,25 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			else
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
+				if (greycheck)
 					V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 			}
 		}
 
-		if (G_GametypeUsesLives()) //show lives
-			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE|((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%dx", players[tab[i].num].lives));
+		if (G_GametypeUsesLives() && !(gametype == GT_COOP && (cv_cooplives.value == 0 || cv_cooplives.value == 3)) && (players[tab[i].num].lives != 0x7f)) //show lives
+			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE|(greycheck ? V_60TRANS : 0), va("%dx", players[tab[i].num].lives));
 		else if (G_TagGametype() && players[tab[i].num].pflags & PF_TAGIT)
 		{
-			if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
+			if (greycheck)
 				V_DrawSmallTranslucentPatch(x-32, y-4, V_60TRANS, tagico);
 			else
 				V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
 		}
+
+		if (players[tab[i].num].exiting)
+			V_DrawSmallScaledPatch(x - SHORT(exiticon->width)/2 - 1, y-3, 0, exiticon);
 
 		if (gametype == GT_RACE)
 		{
@@ -1256,13 +1270,13 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedString(x+240, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
+					V_DrawRightAlignedString(x+240, y, (greycheck ? V_60TRANS : 0), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedString(x+240, y, (greycheck ? V_60TRANS : 0), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
+			V_DrawRightAlignedString(x+240, y, (greycheck ? V_60TRANS : 0), va("%u", tab[i].count));
 
 		y += 16;
 	}
@@ -1277,6 +1291,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	INT32 redplayers = 0, blueplayers = 0;
 	const UINT8 *colormap;
 	char name[MAXPLAYERNAME+1];
+	boolean greycheck, supercheck;
 
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two teams.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
@@ -1304,10 +1319,13 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		else //er?  not on red or blue, so ignore them
 			continue;
 
+		greycheck = greycheckdef;
+		supercheck = supercheckdef;
+
 		strlcpy(name, tab[i].name, 9);
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT)
+		             | (greycheck ? V_TRANSLUCENT : 0)
 		             | V_ALLOWLOWERCASE, name);
 
 		if (gametype == GT_CTF)
@@ -1325,7 +1343,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
 		}
 
-		if (players[tab[i].num].powers[pw_super])
+		if (supercheck)
 		{
 			colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
 			V_DrawSmallMappedPatch (x, y-4, 0, superprefix[players[tab[i].num].skin], colormap);
@@ -1333,12 +1351,12 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		else
 		{
 			colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-			if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
-				V_DrawSmallTranslucentMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
+			if (greycheck)
+				V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 			else
 				V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
-		V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+		V_DrawRightAlignedThinString(x+120, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 	}
 }
 
@@ -1350,6 +1368,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 	INT32 i;
 	const UINT8 *colormap;
 	char name[MAXPLAYERNAME+1];
+	boolean greycheck, supercheck;
 
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two sides.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
@@ -1357,19 +1376,25 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 
 	for (i = 0; i < scorelines; i++)
 	{
-		if (players[tab[i].num].spectator)
+		if (players[tab[i].num].spectator && gametype != GT_COOP)
 			continue; //ignore them.
+
+		greycheck = greycheckdef;
+		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 9);
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT)
+		             | (greycheck ? V_TRANSLUCENT : 0)
 		             | V_ALLOWLOWERCASE, name);
 
-		if (G_GametypeUsesLives()) //show lives
+		if (G_GametypeUsesLives() && !(gametype == GT_COOP && (cv_cooplives.value == 0 || cv_cooplives.value == 3)) && (players[tab[i].num].lives != 0x7f)) //show lives
 			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE, va("%dx", players[tab[i].num].lives));
 		else if (G_TagGametype() && players[tab[i].num].pflags & PF_TAGIT)
 			V_DrawSmallScaledPatch(x-28, y-4, 0, tagico);
+
+		if (players[tab[i].num].exiting)
+			V_DrawSmallScaledPatch(x - SHORT(exiticon->width)/2 - 1, y-3, 0, exiticon);
 
 		// Draw emeralds
 		if (!players[tab[i].num].powers[pw_super]
@@ -1382,19 +1407,19 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 		if (tab[i].color == 0)
 		{
 			colormap = colormaps;
-			if (players[tab[i].num].powers[pw_super])
+			if (supercheck)
 				V_DrawSmallScaledPatch (x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
-					V_DrawSmallTranslucentPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin]);
+				if (greycheck)
+					V_DrawSmallTranslucentPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin]);
 				else
 					V_DrawSmallScaledPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin]);
 			}
 		}
 		else
 		{
-			if (players[tab[i].num].powers[pw_super])
+			if (supercheck)
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
 				V_DrawSmallMappedPatch (x, y-4, 0, superprefix[players[tab[i].num].skin], colormap);
@@ -1402,8 +1427,8 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			else
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
-					V_DrawSmallTranslucentMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
+				if (greycheck)
+					V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 			}
@@ -1417,13 +1442,13 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedThinString(x+156, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+156, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+156, y, (greycheck ? V_TRANSLUCENT : 0), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+			V_DrawRightAlignedThinString(x+120, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 
 		y += 16;
 		if (y > 160)
@@ -1620,59 +1645,65 @@ static void HU_DrawRankings(void)
 
 	for (j = 0; j < MAXPLAYERS; j++)
 	{
-		if (!playeringame[j] || players[j].spectator)
+		if (!playeringame[j])
+			continue;
+
+		if (gametype != GT_COOP && players[j].spectator)
 			continue;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && !players[i].spectator)
+			if (!playeringame[i])
+				continue;
+
+			if (gametype != GT_COOP && players[i].spectator)
+				continue;
+
+			if (gametype == GT_RACE)
 			{
-				if (gametype == GT_RACE)
+				if (circuitmap)
 				{
-					if (circuitmap)
+					if ((unsigned)players[i].laps+1 >= tab[scorelines].count && completed[i] == false)
 					{
-						if ((unsigned)players[i].laps+1 >= tab[scorelines].count && completed[i] == false)
-						{
-							tab[scorelines].count = players[i].laps+1;
-							tab[scorelines].num = i;
-							tab[scorelines].color = players[i].skincolor;
-							tab[scorelines].name = player_names[i];
-						}
-					}
-					else
-					{
-						if (players[i].realtime <= tab[scorelines].count && completed[i] == false)
-						{
-							tab[scorelines].count = players[i].realtime;
-							tab[scorelines].num = i;
-							tab[scorelines].color = players[i].skincolor;
-							tab[scorelines].name = player_names[i];
-						}
-					}
-				}
-				else if (gametype == GT_COMPETITION)
-				{
-					// todo put something more fitting for the gametype here, such as current
-					// number of categories led
-					if (players[i].score >= tab[scorelines].count && completed[i] == false)
-					{
-						tab[scorelines].count = players[i].score;
+						tab[scorelines].count = players[i].laps+1;
 						tab[scorelines].num = i;
 						tab[scorelines].color = players[i].skincolor;
 						tab[scorelines].name = player_names[i];
-						tab[scorelines].emeralds = players[i].powers[pw_emeralds];
 					}
 				}
 				else
 				{
-					if (players[i].score >= tab[scorelines].count && completed[i] == false)
+					if (players[i].realtime <= tab[scorelines].count && completed[i] == false)
 					{
-						tab[scorelines].count = players[i].score;
+						tab[scorelines].count = players[i].realtime;
 						tab[scorelines].num = i;
 						tab[scorelines].color = players[i].skincolor;
 						tab[scorelines].name = player_names[i];
-						tab[scorelines].emeralds = players[i].powers[pw_emeralds];
 					}
+				}
+			}
+			else if (gametype == GT_COMPETITION)
+			{
+				// todo put something more fitting for the gametype here, such as current
+				// number of categories led
+				if (players[i].score >= tab[scorelines].count && completed[i] == false)
+				{
+					tab[scorelines].count = players[i].score;
+					tab[scorelines].num = i;
+					tab[scorelines].color = players[i].skincolor;
+					tab[scorelines].name = player_names[i];
+					tab[scorelines].emeralds = players[i].powers[pw_emeralds];
+				}
+			}
+			else
+			{
+				if (players[i].score >= tab[scorelines].count && completed[i] == false)
+				{
+					tab[scorelines].count = players[i].score;
+					tab[scorelines].num = i;
+					tab[scorelines].color = players[i].skincolor;
+					tab[scorelines].name = player_names[i];
+					tab[scorelines].emeralds = players[i].powers[pw_emeralds];
 				}
 			}
 		}
