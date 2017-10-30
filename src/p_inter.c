@@ -414,13 +414,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		////////////////////////////////////////////////////////
 		if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
+		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			// Can only hit snapper from above
-			P_DamageMobj(toucher, special, special, 1, 0);
+			P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (special->type == MT_SHARP
-		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
+		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2))
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			if (player->pflags & PF_BOUNCING)
 			{
@@ -428,7 +430,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoAbilityBounce(player, false);
 			}
 			else // Cannot hit sharp from above or when red and angry
-				P_DamageMobj(toucher, special, special, 1, 0);
+				P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
@@ -481,9 +483,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_REDTEAMRING:
 			if (player->ctfteam != 1)
 				return;
+			/* FALLTHRU */
 		case MT_BLUETEAMRING: // Yes, I'm lazy. Oh well, deal with it.
 			if (special->type == MT_BLUETEAMRING && player->ctfteam != 2)
 				return;
+			/* FALLTHRU */
 		case MT_RING:
 		case MT_FLINGRING:
 			if (!(P_CanPickupItem(player, false)))
@@ -878,7 +882,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 						if (!(mo2->flags & MF_SPECIAL) && mo2->health)
 						{
-							P_SetMobjState(mo2, mo2->info->seestate);
+							mo2->flags2 &= ~MF2_DONTDRAW;
 							mo2->flags |= MF_SPECIAL;
 							mo2->flags &= ~MF_NIGHTSITEM;
 							S_StartSound(toucher, sfx_hidden);
@@ -887,7 +891,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 
 					if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-					   || mo2->type == MT_BLUEBALL))
+					   || mo2->type == MT_BLUEBALL
+					   || ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -1290,13 +1295,40 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			// Save the player's time and position.
-			player->starposttime = leveltime;
-			player->starpostx = toucher->x>>FRACBITS;
-			player->starposty = toucher->y>>FRACBITS;
-			player->starpostz = special->z>>FRACBITS;
-			player->starpostangle = special->angle;
-			player->starpostnum = special->health;
+			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+					{
+						if (players[i].bot) // ignore dumb, stupid tails
+							continue;
+
+						players[i].starposttime = leveltime;
+						players[i].starpostx = player->mo->x>>FRACBITS;
+						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostz = special->z>>FRACBITS;
+						players[i].starpostangle = special->angle;
+						players[i].starpostnum = special->health;
+
+						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+					}
+				}
+				S_StartSound(NULL, special->info->painsound);
+			}
+			else
+			{
+				// Save the player's time and position.
+				player->starposttime = leveltime;
+				player->starpostx = toucher->x>>FRACBITS;
+				player->starposty = toucher->y>>FRACBITS;
+				player->starpostz = special->z>>FRACBITS;
+				player->starpostangle = special->angle;
+				player->starpostnum = special->health;
+				S_StartSound(toucher, special->info->painsound);
+			}
+
 			P_ClearStarPost(special->health);
 
 			// Find all starposts in the level with this value.
@@ -1468,10 +1500,19 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_flashing])
 				return;
 
+			if (special->movefactor && special->tracer && (angle_t)special->tracer->health != ANGLE_90 && (angle_t)special->tracer->health != ANGLE_270)
+			{ // I don't expect you to understand this, Mr Bond...
+				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->threshold;
+				if ((special->movefactor > 0) == ((angle_t)special->tracer->health > ANGLE_90 && (angle_t)special->tracer->health < ANGLE_270))
+					ang += ANGLE_180;
+				if (ang < ANGLE_180)
+					return; // I expect you to die.
+			}
+
 			P_ResetPlayer(player);
 			P_SetTarget(&toucher->tracer, special);
 
-			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
+			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
@@ -1482,6 +1523,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
+
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:
@@ -1492,30 +1534,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_SetMobjState(special, special->info->deathstate);
 			return;
 		case MT_SPECIALSPIKEBALL:
-			if (!(!useNightsSS && G_IsSpecialStage(gamemap))) // Only for old special stages
-			{
-				P_DamageMobj(toucher, special, special, 1, 0);
-				return;
-			}
-
-			if (player->powers[pw_invulnerability] || player->powers[pw_flashing]
-			|| player->powers[pw_super])
-				return;
-			if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
-			{
-				P_RemoveShield(player);
-				S_StartSound(toucher, sfx_shldls); // Ba-Dum! Shield loss.
-			}
+			if (!useNightsSS && G_IsSpecialStage(gamemap)) // Only for old special stages
+				P_SpecialStageDamage(player, special, NULL);
 			else
-			{
-				P_PlayRinglossSound(toucher);
-				if (player->rings >= 10)
-					player->rings -= 10;
-				else
-					player->rings = 0;
-			}
-
-			P_DoPlayerPain(player, special, NULL);
+				P_DamageMobj(toucher, special, special, 1, 0);
 			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
@@ -1665,7 +1687,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 					if (damagetype == DMG_NUKE) // SH_ARMAGEDDON, armageddon shield
 						str = M_GetText("%s%s's armageddon blast %s %s.\n");
 					else if ((inflictor->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && (inflictor->player->pflags & PF_SHIELDABILITY))
-						str = M_GetText("%s%s's flame stomp %s %s.\n");
+						str = M_GetText("%s%s's elemental stomp %s %s.\n");
 					else if (inflictor->player->powers[pw_invulnerability])
 						str = M_GetText("%s%s's invincibility aura %s %s.\n");
 					else if (inflictor->player->powers[pw_super])
@@ -1719,6 +1741,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 				str = M_GetText("%s was %s by Eggman's nefarious TV magic.\n");
 				break;
 			case MT_SPIKE:
+			case MT_WALLSPIKE:
 				str = M_GetText("%s was %s by spikes.\n");
 				break;
 			default:
@@ -1830,7 +1853,7 @@ void P_CheckTimeLimit(void)
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i] || players[i].spectator
-				 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
+				 || (players[i].pflags & PF_GAMETYPEOVER) || (players[i].pflags & PF_TAGIT))
 					continue;
 
 				CONS_Printf(M_GetText("%s received double points for surviving the round.\n"), player_names[i]);
@@ -1977,7 +2000,7 @@ void P_CheckSurvivors(void)
 				spectators++;
 			else if (players[i].pflags & PF_TAGIT)
 				taggers++;
-			else if (!(players[i].pflags & PF_TAGGED))
+			else if (!(players[i].pflags & PF_GAMETYPEOVER))
 			{
 				survivorarray[survivors] = i;
 				survivors++;
@@ -2216,17 +2239,44 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
-		if (!target->player->bot && !G_IsSpecialStage(gamemap)
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+			;
+		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap) && (target->player->lives != 0x7f)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
+				boolean gameovermus = false;
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
+				{
+					INT32 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						if (players[i].lives > 0)
+							break;
+					}
+					if (i == MAXPLAYERS)
+						gameovermus = true;
+				}
+				else if (P_IsLocalPlayer(target->player))
+					gameovermus = true;
+
+				if (gameovermus)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
+				}
+
+				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
+				{
+					numgameovers++;
+					if ((!modifiedgame || savemoddata) && cursaveslot > 0)
+						G_SaveGameOver((UINT32)cursaveslot, (target->player->continues <= 0));
 				}
 			}
 		}
@@ -2264,7 +2314,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 				else
 				{
-					if (!(target->player->pflags & PF_TAGGED))
+					if (!(target->player->pflags & PF_GAMETYPEOVER))
 					{
 						//otherwise, increment the tagger's score.
 						//in hide and seek, suiciding players are counted as found.
@@ -2276,7 +2326,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 								P_AddPlayerScore(&players[w], 100);
 						}
 
-						target->player->pflags |= PF_TAGGED;
+						target->player->pflags |= PF_GAMETYPEOVER;
 						CONS_Printf(M_GetText("%s was found!\n"), player_names[target->player-players]);
 						P_CheckSurvivors();
 					}
@@ -2395,7 +2445,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				else
 				{
 					P_SetObjectMomZ(target, 14*FRACUNIT, false);
-					if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
+					if (damagetype == DMG_SPIKE) // Spikes
 						S_StartSound(target, sfx_spkdth);
 					else
 						P_PlayDeathSound(target);
@@ -2457,90 +2507,159 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 	}
 
-	if (target->type == MT_SPIKE && inflictor && target->info->deathstate != S_NULL)
+	if (target->type == MT_SPIKE && target->info->deathstate != S_NULL)
 	{
-		const fixed_t x=target->x,y=target->y,z=target->z;
-		const fixed_t scale=target->scale;
-		const boolean flip=(target->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP;
-		S_StartSound(target,target->info->deathsound);
+		const angle_t ang = ((inflictor) ? inflictor->angle : 0) + ANGLE_90;
+		const fixed_t scale = target->scale;
+		const fixed_t xoffs = P_ReturnThrustX(target, ang, 8*scale), yoffs = P_ReturnThrustY(target, ang, 8*scale);
+		const UINT16 flip = (target->eflags & MFE_VERTICALFLIP);
+		mobj_t *chunk;
+		fixed_t momz;
 
-		P_SetMobjState(target, target->info->deathstate);
-		target->health = 0;
-		target->angle = inflictor->angle + ANGLE_90;
-		P_UnsetThingPosition(target);
-		target->flags = MF_NOCLIP;
-		target->x += P_ReturnThrustX(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-		target->y += P_ReturnThrustY(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-		if (flip)
-			target->z -= FixedMul(12*FRACUNIT, target->scale);
-		else
-			target->z += FixedMul(12*FRACUNIT, target->scale);
-		P_SetThingPosition(target);
-		P_InstaThrust(target,target->angle,FixedMul(2*FRACUNIT, target->scale));
-		target->momz = FixedMul(7*FRACUNIT, target->scale);
-		if (flip)
-			target->momz = -target->momz;
-
-		if (flip)
-		{
-			target = P_SpawnMobj(x,y,z-FixedMul(12*FRACUNIT, target->scale),MT_SPIKE);
-			target->eflags |= MFE_VERTICALFLIP;
-		}
-		else
-			target = P_SpawnMobj(x,y,z+FixedMul(12*FRACUNIT, target->scale),MT_SPIKE);
-		P_SetMobjState(target, target->info->deathstate);
-		target->health = 0;
-		target->angle = inflictor->angle - ANGLE_90;
-		target->destscale = scale;
-		P_SetScale(target, scale);
-		P_UnsetThingPosition(target);
-		target->flags = MF_NOCLIP;
-		target->x += P_ReturnThrustX(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-		target->y += P_ReturnThrustY(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-		P_SetThingPosition(target);
-		P_InstaThrust(target,target->angle,FixedMul(2*FRACUNIT, target->scale));
-		target->momz = FixedMul(7*FRACUNIT, target->scale);
-		if (flip)
-			target->momz = -target->momz;
+		S_StartSound(target, target->info->deathsound);
 
 		if (target->info->xdeathstate != S_NULL)
 		{
-			target = P_SpawnMobj(x,y,z,MT_SPIKE);
+			momz = 6*scale;
 			if (flip)
-				target->eflags |= MFE_VERTICALFLIP;
-			P_SetMobjState(target, target->info->xdeathstate);
-			target->health = 0;
-			target->angle = inflictor->angle + ANGLE_90;
-			target->destscale = scale;
-			P_SetScale(target, scale);
-			P_UnsetThingPosition(target);
-			target->flags = MF_NOCLIP;
-			target->x += P_ReturnThrustX(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-			target->y += P_ReturnThrustY(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-			P_SetThingPosition(target);
-			P_InstaThrust(target,target->angle,FixedMul(4*FRACUNIT, target->scale));
-			target->momz = FixedMul(6*FRACUNIT, target->scale);
-			if (flip)
-				target->momz = -target->momz;
+				momz *= -1;
+#define makechunk(angtweak, xmov, ymov) \
+			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);\
+			chunk->eflags |= flip;\
+			P_SetMobjState(chunk, target->info->xdeathstate);\
+			chunk->health = 0;\
+			chunk->angle = angtweak;\
+			chunk->destscale = scale;\
+			P_SetScale(chunk, scale);\
+			P_UnsetThingPosition(chunk);\
+			chunk->flags = MF_NOCLIP;\
+			chunk->x += xmov;\
+			chunk->y += ymov;\
+			P_SetThingPosition(chunk);\
+			P_InstaThrust(chunk,chunk->angle, 4*scale);\
+			chunk->momz = momz
 
-			target = P_SpawnMobj(x,y,z,MT_SPIKE);
-			if (flip)
-				target->eflags |= MFE_VERTICALFLIP;
-			P_SetMobjState(target, target->info->xdeathstate);
-			target->health = 0;
-			target->angle = inflictor->angle - ANGLE_90;
-			target->destscale = scale;
-			P_SetScale(target, scale);
-			P_UnsetThingPosition(target);
-			target->flags = MF_NOCLIP;
-			target->x += P_ReturnThrustX(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-			target->y += P_ReturnThrustY(target, target->angle, FixedMul(8*FRACUNIT, target->scale));
-			P_SetThingPosition(target);
-			P_InstaThrust(target,target->angle,FixedMul(4*FRACUNIT, target->scale));
-			target->momz = FixedMul(6*FRACUNIT, target->scale);
-			if (flip)
-				target->momz = -target->momz;
+			makechunk(ang + ANGLE_180, -xoffs, -yoffs);
+			makechunk(ang, xoffs, yoffs);
+
+#undef makechunk
 		}
+
+		momz = 7*scale;
+		if (flip)
+			momz *= -1;
+
+		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_SPIKE);
+		chunk->eflags |= flip;
+
+		P_SetMobjState(chunk, target->info->deathstate);
+		chunk->health = 0;
+		chunk->angle = ang + ANGLE_180;
+		chunk->destscale = scale;
+		P_SetScale(chunk, scale);
+		P_UnsetThingPosition(chunk);
+		chunk->flags = MF_NOCLIP;
+		chunk->x -= xoffs;
+		chunk->y -= yoffs;
+		if (flip)
+			chunk->z -= 12*scale;
+		else
+			chunk->z += 12*scale;
+		P_SetThingPosition(chunk);
+		P_InstaThrust(chunk, chunk->angle, 2*scale);
+		chunk->momz = momz;
+
+		P_SetMobjState(target, target->info->deathstate);
+		target->health = 0;
+		target->angle = ang;
+		P_UnsetThingPosition(target);
+		target->flags = MF_NOCLIP;
+		target->x += xoffs;
+		target->y += yoffs;
+		target->z = chunk->z;
+		P_SetThingPosition(target);
+		P_InstaThrust(target, target->angle, 2*scale);
+		target->momz = momz;
+	}
+	else if (target->type == MT_WALLSPIKE && target->info->deathstate != S_NULL)
+	{
+		const angle_t ang = (/*(inflictor) ? inflictor->angle : */target->angle) + ANGLE_90;
+		const fixed_t scale = target->scale;
+		const fixed_t xoffs = P_ReturnThrustX(target, ang, 8*scale), yoffs = P_ReturnThrustY(target, ang, 8*scale), forwardxoffs = P_ReturnThrustX(target, target->angle, 7*scale), forwardyoffs = P_ReturnThrustY(target, target->angle, 7*scale);
+		const UINT16 flip = (target->eflags & MFE_VERTICALFLIP);
+		mobj_t *chunk;
+		boolean sprflip;
+
+		S_StartSound(target, target->info->deathsound);
+		if (!P_MobjWasRemoved(target->tracer))
+			P_RemoveMobj(target->tracer);
+
+		if (target->info->xdeathstate != S_NULL)
+		{
+			sprflip = P_RandomChance(FRACUNIT/2);
+
+#define makechunk(angtweak, xmov, ymov) \
+			chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);\
+			chunk->eflags |= flip;\
+			P_SetMobjState(chunk, target->info->xdeathstate);\
+			chunk->health = 0;\
+			chunk->angle = target->angle;\
+			chunk->destscale = scale;\
+			P_SetScale(chunk, scale);\
+			P_UnsetThingPosition(chunk);\
+			chunk->flags = MF_NOCLIP;\
+			chunk->x += xmov - forwardxoffs;\
+			chunk->y += ymov - forwardyoffs;\
+			P_SetThingPosition(chunk);\
+			P_InstaThrust(chunk, angtweak, 4*scale);\
+			chunk->momz = P_RandomRange(5, 7)*scale;\
+			if (flip)\
+				chunk->momz *= -1;\
+			if (sprflip)\
+				chunk->frame |= FF_VERTICALFLIP
+
+			makechunk(ang + ANGLE_180, -xoffs, -yoffs);
+			sprflip = !sprflip;
+			makechunk(ang, xoffs, yoffs);
+
+#undef makechunk
+		}
+
+		sprflip = P_RandomChance(FRACUNIT/2);
+
+		chunk = P_SpawnMobj(target->x, target->y, target->z, MT_WALLSPIKE);
+		chunk->eflags |= flip;
+
+		P_SetMobjState(chunk, target->info->deathstate);
+		chunk->health = 0;
+		chunk->angle = target->angle;
+		chunk->destscale = scale;
+		P_SetScale(chunk, scale);
+		P_UnsetThingPosition(chunk);
+		chunk->flags = MF_NOCLIP;
+		chunk->x += forwardxoffs - xoffs;
+		chunk->y += forwardyoffs - yoffs;
+		P_SetThingPosition(chunk);
+		P_InstaThrust(chunk, ang + ANGLE_180, 2*scale);
+		chunk->momz = P_RandomRange(5, 7)*scale;
+		if (flip)
+			chunk->momz *= -1;
+		if (sprflip)
+			chunk->frame |= FF_VERTICALFLIP;
+
+		P_SetMobjState(target, target->info->deathstate);
+		target->health = 0;
+		P_UnsetThingPosition(target);
+		target->flags = MF_NOCLIP;
+		target->x += forwardxoffs + xoffs;
+		target->y += forwardyoffs + yoffs;
+		P_SetThingPosition(target);
+		P_InstaThrust(target, ang, 2*scale);
+		target->momz = P_RandomRange(5, 7)*scale;
+		if (flip)
+			target->momz *= -1;
+		if (!sprflip)
+			target->frame |= FF_VERTICALFLIP;
 	}
 	else if (target->player)
 	{
@@ -2663,7 +2782,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		}
 		else
 		{
-			player->pflags |= PF_TAGGED; //in hide and seek, the player is tagged and stays stationary.
+			player->pflags |= PF_GAMETYPEOVER; //in hide and seek, the player is tagged and stays stationary.
 			CONS_Printf(M_GetText("%s was found!\n"), player_names[player-players]); // Tell everyone who is it!
 		}
 
@@ -2849,7 +2968,17 @@ void P_RemoveShield(player_t *player)
 		else
 			player->powers[pw_shield] &= SH_STACK;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
+	else if (player->powers[pw_shield] & SH_NOSTACK)
+	{ // First layer shields
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
+		{
+			P_BlackOw(player); // BAM!
+			player->pflags |= PF_JUMPDOWN;
+		}
+		else
+			player->powers[pw_shield] &= SH_STACK;
+	}
+	else
 	{ // Second layer shields
 		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
@@ -2858,13 +2987,6 @@ void P_RemoveShield(player_t *player)
 		}
 		player->powers[pw_shield] = SH_NONE;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
-	{
-		P_BlackOw(player); // BAM!
-		player->pflags |= PF_JUMPDOWN;
-	}
-	else
-		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
@@ -2876,7 +2998,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-	if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // spikes
+	if (damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
@@ -2905,7 +3027,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-	if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // spikes
+	if (damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 
 	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
@@ -2932,6 +3054,38 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	player->rings -= damage;
 	if (player->rings < 0)
 		player->rings = 0;
+}
+
+//
+// P_SpecialStageDamage
+//
+// Do old special stage-style damaging
+// Removes 10 rings from the player, or knocks off their shield if they have one.
+// If they don't have anything, just knock the player back anyway (this doesn't kill them).
+//
+void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
+{
+	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
+		return;
+
+	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+	{
+		P_RemoveShield(player);
+		S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
+	}
+	else
+	{
+		P_PlayRinglossSound(player->mo);
+		if (player->rings >= 10)
+			player->rings -= 10;
+		else
+			player->rings = 0;
+	}
+
+	P_DoPlayerPain(player, inflictor, source);
+
+	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+		P_PlayerFlagBurst(player, false);
 }
 
 /** Damages an object, which may or may not be a player.
@@ -3078,23 +3232,21 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (player->pflags & PF_GODMODE)
 				return false;
 
-			if (!(target->player->powers[pw_carry] == CR_NIGHTSMODE || target->player->pflags & PF_NIGHTSFALL) && (maptol & TOL_NIGHTS))
+			if ((maptol & TOL_NIGHTS) && target->player->powers[pw_carry] != CR_NIGHTSMODE && target->player->powers[pw_carry] != CR_NIGHTSFALL)
 				return false;
 
 			switch (damagetype)
 			{
-				case DMG_WATER:
-					if (player->powers[pw_shield] & SH_PROTECTWATER)
-						return false; // Invincible to water damage
-					break;
-				case DMG_FIRE:
-					if (player->powers[pw_shield] & SH_PROTECTFIRE)
-						return false; // Invincible to fire damage
-					break;
-				case DMG_ELECTRIC:
-					if (player->powers[pw_shield] & SH_PROTECTELECTRIC)
-						return false; // Invincible to electric damage
-					break;
+#define DAMAGECASE(type)\
+				case DMG_##type:\
+					if (player->powers[pw_shield] & SH_PROTECT##type)\
+						return false;\
+					break
+				DAMAGECASE(WATER);
+				DAMAGECASE(FIRE);
+				DAMAGECASE(ELECTRIC);
+				DAMAGECASE(SPIKE);
+#undef DAMAGECASE
 				default:
 					break;
 			}
@@ -3240,7 +3392,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 				break;
 			}
-			// fallthrough
+			/* FALLTHRU */
 		default:
 			P_SetMobjState(target, target->info->painstate);
 			break;
@@ -3281,7 +3433,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	if (player->rings <= 0)
 		num_rings = 0;
 
-	if (num_rings > 32 && !(player->pflags & PF_NIGHTSFALL))
+	if (num_rings > 32 && player->powers[pw_carry] != CR_NIGHTSFALL)
 		num_rings = 32;
 
 	if (player->powers[pw_emeralds])
@@ -3313,7 +3465,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.
-		if (player->pflags & PF_NIGHTSFALL)
+		if (player->powers[pw_carry] == CR_NIGHTSFALL)
 		{
 			ns = FixedMul(((i*FRACUNIT)/16)+2*FRACUNIT, mo->scale);
 			mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -3353,12 +3505,12 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		}
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mo->momz *= -1;
+
+		if (P_IsObjectOnGround(player->mo))
+			player->powers[pw_carry] = CR_NONE;
 	}
 
 	player->losstime += 10*TICRATE;
-
-	if (P_IsObjectOnGround(player->mo))
-		player->pflags &= ~PF_NIGHTSFALL;
 
 	return;
 }

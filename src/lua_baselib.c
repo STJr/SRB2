@@ -137,7 +137,7 @@ static const struct {
 };
 
 // goes through the above list and returns the utype string for the userdata type
-// returns "unknown" instead if we couldn't find the right userdata type 
+// returns "unknown" instead if we couldn't find the right userdata type
 static const char *GetUserdataUType(lua_State *L)
 {
 	UINT8 i;
@@ -464,6 +464,8 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
+	if (state >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
 	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
@@ -980,6 +982,19 @@ static int lib_pGivePlayerLives(lua_State *L)
 	return 0;
 }
 
+static int lib_pGiveCoopLives(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 numlives = (INT32)luaL_checkinteger(L, 2);
+	boolean sound = (boolean)lua_opttrueboolean(L, 3);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_GiveCoopLives(player, numlives, sound);
+	return 0;
+}
+
 static int lib_pResetScore(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1182,6 +1197,18 @@ static int lib_pTelekinesis(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_Telekinesis(player, thrust, range);
+	return 0;
+}
+
+static int lib_pSwitchShield(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	UINT16 shield = luaL_checkinteger(L, 2);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_SwitchShield(player, shield);
 	return 0;
 }
 
@@ -2430,6 +2457,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnGhostMobj",lib_pSpawnGhostMobj},
 	{"P_GivePlayerRings",lib_pGivePlayerRings},
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
+	{"P_GiveCoopLives",lib_pGiveCoopLives},
 	{"P_ResetScore",lib_pResetScore},
 	{"P_DoJumpShield",lib_pDoJumpShield},
 	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
@@ -2447,6 +2475,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
+	{"P_SwitchShield",lib_pSwitchShield},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},

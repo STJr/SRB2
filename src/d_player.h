@@ -98,66 +98,58 @@ typedef enum
 //
 typedef enum
 {
-	// Flip camera angle with gravity flip prefrence.
-	PF_FLIPCAM = 1,
+	// Cvars
+	PF_FLIPCAM       = 1, // Flip camera angle with gravity flip prefrence.
+	PF_ANALOGMODE    = 1<<1, // Analog mode?
+	PF_DIRECTIONCHAR = 1<<2, // Directional character sprites?
+	PF_AUTOBRAKE     = 1<<3, // Autobrake?
 
 	// Cheats
-	PF_GODMODE = 1<<1,
-	PF_NOCLIP  = 1<<2,
-	PF_INVIS   = 1<<3,
+	PF_GODMODE = 1<<4,
+	PF_NOCLIP  = 1<<5,
+	PF_INVIS   = 1<<6,
 
 	// True if button down last tic.
-	PF_ATTACKDOWN = 1<<4,
-	PF_USEDOWN    = 1<<5,
-	PF_JUMPDOWN   = 1<<6,
-	PF_WPNDOWN    = 1<<7,
+	PF_ATTACKDOWN = 1<<7,
+	PF_USEDOWN    = 1<<8,
+	PF_JUMPDOWN   = 1<<9,
+	PF_WPNDOWN    = 1<<10,
 
 	// Unmoving states
-	PF_STASIS     = 1<<8, // Player is not allowed to move
-	PF_JUMPSTASIS = 1<<9, // and that includes jumping.
+	PF_STASIS     = 1<<11, // Player is not allowed to move
+	PF_JUMPSTASIS = 1<<12, // and that includes jumping.
 	PF_FULLSTASIS = PF_STASIS|PF_JUMPSTASIS,
 
-	// Did you get a time-over?
-	PF_TIMEOVER = 1<<10,
+	// Applying autobrake?
+	PF_APPLYAUTOBRAKE = 1<<13,
 
 	// Character action status
-	PF_STARTJUMP = 1<<11,
-	PF_JUMPED    = 1<<12,
-	PF_SPINNING  = 1<<13,
-	PF_STARTDASH = 1<<14,
-	PF_THOKKED   = 1<<15,
+	PF_STARTJUMP     = 1<<14,
+	PF_JUMPED        = 1<<15,
+	PF_NOJUMPDAMAGE  = 1<<16,
 
-	// Are you gliding?
-	PF_GLIDING   = 1<<16,
+	PF_SPINNING      = 1<<17,
+	PF_STARTDASH     = 1<<18,
+
+	PF_THOKKED       = 1<<19,
+	PF_SHIELDABILITY = 1<<20,
+	PF_GLIDING       = 1<<21,
+	PF_BOUNCING      = 1<<22,
 
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
-	PF_SLIDING   = 1<<17,
+	PF_SLIDING       = 1<<23,
 
-	// Bouncing
-	PF_BOUNCING  = 1<<18,
+	// NiGHTS stuff
+	PF_TRANSFERTOCLOSEST = 1<<24,
+	PF_DRILLING          = 1<<25,
 
-	/*** NIGHTS STUFF ***/
-	PF_TRANSFERTOCLOSEST = 1<<19,
-	PF_NIGHTSFALL        = 1<<20,
-	PF_DRILLING          = 1<<21,
-	PF_SKIDDOWN          = 1<<22,
-
-	/*** TAG STUFF ***/
-	PF_TAGGED            = 1<<23, // Player has been tagged and awaits the next round in hide and seek.
-	PF_TAGIT             = 1<<24, // The player is it! For Tag Mode
+	// Gametype-specific stuff
+	PF_GAMETYPEOVER = 1<<26, // Race time over, or H&S out-of-game
+	PF_TAGIT        = 1<<27, // The player is it! For Tag Mode
 
 	/*** misc ***/
-	PF_FORCESTRAFE       = 1<<25, // Turning inputs are translated into strafing inputs
-	PF_ANALOGMODE        = 1<<26, // Analog mode?
-
-	// Can carry another player?
-	PF_CANCARRY          = 1<<27,
-
-	// Used shield ability
-	PF_SHIELDABILITY     = 1<<28,
-
-	// Jump damage?
-	PF_NOJUMPDAMAGE   = 1<<29,
+	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
+	PF_CANCARRY    = 1<<29, // Can carry another player?
 
 	// up to 1<<31 is free
 } pflags_t;
@@ -181,6 +173,14 @@ typedef enum
 	PA_RIDE
 } panim_t;
 
+//
+// All of the base srb2 shields are either a single constant,
+// or use damagetype-protecting flags applied to a constant,
+// or are the force shield (which does everything weirdly).
+//
+// Base flags by themselves aren't used so modders can make
+// abstract, ability-less shields should they so choose.
+//
 typedef enum
 {
 	SH_NONE = 0,
@@ -189,19 +189,21 @@ typedef enum
 	SH_PROTECTFIRE = 0x400,
 	SH_PROTECTWATER = 0x800,
 	SH_PROTECTELECTRIC = 0x1000,
+	SH_PROTECTSPIKE = 0x2000, // cactus shield one day? thanks, subarashii
+	//SH_PROTECTNUKE = 0x4000, // intentionally no hardcoded defense against nukes
 
 	// Indivisible shields
 	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
 
-	// normal shields that use flags
-	SH_ATTRACT = SH_PROTECTELECTRIC,
-	SH_ELEMENTAL = SH_PROTECTFIRE|SH_PROTECTWATER,
+	// Normal shields that use flags
+	SH_ATTRACT = SH_PITY|SH_PROTECTELECTRIC,
+	SH_ELEMENTAL = SH_PITY|SH_PROTECTFIRE|SH_PROTECTWATER,
 
 	// Sonic 3 shields
-	SH_FLAMEAURA = SH_PROTECTFIRE,
-	SH_BUBBLEWRAP = SH_PROTECTWATER,
+	SH_FLAMEAURA = SH_PITY|SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PITY|SH_PROTECTWATER,
 	SH_THUNDERCOIN = SH_WHIRLWIND|SH_PROTECTELECTRIC,
 
 	// The force shield uses the lower 8 bits to count how many extra hits are left.
@@ -224,6 +226,7 @@ typedef enum
 	CR_PLAYER,
 	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
 	CR_NIGHTSMODE,
+	CR_NIGHTSFALL,
 	// Old Brak sucks hard, but this gimmick could be used for something better, so we might as well continue supporting it.
 	CR_BRAKGOOP,
 	// Specific level gimmicks.
@@ -244,6 +247,7 @@ typedef enum
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
+	pw_pushing,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots
@@ -316,6 +320,9 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
+	// fun thing for player sprite
+	angle_t drawangle;
+
 	// player's ring count
 	INT32 rings;
 
@@ -362,6 +369,8 @@ typedef struct player_s
 	mobjtype_t thokitem; // Object # to spawn for the thok
 	mobjtype_t spinitem; // Object # to spawn for spindash/spinning
 	mobjtype_t revitem; // Object # to spawn for spindash/spinning
+	mobjtype_t followitem; // Object # to spawn for Smiles
+	mobj_t *followmobj; // Smiles all around
 
 	fixed_t actionspd; // Speed of thok/glide/fly
 	fixed_t mindash; // Minimum spindash speed
@@ -471,6 +480,7 @@ typedef struct player_s
 	angle_t awayviewaiming; // Used for cut-away view
 
 	boolean spectator;
+	boolean outofcoop;
 	UINT8 bot;
 
 	tic_t jointime; // Timer when player joins game to change skin/color

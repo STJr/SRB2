@@ -44,10 +44,6 @@ static const UINT8 NOCLIMBBROWNS      = (2*16);
 static const UINT8 NOCLIMBYELLOWS     = (11*16);
 
 
-#ifdef _NDS
-#undef BACKGROUND
-#endif
-
 // Automap colors
 #define BACKGROUND            DBLACK
 #define YOURCOLORS            DWHITE

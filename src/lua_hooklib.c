@@ -58,6 +58,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ShieldSpecial",
 	"MobjMoveBlocked",
 	"MapThingSpawn",
+	"FollowMobj",
 	NULL
 };
 
@@ -109,8 +110,8 @@ static int lib_addHook(lua_State *L)
 
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 
-	if (hud_running)
-		return luaL_error(L, "HUD rendering code should not call this function!");
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 	switch(hook.type)
 	{
@@ -197,6 +198,7 @@ static int lib_addHook(lua_State *L)
 	case hook_SpinSpecial:
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
+	case hook_FollowMobj:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:
@@ -1117,6 +1119,44 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 			{
 				LUA_PushUserdata(gL, mo, META_MOBJ);
 				LUA_PushUserdata(gL, mthing, META_MAPTHING);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	return hooked;
+}
+
+// Hook for P_PlayerAfterThink Smiles mobj-following
+boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_FollowMobj/8] & (1<<(hook_FollowMobj%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+		if (hookp->type == hook_FollowMobj)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, player, META_PLAYER);
+				LUA_PushUserdata(gL, mobj, META_MOBJ);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);

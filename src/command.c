@@ -1189,7 +1189,10 @@ finish:
 		CONS_Printf(M_GetText("%s set to %s\n"), var->name, var->string);
 		var->flags &= ~CV_SHOWMODIFONETIME;
 	}
-	DEBFILE(va("%s set to %s\n", var->name, var->string));
+	else // display message in debug file only
+	{
+		DEBFILE(va("%s set to %s\n", var->name, var->string));
+	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
 #ifdef HAVE_BLUA
@@ -1233,7 +1236,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1252,9 +1255,6 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
 		return;
 	}
-#if 0 //defined (GP2X) || defined (PSP)
-	CONS_Printf("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue);
-#endif
 	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
 
 	Setvalue(cvar, svalue, stealth);
@@ -1353,7 +1353,7 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		XBOXSTATIC UINT8 buf[128];
+		UINT8 buf[128];
 		UINT8 *p = buf;
 		if (!(server || (adminplayer == consoleplayer)))
 		{

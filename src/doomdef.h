@@ -28,13 +28,11 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(DC) && !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
-    //#endif
 #endif
 
 // Use generic SDL interface.
@@ -70,7 +68,7 @@
 #endif
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define ASMCALL __cdecl
 #else
 #define ASMCALL
@@ -86,13 +84,6 @@
 // warning C4127: conditional expression is constant
 // warning C4152: nonstandard extension, function/data pointer conversion in expression
 // warning C4213: nonstandard extension used : cast on l-value
-
-#if defined (_WIN32_WCE) && defined (DEBUG) && defined (ARM)
-#if defined (ARMV4) || defined (ARMV4I)
-//#pragma warning(disable : 1166)
-// warning LNK1166: cannot adjust code at offset=
-#endif
-#endif
 
 
 #include "doomtype.h"
@@ -110,13 +101,11 @@
 #include <locale.h>
 #endif
 
-#if !defined (_WIN32_WCE)
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <ctype.h>
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #endif
 
@@ -229,39 +218,77 @@ extern FILE *logstream;
 typedef enum
 {
 	SKINCOLOR_NONE = 0,
+
+	// Greyscale ranges
 	SKINCOLOR_WHITE,
-	SKINCOLOR_SILVER,
+	SKINCOLOR_BONE,
+	SKINCOLOR_CLOUDY,
 	SKINCOLOR_GREY,
+	SKINCOLOR_SILVER,
+	SKINCOLOR_CARBON,
+	SKINCOLOR_JET,
 	SKINCOLOR_BLACK,
-	SKINCOLOR_BEIGE,
-	SKINCOLOR_PEACH,
+
+	// Desaturated
+	SKINCOLOR_AETHER,
+	SKINCOLOR_SLATE,
+	SKINCOLOR_PINK,
+	SKINCOLOR_YOGURT,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_TAN,
+	SKINCOLOR_BEIGE,
+	SKINCOLOR_MOSS,
+	SKINCOLOR_AZURE,
+	SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	SKINCOLOR_RUBY,
+	SKINCOLOR_SALMON,
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
+	SKINCOLOR_FLAME,
+	SKINCOLOR_PEACHY,
+	SKINCOLOR_QUAIL,
+	SKINCOLOR_SUNSET,
+	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
 	SKINCOLOR_GOLD,
+	SKINCOLOR_SANDY,
 	SKINCOLOR_YELLOW,
-	SKINCOLOR_TAN,
-	SKINCOLOR_MOSS,
+	SKINCOLOR_OLIVE,
+	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_GREEN,
+	SKINCOLOR_FOREST,
 	SKINCOLOR_EMERALD,
+	SKINCOLOR_MINT,
+	SKINCOLOR_SEAFOAM,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
+	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
+	SKINCOLOR_SKY,
+	SKINCOLOR_CERULEAN,
+	SKINCOLOR_ICY,
+	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_CORNFLOWER,
 	SKINCOLOR_BLUE,
-	SKINCOLOR_AZURE,
+	SKINCOLOR_COBALT,
+	SKINCOLOR_VAPOR,
+	SKINCOLOR_DUSK,
 	SKINCOLOR_PASTEL,
 	SKINCOLOR_PURPLE,
-	SKINCOLOR_LAVENDER,
+	SKINCOLOR_BUBBLEGUM,
 	SKINCOLOR_MAGENTA,
-	SKINCOLOR_PINK,
+	SKINCOLOR_NEON,
+	SKINCOLOR_VIOLET,
+	SKINCOLOR_LILAC,
+	SKINCOLOR_PLUM,
 	SKINCOLOR_ROSY,
-	//SKINCOLOR_?
-	//SKINCOLOR_?
 
-	// Careful! MAXSKINCOLORS cannot be greater than 0x20! Two slots left...
+	// SKINCOLOR_? - one left before we bump up against 0x39, which isn't a HARD limit anymore but would be excessive
+
 	MAXSKINCOLORS,
 
 	// Super special awesome Super flashing colors!
@@ -295,11 +322,11 @@ typedef enum
 	SKINCOLOR_SUPERPERIDOT4,
 	SKINCOLOR_SUPERPERIDOT5,
 
-	SKINCOLOR_SUPERCYAN1,
-	SKINCOLOR_SUPERCYAN2,
-	SKINCOLOR_SUPERCYAN3,
-	SKINCOLOR_SUPERCYAN4,
-	SKINCOLOR_SUPERCYAN5,
+	SKINCOLOR_SUPERSKY1,
+	SKINCOLOR_SUPERSKY2,
+	SKINCOLOR_SUPERSKY3,
+	SKINCOLOR_SUPERSKY4,
+	SKINCOLOR_SUPERSKY5,
 
 	SKINCOLOR_SUPERPURPLE1,
 	SKINCOLOR_SUPERPURPLE2,
@@ -343,12 +370,10 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_arch_dreamcast) && !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
-#endif
 #endif
 
 #include "g_state.h"
@@ -483,10 +508,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define ESLOPE_TYPESHIM
 #endif
 
-///	Delete file while the game is running.
-///	\note	EXTREMELY buggy, tends to crash game.
-//#define DELFILE
-
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
 
@@ -514,19 +535,15 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	Most modifications should probably enable this.
 //#define SAVEGAME_OTHERVERSIONS
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
-#endif
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
-#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.
@@ -545,6 +562,13 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Hudname padding.
 #define SKINNAMEPADDING
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
 
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.

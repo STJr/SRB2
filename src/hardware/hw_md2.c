@@ -28,6 +28,7 @@
 
 #include "../doomdef.h"
 #include "../doomstat.h"
+#include "../fastcmp.h"
 
 #ifdef HWRENDER
 #include "hw_drv.h"
@@ -265,6 +266,9 @@ static void md2_freeModel (md2_model_t *model)
 			free(model->frames);
 		}
 
+		if (model->spr2frames)
+			free(model->spr2frames);
+
 		if (model->glCommandBuffer)
 			free(model->glCommandBuffer);
 
@@ -298,8 +302,8 @@ static md2_model_t *md2_readModel(const char *filename)
 	// initialize model and read header
 
 	if (fread(&model->header, sizeof (model->header), 1, file) != 1
-		|| model->header.magic !=
-		(INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I'))
+		|| model->header.magic != MD2_IDENT
+		|| model->header.version != MD2_VERSION)
 	{
 		fclose(file);
 		free(model);
@@ -313,6 +317,7 @@ static md2_model_t *md2_readModel(const char *filename)
 	{ \
 		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
 		md2_freeModel (model); \
+		fclose(file); \
 		return 0; \
 	}
 
@@ -334,6 +339,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->skins, sizeof (md2_skin_t), model->header.numSkins, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -347,6 +353,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->texCoords, sizeof (md2_textureCoordinate_t), model->header.numTexCoords, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -360,6 +367,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->triangles, sizeof (md2_triangle_t), model->header.numTriangles, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -372,6 +380,7 @@ static md2_model_t *md2_readModel(const char *filename)
 		if (!model->frames)
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 
@@ -385,10 +394,44 @@ static md2_model_t *md2_readModel(const char *filename)
 				fread(frame, 1, model->header.frameSize, file))
 			{
 				md2_freeModel (model);
+				fclose(file);
 				return 0;
 			}
 
 			strcpy(model->frames[i].name, frame->name);
+			if (frame->name[0] == 'S')
+			{
+				boolean super;
+				if ((super = (fastncmp("UPER", frame->name+1, 4))) // SUPER
+					|| fastncmp("PR2_", frame->name+1, 4)) // SPR2_
+				{
+					UINT8 spr2;
+					for (spr2 = 0; spr2 < free_spr2; spr2++)
+						if (fastncmp(frame->name+5,spr2names[spr2],3)
+						&& ((frame->name[8] == spr2names[spr2][3])
+							|| (frame->name[8] == '.' && spr2names[spr2][3] == '_')))
+							break;
+
+					if (spr2 < free_spr2)
+					{
+						if (!model->spr2frames)
+						{
+							model->spr2frames = calloc(sizeof (size_t), 2*NUMPLAYERSPRITES*2);
+							if (!model->spr2frames)
+							{
+								md2_freeModel (model);
+								fclose(file);
+								return 0;
+							}
+						}
+						if (super)
+							spr2 |= FF_SPR2SUPER;
+						if (model->spr2frames[spr2*2 + 1]++ == 0) // numspr2frames
+							model->spr2frames[spr2*2] = i; // starting frame
+						CONS_Debug(DBG_RENDER, "frame %s, sprite2 %s - starting frame %s, number of frames %s\n", frame->name, spr2names[spr2 & ~FF_SPR2SUPER], sizeu1(model->spr2frames[spr2*2]), sizeu2(model->spr2frames[spr2*2 + 1]));
+					}
+				}
+			}
 			for (j = 0; j < model->header.numVertices; j++)
 			{
 				model->frames[i].vertices[j].vertex[0] = (float) ((INT32) frame->alias_vertices[j].vertex[0]) * frame->scale[0] + frame->translate[0];
@@ -410,6 +453,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->glCommandBuffer, sizeof (INT32), model->header.numGlCommands, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -961,244 +1005,10 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	image = gpatch->mipmap.grInfo.data;
 	blendimage = blendgpatch->mipmap.grInfo.data;
 
-	switch (color)
-	{
-		case SKINCOLOR_WHITE:
-			blendcolor = V_GetColor(3);
-			break;
-		case SKINCOLOR_SILVER:
-			blendcolor = V_GetColor(10);
-			break;
-		case SKINCOLOR_GREY:
-			blendcolor = V_GetColor(15);
-			break;
-		case SKINCOLOR_BLACK:
-			blendcolor = V_GetColor(27);
-			break;
-		case SKINCOLOR_BEIGE:
-			blendcolor = V_GetColor(247);
-			break;
-		case SKINCOLOR_PEACH:
-			blendcolor = V_GetColor(218);
-			break;
-		case SKINCOLOR_BROWN:
-			blendcolor = V_GetColor(234);
-			break;
-		case SKINCOLOR_RED:
-			blendcolor = V_GetColor(38);
-			break;
-		case SKINCOLOR_CRIMSON:
-			blendcolor = V_GetColor(45);
-			break;
-		case SKINCOLOR_ORANGE:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_RUST:
-			blendcolor = V_GetColor(60);
-			break;
-		case SKINCOLOR_GOLD:
-			blendcolor = V_GetColor(67);
-			break;
-		case SKINCOLOR_YELLOW:
-			blendcolor = V_GetColor(73);
-			break;
-		case SKINCOLOR_TAN:
-			blendcolor = V_GetColor(85);
-			break;
-		case SKINCOLOR_MOSS:
-			blendcolor = V_GetColor(92);
-			break;
-		case SKINCOLOR_PERIDOT:
-			blendcolor = V_GetColor(188);
-			break;
-		case SKINCOLOR_GREEN:
-			blendcolor = V_GetColor(101);
-			break;
-		case SKINCOLOR_EMERALD:
-			blendcolor = V_GetColor(112);
-			break;
-		case SKINCOLOR_AQUA:
-			blendcolor = V_GetColor(122);
-			break;
-		case SKINCOLOR_TEAL:
-			blendcolor = V_GetColor(141);
-			break;
-		case SKINCOLOR_CYAN:
-			blendcolor = V_GetColor(131);
-			break;
-		case SKINCOLOR_BLUE:
-			blendcolor = V_GetColor(152);
-			break;
-		case SKINCOLOR_AZURE:
-			blendcolor = V_GetColor(171);
-			break;
-		case SKINCOLOR_PASTEL:
-			blendcolor = V_GetColor(161);
-			break;
-		case SKINCOLOR_PURPLE:
-			blendcolor = V_GetColor(165);
-			break;
-		case SKINCOLOR_LAVENDER:
-			blendcolor = V_GetColor(195);
-			break;
-		case SKINCOLOR_MAGENTA:
-			blendcolor = V_GetColor(183);
-			break;
-		case SKINCOLOR_PINK:
-			blendcolor = V_GetColor(211);
-			break;
-		case SKINCOLOR_ROSY:
-			blendcolor = V_GetColor(202);
-			break;
-
-		case SKINCOLOR_SUPERSILVER1: // Super silver
-			blendcolor = V_GetColor(0);
-			break;
-		case SKINCOLOR_SUPERSILVER2:
-			blendcolor = V_GetColor(2);
-			break;
-		case SKINCOLOR_SUPERSILVER3:
-			blendcolor = V_GetColor(4);
-			break;
-		case SKINCOLOR_SUPERSILVER4:
-			blendcolor = V_GetColor(7);
-			break;
-		case SKINCOLOR_SUPERSILVER5:
-			blendcolor = V_GetColor(10);
-			break;
-
-		case SKINCOLOR_SUPERRED1: // Super red
-			blendcolor = V_GetColor(208);
-			break;
-		case SKINCOLOR_SUPERRED2:
-			blendcolor = V_GetColor(210);
-			break;
-		case SKINCOLOR_SUPERRED3:
-			blendcolor = V_GetColor(32);
-			break;
-		case SKINCOLOR_SUPERRED4:
-			blendcolor = V_GetColor(33);
-			break;
-		case SKINCOLOR_SUPERRED5:
-			blendcolor = V_GetColor(35);
-			break;
-
-		case SKINCOLOR_SUPERORANGE1: // Super orange
-			blendcolor = V_GetColor(208);
-			break;
-		case SKINCOLOR_SUPERORANGE2:
-			blendcolor = V_GetColor(48);
-			break;
-		case SKINCOLOR_SUPERORANGE3:
-			blendcolor = V_GetColor(50);
-			break;
-		case SKINCOLOR_SUPERORANGE4:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_SUPERORANGE5:
-			blendcolor = V_GetColor(58);
-			break;
-
-		case SKINCOLOR_SUPERGOLD1: // Super gold
-			blendcolor = V_GetColor(80);
-			break;
-		case SKINCOLOR_SUPERGOLD2:
-			blendcolor = V_GetColor(83);
-			break;
-		case SKINCOLOR_SUPERGOLD3:
-			blendcolor = V_GetColor(73);
-			break;
-		case SKINCOLOR_SUPERGOLD4:
-			blendcolor = V_GetColor(64);
-			break;
-		case SKINCOLOR_SUPERGOLD5:
-			blendcolor = V_GetColor(67);
-			break;
-
-		case SKINCOLOR_SUPERPERIDOT1: // Super peridot
-			blendcolor = V_GetColor(88);
-			break;
-		case SKINCOLOR_SUPERPERIDOT2:
-			blendcolor = V_GetColor(188);
-			break;
-		case SKINCOLOR_SUPERPERIDOT3:
-			blendcolor = V_GetColor(189);
-			break;
-		case SKINCOLOR_SUPERPERIDOT4:
-			blendcolor = V_GetColor(190);
-			break;
-		case SKINCOLOR_SUPERPERIDOT5:
-			blendcolor = V_GetColor(191);
-			break;
-
-		case SKINCOLOR_SUPERCYAN1: // Super cyan
-			blendcolor = V_GetColor(128);
-			break;
-		case SKINCOLOR_SUPERCYAN2:
-			blendcolor = V_GetColor(131);
-			break;
-		case SKINCOLOR_SUPERCYAN3:
-			blendcolor = V_GetColor(133);
-			break;
-		case SKINCOLOR_SUPERCYAN4:
-			blendcolor = V_GetColor(134);
-			break;
-		case SKINCOLOR_SUPERCYAN5:
-			blendcolor = V_GetColor(136);
-			break;
-
-		case SKINCOLOR_SUPERPURPLE1: // Super purple
-			blendcolor = V_GetColor(144);
-			break;
-		case SKINCOLOR_SUPERPURPLE2:
-			blendcolor = V_GetColor(162);
-			break;
-		case SKINCOLOR_SUPERPURPLE3:
-			blendcolor = V_GetColor(164);
-			break;
-		case SKINCOLOR_SUPERPURPLE4:
-			blendcolor = V_GetColor(166);
-			break;
-		case SKINCOLOR_SUPERPURPLE5:
-			blendcolor = V_GetColor(168);
-			break;
-
-		case SKINCOLOR_SUPERRUST1: // Super rust
-			blendcolor = V_GetColor(51);
-			break;
-		case SKINCOLOR_SUPERRUST2:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_SUPERRUST3:
-			blendcolor = V_GetColor(68);
-			break;
-		case SKINCOLOR_SUPERRUST4:
-			blendcolor = V_GetColor(70);
-			break;
-		case SKINCOLOR_SUPERRUST5:
-			blendcolor = V_GetColor(234);
-			break;
-
-		case SKINCOLOR_SUPERTAN1: // Super tan
-			blendcolor = V_GetColor(80);
-			break;
-		case SKINCOLOR_SUPERTAN2:
-			blendcolor = V_GetColor(82);
-			break;
-		case SKINCOLOR_SUPERTAN3:
-			blendcolor = V_GetColor(84);
-			break;
-		case SKINCOLOR_SUPERTAN4:
-			blendcolor = V_GetColor(87);
-			break;
-		case SKINCOLOR_SUPERTAN5:
-			blendcolor = V_GetColor(247);
-			break;
-
-		default:
-			blendcolor = V_GetColor(255);
-			break;
-	}
+	if (color == SKINCOLOR_NONE || color >= MAXTRANSLATIONS)
+		blendcolor = V_GetColor(0xff);
+	else
+		blendcolor = V_GetColor(Color_Index[color-1][4]);
 
 	while (size--)
 	{
@@ -1305,6 +1115,51 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, con
 	res?
 	run?
 	*/
+
+static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+{
+	UINT8 super = 0, i = 0;
+
+	if (!md2 || !skin)
+		return 0;
+
+	while (!(md2->model->spr2frames[spr2*2 + 1])
+		&& spr2 != SPR2_STND
+		&& ++i != 32) // recursion limiter
+	{
+		if (spr2 & FF_SPR2SUPER)
+		{
+			super = FF_SPR2SUPER;
+			spr2 &= ~FF_SPR2SUPER;
+			continue;
+		}
+
+		switch(spr2)
+		{
+
+		// Normal special cases.
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
+			break;
+		case SPR2_TIRE:
+			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+
+		// Use the handy list, that's what it's there for!
+		default:
+			spr2 = spr2defaults[spr2];
+			break;
+		}
+
+		spr2 |= super;
+	}
+
+	return spr2;
+}
+
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
 void HWR_DrawMD2(gr_vissprite_t *spr)
@@ -1452,31 +1307,70 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			tics = spr->mobj->anim_duration;
 		}
 
-		//FIXME: this is not yet correct
-		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-		buff = md2->model->glCommandBuffer;
-		curr = &md2->model->frames[frame];
-		if (cv_grmd2.value == 1)
+#define INTERPOLERATION_LIMIT TICRATE/4
+
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 		{
-			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
-			if (spr->mobj->frame & FF_ANIMATE)
+			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
+			if (mod > ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
+				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
+			//FIXME: this is not yet correct
+			frame = (spr->mobj->frame & FF_FRAMEMASK);
+			if (frame >= mod)
+				frame = 0;
+			buff = md2->model->glCommandBuffer;
+			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
+			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
 			{
-				UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-				if (nextframe >= (UINT32)spr->mobj->state->var1)
-					nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
-				nextframe %= md2->model->header.numFrames;
-				next = &md2->model->frames[nextframe];
-			}
-			else
-			{
-				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-					&& !(spr->mobj->player && spr->mobj->state->nextstate == S_PLAY_WAIT && spr->mobj->state == &states[S_PLAY_STND]))
+				if (durs > INTERPOLERATION_LIMIT)
+					durs = INTERPOLERATION_LIMIT;
+
+				if (spr->mobj->frame & FF_ANIMATE
+					|| (spr->mobj->state->nextstate != S_NULL
+					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite
+					&& (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) == spr->mobj->sprite2))
 				{
-					const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-					next = &md2->model->frames[nextframe];
+					if (++frame >= mod)
+						frame = 0;
+					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
+						next = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
 				}
 			}
 		}
+		else
+		{
+			//FIXME: this is not yet correct
+			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+			buff = md2->model->glCommandBuffer;
+			curr = &md2->model->frames[frame];
+			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
+			{
+				if (durs > INTERPOLERATION_LIMIT)
+					durs = INTERPOLERATION_LIMIT;
+
+				// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
+				if (spr->mobj->frame & FF_ANIMATE)
+				{
+					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+					if (nextframe >= (UINT32)spr->mobj->state->var1)
+						nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
+					nextframe %= md2->model->header.numFrames;
+					next = &md2->model->frames[nextframe];
+				}
+				else
+				{
+					if (spr->mobj->state->nextstate != S_NULL
+					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite)
+					{
+						const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+						next = &md2->model->frames[nextframe];
+					}
+				}
+			}
+		}
+
+#undef INTERPOLERATION_LIMIT
 
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
@@ -1496,7 +1390,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sprframe->rotate)
 		{
-			const fixed_t anglef = AngleFixed(spr->mobj->angle);
+			const fixed_t anglef = AngleFixed((spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle));
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else

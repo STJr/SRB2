@@ -107,17 +107,17 @@ static void releaseLineChains(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
-	sector = &sectors[i];
-	nextElem = sector->sectorLines;
+		sector = &sectors[i];
+		nextElem = sector->sectorLines;
 
-	while (nextElem)
-	{
-		thisElem = nextElem;
-		nextElem = thisElem->next;
-		free(thisElem);
-	}
+		while (nextElem)
+		{
+			thisElem = nextElem;
+			nextElem = thisElem->next;
+			free(thisElem);
+		}
 
-	sector->sectorLines = NULL;
+		sector->sectorLines = NULL;
 	}
 }
 
@@ -397,7 +397,7 @@ static void sortStacklist(sector_t *sector)
 		i = 0;
 		finished = true;
 
-		while (NULL != *(list+i+1))
+		while (*(list+i+1))
 		{
 			sec1 = *(list+i);
 			sec2 = *(list+i+1);
@@ -438,7 +438,7 @@ static double calcLineoutLength(sector_t *sector)
 	double length = 0.0L;
 	chain = sector->sectorLines;
 
-	while (NULL != chain) // sum up lengths of all lines
+	while (chain) // sum up lengths of all lines
 	{
 		length += lineLength(chain->line);
 		chain = chain->next;
@@ -454,7 +454,7 @@ static void calcLineouts(sector_t *sector)
 	size_t secCount = 0;
 	sector_t *encSector = *(sector->stackList);
 
-	while (NULL != encSector)
+	while (encSector)
 	{
 		if (encSector->lineoutLength < 0.0L) // if length has not yet been calculated
 		{
@@ -552,7 +552,7 @@ static boolean areBottomtexturesMissing(sector_t *thisSector)
 		if (frontSector == backSector) // skip damn renderer tricks here
 			continue;
 
-		if (frontSector == NULL || backSector == NULL)
+		if (!frontSector || !backSector)
 			continue;
 
 		sider = &sides[thisElem->line->sidenum[0]];
@@ -587,73 +587,12 @@ static boolean areBottomtexturesMissing(sector_t *thisSector)
 static boolean isCeilingFloating(sector_t *thisSector)
 {
 	sector_t *adjSector, *refSector = NULL, *frontSector, *backSector;
-	boolean floating = true;
 	linechain_t *thisElem, *nextElem;
 
 	if (!thisSector)
 		return false;
 
-	nextElem  = thisSector->sectorLines;
-
-	while (NULL != nextElem) // walk through chain
-	{
-		thisElem = nextElem;
-		nextElem = thisElem->next;
-
-		frontSector = thisElem->line->frontsector;
-		backSector  = thisElem->line->backsector;
-
-		if (frontSector == thisSector)
-			adjSector = backSector;
-		else
-			adjSector = frontSector;
-
-		if (!adjSector) // assume floating sectors have surrounding sectors
-		{
-			floating = false;
-			break;
-		}
-
-		if (!refSector)
-		{
-			refSector = adjSector;
-			continue;
-		}
-
-		// if adjacent sector has same height or more than one adjacent sector exists -> stop
-		if (thisSector->ceilingheight == adjSector->ceilingheight ||
-		   refSector != adjSector)
-		{
-			floating = false;
-			break;
-		}
-	}
-
-	// now check for walltextures
-	if (floating)
-	{
-		if (!areToptexturesMissing(thisSector))
-		{
-			floating = false;
-		}
-	}
-	return floating;
-}
-
-//
-// check if no adjacent sector has same ceiling height
-// FIXME: throw that together with isCeilingFloating??
-//
-static boolean isFloorFloating(sector_t *thisSector)
-{
-	sector_t *adjSector, *refSector = NULL, *frontSector, *backSector;
-	boolean floating = true;
-	linechain_t *thisElem, *nextElem;
-
-	if (!thisSector)
-		return false;
-
-	nextElem  = thisSector->sectorLines;
+	nextElem = thisSector->sectorLines;
 
 	while (nextElem) // walk through chain
 	{
@@ -668,36 +607,83 @@ static boolean isFloorFloating(sector_t *thisSector)
 		else
 			adjSector = frontSector;
 
-		if (NULL == adjSector) // assume floating sectors have surrounding sectors
-		{
-			floating = false;
-			break;
-		}
+		if (!adjSector) // assume floating sectors have surrounding sectors
+			return false;
 
-		if (NULL == refSector)
+#ifdef ESLOPE
+		if (adjSector->c_slope) // Don't bother with slopes
+			return false;
+#endif
+
+		if (!refSector)
 		{
 			refSector = adjSector;
 			continue;
 		}
 
 		// if adjacent sector has same height or more than one adjacent sector exists -> stop
-		if (thisSector->floorheight == adjSector->floorheight ||
-		   refSector != adjSector)
-		{
-			floating = false;
-			break;
-		}
+		if (thisSector->ceilingheight == adjSector->ceilingheight || refSector != adjSector)
+			return false;
 	}
 
 	// now check for walltextures
-	if (floating)
+	if (!areToptexturesMissing(thisSector))
+		return false;
+
+	return true;
+}
+
+//
+// check if no adjacent sector has same ceiling height
+// FIXME: throw that together with isCeilingFloating??
+//
+static boolean isFloorFloating(sector_t *thisSector)
+{
+	sector_t *adjSector, *refSector = NULL, *frontSector, *backSector;
+	linechain_t *thisElem, *nextElem;
+
+	if (!thisSector)
+		return false;
+
+	nextElem = thisSector->sectorLines;
+
+	while (nextElem) // walk through chain
 	{
-		if (!areBottomtexturesMissing(thisSector))
+		thisElem = nextElem;
+		nextElem = thisElem->next;
+
+		frontSector = thisElem->line->frontsector;
+		backSector  = thisElem->line->backsector;
+
+		if (frontSector == thisSector)
+			adjSector = backSector;
+		else
+			adjSector = frontSector;
+
+		if (!adjSector) // assume floating sectors have surrounding sectors
+			return false;
+
+#ifdef ESLOPE
+		if (adjSector->f_slope) // Don't bother with slopes
+			return false;
+#endif
+
+		if (!refSector)
 		{
-			floating = false;
+			refSector = adjSector;
+			continue;
 		}
+
+		// if adjacent sector has same height or more than one adjacent sector exists -> stop
+		if (thisSector->floorheight == adjSector->floorheight || refSector != adjSector)
+			return false;
 	}
-	return floating;
+
+	// now check for walltextures
+	if (!areBottomtexturesMissing(thisSector))
+		return false;
+
+	return true;
 }
 
 //
@@ -707,14 +693,12 @@ static fixed_t estimateCeilHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
 		return 0;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+		adjSector = thisSector->sectorLines->line->backsector;
 
 	if (!adjSector)
 		return 0;
@@ -729,17 +713,15 @@ static fixed_t estimateFloorHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
-	return 0;
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
+		return 0;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+		adjSector = thisSector->sectorLines->line->backsector;
 
-	if (NULL == adjSector)
-	return 0;
+	if (!adjSector)
+		return 0;
 
 	return adjSector->floorheight;
 }
@@ -845,18 +827,12 @@ void HWR_CorrectSWTricks(void)
 		// correct height of floating sectors
 		if (isCeilingFloating(floatSector))
 		{
-			fixed_t corrheight;
-
-			corrheight = estimateCeilHeight(floatSector);
-			floatSector->virtualCeilingheight = corrheight;
+			floatSector->virtualCeilingheight = estimateCeilHeight(floatSector);
 			floatSector->virtualCeiling = true;
 		}
 		if (isFloorFloating(floatSector))
 		{
-			fixed_t corrheight;
-
-			corrheight = estimateFloorHeight(floatSector);
-			floatSector->virtualFloorheight = corrheight;
+			floatSector->virtualFloorheight = estimateFloorHeight(floatSector);
 			floatSector->virtualFloor = true;
 		}
 	}

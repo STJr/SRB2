@@ -60,9 +60,6 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 void P_LoadThingsOnly(void);
 boolean P_SetupLevel(boolean skipprecip);
 boolean P_AddWadFile(const char *wadfilename, char **firstmapname);
-#ifdef DELFILE
-boolean P_DelWadFile(void);
-#endif
 boolean P_RunSOC(const char *socfilename);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
