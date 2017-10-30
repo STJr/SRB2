@@ -3320,6 +3320,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
+	// Search for sprite replacements.
+	R_AddSpriteDefs(wadnum);
+
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
 	// TEXTURES/etc. list.
@@ -3333,9 +3336,6 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	HU_LoadGraphics();
 	ST_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();
-
-	// Search for sprite replacements.
-	R_AddSpriteDefs(wadnum);
 
 	//
 	// look for skins
