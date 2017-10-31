@@ -8331,15 +8331,51 @@ int LUA_EnumLib(lua_State *L)
 // getActionName(action) -> return action's string name
 static int lib_getActionName(lua_State *L)
 {
-	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
-	const char *name = NULL;
-	if (!action)
-		return 0; // insert error here (or not?)
-	name = LUA_GetActionName(action);
-	if (!name) // that can't be right?
-		return 0;
-	lua_pushstring(L, name);
-	return 1;
+	if (lua_isuserdata(L, 1)) // arg 1 is built-in action, expect action userdata
+	{
+		actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+		const char *name = NULL;
+		if (!action)
+			return 0; // insert error here (or not?)
+		name = LUA_GetActionName(action);
+		if (!name) // that can't be right?
+			return 0;
+		lua_pushstring(L, name);
+		return 1;
+	}
+	else if (lua_isfunction(L, 1)) // arg 1 is a function (either C or Lua)
+	{
+		lua_settop(L, 1); // set top of stack to 1 (removing any extra args, which there shouldn't be)
+		// get the name for this action, if possible.
+		lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
+		lua_pushnil(gL);
+		// Lua stack at this point:
+		//  1   ...       -2              -1
+		// arg  ...   LREG_ACTIONS        nil
+		while (lua_next(gL, -2))
+		{
+			// Lua stack at this point:
+			//  1   ...       -3              -2           -1
+			// arg  ...   LREG_ACTIONS    "A_ACTION"    function
+			if (lua_rawequal(gL, -1, 1)) // is this the same as the arg?
+			{
+				// make sure the key (i.e. "A_ACTION") is a string first
+				// (note: we don't use lua_isstring because it also returns true for numbers)
+				if (lua_type(L, -2) == LUA_TSTRING)
+				{
+					lua_pushvalue(L, -2); // push "A_ACTION" string to top of stack
+					return 1;
+				}
+				lua_pop(gL, 2); // pop the name and function
+				break; // probably should have succeeded but we didn't, so end the loop
+			}
+			lua_pop(gL, 1);
+		}
+		lua_pop(gL, 1); // pop LREG_ACTIONS
+		return 0; // return nothing (don't error)
+	}
+
+	return luaL_typerror(L, 1, "action userdata or Lua function");
 }
 
 int LUA_SOCLib(lua_State *L)
