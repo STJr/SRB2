@@ -326,6 +326,7 @@ static int lib_setState(lua_State *L)
 				state->action = *action;
 				state->action.acv = action->acv;
 				state->action.acp1 = action->acp1;
+				break;
 			}
 			case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 				lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
@@ -531,6 +532,7 @@ static int state_set(lua_State *L)
 			st->action = *action;
 			st->action.acv = action->acv;
 			st->action.acp1 = action->acp1;
+			break;
 		}
 		case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 			lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);

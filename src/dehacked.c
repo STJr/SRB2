@@ -7904,9 +7904,9 @@ static int action_call(lua_State *L)
 {
 	//actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
 	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
-	mobj_t *actor = *((mobj_t **)luaL_checkudata(L,1,META_MOBJ));
-	var1 = (INT32)luaL_optinteger(L,2,0);
-	var2 = (INT32)luaL_optinteger(L,3,0);
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	var1 = (INT32)luaL_optinteger(L, 3, 0);
+	var2 = (INT32)luaL_optinteger(L, 4, 0);
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	action->acp1(actor);
