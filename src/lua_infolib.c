@@ -321,7 +321,7 @@ static int lib_setState(lua_State *L)
 				actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
 
 				if (!action)
-					return 0; //insert error here
+					return luaL_error(L, "not a valid action?");
 
 				state->action = *action;
 				state->action.acv = action->acv;
@@ -527,7 +527,7 @@ static int state_set(lua_State *L)
 			actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
 
 			if (!action)
-				return 0; //insert error here
+				return luaL_error(L, "not a valid action?");
 
 			st->action = *action;
 			st->action.acv = action->acv;

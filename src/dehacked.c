@@ -8336,10 +8336,10 @@ static int lib_getActionName(lua_State *L)
 		actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 		const char *name = NULL;
 		if (!action)
-			return 0; // insert error here (or not?)
+			return luaL_error(L, "not a valid action?");
 		name = LUA_GetActionName(action);
 		if (!name) // that can't be right?
-			return 0;
+			return luaL_error(L, "no name string could be found for this action");
 		lua_pushstring(L, name);
 		return 1;
 	}
