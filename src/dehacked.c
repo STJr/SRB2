@@ -7899,14 +7899,14 @@ static inline int lib_freeslot(lua_State *L)
 }
 
 // Wrapper for ALL A_Action functions.
-// Upvalue: actionf_t to represent
 // Arguments: mobj_t actor, int var1, int var2
-static inline int lib_action(lua_State *L)
+static int action_call(lua_State *L)
 {
-	actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
-	mobj_t *actor = *((mobj_t **)luaL_checkudata(L,1,META_MOBJ));
-	var1 = (INT32)luaL_optinteger(L,2,0);
-	var2 = (INT32)luaL_optinteger(L,3,0);
+	//actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
+	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	var1 = (INT32)luaL_optinteger(L, 3, 0);
+	var2 = (INT32)luaL_optinteger(L, 4, 0);
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	action->acp1(actor);
@@ -8183,9 +8183,8 @@ static inline int lib_getenum(lua_State *L)
 		// Retrieving them from this metatable allows them to be case-insensitive!
 		for (i = 0; actionpointers[i].name; i++)
 			if (fasticmp(word, actionpointers[i].name)) {
-				// push lib_action as a C closure with the actionf_t* as an upvalue.
-				lua_pushlightuserdata(L, &actionpointers[i].action);
-				lua_pushcclosure(L, lib_action, 1);
+				// We push the actionf_t* itself as userdata!
+				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
 		return 0;
@@ -8199,8 +8198,7 @@ static inline int lib_getenum(lua_State *L)
 		}
 		for (i = 0; actionpointers[i].name; i++)
 			if (fasticmp(superactions[superstack-1], actionpointers[i].name)) {
-				lua_pushlightuserdata(L, &actionpointers[i].action);
-				lua_pushcclosure(L, lib_action, 1);
+				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
 		return 0;
@@ -8330,9 +8328,66 @@ int LUA_EnumLib(lua_State *L)
 	return 0;
 }
 
+// getActionName(action) -> return action's string name
+static int lib_getActionName(lua_State *L)
+{
+	if (lua_isuserdata(L, 1)) // arg 1 is built-in action, expect action userdata
+	{
+		actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+		const char *name = NULL;
+		if (!action)
+			return luaL_error(L, "not a valid action?");
+		name = LUA_GetActionName(action);
+		if (!name) // that can't be right?
+			return luaL_error(L, "no name string could be found for this action");
+		lua_pushstring(L, name);
+		return 1;
+	}
+	else if (lua_isfunction(L, 1)) // arg 1 is a function (either C or Lua)
+	{
+		lua_settop(L, 1); // set top of stack to 1 (removing any extra args, which there shouldn't be)
+		// get the name for this action, if possible.
+		lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
+		lua_pushnil(gL);
+		// Lua stack at this point:
+		//  1   ...       -2              -1
+		// arg  ...   LREG_ACTIONS        nil
+		while (lua_next(gL, -2))
+		{
+			// Lua stack at this point:
+			//  1   ...       -3              -2           -1
+			// arg  ...   LREG_ACTIONS    "A_ACTION"    function
+			if (lua_rawequal(gL, -1, 1)) // is this the same as the arg?
+			{
+				// make sure the key (i.e. "A_ACTION") is a string first
+				// (note: we don't use lua_isstring because it also returns true for numbers)
+				if (lua_type(L, -2) == LUA_TSTRING)
+				{
+					lua_pushvalue(L, -2); // push "A_ACTION" string to top of stack
+					return 1;
+				}
+				lua_pop(gL, 2); // pop the name and function
+				break; // probably should have succeeded but we didn't, so end the loop
+			}
+			lua_pop(gL, 1);
+		}
+		lua_pop(gL, 1); // pop LREG_ACTIONS
+		return 0; // return nothing (don't error)
+	}
+
+	return luaL_typerror(L, 1, "action userdata or Lua function");
+}
+
 int LUA_SOCLib(lua_State *L)
 {
 	lua_register(L,"freeslot",lib_freeslot);
+	lua_register(L,"getActionName",lib_getActionName);
+
+	luaL_newmetatable(L, META_ACTION);
+		lua_pushcfunction(L, action_call);
+		lua_setfield(L, -2, "__call");
+	lua_pop(L, 1);
+
 	return 0;
 }
 

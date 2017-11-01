@@ -60,6 +60,8 @@ extern lua_State *gL;
 #define META_COLORMAP "COLORMAP"
 #define META_CAMERA "CAMERA_T*"
 
+#define META_ACTION "ACTIONF_T*"
+
 boolean luaL_checkboolean(lua_State *L, int narg);
 
 int LUA_EnumLib(lua_State *L);

@@ -405,6 +405,16 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
   */
 void D_RegisterServerCommands(void)
 {
+	INT32 i;
+
+	for (i = 0; i < NUMGAMETYPES; i++)
+	{
+		gametype_cons_t[i].value = i;
+		gametype_cons_t[i].strvalue = Gametype_Names[i];
+	}
+	gametype_cons_t[NUMGAMETYPES].value = 0;
+	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+
 	RegisterNetXCmd(XD_NAMEANDCOLOR, Got_NameAndColor);
 	RegisterNetXCmd(XD_WEAPONPREF, Got_WeaponPref);
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
@@ -1683,7 +1693,7 @@ static void Command_Map_f(void)
 {
 	const char *mapname;
 	size_t i;
-	INT32 j, newmapnum;
+	INT32 newmapnum;
 	boolean newresetplayers;
 	INT32 newgametype = gametype;
 
@@ -1751,27 +1761,13 @@ static void Command_Map_f(void)
 			return;
 		}
 
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-			if (!strcasecmp(gametype_cons_t[j].strvalue, COM_Argv(i+1)))
-			{
-				// Don't do any variable setting here. Wait until you get your
-				// map packet first to avoid sending the same info twice!
-				newgametype = gametype_cons_t[j].value;
+		newgametype = G_GetGametypeByName(COM_Argv(i+1));
 
-				break;
-			}
-
-		if (!gametype_cons_t[j].strvalue) // reached end of the list with no match
+		if (newgametype == -1) // reached end of the list with no match
 		{
-			// assume they gave us a gametype number, which is okay too
-			for (j = 0; gametype_cons_t[j].strvalue != NULL; j++)
-			{
-				if (atoi(COM_Argv(i+1)) == gametype_cons_t[j].value)
-				{
-					newgametype = gametype_cons_t[j].value;
-					break;
-				}
-			}
+			INT32 j = atoi(COM_Argv(i+1)); // assume they gave us a gametype number, which is okay too
+			if (j >= 0 && j < NUMGAMETYPES)
+				newgametype = (INT16)j;
 		}
 	}
 
@@ -1796,12 +1792,11 @@ static void Command_Map_f(void)
 		char gametypestring[32] = "Single Player";
 
 		if (multiplayer)
-			for (i = 0; gametype_cons_t[i].strvalue != NULL; i++)
-				if (gametype_cons_t[i].value == newgametype)
-				{
-					strcpy(gametypestring, gametype_cons_t[i].strvalue);
-					break;
-				}
+		{
+			if (newgametype >= 0 && newgametype < NUMGAMETYPES
+			&& Gametype_Names[newgametype])
+				strcpy(gametypestring, Gametype_Names[newgametype]);
+		}
 
 		CONS_Alert(CONS_WARNING, M_GetText("%s doesn't support %s mode!\n(Use -force to override)\n"), mapname, gametypestring);
 		return;
@@ -3279,7 +3274,6 @@ static void Command_ModDetails_f(void)
 //
 static void Command_ShowGametype_f(void)
 {
-	INT32 j;
 	const char *gametypestr = NULL;
 
 	if (!(netgame || multiplayer)) // print "Single player" instead of "Co-op"
@@ -3287,15 +3281,11 @@ static void Command_ShowGametype_f(void)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), M_GetText("Single player"));
 		return;
 	}
-	// find name string for current gametype
-	for (j = 0; gametype_cons_t[j].strvalue; j++)
-	{
-		if (gametype_cons_t[j].value == gametype)
-		{
-			gametypestr = gametype_cons_t[j].strvalue;
-			break;
-		}
-	}
+
+	// get name string for current gametype
+	if (gametype >= 0 && gametype < NUMGAMETYPES)
+		gametypestr = Gametype_Names[gametype];
+
 	if (gametypestr)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), gametypestr);
 	else // string for current gametype was not found above (should never happen)
@@ -3530,15 +3520,13 @@ void D_GameTypeChanged(INT32 lastgametype)
 {
 	if (netgame)
 	{
-		INT32 j;
 		const char *oldgt = NULL, *newgt = NULL;
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == lastgametype)
-				oldgt = gametype_cons_t[j].strvalue;
-			if (gametype_cons_t[j].value == gametype)
-				newgt = gametype_cons_t[j].strvalue;
-		}
+
+		if (lastgametype >= 0 && lastgametype < NUMGAMETYPES)
+			oldgt = Gametype_Names[lastgametype];
+		if (gametype >= 0 && lastgametype < NUMGAMETYPES)
+			newgt = Gametype_Names[gametype];
+
 		if (oldgt && newgt)
 			CONS_Printf(M_GetText("Gametype was changed from %s to %s\n"), oldgt, newgt);
 	}

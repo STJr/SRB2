@@ -316,6 +316,18 @@ static int lib_setState(lua_State *L)
 			case LUA_TSTRING: // It's a string, expect the name of a built-in action
 				LUA_SetActionByName(state, lua_tostring(L, 3));
 				break;
+			case LUA_TUSERDATA: // It's a userdata, expect META_ACTION of a built-in action
+			{
+				actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
+
+				if (!action)
+					return luaL_error(L, "not a valid action?");
+
+				state->action = *action;
+				state->action.acv = action->acv;
+				state->action.acp1 = action->acp1;
+				break;
+			}
 			case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 				lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
 				I_Assert(lua_istable(L, -1));
@@ -465,9 +477,8 @@ static int state_get(lua_State *L)
 			return 0; // Just what is this??
 		// get the function from the global
 		// because the metatable will trigger.
-		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a new C closure if not.
-		lua_pushstring(L, name); // push the name we found.
-		return 2; // return both the function and its name, in case somebody wanted to do a comparison by name or something?
+		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a META_ACTION userdata if not.
+		return 1; // return just the function
 	} else if (fastcmp(field,"var1"))
 		number = st->var1;
 	else if (fastcmp(field,"var2"))
@@ -511,6 +522,18 @@ static int state_set(lua_State *L)
 		case LUA_TSTRING: // It's a string, expect the name of a built-in action
 			LUA_SetActionByName(st, lua_tostring(L, 3));
 			break;
+		case LUA_TUSERDATA: // It's a userdata, expect META_ACTION of a built-in action
+		{
+			actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
+
+			if (!action)
+				return luaL_error(L, "not a valid action?");
+
+			st->action = *action;
+			st->action.acv = action->acv;
+			st->action.acp1 = action->acp1;
+			break;
+		}
 		case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 			lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
 			I_Assert(lua_istable(L, -1));

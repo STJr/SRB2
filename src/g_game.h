@@ -166,6 +166,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 
+INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);
 boolean G_GametypeUsesLives(void);
 boolean G_GametypeHasTeams(void);
