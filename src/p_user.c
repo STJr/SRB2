@@ -9711,7 +9711,7 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 
-	if (player->linktimer && !player->powers[pw_nights_linkfreeze])
+	if (player->linktimer && (player->linktimer >= (2*TICRATE - 1) || !player->powers[pw_nights_linkfreeze]))
 	{
 		if (--player->linktimer <= 0) // Link timer
 			player->linkcount = 0;

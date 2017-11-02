@@ -9080,6 +9080,7 @@ void P_SpawnPlayer(INT32 playernum)
 
 	p->bonustime = false;
 	p->realtime = leveltime;
+	p->followitem = skins[p->skin].followitem;
 
 	//awayview stuff
 	p->awayviewmobj = NULL;

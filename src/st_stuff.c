@@ -506,10 +506,10 @@ static INT32 SCR(INT32 r)
 // Always draw the number completely since it's overlay
 //
 // Supports different colors! woo!
-static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a,
-	INT32 num, patch_t **numpat, skincolors_t colornum)
+static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
+	UINT32 num, patch_t **numpat, skincolors_t colornum)
 {
-	INT32 w = SHORT(numpat[0]->width);
+	fixed_t w = SHORT(numpat[0]->width)*s;
 	const UINT8 *colormap;
 
 	// I want my V_SNAPTOx flags. :< -Red
@@ -520,17 +520,18 @@ static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a
 	else // Uses the player colors.
 		colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
-	I_Assert(num >= 0); // this function does not draw negative numbers
+	//I_Assert(num >= 0); // this function does not draw negative numbers
 
 	// draw the number
 	do
 	{
 		x -= w;
-		V_DrawTranslucentMappedPatch(x, y, a, numpat[num % 10], colormap);
+		V_DrawFixedPatch(x, y, s, a, numpat[num % 10], colormap);
 		num /= 10;
 	} while (num);
 
 	// Sorry chum, this function only draws UNSIGNED values!
+	// then why is num not UINT32? ~toast
 }
 
 // Devmode information
@@ -1146,30 +1147,6 @@ static void ST_drawFirstPersonHUD(void)
 			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
 }
 
-// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
-/*#define NUMLINKCOLORS 14
-static skincolors_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
- SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
-
-// 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
-/*#define NUMLINKCOLORS 13
-static skincolors_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
- SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
- SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
-
-// 2.2+ list: [19:59:52] <baldobo> Ruby > Red > Flame > Sunset > Orange > Gold > Yellow > Lime > Green > Aqua  > cyan > Sky > Blue > Pastel > Purple > Bubblegum > Magenta > Rosy > repeat
-// [20:00:25] <baldobo> Also Icy for the link freeze text color
-// [20:04:03] <baldobo> I would start it on lime
-#define NUMLINKCOLORS 18
-static skincolors_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
- SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
- SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
- SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW};
-
 static void ST_drawNightsRecords(void)
 {
 	INT32 aflag = 0;
@@ -1216,7 +1193,7 @@ static void ST_drawNightsRecords(void)
 		V_DrawString(BASEVIDWIDTH/2 - 48, STRINGY(148), aflag, "BONUS:");
 		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(140), V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings));
 		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(148), V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings * 50));
-		ST_DrawNightsOverlayNum(BASEVIDWIDTH/2 + 48, STRINGY(160), aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 48)<<FRACBITS, STRINGY(160)<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 		// If new record, say so!
 		if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
@@ -1236,6 +1213,38 @@ static void ST_drawNightsRecords(void)
 		}
 	}
 }
+
+// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
+/*#define NUMLINKCOLORS 14
+static skincolors_t linkColor[NUMLINKCOLORS] =
+{SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
+ SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
+ SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
+
+// 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
+/*#define NUMLINKCOLORS 13
+static skincolors_t linkColor[NUMLINKCOLORS] =
+{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
+ SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
+ SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
+
+// 2.2 indev list again: [19:59:52] <baldobo> Ruby > Red > Flame > Sunset > Orange > Gold > Yellow > Lime > Green > Aqua  > cyan > Sky > Blue > Pastel > Purple > Bubblegum > Magenta > Rosy > repeat
+// [20:00:25] <baldobo> Also Icy for the link freeze text color
+// [20:04:03] <baldobo> I would start it on lime
+/*#define NUMLINKCOLORS 18
+static skincolors_t linkColor[NUMLINKCOLORS] =
+{SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
+ SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
+ SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
+ SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW};*/
+
+// 2.2+ list for real this time: https://wiki.srb2.org/wiki/User:Rob/Sandbox (check history around 31/10/17, spoopy)
+#define NUMLINKCOLORS 12
+static skincolors_t linkColor[2][NUMLINKCOLORS] = {
+{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
+ SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
+{SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
+ SKINCOLOR_VIOLET, SKINCOLOR_RUBY, SKINCOLOR_FLAME, SKINCOLOR_SUNSET, SKINCOLOR_SANDY, SKINCOLOR_LIME}};
 
 static void ST_drawNiGHTSHUD(void)
 {
@@ -1259,65 +1268,6 @@ static void ST_drawNiGHTSHUD(void)
 			return;
 		nosshack = splitscreen;
 		splitscreen = false;
-	}
-
-	// Link drawing
-	if (
-#ifdef HAVE_BLUA
-	LUA_HudEnabled(hud_nightslink) &&
-#endif
-	stplyr->linkcount > minlink)
-	{
-		skincolors_t colornum = linkColor[((stplyr->linkcount-1) / 5) % NUMLINKCOLORS];
-		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
-			colornum = SKINCOLOR_ICY;
-
-		if (stplyr->linktimer < 2*TICRATE/3)
-		{
-			INT32 linktrans = (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT;
-
-			if (splitscreen)
-			{
-				ST_DrawNightsOverlayNum(256, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawTranslucentMappedPatch(264, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, nightslink,
-					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-			}
-			else
-			{
-				ST_DrawNightsOverlayNum(160, 160, V_SNAPTOBOTTOM|linktrans, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawTranslucentMappedPatch(168, 160, V_SNAPTOBOTTOM|linktrans, nightslink,
-					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-			}
-		}
-		else // normal, fullbright
-		{
-#if 0 // Cool but silly number effect where the previous link number fades away
-			if (stplyr->linkcount > 2 && stplyr->linktimer > (2*TICRATE) - 9)
-			{
-				INT32 offs = 10 - (stplyr->linktimer - (2*TICRATE - 9));
-				INT32 ghosttrans = offs << V_ALPHASHIFT;
-				ST_DrawNightsOverlayNum(160, STRINGY(160+offs), SPLITFLAGS(V_SNAPTOBOTTOM)|ghosttrans, (stplyr->linkcount-2),
-					nightsnum, colornum);
-			}
-#endif
-
-			if (splitscreen)
-			{
-				ST_DrawNightsOverlayNum(256, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawMappedPatch(264, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, nightslink,
-					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-			}
-			else
-			{
-				ST_DrawNightsOverlayNum(160, 160, V_SNAPTOBOTTOM, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawMappedPatch(168, 160, V_SNAPTOBOTTOM, nightslink,
-					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-			}
-		}
-
-		// Show remaining link time left in debug
-		if (cv_debug & DBG_NIGHTSBASIC)
-			V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
 	}
 
 	// Drill meter
@@ -1386,6 +1336,63 @@ static void ST_drawNiGHTSHUD(void)
 			else
 				V_DrawString(SCX(locx), SCY(locy - 8), V_NOSCALESTART|V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
 		}
+	}
+
+	// Link drawing
+	if (
+#ifdef HAVE_BLUA
+	LUA_HudEnabled(hud_nightslink) &&
+#endif
+	stplyr->linkcount > minlink)
+	{
+		skincolors_t colornum;
+		INT32 aflag;
+		fixed_t x, y, scale;
+
+		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
+			colornum = SKINCOLOR_ICY;
+		else
+			colornum = linkColor[((stplyr->linkcount-1 >= 300) ? 1 : 0)][((stplyr->linkcount-1) / 5) % NUMLINKCOLORS];
+
+		aflag = ((stplyr->linktimer < 2*TICRATE/3)
+		? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
+		: 0);
+
+		if (splitscreen)
+		{
+			x = (256+4)<<FRACBITS;
+			y = (STRINGY(152)+11)<<FRACBITS;
+			aflag |= SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT;
+		}
+		else
+		{
+			x = (160+4)<<FRACBITS;
+			y = (160+11)<<FRACBITS;
+			aflag |= V_SNAPTOBOTTOM;
+		}
+
+		switch (stplyr->linktimer)
+		{
+			case (2*TICRATE):
+				scale = (36*FRACUNIT)/32;
+				break;
+			case (2*TICRATE - 1):
+				scale = (34*FRACUNIT)/32;
+				break;
+			default:
+				scale = FRACUNIT;
+				break;
+		}
+
+		y -= (11*scale);
+
+		ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+		V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
+			colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
+
+		// Show remaining link time left in debug
+		if (cv_debug & DBG_NIGHTSBASIC)
+			V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
 	}
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
@@ -1498,7 +1505,7 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	)
 	{
-		ST_DrawNightsOverlayNum(304, STRINGY(16), SPLITFLAGS(V_SNAPTOTOP)|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
+		ST_DrawNightsOverlayNum(304<<FRACBITS, STRINGY(16)<<FRACBITS, FRACUNIT, SPLITFLAGS(V_SNAPTOTOP)|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
 	}
 
 	if (!stplyr->exiting
@@ -1568,12 +1575,8 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		if (realnightstime < 10)
-			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
-				nightsnum, SKINCOLOR_RED);
-		else
-			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
-				nightsnum, SKINCOLOR_SUPERGOLD4);
+		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, STRINGY(12)<<FRACBITS, FRACUNIT, SPLITFLAGS(V_SNAPTOTOP), realnightstime, nightsnum,
+			((realnightstime < 10) ? SKINCOLOR_RED : SKINCOLOR_SUPERGOLD4));
 
 		// Show exact time in debug
 		if (cv_debug & DBG_NIGHTSBASIC)
