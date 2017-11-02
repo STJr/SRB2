@@ -528,8 +528,8 @@ void R_FlushTextureCache(void)
 }
 
 // Need these prototypes for later; defining them here instead of r_data.h so they're "private"
-int R_CountTexturesInTEXTURESLump(UINT16 wadNum);
-void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *index);
+int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum);
+void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 
 //
 // R_LoadTextures
@@ -567,13 +567,22 @@ void R_LoadTextures(void)
 	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
 	for (w = 0, numtextures = 0; w < numwadfiles; w++)
 	{
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
-		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-
-		if (texturesLumpPos != INT16_MAX)
+		if (wadfiles[w]->type == RET_PK3)
 		{
-			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w);
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		}
+
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+		while (texturesLumpPos != INT16_MAX)
+		{
+			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
 		}
 
 		// Add all the textures between TX_START and TX_END
@@ -588,7 +597,6 @@ void R_LoadTextures(void)
 			I_Error("No textures detected in any WADs!\n");
 		}
 	}
-
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
@@ -610,12 +618,25 @@ void R_LoadTextures(void)
 	for (i = 0, w = 0; w < numwadfiles; w++)
 	{
 		// Get the lump numbers for the markers in the WAD, if they exist.
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
-		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-
-		if (texturesLumpPos != INT16_MAX)
-			R_ParseTEXTURESLump(w,&i);
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+			while (texturesLumpPos != INT16_MAX)
+			{
+				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
+				texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+			}
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+			if (texturesLumpPos != INT16_MAX)
+				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
+		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
 			continue;
@@ -1013,7 +1034,7 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 }
 
 // Parses the TEXTURES lump... but just to count the number of textures.
-int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
+int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 {
 	char *texturesLump;
 	size_t texturesLumpLength;
@@ -1024,11 +1045,11 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
 	// correctly. Start by loading the relevant data from the WAD.
-	texturesLump = (char *)W_CacheLumpNumPwad(wadNum,W_CheckNumForNamePwad("TEXTURES", wadNum, 0),PU_STATIC);
+	texturesLump = (char *)W_CacheLumpNumPwad(wadNum, lumpNum, PU_STATIC);
 	// If that didn't exist, we have nothing to do here.
 	if (texturesLump == NULL) return 0;
 	// If we're still here, then it DOES exist; figure out how long it is, and allot memory accordingly.
-	texturesLumpLength = W_LumpLengthPwad(wadNum,W_CheckNumForNamePwad("TEXTURES",wadNum,0));
+	texturesLumpLength = W_LumpLengthPwad(wadNum, lumpNum);
 	texturesText = (char *)Z_Malloc((texturesLumpLength+1)*sizeof(char),PU_STATIC,NULL);
 	// Now move the contents of the lump into this new location.
 	memmove(texturesText,texturesLump,texturesLumpLength);
@@ -1060,7 +1081,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
 }
 
 // Parses the TEXTURES lump... for real, this time.
-void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *texindex)
+void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 {
 	char *texturesLump;
 	size_t texturesLumpLength;
@@ -1073,11 +1094,11 @@ void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *texindex)
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
 	// correctly. Start by loading the relevant data from the WAD.
-	texturesLump = (char *)W_CacheLumpNumPwad(wadNum,W_CheckNumForNamePwad("TEXTURES", wadNum, 0),PU_STATIC);
+	texturesLump = (char *)W_CacheLumpNumPwad(wadNum, lumpNum, PU_STATIC);
 	// If that didn't exist, we have nothing to do here.
 	if (texturesLump == NULL) return;
 	// If we're still here, then it DOES exist; figure out how long it is, and allot memory accordingly.
-	texturesLumpLength = W_LumpLengthPwad(wadNum,W_CheckNumForNamePwad("TEXTURES",wadNum,0));
+	texturesLumpLength = W_LumpLengthPwad(wadNum, lumpNum);
 	texturesText = (char *)Z_Malloc((texturesLumpLength+1)*sizeof(char),PU_STATIC,NULL);
 	// Now move the contents of the lump into this new location.
 	memmove(texturesText,texturesLump,texturesLumpLength);
@@ -1164,12 +1185,60 @@ static void R_InitExtraColormaps(void)
 	CONS_Printf(M_GetText("Number of Extra Colormaps: %s\n"), sizeu1(numcolormaplumps));
 }
 
-// 12/14/14 -- only take flats in F_START/F_END
+// Search for flat name through all
 lumpnum_t R_GetFlatNumForName(const char *name)
 {
-	lumpnum_t lump = W_CheckNumForNameInBlock(name, "F_START", "F_END");
-	if (lump == LUMPERROR)
-		lump = W_CheckNumForNameInBlock(name, "FF_START", "FF_END"); // deutex, some other old things
+	INT32 i;
+	lumpnum_t lump;
+	lumpnum_t start;
+	lumpnum_t end;
+
+	// Scan wad files backwards so patched flats take preference.
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		
+		if (wadfiles[i]->type == RET_PK3)
+		{
+			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);
+			if (start == INT16_MAX)
+				continue;
+			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
+			if (end == INT16_MAX)
+				continue;
+		}
+		else // WAD type? use markers.
+		{
+			// Find the ranges to work with.
+			start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0);
+			if (start == INT16_MAX)
+			{
+				start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0);
+				if (start == INT16_MAX)
+					continue;
+				else
+				{
+					end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start);
+					if (end == INT16_MAX)
+						continue;
+				}
+			}
+			else
+			{
+				end = W_CheckNumForNamePwad("F_END", (UINT16)i, start);
+				if (end == INT16_MAX)
+					continue;
+			}
+		}
+		// Now find lump with specified name in that range.
+		lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+		if (lump < end)
+		{
+			lump += (i<<16); // found it, in our constraints
+			break;
+		}
+		lump = LUMPERROR;
+	}
+
 	if (lump == LUMPERROR)
 	{
 		if (strcmp(name, SKYFLATNAME))
@@ -1218,7 +1287,6 @@ void R_ReInitColormaps(UINT16 num)
 {
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
-
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 

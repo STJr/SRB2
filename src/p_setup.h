@@ -61,6 +61,8 @@ void P_LoadThingsOnly(void);
 boolean P_SetupLevel(boolean skipprecip);
 boolean P_AddWadFile(const char *wadfilename, char **firstmapname);
 boolean P_RunSOC(const char *socfilename);
+void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
+void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);

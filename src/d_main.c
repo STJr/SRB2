@@ -817,7 +817,7 @@ static void IdentifyVersion(void)
 	if (srb2wad1 == NULL && srb2wad2 == NULL)
 		I_Error("No more free memory to look in %s", srb2waddir);
 	if (srb2wad1 != NULL)
-		sprintf(srb2wad1, pandf, srb2waddir, "srb2.srb");
+		sprintf(srb2wad1, pandf, srb2waddir, "srb2.pk3");
 	if (srb2wad2 != NULL)
 		sprintf(srb2wad2, pandf, srb2waddir, "srb2.wad");
 
@@ -846,9 +846,6 @@ static void IdentifyVersion(void)
 
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.dta"));
-
-	// Add the weapons
-	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
@@ -1137,16 +1134,15 @@ void D_SRB2Main(void)
 	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
 	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-	//W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
 
-	mainwads = 4; // there are 4 wads not to unload
+	mainwads = 3; // there are 3 wads not to unload
 #ifdef USE_PATCH_DTA
 	++mainwads; // patch.dta adds one more
 #endif
@@ -1373,7 +1369,9 @@ void D_SRB2Main(void)
 			else if (!dedicated && M_MapLocked(pstartmap))
 				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
+			{
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
+			}
 		}
 	}
 	else if (M_CheckParm("-skipintro"))

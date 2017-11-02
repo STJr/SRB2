@@ -145,22 +145,23 @@ void P_InitPicAnims(void)
 	size_t i;
 
 	I_Assert(animdefs == NULL);
-
+	
 	maxanims = 0;
 
-	if (W_CheckNumForName("ANIMDEFS") != LUMPERROR)
+	for (w = numwadfiles-1; w >= 0; w--)
 	{
-		for (w = numwadfiles-1; w >= 0; w--)
-		{
-			UINT16 animdefsLumpNum;
+		UINT16 animdefsLumpNum;
 
-			// Find ANIMDEFS lump in the WAD
-			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
-			if (animdefsLumpNum != INT16_MAX)
-				P_ParseANIMDEFSLump(w, animdefsLumpNum);
+		// Find ANIMDEFS lump in the WAD
+		animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+
+		while (animdefsLumpNum != INT16_MAX)
+		{
+			P_ParseANIMDEFSLump(w, animdefsLumpNum);
+			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
 		}
 	}
-
+	
 	// Define the last one
 	animdefs[maxanims].istexture = -1;
 	strncpy(animdefs[maxanims].endname, "", 9);

@@ -354,25 +354,19 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
   * \param lump VERTEXES lump number.
   * \sa ML_VERTEXES
   */
-static inline void P_LoadVertexes(lumpnum_t lumpnum)
+
+static inline void P_LoadRawVertexes(UINT8 *data, size_t i)
 {
-	UINT8 *data;
-	size_t i;
 	mapvertex_t *ml;
 	vertex_t *li;
 
-	// Determine number of lumps:
-	//  total lump length / vertex record length.
-	numvertexes = W_LumpLength(lumpnum) / sizeof (mapvertex_t);
+	numvertexes = i / sizeof (mapvertex_t);
 
 	if (numvertexes <= 0)
 		I_Error("Level has no vertices"); // instead of crashing
 
 	// Allocate zone memory for buffer.
 	vertexes = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-
-	// Load data into cache.
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
 
 	ml = (mapvertex_t *)data;
 	li = vertexes;
@@ -383,10 +377,15 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 		li->x = SHORT(ml->x)<<FRACBITS;
 		li->y = SHORT(ml->y)<<FRACBITS;
 	}
+}
 
-	// Free buffer memory.
+static inline void P_LoadVertexes(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawVertexes(data, W_LumpLength(lumpnum));
 	Z_Free(data);
 }
+
 
 //
 // Computes the line length in fracunits, the OpenGL render needs this
@@ -427,20 +426,17 @@ static inline float P_SegLengthf(seg_t *seg)
   * \param lump Lump number of the SEGS resource.
   * \sa ::ML_SEGS
   */
-static void P_LoadSegs(lumpnum_t lumpnum)
+static void P_LoadRawSegs(UINT8 *data, size_t i)
 {
-	UINT8 *data;
-	size_t i;
 	INT32 linedef, side;
 	mapseg_t *ml;
 	seg_t *li;
 	line_t *ldef;
 
-	numsegs = W_LumpLength(lumpnum) / sizeof (mapseg_t);
+	numsegs = i / sizeof (mapseg_t);
 	if (numsegs <= 0)
 		I_Error("Level has no segs"); // instead of crashing
 	segs = Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
 
 	ml = (mapseg_t *)data;
 	li = segs;
@@ -476,27 +472,30 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 		li->numlights = 0;
 		li->rlights = NULL;
 	}
+}
 
+static void P_LoadSegs(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSegs(data, W_LumpLength(lumpnum));
 	Z_Free(data);
 }
+
 
 /** Loads the SSECTORS resource from a level.
   *
   * \param lump Lump number of the SSECTORS resource.
   * \sa ::ML_SSECTORS
   */
-static inline void P_LoadSubsectors(lumpnum_t lumpnum)
+static inline void P_LoadRawSubsectors(void *data, size_t i)
 {
-	void *data;
-	size_t i;
 	mapsubsector_t *ms;
 	subsector_t *ss;
 
-	numsubsectors = W_LumpLength(lumpnum) / sizeof (mapsubsector_t);
+	numsubsectors = i / sizeof (mapsubsector_t);
 	if (numsubsectors <= 0)
 		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
 	ss = subsectors = Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum,PU_STATIC);
 
 	ms = (mapsubsector_t *)data;
 
@@ -510,13 +509,14 @@ static inline void P_LoadSubsectors(lumpnum_t lumpnum)
 #endif
 		ss->validcount = 0;
 	}
-
-	Z_Free(data);
 }
 
-//
-// P_LoadSectors
-//
+static void P_LoadSubsectors(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSubsectors(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
 
 //
 // levelflats
@@ -543,24 +543,21 @@ size_t P_PrecacheLevelFlats(void)
 	return flatmemory;
 }
 
-// help function for P_LoadSectors, find a flat in the active wad files,
+// Auxiliary function. Find a flat in the active wad files,
 // allocate an id for it, and set the levelflat (to speedup search)
-//
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
 	size_t i;
 
-	//
-	//  first scan through the already found flats
-	//
+	// Scan through the already found flats, break if it matches.
 	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
+		if (strnicmp(levelflat->name, flatname, 8) == 0)
 			break;
 
-	// that flat was already found in the level, return the id
+	// If there is no match, make room for a new flat.
 	if (i == numlevelflats)
 	{
-		// store the name
+		// Store the name.
 		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
 		strupr(levelflat->name);
 
@@ -644,29 +641,31 @@ INT32 P_CheckLevelFlat(const char *flatname)
 	return (INT32)i;
 }
 
-static void P_LoadSectors(lumpnum_t lumpnum)
+// Sets up the ingame sectors structures.
+// Lumpnum is the lumpnum of a SECTORS lump.
+static void P_LoadRawSectors(UINT8 *data, size_t i)
 {
-	UINT8 *data;
-	size_t i;
 	mapsector_t *ms;
 	sector_t *ss;
 	levelflat_t *foundflats;
 
-	numsectors = W_LumpLength(lumpnum) / sizeof (mapsector_t);
+	// We count how many sectors we got.
+	numsectors = i / sizeof (mapsector_t);
 	if (numsectors <= 0)
 		I_Error("Level has no sectors");
+
+	// Allocate as much memory as we need into the global sectors table.
 	sectors = Z_Calloc(numsectors*sizeof (*sectors), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum,PU_STATIC);
 
-	//Fab : FIXME: allocate for whatever number of flats
-	//           512 different flats per level should be plenty
-
+	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
+	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
 	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
 	if (foundflats == NULL)
 		I_Error("Ran out of memory while loading sectors\n");
 
 	numlevelflats = 0;
 
+	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
 	ms = (mapsector_t *)data;
 	ss = sectors;
 	for (i = 0; i < numsectors; i++, ss++, ms++)
@@ -674,9 +673,6 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
 		ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
 
-		//
-		//  flats
-		//
 		ss->floorpic = P_AddLevelFlat(ms->floorpic, foundflats);
 		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
 
@@ -741,8 +737,6 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 #endif // ----- end special tricks -----
 	}
 
-	Z_Free(data);
-
 	// set the sky flat num
 	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
 
@@ -754,22 +748,26 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 	P_SetupLevelFlatAnims();
 }
 
+static void P_LoadSectors(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSectors(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
+
 //
 // P_LoadNodes
 //
-static void P_LoadNodes(lumpnum_t lumpnum)
+static void P_LoadRawNodes(UINT8 *data, size_t i)
 {
-	UINT8 *data;
-	size_t i;
 	UINT8 j, k;
 	mapnode_t *mn;
 	node_t *no;
 
-	numnodes = W_LumpLength(lumpnum) / sizeof (mapnode_t);
+	numnodes = i / sizeof (mapnode_t);
 	if (numnodes <= 0)
 		I_Error("Level has no nodes");
 	nodes = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
 
 	mn = (mapnode_t *)data;
 	no = nodes;
@@ -787,7 +785,12 @@ static void P_LoadNodes(lumpnum_t lumpnum)
 				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
 		}
 	}
+}
 
+static void P_LoadNodes(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawNodes(data, W_LumpLength(lumpnum));
 	Z_Free(data);
 }
 
@@ -922,18 +925,16 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 //
 // P_LoadThings
 //
-static void P_PrepareThings(lumpnum_t lumpnum)
-{
-	size_t i;
-	mapthing_t *mt;
-	UINT8 *data, *datastart;
 
-	nummapthings = W_LumpLength(lumpnum) / (5 * sizeof (INT16));
+static void P_PrepareRawThings(UINT8 *data, size_t i)
+{
+	mapthing_t *mt;
+
+	nummapthings = i / (5 * sizeof (INT16));
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
 	// Spawn axis points first so they are
 	// at the front of the list for fast searching.
-	data = datastart = W_CacheLumpNum(lumpnum, PU_LEVEL);
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
@@ -958,8 +959,13 @@ static void P_PrepareThings(lumpnum_t lumpnum)
 				break;
 		}
 	}
-	Z_Free(datastart);
+}
 
+static void P_PrepareThings(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_PrepareRawThings(data, W_LumpLength(lumpnum));
+	Z_Free(data);
 }
 
 static void P_LoadThings(void)
@@ -1159,22 +1165,16 @@ void P_WriteThings(lumpnum_t lumpnum)
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
 }
 
-//
-// P_LoadLineDefs
-//
-static void P_LoadLineDefs(lumpnum_t lumpnum)
+static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 {
-	UINT8 *data;
-	size_t i;
 	maplinedef_t *mld;
 	line_t *ld;
 	vertex_t *v1, *v2;
 
-	numlines = W_LumpLength(lumpnum) / sizeof (maplinedef_t);
+	numlines = i / sizeof (maplinedef_t);
 	if (numlines <= 0)
 		I_Error("Level has no linedefs");
 	lines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
 
 	mld = (maplinedef_t *)data;
 	ld = lines;
@@ -1236,7 +1236,7 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 				{
 					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
+					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
 				}
 			}
 		}
@@ -1251,14 +1251,14 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 		{
 			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 		{
 			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
+			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
 		}
 
 		if (ld->sidenum[0] != 0xffff && ld->special)
@@ -1270,7 +1270,12 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 		ld->polyobj = NULL;
 #endif
 	}
+}
 
+static void P_LoadLineDefs(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawLineDefs(data, W_LumpLength(lumpnum));
 	Z_Free(data);
 }
 
@@ -1372,22 +1377,24 @@ static void P_LoadLineDefs2(void)
 	}
 }
 
-//
-// P_LoadSideDefs
-//
-static inline void P_LoadSideDefs(lumpnum_t lumpnum)
+
+
+static inline void P_LoadRawSideDefs(size_t i)
 {
-	numsides = W_LumpLength(lumpnum) / sizeof (mapsidedef_t);
+	numsides = i / sizeof (mapsidedef_t);
 	if (numsides <= 0)
 		I_Error("Level has no sidedefs");
 	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 }
 
-// Delay loading texture names until after loaded linedefs.
-
-static void P_LoadSideDefs2(lumpnum_t lumpnum)
+static inline void P_LoadSideDefs(lumpnum_t lumpnum)
 {
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSideDefs(W_LumpLength(lumpnum));
+}
+
+
+static void P_LoadRawSideDefs2(void *data)
+{
 	UINT16 i;
 	INT32 num;
 
@@ -1405,7 +1412,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 
 			if (sector_num >= numsectors)
 			{
-				CONS_Debug(DBG_SETUP, "P_LoadSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
+				CONS_Debug(DBG_SETUP, "P_LoadRawSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
 				sector_num = 0;
 			}
 			sd->sector = sec = &sectors[sector_num];
@@ -1619,10 +1626,17 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				break;
 		}
 	}
-
-	Z_Free(data);
 	R_ClearTextureNumCache(true);
 }
+
+// Delay loading texture names until after loaded linedefs.
+static void P_LoadSideDefs2(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSideDefs2(data);
+	Z_Free(data);
+}
+
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
 {
@@ -2297,6 +2311,7 @@ void P_LoadThingsOnly(void)
 				centerid = i; // save id just in case
 		}
 
+
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -2313,10 +2328,10 @@ void P_LoadThingsOnly(void)
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
 	P_LoadThings();
 
+
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
 	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
-
 	P_SpawnSecretItems(true);
 }
 
@@ -2566,6 +2581,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
+	char *lumpfullName;
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
@@ -2728,7 +2744,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	}
 
 	// internal game map
-	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
+	maplumpname = G_BuildMapName(gamemap);
+	//lastloadedmaplumpnum = LUMPERROR;
+	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
+
+	if (lastloadedmaplumpnum == INT16_MAX)
+		I_Error("Map %s not found.\n", maplumpname);
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
 	CON_SetupBackColormap();
@@ -2738,42 +2759,87 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
 
-	// note: most of this ordering is important
-	loadedbm = P_LoadBlockMap(lastloadedmaplumpnum + ML_BLOCKMAP);
 
-	P_LoadVertexes(lastloadedmaplumpnum + ML_VERTEXES);
-	P_LoadSectors(lastloadedmaplumpnum + ML_SECTORS);
+	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
+	// As it is implemented right now, we're assuming an uncompressed WAD.
+	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
+	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
+	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
+	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4))
+	{
+		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
+		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
+		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
 
-	P_LoadSideDefs(lastloadedmaplumpnum + ML_SIDEDEFS);
+		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
+		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
+		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
+		P_LoadRawLineDefs(wadData + (fileinfo + ML_LINEDEFS)->filepos, (fileinfo + ML_LINEDEFS)->size);
+		P_LoadRawSideDefs2(wadData + (fileinfo + ML_SIDEDEFS)->filepos);
+		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
+		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
+		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
 
-	P_LoadLineDefs(lastloadedmaplumpnum + ML_LINEDEFS);
-	if (!loadedbm)
-		P_CreateBlockMap(); // Graue 02-29-2004
-	P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
+		// Important: take care of the ordering of the next functions.
+		if (!loadedbm)
+			P_CreateBlockMap(); // Graue 02-29-2004
+		R_MakeColormaps();
+		P_LoadLineDefs2();
+		P_GroupLines();
+		numdmstarts = numredctfstarts = numbluectfstarts = 0;
 
-	R_MakeColormaps();
-	P_LoadLineDefs2();
-	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
-	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
-	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
-	P_GroupLines();
+		// reset the player starts
+		for (i = 0; i < MAXPLAYERS; i++)
+			playerstarts[i] = NULL;
 
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+		for (i = 0; i < 2; i++)
+			skyboxmo[i] = NULL;
 
-	// reset the player starts
-	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = NULL;
+		for (i = 0; i < 16; i++)
+			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 
-	for (i = 0; i < 2; i++)
-		skyboxmo[i] = NULL;
+		P_MapStart();
 
-	for (i = 0; i < 16; i++)
-		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
+		Z_Free(wadData);
+	}
+	else
+	{
+		// Important: take care of the ordering of the next functions.
+		loadedbm = P_LoadBlockMap(lastloadedmaplumpnum + ML_BLOCKMAP);
+		P_LoadVertexes(lastloadedmaplumpnum + ML_VERTEXES);
+		P_LoadSectors(lastloadedmaplumpnum + ML_SECTORS);
+		P_LoadSideDefs(lastloadedmaplumpnum + ML_SIDEDEFS);
+		P_LoadLineDefs(lastloadedmaplumpnum + ML_LINEDEFS);
+		P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
+		P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
+		P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
+		P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
+		P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 
-	P_MapStart();
+		// Important: take care of the ordering of the next functions.
+		if (!loadedbm)
+			P_CreateBlockMap(); // Graue 02-29-2004
+		R_MakeColormaps();
+		P_LoadLineDefs2();
+		P_GroupLines();
+		numdmstarts = numredctfstarts = numbluectfstarts = 0;
 
-	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+		// reset the player starts
+		for (i = 0; i < MAXPLAYERS; i++)
+			playerstarts[i] = NULL;
+
+		for (i = 0; i < 2; i++)
+			skyboxmo[i] = NULL;
+
+		for (i = 0; i < 16; i++)
+			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
+		P_MapStart();
+
+		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	}
 
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
@@ -2784,7 +2850,6 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 
 	P_LoadThings();
-	// skybox mobj defaults
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
 
@@ -3078,6 +3143,50 @@ boolean P_RunSOC(const char *socfilename)
 	return true;
 }
 
+// Auxiliary function for PK3 loading - looks for sound replacements.
+// NOTE: it does not really add any new sound entry or anything.
+void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
+{
+	size_t j;
+	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo + first;
+	for (; num > 0; num--, lumpinfo++)
+	{
+		// Let's check whether it's replacing an existing sound or it's a brand new one.
+		for (j = 1; j < NUMSFX; j++)
+		{
+			if (S_sfx[j].name && !strnicmp(S_sfx[j].name, lumpinfo->name + 2, 6))
+			{
+				// the sound will be reloaded when needed,
+				// since sfx->data will be NULL
+				CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", lumpinfo->name);
+
+				I_FreeSfx(&S_sfx[j]);
+			}
+		}
+	}
+}
+
+// Auxiliary function for PK3 loading - looks for music and music replacements.
+// NOTE: does nothing but print debug messages. The code is handled somewhere else.
+void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num)
+{
+	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo + first;
+	char *name;
+	for (; num > 0; num--, lumpinfo++)
+	{
+		name = lumpinfo->name;
+		if (name[0] == 'O' && name[1] == '_')
+		{
+			CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
+		}
+		else if (name[0] == 'D' && name[1] == '_')
+		{
+			CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
+		}
+	}
+	return;
+}
+
 //
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
@@ -3091,47 +3200,118 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	lumpinfo_t *lumpinfo;
 	boolean replacedcurrentmap = false;
 
-	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
+	// Vars to help us with the position start and amount of each resource type.
+	// Useful for PK3s since they use folders.
+	// WADs use markers for some resources, but others such as sounds are checked lump-by-lump anyway.
+//	UINT16 luaPos, luaNum = 0;
+//	UINT16 socPos, socNum = 0;
+	UINT16 sfxPos, sfxNum = 0;
+	UINT16 musPos = 0, musNum = 0;
+//	UINT16 sprPos, sprNum = 0;
+	UINT16 texPos, texNum = 0;
+//	UINT16 patPos, patNum = 0;
+//	UINT16 flaPos, flaNum = 0;
+//	UINT16 mapPos, mapNum = 0;
+
+	// Init file.
+	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
-	else wadnum = (UINT16)(numwadfiles-1);
+	else
+		wadnum = (UINT16)(numwadfiles-1);
 
-	//
-	// search for sound replacements
-	//
-	lumpinfo = wadfiles[wadnum]->lumpinfo;
-	for (i = 0; i < numlumps; i++, lumpinfo++)
+	switch(wadfiles[wadnum]->type)
 	{
-		name = lumpinfo->name;
-		if (name[0] == 'D')
+	case RET_PK3:
 		{
-			if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+			// Auxiliary function - input a folder name and gives us the resource markers positions.
+			void FindFolder(const char *folName, UINT16 *start, UINT16 *end)
 			{
-				if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+				if (!stricmp(lumpinfo->name2, folName))
 				{
-					// the sound will be reloaded when needed,
-					// since sfx->data will be NULL
-					CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+					lumpinfo++;
+					*start = ++i;
+					for (; i < numlumps; i++, lumpinfo++)
+						if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+							break;
+					lumpinfo--;
+					*end = i-- - *start;
+					return;
+				}
+				return;
+			}
 
-					I_FreeSfx(&S_sfx[j]);
+			// Look for the lumps that act as resource delimitation markers.
+			lumpinfo = wadfiles[wadnum]->lumpinfo;
+			for (i = 0; i < numlumps; i++, lumpinfo++)
+			{
+//				FindFolder("Lua/",		&luaPos, &luaNum);
+//				FindFolder("SOCs/",		&socPos, &socNum);
+				FindFolder("Sounds/",	&sfxPos, &sfxNum);
+				FindFolder("Music/",	&musPos, &musNum);
+//				FindFolder("Sprites/",	&sprPos, &sprNum);
+				FindFolder("Textures/",	&texPos, &texNum);
+//				FindFolder("Patches/",	&patPos, &patNum);
+//				FindFolder("Flats/",	&flaPos, &flaNum);
+//				FindFolder("Maps/",		&mapPos, &mapNum);
+			}
 
-					sreplaces++;
+			// Update the detected resources.
+			// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
+#ifdef HAVE_BLUA
+//			if (luaNum) // Lua scripts.
+//				P_LoadLuaScrRange(wadnum, luaPos, luaNum);
+#endif
+//			if (socNum) // SOCs.
+//				P_LoadDehackRange(wadnum, socPos, socNum);
+			if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.
+				P_LoadSoundsRange(wadnum, sfxPos, sfxNum);
+			if (musNum) // Music. TODO: Useless function right now.
+				P_LoadMusicsRange(wadnum, musPos, musNum);
+//			if (sprNum) // Sprites.
+//				R_LoadSpritsRange(wadnum, sprPos, sprNum);
+//			if (texNum) // Textures. TODO: R_LoadTextures() does the folder positioning once again. New function maybe?
+//				R_LoadTextures();
+//			if (mapNum) // Maps. TODO: Actually implement the map WAD loading code, lulz.
+//				P_LoadWadMapRange(wadnum, mapPos, mapNum);
+		}
+		break;
+	default:
+		lumpinfo = wadfiles[wadnum]->lumpinfo;
+		for (i = 0; i < numlumps; i++, lumpinfo++)
+		{
+			name = lumpinfo->name;
+			if (name[0] == 'D')
+			{
+				if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+				{
+					if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+					{
+						// the sound will be reloaded when needed,
+						// since sfx->data will be NULL
+						CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+
+						I_FreeSfx(&S_sfx[j]);
+
+						sreplaces++;
+					}
+				}
+				else if (name[1] == '_')
+				{
+					CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
+					mreplaces++;
 				}
 			}
-			else if (name[1] == '_')
+			else if (name[0] == 'O' && name[1] == '_')
 			{
 				CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
-				mreplaces++;
+				digmreplaces++;
 			}
 		}
-		else if (name[0] == 'O' && name[1] == '_')
-		{
-			CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
-			digmreplaces++;
-		}
+		break;
 	}
 	if (!devparm && sreplaces)
 		CONS_Printf(M_GetText("%s sounds replaced\n"), sizeu1(sreplaces));
@@ -3140,9 +3320,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
-	//
-	// search for sprite replacements
-	//
+	// Search for sprite replacements.
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they
