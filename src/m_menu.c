@@ -3822,6 +3822,9 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 			if (mapvisited[mapnum]) // MV_MP
 				return true;
 
+			if (mapnum+1 == spstage_start)
+				return true;
+
 			// intentional fallthrough
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
