@@ -8587,6 +8587,12 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->type == MT_OVERLAY)
 		P_RemoveOverlay(mobj);
 
+	if (mobj->player && mobj->player->followmobj)
+	{
+		P_RemoveMobj(mobj->player->followmobj);
+		mobj->player->followmobj = NULL;
+	}
+
 	mobj->health = 0; // Just because
 
 	// unlink from sector and block lists
@@ -9496,10 +9502,6 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// Don't spawn starposts that wouldn't be usable
 		if (i == MT_STARPOST)
 			return;
-
-		// Emerald Tokens -->> Score Tokens
-		else if (i == MT_TOKEN)
-			return; /// \todo
 
 		// 1UPs -->> Score TVs
 		else if (i == MT_1UP_BOX) // 1UP

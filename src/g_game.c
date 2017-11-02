@@ -248,7 +248,7 @@ static UINT8 demoflags;
 static UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
-static boolean demosynced = true; // console warning message
+boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
 mobj_t *metalplayback;
@@ -1598,6 +1598,7 @@ void G_DoLoadLevel(boolean resetplayer)
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
+	demosynced = true;
 
 	levelstarttic = gametic; // for time calculation
 
@@ -3898,7 +3899,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0009
+#define DEMOVERSION 0x000a
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -3923,10 +3924,10 @@ static ticcmd_t oldcmd;
 #define GZT_MOMZ   0x04
 #define GZT_ANGLE  0x08
 // Not used for Metal Sonic
-#define GZT_SPRITE 0x10 // Animation frame
-#define GZT_EXTRA  0x20
-#define GZT_NIGHTS 0x40 // NiGHTS Mode stuff!
-#define GZT_SPR2   0x80 // Player animations
+#define GZT_FRAME  0x10 // Animation frame
+#define GZT_SPR2   0x20 // Player animations
+#define GZT_EXTRA  0x40
+#define GZT_FOLLOW 0x80 // Followmobj
 
 // GZT_EXTRA flags
 #define EZT_THOK   0x01 // Spawned a thok object
@@ -3938,6 +3939,7 @@ static ticcmd_t oldcmd;
 #define EZT_SCALE  0x10 // Changed size
 #define EZT_HIT    0x20 // Damaged a mobj
 #define EZT_SPRITE 0x40 // Changed sprite set completely out of PLAY (NiGHTS, SOCs, whatever)
+// spare EZT slot  0x80
 
 static mobj_t oldmetal, oldghost;
 
@@ -4136,9 +4138,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->powers[pw_carry] == CR_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
-		ziptic |= GZT_NIGHTS;
-
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
 	#define MAXMOM (0xFFFF<<8)
@@ -4192,18 +4191,18 @@ void G_WriteGhostTic(mobj_t *ghost)
 	// Only store the 8 most relevant bits of angle
 	// because exact values aren't too easy to discern to begin with when only 8 angles have different sprites
 	// and it does not affect this mode of movement at all anyway.
-	if (ghost->angle>>24 != oldghost.angle)
+	if (ghost->player && ghost->player->drawangle>>24 != oldghost.angle)
 	{
-		oldghost.angle = ghost->angle>>24;
+		oldghost.angle = ghost->player->drawangle>>24;
 		ziptic |= GZT_ANGLE;
 		WRITEUINT8(demo_p,oldghost.angle);
 	}
 
 	// Store the sprite frame.
-	if ((ghost->frame & 0xFF) != oldghost.frame)
+	if ((ghost->frame & FF_FRAMEMASK) != oldghost.frame)
 	{
-		oldghost.frame = (ghost->frame & 0xFF);
-		ziptic |= GZT_SPRITE;
+		oldghost.frame = (ghost->frame & FF_FRAMEMASK);
+		ziptic |= GZT_FRAME;
 		WRITEUINT8(demo_p,oldghost.frame);
 	}
 
@@ -4248,7 +4247,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			for (i = 0; i < ghostext.hits; i++)
 			{
 				mobj_t *mo = ghostext.hitlist[i];
-				WRITEUINT32(demo_p,UINT32_MAX); // reserved for some method of determining exactly which mobj this is. (mobjnum doesn't work here.)
+				//WRITEUINT32(demo_p,UINT32_MAX); // reserved for some method of determining exactly which mobj this is. (mobjnum doesn't work here.)
 				WRITEUINT32(demo_p,mo->type);
 				WRITEUINT16(demo_p,(UINT16)mo->health);
 				WRITEFIXED(demo_p,mo->x);
@@ -4265,11 +4264,28 @@ void G_WriteGhostTic(mobj_t *ghost)
 		ghostext.flags = 0;
 	}
 
+	if (ghost->player && ghost->player->followmobj)
+	{
+		INT16 temp;
+
+		ziptic |= GZT_FOLLOW;
+
+		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
+		WRITEINT16(demo_p,temp);
+		temp = (INT16)((ghost->player->followmobj->y-ghost->y)>>8);
+		WRITEINT16(demo_p,temp);
+		temp = (INT16)((ghost->player->followmobj->z-ghost->z)>>8);
+		WRITEINT16(demo_p,temp);
+		WRITEUINT8(demo_p,ghost->player->followmobj->sprite);
+		WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
+	}
+
 	*ziptic_p = ziptic;
 
 	// attention here for the ticcmd size!
 	// latest demos with mouse aiming byte in ticcmd
-	if (demo_p >= demoend - (13 + 9))
+	if (demo_p >= demoend - (13 + 9 + 9))
 	{
 		G_CheckDemoStatus(); // no more space
 		return;
@@ -4283,7 +4299,6 @@ void G_ConsGhostTic(void)
 	UINT8 ziptic;
 	UINT16 px,py,pz,gx,gy,gz;
 	mobj_t *testmo;
-	boolean nightsfail = false;
 
 	if (!demo_p || !demo_start)
 		return;
@@ -4315,23 +4330,19 @@ void G_ConsGhostTic(void)
 	}
 	if (ziptic & GZT_ANGLE)
 		demo_p++;
-	if (ziptic & GZT_SPRITE)
+	if (ziptic & GZT_FRAME)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
 		demo_p++;
-	if (ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->powers[pw_carry] == CR_NIGHTSMODE))
-			nightsfail = true;
-	}
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
-		ziptic = READUINT8(demo_p);
-		if (ziptic & EZT_COLOR)
+		UINT8 xziptic = READUINT8(demo_p);
+		if (xziptic & EZT_COLOR)
 			demo_p++;
-		if (ziptic & EZT_SCALE)
+		if (xziptic & EZT_SCALE)
 			demo_p += sizeof(fixed_t);
-		if (ziptic & EZT_HIT)
+		if (xziptic & EZT_HIT)
 		{ // Resync mob damage.
 			UINT16 i, count = READUINT16(demo_p);
 			thinker_t *th;
@@ -4345,7 +4356,7 @@ void G_ConsGhostTic(void)
 
 			for (i = 0; i < count; i++)
 			{
-				demo_p += 4; // reserved.
+				//demo_p += 4; // reserved.
 				type = READUINT32(demo_p);
 				health = READUINT16(demo_p);
 				x = READFIXED(demo_p);
@@ -4372,8 +4383,18 @@ void G_ConsGhostTic(void)
 				}
 			}
 		}
-		if (ziptic & EZT_SPRITE)
+		if (xziptic & EZT_SPRITE)
 			demo_p++;
+	}
+
+	if (ziptic & GZT_FOLLOW)
+	{ // Even more...
+		demo_p += sizeof(INT16);
+		demo_p += sizeof(INT16);
+		demo_p += sizeof(INT16);
+		demo_p++;
+		demo_p++;
+		demo_p++;
 	}
 
 	// Re-synchronise
@@ -4384,7 +4405,7 @@ void G_ConsGhostTic(void)
 	gy = oldghost.y>>FRACBITS;
 	gz = oldghost.z>>FRACBITS;
 
-	if (nightsfail || px != gx || py != gy || pz != gz)
+	if (px != gx || py != gy || pz != gz)
 	{
 		if (demosynced)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
@@ -4412,6 +4433,7 @@ void G_GhostTicker(void)
 	{
 		// Skip normal demo data.
 		UINT8 ziptic = READUINT8(g->p);
+		UINT8 xziptic = 0;
 		if (ziptic & ZT_FWD)
 			g->p++;
 		if (ziptic & ZT_SIDE)
@@ -4445,8 +4467,8 @@ void G_GhostTicker(void)
 			g->oldmo.z += g->oldmo.momz;
 		}
 		if (ziptic & GZT_ANGLE)
-			g->oldmo.angle = READUINT8(g->p)<<24;
-		if (ziptic & GZT_SPRITE)
+			g->mo->angle = READUINT8(g->p)<<24;
+		if (ziptic & GZT_FRAME)
 			g->oldmo.frame = READUINT8(g->p);
 		if (ziptic & GZT_SPR2)
 			g->oldmo.sprite2 = READUINT8(g->p);
@@ -4457,14 +4479,13 @@ void G_GhostTicker(void)
 		g->mo->y = g->oldmo.y;
 		g->mo->z = g->oldmo.z;
 		P_SetThingPosition(g->mo);
-		g->mo->angle = g->oldmo.angle;
 		g->mo->frame = g->oldmo.frame | tr_trans30<<FF_TRANSSHIFT;
 		g->mo->sprite2 = g->oldmo.sprite2;
 
 		if (ziptic & GZT_EXTRA)
 		{ // But wait, there's more!
-			ziptic = READUINT8(g->p);
-			if (ziptic & EZT_COLOR)
+			xziptic = READUINT8(g->p);
+			if (xziptic & EZT_COLOR)
 			{
 				g->color = READUINT8(g->p);
 				switch(g->color)
@@ -4482,22 +4503,22 @@ void G_GhostTicker(void)
 					break;
 				}
 			}
-			if (ziptic & EZT_FLIP)
+			if (xziptic & EZT_FLIP)
 				g->mo->eflags ^= MFE_VERTICALFLIP;
-			if (ziptic & EZT_SCALE)
+			if (xziptic & EZT_SCALE)
 			{
 				g->mo->destscale = READFIXED(g->p);
 				if (g->mo->destscale != g->mo->scale)
 					P_SetScale(g->mo, g->mo->destscale);
 			}
-			if (ziptic & EZT_THOKMASK)
+			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
 				mobj_t *mobj;
 				INT32 type = -1;
 				if (g->mo->skin)
 				{
 					skin_t *skin = (skin_t *)g->mo->skin;
-					switch (ziptic & EZT_THOKMASK)
+					switch (xziptic & EZT_THOKMASK)
 					{
 					case EZT_THOK:
 						type = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
@@ -4538,7 +4559,7 @@ void G_GhostTicker(void)
 				mobj->fuse = 8;
 				P_SetTarget(&mobj->target, g->mo);
 			}
-			if (ziptic & EZT_HIT)
+			if (xziptic & EZT_HIT)
 			{ // Spawn hit poofs for killing things!
 				UINT16 i, count = READUINT16(g->p), health;
 				UINT32 type;
@@ -4547,7 +4568,7 @@ void G_GhostTicker(void)
 				mobj_t *poof;
 				for (i = 0; i < count; i++)
 				{
-					g->p += 4; // reserved
+					//g->p += 4; // reserved
 					type = READUINT32(g->p);
 					health = READUINT16(g->p);
 					x = READFIXED(g->p);
@@ -4565,7 +4586,7 @@ void G_GhostTicker(void)
 					P_SetMobjStateNF(poof, S_XPLD1);
 				}
 			}
-			if (ziptic & EZT_SPRITE)
+			if (xziptic & EZT_SPRITE)
 				g->mo->sprite = READUINT8(g->p);
 		}
 
@@ -4588,6 +4609,54 @@ void G_GhostTicker(void)
 		default:
 			break;
 		}
+
+#define follow g->mo->tracer
+		if (ziptic & GZT_FOLLOW)
+		{ // Even more...
+			if (!follow)
+			{
+				mobj_t *newmo = P_SpawnMobj(g->mo->x, g->mo->y, g->mo->z, MT_GHOST);
+				P_SetTarget(&g->mo->tracer, newmo);
+				P_SetTarget(&newmo->tracer, g->mo);
+				newmo->skin = g->mo->skin;
+				newmo->tics = -1;
+				newmo->flags2 |= MF2_LINKDRAW;
+
+				follow->eflags = (follow->eflags & ~MFE_VERTICALFLIP)|(g->mo->eflags & MFE_VERTICALFLIP);
+				follow->destscale = g->mo->destscale;
+				if (follow->destscale != follow->scale)
+					P_SetScale(follow, follow->destscale);
+			}
+			else
+			{
+				if (xziptic & EZT_FLIP)
+					g->mo->eflags ^= MFE_VERTICALFLIP;
+				if (xziptic & EZT_SCALE)
+				{
+					follow->destscale = g->mo->destscale;
+					if (follow->destscale != follow->scale)
+						P_SetScale(follow, follow->destscale);
+				}
+			}
+
+			P_UnsetThingPosition(follow);
+			follow->x = g->mo->x + (READINT16(g->p)<<8);
+			follow->y = g->mo->y + (READINT16(g->p)<<8);
+			follow->z = g->mo->z + (READINT16(g->p)<<8);
+			P_SetThingPosition(follow);
+			follow->sprite = READUINT8(g->p);
+			follow->sprite2 = READUINT8(g->p);
+			follow->frame = (READUINT8(g->p)) | tr_trans30<<FF_TRANSSHIFT;
+
+			follow->angle = g->mo->angle;
+			follow->color = g->mo->color;
+		}
+		else if (follow)
+		{
+			P_RemoveMobj(follow);
+			P_SetTarget(&follow, NULL);
+		}
+#undef follow
 
 		// Demo ends after ghost data.
 		if (*g->p == DEMOMARKER)
@@ -4635,8 +4704,8 @@ void G_ReadMetalTic(mobj_t *metal)
 		oldmetal.z += oldmetal.momz;
 	}
 	if (ziptic & GZT_ANGLE)
-		oldmetal.angle = READUINT8(metal_p)<<24;
-	if (ziptic & GZT_SPRITE)
+		metal->angle = READUINT8(metal_p)<<24;
+	if (ziptic & GZT_FRAME)
 		metal_p++; // Currently unused. (Metal Sonic figures out what he's doing his own damn self.)
 	if (ziptic & GZT_SPR2)
 		metal_p++;
@@ -4651,7 +4720,6 @@ void G_ReadMetalTic(mobj_t *metal)
 	metal->y = oldmetal.y;
 	metal->z = oldmetal.z;
 	P_SetThingPosition(metal);
-	metal->angle = oldmetal.angle;
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -4766,11 +4834,11 @@ void G_WriteMetalTic(mobj_t *metal)
 	// Only store the 8 most relevant bits of angle
 	// because exact values aren't too easy to discern to begin with when only 8 angles have different sprites
 	// and it does not affect movement at all anyway.
-	if (metal->angle>>24 != oldmetal.angle)
+	if (metal->player && metal->player->drawangle>>24 != oldmetal.angle)
 	{
-		oldmetal.angle = metal->angle>>24;
-		WRITEUINT8(demo_p,oldmetal.angle);
+		oldmetal.angle = metal->player->drawangle>>24;
 		ziptic |= GZT_ANGLE;
+		WRITEUINT8(demo_p,oldmetal.angle);
 	}
 
 	// Metal Sonic does not need our state changes.
@@ -4919,8 +4987,6 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Stats
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
 	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
@@ -4933,10 +4999,33 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEUINT8(demo_p,player->height>>FRACBITS);
 	WRITEUINT8(demo_p,player->spinheight>>FRACBITS);
+	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
+	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
+
+	// And mobjtype_t is best with UINT32 too...
+	WRITEUINT32(demo_p, player->followitem);
+
+	// Save pflag data
+	{
+		UINT8 buf = 0;
+		if (player->pflags & PF_FLIPCAM)
+			buf |= 0x01;
+		if (player->pflags & PF_ANALOGMODE)
+			buf |= 0x02;
+		if (player->pflags & PF_DIRECTIONCHAR)
+			buf |= 0x04;
+		if (player->pflags & PF_AUTOBRAKE)
+			buf |= 0x08;
+		if (cv_usejoystick.value)
+			buf |= 0x10;
+		CV_SetValue(&cv_showinputjoy, !!(cv_usejoystick.value));
+
+		WRITEUINT8(demo_p,buf);
+	}
 
 	// Save netvar data
 	CV_SaveNetVars(&demo_p);
@@ -4952,7 +5041,7 @@ void G_BeginRecording(void)
 		oldghost.x = player->mo->x;
 		oldghost.y = player->mo->y;
 		oldghost.z = player->mo->z;
-		oldghost.angle = player->mo->angle;
+		oldghost.angle = player->mo->angle>>24;
 
 		// preticker started us gravity flipped
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -4985,7 +5074,7 @@ void G_BeginMetal(void)
 	oldmetal.x = mo->x;
 	oldmetal.y = mo->y;
 	oldmetal.z = mo->z;
-	oldmetal.angle = mo->angle;
+	oldmetal.angle = mo->angle>>24;
 }
 
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
@@ -5085,8 +5174,6 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5162,7 +5249,8 @@ void G_DoPlayDemo(char *defdemoname)
 	lumpnum_t l;
 	char skin[17],color[17],*n,*pdemoname;
 	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
-	UINT32 randseed;
+	pflags_t pflags;
+	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
 
@@ -5225,8 +5313,6 @@ void G_DoPlayDemo(char *defdemoname)
 	switch(demoversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5252,10 +5338,7 @@ void G_DoPlayDemo(char *defdemoname)
 		return;
 	}
 	demo_p += 4; // "PLAY"
-	if (demoversion <= 0x0008)
-		gamemap = READUINT8(demo_p);
-	else
-		gamemap = READINT16(demo_p);
+	gamemap = READINT16(demo_p);
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);
@@ -5299,8 +5382,6 @@ void G_DoPlayDemo(char *defdemoname)
 	M_Memcpy(color,demo_p,16);
 	demo_p += 16;
 
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
 	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
@@ -5313,7 +5394,25 @@ void G_DoPlayDemo(char *defdemoname)
 	acceleration = READUINT8(demo_p);
 	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
+	followitem = READUINT32(demo_p);
+
+	// pflag data
+	{
+		UINT8 buf = READUINT8(demo_p);
+		pflags = 0;
+		if (buf & 0x01)
+			pflags |= PF_FLIPCAM;
+		if (buf & 0x02)
+			pflags |= PF_ANALOGMODE;
+		if (buf & 0x04)
+			pflags |= PF_DIRECTIONCHAR;
+		if (buf & 0x08)
+			pflags |= PF_AUTOBRAKE;
+		CV_SetValue(&cv_showinputjoy, !!(buf & 0x10));
+	}
 
 	// net var data
 	CV_LoadNetVars(&demo_p);
@@ -5339,11 +5438,11 @@ void G_DoPlayDemo(char *defdemoname)
 	if (VERSION != version || SUBVERSION != subversion)
 		CONS_Alert(CONS_WARNING, M_GetText("Demo version does not match game version. Desyncs may occur.\n"));
 
-	// console warning messages
-	demosynced = true;
-
 	// didn't start recording right away.
 	demo_start = false;
+
+	// Set skin
+	SetPlayerSkin(0, skin);
 
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
@@ -5353,9 +5452,6 @@ void G_DoPlayDemo(char *defdemoname)
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
-
-	// Set skin
-	SetPlayerSkin(0, skin);
 
 	// Set color
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -5388,9 +5484,11 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].thrustfactor = thrustfactor;
 	players[0].accelstart = accelstart;
 	players[0].acceleration = acceleration;
-	players[0].jumpfactor = jumpfactor;
 	players[0].height = height;
 	players[0].spinheight = spinheight;
+	players[0].jumpfactor = jumpfactor;
+	players[0].followitem = followitem;
+	players[0].pflags = pflags;
 
 	demo_start = true;
 }
@@ -5454,8 +5552,6 @@ void G_AddGhost(char *defdemoname)
 	switch(ghostversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5532,7 +5628,14 @@ void G_AddGhost(char *defdemoname)
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
+	p++; // height
+	p++; // spinheight
+	p++; // camerascale
+	p++; // shieldscale
 	p += 4; // jumpfactor
+	p += 4; // followitem
+
+	p++; // pflag data
 
 	// net var data
 	count = READUINT16(p);
@@ -5587,10 +5690,6 @@ void G_AddGhost(char *defdemoname)
 		gh->mo = P_SpawnMobj(x, y, z, MT_GHOST);
 		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
 	}
-	gh->mo->state = states+S_PLAY_STND;
-	gh->mo->sprite = gh->mo->state->sprite;
-	gh->mo->frame = (gh->mo->state->frame & FF_FRAMEMASK) | tr_trans20<<FF_TRANSSHIFT;
-	gh->mo->tics = -1;
 
 	gh->oldmo.x = gh->mo->x;
 	gh->oldmo.y = gh->mo->y;
@@ -5615,6 +5714,12 @@ void G_AddGhost(char *defdemoname)
 			break;
 		}
 	gh->oldmo.color = gh->mo->color;
+
+	gh->mo->state = states+S_PLAY_STND;
+	gh->mo->sprite = gh->mo->state->sprite;
+	gh->mo->sprite2 = (gh->mo->state->frame & FF_FRAMEMASK);
+	gh->mo->frame = tr_trans20<<FF_TRANSSHIFT;
+	gh->mo->tics = -1;
 
 	CONS_Printf(M_GetText("Added ghost %s from %s\n"), name, pdemoname);
 	Z_Free(pdemoname);
@@ -5662,8 +5767,10 @@ void G_DoPlayMetal(void)
 			continue;
 
 		mo = (mobj_t *)th;
-		if (mo->type == MT_METALSONIC_RACE)
-			break;
+		if (mo->type != MT_METALSONIC_RACE)
+			continue;
+
+		break;
 	}
 	if (!mo)
 	{
@@ -5680,8 +5787,6 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
-	// compatibility available?
-	case 0x0008:
 		break;
 	// too old, cannot support.
 	default:
@@ -5702,7 +5807,6 @@ void G_DoPlayMetal(void)
 	oldmetal.x = mo->x;
 	oldmetal.y = mo->y;
 	oldmetal.z = mo->z;
-	oldmetal.angle = mo->angle;
 	metalplayback = mo;
 }
 

@@ -594,6 +594,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
 	player->mo->color = player->skincolor;
+	G_GhostAddColor(GHC_NORMAL);
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -6917,6 +6918,8 @@ static void P_MovePlayer(player_t *player)
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
+			if (skin->flags & SF_SUPER && player->mo->color < MAXSKINCOLORS)
+				G_GhostAddColor(GHC_SUPER);
 			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((signed)(player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
 		}
 
@@ -9841,7 +9844,7 @@ void P_PlayerThink(player_t *player)
 			}
 		}
 
-		// Autobrake!
+		// Autobrake! check ST_drawInput if you modify this
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 
@@ -10599,7 +10602,7 @@ void P_PlayerAfterThink(player_t *player)
 								chosenstate = S_TAILSOVERLAY_RUN;
 							else if (player->panim == PA_WALK)
 							{
-								if (!smilesonground)
+								if (!smilesonground || player->mo->state-states == S_PLAY_SKID)
 									chosenstate = S_TAILSOVERLAY_PLUS30DEGREES;
 								else if (player->speed >= FixedMul(player->runspeed/2, player->mo->scale))
 									chosenstate = S_TAILSOVERLAY_0DEGREES;
