@@ -385,6 +385,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
 #define MV_MAX         31 // used in gamedata check
+#define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map

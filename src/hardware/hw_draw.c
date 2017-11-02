@@ -281,16 +281,16 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 		sdupx = sdupy = 2.0f;
 
 	v[0].x = v[3].x =     (cx*sdupx -           gpatch->leftoffset  * pdupx) / vid.width - 1;
-	v[2].x = v[1].x =     (cx*sdupx + ((w-sx) - gpatch->leftoffset) * pdupx) / vid.width - 1;
+	v[2].x = v[1].x =     (cx*sdupx + ((w) - gpatch->leftoffset) * pdupx) / vid.width - 1;
 	v[0].y = v[1].y = 1 - (cy*sdupy -           gpatch->topoffset   * pdupy) / vid.height;
-	v[2].y = v[3].y = 1 - (cy*sdupy + ((h-sy) - gpatch->topoffset)  * pdupy) / vid.height;
+	v[2].y = v[3].y = 1 - (cy*sdupy + ((h) - gpatch->topoffset)  * pdupy) / vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].sow = v[3].sow = ((sx)/(float)gpatch->width )*gpatch->max_s;
-	v[2].sow = v[1].sow = ((w )/(float)gpatch->width )*gpatch->max_s;
-	v[0].tow = v[1].tow = ((sy)/(float)gpatch->height)*gpatch->max_t;
-	v[2].tow = v[3].tow = ((h )/(float)gpatch->height)*gpatch->max_t;
+	v[0].sow = v[3].sow = ((sx  )/(float)gpatch->width )*gpatch->max_s;
+	v[2].sow = v[1].sow = ((sx+w)/(float)gpatch->width )*gpatch->max_s;
+	v[0].tow = v[1].tow = ((sy  )/(float)gpatch->height)*gpatch->max_t;
+	v[2].tow = v[3].tow = ((sy+h)/(float)gpatch->height)*gpatch->max_t;
 
 	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
 

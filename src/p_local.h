@@ -28,7 +28,7 @@
 #define VIEWHEIGHTS "41"
 
 // Maximum player score.
-#define MAXSCORE 999999990
+#define MAXSCORE 99999990 // 999999990
 
 // mapblocks are used to check movement
 // against lines and things

@@ -340,6 +340,7 @@ static void D_Display(void)
 
 		case GS_EVALUATION:
 			F_GameEvaluationDrawer();
+			HU_Erase();
 			HU_Drawer();
 			break;
 

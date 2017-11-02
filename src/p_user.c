@@ -1092,9 +1092,8 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 	oldscore = player->score;
 
 	// Don't go above MAXSCORE.
-	if (player->score + amount < MAXSCORE)
-		player->score += amount;
-	else
+	player->score += amount;
+	if (player->score > MAXSCORE)
 		player->score = MAXSCORE;
 
 	// check for extra lives every 50000 pts

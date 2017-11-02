@@ -1751,7 +1751,6 @@ boolean G_Responder(event_t *ev)
 			return true;
 		}
 	}
-
 	else if (gamestate == GS_CREDITS)
 	{
 		if (HU_Responder(ev))
@@ -1763,17 +1762,15 @@ boolean G_Responder(event_t *ev)
 			return true;
 		}
 	}
-
 	else if (gamestate == GS_CONTINUING)
 	{
 		if (F_ContinueResponder(ev))
 			return true;
 	}
 	// Demo End
-	else if (gamestate == GS_GAMEEND || gamestate == GS_EVALUATION || gamestate == GS_CREDITS)
+	else if (gamestate == GS_GAMEEND)
 		return true;
-
-	else if (gamestate == GS_INTERMISSION)
+	else if (gamestate == GS_INTERMISSION || gamestate == GS_EVALUATION)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
 
@@ -1930,6 +1927,7 @@ void G_Ticker(boolean run)
 		case GS_EVALUATION:
 			if (run)
 				F_GameEvaluationTicker();
+			HU_Ticker();
 			break;
 
 		case GS_CONTINUING:
@@ -3377,7 +3375,7 @@ void G_SaveGameData(void)
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		WRITEUINT8(save_p, mapvisited[i]);
+		WRITEUINT8(save_p, (mapvisited[i] & MV_MAX));
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
