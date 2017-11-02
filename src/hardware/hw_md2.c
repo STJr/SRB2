@@ -1321,7 +1321,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				frame = 0;
 			buff = md2->model->glCommandBuffer;
 			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
-			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
+			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 			{
 				if (durs > INTERPOLERATION_LIMIT)
 					durs = INTERPOLERATION_LIMIT;
@@ -1344,7 +1344,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 			buff = md2->model->glCommandBuffer;
 			curr = &md2->model->frames[frame];
-			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
+			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 			{
 				if (durs > INTERPOLERATION_LIMIT)
 					durs = INTERPOLERATION_LIMIT;
