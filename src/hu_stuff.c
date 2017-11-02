@@ -328,7 +328,7 @@ void HU_Start(void)
   */
 static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 {
-	XBOXSTATIC char buf[254];
+	char buf[254];
 	size_t numwords, ix;
 	char *msg = &buf[2];
 	const size_t msgspace = sizeof buf - 2;
@@ -473,7 +473,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			player_names[playernum]);
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -493,7 +493,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				CONS_Alert(CONS_WARNING, M_GetText("Illegal say command received from %s containing invalid characters\n"), player_names[playernum]);
 				if (server)
 				{
-					XBOXSTATIC char buf[2];
+					char buf[2];
 
 					buf[0] = (char)playernum;
 					buf[1] = KICK_MSG_CON_FAIL;
@@ -993,19 +993,17 @@ static void HU_DrawCEcho(void)
 
 static void HU_drawGametype(void)
 {
-	INT32 i = 0;
+	const char *strvalue = NULL;
+	
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		return; // not a valid gametype???
 
-	for (i = 0; gametype_cons_t[i].strvalue; i++)
-	{
-		if (gametype_cons_t[i].value == gametype)
-		{
-			if (splitscreen)
-				V_DrawString(4, 184, 0, gametype_cons_t[i].strvalue);
-			else
-				V_DrawString(4, 192, 0, gametype_cons_t[i].strvalue);
-			return;
-		}
-	}
+	strvalue = Gametype_Names[gametype];
+		
+	if (splitscreen)
+		V_DrawString(4, 184, 0, strvalue);
+	else
+		V_DrawString(4, 192, 0, strvalue);
 }
 
 //

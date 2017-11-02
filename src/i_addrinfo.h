@@ -39,17 +39,7 @@
 #define EAI_NONAME -2
 #endif
 
-#ifdef _PS3 // PSL1GHT v2
-struct my_addrinfo {
-	int                 ai_flags;
-	int                 ai_family;
-	int                 ai_socktype;
-	int                 ai_protocol;
-	size_t              ai_addrlen;
-	struct sockaddr    *ai_addr;
-	struct my_addrinfo *ai_next;
-};
-#elif defined (_WIN32) // already use the stub for Win32
+#ifdef _WIN32 // already use the stub for Win32
 // w32api, ws2tcpip.h, r1.12
 struct my_addrinfo {
         int     ai_flags;

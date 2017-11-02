@@ -201,6 +201,7 @@ typedef struct
 // descriptions for gametype select screen
 typedef struct
 {
+	UINT8 col[2];
 	char notes[441];
 } gtdesc_t;
 

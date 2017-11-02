@@ -205,7 +205,7 @@ static void Y_IntermissionTokenDrawer(void)
 	calc = (lowy - y)*2;
 
 	if (calc > 0)
-		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 32*FRACUNIT, y<<FRACBITS, SHORT(tokenicon->width), calc);
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, SHORT(tokenicon->width), calc);
 }
 
 //
@@ -764,6 +764,8 @@ void Y_Ticker(void)
 				data.coop.total += data.coop.bonuses[i].points;
 				data.coop.bonuses[i].points = 0;
 			}
+			if (data.coop.score > MAXSCORE)
+				data.coop.score = MAXSCORE;
 			if (data.coop.bonuses[i].points > 0)
 				anybonuses = true;
 		}
@@ -1765,6 +1767,8 @@ static void Y_AwardCoopBonuses(void)
 		{
 			(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
 			players[i].score += localbonuses[j].points;
+			if (players[i].score > MAXSCORE)
+				players[i].score = MAXSCORE;
 		}
 
 		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
@@ -1807,6 +1811,8 @@ static void Y_AwardSpecialStageBonus(void)
 		else
 			Y_SetRingBonus(&players[i], &localbonus);
 		players[i].score += localbonus.points;
+		if (players[i].score > MAXSCORE)
+			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
 		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;

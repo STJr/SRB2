@@ -1578,7 +1578,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return; // Only go in the mouth
 
 			// Eaten by player!
-			if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+			if ((!player->bot) && (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1))
 				P_RestoreMusic(player);
 
 			if (player->powers[pw_underwater] < underwatertics + 1)
@@ -1586,12 +1586,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (!player->climbing)
 			{
+				if (player->bot && toucher->state-states != S_PLAY_GASP)
+					S_StartSound(toucher, special->info->deathsound); // Force it to play a sound for bots
 				P_SetPlayerMobjState(toucher, S_PLAY_GASP);
 				P_ResetPlayer(player);
 			}
 
 			toucher->momx = toucher->momy = toucher->momz = 0;
-			break;
+
+			if (player->bot)
+				return;
+			else
+				break;
 
 		case MT_WATERDROP:
 			if (special->state == &states[special->info->spawnstate])

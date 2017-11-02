@@ -324,7 +324,10 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
+// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+
+// String names for gametypes
+extern const char *Gametype_Names[NUMGAMETYPES];
 
 extern tic_t totalplaytime;
 
@@ -382,6 +385,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
 #define MV_MAX         31 // used in gamedata check
+#define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map

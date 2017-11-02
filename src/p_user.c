@@ -188,11 +188,12 @@ void P_CalcHeight(player_t *player)
 	// Note: a LUT allows for effects
 	//  like a ramp with low health.
 
-	player->bob = (FixedMul(player->rmomx,player->rmomx)
-		+ FixedMul(player->rmomy,player->rmomy))>>2;
+	player->bob = FixedMul(cv_movebob.value,
+		(FixedMul(player->rmomx,player->rmomx)
+		+ FixedMul(player->rmomy,player->rmomy))>>2);
 
-	if (player->bob > FixedMul(MAXBOB, mo->scale))
-		player->bob = FixedMul(MAXBOB, mo->scale);
+	if (player->bob > FixedMul(cv_movebob.value, FixedMul(MAXBOB, mo->scale)))
+		player->bob = FixedMul(cv_movebob.value, FixedMul(MAXBOB, mo->scale));
 
 	if (!P_IsObjectOnGround(mo))
 	{
@@ -215,7 +216,7 @@ void P_CalcHeight(player_t *player)
 	bob = FixedMul(player->bob/2, FINESINE(angle));
 
 	// move viewheight
-	pviewheight = FixedMul(cv_viewheight.value << FRACBITS, mo->scale); // default eye view height
+	pviewheight = FixedMul(41*player->height/48, mo->scale); // default eye view height
 
 	if (player->playerstate == PST_LIVE)
 	{
@@ -1093,9 +1094,8 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 	oldscore = player->score;
 
 	// Don't go above MAXSCORE.
-	if (player->score + amount < MAXSCORE)
-		player->score += amount;
-	else
+	player->score += amount;
+	if (player->score > MAXSCORE)
 		player->score = MAXSCORE;
 
 	// check for extra lives every 50000 pts
@@ -1811,48 +1811,50 @@ boolean P_PlayerHitFloor(player_t *player)
 			S_StartSound(player->mo, sfx_spin);
 		}
 		else
+		{
 			player->pflags &= ~PF_SPINNING;
 
-		if (player->pflags & PF_GLIDING) // ground gliding
-		{
-			player->skidtime = TICRATE;
-			player->mo->tics = -1;
-		}
-		else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
-		{
-			P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
-			player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-			S_StartSound(player->mo, sfx_s3k8b);
-			player->pflags |= PF_FULLSTASIS;
-		}
-		else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
-		|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
-		{
-			if (player->cmomx || player->cmomy)
+			if (player->pflags & PF_GLIDING) // ground gliding
 			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->rmomx || player->rmomy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				player->skidtime = TICRATE;
+				player->mo->tics = -1;
 			}
-			else
+			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
 			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->mo->momx || player->mo->momy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
+				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+				S_StartSound(player->mo, sfx_s3k8b);
+				player->pflags |= PF_FULLSTASIS;
+			}
+			else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
+			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+			{
+				if (player->cmomx || player->cmomy)
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->rmomx || player->rmomy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
+				else
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->mo->momx || player->mo->momy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
 			}
 		}
 
@@ -4191,14 +4193,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	if (onground && player->pflags & PF_STARTDASH)
 	{
-		if (player->mo->state-states != S_PLAY_SPINDASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 		// Spawn spin dash dust
 		if (!(player->charflags & SF_NOSPINDASHDUST) && !(player->mo->eflags & MFE_GOOWATER))
 			P_DoSpinDashDust(player);
 	}
-	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
-		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 }
 
 //
@@ -4257,6 +4255,8 @@ void P_DoBubbleBounce(player_t *player)
 	P_DoJump(player, false);
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+	else
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	player->pflags |= PF_THOKKED;
 	player->pflags &= ~PF_STARTJUMP;
 	player->secondjump = UINT8_MAX;
@@ -8620,9 +8620,9 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	x = player->mo->x - P_ReturnThrustX(player->mo, thiscam->angle, player->mo->radius);
 	y = player->mo->y - P_ReturnThrustY(player->mo, thiscam->angle, player->mo->radius);
 	if (player->mo->eflags & MFE_VERTICALFLIP)
-		z = player->mo->z + player->mo->height - (cv_viewheight.value<<FRACBITS) - 16*FRACUNIT;
+		z = player->mo->z + player->mo->height - (41*player->height/48) - 16*FRACUNIT;
 	else
-		z = player->mo->z + (cv_viewheight.value<<FRACBITS);
+		z = player->mo->z + (41*player->height/48);
 
 	// set bits for the camera
 	thiscam->x = x;
@@ -8648,7 +8648,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, height, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
 	INT32 camrotate;
 	boolean camstill, cameranoclip;
 	mobj_t *mo;
@@ -8821,6 +8821,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
+	height = camheight;
+
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
@@ -8830,9 +8832,19 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		dist = camdist;
 
+		// x1.5 dist for splitscreen
+		if (splitscreen)
+		{
+			dist = FixedMul(dist, 3*FRACUNIT/2);
+			height = FixedMul(height, 3*FRACUNIT/2);
+		}
+
 		// x1.2 dist for analog
 		if (P_AnalogMove(player))
+		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
+			height = FixedMul(height, 6*FRACUNIT/5);
+		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
@@ -8878,12 +8890,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 #endif // bad 2D camera code
 
-	pviewheight = FixedMul(cv_viewheight.value<<FRACBITS, mo->scale);
+	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight;
+		z = mo->z + mo->height - pviewheight - height;
 	else
-		z = mo->z + pviewheight + camheight;
+		z = mo->z + pviewheight + height;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -9081,7 +9093,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	if (mo->type == MT_EGGTRAP)
-		z = mo->z + 128*FRACUNIT + pviewheight + camheight;
+		z = mo->z + 128*FRACUNIT + pviewheight + height;
 
 	if (thiscam->z < thiscam->floorz && !cameranoclip)
 		thiscam->z = thiscam->floorz;
@@ -9485,23 +9497,6 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 #endif
-	if (!player->mo->health)
-		;
-	else if (player->pflags & PF_GLIDING)
-	{
-		if (player->panim != PA_ABILITY)
-			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-	}
-	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE)
-	&& (player->mo->state-states != S_PLAY_FLOAT && player->mo->state-states != S_PLAY_FLOAT_RUN))
-	&& ((((player->charflags & (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) == (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) && player->panim != PA_ROLL)
-	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
-	{
-		if (!(player->charflags & SF_NOJUMPSPIN))
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-		else if (!(player->pflags & PF_NOJUMPDAMAGE))
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-	}
 
 	if (player->flashcount)
 		player->flashcount--;
@@ -10310,12 +10305,7 @@ void P_PlayerAfterThink(player_t *player)
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)
 		S_StartSound(NULL, sfx_wepchg);
 
-	if (player->pflags & PF_GLIDING)
-	{
-		if (player->panim != PA_ABILITY)
-			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-	}
-	else if (player->pflags & PF_SLIDING)
+	if (player->pflags & PF_SLIDING)
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
@@ -10470,7 +10460,7 @@ void P_PlayerAfterThink(player_t *player)
 		{
 			// defaults to make sure 1st person cam doesn't do anything weird on startup
 			player->deltaviewheight = 0;
-			player->viewheight = FixedMul(cv_viewheight.value << FRACBITS, player->mo->scale);
+			player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
 			if (player->mo->eflags & MFE_VERTICALFLIP)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else

@@ -62,12 +62,8 @@ consvar_t sndserver_arg = {"sndserver_arg", "-quiet", CV_SAVE, NULL, 0, NULL, NU
 #define SURROUND
 #endif
 
-#if defined (_WIN32_WCE) || defined (DC) || defined(GP2X)
-consvar_t cv_samplerate = {"samplerate", "11025", 0, CV_Unsigned, NULL, 11025, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
-#elif defined(_PSP) || defined(_WINDOWS)
+#ifdef _WINDOWS
 consvar_t cv_samplerate = {"samplerate", "44100", 0, CV_Unsigned, NULL, 44100, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
-#elif defined(_WII)
-consvar_t cv_samplerate = {"samplerate", "32000", 0, CV_Unsigned, NULL, 32000, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #else
 consvar_t cv_samplerate = {"samplerate", "22050", 0, CV_Unsigned, NULL, 22050, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #endif
@@ -93,11 +89,7 @@ static void Captioning_OnChange(void)
 consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // number of channels available
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
-consvar_t cv_numChannels = {"snd_channels", "8", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
-#endif
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -959,21 +951,27 @@ void S_UpdateSounds(void)
 notinlevel:
 	I_UpdateSound();
 
-	for (i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
-		if (!closedcaptions[i].s)
-			continue;
+		boolean gamestopped = (paused || P_AutoPause());
+		for (i = 0; i < NUMCAPTIONS; i++) // update captions
+		{
+			if (!closedcaptions[i].s)
+				continue;
 
-		if (!(--closedcaptions[i].t))
-		{
-			closedcaptions[i].c = NULL;
-			closedcaptions[i].s = NULL;
-		}
-		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
-		{
-			closedcaptions[i].c = NULL;
-			if (closedcaptions[i].t > CAPTIONFADETICS)
-				closedcaptions[i].t = CAPTIONFADETICS;
+			if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
+				continue;
+
+			if (!(--closedcaptions[i].t))
+			{
+				closedcaptions[i].c = NULL;
+				closedcaptions[i].s = NULL;
+			}
+			else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+			{
+				closedcaptions[i].c = NULL;
+				if (closedcaptions[i].t > CAPTIONFADETICS)
+					closedcaptions[i].t = CAPTIONFADETICS;
+			}
 		}
 	}
 }
@@ -1379,10 +1377,6 @@ static boolean S_DigMusic(const char *mname, boolean looping)
 
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 {
-#if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
-	S_ClearSfx();
-#endif
-
 	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
 		return;
 

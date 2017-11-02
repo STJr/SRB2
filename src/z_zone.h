@@ -116,10 +116,6 @@ char *Z_StrDup(const char *in);
 #define Z_SetUser(p,u) Z_SetUser2(p, u)
 #endif
 
-#ifdef _NDS ///TODO: need a lock reference system
-#define Z_Unlock(p) Z_ChangeTag(p, PU_CACHE_UNLOCKED)
-#else
 #define Z_Unlock(p) (void)p
-#endif
 
 #endif

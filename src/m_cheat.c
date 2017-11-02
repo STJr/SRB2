@@ -70,6 +70,7 @@ static UINT8 cheatf_ultimate(void)
 	return 1;
 }
 
+#ifdef REDXVI
 static UINT8 cheatf_warp(void)
 {
 	if (modifiedgame)
@@ -91,6 +92,7 @@ static UINT8 cheatf_warp(void)
 	M_StartControlPanel();
 	return 1;
 }
+#endif
 
 #ifdef DEVELOP
 static UINT8 cheatf_devmode(void)
@@ -131,6 +133,7 @@ static cheatseq_t cheat_ultimate_joy = {
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
 
+#ifdef REDXVI
 static cheatseq_t cheat_warp = {
 	0, cheatf_warp,
 	{ SCRAMBLE('r'), SCRAMBLE('e'), SCRAMBLE('d'), SCRAMBLE('x'), SCRAMBLE('v'), SCRAMBLE('i'), 0xff }
@@ -143,6 +146,7 @@ static cheatseq_t cheat_warp_joy = {
 	  SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_UPARROW),
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
+#endif
 
 #ifdef DEVELOP
 static cheatseq_t cheat_devmode = {
@@ -235,8 +239,10 @@ boolean cht_Responder(event_t *ev)
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
+#ifdef REDXVI
 	ret += cht_CheckCheat(&cheat_warp, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp_joy, (char)ch);
+#endif
 #ifdef DEVELOP
 	ret += cht_CheckCheat(&cheat_devmode, (char)ch);
 #endif
@@ -1129,7 +1135,7 @@ void OP_ObjectplaceMovement(player_t *player)
 
 	// make sure viewz follows player if in 1st person mode
 	player->deltaviewheight = 0;
-	player->viewheight = FixedMul(cv_viewheight.value << FRACBITS, player->mo->scale);
+	player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		player->viewz = player->mo->z + player->mo->height - player->viewheight;
 	else

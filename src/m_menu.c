@@ -238,6 +238,7 @@ static void M_CustomLevelSelect(INT32 choice);
 static void M_CustomWarp(INT32 choice);
 FUNCNORETURN static ATTRNORETURN void M_UltimateCheat(INT32 choice);
 static void M_LoadGameLevelSelect(INT32 choice);
+static void M_AllowSuper(INT32 choice);
 static void M_GetAllEmeralds(INT32 choice);
 static void M_DestroyRobots(INT32 choice);
 static void M_LevelSelectWarp(INT32 choice);
@@ -255,7 +256,6 @@ static void M_Options(INT32 choice);
 static void M_SelectableClearMenus(INT32 choice);
 static void M_Retry(INT32 choice);
 static void M_EndGame(INT32 choice);
-static void M_GameTypeChange(INT32 choice);
 static void M_MapChange(INT32 choice);
 static void M_ChangeLevel(INT32 choice);
 static void M_ConfirmSpectate(INT32 choice);
@@ -353,7 +353,6 @@ static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
 static void M_DrawEmblemHints(void);
 static void M_DrawPauseMenu(void);
-static void M_DrawGameTypeMenu(void);
 static void M_DrawServerMenu(void);
 static void M_DrawLevelPlatterMenu(void);
 static void M_DrawImageDef(void);
@@ -422,22 +421,8 @@ consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_co
 
 // This gametype list is integral for many different reasons.
 // When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
-CV_PossibleValue_t gametype_cons_t[] =
-{
-	{GT_COOP, "Co-op"},
+CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
-	{GT_COMPETITION, "Competition"},
-	{GT_RACE, "Race"},
-
-	{GT_MATCH, "Match"},
-	{GT_TEAMMATCH, "Team Match"},
-
-	{GT_TAG, "Tag"},
-	{GT_HIDEANDSEEK, "Hide & Seek"},
-
-	{GT_CTF, "CTF"},
-	{0, NULL}
-};
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t serversort_cons_t[] = {
@@ -546,7 +531,7 @@ static menuitem_t MPauseMenu[] =
 {
 	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,               8},
 	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef, 16},
-	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_GameTypeChange,      24},
+	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_MapChange,           24},
 
 	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,40},
 	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
@@ -629,32 +614,16 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 	{IT_WHITESTRING|IT_CALL,         NULL, "Confirm",           M_ConfirmTeamChange,    90},
 };
 
-static menuitem_t MISC_ChangeGameTypeMenu[] =
-{
-	{IT_STRING|IT_CALL,              NULL, "Co-op",            M_MapChange,  0},
-
-	{IT_STRING|IT_CALL,              NULL, "Competition",      M_MapChange, 12},
-	{IT_STRING|IT_CALL,              NULL, "Race",             M_MapChange, 20},
-
-	{IT_STRING|IT_CALL,              NULL, "Match",            M_MapChange, 32},
-	{IT_STRING|IT_CALL,              NULL, "Team Match",       M_MapChange, 40},
-
-	{IT_STRING|IT_CALL,              NULL, "Tag",              M_MapChange, 52},
-	{IT_STRING|IT_CALL,              NULL, "Hide & Seek",      M_MapChange, 60},
-
-	{IT_STRING|IT_CALL,              NULL, "Capture the Flag", M_MapChange, 72},
-};
-
 static const gtdesc_t gametypedesc[] =
 {
-	{"Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
-	{"Speed your way through the main acts, competing in several different categories to see who's the best."},
-	{"There's not much to it - zoom through the level faster than everyone else."},
-	{"Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
-	{"Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
-	{"Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
-	{"Try and find a good hiding place in these maps - we dare you."},
-	{"Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
+	{{ 54,  54}, "Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
+	{{103, 103}, "Speed your way through the main acts, competing in several different categories to see who's the best."},
+	{{190, 190}, "There's not much to it - zoom through the level faster than everyone else."},
+	{{ 66,  66}, "Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
+	{{153,  37}, "Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
+	{{123, 123}, "Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
+	{{150, 150}, "Try and find a good hiding place in these maps - we dare you."},
+	{{ 37, 153}, "Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
 };
 
 static menuitem_t MISC_ChangeLevelMenu[] =
@@ -679,17 +648,20 @@ static menuitem_t MISC_HelpMenu[] =
 // Pause Menu Pandora's Box Options
 static menuitem_t SR_PandorasBox[] =
 {
-	{IT_STRING | IT_CVAR, NULL, "Rings",              &cv_dummyrings,      20},
-	{IT_STRING | IT_CVAR, NULL, "Lives",              &cv_dummylives,      30},
-	{IT_STRING | IT_CVAR, NULL, "Continues",          &cv_dummycontinues,  40},
+	{IT_STRING | IT_CALL, NULL, "Mid-game add-ons...", M_Addons,             0},
 
-	{IT_STRING | IT_CVAR, NULL, "Gravity",            &cv_gravity,         60},
-	{IT_STRING | IT_CVAR, NULL, "Throw Rings",        &cv_ringslinger,     70},
+	{IT_STRING | IT_CVAR, NULL, "Rings",               &cv_dummyrings,      20},
+	{IT_STRING | IT_CVAR, NULL, "Lives",               &cv_dummylives,      30},
+	{IT_STRING | IT_CVAR, NULL, "Continues",           &cv_dummycontinues,  40},
 
-	{IT_STRING | IT_CALL, NULL, "Get All Emeralds",   M_GetAllEmeralds,    90},
-	{IT_STRING | IT_CALL, NULL, "Destroy All Robots", M_DestroyRobots,    100},
+	{IT_STRING | IT_CVAR, NULL, "Gravity",             &cv_gravity,         60},
+	{IT_STRING | IT_CVAR, NULL, "Throw Rings",         &cv_ringslinger,     70},
 
-	{IT_STRING | IT_CALL, NULL, "Ultimate Cheat",     M_UltimateCheat,    130},
+	{IT_STRING | IT_CALL, NULL, "Enable Super form",   M_AllowSuper,        90},
+	{IT_STRING | IT_CALL, NULL, "Get All Emeralds",    M_GetAllEmeralds,   100},
+	{IT_STRING | IT_CALL, NULL, "Destroy All Robots",  M_DestroyRobots,    110},
+
+	{IT_STRING | IT_CALL, NULL, "Ultimate Cheat",      M_UltimateCheat,    130},
 };
 
 // Sky Room Custom Unlocks
@@ -928,7 +900,7 @@ static menuitem_t SP_PlayerMenu[] =
 // Separated splitscreen and normal servers.
 static menuitem_t MP_SplitServerMenu[] =
 {
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange,    100},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_MapChange,         100},
 #ifdef NONET // In order to keep player setup accessible.
 	{IT_STRING|IT_CALL,              NULL, "Player 1 setup...",        M_SetupMultiPlayer,  110},
 	{IT_STRING|IT_CALL,              NULL, "Player 2 setup...",        M_SetupMultiPlayer2, 120},
@@ -958,7 +930,7 @@ static menuitem_t MP_ServerMenu[] =
 	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,      20},
 	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,      46},
 	{IT_STRING|IT_CVAR,              NULL, "Allow Add-on Downloading", &cv_downloading,     56},
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange,   100},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_MapChange,        100},
 	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,    130},
 	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,      140},
 };
@@ -1057,7 +1029,7 @@ static menuitem_t OP_P1ControlsMenu[] =
 {
 	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", M_Setup1PControlsMenu,   10},
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
-	{IT_SUBMENU | IT_STRING, NULL, "Joystick Options...", &OP_Joystick1Def  ,  30},
+	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
@@ -1072,7 +1044,7 @@ static menuitem_t OP_P2ControlsMenu[] =
 {
 	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", M_Setup2PControlsMenu,   10},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
-	{IT_SUBMENU | IT_STRING, NULL, "Second Joystick Options...", &OP_Joystick2Def  ,  30},
+	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
@@ -1091,8 +1063,8 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, gc_backward    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, gc_strafeleft  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, gc_straferight },
-	{IT_CALL | IT_STRING2, NULL, "Jump / Main Action", M_ChangeControl, gc_jump      },
-	{IT_CALL | IT_STRING2, NULL, "Spin / Shield Action", M_ChangeControl, gc_use     },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, gc_jump      },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, gc_use     },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Camera Up",        M_ChangeControl, gc_lookup      },
@@ -1136,24 +1108,28 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup1PJoystickMenu,  10},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
 	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
 	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
 	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
 	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu, 10},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
 	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
 	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
 	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
 	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -1509,22 +1485,11 @@ menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPa
 menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
 
 // MP Gametype and map change menu
-menu_t MISC_ChangeGameTypeDef =
-{
-	NULL,
-	sizeof (MISC_ChangeGameTypeMenu)/sizeof (menuitem_t),
-	&MainDef,  // Doesn't matter.
-	MISC_ChangeGameTypeMenu,
-	M_DrawGameTypeMenu,
-	30, (200 - (72+8))/2, // vertically centering
-	0,
-	NULL
-};
 menu_t MISC_ChangeLevelDef =
 {
 	NULL,
 	sizeof (MISC_ChangeLevelMenu)/sizeof (menuitem_t),
-	&MISC_ChangeGameTypeDef,
+	&MainDef,  // Doesn't matter.
 	MISC_ChangeLevelMenu,
 	M_DrawLevelPlatterMenu,
 	0, 0,
@@ -1542,7 +1507,7 @@ menu_t SR_PandoraDef =
 	&SPauseDef,
 	SR_PandorasBox,
 	M_DrawGenericMenu,
-	60, 40,
+	60, 30,
 	0,
 	M_ExitPandorasBox
 };
@@ -2176,6 +2141,8 @@ static void M_GoBack(INT32 choice)
 		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
+			Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
 			menuactive = false;
 			D_StartTitle();
 		}
@@ -2432,7 +2399,6 @@ boolean M_Responder(event_t *ev)
 				itemOn = 0;
 				return true;
 
-#ifndef DC
 			case KEY_F5: // Video Mode
 				if (modeattacking)
 					return true;
@@ -2440,7 +2406,6 @@ boolean M_Responder(event_t *ev)
 				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
-#endif
 
 			case KEY_F6: // Empty
 				return true;
@@ -2540,21 +2505,11 @@ boolean M_Responder(event_t *ev)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &MISC_ChangeGameTypeDef)
-			{
-				Z_Free(char_notes);
-				char_notes = NULL;
-			}
 			return true;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &MISC_ChangeGameTypeDef)
-			{
-				Z_Free(char_notes);
-				char_notes = NULL;
-			}
 			return true;
 
 		case KEY_LEFTARROW:
@@ -2828,9 +2783,8 @@ void M_ClearMenus(boolean callexitmenufunc)
 	if (currentMenu->quitroutine && callexitmenufunc && !currentMenu->quitroutine())
 		return; // we can't quit this menu (also used to set parameter from the menu)
 
-#ifndef DC // Save the config file. I'm sick of crashing the game later and losing all my changes!
+	// Save the config file. I'm sick of crashing the game later and losing all my changes!
 	COM_BufAddText(va("saveconfig \"%s\" -silent\n", configfile));
-#endif //Alam: But not on the Dreamcast's VMUs
 
 	if (currentMenu == &MessageDef) // Oh sod off!
 		currentMenu = &MainDef; // Not like it matters
@@ -3119,6 +3073,34 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 	}
 	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BR], PU_CACHE));
 */
+}
+
+static fixed_t staticalong = 0;
+
+static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
+{
+	patch_t *patch;
+	fixed_t sw, pw;
+
+	patch = W_CachePatchName("LSSTATIC", PU_CACHE);
+	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
+
+	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
+	{
+		if (staticalong > pw)
+			staticalong -= pw;
+	}
+	else
+		staticalong = 0;*/
+
+	if (staticalong > pw) // simplified for base LSSTATIC
+		staticalong -= pw;
+
+	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, flags, patch, staticalong, 0, sw, h*2); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
+
+	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
+
+	W_UnlockCachedPatch(patch);
 }
 
 //
@@ -3833,16 +3815,23 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 
 	switch (levellistmode)
 	{
+		case LLM_CREATESERVER:
+			if (!(mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
+				return true;
+
+			if (mapvisited[mapnum]) // MV_MP
+				return true;
+
+			// intentional fallthrough
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
+			if (mapvisited[mapnum] & MV_MAX)
+				return true;
+
 			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
 				return true;
 
-			if (!mapvisited[mapnum])
-				return false;
-
-			// intentional fallthrough
-		case LLM_CREATESERVER:
+			return false;
 		case LLM_LEVELSELECT:
 		default:
 			return true;
@@ -3981,6 +3970,9 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 		mapnum++;
 	}
 
+	if (levellistmode == LLM_CREATESERVER)
+		rows++;
+
 	return rows;
 }
 
@@ -3990,10 +3982,10 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 // Prepares a tasty dish of zones and acts!
 // Call before any attempt to access a level platter.
 //
-static boolean M_PrepareLevelPlatter(INT32 gt)
+static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
-	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0;
+	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0, startrow = 0;
 
 	if (!numrows)
 		return false;
@@ -4010,6 +4002,17 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
 	lsrow = lscol = lshli = lsoffs[0] = lsoffs[1] = 0;
 
+	if (levellistmode == LLM_CREATESERVER)
+	{
+		sprintf(levelselect.rows[0].header, "Gametype");
+		lswide(0) = true;
+		levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0] = false;
+		startrow = row = 1;
+
+		Z_Free(char_notes);
+		char_notes = NULL;
+	}
+
 	while (mapnum < NUMMAPS)
 	{
 		if (M_CanShowLevelOnPlatter(mapnum, gt))
@@ -4019,7 +4022,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
 
 			// preparing next position to drop mapnum into
-			if (levelselect.rows[0].maplist[0])
+			if (levelselect.rows[startrow].maplist[0])
 			{
 				if (col == 2 // no more space on the row?
 				|| wide
@@ -4042,7 +4045,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
 			}
 
-			if (cv_nextmap.value == mapnum+1) // A little quality of life improvement.
+			if (nextmappick && cv_nextmap.value == mapnum+1) // A little quality of life improvement.
 			{
 				lsrow = row;
 				lscol = col;
@@ -4084,7 +4087,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 				sprintf(levelselect.rows[row].mapnames[col], "???");
 
 			// creating header text
-			if (!col && (!row || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
+			if (!col && ((row == startrow) || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
 			{
 				if (!levelselect.rows[row].mapavailable[col])
 					sprintf(levelselect.rows[row].header, "???");
@@ -4144,12 +4147,11 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 	return true;
 }
 
-#define selectvalnextmapnobrace(column) selectval = levelselect.rows[lsrow].maplist[column];\
-			if (selectval && levelselect.rows[lsrow].mapavailable[column])\
+#define ifselectvalnextmapnobrace(column) if ((selectval = levelselect.rows[lsrow].maplist[column]) && levelselect.rows[lsrow].mapavailable[column])\
 			{\
 				CV_SetValue(&cv_nextmap, selectval);
 
-#define selectvalnextmap(column) selectvalnextmapnobrace(column)}
+#define ifselectvalnextmap(column) ifselectvalnextmapnobrace(column)}
 
 //
 // M_HandleLevelPlatter
@@ -4176,7 +4178,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 			S_StartSound(NULL,sfx_s3kb7);
 
-			selectvalnextmap(lscol) else selectvalnextmap(0)
+			ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			break;
 
 		case KEY_UPARROW:
@@ -4199,35 +4201,59 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 			S_StartSound(NULL,sfx_s3kb7);
 
-			selectvalnextmap(lscol) else selectvalnextmap(0)
+			ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			break;
 
-		case KEY_LEFTARROW:
-			if (lscol > 0)
+		case KEY_ENTER:
+			if (!(levellistmode == LLM_CREATESERVER && !lsrow))
 			{
-				lscol--;
-
-				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation);
-				S_StartSound(NULL,sfx_s3kb7);
-
-				selectvalnextmap(lscol) else selectvalnextmap(0)
+				ifselectvalnextmapnobrace(lscol)
+					lsoffs[0] = lsoffs[1] = 0;
+					S_StartSound(NULL,sfx_menu1);
+					if (gamestate == GS_TIMEATTACK)
+						M_SetupNextMenu(currentMenu->prevMenu);
+					else if (currentMenu == &MISC_ChangeLevelDef)
+					{
+						if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
+							M_SetupNextMenu(currentMenu->prevMenu);
+						else
+							M_ChangeLevel(0);
+						Z_Free(levelselect.rows);
+						levelselect.rows = NULL;
+					}
+					else
+						M_LevelSelectWarp(0);
+					Nextmap_OnChange();
+				}
+				else if (!lsoffs[0]) //  prevent sound spam
+				{
+					lsoffs[0] = -8;
+					S_StartSound(NULL,sfx_s3kb2);
+				}
+				break;
 			}
-			else if (!lsoffs[1]) //  prevent sound spam
-			{
-				lsoffs[1] = -8;
-				S_StartSound(NULL,sfx_s3kb7);
-			}
-			break;
-
+			// intentionall fallthrough
 		case KEY_RIGHTARROW:
-			if (lscol < 2)
+			if (levellistmode == LLM_CREATESERVER && !lsrow)
+			{
+				CV_AddValue(&cv_newgametype, 1);
+				S_StartSound(NULL,sfx_menu1);
+				lscol = 0;
+
+				Z_Free(char_notes);
+				char_notes = NULL;
+
+				if (!M_PrepareLevelPlatter(cv_newgametype.value, false))
+					I_Error("Unidentified level platter failure!");
+			}
+			else if (lscol < 2)
 			{
 				lscol++;
 
 				lsoffs[1] = (lswide(lsrow) ? 8 : -lshseperation);
 				S_StartSound(NULL,sfx_s3kb7);
 
-				selectvalnextmap(lscol) else selectvalnextmap(0)
+				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
 			else if (!lsoffs[1]) //  prevent sound spam
 			{
@@ -4236,30 +4262,32 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			break;
 
-		case KEY_ENTER:
-			selectvalnextmapnobrace(lscol)
-
-				lsoffs[0] = lsoffs[1] = 0;
-				S_StartSound(NULL,sfx_menu1);
-				if (gamestate == GS_TIMEATTACK)
-					M_SetupNextMenu(currentMenu->prevMenu);
-				else if (currentMenu == &MISC_ChangeLevelDef)
-				{
-					if (currentMenu->prevMenu && currentMenu->prevMenu->prevMenu != &MPauseDef)
-						M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
-					else
-						M_ChangeLevel(0);
-					Z_Free(levelselect.rows);
-					levelselect.rows = NULL;
-				}
-				else
-					M_LevelSelectWarp(0);
-				Nextmap_OnChange();
-			}
-			else if (!lsoffs[0]) //  prevent sound spam
+		case KEY_LEFTARROW:
+			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
-				lsoffs[0] = -8;
-				S_StartSound(NULL,sfx_lose);
+				CV_AddValue(&cv_newgametype, -1);
+				S_StartSound(NULL,sfx_menu1);
+				lscol = 0;
+
+				Z_Free(char_notes);
+				char_notes = NULL;
+
+				if (!M_PrepareLevelPlatter(cv_newgametype.value, false))
+					I_Error("Unidentified level platter failure!");
+			}
+			else if (lscol > 0)
+			{
+				lscol--;
+
+				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation);
+				S_StartSound(NULL,sfx_s3kb7);
+
+				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
+			}
+			else if (!lsoffs[1]) //  prevent sound spam
+			{
+				lsoffs[1] = -8;
+				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
 
@@ -4273,6 +4301,12 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 	if (exitmenu)
 	{
+		if (gamestate != GS_TIMEATTACK)
+		{
+			Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
+		}
+
 		if (currentMenu->prevMenu)
 		{
 			M_SetupNextMenu(currentMenu->prevMenu);
@@ -4280,8 +4314,9 @@ static void M_HandleLevelPlatter(INT32 choice)
 		}
 		else
 			M_ClearMenus(true);
-		Z_Free(levelselect.rows);
-		levelselect.rows = NULL;
+
+		Z_Free(char_notes);
+		char_notes = NULL;
 	}
 }
 
@@ -4306,7 +4341,10 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[1][2]); // static - make secret maps look ENTICING
+	{
+		V_DrawSmallScaledPatch(x, y, 0, levselp[1][2]);
+		M_DrawStaticBox(x, y, V_80TRANS, 282, 50);
+	}
 	else
 	{
 		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
@@ -4334,7 +4372,10 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[0][2]); // static - make secret maps look ENTICING
+	{
+		V_DrawSmallScaledPatch(x, y, 0, levselp[0][2]);
+		M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
+	}
 	else
 	{
 		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
@@ -4365,7 +4406,28 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 		y += lsheadingheight;
 	}
 
-	if (lswide(row))
+	if (levellistmode == LLM_CREATESERVER && !row)
+	{
+		if (!char_notes)
+			char_notes = V_WordWrap(0, 282 - 8, V_ALLOWLOWERCASE, gametypedesc[cv_newgametype.value].notes);
+
+		V_DrawFill(lsbasex, y, 282, 50, 27);
+		V_DrawString(lsbasex + 4, y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+
+		V_DrawFill(lsbasex,     y+50, 141, 8, gametypedesc[cv_newgametype.value].col[0]);
+		V_DrawFill(lsbasex+141, y+50, 141, 8, gametypedesc[cv_newgametype.value].col[1]);
+
+		V_DrawString(lsbasex, y+50, 0, gametype_cons_t[cv_newgametype.value].strvalue);
+
+		if (!lsrow)
+		{
+			V_DrawCharacter(lsbasex - 10 - (skullAnimCounter/5), y+25,
+				'\x1C' | V_YELLOWMAP, false);
+			V_DrawCharacter(lsbasex+282 + 2 + (skullAnimCounter/5), y+25,
+				'\x1D' | V_YELLOWMAP, false);
+		}
+	}
+	else if (lswide(row))
 		M_DrawLevelPlatterWideMap(row, 0, lsbasex, y, rowhighlight);
 	else
 	{
@@ -4399,10 +4461,13 @@ static void M_DrawLevelPlatterMenu(void)
 	}
 
 	// draw cursor box
-	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
+	if (levellistmode != LLM_CREATESERVER || lsrow)
+		V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey+lsoffs[0], 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
+#if 0
 	if (levelselect.rows[lsrow].maplist[lscol] > 0)
 		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+#endif
 
 	// handle movement of cursor box
 	if (lsoffs[0] > 1 || lsoffs[0] < -1)
@@ -4757,6 +4822,7 @@ static void M_Addons(INT32 choice)
 	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_STATIC);
 	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
 	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
+	addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_STATIC);
 	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
 	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
 	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_STATIC);
@@ -5004,7 +5070,7 @@ static void M_DrawAddons(void)
 	x = BASEVIDWIDTH - x - 16;
 	V_DrawSmallScaledPatch(x, y + 4, (CANSAVE ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
 
-	if CANSAVE
+	if (modifiedgame)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
 #undef CANSAVE
 }
@@ -5172,6 +5238,7 @@ static void M_HandleAddons(INT32 choice)
 						// else intentional fallthrough
 						case EXT_SOC:
 						case EXT_WAD:
+						case EXT_PK3:
 							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							addonsresponselimit = 5;
 							break;
@@ -5218,6 +5285,12 @@ static void M_PandorasBox(INT32 choice)
 	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
+	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
+#ifndef DEVELOP
+	|| cv_skin.value == 1
+#endif
+	) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
+	SR_PandorasBox[7].status = (emeralds == ((EMERALD7)*2)-1) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	M_SetupNextMenu(&SR_PandoraDef);
 }
 
@@ -5354,12 +5427,24 @@ static void M_UltimateCheat(INT32 choice)
 	I_Quit();
 }
 
+static void M_AllowSuper(INT32 choice)
+{
+	(void)choice;
+
+	players[consoleplayer].charflags |= SF_SUPER;
+	M_StartMessage(M_GetText("You are now capable of turning super.\nRemember to get all the emeralds!\n"),NULL,MM_NOTHING);
+	SR_PandorasBox[6].status = IT_GRAYEDOUT;
+
+	G_SetGameModified(multiplayer);
+}
+
 static void M_GetAllEmeralds(INT32 choice)
 {
 	(void)choice;
 
 	emeralds = ((EMERALD7)*2)-1;
 	M_StartMessage(M_GetText("You now have all 7 emeralds.\nUse them wisely.\nWith great power comes great ring drain.\n"),NULL,MM_NOTHING);
+	SR_PandorasBox[7].status = IT_GRAYEDOUT;
 
 	G_SetGameModified(multiplayer);
 }
@@ -5574,7 +5659,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].requirement-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -5607,7 +5692,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -5676,7 +5761,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -5990,7 +6075,7 @@ static void M_CustomLevelSelect(INT32 choice)
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = (UINT8)(unlockables[ul].variable);
 
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -6022,7 +6107,7 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = 1;
 
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -6075,12 +6160,14 @@ static void M_DrawLoadGameData(void)
 			if (savetodraw == saveSlotSelected)
 				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
 			y += 11;
-			V_DrawSmallScaledPatch(x, y, V_STATIC, savselp[4]);
+			V_DrawSmallScaledPatch(x, y, 0, savselp[4]);
+			M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 			y += 41;
 			if (ultimate_selectable)
 				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
 			else
 				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "DON'T SAVE!");
+
 			continue;
 		}
 
@@ -6138,27 +6225,27 @@ static void M_DrawLoadGameData(void)
 
 		// level image area
 		{
-			patch_t *patch;
-			INT32 flags = 0;
-
 			if ((savegameinfo[savetodraw].lives == -42)
 			|| (savegameinfo[savetodraw].lives == -666))
 			{
-				patch = savselp[3];
-				flags = V_STATIC;
+				V_DrawFill(x, y, 80, 50, 31);
+				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 			}
-			else if (savegameinfo[savetodraw].gamemap & 8192)
-				patch = savselp[6];
 			else
 			{
-				lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
-				if (lumpnum != LUMPERROR)
-					patch = W_CachePatchNum(lumpnum, PU_CACHE);
+				patch_t *patch;
+				if (savegameinfo[savetodraw].gamemap & 8192)
+					patch = savselp[3];
 				else
-					patch = savselp[5];
+				{
+					lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
+					if (lumpnum != LUMPERROR)
+						patch = W_CachePatchNum(lumpnum, PU_CACHE);
+					else
+						patch = savselp[5];
+				}
+				V_DrawSmallScaledPatch(x, y, 0, patch);
 			}
-
-			V_DrawSmallScaledPatch(x, y, flags, patch);
 
 			y += 41;
 
@@ -6510,17 +6597,15 @@ static void M_ReadSaveStrings(void)
 		W_UnlockCachedPatch(savselp[3]);
 		W_UnlockCachedPatch(savselp[4]);
 		W_UnlockCachedPatch(savselp[5]);
-		W_UnlockCachedPatch(savselp[6]);
 	}
 
 	savselp[0] = W_CachePatchName("SAVEBACK", PU_STATIC);
 	savselp[1] = W_CachePatchName("SAVENONE", PU_STATIC);
 	savselp[2] = W_CachePatchName("ULTIMATE", PU_STATIC);
 
-	savselp[3] = W_CachePatchName("BLACKLVL", PU_STATIC);
+	savselp[3] = W_CachePatchName("GAMEDONE", PU_STATIC);
 	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
 	savselp[5] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	savselp[6] = W_CachePatchName("GAMEDONE", PU_STATIC);
 }
 
 //
@@ -6861,9 +6946,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
 			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
 			W_UnlockCachedPatch(patch);
 		}
 
@@ -6872,7 +6957,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			patch = W_CachePatchName(description[next].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
 			else
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 			W_UnlockCachedPatch(patch);
@@ -6890,9 +6975,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else
 	{
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height) - 2*(o-32));
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height) - (o-32));
 	}
 	W_UnlockCachedPatch(patch);
 
@@ -6982,7 +7067,7 @@ static void M_Statistics(INT32 choice)
 		if (!(mapheaderinfo[i]->typeoflevel & TOL_SP) || (mapheaderinfo[i]->menuflags & LF2_HIDEINSTATS))
 			continue;
 
-		if (!mapvisited[i])
+		if (!(mapvisited[i] & MV_MAX))
 			continue;
 
 		statsMapList[j++] = i;
@@ -7379,7 +7464,7 @@ static void M_TimeAttack(INT32 choice)
 	SP_TimeAttackDef.prevMenu = &MainDef;
 	levellistmode = LLM_RECORDATTACK; // Don't be dependent on cv_newgametype
 
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No record-attackable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -7556,7 +7641,7 @@ static void M_NightsAttack(INT32 choice)
 	SP_NightsAttackDef.prevMenu = &MainDef;
 	levellistmode = LLM_NIGHTSATTACK; // Don't be dependent on cv_newgametype
 
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No NiGHTS-attackable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -7943,7 +8028,7 @@ static void M_DrawRoomMenu(void)
 
 static void M_DrawConnectMenu(void)
 {
-	UINT16 i, j;
+	UINT16 i;
 	const char *gt = "Unknown";
 	INT32 numPages = (serverlistcount+(SERVERS_PER_PAGE-1))/SERVERS_PER_PAGE;
 
@@ -7989,11 +8074,8 @@ static void M_DrawConnectMenu(void)
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
 		gt = "Unknown";
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == serverlist[slindex].info.gametype)
-				gt = gametype_cons_t[j].strvalue;
-		}
+		if (serverlist[slindex].info.gametype < NUMGAMETYPES)
+			gt = Gametype_Names[serverlist[slindex].info.gametype];
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,
 		                         va("Players: %02d/%02d", serverlist[slindex].info.numberofplayer, serverlist[slindex].info.maxplayer));
@@ -8261,42 +8343,17 @@ static void M_DrawServerMenu(void)
 	}
 }
 
-static void M_GameTypeChange(INT32 choice)
+static void M_MapChange(INT32 choice)
 {
 	(void)choice;
 
-	MISC_ChangeGameTypeDef.prevMenu = currentMenu;
-	M_SetupNextMenu(&MISC_ChangeGameTypeDef);
-	if (Playing())
-		itemOn = gametype;
-
-	Z_Free(char_notes);
-	char_notes = NULL;
-}
-
-void M_DrawGameTypeMenu(void)
-{
-	M_DrawGenericMenu();
-	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "Select Gametype", true, false);
-
-	if (!char_notes)
-		char_notes = V_WordWrap(0, (160 - 30) - 8, V_ALLOWLOWERCASE, gametypedesc[itemOn].notes);
-
-	V_DrawFill(160, currentMenu->y, (160 - 30), 72 + 8, 159);
-	V_DrawString(164, currentMenu->y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
-}
-
-static void M_MapChange(INT32 choice)
-{
 	MISC_ChangeLevelDef.prevMenu = currentMenu;
 	levellistmode = LLM_CREATESERVER;
 
-	CV_SetValue(&cv_newgametype, choice);
-
-	if (Playing() && !(M_CanShowLevelOnPlatter(cv_nextmap.value-1, choice)) && (M_CanShowLevelOnPlatter(gamemap-1, choice)))
+	if (Playing() && !(M_CanShowLevelOnPlatter(cv_nextmap.value-1, cv_newgametype.value)) && (M_CanShowLevelOnPlatter(gamemap-1, cv_newgametype.value)))
 		CV_SetValue(&cv_nextmap, gamemap);
 
-	if (!M_PrepareLevelPlatter(choice))
+	if (!M_PrepareLevelPlatter(cv_newgametype.value, (currentMenu == &MPauseDef)))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -8469,7 +8526,7 @@ static void M_HandleConnectIP(INT32 choice)
 			}
 			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
 			{
-				XBOXSTATIC char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
+				char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
 				choice = keypad_translation[choice - 199];
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;
@@ -9410,7 +9467,10 @@ static void M_ToggleDigital(INT32 choice)
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
-		S_ChangeMusicInternal("_clear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
 		//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -9418,7 +9478,10 @@ static void M_ToggleDigital(INT32 choice)
 		if (digital_disabled)
 		{
 			digital_disabled = false;
-			S_ChangeMusicInternal("_clear", false);
+			if (Playing())
+				P_RestoreMusic(&players[consoleplayer]);
+			else
+				S_ChangeMusicInternal("_clear", false);
 			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
@@ -9460,7 +9523,10 @@ static void M_ToggleMIDI(INT32 choice)
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusicInternal("_clear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
 		//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -9468,7 +9534,10 @@ static void M_ToggleMIDI(INT32 choice)
 		if (music_disabled)
 		{
 			music_disabled = false;
-			S_ChangeMusicInternal("_clear", false);
+			if (Playing())
+				P_RestoreMusic(&players[consoleplayer]);
+			else
+				S_ChangeMusicInternal("_clear", false);
 			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else

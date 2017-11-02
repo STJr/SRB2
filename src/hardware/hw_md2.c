@@ -1216,8 +1216,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	{
 		GLPatch_t *gpatch;
 		INT32 *buff;
-		UINT32 durs = spr->mobj->state->tics;
-		UINT32 tics = spr->mobj->tics;
+		INT32 durs = spr->mobj->state->tics;
+		INT32 tics = spr->mobj->tics;
 		md2_frame_t *curr, *next = NULL;
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;

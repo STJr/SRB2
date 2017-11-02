@@ -54,6 +54,7 @@ typedef enum
 	EXT_CFG,
 	EXT_LOADSTART,
 	EXT_WAD = EXT_LOADSTART,
+	EXT_PK3,
 	EXT_SOC,
 	EXT_LUA, // allowed even if not HAVE_BLUA so that we can yell on load attempt
 	NUM_EXT,

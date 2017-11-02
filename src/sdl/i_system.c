@@ -142,7 +142,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 /**	\brief WAD file to look for
 */
-#define WADKEYWORD1 "srb2.srb"
+#define WADKEYWORD1 "srb2.pk3"
 #define WADKEYWORD2 "srb2.wad"
 /**	\brief holds wad path
 */
@@ -670,7 +670,7 @@ void I_StartupKeyboard (void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	XBOXSTATIC char txt[8192];
+	char txt[8192];
 	va_list  argptr;
 
 	va_start(argptr,fmt);
@@ -1026,7 +1026,7 @@ static int joy_open(const char *fname)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			CONS_Printf(M_GetText("Couldn't initialize gamepad: %s\n"), SDL_GetError());
 			return -1;
 		}
 		else
@@ -1036,7 +1036,7 @@ static int joy_open(const char *fname)
 
 		if (num_joy < joyindex)
 		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
+			CONS_Printf("Cannot use gamepad #%d/(%s), it doesn't exist\n",joyindex,fname);
 			for (i = 0; i < num_joy; i++)
 				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick();
@@ -1310,7 +1310,7 @@ static int joy_open2(const char *fname)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
-			CONS_Printf(M_GetText("Couldn't initialize joystick: %s\n"), SDL_GetError());
+			CONS_Printf(M_GetText("Couldn't initialize gamepad: %s\n"), SDL_GetError());
 			return -1;
 		}
 		else
@@ -1318,7 +1318,7 @@ static int joy_open2(const char *fname)
 
 		if (num_joy < joyindex)
 		{
-			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
+			CONS_Printf("Cannot use gamepad #%d/(%s), it doesn't exist\n",joyindex,fname);
 			for (i = 0; i < num_joy; i++)
 				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick2();
@@ -2417,7 +2417,7 @@ char *I_GetUserName(void)
 INT32 I_mkdir(const char *dirname, INT32 unixright)
 {
 //[segabor]
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__) || defined (__OS2__)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__)
 	return mkdir(dirname, unixright);
 #elif defined (_WIN32)
 	UNREFERENCED_PARAMETER(unixright); /// \todo should implement ntright under nt...
@@ -2763,16 +2763,6 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (__OS2__)
-	UINT32 pr_arena;
-
-	if (total)
-		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
-							(PVOID) total, sizeof (UINT32));
-	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
-				(PVOID) &pr_arena, sizeof (UINT32));
-
-	return pr_arena;
 #elif defined (LINUX) || defined (LINUX64)
 	/* Linux */
 	char buf[1024];
