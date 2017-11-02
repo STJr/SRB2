@@ -217,6 +217,7 @@ void A_FlickyHeightCheck();
 void A_FlickyFlutter();
 void A_FlameParticle();
 void A_FadeOverlay();
+void A_Boss5Jump();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256

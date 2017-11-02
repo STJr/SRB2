@@ -1805,6 +1805,7 @@ static actionpointer_t actionpointers[] =
 	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
 	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
 	{{A_FadeOverlay},          "A_FADEOVERLAY"},
+	{{A_Boss5Jump},            "A_BOSS5JUMP"},
 
 	{{NULL},                   "NONE"},
 

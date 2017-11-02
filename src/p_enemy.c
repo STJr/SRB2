@@ -245,6 +245,7 @@ void A_FlickyHeightCheck(mobj_t *actor);
 void A_FlickyFlutter(mobj_t *actor);
 void A_FlameParticle(mobj_t *actor);
 void A_FadeOverlay(mobj_t *actor);
+void A_Boss5Jump(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -9179,7 +9180,7 @@ void A_Repeat(mobj_t *actor)
 		return;
 #endif
 
-	if ((!(actor->extravalue2)) || actor->extravalue2 > locvar1)
+	if (locvar1 && (!actor->extravalue2 || actor->extravalue2 > locvar1))
 		actor->extravalue2 = locvar1;
 
 	if (--actor->extravalue2 > 0)
@@ -10532,4 +10533,94 @@ void A_FadeOverlay(mobj_t *actor)
 
 	if (!(locvar1 & 4))
 		P_SetTarget(&actor->tracer, fade);
+}
+
+// Function: A_Boss5Jump
+//
+// Description: Makes an object jump in an arc to land on their tracer precicely.
+//				Adapted from A_BrakLobShot, see there for explanation.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_Boss5Jump(mobj_t *actor)
+{
+	fixed_t v; // Velocity to jump at
+	fixed_t a1, a2, aToUse; // Velocity squared
+	fixed_t g; // Gravity
+	fixed_t x; // Horizontal difference
+	INT32 x_int; // x! But in integer form!
+	fixed_t y; // Vertical difference (yes that's normally z in SRB2 shut up)
+	INT32 y_int; // y! But in integer form!
+	INT32 intHypotenuse; // x^2 + y^2. Frequently overflows fixed point, hence why we need integers proper.
+	fixed_t fixedHypotenuse; // However, we can work around that and still get a fixed-point number.
+	angle_t theta; // Angle of attack
+	// INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+ 
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5Jump", actor))
+		return;
+#endif
+ 
+	if (!actor->tracer)
+		return; // Don't even bother if we've got nothing to aim at.
+ 
+	// Look up actor's current gravity situation
+	if (actor->subsector->sector->gravity)
+		g = FixedMul(gravity,(FixedDiv(*actor->subsector->sector->gravity>>FRACBITS, 1000)));
+	else
+		g = gravity;
+ 
+	// Look up distance between actor and its tracer
+	x = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
+	// Look up height difference between actor and its tracer
+	y = actor->tracer->z - actor->z;
+ 
+	// Get x^2 + y^2. Have to do it in a roundabout manner, because this overflows fixed_t way too easily otherwise.
+	x_int = x>>FRACBITS;
+	y_int = y>>FRACBITS;
+	intHypotenuse = (x_int*x_int) + (y_int*y_int);
+	fixedHypotenuse = FixedSqrt(intHypotenuse) *256;
+ 
+	// a = g(y+/-sqrt(x^2+y^2)). a1 can be +, a2 can be -.
+	a1 = FixedMul(g,y+fixedHypotenuse);
+	a2 = FixedMul(g,y-fixedHypotenuse);
+ 
+	// Determine which one isn't actually an imaginary number (or the smaller of the two, if both are real), and use that for v.
+	if (a1 < 0 || a2 < 0)
+	{
+		if (a1 < 0 && a2 < 0)
+		{
+			//Somehow, v^2 is negative in both cases. v is therefore imaginary and something is horribly wrong. Abort!
+			return;
+		}
+		// Just find which one's NOT negative, and use that
+		aToUse = max(a1,a2);
+	}
+	else
+	{
+		// Both are positive; use whichever's smaller so it can decay faster
+		aToUse = min(a1,a2);
+	}
+	v = FixedSqrt(aToUse);
+	// Okay, so we know the velocity. Let's actually find theta.
+	// We can cut the "+/- sqrt" part out entirely, since v was calculated specifically for it to equal zero. So:
+	//theta = tantoangle[FixedDiv(aToUse,FixedMul(g,x)) >> DBITS];
+	theta = tantoangle[SlopeDiv(aToUse,FixedMul(g,x))];
+ 
+	// Okay, complicated math done. Let's make this object jump already.
+	A_FaceTracer(actor);
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		actor->z--;
+	else
+		actor->z++;
+
+	// Horizontal axes first. First parameter is initial horizontal impulse, second is to correct its angle.
+	actor->momx = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINECOSINE(actor->angle >> ANGLETOFINESHIFT));
+	actor->momy = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINESINE(actor->angle >> ANGLETOFINESHIFT));
+	// Then the vertical axis. No angle-correction needed here.
+	actor->momz = FixedMul(v, FINESINE(theta >> ANGLETOFINESHIFT));
+	// I hope that's all that's needed, ugh
 }
