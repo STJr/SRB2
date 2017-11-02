@@ -424,8 +424,6 @@ static void P_NetUnArchivePlayers(void)
 		if (flags & FOLLOW)
 			players[i].followmobj = (mobj_t *)(size_t)READUINT32(save_p);
 
-		players[i].viewheight = READFIXED(save_p);
-
 		players[i].camerascale = READFIXED(save_p);
 		players[i].shieldscale = READFIXED(save_p);
 
@@ -448,6 +446,8 @@ static void P_NetUnArchivePlayers(void)
 		players[i].jumpfactor = READFIXED(save_p);
 		players[i].height = READFIXED(save_p);
 		players[i].spinheight = READFIXED(save_p);
+
+		players[i].viewheight = 41*players[i].height/48; // scale cannot be factored in at this point
 	}
 }
 
