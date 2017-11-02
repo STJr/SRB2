@@ -1674,6 +1674,78 @@ static int lib_pPlayerTouchingSectorSpecial(lua_State *L)
 	return 1;
 }
 
+static int lib_pFindLowestFloorSurrounding(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	lua_pushfixed(L, P_FindLowestFloorSurrounding(sector));
+	return 1;
+}
+
+static int lib_pFindHighestFloorSurrounding(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	lua_pushfixed(L, P_FindHighestFloorSurrounding(sector));
+	return 1;
+}
+
+static int lib_pFindNextHighestFloor(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	fixed_t currentheight;
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	// defaults to floorheight of sector arg
+	currentheight = (fixed_t)luaL_optinteger(L, 2, sector->floorheight);
+	lua_pushfixed(L, P_FindNextHighestFloor(sector, currentheight));
+	return 1;
+}
+
+static int lib_pFindNextLowestFloor(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	fixed_t currentheight;
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	// defaults to floorheight of sector arg
+	currentheight = (fixed_t)luaL_optinteger(L, 2, sector->floorheight);
+	lua_pushfixed(L, P_FindNextLowestFloor(sector, currentheight));
+	return 1;
+}
+
+static int lib_pFindLowestCeilingSurrounding(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	lua_pushfixed(L, P_FindLowestCeilingSurrounding(sector));
+	return 1;
+}
+
+static int lib_pFindHighestCeilingSurrounding(lua_State *L)
+{
+	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	//HUDSAFE
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	lua_pushfixed(L, P_FindHighestCeilingSurrounding(sector));
+	return 1;
+}
+
 static int lib_pFindSpecialLineFromTag(lua_State *L)
 {
 	INT16 special = (INT16)luaL_checkinteger(L, 1);
@@ -2532,6 +2604,12 @@ static luaL_Reg lib[] = {
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
 	{"P_PlayerTouchingSectorSpecial",lib_pPlayerTouchingSectorSpecial},
+	{"P_FindLowestFloorSurrounding",lib_pFindLowestFloorSurrounding},
+	{"P_FindHighestFloorSurrounding",lib_pFindHighestFloorSurrounding},
+	{"P_FindNextHighestFloor",lib_pFindNextHighestFloor},
+	{"P_FindNextLowestFloor",lib_pFindNextLowestFloor},
+	{"P_FindLowestCeilingSurrounding",lib_pFindLowestCeilingSurrounding},
+	{"P_FindHighestCeilingSurrounding",lib_pFindHighestCeilingSurrounding},
 	{"P_FindSpecialLineFromTag",lib_pFindSpecialLineFromTag},
 	{"P_SwitchWeather",lib_pSwitchWeather},
 	{"P_LinedefExecute",lib_pLinedefExecute},
