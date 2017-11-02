@@ -346,6 +346,8 @@ typedef enum
 	AXISLOOK,
 	AXISSTRAFE,
 	AXISDEAD, //Axises that don't want deadzones
+	AXISJUMP,
+	AXISSPIN,
 	AXISFIRE,
 	AXISFIRENORMAL,
 } axis_input_e;
@@ -356,6 +358,8 @@ consvar_t cv_sideaxis = {"joyaxis_side", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_lookaxis = {"joyaxis_look", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis = {"joyaxis_fire", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis = {"joyaxis_firenormal", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_jumpaxis = {"joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis = {"joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_turnaxis2 = {"joyaxis2_turn", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_moveaxis2 = {"joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -363,6 +367,8 @@ consvar_t cv_sideaxis2 = {"joyaxis2_side", "Z-Axis", CV_SAVE, joyaxis_cons_t, NU
 consvar_t cv_lookaxis2 = {"joyaxis2_look", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_jumpaxis2 = {"joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #if MAXPLAYERS > 32
 #error "please update player_name table using the new value for MAXPLAYERS"
@@ -725,6 +731,12 @@ static INT32 JoyAxis(axis_input_e axissel)
 		case AXISSTRAFE:
 			axisval = cv_sideaxis.value;
 			break;
+		case AXISJUMP:
+			axisval = cv_jumpaxis.value;
+			break;
+		case AXISSPIN:
+			axisval = cv_spinaxis.value;
+			break;
 		case AXISFIRE:
 			axisval = cv_fireaxis.value;
 			break;
@@ -789,6 +801,12 @@ static INT32 Joy2Axis(axis_input_e axissel)
 			break;
 		case AXISSTRAFE:
 			axisval = cv_sideaxis2.value;
+			break;
+		case AXISJUMP:
+			axisval = cv_jumpaxis2.value;
+			break;
+		case AXISSPIN:
+			axisval = cv_spinaxis2.value;
 			break;
 		case AXISFIRE:
 			axisval = cv_fireaxis2.value;
@@ -858,7 +876,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[consoleplayer];
 	camera_t *thiscam = &camera;
 
@@ -879,6 +897,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	turnright = PLAYER1INPUTDOWN(gc_turnright);
 	turnleft = PLAYER1INPUTDOWN(gc_turnleft);
+	
+	straferkey = PLAYER1INPUTDOWN(gc_straferight);
+	strafelkey = PLAYER1INPUTDOWN(gc_strafeleft);
+	movefkey = PLAYER1INPUTDOWN(gc_forward);
+	movebkey = PLAYER1INPUTDOWN(gc_backward);
+	
 	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^ cv_alwaysfreelook.value;
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
@@ -967,9 +991,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = JoyAxis(AXISMOVE);
-	if (PLAYER1INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0))
+	if (movefkey || (gamepadjoystickmove && axis < 0))
 		forward = forwardmove[speed];
-	if (PLAYER1INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0))
+	if (movebkey || (gamepadjoystickmove && axis > 0))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -977,9 +1001,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// some people strafe left & right with mouse buttons
 	// those people are weird
-	if (PLAYER1INPUTDOWN(gc_straferight))
+	if (straferkey)
 		side += sidemove[speed];
-	if (PLAYER1INPUTDOWN(gc_strafeleft))
+	if (strafelkey)
 		side -= sidemove[speed];
 
 	if (PLAYER1INPUTDOWN(gc_weaponnext))
@@ -1021,7 +1045,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	if (PLAYER1INPUTDOWN(gc_use))
+	axis = JoyAxis(AXISSPIN);
+	if (PLAYER1INPUTDOWN(gc_use) || (cv_usejoystick.value && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	if (PLAYER1INPUTDOWN(gc_camreset))
@@ -1034,7 +1059,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	if (PLAYER1INPUTDOWN(gc_jump))
+	axis = JoyAxis(AXISJUMP);
+	if (PLAYER1INPUTDOWN(gc_jump) || (cv_usejoystick.value && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1114,7 +1140,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	if (!forcestrafe && forward && side)
+	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
+	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
 	{
 		forward = FixedMul(forward, 3*FRACUNIT/4);
 		side = FixedMul(side, 3*FRACUNIT/4);
@@ -1156,7 +1183,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[secondarydisplayplayer];
 	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
 
@@ -1177,6 +1204,12 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	turnright = PLAYER2INPUTDOWN(gc_turnright);
 	turnleft = PLAYER2INPUTDOWN(gc_turnleft);
+
+	straferkey = PLAYER2INPUTDOWN(gc_straferight);
+	strafelkey = PLAYER2INPUTDOWN(gc_strafeleft);
+	movefkey = PLAYER2INPUTDOWN(gc_forward);
+	movebkey = PLAYER2INPUTDOWN(gc_backward);
+
 	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^ cv_alwaysfreelook2.value;
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
@@ -1265,9 +1298,9 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = Joy2Axis(AXISMOVE);
-	if (PLAYER2INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0))
+	if (movefkey || (gamepadjoystickmove && axis < 0))
 		forward = forwardmove[speed];
-	if (PLAYER2INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0))
+	if (movebkey || (gamepadjoystickmove && axis > 0))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1275,9 +1308,9 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// some people strafe left & right with mouse buttons
 	// those people are (still) weird
-	if (PLAYER2INPUTDOWN(gc_straferight))
+	if (straferkey)
 		side += sidemove[speed];
-	if (PLAYER2INPUTDOWN(gc_strafeleft))
+	if (strafelkey)
 		side -= sidemove[speed];
 
 	if (PLAYER2INPUTDOWN(gc_weaponnext))
@@ -1316,7 +1349,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	if (PLAYER2INPUTDOWN(gc_use))
+	axis = Joy2Axis(AXISSPIN);
+	if (PLAYER2INPUTDOWN(gc_use) || (cv_usejoystick2.value && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	if (PLAYER2INPUTDOWN(gc_camreset))
@@ -1329,7 +1363,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	if (PLAYER2INPUTDOWN(gc_jump))
+	axis = Joy2Axis(AXISJUMP);
+	if (PLAYER2INPUTDOWN(gc_jump) || (cv_usejoystick2.value && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1409,7 +1444,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	if (!forcestrafe && forward && side)
+	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
+	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
 	{
 		forward = FixedMul(forward, 3*FRACUNIT/4);
 		side = FixedMul(side, 3*FRACUNIT/4);

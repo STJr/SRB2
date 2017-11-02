@@ -25,8 +25,6 @@
 
 #define FLOATSPEED (FRACUNIT*4)
 
-#define VIEWHEIGHTS "41"
-
 // Maximum player score.
 #define MAXSCORE 99999990 // 999999990
 
@@ -217,7 +215,7 @@ void P_RestoreMultiMusic(player_t *player);
 extern mapthing_t *itemrespawnque[ITEMQUESIZE];
 extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
-extern consvar_t cv_gravity, cv_viewheight;
+extern consvar_t cv_gravity, cv_movebob;
 
 void P_RespawnSpecials(void);
 

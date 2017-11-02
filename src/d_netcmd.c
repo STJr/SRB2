@@ -721,6 +721,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_moveaxis2);
 	CV_RegisterVar(&cv_lookaxis);
 	CV_RegisterVar(&cv_lookaxis2);
+	CV_RegisterVar(&cv_jumpaxis);
+	CV_RegisterVar(&cv_jumpaxis2);
+	CV_RegisterVar(&cv_spinaxis);
+	CV_RegisterVar(&cv_spinaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);

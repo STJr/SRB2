@@ -36,9 +36,9 @@
 #endif
 #include "f_finale.h"
 
-// protos.
-static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
-consvar_t cv_viewheight = {"viewheight", VIEWHEIGHTS, 0, viewheight_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
+consvar_t cv_movebob = {"movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 #ifdef WALLSPLATS
 consvar_t cv_splats = {"splats", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -2898,7 +2898,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 			mo->player->viewheight -= mo->floorz - mo->z;
 
 		mo->player->deltaviewheight =
-			(FixedMul(cv_viewheight.value<<FRACBITS, mo->scale) - mo->player->viewheight)>>3;
+			(FixedMul(41*mo->player->height/48, mo->scale) - mo->player->viewheight)>>3;
 	}
 
 	// adjust height
@@ -9101,7 +9101,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	else if (playernum == secondarydisplayplayer)
 		localangle2 = mobj->angle;
 
-	p->viewheight = cv_viewheight.value<<FRACBITS;
+	p->viewheight = 41*p->height/48;
 
 	if (p->mo->eflags & MFE_VERTICALFLIP)
 		p->viewz = p->mo->z + p->mo->height - p->viewheight;
