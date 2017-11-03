@@ -3189,6 +3189,27 @@ void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 	return;
 }
 
+// Auxiliary function - input a folder name and gives us the resource markers positions.
+static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, lumpinfo_t *lumpinfo, UINT16 *pnumlumps, size_t *pi)
+{
+	UINT16 numlumps = *pnumlumps;
+	size_t i = *pi;
+	if (!stricmp(lumpinfo->name2, folName))
+	{
+		lumpinfo++;
+		*start = ++i;
+		for (; i < numlumps; i++, lumpinfo++)
+			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+				break;
+		lumpinfo--;
+		*end = i-- - *start;
+		*pi = i;
+		*pnumlumps = numlumps;
+		return lumpinfo;
+	}
+	return lumpinfo;
+}
+
 //
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
@@ -3228,58 +3249,39 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:
+		// Look for the lumps that act as resource delimitation markers.
+		lumpinfo = wadfiles[wadnum]->lumpinfo;
+		for (i = 0; i < numlumps; i++, lumpinfo++)
 		{
-			// Auxiliary function - input a folder name and gives us the resource markers positions.
-			void FindFolder(const char *folName, UINT16 *start, UINT16 *end)
-			{
-				if (!stricmp(lumpinfo->name2, folName))
-				{
-					lumpinfo++;
-					*start = ++i;
-					for (; i < numlumps; i++, lumpinfo++)
-						if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
-							break;
-					lumpinfo--;
-					*end = i-- - *start;
-					return;
-				}
-				return;
-			}
-
-			// Look for the lumps that act as resource delimitation markers.
-			lumpinfo = wadfiles[wadnum]->lumpinfo;
-			for (i = 0; i < numlumps; i++, lumpinfo++)
-			{
-//				FindFolder("Lua/",		&luaPos, &luaNum);
-//				FindFolder("SOCs/",		&socPos, &socNum);
-				FindFolder("Sounds/",	&sfxPos, &sfxNum);
-				FindFolder("Music/",	&musPos, &musNum);
-//				FindFolder("Sprites/",	&sprPos, &sprNum);
-				FindFolder("Textures/",	&texPos, &texNum);
-//				FindFolder("Patches/",	&patPos, &patNum);
-//				FindFolder("Flats/",	&flaPos, &flaNum);
-//				FindFolder("Maps/",		&mapPos, &mapNum);
-			}
-
-			// Update the detected resources.
-			// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
-//			if (luaNum) // Lua scripts.
-//				P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
-//			if (socNum) // SOCs.
-//				P_LoadDehackRange(wadnum, socPos, socNum);
-			if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.
-				P_LoadSoundsRange(wadnum, sfxPos, sfxNum);
-			if (musNum) // Music. TODO: Useless function right now.
-				P_LoadMusicsRange(wadnum, musPos, musNum);
-//			if (sprNum) // Sprites.
-//				R_LoadSpritsRange(wadnum, sprPos, sprNum);
-//			if (texNum) // Textures. TODO: R_LoadTextures() does the folder positioning once again. New function maybe?
-//				R_LoadTextures();
-//			if (mapNum) // Maps. TODO: Actually implement the map WAD loading code, lulz.
-//				P_LoadWadMapRange(wadnum, mapPos, mapNum);
+//			lumpinfo = FindFolder("Lua/",      &luaPos, &luaNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("SOCs/",     &socPos, &socNum, lumpinfo, &numlumps, &i);
+			lumpinfo = FindFolder("Sounds/",   &sfxPos, &sfxNum, lumpinfo, &numlumps, &i);
+			lumpinfo = FindFolder("Music/",    &musPos, &musNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("Sprites/",  &sprPos, &sprNum, lumpinfo, &numlumps, &i);
+			lumpinfo = FindFolder("Textures/", &texPos, &texNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("Patches/",  &patPos, &patNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("Flats/",    &flaPos, &flaNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("Maps/",     &mapPos, &mapNum, lumpinfo, &numlumps, &i);
 		}
+
+		// Update the detected resources.
+		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
+#ifdef HAVE_BLUA
+//		if (luaNum) // Lua scripts.
+//			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
+#endif
+//		if (socNum) // SOCs.
+//			P_LoadDehackRange(wadnum, socPos, socNum);
+		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.
+			P_LoadSoundsRange(wadnum, sfxPos, sfxNum);
+		if (musNum) // Music. TODO: Useless function right now.
+			P_LoadMusicsRange(wadnum, musPos, musNum);
+//		if (sprNum) // Sprites.
+//			R_LoadSpritsRange(wadnum, sprPos, sprNum);
+//		if (texNum) // Textures. TODO: R_LoadTextures() does the folder positioning once again. New function maybe?
+//			R_LoadTextures();
+//		if (mapNum) // Maps. TODO: Actually implement the map WAD loading code, lulz.
+//			P_LoadWadMapRange(wadnum, mapPos, mapNum);
 		break;
 	default:
 		lumpinfo = wadfiles[wadnum]->lumpinfo;
