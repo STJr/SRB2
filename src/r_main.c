@@ -1311,7 +1311,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
-	
+
 	CV_RegisterVar(&cv_movebob);
 
 #ifdef HWRENDER

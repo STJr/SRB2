@@ -617,7 +617,7 @@ UINT16 W_InitFile(const char *filename)
 		lumpinfo_t *lump_p;
 		filelump_t *fileinfo;
 		void *fileinfov;
-		
+
 		type = RET_WAD;
 
 		// read the header

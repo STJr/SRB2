@@ -43,11 +43,11 @@ typedef struct
 } ATTRPACK filelump_t;
 
 // Available compression methods for lumps.
-typedef enum 
+typedef enum
 {
-	CM_NOCOMPRESSION, 
-	CM_DEFLATE, 
-	CM_LZF, 
+	CM_NOCOMPRESSION,
+	CM_DEFLATE,
+	CM_LZF,
 	CM_UNSUPPORTED
 } compmethod;
 

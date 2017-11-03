@@ -145,7 +145,7 @@ void P_InitPicAnims(void)
 	size_t i;
 
 	I_Assert(animdefs == NULL);
-	
+
 	maxanims = 0;
 
 	for (w = numwadfiles-1; w >= 0; w--)
@@ -161,7 +161,7 @@ void P_InitPicAnims(void)
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
 		}
 	}
-	
+
 	// Define the last one
 	animdefs[maxanims].istexture = -1;
 	strncpy(animdefs[maxanims].endname, "", 9);

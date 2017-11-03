@@ -1196,7 +1196,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
-		
+
 		if (wadfiles[i]->type == RET_PK3)
 		{
 			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);

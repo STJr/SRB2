@@ -897,12 +897,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	turnright = PLAYER1INPUTDOWN(gc_turnright);
 	turnleft = PLAYER1INPUTDOWN(gc_turnleft);
-	
+
 	straferkey = PLAYER1INPUTDOWN(gc_straferight);
 	strafelkey = PLAYER1INPUTDOWN(gc_strafeleft);
 	movefkey = PLAYER1INPUTDOWN(gc_forward);
 	movebkey = PLAYER1INPUTDOWN(gc_backward);
-	
+
 	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^ cv_alwaysfreelook.value;
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;

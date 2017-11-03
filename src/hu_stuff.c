@@ -994,12 +994,12 @@ static void HU_DrawCEcho(void)
 static void HU_drawGametype(void)
 {
 	const char *strvalue = NULL;
-	
+
 	if (gametype < 0 || gametype >= NUMGAMETYPES)
 		return; // not a valid gametype???
 
 	strvalue = Gametype_Names[gametype];
-		
+
 	if (splitscreen)
 		V_DrawString(4, 184, 0, strvalue);
 	else
