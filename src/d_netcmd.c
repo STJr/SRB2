@@ -4176,17 +4176,9 @@ static void Color_OnChange(void)
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
 	}
-
-	if (!P_PlayerMoving(consoleplayer))
-	{
-		// Color change menu scrolling fix is no longer necessary
-		SendNameAndColor();
-	}
-	else
-	{
-		CV_StealthSetValue(&cv_playercolor,
-			players[consoleplayer].skincolor);
-	}
+	
+	// Color change menu scrolling fix is no longer necessary
+	SendNameAndColor();
 }
 
 /** Sends a color change for the secondary splitscreen player, unless that
@@ -4199,16 +4191,8 @@ static void Color2_OnChange(void)
 	if (!Playing() || !splitscreen)
 		return; // do whatever you want
 
-	if (!P_PlayerMoving(secondarydisplayplayer))
-	{
-		// Color change menu scrolling fix is no longer necessary
-		SendNameAndColor2();
-	}
-	else
-	{
-		CV_StealthSetValue(&cv_playercolor2,
-			players[secondarydisplayplayer].skincolor);
-	}
+	// Color change menu scrolling fix is no longer necessary
+	SendNameAndColor2();
 }
 
 /** Displays the result of the chat being muted or unmuted.
