@@ -3914,16 +3914,21 @@ static void Command_Tunes_f(void)
 
 static void Command_RestartAudio_f(void)
 {
+	if (dedicated) // No point in doing anything game is a dedicated server.
+	return;
+
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_StartupSound();
 	I_InitMusic();
 	
-// These must be called or everthing will be muted for the user until next volume change.
-	
+// These must be called or no sound and music untill manually set.
+
 	I_SetSfxVolume(cv_soundvolume.value);
 	I_SetDigMusicVolume(cv_digmusicvolume.value);
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
+	if (Playing() && (!dedicated)) 
+	P_RestoreMusic(displayplayer);
 }
 
 /** Quits a game and returns to the title screen.
