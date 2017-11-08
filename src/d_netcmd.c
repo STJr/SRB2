@@ -3915,7 +3915,7 @@ static void Command_Tunes_f(void)
 static void Command_RestartAudio_f(void)
 {
 	if (dedicated) // No point in doing anything game is a dedicated server.
-	return;
+		return;
 
 	I_ShutdownMusic();
 	I_ShutdownSound();
@@ -3928,7 +3928,7 @@ static void Command_RestartAudio_f(void)
 	I_SetDigMusicVolume(cv_digmusicvolume.value);
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
 	if (Playing() && (!dedicated)) 
-	P_RestoreMusic(displayplayer);
+		P_RestoreMusic(displayplayer);
 }
 
 /** Quits a game and returns to the title screen.
