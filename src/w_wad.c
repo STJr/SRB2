@@ -224,7 +224,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 			{	// shameless copy+paste of code from LUA_LoadLump
 				char *name = malloc(strlen(wadfiles[wadnum]->filename)+10);
 				strcpy(name, wadfiles[wadnum]->filename);
-				if (!fasticmp(&name[strlen(name) - 4], ".soc")) {
+				/*if (!fasticmp(&name[strlen(name) - 4], ".soc"))*/ {
 					// If it's not a .soc file, copy the lump name in too.
 					name[strlen(wadfiles[wadnum]->filename)] = '|';
 					M_Memcpy(name+strlen(wadfiles[wadnum]->filename)+1, lump_p->name, 8);
@@ -319,7 +319,7 @@ UINT16 W_InitFile(const char *filename)
 	FILE *handle;
 	lumpinfo_t *lumpinfo;
 	wadfile_t *wadfile;
-	enum restype type;
+	restype_t type;
 	UINT16 numlumps;
 	size_t i;
 	INT32 compressed = 0;
@@ -390,7 +390,7 @@ UINT16 W_InitFile(const char *filename)
 		// This code emulates a wadfile with one lump name "OBJCTCFG"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		type = RET_WAD;
+		type = RET_SOC;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -411,7 +411,7 @@ UINT16 W_InitFile(const char *filename)
 		// This code emulates a wadfile with one lump name "LUA_INIT"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		type = RET_WAD;
+		type = RET_LUA;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -733,11 +733,24 @@ UINT16 W_InitFile(const char *filename)
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
-	if (wadfile->type == RET_WAD)
-		W_LoadDehackedLumps(numwadfiles - 1);
-	else if (wadfile->type == RET_PK3)
-		W_LoadDehackedLumpsPK3(numwadfiles - 1);
-
+	switch (wadfile->type)
+	{
+		case RET_WAD:
+			W_LoadDehackedLumps(numwadfiles - 1);
+			break;
+		case RET_PK3:
+			W_LoadDehackedLumpsPK3(numwadfiles - 1);
+			break;
+		case RET_SOC:
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
+			DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0);
+			break;
+		case RET_LUA:
+			LUA_LoadLump(numwadfiles - 1, 0);
+			break;
+		default:
+			break;
+	}
 
 	W_InvalidateLumpnumCache();
 

@@ -78,12 +78,18 @@ typedef struct
 #endif
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
-enum restype {RET_WAD, RET_PK3};
+typedef enum restype
+{
+	RET_WAD,
+	RET_SOC,
+	RET_LUA,
+	RET_PK3
+} restype_t;
 
 typedef struct wadfile_s
 {
 	char *filename;
-	enum restype type;
+	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 #ifdef HWRENDER
