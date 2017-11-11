@@ -282,7 +282,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
-	SINT8 adminplayer; // Needs to be signed
+	SINT8 adminplayers[4]; // Needs to be signed
 
 	char server_context[8]; // Unique context id, generated at server startup.
 
@@ -321,7 +321,7 @@ typedef struct
 	UINT8 cheatsenabled;
 	UINT8 isdedicated;
 	UINT8 fileneedednum;
-	SINT8 adminplayer;
+	SINT8 adminplayers[4];
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];

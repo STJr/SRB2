@@ -2441,7 +2441,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin '%s' not found.\n"), skinname);
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
 	SetPlayerSkinByNum(playernum, 0);
@@ -2499,7 +2499,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }

@@ -8270,9 +8270,9 @@ static inline int lib_getenum(lua_State *L)
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"admin")) {
-		if (!playeringame[adminplayer] || adminplayer == serverplayer)
-			return 0;
-		LUA_PushUserdata(L, &players[adminplayer], META_PLAYER);
+		//if (!playeringame[adminplayer] || IsPlayerAdmin(serverplayer))
+			//return 0;
+		//LUA_PushUserdata(L, &players[adminplayer], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);

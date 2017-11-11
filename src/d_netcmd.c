@@ -317,6 +317,7 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
+consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t pointlimit_cons_t[] = {{0, "MIN"}, {999999990, "MAX"}, {0, NULL}};
 consvar_t cv_pointlimit = {"pointlimit", "0", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
@@ -365,7 +366,7 @@ consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
-INT32 adminplayer = -1;
+INT32 adminplayers[] = { -1, -1, -1, -1 }; // Hardcoded to four admins for now.
 
 /// \warning Keep this up-to-date if you add/remove/rename net text commands
 const char *netxcmdnames[MAXNETXCMD - 1] =
@@ -665,6 +666,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ghost_guest);
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
+	COM_AddCommand("tunes", Command_Tunes_f);
+	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_usegamma);
@@ -1005,7 +1008,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && (cv_forceskin.value != -1) && !(IsPlayerAdmin(playernum) && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1156,7 +1159,7 @@ static void SendNameAndColor(void)
 	snacpending++;
 
 	// Don't change name if muted
-	if (cv_mute.value && !(server || adminplayer == consoleplayer))
+	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
 	else // Cleanup name if changing it
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
@@ -1563,7 +1566,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer))
+		if (!IsPlayerAdmin(consoleplayer))
 		{
 			if (SV_SpawnServer())
 				buf[0] &= ~(1<<1);
@@ -1621,7 +1624,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (client && !(adminplayer == consoleplayer))
+	if (client && !IsPlayerAdmin(consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1750,7 +1753,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	INT32 resetplayer = 1, lastgametype;
 	UINT8 skipprecutscene, FLS;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal map change received from %s\n"), player_names[playernum]);
 		if (server)
@@ -1848,7 +1851,7 @@ static void Command_Pause(void)
 	else
 		WRITEUINT8(cp, 0);
 
-	if (cv_pause.value || server || (adminplayer == consoleplayer))
+	if (cv_pause.value || server || (IsPlayerAdmin(consoleplayer)))
 	{
 		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 		{
@@ -1866,7 +1869,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 	UINT8 dedicatedpause = false;
 	const char *playername;
 
-	if (netgame && !cv_pause.value && playernum != serverplayer && playernum != adminplayer)
+	if (netgame && !cv_pause.value && playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal pause command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -1995,7 +1998,7 @@ static void Got_RandomSeed(UINT8 **cp, INT32 playernum)
   */
 static void Command_Clearscores_f(void)
 {
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		return;
 
 	SendNetXCmd(XD_CLEARSCORES, NULL, 1);
@@ -2015,7 +2018,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 	INT32 i;
 
 	(void)cp;
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal clear scores command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2236,7 +2239,7 @@ static void Command_ServerTeamChange_f(void)
 	UINT16 usvalue;
 	NetPacket.value.l = NetPacket.value.b = 0;
 
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2383,7 +2386,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 	if (NetPacket.packet.verification) // Special marker that the server sent the request
 	{
-		if (playernum != serverplayer && (playernum != adminplayer))
+		if (playernum != serverplayer && (!IsPlayerAdmin(playernum)))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
@@ -2422,7 +2425,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 	else
 	{
-		if (playernum != serverplayer && (playernum != adminplayer))
+		if (playernum != serverplayer && (!IsPlayerAdmin(playernum)))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
@@ -2746,6 +2749,53 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 #endif
 }
 
+boolean IsPlayerAdmin(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < 4; i++)
+		if (playernum == adminplayers[i])
+			return true;
+
+	return false;
+}
+
+void SetAdminPlayer(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < 4; i++)
+	{
+		if (playernum == adminplayers[i])
+			return; // Player is already admin
+
+		if (adminplayers[i] == -1)
+		{
+			adminplayers[i] = playernum; // Set the player to a free spot
+			break; // End the loop now. If it keeps going, the same player might get assigned to two slots.
+		}
+
+		if (i == 3 && adminplayers[i] != -1) // End of the loop and all slots are full
+		{
+			adminplayers[0] = playernum; // Overwrite the first slot
+			break;
+		}
+	}
+}
+
+void ClearAdminPlayers(void)
+{
+	INT32 i;
+	for (i = 0; i < 4; i++)
+		adminplayers[i] = -1;
+}
+
+void RemoveAdminPlayer(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < 4; i++)
+		if (playernum == adminplayers[i])
+			adminplayers[i] = -1;
+}
+
 static void Command_Verify_f(void)
 {
 	XBOXSTATIC char buf[8]; // Should be plenty
@@ -2794,7 +2844,7 @@ static void Got_Verification(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	adminplayer = num;
+	SetAdminPlayer(num);
 
 	if (num != consoleplayer)
 		return;
@@ -2813,7 +2863,7 @@ static void Command_MotD_f(void)
 		return;
 	}
 
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2860,7 +2910,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum)
 		if (!isprint(mymotd[i]) || mymotd[i] == ';')
 			kick = true;
 
-	if ((playernum != serverplayer && playernum != adminplayer) || kick)
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal motd change received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2897,7 +2947,7 @@ static void Command_RunSOC(void)
 	else
 		fn = COM_Argv(1);
 
-	if (netgame && !(server || consoleplayer == adminplayer))
+	if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2923,7 +2973,7 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 	char filename[256];
 	filestatus_t ncs = FS_NOTFOUND;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal runsoc command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2994,7 +3044,7 @@ static void Command_Addfile(void)
 	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
-		if (netgame && !(server || adminplayer == consoleplayer))
+		if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;
@@ -3069,7 +3119,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (IsPlayerAdmin(consoleplayer)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -3118,7 +3168,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
-	INT32 i;
+	INT32 i,j;
 	size_t packetsize = 0;
 	serverinfo_pak *dummycheck = NULL;
 
@@ -3137,7 +3187,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		if (!isprint(filename[i]) || filename[i] == ';')
 			kick = true;
 
-	if ((playernum != serverplayer && playernum != adminplayer) || kick)
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
 	{
 		XBOXSTATIC UINT8 buf[2];
 
@@ -3176,8 +3226,9 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 
 		CONS_Printf("%s",message);
 
-		if (adminplayer)
-			COM_BufAddText(va("sayto %d %s", adminplayer, message));
+		for (j = 0; j < 4; j++)
+			if (adminplayers[j])
+				COM_BufAddText(va("sayto %d %s", adminplayers[j], message));
 
 		return;
 	}
@@ -3571,7 +3622,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 			if (playeringame[i])
 				players[i].ctfteam = 0;
 
-		if (server || (adminplayer == consoleplayer))
+		if (server || (IsPlayerAdmin(consoleplayer)))
 		{
 			CV_StealthSetValue(&cv_teamscramble, 0);
 			teamscramble = 0;
@@ -3654,7 +3705,7 @@ static void TeamScramble_OnChange(void)
 	if (!cv_teamscramble.value)
 		teamscramble = 0;
 
-	if (!G_GametypeHasTeams() && (server || consoleplayer == adminplayer))
+	if (!G_GametypeHasTeams() && (server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("This command cannot be used in this gametype.\n"));
 		CV_StealthSetValue(&cv_teamscramble, 0);
@@ -3833,7 +3884,7 @@ static void Command_ExitLevel_f(void)
 {
 	if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
 		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-	else if (!(server || (adminplayer == consoleplayer)))
+	else if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
@@ -3849,7 +3900,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 	if (gameaction == ga_completed)
 		return;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal exitlevel command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -3954,7 +4005,7 @@ static void Command_Cheats_f(void)
 {
 	if (COM_CheckParm("off"))
 	{
-		if (!(server || (adminplayer == consoleplayer)))
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		else
 			CV_ResetCheatNetVars();
@@ -3964,7 +4015,7 @@ static void Command_Cheats_f(void)
 	if (CV_CheatsEnabled())
 	{
 		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
-		if (server || (adminplayer == consoleplayer))
+		if (server || (IsPlayerAdmin(consoleplayer)))
 			CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
@@ -4033,7 +4084,7 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
+	if ((server || IsPlayerAdmin(consoleplayer)) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
 	{
 		if (cv_forceskin.value == -2)
 			CV_SetValue(&cv_forceskin, numskins-1);
@@ -4063,7 +4114,7 @@ static void ForceSkin_OnChange(void)
 //Allows the player's name to be changed if cv_mute is off.
 static void Name_OnChange(void)
 {
-	if (cv_mute.value && !(server || adminplayer == consoleplayer))
+	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You may not change your name when chat is muted.\n"));
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
@@ -4186,7 +4237,7 @@ static void Color2_OnChange(void)
   */
 static void Mute_OnChange(void)
 {
-	if (server || (adminplayer == consoleplayer))
+	if (server || (IsPlayerAdmin(consoleplayer)))
 		return;
 
 	if (cv_mute.value)

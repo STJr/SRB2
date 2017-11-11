@@ -1220,7 +1220,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 	char *svalue;
 	UINT8 stealth = false;
 
-	if (playernum != serverplayer && playernum != adminplayer && !serverloading)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum) && !serverloading)
 	{
 		// not from server or remote admin, must be hacked/buggy client
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal netvar command received from %s\n"), player_names[playernum]);
@@ -1349,7 +1349,7 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 		// send the value of the variable
 		XBOXSTATIC UINT8 buf[128];
 		UINT8 *p = buf;
-		if (!(server || (adminplayer == consoleplayer)))
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
 			return;
