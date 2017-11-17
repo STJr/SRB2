@@ -6274,7 +6274,7 @@ static void M_DrawLoadGameData(void)
 			for (j = 0; j < 7; ++j)
 			{
 				if (savegameinfo[savetodraw].numemeralds & (1 << j))
-					V_DrawScaledPatch(workx, y, 0, tinyemeraldpics[j]);
+					V_DrawScaledPatch(workx, y, 0, emeraldpics[1][j]);
 				workx += 10;
 			}
 		}

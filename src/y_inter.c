@@ -176,12 +176,23 @@ static INT32 SCY(INT32 z)
 
 static void Y_IntermissionTokenDrawer(void)
 {
-	INT32 y;
-	INT32 offs = 0;
+	INT32 y, offs, lowy, calc;
 	UINT32 tokencount;
-	INT32 lowy = BASEVIDHEIGHT - 32;
-	INT16 temp = SHORT(tokenicon->height)/2;
-	INT32 calc;
+	INT16 temp;
+	UINT8 em;
+
+	offs = 0;
+	lowy = BASEVIDHEIGHT - 32 - 8;
+	temp = SHORT(tokenicon->height)/2;
+
+	if (!(emeralds & EMERALD1)) em = 0;
+	else if (!(emeralds & EMERALD2)) em = 1;
+	else if (!(emeralds & EMERALD3)) em = 2;
+	else if (!(emeralds & EMERALD4)) em = 3;
+	else if (!(emeralds & EMERALD5)) em = 4;
+	else if (!(emeralds & EMERALD6)) em = 5;
+	else if (!(emeralds & EMERALD7)) em = 6;
+	else return;
 
 	if (tallydonetic != -1)
 	{
@@ -190,7 +201,7 @@ static void Y_IntermissionTokenDrawer(void)
 			offs = 8;
 	}
 
-	V_DrawFill(32, lowy-1, 16, 1, 31); // slot
+	V_DrawSmallScaledPatch(32, lowy-1, 0, emeraldpics[2][em]); // coinbox
 
 	y = (lowy + offs + 1) - (temp + (token + 1)*8);
 
@@ -370,14 +381,14 @@ void Y_IntermissionDrawer(void)
 		}
 
 		// draw the emeralds
-		if (intertic & 1)
+		//if (intertic & 1)
 		{
-			INT32 emeraldx = 80;
+			INT32 emeraldx = 152 - 3*28;
 			for (i = 0; i < 7; ++i)
 			{
-				if (emeralds & (1 << i))
-					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[i]);
-				emeraldx += 24;
+				if ((emeralds & (1 << i)) && ((intertic & 1) || i != (gamemap + 1 - sstage_start)))
+					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
+				emeraldx += 28;
 			}
 		}
 

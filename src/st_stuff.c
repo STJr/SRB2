@@ -1699,33 +1699,33 @@ static void ST_drawMatchHUD(void)
 	offset = 136; // Used for Y now
 
 	if (stplyr->powers[pw_emeralds] & EMERALD1)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[0]);
+		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][0]);
 
 	offset += 8;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD2)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[1]);
+		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][1]);
 
 	if (stplyr->powers[pw_emeralds] & EMERALD6)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[5]);
+		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][5]);
 
 	offset += 16;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD3)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[2]);
+		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][2]);
 
 	if (stplyr->powers[pw_emeralds] & EMERALD5)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[4]);
+		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][4]);
 
 	offset += 8;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD4)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[3]);
+		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][3]);
 
 	offset -= 16;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD7)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[6]);
+		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][6]);
 
 #ifdef HAVE_BLUA
 	}
