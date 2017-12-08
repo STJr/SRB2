@@ -1375,8 +1375,7 @@ static boolean SV_SendServerConfig(INT32 node)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (i < 4)
-			netbuffer->u.servercfg.adminplayers[i] = (SINT8)adminplayers[i];
+		netbuffer->u.servercfg.adminplayers[i] = (SINT8)adminplayers[i];
 
 		if (!playeringame[i])
 			continue;
@@ -3275,6 +3274,10 @@ boolean Playing(void)
 
 boolean SV_SpawnServer(void)
 {
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		adminplayers[i] = -1; // Populate the entire adminplayers array with -1.
+
 	if (demoplayback)
 		G_StopDemo(); // reset engine parameter
 	if (metalplayback)
@@ -3598,9 +3601,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				gametype = netbuffer->u.servercfg.gametype;
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
-				for (j = 0; j < 4; j++)
+				for (j = 0; j < MAXPLAYERS; j++)
 					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
-				j = 0;
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
