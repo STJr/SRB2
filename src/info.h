@@ -218,6 +218,7 @@ void A_FlickyFlutter();
 void A_FlameParticle();
 void A_FadeOverlay();
 void A_Boss5Jump();
+void A_LightBeamReset();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -401,6 +402,9 @@ typedef enum sprite
 	SPR_CRL2, // Coral 2
 	SPR_CRL3, // Coral 3
 	SPR_BCRY, // Blue Crystal
+	SPR_KELP, // Kelp
+	SPR_DSTG, // DSZ Stalagmites
+	SPR_LIBE, // DSZ Light beam
 
 	// Castle Eggman Scenery
 	SPR_CHAN, // CEZ Chain
@@ -2056,6 +2060,33 @@ typedef enum state
 	// Blue Crystal
 	S_BLUECRYSTAL1,
 
+	// Kelp,
+	S_KELP,
+
+	// DSZ Stalagmites
+	S_DSZSTALAGMITE,
+	S_DSZ2STALAGMITE,
+
+	// DSZ Light beam
+	S_LIGHTBEAM1,
+	S_LIGHTBEAM2,
+	S_LIGHTBEAM3,
+	S_LIGHTBEAM4,
+	S_LIGHTBEAM5,
+	S_LIGHTBEAM6,
+	S_LIGHTBEAM7,
+	S_LIGHTBEAM8,
+	S_LIGHTBEAM9,
+	S_LIGHTBEAM10,
+	S_LIGHTBEAM11,
+	S_LIGHTBEAM12,
+	S_LIGHTBEAM13,
+	S_LIGHTBEAM14,
+	S_LIGHTBEAM15,
+	S_LIGHTBEAM16,
+	S_LIGHTBEAM17,
+	S_LIGHTBEAM18,
+
 	// CEZ Chain
 	S_CEZCHAIN,
 
@@ -3481,6 +3512,10 @@ typedef enum mobj_type
 	MT_CORAL2, // Coral 2
 	MT_CORAL3, // Coral 3
 	MT_BLUECRYSTAL, // Blue Crystal
+	MT_KELP, // Kelp
+	MT_DSZSTALAGMITE, // Deep Sea 1 Stalagmite
+	MT_DSZ2STALAGMITE, // Deep Sea 2 Stalagmite
+	MT_LIGHTBEAM, // DSZ Light beam
 
 	// Castle Eggman Scenery
 	MT_CHAIN, // CEZ Chain

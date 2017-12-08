@@ -202,6 +202,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"CRL2", // Coral 2
 	"CRL3", // Coral 3
 	"BCRY", // Blue Crystal
+	"KELP", // Kelp
+	"DSTG", // DSZ Stalagmites
+	"LIBE", // DSZ Light beam
 
 	// Castle Eggman Scenery
 	"CHAN", // CEZ Chain
@@ -1947,6 +1950,33 @@ state_t states[NUMSTATES] =
 
 	// Blue Crystal
 	{SPR_BCRY, FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_BLUECRYSTAL1
+
+	// Kelp
+	{SPR_KELP, 0, -1, {NULL}, 0, 0, S_NULL}, // S_KELP
+
+	// DSZ Stalagmites
+	{SPR_DSTG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_DSZSTALAGMITE
+	{SPR_DSTG, 1, -1, {NULL}, 0, 0, S_NULL}, // S_DSZ2STALAGMITE
+
+	// DSZ Light beam
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {A_LightBeamReset}, 0, 0, S_LIGHTBEAM2}, // S_LIGHTBEAM1
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM3}, // S_LIGHTBEAM2
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM4}, // S_LIGHTBEAM3
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM5}, // S_LIGHTBEAM4
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM6}, // S_LIGHTBEAM5
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM7}, // S_LIGHTBEAM6
+	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM8}, // S_LIGHTBEAM7
+	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM9}, // S_LIGHTBEAM8
+	{SPR_LIBE, 0|FF_TRANS30|FF_FULLBRIGHT|FF_PAPERSPRITE, 9, {NULL}, 0, 0, S_LIGHTBEAM10}, // S_LIGHTBEAM9
+	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM11}, // S_LIGHTBEAM10
+	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM12}, // S_LIGHTBEAM11
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM13}, // S_LIGHTBEAM12
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM14}, // S_LIGHTBEAM13
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM15}, // S_LIGHTBEAM14
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM16}, // S_LIGHTBEAM15
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM17}, // S_LIGHTBEAM16
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM18}, // S_LIGHTBEAM17
+	{SPR_NULL, 0, 2, {A_SetRandomTics}, 4, 35, S_LIGHTBEAM1}, // S_LIGHTBEAM18
 
 	// CEZ Chain
 	{SPR_CHAN, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CEZCHAIN
@@ -8877,6 +8907,114 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_KELP
+		1007,           // doomednum
+		S_KELP, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,     // radius
+		292*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_NOBLOCKMAP,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_DSZSTALAGMITE
+		1008,           // doomednum
+		S_DSZSTALAGMITE, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		116*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_SOLID,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_DSZ2STALAGMITE
+		999,           // doomednum
+		S_DSZ2STALAGMITE, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		116*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_SOLID,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LIGHTBEAM
+		1010,           // doomednum
+		S_LIGHTBEAM1, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,     // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_NOBLOCKMAP|MF_NOGRAVITY,     // flags
 		S_NULL          // raisestate
 	},
 

@@ -8359,6 +8359,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_GFZCHERRYTREE:
 		case MT_LAMPPOST1:
 		case MT_LAMPPOST2:
+		case MT_DSZSTALAGMITE:
+		case MT_DSZ2STALAGMITE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
 		case MT_DETON:
@@ -10075,6 +10077,15 @@ domaceagain:
 	case MT_TRAPGOYLELONG:
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
+		break;
+	case MT_DSZSTALAGMITE:
+	case MT_DSZ2STALAGMITE:
+	case MT_KELP:
+		if (mthing->options & MTF_OBJECTSPECIAL) { // make mobj twice as big as normal
+			P_SetScale(mobj, 2*mobj->scale); // not 2*FRACUNIT in case of something like the old ERZ3 mode
+			mobj->destscale = mobj->scale;
+		}
+		break;
 	default:
 		break;
 	}

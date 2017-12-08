@@ -246,6 +246,7 @@ void A_FlickyFlutter(mobj_t *actor);
 void A_FlameParticle(mobj_t *actor);
 void A_FadeOverlay(mobj_t *actor);
 void A_Boss5Jump(mobj_t *actor);
+void A_LightBeamReset(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10623,4 +10624,34 @@ void A_Boss5Jump(mobj_t *actor)
 	// Then the vertical axis. No angle-correction needed here.
 	actor->momz = FixedMul(v, FINESINE(theta >> ANGLETOFINESHIFT));
 	// I hope that's all that's needed, ugh
+}
+
+// Function: A_LightBeamReset
+// Description: Resets momentum and position for DSZ's projecting light beams
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LightBeamReset(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LightBeamReset", actor))
+		return;
+#endif
+
+	P_SetScale(actor, FRACUNIT + P_SignedRandom()*FRACUNIT/256);
+	actor->destscale = actor->scale;
+
+	if (!actor->spawnpoint)
+		return; // this can't work properly welp
+
+	actor->momx = P_SignedRandom()*FINECOSINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/128;
+	actor->momy = P_SignedRandom()*FINESINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/128;
+	actor->momz = P_SignedRandom()*FRACUNIT/128;
+
+	P_UnsetThingPosition(actor);
+	actor->x = actor->spawnpoint->x*FRACUNIT + P_SignedRandom()*FINECOSINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/2;
+	actor->y = actor->spawnpoint->y*FRACUNIT + P_SignedRandom()*FINESINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/2;
+	actor->z = actor->spawnpoint->z*FRACUNIT + P_SignedRandom()*FRACUNIT/2;
+	P_SetThingPosition(actor);
 }
