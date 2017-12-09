@@ -263,7 +263,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[1][3] = W_CachePatchName("TEMER4", PU_HUDGFX);
 	emeraldpics[1][4] = W_CachePatchName("TEMER5", PU_HUDGFX);
 	emeraldpics[1][5] = W_CachePatchName("TEMER6", PU_HUDGFX);
-	emeraldpics[2][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
+	emeraldpics[1][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
 
 	emeraldpics[2][0] = W_CachePatchName("EMBOX1", PU_HUDGFX);
 	emeraldpics[2][1] = W_CachePatchName("EMBOX2", PU_HUDGFX);
