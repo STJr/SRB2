@@ -688,29 +688,34 @@ static inline void ST_drawRings(void)
 		ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 }
 
-static void ST_drawLives(void)
+static void ST_drawLivesPic(void)
 {
-	const INT32 v_splitflag = (splitscreen && stplyr == &players[displayplayer] ? V_SPLITSCREEN : 0);
-	INT32 livescount;
-	boolean notgreyedout;
+	const INT32 y = STRINGY(hudinfo[HUD_LIVESPIC].y+16)-16;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
 
 	// face background
-	V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, livesback);
+	V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC].x, y,
+		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, livesback);
 
 	// face
-	if (stplyr->mo && stplyr->mo->color)
+	if (stplyr->spectator)
+	{
+		// spectator face
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, SKINCOLOR_CLOUDY, GTC_CACHE);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, y,
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF, faceprefix[stplyr->skin], colormap);
+	}
+	else if (stplyr->mo && stplyr->mo->color)
 	{
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
 		if (stplyr->powers[pw_super])
 			face = superprefix[stplyr->skin];
-		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, y,
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, face, colormap);
 		if (cv_translucenthud.value == 10 && stplyr->powers[pw_super] == 1 && stplyr->mo->tracer)
 		{
 			INT32 v_supertrans = (stplyr->mo->tracer->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
@@ -718,8 +723,8 @@ static void ST_drawLives(void)
 			{
 				v_supertrans <<= V_ALPHASHIFT;
 				colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->tracer->color, GTC_CACHE);
-				V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-					V_SNAPTOLEFT|V_SNAPTOBOTTOM|v_supertrans|v_splitflag,face, colormap);
+				V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, y,
+					V_SNAPTOLEFT|V_SNAPTOBOTTOM|v_supertrans, face, colormap);
 			}
 		}
 	}
@@ -727,20 +732,30 @@ static void ST_drawLives(void)
 	{
 		// skincolor face
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
-		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,faceprefix[stplyr->skin], colormap);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, y,
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
 	}
+}
+
+static void ST_drawLives(void)
+{
+	const INT32 y = STRINGY(hudinfo[HUD_LIVESNAME].y+16)-16;
+	INT32 livescount;
+	boolean notgreyedout;
+
+	if (!stplyr->skincolor)
+		return; // Just joined a server, skin isn't loaded yet!
 
 	// name
 	if (strlen(skins[stplyr->skin].hudname) > 8)
-		V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+		V_DrawThinString(hudinfo[HUD_LIVESNAME].x, y,
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP, skins[stplyr->skin].hudname);
 	else
-		V_DrawString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+		V_DrawString(hudinfo[HUD_LIVESNAME].x, y,
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP, skins[stplyr->skin].hudname);
 	// x
-	V_DrawScaledPatch(hudinfo[HUD_LIVESX].x, hudinfo[HUD_LIVESX].y + (v_splitflag ? -4 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, stlivex);
+	V_DrawScaledPatch(hudinfo[HUD_LIVESX].x, y+8,
+		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, stlivex);
 
 	// lives number
 	if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
@@ -775,20 +790,20 @@ static void ST_drawLives(void)
 	}
 
 	if (livescount == 0x7f)
-		V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0), '\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, false);
+		V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, y+8,
+			'\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, false);
 	else
 	{
 		if (livescount > 99)
 			livescount = 99;
-		V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
+		V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, y+8,
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF),
 			((livescount > 99) ? "!!" : va("%d",livescount)));
 	}
 }
 
 static void ST_drawInput(void)
 {
-	//const INT32 v_splitflag = (splitscreen && stplyr == &players[displayplayer] ? V_SPLITSCREEN : 0); -- no splitscreen support - record attack only for base game
 	const UINT8 accent = (stplyr->skincolor ? Color_Index[stplyr->skincolor-1][4] : 0);
 	UINT8 col, offs;
 
@@ -1620,7 +1635,7 @@ static void ST_drawNiGHTSHUD(void)
 		splitscreen = true;
 }
 
-static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, patch_t *pat)
+static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, INT32 y, patch_t *pat)
 {
 	INT32 txtflags = 0, patflags = 0;
 
@@ -1638,23 +1653,24 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			patflags =  V_80TRANS;
 		}
 
-		V_DrawScaledPatch(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|patflags, pat);
+		V_DrawScaledPatch(8 + xoffs, y, V_SNAPTOLEFT|patflags, pat);
 
 		if (stplyr->powers[weapon] > 99)
-			V_DrawThinString(8 + xoffs + 1, STRINGY(162), V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
+			V_DrawThinString(8 + xoffs + 1, y, V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
 		else
-			V_DrawString(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
+			V_DrawString(8 + xoffs, y, V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
 
 		if (stplyr->currentweapon == wepflag)
-			V_DrawScaledPatch(6 + xoffs, STRINGY(162 - (splitscreen ? 4 : 2)), V_SNAPTOLEFT, curweapon);
+			V_DrawScaledPatch(6 + xoffs, y-2, V_SNAPTOLEFT, curweapon);
 	}
 	else if (stplyr->ringweapons & rwflag)
-		V_DrawScaledPatch(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|V_TRANSLUCENT, pat);
+		V_DrawScaledPatch(8 + xoffs, y, V_SNAPTOLEFT|V_TRANSLUCENT, pat);
 }
 
 static void ST_drawMatchHUD(void)
 {
-	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10);
+	const INT32 y = STRINGY(176+16)-16; // HUD_LIVESPIC
+	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 
 	if (!G_RingSlingerGametype())
 		return;
@@ -1667,27 +1683,27 @@ static void ST_drawMatchHUD(void)
 #endif
 
 	if (stplyr->powers[pw_infinityring])
-		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
+		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, y, infinityring);
 	else if (stplyr->rings > 0)
-		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
+		V_DrawScaledPatch(8 + offset, y, V_SNAPTOLEFT, normring);
 	else
-		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
+		V_DrawTranslucentPatch(8 + offset, y, V_SNAPTOLEFT|V_80TRANS, normring);
 
 	if (!stplyr->currentweapon)
-		V_DrawScaledPatch(6 + offset, STRINGY(162 - (splitscreen ? 4 : 2)), V_SNAPTOLEFT, curweapon);
+		V_DrawScaledPatch(6 + offset, y-2, V_SNAPTOLEFT, curweapon);
 
 	offset += 20;
-	ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset, autoring);
+	ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset, y, autoring);
 	offset += 20;
-	ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset, bouncering);
+	ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset, y, bouncering);
 	offset += 20;
-	ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset, scatterring);
+	ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset, y, scatterring);
 	offset += 20;
-	ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset, grenadering);
+	ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset, y, grenadering);
 	offset += 20;
-	ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, explosionring);
+	ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, y, explosionring);
 	offset += 20;
-	ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, railring);
+	ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, y, railring);
 
 #ifdef HAVE_BLUA
 	}
@@ -1696,36 +1712,36 @@ static void ST_drawMatchHUD(void)
 #endif
 
 	// Power Stones collected
-	offset = 136; // Used for Y now
+	offset = STRINGY(128); // Used for Y now
 
 	if (stplyr->powers[pw_emeralds] & EMERALD1)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][0]);
+		V_DrawScaledPatch(28, offset, V_SNAPTOLEFT, emeraldpics[1][0]);
 
 	offset += 8;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD2)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][1]);
+		V_DrawScaledPatch(40, offset, V_SNAPTOLEFT, emeraldpics[1][1]);
 
 	if (stplyr->powers[pw_emeralds] & EMERALD6)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][5]);
+		V_DrawScaledPatch(16, offset, V_SNAPTOLEFT, emeraldpics[1][5]);
 
 	offset += 16;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD3)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][2]);
+		V_DrawScaledPatch(40, offset, V_SNAPTOLEFT, emeraldpics[1][2]);
 
 	if (stplyr->powers[pw_emeralds] & EMERALD5)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][4]);
+		V_DrawScaledPatch(16, offset, V_SNAPTOLEFT, emeraldpics[1][4]);
 
 	offset += 8;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD4)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][3]);
+		V_DrawScaledPatch(28, offset, V_SNAPTOLEFT, emeraldpics[1][3]);
 
 	offset -= 16;
 
 	if (stplyr->powers[pw_emeralds] & EMERALD7)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, emeraldpics[1][6]);
+		V_DrawScaledPatch(28, offset, V_SNAPTOLEFT, emeraldpics[1][6]);
 
 #ifdef HAVE_BLUA
 	}
@@ -1878,17 +1894,6 @@ static void ST_drawCTFHUD(void)
 			V_DrawCenteredString(300, STRINGY(184), V_YELLOWMAP|V_HUDTRANS, timeleft);
 		}
 	}
-}
-
-// Draws "Red Team", "Blue Team", or "Spectator" for team gametypes.
-static inline void ST_drawTeamName(void)
-{
-	if (stplyr->ctfteam == 1)
-		V_DrawString(256, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "RED TEAM");
-	else if (stplyr->ctfteam == 2)
-		V_DrawString(248, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "BLUE TEAM");
-	else
-		V_DrawString(244, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "SPECTATOR");
 }
 
 static void ST_drawSpecialStageHUD(void)
@@ -2061,6 +2066,8 @@ static void ST_overlayDrawer(void)
 			if (LUA_HudEnabled(hud_rings))
 #endif
 			ST_drawRings();
+
+			ST_drawLivesPic(); // always do on mystic's request - allows us to kill "RED/BLUE TEAM" text
 			if (G_GametypeUsesLives()
 #ifdef HAVE_BLUA
 			&& LUA_HudEnabled(hud_lives)
@@ -2141,10 +2148,6 @@ static void ST_overlayDrawer(void)
 		// CTF HUD Stuff
 		else if (gametype == GT_CTF)
 			ST_drawCTFHUD();
-
-		// Team names for team gametypes
-		if (G_GametypeHasTeams())
-			ST_drawTeamName();
 
 		// Special Stage HUD
 		if (!useNightsSS && G_IsSpecialStage(gamemap) && stplyr == &players[displayplayer])
