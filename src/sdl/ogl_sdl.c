@@ -71,7 +71,6 @@ INT32 oglflags = 0;
 void *GLUhandle = NULL;
 SDL_GLContext sdlglcontext = 0;
 
-#ifndef STATIC_OPENGL
 void *GetGLFunc(const char *proc)
 {
 	if (strncmp(proc, "glu", 3) == 0)
@@ -83,7 +82,6 @@ void *GetGLFunc(const char *proc)
 	}
 	return SDL_GL_GetProcAddress(proc);
 }
-#endif
 
 boolean LoadGL(void)
 {
