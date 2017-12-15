@@ -716,7 +716,10 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 		lua_pop(gL, 1);
 
 	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	{
+		lua_pop(gL, 1);
 		return;
+	}
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
