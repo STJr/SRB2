@@ -244,6 +244,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglMaterialfv glMaterialfv
 
 /* Raster functions */
+#define pglPixelStorei glPixelStorei
 #define pglReadPixels glReadPixels
 
 /* Texture mapping */
@@ -262,15 +263,8 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 /* texture mapping */ //GL_EXT_copy_texture
 #ifndef KOS_GL_COMPATIBILITY
 #define pglCopyTexImage2D glCopyTexImage2D
+#endif
 
-/* GLU functions */
-#define pgluBuild2DMipmaps gluBuild2DMipmaps
-#endif
-#ifndef MINI_GL_COMPATIBILITY
-/* 1.3 functions for multitexturing */
-#define pglActiveTexture glActiveTexture
-#define pglMultiTexCoord2f glMultiTexCoord2f
-#endif
 #else //!STATIC_OPENGL
 
 /* 1.0 functions */
@@ -365,6 +359,8 @@ typedef void (APIENTRY * PFNglMaterialfv) (GLint face, GLenum pname, GLfloat *pa
 static PFNglMaterialfv pglMaterialfv;
 
 /* Raster functions */
+typedef void (APIENTRY * PFNglPixelStorei) (GLenum pname, GLint param);
+static PFNglPixelStorei pglPixelStorei;
 typedef void (APIENTRY  * PFNglReadPixels) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 static PFNglReadPixels pglReadPixels;
 
@@ -391,7 +387,7 @@ static PFNglBindTexture pglBindTexture;
 /* texture mapping */ //GL_EXT_copy_texture
 typedef void (APIENTRY * PFNglCopyTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 static PFNglCopyTexImage2D pglCopyTexImage2D;
-
+#endif
 /* GLU functions */
 typedef GLint (APIENTRY * PFNgluBuild2DMipmaps) (GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
 static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
@@ -402,7 +398,6 @@ typedef void (APIENTRY *PFNglActiveTexture) (GLenum);
 static PFNglActiveTexture pglActiveTexture;
 typedef void (APIENTRY *PFNglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 static PFNglMultiTexCoord2f pglMultiTexCoord2f;
-#endif
 #endif
 
 #ifndef MINI_GL_COMPATIBILITY
@@ -494,6 +489,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglLightModelfv , glLightModelfv)
 	GETOPENGLFUNC(pglMaterialfv , glMaterialfv)
 
+	GETOPENGLFUNC(pglPixelStorei , glPixelStorei)
 	GETOPENGLFUNC(pglReadPixels , glReadPixels)
 
 	GETOPENGLFUNC(pglTexEnvi , glTexEnvi)
@@ -519,35 +515,23 @@ boolean SetupGLfunc(void)
 // This has to be done after the context is created so the version number can be obtained
 boolean SetupGLFunc13(void)
 {
+#ifdef MINI_GL_COMPATIBILITY
+	return false;
+#else
 	const GLubyte *version = pglGetString(GL_VERSION);
 	int glmajor, glminor;
 
 	gl13 = false;
-#ifdef MINI_GL_COMPATIBILITY
-	return false;
-#else
-#ifdef STATIC_OPENGL
-	gl13 = true;
-#else
-
 	// Parse the GL version
 	if (version != NULL)
 	{
 		if (sscanf((const char*)version, "%d.%d", &glmajor, &glminor) == 2)
 		{
 			// Look, we gotta prepare for the inevitable arrival of GL 2.0 code...
-			switch (glmajor)
-			{
-				case 1:
-					if (glminor == 3) gl13 = true;
-					break;
-				case 2:
-				case 3:
-				case 4:
-					gl13 = true;
-				default:
-					break;
-			}
+			if (glmajor == 1 && glminor >= 3)
+				gl13 = true;
+			else if (glmajor > 1)
+				gl13 = true;
 		}
 	}
 
@@ -568,9 +552,6 @@ boolean SetupGLFunc13(void)
 	}
 	else
 		DBG_Printf("GL_ARB_multitexture support: disabled\n");
-#undef GETOPENGLFUNC
-
-#endif
 	return true;
 #endif
 }
@@ -897,7 +878,9 @@ EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height,
 		GLubyte*top = (GLvoid*)dst_data, *bottom = top + dst_stride * (height - 1);
 		GLubyte *row = malloc(dst_stride);
 		if (!row) return;
+		pglPixelStorei(GL_PACK_ALIGNMENT, 1);
 		pglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, dst_data);
+		pglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		for(i = 0; i < height/2; i++)
 		{
 			memcpy(row, top, dst_stride);
@@ -913,7 +896,9 @@ EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height,
 		INT32 j;
 		GLubyte *image = malloc(width*height*3*sizeof (*image));
 		if (!image) return;
+		pglPixelStorei(GL_PACK_ALIGNMENT, 1);
 		pglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+		pglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		for (i = height-1; i >= 0; i--)
 		{
 			for (j = 0; j < width; j++)
@@ -1815,13 +1800,11 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 					min_filter = GL_NEAREST;
 #endif
 			}
-#ifndef STATIC_OPENGL
 			if (!pgluBuild2DMipmaps)
 			{
 				MipMap = GL_FALSE;
 				min_filter = GL_LINEAR;
 			}
-#endif
 			Flush(); //??? if we want to change filter mode by texture, remove this
 			break;
 
@@ -1836,15 +1819,14 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 	}
 }
 
-static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
 	INT32     val, count, pindex;
 	GLfloat s, t;
 	GLfloat ambient[4];
 	GLfloat diffuse[4];
 
-	float pol;
-	UINT32 newtime;
+	float pol = 0.0f;
 	float scalex = scale, scaley = scale, scalez = scale;
 
 	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
@@ -1852,18 +1834,18 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
 #endif
 
-	if (duration == 0)
-		duration = 1;
+	if (duration != 0 && duration != -1 && tics != -1) // don't interpolate if instantaneous or infinite in length
+	{
+		UINT32 newtime = (duration - tics); // + 1;
 
-	newtime = (duration - tics) + 1;
+		pol = (newtime)/(float)duration;
 
-	pol = (newtime)/(float)duration;
+		if (pol > 1.0f)
+			pol = 1.0f;
 
-	if (pol > 1.0f)
-		pol = 1.0f;
-
-	if (pol < 0.0f)
-		pol = 0.0f;
+		if (pol < 0.0f)
+			pol = 0.0f;
+	}
 
 	if (color)
 	{
@@ -1957,7 +1939,7 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 
 			pglTexCoord2f(s, t);
 
-			if (!nextframe)
+			if (!nextframe || pol == 0.0f)
 			{
 				pglNormal3f(frame->vertices[pindex].normal[0],
 				            frame->vertices[pindex].normal[1],
@@ -2007,7 +1989,7 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 // -----------------+
 // HWRAPI DrawMD2   : Draw an MD2 model with glcommands
 // -----------------+
-EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
 	DrawMD2Ex(gl_cmd_buffer, frame, duration, tics,  nextframe, pos, scale, flipped, color);
 }

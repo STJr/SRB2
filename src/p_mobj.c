@@ -7138,7 +7138,7 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z = mobj->ceilingz - mobj->height;
 			else
 				mobj->z = mobj->floorz;
-			// THERE IS NO BREAK HERE ON PURPOSE
+			/* FALLTHRU */
 		default:
 			// check mobj against possible water content, before movement code
 			P_MobjCheckWater(mobj);
@@ -8185,6 +8185,7 @@ void P_PrecipitationEffects(void)
 	{
 		case PRECIP_RAIN: // no lightning or thunder whatsoever
 			sounds_thunder = false;
+			/* FALLTHRU */
 		case PRECIP_STORM_NOSTRIKES: // no lightning strikes specifically
 			effects_lightning = false;
 			break;
