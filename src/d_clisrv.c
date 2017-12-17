@@ -109,7 +109,7 @@ static INT16 consistancy[BACKUPTICS];
 static UINT32 resynch_score[MAXNETNODES]; // "score" for kicking -- if this gets too high then cfail kick
 static UINT16 resynch_delay[MAXNETNODES]; // delay time before the player can be considered to have desynched
 static UINT32 resynch_status[MAXNETNODES]; // 0 bit means synched for that player, 1 means possibly desynched
-static UINT8 resynch_sent[MAXNETNODES][MAXNETNODES]; // what synch packets have we attempted to send to the player
+static UINT8 resynch_sent[MAXNETNODES][MAXPLAYERS]; // what synch packets have we attempted to send to the player
 static UINT8 resynch_inprogress[MAXNETNODES];
 static UINT8 resynch_local_inprogress = false; // WE are desynched and getting packets to fix it.
 static UINT8 player_joining = false;
@@ -928,7 +928,7 @@ static void SV_InitResynchVars(INT32 node)
 	resynch_score[node] = 0; // clean slate
 	resynch_status[node] = 0x00;
 	resynch_inprogress[node] = false;
-	memset(resynch_sent[node], 0, MAXNETNODES);
+	memset(resynch_sent[node], 0, MAXPLAYERS);
 }
 
 static void SV_RequireResynch(INT32 node)
@@ -937,16 +937,16 @@ static void SV_RequireResynch(INT32 node)
 
 	resynch_delay[node] = 10; // Delay before you can fail sync again
 	resynch_score[node] += 200; // Add score for initial desynch
-	resynch_status[node] = 0xFF; // No players assumed synched
+	resynch_status[node] = 0xFFFFFFFF; // No players assumed synched
 	resynch_inprogress[node] = true; // so we know to send a PT_RESYNCHEND after sync
 
 	// Initial setup
-	memset(resynch_sent[node], 0, MAXNETNODES);
+	memset(resynch_sent[node], 0, MAXPLAYERS);
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		if (!playeringame[i]) // Player not in game so just drop it from required synch
 			resynch_status[node] &= ~(1<<i);
-		else if (i == node); // instantly update THEIR position
+		else if (playernode[i] == node); // instantly update THEIR position
 		else // Send at random times based on num players
 			resynch_sent[node][i] = M_RandomKey(D_NumPlayers()>>1)+1;
 	}
