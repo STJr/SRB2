@@ -169,6 +169,10 @@ consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NUL
 // (on those Update can be disabled)
 consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+#if (__GNUC__ > 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+#endif
 // hour,minutes,seconds
 static LPSTR hms(UINT seconds)
 {
@@ -185,6 +189,9 @@ static LPSTR hms(UINT seconds)
 		sprintf (s, "%2lu:%02lu", (long unsigned int)minutes, (long unsigned int)seconds);
 	return s;
 }
+#if (__GNUC__ > 6)
+#pragma GCC diagnostic pop
+#endif
 
 static void Command_Cd_f(void)
 {
