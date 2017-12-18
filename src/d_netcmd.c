@@ -3012,8 +3012,31 @@ static void Command_Addfile(void)
 		if (*p == '\\' || *p == '/' || *p == ':')
 			break;
 	++p;
+	// check total packet size and no of files currently loaded
+	{
+		size_t packetsize = 0;
+		serverinfo_pak *dummycheck = NULL;
+
+		// Shut the compiler up.
+		(void)dummycheck;
+
+		// See W_LoadWadFile in w_wad.c
+		for (i = 0; i < numwadfiles; i++)
+			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+
+		packetsize += nameonlylength(fn) + 22;
+
+		if ((numwadfiles >= MAX_WADFILES)
+		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			return;
+		}
+	}
+
 	WRITESTRINGN(buf_p,p,240);
 
+	// calculate and check md5
 	{
 		UINT8 md5sum[16];
 #ifdef NOMD5
@@ -3031,6 +3054,15 @@ static void Command_Addfile(void)
 		}
 		else // file not found
 			return;
+
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				return;
+			}
+		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
