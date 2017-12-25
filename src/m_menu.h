@@ -42,6 +42,10 @@ void M_Init(void);
 // does nothing if menu is already up.
 void M_StartControlPanel(void);
 
+// Calls M_StartControlPanel if chat is not open,
+// otherwise, closes chat.
+void M_OpenEscapeMenu(void);
+
 // Called upon end of a mode attack run
 void M_EndModeAttackRun(void);
 
@@ -68,7 +72,6 @@ void M_QuitResponse(INT32 ch);
 
 // Determines whether to show a level in the list
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
-
 
 // flags for items in the menu
 // menu handle (what we do when key is pressed

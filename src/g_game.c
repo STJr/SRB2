@@ -1856,6 +1856,12 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam2, cv_chasecam2.value ? 0 : 1);
 				}
 			}
+			if (ev->data1 == gamecontrol[gc_systemmenu][0]
+				|| ev->data1 == gamecontrol[gc_systemmenu][1])
+			{
+				M_OpenEscapeMenu();
+				return true;
+			}
 			return true;
 
 		case ev_keyup:
@@ -1869,7 +1875,6 @@ boolean G_Responder(event_t *ev)
 
 		case ev_joystick2:
 			return true; // eat events
-
 
 		default:
 			break;

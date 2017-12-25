@@ -2100,6 +2100,9 @@ boolean M_Responder(event_t *ev)
 			case KEY_JOY1 + 3:
 				ch = 'n';
 				break;
+			case KEY_JOY1 + 6:
+				ch = KEY_ESCAPE;
+				break;
 			case KEY_MOUSE1 + 1:
 			case KEY_JOY1 + 1:
 				ch = KEY_BACKSPACE;
@@ -2178,7 +2181,8 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[gc_systemmenu][0]) // allow remappable ESC key
+	else if (ch == gamecontrol[gc_systemmenu][0]
+		|| ch == gamecontrol[gc_systemmenu][1]) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys
@@ -2247,13 +2251,7 @@ boolean M_Responder(event_t *ev)
 			// Spymode on F12 handled in game logic
 
 			case KEY_ESCAPE: // Pop up menu
-				if (chat_on)
-				{
-					HU_clearChatChars();
-					chat_on = false;
-				}
-				else
-					M_StartControlPanel();
+				M_OpenEscapeMenu();
 				return true;
 		}
 		noFurtherInput = false; // turns out we didn't care
@@ -2439,6 +2437,21 @@ boolean M_Responder(event_t *ev)
 	}
 
 	return true;
+}
+
+//
+// M_OpenEscapeMenu
+// Opens the escape menu or exits the chat, depending on game state.
+//
+void M_OpenEscapeMenu(void)
+{
+	if (chat_on)
+	{
+		HU_clearChatChars();
+		chat_on = false;
+	}
+	else
+		M_StartControlPanel();
 }
 
 //

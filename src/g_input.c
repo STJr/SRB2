@@ -140,6 +140,8 @@ void G_MapEventsToControls(event_t *ev)
 	{
 		flag = G_CheckDoubleClick(gamekeydown[KEY_JOY1+i], &joydclicks[i]);
 		gamekeydown[KEY_DBLJOY1+i] = flag;
+		if (flag == '\x1') // Improves dodginess of double-press on joysticks..
+			ev->data1 = KEY_DBLJOY1 + i;
 	}
 
 	for (i = 0; i < MOUSEBUTTONS; i++)
@@ -152,6 +154,8 @@ void G_MapEventsToControls(event_t *ev)
 	{
 		flag = G_CheckDoubleClick(gamekeydown[KEY_2JOY1+i], &joy2dclicks[i]);
 		gamekeydown[KEY_DBL2JOY1+i] = flag;
+		if (flag == '\x1') // Improves dodginess of double-press on joysticks..
+			ev->data1 = KEY_DBL2JOY1 + i;
 	}
 }
 
