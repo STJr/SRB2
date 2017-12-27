@@ -3928,7 +3928,7 @@ static void Command_RestartAudio_f(void)
 	I_SetSfxVolume(cv_soundvolume.value);
 	I_SetDigMusicVolume(cv_digmusicvolume.value);
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
-	if (Playing() && (!dedicated)) // Gotta make sure the player is in a level
+	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
 	
 }
