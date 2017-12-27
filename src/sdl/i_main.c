@@ -148,7 +148,9 @@ int main(int argc, char **argv)
 			LoadLibraryA("exchndl.dll");
 		}
 	}
+#ifndef __MINGW32__
 	prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
+#endif
 	MakeCodeWritable();
 #endif
 	// startup SRB2
