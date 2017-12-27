@@ -666,7 +666,9 @@ int WINAPI WinMain (HINSTANCE hInstance,
 #endif
 			LoadLibraryA("exchndl.dll");
 
+#ifndef __MINGW32__
 		prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
+#endif
 
 		Result = HandledWinMain(hInstance);
 #ifdef BUGTRAP
