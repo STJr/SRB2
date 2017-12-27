@@ -3914,23 +3914,23 @@ static void Command_Tunes_f(void)
 
 static void Command_RestartAudio_f(void)
 {
-	if (dedicated) { // No point in doing anything if game is a dedicated server.
+	if (dedicated)  // No point in doing anything if game is a dedicated server.
 		return;
-}
+
 	S_StopMusic();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_StartupSound();
 	I_InitMusic();
 	
-// These must be called or no sound and music untill manually set.
+// These must be called or no sound and music until manually set.
 
 	I_SetSfxVolume(cv_soundvolume.value);
 	I_SetDigMusicVolume(cv_digmusicvolume.value);
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
-	if (Playing() && (!dedicated)) { // Gotta make sure the player is in a level
+	if (Playing() && (!dedicated)) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
-	}
+	
 }
 
 /** Quits a game and returns to the title screen.
