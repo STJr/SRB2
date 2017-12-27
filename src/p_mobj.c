@@ -8332,6 +8332,16 @@ void P_RespawnSpecials(void)
 			if (mthing->type == mobjinfo[i].doomednum)
 				break;
 
+		if (i == NUMMOBJTYPES) // prevent creation of objects with this type -- Monster Iestyn 17/12/17
+		{
+			// 3D Mode start Thing is unlikely to be added to the que,
+			// so don't bother checking for that specific type
+			CONS_Alert(CONS_WARNING, M_GetText("P_RespawnSpecials: Unknown thing type %d attempted to respawn at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
+			// pull it from the que
+			iquetail = (iquetail+1)&(ITEMQUESIZE-1);
+			return;
+		}
+
 		//CTF rings should continue to respawn as normal rings outside of CTF.
 		if (gametype != GT_CTF)
 		{
