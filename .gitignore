@@ -18,3 +18,4 @@ Win32_LIB_ASM_Release
 *.user
 *.db
 *.opendb
+/.vs
