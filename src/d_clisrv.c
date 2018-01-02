@@ -103,7 +103,7 @@ static INT16 consistancy[BACKUPTICS];
 static UINT32 resynch_score[MAXNETNODES]; // "score" for kicking -- if this gets too high then cfail kick
 static UINT16 resynch_delay[MAXNETNODES]; // delay time before the player can be considered to have desynched
 static UINT32 resynch_status[MAXNETNODES]; // 0 bit means synched for that player, 1 means possibly desynched
-static UINT8 resynch_sent[MAXNETNODES][MAXNETNODES]; // what synch packets have we attempted to send to the player
+static UINT8 resynch_sent[MAXNETNODES][MAXPLAYERS]; // what synch packets have we attempted to send to the player
 static UINT8 resynch_inprogress[MAXNETNODES];
 static UINT8 resynch_local_inprogress = false; // WE are desynched and getting packets to fix it.
 static UINT8 player_joining = false;
@@ -944,7 +944,7 @@ static void SV_InitResynchVars(INT32 node)
 	resynch_score[node] = 0; // clean slate
 	resynch_status[node] = 0x00;
 	resynch_inprogress[node] = false;
-	memset(resynch_sent[node], 0, MAXNETNODES);
+	memset(resynch_sent[node], 0, MAXPLAYERS);
 }
 
 static void SV_RequireResynch(INT32 node)
@@ -953,16 +953,16 @@ static void SV_RequireResynch(INT32 node)
 
 	resynch_delay[node] = 10; // Delay before you can fail sync again
 	resynch_score[node] += 200; // Add score for initial desynch
-	resynch_status[node] = 0xFF; // No players assumed synched
+	resynch_status[node] = 0xFFFFFFFF; // No players assumed synched
 	resynch_inprogress[node] = true; // so we know to send a PT_RESYNCHEND after sync
 
 	// Initial setup
-	memset(resynch_sent[node], 0, MAXNETNODES);
+	memset(resynch_sent[node], 0, MAXPLAYERS);
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		if (!playeringame[i]) // Player not in game so just drop it from required synch
 			resynch_status[node] &= ~(1<<i);
-		else if (i == node); // instantly update THEIR position
+		else if (playernode[i] == node); // instantly update THEIR position
 		else // Send at random times based on num players
 			resynch_sent[node][i] = M_RandomKey(D_NumPlayers()>>1)+1;
 	}
@@ -3155,16 +3155,68 @@ static boolean SV_AddWaitingPlayers(void)
 		{
 			newplayer = true;
 
-			// search for a free playernum
-			// we can't use playeringame since it is not updated here
-			for (; newplayernum < MAXPLAYERS; newplayernum++)
-			{
-				for (n = 0; n < MAXNETNODES; n++)
-					if (nodetoplayer[n] == newplayernum || nodetoplayer2[n] == newplayernum)
+			if (netgame)
+				// !!!!!!!!! EXTREMELY SUPER MEGA GIGA ULTRA ULTIMATELY TERRIBLY IMPORTANT !!!!!!!!!
+				//
+				// The line just after that comment is an awful, horrible, terrible, TERRIBLE hack.
+				//
+				// Basically, the fix I did in order to fix the download freezes happens
+				// to cause situations in which a player number does not match
+				// the node number associated to that player.
+				// That is totally normal, there is absolutely *nothing* wrong with that.
+				// Really. Player 7 being tied to node 29, for instance, is totally fine.
+				//
+				// HOWEVER. A few (broken) parts of the netcode do the TERRIBLE mistake
+				// of mixing up the concepts of node and player, resulting in
+				// incorrect handling of cases where a player is tied to a node that has
+				// a different number (which is a totally normal case, or at least should be).
+				// This incorrect handling can go as far as literally
+				// anyone from joining your server at all, forever.
+				//
+				// Given those two facts, there are two options available
+				// in order to let this download freeze fix be:
+				//  1) Fix the broken parts that assume a node is a player or similar bullshit.
+				//  2) Change the part this comment is located at, so that any player who joins
+				//     is given the same number as their associated node.
+				//
+				// No need to say, 1) is by far the obvious best, whereas 2) is a terrible hack.
+				// Unfortunately, after trying 1), I most likely didn't manage to find all
+				// of those broken parts, and thus 2) has become the only safe option that remains.
+				//
+				// So I did this hack.
+				//
+				// If it isn't clear enough, in order to get rid of this ugly hack,
+				// you will have to fix all parts of the netcode that
+				// make a confusion between nodes and players.
+				//
+				// And if it STILL isn't clear enough, a node and a player
+				// is NOT the same thing. Never. NEVER. *NEVER*.
+				//
+				// And if someday you make the terrible mistake of
+				// daring to have the unforgivable idea to try thinking
+				// that a node might possibly be the same as a player,
+				// or that a player should have the same number as its node,
+				// be sure that I will somehow know about it and
+				// hunt you down tirelessly and make you regret it,
+				// even if you live on the other side of the world.
+				//
+				// TODO:            vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+				// \todo >>>>>>>>>> Remove this horrible hack as soon as possible <<<<<<<<<<
+				// TODO:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				//
+				// !!!!!!!!! EXTREMELY SUPER MEGA GIGA ULTRA ULTIMATELY TERRIBLY IMPORTANT !!!!!!!!!
+				newplayernum = node; // OMFG SAY WELCOME TO TEH NEW HACK FOR FIX FIL DOWNLOAD!!1!
+			else // Don't use the hack if we don't have to
+				// search for a free playernum
+				// we can't use playeringame since it is not updated here
+				for (; newplayernum < MAXPLAYERS; newplayernum++)
+				{
+					for (n = 0; n < MAXNETNODES; n++)
+						if (nodetoplayer[n] == newplayernum || nodetoplayer2[n] == newplayernum)
+							break;
+					if (n == MAXNETNODES)
 						break;
-				if (n == MAXNETNODES)
-					break;
-			}
+				}
 
 			// should never happen since we check the playernum
 			// before accepting the join

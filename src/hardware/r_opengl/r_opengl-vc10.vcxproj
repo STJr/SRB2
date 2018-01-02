@@ -122,6 +122,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)r_opengl.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -166,6 +167,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)r_opengl.lib</ImportLibrary>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -212,6 +214,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)r_opengl.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -258,6 +261,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)r_opengl.lib</ImportLibrary>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>

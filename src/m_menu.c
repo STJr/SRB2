@@ -4964,7 +4964,10 @@ static void M_DrawAddons(void)
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
-		return M_DrawMessageMenu();
+	{
+		M_DrawMessageMenu();
+		return;
+	}
 
 	if (addonsresponselimit)
 		addonsresponselimit--;

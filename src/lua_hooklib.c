@@ -241,6 +241,8 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
 		return false;
 
+	I_Assert(mo->type < NUMMOBJTYPES);
+
 	lua_settop(gL, 0);
 
 	// Look for all generic mobj hooks
@@ -416,6 +418,8 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
 		return 0;
 
+	I_Assert(thing1->type < NUMMOBJTYPES);
+
 	lua_settop(gL, 0);
 
 	// Look for all generic mobj collision hooks
@@ -489,6 +493,8 @@ boolean LUAh_MobjThinker(mobj_t *mo)
 	if (!gL || !(hooksAvailable[hook_MobjThinker/8] & (1<<(hook_MobjThinker%8))))
 		return false;
 
+	I_Assert(mo->type < NUMMOBJTYPES);
+
 	lua_settop(gL, 0);
 
 	// Look for all generic mobj thinker hooks
@@ -541,6 +547,8 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_TouchSpecial/8] & (1<<(hook_TouchSpecial%8))))
 		return 0;
+
+	I_Assert(special->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
 
@@ -604,6 +612,8 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	UINT8 shouldDamage = 0; // 0 = default, 1 = force yes, 2 = force no.
 	if (!gL || !(hooksAvailable[hook_ShouldDamage/8] & (1<<(hook_ShouldDamage%8))))
 		return 0;
+
+	I_Assert(target->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
 
@@ -688,6 +698,8 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	if (!gL || !(hooksAvailable[hook_MobjDamage/8] & (1<<(hook_MobjDamage%8))))
 		return 0;
 
+	I_Assert(target->type < NUMMOBJTYPES);
+
 	lua_settop(gL, 0);
 
 	// Look for all generic mobj damage hooks
@@ -760,6 +772,8 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_MobjDeath/8] & (1<<(hook_MobjDeath%8))))
 		return 0;
+
+	I_Assert(target->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
 
