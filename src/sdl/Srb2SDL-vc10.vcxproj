@@ -141,6 +141,7 @@
     <ClInclude Include="..\hardware\hw3dsdrv.h" />
     <ClInclude Include="..\hardware\hw3sound.h" />
     <ClInclude Include="..\hardware\hws_data.h" />
+    <ClInclude Include="..\hardware\hw_clip.h" />
     <ClInclude Include="..\hardware\hw_data.h" />
     <ClInclude Include="..\hardware\hw_defs.h" />
     <ClInclude Include="..\hardware\hw_dll.h" />
@@ -282,6 +283,7 @@
     <ClCompile Include="..\hardware\hw3sound.c" />
     <ClCompile Include="..\hardware\hw_bsp.c" />
     <ClCompile Include="..\hardware\hw_cache.c" />
+    <ClCompile Include="..\hardware\hw_clip.c" />
     <ClCompile Include="..\hardware\hw_draw.c" />
     <ClCompile Include="..\hardware\hw_light.c" />
     <ClCompile Include="..\hardware\hw_main.c" />

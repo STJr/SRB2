@@ -444,6 +444,9 @@
     <ClInclude Include="sdlmain.h">
       <Filter>SDLApp</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
@@ -878,6 +881,9 @@
     </ClCompile>
     <ClCompile Include="SDL_main\SDL_windows_main.c">
       <Filter>SDLApp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

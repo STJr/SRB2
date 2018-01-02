@@ -450,6 +450,9 @@
     <ClCompile Include="..\string.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="afxres.h">
@@ -844,6 +847,9 @@
     </ClInclude>
     <ClInclude Include="..\fastcmp.h">
       <Filter>O_Other</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
