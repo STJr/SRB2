@@ -2106,6 +2106,8 @@ void A_Boss7FireMissiles(mobj_t *actor)
 // var2:
 //		0 - Boss 1 Left side
 //		1 - Boss 1 Right side
+//		2 - Triple laser
+//		>3 - Boss 1 Middle
 //
 void A_Boss1Laser(mobj_t *actor)
 {
@@ -2141,6 +2143,15 @@ void A_Boss1Laser(mobj_t *actor)
 			else
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
+		case 2:
+			var2 = 3; // Fire middle laser
+			A_Boss1Laser(actor);
+			var2 = 0; // Fire left laser
+			A_Boss1Laser(actor);
+			var2 = 1; // Fire right laser
+			A_Boss1Laser(actor);
+			return;
+			break;
 		default:
 			x = actor->x;
 			y = actor->y;
@@ -2148,7 +2159,7 @@ void A_Boss1Laser(mobj_t *actor)
 			break;
 	}
 
-	if (!(actor->flags2 & MF2_FIRING))
+	if (!(actor->flags2 & MF2_FIRING) && actor->tics > 1)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
@@ -2170,6 +2181,7 @@ void A_Boss1Laser(mobj_t *actor)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
 	else
 		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
+
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
