@@ -448,7 +448,7 @@ UINT16 W_InitFile(const char *filename)
 		// We must look for the central directory through the file. (Thanks to JTE for this algorithm.)
 		// All of the central directory entry headers have a signature of 0x50 0x4b 0x01 0x02.
 		// The first entry found means the beginning of the central directory.
-		fseek(handle, -min(size, (22 + 65536)), SEEK_CUR);
+		fseek(handle, 0-min(size, (22 + 65536)), SEEK_CUR);
 		s = endPat;
 		while((c = fgetc(handle)) != EOF)
 		{
@@ -1211,6 +1211,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	default:
 		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
+	return 0;
 }
 
 size_t W_ReadLumpHeader(lumpnum_t lumpnum, void *dest, size_t size, size_t offset)
