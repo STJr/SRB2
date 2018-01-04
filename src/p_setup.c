@@ -3163,6 +3163,7 @@ void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 				CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", lumpinfo->name);
 
 				I_FreeSfx(&S_sfx[j]);
+				break; // there shouldn't be two sounds with the same name, so stop looking
 			}
 		}
 	}
@@ -3290,17 +3291,21 @@ boolean P_AddWadFile(const char *wadfilename)
 			name = lumpinfo->name;
 			if (name[0] == 'D')
 			{
-				if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+				if (name[1] == 'S')
 				{
-					if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+					for (j = 1; j < NUMSFX; j++)
 					{
-						// the sound will be reloaded when needed,
-						// since sfx->data will be NULL
-						CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+						if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+						{
+							// the sound will be reloaded when needed,
+							// since sfx->data will be NULL
+							CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
 
-						I_FreeSfx(&S_sfx[j]);
+							I_FreeSfx(&S_sfx[j]);
 
-						sreplaces++;
+							sreplaces++;
+							break; // there shouldn't be two sounds with the same name, so stop looking
+						}
 					}
 				}
 				else if (name[1] == '_')
