@@ -1138,7 +1138,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 				else if (errno == EINVAL)
 					I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
 			}
-			// Otherwise, fall back on below error (if it was actually correct size then ???)
+			// Otherwise, fall back on below error (if zero was actually the correct size then ???)
 #endif
 			if (retval != l->size)
 			{
