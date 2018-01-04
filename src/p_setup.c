@@ -3133,7 +3133,7 @@ boolean P_RunSOC(const char *socfilename)
 	lumpnum_t lump;
 
 	if (strstr(socfilename, ".soc") != NULL)
-		return P_AddWadFile(socfilename, NULL);
+		return P_AddWadFile(socfilename);
 
 	lump = W_CheckNumForName(socfilename);
 	if (lump == LUMPERROR)
@@ -3214,13 +3214,13 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
+boolean P_AddWadFile(const char *wadfilename)
 {
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
 	UINT16 numlumps, wadnum;
-	INT16 firstmapreplaced = 0, num;
 	char *name;
 	lumpinfo_t *lumpinfo;
+	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 
 	// Vars to help us with the position start and amount of each resource type.
@@ -3354,10 +3354,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		num = firstmapreplaced;
-
 		if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P') // Ignore the headers
 		{
+			INT16 num;
 			if (name[5]!='\0')
 				continue;
 			num = (INT16)M_MapNumber(name[3], name[4]);
@@ -3367,16 +3366,10 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				replacedcurrentmap = true;
 
 			CONS_Printf("%s\n", name);
-		}
-
-		if (num && (num < firstmapreplaced || !firstmapreplaced))
-		{
-			firstmapreplaced = num;
-			if (firstmapname)
-				*firstmapname = name;
+			mapsadded = true;
 		}
 	}
-	if (!firstmapreplaced)
+	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
 	// reload status bar (warning should have valid player!)

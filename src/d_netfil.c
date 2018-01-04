@@ -423,7 +423,7 @@ void CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename, NULL);
+			P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 		}

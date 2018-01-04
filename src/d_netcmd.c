@@ -3066,7 +3066,7 @@ static void Command_Addfile(void)
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
 	if (!(netgame || multiplayer) || musiconly)
 	{
-		P_AddWadFile(fn, NULL);
+		P_AddWadFile(fn);
 		return;
 	}
 
@@ -3235,7 +3235,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
+	if (ncs != FS_FOUND || !P_AddWadFile(filename))
 	{
 		Command_ExitGame_f();
 		if (ncs == FS_FOUND)
