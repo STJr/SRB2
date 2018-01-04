@@ -1130,30 +1130,30 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
 			retval = lzf_decompress(rawData, l->disksize, decData, l->size);
 #ifndef AVOID_ERRNO
-			if (retval == 0 && errno == E2BIG) // errno is a global var set by the lzf functions when something goes wrong.
+			if (retval == 0) // If this was returned, check if errno was set
 			{
-				I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+				// errno is a global var set by the lzf functions when something goes wrong.
+				if (errno == E2BIG)
+					I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+				else if (errno == EINVAL)
+					I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
 			}
-			else if (retval == 0 && errno == EINVAL)
-				I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
-			else
+			// Otherwise, fall back on below error (if it was actually correct size then ???)
 #endif
 			if (retval != l->size)
 			{
 				I_Error("wad %d, lump %d: decompressed to wrong number of bytes (expected %s, got %s)", wad, lump, sizeu1(l->size), sizeu2(retval));
 			}
-#else
-			(void)wad;
-			(void)lump;
-			//I_Error("ZWAD files not supported on this platform.");
-			return NULL;
-#endif
 			if (!decData) // Did we get no data at all?
 				return 0;
 			M_Memcpy(dest, decData + offset, size);
 			Z_Free(rawData);
 			Z_Free(decData);
 			return size;
+#else
+			//I_Error("ZWAD files not supported on this platform.");
+			return 0;
+#endif
 		}
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{
