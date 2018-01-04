@@ -102,7 +102,7 @@ static int lib_sprnamelen(lua_State *L)
 // push sprite name
 static int lib_getSpr2name(lua_State *L)
 {
-	INT32 i;
+	playersprite_t i;
 
 	lua_remove(L, 1); // don't care about spr2names[] dummy userdata.
 
@@ -129,7 +129,7 @@ static int lib_getSpr2name(lua_State *L)
 
 static int lib_getSpr2default(lua_State *L)
 {
-	INT32 i;
+	playersprite_t i;
 
 	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
 
@@ -154,7 +154,7 @@ static int lib_getSpr2default(lua_State *L)
 
 static int lib_setSpr2default(lua_State *L)
 {
-	INT32 i;
+	playersprite_t i;
 	UINT8 j = 0;
 
 	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.

@@ -70,6 +70,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
+#if defined (__GNUC__) && (__GNUC__ >= 4)
+#define FIXUPO0
+#endif
+
 #define SKULLXOFF -32
 #define LINEHEIGHT 16
 #define STRINGHEIGHT 8
@@ -4953,7 +4957,7 @@ static boolean M_AddonsRefresh(void)
 
 #define offs 1
 
-#ifdef __GNUC__
+#ifdef FIXUPO0
 #pragma GCC optimize ("0")
 #endif
 
@@ -5081,7 +5085,7 @@ static void M_DrawAddons(void)
 #undef CANSAVE
 }
 
-#ifdef __GNUC__
+#ifdef FIXUPO0
 #pragma GCC reset_options
 #endif
 
