@@ -407,7 +407,7 @@ static int libd_getSpritePatch(lua_State *L)
 static int libd_getSprite2Patch(lua_State *L)
 {
 	INT32 i; // skin number
-	INT32 j; // sprite2 prefix
+	UINT32 j; // sprite2 prefix
 	UINT32 frame = 0; // 'A'
 	UINT8 angle = 0;
 	spritedef_t *sprdef;
