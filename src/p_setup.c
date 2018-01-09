@@ -2003,16 +2003,16 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname
 	return false;
 #else
 	// Check if the lump is named "BLOCKMAP"
-	if (!lumpname || !memcmp(lumpname, "BLOCKMAP", 8) != 0)
+	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
 	{
-		CONS_Printf("No blockmap lump found for pk3!");
+		CONS_Printf("No blockmap lump found for pk3!\n");
 		return false;
 	}
 
 	if (!count || count >= 0x20000)
 		return false;
 
-	CONS_Printf("Reading blockmap lump for pk3...");
+	CONS_Printf("Reading blockmap lump for pk3...\n");
 
 	// no need to malloc anything, assume the data is uncompressed for now
 	count /= 2;
