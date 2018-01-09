@@ -1893,6 +1893,30 @@ static void P_CreateBlockMap(void)
 	}
 }
 
+// Split from P_LoadBlockMap for convenience
+// -- Monster Iestyn 08/01/18
+static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
+{
+	size_t i;
+	blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
+
+	// killough 3/1/98: Expand wad blockmap into larger internal one,
+	// by treating all offsets except -1 as unsigned and zero-extending
+	// them. This potentially doubles the size of blockmaps allowed,
+	// because Doom originally considered the offsets as always signed.
+
+	blockmaplump[0] = SHORT(wadblockmaplump[0]);
+	blockmaplump[1] = SHORT(wadblockmaplump[1]);
+	blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
+	blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
+
+	for (i = 4; i < count; i++)
+	{
+		INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
+		blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
+	}
+}
+
 //
 // P_LoadBlockMap
 //
@@ -1919,37 +1943,19 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 		return false;
 
 	{
-		size_t i;
 		INT16 *wadblockmaplump = malloc(count); //INT16 *wadblockmaplump = W_CacheLumpNum (lump, PU_LEVEL);
-
-		if (wadblockmaplump) W_ReadLump(lumpnum, wadblockmaplump);
-		else return false;
+		if (!wadblockmaplump)
+			return false;
+		W_ReadLump(lumpnum, wadblockmaplump);
 		count /= 2;
-		blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, 0);
-
-		// killough 3/1/98: Expand wad blockmap into larger internal one,
-		// by treating all offsets except -1 as unsigned and zero-extending
-		// them. This potentially doubles the size of blockmaps allowed,
-		// because Doom originally considered the offsets as always signed.
-
-		blockmaplump[0] = SHORT(wadblockmaplump[0]);
-		blockmaplump[1] = SHORT(wadblockmaplump[1]);
-		blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
-		blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
-
-		for (i = 4; i < count; i++)
-		{
-			INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
-			blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
-		}
-
+		P_ReadBlockMapLump(wadblockmaplump, count);
 		free(wadblockmaplump);
-
-		bmaporgx = blockmaplump[0]<<FRACBITS;
-		bmaporgy = blockmaplump[1]<<FRACBITS;
-		bmapwidth = blockmaplump[2];
-		bmapheight = blockmaplump[3];
 	}
+
+	bmaporgx = blockmaplump[0]<<FRACBITS;
+	bmaporgy = blockmaplump[1]<<FRACBITS;
+	bmapwidth = blockmaplump[2];
+	bmapheight = blockmaplump[3];
 
 	// clear out mobj chains
 	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
@@ -1981,6 +1987,53 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	return true;
 	*/
+#endif
+}
+
+// This needs to be a separate function
+// because making both the WAD and PK3 loading code use
+// the same functions is trickier than it looks for blockmap
+// -- Monster Iestyn 09/01/18
+static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname)
+{
+#if 0
+	(void)data;
+	(void)count;
+	(void)lumpname;
+	return false;
+#else
+	// Check if the lump is named "BLOCKMAP"
+	if (!lumpname || !memcmp(lumpname, "BLOCKMAP", 8) != 0)
+	{
+		CONS_Printf("No blockmap lump found for pk3!");
+		return false;
+	}
+
+	if (!count || count >= 0x20000)
+		return false;
+
+	CONS_Printf("Reading blockmap lump for pk3...");
+
+	// no need to malloc anything, assume the data is uncompressed for now
+	count /= 2;
+	P_ReadBlockMapLump((INT16 *)data, count);
+
+	bmaporgx = blockmaplump[0]<<FRACBITS;
+	bmaporgy = blockmaplump[1]<<FRACBITS;
+	bmapwidth = blockmaplump[2];
+	bmapheight = blockmaplump[3];
+
+	// clear out mobj chains
+	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
+	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+	blockmap = blockmaplump+4;
+
+#ifdef POLYOBJECTS
+	// haleyjd 2/22/06: setup polyobject blockmap
+	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
+	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+#endif
+	return true;
 #endif
 }
 
@@ -2771,7 +2824,20 @@ boolean P_SetupLevel(boolean skipprecip)
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
 		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
 
+		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
+		{
+			I_Error("Bad WAD file for map %s!\n", maplumpname);
+		}
+
+		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
+		{
+			loadedbm = P_LoadRawBlockMap(
+							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
+							(fileinfo + ML_BLOCKMAP)->size,
+							(fileinfo + ML_BLOCKMAP)->name);
+		}
 		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
 		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
 		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
@@ -2780,6 +2846,10 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
 		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
 		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
+		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
+		{
+			// placeholder
+		}
 
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
