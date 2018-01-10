@@ -1057,11 +1057,16 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 //
 boolean W_IsLumpWad(lumpnum_t lumpnum)
 {
-	const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->name2;
+	if (wadfiles[WADFILENUM(lumpnum)]->type == RET_PK3)
+	{
+		const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->name2;
 
-	if (strlen(lumpfullName) < 4)
-		return false; // can't possibly be a wad can it?
-	return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
+		if (strlen(lumpfullName) < 4)
+			return false; // can't possibly be a WAD can it?
+		return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
+	}
+
+	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
 }
 
 /* report a zlib or i/o error */
