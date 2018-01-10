@@ -2658,7 +2658,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	char *lumpfullName;
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
@@ -2841,8 +2840,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// As it is implemented right now, we're assuming an uncompressed WAD.
 	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
 	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
-	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
-	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4))
+	if (W_IsLumpWad(lastloadedmaplumpnum))
 	{
 		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);

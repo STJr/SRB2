@@ -1051,6 +1051,19 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 	return W_LumpLengthPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
+//
+// W_IsLumpWad
+// Is the lump a WAD? (presumably in a PK3)
+//
+boolean W_IsLumpWad(lumpnum_t lumpnum)
+{
+	const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->name2;
+
+	if (strlen(lumpfullName) < 4)
+		return false; // can't possibly be a wad can it?
+	return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
+}
+
 /* report a zlib or i/o error */
 void zerr(int ret)
 {

@@ -6307,9 +6307,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				{
 					UINT8 *data;
 					UINT16 b;
-					char *lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
 
-					if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4)) // welp it's a map wad in a pk3
+					if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
 					{ // HACK: Open wad file rather quickly so we can get the data from the sidedefs lump
 						UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
 						filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);

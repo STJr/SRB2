@@ -139,6 +139,8 @@ UINT8 W_LumpExists(const char *name); // Lua uses this.
 size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump);
 size_t W_LumpLength(lumpnum_t lumpnum);
 
+boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
+
 void zerr(int ret); // zlib error checking
 
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset);

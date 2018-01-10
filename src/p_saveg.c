@@ -502,14 +502,11 @@ static void P_NetArchiveWorld(void)
 	maplinedef_t *mld;
 	const sector_t *ss = sectors;
 	UINT8 diff, diff2;
-	char *lumpfullName;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
 
-	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
-
-	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4)) // welp it's a map wad in a pk3
+	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
 	{ // HACK: Open wad file rather quickly so we can get the data from the relevant lumps
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
@@ -657,7 +654,6 @@ static void P_NetArchiveWorld(void)
 	}
 
 	WRITEUINT16(put, 0xffff);
-
 
 	// do lines
 	for (i = 0; i < numlines; i++, mld++, li++)
