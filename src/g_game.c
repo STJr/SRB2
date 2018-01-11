@@ -14,6 +14,7 @@
 #include "doomdef.h"
 #include "console.h"
 #include "d_main.h"
+#include "d_netfil.h"
 #include "d_player.h"
 #include "f_finale.h"
 #include "p_setup.h"
@@ -4911,6 +4912,20 @@ void G_DeferedPlayDemo(const char *name)
 	COM_BufAddText("\"\n");
 }
 
+#ifdef _WIN32
+#define PATHDELIM '\\'
+#else
+#define PATHDELIM '/'
+#endif
+static inline char * filename (char *s)
+{
+	char *sp;
+	if ((sp = strrchr(s, PATHDELIM)))
+		return sp+1;
+
+	return s;
+}
+
 //
 // Start a demo from a .LMP file or from a wad resource
 //
@@ -4927,11 +4942,7 @@ void G_DoPlayDemo(char *defdemoname)
 	skin[16] = '\0';
 	color[16] = '\0';
 
-	n = defdemoname+strlen(defdemoname);
-	while (*n != '/' && *n != '\\' && n != defdemoname)
-		n--;
-	if (n != defdemoname)
-		n++;
+	n = filename(defdemoname);
 	pdemoname = ZZ_Alloc(strlen(n)+1);
 	strcpy(pdemoname,n);
 
@@ -4939,6 +4950,9 @@ void G_DoPlayDemo(char *defdemoname)
 	if (FIL_CheckExtension(defdemoname))
 	{
 		//FIL_DefaultExtension(defdemoname, ".lmp");
+		if (!FIL_FileExists(defdemoname))
+			findfile(filename(defdemoname), NULL, true);
+
 		if (!FIL_ReadFile(defdemoname, &demobuffer))
 		{
 			snprintf(msg, 1024, M_GetText("Failed to read file '%s'.\n"), defdemoname);
