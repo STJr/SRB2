@@ -1304,6 +1304,7 @@ void D_SRB2Main(void)
 
 		CONS_Printf(M_GetText("Playing demo %s.\n"), tmp);
 
+		COM_BufInsertText("wait 2");  // get off baby screen?
 		if (M_CheckParm("-playdemo"))
 		{
 			singledemo = true; // quit after one demo
