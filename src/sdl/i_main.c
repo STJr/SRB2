@@ -103,6 +103,10 @@ static inline VOID MakeCodeWritable(VOID)
 
 	\return	int
 */
+#if defined (__GNUC__) && (__GNUC__ >= 4)
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#endif
+
 #ifdef FORCESDLMAIN
 int SDL_main(int argc, char **argv)
 #else
