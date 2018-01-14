@@ -127,6 +127,7 @@ static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
+static void Command_GetMusicposition_f(void);
 static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
@@ -686,6 +687,7 @@ void D_RegisterClientCommands(void)
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
 	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("musicpos", Command_GetMusicposition_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
 
@@ -4047,6 +4049,13 @@ static void Command_Tunes_f(void)
 		UINT32 position = (UINT32)atoi(COM_Argv(4));
 		S_PositionMusic(position);
 	}
+}
+
+static void Command_GetMusicposition_f(void)
+{
+	UINT32 position = 0;
+	position = S_GetPositionMusic();
+	CONS_Printf(M_GetText("%d\n"), position);
 }
 
 static void Command_RestartAudio_f(void)
