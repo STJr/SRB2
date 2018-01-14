@@ -486,6 +486,8 @@ void I_ShutdownMusic(void)
 void I_PauseSong(INT32 handle)
 {
 	(void)handle;
+	if(!midimode)
+		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_PauseMusic();
 	songpaused = true;
 }
@@ -493,6 +495,14 @@ void I_PauseSong(INT32 handle)
 void I_ResumeSong(INT32 handle)
 {
 	(void)handle;
+	if(!midimode)
+	{
+		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { } 
+			// HACK: fixes issue of multiple effect callbacks being registered
+		if(music && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+			// midimode and music must be checked in case nothing is actually playing
+			CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
+	}
 	Mix_ResumeMusic();
 	songpaused = false;
 }
