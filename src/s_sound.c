@@ -1606,11 +1606,7 @@ boolean S_MusicPaused(void)
 
 const char *S_MusicName(void)
 {
-	//return music_name;
-	char *result = (char *)malloc(7);
-	strncpy(result, music_name, 7);
-	result[6] = 0;
-	return result;
+	return music_name;
 }
 
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
