@@ -190,8 +190,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"TRE5", // Bush tree
 
 	// Techno Hill Scenery
-	"THZP", // Techno Hill Zone Plant
-	"FWR5", // Another one
+	"THZP", // THZ1 Steam Flower
+	"FWR5", // THZ1 Spin flower (red)
+	"FWR6", // THZ1 Spin flower (yellow)
 	"ALRM", // THZ2 Alarm
 
 	// Deep Sea Scenery
@@ -1892,7 +1893,7 @@ state_t states[NUMSTATES] =
 	{SPR_CFIR, FF_FULLBRIGHT|4, 2, {NULL}, 0, 0, S_DEMONFIRE6}, // S_DEMONFIRE5
 	{SPR_CFIR, FF_FULLBRIGHT|5, 2, {NULL}, 0, 0, S_DEMONFIRE1}, // S_DEMONFIRE6
 
-	// GFZ Flower
+	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, {NULL},  7, 3, S_NULL}, // S_GFZFLOWERA
 	{SPR_FWR2, FF_ANIMATE, -1, {NULL}, 19, 3, S_NULL}, // S_GFZFLOWERB
 	{SPR_FWR3, FF_ANIMATE, -1, {NULL}, 11, 4, S_NULL}, // S_GFZFLOWERC
@@ -1912,8 +1913,10 @@ state_t states[NUMSTATES] =
 	{SPR_TRE5, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BUSHTREE
 	{SPR_TRE5, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BUSHREDTREE
 
+	// THZ flowers
 	{SPR_THZP, FF_ANIMATE, -1, {NULL},  7, 4, S_NULL}, // S_THZFLOWERA
 	{SPR_FWR5, FF_ANIMATE, -1, {NULL}, 19, 2, S_NULL}, // S_THZFLOWERB
+	{SPR_FWR6, FF_ANIMATE, -1, {NULL}, 19, 2, S_NULL}, // S_THZFLOWERC
 
 	// THZ Alarm
 	{SPR_ALRM, FF_FULLBRIGHT, 35, {A_Scream}, 0, 0, S_ALARM1}, // S_ALARM1
@@ -8630,8 +8633,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		8,              // speed
-		8*FRACUNIT,     // radius
-		32*FRACUNIT,    // height
+		16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_THZFLOWER3
+		903,            // doomednum
+		S_THZFLOWERC,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
