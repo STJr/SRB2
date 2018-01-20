@@ -33,6 +33,8 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../st_stuff.h"
+#include "../p_local.h" // stplyr
+#include "../g_game.h" // players
 
 #include <fcntl.h>
 #include "../i_video.h"  // for rendermode != render_glide
@@ -181,8 +183,49 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
-	if (option & V_SPLITSCREEN)
-		sdupy /= 2.0f;
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		pdupy /= 2;
+		cy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			pdupx /= 2;
+			cx /= 2;
+			if (stplyr == &players[displayplayer])
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				cx += adjustx;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				cx += adjustx;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+				option &= ~V_SNAPTOBOTTOM;
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	if (option & V_FLIP) // Need to flip both this and sow
 	{

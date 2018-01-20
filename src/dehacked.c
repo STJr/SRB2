@@ -6799,32 +6799,22 @@ static const char *const POWERS_LIST[] = {
 };
 
 static const char *const HUDITEMS_LIST[] = {
-	"LIVESNAME",
-	"LIVESPIC",
-	"LIVESNUM",
-	"LIVESX",
+	"LIVES",
 
 	"RINGS",
-	"RINGSSPLIT",
 	"RINGSNUM",
-	"RINGSNUMSPLIT",
 
 	"SCORE",
 	"SCORENUM",
 
 	"TIME",
-	"TIMESPLIT",
 	"MINUTES",
-	"MINUTESSPLIT",
 	"TIMECOLON",
-	"TIMECOLONSPLIT",
 	"SECONDS",
-	"SECONDSSPLIT",
 	"TIMETICCOLON",
 	"TICS",
 
 	"SS_TOTALRINGS",
-	"SS_TOTALRINGS_SPLIT",
 
 	"GETRINGS",
 	"GETRINGSNUM",
@@ -7353,7 +7343,7 @@ struct {
 	{"V_WRAPX",V_WRAPX},
 	{"V_WRAPY",V_WRAPY},
 	{"V_NOSCALESTART",V_NOSCALESTART},
-	{"V_SPLITSCREEN",V_SPLITSCREEN},
+	{"V_PERPLAYER",V_PERPLAYER},
 
 	{"V_PARAMMASK",V_PARAMMASK},
 	{"V_SCALEPATCHMASK",V_SCALEPATCHMASK},
@@ -7503,7 +7493,7 @@ static hudnum_t get_huditem(const char *word)
 		if (fastcmp(word, HUDITEMS_LIST[i]))
 			return i;
 	deh_warning("Couldn't find huditem named 'HUD_%s'",word);
-	return HUD_LIVESNAME;
+	return HUD_LIVES;
 }
 
 #ifndef HAVE_BLUA

@@ -15,6 +15,8 @@
 
 #include "doomdef.h"
 #include "r_local.h"
+#include "p_local.h" // stplyr
+#include "g_game.h" // players
 #include "v_video.h"
 #include "hu_stuff.h"
 #include "r_draw.h"
@@ -624,8 +626,50 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			x -= FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
 	}
 
-	if (scrn & V_SPLITSCREEN)
-		y>>=1;
+	if (splitscreen && (scrn & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
+		fdup >>= 1;
+		rowfrac <<= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			colfrac <<= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				x += adjustx;
+				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				x += adjustx;
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+				scrn &= ~V_SNAPTOBOTTOM;
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				y += adjusty;
+				scrn &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	desttop = screens[scrn&V_PARAMMASK];
 
@@ -670,9 +714,9 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			if (vid.height != BASEVIDHEIGHT * dupy)
 			{
 				// same thing here
-				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
+				/*if ((scrn & (V_PERPLAYER|V_SNAPTOBOTTOM)) == (V_PERPLAYER|V_SNAPTOBOTTOM))
 					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
-				else if (scrn & V_SNAPTOBOTTOM)
+				else */if (scrn & V_SNAPTOBOTTOM)
 					y += (vid.height - (BASEVIDHEIGHT * dupy));
 				else if (!(scrn & V_SNAPTOTOP))
 					y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
@@ -835,7 +879,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			if (vid.height != BASEVIDHEIGHT * dupy)
 			{
 				// same thing here
-				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
+				if ((scrn & (V_PERPLAYER|V_SNAPTOBOTTOM)) == (V_PERPLAYER|V_SNAPTOBOTTOM))
 					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
 				else if (scrn & V_SNAPTOBOTTOM)
 					y += (vid.height - (BASEVIDHEIGHT * dupy));
