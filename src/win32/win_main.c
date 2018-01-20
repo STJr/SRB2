@@ -244,7 +244,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				D_PostEvent(&ev);
 				return TRUE;
 			}
-
+			break;
 		case WM_XBUTTONDOWN:
 			if (nodinput)
 			{
@@ -253,7 +253,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				D_PostEvent(&ev);
 				return TRUE;
 			}
-
+			break;
 		case WM_MOUSEWHEEL:
 			//I_OutputMsg("MW_WHEEL dispatched.\n");
 			ev.type = ev_keydown;
@@ -666,7 +666,9 @@ int WINAPI WinMain (HINSTANCE hInstance,
 #endif
 			LoadLibraryA("exchndl.dll");
 
+#ifndef __MINGW32__
 		prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
+#endif
 
 		Result = HandledWinMain(hInstance);
 #ifdef BUGTRAP

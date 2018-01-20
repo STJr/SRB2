@@ -5240,13 +5240,11 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[2] = FRACUNIT;
 
 	if (noadjust)
-	{
 		airbob->vars[7] = airbob->sector->ceilingheight-16*FRACUNIT;
-		airbob->vars[6] = airbob->vars[7]
-			- (sec->ceilingheight - sec->floorheight);
-	}
 	else
 		airbob->vars[7] = airbob->sector->ceilingheight - P_AproxDistance(sourceline->dx, sourceline->dy);
+	airbob->vars[6] = airbob->vars[7]
+		- (sec->ceilingheight - sec->floorheight);
 
 	airbob->vars[3] = airbob->vars[2];
 

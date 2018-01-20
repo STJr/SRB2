@@ -2581,7 +2581,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoybuttons;
 		lastjoybuttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2601,7 +2601,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoyhats;
 		lastjoyhats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
@@ -2825,7 +2825,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoy2buttons;
 		lastjoy2buttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2845,7 +2845,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoy2hats;
 		lastjoy2hats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
