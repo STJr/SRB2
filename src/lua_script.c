@@ -767,11 +767,19 @@ static void ArchiveTables(void)
 		lua_pushnil(gL);
 		while (lua_next(gL, -2))
 		{
-			ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			// Write key
+			e = ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
+			{
+				lua_pushvalue(gL, -2);
+				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -1), luaL_typename(gL, -1), i);
+				lua_pop(gL, 1);
+			}
+			// Write value
 			e = ArchiveValue(TABLESINDEX, -1);
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
-			else if (e == 2)
+			else if (e == 2) // invalid value type
 			{
 				lua_pushvalue(gL, -2);
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
@@ -912,11 +920,17 @@ static void UnArchiveTables(void)
 		lua_rawgeti(gL, TABLESINDEX, i);
 		while (true)
 		{
-			if (UnArchiveValue(TABLESINDEX) == 1)
+			if (UnArchiveValue(TABLESINDEX) == 1) // read key
 				break;
-			if (UnArchiveValue(TABLESINDEX) == 2)
+			if (UnArchiveValue(TABLESINDEX) == 2) // read value
 				n++;
-			lua_rawset(gL, -3);
+			if (lua_isnil(gL, -2)) // if key is nil (if a function etc was accidentally saved)
+			{
+				CONS_Alert(CONS_ERROR, "A nil key in table %d was found! (Invalid key type or corrupted save?)\n", i);
+				lua_pop(gL, 2); // pop key and value instead of setting them in the table, to prevent Lua panic errors
+			}
+			else
+				lua_rawset(gL, -3);
 		}
 		lua_pop(gL, 1);
 	}
