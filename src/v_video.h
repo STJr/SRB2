@@ -112,8 +112,8 @@ extern RGBA_t *pMasterPalette;
 #define V_WRAPX              0x10000000 // Don't clamp texture on X (for HW mode)
 #define V_WRAPY              0x20000000 // Don't clamp texture on Y (for HW mode)
 
-#define V_NOSCALESTART       0x40000000  // don't scale x, y, start coords
-#define V_PERPLAYER        0x80000000
+#define V_NOSCALESTART       0x40000000 // don't scale x, y, start coords
+#define V_PERPLAYER          0x80000000 // automatically adjust coordinates/scaling for splitscreen mode
 
 // defines for old functions
 #define V_DrawPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s|V_NOSCALESTART|V_NOSCALEPATCH, p, NULL)

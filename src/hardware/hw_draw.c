@@ -194,36 +194,22 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
 			pdupx /= 2;
 			cx /= 2;
-			if (stplyr == &players[displayplayer])
-				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
-			else if (stplyr == &players[secondarydisplayplayer])
-			{
+			if (stplyr == &players[secondarydisplayplayer])
 				cx += adjustx;
-				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
-			}
 			else if (stplyr == &players[thirddisplayplayer])
-			{
 				cy += adjusty;
-				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
-			}
-			else //if (stplyr == &players[fourthdisplayplayer])
+			else if (stplyr == &players[fourthdisplayplayer])
 			{
 				cx += adjustx;
 				cy += adjusty;
-				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
 			}
 		}
 		else
 #endif
 		// 2 players
 		{
-			if (stplyr == &players[displayplayer])
-				option &= ~V_SNAPTOBOTTOM;
-			else //if (stplyr == &players[secondarydisplayplayer])
-			{
+			if (stplyr == &players[secondarydisplayplayer])
 				cy += adjusty;
-				option &= ~V_SNAPTOTOP;
-			}
 		}
 	}
 
@@ -322,6 +308,37 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
+
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		pdupy /= 2;
+		cy /= 2;
+		// unlike software no need to adjust texture sourcing
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			pdupx /= 2;
+			cx /= 2;
+			if (stplyr == &players[secondarydisplayplayer])
+				cx += adjustx;
+			else if (stplyr == &players[thirddisplayplayer])
+				cy += adjusty;
+			if (stplyr == &players[fourthdisplayplayer])
+			{
+				cx += adjustx;
+				cy += adjusty;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[secondarydisplayplayer])
+				cy += adjusty;
+		}
+	}
 
 	v[0].x = v[3].x =     (cx*sdupx -           gpatch->leftoffset  * pdupx) / vid.width - 1;
 	v[2].x = v[1].x =     (cx*sdupx + ((w) - gpatch->leftoffset) * pdupx) / vid.width - 1;
@@ -717,6 +734,36 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 
 	if (color & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
+
+	if (splitscreen && (color & V_PERPLAYER))
+	{
+		float adjusty = ((color & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		w >>= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((color & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			w >>= 1;
+			x >>= 1;
+			if (stplyr == &players[secondarydisplayplayer])
+				x += adjustx;
+			else if (stplyr == &players[thirddisplayplayer])
+				y += adjusty;
+			else if (stplyr == &players[fourthdisplayplayer])
+			{
+				x += adjustx;
+				y += adjusty;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[secondarydisplayplayer])
+				y += adjusty;
+		}
+	}
 
 	v[0].x = v[3].x = (x*sdupx)/vid.width - 1;
 	v[2].x = v[1].x = (x*sdupx + w*sdupx)/vid.width - 1;
