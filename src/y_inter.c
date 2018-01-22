@@ -176,14 +176,10 @@ static void Y_IntermissionTokenDrawer(void)
 	lowy = BASEVIDHEIGHT - 32 - 8;
 	temp = SHORT(tokenicon->height)/2;
 
-	if (!(emeralds & EMERALD1)) em = 0;
-	else if (!(emeralds & EMERALD2)) em = 1;
-	else if (!(emeralds & EMERALD3)) em = 2;
-	else if (!(emeralds & EMERALD4)) em = 3;
-	else if (!(emeralds & EMERALD5)) em = 4;
-	else if (!(emeralds & EMERALD6)) em = 5;
-	else if (!(emeralds & EMERALD7)) em = 6;
-	else return;
+	em = 0;
+	while (emeralds & (1 << em))
+		if (++em == 7)
+			return;
 
 	if (tallydonetic != -1)
 	{
@@ -325,7 +321,7 @@ void Y_IntermissionDrawer(void)
 			Y_IntermissionTokenDrawer();
 
 		// draw the header
-		if (intertic <= TICRATE)
+		if (intertic <= 2*TICRATE)
 			animatetic = 0;
 		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
 			animatetic = intertic;
@@ -378,11 +374,45 @@ void Y_IntermissionDrawer(void)
 		//if (intertic & 1)
 		{
 			INT32 emeraldx = 152 - 3*28;
+			INT32 em = (gamemap - sstage_start);
+
 			for (i = 0; i < 7; ++i)
 			{
-				if ((emeralds & (1 << i)) && ((intertic & 1) || i != (gamemap + 1 - sstage_start)))
+				if ((i != em) && !(intertic & 1) && (emeralds & (1 << i)))
 					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
 				emeraldx += 28;
+			}
+
+			if (em < 7)
+			{
+				static UINT8 emeraldbounces = 0;
+				static INT32 emeraldmomy = 20;
+				static INT32 emeraldy = -40;
+
+				emeraldx = 152 + (em-3)*28;
+
+				if (intertic <= 1)
+				{
+					emeraldbounces = 0;
+					emeraldmomy = 20;
+					emeraldy = -40;
+				}
+				else
+				{
+					if (emeraldbounces < 3)
+					{
+						emeraldmomy += 1;
+						emeraldy += emeraldmomy;
+						if (emeraldy > 74)
+						{
+							S_StartSound(NULL, sfx_tink); // tink
+							emeraldbounces++;
+							emeraldmomy = -(emeraldmomy/2);
+							emeraldy = 74;
+						}
+					}
+					V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
+				}
 			}
 		}
 
@@ -812,7 +842,7 @@ void Y_Ticker(void)
 			tallydonetic = -1;
 		}
 
-		if (intertic < TICRATE) // one second pause before tally begins
+		if (intertic < 2*TICRATE) // one second pause before tally begins
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
