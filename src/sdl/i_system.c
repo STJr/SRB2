@@ -1980,6 +1980,7 @@ tic_t I_GetTime (void)
 //
 FUNCMATH void I_StartupTimer(void)
 {
+	SDL_SetHint(SDL_HINT_TIMER_RESOLUTION, "2");
 }
 
 
