@@ -929,6 +929,9 @@ void I_UpdateNoBlit(void)
 // from PrBoom's src/SDL/i_video.c
 static inline boolean I_SkipFrame(void)
 {
+#if 1
+	return false;
+#else
 	static boolean skip = false;
 
 	if (rendermode != render_soft)
@@ -948,6 +951,7 @@ static inline boolean I_SkipFrame(void)
 		default:
 			return false;
 	}
+#endif
 }
 
 //
