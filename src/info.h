@@ -393,6 +393,7 @@ typedef enum sprite
 	SPR_THZP, // THZ1 Steam Flower
 	SPR_FWR5, // THZ1 Spin flower (red)
 	SPR_FWR6, // THZ1 Spin flower (yellow)
+	SPR_THZT, // Steam Whistle tree/bush
 	SPR_ALRM, // THZ2 Alarm
 
 	// Deep Sea Scenery
@@ -2026,6 +2027,22 @@ typedef enum state
 	S_THZFLOWERB, // THZ1 Spin flower (red)
 	S_THZFLOWERC, // THZ1 Spin flower (yellow)
 
+	// THZ Steam Whistle tree/bush
+	S_THZTREE,
+	S_THZTREEBRANCH1,
+	S_THZTREEBRANCH2,
+	S_THZTREEBRANCH3,
+	S_THZTREEBRANCH4,
+	S_THZTREEBRANCH5,
+	S_THZTREEBRANCH6,
+	S_THZTREEBRANCH7,
+	S_THZTREEBRANCH8,
+	S_THZTREEBRANCH9,
+	S_THZTREEBRANCH10,
+	S_THZTREEBRANCH11,
+	S_THZTREEBRANCH12,
+	S_THZTREEBRANCH13,
+
 	// THZ Alarm
 	S_ALARM1,
 
@@ -3503,6 +3520,8 @@ typedef enum mobj_type
 	MT_THZFLOWER1,
 	MT_THZFLOWER2,
 	MT_THZFLOWER3,
+	MT_THZTREE, // Steam whistle tree/bush
+	MT_THZTREEBRANCH, // branch of said tree
 	MT_ALARM,
 
 	// Deep Sea Scenery

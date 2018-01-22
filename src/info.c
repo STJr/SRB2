@@ -193,6 +193,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"THZP", // THZ1 Steam Flower
 	"FWR5", // THZ1 Spin flower (red)
 	"FWR6", // THZ1 Spin flower (yellow)
+	"THZT", // Steam Whistle tree/bush
 	"ALRM", // THZ2 Alarm
 
 	// Deep Sea Scenery
@@ -1917,6 +1918,22 @@ state_t states[NUMSTATES] =
 	{SPR_THZP, FF_ANIMATE, -1, {NULL},  7, 4, S_NULL}, // S_THZFLOWERA
 	{SPR_FWR5, FF_ANIMATE, -1, {NULL}, 19, 2, S_NULL}, // S_THZFLOWERB
 	{SPR_FWR6, FF_ANIMATE, -1, {NULL}, 19, 2, S_NULL}, // S_THZFLOWERC
+
+	// THZ Steam Whistle tree/bush
+	{SPR_THZT, 0, -1, {NULL}, 0, 0, S_NULL}, // S_THZTREE
+	{SPR_THZT,  1|FF_PAPERSPRITE, 40, {NULL}, 0, 0, S_THZTREEBRANCH2}, // S_THZTREEBRANCH1
+	{SPR_THZT,  2|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH3}, // S_THZTREEBRANCH2
+	{SPR_THZT,  3|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH4}, // S_THZTREEBRANCH3
+	{SPR_THZT,  4|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH5}, // S_THZTREEBRANCH4
+	{SPR_THZT,  5|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH6}, // S_THZTREEBRANCH5
+	{SPR_THZT,  6|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH7}, // S_THZTREEBRANCH6
+	{SPR_THZT,  7|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH8}, // S_THZTREEBRANCH7
+	{SPR_THZT,  8|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH9}, // S_THZTREEBRANCH8
+	{SPR_THZT,  9|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH10}, // S_THZTREEBRANCH9
+	{SPR_THZT, 10|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH11}, // S_THZTREEBRANCH10
+	{SPR_THZT, 11|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH12}, // S_THZTREEBRANCH11
+	{SPR_THZT, 12|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH13}, // S_THZTREEBRANCH12
+	{SPR_THZT, 13|FF_PAPERSPRITE,  4, {NULL}, 0, 0, S_THZTREEBRANCH1}, // S_THZTREEBRANCH13
 
 	// THZ Alarm
 	{SPR_ALRM, FF_FULLBRIGHT, 35, {A_Scream}, 0, 0, S_ALARM1}, // S_ALARM1
@@ -8662,6 +8679,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8,              // speed
 		16*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_THZTREE
+		904,            // doomednum
+		S_THZTREE,      // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_THZTREEBRANCH
+		-1,             // doomednum
+		S_THZTREEBRANCH1, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		1*FRACUNIT,     // radius
+		1*FRACUNIT,     // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage

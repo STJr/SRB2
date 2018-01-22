@@ -10096,6 +10096,14 @@ domaceagain:
 			mobj->destscale = mobj->scale;
 		}
 		break;
+	case MT_THZTREE:
+		{ // Spawn the branches
+			angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT);
+			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
+			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
+			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
+		}
+		break;
 	default:
 		break;
 	}
