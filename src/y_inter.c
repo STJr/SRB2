@@ -399,13 +399,29 @@ void Y_IntermissionDrawer(void)
 				}
 				else
 				{
-					if (emeraldbounces < 3)
+					if (emeralds & (1 << em))
+					{
+						if (emeraldbounces < 3)
+						{
+							emeraldmomy += 1;
+							emeraldy += emeraldmomy;
+							if (emeraldy > 74)
+							{
+								S_StartSound(NULL, sfx_tink); // tink
+								emeraldbounces++;
+								emeraldmomy = -(emeraldmomy/2);
+								emeraldy = 74;
+							}
+						}
+					}
+					else
 					{
 						emeraldmomy += 1;
 						emeraldy += emeraldmomy;
-						if (emeraldy > 74)
+						emeraldx += intertic - 6;
+						if (emeraldbounces < 1 && emeraldy > 74)
 						{
-							S_StartSound(NULL, sfx_tink); // tink
+							S_StartSound(NULL, sfx_shldls); // nope
 							emeraldbounces++;
 							emeraldmomy = -(emeraldmomy/2);
 							emeraldy = 74;
