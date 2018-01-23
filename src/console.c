@@ -694,6 +694,28 @@ static void CON_InputDelChar(void)
 // ----
 //
 
+static int bs_space (int c)
+{
+	return (c == ' ');
+}
+static void blockshift (boolean left)
+{
+	char *cp;
+	int (*f) (int);
+
+	cp = inputlines[inputline];
+	f = ((cp[input_cur] == ' ') ? &bs_space
+		  : (ispunct(cp[input_cur]) ? &ispunct : &isalnum));
+
+	if (left)
+	{
+		for (; input_cur != -1 && f(cp[input_cur]); input_cur--) ;
+		input_cur++;
+	}
+	else
+		for (; input_cur != input_len && f(cp[input_cur]); input_cur++) ;
+}
+
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
@@ -758,7 +780,8 @@ boolean CON_Responder(event_t *ev)
 	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
 	if (key == KEY_LSHIFT || key == KEY_RSHIFT
 	 || key == KEY_LCTRL || key == KEY_RCTRL
-	 || key == KEY_LALT || key == KEY_RALT)
+	 || key == KEY_LALT || key == KEY_RALT
+	 || key == KEY_CAPSLOCK)
 		return true;
 
 	// ctrl modifier -- changes behavior, adds shortcuts
@@ -917,7 +940,11 @@ boolean CON_Responder(event_t *ev)
 	if (key == KEY_LEFTARROW)
 	{
 		if (input_cur != 0)
+		{
 			--input_cur;
+			if (ctrldown)
+				blockshift(true);
+		}
 		if (!shiftdown)
 			input_sel = input_cur;
 		return true;
@@ -925,7 +952,12 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_RIGHTARROW)
 	{
 		if (input_cur < input_len)
-			++input_cur;
+		{
+			if (ctrldown)
+				blockshift(false);
+			else
+				++input_cur;
+		}
 		if (!shiftdown)
 			input_sel = input_cur;
 		return true;
@@ -973,21 +1005,46 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (key == KEY_BACKSPACE || key == KEY_DEL)
 		{
+			if (ctrldown)
+			{
+				if (key == KEY_BACKSPACE)
+				{
+					input_cur--;
+					blockshift(true);
+				}
+				else
+					blockshift(false);
+			}
 			CON_InputDelSelection();
 			return true;
 		}
 	}
 	else if (key == KEY_BACKSPACE)
 	{
-		CON_InputDelChar();
+		if (ctrldown)
+		{
+			input_cur--;
+			blockshift(true);
+			CON_InputDelSelection();
+		}
+		else
+			CON_InputDelChar();
 		return true;
 	}
 	else if (key == KEY_DEL)
 	{
 		if (input_cur == input_len)
 			return true;
-		++input_cur;
-		CON_InputDelChar();
+		if (ctrldown)
+		{
+			blockshift(false);
+			CON_InputDelSelection();
+		}
+		else
+		{
+			++input_cur;
+			CON_InputDelChar();
+		}
 		return true;
 	}
 
@@ -1038,16 +1095,23 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	if (shiftdown)
-		key = shiftxform[key];
-
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true; // even if key can't be printed, eat it anyway
 
+	if (capslocked && key >= 'a' && key <= 'z')
+	{
+		if (!shiftdown)
+			key = shiftxform[key];
+	}
+	else if (shiftdown)
+		key = shiftxform[key];
+
+#if 0
 	// add key to cmd line here
 	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
 		key = key + 'a' - 'A';
+#endif
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();

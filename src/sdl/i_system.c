@@ -806,6 +806,11 @@ INT32 I_GetKey (void)
 	return rc;
 }
 
+boolean I_CapsLockState (void)
+{
+	return !!(SDL_GetModState() & KMOD_CAPS);
+}
+
 //
 // I_JoyScale
 //

@@ -181,6 +181,9 @@ void D_PostEvent_end(void) {};
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
+
+boolean capslocked;
+
 //
 // D_ModifierKeyResponder
 // Sets global shift/ctrl/alt variables, never actually eats events
@@ -195,6 +198,7 @@ static inline void D_ModifierKeyResponder(event_t *ev)
 		case KEY_RCTRL: ctrldown |= 0x2; return;
 		case KEY_LALT: altdown |= 0x1; return;
 		case KEY_RALT: altdown |= 0x2; return;
+		case KEY_CAPSLOCK: capslocked = I_CapsLockState(); return;
 		default: return;
 	}
 	else if (ev->type == ev_keyup) switch (ev->data1)
@@ -205,6 +209,7 @@ static inline void D_ModifierKeyResponder(event_t *ev)
 		case KEY_RCTRL: ctrldown &= ~0x2; return;
 		case KEY_LALT: altdown &= ~0x1; return;
 		case KEY_RALT: altdown &= ~0x2; return;
+		case KEY_CAPSLOCK: capslocked = I_CapsLockState(); return;
 		default: return;
 	}
 }
@@ -542,6 +547,9 @@ void D_SRB2Loop(void)
 
 	CONS_Printf("I_StartupKeyboard()...\n");
 	I_StartupKeyboard();
+
+	I_GetEvent();
+	capslocked = I_CapsLockState();
 
 #ifdef _WINDOWS
 	CONS_Printf("I_StartupMouse()...\n");
