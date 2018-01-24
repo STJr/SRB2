@@ -6165,7 +6165,7 @@ static void M_DrawLoadGameData(void)
 			{
 				V_DrawSmallScaledPatch(x+2, y+64, 0, savselp[5]);
 			}
-#ifndef PERFECTSAVE // disabled, don't touch
+#ifdef PERFECTSAVE // disabled on request
 			else if ((savegameinfo[savetodraw].skinnum == 1)
 			&& (savegameinfo[savetodraw].lives == 99)
 			&& (savegameinfo[savetodraw].gamemap & 8192)
