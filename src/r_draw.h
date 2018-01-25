@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -111,6 +111,7 @@ void R_InitTranslationTables(void);
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags);
 void R_FlushTranslationColormapCache(void);
 UINT8 R_GetColorByName(const char *name);
+UINT8 R_GetSuperColorByName(const char *name);
 
 // Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);
@@ -161,6 +162,7 @@ void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
 void R_DrawTranslucentSpan_8(void);
 void R_Draw2sMultiPatchColumn_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogSpan_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
@@ -169,11 +171,13 @@ void R_DrawColumnShadowed_8(void);
 // 16bpp DRAWING CODE
 // ------------------
 
+#ifdef HIGHCOLOR
 void R_DrawColumn_16(void);
 void R_DrawWallColumn_16(void);
 void R_DrawTranslucentColumn_16(void);
 void R_DrawTranslatedColumn_16(void);
 void R_DrawSpan_16(void);
+#endif
 
 // =========================================================================
 #endif  // __R_DRAW__

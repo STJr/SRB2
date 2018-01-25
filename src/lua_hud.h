@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014      by John "JTE" Muniz.
-// Copyright (C) 2014      by Sonic Team Junior.
+// Copyright (C) 2014-2016 by John "JTE" Muniz.
+// Copyright (C) 2014-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,9 @@ enum hud {
 	hud_time,
 	hud_rings,
 	hud_lives,
+	// Match / CTF / Tag / Ringslinger
+	hud_weaponrings,
+	hud_powerstones,
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,
@@ -39,3 +42,4 @@ boolean LUA_HudEnabled(enum hud option);
 
 void LUAh_GameHUD(player_t *stplyr);
 void LUAh_ScoresHUD(void);
+void LUAh_TitleHUD(void);

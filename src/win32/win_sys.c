@@ -170,24 +170,6 @@ ticcmd_t *I_BaseTiccmd2(void)
 // of win95 etc...
 //
 
-BOOL win9x;
-
-/**	\brief WinNT system platform
-*/
-static BOOL winnt;
-
-static void I_DetectWin9x(VOID)
-{
-	OSVERSIONINFO osvi;
-
-	osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-	GetVersionEx(&osvi);
-
-	winnt = (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT);
-	// 95 or 98 what the hell
-	win9x = true;
-}
-
 // return free and total memory in the system
 UINT32 I_GetFreeMem(UINT32* total)
 {
@@ -2599,7 +2581,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoybuttons;
 		lastjoybuttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2619,7 +2601,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoyhats;
 		lastjoyhats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
@@ -2843,7 +2825,7 @@ acquire:
 		UINT64 newbuttons = joybuttons ^ lastjoy2buttons;
 		lastjoy2buttons = joybuttons;
 
-		for (i = 0; i < JOYBUTTONS && i < JOYBUTTONS_MAX; i++, j <<= 1)
+		for (i = 0; i < JOYBUTTONS_MIN; i++, j <<= 1)
 		{
 			if (newbuttons & j) // button changed state?
 			{
@@ -2863,7 +2845,7 @@ acquire:
 		UINT64 newhats = joyhats ^ lastjoy2hats;
 		lastjoy2hats = joyhats;
 
-		for (i = 0; i < JOYHATS*4 && i < JOYHATS_MAX*4; i++, j <<= 1)
+		for (i = 0; i < JOYHATS_MIN*4; i++, j <<= 1)
 		{
 			if (newhats & j) // button changed state?
 			{
@@ -3095,7 +3077,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		return;
 
 	if(mumble->uiVersion != 2) {
-		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRING, 256);
+		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
 		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
 		mumble->uiVersion = 2;
 	}
@@ -3405,7 +3387,7 @@ getBufferedData:
 }
 
 static HINSTANCE DInputDLL = NULL;
-typedef HRESULT (WINAPI *DICreateA)(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT *ppDI, LPUNKNOWN punkOuter);
+typedef HRESULT (WINAPI *DICreateA)(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUTA *ppDI, LPUNKNOWN punkOuter);
 static DICreateA pfnDirectInputCreateA = NULL;
 
 BOOL LoadDirectInput(VOID)
@@ -3452,9 +3434,6 @@ INT32 I_StartupSystem(void)
 	// some 'more global than globals' things to initialize here ?
 	graphics_started = keyboard_started = sound_started = cdaudio_started = false;
 
-	I_DetectWin9x();
-
-	// check for OS type and version here?
 #ifdef NDEBUG
 
 #ifdef BUGTRAP
@@ -3617,6 +3596,18 @@ char * I_GetEnv(const char *name)
 INT32 I_PutEnv(char *variable)
 {
 	return putenv(variable);
+}
+
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+const char *I_ClipboardPaste(void)
+{
+	return NULL;
 }
 
 typedef BOOL (WINAPI *p_IsProcessorFeaturePresent) (DWORD);

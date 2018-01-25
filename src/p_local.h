@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,10 +25,8 @@
 
 #define FLOATSPEED (FRACUNIT*4)
 
-#define VIEWHEIGHTS "41"
-
 // Maximum player score.
-#define MAXSCORE 999999990
+#define MAXSCORE 99999990 // 999999990
 
 // mapblocks are used to check movement
 // against lines and things
@@ -59,8 +57,12 @@
 
 #define AIMINGTOSLOPE(aiming) FINESINE((aiming>>ANGLETOFINESHIFT) & FINEMASK)
 
-#define mariomode (maptol & TOL_MARIO)
 #define twodlevel (maptol & TOL_2D)
+
+#define mariomode (maptol & TOL_MARIO)
+
+#define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
+#define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
 //
 // P_TICK
@@ -68,7 +70,6 @@
 
 // both the head and tail of the thinker list
 extern thinker_t thinkercap;
-extern INT32 runcount;
 
 void P_InitThinkers(void);
 void P_AddThinker(thinker_t *thinker);
@@ -119,14 +120,14 @@ extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed;
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
-fixed_t P_GetPlayerHeight(player_t *player);
-fixed_t P_GetPlayerSpinHeight(player_t *player);
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
+void P_StealPlayerScore(player_t *player, UINT32 amount);
 void P_ResetCamera(player_t *player, camera_t *thiscam);
 boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
 void P_SlideCameraMove(camera_t *thiscam);
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
+pflags_t P_GetJumpFlags(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
@@ -137,21 +138,30 @@ boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
+boolean P_PlayerHitFloor(player_t *player);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
+void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
+void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
 void P_GiveEmerald(boolean spawnObj);
+#if 0
 void P_ResetScore(player_t *player);
+#else
+#define P_ResetScore(player) player->scoreadd = 0
+#endif
 boolean P_AutoPause(void);
 
 void P_DoJumpShield(player_t *player);
+void P_DoBubbleBounce(player_t *player);
+void P_DoAbilityBounce(player_t *player, boolean changemomz);
 void P_BlackOw(player_t *player);
-void P_ElementalFireTrail(player_t *player);
+void P_ElementalFire(player_t *player, boolean cropcircle);
 
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
@@ -164,11 +174,16 @@ fixed_t P_ReturnThrustX(mobj_t *mo, angle_t angle, fixed_t move);
 fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move);
 void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
-boolean P_LookForEnemies(player_t *player);
+mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
+#if 0
+boolean P_AnalogMove(player_t *player);
+#else
+#define P_AnalogMove(player) (player->pflags & PF_ANALOGMODE)
+#endif
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
 void P_FindEmerald(void);
@@ -183,6 +198,9 @@ void P_PlayLivesJingle(player_t *player);
 #define P_PlayDeathSound(s)		S_StartSound(s, sfx_altdi1 + P_RandomKey(4));
 #define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
 
+boolean P_GetLives(player_t *player);
+boolean P_SpectatorJoinGame(player_t *player);
+void P_RestoreMultiMusic(player_t *player);
 
 //
 // P_MOBJ
@@ -197,7 +215,7 @@ void P_PlayLivesJingle(player_t *player);
 extern mapthing_t *itemrespawnque[ITEMQUESIZE];
 extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
-extern consvar_t cv_gravity, cv_viewheight;
+extern consvar_t cv_gravity, cv_movebob;
 
 void P_RespawnSpecials(void);
 
@@ -239,6 +257,8 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
 
+mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type);
+
 mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
 mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
@@ -250,7 +270,8 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype
 #endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
-boolean P_WeaponOrPanel(mobjtype_t type);
+fixed_t P_GetMobjGravity(mobj_t *mo);
+FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 
@@ -284,6 +305,11 @@ boolean P_CheckMissileRange(mobj_t *actor);
 
 void P_NewChaseDir(mobj_t *actor);
 boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed_t dist);
+
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers);
+void P_InternalFlickyBubble(mobj_t *actor);
+void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fixed_t chasez);
+void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angle);
 
 //
 // P_MAP
@@ -375,7 +401,8 @@ typedef struct BasicFF_s
 #define DMG_FIRE      2
 #define DMG_ELECTRIC  3
 #define DMG_SPIKE     4
-//#define DMG_SPECIALSTAGE 5
+#define DMG_NUKE      5 // bomb shield
+//#define DMG_SPECIALSTAGE 6
 //// Death types - cannot be combined with damage types
 #define DMG_INSTAKILL  0x80
 #define DMG_DROWNED    0x80+1
@@ -389,11 +416,13 @@ void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duratio
 void P_ForceConstant(const BasicFF_t *FFInfo);
 void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End);
 void P_RemoveShield(player_t *player);
+void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source);
 boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);
+void P_PlayerWeaponPanelOrAmmoBurst(player_t *player);
 void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
@@ -408,6 +437,7 @@ void P_ResetStarposts(void);
 
 boolean P_CanPickupItem(player_t *player, boolean weapon);
 void P_DoNightsScore(player_t *player);
+void P_DoMatchSuper(player_t *player);
 
 //
 // P_SPEC

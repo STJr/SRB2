@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,14 +30,13 @@ mobj_t *P_FindNewPosition(UINT32 oldposition);
 
 typedef struct
 {
-	UINT8 skincolor;
 	UINT8 skin;
 	UINT8 botskin;
-	UINT8 botcolor;
 	INT32 score;
 	INT32 lives;
 	INT32 continues;
 	UINT16 emeralds;
+	UINT8 numgameovers;
 } savedata_t;
 
 extern savedata_t savedata;

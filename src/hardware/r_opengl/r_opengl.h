@@ -21,6 +21,7 @@
 #define _R_OPENGL_H_
 
 #ifdef HAVE_SDL
+#define _MATH_DEFINES_DEFINED
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
@@ -36,11 +37,9 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-#ifndef MINI_GL_COMPATIBILITY
 #ifdef STATIC_OPENGL // Because of the 1.3 functions, you'll need GLext to compile it if static
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glext.h>
-#endif
 #endif
 #endif
 
@@ -86,7 +85,7 @@ boolean SetupGLfunc(void);
 boolean SetupGLFunc13(void);
 void Flush(void);
 INT32 isExtAvailable(const char *extension, const GLubyte *start);
-boolean SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepthBits);
+int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepthBits);
 void SetModelView(GLint w, GLint h);
 void SetStates(void);
 FUNCMATH float byteasfloat(UINT8 fbyte);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,7 +25,6 @@
 #define ANGLETOFINESHIFT 19 // 0x100000000 to 0x2000
 #define FINEANGLE_C(x) ((FixedAngle((x)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK) // ((x*(ANGLE_45/45))>>ANGLETOFINESHIFT) & FINEMASK
 
-#if !(defined _NDS) || !(defined NONET)
 // Effective size is 10240.
 extern fixed_t finesine[5*FINEANGLES/4];
 
@@ -34,7 +33,6 @@ extern fixed_t *finecosine;
 
 // Effective size is 4096.
 extern fixed_t finetangent[FINEANGLES/2];
-#endif
 
 #define ANG1   0x00B60B61 //0.B6~
 #define ANG2   0x016C16C1 //.6C1~
@@ -82,7 +80,7 @@ typedef UINT32 angle_t;
 extern angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
-unsigned SlopeDiv(unsigned num, unsigned den);
+FUNCMATH unsigned SlopeDiv(unsigned num, unsigned den);
 
 // 360 - angle_t(ANGLE_45) = ANGLE_315
 FUNCMATH FUNCINLINE static ATTRINLINE angle_t InvAngle(angle_t a)
@@ -112,17 +110,9 @@ void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
 // The table values in tables.c are calculated with this many fractional bits.
 #define FINE_FRACBITS 16
 
-#if (defined _NDS) && (defined NONET)
-// Use the NDS's trig functions. This would break netplay, so we only do
-// it if NONET is defined.
-#define FINESINE(n) ((fixed_t)sinLerp((INT16)(((INT32)(n))<<(ANGLETOFINESHIFT-17))) << (FRACBITS - 12))
-#define FINECOSINE(n) ((fixed_t)cosLerp((INT16)(((INT32)(n))<<(ANGLETOFINESHIFT-17))) << (FRACBITS - 12))
-#define FINETANGENT(n) ((fixed_t)tanLerp((INT16)(((INT32)(n)-(FINEANGLES>>2))<<(ANGLETOFINESHIFT-17))) << (FRACBITS - 12))
-#else
 // These macros should be used in case FRACBITS < FINE_FRACBITS.
 #define FINESINE(n) (finesine[n]>>(FINE_FRACBITS-FRACBITS))
 #define FINECOSINE(n) (finecosine[n]>>(FINE_FRACBITS-FRACBITS))
 #define FINETANGENT(n) (finetangent[n]>>(FINE_FRACBITS-FRACBITS))
-#endif
 
 #endif

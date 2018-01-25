@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,10 +24,10 @@
 //
 
 // Called by main loop.
-void ST_Ticker(void);
+FUNCMATH void ST_Ticker(void);
 
 // Called by main loop.
-void ST_Drawer(boolean refresh);
+void ST_Drawer(void);
 
 // Called when the console player is spawned on each level.
 void ST_Start(void);
@@ -44,9 +44,6 @@ void ST_LoadGraphics(void);
 // face load graphics, called when skin changes
 void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
-#ifdef DELFILE
-void ST_UnLoadFaceGraphics(INT32 skinnum);
-#endif
 
 void ST_doPaletteStuff(void);
 
@@ -89,6 +86,7 @@ typedef enum
 	HUD_RINGSSPLIT,
 	HUD_RINGSNUM,
 	HUD_RINGSNUMSPLIT,
+	HUD_RINGSNUMTICS,
 
 	HUD_SCORE,
 	HUD_SCORENUM,

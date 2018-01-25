@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,16 +30,12 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 #include <direct.h>
 #include <malloc.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#elif defined (_XBOX)
-#define NO_TIME
-#endif
 
 #include "doomdef.h"
 #include "am_map.h"
@@ -73,15 +69,13 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "keys.h"
+#include "filesrch.h" // refreshdirmenu, mainwadstally
 
 #ifdef CMAKECONFIG
 #include "config.h"
 #else
 #include "config.h.in"
-#endif
-
-#ifdef _XBOX
-#include "sdl/SRB2XBOX/xboxhelp.h"
 #endif
 
 #ifdef HWRENDER
@@ -106,8 +100,6 @@ UINT8 window_notinfocus = false;
 //
 // DEMO LOOP
 //
-//static INT32 demosequence;
-static const char *pagename = "MAP1PIC";
 static char *startupwadfiles[MAX_WADFILES];
 
 boolean devparm = false; // started game with -devparm
@@ -120,13 +112,8 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-#ifdef _XBOX
-boolean nomidimusic = true, nosound = true;
-boolean nodigimusic = true;
-#else
 boolean nomidimusic = false, nosound = false;
 boolean nodigimusic = false; // No fmod-based music
-#endif
 
 // These variables are only true if
 // the respective sound system is initialized
@@ -140,13 +127,8 @@ boolean advancedemo;
 INT32 debugload = 0;
 #endif
 
-#ifdef _arch_dreamcast
-char srb2home[256] = "/cd";
-char srb2path[256] = "/cd";
-#else
 char srb2home[256] = ".";
 char srb2path[256] = ".";
-#endif
 boolean usehome = true;
 const char *pandf = "%s" PATHSEP "%s";
 
@@ -176,6 +158,38 @@ void D_PostEvent(const event_t *ev)
 void D_PostEvent_end(void) {};
 #endif
 
+// modifier keys
+UINT8 shiftdown = 0; // 0x1 left, 0x2 right
+UINT8 ctrldown = 0; // 0x1 left, 0x2 right
+UINT8 altdown = 0; // 0x1 left, 0x2 right
+//
+// D_ModifierKeyResponder
+// Sets global shift/ctrl/alt variables, never actually eats events
+//
+static inline void D_ModifierKeyResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown |= 0x1; return;
+		case KEY_RSHIFT: shiftdown |= 0x2; return;
+		case KEY_LCTRL: ctrldown |= 0x1; return;
+		case KEY_RCTRL: ctrldown |= 0x2; return;
+		case KEY_LALT: altdown |= 0x1; return;
+		case KEY_RALT: altdown |= 0x2; return;
+		default: return;
+	}
+	else if (ev->type == ev_keyup) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown &= ~0x1; return;
+		case KEY_RSHIFT: shiftdown &= ~0x2; return;
+		case KEY_LCTRL: ctrldown &= ~0x1; return;
+		case KEY_RCTRL: ctrldown &= ~0x2; return;
+		case KEY_LALT: altdown &= ~0x1; return;
+		case KEY_RALT: altdown &= ~0x2; return;
+		default: return;
+	}
+}
+
 //
 // D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
@@ -187,6 +201,9 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
+
+		// Set global shift/ctrl/alt down variables
+		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -221,10 +238,7 @@ gamestate_t wipegamestate = GS_LEVEL;
 
 static void D_Display(void)
 {
-	static boolean menuactivestate = false;
-	static gamestate_t oldgamestate = -1;
-	boolean redrawsbar = false;
-
+	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
 
@@ -245,23 +259,15 @@ static void D_Display(void)
 	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
-		oldgamestate = -1; // force background redraw
-		redrawsbar = true;
+		forcerefresh = true; // force background redraw
 	}
-
-	// save the current screen if about to wipe
-	if (gamestate != wipegamestate)
-	{
-		wipe = true;
-		F_WipeStartScreen();
-	}
-	else
-		wipe = false;
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
 	I_UpdateNoBlit();
 
+	// save the current screen if about to wipe
+	wipe = (gamestate != wipegamestate);
 	if (wipe)
 	{
 		// set for all later
@@ -277,9 +283,10 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (gamestate != GS_LEVEL // fades to black on its own timing, always
+			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
+				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
 				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
@@ -292,14 +299,18 @@ static void D_Display(void)
 	// do buffered drawing
 	switch (gamestate)
 	{
+		case GS_TITLESCREEN:
+			if (!titlemapinaction) {
+				F_TitleScreenDrawer();
+				break;
+			}
+			// Intentional fall-through
 		case GS_LEVEL:
 			if (!gametic)
 				break;
 			HU_Erase();
 			if (automapactive)
 				AM_Drawer();
-			if (wipe || menuactivestate || (rendermode != render_soft && rendermode != render_none) || vid.recalc)
-				redrawsbar = true;
 			break;
 
 		case GS_INTERMISSION:
@@ -329,6 +340,7 @@ static void D_Display(void)
 
 		case GS_EVALUATION:
 			F_GameEvaluationDrawer();
+			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -342,10 +354,6 @@ static void D_Display(void)
 			HU_Drawer();
 			break;
 
-		case GS_TITLESCREEN:
-			F_TitleScreenDrawer();
-			break;
-
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
 		case GS_DEDICATEDSERVER:
@@ -355,14 +363,10 @@ static void D_Display(void)
 
 	// clean up border stuff
 	// see if the border needs to be initially drawn
-	if (gamestate == GS_LEVEL)
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
 	{
-#if 0
-		if (oldgamestate != GS_LEVEL)
-			R_FillBackScreen(); // draw the pattern into the back screen
-#endif
-
 		// draw the view directly
+
 		if (!automapactive && !dedicated && cv_renderview.value)
 		{
 			if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
@@ -401,10 +405,13 @@ static void D_Display(void)
 			}
 
 			// Image postprocessing effect
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			if (rendermode == render_soft)
+			{
+				if (postimgtype)
+					V_DoPostProcessor(0, postimgtype, postimgparam);
+				if (postimgtype2)
+					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			}
 		}
 
 		if (lastdraw)
@@ -417,17 +424,21 @@ static void D_Display(void)
 			lastdraw = false;
 		}
 
-		ST_Drawer(redrawsbar);
-
-		HU_Drawer();
+		if (gamestate == GS_LEVEL)
+		{
+			ST_Drawer();
+			HU_Drawer();
+		}
+		else
+			F_TitleScreenDrawer();
 	}
 
 	// change gamma if needed
-	if (gamestate != oldgamestate && gamestate != GS_LEVEL)
+	// (GS_LEVEL handles this already due to level-specific palettes)
+	if (forcerefresh && gamestate != GS_LEVEL)
 		V_SetPalette(0);
 
-	menuactivestate = menuactive;
-	oldgamestate = wipegamestate = gamestate;
+	wipegamestate = gamestate;
 
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
@@ -450,15 +461,22 @@ static void D_Display(void)
 		CON_Drawer();
 
 	M_Drawer(); // menu is drawn even on top of everything
+	// focus lost moved to M_Drawer
 
-	// focus lost notification goes on top of everything, even the former everything
-	if (window_notinfocus)
+	//
+	// wipe update
+	//
+	if (wipe)
 	{
-		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
-		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
-		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
+		// note: moved up here because NetUpdate does input changes
+		// and input during wipe tends to mess things up
+		wipedefindex += WIPEFINALSHIFT;
+
+		if (rendermode != render_none)
+		{
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+		}
 	}
 
 	NetUpdate(); // send out any new accumulation
@@ -493,18 +511,6 @@ static void D_Display(void)
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
-		return;
-	}
-
-	//
-	// wipe update
-	//
-	wipedefindex += WIPEFINALSHIFT;
-
-	if (rendermode != render_none)
-	{
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 	}
 }
 
@@ -513,7 +519,6 @@ static void D_Display(void)
 // =========================================================================
 
 tic_t rendergametic;
-boolean supdate;
 
 void D_SRB2Loop(void)
 {
@@ -573,6 +578,8 @@ void D_SRB2Loop(void)
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
 
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
+
 #ifdef DEBUGFILE
 		if (!realtics)
 			if (debugload)
@@ -604,7 +611,6 @@ void D_SRB2Loop(void)
 
 			// Update display, next frame, with current state.
 			D_Display();
-			supdate = false;
 
 			if (moviemode)
 				M_SaveFrame();
@@ -656,6 +662,9 @@ void D_AdvanceDemo(void)
 void D_StartTitle(void)
 {
 	INT32 i;
+
+	S_StopMusic();
+
 	if (netgame)
 	{
 		if (gametype == GT_COOP)
@@ -691,6 +700,7 @@ void D_StartTitle(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	lastmaploaded = 0;
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -699,10 +709,16 @@ void D_StartTitle(void)
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
 
+	// reset to default player stuff
+	COM_BufAddText (va("%s \"%s\"\n",cv_playername.name,cv_defaultplayername.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playername2.name,cv_defaultplayername2.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
+
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
-	//demosequence = -1;
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
@@ -775,17 +791,11 @@ static void IdentifyVersion(void)
 	}
 	else
 	{
-#if !defined(_WIN32_WCE) && !defined(_PS3)
 		if (getcwd(srb2path, 256) != NULL)
 			srb2waddir = srb2path;
 		else
-#endif
 		{
-#ifdef _arch_dreamcast
-			srb2waddir = "/cd";
-#else
 			srb2waddir = ".";
-#endif
 		}
 	}
 
@@ -800,7 +810,7 @@ static void IdentifyVersion(void)
 	if (srb2wad1 == NULL && srb2wad2 == NULL)
 		I_Error("No more free memory to look in %s", srb2waddir);
 	if (srb2wad1 != NULL)
-		sprintf(srb2wad1, pandf, srb2waddir, "srb2.srb");
+		sprintf(srb2wad1, pandf, srb2waddir, "srb2.pk3");
 	if (srb2wad2 != NULL)
 		sprintf(srb2wad2, pandf, srb2waddir, "srb2.wad");
 
@@ -830,19 +840,26 @@ static void IdentifyVersion(void)
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.dta"));
 
-	// Add the weapons
-	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
-
+#ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+#endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-#if defined (DC) && 0
-		const char *musicfile = "music_dc.dta";
-#else
 		const char *musicfile = "music.dta";
+		const char *musicpath = va(pandf,srb2waddir,musicfile);
+		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
+		if (ms == 1)
+			D_AddFile(musicpath);
+		else if (ms == 0)
+			I_Error("File %s has been modified with non-music lumps",musicfile);
+	}
 #endif
+
+#ifdef DEVELOP // This section can be deleted when music_new is merged with music.dta
+	{
+		const char *musicfile = "music_new.dta";
 		const char *musicpath = va(pandf,srb2waddir,musicfile);
 		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
 		if (ms == 1)
@@ -853,27 +870,10 @@ static void IdentifyVersion(void)
 #endif
 }
 
-/* ======================================================================== */
-// Just print the nice red titlebar like the original SRB2 for DOS.
-/* ======================================================================== */
 #ifdef PC_DOS
-static inline void D_Titlebar(char *title1, char *title2)
-{
-	// SRB2 banner
-	clrscr();
-	textattr((BLUE<<4)+WHITE);
-	clreol();
-	cputs(title1);
-
-	// standard srb2 banner
-	textattr((RED<<4)+WHITE);
-	clreol();
-	gotoxy((80-strlen(title2))/2, 2);
-	cputs(title2);
-	normvideo();
-	gotoxy(1,3);
-}
-#endif
+/* ======================================================================== */
+// Code for printing SRB2's title bar in DOS
+/* ======================================================================== */
 
 //
 // Center the title string, then add the date and time of compilation.
@@ -902,6 +902,31 @@ static inline void D_MakeTitleString(char *s)
 	strcpy(s, temp);
 }
 
+static inline void D_Titlebar(void)
+{
+	char title1[82]; // srb2 title banner
+	char title2[82];
+
+	strcpy(title1, "Sonic Robo Blast 2");
+	strcpy(title2, "Sonic Robo Blast 2");
+
+	D_MakeTitleString(title1);
+
+	// SRB2 banner
+	clrscr();
+	textattr((BLUE<<4)+WHITE);
+	clreol();
+	cputs(title1);
+
+	// standard srb2 banner
+	textattr((RED<<4)+WHITE);
+	clreol();
+	gotoxy((80-strlen(title2))/2, 2);
+	cputs(title2);
+	normvideo();
+	gotoxy(1,3);
+}
+#endif
 
 //
 // D_SRB2Main
@@ -909,14 +934,12 @@ static inline void D_MakeTitleString(char *s)
 void D_SRB2Main(void)
 {
 	INT32 p;
-	char srb2[82]; // srb2 title banner
-	char title[82];
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
 
 	// keep error messages until the final flush(stderr)
-#if !defined (PC_DOS) && !defined (_WIN32_WCE) && !defined(NOTERMIOS)
+#if !defined (PC_DOS) && !defined(NOTERMIOS)
 	if (setvbuf(stderr, NULL, _IOFBF, 1000))
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
@@ -938,11 +961,11 @@ void D_SRB2Main(void)
 	// identify the main IWAD file to use
 	IdentifyVersion();
 
-#if !defined (_WIN32_WCE) && !defined(NOTERMIOS)
+#if !defined(NOTERMIOS)
 	setbuf(stdout, NULL); // non-buffered output
 #endif
 
-#if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
+#if 0 //defined (_DEBUG)
 	devparm = M_CheckParm("-nodebug") == 0;
 #else
 	devparm = M_CheckParm("-debug") != 0;
@@ -953,20 +976,8 @@ void D_SRB2Main(void)
 	dedicated = M_CheckParm("-dedicated") != 0;
 #endif
 
-	strcpy(title, "Sonic Robo Blast 2");
-	strcpy(srb2, "Sonic Robo Blast 2");
-	D_MakeTitleString(srb2);
-
 #ifdef PC_DOS
-	D_Titlebar(srb2, title);
-#endif
-
-#if defined (__OS2__) && !defined (HAVE_SDL)
-	// set PM window title
-	snprintf(pmData->title, sizeof (pmData->title),
-		"Sonic Robo Blast 2" VERSIONSTRING ": %s",
-		title);
-	pmData->title[sizeof (pmData->title) - 1] = '\0';
+	D_Titlebar();
 #endif
 
 	if (devparm)
@@ -980,13 +991,8 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (DC) && !defined (PSP) && !defined(GP2X)
+#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
 			I_Error("Please set $HOME to your home directory\n");
-#elif defined (_WIN32_WCE) && 0
-			if (dedicated)
-				snprintf(configfile, sizeof configfile, "/Storage Card/SRB2DEMO/d"CONFIGFILENAME);
-			else
-				snprintf(configfile, sizeof configfile, "/Storage Card/SRB2DEMO/"CONFIGFILENAME);
 #else
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "d"CONFIGFILENAME);
@@ -1023,10 +1029,6 @@ void D_SRB2Main(void)
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
-
-#ifdef _arch_dreamcast
-	strcpy(downloaddir, "/ram"); // the dreamcast's TMP
-#endif
 	}
 
 	// rand() needs seeded regardless of password
@@ -1074,10 +1076,11 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-warp") && M_IsNextParm())
 	{
 		const char *word = M_GetNextParm();
-		if (fastncmp(word, "MAP", 3))
+		char ch; // use this with sscanf to catch non-digits with
+		if (fastncmp(word, "MAP", 3)) // MAPxx name
 			pstartmap = M_MapNumber(word[3], word[4]);
-		else
-			pstartmap = atoi(word);
+		else if (sscanf(word, "%d%c", &pstartmap, &ch) != 1) // a plain number
+			I_Error("Cannot warp to map %s (invalid map name)\n", word);
 		// Don't check if lump exists just yet because the wads haven't been loaded!
 		// Just do a basic range check here.
 		if (pstartmap < 1 || pstartmap > NUMMAPS)
@@ -1124,13 +1127,23 @@ void D_SRB2Main(void)
 	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
 	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-	//W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
-	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
 
-	mainwads = 4; // there are 5 wads not to unload
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#endif //ifndef DEVELOP
+
+	mainwads = 3; // there are 3 wads not to unload
+#ifdef USE_PATCH_DTA
+	++mainwads; // patch.dta adds one more
+#endif
+#ifdef DEVELOP
+	++mainwads; // music_new, too
+#endif
+
+	mainwadstally = packetsizetally;
 
 	cht_Init();
 
@@ -1149,12 +1162,7 @@ void D_SRB2Main(void)
 	HU_Init();
 
 	COM_Init();
-	// libogc has a CON_Init function, we must rename SRB2's CON_Init in WII/libogc
-#ifndef _WII
 	CON_Init();
-#else
-	CON_InitWii();
-#endif
 
 	D_RegisterServerCommands();
 	D_RegisterClientCommands(); // be sure that this is called before D_CheckNetGame
@@ -1294,6 +1302,19 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
+	// rei/miru: bootmap (Idea: starts the game on a predefined map)
+	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
+	{
+		pstartmap = bootmap;
+
+		if (pstartmap < 1 || pstartmap > NUMMAPS)
+			I_Error("Cannot warp to map %d (out of range)\n", pstartmap);
+		else
+		{
+			autostart = true;
+		}
+	}
+
 	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
 	{
 		gameaction = ga_nothing;
@@ -1311,13 +1332,9 @@ void D_SRB2Main(void)
 			INT16 newgametype = -1;
 			const char *sgametype = M_GetNextParm();
 
-			for (j = 0; gametype_cons_t[j].strvalue; j++)
-				if (!strcasecmp(gametype_cons_t[j].strvalue, sgametype))
-				{
-					newgametype = (INT16)gametype_cons_t[j].value;
-					break;
-				}
-			if (!gametype_cons_t[j].strvalue) // reached end of the list with no match
+			newgametype = G_GetGametypeByName(sgametype);
+
+			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
 				if (j >= 0 && j < NUMGAMETYPES)
@@ -1345,7 +1362,9 @@ void D_SRB2Main(void)
 			else if (!dedicated && M_MapLocked(pstartmap))
 				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
+			{
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
+			}
 		}
 	}
 	else if (M_CheckParm("-skipintro"))
@@ -1359,7 +1378,6 @@ void D_SRB2Main(void)
 
 	if (dedicated && server)
 	{
-		pagename = "TITLESKY";
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
 		if (!P_SetupLevel(false))
@@ -1374,26 +1392,19 @@ const char *D_Home(void)
 #ifdef ANDROID
 	return "/data/data/org.srb2/";
 #endif
-#ifdef _arch_dreamcast
-	char VMUHOME[] = "HOME=/vmu/a1";
-	putenv(VMUHOME); //don't use I_PutEnv
-#endif
 
 	if (M_CheckParm("-home") && M_IsNextParm())
 		userhome = M_GetNextParm();
 	else
 	{
-#if defined (GP2X)
-		usehome = false; //let use the CWD
-		return NULL;
-#elif !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__) && !defined(_WIN32_WCE)
+#if !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__)
 		if (FIL_FileOK(CONFIGFILENAME))
 			usehome = false; // Let's NOT use home
 		else
 #endif
 			userhome = I_GetEnv("HOME"); //Alam: my new HOME for srb2
 	}
-#if defined (_WIN32) && !defined(_WIN32_WCE) //Alam: only Win32 have APPDATA and USERPROFILE
+#ifdef _WIN32 //Alam: only Win32 have APPDATA and USERPROFILE
 	if (!userhome && usehome) //Alam: Still not?
 	{
 		char *testhome = NULL;

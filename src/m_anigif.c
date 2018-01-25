@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 2013      by "Treeki" / "Ninjifox".
-// Copyright (C) 2013-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 2013      by "Ninji".
+// Copyright (C) 2013-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "i_video.h"
+#include "m_misc.h"
 
 // GIFs are always little-endian
 #include "byteptr.h"
@@ -396,7 +397,6 @@ static void GIF_headwrite(void)
 {
 	UINT8 *gifhead = Z_Malloc(800, PU_STATIC, NULL);
 	UINT8 *p = gifhead;
-	RGBA_t *c;
 	INT32 i;
 	UINT16 rwidth, rheight;
 
@@ -427,12 +427,17 @@ static void GIF_headwrite(void)
 	WRITEUINT8(p, 0x00);
 
 	// write color table
-	for (i = 0; i < 256; ++i)
 	{
-		c = &pLocalPalette[i];
-		WRITEUINT8(p, c->s.red);
-		WRITEUINT8(p, c->s.green);
-		WRITEUINT8(p, c->s.blue);
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
+		for (i = 0; i < 256; i++)
+		{
+			WRITEUINT8(p, pal[i].s.red);
+			WRITEUINT8(p, pal[i].s.green);
+			WRITEUINT8(p, pal[i].s.blue);
+		}
 	}
 
 	// write extension block

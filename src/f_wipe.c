@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -86,7 +86,7 @@ INT32 lastwipetic = 0;
 static UINT8 *wipe_scr_start; //screen 3
 static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
-static fixed_t paldiv;
+static fixed_t paldiv = 0;
 
 /** Create fademask_t from lump
   *
@@ -94,7 +94,7 @@ static fixed_t paldiv;
   * \return	fademask_t for lump
   */
 static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
-	static char lumpname[9] = "FADEmmss";
+	static char lumpname[10] = "FADEmmss";
 	static fademask_t fm = {NULL,0,0,0,0,0};
 	lumpnum_t lumpnum;
 	UINT8 *lump, *mask;
@@ -145,7 +145,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	while (lsize--)
 	{
 		// Determine pixel to use from fademask
-		pcolor = &pLocalPalette[*lump++];
+		pcolor = &pMasterPalette[*lump++];
 		*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
 
@@ -337,7 +337,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	UINT8 wipeframe = 0;
 	fademask_t *fmask;
 
-	paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
+	if (!paldiv)
+		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
 	WipeInAction = true;

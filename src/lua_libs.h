@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,17 +38,29 @@ extern lua_State *gL;
 #define META_SUBSECTOR "SUBSECTOR_T*"
 #define META_SECTOR "SECTOR_T*"
 #define META_FFLOOR "FFLOOR_T*"
+#ifdef HAVE_LUA_SEGS
+#define META_SEG "SEG_T*"
+#define META_NODE "NODE_T*"
+#endif
 #define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_CVAR "CONSVAR_T*"
 
 #define META_SECTORLINES "SECTOR_T*LINES"
 #define META_SIDENUM "LINE_T*SIDENUM"
+#ifdef HAVE_LUA_SEGS
+#define META_NODEBBOX "NODE_T*BBOX"
+#define META_NODECHILDREN "NODE_T*CHILDREN"
+#endif
+
+#define META_BBOX "BOUNDING_BOX"
 
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
 #define META_CAMERA "CAMERA_T*"
+
+#define META_ACTION "ACTIONF_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 
@@ -64,6 +76,7 @@ int LUA_PlayerLib(lua_State *L);
 int LUA_SkinLib(lua_State *L);
 int LUA_ThinkerLib(lua_State *L);
 int LUA_MapLib(lua_State *L);
+int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
 
 #endif

@@ -2,14 +2,14 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  am_map.h
-/// \brief AutoMap module
+/// \brief Code for the 'automap', former Doom feature used for DEVMODE testing
 
 #ifndef __AMMAP_H__
 #define __AMMAP_H__

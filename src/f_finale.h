@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,7 +35,7 @@ void F_CutsceneTicker(void);
 void F_TitleDemoTicker(void);
 
 // Called by main loop.
-void F_GameEndDrawer(void);
+FUNCMATH void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 
@@ -61,6 +61,15 @@ void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
 extern INT32 titlescrollspeed;
+
+typedef enum
+{
+	TITLEMAP_OFF = 0,
+	TITLEMAP_LOADING,
+	TITLEMAP_RUNNING
+} titlemap_enum;
+
+extern UINT8 titlemapinaction;
 
 //
 // WIPE

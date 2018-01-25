@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,13 +26,6 @@ typedef enum
 	UNDO_TODO = 0,
 	UNDO_DONE = 0,
 } undotype_f;
-
-#ifdef DELFILE
-void DEH_WriteUndoline(const char *value, const char *data, undotype_f flags);
-void DEH_UnloadDehackedWad(UINT16 wad);
-#else // null the undo lines
-#define DEH_WriteUndoline(a,b,c)
-#endif
 
 void DEH_LoadDehackedLump(lumpnum_t lumpnum);
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump);

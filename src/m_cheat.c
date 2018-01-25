@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,6 +31,7 @@
 
 #include "v_video.h"
 #include "z_zone.h"
+#include "p_slopes.h"
 
 #include "lua_script.h"
 #include "lua_hook.h"
@@ -60,7 +61,7 @@ static UINT8 cheatf_ultimate(void)
 	if (menuactive && (currentMenu != &MainDef && currentMenu != &SP_LoadDef))
 		return 0; // Only on the main menu, or the save select!
 
-	S_StartSound(0, sfx_itemup);
+	BwehHehHe();
 	ultimate_selectable = (!ultimate_selectable);
 
 	// If on the save select, move to what is now Ultimate Mode!
@@ -69,6 +70,7 @@ static UINT8 cheatf_ultimate(void)
 	return 1;
 }
 
+#ifdef REDXVI
 static UINT8 cheatf_warp(void)
 {
 	if (modifiedgame)
@@ -90,6 +92,7 @@ static UINT8 cheatf_warp(void)
 	M_StartControlPanel();
 	return 1;
 }
+#endif
 
 #ifdef DEVELOP
 static UINT8 cheatf_devmode(void)
@@ -130,6 +133,7 @@ static cheatseq_t cheat_ultimate_joy = {
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
 
+#ifdef REDXVI
 static cheatseq_t cheat_warp = {
 	0, cheatf_warp,
 	{ SCRAMBLE('r'), SCRAMBLE('e'), SCRAMBLE('d'), SCRAMBLE('x'), SCRAMBLE('v'), SCRAMBLE('i'), 0xff }
@@ -142,6 +146,7 @@ static cheatseq_t cheat_warp_joy = {
 	  SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_UPARROW),
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
+#endif
 
 #ifdef DEVELOP
 static cheatseq_t cheat_devmode = {
@@ -196,26 +201,6 @@ static UINT8 cht_CheckCheat(cheatseq_t *cht, char key)
 	return rc;
 }
 
-static inline void cht_GetParam(cheatseq_t *cht, char *buffer)
-{
-	UINT8 *p;
-	UINT8 c;
-
-	p = cht->sequence;
-	while (*(p++) != 1)
-		;
-
-	do
-	{
-		c = *p;
-		*(buffer++) = c;
-		*(p++) = 0;
-	} while (c && *p != 0xff);
-
-	if (*p == 0xff)
-		*buffer = 0;
-}
-
 boolean cht_Responder(event_t *ev)
 {
 	UINT8 ret = 0, ch = 0;
@@ -254,8 +239,10 @@ boolean cht_Responder(event_t *ev)
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
+#ifdef REDXVI
 	ret += cht_CheckCheat(&cheat_warp, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp_joy, (char)ch);
+#endif
 #ifdef DEVELOP
 	ret += cht_CheckCheat(&cheat_devmode, (char)ch);
 #endif
@@ -471,7 +458,7 @@ void Command_RTeleport_f(void)
 	else
 		inty = 0;
 
-	ss = R_PointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
+	ss = R_IsPointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
 	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
@@ -618,14 +605,14 @@ void Command_CauseCfail_f(void)
 	}
 
 	P_UnsetThingPosition(players[consoleplayer].mo);
-	P_Random();
-	P_Random();
-	P_Random();
+	P_RandomFixed();
+	P_RandomByte();
+	P_RandomFixed();
 	players[consoleplayer].mo->x = 0;
 	players[consoleplayer].mo->y = 123311; //cfail cansuled kthxbye
 	players[consoleplayer].mo->z = 123311;
 	players[consoleplayer].score = 1337;
-	players[consoleplayer].health = 1337;
+	players[consoleplayer].rings = 1337;
 	players[consoleplayer].mo->destscale = 25;
 	P_SetThingPosition(players[consoleplayer].mo);
 
@@ -739,7 +726,7 @@ void Command_Setrings_f(void)
 	if (COM_Argc() > 1)
 	{
 		// P_GivePlayerRings does value clamping
-		players[consoleplayer].health = players[consoleplayer].mo->health = 1;
+		players[consoleplayer].rings = 0;
 		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
 		if (!G_IsSpecialStage(gamemap) || !useNightsSS)
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
@@ -857,9 +844,19 @@ static void OP_CycleThings(INT32 amt)
 
 static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 {
+	sector_t *sec = player->mo->subsector->sector;
+
 	if (ceiling)
 	{
-		if (((player->mo->subsector->sector->ceilingheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))
+#ifdef ESLOPE
+		// Truncate position to match where mapthing would be when spawned
+		// (this applies to every further P_GetZAt call as well)
+		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+#else
+		fixed_t cheight = sec->ceilingheight;
+#endif
+
+		if (((cheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
 			CONS_Printf(M_GetText("Sorry, you're too %s to place this object (max: %d %s).\n"), M_GetText("low"),
 				(1 << (16-ZSHIFT)), M_GetText("below top ceiling"));
@@ -868,7 +865,12 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 	}
 	else
 	{
-		if (((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS) >= (1 << (16-ZSHIFT)))
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+		if (((player->mo->z - fheight)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
 			CONS_Printf(M_GetText("Sorry, you're too %s to place this object (max: %d %s).\n"), M_GetText("high"),
 				(1 << (16-ZSHIFT)), M_GetText("above bottom floor"));
@@ -881,6 +883,7 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean ceiling)
 {
 	mapthing_t *mt = mapthings;
+	sector_t *sec = player->mo->subsector->sector;
 
 #ifdef HAVE_BLUA
 	LUA_InvalidateMapthings();
@@ -913,9 +916,23 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->x = (INT16)(player->mo->x>>FRACBITS);
 	mt->y = (INT16)(player->mo->y>>FRACBITS);
 	if (ceiling)
-		mt->options = (UINT16)((player->mo->subsector->sector->ceilingheight - player->mo->z - player->mo->height)>>FRACBITS);
+	{
+#ifdef ESLOPE
+		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->ceilingheight;
+#else
+		fixed_t cheight = sec->ceilingheight;
+#endif
+		mt->options = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
+	}
 	else
-		mt->options = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
+	{
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+	}
 	mt->options <<= ZSHIFT;
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
@@ -931,7 +948,7 @@ boolean OP_FreezeObjectplace(void)
 	if (!objectplacing)
 		return false;
 
-	if ((maptol & TOL_NIGHTS) && (players[consoleplayer].pflags & PF_NIGHTSMODE))
+	if ((maptol & TOL_NIGHTS) && (players[consoleplayer].powers[pw_carry] == CR_NIGHTSMODE))
 		return false;
 
 	return true;
@@ -957,7 +974,7 @@ void OP_NightsObjectplace(player_t *player)
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_CAMRIGHT|BT_CAMLEFT)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
@@ -969,6 +986,13 @@ void OP_NightsObjectplace(player_t *player)
 	{
 		UINT16 angle = (UINT16)(player->anotherflyangle % 360);
 		INT16 temp = (INT16)FixedInt(AngleFixed(player->mo->angle)); // Traditional 2D Angle
+		sector_t *sec = player->mo->subsector->sector;
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+
 
 		player->pflags |= PF_ATTACKDOWN;
 
@@ -983,7 +1007,7 @@ void OP_NightsObjectplace(player_t *player)
 			temp += 90;
 		temp %= 360;
 
-		mt->options = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
+		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
 		P_SpawnHoopsAndRings(mt);
@@ -1001,7 +1025,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a ring!
-	if (cmd->buttons & BT_CAMRIGHT)
+	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
@@ -1012,7 +1036,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a wing item!
-	if (cmd->buttons & BT_CAMLEFT)
+	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
@@ -1036,7 +1060,7 @@ void OP_NightsObjectplace(player_t *player)
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		if (player->mo->target->flags & MF_AMBUSH)
+		if (player->mo->target->flags2 & MF2_AMBUSH)
 			angle = (UINT16)player->anotherflyangle;
 		else
 		{
@@ -1075,7 +1099,7 @@ void OP_ObjectplaceMovement(player_t *player)
 	ticcmd_t *cmd = &player->cmd;
 
 	if (!player->climbing && (netgame || !cv_analog.value || (player->pflags & PF_SPINNING)))
-		player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+		player->drawangle = player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 	ticruned++;
 	if (!(cmd->angleturn & TICCMD_RECEIVED))
@@ -1111,28 +1135,56 @@ void OP_ObjectplaceMovement(player_t *player)
 
 	// make sure viewz follows player if in 1st person mode
 	player->deltaviewheight = 0;
-	player->viewheight = FixedMul(cv_viewheight.value << FRACBITS, player->mo->scale);
+	player->viewheight = FixedMul(41*player->height/48, player->mo->scale);
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		player->viewz = player->mo->z + player->mo->height - player->viewheight;
 	else
 		player->viewz = player->mo->z + player->viewheight;
 
+	// Display flag information
+	// Moved up so it always updates.
+	{
+		sector_t *sec = player->mo->subsector->sector;
+
+		if (!!(mobjinfo[op_currentthing].flags & MF_SPAWNCEILING) ^ !!(cv_opflags.value & MTF_OBJECTFLIP))
+		{
+#ifdef ESLOPE
+			fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+#else
+			fixed_t cheight = sec->ceilingheight;
+#endif
+			op_displayflags = (UINT16)((cheight - player->mo->z - mobjinfo[op_currentthing].height)>>FRACBITS);
+		}
+		else
+		{
+#ifdef ESLOPE
+			fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+			fixed_t fheight = sec->floorheight;
+#endif
+			op_displayflags = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+		}
+		op_displayflags <<= ZSHIFT;
+		op_displayflags |= (UINT16)cv_opflags.value;
+	}
+
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_CAMRIGHT|BT_CAMLEFT)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
 		return;
 	}
 
-	if (cmd->buttons & BT_CAMLEFT)
+	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		OP_CycleThings(-1);
 		player->pflags |= PF_ATTACKDOWN;
 	}
-	else if (cmd->buttons & BT_CAMRIGHT)
+
+	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		OP_CycleThings(1);
 		player->pflags |= PF_ATTACKDOWN;
@@ -1182,16 +1234,6 @@ void OP_ObjectplaceMovement(player_t *player)
 
 		CONS_Printf(M_GetText("Placed object type %d at %d, %d, %d, %d\n"), mt->type, mt->x, mt->y, mt->options>>ZSHIFT, mt->angle);
 	}
-
-	// Display flag information
-	{
-		if (!!(mobjinfo[op_currentthing].flags & MF_SPAWNCEILING) ^ !!(cv_opflags.value & MTF_OBJECTFLIP))
-			op_displayflags = (UINT16)((player->mo->subsector->sector->ceilingheight - player->mo->z - mobjinfo[op_currentthing].height)>>FRACBITS);
-		else
-			op_displayflags = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
-		op_displayflags <<= ZSHIFT;
-		op_displayflags |= (UINT16)cv_opflags.value;
-	}
 }
 
 //
@@ -1219,7 +1261,7 @@ void Command_ObjectPlace_f(void)
 	{
 		objectplacing = true;
 
-		if ((players[0].pflags & PF_NIGHTSMODE))
+		if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
 			return;
 
 		if (!COM_CheckParm("-silent"))
@@ -1229,10 +1271,10 @@ void Command_ObjectPlace_f(void)
 			HU_DoCEcho(va(M_GetText(
 				"\\\\\\\\\\\\\\\\\\\\\\\\\x82"
 				"   Objectplace Controls:   \x80\\\\"
-				"Camera L/R: Cycle mapthings\\"
-				"      Jump: Float up       \\"
-				"      Spin: Float down     \\"
-				" Fire Ring: Place object   \\")));
+				"Weapon Next/Prev: Cycle mapthings\\"
+				"            Jump: Float up       \\"
+				"            Spin: Float down     \\"
+				"       Fire Ring: Place object   \\")));
 		}
 
 		// Save all the player's data.
@@ -1262,7 +1304,7 @@ void Command_ObjectPlace_f(void)
 		// Like the classics, recover from death by entering objectplace
 		if (players[0].mo->health <= 0)
 		{
-			players[0].mo->health = players[0].health = 1;
+			players[0].mo->health = 1;
 			players[0].deadtimer = 0;
 			op_oldflags1 = mobjinfo[MT_PLAYER].flags;
 			++players[0].lives;
@@ -1290,7 +1332,7 @@ void Command_ObjectPlace_f(void)
 
 		// Don't touch the NiGHTS Objectplace stuff.
 		// ... or if the mo mysteriously vanished.
-		if (!players[0].mo || (players[0].pflags & PF_NIGHTSMODE))
+		if (!players[0].mo || (players[0].powers[pw_carry] == CR_NIGHTSMODE))
 			return;
 
 		// If still in dummy state, get out of it.

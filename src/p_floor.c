@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,7 +13,11 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "m_random.h"
 #include "p_local.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -312,6 +316,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -360,6 +365,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -1141,6 +1147,7 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->sector->ceilingdata = NULL;
 		block->sector->floorspeed = 0;
 		block->sector->ceilspeed = 0;
+		block->direction = 0;
 	}
 
 	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
@@ -1163,7 +1170,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 	node = spikes->sector->touching_thinglist; // things touching this sector
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (!thing->player)
@@ -1314,7 +1321,7 @@ void T_BridgeThinker(levelspecthink_t *bridge)
 			controlsec = &sectors[k];
 
 			// Is a player standing on me?
-			for (node = sector->touching_thinglist; node; node = node->m_snext)
+			for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 			{
 				thing = node->m_thing;
 
@@ -1737,23 +1744,27 @@ wegotit:
 static mobj_t *SearchMarioNode(msecnode_t *node)
 {
 	mobj_t *thing = NULL;
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		// Things which should NEVER be ejected from a MarioBlock, by type.
 		switch (node->m_thing->type)
 		{
 		case MT_NULL:
 		case MT_UNKNOWN:
+		case MT_TAILSOVERLAY:
 		case MT_THOK:
 		case MT_GHOST:
 		case MT_OVERLAY:
 		case MT_EMERALDSPAWN:
-		case MT_GREENORB:
-		case MT_YELLOWORB:
-		case MT_BLUEORB:
-		case MT_BLACKORB:
-		case MT_WHITEORB:
-		case MT_PITYORB:
+		case MT_ELEMENTAL_ORB:
+		case MT_ATTRACT_ORB:
+		case MT_FORCE_ORB:
+		case MT_ARMAGEDDON_ORB:
+		case MT_WHIRLWIND_ORB:
+		case MT_PITY_ORB:
+		case MT_FLAMEAURA_ORB:
+		case MT_BUBBLEWRAP_ORB:
+		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
 		case MT_RAIN:
@@ -1768,9 +1779,9 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_SCORE:
 		case MT_DROWNNUMBERS:
 		case MT_GOTEMERALD:
+		case MT_LOCKON:
 		case MT_TAG:
 		case MT_GOTFLAG:
-		case MT_GOTFLAG2:
 		case MT_HOOP:
 		case MT_HOOPCOLLIDE:
 		case MT_NIGHTSCORE:
@@ -1782,8 +1793,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 			break;
 		}
 		// Ignore popped monitors, too.
-		if (node->m_thing->flags & MF_MONITOR
-		&& node->m_thing->threshold == 68)
+		if (node->m_thing->health == 0 // this only really applies for monitors
+		|| (!(node->m_thing->flags & MF_MONITOR) && (mobjinfo[node->m_thing->type].flags & MF_MONITOR))) // gold monitor support
 			continue;
 		// Okay, we found something valid.
 		if (!thing // take either the first thing
@@ -1797,10 +1808,24 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
+	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
+		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+	{
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
+		}
+	}
 	else
+	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
+		}
+	}
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
@@ -2009,7 +2034,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
 						return;
 
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 				}
 			}
 		}
@@ -2027,7 +2052,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
 					return;
 
-				node = node->m_snext;
+				node = node->m_thinglist_next;
 			}
 		}
 	}
@@ -2037,6 +2062,33 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 	// No enemies found, run the linedef exec and terminate this thinker
 	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
+}
+
+//
+// P_IsObjectOnRealGround
+//
+// Helper function for T_EachTimeThinker
+// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
+// I'll consider whether to make this a more globally accessible function or whatever in future
+// -- Monster Iestyn
+//
+static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+{
+	// Is the object in reverse gravity?
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		// Detect if the player is on the ceiling.
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
+			return true;
+	}
+	// Nope!
+	else
+	{
+		// Detect if the player is on the floor.
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
+			return true;
+	}
+	return false;
 }
 
 //
@@ -2091,6 +2143,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean inAndOut = false;
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
+	msecnode_t *node;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2152,7 +2205,23 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if ((netgame || multiplayer) && players[j].spectator)
 						continue;
 
-					if (players[j].mo->subsector->sector != targetsec)
+					if (players[j].mo->subsector->sector == targetsec)
+						;
+					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						boolean insector = false;
+						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == targetsec)
+							{
+								insector = true;
+								break;
+							}
+						}
+						if (!insector)
+							continue;
+					}
+					else
 						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
@@ -2202,10 +2271,30 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 				if ((netgame || multiplayer) && players[i].spectator)
 					continue;
 
-				if (players[i].mo->subsector->sector != sec)
+				if (players[i].mo->subsector->sector == sec)
+					;
+				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+				{
+					boolean insector = false;
+					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+					{
+						if (node->m_sector == sec)
+						{
+							insector = true;
+							break;
+						}
+					}
+					if (!insector)
+						continue;
+				}
+				else
 					continue;
 
-				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
+				if (!(players[i].mo->subsector->sector == sec
+					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
+					continue;
+
+				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
 					if (i & 1)
 						eachtime->var2s[i/2] |= 1;
@@ -2306,7 +2395,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 		sector = &sectors[i];
 
 		// Is a player standing on me?
-		for (node = sector->touching_thinglist; node; node = node->m_snext)
+		for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 		{
 			thing = node->m_thing;
 
@@ -2518,6 +2607,35 @@ void T_CameraScanner(elevator_t *elevator)
 			t_cam2_dist = t_cam2_height = t_cam2_rotate = -42;
 		}
 	}
+}
+
+void T_PlaneDisplace(planedisplace_t *pd)
+{
+	sector_t *control, *target;
+	INT32 direction;
+	fixed_t diff;
+
+	control = &sectors[pd->control];
+	target = &sectors[pd->affectee];
+
+	if (control->floorheight == pd->last_height)
+		return; // no change, no movement
+
+	direction = (control->floorheight > pd->last_height) ? 1 : -1;
+	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
+
+	if (pd->reverse) // reverse direction?
+	{
+		direction *= -1;
+		diff *= -1;
+	}
+
+	if (pd->type == pd_floor || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
+	if (pd->type == pd_ceiling || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, 0, 1, direction); // move ceiling
+
+	pd->last_height = control->floorheight;
 }
 
 //
@@ -2877,18 +2995,41 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	size_t topmostvertex = 0, bottommostvertex = 0;
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
-	fixed_t topz;
+	fixed_t topz, bottomz;
+	fixed_t widthfactor = FRACUNIT, heightfactor = FRACUNIT;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
+	fixed_t spacing = (32<<FRACBITS);
+	tic_t lifetime = 3*TICRATE;
+	INT16 flags = 0;
 
-	// If the control sector has a special
-	// of Section3:7-15, use the custom debris.
-	if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
-		type = MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7);
+#define controlsec rover->master->frontsector
+
+	if (controlsec->tag != 0)
+	{
+		INT32 tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		if (tagline != -1)
+		{
+			if (sides[lines[tagline].sidenum[0]].toptexture)
+				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
+			if (sides[lines[tagline].sidenum[0]].textureoffset)
+				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
+			if (sides[lines[tagline].sidenum[0]].rowoffset)
+			{
+				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
+					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+				else
+					lifetime = 0;
+			}
+			flags = lines[tagline].flags;
+		}
+	}
+
+#undef controlsec
 
 	// soundorg z height never gets set normally, so MEH.
 	sec->soundorg.z = sec->floorheight;
-	S_StartSound(&sec->soundorg, sfx_crumbl);
+	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
 
 	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
@@ -2907,23 +3048,46 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			bottommostvertex = i;
 	}
 
-	leftx = sec->lines[leftmostvertex]->v1->x+(16<<FRACBITS);
+	leftx = sec->lines[leftmostvertex]->v1->x+(spacing>>1);
 	rightx = sec->lines[rightmostvertex]->v1->x;
-	topy = sec->lines[topmostvertex]->v1->y-(16<<FRACBITS);
+	topy = sec->lines[topmostvertex]->v1->y-(spacing>>1);
 	bottomy = sec->lines[bottommostvertex]->v1->y;
-	topz = *rover->topheight-(16<<FRACBITS);
 
-	for (a = leftx; a < rightx; a += (32<<FRACBITS))
+	topz = *rover->topheight-(spacing>>1);
+	bottomz = *rover->bottomheight;
+
+	if (flags & ML_EFFECT1)
 	{
-		for (b = topy; b > bottomy; b -= (32<<FRACBITS))
+		widthfactor = (rightx + topy - leftx - bottomy)>>3;
+		heightfactor = (topz - *rover->bottomheight)>>2;
+	}
+
+	for (a = leftx; a < rightx; a += spacing)
+	{
+		for (b = topy; b > bottomy; b -= spacing)
 		{
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-				for (c = topz; c > *rover->bottomheight; c -= (32<<FRACBITS))
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+				if (*rover->b_slope)
+					bottomz = P_GetZAt(*rover->b_slope, a, b);
+#endif
+
+				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
-					spawned->fuse = 3*TICRATE;
+					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+
+					if (flags & ML_EFFECT1)
+					{
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
+					}
+
+					spawned->fuse = lifetime;
 				}
 			}
 		}
@@ -3083,8 +3247,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	return 1;
 }
 
-INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mobj_t *puncher)
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
+	sector_t *roversec = rover->master->frontsector;
+	fixed_t topheight = *rover->topheight;
 	levelspecthink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
@@ -3092,11 +3258,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 	I_Assert(puncher != NULL);
 	I_Assert(puncher->player != NULL);
 
-	if (sec->floordata || sec->ceilingdata)
+	if (roversec->floordata || roversec->ceilingdata)
 		return 0;
 
+	if (!(rover->flags & FF_SOLID))
+		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+
 	// Find an item to pop out!
-	thing = SearchMarioNode(sec->touching_thinglist);
+	thing = SearchMarioNode(roversec->touching_thinglist);
 
 	// Found something!
 	if (thing)
@@ -3106,13 +3275,13 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 
 		block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
 		P_AddThinker(&block->thinker);
-		sec->floordata = block;
-		sec->ceilingdata = block;
+		roversec->floordata = block;
+		roversec->ceilingdata = block;
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
-		block->sector = sec;
-		block->vars[0] = roversector->tag; // actionsector
+		block->sector = roversec;
+		block->vars[0] = sector->tag; // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed
 		block->vars[2] = 1; // Up // direction
 		block->vars[3] = block->sector->floorheight; // floorwasheight
@@ -3128,8 +3297,8 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = roversector->soundorg.x;
-		thing->y = roversector->soundorg.y;
+		thing->x = sector->soundorg.x;
+		thing->y = sector->soundorg.y;
 		thing->z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
@@ -3144,27 +3313,19 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 		else
 		{
-			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
-			{
-				mobj_t *tokenobj = P_SpawnMobj(roversector->soundorg.x, roversector->soundorg.y, topheight, MT_TOKEN);
-				P_SetTarget(&thing->tracer, tokenobj);
-				P_SetTarget(&tokenobj->target, thing);
-				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);
-			}
-
 			// "Powerup rise" sound
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}
 
-		if (itsamonitor)
+		if (itsamonitor && thing)
 		{
-			P_UnsetThingPosition(tmthing);
-			tmthing->x = oldx;
-			tmthing->y = oldy;
-			tmthing->z = oldz;
-			tmthing->momx = 1;
-			tmthing->momy = 1;
-			P_SetThingPosition(tmthing);
+			P_UnsetThingPosition(thing);
+			thing->x = oldx;
+			thing->y = oldy;
+			thing->z = oldz;
+			thing->momx = 1;
+			thing->momy = 1;
+			P_SetThingPosition(thing);
 		}
 	}
 	else

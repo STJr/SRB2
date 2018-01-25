@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014      by John "JTE" Muniz.
-// Copyright (C) 2014      by Sonic Team Junior.
+// Copyright (C) 2014-2016 by John "JTE" Muniz.
+// Copyright (C) 2014-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -12,6 +12,7 @@
 
 #include "doomdef.h"
 #ifdef HAVE_BLUA
+#include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
@@ -43,6 +44,9 @@ static const char *const hud_disable_options[] = {
 	"time",
 	"rings",
 	"lives",
+
+	"weaponrings",
+	"powerstones",
 
 	"nightslink",
 	"nightsdrill",
@@ -84,11 +88,13 @@ static const char *const patch_opt[] = {
 
 enum hudhook {
 	hudhook_game = 0,
-	hudhook_scores
+	hudhook_scores,
+	hudhook_title
 };
 static const char *const hudhook_opt[] = {
 	"game",
 	"scores",
+	"title",
 	NULL};
 
 // alignment types for v.drawString
@@ -166,6 +172,8 @@ static int lib_getHudInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMHUDITEMS)
+		return luaL_error(L, "hudinfo[] index %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
@@ -221,7 +229,12 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	return luaL_error(L, "colormap is not a struct.");
+	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	lua_pushinteger(L, colormap[i]);
+	return 1;
 }
 
 static int patch_get(lua_State *L)
@@ -333,6 +346,158 @@ static int libd_cachePatch(lua_State *L)
 	return 1;
 }
 
+// v.getSpritePatch(sprite, [frame, [angle]])
+static int libd_getSpritePatch(lua_State *L)
+{
+	UINT32 i; // sprite prefix
+	UINT32 frame = 0; // 'A'
+	UINT8 angle = 0;
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	HUDONLY
+
+	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR_THOK
+	{
+		i = lua_tonumber(L, 1);
+		if (i >= NUMSPRITES)
+			return 0;
+	}
+	else if (lua_isstring(L, 1)) // sprite prefix name given, e.g. "THOK"
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < NUMSPRITES; i++)
+			if (fastcmp(name, sprnames[i]))
+				break;
+		if (i >= NUMSPRITES)
+			return 0;
+	}
+	else
+		return 0;
+
+	if (i == SPR_PLAY) // Use getSprite2Patch instead!
+		return 0;
+
+	sprdef = &sprites[i];
+
+	// set frame number
+	frame = luaL_optinteger(L, 2, 0);
+	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
+	if (frame >= sprdef->numframes)
+		return 0;
+	// set angle number
+	sprframe = &sprdef->spriteframes[frame];
+	angle = luaL_optinteger(L, 3, 1);
+
+	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
+	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
+	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	if (angle != 0)
+		angle--;
+
+	if (angle >= 8) // out of range?
+		return 0;
+
+	// push both the patch and it's "flip" value
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
+	return 2;
+}
+
+// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle]])
+static int libd_getSprite2Patch(lua_State *L)
+{
+	INT32 i; // skin number
+	playersprite_t j; // sprite2 prefix
+	UINT32 frame = 0; // 'A'
+	UINT8 angle = 0;
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	boolean super = false; // add FF_SPR2SUPER to sprite2 if true
+	HUDONLY
+
+	// get skin first!
+	if (lua_isnumber(L, 1)) // find skin by number
+	{
+		i = lua_tonumber(L, 1);
+		if (i < 0 || i >= MAXSKINS)
+			return luaL_error(L, "skin number %d out of range (0 - %d)", i, MAXSKINS-1);
+		if (i >= numskins)
+			return 0;
+	}
+	else // find skin by name
+	{
+		const char *name = luaL_checkstring(L, 1);
+		for (i = 0; i < numskins; i++)
+			if (fastcmp(skins[i].name, name))
+				break;
+		if (i >= numskins)
+			return 0;
+	}
+
+	lua_remove(L, 1); // remove skin now
+
+	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR2_STND
+	{
+		j = lua_tonumber(L, 1);
+		if (j & FF_SPR2SUPER) // e.g. SPR2_STND|FF_SPR2SUPER
+		{
+			super = true;
+			j &= ~FF_SPR2SUPER; // remove flag so the next check doesn't fail
+		}
+		if (j >= free_spr2)
+			return 0;
+	}
+	else if (lua_isstring(L, 1)) // sprite prefix name given, e.g. "STND"
+	{
+		const char *name = lua_tostring(L, 1);
+		for (j = 0; j < free_spr2; j++)
+			if (fastcmp(name, spr2names[j]))
+				break;
+		// if you want super flags you'll have to use the optional boolean following this
+		if (j >= free_spr2)
+			return 0;
+	}
+	else
+		return 0;
+
+	if (lua_isboolean(L, 2)) // optional boolean for superness
+	{
+		super = lua_toboolean(L, 2); // note: this can override FF_SPR2SUPER from sprite number
+		lua_remove(L, 2); // remove
+	}
+	// if it's not boolean then just assume it's the frame number
+
+	if (super)
+		j |= FF_SPR2SUPER;
+
+	j = P_GetSkinSprite2(&skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
+
+	sprdef = &skins[i].sprites[j];
+
+	// set frame number
+	frame = luaL_optinteger(L, 2, 0);
+	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
+	if (frame >= sprdef->numframes)
+		return 0;
+	// set angle number
+	sprframe = &sprdef->spriteframes[frame];
+	angle = luaL_optinteger(L, 3, 1);
+
+	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
+	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
+	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	if (angle != 0)
+		angle--;
+
+	if (angle >= 8) // out of range?
+		return 0;
+
+	// push both the patch and it's "flip" value
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
+	return 2;
+}
+
 static int libd_draw(lua_State *L)
 {
 	INT32 x, y, flags;
@@ -364,6 +529,8 @@ static int libd_drawScaled(lua_State *L)
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
 	scale = luaL_checkinteger(L, 3);
+	if (scale < 0)
+		return luaL_error(L, "negative scale");
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))
@@ -395,7 +562,7 @@ static int libd_drawPaddedNum(lua_State *L)
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	num = abs(luaL_checkinteger(L, 3));
+	num = labs(luaL_checkinteger(L, 3));
 	digits = luaL_optinteger(L, 4, 2);
 	flags = luaL_optinteger(L, 5, 0);
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
@@ -495,7 +662,7 @@ static int libd_getColormap(lua_State *L)
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
 		if (skinnum < TC_ALLWHITE || skinnum >= MAXSKINS)
-			return luaL_error(L, "argument #1 is out of range");
+			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_ALLWHITE, MAXSKINS-1);
 	}
 	else // skin name
 	{
@@ -526,6 +693,22 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
+static int libd_dupx(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_dupy(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	return 2;
+}
+
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
@@ -540,6 +723,8 @@ static int libd_renderer(lua_State *L)
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
+	{"getSpritePatch", libd_getSpritePatch},
+	{"getSprite2Patch", libd_getSprite2Patch},
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawNum", libd_drawNum},
@@ -550,6 +735,8 @@ static luaL_Reg lib_draw[] = {
 	{"getColormap", libd_getColormap},
 	{"width", libd_width},
 	{"height", libd_height},
+	{"dupx", libd_dupx},
+	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
@@ -581,6 +768,9 @@ static int lib_hudadd(lua_State *L)
 
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	field = luaL_checkoption(L, 2, "game", hudhook_opt);
+
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 	lua_getfield(L, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(L, -1));
@@ -620,6 +810,9 @@ int LUA_HudLib(lua_State *L)
 
 		lua_newtable(L);
 		lua_rawseti(L, -2, 3); // HUD[2] = scores rendering functions array
+
+		lua_newtable(L);
+		lua_rawseti(L, -2, 4); // HUD[3] = title rendering functions array
 	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
 
 	luaL_newmetatable(L, META_HUDINFO);
@@ -718,6 +911,31 @@ void LUAh_ScoresHUD(void)
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
 	lua_rawgeti(gL, -1, 3); // HUD[3] = rendering funcs
+	I_Assert(lua_istable(gL, -1));
+
+	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
+	I_Assert(lua_istable(gL, -1));
+	lua_remove(gL, -3); // pop HUD
+	lua_pushnil(gL);
+	while (lua_next(gL, -3) != 0) {
+		lua_pushvalue(gL, -3); // graphics library (HUD[1])
+		LUA_Call(gL, 1);
+	}
+	lua_pop(gL, -1);
+	hud_running = false;
+}
+
+void LUAh_TitleHUD(void)
+{
+	if (!gL || !(hudAvailable & (1<<hudhook_title)))
+		return;
+
+	hud_running = true;
+	lua_pop(gL, -1);
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, 4); // HUD[4] = rendering funcs
 	I_Assert(lua_istable(gL, -1));
 
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw

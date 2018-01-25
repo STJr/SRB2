@@ -60,7 +60,7 @@ static VOID MCIErrorMessageBox (MCIERROR iErrorCode)
 {
 	char szErrorText[128];
 	if (!mciGetErrorStringA (iErrorCode, szErrorText, sizeof (szErrorText)))
-		wsprintfA(szErrorText,"MCI CD Audio Unknown Error #%d\n", iErrorCode);
+		wsprintfA(szErrorText,"MCI CD Audio Unknown Error #%lu\n", iErrorCode);
 	I_OutputMsg("%s", szErrorText);
 	/*MessageBox (GetActiveWindow(), szTemp+1, "LEGACY",
 				MB_OK | MB_ICONSTOP);*/
@@ -169,6 +169,10 @@ consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NUL
 // (on those Update can be disabled)
 consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+#if (__GNUC__ > 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+#endif
 // hour,minutes,seconds
 static LPSTR hms(UINT seconds)
 {
@@ -180,11 +184,14 @@ static LPSTR hms(UINT seconds)
 	hours = minutes / 60;
 	minutes %= 60;
 	if (hours > 0)
-		sprintf (s, "%d:%02d:%02d", hours, minutes, seconds);
+		sprintf (s, "%lu:%02lu:%02lu", (long unsigned int)hours, (long unsigned int)minutes, (long unsigned int)seconds);
 	else
-		sprintf (s, "%2d:%02d", minutes, seconds);
+		sprintf (s, "%2lu:%02lu", (long unsigned int)minutes, (long unsigned int)seconds);
 	return s;
 }
+#if (__GNUC__ > 6)
+#pragma GCC diagnostic pop
+#endif
 
 static void Command_Cd_f(void)
 {

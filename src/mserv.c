@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,9 +16,7 @@
 #include <errno.h>
 #endif
 
-#if !defined (UNDER_CE)
 #include <time.h>
-#endif
 
 #if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET)
 #define NONET
@@ -30,23 +28,13 @@
 #define HAVE_IPV6
 #endif
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (_XBOX)
+#ifdef _WIN32
 #define RPC_NO_WINDOWS_H
 #ifdef HAVE_IPV6
 #include <ws2tcpip.h>
 #else
 #include <winsock.h>     // socket(),...
 #endif //!HAVE_IPV6
-#else
-#ifdef __OS2__
-#include <sys/types.h>
-#endif // __OS2__
-
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#include <kos/net.h>
-#include <lwip/lwip.h>
-#define ioctl lwip_ioctl
 #else
 #include <arpa/inet.h>
 #ifdef __APPLE_CC__
@@ -56,25 +44,12 @@
 #endif
 #include <sys/socket.h> // socket(),...
 #include <netinet/in.h> // sockaddr_in
-#ifdef _PS3
-#include <net/select.h>
-#elif !defined(_arch_dreamcast)
 #include <netdb.h> // getaddrinfo(),...
 #include <sys/ioctl.h>
-#endif
-#endif
-
-#ifdef _arch_dreamcast
-#include "sdl/SRB2DC/dchelp.h"
-#endif
 
 #include <sys/time.h> // timeval,... (TIMEOUT)
 #include <errno.h>
-#endif // _WIN32/_WIN32_WCE
-
-#ifdef __OS2__
-#include <errno.h>
-#endif // __OS2__
+#endif // _WIN32
 #endif // !NONET
 
 #include "doomstat.h"
@@ -91,10 +66,6 @@
 #include "m_argv.h" // Alam is going to kill me <3
 #include "m_misc.h" //  GetRevisionString()
 
-#ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
-#endif
-
 #include "i_addrinfo.h"
 
 // ================================ DEFINITIONS ===============================
@@ -102,35 +73,35 @@
 #define PACKET_SIZE 1024
 
 
-#define  MS_NO_ERROR               0
-#define  MS_SOCKET_ERROR        -201
-#define  MS_CONNECT_ERROR       -203
-#define  MS_WRITE_ERROR         -210
-#define  MS_READ_ERROR          -211
-#define  MS_CLOSE_ERROR         -212
-#define  MS_GETHOSTBYNAME_ERROR -220
-#define  MS_GETHOSTNAME_ERROR   -221
-#define  MS_TIMEOUT_ERROR       -231
+#define  MS_NO_ERROR            	   0
+#define  MS_SOCKET_ERROR        	-201
+#define  MS_CONNECT_ERROR       	-203
+#define  MS_WRITE_ERROR         	-210
+#define  MS_READ_ERROR          	-211
+#define  MS_CLOSE_ERROR         	-212
+#define  MS_GETHOSTBYNAME_ERROR 	-220
+#define  MS_GETHOSTNAME_ERROR   	-221
+#define  MS_TIMEOUT_ERROR       	-231
 
 // see master server code for the values
-#define ADD_SERVER_MSG           101
-#define REMOVE_SERVER_MSG        103
-#define ADD_SERVERv2_MSG         104
-#define GET_SERVER_MSG           200
-#define GET_SHORT_SERVER_MSG     205
-#define ASK_SERVER_MSG           206
-#define ANSWER_ASK_SERVER_MSG    207
-#define ASK_SERVER_MSG           206
-#define ANSWER_ASK_SERVER_MSG    207
-#define GET_MOTD_MSG             208
-#define SEND_MOTD_MSG            209
-#define GET_ROOMS_MSG			 210
-#define SEND_ROOMS_MSG			 211
-#define GET_ROOMS_HOST_MSG		 212
-#define GET_VERSION_MSG			 213
-#define SEND_VERSION_MSG		 214
-#define GET_BANNED_MSG			 215 // Someone's been baaaaaad!
-#define PING_SERVER_MSG			 216
+#define ADD_SERVER_MSG          	101
+#define REMOVE_SERVER_MSG       	103
+#define ADD_SERVERv2_MSG        	104
+#define GET_SERVER_MSG          	200
+#define GET_SHORT_SERVER_MSG    	205
+#define ASK_SERVER_MSG          	206
+#define ANSWER_ASK_SERVER_MSG   	207
+#define ASK_SERVER_MSG          	206
+#define ANSWER_ASK_SERVER_MSG   	207
+#define GET_MOTD_MSG            	208
+#define SEND_MOTD_MSG           	209
+#define GET_ROOMS_MSG           	210
+#define SEND_ROOMS_MSG          	211
+#define GET_ROOMS_HOST_MSG      	212
+#define GET_VERSION_MSG         	213
+#define SEND_VERSION_MSG        	214
+#define GET_BANNED_MSG          	215 // Someone's been baaaaaad!
+#define PING_SERVER_MSG         	216
 
 #define HEADER_SIZE (sizeof (INT32)*4)
 
@@ -183,13 +154,13 @@ typedef struct
 #endif
 
 // win32 or djgpp
-#if defined (_WIN32) || defined (_WIN32_WCE) || defined (__DJGPP__)
+#if defined (_WIN32) || defined (__DJGPP__)
 #define ioctl ioctlsocket
 #define close closesocket
 #ifdef WATTCP
 #define strerror strerror_s
 #endif
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #undef errno
 #define errno h_errno // some very strange things happen when not using h_error
 #endif
@@ -215,17 +186,15 @@ static enum { MSCS_NONE, MSCS_WAITING, MSCS_REGISTERED, MSCS_FAILED } con_state 
 static INT32 msnode = -1;
 UINT16 current_port = 0;
 
-#if (defined (_WIN32) || defined (_WIN32_WCE) || defined (_WIN32)) && !defined (NONET)
+#if defined (_WIN32) && !defined (NONET)
 typedef SOCKET SOCKET_TYPE;
-#define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined (_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;
 #endif
-#define BADSOCKET (SOCKET_TYPE)(~0)
 #define ERRSOCKET (-1)
 #endif
 
@@ -234,7 +203,7 @@ typedef int socklen_t;
 #endif
 
 #ifndef NONET
-static SOCKET_TYPE socket_fd = BADSOCKET; // WINSOCK socket
+static SOCKET_TYPE socket_fd = ERRSOCKET; // WINSOCK socket
 static struct timeval select_timeout;
 static fd_set wset;
 static size_t recvfull(SOCKET_TYPE s, char *buf, size_t len, int flags);
@@ -265,9 +234,9 @@ void AddMServCommands(void)
 static void CloseConnection(void)
 {
 #ifndef NONET
-	if (socket_fd != (SOCKET_TYPE)ERRSOCKET && socket_fd != BADSOCKET)
+	if (socket_fd != (SOCKET_TYPE)ERRSOCKET)
 		close(socket_fd);
-	socket_fd = BADSOCKET;
+	socket_fd = ERRSOCKET;
 #endif
 }
 
@@ -351,33 +320,6 @@ static INT32 GetServersList(void)
 }
 #endif
 
-/** Get the MOTD from the master server.
-  */
-static inline INT32 GetMSMOTD(void)
-{
-	msg_t msg;
-	INT32 count = 0;
-
-	msg.type = GET_MOTD_MSG;
-	msg.length = 0;
-	if (MS_Write(&msg) < 0)
-		return MS_WRITE_ERROR;
-
-	while (MS_Read(&msg) >= 0)
-	{
-		if (!msg.length)
-		{
-			if (!count)
-				CONS_Alert(CONS_NOTICE, M_GetText("No servers currently running.\n"));
-			return MS_NO_ERROR;
-		}
-		count++;
-		CONS_Printf("%s",msg.buffer);
-	}
-
-	return MS_READ_ERROR;
-}
-
 //
 // MS_Connect()
 //
@@ -412,7 +354,7 @@ static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 	while (runp != NULL)
 	{
 		socket_fd = socket(runp->ai_family, runp->ai_socktype, runp->ai_protocol);
-		if (socket_fd != BADSOCKET && socket_fd != (SOCKET_TYPE)ERRSOCKET)
+		if (socket_fd != (SOCKET_TYPE)ERRSOCKET)
 		{
 			if (async) // do asynchronous connection
 			{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -367,11 +367,11 @@ static void P_DoAutobalanceTeams(void)
 	totalred = red + redflagcarrier;
 	totalblue = blue + blueflagcarrier;
 
-	if ((abs(totalred - totalblue) > cv_autobalance.value))
+	if ((abs(totalred - totalblue) > max(1, (totalred + totalblue) / 8)))
 	{
 		if (totalred > totalblue)
 		{
-			i = M_Random() % red;
+			i = M_RandomKey(red);
 			NetPacket.packet.newteam = 2;
 			NetPacket.packet.playernum = redarray[i];
 			NetPacket.packet.verification = true;
@@ -380,10 +380,9 @@ static void P_DoAutobalanceTeams(void)
 			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
 			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 		}
-
-		if (totalblue > totalred)
+		else //if (totalblue > totalred)
 		{
-			i = M_Random() % blue;
+			i = M_RandomKey(blue);
 			NetPacket.packet.newteam = 1;
 			NetPacket.packet.playernum = bluearray[i];
 			NetPacket.packet.verification = true;
@@ -477,7 +476,7 @@ static inline void P_DoSpecialStageStuff(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				ssrings += (players[i].mo->health-1);
+				ssrings += players[i].rings;
 
 				// If in water, deplete timer 6x as fast.
 				if ((players[i].mo->eflags & MFE_TOUCHWATER)
@@ -542,7 +541,7 @@ static inline void P_DoTagStuff(void)
 		for (i=0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && !players[i].spectator && players[i].playerstate == PST_LIVE
-			&& !(players[i].pflags & (PF_TAGIT|PF_TAGGED)))
+			&& !(players[i].pflags & (PF_TAGIT|PF_GAMETYPEOVER)))
 				//points given is the number of participating players divided by two.
 				P_AddPlayerScore(&players[i], participants/2);
 		}
@@ -656,7 +655,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -668,6 +667,8 @@ void P_Ticker(boolean run)
 				if (!players[i].mo)
 					continue;
 
+				if (multiplayer || netgame)
+					players[i].exiting = 0;
 				P_DamageMobj(players[i].mo, NULL, NULL, 1, DMG_INSTAKILL);
 			}
 		}

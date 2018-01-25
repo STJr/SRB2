@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -295,6 +295,14 @@ void I_GetMouseEvents(void);
 char *I_GetEnv(const char *name);
 
 INT32 I_PutEnv(char *variable);
+
+/** \brief Put data in system clipboard
+*/
+INT32 I_ClipboardCopy(const char *data, size_t size);
+
+/** \brief Retrieve data from system clipboard
+*/
+const char *I_ClipboardPaste(void);
 
 void I_RegisterSysCommands(void);
 

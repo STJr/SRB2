@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -66,7 +66,7 @@ void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtyp
 // Called by linux_x/i_video_xshm.c
 void M_QuitResponse(INT32 ch);
 
-// Determines whether to show a level in the list
+// Determines whether to show a level in the list (platter version does not need to be exposed)
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
 
@@ -79,7 +79,7 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_SUBMENU           6     // go to sub menu
 #define IT_CVAR              8     // handle as a cvar
 #define IT_SPACE            10     // no handling
-#define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message
+#define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message)
 
 #define IT_DISPLAY   (48+64+128)    // 16+32+64+128
 #define IT_NOTHING            0     // space
@@ -124,6 +124,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_HEADER      (IT_SPACE  +IT_HEADERTEXT)
 #define IT_SECRET      (IT_SPACE  +IT_QUESTIONMARKS)
 
+#define MAXSTRINGLENGTH 32
+
 typedef union
 {
 	struct menu_s *submenu;      // IT_SUBMENU
@@ -149,8 +151,6 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
-extern menuitem_t PlayerMenu[32];
-
 typedef struct menu_s
 {
 	const char    *menutitlepic;
@@ -174,10 +174,36 @@ extern menu_t SP_LoadDef;
 // Stuff for customizing the player select screen
 typedef struct
 {
+	boolean used;
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
+	UINT8 prev;
+	UINT8 next;
 } description_t;
+
+// level select platter
+typedef struct
+{
+	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"
+	INT32 maplist[3];
+	char mapnames[3][17+1];
+	boolean mapavailable[4]; // mapavailable[3] == wide or not
+} levelselectrow_t;
+
+typedef struct
+{
+	UINT8 numrows;
+	levelselectrow_t *rows;
+} levelselect_t;
+// experimental level select end
+
+// descriptions for gametype select screen
+typedef struct
+{
+	UINT8 col[2];
+	char notes[441];
+} gtdesc_t;
 
 // mode descriptions for video mode menu
 typedef struct
@@ -190,18 +216,14 @@ typedef struct
 // savegame struct for save game menu
 typedef struct
 {
-	char playername[32];
 	char levelname[32];
-	UINT8 actnum;
-	UINT8 skincolor;
 	UINT8 skinnum;
 	UINT8 botskin;
-	UINT8 botcolor;
 	UINT8 numemeralds;
+	UINT8 numgameovers;
 	INT32 lives;
 	INT32 continues;
 	INT32 gamemap;
-	UINT8 netgame;
 } saveinfo_t;
 
 extern description_t description[32];
@@ -211,17 +233,26 @@ extern CV_PossibleValue_t gametype_cons_t[];
 
 extern INT16 startmap;
 extern INT32 ultimate_selectable;
+extern INT16 char_on, startchar;
 
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
-#define NOSAVESLOT MAXSAVEGAMES-1 //slot where Play Without Saving appears
+#define NOSAVESLOT 0 //slot where Play Without Saving appears
+
+#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
 void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
 
+// Level select updating
+void Nextmap_OnChange(void);
+
 // Screenshot menu updating
 void Moviemode_mode_Onchange(void);
 void Screenshot_option_Onchange(void);
+
+// Addons menu updating
+void Addons_option_Onchange(void);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(header, source, prev, x, y)\
@@ -231,6 +262,18 @@ void Screenshot_option_Onchange(void);
 	prev,\
 	source,\
 	M_DrawGenericMenu,\
+	x, y,\
+	0,\
+	NULL\
+}
+
+#define DEFAULTSCROLLMENUSTYLE(header, source, prev, x, y)\
+{\
+	header,\
+	sizeof(source)/sizeof(menuitem_t),\
+	prev,\
+	source,\
+	M_DrawGenericScrollMenu,\
 	x, y,\
 	0,\
 	NULL\
@@ -260,14 +303,14 @@ void Screenshot_option_Onchange(void);
 	NULL\
 }
 
-#define MAPICONMENUSTYLE(header, source, prev)\
+#define MAPPLATTERMENUSTYLE(header, source)\
 {\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
-	prev,\
+	&MainDef,\
 	source,\
-	M_DrawServerMenu,\
-	27,40,\
+	M_DrawLevelPlatterMenu,\
+	0,0,\
 	0,\
 	NULL\
 }

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1237,7 +1237,7 @@ static void Polyobj_rotateLine(line_t *ld)
 
 	// determine slopetype
 	ld->slopetype = !ld->dx ? ST_VERTICAL : !ld->dy ? ST_HORIZONTAL :
-			FixedDiv(ld->dy, ld->dx) > 0 ? ST_POSITIVE : ST_NEGATIVE;
+			((ld->dy > 0) == (ld->dx > 0)) ? ST_POSITIVE : ST_NEGATIVE;
 
 	// update bounding box
 	if (v1->x < v2->x)

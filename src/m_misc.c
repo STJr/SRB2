@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,7 +58,7 @@ typedef off_t off64_t;
 
 #if defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
+#elif defined (DJGPP)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
@@ -67,10 +67,8 @@ typedef off_t off64_t;
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 
@@ -99,6 +97,8 @@ typedef off_t off64_t;
 static CV_PossibleValue_t screenshot_cons_t[] = {{0, "Default"}, {1, "HOME"}, {2, "SRB2"}, {3, "CUSTOM"}, {0, NULL}};
 consvar_t cv_screenshot_option = {"screenshot_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Screenshot_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_screenshot_folder = {"screenshot_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
@@ -189,7 +189,7 @@ INT32 M_MapNumber(char first, char second)
 // ==========================================================================
 
 // some libcs has no access function, make our own
-#if defined (_WIN32_WCE) || defined (_XBOX) || defined (_WII) || defined (_PS3)
+#if defined (_WIN32_WCE)
 int access(const char *path, int amode)
 {
 	int accesshandle = -1;
@@ -585,7 +585,7 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 
 		i += add * result;
 
-		if (add < 0 || add > 9999)
+		if (i < 0 || i > 9999)
 			return NULL;
 	}
 
@@ -610,20 +610,25 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_uint_32 width, PNG_CONST png_uint_32 height, PNG_CONST png_byte *palette)
+static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_uint_32 width, PNG_CONST png_uint_32 height, const boolean palette)
 {
 	const png_byte png_interlace = PNG_INTERLACE_NONE; //PNG_INTERLACE_ADAM7
 	if (palette)
 	{
 		png_colorp png_PLTE = png_malloc(png_ptr, sizeof(png_color)*256); //palette
-		const png_byte *pal = palette;
 		png_uint_16 i;
+
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
 		for (i = 0; i < 256; i++)
 		{
-			png_PLTE[i].red   = *pal; pal++;
-			png_PLTE[i].green = *pal; pal++;
-			png_PLTE[i].blue  = *pal; pal++;
+			png_PLTE[i].red   = pal[i].s.red;
+			png_PLTE[i].green = pal[i].s.green;
+			png_PLTE[i].blue  = pal[i].s.blue;
 		}
+
 		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8, PNG_COLOR_TYPE_PALETTE,
 		 png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 		png_write_info_before_PLTE(png_ptr, png_info_ptr);
@@ -924,7 +929,7 @@ static void M_PNGfix_acTL(png_structp png_ptr, png_infop png_info_ptr)
 	fseek(apng_FILE, oldpos, SEEK_SET);
 }
 
-static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
+static boolean M_SetupaPNG(png_const_charp filename, boolean palette)
 {
 	apng_FILE = fopen(filename,"wb+"); // + mode for reading
 	if (!apng_FILE)
@@ -966,7 +971,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 	png_set_compression_strategy(apng_ptr, cv_zlib_strategya.value);
 	png_set_compression_window_bits(apng_ptr, cv_zlib_window_bitsa.value);
 
-	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width, vid.height, pal);
+	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width, vid.height, palette);
 
 	M_PNGText(apng_ptr, apng_info_ptr, true);
 
@@ -1007,9 +1012,9 @@ static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 	}
 
 	if (rendermode == render_soft)
-		ret = M_SetupaPNG(va(pandf,pathname,freename), W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = M_SetupaPNG(va(pandf,pathname,freename), true);
 	else
-		ret = M_SetupaPNG(va(pandf,pathname,freename), NULL);
+		ret = M_SetupaPNG(va(pandf,pathname,freename), false);
 
 	if (!ret)
 	{
@@ -1079,7 +1084,7 @@ void M_StartMovie(void)
 				moviemode = M_StartMovieGIF(pathname);
 				break;
 			}
-			// fall thru
+			/* FALLTHRU */
 		case MM_APNG:
 			moviemode = M_StartMovieAPNG(pathname);
 			break;
@@ -1215,11 +1220,10 @@ void M_StopMovie(void)
   * \param palette  Palette of image data
   *  \note if palette is NULL, BGR888 format
   */
-boolean M_SavePNG(const char *filename, void *data, int width, int height, const UINT8 *palette)
+boolean M_SavePNG(const char *filename, void *data, int width, int height, const boolean palette)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
-	PNG_CONST png_byte *PLTE = (const png_byte *)palette;
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
 	jmp_buf jmpbuf;
@@ -1282,7 +1286,7 @@ boolean M_SavePNG(const char *filename, void *data, int width, int height, const
 	png_set_compression_strategy(png_ptr, cv_zlib_strategy.value);
 	png_set_compression_window_bits(png_ptr, cv_zlib_window_bits.value);
 
-	M_PNGhdr(png_ptr, png_info_ptr, width, height, PLTE);
+	M_PNGhdr(png_ptr, png_info_ptr, width, height, palette);
 
 	M_PNGText(png_ptr, png_info_ptr, false);
 
@@ -1329,7 +1333,7 @@ typedef struct
   * \param palette  Palette of image data
   */
 #if NUMSCREENS > 2
-static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *palette)
+static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height)
 {
 	int i;
 	size_t length;
@@ -1370,8 +1374,20 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 
 	// write the palette
 	*pack++ = 0x0c; // palette ID byte
-	for (i = 0; i < 768; i++)
-		*pack++ = *palette++;
+
+	// write color table
+	{
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
+		for (i = 0; i < 256; i++)
+		{
+			*pack++ = pal[i].s.red;
+			*pack++ = pal[i].s.green;
+			*pack++ = pal[i].s.blue;
+		}
+	}
 
 	// write output file
 	length = pack - (UINT8 *)pcx;
@@ -1445,11 +1461,9 @@ void M_DoScreenShot(void)
 	if (rendermode != render_none)
 	{
 #ifdef USE_PNG
-		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, true);
 #else
-		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height);
 #endif
 	}
 
@@ -1617,6 +1631,11 @@ INT32 axtoi(const char *hexStg)
 	return intValue;
 }
 
+// Token parser variables
+
+static UINT32 oldendPos = 0; // old value of endPos, used by M_UnGetToken
+static UINT32 endPos = 0; // now external to M_GetToken, but still static
+
 /** Token parser for TEXTURES, ANIMDEFS, and potentially other lumps later down the line.
   * Was originally R_GetTexturesToken when I was coding up the TEXTURES parser, until I realized I needed it for ANIMDEFS too.
   * Parses up to the next whitespace character or comma. When finding the start of the next token, whitespace is skipped.
@@ -1631,7 +1650,7 @@ char *M_GetToken(const char *inputString)
 {
 	static const char *stringToUse = NULL; // Populated if inputString != NULL; used otherwise
 	static UINT32 startPos = 0;
-	static UINT32 endPos = 0;
+//	static UINT32 endPos = 0;
 	static UINT32 stringLength = 0;
 	static UINT8 inComment = 0; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
 	char *texturesToken = NULL;
@@ -1641,12 +1660,12 @@ char *M_GetToken(const char *inputString)
 	{
 		stringToUse = inputString;
 		startPos = 0;
-		endPos = 0;
+		oldendPos = endPos = 0;
 		stringLength = strlen(inputString);
 	}
 	else
 	{
-		startPos = endPos;
+		startPos = oldendPos = endPos;
 	}
 	if (stringToUse == NULL)
 		return NULL;
@@ -1675,6 +1694,7 @@ char *M_GetToken(const char *inputString)
 			|| stringToUse[startPos] == '\r'
 			|| stringToUse[startPos] == '\n'
 			|| stringToUse[startPos] == '\0'
+			|| stringToUse[startPos] == '"' // we're treating this as whitespace because SLADE likes adding it for no good reason
 			|| inComment != 0)
 			&& startPos < stringLength)
 	{
@@ -1742,6 +1762,7 @@ char *M_GetToken(const char *inputString)
 			&& stringToUse[endPos] != ','
 			&& stringToUse[endPos] != '{'
 			&& stringToUse[endPos] != '}'
+			&& stringToUse[endPos] != '"' // see above
 			&& inComment == 0)
 			&& endPos < stringLength)
 	{
@@ -1775,6 +1796,16 @@ char *M_GetToken(const char *inputString)
 	return texturesToken;
 }
 
+/** Undoes the last M_GetToken call
+  * The current position along the string being parsed is reset to the last saved position.
+  * This exists mostly because of R_ParseTexture/R_ParsePatch honestly, but could be useful elsewhere?
+  * -Monster Iestyn (22/10/16)
+ */
+void M_UnGetToken(void)
+{
+	endPos = oldendPos;
+}
+
 /** Count bits in a number.
   */
 UINT8 M_CountBits(UINT32 num, UINT8 size)
@@ -1785,17 +1816,6 @@ UINT8 M_CountBits(UINT32 num, UINT8 size)
 		if (num & (1 << i))
 			++sum;
 	return sum;
-}
-
-
-/** Get the most significant bit in a number.
-  * (integer log2)
-  */
-UINT8 M_HighestBit(UINT32 num)
-{
-	UINT8 i = 0;
-	while (num >>= 1) ++i;
-	return i;
 }
 
 const char *GetRevisionString(void)
@@ -2333,159 +2353,4 @@ void M_SetupMemcpy(void)
 #if 0
 	M_Memcpy = cpu_cpy;
 #endif
-}
-
-
-// A partial implementation of AA trees,
-// according to the algorithms given on Wikipedia.
-// http://en.wikipedia.org/wiki/AA_tree
-
-
-
-typedef struct aatree_node_s
-{
-	INT32	level;
-	INT32	key;
-	void*	value;
-
-	struct aatree_node_s *left, *right;
-} aatree_node_t;
-
-struct aatree_s
-{
-	aatree_node_t	*root;
-	UINT32		flags;
-};
-
-aatree_t *M_AATreeAlloc(UINT32 flags)
-{
-	aatree_t *aatree = Z_Malloc(sizeof (aatree_t), PU_STATIC, NULL);
-	aatree->root = NULL;
-	aatree->flags = flags;
-	return aatree;
-}
-
-static void M_AATreeFree_Node(aatree_node_t *node)
-{
-	if (node->left) M_AATreeFree_Node(node->left);
-	if (node->right) M_AATreeFree_Node(node->right);
-	Z_Free(node);
-}
-
-void M_AATreeFree(aatree_t *aatree)
-{
-	if (aatree->root)
-		M_AATreeFree_Node(aatree->root);
-
-	Z_Free(aatree);
-}
-
-static aatree_node_t *M_AATreeSkew(aatree_node_t *node)
-{
-	if (node && node->left && node->left->level == node->level)
-	{
-		// Not allowed: horizontal left-link. Reverse the
-		// horizontal link and hook the orphan back in.
-		aatree_node_t *oldleft = node->left;
-		node->left = oldleft->right;
-		oldleft->right = node;
-
-		return oldleft;
-	}
-
-	// No change needed.
-	return node;
-}
-
-static aatree_node_t *M_AATreeSplit(aatree_node_t *node)
-{
-	if (node && node->right && node->right->right && node->level == node->right->right->level)
-	{
-		// Not allowed: two consecutive horizontal right-links.
-		// The middle one becomes the new root at this point,
-		// with suitable adjustments below.
-
-		aatree_node_t *oldright = node->right;
-		node->right = oldright->left;
-		oldright->left = node;
-		oldright->level++;
-
-		return oldright;
-	}
-
-	// No change needed.
-	return node;
-}
-
-static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, INT32 key, void* value)
-{
-	if (!node)
-	{
-		// Nothing here, so just add where we are
-
-		node = Z_Malloc(sizeof (aatree_node_t), PU_STATIC, NULL);
-		node->level = 1;
-		node->key = key;
-		if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-		else node->value = value;
-		node->left = node->right = NULL;
-	}
-	else
-	{
-		if (key < node->key)
-			node->left = M_AATreeSet_Node(node->left, flags, key, value);
-		else if (key > node->key)
-			node->right = M_AATreeSet_Node(node->right, flags, key, value);
-		else
-		{
-			if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-			else node->value = value;
-		}
-
-		node = M_AATreeSkew(node);
-		node = M_AATreeSplit(node);
-	}
-
-	return node;
-}
-
-void M_AATreeSet(aatree_t *aatree, INT32 key, void* value)
-{
-	aatree->root = M_AATreeSet_Node(aatree->root, aatree->flags, key, value);
-}
-
-// Caveat: we don't distinguish between nodes that don't exists
-// and nodes with value == NULL.
-static void *M_AATreeGet_Node(aatree_node_t *node, INT32 key)
-{
-	if (node)
-	{
-		if (node->key == key)
-			return node->value;
-		else if(node->key < key)
-			return M_AATreeGet_Node(node->right, key);
-		else
-			return M_AATreeGet_Node(node->left, key);
-	}
-
-	return NULL;
-}
-
-void *M_AATreeGet(aatree_t *aatree, INT32 key)
-{
-	return M_AATreeGet_Node(aatree->root, key);
-}
-
-
-static void M_AATreeIterate_Node(aatree_node_t *node, aatree_iter_t callback)
-{
-	if (node->left) M_AATreeIterate_Node(node->left, callback);
-	callback(node->key, node->value);
-	if (node->right) M_AATreeIterate_Node(node->right, callback);
-}
-
-void M_AATreeIterate(aatree_t *aatree, aatree_iter_t callback)
-{
-	if (aatree->root)
-		M_AATreeIterate_Node(aatree->root, callback);
 }

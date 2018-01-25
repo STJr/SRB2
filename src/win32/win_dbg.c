@@ -20,7 +20,9 @@
 
 
 #include <tchar.h>
+#ifndef HAVE_SDL
 #include "win_main.h"
+#endif
 #include "../doomdef.h" //just for VERSION
 #include "win_dbg.h"
 #include "../m_argv.h" //print the parameter in the log
@@ -412,11 +414,14 @@ LONG WINAPI RecordExceptionInfo(PEXCEPTION_POINTERS data/*, LPCSTR Message, LPST
 	}
 	BeenHere = TRUE;
 
+	if (Context)
+	{
 #ifdef _X86_
-	code = (LPBYTE)(size_t)Context->Eip;
+		code = (LPBYTE)(size_t)Context->Eip;
 #elif defined (_AMD64_)
-	code = (LPBYTE)(size_t)Context->Rip;
+		code = (LPBYTE)(size_t)Context->Rip;
 #endif // || defined (_IA64_)
+	}
 
 	// Create a filename to record the error information to.
 	// Store it in the executable directory.
@@ -628,12 +633,12 @@ LONG WINAPI RecordExceptionInfo(PEXCEPTION_POINTERS data/*, LPCSTR Message, LPST
 		while(pStack + 1 <= pStackTop)
 		{
 			if ((Count % StackColumns) == 0)
-				output += wsprintf(output, TEXT("%08x: "), pStack);
+				output += wsprintf(output, TEXT("%p: "), pStack);
 			if ((++Count % StackColumns) == 0 || pStack + 2 > pStackTop)
 				Suffix = TEXT("\r\n");
 			else
 				Suffix = TEXT(" ");
-			output += wsprintf(output, TEXT("%08x%s"), *pStack, Suffix);
+			output += wsprintf(output, TEXT("%p%s"), *pStack, Suffix);
 			pStack++;
 			// Check for when the buffer is almost full, and flush it to disk.
 			if ( output > nearend)

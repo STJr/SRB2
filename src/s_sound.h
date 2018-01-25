@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,7 +23,7 @@
 #define PICKUP_SOUND 0x8000
 
 extern consvar_t stereoreverse;
-extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
+extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
 
 #ifdef SNDSERV
@@ -63,6 +63,34 @@ typedef struct {
 	fixed_t x, y, z;
 	angle_t angle;
 } listener_t;
+
+typedef struct
+{
+	// sound information (if null, channel avail.)
+	sfxinfo_t *sfxinfo;
+
+	// origin of sound
+	const void *origin;
+
+	// handle of the sound being played
+	INT32 handle;
+
+} channel_t;
+
+typedef struct {
+	channel_t *c;
+	sfxinfo_t *s;
+	UINT16 t;
+	UINT8 b;
+} caption_t;
+
+#define NUMCAPTIONS 8
+#define MAXCAPTIONTICS (2*TICRATE)
+#define CAPTIONFADETICS 20
+
+extern caption_t closedcaptions[NUMCAPTIONS];
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan);
+void S_ResetCaptions(void);
 
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);
@@ -119,7 +147,7 @@ void S_ResumeAudio(void);
 //
 void S_UpdateSounds(void);
 
-fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
+FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
 void S_SetDigMusicVolume(INT32 volume);
 void S_SetMIDIMusicVolume(INT32 volume);

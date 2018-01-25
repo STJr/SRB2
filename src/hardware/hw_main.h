@@ -46,8 +46,7 @@ void HWR_SetViewSize(void);
 void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option);
 void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, const UINT8 *colormap);
 void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
-void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option, fixed_t scale, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
-void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
+void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
 void HWR_PrepLevelCache(size_t pnumtextures);
@@ -74,10 +73,12 @@ FUNCMATH UINT8 LightLevelToLum(INT32 l);
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
+#ifdef ALAM_LIGHTING
 extern consvar_t cv_grdynamiclighting;
 extern consvar_t cv_grstaticlighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
+#endif
 extern consvar_t cv_grfov;
 extern consvar_t cv_grmd2;
 extern consvar_t cv_grfog;
@@ -101,14 +102,5 @@ extern float gr_viewwindowx, gr_basewindowcentery;
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
 extern FTransform atransform;
-
-typedef struct
-{
-	wallVert3D    floorVerts[4];
-	FSurfaceInfo  Surf;
-	INT32           texnum;
-	INT32           blend;
-	INT32           drawcount;
-} floorinfo_t;
 
 #endif

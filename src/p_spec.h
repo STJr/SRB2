@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,7 +17,9 @@
 #ifndef __P_SPEC__
 #define __P_SPEC__
 
-extern mobj_t *skyboxmo[2];
+extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
+extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
+extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
 // GETSECSPECIAL (specialval, section)
 //
@@ -32,6 +34,7 @@ void P_InitPicAnims(void);
 void P_SetupLevelFlatAnims(void);
 
 // at map load
+void P_InitSpecials(void);
 void P_SpawnSpecials(INT32 fromnetsave);
 
 // every tic
@@ -63,6 +66,8 @@ void P_SwitchWeather(INT32 weathernum);
 boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
+
+ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 
 //
 // P_LIGHTS
@@ -323,7 +328,7 @@ INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
 
 INT32 EV_DoContinuousFall(sector_t *sec, sector_t *pbacksector, fixed_t spd, boolean backwards);
 
-INT32 EV_MarioBlock(sector_t *sector, sector_t *roversector, fixed_t topheight, mobj_t *puncher);
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
 
 void T_MoveFloor(floormove_t *movefloor);
 
@@ -386,7 +391,7 @@ typedef struct
 {
 	thinker_t thinker;   ///< Thinker structure for friction.
 	INT32 friction;      ///< Friction value, 0xe800 = normal.
-	INT32 movefactor;    ///< Inertia factor when adding to momentum.
+	INT32 movefactor;    ///< Inertia factor when adding to momentum, FRACUNIT = normal.
 	INT32 affectee;      ///< Number of affected sector.
 	INT32 referrer;      ///< If roverfriction == true, then this will contain the sector # of the control sector where the effect was applied.
 	UINT8 roverfriction;  ///< flag for whether friction originated from a FOF or not
@@ -447,6 +452,27 @@ void T_Disappear(disappear_t *d);
 // Prototype functions for pushers
 void T_Pusher(pusher_t *p);
 mobj_t *P_GetPushThing(UINT32 s);
+
+// Plane displacement
+typedef struct
+{
+	thinker_t thinker;   ///< Thinker structure for plane displacement effect.
+	INT32 affectee;      ///< Number of affected sector.
+	INT32 control;       ///< Control sector used to control plane positions.
+	fixed_t last_height; ///< Last known height of control sector.
+	fixed_t speed;       ///< Plane movement speed.
+	UINT8 reverse;       ///< Move in reverse direction to control sector?
+	/** Types of plane displacement effects.
+	*/
+	enum
+	{
+		pd_floor,        ///< Displace floor.
+		pd_ceiling,      ///< Displace ceiling.
+		pd_both,         ///< Displace both floor AND ceiling.
+	} type;
+} planedisplace_t;
+
+void T_PlaneDisplace(planedisplace_t *pd);
 
 void P_CalcHeight(player_t *player);
 

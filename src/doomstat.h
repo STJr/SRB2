@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,8 +41,13 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
+extern INT16 lastmaploaded;
 extern boolean gamecomplete;
+
+#define maxgameovers 13
+extern UINT8 numgameovers;
+extern SINT8 startinglivesbalance[maxgameovers+1];
 
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
@@ -123,6 +128,10 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 extern INT16 spstage_start;
 extern INT16 sstage_start;
 extern INT16 sstage_end;
+
+extern INT16 titlemap;
+extern boolean hidetitlepics;
+extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
 extern boolean useNightsSS;
@@ -241,6 +250,12 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
+	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+
+	// Freed animals stuff.
+	UINT8 numFlickies;     ///< Internal. For freed flicky support.
+	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
+
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
@@ -257,12 +272,14 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME      32 ///< Save the game upon loading this level
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
 #define LF2_RECORDATTACK   4 ///< Show this map in Time Attack
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
+#define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
@@ -307,7 +324,10 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update gametype_cons_t in m_menu.c
+// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+
+// String names for gametypes
+extern const char *Gametype_Names[NUMGAMETYPES];
 
 extern tic_t totalplaytime;
 
@@ -365,6 +385,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
 #define MV_MAX         31 // used in gamedata check
+#define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
@@ -372,6 +393,7 @@ nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
+extern boolean gottoken; ///< Did you get a token? Used for end of act
 extern INT32 tokenbits; ///< Used for setting token bits
 extern INT32 sstimer; ///< Time allotted in the special stage
 extern UINT32 bluescore; ///< Blue Team Scores
@@ -445,19 +467,17 @@ extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
 
 #if defined (macintosh)
 #define DEBFILE(msg) I_OutputMsg(msg)
-extern FILE *debugfile;
 #else
 #define DEBUGFILE
 #ifdef DEBUGFILE
 #define DEBFILE(msg) { if (debugfile) { fputs(msg, debugfile); fflush(debugfile); } }
-extern FILE *debugfile;
 #else
 #define DEBFILE(msg) {}
-extern FILE *debugfile;
 #endif
 #endif
 
 #ifdef DEBUGFILE
+extern FILE *debugfile;
 extern INT32 debugload;
 #endif
 
@@ -478,6 +498,7 @@ extern boolean singletics;
 #include "d_clisrv.h"
 
 extern consvar_t cv_timetic; // display high resolution timer
+extern consvar_t cv_showinputjoy; // display joystick in time attack
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.
 extern ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];

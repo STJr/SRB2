@@ -26,19 +26,11 @@
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
-#endif
-
-#if SDL_VERSION_ATLEAST(1,3,0)
-#define SDLK_EQUALS SDLK_KP_EQUALSAS400
-#define SDLK_LMETA SDLK_LGUI
-#define SDLK_RMETA SDLK_RGUI
-#else
-#define HAVE_SDLMETAKEYS
 #endif
 
 #ifdef HAVE_TTF
@@ -55,7 +47,7 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32)
+#ifdef _WIN32
 #include "SDL_syswm.h"
 #endif
 
@@ -115,6 +107,9 @@ static SDL_bool disable_mouse = SDL_FALSE;
 // first entry in the modelist which is not bigger than MAXVIDWIDTHxMAXVIDHEIGHT
 static      INT32          firstEntry = 0;
 
+// Total mouse motion X/Y offsets
+static      INT32        mousemovex = 0, mousemovey = 0;
+
 // SDL vars
 static      SDL_Surface *vidSurface = NULL;
 static      SDL_Surface *bufSurface = NULL;
@@ -126,10 +121,9 @@ static       Uint8       BitsPerPixel = 16;
 #endif
 Uint16      realwidth = BASEVIDWIDTH;
 Uint16      realheight = BASEVIDHEIGHT;
-static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
-static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
-#define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
+static       SDL_bool    wrapmouseok = SDL_FALSE;
+#define HalfWarpMouse(x,y) if (wrapmouseok) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 static       SDL_bool    usesdl2soft = SDL_FALSE;
@@ -168,7 +162,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
-static void Impl_SetWindowName(const char *title);
+//static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
@@ -191,18 +185,16 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (!fullscreen && wasfullscreen)
+		else // windowed mode
 		{
-			wasfullscreen = SDL_FALSE;
-			SDL_SetWindowFullscreen(window, 0);
-			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
-		}
-		else if (!wasfullscreen)
-		{
+			if (wasfullscreen)
+			{
+				wasfullscreen = SDL_FALSE;
+				SDL_SetWindowFullscreen(window, 0);
+			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
 	else
@@ -253,6 +245,11 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_FreeSurface(vidSurface);
 		}
+		if (vid.buffer)
+		{
+			free(vid.buffer);
+			vid.buffer = NULL;
+		}
 		SDL_PixelFormatEnumToMasks(sw_texture_format, &bpp, &rmask, &gmask, &bmask, &amask);
 		vidSurface = SDL_CreateRGBSurface(0, width, height, bpp, rmask, gmask, bmask, amask);
 	}
@@ -279,129 +276,70 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	}
 	switch (code)
 	{
-		case SDL_SCANCODE_F11: // F11 and F12 are
-			return KEY_F11;    // separated from the
-		case SDL_SCANCODE_F12: // rest of the function
-			return KEY_F12;    // keys
+		// F11 and F12 are separated from the rest of the function keys
+		case SDL_SCANCODE_F11: return KEY_F11;
+		case SDL_SCANCODE_F12: return KEY_F12;
 
-		case SDL_SCANCODE_KP_0:
-			return KEY_KEYPAD0;
-		case SDL_SCANCODE_KP_1:
-			return KEY_KEYPAD1;
-		case SDL_SCANCODE_KP_2:
-			return KEY_KEYPAD2;
-		case SDL_SCANCODE_KP_3:
-			return KEY_KEYPAD3;
-		case SDL_SCANCODE_KP_4:
-			return KEY_KEYPAD4;
-		case SDL_SCANCODE_KP_5:
-			return KEY_KEYPAD5;
-		case SDL_SCANCODE_KP_6:
-			return KEY_KEYPAD6;
-		case SDL_SCANCODE_KP_7:
-			return KEY_KEYPAD7;
-		case SDL_SCANCODE_KP_8:
-			return KEY_KEYPAD8;
-		case SDL_SCANCODE_KP_9:
-			return KEY_KEYPAD9;
+		case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
+		case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
+		case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
+		case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
+		case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
+		case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
+		case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
+		case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
+		case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
+		case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
 
-		case SDL_SCANCODE_RETURN:
-			return KEY_ENTER;
-		case SDL_SCANCODE_ESCAPE:
-			return KEY_ESCAPE;
-		case SDL_SCANCODE_BACKSPACE:
-			return KEY_BACKSPACE;
-		case SDL_SCANCODE_TAB:
-			return KEY_TAB;
-		case SDL_SCANCODE_SPACE:
-			return KEY_SPACE;
-		case SDL_SCANCODE_MINUS:
-			return KEY_MINUS;
-		case SDL_SCANCODE_EQUALS:
-			return KEY_EQUALS;
-		case SDL_SCANCODE_LEFTBRACKET:
-			return '[';
-		case SDL_SCANCODE_RIGHTBRACKET:
-			return ']';
-		case SDL_SCANCODE_BACKSLASH:
-			return '\\';
-		case SDL_SCANCODE_NONUSHASH:
-			return '#';
-		case SDL_SCANCODE_SEMICOLON:
-			return ';';
-		case SDL_SCANCODE_APOSTROPHE:
-			return '\'';
-		case SDL_SCANCODE_GRAVE:
-			return '`';
-		case SDL_SCANCODE_COMMA:
-			return ',';
-		case SDL_SCANCODE_PERIOD:
-			return '.';
-		case SDL_SCANCODE_SLASH:
-			return '/';
-		case SDL_SCANCODE_CAPSLOCK:
-			return KEY_CAPSLOCK;
-		case SDL_SCANCODE_PRINTSCREEN:
-			return 0; // undefined?
-		case SDL_SCANCODE_SCROLLLOCK:
-			return KEY_SCROLLLOCK;
-		case SDL_SCANCODE_PAUSE:
-			return KEY_PAUSE;
-		case SDL_SCANCODE_INSERT:
-			return KEY_INS;
-		case SDL_SCANCODE_HOME:
-			return KEY_HOME;
-		case SDL_SCANCODE_PAGEUP:
-			return KEY_PGUP;
-		case SDL_SCANCODE_DELETE:
-			return KEY_DEL;
-		case SDL_SCANCODE_END:
-			return KEY_END;
-		case SDL_SCANCODE_PAGEDOWN:
-			return KEY_PGDN;
-		case SDL_SCANCODE_RIGHT:
-			return KEY_RIGHTARROW;
-		case SDL_SCANCODE_LEFT:
-			return KEY_LEFTARROW;
-		case SDL_SCANCODE_DOWN:
-			return KEY_DOWNARROW;
-		case SDL_SCANCODE_UP:
-			return KEY_UPARROW;
-		case SDL_SCANCODE_NUMLOCKCLEAR:
-			return KEY_NUMLOCK;
-		case SDL_SCANCODE_KP_DIVIDE:
-			return KEY_KPADSLASH;
-		case SDL_SCANCODE_KP_MULTIPLY:
-			return '*'; // undefined?
-		case SDL_SCANCODE_KP_MINUS:
-			return KEY_MINUSPAD;
-		case SDL_SCANCODE_KP_PLUS:
-			return KEY_PLUSPAD;
-		case SDL_SCANCODE_KP_ENTER:
-			return KEY_ENTER;
-		case SDL_SCANCODE_KP_PERIOD:
-			return KEY_KPADDEL;
-		case SDL_SCANCODE_NONUSBACKSLASH:
-			return '\\';
+		case SDL_SCANCODE_RETURN:         return KEY_ENTER;
+		case SDL_SCANCODE_ESCAPE:         return KEY_ESCAPE;
+		case SDL_SCANCODE_BACKSPACE:      return KEY_BACKSPACE;
+		case SDL_SCANCODE_TAB:            return KEY_TAB;
+		case SDL_SCANCODE_SPACE:          return KEY_SPACE;
+		case SDL_SCANCODE_MINUS:          return KEY_MINUS;
+		case SDL_SCANCODE_EQUALS:         return KEY_EQUALS;
+		case SDL_SCANCODE_LEFTBRACKET:    return '[';
+		case SDL_SCANCODE_RIGHTBRACKET:   return ']';
+		case SDL_SCANCODE_BACKSLASH:      return '\\';
+		case SDL_SCANCODE_NONUSHASH:      return '#';
+		case SDL_SCANCODE_SEMICOLON:      return ';';
+		case SDL_SCANCODE_APOSTROPHE:     return '\'';
+		case SDL_SCANCODE_GRAVE:          return '`';
+		case SDL_SCANCODE_COMMA:          return ',';
+		case SDL_SCANCODE_PERIOD:         return '.';
+		case SDL_SCANCODE_SLASH:          return '/';
+		case SDL_SCANCODE_CAPSLOCK:       return KEY_CAPSLOCK;
+		case SDL_SCANCODE_PRINTSCREEN:    return 0; // undefined?
+		case SDL_SCANCODE_SCROLLLOCK:     return KEY_SCROLLLOCK;
+		case SDL_SCANCODE_PAUSE:          return KEY_PAUSE;
+		case SDL_SCANCODE_INSERT:         return KEY_INS;
+		case SDL_SCANCODE_HOME:           return KEY_HOME;
+		case SDL_SCANCODE_PAGEUP:         return KEY_PGUP;
+		case SDL_SCANCODE_DELETE:         return KEY_DEL;
+		case SDL_SCANCODE_END:            return KEY_END;
+		case SDL_SCANCODE_PAGEDOWN:       return KEY_PGDN;
+		case SDL_SCANCODE_RIGHT:          return KEY_RIGHTARROW;
+		case SDL_SCANCODE_LEFT:           return KEY_LEFTARROW;
+		case SDL_SCANCODE_DOWN:           return KEY_DOWNARROW;
+		case SDL_SCANCODE_UP:             return KEY_UPARROW;
+		case SDL_SCANCODE_NUMLOCKCLEAR:   return KEY_NUMLOCK;
+		case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
+		case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
+		case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
+		case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
+		case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
+		case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
+		case SDL_SCANCODE_NONUSBACKSLASH: return '\\';
 
-		case SDL_SCANCODE_LSHIFT:
-			return KEY_LSHIFT;
-		case SDL_SCANCODE_RSHIFT:
-			return KEY_RSHIFT;
-		case SDL_SCANCODE_LCTRL:
-			return KEY_LCTRL;
-		case SDL_SCANCODE_RCTRL:
-			return KEY_RCTRL;
-		case SDL_SCANCODE_LALT:
-			return KEY_LALT;
-		case SDL_SCANCODE_RALT:
-			return KEY_RALT;
-		case SDL_SCANCODE_LGUI:
-			return KEY_LEFTWIN;
-		case SDL_SCANCODE_RGUI:
-			return KEY_RIGHTWIN;
-		default:
-			break;
+		case SDL_SCANCODE_LSHIFT: return KEY_LSHIFT;
+		case SDL_SCANCODE_RSHIFT: return KEY_RSHIFT;
+		case SDL_SCANCODE_LCTRL:  return KEY_LCTRL;
+		case SDL_SCANCODE_RCTRL:  return KEY_RCTRL;
+		case SDL_SCANCODE_LALT:   return KEY_LALT;
+		case SDL_SCANCODE_RALT:   return KEY_RALT;
+		case SDL_SCANCODE_LGUI:   return KEY_LEFTWIN;
+		case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
+		default:                  break;
 	}
 #ifdef HWRENDER
 	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
@@ -414,6 +352,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 static void SDLdoUngrabMouse(void)
 {
 	SDL_SetWindowGrab(window, SDL_FALSE);
+	wrapmouseok = SDL_FALSE;
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 }
 
 void SDLforceUngrabMouse(void)
@@ -421,6 +361,8 @@ void SDLforceUngrabMouse(void)
 	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO && window != NULL)
 	{
 		SDL_SetWindowGrab(window, SDL_FALSE);
+		wrapmouseok = SDL_FALSE;
+		SDL_SetRelativeMouseMode(SDL_FALSE);
 	}
 }
 
@@ -429,15 +371,10 @@ static void VID_Command_NumModes_f (void)
 	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), VID_NumModes());
 }
 
+// SDL2 doesn't have SDL_GetVideoSurface or a lot of the SDL_Surface flags that SDL 1.2 had
 static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 {
-#if 1
-	(void)infoSurface;
-	(void)SurfaceText;
-	SDL2STUB();
-#else
 	INT32 vfBPP;
-	const SDL_Surface *VidSur = SDL_GetVideoSurface();
 
 	if (!infoSurface)
 		return;
@@ -450,49 +387,12 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 	CONS_Printf("\x82" "%s\n", SurfaceText);
 	CONS_Printf(M_GetText(" %ix%i at %i bit color\n"), infoSurface->w, infoSurface->h, vfBPP);
 
-	if (infoSurface->flags&SDL_HWSURFACE)
-		CONS_Printf("%s", M_GetText(" Stored in video memory\n"));
-	else if (infoSurface->flags&SDL_OPENGL)
-		CONS_Printf("%s", M_GetText(" Stored in an OpenGL context\n"));
-	else if (infoSurface->flags&SDL_PREALLOC)
+	if (infoSurface->flags&SDL_PREALLOC)
 		CONS_Printf("%s", M_GetText(" Uses preallocated memory\n"));
 	else
 		CONS_Printf("%s", M_GetText(" Stored in system memory\n"));
-
-	if (infoSurface->flags&SDL_ASYNCBLIT)
-		CONS_Printf("%s", M_GetText(" Uses asynchronous blits if possible\n"));
-	else
-		CONS_Printf("%s", M_GetText(" Uses synchronous blits if possible\n"));
-
-	if (infoSurface->flags&SDL_ANYFORMAT)
-		CONS_Printf("%s", M_GetText(" Allows any pixel-format\n"));
-
-	if (infoSurface->flags&SDL_HWPALETTE)
-		CONS_Printf("%s", M_GetText(" Has exclusive palette access\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" Has nonexclusive palette access\n"));
-
-	if (infoSurface->flags&SDL_DOUBLEBUF)
-		CONS_Printf("%s", M_GetText(" Double buffered\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" No hardware flipping\n"));
-
-	if (infoSurface->flags&SDL_FULLSCREEN)
-		CONS_Printf("%s", M_GetText(" Full screen\n"));
-	else if (infoSurface->flags&SDL_RESIZABLE)
-		CONS_Printf("%s", M_GetText(" Resizable window\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" Nonresizable window\n"));
-
-	if (infoSurface->flags&SDL_HWACCEL)
-		CONS_Printf("%s", M_GetText(" Uses hardware acceleration blit\n"));
-	if (infoSurface->flags&SDL_SRCCOLORKEY)
-		CONS_Printf("%s", M_GetText(" Use colorkey blitting\n"));
 	if (infoSurface->flags&SDL_RLEACCEL)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
-	if (infoSurface->flags&SDL_SRCALPHA)
-		CONS_Printf("%s", M_GetText(" Use alpha blending acceleration blit\n"));
-#endif
 }
 
 static void VID_Command_Info_f (void)
@@ -575,23 +475,6 @@ static void VID_Command_Mode_f (void)
 	else
 		setmodeneeded = modenum+1; // request vid mode change
 }
-
-#if 0
-#if defined(RPC_NO_WINDOWS_H)
-static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(hWnd);
-	UNREFERENCED_PARAMETER(message);
-	UNREFERENCED_PARAMETER(wParam);
-	switch (message)
-	{
-		case WM_SETTEXT:
-			COM_BufAddText((LPCSTR)lParam);
-			break;
-	}
-}
-#endif
-#endif
 
 static inline void SDLJoyRemap(event_t *event)
 {
@@ -728,36 +611,43 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
-	event_t event;
-	int wwidth, wheight;
-
 	if (USE_MOUSEINPUT)
 	{
-		SDL_GetWindowSize(window, &wwidth, &wheight);
-
 		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
 		{
 			SDLdoUngrabMouse();
 			return;
 		}
 
+		// If using relative mouse mode, don't post an event_t just now,
+		// add on the offsets so we can make an overall event later.
+		if (SDL_GetRelativeMouseMode())
+		{
+			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+			{
+				mousemovex +=  evt.xrel;
+				mousemovey += -evt.yrel;
+				SDL_SetWindowGrab(window, SDL_TRUE);
+			}
+			return;
+		}
+
+		// If the event is from warping the pointer to middle
+		// of the screen then ignore it.
 		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
-		else
-		{
-			event.data2 = (INT32)lround((evt.xrel) * ((float)wwidth / (float)realwidth));
-			event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
-		}
 
-		event.type = ev_mouse;
-
+		// Don't send an event_t if not in relative mouse mode anymore,
+		// just grab and set relative mode
+		// this fixes the stupid camera jerk on mouse entering bug
+		// -- Monster Iestyn
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			D_PostEvent(&event);
 			SDL_SetWindowGrab(window, SDL_TRUE);
-			HalfWarpMouse(wwidth, wheight);
+			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
+				wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
 		}
 	}
 }
@@ -905,12 +795,14 @@ void I_GetEvent(void)
 	SDL_Event evt;
 	// We only want the first motion event,
 	// otherwise we'll end up catching the warp back to center.
-	int mouseMotionOnce = 0;
+	//int mouseMotionOnce = 0;
 
 	if (!graphics_started)
 	{
 		return;
 	}
+
+	mousemovex = mousemovey = 0;
 
 	while (SDL_PollEvent(&evt))
 	{
@@ -924,8 +816,9 @@ void I_GetEvent(void)
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!mouseMotionOnce) Impl_HandleMouseMotionEvent(evt.motion);
-				mouseMotionOnce = 1;
+				//if (!mouseMotionOnce)
+				Impl_HandleMouseMotionEvent(evt.motion);
+				//mouseMotionOnce = 1;
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
@@ -948,221 +841,23 @@ void I_GetEvent(void)
 		}
 	}
 
+	// Send all relative mouse movement as one single mouse event.
+	if (mousemovex || mousemovey)
+	{
+		event_t event;
+		int wwidth, wheight;
+		SDL_GetWindowSize(window, &wwidth, &wheight);
+		//SDL_memset(&event, 0, sizeof(event_t));
+		event.type = ev_mouse;
+		event.data1 = 0;
+		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
+		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
+		D_PostEvent(&event);
+	}
+
 	// In order to make wheels act like buttons, we have to set their state to Up.
 	// This is because wheel messages don't have an up/down state.
 	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
-
-#if 0
-	SDL_Event inputEvent;
-	static SDL_bool sdlquit = SDL_FALSE; //Alam: once, just once
-	event_t event;
-
-	if (!graphics_started)
-		return;
-
-	memset(&inputEvent, 0x00, sizeof(inputEvent));
-	while (SDL_PollEvent(&inputEvent))
-	{
-		memset(&event,0x00,sizeof (event_t));
-		switch (inputEvent.type)
-		{
-			case SDL_ACTIVEEVENT:
-				if (inputEvent.active.state  & (SDL_APPACTIVE|SDL_APPINPUTFOCUS))
-				{
-					// pause music when alt-tab
-					if (inputEvent.active.gain /*&& !paused */)
-					{
-						static SDL_bool firsttimeonmouse = SDL_TRUE;
-						if (!firsttimeonmouse)
-						{
-							if (cv_usemouse.value) I_StartupMouse();
-						}
-						else firsttimeonmouse = SDL_FALSE;
-						//if (!netgame && !con_destlines) paused = false;
-						if (gamestate == GS_LEVEL)
-							if (!paused) I_ResumeSong(0); //resume it
-					}
-					else /*if (!paused)*/
-					{
-						if (!disable_mouse)
-							SDLforceUngrabMouse();
-						if (!netgame && gamestate == GS_LEVEL) paused = true;
-						memset(gamekeydown, 0, NUMKEYS);
-						//S_PauseSound();
-						if (gamestate == GS_LEVEL)
-							I_PauseSong(0); //pause it
-					}
-				}
-				if (MOUSE_MENU)
-				{
-					SDLdoUngrabMouse();
-					break;
-				}
-				if ((SDL_APPMOUSEFOCUS&inputEvent.active.state) && USE_MOUSEINPUT && inputEvent.active.gain)
-					HalfWarpMouse(realwidth, realheight);
-				break;
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-				/// \todo inputEvent.key.which?
-				if (inputEvent.type == SDL_KEYUP)
-					event.type = ev_keyup;
-				else if (inputEvent.type == SDL_KEYDOWN)
-					event.type = ev_keydown;
-				else break;
-				event.data1 = SDLatekey(inputEvent.key.keysym.sym);
-				if (event.data1) D_PostEvent(&event);
-				break;
-			case SDL_MOUSEMOTION:
-				/// \todo inputEvent.motion.which
-				if (MOUSE_MENU)
-				{
-					SDLdoUngrabMouse();
-					break;
-				}
-				//if (USE_MOUSEINPUT) TODO SDL2 stub
-				{
-					// If the event is from warping the pointer back to middle
-					// of the screen then ignore it.
-					if ((inputEvent.motion.x == realwidth/2) &&
-					    (inputEvent.motion.y == realheight/2))
-					{
-						break;
-					}
-					else
-					{
-						event.data2 = +inputEvent.motion.xrel;
-						event.data3 = -inputEvent.motion.yrel;
-					}
-					event.type = ev_mouse;
-					D_PostEvent(&event);
-					// Warp the pointer back to the middle of the window
-					//  or we cannot move any further if it's at a border.
-					if ((inputEvent.motion.x < (realwidth/2 )-(realwidth/4 )) ||
-					    (inputEvent.motion.y < (realheight/2)-(realheight/4)) ||
-					    (inputEvent.motion.x > (realwidth/2 )+(realwidth/4 )) ||
-					    (inputEvent.motion.y > (realheight/2)+(realheight/4) ) )
-					{
-						//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
-							HalfWarpMouse(realwidth, realheight);
-					}
-				}
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEBUTTONUP:
-				/// \todo inputEvent.button.which
-				if (USE_MOUSEINPUT)
-				{
-					if (inputEvent.type == SDL_MOUSEBUTTONUP)
-						event.type = ev_keyup;
-					else if (inputEvent.type == SDL_MOUSEBUTTONDOWN)
-						event.type = ev_keydown;
-					else break;
-					if (inputEvent.button.button==SDL_BUTTON_WHEELUP || inputEvent.button.button==SDL_BUTTON_WHEELDOWN)
-					{
-						if (inputEvent.type == SDL_MOUSEBUTTONUP)
-							event.data1 = 0; //Alam: dumb! this could be a real button with some mice
-						else
-							event.data1 = KEY_MOUSEWHEELUP + inputEvent.button.button - SDL_BUTTON_WHEELUP;
-					}
-					else if (inputEvent.button.button == SDL_BUTTON_MIDDLE)
-						event.data1 = KEY_MOUSE1+2;
-					else if (inputEvent.button.button == SDL_BUTTON_RIGHT)
-						event.data1 = KEY_MOUSE1+1;
-					else if (inputEvent.button.button <= MOUSEBUTTONS)
-						event.data1 = KEY_MOUSE1 + inputEvent.button.button - SDL_BUTTON_LEFT;
-					if (event.data1) D_PostEvent(&event);
-				}
-				break;
-			case SDL_JOYAXISMOTION:
-				inputEvent.jaxis.which++;
-				inputEvent.jaxis.axis++;
-				event.data1 = event.data2 = event.data3 = INT32_MAX;
-				if (cv_usejoystick.value == inputEvent.jaxis.which)
-				{
-					event.type = ev_joystick;
-				}
-				else if (cv_usejoystick.value == inputEvent.jaxis.which)
-				{
-					event.type = ev_joystick2;
-				}
-				else break;
-				//axis
-				if (inputEvent.jaxis.axis > JOYAXISSET*2)
-					break;
-				//vaule
-				if (inputEvent.jaxis.axis%2)
-				{
-					event.data1 = inputEvent.jaxis.axis / 2;
-					event.data2 = SDLJoyAxis(inputEvent.jaxis.value, event.type);
-				}
-				else
-				{
-					inputEvent.jaxis.axis--;
-					event.data1 = inputEvent.jaxis.axis / 2;
-					event.data3 = SDLJoyAxis(inputEvent.jaxis.value, event.type);
-				}
-				D_PostEvent(&event);
-				break;
-			case SDL_JOYBALLMOTION:
-			case SDL_JOYHATMOTION:
-				break; //NONE
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
-				inputEvent.jbutton.which++;
-				if (cv_usejoystick.value == inputEvent.jbutton.which)
-					event.data1 = KEY_JOY1;
-				else if (cv_usejoystick.value == inputEvent.jbutton.which)
-					event.data1 = KEY_2JOY1;
-				else break;
-				if (inputEvent.type == SDL_JOYBUTTONUP)
-					event.type = ev_keyup;
-				else if (inputEvent.type == SDL_JOYBUTTONDOWN)
-					event.type = ev_keydown;
-				else break;
-				if (inputEvent.jbutton.button < JOYBUTTONS)
-					event.data1 += inputEvent.jbutton.button;
-				else
-					break;
-				SDLJoyRemap(&event);
-				if (event.type != ev_console) D_PostEvent(&event);
-				break;
-			case SDL_QUIT:
-				if (!sdlquit)
-				{
-					sdlquit = SDL_TRUE;
-					M_QuitResponse('y');
-				}
-				break;
-#if defined(RPC_NO_WINDOWS_H)
-			case SDL_SYSWMEVENT:
-				MainWndproc(inputEvent.syswm.msg->hwnd,
-					inputEvent.syswm.msg->msg,
-					inputEvent.syswm.msg->wParam,
-					inputEvent.syswm.msg->lParam);
-				break;
-#endif
-			case SDL_VIDEORESIZE:
-				if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN || gamestate == GS_EVALUATION)
-				    setmodeneeded = VID_GetModeForSize(inputEvent.resize.w,inputEvent.resize.h)+1;
-				if (render_soft == rendermode)
-				{
-					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
-					if (vidSurface) SDL_SetColors(vidSurface, localPalette, 0, 256);
-				}
-				else
-					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
-				if (!vidSurface)
-					I_Error("Could not reset vidmode: %s\n",SDL_GetError());
-				break;
-			case SDL_VIDEOEXPOSE:
-				exposevideo = SDL_TRUE;
-				break;
-			default:
-				break;
-		}
-	}
-	//reset wheel like in win32, I don't understand it but works
-#endif
 }
 
 void I_StartupMouse(void)
@@ -1173,7 +868,9 @@ void I_StartupMouse(void)
 		return;
 
 	if (!firsttimeonmouse)
+	{
 		HalfWarpMouse(realwidth, realheight); // warp to center
+	}
 	else
 		firsttimeonmouse = SDL_FALSE;
 	if (cv_usemouse.value)
@@ -1234,7 +931,7 @@ static inline boolean I_SkipFrame(void)
 {
 	static boolean skip = false;
 
-	if (render_soft != rendermode)
+	if (rendermode != render_soft)
 		return false;
 
 	skip = !skip;
@@ -1244,23 +941,13 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
-		case GS_TIMEATTACK:
+			/* FALLTHRU */
+		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
 		case GS_WAITINGPLAYERS:
 			return skip; // Skip odd frames
 		default:
 			return false;
 	}
-}
-
-static inline SDL_bool SDLmatchVideoformat(void)
-{
-	const SDL_PixelFormat *vidformat = vidSurface->format;
-	const INT32 vfBPP = vidformat?vidformat->BitsPerPixel:0;
-	return (((vfBPP == 8 && vid.bpp == 1 &&
-	 !vidformat->Rmask && !vidformat->Gmask && !vidformat->Bmask) ||
-	 (vfBPP == 15 && vid.bpp == 2 && vidformat->Rmask == 0x7C00 &&
-	 vidformat->Gmask == 0x03E0 && vidformat->Bmask == 0x001F )) &&
-	 !vidformat->Amask && (vidSurface->flags & SDL_RLEACCEL) == 0);
 }
 
 //
@@ -1274,10 +961,14 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
-	if (render_soft == rendermode && screens[0])
+	if (rendermode == render_soft && screens[0])
 	{
 		SDL_Rect rect;
 
@@ -1304,7 +995,7 @@ void I_FinishUpdate(void)
 	}
 
 #ifdef HWRENDER
-	else
+	else if (rendermode == render_opengl)
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
@@ -1354,7 +1045,7 @@ void I_SetPalette(RGBA_t *palette)
 }
 
 // return number of fullscreen + X11 modes
-INT32 VID_NumModes(void)
+FUNCMATH INT32 VID_NumModes(void)
 {
 	if (USE_FULLSCREEN && numVidModes != -1)
 		return numVidModes - firstEntry;
@@ -1362,7 +1053,7 @@ INT32 VID_NumModes(void)
 		return MAXWINMODES;
 }
 
-const char *VID_GetModeName(INT32 modeNum)
+FUNCMATH const char *VID_GetModeName(INT32 modeNum)
 {
 #if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
@@ -1392,7 +1083,7 @@ const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
+FUNCMATH INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	int i;
 	for (i = 0; i < MAXWINMODES; i++)
@@ -1502,11 +1193,6 @@ void VID_PrepareModeList(void)
 #endif
 }
 
-static inline void SDLESSet(void)
-{
-	SDL2STUB();
-}
-
 INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
@@ -1537,11 +1223,11 @@ INT32 VID_SetMode(INT32 modeNum)
 		}
 		vid.modenum = -1;
 	}
-	Impl_SetWindowName("SRB2 "VERSIONSTRING);
+	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
-	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 
-	if (render_soft == rendermode)
+	if (rendermode == render_soft)
 	{
 		if (bufSurface)
 		{
@@ -1558,69 +1244,78 @@ INT32 VID_SetMode(INT32 modeNum)
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
 	int flags = 0;
+
+	if (rendermode == render_none) // dedicated
+		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
+
 	if (window != NULL)
-	{
 		return SDL_FALSE;
-	}
 
 	if (fullscreen)
-	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
 
 	if (borderlesswindow)
-	{
 		flags |= SDL_WINDOW_BORDERLESS;
-	}
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
+		flags |= SDL_WINDOW_OPENGL;
+#endif
+
+	// Create a window
+	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			realwidth, realheight, flags);
+
+	if (window == NULL)
 	{
-		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
-		if (window != NULL)
-		{
-			sdlglcontext = SDL_GL_CreateContext(window);
-			if (sdlglcontext == NULL)
-			{
-				SDL_DestroyWindow(window);
-				I_Error("Failed to create a GL context: %s\n", SDL_GetError());
-			}
-			else
-			{
-				SDL_GL_MakeCurrent(window, sdlglcontext);
-			}
-		}
-		else return SDL_FALSE;
+		CONS_Printf(M_GetText("Couldn't create window: %s\n"), SDL_GetError());
+		return SDL_FALSE;
 	}
+
+	// Renderer-specific stuff
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		sdlglcontext = SDL_GL_CreateContext(window);
+		if (sdlglcontext == NULL)
+		{
+			SDL_DestroyWindow(window);
+			I_Error("Failed to create a GL context: %s\n", SDL_GetError());
+		}
+		SDL_GL_MakeCurrent(window, sdlglcontext);
+	}
+	else
 #endif
 	if (rendermode == render_soft)
 	{
-		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-				realwidth, realheight, flags);
-		if (window != NULL)
+		flags = 0; // Use this to set SDL_RENDERER_* flags now
+		if (usesdl2soft)
+			flags |= SDL_RENDERER_SOFTWARE;
+		else if (cv_vidwait.value)
+			flags |= SDL_RENDERER_PRESENTVSYNC;
+
+		renderer = SDL_CreateRenderer(window, -1, flags);
+		if (renderer == NULL)
 		{
-			renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
-			if (renderer != NULL)
-			{
-				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
-			}
-			else return SDL_FALSE;
+			CONS_Printf(M_GetText("Couldn't create rendering context: %s\n"), SDL_GetError());
+			return SDL_FALSE;
 		}
-		else return SDL_FALSE;
+		SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 	}
 
 	return SDL_TRUE;
 }
 
+/*
 static void Impl_SetWindowName(const char *title)
 {
-	if (window != NULL)
+	if (window == NULL)
 	{
 		return;
 	}
 	SDL_SetWindowTitle(window, title);
 }
+*/
 
 static void Impl_SetWindowIcon(void)
 {
@@ -1628,7 +1323,7 @@ static void Impl_SetWindowIcon(void)
 	{
 		return;
 	}
-	SDL2STUB();
+	//SDL2STUB(); // Monster Iestyn: why is this stubbed?
 	SDL_SetWindowIcon(window, icoSurface);
 }
 
@@ -1667,12 +1362,10 @@ static void Impl_VideoSetupBuffer(void)
 	{
 		vid.rowbytes = vid.width * vid.bpp;
 		vid.direct = NULL;
-		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
 		if (vid.buffer)
-		{
-			memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
-		}
-		else
+			free(vid.buffer);
+		vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+		if (!vid.buffer)
 		{
 			I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
 		}
@@ -1709,9 +1402,14 @@ void I_StartupGraphics(void)
 	}
 #endif
 	{
-		char vd[100]; //stack space for video name
-		//CONS_Printf(M_GetText("Starting up with video driver : %s\n"), SDL_VideoDriverName(vd,100));
-		if (strncasecmp(vd, "gcvideo", 8) == 0 || strncasecmp(vd, "fbcon", 6) == 0 || strncasecmp(vd, "wii", 4) == 0 || strncasecmp(vd, "psl1ght", 8) == 0)
+		const char *vd = SDL_GetCurrentVideoDriver();
+		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
+		if (vd && (
+			strncasecmp(vd, "gcvideo", 8) == 0 ||
+			strncasecmp(vd, "fbcon", 6) == 0 ||
+			strncasecmp(vd, "wii", 4) == 0 ||
+			strncasecmp(vd, "psl1ght", 8) == 0
+		))
 			framebuffer = SDL_TRUE;
 	}
 	if (M_CheckParm("-software"))
@@ -1723,7 +1421,6 @@ void I_StartupGraphics(void)
 	borderlesswindow = M_CheckParm("-borderless");
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
-	SDLESSet();
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
@@ -1774,7 +1471,6 @@ void I_StartupGraphics(void)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
-	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
 	vid.recalc = true; // Set up the console stufff
@@ -1822,9 +1518,10 @@ void I_ShutdownGraphics(void)
 	rendermode = render_none;
 	if (icoSurface) SDL_FreeSurface(icoSurface);
 	icoSurface = NULL;
-	if (render_soft == oldrendermode)
+	if (oldrendermode == render_soft)
 	{
-		vidSurface = NULL; //Alam: SDL_Video system free vidSurface for me
+		if (vidSurface) SDL_FreeSurface(vidSurface);
+		vidSurface = NULL;
 		if (vid.buffer) free(vid.buffer);
 		vid.buffer = NULL;
 		if (bufSurface) SDL_FreeSurface(bufSurface);

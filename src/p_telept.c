@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -160,9 +160,10 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 			INT32 p;
 			// Search for any players you might be carrying, so you can get them off before they end up being taken with you!
 			for (p = 0; p < MAXPLAYERS; p++)
-				if (playeringame[p] && players[p].mo && players[p].pflags & PF_CARRIED && players[p].mo->tracer == thing)
+				if (playeringame[p] && players[p].mo && players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == thing)
 				{
-					players[p].pflags &= ~PF_CARRIED;
+					players[p].powers[pw_carry] = CR_NONE;
+					P_SetTarget(&players[p].mo->tracer, NULL);
 					break;
 				}
 			thing->player->cmomx = thing->player->cmomy = 0;

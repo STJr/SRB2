@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -103,12 +103,20 @@ static fixed_t P_InterceptVector2(divline_t *v2, divline_t *v1)
 static boolean P_CrossSubsecPolyObj(polyobj_t *po, register los_t *los)
 {
 	size_t i;
+	sector_t *polysec;
+
+	if (!(po->flags & POF_RENDERALL))
+		return true; // the polyobject isn't visible, so we can ignore it
+
+	polysec = po->lines[0]->backsector;
 
 	for (i = 0; i < po->numLines; ++i)
 	{
 		line_t *line = po->lines[i];
 		divline_t divl;
 		const vertex_t *v1,*v2;
+		fixed_t frac;
+		fixed_t topslope, bottomslope;
 
 		// already checked other side?
 		if (line->validcount == validcount)
@@ -140,7 +148,22 @@ static boolean P_CrossSubsecPolyObj(polyobj_t *po, register los_t *los)
 			continue;
 
 		// stop because it is not two sided
-		return false;
+		//if (!(po->flags & POF_TESTHEIGHT))
+			//return false;
+
+		frac = P_InterceptVector2(&los->strace, &divl);
+
+		// get slopes of top and bottom of this polyobject line
+		topslope = FixedDiv(polysec->ceilingheight - los->sightzstart , frac);
+		bottomslope = FixedDiv(polysec->floorheight - los->sightzstart , frac);
+
+		if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+			return false; // view completely blocked
+
+		// TODO: figure out if it's worth considering partially blocked cases or not?
+		// maybe to adjust los's top/bottom slopes if needed
+		//if (los->topslope <= los->bottomslope)
+			//return false;
 	}
 
 	return true;
@@ -325,9 +348,12 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 	pnum = (s1-sectors)*numsectors + (s2-sectors);
 
-	// Check in REJECT table.
-	if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-		return false;
+	if (rejectmatrix != NULL)
+	{
+		// Check in REJECT table.
+		if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			return false;
+	}
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible

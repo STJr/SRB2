@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -220,10 +220,6 @@ static void *xm(size_t size)
 
 		if (p == NULL)
 		{
-#if defined (_NDS) | defined (_PSP)
-			// Temporary-ish debugging measure
-			Command_Memfree_f();
-#endif
 			I_Error("Out of memory allocating %s bytes", sizeu1(size));
 		}
 	}

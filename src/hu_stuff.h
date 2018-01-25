@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,7 +21,7 @@
 //------------------------------------
 //           heads up font
 //------------------------------------
-#define HU_FONTSTART '\x1F' // the first font character
+#define HU_FONTSTART '\x16' // the first font character
 #define HU_FONTEND '~'
 
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
@@ -71,6 +71,8 @@ extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
+extern patch_t *tallinfin;
+extern patch_t *tokenicon;
 
 // set true when entering a chat message
 extern boolean chat_on;
@@ -78,16 +80,13 @@ extern boolean chat_on;
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;
 
-// P_DeathThink sets this true to show scores while dead, in multiplayer
-extern boolean playerdeadview;
-
 // init heads up data at game startup.
 void HU_Init(void);
 
 void HU_LoadGraphics(void);
 
 // reset heads up when consoleplayer respawns.
-void HU_Start(void);
+FUNCMATH void HU_Start(void);
 
 boolean HU_Responder(event_t *ev);
 

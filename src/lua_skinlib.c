@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014      by John "JTE" Muniz.
-// Copyright (C) 2014      by Sonic Team Junior.
+// Copyright (C) 2014-2016 by John "JTE" Muniz.
+// Copyright (C) 2014-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,6 +35,7 @@ enum skin {
 	skin_thokitem,
 	skin_spinitem,
 	skin_revitem,
+	skin_followitem,
 	skin_actionspd,
 	skin_mindash,
 	skin_maxdash,
@@ -44,10 +45,18 @@ enum skin {
 	skin_accelstart,
 	skin_acceleration,
 	skin_jumpfactor,
+	skin_radius,
+	skin_height,
+	skin_spinheight,
+	skin_shieldscale,
+	skin_camerascale,
 	skin_starttranscolor,
 	skin_prefcolor,
+	skin_supercolor,
+	skin_prefoppositecolor,
 	skin_highresscale,
-	skin_soundsid
+	skin_soundsid,
+	skin_availability
 };
 static const char *const skin_opt[] = {
 	"valid",
@@ -65,6 +74,7 @@ static const char *const skin_opt[] = {
 	"thokitem",
 	"spinitem",
 	"revitem",
+	"followitem",
 	"actionspd",
 	"mindash",
 	"maxdash",
@@ -74,10 +84,18 @@ static const char *const skin_opt[] = {
 	"accelstart",
 	"acceleration",
 	"jumpfactor",
+	"radius",
+	"height",
+	"spinheight",
+	"shieldscale",
+	"camerascale",
 	"starttranscolor",
 	"prefcolor",
+	"supercolor",
+	"prefoppositecolor",
 	"highresscale",
 	"soundsid",
+	"availability",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
@@ -146,6 +164,9 @@ static int skin_get(lua_State *L)
 	case skin_revitem:
 		lua_pushinteger(L, skin->revitem);
 		break;
+	case skin_followitem:
+		lua_pushinteger(L, skin->followitem);
+		break;
 	case skin_actionspd:
 		lua_pushfixed(L, skin->actionspd);
 		break;
@@ -173,17 +194,41 @@ static int skin_get(lua_State *L)
 	case skin_jumpfactor:
 		lua_pushfixed(L, skin->jumpfactor);
 		break;
+	case skin_radius:
+		lua_pushfixed(L, skin->radius);
+		break;
+	case skin_height:
+		lua_pushfixed(L, skin->height);
+		break;
+	case skin_spinheight:
+		lua_pushfixed(L, skin->spinheight);
+		break;
+	case skin_shieldscale:
+		lua_pushfixed(L, skin->shieldscale);
+		break;
+	case skin_camerascale:
+		lua_pushfixed(L, skin->camerascale);
+		break;
 	case skin_starttranscolor:
 		lua_pushinteger(L, skin->starttranscolor);
 		break;
 	case skin_prefcolor:
 		lua_pushinteger(L, skin->prefcolor);
 		break;
+	case skin_supercolor:
+		lua_pushinteger(L, skin->supercolor);
+		break;
+	case skin_prefoppositecolor:
+		lua_pushinteger(L, skin->prefoppositecolor);
+		break;
 	case skin_highresscale:
 		lua_pushinteger(L, skin->highresscale);
 		break;
 	case skin_soundsid:
 		LUA_PushUserdata(L, skin->soundsid, META_SOUNDSID);
+		break;
+	case skin_availability:
+		lua_pushinteger(L, skin->availability);
 		break;
 	}
 	return 1;
@@ -244,7 +289,7 @@ static int lib_getSkin(lua_State *L)
 	{
 		i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXSKINS)
-			return luaL_error(L, "skins[] index cannot exceed MAXSKINS");
+			return luaL_error(L, "skins[] index %d out of range (0 - %d)", i, MAXSKINS-1);
 		if (i >= numskins)
 			return 0;
 		LUA_PushUserdata(L, &skins[i], META_SKIN);

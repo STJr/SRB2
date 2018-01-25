@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,6 +47,8 @@ typedef struct
 extern size_t numlevelflats;
 extern levelflat_t *levelflats;
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat);
+INT32 P_AddLevelFlatRuntime(const char *flatname);
+INT32 P_CheckLevelFlat(const char *flatname);
 
 extern size_t nummapthings;
 extern mapthing_t *mapthings;
@@ -58,13 +60,15 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 void P_LoadThingsOnly(void);
 boolean P_SetupLevel(boolean skipprecip);
 boolean P_AddWadFile(const char *wadfilename, char **firstmapname);
-#ifdef DELFILE
-boolean P_DelWadFile(void);
-#endif
 boolean P_RunSOC(const char *socfilename);
+void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
+void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);
+
+void P_SetDemoFlickies(INT16 i);
+void P_DeleteFlickies(INT16 i);
 
 // Needed for NiGHTS
 void P_ReloadRings(void);

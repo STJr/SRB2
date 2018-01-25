@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,20 +15,16 @@
 
 #include "command.h"
 
-#if (defined (_WIN32) || defined (_WIN32_WCE)) && !defined (__CYGWIN__) && !defined (_XBOX)
-#if defined (_WIN32_WCE) && defined (__GNUC__)
-#include <sys/wcetypes.h>
-#else
+#if defined (_WIN32) && !defined (__CYGWIN__)
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
-#endif
 #define DNWH HWND
 #else
 #define DNWH void * // unused in DOS version
 #endif
 
 // quickhack for V_Init()... to be cleaned up
-#if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined (NOPOSTPROCESSING)
+#ifdef NOPOSTPROCESSING
 #define NUMSCREENS 2
 #else
 #define NUMSCREENS 5
@@ -43,15 +39,9 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#if defined (_WIN32_WCE) || defined (DC) || defined (_PSP) || defined (_NDS)
+#if defined (_WIN32_WCE)
 #define MAXVIDWIDTH 320
 #define MAXVIDHEIGHT 200
-#elif defined (GP2X)
-#define MAXVIDWIDTH 320 //720
-#define MAXVIDHEIGHT 240 //576
-#elif defined (WII) // Wii, VGA/640x480
-#define MAXVIDWIDTH 640
-#define MAXVIDHEIGHT 480
 #else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.
@@ -110,7 +100,7 @@ typedef struct vmode_s
 	INT32 windowed; // if true this is a windowed mode
 	INT32 numpages;
 	vesa_extra_t *pextradata; // vesa mode extra data
-#if defined (_WIN32) && !defined (_XBOX)
+#ifdef _WIN32
 	INT32 (WINAPI *setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
 #else
 	INT32 (*setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
@@ -136,6 +126,7 @@ extern void (*basespanfunc)(void);
 extern void (*splatfunc)(void);
 extern void (*transtransfunc)(void);
 extern void (*twosmultipatchfunc)(void);
+extern void (*twosmultipatchtransfunc)(void);
 
 // -----
 // CPUID
@@ -175,11 +166,10 @@ void SCR_SetDefaultMode (void);
 
 void SCR_Startup (void);
 
-void SCR_ChangeFullscreen (void);
-
-boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
+FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);
+void SCR_ClosedCaptions(void);
 #undef DNWH
 #endif //__SCREEN_H__

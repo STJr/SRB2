@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -48,6 +48,7 @@ static lua_CFunction liblist[] = {
 	LUA_SkinLib, // skin_t, skins[]
 	LUA_ThinkerLib, // thinker_t
 	LUA_MapLib, // line_t, side_t, sector_t, subsector_t
+	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
 	NULL
 };
@@ -160,6 +161,11 @@ void LUA_ClearExtVars(void)
 }
 #endif
 
+// Use this variable to prevent certain functions from running
+// if they were not called on lump load
+// (i.e. they were called in hooks or coroutines etc)
+boolean lua_lumploading = false;
+
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name)
 {
@@ -197,7 +203,9 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[strlen(wadfiles[wad]->filename)+9] = '\0';
 	}
 
-	LUA_LoadFile(&f, name);
+	lua_lumploading = true; // turn on loading flag
+	LUA_LoadFile(&f, name); // actually load file!
+	lua_lumploading = false; // turn off again
 
 	free(name);
 	Z_Free(f.data);
@@ -395,6 +403,7 @@ void LUA_InvalidateLevel(void)
 {
 	thinker_t *th;
 	size_t i;
+	ffloor_t *rover = NULL;
 	if (!gL)
 		return;
 
@@ -406,7 +415,15 @@ void LUA_InvalidateLevel(void)
 	for (i = 0; i < numsubsectors; i++)
 		LUA_InvalidateUserdata(&subsectors[i]);
 	for (i = 0; i < numsectors; i++)
+	{
 		LUA_InvalidateUserdata(&sectors[i]);
+		LUA_InvalidateUserdata(sectors[i].lines);
+		if (sectors[i].ffloors)
+		{
+			for (rover = sectors[i].ffloors; rover; rover = rover->next)
+				LUA_InvalidateUserdata(rover);
+		}
+	}
 	for (i = 0; i < numlines; i++)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
@@ -416,6 +433,16 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+#ifdef HAVE_LUA_SEGS
+	for (i = 0; i < numsegs; i++)
+		LUA_InvalidateUserdata(&segs[i]);
+	for (i = 0; i < numnodes; i++)
+	{
+		LUA_InvalidateUserdata(&nodes[i]);
+		LUA_InvalidateUserdata(nodes[i].bbox);
+		LUA_InvalidateUserdata(nodes[i].children);
+	}
+#endif
 }
 
 void LUA_InvalidateMapthings(void)
@@ -455,6 +482,11 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+#ifdef HAVE_LUA_SEGS
+	ARCH_SEG,
+	ARCH_NODE,
+#endif
+	ARCH_FFLOOR,
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -474,6 +506,11 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+#ifdef HAVE_LUA_SEGS
+	{META_SEG,      ARCH_SEG},
+	{META_NODE,     ARCH_NODE},
+#endif
+	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -566,14 +603,14 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:
@@ -664,6 +701,56 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+#ifdef HAVE_LUA_SEGS
+		case ARCH_SEG:
+		{
+			seg_t *seg = *((seg_t **)lua_touserdata(gL, myindex));
+			if (!seg)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_SEG);
+				WRITEUINT16(save_p, seg - segs);
+			}
+			break;
+		}
+		case ARCH_NODE:
+		{
+			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
+			if (!node)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_NODE);
+				WRITEUINT16(save_p, node - nodes);
+			}
+			break;
+		}
+#endif
+		case ARCH_FFLOOR:
+		{
+			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
+			if (!rover)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				ffloor_t *r2;
+				UINT16 i = 0;
+				// search for id
+				for (r2 = rover->target->ffloors; r2; r2 = r2->next)
+				{
+					if (r2 == rover)
+						break;
+					i++;
+				}
+				if (!r2)
+					WRITEUINT8(save_p, ARCH_NULL);
+				else
+				{
+					WRITEUINT8(save_p, ARCH_FFLOOR);
+					WRITEUINT16(save_p, rover->target - sectors);
+					WRITEUINT16(save_p, i);
+				}
+			}
+			break;
+		}
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -715,8 +802,15 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 	for (i = 0; lua_next(gL, -2); i++)
 		lua_pop(gL, 1);
 
-	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	// skip anything that has an empty table and isn't a player.
+	if (i == 0)
+	{
+		if (fastcmp(ptype,"player")) // always include players even if they have no extra variables
+			WRITEUINT16(save_p, 0);
+		lua_pop(gL, 1);
 		return;
+	}
+
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
@@ -842,6 +936,23 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
+#ifdef HAVE_LUA_SEGS
+	case ARCH_SEG:
+		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
+		break;
+	case ARCH_NODE:
+		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
+		break;
+#endif
+	case ARCH_FFLOOR:
+	{
+		sector_t *sector = &sectors[READUINT16(save_p)];
+		UINT16 id = READUINT16(save_p);
+		ffloor_t *rover = P_GetFFloorByID(sector, id);
+		if (rover)
+			LUA_PushUserdata(gL, rover, META_FFLOOR);
+		break;
+	}
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
 		break;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,12 +35,16 @@
 #pragma interface
 #endif
 
-/// \brief Frame flags: only the frame number
-#define FF_FRAMEMASK 0x3fff
-/// \brief Frame flags: Simple stateless animation
-#define FF_ANIMATE 0x4000
-/// \brief Frame flags: frame always appears full bright
-#define FF_FULLBRIGHT 0x8000
+/// \brief Frame flags: only the frame number - 0 to 256 (Frames from 0 to 63, Sprite2 number uses 0 to 127 plus FF_SPR2SUPER)
+#define FF_FRAMEMASK 0xff
+
+/// \brief Frame flags - SPR2: Super sprite2
+#define FF_SPR2SUPER 0x80
+/// \brief Frame flags - SPR2: A change of state at the end of Sprite2 animation
+#define FF_SPR2ENDSTATE 0x1000
+/// \brief Frame flags - SPR2: 50% of starting in middle of Sprite2 animation
+#define FF_SPR2MIDSTART 0x2000
+
 /// \brief Frame flags: 0 = no trans(opaque), 1-15 = transl. table
 #define FF_TRANSMASK 0xf0000
 /// \brief shift for FF_TRANSMASK
@@ -55,6 +59,20 @@
 #define FF_TRANS70 (tr_trans70<<FF_TRANSSHIFT)
 #define FF_TRANS80 (tr_trans80<<FF_TRANSSHIFT)
 #define FF_TRANS90 (tr_trans90<<FF_TRANSSHIFT)
+
+/// \brief Frame flags: frame always appears full bright
+#define FF_FULLBRIGHT 0x00100000
+/// \brief Frame flags: Flip sprite vertically (relative to what it should be for its gravity)
+#define FF_VERTICALFLIP 0x00200000
+/// \brief Frame flags: Thin, paper-like sprite (for collision equivalent, see MF_PAPERCOLLISION)
+#define FF_PAPERSPRITE 0x00400000
+
+/// \brief Frame flags - Animate: Simple stateless animation
+#define FF_ANIMATE 0x01000000
+/// \brief Frame flags - Animate: Start at a random place in the animation (mutually exclusive with below)
+#define FF_RANDOMANIM 0x02000000
+/// \brief Frame flags - Animate: Sync animation to global timer (mutually exclusive with above)
+#define FF_GLOBALANIM 0x04000000
 
 /**	\brief translucency tables
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,13 +32,22 @@
 // Extra abilities/settings for skins (combinable stuff)
 typedef enum
 {
-	SF_SUPER            = 1, // Can turn super in singleplayer/co-op mode.
-	SF_SUPERANIMS       = 1<<1, // If super, use the super sonic animations
-	SF_SUPERSPIN        = 1<<2, // Should spin frames be played while super?
-	SF_HIRES            = 1<<3, // Draw the sprite 2x as small?
+	SF_SUPER            = 1,    // Can turn super in singleplayer/co-op mode?
+	SF_NOSUPERSPIN      = 1<<1, // Should spin frames be played while super?
+	SF_NOSPINDASHDUST   = 1<<2, // Spawn dust particles when charging a spindash?
+	SF_HIRES            = 1<<3, // Draw the sprite at different size?
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
 	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
+	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_ROLL, falling states used, and player height is full when jumping?
+	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
+	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
+	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
+	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
+	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
+	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
+	// free up to and including 1<<31
 } skinflags_t;
 
 //Primary and secondary skin abilities
@@ -57,7 +66,9 @@ typedef enum
 	CA_FALLSWITCH,
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
-	CA_JUMPTHOK
+	CA_JUMPTHOK,
+	CA_BOUNCE,
+	CA_TWINSPIN
 } charability_t;
 
 //Secondary skin abilities
@@ -65,7 +76,8 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY
+	CA2_GUNSLINGER,
+	CA2_MELEE
 } charability2_t;
 
 //
@@ -86,74 +98,60 @@ typedef enum
 //
 typedef enum
 {
-	// Flip camera angle with gravity flip prefrence.
-	PF_FLIPCAM = 1,
+	// Cvars
+	PF_FLIPCAM       = 1, // Flip camera angle with gravity flip prefrence.
+	PF_ANALOGMODE    = 1<<1, // Analog mode?
+	PF_DIRECTIONCHAR = 1<<2, // Directional character sprites?
+	PF_AUTOBRAKE     = 1<<3, // Autobrake?
 
 	// Cheats
-	PF_GODMODE = 1<<1,
-	PF_NOCLIP  = 1<<2,
-	PF_INVIS   = 1<<3,
+	PF_GODMODE = 1<<4,
+	PF_NOCLIP  = 1<<5,
+	PF_INVIS   = 1<<6,
 
 	// True if button down last tic.
-	PF_ATTACKDOWN = 1<<4,
-	PF_USEDOWN    = 1<<5,
-	PF_JUMPDOWN   = 1<<6,
-	PF_WPNDOWN    = 1<<7,
+	PF_ATTACKDOWN = 1<<7,
+	PF_USEDOWN    = 1<<8,
+	PF_JUMPDOWN   = 1<<9,
+	PF_WPNDOWN    = 1<<10,
 
 	// Unmoving states
-	PF_STASIS     = 1<<8, // Player is not allowed to move
-	PF_JUMPSTASIS = 1<<9, // and that includes jumping.
+	PF_STASIS     = 1<<11, // Player is not allowed to move
+	PF_JUMPSTASIS = 1<<12, // and that includes jumping.
 	PF_FULLSTASIS = PF_STASIS|PF_JUMPSTASIS,
 
-	// Did you get a time-over?
-	PF_TIMEOVER = 1<<10,
-
-	// Ready for Super?
-	PF_SUPERREADY = 1<<11,
+	// Applying autobrake?
+	PF_APPLYAUTOBRAKE = 1<<13,
 
 	// Character action status
-	PF_JUMPED    = 1<<12,
-	PF_SPINNING  = 1<<13,
-	PF_STARTDASH = 1<<14,
-	PF_THOKKED   = 1<<15,
+	PF_STARTJUMP     = 1<<14,
+	PF_JUMPED        = 1<<15,
+	PF_NOJUMPDAMAGE  = 1<<16,
 
-	// Are you gliding?
-	PF_GLIDING   = 1<<16,
+	PF_SPINNING      = 1<<17,
+	PF_STARTDASH     = 1<<18,
 
-	// Tails pickup!
-	PF_CARRIED   = 1<<17,
+	PF_THOKKED       = 1<<19,
+	PF_SHIELDABILITY = 1<<20,
+	PF_GLIDING       = 1<<21,
+	PF_BOUNCING      = 1<<22,
 
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
-	PF_SLIDING   = 1<<18,
+	PF_SLIDING       = 1<<23,
 
-	// Hanging on a rope
-	PF_ROPEHANG = 1<<19,
-
-	// Hanging on an item of some kind - zipline, chain, etc. (->tracer)
-	PF_ITEMHANG = 1<<20,
-
-	// On the mace chain spinning around (->tracer)
-	PF_MACESPIN = 1<<21,
-
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<22,
-	PF_TRANSFERTOCLOSEST = 1<<23,
-
-	// Spill rings after falling
-	PF_NIGHTSFALL        = 1<<24,
+	// NiGHTS stuff
+	PF_TRANSFERTOCLOSEST = 1<<24,
 	PF_DRILLING          = 1<<25,
-	PF_SKIDDOWN          = 1<<26,
 
-	/*** TAG STUFF ***/
-	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
-	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
+	// Gametype-specific stuff
+	PF_GAMETYPEOVER = 1<<26, // Race time over, or H&S out-of-game
+	PF_TAGIT        = 1<<27, // The player is it! For Tag Mode
 
 	/*** misc ***/
-	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
-	PF_ANALOGMODE        = 1<<30, // Analog mode?
+	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
+	PF_CANCARRY    = 1<<29, // Can carry another player?
 
-	// free: 1<<30 and 1<<31
+	// up to 1<<31 is free
 } pflags_t;
 
 typedef enum
@@ -164,36 +162,78 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
+	PA_DASH,
 	PA_PAIN,
 	PA_ROLL,
+	PA_JUMP,
 	PA_SPRING,
 	PA_FALL,
 	PA_ABILITY,
+	PA_ABILITY2,
 	PA_RIDE
 } panim_t;
 
+//
+// All of the base srb2 shields are either a single constant,
+// or use damagetype-protecting flags applied to a constant,
+// or are the force shield (which does everything weirdly).
+//
+// Base flags by themselves aren't used so modders can make
+// abstract, ability-less shields should they so choose.
+//
 typedef enum
 {
 	SH_NONE = 0,
-	// Standard shields
-	SH_JUMP,
-	SH_ATTRACT,
-	SH_ELEMENTAL,
-	SH_BOMB,
-	// Stupid useless unimplimented Sonic 3 shields
-	SH_BUBBLEWRAP,
-	SH_THUNDERCOIN,
-	SH_FLAMEAURA,
-	// Pity shield: the world's most basic shield ever, given to players who suck at Match
-	SH_PITY,
-	// The fireflower is special, it combines with other shields.
-	SH_FIREFLOWER = 0x100,
-	// The force shield uses the lower 8 bits to count how many hits are left.
-	SH_FORCE = 0x200,
 
-	SH_STACK = SH_FIREFLOWER,
+	// Shield flags
+	SH_PROTECTFIRE = 0x400,
+	SH_PROTECTWATER = 0x800,
+	SH_PROTECTELECTRIC = 0x1000,
+	SH_PROTECTSPIKE = 0x2000, // cactus shield one day? thanks, subarashii
+	//SH_PROTECTNUKE = 0x4000, // intentionally no hardcoded defense against nukes
+
+	// Indivisible shields
+	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
+	SH_WHIRLWIND,
+	SH_ARMAGEDDON,
+
+	// Normal shields that use flags
+	SH_ATTRACT = SH_PITY|SH_PROTECTELECTRIC,
+	SH_ELEMENTAL = SH_PITY|SH_PROTECTFIRE|SH_PROTECTWATER,
+
+	// Sonic 3 shields
+	SH_FLAMEAURA = SH_PITY|SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PITY|SH_PROTECTWATER,
+	SH_THUNDERCOIN = SH_WHIRLWIND|SH_PROTECTELECTRIC,
+
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	SH_FORCE = 0x100,
+	SH_FORCEHP = 0xFF, // to be used as a bitmask only
+
+	// Mostly for use with Mario mode.
+	SH_FIREFLOWER = 0x200,
+
+	SH_STACK = SH_FIREFLOWER, // second-layer shields
 	SH_NOSTACK = ~SH_STACK
-} shieldtype_t;
+} shieldtype_t; // pw_shield
+
+typedef enum
+{
+	CR_NONE = 0,
+	// The generic case is suitable for most objects.
+	CR_GENERIC,
+	// Tails carry.
+	CR_PLAYER,
+	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
+	CR_NIGHTSMODE,
+	CR_NIGHTSFALL,
+	// Old Brak sucks hard, but this gimmick could be used for something better, so we might as well continue supporting it.
+	CR_BRAKGOOP,
+	// Specific level gimmicks.
+	CR_ZOOMTUBE,
+	CR_ROPEHANG,
+	CR_MACESPIN
+} carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
 typedef enum
@@ -202,10 +242,12 @@ typedef enum
 	pw_sneakers,
 	pw_flashing,
 	pw_shield,
+	pw_carry,
 	pw_tailsfly, // tails flying
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
+	pw_pushing,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots
@@ -227,9 +269,7 @@ typedef enum
 	pw_nights_helper,
 	pw_nights_linkfreeze,
 
-	//for linedef exec 427
-	pw_nocontrol,
-	pw_ingoop, // In goop
+	pw_nocontrol, //for linedef exec 427
 
 	NUMPOWERS
 } powertype_t;
@@ -265,6 +305,8 @@ typedef struct player_s
 	playerstate_t playerstate;
 
 	// Determine POV, including viewpoint bobbing during movement.
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	// Focal origin above r.z
 	fixed_t viewz;
 	// Base height above floor for viewz.
@@ -278,10 +320,11 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
-	// This is only used between levels,
-	// mo->health is used during levels.
-	/// \todo Remove this.  We don't need a second health definition for players.
-	INT32 health;
+	// fun thing for player sprite
+	angle_t drawangle;
+
+	// player's ring count
+	INT32 rings;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
@@ -305,10 +348,10 @@ typedef struct player_s
 	UINT8 skincolor;
 
 	INT32 skin;
+	UINT32 availabilities;
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed
-	INT32 dashtime; // tics dashing, used for rev sound
 
 	fixed_t normalspeed; // Normal ground
 	fixed_t runspeed; // Speed you break into the run animation
@@ -326,12 +369,17 @@ typedef struct player_s
 	mobjtype_t thokitem; // Object # to spawn for the thok
 	mobjtype_t spinitem; // Object # to spawn for spindash/spinning
 	mobjtype_t revitem; // Object # to spawn for spindash/spinning
+	mobjtype_t followitem; // Object # to spawn for Smiles
+	mobj_t *followmobj; // Smiles all around
 
 	fixed_t actionspd; // Speed of thok/glide/fly
 	fixed_t mindash; // Minimum spindash speed
 	fixed_t maxdash; // Maximum spindash speed
 
 	fixed_t jumpfactor; // How high can the player jump?
+
+	fixed_t height; // Bounding box changes.
+	fixed_t spinheight;
 
 	SINT8 lives;
 	SINT8 continues; // continues that player has acquired
@@ -340,8 +388,7 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Jump counter
-	UINT8 secondjump;
+	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying
 	UINT8 scoreadd; // Used for multiple enemy attack bonus
@@ -351,6 +398,7 @@ typedef struct player_s
 	tic_t exiting; // Exitlevel timer
 
 	UINT8 homing; // Are you homing?
+	tic_t dashmode; // counter for dashmode ability
 
 	tic_t skidtime; // Skid timer
 
@@ -432,6 +480,7 @@ typedef struct player_s
 	angle_t awayviewaiming; // Used for cut-away view
 
 	boolean spectator;
+	boolean outofcoop;
 	UINT8 bot;
 
 	tic_t jointime; // Timer when player joins game to change skin/color

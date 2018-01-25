@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -126,81 +126,301 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define BOSS_TT_CACHE_INDEX (MAXSKINS + 1)
 #define METALSONIC_TT_CACHE_INDEX (MAXSKINS + 2)
 #define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
-#define SKIN_RAMP_LENGTH 16
 #define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
 static UINT8** translationtablecache[MAXSKINS + 4] = {NULL};
 
+const UINT8 Color_Index[MAXTRANSLATIONS-1][16] = {
+	// {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // SKINCOLOR_NONE
+
+	// Greyscale ranges
+	{0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x02, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10, 0x11}, // SKINCOLOR_WHITE
+	{0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x05, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10, 0x11, 0x12}, // SKINCOLOR_BONE
+	{0x02, 0x03, 0x04, 0x05, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14}, // SKINCOLOR_CLOUDY
+	{0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}, // SKINCOLOR_GREY
+	{0x02, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f, 0x11, 0x13, 0x15, 0x17, 0x19, 0x1b, 0x1d, 0x1f}, // SKINCOLOR_SILVER
+	{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x16, 0x17, 0x17, 0x19, 0x19, 0x1a, 0x1a, 0x1b, 0x1c, 0x1d}, // SKINCOLOR_CARBON
+	{0x00, 0x05, 0x0a, 0x0f, 0x14, 0x19, 0x1a, 0x1b, 0x1c, 0x1e, 0x1e, 0x1e, 0x1f, 0x1f, 0x1f, 0x1f}, // SKINCOLOR_JET
+	{0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1b, 0x1b, 0x1c, 0x1d, 0x1d, 0x1e, 0x1e, 0x1f, 0x1f}, // SKINCOLOR_BLACK
+
+	// Desaturated
+	{0x00, 0x00, 0x01, 0x02, 0x02, 0x03, 0x91, 0x91, 0x91, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xaf}, // SKINCOLOR_AETHER
+	{0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0xaa, 0xaa, 0xaa, 0xab, 0xac, 0xac, 0xad, 0xad, 0xae, 0xaf}, // SKINCOLOR_SLATE
+	{0xd0, 0xd0, 0xd1, 0xd1, 0xd2, 0xd2, 0xd3, 0xd3, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0x2b, 0x2c, 0x2e}, // SKINCOLOR_PINK
+	{0xd0, 0x30, 0xd8, 0xd9, 0xda, 0xdb, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe3, 0xe6, 0xe8, 0xe9}, // SKINCOLOR_YOGURT
+	{0xdf, 0xe0, 0xe1, 0xe2, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef}, // SKINCOLOR_BROWN
+	{0x51, 0x51, 0x54, 0x54, 0x55, 0x55, 0x56, 0x56, 0x56, 0x57, 0xf5, 0xf5, 0xf9, 0xf9, 0xed, 0xed}, // SKINCOLOR_TAN
+	{0x54, 0x55, 0x56, 0x56, 0xf2, 0xf3, 0xf3, 0xf4, 0xf5, 0xf6, 0xf8, 0xf9, 0xfa, 0xfb, 0xed, 0xed}, // SKINCOLOR_BEIGE
+	{0x58, 0x58, 0x59, 0x59, 0x5a, 0x5a, 0x5b, 0x5b, 0x5b, 0x5c, 0x5d, 0x5d, 0x5e, 0x5e, 0x5f, 0x5f}, // SKINCOLOR_MOSS
+	{0x90, 0x90, 0x91, 0x91, 0xaa, 0xaa, 0xab, 0xab, 0xab, 0xac, 0xad, 0xad, 0xae, 0xae, 0xaf, 0xaf}, // SKINCOLOR_AZURE
+	{0xc0, 0xc0, 0xc1, 0xc1, 0xc2, 0xc2, 0xc3, 0xc3, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xc7, 0xc7}, // SKINCOLOR_LAVENDER
+
+	// Viv's vivid colours (toast 21/07/17)
+	{0xb0, 0xb0, 0xc9, 0xca, 0xcc, 0x26, 0x27, 0x28, 0x29, 0x2a, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xfd}, // SKINCOLOR_RUBY
+	{0xd0, 0xd0, 0xd1, 0xd2, 0x20, 0x21, 0x24, 0x25, 0x26, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e}, // SKINCOLOR_SALMON
+	{0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x47, 0x2e, 0x2f}, // SKINCOLOR_RED
+	{0x27, 0x27, 0x28, 0x28, 0x29, 0x2a, 0x2b, 0x2b, 0x2c, 0x2d, 0x2e, 0x2e, 0x2e, 0x2f, 0x2f, 0x1f}, // SKINCOLOR_CRIMSON
+	{0x31, 0x32, 0x33, 0x36, 0x22, 0x22, 0x25, 0x25, 0x25, 0xcd, 0xcf, 0xcf, 0xc5, 0xc5, 0xc7, 0xc7}, // SKINCOLOR_FLAME
+	{0xd0, 0x30, 0x31, 0x31, 0x32, 0x32, 0xdc, 0xdc, 0xdc, 0xd3, 0xd4, 0xd4, 0xcc, 0xcd, 0xce, 0xcf}, // SKINCOLOR_PEACHY
+	{0xd8, 0xd9, 0xdb, 0xdc, 0xde, 0xdf, 0xd5, 0xd5, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0x1d, 0x1f}, // SKINCOLOR_QUAIL
+	{0x51, 0x52, 0x40, 0x40, 0x34, 0x36, 0xd5, 0xd5, 0xd6, 0xd7, 0xcf, 0xcf, 0xc6, 0xc6, 0xc7, 0xfe}, // SKINCOLOR_SUNSET
+	{0x00, 0xd8, 0xd9, 0xda, 0xdb, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e}, // SKINCOLOR_APRICOT
+	{0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x2c}, // SKINCOLOR_ORANGE
+	{0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3c, 0x3d, 0x3d, 0x3d, 0x3f, 0x2c, 0x2d, 0x47, 0x2e, 0x2f, 0x2f}, // SKINCOLOR_RUST
+	{0x51, 0x51, 0x54, 0x54, 0x41, 0x42, 0x43, 0x43, 0x44, 0x45, 0x46, 0x3f, 0x2d, 0x2e, 0x2f, 0x2f}, // SKINCOLOR_GOLD
+	{0x53, 0x40, 0x41, 0x42, 0x43, 0xe6, 0xe9, 0xe9, 0xea, 0xec, 0xec, 0xc6, 0xc6, 0xc7, 0xc7, 0xfe}, // SKINCOLOR_SANDY
+	{0x52, 0x53, 0x49, 0x49, 0x4a, 0x4a, 0x4b, 0x4b, 0x4b, 0x4c, 0x4d, 0x4d, 0x4e, 0x4e, 0x4f, 0xed}, // SKINCOLOR_YELLOW
+	{0x4b, 0x4b, 0x4c, 0x4c, 0x4d, 0x4e, 0xe7, 0xe7, 0xe9, 0xc5, 0xc5, 0xc6, 0xc6, 0xc7, 0xc7, 0xfd}, // SKINCOLOR_OLIVE
+	{0x50, 0x51, 0x52, 0x53, 0x48, 0xbc, 0xbd, 0xbe, 0xbe, 0xbf, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, // SKINCOLOR_LIME
+	{0x58, 0x58, 0xbc, 0xbc, 0xbd, 0xbd, 0xbe, 0xbe, 0xbe, 0xbf, 0x5e, 0x5e, 0x5f, 0x5f, 0x77, 0x77}, // SKINCOLOR_PERIDOT
+	{0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, // SKINCOLOR_GREEN
+	{0x65, 0x66, 0x67, 0x68, 0x69, 0x69, 0x6a, 0x6b, 0x6b, 0x6c, 0x6d, 0x6d, 0x6e, 0x6e, 0x6e, 0x6f}, // SKINCOLOR_FOREST
+	{0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73, 0x73, 0x73, 0x74, 0x75, 0x75, 0x76, 0x76, 0x77, 0x77}, // SKINCOLOR_EMERALD
+	{0x00, 0x00, 0x58, 0x58, 0x59, 0x62, 0x62, 0x62, 0x64, 0x67, 0x7e, 0x7e, 0x8f, 0x8f, 0x8a, 0x8a}, // SKINCOLOR_MINT
+	{0x01, 0x58, 0x59, 0x5a, 0x7d, 0x7d, 0x7e, 0x7e, 0x7e, 0x8f, 0x8f, 0x8a, 0x8a, 0x8a, 0xfd, 0xfd}, // SKINCOLOR_SEAFOAM
+	{0x78, 0x79, 0x7a, 0x7a, 0x7b, 0x7b, 0x7c, 0x7c, 0x7c, 0x7d, 0x7e, 0x7e, 0x7f, 0x7f, 0x76, 0x77}, // SKINCOLOR_AQUA
+	{0x78, 0x78, 0x8c, 0x8c, 0x8d, 0x8d, 0x8d, 0x8e, 0x8e, 0x8f, 0x8f, 0x8f, 0x8a, 0x8a, 0x8a, 0x8a}, // SKINCOLOR_TEAL
+	{0x00, 0x78, 0x78, 0x79, 0x8d, 0x87, 0x88, 0x89, 0x89, 0xae, 0xa8, 0xa8, 0xa9, 0xa9, 0xfd, 0xfd}, // SKINCOLOR_WAVE
+	{0x80, 0x81, 0xff, 0xff, 0x83, 0x83, 0x8d, 0x8d, 0x8d, 0x8e, 0x7e, 0x7f, 0x76, 0x76, 0x77, 0x6e}, // SKINCOLOR_CYAN
+	{0x80, 0x80, 0x81, 0x82, 0x83, 0x83, 0x84, 0x85, 0x85, 0x86, 0x87, 0x88, 0x89, 0x89, 0x8a, 0x8b}, // SKINCOLOR_SKY
+	{0x85, 0x86, 0x87, 0x88, 0x88, 0x89, 0x89, 0x89, 0x8a, 0x8a, 0xfd, 0xfd, 0xfd, 0x1f, 0x1f, 0x1f}, // SKINCOLOR_CERULEAN
+	{0x00, 0x00, 0x00, 0x00, 0x80, 0x81, 0x83, 0x83, 0x86, 0x87, 0x95, 0x95, 0xad, 0xad, 0xae, 0xaf}, // SKINCOLOR_ICY
+	{0x80, 0x83, 0x86, 0x87, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xfd, 0xfe}, // SKINCOLOR_SAPPHIRE
+	{0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x9a, 0x9c, 0x9d, 0x9d, 0x9e, 0x9e, 0x9e}, // SKINCOLOR_CORNFLOWER
+	{0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xfd, 0xfe}, // SKINCOLOR_BLUE
+	{0x93, 0x94, 0x95, 0x96, 0x98, 0x9a, 0x9b, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xfd, 0xfd, 0xfe, 0xfe}, // SKINCOLOR_COBALT
+	{0x80, 0x81, 0x83, 0x86, 0x94, 0x94, 0xa3, 0xa3, 0xa4, 0xa6, 0xa6, 0xa6, 0xa8, 0xa8, 0xa9, 0xa9}, // SKINCOLOR_VAPOR
+	{0x92, 0x93, 0x94, 0x94, 0xac, 0xad, 0xad, 0xad, 0xae, 0xae, 0xaf, 0xaf, 0xa9, 0xa9, 0xfd, 0xfd}, // SKINCOLOR_DUSK
+	{0x90, 0x90, 0xa0, 0xa0, 0xa1, 0xa1, 0xa2, 0xa2, 0xa2, 0xa3, 0xa4, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8}, // SKINCOLOR_PASTEL
+	{0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5, 0xa5, 0xa6, 0xa7, 0xa7, 0xa8, 0xa8, 0xa9, 0xa9}, // SKINCOLOR_PURPLE
+	{0x00, 0xd0, 0xd0, 0xc8, 0xc8, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8}, // SKINCOLOR_BUBBLEGUM
+	{0xb3, 0xb3, 0xb4, 0xb5, 0xb6, 0xb6, 0xb7, 0xb7, 0xb7, 0xb8, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xbb}, // SKINCOLOR_MAGENTA
+	{0xb3, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xbb, 0xc7, 0xc7, 0x1d, 0x1d, 0x1e}, // SKINCOLOR_NEON
+	{0xd0, 0xd1, 0xd2, 0xca, 0xcc, 0xb8, 0xb9, 0xb9, 0xba, 0xa8, 0xa8, 0xa9, 0xa9, 0xfd, 0xfe, 0xfe}, // SKINCOLOR_VIOLET
+	{0x00, 0xd0, 0xd1, 0xd2, 0xd3, 0xc1, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xfe, 0x1f}, // SKINCOLOR_LILAC
+	{0xc8, 0xd3, 0xd5, 0xd6, 0xd7, 0xce, 0xcf, 0xb9, 0xb9, 0xba, 0xba, 0xa9, 0xa9, 0xa9, 0xfd, 0xfe}, // SKINCOLOR_PLUM
+	{0xfc, 0xc8, 0xc8, 0xc9, 0xc9, 0xca, 0xca, 0xcb, 0xcb, 0xcc, 0xcc, 0xcd, 0xcd, 0xce, 0xce, 0xcf}, // SKINCOLOR_ROSY
+
+	// {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // SKINCOLOR_?
+
+	// super
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x03}, // SKINCOLOR_SUPERSILVER1
+	{0x00, 0x01, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05, 0x07}, // SKINCOLOR_SUPERSILVER2
+	{0x01, 0x02, 0x02, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05, 0x07, 0x09, 0x0b}, // SKINCOLOR_SUPERSILVER3
+	{0x02, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f, 0x11}, // SKINCOLOR_SUPERSILVER4
+	{0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f, 0x11, 0x13}, // SKINCOLOR_SUPERSILVER5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd0, 0xd0, 0xd1, 0xd1, 0xd2, 0xd2}, // SKINCOLOR_SUPERRED1
+	{0x00, 0x00, 0x00, 0xd0, 0xd0, 0xd0, 0xd1, 0xd1, 0xd1, 0xd2, 0xd2, 0xd2, 0x20, 0x20, 0x21, 0x21}, // SKINCOLOR_SUPERRED2
+	{0x00, 0x00, 0xd0, 0xd0, 0xd1, 0xd1, 0xd2, 0xd2, 0x20, 0x20, 0x21, 0x21, 0x22, 0x22, 0x23, 0x23}, // SKINCOLOR_SUPERRED3
+	{0x00, 0xd0, 0xd1, 0xd1, 0xd2, 0xd2, 0x20, 0x20, 0x21, 0x21, 0x22, 0x22, 0x23, 0x23, 0x24, 0x24}, // SKINCOLOR_SUPERRED4
+	{0xd0, 0xd1, 0xd2, 0xd2, 0x20, 0x20, 0x21, 0x21, 0x22, 0x22, 0x23, 0x23, 0x24, 0x24, 0x25, 0x25}, // SKINCOLOR_SUPERRED5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd0, 0x30, 0x31, 0x32, 0x33, 0x34}, // SKINCOLOR_SUPERORANGE1
+	{0x00, 0x00, 0x00, 0x00, 0xd0, 0xd0, 0x30, 0x30, 0x31, 0x31, 0x32, 0x32, 0x33, 0x33, 0x34, 0x34}, // SKINCOLOR_SUPERORANGE2
+	{0x00, 0x00, 0xd0, 0xd0, 0x30, 0x30, 0x31, 0x31, 0x32, 0x32, 0x33, 0x33, 0x34, 0x34, 0x35, 0x35}, // SKINCOLOR_SUPERORANGE3
+	{0x00, 0xd0, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x44, 0x45, 0x46}, // SKINCOLOR_SUPERORANGE4
+	{0xd0, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x44, 0x45, 0x46, 0x47}, // SKINCOLOR_SUPERORANGE5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x50, 0x51, 0x52, 0x53, 0x48}, // SKINCOLOR_SUPERGOLD1
+	{0x00, 0x50, 0x51, 0x52, 0x53, 0x53, 0x48, 0x48, 0x49, 0x49, 0x49, 0x49, 0x49, 0x49, 0x40, 0x41}, // SKINCOLOR_SUPERGOLD2
+	{0x51, 0x52, 0x53, 0x53, 0x48, 0x48, 0x49, 0x49, 0x49, 0x49, 0x49, 0x49, 0x40, 0x41, 0x42, 0x43}, // SKINCOLOR_SUPERGOLD3
+	{0x53, 0x48, 0x48, 0x49, 0x49, 0x49, 0x49, 0x49, 0x49, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46}, // SKINCOLOR_SUPERGOLD4
+	{0x48, 0x48, 0x49, 0x49, 0x49, 0x49, 0x49, 0x49, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47}, // SKINCOLOR_SUPERGOLD5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x58, 0x58, 0x58, 0xbc, 0xbc, 0xbc}, // SKINCOLOR_SUPERPERIDOT1
+	{0x00, 0x58, 0x58, 0x58, 0xbc, 0xbc, 0xbc, 0xbc, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbe, 0xbe}, // SKINCOLOR_SUPERPERIDOT2
+	{0x58, 0x58, 0xbc, 0xbc, 0xbc, 0xbc, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbe, 0xbe, 0xbf, 0xbf}, // SKINCOLOR_SUPERPERIDOT3
+	{0x58, 0xbc, 0xbc, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbe, 0xbe, 0xbf, 0xbf, 0x5e, 0x5e, 0x5f}, // SKINCOLOR_SUPERPERIDOT4
+	{0xbc, 0xbc, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbd, 0xbe, 0xbe, 0xbf, 0xbf, 0x5e, 0x5e, 0x5f, 0x77}, // SKINCOLOR_SUPERPERIDOT5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0x81, 0x82, 0x83, 0x84}, // SKINCOLOR_SUPERSKY1
+	{0x00, 0x80, 0x81, 0x82, 0x83, 0x83, 0x84, 0x84, 0x85, 0x85, 0x85, 0x85, 0x85, 0x85, 0x86, 0x86}, // SKINCOLOR_SUPERSKY2
+	{0x81, 0x82, 0x83, 0x83, 0x84, 0x84, 0x85, 0x85, 0x85, 0x85, 0x85, 0x85, 0x86, 0x86, 0x87, 0x87}, // SKINCOLOR_SUPERSKY3
+	{0x83, 0x84, 0x84, 0x85, 0x85, 0x85, 0x85, 0x85, 0x85, 0x86, 0x86, 0x87, 0x87, 0x88, 0x89, 0x8a}, // SKINCOLOR_SUPERSKY4
+	{0x84, 0x84, 0x85, 0x85, 0x85, 0x85, 0x85, 0x85, 0x86, 0x86, 0x87, 0x87, 0x88, 0x89, 0x8a, 0x8b}, // SKINCOLOR_SUPERSKY5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0x90, 0xa0, 0xa0, 0xa1, 0xa2}, // SKINCOLOR_SUPERPURPLE1
+	{0x00, 0x90, 0xa0, 0xa0, 0xa1, 0xa1, 0xa2, 0xa2, 0xa3, 0xa3, 0xa3, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5}, // SKINCOLOR_SUPERPURPLE2
+	{0xa0, 0xa0, 0xa1, 0xa1, 0xa2, 0xa2, 0xa3, 0xa3, 0xa3, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5, 0xa6, 0xa6}, // SKINCOLOR_SUPERPURPLE3
+	{0xa1, 0xa2, 0xa2, 0xa3, 0xa3, 0xa3, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5, 0xa6, 0xa6, 0xa7, 0xa8, 0xa9}, // SKINCOLOR_SUPERPURPLE4
+	{0xa2, 0xa2, 0xa3, 0xa3, 0xa3, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5, 0xa6, 0xa6, 0xa7, 0xa8, 0xa9, 0xfd}, // SKINCOLOR_SUPERPURPLE5
+
+	{0x00, 0xd0, 0xd0, 0xd0, 0x30, 0x30, 0x31, 0x32, 0x33, 0x37, 0x3a, 0x44, 0x45, 0x46, 0x47, 0x2e}, // SKINCOLOR_SUPERRUST1
+	{0x30, 0x31, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x38, 0x3a, 0x44, 0x45, 0x46, 0x47, 0x47, 0x2e}, // SKINCOLOR_SUPERRUST2
+	{0x31, 0x32, 0x33, 0x34, 0x36, 0x37, 0x38, 0x3a, 0x44, 0x45, 0x45, 0x46, 0x46, 0x47, 0x2e, 0x2e}, // SKINCOLOR_SUPERRUST3
+	{0x48, 0x40, 0x41, 0x42, 0x43, 0x44, 0x44, 0x45, 0x45, 0x46, 0x46, 0x47, 0x47, 0x2e, 0x2e, 0x2e}, // SKINCOLOR_SUPERRUST4
+	{0x41, 0x42, 0x43, 0x43, 0x44, 0x44, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xed, 0xee, 0xee, 0xef, 0xef}, // SKINCOLOR_SUPERRUST5
+
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x50, 0x51, 0x51, 0x52, 0x52}, // SKINCOLOR_SUPERTAN1
+	{0x00, 0x50, 0x50, 0x51, 0x51, 0x52, 0x52, 0x52, 0x54, 0x54, 0x54, 0x54, 0x55, 0x56, 0x57, 0xf5}, // SKINCOLOR_SUPERTAN2
+	{0x50, 0x51, 0x51, 0x52, 0x52, 0x52, 0x54, 0x54, 0x54, 0x54, 0x55, 0x56, 0x57, 0xf5, 0xf7, 0xf9}, // SKINCOLOR_SUPERTAN3
+	{0x51, 0x52, 0x52, 0x52, 0x52, 0x54, 0x54, 0x54, 0x55, 0x56, 0x57, 0xf5, 0xf7, 0xf9, 0xfb, 0xed}, // SKINCOLOR_SUPERTAN4
+	{0x52, 0x52, 0x54, 0x54, 0x54, 0x55, 0x56, 0x57, 0xf5, 0xf7, 0xf9, 0xfb, 0xed, 0xee, 0xef, 0xef} // SKINCOLOR_SUPERTAN5
+};
 
 // See also the enum skincolors_t
 // TODO Callum: Can this be translated?
-const char *Color_Names[MAXSKINCOLORS] =
+const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS] =
 {
-	"None",     	// SKINCOLOR_NONE
-	"White",    	// SKINCOLOR_WHITE
-	"Silver",   	// SKINCOLOR_SILVER
-	"Grey",	    	// SKINCOLOR_GREY
-	"Black",    	// SKINCOLOR_BLACK
-	"Beige",    	// SKINCOLOR_BEIGE
-	"Peach",    	// SKINCOLOR_PEACH
-	"Brown",    	// SKINCOLOR_BROWN
-	"Red",      	// SKINCOLOR_RED
-	"Crimson",     	// SKINCOLOR_CRIMSON
-	"Orange",   	// SKINCOLOR_ORANGE
-	"Rust",     	// SKINCOLOR_RUST
-	"Gold",      	// SKINCOLOR_GOLD
-	"Yellow",   	// SKINCOLOR_YELLOW
-	"Tan",      	// SKINCOLOR_TAN
-	"Moss",      	// SKINCOLOR_MOSS
-	"Peridot",    	// SKINCOLOR_PERIDOT
-	"Green",    	// SKINCOLOR_GREEN
-	"Emerald",  	// SKINCOLOR_EMERALD
-	"Aqua",     	// SKINCOLOR_AQUA
-	"Teal",     	// SKINCOLOR_TEAL
-	"Cyan",     	// SKINCOLOR_CYAN
-	"Blue",     	// SKINCOLOR_BLUE
-	"Azure",    	// SKINCOLOR_AZURE
-	"Pastel",		// SKINCOLOR_PASTEL
-	"Purple",   	// SKINCOLOR_PURPLE
-	"Lavender", 	// SKINCOLOR_LAVENDER
-	"Magenta",   	// SKINCOLOR_MAGENTA
-	"Pink",     	// SKINCOLOR_PINK
-	"Rosy"     	// SKINCOLOR_ROSY
+	"None",     	// SKINCOLOR_NONE,
+
+	// Greyscale ranges
+	"White",     	// SKINCOLOR_WHITE,
+	"Bone",     	// SKINCOLOR_BONE,
+	"Cloudy",     	// SKINCOLOR_CLOUDY,
+	"Grey",     	// SKINCOLOR_GREY,
+	"Silver",     	// SKINCOLOR_SILVER,
+	"Carbon",     	// SKINCOLOR_CARBON,
+	"Jet",     		// SKINCOLOR_JET,
+	"Black",     	// SKINCOLOR_BLACK,
+
+	// Desaturated
+	"Aether",     	// SKINCOLOR_AETHER,
+	"Slate",     	// SKINCOLOR_SLATE,
+	"Pink",     	// SKINCOLOR_PINK,
+	"Yogurt",     	// SKINCOLOR_YOGURT,
+	"Brown",     	// SKINCOLOR_BROWN,
+	"Tan",     		// SKINCOLOR_TAN,
+	"Beige",     	// SKINCOLOR_BEIGE,
+	"Moss",     	// SKINCOLOR_MOSS,
+	"Azure",     	// SKINCOLOR_AZURE,
+	"Lavender",     // SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	"Ruby",     	// SKINCOLOR_RUBY,
+	"Salmon",     	// SKINCOLOR_SALMON,
+	"Red",     		// SKINCOLOR_RED,
+	"Crimson",     	// SKINCOLOR_CRIMSON,
+	"Flame",     	// SKINCOLOR_FLAME,
+	"Peachy",     	// SKINCOLOR_PEACHY,
+	"Quail",     	// SKINCOLOR_QUAIL,
+	"Sunset",     	// SKINCOLOR_SUNSET,
+	"Apricot",     	// SKINCOLOR_APRICOT,
+	"Orange",     	// SKINCOLOR_ORANGE,
+	"Rust",     	// SKINCOLOR_RUST,
+	"Gold",     	// SKINCOLOR_GOLD,
+	"Sandy",     	// SKINCOLOR_SANDY,
+	"Yellow",     	// SKINCOLOR_YELLOW,
+	"Olive",     	// SKINCOLOR_OLIVE,
+	"Lime",     	// SKINCOLOR_LIME,
+	"Peridot",     	// SKINCOLOR_PERIDOT,
+	"Green",     	// SKINCOLOR_GREEN,
+	"Forest",     	// SKINCOLOR_FOREST,
+	"Emerald",     	// SKINCOLOR_EMERALD,
+	"Mint",     	// SKINCOLOR_MINT,
+	"Seafoam",     	// SKINCOLOR_SEAFOAM,
+	"Aqua",     	// SKINCOLOR_AQUA,
+	"Teal",     	// SKINCOLOR_TEAL,
+	"Wave",     	// SKINCOLOR_WAVE,
+	"Cyan",     	// SKINCOLOR_CYAN,
+	"Sky",     		// SKINCOLOR_SKY,
+	"Cerulean",     // SKINCOLOR_CERULEAN,
+	"Icy",     		// SKINCOLOR_ICY,
+	"Sapphire",     // SKINCOLOR_SAPPHIRE,
+	"Cornflower",   // SKINCOLOR_CORNFLOWER,
+	"Blue",     	// SKINCOLOR_BLUE,
+	"Cobalt",     	// SKINCOLOR_COBALT,
+	"Vapor",     	// SKINCOLOR_VAPOR,
+	"Dusk",     	// SKINCOLOR_DUSK,
+	"Pastel",     	// SKINCOLOR_PASTEL,
+	"Purple",     	// SKINCOLOR_PURPLE,
+	"Bubblegum",    // SKINCOLOR_BUBBLEGUM,
+	"Magenta",     	// SKINCOLOR_MAGENTA,
+	"Neon",     	// SKINCOLOR_NEON,
+	"Violet",     	// SKINCOLOR_VIOLET,
+	"Lilac",     	// SKINCOLOR_LILAC,
+	"Plum",     	// SKINCOLOR_PLUM,
+	"Rosy",     	// SKINCOLOR_ROSY,
+
+	// Super behaves by different rules (one name per 5 colours), and will be accessed exclusively via R_GetSuperColorByName instead of R_GetColorByName.
+	"Silver",		// SKINCOLOR_SUPERSILVER1,
+	"Red",			// SKINCOLOR_SUPERRED1,
+	"Orange",		// SKINCOLOR_SUPERORANGE1,
+	"Gold",			// SKINCOLOR_SUPERGOLD1,
+	"Peridot",		// SKINCOLOR_SUPERPERIDOT1,
+	"Sky",			// SKINCOLOR_SUPERSKY1,
+	"Purple",		// SKINCOLOR_SUPERPURPLE1,
+	"Rust",			// SKINCOLOR_SUPERRUST1,
+	"Tan"			// SKINCOLOR_SUPERTAN1,
 };
 
-const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
+/*
+A word of warning: If the following array is non-symmetrical,
+A_SignPlayer's prefoppositecolor behaviour will break.
+*/
+const UINT8 Color_Opposite[(MAXSKINCOLORS - 1)*2] =
 {
-	SKINCOLOR_NONE,8,   	// SKINCOLOR_NONE
-	SKINCOLOR_BLACK,10, 	// SKINCOLOR_WHITE
-	SKINCOLOR_GREY,4,   	// SKINCOLOR_SILVER
-	SKINCOLOR_SILVER,12,	// SKINCOLOR_GREY
-	SKINCOLOR_WHITE,8,  	// SKINCOLOR_BLACK
-	SKINCOLOR_BEIGE,8,   	// SKINCOLOR_BEIGE - needs new offset
-	SKINCOLOR_BROWN,8,   	// SKINCOLOR_PEACH - ditto
-	SKINCOLOR_PEACH,8,   	// SKINCOLOR_BROWN - ditto
-	SKINCOLOR_GREEN,5,  	// SKINCOLOR_RED
-	SKINCOLOR_CYAN,8,   	// SKINCOLOR_CRIMSON - ditto
-	SKINCOLOR_BLUE,12,  	// SKINCOLOR_ORANGE
-	SKINCOLOR_TAN,8,   		// SKINCOLOR_RUST - ditto
-	SKINCOLOR_LAVENDER,8,    // SKINCOLOR_GOLD - ditto
-	SKINCOLOR_TEAL,8,   	// SKINCOLOR_YELLOW - ditto
-	SKINCOLOR_RUST,8,   	// SKINCOLOR_TAN - ditto
-	SKINCOLOR_MAGENTA,3, 	// SKINCOLOR_MOSS
-	SKINCOLOR_PURPLE,8,   	// SKINCOLOR_PERIDOT - ditto
-	SKINCOLOR_RED,11,   	// SKINCOLOR_GREEN
-	SKINCOLOR_PASTEL,8,   	// SKINCOLOR_EMERALD - ditto
-	SKINCOLOR_ROSY,8,   	// SKINCOLOR_AQUA - ditto
-	SKINCOLOR_YELLOW,8,   	// SKINCOLOR_TEAL - ditto
-	SKINCOLOR_CRIMSON,8,   	// SKINCOLOR_CYAN - ditto
-	SKINCOLOR_ORANGE,9, 	// SKINCOLOR_BLUE
-	SKINCOLOR_PINK,8,   	// SKINCOLOR_AZURE - ditto
-	SKINCOLOR_EMERALD,8,   	// SKINCOLOR_PASTEL - ditto
-	SKINCOLOR_PERIDOT,8,   	// SKINCOLOR_PURPLE - ditto
-	SKINCOLOR_GOLD,8,   	// SKINCOLOR_LAVENDER - ditto
-	SKINCOLOR_MOSS,8,   	// SKINCOLOR_MAGENTA - ditto
-	SKINCOLOR_AZURE,8,   	// SKINCOLOR_PINK - ditto
-	SKINCOLOR_AQUA,8   	// SKINCOLOR_ROSY - ditto
+	// SKINCOLOR_NONE,8,   	// SKINCOLOR_NONE
+
+	// Greyscale ranges
+	SKINCOLOR_BLACK,5,		// SKINCOLOR_WHITE,
+	SKINCOLOR_JET,7,     	// SKINCOLOR_BONE,
+	SKINCOLOR_CARBON,7,     // SKINCOLOR_CLOUDY,
+	SKINCOLOR_AETHER,12,    // SKINCOLOR_GREY,
+	SKINCOLOR_SLATE,12,    	// SKINCOLOR_SILVER,
+	SKINCOLOR_CLOUDY,7,     // SKINCOLOR_CARBON,
+	SKINCOLOR_BONE,7,     	// SKINCOLOR_JET,
+	SKINCOLOR_WHITE,7,     	// SKINCOLOR_BLACK,
+
+	// Desaturated
+	SKINCOLOR_GREY,15,		// SKINCOLOR_AETHER,
+	SKINCOLOR_SILVER,12,	// SKINCOLOR_SLATE,
+	SKINCOLOR_AZURE,9,		// SKINCOLOR_PINK,
+	SKINCOLOR_RUST,7,		// SKINCOLOR_YOGURT,
+	SKINCOLOR_TAN,2,		// SKINCOLOR_BROWN,
+	SKINCOLOR_BROWN,12,		// SKINCOLOR_TAN,
+	SKINCOLOR_MOSS,5,     	// SKINCOLOR_BEIGE,
+	SKINCOLOR_BEIGE,13,		// SKINCOLOR_MOSS,
+	SKINCOLOR_PINK,5,		// SKINCOLOR_AZURE,
+	SKINCOLOR_GOLD,4,		// SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	SKINCOLOR_EMERALD,10,	// SKINCOLOR_RUBY,
+	SKINCOLOR_FOREST,6,		// SKINCOLOR_SALMON,
+	SKINCOLOR_GREEN,10,		// SKINCOLOR_RED,
+	SKINCOLOR_ICY,10,		// SKINCOLOR_CRIMSON,
+	SKINCOLOR_PURPLE,8,		// SKINCOLOR_FLAME,
+	SKINCOLOR_TEAL,7,		// SKINCOLOR_PEACHY,
+	SKINCOLOR_WAVE,5,		// SKINCOLOR_QUAIL,
+	SKINCOLOR_SAPPHIRE,5,	// SKINCOLOR_SUNSET,
+	SKINCOLOR_CYAN,4,		// SKINCOLOR_APRICOT,
+	SKINCOLOR_BLUE,4,		// SKINCOLOR_ORANGE,
+	SKINCOLOR_YOGURT,8,		// SKINCOLOR_RUST,
+	SKINCOLOR_LAVENDER,10,	// SKINCOLOR_GOLD,
+	SKINCOLOR_SKY,8,		// SKINCOLOR_SANDY,
+	SKINCOLOR_CORNFLOWER,8,	// SKINCOLOR_YELLOW,
+	SKINCOLOR_DUSK,3,		// SKINCOLOR_OLIVE,
+	SKINCOLOR_MAGENTA,9,	// SKINCOLOR_LIME,
+	SKINCOLOR_COBALT,2,		// SKINCOLOR_PERIDOT,
+	SKINCOLOR_RED,6,		// SKINCOLOR_GREEN,
+	SKINCOLOR_SALMON,9,		// SKINCOLOR_FOREST,
+	SKINCOLOR_RUBY,4,     	// SKINCOLOR_EMERALD,
+	SKINCOLOR_VIOLET,5,		// SKINCOLOR_MINT,
+	SKINCOLOR_PLUM,6,		// SKINCOLOR_SEAFOAM,
+	SKINCOLOR_ROSY,7,		// SKINCOLOR_AQUA,
+	SKINCOLOR_PEACHY,7,		// SKINCOLOR_TEAL,
+	SKINCOLOR_QUAIL,5,		// SKINCOLOR_WAVE,
+	SKINCOLOR_APRICOT,6,	// SKINCOLOR_CYAN,
+	SKINCOLOR_SANDY,1,		// SKINCOLOR_SKY,
+	SKINCOLOR_NEON,4,		// SKINCOLOR_CERULEAN,
+	SKINCOLOR_CRIMSON,0,	// SKINCOLOR_ICY,
+	SKINCOLOR_SUNSET,5,     // SKINCOLOR_SAPPHIRE,
+	SKINCOLOR_YELLOW,4,		// SKINCOLOR_CORNFLOWER,
+	SKINCOLOR_ORANGE,5,     // SKINCOLOR_BLUE,
+	SKINCOLOR_PERIDOT,5,	// SKINCOLOR_COBALT,
+	SKINCOLOR_LILAC,4,		// SKINCOLOR_VAPOR,
+	SKINCOLOR_OLIVE,0,		// SKINCOLOR_DUSK,
+	SKINCOLOR_BUBBLEGUM,9,	// SKINCOLOR_PASTEL,
+	SKINCOLOR_FLAME,7,		// SKINCOLOR_PURPLE,
+	SKINCOLOR_PASTEL,8,		// SKINCOLOR_BUBBLEGUM,
+	SKINCOLOR_LIME,6,		// SKINCOLOR_MAGENTA,
+	SKINCOLOR_CERULEAN,2,	// SKINCOLOR_NEON,
+	SKINCOLOR_MINT,6,		// SKINCOLOR_VIOLET,
+	SKINCOLOR_VAPOR,4,		// SKINCOLOR_LILAC,
+	SKINCOLOR_MINT,7,		// SKINCOLOR_PLUM,
+	SKINCOLOR_AQUA,1		// SKINCOLOR_ROSY,
 };
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
@@ -211,10 +431,6 @@ CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 */
 void R_InitTranslationTables(void)
 {
-#ifdef _NDS
-	// Ugly temporary NDS hack.
-	transtables = (UINT8*)0x2000000;
-#else
 	// Load here the transparency lookup tables 'TINTTAB'
 	// NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm
 	// optimised code (in other words, transtables pointer low word is 0)
@@ -230,7 +446,6 @@ void R_InitTranslationTables(void)
 	W_ReadLump(W_GetNumForName("TRANS70"), transtables+0x60000);
 	W_ReadLump(W_GetNumForName("TRANS80"), transtables+0x70000);
 	W_ReadLump(W_GetNumForName("TRANS90"), transtables+0x80000);
-#endif
 }
 
 
@@ -244,40 +459,7 @@ void R_InitTranslationTables(void)
 */
 static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT8 color)
 {
-	// Table of indices into the palette of the first entries of each translated ramp
-	const UINT8 skinbasecolors[] = {
-		0x00, // SKINCOLOR_WHITE
-		0x03, // SKINCOLOR_SILVER
-		0x08, // SKINCOLOR_GREY
-		0x18, // SKINCOLOR_BLACK
-		0xf0, // SKINCOLOR_BEIGE
-		0xd8, // SKINCOLOR_PEACH
-		0xe0, // SKINCOLOR_BROWN
-		0x21, // SKINCOLOR_RED
-		0x28, // SKINCOLOR_CRIMSON
-		0x31, // SKINCOLOR_ORANGE
-		0x3a, // SKINCOLOR_RUST
-		0x40, // SKINCOLOR_GOLD
-		0x48, // SKINCOLOR_YELLOW
-		0x54, // SKINCOLOR_TAN
-		0x58, // SKINCOLOR_MOSS
-		0xbc, // SKINCOLOR_PERIDOT
-		0x60, // SKINCOLOR_GREEN
-		0x70, // SKINCOLOR_EMERALD
-		0x78, // SKINCOLOR_AQUA
-		0x8c, // SKINCOLOR_TEAL
-		0x80, // SKINCOLOR_CYAN
-		0x92, // SKINCOLOR_BLUE
-		0xaa, // SKINCOLOR_AZURE
-		0xa0, // SKINCOLOR_PASTEL
-		0xa0, // SKINCOLOR_PURPLE
-		0xc0, // SKINCOLOR_LAVENDER
-		0xb3, // SKINCOLOR_MAGENTA
-		0xd0, // SKINCOLOR_PINK
-		0xc8, // SKINCOLOR_ROSY
-	};
-	INT32 i;
-	INT32 starttranscolor;
+	INT32 i, starttranscolor, skinramplength;
 
 	// Handle a couple of simple special cases
 	if (skinnum == TC_BOSS || skinnum == TC_ALLWHITE || skinnum == TC_METALSONIC || color == SKINCOLOR_NONE)
@@ -297,359 +479,28 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		return;
 	}
 
+	if (color >= MAXTRANSLATIONS)
+		I_Error("Invalid skin color #%hu.", (UINT16)color);
+
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
 
 	// Fill in the entries of the palette that are fixed
 	for (i = 0; i < starttranscolor; i++)
 		dest_colormap[i] = (UINT8)i;
 
-	for (i = (UINT8)(starttranscolor + 16); i < NUM_PALETTE_ENTRIES; i++)
-		dest_colormap[i] = (UINT8)i;
+	i = starttranscolor + 16;
+	if (i < NUM_PALETTE_ENTRIES)
+	{
+		for (i = (UINT8)i; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
+		skinramplength = 16;
+	}
+	else
+		skinramplength = i - NUM_PALETTE_ENTRIES;
 
 	// Build the translated ramp
-	switch (color)
-	{
-	case SKINCOLOR_SILVER:
-	case SKINCOLOR_GREY:
-	case SKINCOLOR_BROWN:
-	case SKINCOLOR_GREEN:
-		// 16 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		break;
-
-	case SKINCOLOR_WHITE:
-	case SKINCOLOR_CYAN:
-		// 12 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (12*i/SKIN_RAMP_LENGTH));
-		break;
-
-	case SKINCOLOR_BLACK:
-	case SKINCOLOR_MOSS:
-	case SKINCOLOR_EMERALD:
-	case SKINCOLOR_LAVENDER:
-	case SKINCOLOR_PINK:
-		// 8 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
-		break;
-
-	case SKINCOLOR_BEIGE:
-		// 13 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 15)
-				dest_colormap[starttranscolor + i] = 0xed; // Darkest
-			else if (i <= 6)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + ((i + 1) >> 1)); // Brightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 3);
-		}
-		break;
-
-	case SKINCOLOR_PEACH:
-		// 11 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0xD0; // Lightest 1
-			else if (i == 1)
-				dest_colormap[starttranscolor + i] = 0x30; // Lightest 2
-			else if (i <= 11)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 1);
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 7); // Darkest
-		}
-		break;
-
-	case SKINCOLOR_RED:
-		// 16 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 13)
-				dest_colormap[starttranscolor + i] = 0x47; // Semidark
-			else if (i > 13)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 1); // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		}
-		break;
-
-	case SKINCOLOR_CRIMSON:
-		// 9 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i/2 == 6)
-				dest_colormap[starttranscolor + i] = 0x47; // Semidark
-			else if (i/2 == 7)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 8); // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
-		}
-		break;
-
-	case SKINCOLOR_ORANGE:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 15)
-				dest_colormap[starttranscolor + i] = 0x2c; // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		}
-		break;
-
-	case SKINCOLOR_RUST:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i <= 11)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
-			else if (i == 12)
-				dest_colormap[starttranscolor + i] = 0x2c; // Darkest 4
-			else if (i == 13)
-				dest_colormap[starttranscolor + i] = 0xfe; // Darkest 3
-			else
-				dest_colormap[starttranscolor + i] = 0x2d + i - 14; // Darkest 2 and 1
-		}
-		break;
-
-	case SKINCOLOR_GOLD:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0x50; // Lightest 1
-			else if (i == 1)
-				dest_colormap[starttranscolor + i] = 0x53; // Lightest 2
-			else if (i/2 == 7)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 8); //Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 1);
-		}
-		break;
-
-	case SKINCOLOR_YELLOW:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0x53; // Lightest
-			else if (i == 15)
-				dest_colormap[starttranscolor + i] = 0xed; // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
-		}
-		break;
-
-	case SKINCOLOR_TAN:
-		// 8 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i/2 == 0)
-				dest_colormap[starttranscolor + i] = 0x51; // Lightest
-			else if (i/2 == 5)
-				dest_colormap[starttranscolor + i] = 0xf5; // Darkest 1
-			else if (i/2 == 6)
-				dest_colormap[starttranscolor + i] = 0xf9; // Darkest 2
-			else if (i/2 == 7)
-				dest_colormap[starttranscolor + i] = 0xed; // Darkest 3
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 1);
-		}
-		break;
-
-	case SKINCOLOR_PERIDOT:
-		// 8 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i/2 == 0)
-				dest_colormap[starttranscolor + i] = 0x58; // Lightest
-			else if (i/2 == 7)
-				dest_colormap[starttranscolor + i] = 0x77; // Darkest
-			else if (i/2 >= 5)
-				dest_colormap[starttranscolor + i] = (UINT8)(0x5e + (i >> 1) - 5); // Semidark
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 1);
-		}
-		break;
-
-	case SKINCOLOR_AQUA:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0x78; // Lightest
-			else if (i >= 14)
-				dest_colormap[starttranscolor + i] = (UINT8)(0x76 + i - 14); // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) + 1);
-		}
-		break;
-
-	case SKINCOLOR_TEAL:
-		// 6 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i <= 1)
-				dest_colormap[starttranscolor + i] = 0x78; // Lightest
-			else if (i >= 13)
-				dest_colormap[starttranscolor + i] = 0x8a; // Darkest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + ((i - 1)/3));
-		}
-		break;
-
-	case SKINCOLOR_AZURE:
-		// 8 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i <= 3)
-				dest_colormap[starttranscolor + i] = (UINT8)(0x90 + i/2); // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 2);
-		}
-		break;
-
-	case SKINCOLOR_BLUE:
-		// 16 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 15)
-				dest_colormap[starttranscolor + i] = 0x1F; //Darkest 1
-			else if (i == 14)
-				dest_colormap[starttranscolor + i] = 0xfd; //Darkest 2
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i);
-		}
-		break;
-
-	case SKINCOLOR_PASTEL:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i >= 12)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 7); // Darkest
-			else if (i <= 1)
-				dest_colormap[starttranscolor + i] = 0x90; // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) - 1);
-		}
-		break;
-
-	case SKINCOLOR_PURPLE:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i <= 3)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i); // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) + 2);
-		}
-		break;
-
-	case SKINCOLOR_MAGENTA:
-		// 9 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1]); // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1) + 1);
-		break;
-
-	case SKINCOLOR_ROSY:
-		// 9 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0xfc; // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + ((i - 1) >> 1));
-		}
-		break;
-
-	// Super colors, from lightest to darkest!
-	case SKINCOLOR_SUPER1:
-		// Super White
-		for (i = 0; i < 10; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)0; // True white
-		for (; i < 12; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(80);
-		for (; i < 15; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(81 + (i-12));
-		dest_colormap[starttranscolor + 15] = (UINT8)(72);
-		break;
-
-	case SKINCOLOR_SUPER2:
-		// Super Bright
-		dest_colormap[starttranscolor] = (UINT8)(0);
-		for (i = 1; i < 4; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-1));
-		for (; i < 6; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(83);
-		for (; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
-		for (; i < 14; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
-		for (; i < 16; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-14));
-		break;
-
-	case SKINCOLOR_SUPER3:
-		// Super Yellow
-		for (i = 0; i < 2; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(81 + i);
-		for (; i < 4; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(83);
-		for (; i < 6; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
-		for (; i < 12; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
-		for (; i < 16; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-12));
-		break;
-
-	case SKINCOLOR_SUPER4:
-		// "The SSNTails"
-		dest_colormap[starttranscolor] = 83; // Golden shine
-		for (i = 1; i < 3; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
-		for (; i < 9; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
-		for (; i < 16; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-9));
-		break;
-
-	case SKINCOLOR_SUPER5:
-		// Golden Delicious
-		for (i = 0; i < 2; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
-		for (; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
-		for (; i < 15; i++) // With a fine golden finish! :3
-			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-8));
-		dest_colormap[starttranscolor + 15] = (UINT8)63;
-		break;
-
-	// Super Tails and Knuckles, who really should be dummied out by now
-	case SKINCOLOR_TSUPER1:
-	case SKINCOLOR_TSUPER2:
-	case SKINCOLOR_TSUPER3:
-	case SKINCOLOR_TSUPER4:
-	case SKINCOLOR_TSUPER5:
-	case SKINCOLOR_KSUPER1:
-	case SKINCOLOR_KSUPER2:
-	case SKINCOLOR_KSUPER3:
-	case SKINCOLOR_KSUPER4:
-	case SKINCOLOR_KSUPER5:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = 0xFF;
-		break;
-
-	default:
-		I_Error("Invalid skin color #%hu.", (UINT16)color);
-		break;
-	}
+	for (i = 0; i < skinramplength; i++)
+		dest_colormap[starttranscolor + i] = (UINT8)Color_Index[color-1][i];
 }
 
 
@@ -724,7 +575,18 @@ UINT8 R_GetColorByName(const char *name)
 	for (color = 1; color < MAXSKINCOLORS; color++)
 		if (!stricmp(Color_Names[color], name))
 			return color;
-	return 0;
+	return SKINCOLOR_GREEN;
+}
+
+UINT8 R_GetSuperColorByName(const char *name)
+{
+	UINT8 color; /* = (UINT8)atoi(name); -- This isn't relevant to S_SKIN, which is the only way it's accessible right now. Let's simplify things.
+	if (color > MAXSKINCOLORS && color < MAXTRANSLATIONS && !((color - MAXSKINCOLORS) % 5))
+		return color;*/
+	for (color = 0; color < NUMSUPERCOLORS; color++)
+		if (!stricmp(Color_Names[color + MAXSKINCOLORS], name))
+			return ((color*5) + MAXSKINCOLORS);
+	return SKINCOLOR_SUPERGOLD1;
 }
 
 // ==========================================================================
@@ -956,4 +818,6 @@ void R_DrawViewBorder(void)
 //                   INCLUDE 16bpp DRAWING CODE HERE
 // ==========================================================================
 
+#ifdef HIGHCOLOR
 #include "r_draw16.c"
+#endif

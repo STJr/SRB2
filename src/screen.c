@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,9 +28,13 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
+#include "p_local.h" // P_AutoPause()
 
 
-#if defined (USEASM) //&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
+#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
@@ -49,6 +53,7 @@ void (*splatfunc)(void); // span drawer w/ transparency
 void (*basespanfunc)(void); // default span func for color mode
 void (*transtransfunc)(void); // translucent translated column drawer
 void (*twosmultipatchfunc)(void); // for cols with transparent pixels
+void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND translucency
 
 // ------------------
 // global video state
@@ -59,16 +64,17 @@ INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set +
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
 //added : 03-02-98: default screen mode, as loaded/saved in config
-#ifdef WII
-consvar_t cv_scr_width = {"scr_width", "640", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_height = {"scr_height", "480", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+#ifdef DIRECTFULLSCREEN
+static FUNCMATH void SCR_ChangeFullscreen (void);
+#else
+static void SCR_ChangeFullscreen (void);
+#endif
+
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
 // =========================================================================
@@ -120,6 +126,7 @@ void SCR_SetMode(void)
 		fuzzcolfunc = R_DrawTranslucentColumn_8;
 		walldrawerfunc = R_DrawWallColumn_8;
 		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
+		twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
 #ifdef RUSEASM
 		if (R_ASM)
 		{
@@ -157,10 +164,13 @@ void SCR_SetMode(void)
 	}*/
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
-/*#if !defined (DC) && !defined (WII)
+/*
 	if (SCR_IsAspectCorrect(vid.width, vid.height))
 		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
-#endif*/
+*/
+
+	wallcolfunc = walldrawerfunc;
+
 	// set the apprpriate drawer for the sky (tall or INT16)
 	setmodeneeded = 0;
 }
@@ -404,6 +414,7 @@ void SCR_DisplayTicRate(void)
 	tic_t ontic = I_GetTime();
 	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
+	INT32 offs = (cv_debug ? 8 : 0);
 
 	for (i = lasttic + 1; i < NEWTICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % NEWTICRATE] = false;
@@ -417,10 +428,49 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= NEWTICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == NEWTICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(24*vid.dupx), vid.height-(16*vid.dupy),
+	V_DrawString(vid.width-((24+(6*offs))*vid.dupx), vid.height-((16-offs)*vid.dupy),
 		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-(40*vid.dupx), vid.height-( 8*vid.dupy),
+	V_DrawString(vid.width-(40*vid.dupx), vid.height-(8*vid.dupy),
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, NEWTICRATE));
 
 	lasttic = ontic;
+}
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+	boolean gamestopped = (paused || P_AutoPause());
+
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		INT32 flags, y;
+		char dot;
+		boolean music;
+
+		if (!closedcaptions[i].s)
+			continue;
+
+		music = (closedcaptions[i].s-S_sfx == sfx_None);
+
+		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+			continue;
+
+		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+		y = vid.height-((i + 2)*10*vid.dupy);
+		dot = ' ';
+
+		if (closedcaptions[i].b)
+			y -= (closedcaptions[i].b--)*vid.dupy;
+
+		if (closedcaptions[i].t < CAPTIONFADETICS)
+			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+
+		if (music)
+			dot = '\x19';
+		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
+			dot = '\x1E';
+
+		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
+		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+	}
 }

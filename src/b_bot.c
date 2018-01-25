@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2007-2014 by John "JTE" Muniz.
-// Copyright (C) 2011-2014 by Sonic Team Junior.
+// Copyright (C) 2007-2016 by John "JTE" Muniz.
+// Copyright (C) 2011-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,15 +41,16 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		return;
 #endif
 
-	if (tails->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
+	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
 	{
+		boolean isrelevant = (sonic->player->powers[pw_carry] == CR_MACESPIN || sonic->player->powers[pw_carry] == CR_GENERIC);
 		dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y);
-		if (sonic->player->cmd.buttons & BT_JUMP && sonic->player->pflags & (PF_JUMPED|PF_MACESPIN|PF_ITEMHANG))
+		if (sonic->player->cmd.buttons & BT_JUMP && (sonic->player->pflags & PF_JUMPED) && isrelevant)
 			cmd->buttons |= BT_JUMP;
-		if (sonic->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
+		if (isrelevant)
 		{
 			cmd->forwardmove = sonic->player->cmd.forwardmove;
-			cmd->angleturn = abs((tails->angle - sonic->angle))>>16;
+			cmd->angleturn = abs((signed)(tails->angle - sonic->angle))>>16;
 			if (sonic->angle < tails->angle)
 				cmd->angleturn = -cmd->angleturn;
 		} else if (dist > FixedMul(512*FRACUNIT, tails->scale))
@@ -211,8 +212,9 @@ boolean B_CheckRespawn(player_t *player)
 
 	// Check if Sonic is busy first.
 	// If he's doing any of these things, he probably doesn't want to see us.
-	if (sonic->player->pflags & (PF_ROPEHANG|PF_GLIDING|PF_CARRIED|PF_SLIDING|PF_ITEMHANG|PF_MACESPIN|PF_NIGHTSMODE)
-	|| (sonic->player->panim != PA_IDLE && sonic->player->panim != PA_WALK))
+	if (sonic->player->pflags & (PF_GLIDING|PF_SLIDING|PF_BOUNCING)
+	|| (sonic->player->panim != PA_IDLE && sonic->player->panim != PA_WALK)
+	|| (sonic->player->powers[pw_carry]))
 		return false;
 
 	// Low ceiling, do not want!
@@ -269,6 +271,12 @@ void B_RespawnBot(INT32 playernum)
 	player->powers[pw_spacetime] = sonic->player->powers[pw_spacetime];
 	player->powers[pw_gravityboots] = sonic->player->powers[pw_gravityboots];
 	player->powers[pw_nocontrol] = sonic->player->powers[pw_nocontrol];
+	player->acceleration = sonic->player->acceleration;
+	player->accelstart = sonic->player->accelstart;
+	player->thrustfactor = sonic->player->thrustfactor;
+	player->normalspeed = sonic->player->normalspeed;
+	player->pflags |= PF_AUTOBRAKE;
+	player->pflags &= ~PF_DIRECTIONCHAR;
 
 	P_TeleportMove(tails, x, y, z);
 	if (player->charability == CA_FLY)

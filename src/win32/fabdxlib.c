@@ -138,7 +138,7 @@ BOOL EnumDirectDrawDisplayModes (APPENUMMODESCALLBACK appFunc)
 }
 
 static HINSTANCE DDrawDLL = NULL;
-typedef BOOL (WINAPI *DDCreate)(GUID FAR *lpGUID, LPDIRECTDRAW FAR *lplpDD, IUnknown FAR *pUnkOuter);
+typedef HRESULT(WINAPI *DDCreate)(GUID FAR *lpGUID, LPDIRECTDRAW FAR *lplpDD, IUnknown FAR *pUnkOuter);
 static DDCreate pfnDirectDrawCreate = NULL;
 
 static inline BOOL LoadDirectDraw(VOID)

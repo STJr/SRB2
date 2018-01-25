@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,20 +18,12 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
-#ifdef __OS2__
-#include <sys/types.h>
-#include <sys/time.h>
-#endif // __OS2__
-
-#ifdef _PS3
-#define NO_IPV6 // PSL1GHT v2 do not have IPv6 support
-#endif
 
 #ifndef NO_IPV6
 #define HAVE_IPV6
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define USE_WINSOCK
 #if defined (_WIN64) || defined (HAVE_IPV6)
 #define USE_WINSOCK2
@@ -39,12 +31,6 @@
 #define USE_WINSOCK1
 #endif
 #endif //WIN32 OS
-
-#ifdef _XBOX // XBox have on WinSock API?
-#undef USE_WINSOCK
-#undef USE_WINSOCK1
-#undef USE_WINSOCK2
-#endif
 
 #ifdef USE_WINSOCK2
 #include <ws2tcpip.h>
@@ -56,20 +42,17 @@
 //#define NONET
 #endif
 
-#ifndef NONET
+#ifdef NONET
+#undef HAVE_MINIUPNPC
+#else
 #ifdef USE_WINSOCK1
 #include <winsock.h>
-#elif !defined (SCOUW2) && !defined (SCOUW7) && !defined (__OS2__)
-#ifdef HAVE_LWIP
-#include <lwip/inet.h>
-#elif !defined (USE_WINSOCK)
+#elif !defined (SCOUW2) && !defined (SCOUW7)
+#ifndef USE_WINSOCK
 #include <arpa/inet.h>
 #endif //normal BSD API
 
-#ifdef HAVE_LWIP
-#include <lwip/sockets.h>
-#define ioctl lwip_ioctl
-#elif !defined (USE_WINSOCK) //!HAVE_LWIP
+#ifndef USE_WINSOCK
 #ifdef __APPLE_CC__
 #ifndef _BSD_SOCKLEN_T_
 #define _BSD_SOCKLEN_T_
@@ -79,24 +62,13 @@
 #include <netinet/in.h>
 #endif //normal BSD API
 
-#if defined(_arch_dreamcast) && !defined(HAVE_LWIP)
-#include <kos/net.h>
-#elif defined(HAVE_LWIP)
-#include <lwip/lwip.h>
-#elif defined (_PS3)
-#include <net/select.h>
-#include <net/net.h>
-#elif !defined(USE_WINSOCK) //!HAVE_LWIP
+#ifndef USE_WINSOCK
 #include <netdb.h>
 #include <sys/ioctl.h>
 #endif //normal BSD API
 
 #include <errno.h>
 #include <time.h>
-
-#ifdef _arch_dreamcast
-#include "sdl/SRB2DC/dchelp.h"
-#endif
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 	#include <sys/time.h>
@@ -177,6 +149,7 @@ static UINT8 UPNP_support = TRUE;
 #include "i_system.h"
 #include "i_net.h"
 #include "d_net.h"
+#include "d_netfil.h"
 #include "i_tcp.h"
 #include "m_argv.h"
 
@@ -187,11 +160,6 @@ static UINT8 UPNP_support = TRUE;
 	// winsock stuff (in winsock a socket is not a file)
 	#define ioctl ioctlsocket
 	#define close closesocket
-
-	#ifdef _WIN32_WCE
-	#include "sdl/SRB2CE/cehelp.h"
-	#endif
-
 #endif
 
 #include "i_addrinfo.h"
@@ -202,9 +170,7 @@ static UINT8 UPNP_support = TRUE;
 #define SELECTTEST
 #endif
 
-#elif defined(HAVE_LWIP)
-#define SELECTTEST
-#elif !defined( _arch_dreamcast)
+#else
 #define SELECTTEST
 #endif
 
@@ -212,15 +178,13 @@ static UINT8 UPNP_support = TRUE;
 
 #if defined (USE_WINSOCK) && !defined (NONET)
 typedef SOCKET SOCKET_TYPE;
-#define BADSOCKET INVALID_SOCKET
 #define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__) || defined(_PS3)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
 typedef int SOCKET_TYPE;
 #else
 typedef unsigned long SOCKET_TYPE;
 #endif
-#define BADSOCKET (SOCKET_TYPE)(~0)
 #define ERRSOCKET (-1)
 #endif
 
@@ -229,10 +193,10 @@ typedef int socklen_t;
 #endif
 
 #ifndef NONET
-static SOCKET_TYPE mysockets[MAXNETNODES+1] = {BADSOCKET};
+static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
 static size_t mysocketses = 0;
 static int myfamily[MAXNETNODES+1] = {0};
-static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {BADSOCKET};
+static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
 static mysockaddr_t clientaddress[MAXNETNODES+1];
 static mysockaddr_t broadcastaddress[MAXNETNODES+1];
 static size_t broadcastaddresses = 0;
@@ -466,7 +430,7 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 	UINT32 bitmask = INADDR_NONE;
 
 	if (mask && mask < 32)
-		bitmask = htonl(-1 << (32 - mask));
+		bitmask = htonl((UINT32)(-1) << (32 - mask));
 
 	if (b->any.sa_family == AF_INET)
 		return (a->ip4.sin_addr.s_addr & bitmask) == (b->ip4.sin_addr.s_addr & bitmask)
@@ -480,21 +444,12 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 		return false;
 }
 
-static SINT8 getfreenode(void)
-{
-	SINT8 j;
-
-	for (j = 0; j < MAXNETNODES; j++)
-		if (!nodeconnected[j])
-		{
-			nodeconnected[j] = true;
-			return j;
-		}
-	return -1;
-}
-
 // This is a hack. For some reason, nodes aren't being freed properly.
 // This goes through and cleans up what nodes were supposed to be freed.
+/** \warning This function causes the file downloading to stop if someone joins.
+  *          How? Because it removes nodes that are connected but not in game,
+  *          which is exactly what clients downloading a file are.
+  */
 static void cleanupnodes(void)
 {
 	SINT8 j;
@@ -504,13 +459,80 @@ static void cleanupnodes(void)
 
 	// Why can't I start at zero?
 	for (j = 1; j < MAXNETNODES; j++)
-		if (!nodeingame[j])
+		if (!(nodeingame[j] || SV_SendingFile(j)))
 			nodeconnected[j] = false;
 }
+
+static SINT8 getfreenode(void)
+{
+	SINT8 j;
+
+	cleanupnodes();
+
+	for (j = 0; j < MAXNETNODES; j++)
+		if (!nodeconnected[j])
+		{
+			nodeconnected[j] = true;
+			return j;
+		}
+
+	/** \warning No free node? Just in case a node might not have been freed properly,
+	  *          look if there are connected nodes that aren't in game, and forget them.
+	  *          It's dirty, and might result in a poor guy having to restart
+	  *          downloading a needed wad, but it's better than not letting anyone join...
+	  */
+	/*I_Error("No more free nodes!!1!11!11!!1111\n");
+	for (j = 1; j < MAXNETNODES; j++)
+		if (!nodeingame[j])
+			return j;*/
+
+	return -1;
+}
+
+#ifdef _DEBUG
+void Command_Numnodes(void)
+{
+	INT32 connected = 0;
+	INT32 ingame = 0;
+	INT32 i;
+
+	for (i = 1; i < MAXNETNODES; i++)
+	{
+		if (!(nodeconnected[i] || nodeingame[i]))
+			continue;
+
+		if (nodeconnected[i])
+			connected++;
+		if (nodeingame[i])
+			ingame++;
+
+		CONS_Printf("%2d - ", i);
+		if (nodetoplayer[i] != -1)
+			CONS_Printf("player %.2d", nodetoplayer[i]);
+		else
+			CONS_Printf("         ");
+		if (nodeconnected[i])
+			CONS_Printf(" - connected");
+		else
+			CONS_Printf(" -          ");
+		if (nodeingame[i])
+			CONS_Printf(" - ingame");
+		else
+			CONS_Printf(" -       ");
+		CONS_Printf(" - %s\n", I_GetNodeAddress(i));
+	}
+
+	CONS_Printf("\n"
+				"Connected: %d\n"
+				"Ingame:    %d\n",
+				connected, ingame);
+}
+#endif
 #endif
 
 #ifndef NONET
-static void SOCK_Get(void)
+// Returns true if a packet was received from a new node, false in all other cases
+static boolean SOCK_Get(void)
 {
 	size_t i, n;
 	int j;
@@ -533,13 +555,12 @@ static void SOCK_Get(void)
 					doomcom->remotenode = (INT16)j; // good packet from a game player
 					doomcom->datalength = (INT16)c;
 					nodesocket[j] = mysockets[n];
-					return;
+					return false;
 				}
 			}
 			// not found
 
 			// find a free slot
-			cleanupnodes();
 			j = getfreenode();
 			if (j > 0)
 			{
@@ -562,14 +583,15 @@ static void SOCK_Get(void)
 				}
 				if (i == numbans)
 					SOCK_bannednode[j] = false;
-				return;
+				return true;
 			}
 			else
 				DEBFILE("New node detected: No more free slots\n");
-
 		}
 	}
+
 	doomcom->remotenode = -1; // no packet
+	return false;
 }
 #endif
 
@@ -586,7 +608,7 @@ static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
 	FD_ZERO(dst);
 	for (i = 0; i < len;i++)
 	{
-		if(fd[i] != BADSOCKET && fd[i] != (SOCKET_TYPE)ERRSOCKET &&
+		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
 		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
 		{
 			FD_SET(fd[i], dst);
@@ -664,7 +686,7 @@ static void SOCK_Send(void)
 		}
 		return;
 	}
-	else if (nodesocket[doomcom->remotenode] == BADSOCKET)
+	else if (nodesocket[doomcom->remotenode] == (SOCKET_TYPE)ERRSOCKET)
 	{
 		for (i = 0; i < mysocketses; i++)
 		{
@@ -716,7 +738,7 @@ static void SOCK_FreeNodenum(INT32 numnode)
 	DEBFILE(va("Free node %d (%s)\n", numnode, SOCK_GetNodeAddress(numnode)));
 
 	nodeconnected[numnode] = false;
-	nodesocket[numnode] = BADSOCKET;
+	nodesocket[numnode] = ERRSOCKET;
 
 	// put invalid address
 	memset(&clientaddress[numnode], 0, sizeof (clientaddress[numnode]));
@@ -743,7 +765,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #endif
 	mysockaddr_t straddr;
 
-	if (s == (SOCKET_TYPE)ERRSOCKET || s == BADSOCKET)
+	if (s == (SOCKET_TYPE)ERRSOCKET)
 		return (SOCKET_TYPE)ERRSOCKET;
 #ifdef USE_WINSOCK
 	{ // Alam_GBC: disable the new UDP connection reset behavior for Win2k and up
@@ -850,9 +872,9 @@ static boolean UDP_Socket(void)
 
 
 	for (s = 0; s < mysocketses; s++)
-		mysockets[s] = BADSOCKET;
+		mysockets[s] = ERRSOCKET;
 	for (s = 0; s < MAXNETNODES+1; s++)
-		nodesocket[s] = BADSOCKET;
+		nodesocket[s] = ERRSOCKET;
 	FD_ZERO(&masterset);
 	s = 0;
 
@@ -1103,12 +1125,6 @@ boolean I_InitTcpDriver(void)
 		CONS_Debug(DBG_NETPLAY, "WinSock description: %s\n",WSAData.szDescription);
 		CONS_Debug(DBG_NETPLAY, "WinSock System Status: %s\n",WSAData.szSystemStatus);
 #endif
-#ifdef HAVE_LWIP
-		lwip_kos_init();
-#elif defined(_arch_dreamcast)
-		//return;
-		net_init();
-#endif
 #ifdef __DJGPP__
 #ifdef WATTCP // Alam_GBC: survive bootp, dhcp, rarp and wattcp/pktdrv from failing to load
 		survive_eth   = 1; // would be needed to not exit if pkt_eth_init() fails
@@ -1161,9 +1177,6 @@ boolean I_InitTcpDriver(void)
 			CONS_Debug(DBG_NETPLAY, "No TCP/IP driver detected\n");
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-		netInitialize();
-#endif
 #ifndef __DJGPP__
 		init_tcp_driver = true;
 #endif
@@ -1189,7 +1202,6 @@ static void SOCK_CloseSocket(void)
 	for (i=0; i < MAXNETNODES+1; i++)
 	{
 		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
-		 && mysockets[i] != BADSOCKET
 		 && FD_ISSET(mysockets[i], &masterset))
 		{
 #if !defined (__DJGPP__) || defined (WATTCP)
@@ -1197,7 +1209,7 @@ static void SOCK_CloseSocket(void)
 			close(mysockets[i]);
 #endif
 		}
-		mysockets[i] = BADSOCKET;
+		mysockets[i] = ERRSOCKET;
 	}
 }
 #endif
@@ -1212,11 +1224,6 @@ void I_ShutdownTcpDriver(void)
 	WS_addrinfocleanup();
 	WSACleanup();
 #endif
-#ifdef HAVE_LWIP
-	lwip_kos_shutdown();
-#elif defined(_arch_dreamcast)
-	net_shutdown();
-#endif
 #ifdef __DJGPP__
 #ifdef WATTCP // wattcp
 	//_outch = NULL;
@@ -1225,9 +1232,6 @@ void I_ShutdownTcpDriver(void)
 	__lsck_uninit();
 #endif // libsocket
 #endif // __DJGPP__
-#ifdef _PS3
-	netDeinitialize();
-#endif
 	CONS_Printf("shut down\n");
 	init_tcp_driver = false;
 #endif
@@ -1254,7 +1258,6 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	gaie = I_getaddrinfo(address, port, &hints, &ai);
 	if (gaie == 0)
 	{
-		cleanupnodes();
 		newnode = getfreenode();
 	}
 	if (newnode == -1)

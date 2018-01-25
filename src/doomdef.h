@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,13 +28,11 @@
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER
-    //#if !defined(DC) && !defined(_WIN32_WCE) && !defined(_XBOX) && !defined(GP2X)
     #define SOUND SOUND_MIXER
     #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
-    //#endif
 #endif
 
 // Use generic SDL interface.
@@ -60,6 +58,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -69,7 +68,7 @@
 #endif
 #endif
 
-#if defined (_WIN32) || defined (_WIN32_WCE)
+#ifdef _WIN32
 #define ASMCALL __cdecl
 #else
 #define ASMCALL
@@ -86,13 +85,6 @@
 // warning C4152: nonstandard extension, function/data pointer conversion in expression
 // warning C4213: nonstandard extension used : cast on l-value
 
-#if defined (_WIN32_WCE) && defined (DEBUG) && defined (ARM)
-#if defined (ARMV4) || defined (ARMV4I)
-//#pragma warning(disable : 1166)
-// warning LNK1166: cannot adjust code at offset=
-#endif
-#endif
-
 
 #include "doomtype.h"
 
@@ -101,6 +93,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define _USE_MATH_DEFINES // fixes M_PI errors in r_plane.c for Visual Studio
 #include <math.h>
 
 #ifdef GETTEXT
@@ -108,13 +101,11 @@
 #include <locale.h>
 #endif
 
-#if !defined (_WIN32_WCE)
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <ctype.h>
 
-#if ((defined (_WIN32) && !defined (_WIN32_WCE)) || defined (__DJGPP__)) && !defined (_XBOX)
+#if defined (_WIN32) || defined (__DJGPP__)
 #include <io.h>
 #endif
 
@@ -154,6 +145,10 @@ extern FILE *logstream;
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
+
+// Does this version require an added patch file?
+// Comment or uncomment this as necessary.
+#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -199,7 +194,7 @@ extern FILE *logstream;
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 220
 
-// The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
+// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
 #define MODID 12
@@ -208,7 +203,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 20
+#define MODVERSION 25
 
 // =========================================================================
 
@@ -216,68 +211,143 @@ extern FILE *logstream;
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS MAXPLAYERS
+#define MAXSKINS 32
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
 typedef enum
 {
 	SKINCOLOR_NONE = 0,
+
+	// Greyscale ranges
 	SKINCOLOR_WHITE,
-	SKINCOLOR_SILVER,
+	SKINCOLOR_BONE,
+	SKINCOLOR_CLOUDY,
 	SKINCOLOR_GREY,
+	SKINCOLOR_SILVER,
+	SKINCOLOR_CARBON,
+	SKINCOLOR_JET,
 	SKINCOLOR_BLACK,
-	SKINCOLOR_BEIGE,
-	SKINCOLOR_PEACH,
+
+	// Desaturated
+	SKINCOLOR_AETHER,
+	SKINCOLOR_SLATE,
+	SKINCOLOR_PINK,
+	SKINCOLOR_YOGURT,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_TAN,
+	SKINCOLOR_BEIGE,
+	SKINCOLOR_MOSS,
+	SKINCOLOR_AZURE,
+	SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	SKINCOLOR_RUBY,
+	SKINCOLOR_SALMON,
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
+	SKINCOLOR_FLAME,
+	SKINCOLOR_PEACHY,
+	SKINCOLOR_QUAIL,
+	SKINCOLOR_SUNSET,
+	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
 	SKINCOLOR_GOLD,
+	SKINCOLOR_SANDY,
 	SKINCOLOR_YELLOW,
-	SKINCOLOR_TAN,
-	SKINCOLOR_MOSS,
+	SKINCOLOR_OLIVE,
+	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_GREEN,
+	SKINCOLOR_FOREST,
 	SKINCOLOR_EMERALD,
+	SKINCOLOR_MINT,
+	SKINCOLOR_SEAFOAM,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
+	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
+	SKINCOLOR_SKY,
+	SKINCOLOR_CERULEAN,
+	SKINCOLOR_ICY,
+	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_CORNFLOWER,
 	SKINCOLOR_BLUE,
-	SKINCOLOR_AZURE,
+	SKINCOLOR_COBALT,
+	SKINCOLOR_VAPOR,
+	SKINCOLOR_DUSK,
 	SKINCOLOR_PASTEL,
 	SKINCOLOR_PURPLE,
-	SKINCOLOR_LAVENDER,
+	SKINCOLOR_BUBBLEGUM,
 	SKINCOLOR_MAGENTA,
-	SKINCOLOR_PINK,
+	SKINCOLOR_NEON,
+	SKINCOLOR_VIOLET,
+	SKINCOLOR_LILAC,
+	SKINCOLOR_PLUM,
 	SKINCOLOR_ROSY,
 
-	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
+	// SKINCOLOR_? - one left before we bump up against 0x39, which isn't a HARD limit anymore but would be excessive
+
 	MAXSKINCOLORS,
 
 	// Super special awesome Super flashing colors!
-	SKINCOLOR_SUPER1 = MAXSKINCOLORS,
-	SKINCOLOR_SUPER2,
-	SKINCOLOR_SUPER3,
-	SKINCOLOR_SUPER4,
-	SKINCOLOR_SUPER5,
+	SKINCOLOR_SUPERSILVER1 = MAXSKINCOLORS,
+	SKINCOLOR_SUPERSILVER2,
+	SKINCOLOR_SUPERSILVER3,
+	SKINCOLOR_SUPERSILVER4,
+	SKINCOLOR_SUPERSILVER5,
 
-	// Super Tails
-	SKINCOLOR_TSUPER1,
-	SKINCOLOR_TSUPER2,
-	SKINCOLOR_TSUPER3,
-	SKINCOLOR_TSUPER4,
-	SKINCOLOR_TSUPER5,
+	SKINCOLOR_SUPERRED1,
+	SKINCOLOR_SUPERRED2,
+	SKINCOLOR_SUPERRED3,
+	SKINCOLOR_SUPERRED4,
+	SKINCOLOR_SUPERRED5,
 
-	// Super Knuckles
-	SKINCOLOR_KSUPER1,
-	SKINCOLOR_KSUPER2,
-	SKINCOLOR_KSUPER3,
-	SKINCOLOR_KSUPER4,
-	SKINCOLOR_KSUPER5,
+	SKINCOLOR_SUPERORANGE1,
+	SKINCOLOR_SUPERORANGE2,
+	SKINCOLOR_SUPERORANGE3,
+	SKINCOLOR_SUPERORANGE4,
+	SKINCOLOR_SUPERORANGE5,
 
-	MAXTRANSLATIONS
+	SKINCOLOR_SUPERGOLD1,
+	SKINCOLOR_SUPERGOLD2,
+	SKINCOLOR_SUPERGOLD3,
+	SKINCOLOR_SUPERGOLD4,
+	SKINCOLOR_SUPERGOLD5,
+
+	SKINCOLOR_SUPERPERIDOT1,
+	SKINCOLOR_SUPERPERIDOT2,
+	SKINCOLOR_SUPERPERIDOT3,
+	SKINCOLOR_SUPERPERIDOT4,
+	SKINCOLOR_SUPERPERIDOT5,
+
+	SKINCOLOR_SUPERSKY1,
+	SKINCOLOR_SUPERSKY2,
+	SKINCOLOR_SUPERSKY3,
+	SKINCOLOR_SUPERSKY4,
+	SKINCOLOR_SUPERSKY5,
+
+	SKINCOLOR_SUPERPURPLE1,
+	SKINCOLOR_SUPERPURPLE2,
+	SKINCOLOR_SUPERPURPLE3,
+	SKINCOLOR_SUPERPURPLE4,
+	SKINCOLOR_SUPERPURPLE5,
+
+	SKINCOLOR_SUPERRUST1,
+	SKINCOLOR_SUPERRUST2,
+	SKINCOLOR_SUPERRUST3,
+	SKINCOLOR_SUPERRUST4,
+	SKINCOLOR_SUPERRUST5,
+
+	SKINCOLOR_SUPERTAN1,
+	SKINCOLOR_SUPERTAN2,
+	SKINCOLOR_SUPERTAN3,
+	SKINCOLOR_SUPERTAN4,
+	SKINCOLOR_SUPERTAN5,
+
+	MAXTRANSLATIONS,
+	NUMSUPERCOLORS = ((MAXTRANSLATIONS - MAXSKINCOLORS)/5)
 } skincolors_t;
 
 // State updates, number of tics / second.
@@ -300,12 +370,10 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if !defined(_arch_dreamcast) && !defined(_WIN32_WCE) && !defined(GP2X) && !defined(_WII) && !defined(_PS3)
 #if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
-#endif
 #endif
 
 #include "g_state.h"
@@ -364,6 +432,7 @@ void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
+void M_UnGetToken(void);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -391,6 +460,9 @@ extern INT32 cv_debug;
 // =======================
 // Misc stuff for later...
 // =======================
+
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
@@ -427,16 +499,14 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
 
-///	Max recursive portal renders
-///	\note	obsoleted by cv_maxportals
-//#define PORTAL_LIMIT 8
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 
-///	Delete file while the game is running.
-///	\note	EXTREMELY buggy, tends to crash game.
-//#define DELFILE
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
@@ -465,19 +535,15 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	Most modifications should probably enable this.
 //#define SAVEGAME_OTHERVERSIONS
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
-#endif
 
-#if !defined (_NDS) && !defined (_PSP)
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
-#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.
@@ -490,5 +556,22 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Backwards compatibility with musicslots.
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
+
+/// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
+//#define PAPER_COLLISIONCORRECTION
+
+/// Hudname padding.
+#define SKINNAMEPADDING
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+//#define SECTORSPECIALSAFTERTHINK
 
 #endif // __DOOMDEF__
