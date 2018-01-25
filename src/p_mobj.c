@@ -1525,7 +1525,9 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 #if NEWTICRATERATIO != 1
 		gravityadd /= NEWTICRATERATIO;
-#endif		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
+#endif		
+
+		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
 			P_PlayerFlip(mo);
 	}
 	else
@@ -1680,7 +1682,6 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 				mo->momy = FixedMul(mo->momy, ns);
 #endif
 			}
-#endif
 		}
 		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
