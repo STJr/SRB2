@@ -694,10 +694,10 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	INT32 x;
-	INT32 angle;
 	INT32 i;
 
+	// Note: are these two lines really needed?
+	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
 	spanfunc = basespanfunc;
 	wallcolfunc = walldrawerfunc;
 
@@ -705,45 +705,6 @@ void R_DrawPlanes(void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			// sky flat
-			if (pl->picnum == skyflatnum)
-			{
-				if (!viewsky)
-				{
-					skyVisible = true;
-					continue;
-				}
-
-				// use correct aspect ratio scale
-				dc_iscale = skyscale;
-
-				// Sky is always drawn full bright,
-				//  i.e. colormaps[0] is used.
-				// Because of this hack, sky is not affected
-				//  by INVUL inverse mapping.
-				dc_colormap = colormaps;
-				dc_texturemid = skytexturemid;
-				dc_texheight = textureheight[skytexture]
-					>>FRACBITS;
-				for (x = pl->minx; x <= pl->maxx; x++)
-				{
-					dc_yl = pl->top[x];
-					dc_yh = pl->bottom[x];
-
-					if (dc_yl <= dc_yh)
-					{
-						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
-						dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
-						dc_x = x;
-						dc_source =
-							R_GetColumn(texturetranslation[skytexture],
-								angle);
-						wallcolfunc();
-					}
-				}
-				continue;
-			}
-
 			if (pl->ffloor != NULL
 #ifdef POLYOBJECTS_PLANES
 			|| pl->polyobj != NULL
@@ -760,6 +721,59 @@ void R_DrawPlanes(void)
 #endif
 }
 
+// R_DrawSkyPlane
+//
+// Draws the sky within the plane's top/bottom bounds
+// Note: this uses column drawers instead of span drawers, since the sky is always a texture
+//
+static void R_DrawSkyPlane(visplane_t *pl)
+{
+	INT32 x;
+	INT32 angle;
+
+	// If we're not supposed to draw the sky (e.g. for skyboxes), don't do anything!
+	// This probably utterly ruins sky rendering for FOFs and polyobjects, unfortunately
+	if (!viewsky)
+	{
+		// Mark that the sky was visible here for next tic
+		// (note: this is a hack and it sometimes can cause HOMs to appear for a tic IIRC)
+		skyVisible = true;
+		return;
+	}
+
+	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
+	// (that is, unless we'll need to switch drawers in future for some reason)
+	wallcolfunc = walldrawerfunc;
+
+	// use correct aspect ratio scale
+	dc_iscale = skyscale;
+
+	// Sky is always drawn full bright,
+	//  i.e. colormaps[0] is used.
+	// Because of this hack, sky is not affected
+	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
+	dc_colormap = colormaps;
+	dc_texturemid = skytexturemid;
+	dc_texheight = textureheight[skytexture]
+		>>FRACBITS;
+	for (x = pl->minx; x <= pl->maxx; x++)
+	{
+		dc_yl = pl->top[x];
+		dc_yh = pl->bottom[x];
+
+		if (dc_yl <= dc_yh)
+		{
+			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
+			dc_x = x;
+			dc_source =
+				R_GetColumn(texturetranslation[skytexture],
+					angle);
+			wallcolfunc();
+		}
+	}
+}
+
 void R_DrawSinglePlane(visplane_t *pl)
 {
 	INT32 light = 0;
@@ -770,6 +784,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (!(pl->minx <= pl->maxx))
 		return;
+
+	// sky flat
+	if (pl->picnum == skyflatnum)
+	{
+		R_DrawSkyPlane(pl);
+		return;
+	}
 
 #ifndef NOWATER
 	itswater = false;
