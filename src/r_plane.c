@@ -768,7 +768,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 			dc_x = x;
 			dc_source =
 				R_GetColumn(texturetranslation[skytexture],
-					angle);
+					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
 			wallcolfunc();
 		}
 	}
