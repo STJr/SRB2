@@ -1366,7 +1366,6 @@ static void R_RenderSegLoop (void)
 		// mark floor / ceiling areas
 		yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
-		// no space above wall?
 		top = ceilingclip[rw_x]+1;
 
 		// no space above wall?
@@ -1375,12 +1374,9 @@ static void R_RenderSegLoop (void)
 
 		if (markceiling)
 		{
-			bottom = yl-1;
+			bottom = yl > floorclip[rw_x] ? floorclip[rw_x] : yl;
 
-			if (bottom >= floorclip[rw_x])
-				bottom = floorclip[rw_x]-1;
-
-			if (top <= bottom)
+			if (top <= --bottom)
 			{
 				ceilingplane->top[rw_x] = (INT16)top;
 				ceilingplane->bottom[rw_x] = (INT16)bottom;
@@ -1397,24 +1393,13 @@ static void R_RenderSegLoop (void)
 
 		if (markfloor)
 		{
-#if 0 // Old Doom Legacy code
-			bottom = floorclip[rw_x]-1;
-			if (top <= ceilingclip[rw_x])
-				top = ceilingclip[rw_x]+1;
-			if (top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
-#else // Spiffy new PRBoom code
-			top  = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
+			top = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
 
 			if (++top <= bottom && floorplane)
 			{
 				floorplane->top[rw_x] = (INT16)top;
 				floorplane->bottom[rw_x] = (INT16)bottom;
 			}
-#endif
 		}
 
 		if (numffloors)
@@ -1428,7 +1413,7 @@ static void R_RenderSegLoop (void)
 #ifdef POLYOBJECTS_PLANES
 				if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
 					continue;
-
+/*
 				// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
 				if (curline->polyseg) {
 					if (ffloor[i].plane->minx > rw_x)
@@ -1436,6 +1421,7 @@ static void R_RenderSegLoop (void)
 					else if (ffloor[i].plane->maxx < rw_x)
 						ffloor[i].plane->maxx = rw_x;
 				}
+*/
 #endif
 
 				if (ffloor[i].height < viewz)
@@ -1451,7 +1437,7 @@ static void R_RenderSegLoop (void)
 
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w) {
 						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
 					} else
 #endif
@@ -1475,7 +1461,7 @@ static void R_RenderSegLoop (void)
 
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w) {
 						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
 					} else
 #endif
@@ -3175,6 +3161,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			for (i = 0; i < numffloors; i++)
 				R_ExpandPlane(ffloor[i].plane, rw_x, rw_stopx - 1);
 		}
+#ifdef POLYOBJECTS_PLANES
+		// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
+		if (curline->polyseg)
+		{
+			for (i = 0; i < numffloors; i++)
+			{
+				if (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg)
+					continue;
+				if (ffloor[i].plane->minx > rw_x)
+					ffloor[i].plane->minx = rw_x;
+
+				if (ffloor[i].plane->maxx < rw_stopx - 1)
+					ffloor[i].plane->maxx = rw_stopx - 1;
+			}
+		}
+#endif
 	}
 
 #ifdef WALLSPLATS
