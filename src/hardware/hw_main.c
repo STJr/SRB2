@@ -1543,6 +1543,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		INT32 gr_toptexture = 0, gr_bottomtexture = 0;
 		// two sided line
 		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
+		boolean bothfloorssky = false; // likewise, but for floors
 
 #ifdef ESLOPE
 		SLOPEPARAMS(gr_backsector->c_slope, worldhigh, worldhighslope, gr_backsector->ceilingheight)
@@ -1561,9 +1562,17 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			bothceilingssky = true;
 		}
 
+		// likewise, but for floors and upper textures
+		if (gr_frontsector->floorpic == skyflatnum
+			&& gr_backsector->floorpic == skyflatnum)
+		{
+			bothfloorssky = true;
+		}
+
 		if (!bothceilingssky)
 			gr_toptexture = R_GetTextureNum(gr_sidedef->toptexture);
-		gr_bottomtexture = R_GetTextureNum(gr_sidedef->bottomtexture);
+		if (!bothfloorssky)
+			gr_bottomtexture = R_GetTextureNum(gr_sidedef->bottomtexture);
 
 		// check TOP TEXTURE
 		if ((
@@ -2457,7 +2466,9 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 		backc1 = backc2 = abacksector->ceilingheight;
 	}
 	// properly render skies (consider door "open" if both ceilings are sky)
-	if (abacksector->ceilingpic != skyflatnum || afrontsector->ceilingpic != skyflatnum)
+	// same for floors
+	if ((abacksector->ceilingpic != skyflatnum || afrontsector->ceilingpic != skyflatnum)
+	 && (abacksector->floorpic != skyflatnum   || afrontsector->floorpic != skyflatnum))
 	{
 		// now check for closed sectors!
 		if ((backc1 <= frontf1 && backc2 <= frontf2)
@@ -2953,8 +2964,10 @@ static void HWR_AddLine(seg_t * line)
 		SLOPEPARAMS( gr_backsector->f_slope, backf1,  backf2,  gr_backsector->floorheight)
 		SLOPEPARAMS( gr_backsector->c_slope, backc1,  backc2,  gr_backsector->ceilingheight)
 #undef SLOPEPARAMS
-
-		if (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
+		// if both ceilings are skies, consider it always "open"
+		// same for floors
+		if ((gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
+		 && (gr_backsector->floorpic != skyflatnum   || gr_frontsector->floorpic != skyflatnum))
 		{
 			// Closed door.
 			if ((backc1 <= frontf1 && backc2 <= frontf2)
@@ -2980,8 +2993,10 @@ static void HWR_AddLine(seg_t * line)
 	else
 #endif
 	{
-
-		if (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
+		// if both ceilings are skies, consider it always "open"
+		// same for floors
+		if ((gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
+		 && (gr_backsector->floorpic != skyflatnum   || gr_frontsector->floorpic != skyflatnum))
 		{
 			// Closed door.
 			if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||

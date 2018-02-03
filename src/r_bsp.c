@@ -506,7 +506,9 @@ static void R_AddLine(seg_t *line)
 		SLOPEPARAMS( backsector->c_slope, backc1,  backc2,  backsector->ceilingheight)
 #undef SLOPEPARAMS
 		// if both ceilings are skies, consider it always "open"
-		if (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
+		// same for floors
+		if ((backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
+		 && (backsector->floorpic != skyflatnum   || frontsector->floorpic != skyflatnum))
 		{
 			if ((backc1 <= frontf1 && backc2 <= frontf2)
 				|| (backf1 >= frontc1 && backf2 >= frontc2))
@@ -534,7 +536,9 @@ static void R_AddLine(seg_t *line)
 #endif
 	{
 		// if both ceilings are skies, consider it always "open"
-		if (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
+		// same for floors
+		if ((backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
+		 && (backsector->floorpic != skyflatnum   || frontsector->floorpic != skyflatnum))
 		{
 			if (backsector->ceilingheight <= frontsector->floorheight
 				|| backsector->floorheight >= frontsector->ceilingheight)
@@ -926,7 +930,8 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
 #endif
-		frontsector->floorheight) < viewz || (frontsector->heightsec != -1
+		frontsector->floorheight) < viewz || frontsector->floorpic == skyflatnum
+		|| (frontsector->heightsec != -1
 		&& sectors[frontsector->heightsec].ceilingpic == skyflatnum)))
 	{
 		floorplane = R_FindPlane(frontsector->floorheight, frontsector->floorpic, floorlightlevel,

@@ -2016,6 +2016,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		// two sided line
 		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
+		boolean bothfloorssky = false; // likewise, but for floors
 
 #ifdef ESLOPE
 		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
@@ -2037,34 +2038,44 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			bothceilingssky = true;
 		}
 
+		// likewise, but for floors and upper textures
+		if (frontsector->floorpic == skyflatnum
+			&& backsector->floorpic == skyflatnum)
+		{
+			bothfloorssky = true;
+		}
+
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 		ds_p->silhouette = 0;
 
-		if (
-#ifdef ESLOPE
-			worldbottomslope > worldlowslope ||
-#endif
-			worldbottom > worldlow)
+		if (!bothfloorssky)
 		{
-			ds_p->silhouette = SIL_BOTTOM;
+			if (
 #ifdef ESLOPE
-			if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+				worldbottomslope > worldlowslope ||
+#endif
+				worldbottom > worldlow)
+			{
+				ds_p->silhouette = SIL_BOTTOM;
+#ifdef ESLOPE
+				if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+					ds_p->bsilheight = INT32_MAX;
+				else
+					ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
+#else
+				ds_p->bsilheight = frontsector->floorheight;
+#endif
+			}
+#ifdef ESLOPE
+			else if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+#else
+			else if (backsector->floorheight > viewz)
+#endif
+			{
+				ds_p->silhouette = SIL_BOTTOM;
 				ds_p->bsilheight = INT32_MAX;
-			else
-				ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
-#else
-			ds_p->bsilheight = frontsector->floorheight;
-#endif
-		}
-#ifdef ESLOPE
-		else if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
-#else
-		else if (backsector->floorheight > viewz)
-#endif
-		{
-			ds_p->silhouette = SIL_BOTTOM;
-			ds_p->bsilheight = INT32_MAX;
-			// ds_p->sprbottomclip = negonearray;
+				// ds_p->sprbottomclip = negonearray;
+			}
 		}
 
 		if (!bothceilingssky)
@@ -2097,7 +2108,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		if (!bothceilingssky)
+		if (!bothceilingssky && !bothfloorssky)
 		{
 #ifdef ESLOPE
 			if (worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
@@ -2125,7 +2136,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
 		// frontsector->ceiling and backsector->floor to see if a door was closed.
 		// Without the following code, sprites get displayed behind closed doors.
-		if (!bothceilingssky)
+		if (!bothceilingssky && !bothfloorssky)
 		{
 #ifdef ESLOPE
 			if (doorclosed || (worldhigh <= worldbottom && worldhighslope <= worldbottomslope))
@@ -2149,7 +2160,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		if (worldlow != worldbottom
+		if (bothfloorssky)
+		{
+			// see double ceiling skies comment
+			// this is the same but for upside down thok barriers where the floor is sky and the ceiling is normal
+			markfloor = false;
+		}
+		else if (worldlow != worldbottom
 #ifdef ESLOPE
 			|| worldlowslope != worldbottomslope
 			|| backsector->f_slope != frontsector->f_slope
@@ -2161,7 +2178,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floor_yoffs != frontsector->floor_yoffs
 		    || backsector->floorpic_angle != frontsector->floorpic_angle
 		    //SoM: 3/22/2000: Prevents bleeding.
-		    || frontsector->heightsec != -1
+		    || (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
@@ -2208,7 +2225,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markceiling = false;
 		}
 
-		if (!bothceilingssky)
+		if (!bothceilingssky && !bothfloorssky)
 		{
 #ifdef ESLOPE
 			if ((worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
@@ -2278,11 +2295,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 		// check BOTTOM TEXTURE
-		if (worldlow > worldbottom
+		if (!bothfloorssky // never draw the bottom texture if on
+			&& (worldlow > worldbottom
 #ifdef ESLOPE
 				|| worldlowslope > worldbottomslope
 #endif
-			)     //seulement si VISIBLE!!!
+			))     //seulement si VISIBLE!!!
 		{
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
@@ -2636,7 +2654,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//  and doesn't need to be marked.
 	if (frontsector->heightsec == -1)
 	{
-		if ((
+		if (frontsector->floorpic != skyflatnum
+		&& (
 #ifdef ESLOPE
 			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
 #endif
