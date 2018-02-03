@@ -220,10 +220,7 @@ static INT32 R_DoorClosed(void)
 	// preserve a kind of transparent door/lift special effect:
 	&& (backsector->ceilingheight >= frontsector->ceilingheight || curline->sidedef->toptexture)
 
-	&& (backsector->floorheight <= frontsector->floorheight || curline->sidedef->bottomtexture)
-
-	// properly render skies (consider door "open" if both ceilings are sky):
-	&& (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum);
+	&& (backsector->floorheight <= frontsector->floorheight || curline->sidedef->bottomtexture);
 }
 
 //
@@ -520,9 +517,7 @@ static void R_AddLine(seg_t *line)
 			// Check for automap fix. Store in doorclosed for r_segs.c
 			doorclosed = (backc1 <= backf1 && backc2 <= backf2
 			&& ((backc1 >= frontc1 && backc2 >= frontc2) || curline->sidedef->toptexture)
-			&& ((backf1 <= frontf1 && backf2 >= frontf2) || curline->sidedef->bottomtexture)
-			//&& (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
-			);
+			&& ((backf1 <= frontf1 && backf2 >= frontf2) || curline->sidedef->bottomtexture));
 
 			if (doorclosed)
 				goto clipsolid;

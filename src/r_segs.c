@@ -1894,29 +1894,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
-	if (frontsector->c_slope) {
-		worldtop = P_GetZAt(frontsector->c_slope, segleft.x, segleft.y) - viewz;
-		worldtopslope = P_GetZAt(frontsector->c_slope, segright.x, segright.y) - viewz;
-	} else {
-		worldtopslope =
-#else
-	{
-#endif
-		worldtop = frontsector->ceilingheight - viewz;
-	}
 
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, segleft.x, segleft.y); \
+		end2 = P_GetZAt(slope, segright.x, segright.y); \
+	} else \
+		end1 = end2 = normalheight;
 
-#ifdef ESLOPE
-	if (frontsector->f_slope) {
-		worldbottom = P_GetZAt(frontsector->f_slope, segleft.x, segleft.y) - viewz;
-		worldbottomslope = P_GetZAt(frontsector->f_slope, segright.x, segright.y) - viewz;
-	} else {
-		worldbottomslope =
+	SLOPEPARAMS(frontsector->c_slope, worldtop,    worldtopslope,    frontsector->ceilingheight)
+	SLOPEPARAMS(frontsector->f_slope, worldbottom, worldbottomslope, frontsector->floorheight)
+	// subtract viewz from these to turn them into
+	// positions relative to the camera's z position
+	worldtop -= viewz;
+	worldtopslope -= viewz;
+	worldbottom -= viewz;
+	worldbottomslope -= viewz;
 #else
-	{
+	worldtop = frontsector->ceilingheight - viewz;
+	worldbottom = frontsector->floorheight - viewz;
 #endif
-		worldbottom = frontsector->floorheight - viewz;
-	}
 
 	midtexture = toptexture = bottomtexture = maskedtexture = 0;
 	ds_p->maskedtexturecol = NULL;
@@ -2021,40 +2018,23 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
 
 #ifdef ESLOPE
-		if (backsector->c_slope) {
-			worldhigh = P_GetZAt(backsector->c_slope, segleft.x, segleft.y) - viewz;
-			worldhighslope = P_GetZAt(backsector->c_slope, segright.x, segright.y) - viewz;
-		} else {
-			worldhighslope =
+		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
+		SLOPEPARAMS(backsector->f_slope, worldlow,  worldlowslope,  backsector->floorheight)
+		worldhigh -= viewz;
+		worldhighslope -= viewz;
+		worldlow -= viewz;
+		worldlowslope -= viewz;
 #else
-		{
+		worldhigh = backsector->ceilingheight - viewz;
+		worldlow = backsector->floorheight - viewz;
 #endif
-			worldhigh = backsector->ceilingheight - viewz;
-		}
-
-
-#ifdef ESLOPE
-		if (backsector->f_slope) {
-			worldlow = P_GetZAt(backsector->f_slope, segleft.x, segleft.y) - viewz;
-			worldlowslope = P_GetZAt(backsector->f_slope, segright.x, segright.y) - viewz;
-		} else {
-			worldlowslope =
-#else
-		{
-#endif
-			worldlow = backsector->floorheight - viewz;
-		}
-
 
 		// hack to allow height changes in outdoor areas
+		// This is what gets rid of the upper textures if there should be sky
 		if (frontsector->ceilingpic == skyflatnum
 			&& backsector->ceilingpic == skyflatnum)
 		{
 			bothceilingssky = true;
-#ifdef ESLOPE
-			//worldtopslope = worldhighslope;
-#endif
-			//worldtop = worldhigh;
 		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
@@ -2375,16 +2355,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						continue;
 
 #ifdef ESLOPE
-					if (*rover->t_slope) {
-						high1 = P_GetZAt(*rover->t_slope, segleft.x, segleft.y);
-						highslope1 = P_GetZAt(*rover->t_slope, segright.x, segright.y);
-					} else
-						high1 = highslope1 = *rover->topheight;
-					if (*rover->b_slope) {
-						low1 = P_GetZAt(*rover->b_slope, segleft.x, segleft.y);
-						lowslope1 = P_GetZAt(*rover->b_slope, segright.x, segright.y);
-					} else
-						low1 = lowslope1 = *rover->bottomheight;
+					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
 
 					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 						continue;
@@ -2416,16 +2388,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						}
 
 #ifdef ESLOPE
-						if (*r2->t_slope) {
-							high2 = P_GetZAt(*r2->t_slope, segleft.x, segleft.y);
-							highslope2 = P_GetZAt(*r2->t_slope, segright.x, segright.y);
-						} else
-							high2 = highslope2 = *r2->topheight;
-						if (*r2->b_slope) {
-							low2 = P_GetZAt(*r2->b_slope, segleft.x, segleft.y);
-							lowslope2 = P_GetZAt(*r2->b_slope, segright.x, segright.y);
-						} else
-							low2 = lowslope2 = *r2->bottomheight;
+						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
 
 						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
@@ -2458,16 +2422,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						continue;
 
 #ifdef ESLOPE
-					if (*rover->t_slope) {
-						high1 = P_GetZAt(*rover->t_slope, segleft.x, segleft.y);
-						highslope1 = P_GetZAt(*rover->t_slope, segright.x, segright.y);
-					} else
-						high1 = highslope1 = *rover->topheight;
-					if (*rover->b_slope) {
-						low1 = P_GetZAt(*rover->b_slope, segleft.x, segleft.y);
-						lowslope1 = P_GetZAt(*rover->b_slope, segright.x, segright.y);
-					} else
-						low1 = lowslope1 = *rover->bottomheight;
+					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
 
 					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 						continue;
@@ -2499,17 +2455,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						}
 
 #ifdef ESLOPE
-						if (*r2->t_slope) {
-							high2 = P_GetZAt(*r2->t_slope, segleft.x, segleft.y);
-							highslope2 = P_GetZAt(*r2->t_slope, segright.x, segright.y);
-						} else
-							high2 = highslope2 = *r2->topheight;
-						if (*r2->b_slope) {
-							low2 = P_GetZAt(*r2->b_slope, segleft.x, segleft.y);
-							lowslope2 = P_GetZAt(*r2->b_slope, segright.x, segright.y);
-						} else
-							low2 = lowslope2 = *r2->bottomheight;
-
+						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
+#undef SLOPEPARAMS
 						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
 						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))

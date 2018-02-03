@@ -1555,14 +1555,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
-		if (gr_frontsector->ceilingpic == skyflatnum &&
-			gr_backsector->ceilingpic  == skyflatnum)
+		if (gr_frontsector->ceilingpic == skyflatnum
+			&& gr_backsector->ceilingpic  == skyflatnum)
 		{
 			bothceilingssky = true;
-			//worldtop = worldhigh;
-#ifdef ESLOPE
-			//worldtopslope = worldhighslope;
-#endif
 		}
 
 		if (!bothceilingssky)
@@ -2464,21 +2460,10 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 	if (abacksector->ceilingpic != skyflatnum || afrontsector->ceilingpic != skyflatnum)
 	{
 		// now check for closed sectors!
-		if (backc1 <= frontf1 && backc2 <= frontf2)
+		if ((backc1 <= frontf1 && backc2 <= frontf2)
+			|| (backf1 >= frontc1 && backf2 >= frontc2))
 		{
 			checkforemptylines = false;
-			//if (!seg->sidedef->toptexture)
-				//return false;
-
-			return true;
-		}
-
-		if (backf1 >= frontc1 && backf2 >= frontc2)
-		{
-			checkforemptylines = false;
-			//if (!seg->sidedef->bottomtexture)
-				//return false;
-
 			return true;
 		}
 
@@ -2981,9 +2966,7 @@ static void HWR_AddLine(seg_t * line)
 			// Check for automap fix.
 			if (backc1 <= backf1 && backc2 <= backf2
 			&& ((backc1 >= frontc1 && backc2 >= frontc2) || gr_curline->sidedef->toptexture)
-			&& ((backf1 <= frontf1 && backf2 >= frontf2) || gr_curline->sidedef->bottomtexture)
-			//&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
-			)
+			&& ((backf1 <= frontf1 && backf2 >= frontf2) || gr_curline->sidedef->bottomtexture))
 				goto clipsolid;
 		}
 
@@ -3008,9 +2991,7 @@ static void HWR_AddLine(seg_t * line)
 			// Check for automap fix.
 			if (gr_backsector->ceilingheight <= gr_backsector->floorheight
 			&& ((gr_backsector->ceilingheight >= gr_frontsector->ceilingheight) || gr_curline->sidedef->toptexture)
-			&& ((gr_backsector->floorheight <= gr_backsector->floorheight) || gr_curline->sidedef->bottomtexture)
-			//&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
-			)
+			&& ((gr_backsector->floorheight <= gr_backsector->floorheight) || gr_curline->sidedef->bottomtexture))
 				goto clipsolid;
 		}
 
