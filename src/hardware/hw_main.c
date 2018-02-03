@@ -5487,8 +5487,9 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
-	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
-	v[2].sow = v[1].sow = (-1.0f/dimensionmultiply)+((float) angle / ((ANGLE_90-1)*dimensionmultiply));
+	v[0].sow = v[3].sow = ((float) (-angle) / ((ANGLE_90-1)*dimensionmultiply)); // left
+	v[2].sow = v[1].sow = v[0].sow + (1.0f/dimensionmultiply); // right (or left + 1.0f)
+	// use +angle and -1.0f above instead if you wanted old backwards behavior
 
 	// Y
 	angle = aimingangle;
@@ -5502,13 +5503,13 @@ static void HWR_DrawSkyBackground(player_t *player)
 	if (atransform.flip)
 	{
 		// During vertical flip the sky should be flipped and it's y movement should also be flipped obviously
-		v[3].tow = v[2].tow = -(0.5f-(0.5f/dimensionmultiply));
-		v[0].tow = v[1].tow = (-1.0f/dimensionmultiply)-(0.5f-(0.5f/dimensionmultiply));
+		v[3].tow = v[2].tow = -(0.5f-(0.5f/dimensionmultiply)); // top
+		v[0].tow = v[1].tow = v[3].tow - (1.0f/dimensionmultiply); // bottom (or top - 1.0f)
 	}
 	else
 	{
-		v[3].tow = v[2].tow = (-1.0f/dimensionmultiply)-(0.5f-(0.5f/dimensionmultiply));
-		v[0].tow = v[1].tow = -(0.5f-(0.5f/dimensionmultiply));
+		v[0].tow = v[1].tow = -(0.5f-(0.5f/dimensionmultiply)); // bottom
+		v[3].tow = v[2].tow = v[0].tow - (1.0f/dimensionmultiply); // top (or bottom - 1.0f)
 	}
 
 	if (angle > ANGLE_180) // Do this because we don't want the sky to suddenly teleport when crossing over 0 to 360 and vice versa
