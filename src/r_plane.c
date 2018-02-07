@@ -625,7 +625,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 // overlap.
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 {
-	INT32 unionl, unionh;
+//	INT32 unionl, unionh;
 //	INT32 x;
 
 #ifdef POLYOBJECTS_PLANES
@@ -634,6 +634,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 		return;
 #endif
 
+	if (pl->minx > start) pl->minx = start;
+	if (pl->maxx < stop)  pl->maxx = stop;
+/*
 	if (start < pl->minx)
 	{
 		unionl = start;
@@ -651,15 +654,16 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 	{
 		unionh = pl->maxx;
 	}
-/*
 	for (x = start; x <= stop; x++)
 		if (pl->top[x] != 0xffff || pl->bottom[x] != 0x0000)
 			break;
 
 	if (x <= stop)
 		I_Error("R_ExpandPlane: planes in same subsector overlap?!\nminx: %d, maxx: %d, start: %d, stop: %d\n", pl->minx, pl->maxx, start, stop);
-*/
+
 	pl->minx = unionl, pl->maxx = unionh;
+*/
+
 }
 
 //
