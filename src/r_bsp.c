@@ -401,6 +401,7 @@ static void R_AddLine(seg_t *line)
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
 	static sector_t tempsec; // ceiling/water hack
+	boolean bothceilingssky = false, bothfloorssky = false;
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
@@ -487,6 +488,25 @@ static void R_AddLine(seg_t *line)
 
 	doorclosed = 0;
 
+	if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+		bothceilingssky = true;
+	if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum)
+		bothfloorssky = true;
+
+	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
+	{
+		if (
+#ifdef POLYOBJECTS
+		!line->polyseg &&
+#endif
+		!line->sidedef->midtexture
+		&& ((!frontsector->ffloors && !backsector->ffloors)
+		|| (frontsector->tag == backsector->tag)))
+			return; // line is empty, don't even bother
+
+		goto clippass; // treat like wide open window instead
+	}
+
 	// Closed door.
 #ifdef ESLOPE
 	if (frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope)
@@ -507,8 +527,7 @@ static void R_AddLine(seg_t *line)
 #undef SLOPEPARAMS
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
-		if ((backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
-		 && (backsector->floorpic != skyflatnum   || frontsector->floorpic != skyflatnum))
+		if (!bothceilingssky && !bothfloorssky)
 		{
 			if ((backc1 <= frontf1 && backc2 <= frontf2)
 				|| (backf1 >= frontc1 && backf2 >= frontc2))
@@ -526,19 +545,19 @@ static void R_AddLine(seg_t *line)
 		}
 
 		// Window.
-		if (backc1 != frontc1 || backc2 != frontc2
-			|| backf1 != frontf1 || backf2 != frontf2)
-		{
-			goto clippass;
-		}
+		if (!bothceilingssky) // ceilings are always the "same" when sky
+			if (backc1 != frontc1 || backc2 != frontc2)
+				goto clippass;
+		if (!bothfloorssky)	// floors are always the "same" when sky
+			if (backf1 != frontf1 || backf2 != frontf2)
+				goto clippass;
 	}
 	else
 #endif
 	{
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
-		if ((backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum)
-		 && (backsector->floorpic != skyflatnum   || frontsector->floorpic != skyflatnum))
+		if (!bothceilingssky && !bothfloorssky)
 		{
 			if (backsector->ceilingheight <= frontsector->floorheight
 				|| backsector->floorheight >= frontsector->ceilingheight)
@@ -553,11 +572,12 @@ static void R_AddLine(seg_t *line)
 		}
 
 		// Window.
-		if (backsector->ceilingheight != frontsector->ceilingheight
-			|| backsector->floorheight != frontsector->floorheight)
-		{
-			goto clippass;
-		}
+		if (!bothceilingssky) // ceilings are always the "same" when sky
+			if (backsector->ceilingheight != frontsector->ceilingheight)
+				goto clippass;
+		if (!bothfloorssky)	// floors are always the "same" when sky
+			if (backsector->floorheight != frontsector->floorheight)
+				goto clippass;
 	}
 
 	// Reject empty lines used for triggers and special events.

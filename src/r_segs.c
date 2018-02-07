@@ -1321,6 +1321,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #undef CLAMPMIN
 }
 
+// R_ExpandPlaneY
+//
+// A simple function to modify a vsplane's top and bottom for a particular column
+// Sort of like R_ExpandPlane in r_plane.c, except this is vertical expansion
+static inline void R_ExpandPlaneY(visplane_t *pl, INT32 x, INT16 top, INT16 bottom)
+{
+	// Expand the plane, don't shrink it!
+	// note: top and bottom default to 0xFFFF and 0x0000 respectively, which is totally compatible with this
+	if (pl->top[x] > top)       pl->top[x] = top;
+	if (pl->bottom[x] < bottom) pl->bottom[x] = bottom;
+}
+
 //
 // R_RenderSegLoop
 // Draws zero, one, or two textures (and possibly a masked
@@ -1343,7 +1355,6 @@ UINT32 nombre = 100000;
 //static   char runtest[10][80];
 #endif
 //profile stuff ---------------------------------------------------------
-
 
 static void R_RenderSegLoop (void)
 {
@@ -1374,13 +1385,19 @@ static void R_RenderSegLoop (void)
 
 		if (markceiling)
 		{
+#if 0
+			bottom = yl-1;
+
+			if (bottom >= floorclip[rw_x])
+				bottom = floorclip[rw_x]-1;
+
+			if (top <= bottom)
+#else
 			bottom = yl > floorclip[rw_x] ? floorclip[rw_x] : yl;
 
-			if (top <= --bottom)
-			{
-				ceilingplane->top[rw_x] = (INT16)top;
-				ceilingplane->bottom[rw_x] = (INT16)bottom;
-			}
+			if (top <= --bottom && ceilingplane)
+#endif
+				R_ExpandPlaneY(ceilingplane, rw_x, top, bottom);
 		}
 
 
@@ -1396,10 +1413,7 @@ static void R_RenderSegLoop (void)
 			top = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
 
 			if (++top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
+				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
 		}
 
 		if (numffloors)
@@ -1413,15 +1427,6 @@ static void R_RenderSegLoop (void)
 #ifdef POLYOBJECTS_PLANES
 				if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
 					continue;
-/*
-				// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
-				if (curline->polyseg) {
-					if (ffloor[i].plane->minx > rw_x)
-						ffloor[i].plane->minx = rw_x;
-					else if (ffloor[i].plane->maxx < rw_x)
-						ffloor[i].plane->maxx = rw_x;
-				}
-*/
 #endif
 
 				if (ffloor[i].height < viewz)

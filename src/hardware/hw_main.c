@@ -2433,6 +2433,12 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 {
 	fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 	fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
+	boolean bothceilingssky = false, bothfloorssky = false;
+
+	if (abacksector->ceilingpic == skyflatnum && afrontsector->ceilingpic == skyflatnum)
+		bothceilingssky = true;
+	if (abacksector->floorpic == skyflatnum && afrontsector->floorpic == skyflatnum)
+		bothfloorssky = true;
 
 	// GZDoom method of sloped line clipping
 
@@ -2467,8 +2473,7 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 	}
 	// properly render skies (consider door "open" if both ceilings are sky)
 	// same for floors
-	if ((abacksector->ceilingpic != skyflatnum || afrontsector->ceilingpic != skyflatnum)
-	 && (abacksector->floorpic != skyflatnum   || afrontsector->floorpic != skyflatnum))
+	if (!bothceilingssky && !bothfloorssky)
 	{
 		// now check for closed sectors!
 		if ((backc1 <= frontf1 && backc2 <= frontf2)
@@ -2490,12 +2495,21 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 		}
 	}
 
-	if (backc1 != frontc1 || backc2 != frontc2
-		|| backf1 != frontf1 || backf2 != frontf2)
+	if (!bothceilingssky) {
+		if (backc1 != frontc1 || backc2 != frontc2)
 		{
 			checkforemptylines = false;
 			return false;
 		}
+	}
+
+	if (!bothfloorssky) {
+		if (backf1 != frontf1 || backf2 != frontf2)
+		{
+			checkforemptylines = false;
+			return false;
+		}
+	}
 
 	return false;
 }
@@ -2798,6 +2812,7 @@ static void HWR_AddLine(seg_t * line)
 #ifndef NEWCLIP
 	INT32 x1, x2;
 	angle_t span, tspan;
+	boolean bothceilingssky = false, bothfloorssky = false;
 #endif
 
 	// SoM: Backsector needs to be run through R_FakeFlat
@@ -2923,7 +2938,30 @@ static void HWR_AddLine(seg_t * line)
     }
     else
     {
+		boolean bothceilingssky = false, bothfloorssky = false;
+
 		gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
+
+		if (gr_backsector->ceilingpic == skyflatnum && gr_frontsector->ceilingpic == skyflatnum)
+			bothceilingssky = true;
+		if (gr_backsector->floorpic == skyflatnum && gr_frontsector->floorpic == skyflatnum)
+			bothfloorssky = true;
+
+		if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
+		{
+			if (
+#ifdef POLYOBJECTS
+			!line->polyseg &&
+#endif
+			!line->sidedef->midtexture
+			&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+			|| (gr_frontsector->tag == gr_backsector->tag)))
+				return; // line is empty, don't even bother
+			// treat like wide open window instead
+			HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
+			return;
+		}
+
 		if (CheckClip(line, gr_frontsector, gr_backsector))
 		{
 			gld_clipper_SafeAddClipRange(angle2, angle1);
@@ -2946,6 +2984,25 @@ static void HWR_AddLine(seg_t * line)
 
 	gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
 
+	if (gr_backsector->ceilingpic == skyflatnum && gr_frontsector->ceilingpic == skyflatnum)
+		bothceilingssky = true;
+	if (gr_backsector->floorpic == skyflatnum && gr_frontsector->floorpic == skyflatnum)
+		bothfloorssky = true;
+
+	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
+	{
+		if (
+#ifdef POLYOBJECTS
+		!line->polyseg &&
+#endif
+		!line->sidedef->midtexture
+		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+		|| (gr_frontsector->tag == gr_backsector->tag)))
+			return; // line is empty, don't even bother
+
+		goto clippass; // treat like wide open window instead
+	}
+
 #ifdef ESLOPE
 	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
 	{
@@ -2966,8 +3023,7 @@ static void HWR_AddLine(seg_t * line)
 #undef SLOPEPARAMS
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
-		if ((gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
-		 && (gr_backsector->floorpic != skyflatnum   || gr_frontsector->floorpic != skyflatnum))
+		if (!bothceilingssky && !bothfloorssky)
 		{
 			// Closed door.
 			if ((backc1 <= frontf1 && backc2 <= frontf2)
@@ -2984,19 +3040,19 @@ static void HWR_AddLine(seg_t * line)
 		}
 
 		// Window.
-		if (backc1 != frontc1 || backc2 != frontc2
-			|| backf1 != frontf1 || backf2 != frontf2)
-		{
-			goto clippass;
-		}
+		if (!bothceilingssky) // ceilings are always the "same" when sky
+			if (backc1 != frontc1 || backc2 != frontc2)
+				goto clippass;
+		if (!bothfloorssky)	// floors are always the "same" when sky
+			if (backf1 != frontf1 || backf2 != frontf2)
+				goto clippass;
 	}
 	else
 #endif
 	{
 		// if both ceilings are skies, consider it always "open"
 		// same for floors
-		if ((gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum)
-		 && (gr_backsector->floorpic != skyflatnum   || gr_frontsector->floorpic != skyflatnum))
+		if (!bothceilingssky && !bothfloorssky)
 		{
 			// Closed door.
 			if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
@@ -3011,9 +3067,12 @@ static void HWR_AddLine(seg_t * line)
 		}
 
 		// Window.
-		if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight ||
-			gr_backsector->floorheight != gr_frontsector->floorheight)
-			goto clippass;
+		if (!bothceilingssky) // ceilings are always the "same" when sky
+			if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight)
+				goto clippass;
+		if (!bothfloorssky)	// floors are always the "same" when sky
+			if (gr_backsector->floorheight != gr_frontsector->floorheight)
+				goto clippass;
 	}
 
 	// Reject empty lines used for triggers and special events.
