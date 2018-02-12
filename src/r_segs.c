@@ -1321,6 +1321,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #undef CLAMPMIN
 }
 
+// R_ExpandPlaneY
+//
+// A simple function to modify a vsplane's top and bottom for a particular column
+// Sort of like R_ExpandPlane in r_plane.c, except this is vertical expansion
+static inline void R_ExpandPlaneY(visplane_t *pl, INT32 x, INT16 top, INT16 bottom)
+{
+	// Expand the plane, don't shrink it!
+	// note: top and bottom default to 0xFFFF and 0x0000 respectively, which is totally compatible with this
+	if (pl->top[x] > top)       pl->top[x] = top;
+	if (pl->bottom[x] < bottom) pl->bottom[x] = bottom;
+}
+
 //
 // R_RenderSegLoop
 // Draws zero, one, or two textures (and possibly a masked
@@ -1344,7 +1356,6 @@ UINT32 nombre = 100000;
 #endif
 //profile stuff ---------------------------------------------------------
 
-
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
@@ -1366,7 +1377,6 @@ static void R_RenderSegLoop (void)
 		// mark floor / ceiling areas
 		yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
-		// no space above wall?
 		top = ceilingclip[rw_x]+1;
 
 		// no space above wall?
@@ -1375,16 +1385,19 @@ static void R_RenderSegLoop (void)
 
 		if (markceiling)
 		{
+#if 0
 			bottom = yl-1;
 
 			if (bottom >= floorclip[rw_x])
 				bottom = floorclip[rw_x]-1;
 
 			if (top <= bottom)
-			{
-				ceilingplane->top[rw_x] = (INT16)top;
-				ceilingplane->bottom[rw_x] = (INT16)bottom;
-			}
+#else
+			bottom = yl > floorclip[rw_x] ? floorclip[rw_x] : yl;
+
+			if (top <= --bottom && ceilingplane)
+#endif
+				R_ExpandPlaneY(ceilingplane, rw_x, top, bottom);
 		}
 
 
@@ -1397,24 +1410,10 @@ static void R_RenderSegLoop (void)
 
 		if (markfloor)
 		{
-#if 0 // Old Doom Legacy code
-			bottom = floorclip[rw_x]-1;
-			if (top <= ceilingclip[rw_x])
-				top = ceilingclip[rw_x]+1;
-			if (top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
-#else // Spiffy new PRBoom code
-			top  = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
+			top = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
 
 			if (++top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
-#endif
+				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
 		}
 
 		if (numffloors)
@@ -1428,14 +1427,6 @@ static void R_RenderSegLoop (void)
 #ifdef POLYOBJECTS_PLANES
 				if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
 					continue;
-
-				// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
-				if (curline->polyseg) {
-					if (ffloor[i].plane->minx > rw_x)
-						ffloor[i].plane->minx = rw_x;
-					else if (ffloor[i].plane->maxx < rw_x)
-						ffloor[i].plane->maxx = rw_x;
-				}
 #endif
 
 				if (ffloor[i].height < viewz)
@@ -1451,7 +1442,7 @@ static void R_RenderSegLoop (void)
 
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w) {
 						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
 					} else
 #endif
@@ -1475,7 +1466,7 @@ static void R_RenderSegLoop (void)
 
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
-					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+					if (ffloor[i].polyobj && top_w >= bottom_w) {
 						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
 					} else
 #endif
@@ -1908,29 +1899,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
-	if (frontsector->c_slope) {
-		worldtop = P_GetZAt(frontsector->c_slope, segleft.x, segleft.y) - viewz;
-		worldtopslope = P_GetZAt(frontsector->c_slope, segright.x, segright.y) - viewz;
-	} else {
-		worldtopslope =
-#else
-	{
-#endif
-		worldtop = frontsector->ceilingheight - viewz;
-	}
 
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, segleft.x, segleft.y); \
+		end2 = P_GetZAt(slope, segright.x, segright.y); \
+	} else \
+		end1 = end2 = normalheight;
 
-#ifdef ESLOPE
-	if (frontsector->f_slope) {
-		worldbottom = P_GetZAt(frontsector->f_slope, segleft.x, segleft.y) - viewz;
-		worldbottomslope = P_GetZAt(frontsector->f_slope, segright.x, segright.y) - viewz;
-	} else {
-		worldbottomslope =
+	SLOPEPARAMS(frontsector->c_slope, worldtop,    worldtopslope,    frontsector->ceilingheight)
+	SLOPEPARAMS(frontsector->f_slope, worldbottom, worldbottomslope, frontsector->floorheight)
+	// subtract viewz from these to turn them into
+	// positions relative to the camera's z position
+	worldtop -= viewz;
+	worldtopslope -= viewz;
+	worldbottom -= viewz;
+	worldbottomslope -= viewz;
 #else
-	{
+	worldtop = frontsector->ceilingheight - viewz;
+	worldbottom = frontsector->floorheight - viewz;
 #endif
-		worldbottom = frontsector->floorheight - viewz;
-	}
 
 	midtexture = toptexture = bottomtexture = maskedtexture = 0;
 	ds_p->maskedtexturecol = NULL;
@@ -2032,125 +2020,128 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
+		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
+		boolean bothfloorssky = false; // likewise, but for floors
 
 #ifdef ESLOPE
-		if (backsector->c_slope) {
-			worldhigh = P_GetZAt(backsector->c_slope, segleft.x, segleft.y) - viewz;
-			worldhighslope = P_GetZAt(backsector->c_slope, segright.x, segright.y) - viewz;
-		} else {
-			worldhighslope =
+		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
+		SLOPEPARAMS(backsector->f_slope, worldlow,  worldlowslope,  backsector->floorheight)
+		worldhigh -= viewz;
+		worldhighslope -= viewz;
+		worldlow -= viewz;
+		worldlowslope -= viewz;
 #else
-		{
+		worldhigh = backsector->ceilingheight - viewz;
+		worldlow = backsector->floorheight - viewz;
 #endif
-			worldhigh = backsector->ceilingheight - viewz;
-		}
-
-
-#ifdef ESLOPE
-		if (backsector->f_slope) {
-			worldlow = P_GetZAt(backsector->f_slope, segleft.x, segleft.y) - viewz;
-			worldlowslope = P_GetZAt(backsector->f_slope, segright.x, segright.y) - viewz;
-		} else {
-			worldlowslope =
-#else
-		{
-#endif
-			worldlow = backsector->floorheight - viewz;
-		}
-
 
 		// hack to allow height changes in outdoor areas
+		// This is what gets rid of the upper textures if there should be sky
 		if (frontsector->ceilingpic == skyflatnum
 			&& backsector->ceilingpic == skyflatnum)
 		{
-#ifdef ESLOPE
-			worldtopslope = worldhighslope =
-#endif
-			worldtop = worldhigh;
+			bothceilingssky = true;
+		}
+
+		// likewise, but for floors and upper textures
+		if (frontsector->floorpic == skyflatnum
+			&& backsector->floorpic == skyflatnum)
+		{
+			bothfloorssky = true;
 		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 		ds_p->silhouette = 0;
 
-		if (
-#ifdef ESLOPE
-			worldbottomslope > worldlowslope ||
-#endif
-			worldbottom > worldlow)
+		if (!bothfloorssky)
 		{
-			ds_p->silhouette = SIL_BOTTOM;
+			if (
 #ifdef ESLOPE
-			if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+				worldbottomslope > worldlowslope ||
+#endif
+				worldbottom > worldlow)
+			{
+				ds_p->silhouette = SIL_BOTTOM;
+#ifdef ESLOPE
+				if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+					ds_p->bsilheight = INT32_MAX;
+				else
+					ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
+#else
+				ds_p->bsilheight = frontsector->floorheight;
+#endif
+			}
+#ifdef ESLOPE
+			else if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+#else
+			else if (backsector->floorheight > viewz)
+#endif
+			{
+				ds_p->silhouette = SIL_BOTTOM;
 				ds_p->bsilheight = INT32_MAX;
-			else
-				ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
-#else
-			ds_p->bsilheight = frontsector->floorheight;
-#endif
-		}
-#ifdef ESLOPE
-		else if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
-#else
-		else if (backsector->floorheight > viewz)
-#endif
-		{
-			ds_p->silhouette = SIL_BOTTOM;
-			ds_p->bsilheight = INT32_MAX;
-			// ds_p->sprbottomclip = negonearray;
+				// ds_p->sprbottomclip = negonearray;
+			}
 		}
 
-		if (
-#ifdef ESLOPE
-			worldtopslope < worldhighslope ||
-#endif
-			worldtop < worldhigh)
+		if (!bothceilingssky)
 		{
-			ds_p->silhouette |= SIL_TOP;
+			if (
 #ifdef ESLOPE
-			if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+				worldtopslope < worldhighslope ||
+#endif
+				worldtop < worldhigh)
+			{
+				ds_p->silhouette |= SIL_TOP;
+#ifdef ESLOPE
+				if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+					ds_p->tsilheight = INT32_MIN;
+				else
+					ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
+#else
+				ds_p->tsilheight = frontsector->ceilingheight;
+#endif
+			}
+#ifdef ESLOPE
+			else if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+#else
+			else if (backsector->ceilingheight < viewz)
+#endif
+			{
+				ds_p->silhouette |= SIL_TOP;
 				ds_p->tsilheight = INT32_MIN;
-			else
-				ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
-#else
-			ds_p->tsilheight = frontsector->ceilingheight;
-#endif
-		}
-#ifdef ESLOPE
-		else if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
-#else
-		else if (backsector->ceilingheight < viewz)
-#endif
-		{
-			ds_p->silhouette |= SIL_TOP;
-			ds_p->tsilheight = INT32_MIN;
-			// ds_p->sprtopclip = screenheightarray;
+				// ds_p->sprtopclip = screenheightarray;
+			}
 		}
 
-#ifdef ESLOPE
-		if (worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
-#else
-		if (worldhigh <= worldbottom)
-#endif
+		if (!bothceilingssky && !bothfloorssky)
 		{
-			ds_p->sprbottomclip = negonearray;
-			ds_p->bsilheight = INT32_MAX;
-			ds_p->silhouette |= SIL_BOTTOM;
-		}
+#ifdef ESLOPE
+			if (worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
+#else
+			if (worldhigh <= worldbottom)
+#endif
+			{
+				ds_p->sprbottomclip = negonearray;
+				ds_p->bsilheight = INT32_MAX;
+				ds_p->silhouette |= SIL_BOTTOM;
+			}
 
 #ifdef ESLOPE
-		if (worldlow >= worldtop && worldlowslope >= worldtopslope)
+			if (worldlow >= worldtop && worldlowslope >= worldtopslope)
 #else
-		if (worldlow >= worldtop)
+			if (worldlow >= worldtop)
 #endif
-		{
-			ds_p->sprtopclip = screenheightarray;
-			ds_p->tsilheight = INT32_MIN;
-			ds_p->silhouette |= SIL_TOP;
+			{
+				ds_p->sprtopclip = screenheightarray;
+				ds_p->tsilheight = INT32_MIN;
+				ds_p->silhouette |= SIL_TOP;
+			}
 		}
 
 		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
 		// frontsector->ceiling and backsector->floor to see if a door was closed.
 		// Without the following code, sprites get displayed behind closed doors.
+		if (!bothceilingssky && !bothfloorssky)
 		{
 #ifdef ESLOPE
 			if (doorclosed || (worldhigh <= worldbottom && worldhighslope <= worldbottomslope))
@@ -2174,7 +2165,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		if (worldlow != worldbottom
+		if (bothfloorssky)
+		{
+			// see double ceiling skies comment
+			// this is the same but for upside down thok barriers where the floor is sky and the ceiling is normal
+			markfloor = false;
+		}
+		else if (worldlow != worldbottom
 #ifdef ESLOPE
 			|| worldlowslope != worldbottomslope
 			|| backsector->f_slope != frontsector->f_slope
@@ -2186,7 +2183,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floor_yoffs != frontsector->floor_yoffs
 		    || backsector->floorpic_angle != frontsector->floorpic_angle
 		    //SoM: 3/22/2000: Prevents bleeding.
-		    || frontsector->heightsec != -1
+		    || (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
@@ -2200,7 +2197,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markfloor = false;
 		}
 
-		if (worldhigh != worldtop
+		if (bothceilingssky)
+		{
+			// double ceiling skies are special
+			// we don't want to lower the ceiling clipping, (no new plane is drawn anyway)
+			// so we can see the floor of thok barriers always regardless of sector properties
+			markceiling = false;
+		}
+		else if (worldhigh != worldtop
 #ifdef ESLOPE
 			|| worldhighslope != worldtopslope
 			|| backsector->c_slope != frontsector->c_slope
@@ -2226,19 +2230,28 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markceiling = false;
 		}
 
-		if (backsector->ceilingheight <= frontsector->floorheight ||
-		    backsector->floorheight >= frontsector->ceilingheight)
+		if (!bothceilingssky && !bothfloorssky)
 		{
-			// closed door
-			markceiling = markfloor = true;
+#ifdef ESLOPE
+			if ((worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
+			 || (worldlow >= worldtop && worldlowslope >= worldtopslope))
+#else
+			if (backsector->ceilingheight <= frontsector->floorheight
+			 || backsector->floorheight >= frontsector->ceilingheight)
+#endif
+			{
+				// closed door
+				markceiling = markfloor = true;
+			}
 		}
 
 		// check TOP TEXTURE
-		if (worldhigh < worldtop
+		if (!bothceilingssky // never draw the top texture if on
+			&& (worldhigh < worldtop
 #ifdef ESLOPE
 				|| worldhighslope < worldtopslope
 #endif
-			)
+			))
 		{
 			fixed_t texheight;
 			// top texture
@@ -2287,11 +2300,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 		// check BOTTOM TEXTURE
-		if (worldlow > worldbottom
+		if (!bothfloorssky // never draw the bottom texture if on
+			&& (worldlow > worldbottom
 #ifdef ESLOPE
 				|| worldlowslope > worldbottomslope
 #endif
-			)     //seulement si VISIBLE!!!
+			))     //seulement si VISIBLE!!!
 		{
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
@@ -2364,16 +2378,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						continue;
 
 #ifdef ESLOPE
-					if (*rover->t_slope) {
-						high1 = P_GetZAt(*rover->t_slope, segleft.x, segleft.y);
-						highslope1 = P_GetZAt(*rover->t_slope, segright.x, segright.y);
-					} else
-						high1 = highslope1 = *rover->topheight;
-					if (*rover->b_slope) {
-						low1 = P_GetZAt(*rover->b_slope, segleft.x, segleft.y);
-						lowslope1 = P_GetZAt(*rover->b_slope, segright.x, segright.y);
-					} else
-						low1 = lowslope1 = *rover->bottomheight;
+					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
 
 					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 						continue;
@@ -2405,16 +2411,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						}
 
 #ifdef ESLOPE
-						if (*r2->t_slope) {
-							high2 = P_GetZAt(*r2->t_slope, segleft.x, segleft.y);
-							highslope2 = P_GetZAt(*r2->t_slope, segright.x, segright.y);
-						} else
-							high2 = highslope2 = *r2->topheight;
-						if (*r2->b_slope) {
-							low2 = P_GetZAt(*r2->b_slope, segleft.x, segleft.y);
-							lowslope2 = P_GetZAt(*r2->b_slope, segright.x, segright.y);
-						} else
-							low2 = lowslope2 = *r2->bottomheight;
+						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
 
 						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
@@ -2447,16 +2445,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						continue;
 
 #ifdef ESLOPE
-					if (*rover->t_slope) {
-						high1 = P_GetZAt(*rover->t_slope, segleft.x, segleft.y);
-						highslope1 = P_GetZAt(*rover->t_slope, segright.x, segright.y);
-					} else
-						high1 = highslope1 = *rover->topheight;
-					if (*rover->b_slope) {
-						low1 = P_GetZAt(*rover->b_slope, segleft.x, segleft.y);
-						lowslope1 = P_GetZAt(*rover->b_slope, segright.x, segright.y);
-					} else
-						low1 = lowslope1 = *rover->bottomheight;
+					SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+					SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
 
 					if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 						continue;
@@ -2488,17 +2478,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						}
 
 #ifdef ESLOPE
-						if (*r2->t_slope) {
-							high2 = P_GetZAt(*r2->t_slope, segleft.x, segleft.y);
-							highslope2 = P_GetZAt(*r2->t_slope, segright.x, segright.y);
-						} else
-							high2 = highslope2 = *r2->topheight;
-						if (*r2->b_slope) {
-							low2 = P_GetZAt(*r2->b_slope, segleft.x, segleft.y);
-							lowslope2 = P_GetZAt(*r2->b_slope, segright.x, segright.y);
-						} else
-							low2 = lowslope2 = *r2->bottomheight;
-
+						SLOPEPARAMS(*r2->t_slope, high2, highslope2, *r2->topheight)
+						SLOPEPARAMS(*r2->b_slope, low2,  lowslope2,  *r2->bottomheight)
+#undef SLOPEPARAMS
 						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
 						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
@@ -2677,7 +2659,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//  and doesn't need to be marked.
 	if (frontsector->heightsec == -1)
 	{
-		if ((
+		if (frontsector->floorpic != skyflatnum
+		&& (
 #ifdef ESLOPE
 			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
 #endif
@@ -2687,12 +2670,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markfloor = false;
 		}
 
-		if ((
+		if (frontsector->ceilingpic != skyflatnum
+		&& (
 #ifdef ESLOPE
 			frontsector->c_slope ? P_GetZAt(frontsector->c_slope, viewx, viewy) :
 #endif
-			frontsector->ceilingheight) <= viewz &&
-		    frontsector->ceilingpic != skyflatnum)
+			frontsector->ceilingheight) <= viewz)
 		{
 			// below view plane
 			markceiling = false;
@@ -3150,6 +3133,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			for (i = 0; i < numffloors; i++)
 				R_ExpandPlane(ffloor[i].plane, rw_x, rw_stopx - 1);
 		}
+#ifdef POLYOBJECTS_PLANES
+		// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
+		if (curline->polyseg)
+		{
+			for (i = 0; i < numffloors; i++)
+			{
+				if (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg)
+					continue;
+				if (ffloor[i].plane->minx > rw_x)
+					ffloor[i].plane->minx = rw_x;
+
+				if (ffloor[i].plane->maxx < rw_stopx - 1)
+					ffloor[i].plane->maxx = rw_stopx - 1;
+			}
+		}
+#endif
 	}
 
 #ifdef WALLSPLATS
