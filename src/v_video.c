@@ -1321,7 +1321,7 @@ void V_DrawPatchFill(patch_t *pat)
 //
 // Fade all the screen buffer, so that the menu is more readable,
 // especially now that we use the small hufont in the menus...
-// If color is 0x00 to 0xFF, draw transtable (strength range 0-10).
+// If color is 0x00 to 0xFF, draw transtable (strength range 0-9).
 // Else, use COLORMAP lump (strength range 0-31).
 // IF YOU ARE NOT CAREFUL, THIS CAN AND WILL CRASH!
 // I have kept the safety checks out of this function;
@@ -1331,12 +1331,6 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 {
 	if (!strength)
 		return;
-
-	if (!(color & 0xFF00) && strength == 10)
-	{
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, color);
-		return;
-	}
 
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
@@ -1349,7 +1343,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 	{
 		const UINT8 *fadetable = ((color & 0xFF00) // Color is not palette index?
 		? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
-		: ((UINT8 *)transtables + ((10-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
+		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
 		const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
 		UINT8 *buf = screens[0];
 
