@@ -509,12 +509,12 @@ void HWR_FadeScreenMenuBack(UINT16 color, UINT8 strength)
 	if (color & 0xFF00) // Do COLORMAP fade.
 	{
 		Surf.FlatColor.rgba = UINT2RGBA(0x01010160);
-		Surf.FlatColor.s.alpha = 0xFF - (strength*8);
+		Surf.FlatColor.s.alpha = (strength*8);
 	}
 	else // Do TRANSMAP** fade.
 	{
 		Surf.FlatColor.rgba = pLocalPalette[color].rgba;
-		Surf.FlatColor.s.alpha = (UINT8)((float)(10-strength)*25.5f);
+		Surf.FlatColor.s.alpha = (UINT8)(strength*25.5f);
 	}
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
 }
