@@ -11,7 +11,7 @@
 
 #ifdef CMAKECONFIG
 
-#define ASSET_HASH_SRB2_SRB   "${SRB2_ASSET_srb2.srb_HASH}"
+#define ASSET_HASH_SRB2_PK3   "${SRB2_ASSET_srb2.pk3_HASH}"
 #define ASSET_HASH_PLAYER_DTA "${SRB2_ASSET_player.dta_HASH}"
 #define ASSET_HASH_RINGS_DTA  "${SRB2_ASSET_rings.dta_HASH}"
 #define ASSET_HASH_ZONES_DTA  "${SRB2_ASSET_zones.dta_HASH}"
@@ -31,7 +31,7 @@
 /* Manually defined asset hashes for non-CMake builds
  * Last updated 2015 / 05 / 03
  */
-#define ASSET_HASH_SRB2_SRB   "c1b9577687f8a795104aef4600720ea7"
+#define ASSET_HASH_SRB2_PK3   "c1b9577687f8a795104aef4600720ea7"
 #define ASSET_HASH_ZONES_DTA  "303838c6c534d9540288360fa49cca60"
 #define ASSET_HASH_PLAYER_DTA "cfca0f1c73023cbbd8f844f45480f799"
 #define ASSET_HASH_RINGS_DTA  "85901ad4bf94637e5753d2ac2c03ea26"
