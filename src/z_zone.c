@@ -407,6 +407,11 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 	}
 }
 
+void Z_FreeTag(INT32 tagnum)
+{
+	Z_FreeTags(tagnum, tagnum);
+}
+
 //
 // Z_CheckMemCleanup
 //
