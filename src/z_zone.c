@@ -541,7 +541,7 @@ void Z_CheckHeap(INT32 i)
 #ifdef PARANOIA
 void Z_ChangeTag2(void *ptr, INT32 tag, const char *file, INT32 line)
 #else
-void Z_ChangeTag2(void *ptr, INT32 tag)
+void Z_ChangeTag(void *ptr, INT32 tag)
 #endif
 {
 	memblock_t *block;
@@ -675,7 +675,7 @@ char *Z_StrDup(const char *s)
 #ifdef PARANOIA
 void Z_SetUser2(void *ptr, void **newuser, const char *file, INT32 line)
 #else
-void Z_SetUser2(void *ptr, void **newuser)
+void Z_SetUser(void *ptr, void **newuser)
 #endif
 {
 	memblock_t *block;
