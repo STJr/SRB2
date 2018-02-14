@@ -3984,7 +3984,8 @@ FILESTAMP
 						INT32 k = *txtpak++; // playernum
 						const size_t txtsize = txtpak[0]+1;
 
-						M_Memcpy(D_GetTextcmd(i, k), txtpak, txtsize);
+						if (i >= gametic) // Don't copy old net commands
+							M_Memcpy(D_GetTextcmd(i, k), txtpak, txtsize);
 						txtpak += txtsize;
 					}
 				}
