@@ -584,11 +584,12 @@ void Z_ChangeTag(void *ptr, INT32 tag)
 }
 
 /** Calculates memory usage for a given set of tags.
+  * NOTE: Z_TagUsage is now just a macro of this function.
+  *
   * \param lowtag The lowest tag to consider.
   * \param hightag The highest tag to consider.
   * \return Number of bytes currently allocated in the heap for the
   *         given tags.
-  * \sa Z_TagUsage
   */
 size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
 {
