@@ -82,6 +82,59 @@ typedef struct memblock_s
 	struct memblock_s *next, *prev;
 } ATTRPACK memblock_t;
 
+// both the head and tail of the zone memory block list
+static memblock_t head;
+
+//
+// Function prototypes
+//
+static void Command_Memfree_f(void);
+#ifdef ZDEBUG
+static void Command_Memdump_f(void);
+#endif
+
+// --------------------------
+// Zone memory initialisation
+// --------------------------
+
+/** Initialises zone memory.
+  * Used at game startup.
+  *
+  * \sa I_GetFreeMem, Command_Memfree_f, Command_Memdump_f
+  */
+void Z_Init(void)
+{
+	UINT32 total, memfree;
+
+	memset(&head, 0x00, sizeof(head));
+
+	head.next = head.prev = &head;
+
+	memfree = I_GetFreeMem(&total)>>20;
+	CONS_Printf("System memory: %uMB - Free: %uMB\n", total>>20, memfree);
+
+	// Note: This allocates memory. Watch out.
+	COM_AddCommand("memfree", Command_Memfree_f);
+
+#ifdef ZDEBUG
+	COM_AddCommand("memdump", Command_Memdump_f);
+#endif
+}
+
+
+// ----------------------
+// Zone memory allocation
+// ----------------------
+
+/** Returns the corresponding memblock_t for a given memory block.
+  *
+  * \param ptr A pointer to allocated memory,
+  *             assumed to have been allocated with Z_Malloc/Z_Calloc.
+  * \param func A string containing the name of the function that called this,
+  *              to be printed if the function I_Errors
+  * \return A pointer to the memblock_t for the given memory.
+  * \sa Z_Free, Z_ReallocAlign
+  */
 #ifdef ZDEBUG
 #define Ptr2Memblock(s, f) Ptr2Memblock2(s, f, __FILE__, __LINE__)
 static memblock_t *Ptr2Memblock2(void *ptr, const char* func, const char *file, INT32 line)
@@ -131,32 +184,12 @@ static memblock_t *Ptr2Memblock(void *ptr, const char* func)
 
 }
 
-static memblock_t head;
-
-static void Command_Memfree_f(void);
-#ifdef ZDEBUG
-static void Command_Memdump_f(void);
-#endif
-
-void Z_Init(void)
-{
-	UINT32 total, memfree;
-
-	memset(&head, 0x00, sizeof(head));
-
-	head.next = head.prev = &head;
-
-	memfree = I_GetFreeMem(&total)>>20;
-	CONS_Printf("System memory: %uMB - Free: %uMB\n", total>>20, memfree);
-
-	// Note: This allocates memory. Watch out.
-	COM_AddCommand("memfree", Command_Memfree_f);
-
-#ifdef ZDEBUG
-	COM_AddCommand("memdump", Command_Memdump_f);
-#endif
-}
-
+/** Frees allocated memory.
+  *
+  * \param ptr A pointer to allocated memory,
+  *             assumed to have been allocated with Z_Malloc/Z_Calloc.
+  * \sa Z_FreeTags
+  */
 #ifdef ZDEBUG
 void Z_Free2(void *ptr, const char *file, INT32 line)
 #else
@@ -206,7 +239,11 @@ void Z_Free(void *ptr)
 #endif
 }
 
-// malloc() that doesn't accept failure.
+/** malloc() that doesn't accept failure.
+  *
+  * \param size Amount of memory to be allocated, in bytes.
+  * \return A pointer to the allocated memory.
+  */
 static void *xm(size_t size)
 {
 	const size_t padedsize = size+sizeof (size_t);
@@ -227,10 +264,18 @@ static void *xm(size_t size)
 	return p;
 }
 
-// Z_Malloc
-// You can pass Z_Malloc() a NULL user if the tag is less than
-// PU_PURGELEVEL.
-
+/** The Z_MallocAlign function.
+  * Allocates a block of memory, adds it to a linked list so we can keep track of it.
+  *
+  * \param size Amount of memory to be allocated, in bytes.
+  * \param tag Purge tag.
+  * \param user The address of a pointer to the memory to be allocated.
+  *             When the memory is freed by Z_Free later,
+  *             the pointer at this address will then be automatically set to NULL.
+  * \param alignbits The alignment of the memory to be allocated, in bits. Can be 0.
+  * \note You can pass Z_Malloc() a NULL user if the tag is less than PU_PURGELEVEL.
+  * \sa Z_CallocAlign, Z_ReallocAlign
+  */
 #ifdef ZDEBUG
 void *Z_Malloc2(size_t size, INT32 tag, void *user, INT32 alignbits,
 	const char *file, INT32 line)
@@ -307,6 +352,19 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 	return given;
 }
 
+/** The Z_CallocAlign function.
+  * Allocates a block of memory, adds it to a linked list so we can keep track of it.
+  * Unlike Z_MallocAlign, this also initialises the bytes to zero.
+  *
+  * \param size Amount of memory to be allocated, in bytes.
+  * \param tag Purge tag.
+  * \param user The address of a pointer to the memory to be allocated.
+  *             When the memory is freed by Z_Free later,
+  *             the pointer at this address will then be automatically set to NULL.
+  * \param alignbits The alignment of the memory to be allocated, in bits. Can be 0.
+  * \note You can pass Z_Calloc() a NULL user if the tag is less than PU_PURGELEVEL.
+  * \sa Z_MallocAlign, Z_ReallocAlign
+  */
 #ifdef ZDEBUG
 void *Z_Calloc2(size_t size, INT32 tag, void *user, INT32 alignbits, const char *file, INT32 line)
 #else
@@ -323,10 +381,26 @@ void *Z_CallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 #endif
 }
 
+/** The Z_ReallocAlign function.
+  * Reallocates a block of memory with a new size.
+  *
+  * \param ptr A pointer to allocated memory,
+  *             assumed to have been allocated with Z_Malloc/Z_Calloc.
+  *             If NULL, this function instead acts as a wrapper for Z_CallocAlign.
+  * \param size New size of memory block, in bytes.
+  *             If zero, then the memory is freed and NULL is returned.
+  * \param tag New purge tag.
+  * \param user The address of a pointer to the memory to be reallocated.
+  *             This can be a different user to the one originally assigned to the memory block.
+  * \param alignbits The alignment of the memory to be allocated, in bits. Can be 0.
+  * \return A pointer to the reallocated memory. Can be NULL if memory was freed.
+  * \note You can pass Z_Realloc() a NULL user if the tag is less than PU_PURGELEVEL.
+  * \sa Z_MallocAlign, Z_CallocAlign
+  */
 #ifdef ZDEBUG
 void *Z_Realloc2(void *ptr, size_t size, INT32 tag, void *user, INT32 alignbits, const char *file, INT32 line)
 #else
-void *Z_ReallocAlign(void *ptr, size_t size,INT32 tag, void *user,  INT32 alignbits)
+void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignbits)
 #endif
 {
 	void *rez;
@@ -393,6 +467,11 @@ void *Z_ReallocAlign(void *ptr, size_t size,INT32 tag, void *user,  INT32 alignb
 	return rez;
 }
 
+/** Frees all memory for a given set of tags.
+  *
+  * \param lowtag The lowest tag to consider.
+  * \param hightag The highest tag to consider.
+  */
 void Z_FreeTags(INT32 lowtag, INT32 hightag)
 {
 	memblock_t *block, *next;
@@ -407,22 +486,25 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 	}
 }
 
-//
-// Z_CheckMemCleanup
-//
-// TODO: Currently blocks >= PU_PURGELEVEL are freed every
-// CLEANUPCOUNT. It might be better to keep track of
-// the total size of all purgable memory and free it when the
-// size exceeds some value.
-//
-// This was in Z_Malloc, but was freeing data at
-// unsafe times. Now it is only called when it is safe
-// to cleanup memory.
+// -----------------
+// Utility functions
+// -----------------
 
+// starting value of nextcleanup
 #define CLEANUPCOUNT 2000
 
+// number of function calls left before next cleanup
 static INT32 nextcleanup = CLEANUPCOUNT;
 
+/** This was in Z_Malloc, but was freeing data at
+  * unsafe times. Now it is only called when it is safe
+  * to cleanup memory.
+  *
+  * \todo Currently blocks >= PU_PURGELEVEL are freed every
+  *       CLEANUPCOUNT. It might be better to keep track of
+  *       the total size of all purgable memory and free it when the
+  *       size exceeds some value.
+  */
 void Z_CheckMemCleanup(void)
 {
 	if (nextcleanup-- == 0)
@@ -538,6 +620,17 @@ void Z_CheckHeap(INT32 i)
 	}
 }
 
+// ------------------------
+// Zone memory modification
+// ------------------------
+
+/** Changes a memory block's purge tag.
+  *
+  * \param ptr A pointer to allocated memory,
+  *             assumed to have been allocated with Z_Malloc/Z_Calloc.
+  * \param tag The new tag.
+  * \sa Z_SetUser
+  */
 #ifdef PARANOIA
 void Z_ChangeTag2(void *ptr, INT32 tag, const char *file, INT32 line)
 #else
@@ -583,91 +676,13 @@ void Z_ChangeTag(void *ptr, INT32 tag)
 	block->tag = tag;
 }
 
-/** Calculates memory usage for a given set of tags.
-  * NOTE: Z_TagUsage is now just a macro of this function.
+/** Changes a memory block's user.
   *
-  * \param lowtag The lowest tag to consider.
-  * \param hightag The highest tag to consider.
-  * \return Number of bytes currently allocated in the heap for the
-  *         given tags.
+  * \param ptr A pointer to allocated memory,
+  *             assumed to have been allocated with Z_Malloc/Z_Calloc.
+  * \param newuser The new user for the memory block.
+  * \sa Z_ChangeTag
   */
-size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
-{
-	size_t cnt = 0;
-	memblock_t *rover;
-
-	for (rover = head.next; rover != &head; rover = rover->next)
-	{
-		if (rover->tag < lowtag || rover->tag > hightag)
-			continue;
-		cnt += rover->size + sizeof *rover;
-	}
-
-	return cnt;
-}
-
-static void Command_Memfree_f(void)
-{
-	UINT32 freebytes, totalbytes;
-
-	Z_CheckHeap(-1);
-	CONS_Printf("\x82%s", M_GetText("Memory Info\n"));
-	CONS_Printf(M_GetText("Total heap used   : %7s KB\n"), sizeu1(Z_TagsUsage(0, INT32_MAX)>>10));
-	CONS_Printf(M_GetText("Static            : %7s KB\n"), sizeu1(Z_TagUsage(PU_STATIC)>>10));
-	CONS_Printf(M_GetText("Static (sound)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_SOUND)>>10));
-	CONS_Printf(M_GetText("Static (music)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_MUSIC)>>10));
-	CONS_Printf(M_GetText("Locked cache      : %7s KB\n"), sizeu1(Z_TagUsage(PU_CACHE)>>10));
-	CONS_Printf(M_GetText("Level             : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVEL)>>10));
-	CONS_Printf(M_GetText("Special thinker   : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVSPEC)>>10));
-	CONS_Printf(M_GetText("All purgable      : %7s KB\n"),
-		sizeu1(Z_TagsUsage(PU_PURGELEVEL, INT32_MAX)>>10));
-
-#ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
-	{
-		CONS_Printf(M_GetText("Patch info headers: %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
-		CONS_Printf(M_GetText("Mipmap patches    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));
-		CONS_Printf(M_GetText("HW Texture cache  : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
-		CONS_Printf(M_GetText("Plane polygons    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
-		CONS_Printf(M_GetText("HW Texture used   : %7d KB\n"), HWR_GetTextureUsed()>>10);
-	}
-#endif
-
-	CONS_Printf("\x82%s", M_GetText("System Memory Info\n"));
-	freebytes = I_GetFreeMem(&totalbytes);
-	CONS_Printf(M_GetText("    Total physical memory: %7u KB\n"), totalbytes>>10);
-	CONS_Printf(M_GetText("Available physical memory: %7u KB\n"), freebytes>>10);
-}
-
-#ifdef ZDEBUG
-static void Command_Memdump_f(void)
-{
-	memblock_t *block;
-	INT32 mintag = 0, maxtag = INT32_MAX;
-	INT32 i;
-
-	if ((i = COM_CheckParm("-min")))
-		mintag = atoi(COM_Argv(i + 1));
-
-	if ((i = COM_CheckParm("-max")))
-		maxtag = atoi(COM_Argv(i + 1));
-
-	for (block = head.next; block != &head; block = block->next)
-		if (block->tag >= mintag && block->tag <= maxtag)
-		{
-			char *filename = strrchr(block->ownerfile, PATHSEP[0]);
-			CONS_Printf("[%3d] %s (%s) bytes @ %s:%d\n", block->tag, sizeu1(block->size), sizeu2(block->realsize), filename ? filename + 1 : block->ownerfile, block->ownerline);
-		}
-}
-#endif
-
-// Creates a copy of a string.
-char *Z_StrDup(const char *s)
-{
-	return strcpy(ZZ_Alloc(strlen(s) + 1), s);
-}
-
-
 #ifdef PARANOIA
 void Z_SetUser2(void *ptr, void **newuser, const char *file, INT32 line)
 #else
@@ -702,4 +717,107 @@ void Z_SetUser(void *ptr, void **newuser)
 
 	block->user = (void*)newuser;
 	*newuser = ptr;
+}
+
+// -----------------
+// Zone memory usage
+// -----------------
+
+/** Calculates memory usage for a given set of tags.
+  *
+  * \param lowtag The lowest tag to consider.
+  * \param hightag The highest tag to consider.
+  * \return Number of bytes currently allocated in the heap for the
+  *         given tags.
+  */
+size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
+{
+	size_t cnt = 0;
+	memblock_t *rover;
+
+	for (rover = head.next; rover != &head; rover = rover->next)
+	{
+		if (rover->tag < lowtag || rover->tag > hightag)
+			continue;
+		cnt += rover->size + sizeof *rover;
+	}
+
+	return cnt;
+}
+
+// -----------------------
+// Miscellaneous functions
+// -----------------------
+
+/** The function called by the "memfree" console command.
+  * Prints the memory being used by each part of the game to the console.
+  */
+static void Command_Memfree_f(void)
+{
+	UINT32 freebytes, totalbytes;
+
+	Z_CheckHeap(-1);
+	CONS_Printf("\x82%s", M_GetText("Memory Info\n"));
+	CONS_Printf(M_GetText("Total heap used   : %7s KB\n"), sizeu1(Z_TagsUsage(0, INT32_MAX)>>10));
+	CONS_Printf(M_GetText("Static            : %7s KB\n"), sizeu1(Z_TagUsage(PU_STATIC)>>10));
+	CONS_Printf(M_GetText("Static (sound)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_SOUND)>>10));
+	CONS_Printf(M_GetText("Static (music)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_MUSIC)>>10));
+	CONS_Printf(M_GetText("Locked cache      : %7s KB\n"), sizeu1(Z_TagUsage(PU_CACHE)>>10));
+	CONS_Printf(M_GetText("Level             : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVEL)>>10));
+	CONS_Printf(M_GetText("Special thinker   : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVSPEC)>>10));
+	CONS_Printf(M_GetText("All purgable      : %7s KB\n"),
+		sizeu1(Z_TagsUsage(PU_PURGELEVEL, INT32_MAX)>>10));
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		CONS_Printf(M_GetText("Patch info headers: %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
+		CONS_Printf(M_GetText("Mipmap patches    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));
+		CONS_Printf(M_GetText("HW Texture cache  : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
+		CONS_Printf(M_GetText("Plane polygons    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
+		CONS_Printf(M_GetText("HW Texture used   : %7d KB\n"), HWR_GetTextureUsed()>>10);
+	}
+#endif
+
+	CONS_Printf("\x82%s", M_GetText("System Memory Info\n"));
+	freebytes = I_GetFreeMem(&totalbytes);
+	CONS_Printf(M_GetText("    Total physical memory: %7u KB\n"), totalbytes>>10);
+	CONS_Printf(M_GetText("Available physical memory: %7u KB\n"), freebytes>>10);
+}
+
+#ifdef ZDEBUG
+/** The function called by the "memdump" console command.
+  * Prints zone memory debugging information (i.e. tag, size, location in code allocated).
+  * Can be all memory allocated in game, or between a set of tags (if -min/-max args used).
+  * This command is available only if ZDEBUG is enabled.
+  */
+static void Command_Memdump_f(void)
+{
+	memblock_t *block;
+	INT32 mintag = 0, maxtag = INT32_MAX;
+	INT32 i;
+
+	if ((i = COM_CheckParm("-min")))
+		mintag = atoi(COM_Argv(i + 1));
+
+	if ((i = COM_CheckParm("-max")))
+		maxtag = atoi(COM_Argv(i + 1));
+
+	for (block = head.next; block != &head; block = block->next)
+		if (block->tag >= mintag && block->tag <= maxtag)
+		{
+			char *filename = strrchr(block->ownerfile, PATHSEP[0]);
+			CONS_Printf("[%3d] %s (%s) bytes @ %s:%d\n", block->tag, sizeu1(block->size), sizeu2(block->realsize), filename ? filename + 1 : block->ownerfile, block->ownerline);
+		}
+}
+#endif
+
+/** Creates a copy of a string.
+  *
+  * \param s The string to be copied.
+  * \return A copy of the string, allocated in zone memory.
+  */
+char *Z_StrDup(const char *s)
+{
+	return strcpy(ZZ_Alloc(strlen(s) + 1), s);
 }
