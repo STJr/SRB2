@@ -407,11 +407,6 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 	}
 }
 
-void Z_FreeTag(INT32 tagnum)
-{
-	Z_FreeTags(tagnum, tagnum);
-}
-
 //
 // Z_CheckMemCleanup
 //
@@ -610,12 +605,7 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
 	return cnt;
 }
 
-size_t Z_TagUsage(INT32 tagnum)
-{
-	return Z_TagsUsage(tagnum, tagnum);
-}
-
-void Command_Memfree_f(void)
+static void Command_Memfree_f(void)
 {
 	UINT32 freebytes, totalbytes;
 

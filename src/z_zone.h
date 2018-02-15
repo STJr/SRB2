@@ -59,7 +59,7 @@
 #define PU_HWRPATCHINFO_UNLOCKED 103
 
 void Z_Init(void);
-void Z_FreeTag(INT32 tagnum);
+#define Z_FreeTag(tagnum) Z_FreeTags(tagnum, tagnum)
 void Z_FreeTags(INT32 lowtag, INT32 hightag);
 void Z_CheckMemCleanup(void);
 void Z_CheckHeap(INT32 i);
@@ -97,7 +97,7 @@ void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignb
 #define Z_Calloc(s,t,u)    Z_CallocAlign(s, t, u, 0)
 #define Z_Realloc(p,s,t,u) Z_ReallocAlign(p, s, t, u, 0)
 
-size_t Z_TagUsage(INT32 tagnum);
+#define Z_TagUsage(tagnum) Z_TagsUsage(tagnum, tagnum)
 size_t Z_TagsUsage(INT32 lowtag, INT32 hightag);
 
 char *Z_StrDup(const char *in);
