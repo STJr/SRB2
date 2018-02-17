@@ -1223,7 +1223,13 @@ void D_SRB2Main(void)
 	CONS_Printf("R_Init(): Init SRB2 refresh daemon.\n");
 	R_Init();
 
-	// setting up sound
+	// setting up sound	
+	if (dedicated)
+	{
+		nosound = true;
+		nomidimusic = nodigimusic = true;
+	}
+	else
 	CONS_Printf("S_Init(): Setting up sound.\n");
 	if (M_CheckParm("-nosound"))
 		nosound = true;
@@ -1239,7 +1245,7 @@ void D_SRB2Main(void)
 	I_StartupSound();
 	I_InitMusic();
 	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-
+	
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
 
