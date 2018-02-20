@@ -842,8 +842,9 @@ boolean CON_Responder(event_t *ev)
 			return true;
 		}
 
-		// don't eat the key
-		return false;
+		// ...why shouldn't it eat the key? if it doesn't, it just means you
+		// can control Sonic from the console, which is silly
+		return true; //return false;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)
