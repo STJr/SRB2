@@ -1860,7 +1860,6 @@ static void readframe(MYFILE *f, INT32 num)
 	char *word1;
 	char *word2 = NULL;
 	char *tmp;
-	INT32 j;
 
 	do
 	{
@@ -1874,16 +1873,6 @@ static void readframe(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
-
-			for (j = 0; s[j] != '\n'; j++)
-			{
-				if (s[j] == '=')
-				{
-					j += 2;
-					j = atoi(&s[j]);
-					break;
-				}
-			}
 
 			word1 = strtok(s, " ");
 			if (word1)
