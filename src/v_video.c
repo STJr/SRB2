@@ -1819,6 +1819,16 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 	} while (--digits);
 }
 
+// Draw an act number for a level title
+// Todo: actually draw two-digit numbers as two act num patches
+void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, INT32 num)
+{
+	if (num < 0 || num > 19)
+		return; // not supported
+
+	V_DrawScaledPatch(x, y, flags, ttlnum[num]);
+}
+
 // Write a string using the credit font
 // NOTE: the text is centered for screens larger than the base width
 //
@@ -1981,6 +1991,16 @@ INT32 V_LevelNameHeight(const char *string)
 	}
 
 	return w;
+}
+
+// For ST_drawLevelTitle
+// Returns the width of the act num patch
+INT32 V_LevelActNumWidth(INT32 num)
+{
+	if (num < 0 || num > 19)
+		return 0; // not a valid number
+
+	return SHORT(ttlnum[num]->width);
 }
 
 //

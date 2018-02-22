@@ -77,7 +77,6 @@ static patch_t *race1;
 static patch_t *race2;
 static patch_t *race3;
 static patch_t *racego;
-static patch_t *ttlnum;
 static patch_t *nightslink;
 static patch_t *curweapon;
 static patch_t *normring;
@@ -992,13 +991,10 @@ static void ST_drawLevelTitle(void)
 	if (!(timeinmap > 2 && timeinmap-3 < 110))
 		return;
 
+	lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
+
 	if (actnum > 0)
-	{
-		ttlnum = W_CachePatchName(va("TTL%.2d", actnum), PU_CACHE);
-		lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2)) - SHORT(ttlnum->width);
-	}
-	else
-		lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
+		lvlttlxpos -= V_LevelActNumWidth(actnum);
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
 	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
@@ -1026,7 +1022,7 @@ static void ST_drawLevelTitle(void)
 	}
 
 	if (actnum)
-		V_DrawScaledPatch(ttlnumxpos, zoney, 0, ttlnum);
+		V_DrawLevelActNum(ttlnumxpos, zoney, 0, actnum);
 
 	V_DrawLevelTitle(lvlttlxpos, lvlttly, 0, lvlttl);
 

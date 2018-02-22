@@ -63,6 +63,7 @@ extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
+extern patch_t *ttlnum[20];
 extern patch_t *emeraldpics[7];
 extern patch_t *tinyemeraldpics[7];
 extern patch_t *rflagico;
