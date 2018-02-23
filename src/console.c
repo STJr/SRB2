@@ -1043,7 +1043,7 @@ boolean CON_Responder(event_t *ev)
 
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
-		return false;
+		return true; // even if key can't be printed, eat it anyway
 
 	// add key to cmd line here
 	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
