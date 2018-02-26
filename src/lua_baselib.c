@@ -2269,7 +2269,7 @@ static int lib_sSetMusicPosition(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_SetMusicPosition(position));
 	else
-		lua_pushboolean(L, false);
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2316,7 +2316,7 @@ static int lib_sResumeMusic(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		S_ResumeAudio();
 	else
-		lua_pushboolean(L, false);
+		lua_pushnil(L);
 	return 1;
 }
 
