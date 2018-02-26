@@ -2347,6 +2347,8 @@ static int lib_sDigitalPlaying(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, !S_MIDIPlaying() && S_MusicPlaying());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2362,6 +2364,8 @@ static int lib_sMidiPlaying(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_MIDIPlaying());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2377,6 +2381,8 @@ static int lib_sMusicPlaying(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_MusicPlaying());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2392,13 +2398,25 @@ static int lib_sMusicPaused(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_MusicPaused());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
 static int lib_sMusicName(lua_State *L)
 {
+	player_t *player = NULL;
 	NOHUD
-	lua_pushstring(L, S_MusicName());
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushstring(L, S_MusicName());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
