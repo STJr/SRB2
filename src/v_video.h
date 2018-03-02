@@ -73,13 +73,21 @@ extern RGBA_t *pMasterPalette;
 #define V_CHARCOLORSHIFT     12
 #define V_CHARCOLORMASK      0x0000F000
 // for simplicity's sake, shortcuts to specific colors
-#define V_PURPLEMAP          0x00001000
+#define V_MAGENTAMAP         0x00001000
 #define V_YELLOWMAP          0x00002000
 #define V_GREENMAP           0x00003000
 #define V_BLUEMAP            0x00004000
 #define V_REDMAP             0x00005000
 #define V_GRAYMAP            0x00006000
 #define V_ORANGEMAP          0x00007000
+#define V_SKYMAP             0x00008000
+#define V_PURPLEMAP          0x00009000
+#define V_AQUAMAP            0x0000A000
+#define V_PERIDOTMAP         0x0000B000
+#define V_AZUREMAP           0x0000C000
+#define V_BROWNMAP           0x0000D000
+#define V_ROSYMAP            0x0000E000
+#define V_INVERTMAP          0x0000F000
 
 // use bits 17-20 for alpha transparency
 #define V_ALPHASHIFT         16

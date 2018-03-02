@@ -1329,9 +1329,6 @@ void V_DrawPatchFill(patch_t *pat)
 //
 void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 {
-	if (!strength)
-		return;
-
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
@@ -1395,20 +1392,36 @@ static const UINT8 *V_GetStringColormap(INT32 colorflags)
 {
 	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
 	{
-	case 1: // 0x81, purple
-		return purplemap;
-	case 2: // 0x82, yellow
+	case  1: // 0x81, magenta
+		return magentamap;
+	case  2: // 0x82, yellow
 		return yellowmap;
-	case 3: // 0x83, lgreen
+	case  3: // 0x83, lgreen
 		return lgreenmap;
-	case 4: // 0x84, blue
+	case  4: // 0x84, blue
 		return bluemap;
-	case 5: // 0x85, red
+	case  5: // 0x85, red
 		return redmap;
-	case 6: // 0x86, gray
+	case  6: // 0x86, gray
 		return graymap;
-	case 7: // 0x87, orange
+	case  7: // 0x87, orange
 		return orangemap;
+	case  8: // 0x88, sky
+		return skymap;
+	case  9: // 0x89, purple
+		return purplemap;
+	case 10: // 0x8A, aqua
+		return aquamap;
+	case 11: // 0x8B, peridot
+		return peridotmap;
+	case 12: // 0x8C, azure
+		return azuremap;
+	case 13: // 0x8D, brown
+		return brownmap;
+	case 14: // 0x8E, rosy
+		return rosymap;
+	case 15: // 0x8F, invert
+		return invertmap;
 	default: // reset
 		return NULL;
 	}

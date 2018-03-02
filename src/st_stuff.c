@@ -1684,7 +1684,7 @@ static inline void ST_drawRaceHUD(void)
 		if (bounce < 3)
 		{
 			height -= (2 - bounce);
-			if (!bounce)
+			if (!(P_AutoPause() || paused) && !bounce)
 					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 		}
 		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCZ(height)), V_NOSCALESTART|V_PERPLAYER, racenum);
