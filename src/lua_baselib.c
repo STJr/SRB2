@@ -2232,7 +2232,12 @@ static int lib_sChangeMusic(lua_State *L)
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
 
 	if (!player || P_IsLocalPlayer(player))
+	{
 		S_ChangeMusic(music_name, music_flags, looping);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
 	return 0;
 }
 
@@ -2251,7 +2256,7 @@ static int lib_sSpeedMusic(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_SpeedMusic(speed));
 	else
-		lua_pushboolean(L, false);
+		lua_pushnil(L);
 	return 1;
 }
 
