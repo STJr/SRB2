@@ -593,8 +593,8 @@ void HWR_FreeTextureCache(void)
 
 	// free all hardware-converted graphics cached in the heap
 	// our gool is only the textures since user of the texture is the texture cache
-	Z_FreeTags(PU_HWRCACHE, PU_HWRCACHE);
-	Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRCACHE_UNLOCKED);
+	Z_FreeTag(PU_HWRCACHE);
+	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 
 	// Alam: free the Z_Blocks before freeing it's users
 
@@ -641,8 +641,8 @@ void HWR_SetPalette(RGBA_t *palette)
 	// now flush data texture cache so 32 bit texture are recomputed
 	if (patchformat == GR_RGBA || textureformat == GR_RGBA)
 	{
-		Z_FreeTags(PU_HWRCACHE, PU_HWRCACHE);
-		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRCACHE_UNLOCKED);
+		Z_FreeTag(PU_HWRCACHE);
+		Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 	}
 }
 

@@ -497,16 +497,34 @@ static void P_NetArchiveWorld(void)
 	UINT8 *put;
 
 	// reload the map just to see difference
-	const mapsector_t *ms;
-	const mapsidedef_t *msd;
-	const maplinedef_t *mld;
+	mapsector_t *ms;
+	mapsidedef_t *msd;
+	maplinedef_t *mld;
 	const sector_t *ss = sectors;
 	UINT8 diff, diff2;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
 
-	ms = W_CacheLumpNum(lastloadedmaplumpnum+ML_SECTORS, PU_CACHE);
+	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
+	{ // HACK: Open wad file rather quickly so we can get the data from the relevant lumps
+		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+#define retrieve_mapdata(d, f)\
+		d = Z_Malloc((f)->size, PU_CACHE, NULL); \
+		M_Memcpy(d, wadData + (f)->filepos, (f)->size)
+		retrieve_mapdata(ms, fileinfo + ML_SECTORS);
+		retrieve_mapdata(mld, fileinfo + ML_LINEDEFS);
+		retrieve_mapdata(msd, fileinfo + ML_SIDEDEFS);
+#undef retrieve_mapdata
+		Z_Free(wadData); // we're done with this now
+	}
+	else // phew it's just a WAD
+	{
+			ms = W_CacheLumpNum(lastloadedmaplumpnum+ML_SECTORS, PU_CACHE);
+			mld = W_CacheLumpNum(lastloadedmaplumpnum+ML_LINEDEFS, PU_CACHE);
+			msd = W_CacheLumpNum(lastloadedmaplumpnum+ML_SIDEDEFS, PU_CACHE);
+	}
 
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
@@ -637,8 +655,6 @@ static void P_NetArchiveWorld(void)
 
 	WRITEUINT16(put, 0xffff);
 
-	mld = W_CacheLumpNum(lastloadedmaplumpnum+ML_LINEDEFS, PU_CACHE);
-	msd = W_CacheLumpNum(lastloadedmaplumpnum+ML_SIDEDEFS, PU_CACHE);
 	// do lines
 	for (i = 0; i < numlines; i++, mld++, li++)
 	{

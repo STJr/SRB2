@@ -79,7 +79,7 @@
 
 # SRB2 data files
 D_DIR?=../bin/Resources
-D_FILES=$(D_DIR)/srb2.srb \
+D_FILES=$(D_DIR)/srb2.pk3 \
 	$(D_DIR)/player.dta \
 	$(D_DIR)/rings.wpn \
 	$(D_DIR)/drill.dta \
