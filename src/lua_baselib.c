@@ -954,8 +954,14 @@ static int lib_pRestoreMusic(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_RestoreMusic(player);
-	return 0;
+	if (!player || P_IsLocalPlayer(player))
+	{
+		P_RestoreMusic(player);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
 }
 
 static int lib_pSpawnShieldOrb(lua_State *L)
