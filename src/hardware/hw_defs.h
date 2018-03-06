@@ -20,8 +20,8 @@
 #define _HWR_DEFS_
 #include "../doomtype.h"
 
-#define ZCLIP_PLANE 4.0f
-#define NZCLIP_PLANE 0.9f
+#define ZCLIP_PLANE 4.0f // Used for the actual game drawing
+#define NZCLIP_PLANE 0.9f // Seems to be only used for the HUD and screen textures
 
 // ==========================================================================
 //                                                               SIMPLE TYPES

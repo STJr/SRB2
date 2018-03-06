@@ -59,7 +59,7 @@ typedef struct GLRGBAFloat GLRGBAFloat;
 #define      N_PI_DEMI               (M_PIl/2.0f) //(1.5707963268f)
 
 #define      ASPECT_RATIO            (1.0f)  //(320.0f/200.0f)
-#define      FAR_CLIPPING_PLANE      150000.0f // Draw further! Tails 01-21-2001
+#define      FAR_CLIPPING_PLANE      32768.0f // Draw further! Tails 01-21-2001
 static float NEAR_CLIPPING_PLANE =   NZCLIP_PLANE;
 
 // **************************************************************************

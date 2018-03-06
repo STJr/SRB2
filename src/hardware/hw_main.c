@@ -5330,12 +5330,13 @@ static void HWR_DrawSkyBackground(player_t *player)
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
 	//         and thus, the near clipping plane is set to 3.99
-	v[0].x = v[3].x = -4.0f;
-	v[1].x = v[2].x =  4.0f;
-	v[0].y = v[1].y = -4.0f;
-	v[2].y = v[3].y =  4.0f;
+	// Sryder: Just use the near clipping plane value then
+	v[0].x = v[3].x = -ZCLIP_PLANE-1;
+	v[1].x = v[2].x =  ZCLIP_PLANE+1;
+	v[0].y = v[1].y = -ZCLIP_PLANE-1;
+	v[2].y = v[3].y =  ZCLIP_PLANE+1;
 
-	v[0].z = v[1].z = v[2].z = v[3].z = 4.0f;
+	v[0].z = v[1].z = v[2].z = v[3].z = ZCLIP_PLANE+1;
 
 	// X
 
@@ -5403,7 +5404,7 @@ static inline void HWR_ClearView(void)
 	                 (INT32)gr_viewwindowy,
 	                 (INT32)(gr_viewwindowx + gr_viewwidth),
 	                 (INT32)(gr_viewwindowy + gr_viewheight),
-	                 3.99f);
+	                 ZCLIP_PLANE);
 	HWD.pfnClearBuffer(false, true, 0);
 
 	//disable clip window - set to full size
