@@ -1742,7 +1742,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 305: // continuous
 		case 306: // each time
 		case 307: // once
-			if (!(actor && actor->player && actor->player->charability != dist/10))
+			if (!(actor && actor->player && actor->player->charability == dist/10))
 				return false;
 			break;
 		case 309: // continuous
@@ -2437,73 +2437,81 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 414: // Play SFX
 			{
-				fixed_t sfxnum;
+				INT32 sfxnum;
 
 				sfxnum = sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 
-				if (line->tag != 0 && line->flags & ML_EFFECT5)
+				if (sfxnum == sfx_None)
+					return; // Do nothing!
+				if (sfxnum < sfx_None || sfxnum >= NUMSFX)
 				{
-					sector_t *sec;
-
-					while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
+					return;
+				}
+				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
+				{
+					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
-						sec = &sectors[secnum];
-						S_StartSound(&sec->soundorg, sfxnum);
+						// Additionally play the sound from tagged sectors' soundorgs
+						sector_t *sec;
+
+						while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+						{
+							sec = &sectors[secnum];
+							S_StartSound(&sec->soundorg, sfxnum);
+						}
+					}
+					else if (mo) // A mobj must have triggered the executor
+					{
+						// Only trigger if mobj is touching the tag
+						ffloor_t *rover;
+						boolean foundit = false;
+
+						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						{
+							if (rover->master->frontsector->tag != line->tag)
+								continue;
+
+							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							foundit = true;
+						}
+
+						if (mo->subsector->sector->tag == line->tag)
+							foundit = true;
+
+						if (!foundit)
+							return;
 					}
 				}
-				else if (line->tag != 0 && mo)
+
+				if (line->flags & ML_NOCLIMB)
 				{
-					// Only trigger if mobj is touching the tag
-					ffloor_t *rover;
-					boolean foundit = false;
-
-					for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-					{
-						if (rover->master->frontsector->tag != line->tag)
-							continue;
-
-						if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						foundit = true;
-					}
-
-					if (mo->subsector->sector->tag == line->tag)
-						foundit = true;
-
-					if (!foundit)
-						return;
-				}
-
-				if (sfxnum < NUMSFX && sfxnum > sfx_None)
-				{
-					if (line->flags & ML_NOCLIMB)
-					{
-						// play the sound from nowhere, but only if display player triggered it
-						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
-							S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_EFFECT4)
-					{
-						// play the sound from nowhere
+					// play the sound from nowhere, but only if display player triggered it
+					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
 						S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_BLOCKMONSTERS)
-					{
-						// play the sound from calling sector's soundorg
-						if (callsec)
-							S_StartSound(&callsec->soundorg, sfxnum);
-						else if (mo)
-							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-					}
+				}
+				else if (line->flags & ML_EFFECT4)
+				{
+					// play the sound from nowhere
+					S_StartSound(NULL, sfxnum);
+				}
+				else if (line->flags & ML_BLOCKMONSTERS)
+				{
+					// play the sound from calling sector's soundorg
+					if (callsec)
+						S_StartSound(&callsec->soundorg, sfxnum);
 					else if (mo)
-					{
-						// play the sound from mobj that triggered it
-						S_StartSound(mo, sfxnum);
-					}
+						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+				}
+				else if (mo)
+				{
+					// play the sound from mobj that triggered it
+					S_StartSound(mo, sfxnum);
 				}
 			}
 			break;
@@ -3476,7 +3484,7 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 //
 // Is player standing on the sector's "ground"?
 //
-static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
+static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
 	if (mo->eflags & MFE_VERTICALFLIP)
 		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
@@ -3611,20 +3619,56 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				{
 					if (roversector)
 					{
-						if (players[i].mo->subsector->sector != roversector)
+						if (players[i].mo->subsector->sector == roversector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == roversector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
+
 						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
 							goto DoneSection2;
 					}
 					else
 					{
-						if (players[i].mo->subsector->sector != sector)
+						if (players[i].mo->subsector->sector == sector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == sector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
 
 						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
 							goto DoneSection2;
 					}
 				}
+			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -4369,6 +4413,7 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 {
 	sector_t *sector;
 	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
 
 	sector = mo->subsector->sector;
 	if (!sector->ffloors)
@@ -4376,8 +4421,6 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
 		if (!rover->master->frontsector->special)
 			continue;
 
@@ -4425,6 +4468,8 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 	return NULL;
 }
 
+#define TELEPORTED (player->mo->subsector->sector != originalsector)
+
 /** Checks if a player is standing on or is inside a 3D floor (e.g. water) and
   * applies any specials.
   *
@@ -4433,12 +4478,12 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
   */
 static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 {
+	sector_t *originalsector = player->mo->subsector->sector;
 	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
 		if (!rover->master->frontsector->special)
 			continue;
 
@@ -4482,7 +4527,10 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
 			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		{
 			P_ProcessSpecialSector(player, rover->master->frontsector, sector);
+			if TELEPORTED return;
+		}
 	}
 
 	// Allow sector specials to be applied to polyobjects!
@@ -4493,7 +4541,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		boolean touching = false;
 		boolean inside = false;
 
-		while(po)
+		while (po)
 		{
 			if (po->flags & POF_NOSPECIALS)
 			{
@@ -4569,6 +4617,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			}
 
 			P_ProcessSpecialSector(player, polysec, sector);
+			if TELEPORTED return;
 
 			po = (polyobj_t *)(po->link.next);
 		}
@@ -4632,6 +4681,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 				// requires touching floor.
 				break;
 			}
+			/* FALLTHRU */
+
 		case 1: // Starpost activator
 		case 5: // Fan sector
 		case 6: // Super Sonic Transform
@@ -4673,39 +4724,42 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
   */
 void P_PlayerInSpecialSector(player_t *player)
 {
-	sector_t *sector;
+	sector_t *originalsector;
+	sector_t *loopsector;
 	msecnode_t *node;
 
 	if (!player->mo)
 		return;
 
-	// Do your ->subsector->sector first
-	sector = player->mo->subsector->sector;
-	P_PlayerOnSpecial3DFloor(player, sector);
-	// After P_PlayerOnSpecial3DFloor, recheck if the player is in that sector,
-	// because the player can be teleported in between these times.
-	if (sector == player->mo->subsector->sector)
-		P_RunSpecialSectorCheck(player, sector);
+	originalsector = player->mo->subsector->sector;
 
-	// Iterate through touching_sectorlist
+	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
+	if TELEPORTED return;
+
+	P_RunSpecialSectorCheck(player, originalsector);
+	if TELEPORTED return;
+
+	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
-		sector = node->m_sector;
+		loopsector = node->m_sector;
 
-		if (sector == player->mo->subsector->sector) // Don't duplicate
+		if (loopsector == originalsector) // Don't duplicate
 			continue;
 
 		// Check 3D floors...
-		P_PlayerOnSpecial3DFloor(player, sector);
+		P_PlayerOnSpecial3DFloor(player, loopsector);
+		if TELEPORTED return;
 
-		if (!(sector->flags & SF_TRIGGERSPECIAL_TOUCH))
-			return;
-		// After P_PlayerOnSpecial3DFloor, recheck if the player is in that sector,
-		// because the player can be teleported in between these times.
-		if (sector == player->mo->subsector->sector)
-			P_RunSpecialSectorCheck(player, sector);
+		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		P_RunSpecialSectorCheck(player, loopsector);
+		if TELEPORTED return;
 	}
 }
+
+#undef TELEPORTED
 
 /** Animate planes, scroll walls, etc. and keeps track of level timelimit and exits if time is up.
   *
@@ -5162,13 +5216,11 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[2] = FRACUNIT;
 
 	if (noadjust)
-	{
 		airbob->vars[7] = airbob->sector->ceilingheight-16*FRACUNIT;
-		airbob->vars[6] = airbob->vars[7]
-			- (sec->ceilingheight - sec->floorheight);
-	}
 	else
 		airbob->vars[7] = airbob->sector->ceilingheight - P_AproxDistance(sourceline->dx, sourceline->dy);
+	airbob->vars[6] = airbob->vars[7]
+		- (sec->ceilingheight - sec->floorheight);
 
 	airbob->vars[3] = airbob->vars[2];
 
@@ -5711,6 +5763,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloor);
 				if (lines[i].special == 54)
 					break;
+				/* FALLTHRU */
+
 			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
 					EV_DoCeiling(&lines[i], bounceCeiling);
@@ -5722,7 +5776,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloorCrush);
 
 				if (lines[i].special == 57)
-						break; //only move the floor
+					break; //only move the floor
+				/* FALLTHRU */
 
 			case 58: // New super cool and awesome moving ceiling crush type
 				if (lines[i].backsector)
@@ -6828,6 +6883,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 533)
 					break;
+				/* FALLTHRU */
 
 			case 523:	// carry objects on ceiling
 				dx = FixedMul(dx, CARRYFACTOR);
@@ -6842,6 +6898,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 530)
 					break;
+				/* FALLTHRU */
 
 			case 520:	// carry objects on floor
 				dx = FixedMul(dx, CARRYFACTOR);

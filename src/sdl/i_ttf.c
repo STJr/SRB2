@@ -26,10 +26,7 @@
 #include "i_ttf.h"
 
 // Search directories to find aforementioned TTF file.
-#ifdef _PS3
-#include <sysutil/video.h>
-#define FONTSEARCHPATH1 "/dev_hdd0/game/SRB2-PS3_/USRDIR/etc"
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define FONTSEARCHPATH1 "/usr/share/fonts"
 #define FONTSEARCHPATH2 "/usr/local/share/fonts"
 #define FONTSEARCHPATH3 "/usr/games/SRB2"
@@ -233,16 +230,9 @@ void I_StartupTTF(UINT32 fontpointsize, Uint32 initflags, Uint32 vidmodeflags)
 {
 	char *fontpath = NULL;
 	INT32 fontstatus = -1;
-#ifdef _PS3
-	videoState state;
-	videoGetState(0, 0, &state);
-	videoGetResolution(state.displayMode.resolution, &res);
-	bitsperpixel = 24;
-#else
 	res.width = 320;
 	res.height = 200;
 	bitsperpixel = 8;
-#endif
 
 	// what's the point of trying to display an error?
 	// SDL_ttf is not started, can't display anything to screen (presumably)...

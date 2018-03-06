@@ -1028,6 +1028,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 #endif
 			return false;
 		}
+		netbuffer->ack = netbuffer->ackreturn = 0; // don't hold over values from last packet sent/received
 		M_Memcpy(&reboundstore[rebound_head], netbuffer,
 			doomcom->datalength);
 		reboundsize[rebound_head] = doomcom->datalength;
@@ -1363,7 +1364,7 @@ boolean D_CheckNetGame(void)
 #else
 	if (M_CheckParm("-debugfile"))
 	{
-		char filename[20];
+		char filename[21];
 		INT32 k = doomcom->consoleplayer - 1;
 		if (M_IsNextParm())
 			k = atoi(M_GetNextParm()) - 1;

@@ -47,7 +47,7 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32)
+#ifdef _WIN32
 #include "SDL_syswm.h"
 #endif
 
@@ -194,7 +194,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
 	else
@@ -941,6 +941,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
+			/* FALLTHRU */
 		case GS_TIMEATTACK:
 		case GS_WAITINGPLAYERS:
 			return skip; // Skip odd frames
