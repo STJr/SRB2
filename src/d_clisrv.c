@@ -1177,9 +1177,7 @@ static inline void CL_DrawConnectionStatus(void)
 				size_t endhalfpos = strlen(filename)-12;
 				// display as first 16 chars + ... + last 12 chars
 				// which should add up to 31 if our math(s) is correct
-				strncpy(tempname, filename, 16);
-				strncpy(tempname+16, "...", 3);
-				strncpy(tempname+16+3, filename+endhalfpos, 12);
+				snprintf(tempname, 31, "%.16s...%.12s", filename, filename+endhalfpos);
 			}
 			else // we can copy the whole thing in safely
 			{
