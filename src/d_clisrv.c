@@ -1157,7 +1157,7 @@ static inline void CL_DrawConnectionStatus(void)
 		if (lastfilenum != -1)
 		{
 			INT32 dldlength;
-			static char tempname[32];
+			static char tempname[28];
 			fileneeded_t *file = &fileneeded[lastfilenum];
 			char *filename = file->filename;
 
@@ -1172,16 +1172,16 @@ static inline void CL_DrawConnectionStatus(void)
 			// offset filename to just the name only part
 			filename += strlen(filename) - nameonlylength(filename);
 
-			if (strlen(filename) > 31) // too long to display fully
+			if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
 			{
-				size_t endhalfpos = strlen(filename)-12;
-				// display as first 16 chars + ... + last 12 chars
-				// which should add up to 31 if our math(s) is correct
-				snprintf(tempname, 31, "%.16s...%.12s", filename, filename+endhalfpos);
+				size_t endhalfpos = strlen(filename)-10;
+				// display as first 14 chars + ... + last 10 chars
+				// which should add up to 27 if our math(s) is correct
+				snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
 			}
 			else // we can copy the whole thing in safely
 			{
-				strncpy(tempname, filename, 31);
+				strncpy(tempname, filename, sizeof(tempname)-1);
 			}
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
