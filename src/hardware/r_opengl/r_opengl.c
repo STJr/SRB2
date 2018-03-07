@@ -107,10 +107,19 @@ static GLint       viewport[4];
 #endif
 
 // Yay for arbitrary  numbers! NextTexAvail is buggy for some reason.
-static GLuint screentexture = 60000;
-static GLuint startScreenWipe = 60001;
-static GLuint endScreenWipe = 60002;
-static GLuint finalScreenTexture = 60003;
+// Sryder:	NextTexAvail is broken for these because palette changes or changes to the texture filter or antialiasing
+//			flush all of the stored textures, leaving them unavailable at times such as between levels
+//			These need to start at 0 and be set to their number, and be reset to 0 when deleted so that intel GPUs
+//			can know when the textures aren't there, as textures are always considered resident in their virtual memory
+// TODO:	Store them in a more normal way
+#define SCRTEX_SCREENTEXTURE 65535
+#define SCRTEX_STARTSCREENWIPE 65534
+#define SCRTEX_ENDSCREENWIPE 65533
+#define SCRTEX_FINALSCREENTEXTURE 65532
+static GLuint screentexture = 0;
+static GLuint startScreenWipe = 0;
+static GLuint endScreenWipe = 0;
+static GLuint finalScreenTexture = 0;
 #if 0
 GLuint screentexture = FIRST_TEX_AVAIL;
 #endif
@@ -263,6 +272,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 /* texture mapping */ //GL_EXT_copy_texture
 #ifndef KOS_GL_COMPATIBILITY
 #define pglCopyTexImage2D glCopyTexImage2D
+#define pglCopyTexSubImage2D glCopyTexSubImage2D
 #endif
 
 #else //!STATIC_OPENGL
@@ -387,6 +397,8 @@ static PFNglBindTexture pglBindTexture;
 /* texture mapping */ //GL_EXT_copy_texture
 typedef void (APIENTRY * PFNglCopyTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 static PFNglCopyTexImage2D pglCopyTexImage2D;
+typedef void (APIENTRY * PFNglCopyTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+static PFNglCopyTexSubImage2D pglCopyTexSubImage2D;
 #endif
 /* GLU functions */
 typedef GLint (APIENTRY * PFNgluBuild2DMipmaps) (GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
@@ -503,6 +515,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglBindTexture , glBindTexture)
 
 	GETOPENGLFUNC(pglCopyTexImage2D , glCopyTexImage2D)
+	GETOPENGLFUNC(pglCopyTexSubImage2D , glCopyTexSubImage2D)
 
 #undef GETOPENGLFUNC
 
@@ -654,6 +667,10 @@ void SetModelView(GLint w, GLint h)
 {
 //	DBG_Printf("SetModelView(): %dx%d\n", (int)w, (int)h);
 
+	// The screen textures need to be flushed if the width or height change so that they be remade for the correct size
+	if (screen_width != w || screen_height != h)
+		FlushScreenTextures();
+
 	screen_width = w;
 	screen_height = h;
 
@@ -801,6 +818,7 @@ void Flush(void)
 		screentexture = FIRST_TEX_AVAIL;
 	}
 #endif
+
 	tex_downloaded = 0;
 }
 
@@ -2156,10 +2174,25 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 }
 #endif //SHUFFLE
 
+// Sryder:	This needs to be called whenever the screen changes resolution in order to reset the screen textures to use
+//			a new size
+EXPORT void HWRAPI(FlushScreenTextures) (void)
+{
+	pglDeleteTextures(1, &screentexture);
+	pglDeleteTextures(1, &startScreenWipe);
+	pglDeleteTextures(1, &endScreenWipe);
+	pglDeleteTextures(1, &finalScreenTexture);
+	screentexture = 0;
+	startScreenWipe = 0;
+	endScreenWipe = 0;
+	finalScreenTexture = 0;
+}
+
 // Create Screen to fade from
 EXPORT void HWRAPI(StartScreenWipe) (void)
 {
 	INT32 texsize = 2048;
+	boolean firstTime = (startScreenWipe == 0);
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 512)
@@ -2168,27 +2201,38 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 		texsize = 1024;
 
 	// Create screen texture
+	if (firstTime)
+		startScreenWipe = SCRTEX_STARTSCREENWIPE;
 	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
+
+	if (firstTime)
+	{
 #ifdef KOS_GL_COMPATIBILITY
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
 #else
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 #endif
-	Clamp2D(GL_TEXTURE_WRAP_S);
-	Clamp2D(GL_TEXTURE_WRAP_T);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+#endif
+	}
+	else
+#ifndef KOS_GL_COMPATIBILITY
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
 #endif
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+	tex_downloaded = startScreenWipe;
 }
 
 // Create Screen to fade to
 EXPORT void HWRAPI(EndScreenWipe)(void)
 {
 	INT32 texsize = 2048;
+	boolean firstTime = (endScreenWipe == 0);
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 512)
@@ -2197,21 +2241,32 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 		texsize = 1024;
 
 	// Create screen texture
+	if (firstTime)
+		endScreenWipe = SCRTEX_ENDSCREENWIPE;
 	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
+
+	if (firstTime)
+	{
 #ifdef KOS_GL_COMPATIBILITY
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
 #else
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 #endif
-	Clamp2D(GL_TEXTURE_WRAP_S);
-	Clamp2D(GL_TEXTURE_WRAP_T);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+#endif
+	}
+	else
+#ifndef KOS_GL_COMPATIBILITY
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
 #endif
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+
+	tex_downloaded = endScreenWipe;
 }
 
 
@@ -2253,7 +2308,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 
 	pglEnd();
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+	tex_downloaded = screentexture;
 }
 
 // Do screen fades!
@@ -2344,6 +2399,7 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 		pglDisable(GL_TEXTURE_2D); // disable the texture in the 2nd texture unit
 		pglActiveTexture(GL_TEXTURE0);
+		tex_downloaded = endScreenWipe;
 	}
 	else
 	{
@@ -2369,11 +2425,10 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 		pglTexCoord2f(xfix, 0.0f);
 		pglVertex3f(1.0f, -1.0f, 1.0f);
 	pglEnd();
+	tex_downloaded = endScreenWipe;
 #ifndef MINI_GL_COMPATIBILITY
 	}
 #endif
-
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 
@@ -2381,6 +2436,7 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 EXPORT void HWRAPI(MakeScreenTexture) (void)
 {
 	INT32 texsize = 2048;
+	boolean firstTime = (screentexture == 0);
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 512)
@@ -2389,7 +2445,12 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 		texsize = 1024;
 
 	// Create screen texture
+	if (firstTime)
+		screentexture = SCRTEX_SCREENTEXTURE;
 	pglBindTexture(GL_TEXTURE_2D, screentexture);
+
+	if (firstTime)
+	{
 #ifdef KOS_GL_COMPATIBILITY
 	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
 	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
@@ -2400,15 +2461,21 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 	Clamp2D(GL_TEXTURE_WRAP_S);
 	Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+#endif
+	}
+	else
+#ifndef KOS_GL_COMPATIBILITY
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
 #endif
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+	tex_downloaded = screentexture;
 }
 
 EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 {
 	INT32 texsize = 2048;
+	boolean firstTime = (finalScreenTexture == 0);
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 512)
@@ -2417,21 +2484,31 @@ EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 		texsize = 1024;
 
 	// Create screen texture
+	if (firstTime)
+		finalScreenTexture = SCRTEX_FINALSCREENTEXTURE;
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
+
+	if (firstTime)
+	{
 #ifdef KOS_GL_COMPATIBILITY
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
 #else
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 #endif
-	Clamp2D(GL_TEXTURE_WRAP_S);
-	Clamp2D(GL_TEXTURE_WRAP_T);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+#endif
+	}
+	else
+#ifndef KOS_GL_COMPATIBILITY
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
 #endif
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+	tex_downloaded = finalScreenTexture;
 
 }
 
@@ -2476,7 +2553,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	SetModelView(screen_width, screen_height);
 	SetStates();
 
-	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
+	tex_downloaded = finalScreenTexture;
 }
 
 #endif //HWRENDER

@@ -5443,6 +5443,8 @@ void HWR_SetViewSize(void)
 
 	gr_pspritexscale = gr_viewwidth / BASEVIDWIDTH;
 	gr_pspriteyscale = ((vid.height*gr_pspritexscale*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width;
+
+	HWD.pfnFlushScreenTextures();
 }
 
 // ==========================================================================
@@ -6036,6 +6038,7 @@ void HWR_Shutdown(void)
 	HWR_FreeExtraSubsectors();
 	HWR_FreePolyPool();
 	HWR_FreeTextureCache();
+	HWD.pfnFlushScreenTextures();
 }
 
 void transform(float *cx, float *cy, float *cz)
