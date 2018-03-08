@@ -769,6 +769,9 @@ UINT8 *HWR_GetScreenshot(void)
 	if (!buf)
 		return NULL;
 	// returns 24bit 888 RGB
+#ifdef HAVE_SDL
+	if (!HWD.pfnReadScreenTexture(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf))
+#endif
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 	return buf;
 }
@@ -782,7 +785,18 @@ boolean HWR_Screenshot(const char *lbmname)
 		return false;
 
 	// returns 24bit 888 RGB
+#ifdef HAVE_SDL
+	// Sryder:	SDL2 uses borderless fullscreen mode, and creates a screen texture to upscale to the screen size.
+	//			This breaks screenshots because the code here takes a screenshot of just the resolution from the bottom
+	//			left corner, while the "true" resolution is the monitor resolution. We can either take a screenshot of
+	//			the true resolution or just use the already made screen texture
+	// NOTE:	The SDL1.2 version should get a return of false from ReadScreenTexture as no screen texture will have
+	//			been made, this will also mean that if the screen texture doesn't exist for some reason it will fall
+	//			back to the old version
+	if (!HWD.pfnReadScreenTexture(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf))
+#endif
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
+
 
 #ifdef USE_PNG
 	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, NULL);

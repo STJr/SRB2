@@ -260,6 +260,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglTexEnvi glTexEnvi
 #define pglTexParameteri glTexParameteri
 #define pglTexImage2D glTexImage2D
+#define pglGetTexImage glGetTexImage
 
 /* Fog */
 #define pglFogf glFogf
@@ -381,6 +382,8 @@ typedef void (APIENTRY * PFNglTexParameteri) (GLenum target, GLenum pname, GLint
 static PFNglTexParameteri pglTexParameteri;
 typedef void (APIENTRY * PFNglTexImage2D) (GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 static PFNglTexImage2D pglTexImage2D;
+typedef void (APIENTRY * PFNglGetTexImage) (GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels);
+static PFNglGetTexImage pglGetTexImage;
 
 /* Fog */
 typedef void (APIENTRY * PFNglFogf) (GLenum pname, GLfloat param);
@@ -507,6 +510,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglTexEnvi , glTexEnvi)
 	GETOPENGLFUNC(pglTexParameteri , glTexParameteri)
 	GETOPENGLFUNC(pglTexImage2D , glTexImage2D)
+	GETOPENGLFUNC(pglGetTexImage , glGetTexImage)
 
 	GETOPENGLFUNC(pglFogf , glFogf)
 	GETOPENGLFUNC(pglFogfv , glFogfv)
@@ -932,6 +936,81 @@ EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height,
 	}
 #endif
 }
+
+#ifdef HAVE_SDL
+EXPORT boolean HWRAPI(ReadScreenTexture) (INT32 x, INT32 y, INT32 width,
+                                            INT32 height, INT32 dst_stride,
+                                            UINT16 * dst_data)
+{
+#ifdef KOS_GL_COMPATIBILITY
+	(void)x;
+	(void)y;
+	(void)width;
+	(void)height;
+	(void)dst_stride;
+	(void)dst_data;
+#else
+	INT32 i, j;
+	INT32 texsize = 2048;
+	GLubyte *image;
+	// DBG_Printf ("ReadScreenTexture()\n");
+	if (screentexture == 0)
+		return false; // No screen texture
+
+	if(screen_width <= 1024)
+		texsize = 1024;
+	if(screen_width <= 512)
+		texsize = 512;
+
+	if (x < 0)
+		x = 0;
+	if (x + width > screen_width)
+		width = screen_width - x;
+	if (y < 0)
+		y = 0;
+	if (y + height > screen_height)
+		height = screen_height - y;
+
+	image = malloc(texsize*texsize*3*sizeof (*image));
+	if (!image)
+		return false;
+	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
+	tex_downloaded = finalScreenTexture;
+	pglGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+	if (dst_stride == width*3)
+	{
+		UINT8 *dest = (void *)dst_data;
+		for (i = y + height-1; i >= y; i--)
+		{
+			for (j = x; j < width + x; j++)
+			{
+				dest[((height-1-i-y)*width+j-x)*3] = image[(i*texsize+j)*3];
+				dest[((height-1-i-y)*width+j-x)*3+1] = image[(i*texsize+j)*3+1];
+				dest[((height-1-i-y)*width+j-x)*3+2] = image[(i*texsize+j)*3+2];
+			}
+		}
+	}
+	else
+	{
+		// Sryder: NOTE: I'm not entirely sure this works, as far as I know nothing in the game uses it.
+		for (i = y + height-1; i >= y; i--)
+		{
+			for (j = x; j < width + x; j++)
+			{
+				dst_data[(height-1-i-y)*width+j-x] =
+				(UINT16)(
+				                 ((image[(i*texsize+j)*3]>>3)<<11) |
+				                 ((image[(i*texsize+j)*3+1]>>2)<<5) |
+				                 ((image[(i*texsize+j)*3+2]>>3)));
+			}
+		}
+	}
+	free(image);
+	return true;
+#endif
+}
+#endif
 
 
 // -----------------+
