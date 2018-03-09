@@ -4565,6 +4565,33 @@ static void HWR_SortVisSprites(void)
 		gr_vsprsortedhead.prev->next = best;
 		gr_vsprsortedhead.prev = best;
 	}
+
+	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
+	//			mix and they want to be translucent. So let's place all the translucent sprites and MD2's AFTER
+	//			everything else, but still ordered of course, the depth buffer can handle the opaque ones plenty fine.
+	//			We just need to move all translucent ones to the end in order
+	// TODO:	Fully sort all sprites and MD2s with walls and floors, this part will be unnecessary after that
+	best = gr_vsprsortedhead.next;
+	for (i = 0; i < gr_visspritecount; i++)
+	{
+		if ((best->mobj->flags2 & MF2_SHADOW) || (best->mobj->frame & FF_TRANSMASK))
+		{
+			if (best == gr_vsprsortedhead.next)
+			{
+				gr_vsprsortedhead.next = best->next;
+			}
+			best->prev->next = best->next;
+			best->next->prev = best->prev;
+			best->prev = gr_vsprsortedhead.prev;
+			gr_vsprsortedhead.prev->next = best;
+			gr_vsprsortedhead.prev = best;
+			ds = best;
+			best = best->next;
+			ds->next = &gr_vsprsortedhead;
+		}
+		else
+			best = best->next;
+	}
 }
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked
@@ -4912,7 +4939,10 @@ static void HWR_DrawSprites(FTransform *stransform)
 		{
 #ifdef HWPRECIP
 			if (spr->precip)
+			{
+				HWD.pfnSetTransform(stransform);
 				HWR_DrawPrecipitationSprite(spr);
+			}
 			else
 #endif
 				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)

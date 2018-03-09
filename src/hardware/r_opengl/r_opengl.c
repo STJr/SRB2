@@ -2100,7 +2100,6 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration,
 	if (color)
 		pglDisable(GL_LIGHTING);
 	pglShadeModel(GL_FLAT);
-	pglDepthMask(GL_TRUE);
 	pglDisable(GL_CULL_FACE);
 }
 
