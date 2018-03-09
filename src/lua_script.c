@@ -478,10 +478,10 @@ static const struct {
 	{NULL,          ARCH_NULL}
 };
 
-static UINT8 GetUserdataArchType(void)
+static UINT8 GetUserdataArchType(int index)
 {
 	UINT8 i;
-	lua_getmetatable(gL, -1);
+	lua_getmetatable(gL, index);
 
 	for (i = 0; meta2arch[i].meta; i++)
 	{
@@ -560,7 +560,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TUSERDATA:
-		switch (GetUserdataArchType())
+		switch (GetUserdataArchType(myindex))
 		{
 		case ARCH_MOBJINFO:
 		{
@@ -777,6 +777,7 @@ static void ArchiveTables(void)
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
 				lua_pop(gL, 1);
 			}
+
 			lua_pop(gL, 1);
 		}
 		lua_pop(gL, 1);
