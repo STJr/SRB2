@@ -412,8 +412,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			{
 				fixed_t extralight = -(1<<FRACBITS) +
 				FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
-					abs(curline->v1->y - curline->v2->y),
-					abs(curline->v1->x - curline->v2->x))), 90<<FRACBITS)
+					abs(curline->v1->x - curline->v2->x),
+					abs(curline->v1->y - curline->v2->y))), 90<<FRACBITS)
 				* 2;
 				extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
 
@@ -442,8 +442,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			fixed_t extralight = -(1<<FRACBITS) +
 			FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
-				abs(curline->v1->y - curline->v2->y),
-				abs(curline->v1->x - curline->v2->x))), 90<<FRACBITS)
+				abs(curline->v1->x - curline->v2->x),
+				abs(curline->v1->y - curline->v2->y))), 90<<FRACBITS)
 			* 2;
 			extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
 
@@ -941,8 +941,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			{
 				fixed_t extralight = -(1<<FRACBITS) +
 				FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
-					abs(curline->v1->y - curline->v2->y),
-					abs(curline->v1->x - curline->v2->x))), 90<<FRACBITS)
+					abs(curline->v1->x - curline->v2->x),
+					abs(curline->v1->y - curline->v2->y))), 90<<FRACBITS)
 				* 2;
 				extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
 
@@ -1477,8 +1477,8 @@ static void R_RenderSegLoop (void)
 				{
 					fixed_t extralight = -(1<<FRACBITS) +
 					FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
-						abs(curline->v1->y - curline->v2->y),
-						abs(curline->v1->x - curline->v2->x))), 90<<FRACBITS)
+						abs(curline->v1->x - curline->v2->x),
+						abs(curline->v1->y - curline->v2->y))), 90<<FRACBITS)
 					* 2;
 					extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
 
@@ -2581,6 +2581,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (segtextured)
 	{
+		fixed_t extralight;
+
 		offsetangle = rw_normalangle-rw_angle1;
 
 		if (offsetangle > ANGLE_180)
@@ -2606,10 +2608,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 
-		fixed_t extralight = -(1<<FRACBITS) +
+		extralight = -(1<<FRACBITS) +
 		FixedDiv(AngleFixed(R_PointToAngle2(0, 0,
-			abs(curline->v1->y - curline->v2->y),
-			abs(curline->v1->x - curline->v2->x))), 90<<FRACBITS)
+			abs(curline->v1->x - curline->v2->x),
+			abs(curline->v1->y - curline->v2->y))), 90<<FRACBITS)
 		* 2;
 
 		extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
