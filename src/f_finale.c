@@ -969,7 +969,7 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
-	"Tim \"RedEnchilada\" Bordelon",
+	"Colette \"fickle\" Bordelon",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
@@ -979,11 +979,11 @@ static const char *credits[] = {
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
 	"\"SSNTails\"",
-	"Matthew \"Inuyasha\" Walsh",
+	"\"Kaito Sinclaire\"",
 	"",
 	"\1Programming",
 	"\1Assistance",
-	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
+	"\"chi.miru\"", // helped port slope drawing code from ZDoom
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
@@ -1047,7 +1047,7 @@ static const char *credits[] = {
 	"Rob Tisdell",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Matthew \"Inuyasha\" Walsh",
+	"\"Kaito Sinclaire\"",
 	"Marco \"Digiku\" Zafra",
 	"",
 	"\1Boss Design",
