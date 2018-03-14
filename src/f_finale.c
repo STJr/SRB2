@@ -1017,7 +1017,7 @@ static const char *credits[] = {
 	"\1Music and Sound",
 	"\1Production",
 	"Malcolm \"RedXVI\" Brown",
-	"David \"Bulmybag\" Bulmer",
+	"Dave \"DemonTomatoDave\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
 	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
