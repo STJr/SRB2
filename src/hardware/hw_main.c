@@ -774,7 +774,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	if (PolyFlags & (PF_Translucent|PF_Fog))
 	{
 		Surf.FlatColor.s.alpha = (UINT8)alpha;
-		PolyFlags |= PF_Modulated|PF_Occlude|PF_Clip;
+		PolyFlags |= PF_Modulated|PF_Clip;
 	}
 	else
 		PolyFlags |= PF_Masked|PF_Modulated|PF_Clip;
