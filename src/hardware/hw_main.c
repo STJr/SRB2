@@ -489,10 +489,10 @@ UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogbloc
 }
 
 
-static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color, UINT32 fadecolor) // Let's see if this can work
+static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color) // Let's see if this can work
 {
-	RGBA_t realcolor, fogcolor, surfcolor;
-	INT32 alpha, fogalpha;
+	RGBA_t realcolor, surfcolor;
+	INT32 alpha;
 
 	// Don't go out of bounds
 	if (light < 0)
@@ -501,13 +501,11 @@ static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color, UINT32 fadecolor) // L
 		light = 255;
 
 	realcolor.rgba = color;
-	fogcolor.rgba = fadecolor;
 
 	alpha = (realcolor.s.alpha*255)/25;
-	fogalpha = (fogcolor.s.alpha*255)/25;
 
-	// Fog blocks seem to get slightly more opaque with more opaque colourmap opacity, and much more opaque with darker brightness
-	surfcolor.s.alpha = (UINT8)(CALCLIGHT(light, ((0xFF-light)+alpha)/2)+CALCLIGHT(0xFF-light, ((light)+fogalpha)/2));
+	// at 255 brightness, alpha is between 0 and 127, at 0 brightness alpha will always be 255
+	surfcolor.s.alpha = (alpha*light)/(2*256)+255-light;
 
 	return surfcolor.s.alpha;
 }
@@ -773,7 +771,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, true);
 	}
 
-	if (PolyFlags & PF_Translucent)
+	if (PolyFlags & (PF_Translucent|PF_Fog))
 	{
 		Surf.FlatColor.s.alpha = (UINT8)alpha;
 		PolyFlags |= PF_Modulated|PF_Occlude|PF_Clip;
@@ -1380,7 +1378,7 @@ static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* 
 		wallVerts[0].y = wallVerts[1].y = bot;
 
 		if (!solid) // Don't draw it if there's more fog behind it
-			HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Translucent|PF_NoTexture, true, lightnum, colormap);
+			HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Fog|PF_NoTexture, true, lightnum, colormap);
 
 		top = height;
 	}
@@ -2306,7 +2304,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				{
 					FBITFIELD blendmode;
 
-					blendmode = PF_Translucent|PF_NoTexture;
+					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = rover->master->frontsector->lightlevel;
 					colormap = rover->master->frontsector->extra_colormap;
@@ -2314,11 +2312,11 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					if (rover->master->frontsector->extra_colormap)
 					{
 
-						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,rover->master->frontsector->extra_colormap->rgba,rover->master->frontsector->extra_colormap->fadergba);
+						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,rover->master->frontsector->extra_colormap->rgba);
 					}
 					else
 					{
-						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,NORMALFOG,FADEFOG);
+						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,NORMALFOG);
 					}
 
 					if (gr_frontsector->numlights)
@@ -2426,18 +2424,18 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				{
 					FBITFIELD blendmode;
 
-					blendmode = PF_Translucent|PF_NoTexture;
+					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = rover->master->frontsector->lightlevel;
 					colormap = rover->master->frontsector->extra_colormap;
 
 					if (rover->master->frontsector->extra_colormap)
 					{
-						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,rover->master->frontsector->extra_colormap->rgba,rover->master->frontsector->extra_colormap->fadergba);
+						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,rover->master->frontsector->extra_colormap->rgba);
 					}
 					else
 					{
-						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,NORMALFOG,FADEFOG);
+						Surf.FlatColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel,NORMALFOG);
 					}
 
 					if (gr_backsector->numlights)
@@ -3547,16 +3545,16 @@ static void HWR_Subsector(size_t num)
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					if (rover->master->frontsector->extra_colormap)
-						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba, rover->master->frontsector->extra_colormap->fadergba);
+						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba);
 					else
-						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, NORMALFOG, FADEFOG);
+						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, NORMALFOG);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   false,
 					                       *rover->bottomheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
-					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
+					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
 				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256) // SoM: Flags are more efficient
@@ -3610,16 +3608,16 @@ static void HWR_Subsector(size_t num)
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					if (rover->master->frontsector->extra_colormap)
-						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba, rover->master->frontsector->extra_colormap->fadergba);
+						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba);
 					else
-						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, NORMALFOG, FADEFOG);
+						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, NORMALFOG);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   true,
 					                       *rover->topheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
-					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
+					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
 				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)

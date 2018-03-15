@@ -1189,6 +1189,14 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
 #endif
 					break;
+				case PF_Fog & PF_Fog:
+					// Sryder: Fog
+					// multiplies input colour by input alpha, and destination colour by input colour, then adds them
+					pglBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+#endif
+					break;
 				default : // must be 0, otherwise it's an error
 					// No blending
 					pglBlendFunc(GL_ONE, GL_ZERO);   // the same as no blending
