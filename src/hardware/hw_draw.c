@@ -203,6 +203,18 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
+			// if it's meant to cover the whole screen, black out the rest
+			// cx and cy are possibly *slightly* off from float maths
+			// This is done before here compared to software because we directly alter cx and cy to centre
+			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
+			{
+				// Need to temporarily cache the real patch to get the colour of the top left pixel
+				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
+				const UINT8 *source = (const UINT8 *)(column) + 3;
+				HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
+				Z_Free(realpatch);
+			}
 			// centre screen
 			if (vid.width != BASEVIDWIDTH * vid.dupx)
 			{
@@ -220,14 +232,6 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				else if (!(option & V_SNAPTOTOP))
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
 			}
-			// if it's meant to cover the whole screen, black out the rest
-			// TODO
-			/*if (x == 0 && SHORT(gpatch->width) == BASEVIDWIDTH && y == 0 && SHORT(gpatch->height) == BASEVIDHEIGHT)
-			{
-				const column_t *column = (const column_t *)((const UINT8 *)((patch_t *)gpatch) + LONG(((patch_t *)gpatch)->columnofs[0]));
-				const UINT8 *source = (const UINT8 *)(column) + 3;
-				HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-			}*/
 		}
 	}
 
