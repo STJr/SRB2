@@ -2601,6 +2601,9 @@ EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 {
 	float xfix, yfix;
+	float origaspect, newaspect;
+	float xoff = 1, yoff = 1; // xoffset and yoffset for the polygon to have black bars around the screen
+	FRGBAFloat clearColour;
 	INT32 texsize = 2048;
 
 	if(screen_width <= 1024)
@@ -2611,28 +2614,43 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	xfix = 1/((float)(texsize)/((float)((screen_width))));
 	yfix = 1/((float)(texsize)/((float)((screen_height))));
 
-	//pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	origaspect = (float)screen_width / screen_height;
+	newaspect = (float)width / height;
+	if (origaspect < newaspect)
+	{
+		xoff = origaspect / newaspect;
+		yoff = 1;
+	}
+	else if (origaspect > newaspect)
+	{
+		xoff = 1;
+		yoff = newaspect / origaspect;
+	}
+
 	pglViewport(0, 0, width, height);
 
+	clearColour.red = clearColour.green = clearColour.blue = 0;
+	clearColour.alpha = 1;
+	ClearBuffer(true, false, &clearColour);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
 	pglBegin(GL_QUADS);
 
 		pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		// Bottom left
 		pglTexCoord2f(0.0f, 0.0f);
-		pglVertex3f(-1, -1, 1.0f);
+		pglVertex3f(-xoff, -yoff, 1.0f);
 
 		// Top left
 		pglTexCoord2f(0.0f, yfix);
-		pglVertex3f(-1, 1, 1.0f);
+		pglVertex3f(-xoff, yoff, 1.0f);
 
 		// Top right
 		pglTexCoord2f(xfix, yfix);
-		pglVertex3f(1, 1, 1.0f);
+		pglVertex3f(xoff, yoff, 1.0f);
 
 		// Bottom right
 		pglTexCoord2f(xfix, 0.0f);
-		pglVertex3f(1, -1, 1.0f);
+		pglVertex3f(xoff, -yoff, 1.0f);
 
 	pglEnd();
 
