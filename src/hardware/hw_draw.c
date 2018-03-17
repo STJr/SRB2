@@ -312,10 +312,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 //  | /|
 //  |/ |
 //  0--1
-	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
+	float dupx, dupy, fscale, fwidth, fheight;
 
 	if (alphalevel >= 10 && alphalevel < 13)
 		return;
@@ -323,28 +320,109 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	// make patch ready in hardware cache
 	HWR_GetPatch(gpatch);
 
+	dupx = (float)vid.dupx;
+	dupy = (float)vid.dupy;
+
 	switch (option & V_SCALEPATCHMASK)
 	{
 	case V_NOSCALEPATCH:
-		pdupx = pdupy = 2.0f;
+		dupx = dupy = 1.0f;
 		break;
 	case V_SMALLSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
+		dupx = (float)vid.smalldupx;
+		dupy = (float)vid.smalldupy;
 		break;
 	case V_MEDSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
+		dupx = (float)vid.meddupx;
+		dupy = (float)vid.meddupy;
 		break;
 	}
 
-	if (option & V_NOSCALESTART)
-		sdupx = sdupy = 2.0f;
+	dupx = dupy = (dupx < dupy ? dupx : dupy);
+	fscale = FIXED_TO_FLOAT(pscale);
 
-	v[0].x = v[3].x =     (cx*sdupx -           gpatch->leftoffset  * pdupx) / vid.width - 1;
-	v[2].x = v[1].x =     (cx*sdupx + ((w-sx) - gpatch->leftoffset) * pdupx) / vid.width - 1;
-	v[0].y = v[1].y = 1 - (cy*sdupy -           gpatch->topoffset   * pdupy) / vid.height;
-	v[2].y = v[3].y = 1 - (cy*sdupy + ((h-sy) - gpatch->topoffset)  * pdupy) / vid.height;
+	cy -= (float)gpatch->topoffset * fscale;
+	cx -= (float)gpatch->leftoffset * fscale;
+
+	if (!(option & V_NOSCALESTART))
+	{
+		cx = cx * dupx;
+		cy = cy * dupy;
+
+		if (!(option & V_SCALEPATCHMASK))
+		{
+			// if it's meant to cover the whole screen, black out the rest
+			// cx and cy are possibly *slightly* off from float maths
+			// This is done before here compared to software because we directly alter cx and cy to centre
+			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
+			{
+				// Need to temporarily cache the real patch to get the colour of the top left pixel
+				patch_t *realpatch = W_CacheLumpNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
+				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
+				const UINT8 *source = (const UINT8 *)(column) + 3;
+				HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
+				Z_Free(realpatch);
+			}
+			// centre screen
+			if (vid.width != BASEVIDWIDTH * vid.dupx)
+			{
+				if (option & V_SNAPTORIGHT)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+				else if (!(option & V_SNAPTOLEFT))
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+			}
+			if (vid.height != BASEVIDHEIGHT * vid.dupy)
+			{
+				if ((option & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
+					cy += ((float)vid.height/2 - ((float)BASEVIDHEIGHT/2 * dupy));
+				else if (option & V_SNAPTOBOTTOM)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+				else if (!(option & V_SNAPTOTOP))
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+			}
+		}
+	}
+
+	fwidth = w;
+	fheight = h;
+
+	if (fwidth > w - sx)
+		fwidth = w - sx;
+
+	if (fheight > h - sy)
+		fheight = h - sy;
+
+	if (fwidth > gpatch->width)
+		fwidth = gpatch->width;
+
+	if (fheight > gpatch->height)
+		fheight = gpatch->height;
+
+	if (pscale != FRACUNIT)
+	{
+		fwidth *=  fscale * dupx;
+		fheight *=  fscale * dupy;
+	}
+	else
+	{
+		fwidth *= dupx;
+		fheight *= dupy;
+	}
+
+	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
+	cx = -1 + (cx / (vid.width/2));
+	cy = 1 - (cy / (vid.height/2));
+
+	// fwidth and fheight are similar
+	fwidth /= vid.width / 2;
+	fheight /= vid.height / 2;
+
+	// set the polygon vertices to the right positions
+	v[0].x = v[3].x = cx;
+	v[2].x = v[1].x = cx + fwidth;
+
+	v[0].y = v[1].y = cy;
+	v[2].y = v[3].y = cy - fheight;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
