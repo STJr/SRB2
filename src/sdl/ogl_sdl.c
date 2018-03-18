@@ -214,8 +214,11 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	HWR_DrawScreenFinalTexture(sdlw, sdlh);
 	SDL_GL_SwapWindow(window);
 
-	SetModelView(realwidth, realheight);
-	SetStates();
+	GClipRect(0, 0, realwidth, realheight, NZCLIP_PLANE);
+
+	// Sryder:	We need to draw the final screen texture again into the other buffer in the original position so that
+	//			effects that want to take the old screen can do so after this
+	HWR_DrawScreenFinalTexture(realwidth, realheight);
 }
 
 EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)

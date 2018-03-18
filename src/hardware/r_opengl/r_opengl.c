@@ -2538,14 +2538,14 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 	if (firstTime)
 	{
 #ifdef KOS_GL_COMPATIBILITY
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_FILTER_NONE);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_FILTER_NONE);
 #else
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 #endif
-	Clamp2D(GL_TEXTURE_WRAP_S);
-	Clamp2D(GL_TEXTURE_WRAP_T);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
 		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
 #endif
@@ -2653,9 +2653,6 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 		pglVertex3f(xoff, -yoff, 1.0f);
 
 	pglEnd();
-
-	SetModelView(screen_width, screen_height);
-	SetStates();
 
 	tex_downloaded = finalScreenTexture;
 }
