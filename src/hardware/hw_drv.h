@@ -58,9 +58,6 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags);
 EXPORT void HWRAPI(ClearBuffer) (FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor);
 EXPORT void HWRAPI(SetTexture) (FTextureInfo *TexInfo);
 EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 *dst_data);
-#ifdef HAVE_SDL
-EXPORT boolean HWRAPI(ReadScreenTexture) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 * dst_data);
-#endif
 EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip);
 EXPORT void HWRAPI(ClearMipMapCache) (void);
 
@@ -107,9 +104,6 @@ struct hwdriver_s
 	ClearBuffer         pfnClearBuffer;
 	SetTexture          pfnSetTexture;
 	ReadRect            pfnReadRect;
-#ifdef HAVE_SDL
-	ReadScreenTexture   pfnReadScreenTexture;
-#endif
 	GClipRect           pfnGClipRect;
 	ClearMipMapCache    pfnClearMipMapCache;
 	SetSpecialState     pfnSetSpecialState;//Hurdler: added for backward compatibility
