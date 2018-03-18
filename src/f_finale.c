@@ -322,7 +322,7 @@ void F_StartIntro(void)
 	"hovers around the planet.\xBF It suddenly\n"
 	"appears from nowhere, circles around, and\n"
 	"\xB6- just as mysteriously as it arrives -\xB6\n"
-	"vanishes after about two months.\xBF\n"
+	"vanishes after about one week.\xBF\n"
 	"No one knows why it appears, or how.\n#");
 
 	introtext[5] = M_GetText(
@@ -334,11 +334,11 @@ void F_StartIntro(void)
 	"the screen, and just shrugged it off.\n#");
 
 	introtext[6] = M_GetText(
-	"It was only later\n"
+	"It was hours later\n"
 	"that he had an\n"
 	"idea. \xBF\xA7\"The Black\n"
-	"Rock usually has a\n"
-	"lot of energy\n"
+	"Rock has a large\n"
+	"amount of energy\n"
 	"within it\xAC...\xA7\xBF\n"
 	"If I can somehow\n"
 	"harness this,\xB8 I\n"
@@ -356,37 +356,37 @@ void F_StartIntro(void)
 	"a reunion party...\n#");
 
 	introtext[8] = M_GetText(
-	"\xA5\"We're\xB6 ready\xB6 to\xB4 fire\xB6 in\xB6 15\xB6 seconds!\"\xA8\xB8\n"
-	"The robot said, his voice crackling a\n"
-	"little down the com-link. \xBF\xA7\"Good!\"\xA8\xB8\n"
-	"Eggman sat back in his Egg-Mobile and\n"
+	"\xA5\"PRE-""\xB6""PARING-""\xB6""TO-""\xB4""FIRE-\xB6IN-""\xB6""15-""\xB6""SECONDS!\"\xA8\xB8\n"
+	"his targeting system crackled\n"
+	"robotically down the com-link. \xBF\xA7\"Good!\"\xA8\xB8\n"
+	"Eggman sat back in his eggmobile and\n"
 	"began to count down as he saw the\n"
-	"GreenFlower city on the main monitor.\n#");
+	"Greenflower mountain on the monitor.\n#");
 
 	introtext[9] = M_GetText(
 	"\xA5\"10...\xD2""9...\xD2""8...\"\xA8\xD2\n"
 	"Meanwhile, Sonic was tearing across the\n"
 	"zones. Everything became a blur as he\n"
-	"ran around loops, skimmed over water,\n"
+	"ran up slopes, skimmed over water,\n"
 	"and catapulted himself off rocks with\n"
 	"his phenomenal speed.\n#");
 
 	introtext[10] = M_GetText(
 	"\xA5\"6...\xD2""5...\xD2""4...\"\xA8\xD2\n"
 	"Sonic knew he was getting closer to the\n"
-	"City, and pushed himself harder.\xB4 Finally,\n"
-	"the city appeared in the horizon.\xD2\xD2\n"
+	"zone, and pushed himself harder.\xB4 Finally,\n"
+	"the mountain appeared in the horizon.\xD2\xD2\n"
 	"\xA5\"3...\xD2""2...\xD2""1...\xD2""Zero.\"\n#");
 
 	introtext[11] = M_GetText(
-	"GreenFlower City was gone.\xC4\n"
+	"Greenflower Mountain was no more.\xC4\n"
 	"Sonic arrived just in time to see what\n"
 	"little of the 'ruins' were left.\n"
-	"Everyone and everything in the city\n"
+	"The natural beauty of the zone\n"
 	"had been obliterated.\n#");
 
 	introtext[12] = M_GetText(
-	"\xA7\"You're not quite as dead as we thought,\n"
+	"\xA7\"You're not quite as gone as we thought,\n"
 	"huh?\xBF Are you going to tell us your plan as\n"
 	"usual or will I \xA8\xB4'have to work it out'\xA7 or\n"
 	"something?\"\xD2\xD2\n"
@@ -400,8 +400,8 @@ void F_StartIntro(void)
 	"leaving Sonic\n"
 	"and Tails behind.\xB6\n"
 	"Tails looked at\n"
-	"the ruins of the\n"
-	"Greenflower City\n"
+	"the once-perfect\n"
+	"mountainside\n"
 	"with a grim face\n"
 	"and sighed.\xC6\n"
 	"\xA7\"Now\xB6 what do we\n"
