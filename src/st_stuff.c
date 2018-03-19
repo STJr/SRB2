@@ -470,55 +470,55 @@ static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fix
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 192;
-	INT32 dist = 8;
 
 	if (!(stplyr->mo && cv_debug))
 		return;
 
 	if (cv_ticrate.value)
-	{
 		height -= 12;
-		dist >>= 1;
-	}
+
+#define dist 4
+#define VFLAGS V_MONOSPACE|V_SNAPTOBOTTOM|V_SNAPTORIGHT
 
 	if (cv_debug & DBG_BASIC)
 	{
 		const fixed_t d = AngleFixed(stplyr->mo->angle);
-		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("A: %6d", FixedInt(d)));
+		V_DrawRightAlignedString(320, height - 24, VFLAGS, va("X: %6d", stplyr->mo->x>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 16, VFLAGS, va("Y: %6d", stplyr->mo->y>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 8,  VFLAGS, va("Z: %6d", stplyr->mo->z>>FRACBITS));
+		V_DrawRightAlignedString(320, height,      VFLAGS, va("A: %6d", FixedInt(d)));
 
 		height -= (32+dist);
 	}
 
 	if (cv_debug & DBG_DETAILED)
 	{
-		V_DrawRightAlignedString(320, height - 104, V_MONOSPACE, va("SHIELD: %5x", stplyr->powers[pw_shield]));
-		V_DrawRightAlignedString(320, height - 96,  V_MONOSPACE, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
-		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("CARRY: %5x", stplyr->powers[pw_carry]));
-		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
+		V_DrawRightAlignedString(320, height - 104, VFLAGS, va("SHIELD: %5x", stplyr->powers[pw_shield]));
+		V_DrawRightAlignedString(320, height - 96,  VFLAGS, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
+		V_DrawRightAlignedString(320, height - 88,  VFLAGS, va("CARRY: %5x", stplyr->powers[pw_carry]));
+		V_DrawRightAlignedString(320, height - 80,  VFLAGS, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-90,             height - 72, (stplyr->pflags & PF_STARTJUMP) ? V_GREENMAP : V_REDMAP, "SJ");
-		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
-		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
+		V_DrawRightAlignedString(304-92, height - 72, VFLAGS, "PF:");
+		V_DrawString(304-90,             height - 72, VFLAGS|((stplyr->pflags & PF_STARTJUMP)     ? V_GREENMAP : V_REDMAP), "SJ");
+		V_DrawString(304-72,             height - 72, VFLAGS|((stplyr->pflags & PF_JUMPED)        ? V_GREENMAP : V_REDMAP), "JD");
+		V_DrawString(304-54,             height - 72, VFLAGS|((stplyr->pflags & PF_SPINNING)      ? V_GREENMAP : V_REDMAP), "SP");
+		V_DrawString(304-36,             height - 72, VFLAGS|((stplyr->pflags & PF_STARTDASH)     ? V_GREENMAP : V_REDMAP), "ST");
+		V_DrawString(304-18,             height - 72, VFLAGS|((stplyr->pflags & PF_THOKKED)       ? V_GREENMAP : V_REDMAP), "TH");
+		V_DrawString(304,                height - 72, VFLAGS|((stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP), "SH");
 
-		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 64, VFLAGS, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 56, VFLAGS, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
 
-		V_DrawRightAlignedString(320, height - 48, V_MONOSPACE, va("CNVX: %6d", stplyr->cmomx>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 40, V_MONOSPACE, va("CNVY: %6d", stplyr->cmomy>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 32, V_MONOSPACE, va("PLTZ: %6d", stplyr->mo->pmomz>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 48, VFLAGS, va("CNVX: %6d", stplyr->cmomx>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 40, VFLAGS, va("CNVY: %6d", stplyr->cmomy>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 32, VFLAGS, va("PLTZ: %6d", stplyr->mo->pmomz>>FRACBITS));
 
-		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("MOMX: %6d", stplyr->rmomx>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("MOMY: %6d", stplyr->rmomy>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("SPEED: %6d", stplyr->speed>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 24, VFLAGS, va("MOMX: %6d", stplyr->rmomx>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 16, VFLAGS, va("MOMY: %6d", stplyr->rmomy>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 8,  VFLAGS, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
+
+		V_DrawRightAlignedString(320, height,      VFLAGS, va("SPEED: %6d", stplyr->speed>>FRACBITS));
 
 		height -= (112+dist);
 	}
@@ -529,17 +529,20 @@ static void ST_drawDebugInfo(void)
 		peekres *= 10000;     // Change from fixed point
 		peekres >>= FRACBITS; // to displayable decimal
 
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Init: %08x", P_GetInitSeed()));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
+		V_DrawRightAlignedString(320, height - 16, VFLAGS, va("Init: %08x", P_GetInitSeed()));
+		V_DrawRightAlignedString(320, height - 8,  VFLAGS, va("Seed: %08x", P_GetRandSeed()));
+		V_DrawRightAlignedString(320, height,      VFLAGS, va("==  :    .%04d", peekres));
 
 		height -= (24+dist);
 	}
 
 	if (cv_debug & DBG_MEMORY)
 	{
-		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
+		V_DrawRightAlignedString(320, height,     VFLAGS, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
 	}
+
+#undef VFLAGS
+#undef dist
 }
 
 static void ST_drawScore(void)
