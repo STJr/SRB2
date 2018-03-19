@@ -4425,14 +4425,14 @@ static void M_DrawLevelPlatterMenu(void)
 		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
 	// finds row at top of the screen
-	while (y > 0)
+	while (y > -8)
 	{
 		iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
 		y -= lsvseperation(iter);
 	}
 
 	// draw from top to bottom
-	while (y < 200)
+	while (y < (vid.height/vid.dupy))
 	{
 		M_DrawLevelPlatterRow(iter, y);
 		y += lsvseperation(iter);
