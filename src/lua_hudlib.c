@@ -63,12 +63,14 @@ static const char *const hud_disable_options[] = {
 
 enum hudinfo {
 	hudinfo_x = 0,
-	hudinfo_y
+	hudinfo_y,
+	hudinfo_f
 };
 
 static const char *const hudinfo_opt[] = {
 	"x",
 	"y",
+	"f",
 	NULL};
 
 enum patch {
@@ -198,6 +200,9 @@ static int hudinfo_get(lua_State *L)
 	case hudinfo_y:
 		lua_pushinteger(L, info->y);
 		break;
+	case hudinfo_f:
+		lua_pushinteger(L, info->f);
+		break;
 	}
 	return 1;
 }
@@ -215,6 +220,9 @@ static int hudinfo_set(lua_State *L)
 		break;
 	case hudinfo_y:
 		info->y = (INT32)luaL_checkinteger(L, 3);
+		break;
+	case hudinfo_f:
+		info->f = (INT32)luaL_checkinteger(L, 3);
 		break;
 	}
 	return 0;

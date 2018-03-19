@@ -1584,6 +1584,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 			{
 				hudinfo[num].y = i;
 			}
+			else if (fastcmp(word, "F"))
+			{
+				hudinfo[num].f = i;
+			}
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}

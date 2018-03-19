@@ -161,9 +161,9 @@ static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
 // Stuff copy+pasted from st_stuff.c
-#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, V_SNAPTOTOP|V_SNAPTOLEFT, n)
-#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, V_SNAPTOTOP|V_SNAPTOLEFT, n, q)
-#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, V_SNAPTOTOP|V_SNAPTOLEFT, p)
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, p)
 
 static void Y_IntermissionTokenDrawer(void)
 {

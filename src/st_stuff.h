@@ -72,7 +72,7 @@ extern patch_t *ngradeletters[7];
   */
 typedef struct
 {
-	INT32 x, y;
+	INT32 x, y, f;
 } hudinfo_t;
 
 typedef enum
