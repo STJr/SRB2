@@ -1065,7 +1065,7 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 //
 // HWR_SplitWall
 //
-static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, UINT32 cutflag)
+static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, UINT32 cutflag, ffloor_t *pfloor)
 {
 	/* SoM: split up and light walls according to the
 	 lightlist. This may also include leaving out parts
@@ -1093,7 +1093,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	lightlist_t *  list = sector->lightlist;
 	const UINT8 alpha = Surf->FlatColor.s.alpha;
 	FUINT lightnum;
-	extracolormap_t *colormap;
+	extracolormap_t *colormap = NULL;
 
 	realtop = top = wallVerts[3].y;
 	realbot = bot = wallVerts[0].y;
@@ -1109,7 +1109,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	endpegmul = (endpegb - endpegt) / (endtop - endbot);
 #endif
 
-	for (i = 1; i < sector->numlights; i++)
+	for (i = 0; i < sector->numlights; i++)
 	{
 #ifdef ESLOPE
         if (endtop < endrealbot)
@@ -1117,33 +1117,36 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		if (top < realbot)
 			return;
 
-	//Hurdler: fix a crashing bug, but is it correct?
-//		if (!list[i].caster)
-//			continue;
+	// There's a compiler warning here if this comment isn't here because of indentation
+		if (!(list[i].flags & FF_NOSHADE))
+		{
+			if (pfloor && (pfloor->flags & FF_FOG))
+			{
+				lightnum = pfloor->master->frontsector->lightlevel;
+				colormap = pfloor->master->frontsector->extra_colormap;
+			}
+			else
+			{
+				lightnum = *list[i].lightlevel;
+				colormap = list[i].extra_colormap;
+			}
+		}
 
 		solid = false;
 
-		if (list[i].caster)
+		if ((sector->lightlist[i].flags & FF_CUTSOLIDS) && !(cutflag & FF_EXTRA))
+			solid = true;
+		else if ((sector->lightlist[i].flags & FF_CUTEXTRA) && (cutflag & FF_EXTRA))
 		{
-			if (sector->lightlist[i].caster->flags & FF_CUTSOLIDS && !(cutflag & FF_EXTRA))
-				solid = true;
-			else if (sector->lightlist[i].caster->flags & FF_CUTEXTRA && cutflag & FF_EXTRA)
+			if (sector->lightlist[i].flags & FF_EXTRA)
 			{
-				if (sector->lightlist[i].caster->flags & FF_EXTRA)
-				{
-					if (sector->lightlist[i].caster->flags == cutflag) // Only merge with your own types
-						solid = true;
-				}
-				else
+				if ((sector->lightlist[i].flags & (FF_FOG|FF_SWIMMABLE)) == (cutflag & (FF_FOG|FF_SWIMMABLE))) // Only merge with your own types
 					solid = true;
 			}
 			else
-				solid = false;
+				solid = true;
 		}
 		else
-			solid = false;
-
-		if (cutflag == FF_CUTSOLIDS) // These are regular walls sent in from StoreWallRange, they shouldn't be cut from this
 			solid = false;
 
 #ifdef ESLOPE
@@ -1185,34 +1188,53 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 			if (solid && endtop > endbheight)
 				endtop = endbheight;
 #endif
-			continue;
 		}
 
+#ifdef ESLOPE
+		if (i + 1 < sector->numlights)
+		{
+			if (list[i+1].slope)
+			{
+				temp = P_GetZAt(list[i+1].slope, v1x, v1y);
+				bheight = FIXED_TO_FLOAT(temp);
+				temp = P_GetZAt(list[i+1].slope, v2x, v2y);
+				endbheight = FIXED_TO_FLOAT(temp);
+			}
+			else
+				bheight = endbheight = FIXED_TO_FLOAT(list[i+1].height);
+		}
+		else
+		{
+			bheight = realbot;
+			endbheight = endrealbot;
+		}
+#else
+		if (i + 1 < sector->numlights)
+		{
+			bheight = FIXED_TO_FLOAT(list[i+1].height);
+		}
+		else
+		{
+			bheight = realbot;
+		}
+#endif
+
+		if (endbheight >= endtop)
+		if (bheight >= top)
+			continue;
+
 		//Found a break;
-		bot = height;
+		bot = bheight;
 
 		if (bot < realbot)
 			bot = realbot;
 
 #ifdef ESLOPE
-		endbot = endheight;
+		endbot = endbheight;
 
 		if (endbot < endrealbot)
 			endbot = endrealbot;
 #endif
-
-		// colormap test
-		if (list[i-1].caster)
-		{
-			lightnum = *list[i-1].lightlevel;
-			colormap = list[i-1].extra_colormap;
-		}
-		else
-		{
-			lightnum = sector->lightlevel;
-			colormap = sector->extra_colormap;
-		}
-
 		Surf->FlatColor.s.alpha = alpha;
 
 #ifdef ESLOPE
@@ -1235,20 +1257,16 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-		if (cutflag & FF_TRANSLUCENT)
+		if (cutflag & FF_FOG)
+			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture, true, lightnum, colormap);
+		else if (cutflag & FF_TRANSLUCENT)
 			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
 		else
 			HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
 
-		if (solid)
-			top = bheight;
-		else
-			top = height;
+		top = bot;
 #ifdef ESLOPE
-		if (solid)
-			endtop = endbheight;
-		else
-			endtop = endheight;
+		endtop = endbot;
 #endif
 	}
 
@@ -1260,17 +1278,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	if (top <= realbot)
 		return;
 
-	if (list[i-1].caster)
-	{
-		lightnum = *list[i-1].lightlevel;
-		colormap = list[i-1].extra_colormap;
-	}
-	else
-	{
-		lightnum = sector->lightlevel;
-		colormap = sector->extra_colormap;
-	}
-		Surf->FlatColor.s.alpha = alpha;
+	Surf->FlatColor.s.alpha = alpha;
 
 #ifdef ESLOPE
 	wallVerts[3].t = pegt + ((realtop - top) * pegmul);
@@ -1292,114 +1300,12 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
     wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-	if (cutflag & FF_TRANSLUCENT)
+	if (cutflag & FF_FOG)
+		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture, true, lightnum, colormap);
+	else if (cutflag & FF_TRANSLUCENT)
 		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
 	else
 		HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
-}
-
-//
-// HWR_SplitFog
-// Exclusively for fog
-//
-static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* Surf, UINT32 cutflag, FUINT lightnum, extracolormap_t *colormap)
-{
-	/* SoM: split up and light walls according to the
-	 lightlist. This may also include leaving out parts
-	 of the wall that can't be seen */
-	float realtop, realbot, top, bot;
-	float pegt, pegb, pegmul;
-	float height = 0.0f, bheight = 0.0f;
-	INT32   solid, i;
-	lightlist_t *  list = sector->lightlist;
-	const UINT8 alpha = Surf->FlatColor.s.alpha;
-
-	realtop = top = wallVerts[2].y;
-	realbot = bot = wallVerts[0].y;
-	pegt = wallVerts[2].t;
-	pegb = wallVerts[0].t;
-	pegmul = (pegb - pegt) / (top - bot);
-
-	for (i = 1; i < sector->numlights; i++)
-	{
-		if (top < realbot)
-			return;
-
-	//Hurdler: fix a crashing bug, but is it correct?
-//		if (!list[i].caster)
-//			continue;
-
-		solid = false;
-
-		if (list[i].caster)
-		{
-			if (sector->lightlist[i].caster->flags & FF_FOG && cutflag & FF_FOG) // Only fog cuts fog
-			{
-				if (sector->lightlist[i].caster->flags & FF_EXTRA)
-				{
-					if (sector->lightlist[i].caster->flags == cutflag) // only cut by the same
-						solid = true;
-				}
-				else
-					solid = true;
-			}
-		}
-
-		height = FIXED_TO_FLOAT(list[i].height);
-
-		if (solid)
-			bheight = FIXED_TO_FLOAT(*list[i].caster->bottomheight);
-
-		if (height >= top)
-		{
-			if (solid && top > bheight)
-				top = bheight;
-			continue;
-		}
-
-		//Found a break;
-		bot = height;
-
-		if (bot < realbot)
-			bot = realbot;
-
-		{
-
-
-
-			Surf->FlatColor.s.alpha = alpha;
-		}
-
-		wallVerts[3].t = wallVerts[2].t = pegt + ((realtop - top) * pegmul);
-		wallVerts[0].t = wallVerts[1].t = pegt + ((realtop - bot) * pegmul);
-
-		// set top/bottom coords
-		wallVerts[2].y = wallVerts[3].y = top;
-		wallVerts[0].y = wallVerts[1].y = bot;
-
-		if (!solid) // Don't draw it if there's more fog behind it
-			HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Fog|PF_NoTexture, true, lightnum, colormap);
-
-		top = height;
-	}
-
-	bot = realbot;
-	if (top <= realbot)
-		return;
-
-	{
-
-		Surf->FlatColor.s.alpha = alpha;
-	}
-
-	wallVerts[3].t = wallVerts[2].t = pegt + ((realtop - top) * pegmul);
-	wallVerts[0].t = wallVerts[1].t = pegt + ((realtop - bot) * pegmul);
-
-	// set top/bottom coords
-	wallVerts[2].y = wallVerts[3].y = top;
-	wallVerts[0].y = wallVerts[1].y = bot;
-
-	HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Translucent|PF_NoTexture, true, lightnum, colormap);
 }
 
 // HWR_DrawSkyWalls
@@ -1678,7 +1584,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, gr_toptexture, &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_toptexture, &Surf, FF_CUTLEVEL, NULL);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_toptexture, PF_Environment, false, lightnum, colormap);
 			else
@@ -1761,7 +1667,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, gr_bottomtexture, &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_bottomtexture, &Surf, FF_CUTLEVEL, NULL);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_bottomtexture, PF_Environment, false, lightnum, colormap);
 			else
@@ -2027,10 +1933,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			if (gr_frontsector->numlights)
 			{
 				if (!(blendmode & PF_Masked))
-					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT);
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT, NULL);
 				else
 				{
-					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTLEVEL, NULL);
 				}
 			}
 			else if (!(blendmode & PF_Masked))
@@ -2182,7 +2088,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 			// I don't think that solid walls can use translucent linedef types...
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTLEVEL, NULL);
 			else
 			{
 				if (grTex->mipmap.flags & TF_TRANSPARENT)
@@ -2320,7 +2226,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					}
 
 					if (gr_frontsector->numlights)
-						HWR_SplitFog(gr_frontsector, wallVerts, &Surf, rover->flags, lightnum, colormap);
+						HWR_SplitWall(gr_frontsector, wallVerts, 0, &Surf, rover->flags, rover);
 					else
 						HWR_AddTransparentWall(wallVerts, &Surf, 0, blendmode, true, lightnum, colormap);
 				}
@@ -2335,7 +2241,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					}
 
 					if (gr_frontsector->numlights)
-						HWR_SplitWall(gr_frontsector, wallVerts, texnum, &Surf, rover->flags);
+						HWR_SplitWall(gr_frontsector, wallVerts, texnum, &Surf, rover->flags, rover);
 					else
 					{
 						if (blendmode != PF_Masked)
@@ -2439,7 +2345,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					}
 
 					if (gr_backsector->numlights)
-						HWR_SplitFog(gr_backsector, wallVerts, &Surf, rover->flags, lightnum, colormap);
+						HWR_SplitWall(gr_backsector, wallVerts, 0, &Surf, rover->flags, rover);
 					else
 						HWR_AddTransparentWall(wallVerts, &Surf, 0, blendmode, true, lightnum, colormap);
 				}
@@ -2454,7 +2360,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					}
 
 					if (gr_backsector->numlights)
-						HWR_SplitWall(gr_backsector, wallVerts, texnum, &Surf, rover->flags);
+						HWR_SplitWall(gr_backsector, wallVerts, texnum, &Surf, rover->flags, rover);
 					else
 					{
 						if (blendmode != PF_Masked)
