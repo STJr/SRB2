@@ -946,7 +946,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				* 2;
 				extralight = FixedFloor(extralight + (FRACUNIT>>1))>>FRACBITS;
 
-				lightnum += extralight;
+				rlight->lightnum += extralight;
 			}
 
 			p++;
