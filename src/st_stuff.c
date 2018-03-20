@@ -410,25 +410,10 @@ void ST_changeDemoView(void)
 
 boolean st_overlay;
 
-static INT32 SCZ(INT32 z)
-{
-	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
-}
-
-static INT32 SCX(INT32 x)
-{
-	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
-}
-
 // =========================================================================
 //                          INTERNAL DRAWING
 // =========================================================================
-#define ST_DrawUnscaledOverlayNum(x,y,n)           V_DrawTallNum(x, y, V_NOSCALESTART|V_PERPLAYER|V_HUDTRANS, n)
-#define ST_DrawUnscaledPaddedOverlayNum(x,y,n,d)   V_DrawPaddedTallNum(x, y, V_NOSCALESTART|V_PERPLAYER|V_HUDTRANS, n, d)
-#define ST_DrawUnscaledOverlayPatch(x,y,p)         V_DrawScaledPatch(x, y, V_NOSCALESTART|V_PERPLAYER|V_HUDTRANS, p)
-#define ST_DrawTopLeftOverlayNum(x,y,n)           V_DrawTallNum(x, y, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, n)
 #define ST_DrawTopLeftOverlayPatch(x,y,p)         V_DrawScaledPatch(x, y, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, p)
-#define ST_DrawMappedOverlayPatch(x,y,p,c) V_DrawMappedScaledPatch(x, y, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, p, c)
 #define ST_DrawNumFromHud(h,n,flags)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, n)
 #define ST_DrawPadNumFromHud(h,n,q,flags)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, n, q)
 #define ST_DrawPatchFromHud(h,p,flags)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, p)
@@ -1299,9 +1284,9 @@ static void ST_drawNiGHTSHUD(void)
 		if (!splitscreen && (cv_debug & DBG_NIGHTSBASIC))
 		{
 			if (stplyr->bumpertime)
-				V_DrawString(SCX(locx), SCZ(locy - 8), V_NOSCALESTART|V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
+				V_DrawString(locx, locy - 8, V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
 			else
-				V_DrawString(SCX(locx), SCZ(locy - 8), V_NOSCALESTART|V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
+				V_DrawString(locx, locy - 8, V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
 		}
 	}
 
@@ -1416,10 +1401,10 @@ static void ST_drawNiGHTSHUD(void)
 
 			for (r = 0; r < 5; r++)
 			{
-				ST_DrawUnscaledOverlayPatch(SCX(230 - (7*r)), SCZ(144), redstat);
-				ST_DrawUnscaledOverlayPatch(SCX(188 - (7*r)), SCZ(144), orngstat);
-				ST_DrawUnscaledOverlayPatch(SCX(146 - (7*r)), SCZ(144), yelstat);
-				ST_DrawUnscaledOverlayPatch(SCX(104 - (7*r)), SCZ(144), byelstat);
+				V_DrawScaledPatch(230 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, redstat);
+				V_DrawScaledPatch(188 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, orngstat);
+				V_DrawScaledPatch(146 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, yelstat);
+				V_DrawScaledPatch(104 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, byelstat);
 			}
 
 			amount = (origamount - stplyr->capsule->health);
@@ -1438,7 +1423,7 @@ static void ST_drawNiGHTSHUD(void)
 					if (r > 10) ++t;
 					if (r > 5)  ++t;
 
-					ST_DrawUnscaledOverlayPatch(SCX(69 + (7*t)), SCZ(144), bluestat);
+					V_DrawScaledPatch(69 + (7*t), 144, V_PERPLAYER|V_HUDTRANS, bluestat);
 				}
 			}
 		}
@@ -1465,9 +1450,9 @@ static void ST_drawNiGHTSHUD(void)
 		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[8]);
 
 	if (total_ringcount >= 100)
-		ST_DrawTopLeftOverlayNum((total_ringcount >= 1000) ? 76 : 72, 8 + 11, total_ringcount);
+		V_DrawTallNum((total_ringcount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
 	else
-		ST_DrawTopLeftOverlayNum(68, 8 + 11, total_ringcount);
+		V_DrawTallNum(68, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
 #ifdef HAVE_BLUA
 	}
 #endif
@@ -1490,22 +1475,21 @@ static void ST_drawNiGHTSHUD(void)
 		if (modeattacking == ATTACKING_NIGHTS)
 		{
 			INT32 maretime = max(stplyr->realtime - stplyr->marebegunat, 0);
-			fixed_t cornerx = vid.width, cornery = vid.height-SCZ(20);
 
-#define ASSISHHUDFIX(n) (n*vid.dupx)
-			ST_DrawUnscaledOverlayPatch(cornerx-ASSISHHUDFIX(22), cornery, W_CachePatchName("NGRTIMER", PU_HUDGFX));
-			ST_DrawUnscaledPaddedOverlayNum(cornerx-ASSISHHUDFIX(22), cornery, G_TicsToCentiseconds(maretime), 2);
-			ST_DrawUnscaledOverlayPatch(cornerx-ASSISHHUDFIX(46), cornery, sboperiod);
+#define VFLAGS V_SNAPTOBOTTOM|V_SNAPTORIGHT|V_PERPLAYER|V_HUDTRANS
+			V_DrawScaledPatch(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, W_CachePatchName("NGRTIMER", PU_HUDGFX));
+			V_DrawPaddedTallNum(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, G_TicsToCentiseconds(maretime), 2);
+			V_DrawScaledPatch(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, sboperiod);
 			if (maretime < 60*TICRATE)
-				ST_DrawUnscaledOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime));
+				V_DrawTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime));
 			else
 			{
-				ST_DrawUnscaledPaddedOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime), 2);
-				ST_DrawUnscaledOverlayPatch(cornerx-ASSISHHUDFIX(70), cornery, sbocolon);
-				ST_DrawUnscaledOverlayNum(cornerx-ASSISHHUDFIX(70), cornery, G_TicsToMinutes(maretime, true));
+				V_DrawPaddedTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime), 2);
+				V_DrawScaledPatch(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, sbocolon);
+				V_DrawTallNum(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, G_TicsToMinutes(maretime, true));
 			}
+#undef VFLAGS
 		}
-#undef ASSISHHUDFIX
 	}
 
 	// Ideya time remaining
@@ -1534,10 +1518,10 @@ static void ST_drawNiGHTSHUD(void)
 			if (flashingLeft < TICRATE/2) // Start fading out
 			{
 				UINT32 fadingFlag = (9 - 9*flashingLeft/(TICRATE/2)) << V_ALPHASHIFT;
-				V_DrawTranslucentPatch(SCX(160 - (minus5sec->width/2)), SCZ(28), V_NOSCALESTART|V_PERPLAYER|fadingFlag, minus5sec);
+				V_DrawTranslucentPatch(160 - (minus5sec->width/2), 28, V_PERPLAYER|fadingFlag, minus5sec);
 			}
 			else
-				V_DrawScaledPatch(SCX(160 - (minus5sec->width/2)), SCZ(28), V_NOSCALESTART|V_PERPLAYER, minus5sec);
+				V_DrawScaledPatch(160 - (minus5sec->width/2), 28, V_PERPLAYER, minus5sec);
 		}
 
 		if (realnightstime < 10)
@@ -1563,22 +1547,22 @@ static void ST_drawNiGHTSHUD(void)
 		if (stplyr->powers[pw_nights_superloop])
 		{
 			pwr = stplyr->powers[pw_nights_superloop];
-			V_DrawSmallScaledPatch(SCX(110), SCZ(44), V_NOSCALESTART, W_CachePatchName("NPRUA0",PU_CACHE));
-			V_DrawThinString(SCX(106), SCZ(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_CACHE));
+			V_DrawThinString(106, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 
 		if (stplyr->powers[pw_nights_helper])
 		{
 			pwr = stplyr->powers[pw_nights_helper];
-			V_DrawSmallScaledPatch(SCX(150), SCZ(44), V_NOSCALESTART, W_CachePatchName("NPRUC0",PU_CACHE));
-			V_DrawThinString(SCX(146), SCZ(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_CACHE));
+			V_DrawThinString(146, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 
 		if (stplyr->powers[pw_nights_linkfreeze])
 		{
 			pwr = stplyr->powers[pw_nights_linkfreeze];
-			V_DrawSmallScaledPatch(SCX(190), SCZ(44), V_NOSCALESTART, W_CachePatchName("NPRUE0",PU_CACHE));
-			V_DrawThinString(SCX(186), SCZ(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_CACHE));
+			V_DrawThinString(186, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 	}
 
@@ -1689,7 +1673,7 @@ static inline void ST_drawRaceHUD(void)
 			if (!(P_AutoPause() || paused) && !bounce)
 					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 		}
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCZ(height)), V_NOSCALESTART|V_PERPLAYER, racenum);
+		V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
 	}
 
 	if (circuitmap)
