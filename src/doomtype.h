@@ -169,6 +169,10 @@ int strlwr(char *n); // from dosstr.c
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
+// Is this how you test for GLIBC versions?
+#if ! (defined (_GNU_SOURCE) && __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 11)
+char * strchrnul (const char *s, int c);
+#endif
 
 // Macro for use with char foo[FOOSIZE+1] type buffers.
 // Never use this with a buffer that is a "char *" or passed

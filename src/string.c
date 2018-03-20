@@ -50,3 +50,17 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
 }
 
 #endif
+
+#if ! (defined (_GNU_SOURCE) && __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 11)
+char * strchrnul (const char *s, int c)
+{
+	char *p;
+
+	// Grudgingly not discarding const.
+	p = strchr(s, c);
+	if (p == NULL)
+		p = strchr(s, 0);
+
+	return p;
+}
+#endif

@@ -33,6 +33,7 @@
 #include "i_system.h"
 #include "d_main.h"
 #include "m_menu.h"
+#include "m_misc.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -55,8 +56,11 @@ static tic_t con_tick; // console ticker for anim or blinking prompt cursor
 static boolean consoletoggle; // true when console key pushed, ticker will handle
 static boolean consoleready;  // console prompt is ready
 
-       INT32 con_destlines; // vid lines used by console at final position
-static INT32 con_curlines;  // vid lines currently used by console
+static boolean chat_team;
+
+       INT32 con_destlines;   // vid lines used by console at final position
+static INT32 con_curlines;    // vid lines currently used by console
+static INT32 chat_inputlines; // vid lines extra after wrapping chat input
 
        INT32 con_clipviewtop; // clip value for planes & sprites, so that the
                             // part of the view covered by the console is not
@@ -79,6 +83,9 @@ static size_t con_cy;           // cursor line number in con_buffer, is always
 static size_t con_totallines;      // lines of console text into the console buffer
 static size_t con_width;           // columns of chars, depend on vid mode width
 
+static UINT8 chat_newlines;
+static UINT8 chat_tabcount;
+
 static size_t con_scrollup;        // how many rows of text to scroll up (pgup/pgdn)
 UINT32 con_scalefactor;            // text size scale factor
 
@@ -86,13 +93,15 @@ UINT32 con_scalefactor;            // text size scale factor
 #define CON_MAXPROMPTCHARS 256
 #define CON_PROMPTCHAR '$'
 
-static char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines
+static char inputlines[33][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines and chat line
+#define INPUTLINE inputlines[((chat_on) ? 32 : inputline)]
 
 static INT32 inputline;    // current input line number
 static INT32 inputhist;    // line number of history input line to restore
-static size_t input_cur; // position of cursor in line
-static size_t input_sel; // position of selection marker (I.E.: anything between this and input_cur is "selected")
-static size_t input_len; // length of current line, used to bound cursor and such
+static size_t input_cur[2]; // position of cursor in line
+static size_t input_sel[2]; // position of selection marker (I.E.: anything between this and input_cur[chat_on] is "selected")
+static size_t input_len[2]; // length of current line, used to bound cursor and such
+static size_t input_jump;   // position of cursor before line jumping
 // notice: input does NOT include the "$" at the start of the line. - 11/3/16
 
 // protos.
@@ -125,9 +134,11 @@ static consvar_t cons_hudlines = {"con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsig
 // (con_speed needs a limit, apparently)
 static CV_PossibleValue_t speed_cons_t[] = {{0, "MIN"}, {64, "MAX"}, {0, NULL}};
 static consvar_t cons_speed = {"con_speed", "8", CV_SAVE, speed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t chat_speed = {"chat_speed", "0", CV_SAVE, speed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // percentage of screen height to use for console
 static consvar_t cons_height = {"con_height", "50", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t chat_height = {"chat_height", "30", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}, {0, NULL}};
 // whether to use console background picture, or translucent mode
@@ -370,7 +381,9 @@ void CON_Init(void)
 		CV_RegisterVar(&cons_msgtimeout);
 		CV_RegisterVar(&cons_hudlines);
 		CV_RegisterVar(&cons_speed);
+		CV_RegisterVar(&chat_speed);
 		CV_RegisterVar(&cons_height);
+		CV_RegisterVar(&chat_height);
 		CV_RegisterVar(&cons_backpic);
 		CV_RegisterVar(&cons_backcolor);
 		COM_AddCommand("bind", CONS_Bind_f);
@@ -389,7 +402,7 @@ static void CON_InputInit(void)
 	// prepare the first prompt line
 	memset(inputlines, 0, sizeof (inputlines));
 	inputline = 0;
-	input_cur = input_sel = input_len = 0;
+	input_cur[chat_on] = input_sel[chat_on] = input_len[chat_on] = input_jump = 0;
 }
 
 //======================================================================
@@ -487,17 +500,15 @@ static void CON_RecalcSize(void)
 //
 static void CON_MoveConsole(void)
 {
-	const fixed_t conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
+	const fixed_t conspeed = FixedDiv(((chat_on) ? chat_speed : cons_speed).value*vid.fdupy, FRACUNIT);
 
 	// instant
-	if (!cons_speed.value)
+	if (!((chat_on) ? chat_speed : cons_speed).value)
 	{
 		con_curlines = con_destlines;
 		return;
 	}
-
-	// up/down move to dest
-	if (con_curlines < con_destlines)
+	else if (con_curlines < con_destlines)  // up/down move to dest
 	{
 		con_curlines += FixedInt(conspeed);
 		if (con_curlines > con_destlines)
@@ -517,8 +528,11 @@ void CON_ClearHUD(void)
 {
 	INT32 i;
 
-	for (i = 0; i < con_hudlines; i++)
-		con_hudtime[i] = 0;
+	if (!chat_on)
+	{
+		for (i = 0; i < con_hudlines; i++)
+			con_hudtime[i] = 0;
+	}
 }
 
 // Force console to move out immediately
@@ -530,8 +544,10 @@ void CON_ToggleOff(void)
 
 	con_destlines = 0;
 	con_curlines = 0;
+	chat_inputlines = 0;
 	CON_ClearHUD();
 	con_forcepic = 0;
+	chat_on = false;
 	con_clipviewtop = -1; // remove console clipping of view
 }
 
@@ -557,6 +573,7 @@ void CON_Ticker(void)
 		consoletoggle = false;
 		con_destlines = 0;
 		CON_ClearHUD();
+		chat_on = false;
 	}
 
 	// console key was pushed
@@ -568,12 +585,14 @@ void CON_Ticker(void)
 		if (con_destlines > 0)
 		{
 			con_destlines = 0;
+			chat_inputlines = 0;
+			chat_on = false;
 			CON_ClearHUD();
 		}
 		else
 		{
 			// toggle console in
-			con_destlines = (cons_height.value*vid.height)/100;
+			con_destlines = ((chat_on) ? chat_height.value : cons_height.value)*vid.height / 100;
 			if (con_destlines < minheight)
 				con_destlines = minheight;
 			else if (con_destlines > vid.height)
@@ -621,99 +640,204 @@ void CON_Ticker(void)
 // Necessary due to moving cursor
 //
 
+// Global variables land incoming.  These functions are crap, but I don't feel
+// like struggling to find a better way of doing it, through my incredibly
+// efficient method of just hitting keys and hoping for the best.  -James
+
+static inline void recounttabs (const char *s)
+{
+	chat_tabcount = 0;
+	for (; *s != 0 && *s != '\n'; ++s)
+	{
+		if (*s == '\t')
+			chat_tabcount++;
+	}
+}
+
+static size_t strictmemcpy (char *to, const char *s, size_t n)
+{
+	char *p;
+	for (p = to; n-- > 0; ++s)
+	{
+		if (*s == '\n')
+		{
+			if (chat_on && chat_newlines < CHAT_MAXLINEFEEDS)
+			{
+				chat_newlines++;
+				chat_tabcount = 0;
+				*p++ = '\n';
+			}
+			else
+				*p++ = ' ';
+		}
+		else if (*s == '\t')
+		{
+			if (chat_on && chat_tabcount < CHAT_TABULARSPERLINE)
+			{
+				chat_tabcount++;
+				*p++ = '\t';
+			}
+			else
+				*p++ = ' ';
+		}
+		else
+			*p++ = *s;
+	}
+	return p - to;
+}
+
+static inline void * strictmemset (void *s, int c, size_t n)
+{
+	char *p = s;
+	while (n-- > 0)
+	{
+		if (*p == '\n' && (char)c != '\n')
+		{
+			--chat_newlines;
+			recounttabs(p+1);
+		}
+		else if (*p == '\t' && (char)c != '\t')
+			--chat_tabcount;
+
+		*p++ = (char)c;
+	}
+	return s;
+}
+
 static void CON_InputClear(void)
 {
-	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-	input_cur = input_sel = input_len = 0;
+	memset(INPUTLINE, 0, CON_MAXPROMPTCHARS);
+	input_cur[chat_on] = input_sel[chat_on] = input_len[chat_on] = input_jump = 0;
+	if (chat_on)
+		chat_newlines = chat_tabcount = 0;
 }
 
 static void CON_InputSetString(const char *c)
 {
-	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-	strcpy(inputlines[inputline], c);
-	input_cur = input_sel = input_len = strlen(c);
+	size_t n = ((chat_on) ? HU_MAXMSGLEN : CON_MAXPROMPTCHARS);
+	memset(INPUTLINE, 0, CON_MAXPROMPTCHARS);
+	if (chat_on)
+		chat_newlines = chat_tabcount = 0;
+	strictmemcpy(INPUTLINE, c, min(strlen(c), n));
+	input_cur[chat_on] = input_sel[chat_on] = input_len[chat_on] = input_jump = strlen(INPUTLINE);
 }
 
 static void CON_InputAddString(const char *c)
 {
-	size_t csize = strlen(c);
-	if (input_len + csize > CON_MAXPROMPTCHARS-1)
-		return;
-	if (input_cur != input_len)
-		memmove(&inputlines[inputline][input_cur+csize], &inputlines[inputline][input_cur], input_len-input_cur);
-	memcpy(&inputlines[inputline][input_cur], c, csize);
-	input_len += csize;
-	input_sel = (input_cur += csize);
+	static char tmp[256];
+	size_t n = ((chat_on) ? HU_MAXMSGLEN : CON_MAXPROMPTCHARS);
+	size_t csize;
+
+	{
+		UINT8 nlf = chat_newlines, ntab = chat_tabcount;
+		// Restrict special characters before copying to get a memory length.
+		csize = strictmemcpy(tmp, c, strlen(c));
+		if (csize > n - input_len[chat_on])
+			csize = n - input_len[chat_on];
+		chat_newlines = nlf;  chat_tabcount = ntab;  // restore record after copying
+	}
+
+	if (input_cur[chat_on] != input_len[chat_on])
+		memmove(&INPUTLINE[input_cur[chat_on]+csize], &INPUTLINE[input_cur[chat_on]],
+				input_len[chat_on]-input_cur[chat_on]);  // move text forward in the buffer
+	strictmemcpy(&INPUTLINE[input_cur[chat_on]], tmp, csize);
+	input_len[chat_on] += csize;
+	input_sel[chat_on] = (input_cur[chat_on] += csize);
 }
 
 static void CON_InputDelSelection(void)
 {
 	size_t start, end, len;
-	if (input_cur > input_sel)
+
+	if (input_cur[chat_on] > input_sel[chat_on])
 	{
-		start = input_sel;
-		end = input_cur;
+		start = input_sel[chat_on];
+		end = input_cur[chat_on];
 	}
 	else
 	{
-		start = input_cur;
-		end = input_sel;
+		start = input_cur[chat_on];
+		end = input_sel[chat_on];
 	}
 	len = (end - start);
 
-	if (end != input_len)
-		memmove(&inputlines[inputline][start], &inputlines[inputline][end], input_len-end);
-	memset(&inputlines[inputline][input_len - len], 0, len);
+	strictmemset(&INPUTLINE[start], 0, len);  // uncount deleted bytes
+	if (end != input_len[chat_on])
+		strictmemcpy(&INPUTLINE[start], &INPUTLINE[end], input_len[chat_on]-end);
+	strictmemset(&INPUTLINE[input_len[chat_on] - len], 0, len);  // uncount trailing bytes
 
-	input_len -= len;
-	input_sel = input_cur = start;
+	input_len[chat_on] -= len;
+	input_sel[chat_on] = input_cur[chat_on] = input_jump = start;
 }
 
 static void CON_InputAddChar(char c)
 {
-	if (input_len >= CON_MAXPROMPTCHARS-1)
+	size_t n = ((chat_on) ? HU_MAXMSGLEN : CON_MAXPROMPTCHARS);
+	if (input_len[chat_on] >= n)
 		return;
-	if (input_cur != input_len)
-		memmove(&inputlines[inputline][input_cur+1], &inputlines[inputline][input_cur], input_len-input_cur);
-	inputlines[inputline][input_cur++] = c;
-	inputlines[inputline][++input_len] = 0;
-	input_sel = input_cur;
+	// Not checking for chat_on--calling function does that.
+	if (c == '\n')
+	{
+		if (chat_newlines >= CHAT_MAXLINEFEEDS)
+			return;
+		++chat_newlines;
+		chat_tabcount = 0;
+	}
+	else if (c == '\t')
+	{
+		if (chat_tabcount >= CHAT_TABULARSPERLINE)
+			return;
+		++chat_tabcount;
+	}
+
+	if (input_cur[chat_on] != input_len[chat_on])
+		memmove(&INPUTLINE[input_cur[chat_on]+1], &INPUTLINE[input_cur[chat_on]], input_len[chat_on]-input_cur[chat_on]);
+	INPUTLINE[input_cur[chat_on]++] = c;
+	INPUTLINE[++input_len[chat_on]] = 0;
+	input_sel[chat_on] = input_jump = input_cur[chat_on];
 }
 
 static void CON_InputDelChar(void)
 {
-	if (!input_cur)
+	if (!input_cur[chat_on])
 		return;
-	if (input_cur != input_len)
-		memmove(&inputlines[inputline][input_cur-1], &inputlines[inputline][input_cur], input_len-input_cur);
-	inputlines[inputline][--input_len] = 0;
-	input_sel = --input_cur;
+
+	if (INPUTLINE[input_cur[chat_on]-1] == '\n')
+	{
+		size_t i = input_cur[chat_on]-1;
+		--chat_newlines;
+		// gotta recount tabs; ew
+		chat_tabcount = 0;
+		do
+		{
+			if (INPUTLINE[i] == '\t')
+				++chat_tabcount;
+		}
+		while (i-- > 0 && INPUTLINE[i] != '\n') ;
+	}
+	else if (INPUTLINE[input_cur[chat_on]-1] == '\t')
+		--chat_tabcount;
+
+	if (input_cur[chat_on] != input_len[chat_on])
+		memmove(&INPUTLINE[input_cur[chat_on]-1], &INPUTLINE[input_cur[chat_on]], input_len[chat_on]-input_cur[chat_on]);
+
+	INPUTLINE[--input_len[chat_on]] = 0;
+	input_sel[chat_on] = input_jump = --input_cur[chat_on];
 }
 
 //
 // ----
 //
 
-static int bs_space (int c)
+static void jumptoword (boolean left)
 {
-	return (c == ' ');
-}
-static void blockshift (boolean left)
-{
-	char *cp;
-	int (*f) (int);
-
-	cp = inputlines[inputline];
-	f = ((cp[input_cur] == ' ') ? &bs_space
-		  : (ispunct(cp[input_cur]) ? &ispunct : &isalnum));
+	int (*f)(int) = ((isspace(INPUTLINE[input_cur[chat_on]])) ? &isspace
+			: (ispunct(INPUTLINE[input_cur[chat_on]]) ? &ispunct : &isalnum));
 
 	if (left)
-	{
-		for (; input_cur != -1 && f(cp[input_cur]); input_cur--) ;
-		input_cur++;
-	}
+		for (; input_cur[chat_on] != 0 && f(INPUTLINE[input_cur[chat_on]-1]); input_cur[chat_on]--) ;
 	else
-		for (; input_cur != input_len && f(cp[input_cur]); input_cur++) ;
+		for (; input_cur[chat_on] != input_len[chat_on] && f(INPUTLINE[input_cur[chat_on]]); input_cur[chat_on]++) ;
 }
 
 // Handles console key input
@@ -728,9 +852,6 @@ boolean CON_Responder(event_t *ev)
 
 	const char *cmd = "";
 	INT32 key;
-
-	if (chat_on)
-		return false;
 
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
@@ -748,12 +869,21 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording)
 			return false;
 
-		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
+		if ((key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1]) && !chat_on)
 		{
 			if (consdown) // ignore repeat
 				return true;
 			consoletoggle = true;
 			consdown = true;
+			return true;
+		}
+		if ((key == gamecontrol[gc_talkkey][0] || key == gamecontrol[gc_teamkey][0]) && netgame && !con_destlines)
+		{
+			if (cv_mute.value && !(server || adminplayer == consoleplayer))
+				return true;
+			chat_team = (key == gamecontrol[gc_teamkey][0] && G_GametypeHasSpectators());  // team modes imply spectators
+			consoletoggle = true;
+			chat_on = true;
 			return true;
 		}
 
@@ -788,13 +918,13 @@ boolean CON_Responder(event_t *ev)
 	if (ctrldown)
 	{
 		// show all cvars/commands that match what we have inputted
-		if (key == KEY_TAB)
+		if (key == KEY_TAB && !chat_on)
 		{
 			size_t i, len;
 
 			if (!completion[0])
 			{
-				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+				if (!input_len[chat_on] || input_len[chat_on] >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
 				comskips = varskips = 0;
@@ -830,26 +960,26 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			if (input_sel > input_cur)
-				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			if (input_sel[chat_on] > input_cur[chat_on])
+				I_ClipboardCopy(&INPUTLINE[input_cur[chat_on]], input_sel[chat_on]-input_cur[chat_on]);
 			else
-				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
+				I_ClipboardCopy(&INPUTLINE[input_sel[chat_on]], input_cur[chat_on]-input_sel[chat_on]);
 			CON_InputDelSelection();
 			completion[0] = 0;
 			return true;
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			if (input_sel > input_cur)
-				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			if (input_sel[chat_on] > input_cur[chat_on])
+				I_ClipboardCopy(&INPUTLINE[input_cur[chat_on]], input_sel[chat_on]-input_cur[chat_on]);
 			else
-				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
+				I_ClipboardCopy(&INPUTLINE[input_sel[chat_on]], input_cur[chat_on]-input_sel[chat_on]);
 			return true;
 		}
 		else if (key == 'v' || key == 'V')
 		{
 			const char *paste = I_ClipboardPaste();
-			if (input_sel != input_cur)
+			if (input_sel[chat_on] != input_cur[chat_on])
 				CON_InputDelSelection();
 			if (paste != NULL)
 				CON_InputAddString(paste);
@@ -860,8 +990,8 @@ boolean CON_Responder(event_t *ev)
 		// Select all
 		if (key == 'a' || key == 'A')
 		{
-			input_sel = 0;
-			input_cur = input_len;
+			input_sel[chat_on] = 0;
+			input_cur[chat_on] = input_jump = input_len[chat_on];
 			return true;
 		}
 
@@ -873,12 +1003,24 @@ boolean CON_Responder(event_t *ev)
 	// command completion forward (tab) and backward (shift-tab)
 	if (key == KEY_TAB)
 	{
+		if (chat_on)
+		{
+			if (shiftdown)
+			{
+				if (G_GametypeHasSpectators())  // team modes imply spectators
+					chat_team = !chat_team;
+			}
+			else
+				CON_InputAddChar('\t');
+			return true;
+		}
+
 		// sequential command completion forward and backward
 
 		// remember typing for several completions (a-la-4dos)
 		if (!completion[0])
 		{
-			if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+			if (!input_len[chat_on] || input_len[chat_on] >= 40 || strchr(inputlines[inputline], ' '))
 				return true;
 			strcpy(completion, inputlines[inputline]);
 			comskips = varskips = 0;
@@ -939,41 +1081,53 @@ boolean CON_Responder(event_t *ev)
 
 	if (key == KEY_LEFTARROW)
 	{
-		if (input_cur != 0)
+		if (input_cur[chat_on] != 0)
 		{
-			--input_cur;
+			--input_cur[chat_on];  input_jump = input_cur[chat_on];
 			if (ctrldown)
-				blockshift(true);
+				jumptoword(true);
+
+			if (INPUTLINE[input_cur[1]] == '\n')
+				recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[chat_on])]);
 		}
 		if (!shiftdown)
-			input_sel = input_cur;
+			input_sel[chat_on] = input_cur[chat_on];
 		return true;
 	}
 	else if (key == KEY_RIGHTARROW)
 	{
-		if (input_cur < input_len)
+		if (input_cur[chat_on] < input_len[chat_on])
 		{
+			if (INPUTLINE[input_cur[1]] == '\n')
+				recounttabs(&INPUTLINE[input_cur[chat_on] + 1]);
+
 			if (ctrldown)
-				blockshift(false);
+				jumptoword(false);
 			else
-				++input_cur;
+			{
+				++input_cur[chat_on];
+				input_jump = input_cur[chat_on];
+			}
 		}
 		if (!shiftdown)
-			input_sel = input_cur;
+			input_sel[chat_on] = input_cur[chat_on];
 		return true;
 	}
 	else if (key == KEY_HOME)
 	{
-		input_cur = 0;
+		input_cur[chat_on] = input_jump = ((altdown) ? 0 : M_StartOfLine(INPUTLINE, input_cur[chat_on]));
+		recounttabs(&INPUTLINE[input_cur[chat_on]]);
 		if (!shiftdown)
-			input_sel = input_cur;
+			input_sel[chat_on] = input_cur[chat_on];
 		return true;
 	}
 	else if (key == KEY_END)
 	{
-		input_cur = input_len;
+		input_cur[chat_on] = input_jump =
+			((altdown) ? input_len[chat_on] : (unsigned)(strchrnul(&INPUTLINE[input_cur[chat_on]], '\n')-INPUTLINE));
+		recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[chat_on])]);
 		if (!shiftdown)
-			input_sel = input_cur;
+			input_sel[chat_on] = input_cur[chat_on];
 		return true;
 	}
 
@@ -984,24 +1138,57 @@ boolean CON_Responder(event_t *ev)
 	// command enter
 	if (key == KEY_ENTER)
 	{
-		if (!input_len)
+		if (shiftdown && chat_on)
+		{
+			CON_InputAddChar('\n');
+			return true;
+		}
+
+		if (!input_len[chat_on])
 			return true;
 
-		// push the command
-		COM_BufAddText(inputlines[inputline]);
-		COM_BufAddText("\n");
+		if (!chat_on)
+		{
+			// push the command
+			COM_BufAddText(inputlines[inputline]);
+			COM_BufAddText("\n");
 
-		CONS_Printf("\x86""%c""\x80""%s\n", CON_PROMPTCHAR, inputlines[inputline]);
+			CONS_Printf("\x86""%c""\x80""%s\n", CON_PROMPTCHAR, inputlines[inputline]);
 
-		inputline = (inputline+1) & 31;
-		inputhist = inputline;
+			inputline = (inputline+1) & 31;
+			inputhist = inputline;
+		}
+		else
+		{
+			unsigned char buf[2+256];
+			UINT8 n = 2;
+			unsigned char *s = (unsigned char *)inputlines[32];
+
+			do
+			{
+				if (*s == '\t' || *s == '\n' || (*s >= ' ' && !(*s & 0x80)))
+					buf[n++] = *s;
+			}
+			while (*(s++)) ;
+
+			if (cv_mute.value && (!server || adminplayer == consoleplayer))
+				CONS_Alert(CONS_NOTICE, M_GetText("The chat is muted. You can't say anything at the moment.\n"));
+			else
+				if (buf[2] != 0)
+				{
+					buf[0] = -chat_team;
+					buf[1] = 0;
+					SendNetXCmd(XD_SAY, buf, n);
+				}
+			consoletoggle = true;
+		}
 		CON_InputClear();
 
 		return true;
 	}
 
 	// backspace and delete command prompt
-	if (input_sel != input_cur)
+	if (input_sel[chat_on] != input_cur[chat_on])
 	{
 		if (key == KEY_BACKSPACE || key == KEY_DEL)
 		{
@@ -1009,11 +1196,11 @@ boolean CON_Responder(event_t *ev)
 			{
 				if (key == KEY_BACKSPACE)
 				{
-					input_cur--;
-					blockshift(true);
+					input_cur[chat_on]--;
+					jumptoword(true);
 				}
 				else
-					blockshift(false);
+					jumptoword(false);
 			}
 			CON_InputDelSelection();
 			return true;
@@ -1023,8 +1210,8 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (ctrldown)
 		{
-			input_cur--;
-			blockshift(true);
+			input_cur[chat_on]--;
+			jumptoword(true);
 			CON_InputDelSelection();
 		}
 		else
@@ -1033,53 +1220,137 @@ boolean CON_Responder(event_t *ev)
 	}
 	else if (key == KEY_DEL)
 	{
-		if (input_cur == input_len)
+		if (input_cur[chat_on] == input_len[chat_on])
 			return true;
 		if (ctrldown)
 		{
-			blockshift(false);
+			jumptoword(false);
 			CON_InputDelSelection();
 		}
 		else
 		{
-			++input_cur;
+			++input_cur[chat_on];
 			CON_InputDelChar();
 		}
 		return true;
 	}
 
-	// move back in input history
 	if (key == KEY_UPARROW)
 	{
-		// copy one of the previous inputlines to the current
-		do
-			inputhist = (inputhist - 1) & 31; // cycle back
-		while (inputhist != inputline && !inputlines[inputhist][0]);
+		if (chat_on)
+		{
+			size_t start, start2;
+			size_t n, left;
+			const size_t textwidth = con_width - 11 - ((chat_team) ? 9 : 4);  // Say-team:/Say:
 
-		// stop at the last history input line, which is the
-		// current line + 1 because we cycle through the 32 input lines
-		if (inputhist == inputline)
-			inputhist = (inputline + 1) & 31;
+			// For left justified text, count from the previous linefeed.
+			n = (input_jump - M_StartOfLine(inputlines[32], input_jump)) % textwidth;
 
-		CON_InputSetString(inputlines[inputhist]);
-		return true;
+			left = start = M_StartOfLine(inputlines[32], input_cur[1]);
+			if (input_cur[1] - start > textwidth)  // line wrapped
+				left = input_cur[1] - (input_cur[1] - start) % textwidth + 1;
+
+			// Correct position after being truncated by end of buffer.
+			if (input_cur[1] > left + n)
+				input_cur[1] = left + n;
+			else
+			{
+				if (input_cur[1] >= start + textwidth)
+					// Since we're not on the first line, we could just subtract textwidth.
+					// But the final visual line can truncate our position.
+					input_cur[1] = left - textwidth + n - 1;
+				else
+				{
+					if (start == 0)
+						input_cur[1] = 0;
+					else
+					{
+						// The start of the previous line is the previous line to it.
+						start2 = M_StartOfLine(inputlines[32], start-1);
+						input_cur[1] = min(start - (start - start2) % textwidth + n, start-1);
+					}
+				}
+			}
+
+			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
+
+			if (!shiftdown)
+				input_sel[chat_on] = input_cur[chat_on];
+
+			return true;
+		}
+		else  // move back in input history
+		{
+			// copy one of the previous inputlines to the current
+			do
+				inputhist = (inputhist - 1) & 31; // cycle back
+			while (inputhist != inputline && !inputlines[inputhist][0]);
+
+			// stop at the last history input line, which is the
+			// current line + 1 because we cycle through the 32 input lines
+			if (inputhist == inputline)
+				inputhist = (inputline + 1) & 31;
+
+			CON_InputSetString(inputlines[inputhist]);
+			return true;
+		}
 	}
 
-	// move forward in input history
 	if (key == KEY_DOWNARROW)
 	{
-		if (inputhist == inputline)
-			return true;
-		do
-			inputhist = (inputhist + 1) & 31;
-		while (inputhist != inputline && !inputlines[inputhist][0]);
+		if (chat_on)
+		{
+			const char *lf, *lf2;
+			size_t n;
+			const size_t textwidth = con_width - 11 - ((chat_team) ? 9 : 4);  // Say-team:/Say:
 
-		// back to currentline
-		if (inputhist == inputline)
-			CON_InputClear();
-		else
-			CON_InputSetString(inputlines[inputhist]);
-		return true;
+			// For left justified text, count from the previous linefeed.
+			n = (input_jump - M_StartOfLine(inputlines[32], input_jump)) % textwidth;
+
+			lf = strchrnul(&inputlines[32][input_cur[1]], '\n');  // next line
+			// Correct position after being truncated by start of buffer.
+			if (input_cur[1] < min(n, (unsigned)(lf-inputlines[32])))  // only possibly first line
+				input_cur[1] = min(n, (unsigned)(lf-inputlines[32]));
+			else
+			{
+				lf2 = &inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])];
+				// Determine if were on a wrapped line and not the final visual line.
+				if (lf - &inputlines[32][input_cur[1]] > (signed)((lf-lf2) % textwidth))
+					input_cur[1] = min(input_cur[1] + textwidth, (unsigned)(lf-inputlines[32]));
+				else
+				{
+					if (*lf == 0)
+						input_cur[1] = lf-inputlines[32];
+					else
+					{
+						lf2 = strchrnul(lf + 1, '\n');  // line after next
+						input_cur[1] = min(lf + n + 1, lf2)-inputlines[32];
+					}
+				}
+			}
+
+			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
+
+			if (!shiftdown)
+				input_sel[chat_on] = input_cur[chat_on];
+
+			return true;
+		}
+		else  // move forward in input history
+		{
+			if (inputhist == inputline)
+				return true;
+			do
+				inputhist = (inputhist + 1) & 31;
+			while (inputhist != inputline && !inputlines[inputhist][0]);
+
+			// back to currentline
+			if (inputhist == inputline)
+				CON_InputClear();
+			else
+				CON_InputSetString(inputlines[inputhist]);
+			return true;
+		}
 	}
 
 	// allow people to use keypad in console (good for typing IP addresses) - Calum
@@ -1113,7 +1384,7 @@ boolean CON_Responder(event_t *ev)
 		key = key + 'a' - 'A';
 #endif
 
-	if (input_sel != input_cur)
+	if (input_sel[chat_on] != input_cur[chat_on])
 		CON_InputDelSelection();
 	CON_InputAddChar(key);
 
@@ -1400,26 +1671,37 @@ void CONS_Error(const char *msg)
 static void CON_DrawInput(void)
 {
 	INT32 charwidth = (INT32)con_scalefactor << 3;
-	const char *p = inputlines[inputline];
+	INT32 charheight = charwidth;
+	const char *p = inputlines[((chat_on) ? 32 : inputline)];
 	size_t c, clen, cend;
 	UINT8 lellip = 0, rellip = 0;
-	INT32 x, y, i;
+	UINT8 nleading = 0;
+	INT32 x, y, i, xcur = 0, ycur = 0;
+	INT32 ylf, lfmargin;
 
-	y = con_curlines - 12 * con_scalefactor;
+	// FIXME/james: often stops short of maximum potential.
+	// Just so happens to fit the maximum tabs possible (2 per line--5 lines)
+	// nearly perfectly.  Though, it isn't taking tabs into account.
+	lfmargin = vid.height - (CON_MAXPROMPTCHARS-3)*charwidth / (con_width-13) -
+		(vid.width / (float)vid.height + 1)*charheight;
+
+	y = ylf = con_curlines - 12*con_scalefactor;
 	x = charwidth*2;
 
 	clen = con_width-13;
+	if (chat_on)
+		clen -= ((chat_team) ? 8 : 3);
 
-	if (input_len <= clen)
+	if ((chat_on && y <= lfmargin) || input_len[chat_on] <= clen)
 	{
 		c = 0;
-		clen = input_len;
+		clen = input_len[chat_on];
 	}
 	else // input line scrolls left if it gets too long
 	{
 		clen -= 2; // There will always be some extra truncation -- but where is what we'll find out
 
-		if (input_cur <= clen/2)
+		if (input_cur[chat_on] <= clen/2)
 		{
 			// Close enough to right edge to show all
 			c = 0;
@@ -1430,15 +1712,45 @@ static void CON_DrawInput(void)
 		{
 			// Cursor in the middle (or right side) of input
 			// Move over for the ellipsis
-			c = input_cur - (clen/2) + 2;
+			c = input_cur[chat_on] - (clen/2);
+			if (chat_on)
+			{
+				clen = con_width-15;
+				if (chat_team)
+				{
+					// Five more characters in "Say-Team" than "Say".
+					// "Say" is already the same number of characters as an ellipsis.
+					if (c < 6)
+					{
+						// The middle that counted "Say-Team" is too far over for the
+						// ellipsis, so we have to move back in the buffer, aswell as visually.
+						x += (6-c)*charwidth;
+						clen -= 6-c;
+						c = 0;
+					}
+					else
+						c -= 6;
+				}
+				else
+					// One character can always be safely removed, because the left
+					// ellipsis will only show after having passed the middle of the line.
+					c--;
+			}
+			else
+				c += 2;  // Adding on two characters from the "$".
 			x += charwidth*2;
 			lellip = 1;
 
-			if (c + clen >= input_len)
+			if (c + clen >= input_len[chat_on])
 			{
 				// Cursor in the right side of input
 				// We were too far over, so move back
-				c = input_len - clen;
+				if (clen > input_len[chat_on])
+				{
+					x += (clen - input_len[chat_on])*charwidth;  // "-Team"
+					clen = input_len[chat_on];
+				}
+				c = input_len[chat_on] - clen;
 			}
 			else
 			{
@@ -1452,32 +1764,91 @@ static void CON_DrawInput(void)
 	if (lellip)
 	{
 		x -= charwidth*3;
-		if (input_sel < c)
+		if (input_sel[chat_on] < c)
 			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
 	else
-		V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
-
-	for (cend = c + clen; c < cend; ++c, x += charwidth)
 	{
-		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
+		if (chat_on)
 		{
-			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			const char *s = ((chat_team) ? "Say-Team:" : "Say:");
+			for (x = charwidth; *s; ++s, x += charwidth, ++nleading)
+				V_DrawCharacter(x, y, *s | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+		}
+		else
+			V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+	}
+
+	chat_inputlines = y;
+	for (cend = c + clen; c < cend; ++c)
+	{
+		if ((input_sel[chat_on] > c && input_cur[chat_on] <= c) || (input_sel[chat_on] <= c && input_cur[chat_on] > c))
+		{
+			if (p[c] == '\t')
+			{
+				if ((signed)(con_curlines - 12*con_scalefactor) <= lfmargin)  // Linefeeds are potential for uneven lines.
+					V_DrawFill(x, y, min((signed)(4 - (x/charwidth - nleading - 1) % 4), (signed)(con_width-11 - x/charwidth + 1))*charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+				else
+					V_DrawFill(x, y, (4 - c % 4)*charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			}
+			else
+				// Newlines get more distinction because they aren't just any old whitespace!
+				V_DrawFill(x, y, charwidth, (10 * con_scalefactor), ((p[c] == '\n') ? 87 : 107) | V_NOSCALESTART);
 			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
 		}
 		else
-			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		{
+			if (p[c] == '\n' && ((signed)(con_curlines - 12*con_scalefactor) > lfmargin || ylf > lfmargin))
+				V_DrawFill(x, y, charwidth, charheight, 127 | V_NOSCALESTART);
+			else
+				V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		}
 
-		if (c == input_cur && con_tick >= 4)
-			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		if (c == input_cur[chat_on])
+		{
+			xcur = x;
+			ycur = y;
+		}
+
+		if (p[c] == '\t')
+		{
+			if ((signed)(con_curlines - 12*con_scalefactor) <= lfmargin)
+				x += (4 - (x/charwidth - nleading - 1) % 4)*charwidth;
+			else
+				x += (4 - c % 4)*charwidth;
+		}
+		else
+			x += charwidth;
+
+		if (p[c] == '\n' && ylf <= lfmargin && (signed)(con_curlines - 12*con_scalefactor) <= lfmargin)
+		{
+			ylf += charheight;
+			goto newline;
+		}
+		if (x > (signed)((con_width-11)*charwidth) && !lellip)
+		{
+		newline:
+			y += charwidth;
+			x  = charwidth + nleading*charwidth;
+		}
 	}
-	if (cend == input_cur && con_tick >= 4)
-		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	chat_inputlines = y - chat_inputlines;
+
+	if (cend == input_cur[chat_on])
+	{
+		xcur = x;
+		ycur = y;
+	}
+	// Doing it like this to circumvent the selection highlight overwriting
+	// the cursor, also the newline character placeholder.
+	if (con_tick >= 4)
+		V_DrawCharacter(xcur, ycur + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+
 	if (rellip)
 	{
-		if (input_sel > cend)
+		if (input_sel[chat_on] > cend)
 			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
@@ -1489,7 +1860,7 @@ static void CON_DrawHudlines(void)
 {
 	UINT8 *p;
 	size_t i;
-	INT32 y;
+	INT32 y = 0;
 	INT32 charflags = 0;
 	INT32 charwidth = 8 * con_scalefactor;
 	INT32 charheight = 8 * con_scalefactor;
@@ -1497,12 +1868,7 @@ static void CON_DrawHudlines(void)
 	if (con_hudlines <= 0)
 		return;
 
-	if (chat_on)
-		y = charheight; // leave place for chat input in the first row of text
-	else
-		y = 0;
-
-	for (i = con_cy - con_hudlines+1; i <= con_cy; i++)
+	for (i = con_cy - con_hudlines; i <= con_cy; i++)
 	{
 		size_t c;
 		INT32 x;
@@ -1637,7 +2003,7 @@ static void CON_DrawConsole(void)
 	{
 		// inu: no more width (was always 0 and vid.width)
 		if (rendermode != render_none)
-			V_DrawFadeConsBack(con_curlines); // translucent background
+			V_DrawFadeConsBack(con_curlines + chat_inputlines); // translucent background
 	}
 
 	// draw console text lines from top to bottom

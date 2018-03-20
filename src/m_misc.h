@@ -91,6 +91,10 @@ TMatrix *RotateZMatrix(angle_t rad);
 // s1 = s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1, const char *s2, const char *s3);
 
+// The first character of the current line.
+// Works even when n is the position of a linefeed character.
+size_t M_StartOfLine (const char *s, size_t n);
+
 void M_SetupMemcpy(void);
 
 // counting bits, for weapon ammo code, usually

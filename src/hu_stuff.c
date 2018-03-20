@@ -72,10 +72,8 @@ patch_t *cred_font[CRED_FONTSIZE];
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
-static char w_chat[HU_MAXMSGLEN];
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
-static char hu_tick;
 
 patch_t *rflagico;
 patch_t *bflagico;
@@ -497,9 +495,18 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	{
 		size_t i;
 		const size_t j = strlen(msg);
-		for (i = 0; i < j; i++)
+		UINT8 nlf, ntab;
+		for (i = 0, nlf = ntab = 0; i < j; i++)
 		{
-			if (msg[i] & 0x80)
+			if (msg[i] == '\n')
+			{
+				++nlf;
+				ntab = 0;  // reset per line
+			}
+			else if (msg[i] == '\t')
+				++ntab;
+
+			if (msg[i] & 0x80 || nlf > CHAT_MAXLINEFEEDS || ntab > CHAT_TABULARSPERLINE)
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Illegal say command received from %s containing invalid characters\n"), player_names[playernum]);
 				if (server)
@@ -562,8 +569,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		const char *cstart = "", *cend = "", *adminchar = "~", *remotechar = "@", *fmt;
 		char *tempchar = NULL;
 
-		// In CTF and team match, color the player's name.
-		if (G_GametypeHasTeams())
+		if (players[playernum].spectator)
+		{
+			cend = "\x80";
+			cstart = "\x86";
+		}
+		else if (G_GametypeHasTeams())
 		{
 			cend = "\x80";
 			if (players[playernum].ctfteam == 1) // red
@@ -571,19 +582,30 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			else if (players[playernum].ctfteam == 2) // blue
 				cstart = "\x84";
 		}
+		else if (G_TagGametype())
+		{
+			cend = "\x80";
+			if (players[playernum].pflags & PF_TAGIT && gametype == GT_HIDEANDSEEK)
+				cstart = "\x82*\x87";  // Yellow star shows that this is the ALPHA.
+			else if (players[playernum].pflags & (PF_TAGIT|PF_TAGGED))
+				cstart = "\x87";
+		}
+		else if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		{
+			cend = "\x80";
+			if (players[playernum].exiting && gamestate == GS_LEVEL)
+				cstart = "\x82";
+		}
 
 		// Give admins and remote admins their symbols.
 		if (playernum == serverplayer)
-			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(adminchar) + 1, PU_STATIC, NULL);
+			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(adminchar) + 3, PU_STATIC, NULL);
 		else if (playernum == adminplayer)
-			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(remotechar) + 1, PU_STATIC, NULL);
+			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(remotechar) + 3, PU_STATIC, NULL);
 		if (tempchar)
 		{
-			strcat(tempchar, cstart);
-			if (playernum == serverplayer)
-				strcat(tempchar, adminchar);
-			else
-				strcat(tempchar, remotechar);
+			sprintf(tempchar, "\x83%s\x80%s",  // nice bit of green
+					((playernum == serverplayer) ? adminchar : remotechar), cstart);
 			cstart = tempchar;
 		}
 
@@ -596,12 +618,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		else if (target == 0) // To everyone
 			fmt = "\3<%s%s%s> %s\n";
 		else if (target-1 == consoleplayer) // To you
-			fmt = "\3*%s%s%s* %s\n";
+			fmt = "\4*\x85""From:""\x80%s%s%s\x82*\x80 %s\n";
 		else if (target > 0) // By you, to another player
 		{
 			// Use target's name.
 			dispname = player_names[target-1];
-			fmt = "\3->*%s%s%s* %s\n";
+			fmt = "\4*\x85""To:""\x80%s%s%s\x82*\x80 %s\n";
 		}
 		else // To your team
 			fmt = "\3>>%s%s%s<< (team) %s\n";
@@ -621,38 +643,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 }
 #endif
 
-// Handles key input and string input
-//
-static inline boolean HU_keyInChatString(char *s, char ch)
-{
-	size_t l;
-
-	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
-	  || ch == ' ') // Allow spaces, of course
-	{
-		l = strlen(s);
-		if (l < HU_MAXMSGLEN - 1)
-		{
-			s[l++] = ch;
-			s[l]=0;
-			return true;
-		}
-		return false;
-	}
-	else if (ch == KEY_BACKSPACE)
-	{
-		l = strlen(s);
-		if (l)
-			s[--l] = 0;
-		else
-			return false;
-	}
-	else if (ch != KEY_ENTER)
-		return false; // did not eat key
-
-	return true; // ate the key
-}
-
 //
 //
 void HU_Ticker(void)
@@ -660,233 +650,18 @@ void HU_Ticker(void)
 	if (dedicated)
 		return;
 
-	hu_tick++;
-	hu_tick &= 7; // currently only to blink chat input cursor
-
+#if 0
 	if (PLAYER1INPUTDOWN(gc_scores))
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
-}
-
-#define QUEUESIZE 256
-
-static boolean teamtalk = false;
-static char chatchars[QUEUESIZE];
-static INT32 head = 0, tail = 0;
-
-//
-// HU_dequeueChatChar
-//
-char HU_dequeueChatChar(void)
-{
-	char c;
-
-	if (head != tail)
-	{
-		c = chatchars[tail];
-		tail = (tail + 1) & (QUEUESIZE-1);
-	}
-	else
-		c = 0;
-
-	return c;
-}
-
-//
-//
-static void HU_queueChatChar(char c)
-{
-	// send automaticly the message (no more chat char)
-	if (c == KEY_ENTER)
-	{
-		char buf[2+256];
-		size_t ci = 2;
-
-		do {
-			c = HU_dequeueChatChar();
-			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
-				buf[ci++]=c;
-		} while (c);
-
-		// last minute mute check
-		if (cv_mute.value && !(server || adminplayer == consoleplayer))
-		{
-			CONS_Alert(CONS_NOTICE, M_GetText("The chat is muted. You can't say anything at the moment.\n"));
-			return;
-		}
-
-		if (ci > 3) // don't send target+flags+empty message.
-		{
-			if (teamtalk)
-				buf[0] = -1; // target
-			else
-				buf[0] = 0; // target
-			buf[1] = 0; // flags
-			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
-		}
-		return;
-	}
-
-	if (((head + 1) & (QUEUESIZE-1)) == tail)
-		CONS_Printf(M_GetText("[Message unsent]\n")); // message not sent
-	else
-	{
-		if (c == KEY_BACKSPACE)
-		{
-			if (tail != head)
-				head = (head - 1) & (QUEUESIZE-1);
-		}
-		else
-		{
-			chatchars[head] = c;
-			head = (head + 1) & (QUEUESIZE-1);
-		}
-	}
-}
-
-void HU_clearChatChars(void)
-{
-	while (tail != head)
-		HU_queueChatChar(KEY_BACKSPACE);
-	chat_on = false;
-}
-
-//
-// Returns true if key eaten
-//
-boolean HU_Responder(event_t *ev)
-{
-	UINT8 c;
-
-	if (ev->type != ev_keydown)
-		return false;
-
-	// only KeyDown events now...
-
-	if (!chat_on)
-	{
-		// enter chat mode
-		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
-			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
-		{
-			if (cv_mute.value && !(server || adminplayer == consoleplayer))
-				return false;
-			chat_on = true;
-			w_chat[0] = 0;
-			teamtalk = false;
-			return true;
-		}
-		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
-			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
-		{
-			if (cv_mute.value && !(server || adminplayer == consoleplayer))
-				return false;
-			chat_on = true;
-			w_chat[0] = 0;
-			teamtalk = true;
-			return true;
-		}
-	}
-	else // if chat_on
-	{
-		// Ignore modifier keys
-		// Note that we do this here so users can still set
-		// their chat keys to one of these, if they so desire.
-		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
-		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
-		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
-			return true;
-
-		c = (UINT8)ev->data1;
-
-		// use console translations
-		if (shiftdown)
-			c = shiftxform[c];
-
-		if (HU_keyInChatString(w_chat,c))
-			HU_queueChatChar(c);
-		if (c == KEY_ENTER)
-			chat_on = false;
-		else if (c == KEY_ESCAPE)
-			chat_on = false;
-
-		return true;
-	}
-	return false;
+#endif
+	hu_showscores = PLAYER1INPUTDOWN(gc_scores);
 }
 
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
-
-//
-// HU_DrawChat
-//
-// Draw chat input
-//
-static void HU_DrawChat(void)
-{
-	INT32 t = 0, c = 0, y = HU_INPUTY;
-	size_t i = 0;
-	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
-	const char *talk = ntalk;
-	INT32 charwidth = 8 * con_scalefactor; //SHORT(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor; //SHORT(hu_font['A'-HU_FONTSTART]->height) * con_scalefactor;
-
-	if (teamtalk)
-	{
-		talk = ttalk;
-#if 0
-		if (players[consoleplayer].ctfteam == 1)
-			t = 0x500;  // Red
-		else if (players[consoleplayer].ctfteam == 2)
-			t = 0x400; // Blue
-#endif
-	}
-
-	while (talk[i])
-	{
-		if (talk[i] < HU_FONTSTART)
-		{
-			++i;
-			//charwidth = 4 * con_scalefactor;
-		}
-		else
-		{
-			//charwidth = SHORT(hu_font[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
-		}
-		c += charwidth;
-	}
-
-	i = 0;
-	while (w_chat[i])
-	{
-		//Hurdler: isn't it better like that?
-		if (w_chat[i] < HU_FONTSTART)
-		{
-			++i;
-			//charwidth = 4 * con_scalefactor;
-		}
-		else
-		{
-			//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, !cv_allcaps.value);
-		}
-
-		c += charwidth;
-		if (c >= vid.width)
-		{
-			c = 0;
-			y += charheight;
-		}
-	}
-
-	if (hu_tick < 4)
-		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, !cv_allcaps.value);
-}
-
 
 // draw the Crosshair, at the exact center of the view.
 //
@@ -1055,10 +830,6 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-	// draw chat string plus cursor
-	if (chat_on)
-		HU_DrawChat();
-
 	if (cechotimer)
 		HU_DrawCEcho();
 

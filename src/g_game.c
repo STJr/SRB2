@@ -1765,8 +1765,6 @@ boolean G_Responder(event_t *ev)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (HU_Responder(ev))
-			return true; // chat ate the event
 		if (AM_Responder(ev))
 			return true; // automap ate it
 		// map the event (key/mouse/joy) to a gamecontrol
@@ -1782,9 +1780,6 @@ boolean G_Responder(event_t *ev)
 	}
 	else if (gamestate == GS_CUTSCENE)
 	{
-		if (HU_Responder(ev))
-			return true; // chat ate the event
-
 		if (F_CutsceneResponder(ev))
 		{
 			D_StartTitle();
@@ -1794,9 +1789,6 @@ boolean G_Responder(event_t *ev)
 
 	else if (gamestate == GS_CREDITS)
 	{
-		if (HU_Responder(ev))
-			return true; // chat ate the event
-
 		if (F_CreditResponder(ev))
 		{
 			F_StartGameEvaluation();
@@ -1812,10 +1804,6 @@ boolean G_Responder(event_t *ev)
 	// Demo End
 	else if (gamestate == GS_GAMEEND || gamestate == GS_EVALUATION || gamestate == GS_CREDITS)
 		return true;
-
-	else if (gamestate == GS_INTERMISSION)
-		if (HU_Responder(ev))
-			return true; // chat ate the event
 
 	// update keys current state
 	G_MapEventsToControls(ev);

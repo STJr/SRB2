@@ -1575,6 +1575,24 @@ void strcatbf(char *s1, const char *s2, const char *s3)
 	strcat(s1, tmp);
 }
 
+size_t M_StartOfLine (const char *s, size_t n)
+{
+	{
+		size_t len = strlen(s);
+		if (n > len)
+			n = len;
+	}
+	// Move back to not immediately catch a newline,
+	// but not before the beginning.
+	while (n-- > 0)
+	{
+		if (s[n] == '\n')
+			// The newline is technically the last character of the previous line.
+			return n + 1;
+	}
+	return 0;
+}
+
 /** Converts an ASCII Hex string into an integer. Thanks, Borland!
   * <Inuyasha> I don't know if this belongs here specifically, but it sure
   *            doesn't belong in p_spec.c, that's for sure
