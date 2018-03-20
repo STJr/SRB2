@@ -1583,8 +1583,7 @@ static void CON_DrawConsole(void)
 	i = con_cy - con_scrollup;
 
 	// skip the last empty line due to the cursor being at the start of a new line
-	if (!con_scrollup && !con_cx)
-		i--;
+	i--;
 
 	i -= (con_curlines - minheight) / charheight;
 
