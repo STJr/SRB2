@@ -1725,7 +1725,7 @@ void P_DoPlayerExit(player_t *player)
 	else if (gametype == GT_RACE || gametype == GT_COMPETITION) // If in Race Mode, allow
 	{
 		if (!countdown) // a 60-second wait ala Sonic 2.
-			countdown = cv_countdowntime.value*TICRATE + 1; // Use cv_countdowntime
+			countdown = (cv_countdowntime.value - 1)*TICRATE + 1; // Use cv_countdowntime
 
 		player->exiting = 3*TICRATE;
 
@@ -9538,7 +9538,7 @@ void P_PlayerThink(player_t *player)
 		if (i == MAXPLAYERS && player->exiting == 3*TICRATE) // finished
 			player->exiting = (14*TICRATE)/5 + 1;
 
-		// If 10 seconds are left on the timer,
+		// If 11 seconds are left on the timer,
 		// begin the drown music for countdown!
 		if (countdown == 11*TICRATE - 1)
 		{

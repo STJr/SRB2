@@ -151,8 +151,6 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{ 152, 168, 0}, // HUD_HUNTPICS
 
 	{ 152,  24, V_SNAPTORIGHT}, // HUD_GRAVBOOTSICO
-
-	{ 240, 160, V_SNAPTOBOTTOM|V_SNAPTORIGHT}, // HUD_LAP
 };
 
 //
@@ -541,15 +539,46 @@ static void ST_drawScore(void)
 			ST_DrawNumFromHud(HUD_SCORENUM, op_displayflags, V_HUDTRANS);
 	}
 	else
-		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score,V_HUDTRANS);
+		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score, V_HUDTRANS);
+}
+
+static void ST_drawRaceNum(INT32 time)
+{
+	INT32 height, bounce;
+	patch_t *racenum;
+
+	time += TICRATE;
+	height = ((3*BASEVIDHEIGHT)>>2) - 8;
+	bounce = TICRATE - (1 + (time % TICRATE));
+
+	switch (time/TICRATE)
+	{
+		case 3:
+			racenum = race3;
+			break;
+		case 2:
+			racenum = race2;
+			break;
+		case 1:
+			racenum = race1;
+			break;
+		default:
+			racenum = racego;
+			break;
+	}
+	if (bounce < 3)
+	{
+		height -= (2 - bounce);
+		if (!(P_AutoPause() || paused) && !bounce)
+				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+	}
+	V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
 }
 
 static void ST_drawTime(void)
 {
 	INT32 seconds, minutes, tictrn, tics;
-
-	// TIME:
-	ST_DrawPatchFromHud(HUD_TIME, ((mapheaderinfo[gamemap-1]->countdown && countdowntimer < 11*TICRATE && leveltime/5 & 1) ? sboredtime : sbotime), V_HUDTRANS);
+	boolean downwards = false;
 
 	if (objectplacing)
 	{
@@ -560,11 +589,60 @@ static void ST_drawTime(void)
 	}
 	else
 	{
-		tics = (mapheaderinfo[gamemap-1]->countdown ? countdowntimer : stplyr->realtime);
-		seconds = G_TicsToSeconds(tics);
+		// Counting down the hidetime?
+		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime <= (hidetime*TICRATE)))
+		{
+			tics = (hidetime*TICRATE - leveltime);
+			if (tics < 3*TICRATE)
+				ST_drawRaceNum(tics);
+			downwards = true;
+		}
+		else
+		{
+			// Hidetime finish!
+			if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime < ((hidetime+1)*TICRATE)))
+				ST_drawRaceNum(hidetime*TICRATE - leveltime);
+
+			// Time limit?
+			if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP && cv_timelimit.value && timelimitintics > 0)
+			{
+				if (timelimitintics >= leveltime)
+				{
+					tics = (timelimitintics - leveltime);
+					if (tics < 3*TICRATE)
+						ST_drawRaceNum(tics);
+				}
+				else // Overtime!
+					tics = 0;
+				downwards = true;
+			}
+			// Post-hidetime normal.
+			else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+				tics = stplyr->realtime - hidetime*TICRATE;
+			// "Shadow! What are you doing? Hurry and get back here
+			// right now before the island blows up with you on it!"
+			// "Blows up??" *awkward silence* "I've got to get outta
+			// here and find Amy and Tails right away!"
+			else if (mapheaderinfo[gamemap-1]->countdown)
+			{
+				tics = countdowntimer;
+				downwards = true;
+			}
+			// Normal.
+			else
+				tics = stplyr->realtime;
+		}
+
 		minutes = G_TicsToMinutes(tics, true);
+		seconds = G_TicsToSeconds(tics);
 		tictrn  = G_TicsToCentiseconds(tics);
 	}
+
+	// TIME:
+	ST_DrawPatchFromHud(HUD_TIME, ((downwards && (tics < 30*TICRATE) && (leveltime/5 & 1)) ? sboredtime : sbotime), V_HUDTRANS);
+
+	if (!tics && downwards && (leveltime/5 & 1)) // overtime!
+		return;
 
 	if (cv_timetic.value == 1) // Tics only -- how simple is this?
 		ST_DrawNumFromHud(HUD_SECONDS, tics, V_HUDTRANS);
@@ -709,7 +787,7 @@ static void ST_drawLivesArea(void)
 	// Spectator
 	else if (stplyr->spectator)
 	{
-		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "SPECTATE");
+		//V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "SPECTATOR");
 		v_colmap = V_GRAYMAP;
 	}
 	// Tag
@@ -747,10 +825,19 @@ static void ST_drawLivesArea(void)
 		else
 			v_colmap = V_GRAYMAP;
 	}
-	else
+	else if (circuitmap)
 	{
-		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "PLAYING");
+		if (stplyr->exiting)
+			V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "FINISHED");
+			//V_DrawString(hudinfo[HUD_LAP].x, hudinfo[HUD_LAP].y, hudinfo[HUD_LAP].f|V_YELLOWMAP, "FINISHED!");
+		else
+		{
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, va("%u/%d", stplyr->laps+1, cv_numlaps.value));
+			//V_DrawString(hudinfo[HUD_LAP].x, hudinfo[HUD_LAP].y, hudinfo[HUD_LAP].f, va("Lap: %u/%d", stplyr->laps+1, cv_numlaps.value));
+		}
 	}
+	/*else
+		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "PLAYING");*/
 
 	// name
 	v_colmap |= (V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER);
@@ -1647,92 +1734,34 @@ static void ST_drawMatchHUD(void)
 
 static inline void ST_drawRaceHUD(void)
 {
-	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
-	{
-		INT32 height = ((3*BASEVIDHEIGHT)>>2) - 8;
-		INT32 bounce = (leveltime % TICRATE);
-		patch_t *racenum;
-		switch (leveltime/TICRATE)
-		{
-			case 1:
-				racenum = race3;
-				break;
-			case 2:
-				racenum = race2;
-				break;
-			case 3:
-				racenum = race1;
-				break;
-			default:
-				racenum = racego;
-				break;
-		}
-		if (bounce < 3)
-		{
-			height -= (2 - bounce);
-			if (!(P_AutoPause() || paused) && !bounce)
-					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
-		}
-		V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
-	}
-
-	if (circuitmap)
-	{
-		if (stplyr->exiting)
-			V_DrawString(hudinfo[HUD_LAP].x, hudinfo[HUD_LAP].y, hudinfo[HUD_LAP].f|V_YELLOWMAP, "FINISHED!");
-		else
-			V_DrawString(hudinfo[HUD_LAP].x, hudinfo[HUD_LAP].y, hudinfo[HUD_LAP].f, va("Lap: %u/%d", stplyr->laps+1, cv_numlaps.value));
-	}
+	if (leveltime > TICRATE && leveltime <= 5*TICRATE)
+		ST_drawRaceNum(4*TICRATE - leveltime);
 }
 
 static void ST_drawTagHUD(void)
 {
-	char pstime[33] = "";
 	char pstext[33] = "";
 
 	// Figure out what we're going to print.
 	if (leveltime < hidetime * TICRATE) //during the hide time, the seeker and hiders have different messages on their HUD.
 	{
-		if (hidetime)
-			sprintf(pstime, "%d", (hidetime - leveltime/TICRATE)); //hide time is in seconds, not tics.
-
-		if (stplyr->pflags & PF_TAGIT && !stplyr->spectator)
-			sprintf(pstext, "%s", M_GetText("WAITING FOR PLAYERS TO HIDE..."));
-		else
-		{
-			if (!stplyr->spectator) //spectators get a generic HUD message rather than a gametype specific one.
-			{
-				if (gametype == GT_HIDEANDSEEK) //hide and seek.
-					sprintf(pstext, "%s", M_GetText("HIDE BEFORE TIME RUNS OUT!"));
-				else //default
-					sprintf(pstext, "%s", M_GetText("FLEE BEFORE YOU ARE HUNTED!"));
-			}
-			else
-				sprintf(pstext, "%s", M_GetText("HIDE TIME REMAINING:"));
-		}
-	}
-	else
-	{
-		if (cv_timelimit.value && timelimitintics >= leveltime)
-			sprintf(pstime, "%d", (timelimitintics-leveltime)/TICRATE);
-
 		if (stplyr->pflags & PF_TAGIT)
-			sprintf(pstext, "%s", M_GetText("YOU'RE IT!"));
-		else
-		{
-			if (cv_timelimit.value)
-				sprintf(pstext, "%s", M_GetText("TIME REMAINING:"));
-			else //Since having no hud message in tag is not characteristic:
-				sprintf(pstext, "%s", M_GetText("NO TIME LIMIT"));
-		}
+			sprintf(pstext, "%s", M_GetText("Waiting for players to hide..."));
+		else if (gametype == GT_HIDEANDSEEK) //hide and seek.
+			sprintf(pstext, "%s", M_GetText("Hide before time runs out!"));
+		else //default
+			sprintf(pstext, "%s", M_GetText("Flee before you are hunted!"));
 	}
+	else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
+		{
+			sprintf(pstext, "%s", M_GetText("You cannot move while hiding."));
+			if (!splitscreen)
+				V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
+		}
 
 	// Print the stuff.
 	if (pstext[0])
-		V_DrawCenteredString(BASEVIDWIDTH/2, 168, V_PERPLAYER|V_SNAPTOBOTTOM, pstext);
-
-	if (pstime[0])
-		V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_PERPLAYER|V_SNAPTOBOTTOM, pstime);
+		V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER, pstext);
 }
 
 static void ST_drawCTFHUD(void)
@@ -2010,8 +2039,24 @@ static void ST_overlayDrawer(void)
 	if (!hu_showscores) // hide the following if TAB is held
 	{
 		// Countdown timer for Race Mode
-		if (countdown)
-			V_DrawCenteredString(BASEVIDWIDTH/2, 176, V_PERPLAYER, va("%d", countdown/TICRATE));
+		if (countdown > 1)
+		{
+			tic_t time = countdown/TICRATE + 1;
+			if (time < 4)
+				ST_drawRaceNum(countdown);
+			else
+			{
+				tic_t num = time;
+				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				do
+				{
+					width += sz;
+					num /= 10;
+				} while (num);
+				V_DrawTallNum((BASEVIDWIDTH/2) + width, ((3*BASEVIDHEIGHT)>>2) - 7, V_PERPLAYER, time);
+				//V_DrawCenteredString(BASEVIDWIDTH/2, 176, V_PERPLAYER, va("%d", countdown/TICRATE + 1));
+			}
+		}
 
 		// If you are in overtime, put a big honkin' flashin' message on the screen.
 		if (G_RingSlingerGametype() && cv_overtime.value
@@ -2032,7 +2077,7 @@ static void ST_overlayDrawer(void)
 		if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			ST_drawRaceHUD();
 		// Tag HUD Stuff
-		else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+		else if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
 			ST_drawTagHUD();
 		// CTF HUD Stuff
 		else if (gametype == GT_CTF)
@@ -2118,20 +2163,13 @@ static void ST_overlayDrawer(void)
 		}
 		else if (!splitscreen && gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
 			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
-		else if (gametype == GT_HIDEANDSEEK &&
-		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
-		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, 116, V_PERPLAYER, M_GetText("You cannot move while hiding."));
-			if (!splitscreen)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
-		}
 		else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
 		{
 			INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
 			if (respawntime > 0 && !stplyr->spectator)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, va(M_GetText("Respawn in: %d second%s."), respawntime, respawntime == 1 ? "" : "s"));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, va(M_GetText("Respawn in %d..."), respawntime));
 			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Jump to respawn."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Jump to respawn."));
 		}
 		else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE)
 #ifdef HAVE_BLUA
@@ -2141,9 +2179,9 @@ static void ST_overlayDrawer(void)
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, 60, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("You are a spectator."));
 			if (G_GametypeHasTeams())
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
 			else if (G_IsSpecialStage(gamemap) && useNightsSS)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("You cannot play until the stage has ended."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("You cannot play until the stage has ended."));
 			else if (gametype == GT_COOP && stplyr->lives <= 0)
 			{
 				if (cv_cooplives.value == 2
@@ -2163,13 +2201,13 @@ static void ST_overlayDrawer(void)
 					}
 
 					if (i != MAXPLAYERS)
-						V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
+						V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
 				}
 			}
 			else if (gametype != GT_COOP)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
 			if (!splitscreen)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 132, V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, 148, V_PERPLAYER|V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}

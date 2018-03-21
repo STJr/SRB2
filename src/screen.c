@@ -455,9 +455,8 @@ void SCR_ClosedCaptions(void)
 		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
 			continue;
 
-		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
-		y = vid.height-((i + 2)*10*vid.dupy);
-		dot = ' ';
+		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
+		y = BASEVIDHEIGHT-((i + 2)*10);
 
 		if (closedcaptions[i].b)
 			y -= (closedcaptions[i].b--)*vid.dupy;
@@ -469,8 +468,10 @@ void SCR_ClosedCaptions(void)
 			dot = '\x19';
 		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
 			dot = '\x1E';
+		else
+			dot = ' ';
 
-		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }

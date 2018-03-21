@@ -5682,7 +5682,7 @@ static void M_DrawChecklist(void)
 												beat = va("Get %d points in %s", cond[condnum].requirement, level);
 												break;
 											case UC_MAPTIME:
-												beat = va("Beat %s in %d:%d.%d", level,
+												beat = va("Beat %s in %d:%02d.%02d", level,
 												G_TicsToMinutes(cond[condnum].requirement, true),
 												G_TicsToSeconds(cond[condnum].requirement),
 												G_TicsToCentiseconds(cond[condnum].requirement));
@@ -5707,7 +5707,7 @@ static void M_DrawChecklist(void)
 											beat = va("Get %d points over all maps", cond[condnum].requirement);
 											break;
 										case UC_OVERALLTIME:
-											beat = va("Get a total time of less than %d:%d.%d",
+											beat = va("Get a total time of less than %d:%02d.%02d",
 											G_TicsToMinutes(cond[condnum].requirement, true),
 											G_TicsToSeconds(cond[condnum].requirement),
 											G_TicsToCentiseconds(cond[condnum].requirement));
@@ -5755,12 +5755,12 @@ static void M_DrawChecklist(void)
 												break;
 											case UC_NIGHTSTIME:
 												if (cond[condnum].extrainfo2)
-													beat = va("Beat %s, mare %d in %d:%d.%d", level, cond[condnum].extrainfo2,
+													beat = va("Beat %s, mare %d in %d:%02d.%02d", level, cond[condnum].extrainfo2,
 													G_TicsToMinutes(cond[condnum].requirement, true),
 													G_TicsToSeconds(cond[condnum].requirement),
 													G_TicsToCentiseconds(cond[condnum].requirement));
 												else
-													beat = va("Beat %s in %d:%d.%d",
+													beat = va("Beat %s in %d:%02d.%02d",
 													level,
 													G_TicsToMinutes(cond[condnum].requirement, true),
 													G_TicsToSeconds(cond[condnum].requirement),

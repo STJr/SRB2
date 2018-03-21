@@ -102,7 +102,6 @@ typedef enum
 	HUD_TIMEUP,
 	HUD_HUNTPICS,
 	HUD_GRAVBOOTSICO,
-	HUD_LAP,
 
 	NUMHUDITEMS
 } hudnum_t;

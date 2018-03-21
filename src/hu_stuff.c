@@ -1591,20 +1591,8 @@ static void HU_DrawRankings(void)
 	{
 		if (cv_timelimit.value && timelimitintics > 0)
 		{
-			INT32 timeval = (timelimitintics+1-leveltime)/TICRATE;
-
-			if (leveltime <= timelimitintics)
-			{
-				V_DrawCenteredString(64, 8, 0, "TIME LEFT");
-				V_DrawCenteredString(64, 16, 0, va("%u", timeval));
-			}
-
-			// overtime
-			if ((leveltime > (timelimitintics + TICRATE/2)) && cv_overtime.value)
-			{
-				V_DrawCenteredString(64, 8, 0, "TIME LEFT");
-				V_DrawCenteredString(64, 16, 0, "OVERTIME");
-			}
+			V_DrawCenteredString(64, 8, 0, "TIME");
+			V_DrawCenteredString(64, 16, 0, va("%i:%02i", G_TicsToMinutes(stplyr->realtime, true), G_TicsToSeconds(stplyr->realtime)));
 		}
 
 		if (cv_pointlimit.value > 0)
