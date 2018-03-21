@@ -2242,7 +2242,7 @@ boolean M_Responder(event_t *ev)
 			// Spymode on F12 handled in game logic
 
 			case KEY_ESCAPE: // Pop up menu
-				if (chat_on)
+				if (CON_Ready())
 					return false;  // handle this down the road
 
 				M_StartControlPanel();

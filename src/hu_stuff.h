@@ -74,9 +74,6 @@ extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
 
-// set true when entering a chat message
-extern boolean chat_on;
-
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;
 

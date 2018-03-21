@@ -71,7 +71,6 @@ patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
 
 static player_t *plr;
-boolean chat_on; // entering a chat message?
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 
@@ -650,12 +649,6 @@ void HU_Ticker(void)
 	if (dedicated)
 		return;
 
-#if 0
-	if (PLAYER1INPUTDOWN(gc_scores))
-		hu_showscores = !chat_on;
-	else
-		hu_showscores = false;
-#endif
 	hu_showscores = PLAYER1INPUTDOWN(gc_scores);
 }
 
@@ -911,7 +904,7 @@ void HU_Erase(void)
 	static INT32 secondframelines;
 #endif
 
-	if (con_clearlines == oldclearlines && !con_hudupdate && !chat_on)
+	if (con_clearlines == oldclearlines && !con_hudupdate)
 		return;
 
 #ifdef HWRENDER
@@ -924,9 +917,6 @@ void HU_Erase(void)
 	// clear the message lines that go away, so use _oldclearlines_
 	bottomline = oldclearlines;
 	oldclearlines = con_clearlines;
-	if (chat_on)
-		if (bottomline < 8)
-			bottomline = 8;
 
 	if (automapactive || viewwindowx == 0) // hud msgs don't need to be cleared
 		return;
