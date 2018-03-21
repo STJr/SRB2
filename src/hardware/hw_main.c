@@ -3928,12 +3928,10 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 
 static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float this_scale)
 {
-	UINT8 i;
-	float tr_x, tr_y;
-	FOutVector *wv;
 	FOutVector swallVerts[4];
 	FSurfaceInfo sSurf;
 	fixed_t floorheight, mobjfloor;
+	float offset = 0;
 
 	mobjfloor = HWR_OpaqueFloorAtPos(
 		spr->mobj->x, spr->mobj->y,
@@ -3972,6 +3970,8 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 		}
 
 		floorheight = FixedInt(spr->mobj->z - floorheight);
+
+		offset = floorheight;
 	}
 	else
 		floorheight = FixedInt(spr->mobj->z - mobjfloor);
@@ -3984,47 +3984,42 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	//  0--1
 
 	// x1/x2 were already scaled in HWR_ProjectSprite
+	// First match the normal sprite
 	swallVerts[0].x = swallVerts[3].x = spr->x1;
 	swallVerts[2].x = swallVerts[1].x = spr->x2;
+	swallVerts[0].z = swallVerts[3].z = spr->z1;
+	swallVerts[2].z = swallVerts[1].z = spr->z2;
 
 	if (spr->mobj && this_scale != 1.0f)
 	{
 		// Always a pixel above the floor, perfectly flat.
 		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset * this_scale - (floorheight+3);
 
-		swallVerts[0].z = swallVerts[1].z = spr->tz - (gpatch->height-gpatch->topoffset) * this_scale;
-		swallVerts[2].z = swallVerts[3].z = spr->tz + gpatch->topoffset * this_scale;
+		// Now transform the TOP vertices along the floor in the direction of the camera
+		swallVerts[3].x = spr->x1 + ((gpatch->height * this_scale) + offset) * gr_viewcos;
+		swallVerts[2].x = spr->x2 + ((gpatch->height * this_scale) + offset) * gr_viewcos;
+		swallVerts[3].z = spr->z1 + ((gpatch->height * this_scale) + offset) * gr_viewsin;
+		swallVerts[2].z = spr->z2 + ((gpatch->height * this_scale) + offset) * gr_viewsin;
 	}
 	else
 	{
 		// Always a pixel above the floor, perfectly flat.
 		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset - (floorheight+3);
 
-		// Spread out top away from the camera. (Fixme: Make it always move out in the same direction!... somehow.)
-		swallVerts[0].z = swallVerts[1].z = spr->tz - (gpatch->height-gpatch->topoffset);
-		swallVerts[2].z = swallVerts[3].z = spr->tz + gpatch->topoffset;
+		// Now transform the TOP vertices along the floor in the direction of the camera
+		swallVerts[3].x = spr->x1 + (gpatch->height + offset) * gr_viewcos;
+		swallVerts[2].x = spr->x2 + (gpatch->height + offset) * gr_viewcos;
+		swallVerts[3].z = spr->z1 + (gpatch->height + offset) * gr_viewsin;
+		swallVerts[2].z = spr->z2 + (gpatch->height + offset) * gr_viewsin;
 	}
 
-	// transform
-	wv = swallVerts;
-
-	for (i = 0; i < 4; i++,wv++)
+	// We also need to move the bottom ones away when shadowoffs is on
+	if (cv_shadowoffs.value)
 	{
-		// Offset away from the camera based on height from floor.
-		if (cv_shadowoffs.value)
-			wv->z += floorheight;
-		wv->z += 3;
-
-		//look up/down ----TOTAL SUCKS!!!--- do the 2 in one!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		tr_x = wv->z;
-		tr_y = wv->y;
-		wv->y = (tr_x * gr_viewludcos) + (tr_y * gr_viewludsin);
-		wv->z = (tr_x * gr_viewludsin) - (tr_y * gr_viewludcos);
-		// ---------------------- mega lame test ----------------------------------
-
-		//scale y before frustum so that frustum can be scaled to screen height
-		wv->y *= ORIGINAL_ASPECT * gr_fovlud;
-		wv->x *= gr_fovlud;
+		swallVerts[0].x = spr->x1 + offset * gr_viewcos;
+		swallVerts[1].x = spr->x2 + offset * gr_viewcos;
+		swallVerts[0].z = spr->z1 + offset * gr_viewsin;
+		swallVerts[1].z = spr->z2 + offset * gr_viewsin;
 	}
 
 	if (spr->flip)
@@ -4111,10 +4106,8 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 // -----------------+
 static void HWR_DrawSprite(gr_vissprite_t *spr)
 {
-	UINT8 i;
-	float tr_x, tr_y, this_scale = 1.0f;
+	float this_scale = 1.0f;
 	FOutVector wallVerts[4];
-	FOutVector *wv;
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
@@ -4161,24 +4154,8 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[1].z = wallVerts[2].z = wallVerts[3].z = spr->tz;
-
-	// transform
-	wv = wallVerts;
-
-	for (i = 0; i < 4; i++,wv++)
-	{
-		//look up/down ----TOTAL SUCKS!!!--- do the 2 in one!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		tr_x = wv->z;
-		tr_y = wv->y;
-		wv->y = (tr_x * gr_viewludcos) + (tr_y * gr_viewludsin);
-		wv->z = (tr_x * gr_viewludsin) - (tr_y * gr_viewludcos);
-		// ---------------------- mega lame test ----------------------------------
-
-		//scale y before frustum so that frustum can be scaled to screen height
-		wv->y *= ORIGINAL_ASPECT * gr_fovlud;
-		wv->x *= gr_fovlud;
-	}
+	wallVerts[0].z = wallVerts[3].z = spr->z1;
+	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	if (spr->flip)
 	{
@@ -4289,11 +4266,8 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 // Sprite drawer for precipitation
 static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 {
-	UINT8 i;
 	FBITFIELD blend = 0;
-	float tr_x, tr_y;
 	FOutVector wallVerts[4];
-	FOutVector *wv;
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 
@@ -4319,24 +4293,8 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[1].z = wallVerts[2].z = wallVerts[3].z = spr->tz;
-
-	// transform
-	wv = wallVerts;
-
-	for (i = 0; i < 4; i++, wv++)
-	{
-		//look up/down ----TOTAL SUCKS!!!--- do the 2 in one!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		tr_x = wv->z;
-		tr_y = wv->y;
-		wv->y = (tr_x * gr_viewludcos) + (tr_y * gr_viewludsin);
-		wv->z = (tr_x * gr_viewludsin) - (tr_y * gr_viewludcos);
-		// ---------------------- mega lame test ----------------------------------
-
-		//scale y before frustum so that frustum can be scaled to screen height
-		wv->y *= ORIGINAL_ASPECT * gr_fovlud;
-		wv->x *= gr_fovlud;
-	}
+	wallVerts[0].z = wallVerts[3].z = spr->z1;
+	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	wallVerts[0].sow = wallVerts[3].sow = 0;
 	wallVerts[2].sow = wallVerts[1].sow = gpatch->max_s;
@@ -4830,7 +4788,7 @@ static void HWR_CreateDrawNodes(void)
 // --------------------------------------------------------------------------
 #ifdef SORTING
 // added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
-static void HWR_DrawSprites(FTransform *stransform)
+static void HWR_DrawSprites()
 {
 	if (gr_visspritecount > 0)
 	{
@@ -4843,37 +4801,22 @@ static void HWR_DrawSprites(FTransform *stransform)
 		{
 #ifdef HWPRECIP
 			if (spr->precip)
-			{
-				HWD.pfnSetTransform(stransform);
 				HWR_DrawPrecipitationSprite(spr);
-			}
 			else
 #endif
 				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if (!cv_grmd2.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
-					{
-						HWD.pfnSetTransform(stransform);
 						HWR_DrawSprite(spr);
-					}
 					else
-					{
-						HWD.pfnSetTransform(&atransform);
 						HWR_DrawMD2(spr);
-					}
 				}
 				else
 				{
 					if (!cv_grmd2.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
-					{
-						HWD.pfnSetTransform(stransform);
 						HWR_DrawSprite(spr);
-					}
 					else
-					{
-						HWD.pfnSetTransform(&atransform);
 						HWR_DrawMD2(spr);
-					}
 				}
 		}
 	}
@@ -4963,8 +4906,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 {
 	gr_vissprite_t *vis;
 	float tr_x, tr_y;
-	float tx, tz;
+	float tz;
 	float x1, x2;
+	float z1, z2;
+	float rightsin, rightcos;
 	float this_scale;
 	float gz, gzt;
 	spritedef_t *sprdef;
@@ -4991,7 +4936,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (tz < ZCLIP_PLANE && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
 		return;
 
-	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
+	// The above can stay as it works for cutting sprites that are too close
+	tr_x = FIXED_TO_FLOAT(thing->x);
+	tr_y = FIXED_TO_FLOAT(thing->y);
 
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
@@ -5046,23 +4993,23 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
-	// calculate edges of the shape
+	rightsin = FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
 	if (flip)
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale;
+	{
+		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+	}
 	else
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
+	{
+		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+	}
 
-	// project x
-	x1 = gr_windowcenterx + (tx * gr_centerx / tz);
-
-	//faB : tr_x doesnt matter
-	// hurdler: it's used in cliptosolidsegs
-	tr_x = x1;
-
-	x1 = tx;
-
-	tx += FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
-	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
+	z1 = tr_y + x1 * rightsin;
+	z2 = tr_y - x2 * rightsin;
+	x1 = tr_x + x1 * rightcos;
+	x2 = tr_x - x2 * rightcos;
 
 	if (thing->eflags & MFE_VERTICALFLIP)
 	{
@@ -5099,13 +5046,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	// store information in a vissprite
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
-#if 0
 	vis->x2 = x2;
-#else
-	(void)x2;
-#endif
-	vis->x2 = tx;
-	vis->tz = tz;
+	vis->z1 = z1;
+	vis->z2 = z2;
+	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
@@ -5136,7 +5080,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		vis->colormap = colormaps;
 
 	// set top/bottom coords
-	vis->ty = gzt - gr_viewz;
+	vis->ty = gzt;
 
 	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
 	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
@@ -5155,8 +5099,10 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 {
 	gr_vissprite_t *vis;
 	float tr_x, tr_y;
-	float tx, tz;
+	float tz;
 	float x1, x2;
+	float z1, z2;
+	float rightsin, rightcos;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	size_t lumpoff;
@@ -5174,7 +5120,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	if (tz < ZCLIP_PLANE)
 		return;
 
-	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
+	tr_x = FIXED_TO_FLOAT(thing->x);
+	tr_y = FIXED_TO_FLOAT(thing->y);
 
 	// decide which patch to use for sprite relative to player
 	if ((unsigned)thing->sprite >= numsprites)
@@ -5201,32 +5148,32 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	lumpoff = sprframe->lumpid[0];
 	flip = sprframe->flip; // Will only be 0x00 or 0xFF
 
-	// calculate edges of the shape
-	tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset);
+	rightsin = FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	if (flip)
+	{
+		x1 = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset);
+		x2 = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset);
+	}
+	else
+	{
+		x1 = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset);
+		x2 = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset);
+	}
 
-	// project x
-	x1 = gr_windowcenterx + (tx * gr_centerx / tz);
-
-	//faB : tr_x doesnt matter
-	// hurdler: it's used in cliptosolidsegs
-	tr_x = x1;
-
-	x1 = tx;
-
-	tx += FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width);
-	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
+	z1 = tr_y + x1 * rightsin;
+	z2 = tr_y - x2 * rightsin;
+	x1 = tr_x + x1 * rightcos;
+	x2 = tr_x - x2 * rightcos;
 
 	//
 	// store information in a vissprite
 	//
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
-#if 0
 	vis->x2 = x2;
-#else
-	(void)x2;
-#endif
-	vis->x2 = tx;
+	vis->z1 = z1;
+	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
@@ -5236,7 +5183,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->colormap = colormaps;
 
 	// set top/bottom coords
-	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset) - gr_viewz;
+	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
 
 	vis->precip = true;
 }
@@ -5387,7 +5334,6 @@ void HWR_SetViewSize(void)
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
-	FTransform stransform;
 	postimg_t *type;
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
@@ -5456,25 +5402,6 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	atransform.fovxangle = fpov; // Tails
 	atransform.fovyangle = fpov; // Tails
 	atransform.splitscreen = splitscreen;
-
-	// Transform for sprites
-	stransform.anglex = 0.0f;
-	stransform.angley = -270.0f;
-
-	if (*type == postimg_flip)
-		stransform.flip = true;
-	else
-		stransform.flip = false;
-
-	stransform.x      = 0.0f;
-	stransform.y      = 0.0f;
-	stransform.z      = 0.0f;
-	stransform.scalex = 1;
-	stransform.scaley = 1;
-	stransform.scalez = 1;
-	stransform.fovxangle = 90.0f;
-	stransform.fovyangle = 90.0f;
-	stransform.splitscreen = splitscreen;
 
 	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
 
@@ -5556,7 +5483,7 @@ if (0)
 #endif
 
 #ifdef SORTING
-	HWR_DrawSprites(&stransform);
+	HWR_DrawSprites();
 #endif
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
@@ -5599,7 +5526,6 @@ if (0)
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
-	FTransform stransform;
 	postimg_t *type;
 
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
@@ -5684,25 +5610,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	atransform.fovyangle = fpov; // Tails
 	atransform.splitscreen = splitscreen;
 
-	// Transform for sprites
-	stransform.anglex = 0.0f;
-	stransform.angley = -270.0f;
-
-	if (*type == postimg_flip)
-		stransform.flip = true;
-	else
-		stransform.flip = false;
-
-	stransform.x      = 0.0f;
-	stransform.y      = 0.0f;
-	stransform.z      = 0.0f;
-	stransform.scalex = 1;
-	stransform.scaley = 1;
-	stransform.scalez = 1;
-	stransform.fovxangle = 90.0f;
-	stransform.fovyangle = 90.0f;
-	stransform.splitscreen = splitscreen;
-
 	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
 
 	//------------------------------------------------------------------------
@@ -5783,7 +5690,7 @@ if (0)
 #endif
 
 #ifdef SORTING
-	HWR_DrawSprites(&stransform);
+	HWR_DrawSprites();
 #endif
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
