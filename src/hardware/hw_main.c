@@ -5666,7 +5666,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	atransform.y      = gr_viewy;  // FIXED_TO_FLOAT(viewy)
 	atransform.z      = gr_viewz;  // FIXED_TO_FLOAT(viewz)
 	atransform.scalex = 1;
-	atransform.scaley = ORIGINAL_ASPECT;
+	atransform.scaley = (float)vid.width/vid.height;
 	atransform.scalez = 1;
 	atransform.fovxangle = fpov; // Tails
 	atransform.fovyangle = fpov; // Tails
@@ -5873,7 +5873,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	atransform.y      = gr_viewy;  // FIXED_TO_FLOAT(viewy)
 	atransform.z      = gr_viewz;  // FIXED_TO_FLOAT(viewz)
 	atransform.scalex = 1;
-	atransform.scaley = ORIGINAL_ASPECT;
+	atransform.scaley = (float)vid.width/vid.height;
 	atransform.scalez = 1;
 	atransform.fovxangle = fpov; // Tails
 	atransform.fovyangle = fpov; // Tails
