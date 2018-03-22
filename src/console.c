@@ -594,7 +594,7 @@ void CON_Ticker(void)
 		else
 		{
 			// toggle console in
-			con_destlines = ((chat_on) ? chat_height.value : cons_height.value)*vid.height / 100;
+			con_destlines = ((con_chat) ? chat_height.value : cons_height.value)*vid.height / 100;
 			if (con_destlines < minheight)
 				con_destlines = minheight;
 			else if (con_destlines > vid.height)
@@ -1001,10 +1001,6 @@ boolean CON_Responder(event_t *ev)
 			input_cur[chat] = input_jump = input_len[chat];
 			return true;
 		}
-
-		// ...why shouldn't it eat the key? if it doesn't, it just means you
-		// can control Sonic from the console, which is silly
-		return true; //return false;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)
