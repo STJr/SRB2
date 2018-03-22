@@ -688,7 +688,7 @@ static size_t strictmemcpy (char *to, const char *s, size_t n)
 	return p - to;
 }
 
-static inline void * strictmemset (void *s, int c, size_t n)
+static void * strictmemset (void *s, int c, size_t n)
 {
 	char *p = s;
 	while (n-- > 0)
