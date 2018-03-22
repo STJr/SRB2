@@ -1078,6 +1078,7 @@ static void CON_Print(char *msg)
 {
 	size_t l;
 	INT32 controlchars = 0; // for color changing
+	char color = '\x80';  // keep color across lines
 
 	if (msg == NULL)
 		return;
@@ -1103,7 +1104,7 @@ static void CON_Print(char *msg)
 		{
 			if (*msg & 0x80)
 			{
-				con_line[con_cx++] = *(msg++);
+				color = con_line[con_cx++] = *(msg++);
 				controlchars++;
 				continue;
 			}
@@ -1111,12 +1112,14 @@ static void CON_Print(char *msg)
 			{
 				con_cy--;
 				CON_Linefeed();
+				color = '\x80';
 				controlchars = 0;
 			}
 			else if (*msg == '\n') // linefeed
 			{
 				CON_Linefeed();
-				controlchars = 0;
+				con_line[con_cx++] = color;
+				controlchars = 1;
 			}
 			else if (*msg == ' ') // space
 			{
@@ -1124,7 +1127,8 @@ static void CON_Print(char *msg)
 				if (con_cx - controlchars >= con_width-11)
 				{
 					CON_Linefeed();
-					controlchars = 0;
+					con_line[con_cx++] = color;
+					controlchars = 1;
 				}
 			}
 			else if (*msg == '\t')
@@ -1139,7 +1143,8 @@ static void CON_Print(char *msg)
 				if (con_cx - controlchars >= con_width-11)
 				{
 					CON_Linefeed();
-					controlchars = 0;
+					con_line[con_cx++] = color;
+					controlchars = 1;
 				}
 			}
 			msg++;
@@ -1156,7 +1161,8 @@ static void CON_Print(char *msg)
 		if ((con_cx - controlchars) + l > con_width-11)
 		{
 			CON_Linefeed();
-			controlchars = 0;
+			con_line[con_cx++] = color;
+			controlchars = 1;
 		}
 
 		// a word at a time
