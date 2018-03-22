@@ -3079,6 +3079,12 @@ INT32 I_GetKey(void)
 	return 0;
 }
 
+boolean I_GetCapsLockState (void)
+{
+	// FIXME: Someone with knowledge of Windows, please add some meat.
+	return false;
+}
+
 // -----------------
 // I_StartupKeyboard
 // Installs DirectInput keyboard

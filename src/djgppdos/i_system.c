@@ -1476,6 +1476,12 @@ INT32 I_GetKey (void)
 	return rc;
 }
 
+boolean I_GetCapsLockState (void)
+{
+	// FIXME: Someone with DOS knowledge, add some meat.
+	return false;
+}
+
 /* Keyboard handler stuff */
 static _go32_dpmi_seginfo oldkeyinfo,newkeyinfo;
 

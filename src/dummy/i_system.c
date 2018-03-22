@@ -98,6 +98,11 @@ INT32 I_GetKey(void)
 	return 0;
 }
 
+boolean I_GetCapsLockState (void)
+{
+	return false;
+}
+
 void I_StartupTimer(void){}
 
 void I_AddExitFunc(void (*func)())

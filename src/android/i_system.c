@@ -189,6 +189,11 @@ INT32 I_GetKey(void)
   return 0;
 }
 
+boolean I_GetCapsLockState (void)
+{
+	return false;
+}
+
 void I_StartupTimer(void) {
   struct timeval t;
   gettimeofday(&t, NULL);
