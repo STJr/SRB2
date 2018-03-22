@@ -1219,7 +1219,9 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		}
 #endif
 
+#ifdef ESLOPE
 		if (endbheight >= endtop)
+#endif
 		if (bheight >= top)
 			continue;
 
@@ -4099,6 +4101,285 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	}
 }
 
+static void HWR_SplitSprite(gr_vissprite_t *spr)
+{
+	float this_scale = 1.0f;
+	FOutVector wallVerts[4];
+	GLPatch_t *gpatch;
+	FSurfaceInfo Surf;
+	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
+	extracolormap_t *colormap;
+	FUINT lightlevel;
+	FBITFIELD blend = 0;
+	UINT8 alpha;
+
+	INT32 i;
+	float realtop, realbot, top, bot;
+	float towtop, towbot, towmult;
+	float bheight;
+	const sector_t *sector = spr->mobj->subsector->sector;
+	const lightlist_t *list = sector->lightlist;
+#ifdef ESLOPE
+	float endrealtop, endrealbot, endtop, endbot;
+	float endbheight;
+	fixed_t temp;
+	fixed_t v1x, v1y, v2x, v2y;
+#endif
+
+	this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
+
+	if (hires)
+		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
+
+	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+
+	// cache the patch in the graphics card memory
+	//12/12/99: Hurdler: same comment as above (for md2)
+	//Hurdler: 25/04/2000: now support colormap in hardware mode
+	HWR_GetMappedPatch(gpatch, spr->colormap);
+
+	// Draw shadow BEFORE sprite
+	if (cv_shadow.value // Shadows enabled
+		&& (spr->mobj->flags & (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY)) != (MF_SCENERY|MF_SPAWNCEILING|MF_NOGRAVITY) // Ceiling scenery have no shadow.
+		&& !(spr->mobj->flags2 & MF2_DEBRIS) // Debris have no corona or shadow.
+#ifdef ALAM_LIGHTING
+		&& !(t_lspr[spr->mobj->sprite]->type // Things with dynamic lights have no shadow.
+		&& (!spr->mobj->player || spr->mobj->player->powers[pw_super])) // Except for non-super players.
+#endif
+		&& (spr->mobj->z >= spr->mobj->floorz)) // Without this, your shadow shows on the floor, even after you die and fall through the ground.
+	{
+		////////////////////
+		// SHADOW SPRITE! //
+		////////////////////
+		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
+	}
+
+	wallVerts[0].x = wallVerts[3].x = spr->x1;
+	wallVerts[2].x = wallVerts[1].x = spr->x2;
+	wallVerts[0].z = wallVerts[3].z = spr->z1;
+	wallVerts[1].z = wallVerts[2].z = spr->z2;
+
+	wallVerts[2].y = wallVerts[3].y = spr->ty;
+	if (spr->mobj && this_scale != 1.0f)
+		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
+	else
+		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
+
+	v1x = FLOAT_TO_FIXED(spr->x1);
+	v1y = FLOAT_TO_FIXED(spr->z1);
+	v2x = FLOAT_TO_FIXED(spr->x2);
+	v2y = FLOAT_TO_FIXED(spr->z2);
+
+	if (spr->flip)
+	{
+		wallVerts[0].sow = wallVerts[3].sow = gpatch->max_s;
+		wallVerts[2].sow = wallVerts[1].sow = 0;
+	}else{
+		wallVerts[0].sow = wallVerts[3].sow = 0;
+		wallVerts[2].sow = wallVerts[1].sow = gpatch->max_s;
+	}
+
+	// flip the texture coords (look familiar?)
+	if (spr->vflip)
+	{
+		wallVerts[3].tow = wallVerts[2].tow = gpatch->max_t;
+		wallVerts[0].tow = wallVerts[1].tow = 0;
+	}else{
+		wallVerts[3].tow = wallVerts[2].tow = 0;
+		wallVerts[0].tow = wallVerts[1].tow = gpatch->max_t;
+	}
+
+	realtop = top = wallVerts[3].y;
+	realbot = bot = wallVerts[0].y;
+	towtop = wallVerts[3].tow;
+	towbot = wallVerts[0].tow;
+	towmult = (towbot - towtop) / (top - bot);
+
+#ifdef ESLOPE
+	endrealtop = endtop = wallVerts[2].y;
+	endrealbot = endbot = wallVerts[1].y;
+#endif
+
+	if (!cv_translucency.value) // translucency disabled
+	{
+		Surf.FlatColor.s.alpha = 0xFF;
+		blend = PF_Translucent|PF_Occlude;
+	}
+	else if (spr->mobj->flags2 & MF2_SHADOW)
+	{
+		Surf.FlatColor.s.alpha = 0x40;
+		blend = PF_Translucent;
+	}
+	else if (spr->mobj->frame & FF_TRANSMASK)
+		blend = HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+	else
+	{
+		// BP: i agree that is little better in environement but it don't
+		//     work properly under glide nor with fogcolor to ffffff :(
+		// Hurdler: PF_Environement would be cool, but we need to fix
+		//          the issue with the fog before
+		Surf.FlatColor.s.alpha = 0xFF;
+		blend = PF_Translucent|PF_Occlude;
+	}
+
+	alpha = Surf.FlatColor.s.alpha;
+
+	// Start with the lightlevel and colormap from the top of the sprite
+	lightlevel = *list[sector->numlights - 1].lightlevel;
+	colormap = list[sector->numlights - 1].extra_colormap;
+	i = 0;
+	temp = FLOAT_TO_FIXED(realtop);
+
+#ifdef ESLOPE
+	for (i = 1; i < sector->numlights; i++)
+	{
+		fixed_t h = sector->lightlist[i].slope ? P_GetZAt(sector->lightlist[i].slope, spr->mobj->x, spr->mobj->y)
+					: sector->lightlist[i].height;
+		if (h <= temp)
+		{
+			lightlevel = *list[i-1].lightlevel;
+			colormap = list[i-1].extra_colormap;
+			break;
+		}
+	}
+#else
+	i = R_GetPlaneLight(sector, temp, false);
+	lightlevel = *list[i].lightlevel;
+	colormap = list[i].extra_colormap;
+#endif
+
+	for (i = 0; i < sector->numlights; i++)
+	{
+#ifdef ESLOPE
+		if (endtop < endrealbot)
+#endif
+		if (top < realbot)
+			return;
+
+		// even if we aren't changing colormap or lightlevel, we still need to continue drawing down the sprite
+		if (!(list[i].flags & FF_NOSHADE) && (list[i].flags & FF_CUTSPRITES))
+		{
+			lightlevel = *list[i].lightlevel;
+			colormap = list[i].extra_colormap;
+		}
+
+#ifdef ESLOPE
+		if (i + 1 < sector->numlights)
+		{
+			if (list[i+1].slope)
+			{
+				temp = P_GetZAt(list[i+1].slope, v1x, v1y);
+				bheight = FIXED_TO_FLOAT(temp);
+				temp = P_GetZAt(list[i+1].slope, v2x, v2y);
+				endbheight = FIXED_TO_FLOAT(temp);
+			}
+			else
+				bheight = endbheight = FIXED_TO_FLOAT(list[i+1].height);
+		}
+		else
+		{
+			bheight = realbot;
+			endbheight = endrealbot;
+		}
+#else
+		if (i + 1 < sector->numlights)
+		{
+			bheight = FIXED_TO_FLOAT(list[i+1].height);
+		}
+		else
+		{
+			bheight = realbot;
+		}
+#endif
+
+#ifdef ESLOPE
+		if (endbheight >= endtop)
+#endif
+		if (bheight >= top)
+			continue;
+
+		bot = bheight;
+
+		if (bot < realbot)
+			bot = realbot;
+
+#ifdef ESLOPE
+		endbot = endbheight;
+
+		if (endbot < endrealbot)
+			endbot = endrealbot;
+#endif
+
+#ifdef ESLOPE
+		wallVerts[3].tow = towtop + ((realtop - top) * towmult);
+		wallVerts[2].tow = towtop + ((endrealtop - endtop) * towmult);
+		wallVerts[0].tow = towtop + ((realtop - bot) * towmult);
+		wallVerts[1].tow = towtop + ((endrealtop - endbot) * towmult);
+
+		wallVerts[3].y = top;
+		wallVerts[2].y = endtop;
+		wallVerts[0].y = bot;
+		wallVerts[1].y = endbot;
+#else
+		wallVerts[3].tow = wallVerts[2].tow = towtop + ((realtop - top) * towmult);
+		wallVerts[0].tow = wallVerts[1].tow = towtop + ((realtop - bot) * towmult);
+
+		wallVerts[2].y = wallVerts[3].y = top;
+		wallVerts[0].y = wallVerts[1].y = bot;
+#endif
+
+		if (colormap)
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
+		else
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+
+		Surf.FlatColor.s.alpha = alpha;
+
+		HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
+
+		top = bot;
+#ifdef ESLOPE
+		endtop = endbot;
+#endif
+	}
+
+	bot = realbot;
+#ifdef ESLOPE
+	endbot = endrealbot;
+	if (endtop <= endrealbot)
+#endif
+	if (top <= realbot)
+		return;
+
+	// If we're ever down here, somehow the above loop hasn't draw all the light levels of sprite
+#ifdef ESLOPE
+	wallVerts[3].tow = towtop + ((realtop - top) * towmult);
+	wallVerts[2].tow = towtop + ((endrealtop - endtop) * towmult);
+	wallVerts[0].tow = towtop + ((realtop - bot) * towmult);
+	wallVerts[1].tow = towtop + ((endrealtop - endbot) * towmult);
+
+	wallVerts[3].y = top;
+	wallVerts[2].y = endtop;
+	wallVerts[0].y = bot;
+	wallVerts[1].y = endbot;
+#else
+	wallVerts[3].tow = wallVerts[2].tow = towtop + ((realtop - top) * towmult);
+	wallVerts[0].tow = wallVerts[1].tow = towtop + ((realtop - bot) * towmult);
+
+	wallVerts[2].y = wallVerts[3].y = top;
+	wallVerts[0].y = wallVerts[1].y = bot;
+#endif
+
+	if (colormap)
+		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
+	else
+		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+
+	Surf.FlatColor.s.alpha = alpha;
+
+	HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
+}
+
 // -----------------+
 // HWR_DrawSprite   : Draw flat sprites
 //                  : (monsters, bonuses, weapons, lights, ...)
@@ -4121,6 +4402,12 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	if (!spr->mobj->subsector)
 		return;
+
+	if (spr->mobj->subsector->sector->numlights)
+	{
+		HWR_SplitSprite(spr);
+		return;
+	}
 
 	// cache sprite graphics
 	//12/12/99: Hurdler:
@@ -4207,26 +4494,8 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = sector->extra_colormap;
 
-		if (sector->numlights)
-		{
-			INT32 light;
-
-			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
-
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = *sector->lightlist[light].lightlevel;
-
-			if (sector->lightlist[light].extra_colormap)
-				colormap = sector->lightlist[light].extra_colormap;
-		}
-		else
-		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = sector->lightlevel;
-
-			if (sector->extra_colormap)
-				colormap = sector->extra_colormap;
-		}
+		if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			lightlevel = sector->lightlevel;
 
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
