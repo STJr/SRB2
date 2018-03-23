@@ -907,7 +907,7 @@ INT32 I_GetKey (void)
 
 boolean I_GetCapsLockState (void)
 {
-	return (SDL_GetModState() & KMOD_CAPS) & 1;
+	return !!(SDL_GetModState() & KMOD_CAPS);
 }
 
 //
