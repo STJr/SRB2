@@ -2718,7 +2718,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		HWR_ResetLights();
 #endif
 		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
+		//HWR_CorrectSWTricks();
 		HWR_CreatePlanePolygons((INT32)numnodes - 1);
 	}
 #endif
