@@ -435,8 +435,11 @@ static void CON_RecalcSize(void)
 		con_destlines = vid.height;
 	}
 
-	CON_ChangeHeight();
-	con_curlines = con_destlines;
+	if (con_destlines > 0)
+	{
+		CON_ChangeHeight();
+		con_curlines = con_destlines;
+	}
 
 	// check for change of video width
 	if (conw == con_width)
