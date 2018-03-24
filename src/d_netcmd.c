@@ -586,7 +586,6 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
-	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -644,8 +643,6 @@ void D_RegisterClientCommands(void)
 #endif
 
 	// register these so it is saved to config
-	if ((username = I_GetUserName()))
-		cv_playername.defaultvalue = cv_defaultplayername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
@@ -3071,7 +3068,7 @@ static void Command_Addfile(void)
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
 	if (!(netgame || multiplayer) || musiconly)
 	{
-		P_AddWadFile(fn, NULL);
+		P_AddWadFile(fn);
 		return;
 	}
 
@@ -3240,7 +3237,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
+	if (ncs != FS_FOUND || !P_AddWadFile(filename))
 	{
 		Command_ExitGame_f();
 		if (ncs == FS_FOUND)

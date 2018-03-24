@@ -124,7 +124,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include "macosx/mac_resources.h"
 #endif
 
-// Locations for searching the srb2.srb
+// Locations for searching the srb2.pk3
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
@@ -143,7 +143,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 /**	\brief WAD file to look for
 */
 #define WADKEYWORD1 "srb2.pk3"
-#define WADKEYWORD2 "srb2.wad"
 /**	\brief holds wad path
 */
 static char returnWadPath[256];
@@ -2511,14 +2510,6 @@ static boolean isWadPathOk(const char *path)
 		return true;
 	}
 
-	sprintf(wad3path, pandf, path, WADKEYWORD2);
-
-	if (FIL_ReadFileOK(wad3path))
-	{
-		free(wad3path);
-		return true;
-	}
-
 	free(wad3path);
 	return false;
 }
@@ -2536,7 +2527,7 @@ static void pathonly(char *s)
 		}
 }
 
-/**	\brief	search for srb2.srb in the given path
+/**	\brief	search for srb2.pk3 in the given path
 
 	\param	searchDir	starting path
 
@@ -2557,19 +2548,12 @@ static const char *searchWad(const char *searchDir)
 		return tempsw;
 	}
 
-	strcpy(tempsw, WADKEYWORD2);
-	fstemp = filesearch(tempsw, searchDir, NULL, true, 20);
-	if (fstemp == FS_FOUND)
-	{
-		pathonly(tempsw);
-		return tempsw;
-	}
 	return NULL;
 }
 
-/**	\brief go through all possible paths and look for srb2.srb
+/**	\brief go through all possible paths and look for srb2.pk3
 
-  \return path to srb2.srb if any
+  \return path to srb2.pk3 if any
 */
 static const char *locateWad(void)
 {
@@ -2698,7 +2682,7 @@ const char *I_LocateWad(void)
 
 	if (waddir)
 	{
-		// change to the directory where we found srb2.srb
+		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
 		SetCurrentDirectoryA(waddir);
 #else
@@ -2709,7 +2693,7 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#if defined(LINUX) || defined(LINUX64)
+#ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
 #define MEMFREE "MemFree:"
@@ -2729,20 +2713,23 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	};
 	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
 	{
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_nlist(kd, namelist) != 0)
 	{
 		kvm_close (kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
 		sizeof (sum)) != sizeof (sum))
 	{
 		kvm_close(kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	kvm_close(kd);
@@ -2763,7 +2750,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (LINUX) || defined (LINUX64)
+#elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2779,25 +2766,28 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (n < 0)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	buf[n] = '\0';
-	if (NULL == (memTag = strstr(buf, MEMTOTAL)))
+	if ((memTag = strstr(buf, MEMTOTAL)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if (NULL == (memTag = strstr(buf, MEMFREE)))
+	if ((memTag = strstr(buf, MEMFREE)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
@@ -2812,7 +2802,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 48<<20;
 	return 48<<20;
-#endif /* LINUX */
+#endif
 }
 
 const CPUInfoFlags *I_CPUInfo(void)

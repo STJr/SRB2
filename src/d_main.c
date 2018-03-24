@@ -784,7 +784,7 @@ static inline void D_CleanFile(void)
 
 static void IdentifyVersion(void)
 {
-	char *srb2wad1, *srb2wad2;
+	char *srb2wad;
 	const char *srb2waddir = NULL;
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
@@ -813,31 +813,24 @@ static void IdentifyVersion(void)
 		srb2waddir = I_GetWadDir();
 #endif
 	// Commercial.
-	srb2wad1 = malloc(strlen(srb2waddir)+1+8+1);
-	srb2wad2 = malloc(strlen(srb2waddir)+1+8+1);
-	if (srb2wad1 == NULL && srb2wad2 == NULL)
+	srb2wad = malloc(strlen(srb2waddir)+1+8+1);
+	if (srb2wad == NULL)
 		I_Error("No more free memory to look in %s", srb2waddir);
-	if (srb2wad1 != NULL)
-		sprintf(srb2wad1, pandf, srb2waddir, "srb2.pk3");
-	if (srb2wad2 != NULL)
-		sprintf(srb2wad2, pandf, srb2waddir, "srb2.wad");
+	else
+		sprintf(srb2wad, pandf, srb2waddir, "srb2.pk3");
 
 	// will be overwritten in case of -cdrom or unix/win home
 	snprintf(configfile, sizeof configfile, "%s" PATHSEP CONFIGFILENAME, srb2waddir);
 	configfile[sizeof configfile - 1] = '\0';
 
 	// Load the IWAD
-	if (srb2wad2 != NULL && FIL_ReadFileOK(srb2wad2))
-		D_AddFile(srb2wad2);
-	else if (srb2wad1 != NULL && FIL_ReadFileOK(srb2wad1))
-		D_AddFile(srb2wad1);
+	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
+		D_AddFile(srb2wad);
 	else
-		I_Error("SRB2.PK3/SRB2.WAD not found! Expected in %s, ss files: %s and %s\n", srb2waddir, srb2wad1, srb2wad2);
+		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
-	if (srb2wad1)
-		free(srb2wad1);
-	if (srb2wad2)
-		free(srb2wad2);
+	if (srb2wad)
+		free(srb2wad);
 
 	// if you change the ordering of this or add/remove a file, be sure to update the md5
 	// checking in D_SRB2Main
@@ -1132,7 +1125,7 @@ void D_SRB2Main(void)
 #ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
 	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA

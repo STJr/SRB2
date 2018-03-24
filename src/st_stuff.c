@@ -520,7 +520,7 @@ static void ST_drawDebugInfo(void)
 
 	if (cv_debug & DBG_MEMORY)
 	{
-		V_DrawRightAlignedString(320, height,     VFLAGS, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
+		V_DrawRightAlignedString(320, height,     VFLAGS, va("Heap: %7sKB", sizeu1(Z_TotalUsage()>>10)));
 	}
 
 #undef VFLAGS

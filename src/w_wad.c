@@ -190,6 +190,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+		posStart++; // first "lump" will be "Lua/" folder itself, so ignore it
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
@@ -197,8 +198,19 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
+		posStart++; // first "lump" will be "SOCs/" folder itself, so ignore it
 		for(; posStart < posEnd; posStart++)
+		{
+			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
+			size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+			char *name = malloc(length + 1);
+			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+			name[length] = '\0';
+
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 			DEH_LoadDehackedLumpPwad(wadnum, posStart);
+			free(name);
+		}
 	}
 }
 
@@ -222,16 +234,14 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{	// shameless copy+paste of code from LUA_LoadLump
-				char *name = malloc(strlen(wadfiles[wadnum]->filename)+10);
-				strcpy(name, wadfiles[wadnum]->filename);
-				if (!fasticmp(&name[strlen(name) - 4], ".soc")) {
-					// If it's not a .soc file, copy the lump name in too.
-					name[strlen(wadfiles[wadnum]->filename)] = '|';
-					M_Memcpy(name+strlen(wadfiles[wadnum]->filename)+1, lump_p->name, 8);
-					name[strlen(wadfiles[wadnum]->filename)+9] = '\0';
-				}
+				size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+				char *name = malloc(length + 1);
+				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+				name[length] = '\0';
+
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
+				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
 			{
@@ -319,7 +329,7 @@ UINT16 W_InitFile(const char *filename)
 	FILE *handle;
 	lumpinfo_t *lumpinfo;
 	wadfile_t *wadfile;
-	enum restype type;
+	restype_t type;
 	UINT16 numlumps;
 	size_t i;
 	INT32 compressed = 0;
@@ -390,7 +400,7 @@ UINT16 W_InitFile(const char *filename)
 		// This code emulates a wadfile with one lump name "OBJCTCFG"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		type = RET_WAD;
+		type = RET_SOC;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -411,7 +421,7 @@ UINT16 W_InitFile(const char *filename)
 		// This code emulates a wadfile with one lump name "LUA_INIT"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		type = RET_WAD;
+		type = RET_LUA;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -733,11 +743,24 @@ UINT16 W_InitFile(const char *filename)
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
-	if (wadfile->type == RET_WAD)
-		W_LoadDehackedLumps(numwadfiles - 1);
-	else if (wadfile->type == RET_PK3)
-		W_LoadDehackedLumpsPK3(numwadfiles - 1);
-
+	switch (wadfile->type)
+	{
+		case RET_WAD:
+			W_LoadDehackedLumps(numwadfiles - 1);
+			break;
+		case RET_PK3:
+			W_LoadDehackedLumpsPK3(numwadfiles - 1);
+			break;
+		case RET_SOC:
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
+			DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0);
+			break;
+		case RET_LUA:
+			LUA_LoadLump(numwadfiles - 1, 0);
+			break;
+		default:
+			break;
+	}
 
 	W_InvalidateLumpnumCache();
 
@@ -1038,6 +1061,24 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 	return W_LumpLengthPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
+//
+// W_IsLumpWad
+// Is the lump a WAD? (presumably in a PK3)
+//
+boolean W_IsLumpWad(lumpnum_t lumpnum)
+{
+	if (wadfiles[WADFILENUM(lumpnum)]->type == RET_PK3)
+	{
+		const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->name2;
+
+		if (strlen(lumpfullName) < 4)
+			return false; // can't possibly be a WAD can it?
+		return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
+	}
+
+	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
+}
+
 /* report a zlib or i/o error */
 void zerr(int ret)
 {
@@ -1117,30 +1158,30 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
 			retval = lzf_decompress(rawData, l->disksize, decData, l->size);
 #ifndef AVOID_ERRNO
-			if (retval == 0 && errno == E2BIG) // errno is a global var set by the lzf functions when something goes wrong.
+			if (retval == 0) // If this was returned, check if errno was set
 			{
-				I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+				// errno is a global var set by the lzf functions when something goes wrong.
+				if (errno == E2BIG)
+					I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+				else if (errno == EINVAL)
+					I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
 			}
-			else if (retval == 0 && errno == EINVAL)
-				I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
-			else
+			// Otherwise, fall back on below error (if zero was actually the correct size then ???)
 #endif
 			if (retval != l->size)
 			{
 				I_Error("wad %d, lump %d: decompressed to wrong number of bytes (expected %s, got %s)", wad, lump, sizeu1(l->size), sizeu2(retval));
 			}
-#else
-			(void)wad;
-			(void)lump;
-			//I_Error("ZWAD files not supported on this platform.");
-			return NULL;
-#endif
 			if (!decData) // Did we get no data at all?
 				return 0;
 			M_Memcpy(dest, decData + offset, size);
 			Z_Free(rawData);
 			Z_Free(decData);
 			return size;
+#else
+			//I_Error("ZWAD files not supported on this platform.");
+			return 0;
+#endif
 		}
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{

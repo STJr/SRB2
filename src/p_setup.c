@@ -1893,6 +1893,30 @@ static void P_CreateBlockMap(void)
 	}
 }
 
+// Split from P_LoadBlockMap for convenience
+// -- Monster Iestyn 08/01/18
+static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
+{
+	size_t i;
+	blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
+
+	// killough 3/1/98: Expand wad blockmap into larger internal one,
+	// by treating all offsets except -1 as unsigned and zero-extending
+	// them. This potentially doubles the size of blockmaps allowed,
+	// because Doom originally considered the offsets as always signed.
+
+	blockmaplump[0] = SHORT(wadblockmaplump[0]);
+	blockmaplump[1] = SHORT(wadblockmaplump[1]);
+	blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
+	blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
+
+	for (i = 4; i < count; i++)
+	{
+		INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
+		blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
+	}
+}
+
 //
 // P_LoadBlockMap
 //
@@ -1919,37 +1943,19 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 		return false;
 
 	{
-		size_t i;
 		INT16 *wadblockmaplump = malloc(count); //INT16 *wadblockmaplump = W_CacheLumpNum (lump, PU_LEVEL);
-
-		if (wadblockmaplump) W_ReadLump(lumpnum, wadblockmaplump);
-		else return false;
+		if (!wadblockmaplump)
+			return false;
+		W_ReadLump(lumpnum, wadblockmaplump);
 		count /= 2;
-		blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, 0);
-
-		// killough 3/1/98: Expand wad blockmap into larger internal one,
-		// by treating all offsets except -1 as unsigned and zero-extending
-		// them. This potentially doubles the size of blockmaps allowed,
-		// because Doom originally considered the offsets as always signed.
-
-		blockmaplump[0] = SHORT(wadblockmaplump[0]);
-		blockmaplump[1] = SHORT(wadblockmaplump[1]);
-		blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
-		blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
-
-		for (i = 4; i < count; i++)
-		{
-			INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
-			blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
-		}
-
+		P_ReadBlockMapLump(wadblockmaplump, count);
 		free(wadblockmaplump);
-
-		bmaporgx = blockmaplump[0]<<FRACBITS;
-		bmaporgy = blockmaplump[1]<<FRACBITS;
-		bmapwidth = blockmaplump[2];
-		bmapheight = blockmaplump[3];
 	}
+
+	bmaporgx = blockmaplump[0]<<FRACBITS;
+	bmaporgy = blockmaplump[1]<<FRACBITS;
+	bmapwidth = blockmaplump[2];
+	bmapheight = blockmaplump[3];
 
 	// clear out mobj chains
 	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
@@ -1981,6 +1987,53 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	return true;
 	*/
+#endif
+}
+
+// This needs to be a separate function
+// because making both the WAD and PK3 loading code use
+// the same functions is trickier than it looks for blockmap
+// -- Monster Iestyn 09/01/18
+static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname)
+{
+#if 0
+	(void)data;
+	(void)count;
+	(void)lumpname;
+	return false;
+#else
+	// Check if the lump is named "BLOCKMAP"
+	if (!lumpname || memcmp(lumpname, "BLOCKMAP", 8) != 0)
+	{
+		CONS_Printf("No blockmap lump found for pk3!\n");
+		return false;
+	}
+
+	if (!count || count >= 0x20000)
+		return false;
+
+	CONS_Printf("Reading blockmap lump for pk3...\n");
+
+	// no need to malloc anything, assume the data is uncompressed for now
+	count /= 2;
+	P_ReadBlockMapLump((INT16 *)data, count);
+
+	bmaporgx = blockmaplump[0]<<FRACBITS;
+	bmaporgy = blockmaplump[1]<<FRACBITS;
+	bmapwidth = blockmaplump[2];
+	bmapheight = blockmaplump[3];
+
+	// clear out mobj chains
+	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
+	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+	blockmap = blockmaplump+4;
+
+#ifdef POLYOBJECTS
+	// haleyjd 2/22/06: setup polyobject blockmap
+	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
+	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+#endif
+	return true;
 #endif
 }
 
@@ -2107,6 +2160,30 @@ static void P_LoadReject(lumpnum_t lumpnum)
 	}
 	else
 		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
+}
+
+// PK3 version
+// -- Monster Iestyn 09/01/18
+static void P_LoadRawReject(UINT8 *data, size_t count, const char *lumpname)
+{
+	// Check if the lump is named "REJECT"
+	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadRawReject: No valid REJECT lump found\n");
+		return;
+	}
+
+	if (!count) // zero length, someone probably used ZDBSP
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadRawReject: REJECT lump has size 0, will not be loaded\n");
+	}
+	else
+	{
+		rejectmatrix = Z_Malloc(count, PU_LEVEL, NULL); // allocate memory for the reject matrix
+		M_Memcpy(rejectmatrix, data, count); // copy the data into it
+	}
 }
 
 #if 0
@@ -2581,7 +2658,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	char *lumpfullName;
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
@@ -2764,14 +2840,26 @@ boolean P_SetupLevel(boolean skipprecip)
 	// As it is implemented right now, we're assuming an uncompressed WAD.
 	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
 	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
-	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
-	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4))
+	if (W_IsLumpWad(lastloadedmaplumpnum))
 	{
 		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
 		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
 
+		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
+		{
+			I_Error("Bad WAD file for map %s!\n", maplumpname);
+		}
+
+		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
+		{
+			loadedbm = P_LoadRawBlockMap(
+							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
+							(fileinfo + ML_BLOCKMAP)->size,
+							(fileinfo + ML_BLOCKMAP)->name);
+		}
 		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
 		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
 		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
@@ -2780,6 +2868,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
 		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
 		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
+		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
+		{
+			P_LoadRawReject(
+					wadData + (fileinfo + ML_REJECT)->filepos,
+					(fileinfo + ML_REJECT)->size,
+					(fileinfo + ML_REJECT)->name);
+		}
 
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
@@ -3133,7 +3228,7 @@ boolean P_RunSOC(const char *socfilename)
 	lumpnum_t lump;
 
 	if (strstr(socfilename, ".soc") != NULL)
-		return P_AddWadFile(socfilename, NULL);
+		return P_AddWadFile(socfilename);
 
 	lump = W_CheckNumForName(socfilename);
 	if (lump == LUMPERROR)
@@ -3163,6 +3258,7 @@ void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 				CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", lumpinfo->name);
 
 				I_FreeSfx(&S_sfx[j]);
+				break; // there shouldn't be two sounds with the same name, so stop looking
 			}
 		}
 	}
@@ -3214,13 +3310,13 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
+boolean P_AddWadFile(const char *wadfilename)
 {
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
 	UINT16 numlumps, wadnum;
-	INT16 firstmapreplaced = 0, num;
 	char *name;
 	lumpinfo_t *lumpinfo;
+	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 
 	// Vars to help us with the position start and amount of each resource type.
@@ -3290,17 +3386,21 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 			name = lumpinfo->name;
 			if (name[0] == 'D')
 			{
-				if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+				if (name[1] == 'S')
 				{
-					if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+					for (j = 1; j < NUMSFX; j++)
 					{
-						// the sound will be reloaded when needed,
-						// since sfx->data will be NULL
-						CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+						if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+						{
+							// the sound will be reloaded when needed,
+							// since sfx->data will be NULL
+							CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
 
-						I_FreeSfx(&S_sfx[j]);
+							I_FreeSfx(&S_sfx[j]);
 
-						sreplaces++;
+							sreplaces++;
+							break; // there shouldn't be two sounds with the same name, so stop looking
+						}
 					}
 				}
 				else if (name[1] == '_')
@@ -3354,10 +3454,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	for (i = 0; i < numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
-		num = firstmapreplaced;
-
 		if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P') // Ignore the headers
 		{
+			INT16 num;
 			if (name[5]!='\0')
 				continue;
 			num = (INT16)M_MapNumber(name[3], name[4]);
@@ -3367,16 +3466,10 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				replacedcurrentmap = true;
 
 			CONS_Printf("%s\n", name);
-		}
-
-		if (num && (num < firstmapreplaced || !firstmapreplaced))
-		{
-			firstmapreplaced = num;
-			if (firstmapname)
-				*firstmapname = name;
+			mapsadded = true;
 		}
 	}
-	if (!firstmapreplaced)
+	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
 	// reload status bar (warning should have valid player!)
