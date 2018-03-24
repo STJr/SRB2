@@ -1739,6 +1739,7 @@ static void Command_Map_f(void)
 	}
 
 	fromlevelselect = false;
+	CON_ToggleOff();
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, false);
 }
 
@@ -1818,7 +1819,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
 	if (demoplayback && !timingdemo)
 		precache = true;
-	CON_ToggleOff();
 	if (timingdemo)
 		G_DoneLevelLoad();
 

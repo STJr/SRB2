@@ -436,8 +436,6 @@ void F_StartIntro(void)
 	gameaction = ga_nothing;
 	playerdeadview = false;
 	paused = false;
-	CON_ToggleOff();
-	CON_ClearHUD();
 	F_NewCutscene(introtext[0]);
 
 	intro_scenenum = 0;
@@ -1125,7 +1123,7 @@ void F_StartCredits(void)
 	gameaction = ga_nothing;
 	playerdeadview = false;
 	paused = false;
-	CON_ToggleOff();
+	CON_ToggleOff();  // Kept for cinematic effect.
 	CON_ClearHUD();
 	S_StopMusic();
 
@@ -1272,7 +1270,6 @@ void F_StartGameEvaluation(void)
 	gameaction = ga_nothing;
 	playerdeadview = false;
 	paused = false;
-	CON_ToggleOff();
 	CON_ClearHUD();
 
 	finalecount = 0;
