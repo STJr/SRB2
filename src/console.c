@@ -646,7 +646,7 @@ void CON_Ticker(void)
 // like struggling to find a better way of doing it, through my incredibly
 // efficient method of just hitting keys and hoping for the best.  -James
 
-static inline void recounttabs (const char *s)
+static inline void CHAT_RecountTabulars (const char *s)
 {
 	chat_tabcount = 0;
 	for (; *s != 0 && *s != '\n'; ++s)
@@ -656,7 +656,7 @@ static inline void recounttabs (const char *s)
 	}
 }
 
-static size_t strictmemcpy (char *to, const char *s, size_t n)
+static size_t CHAT_StrictMemcpy (char *to, const char *s, size_t n)
 {
 	char *p;
 	for (p = to; n-- > 0; ++s)
@@ -688,7 +688,7 @@ static size_t strictmemcpy (char *to, const char *s, size_t n)
 	return p - to;
 }
 
-static void * strictmemset (void *s, int c, size_t n)
+static void * CHAT_StrictMemset (void *s, int c, size_t n)
 {
 	char *p = s;
 	while (n-- > 0)
@@ -696,7 +696,7 @@ static void * strictmemset (void *s, int c, size_t n)
 		if (*p == '\n' && (char)c != '\n')
 		{
 			--chat_newlines;
-			recounttabs(p+1);
+			CHAT_RecountTabulars(p+1);
 		}
 		else if (*p == '\t' && (char)c != '\t')
 			--chat_tabcount;
@@ -720,7 +720,7 @@ static void CON_InputSetString(const char *c)
 	memset(INPUTLINE, 0, CON_MAXPROMPTCHARS);
 	if (con_chat)
 		chat_newlines = chat_tabcount = 0;
-	strictmemcpy(INPUTLINE, c, min(strlen(c), n));
+	CHAT_StrictMemcpy(INPUTLINE, c, min(strlen(c), n));
 	input_cur[con_chat] = input_sel[con_chat] = input_len[con_chat] = input_jump = strlen(INPUTLINE);
 }
 
@@ -733,7 +733,7 @@ static void CON_InputAddString(const char *c)
 	{
 		UINT8 nlf = chat_newlines, ntab = chat_tabcount;
 		// Restrict special characters before copying to get a memory length.
-		csize = strictmemcpy(tmp, c, strlen(c));
+		csize = CHAT_StrictMemcpy(tmp, c, strlen(c));
 		if (csize > n - input_len[con_chat])
 			csize = n - input_len[con_chat];
 		chat_newlines = nlf;  chat_tabcount = ntab;  // restore record after copying
@@ -742,7 +742,7 @@ static void CON_InputAddString(const char *c)
 	if (input_cur[con_chat] != input_len[con_chat])
 		memmove(&INPUTLINE[input_cur[con_chat]+csize], &INPUTLINE[input_cur[con_chat]],
 				input_len[con_chat]-input_cur[con_chat]);  // move text forward in the buffer
-	strictmemcpy(&INPUTLINE[input_cur[con_chat]], tmp, csize);
+	CHAT_StrictMemcpy(&INPUTLINE[input_cur[con_chat]], tmp, csize);
 	input_len[con_chat] += csize;
 	input_sel[con_chat] = (input_cur[con_chat] += csize);
 }
@@ -763,10 +763,10 @@ static void CON_InputDelSelection(void)
 	}
 	len = (end - start);
 
-	strictmemset(&INPUTLINE[start], 0, len);  // uncount deleted bytes
+	CHAT_StrictMemset(&INPUTLINE[start], 0, len);  // uncount deleted bytes
 	if (end != input_len[con_chat])
-		strictmemcpy(&INPUTLINE[start], &INPUTLINE[end], input_len[con_chat]-end);
-	strictmemset(&INPUTLINE[input_len[con_chat] - len], 0, len);  // uncount trailing bytes
+		CHAT_StrictMemcpy(&INPUTLINE[start], &INPUTLINE[end], input_len[con_chat]-end);
+	CHAT_StrictMemset(&INPUTLINE[input_len[con_chat] - len], 0, len);  // uncount trailing bytes
 
 	input_len[con_chat] -= len;
 	input_sel[con_chat] = input_cur[con_chat] = input_jump = start;
@@ -1091,7 +1091,7 @@ boolean CON_Responder(event_t *ev)
 				jumptoword(true);
 
 			if (INPUTLINE[input_cur[1]] == '\n')
-				recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
+				CHAT_RecountTabulars(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
 		}
 		if (!shiftdown)
 			input_sel[ingamechat] = input_cur[ingamechat];
@@ -1102,7 +1102,7 @@ boolean CON_Responder(event_t *ev)
 		if (input_cur[ingamechat] < input_len[ingamechat])
 		{
 			if (INPUTLINE[input_cur[1]] == '\n')
-				recounttabs(&INPUTLINE[input_cur[ingamechat] + 1]);
+				CHAT_RecountTabulars(&INPUTLINE[input_cur[ingamechat] + 1]);
 
 			if (ctrldown)
 				jumptoword(false);
@@ -1119,7 +1119,7 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_HOME)
 	{
 		input_cur[ingamechat] = input_jump = ((altdown) ? 0 : M_StartOfLine(INPUTLINE, input_cur[ingamechat]));
-		recounttabs(&INPUTLINE[input_cur[ingamechat]]);
+		CHAT_RecountTabulars(&INPUTLINE[input_cur[ingamechat]]);
 		if (!shiftdown)
 			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
@@ -1128,7 +1128,7 @@ boolean CON_Responder(event_t *ev)
 	{
 		input_cur[ingamechat] = input_jump =
 			((altdown) ? input_len[ingamechat] : (unsigned)(strchrnul(&INPUTLINE[input_cur[ingamechat]], '\n')-INPUTLINE));
-		recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
+		CHAT_RecountTabulars(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
 		if (!shiftdown)
 			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
@@ -1282,7 +1282,7 @@ boolean CON_Responder(event_t *ev)
 				}
 			}
 
-			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
+			CHAT_RecountTabulars(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
 
 			if (!shiftdown)
 				input_sel[ingamechat] = input_cur[ingamechat];
@@ -1339,7 +1339,7 @@ boolean CON_Responder(event_t *ev)
 				}
 			}
 
-			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
+			CHAT_RecountTabulars(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
 
 			if (!shiftdown)
 				input_sel[ingamechat] = input_cur[ingamechat];
