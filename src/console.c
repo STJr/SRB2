@@ -857,7 +857,7 @@ boolean CON_Responder(event_t *ev)
 	const char *cmd = "";
 	INT32 key;
 
-	boolean chat = (con_chat && ev->type != ev_console);
+	boolean ingamechat = (con_chat && ev->type != ev_console);
 
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
@@ -925,13 +925,13 @@ boolean CON_Responder(event_t *ev)
 	if (ctrldown)
 	{
 		// show all cvars/commands that match what we have inputted
-		if (key == KEY_TAB && !chat)
+		if (key == KEY_TAB && !ingamechat)
 		{
 			size_t i, len;
 
 			if (!completion[0])
 			{
-				if (!input_len[chat] || input_len[chat] >= 40 || strchr(inputlines[inputline], ' '))
+				if (!input_len[ingamechat] || input_len[ingamechat] >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
 				comskips = varskips = 0;
@@ -967,26 +967,26 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			if (input_sel[chat] > input_cur[chat])
-				I_ClipboardCopy(&INPUTLINE[input_cur[chat]], input_sel[chat]-input_cur[chat]);
+			if (input_sel[ingamechat] > input_cur[ingamechat])
+				I_ClipboardCopy(&INPUTLINE[input_cur[ingamechat]], input_sel[ingamechat]-input_cur[ingamechat]);
 			else
-				I_ClipboardCopy(&INPUTLINE[input_sel[chat]], input_cur[chat]-input_sel[chat]);
+				I_ClipboardCopy(&INPUTLINE[input_sel[ingamechat]], input_cur[ingamechat]-input_sel[ingamechat]);
 			CON_InputDelSelection();
 			completion[0] = 0;
 			return true;
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			if (input_sel[chat] > input_cur[chat])
-				I_ClipboardCopy(&INPUTLINE[input_cur[chat]], input_sel[chat]-input_cur[chat]);
+			if (input_sel[ingamechat] > input_cur[ingamechat])
+				I_ClipboardCopy(&INPUTLINE[input_cur[ingamechat]], input_sel[ingamechat]-input_cur[ingamechat]);
 			else
-				I_ClipboardCopy(&INPUTLINE[input_sel[chat]], input_cur[chat]-input_sel[chat]);
+				I_ClipboardCopy(&INPUTLINE[input_sel[ingamechat]], input_cur[ingamechat]-input_sel[ingamechat]);
 			return true;
 		}
 		else if (key == 'v' || key == 'V')
 		{
 			const char *paste = I_ClipboardPaste();
-			if (input_sel[chat] != input_cur[chat])
+			if (input_sel[ingamechat] != input_cur[ingamechat])
 				CON_InputDelSelection();
 			if (paste != NULL)
 				CON_InputAddString(paste);
@@ -997,8 +997,8 @@ boolean CON_Responder(event_t *ev)
 		// Select all
 		if (key == 'a' || key == 'A')
 		{
-			input_sel[chat] = 0;
-			input_cur[chat] = input_jump = input_len[chat];
+			input_sel[ingamechat] = 0;
+			input_cur[ingamechat] = input_jump = input_len[ingamechat];
 			return true;
 		}
 	}
@@ -1006,7 +1006,7 @@ boolean CON_Responder(event_t *ev)
 	// command completion forward (tab) and backward (shift-tab)
 	if (key == KEY_TAB)
 	{
-		if (chat)
+		if (ingamechat)
 		{
 			if (shiftdown)
 			{
@@ -1023,7 +1023,7 @@ boolean CON_Responder(event_t *ev)
 		// remember typing for several completions (a-la-4dos)
 		if (!completion[0])
 		{
-			if (!input_len[chat] || input_len[chat] >= 40 || strchr(inputlines[inputline], ' '))
+			if (!input_len[ingamechat] || input_len[ingamechat] >= 40 || strchr(inputlines[inputline], ' '))
 				return true;
 			strcpy(completion, inputlines[inputline]);
 			comskips = varskips = 0;
@@ -1084,53 +1084,53 @@ boolean CON_Responder(event_t *ev)
 
 	if (key == KEY_LEFTARROW)
 	{
-		if (input_cur[chat] != 0)
+		if (input_cur[ingamechat] != 0)
 		{
-			--input_cur[chat];  input_jump = input_cur[chat];
+			--input_cur[ingamechat];  input_jump = input_cur[ingamechat];
 			if (ctrldown)
 				jumptoword(true);
 
 			if (INPUTLINE[input_cur[1]] == '\n')
-				recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[chat])]);
+				recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
 		}
 		if (!shiftdown)
-			input_sel[chat] = input_cur[chat];
+			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
 	}
 	else if (key == KEY_RIGHTARROW)
 	{
-		if (input_cur[chat] < input_len[chat])
+		if (input_cur[ingamechat] < input_len[ingamechat])
 		{
 			if (INPUTLINE[input_cur[1]] == '\n')
-				recounttabs(&INPUTLINE[input_cur[chat] + 1]);
+				recounttabs(&INPUTLINE[input_cur[ingamechat] + 1]);
 
 			if (ctrldown)
 				jumptoword(false);
 			else
 			{
-				++input_cur[chat];
-				input_jump = input_cur[chat];
+				++input_cur[ingamechat];
+				input_jump = input_cur[ingamechat];
 			}
 		}
 		if (!shiftdown)
-			input_sel[chat] = input_cur[chat];
+			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
 	}
 	else if (key == KEY_HOME)
 	{
-		input_cur[chat] = input_jump = ((altdown) ? 0 : M_StartOfLine(INPUTLINE, input_cur[chat]));
-		recounttabs(&INPUTLINE[input_cur[chat]]);
+		input_cur[ingamechat] = input_jump = ((altdown) ? 0 : M_StartOfLine(INPUTLINE, input_cur[ingamechat]));
+		recounttabs(&INPUTLINE[input_cur[ingamechat]]);
 		if (!shiftdown)
-			input_sel[chat] = input_cur[chat];
+			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
 	}
 	else if (key == KEY_END)
 	{
-		input_cur[chat] = input_jump =
-			((altdown) ? input_len[chat] : (unsigned)(strchrnul(&INPUTLINE[input_cur[chat]], '\n')-INPUTLINE));
-		recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[chat])]);
+		input_cur[ingamechat] = input_jump =
+			((altdown) ? input_len[ingamechat] : (unsigned)(strchrnul(&INPUTLINE[input_cur[ingamechat]], '\n')-INPUTLINE));
+		recounttabs(&INPUTLINE[M_StartOfLine(INPUTLINE, input_cur[ingamechat])]);
 		if (!shiftdown)
-			input_sel[chat] = input_cur[chat];
+			input_sel[ingamechat] = input_cur[ingamechat];
 		return true;
 	}
 
@@ -1141,7 +1141,7 @@ boolean CON_Responder(event_t *ev)
 	// command enter
 	if (key == KEY_ENTER)
 	{
-		if (chat)  // no jumping console from terminal
+		if (ingamechat)  // no jumping console from terminal
 		{
 			if (shiftdown)
 			{
@@ -1155,10 +1155,10 @@ boolean CON_Responder(event_t *ev)
 			}
 		}
 
-		if (!input_len[chat])
+		if (!input_len[ingamechat])
 			return true;
 
-		if (!chat)  // force console input via terminal
+		if (!ingamechat)  // force console input via terminal
 		{
 			// push the command
 			COM_BufAddText(inputlines[inputline]);
@@ -1183,7 +1183,7 @@ boolean CON_Responder(event_t *ev)
 			while (*(s++)) ;
 
 			if (cv_mute.value && !(server || adminplayer == consoleplayer))
-				CONS_Alert(CONS_NOTICE, M_GetText("The chat is muted. You can't say anything at the moment.\n"));
+				CONS_Alert(CONS_NOTICE, M_GetText("The ingamechat is muted. You can't say anything at the moment.\n"));
 			else
 				if (buf[2] != 0)
 				{
@@ -1192,13 +1192,13 @@ boolean CON_Responder(event_t *ev)
 					SendNetXCmd(XD_SAY, buf, n);
 				}
 		}
-		CON_InputClear(chat);
+		CON_InputClear(ingamechat);
 
 		return true;
 	}
 
 	// backspace and delete command prompt
-	if (input_sel[chat] != input_cur[chat])
+	if (input_sel[ingamechat] != input_cur[ingamechat])
 	{
 		if (key == KEY_BACKSPACE || key == KEY_DEL)
 		{
@@ -1206,7 +1206,7 @@ boolean CON_Responder(event_t *ev)
 			{
 				if (key == KEY_BACKSPACE)
 				{
-					input_cur[chat]--;
+					input_cur[ingamechat]--;
 					jumptoword(true);
 				}
 				else
@@ -1220,17 +1220,17 @@ boolean CON_Responder(event_t *ev)
 	{
 		if (ctrldown)
 		{
-			input_cur[chat]--;
+			input_cur[ingamechat]--;
 			jumptoword(true);
 			CON_InputDelSelection();
 		}
 		else
-			CON_InputDelChar(chat);
+			CON_InputDelChar(ingamechat);
 		return true;
 	}
 	else if (key == KEY_DEL)
 	{
-		if (input_cur[chat] == input_len[chat])
+		if (input_cur[ingamechat] == input_len[ingamechat])
 			return true;
 		if (ctrldown)
 		{
@@ -1239,15 +1239,15 @@ boolean CON_Responder(event_t *ev)
 		}
 		else
 		{
-			++input_cur[chat];
-			CON_InputDelChar(chat);
+			++input_cur[ingamechat];
+			CON_InputDelChar(ingamechat);
 		}
 		return true;
 	}
 
 	if (key == KEY_UPARROW)
 	{
-		if (chat)
+		if (ingamechat)
 		{
 			size_t start, start2;
 			size_t n, left;
@@ -1285,7 +1285,7 @@ boolean CON_Responder(event_t *ev)
 			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
 
 			if (!shiftdown)
-				input_sel[chat] = input_cur[chat];
+				input_sel[ingamechat] = input_cur[ingamechat];
 
 			return true;
 		}
@@ -1308,7 +1308,7 @@ boolean CON_Responder(event_t *ev)
 
 	if (key == KEY_DOWNARROW)
 	{
-		if (chat)
+		if (ingamechat)
 		{
 			const char *lf, *lf2;
 			size_t n;
@@ -1342,7 +1342,7 @@ boolean CON_Responder(event_t *ev)
 			recounttabs(&inputlines[32][M_StartOfLine(inputlines[32], input_cur[1])]);
 
 			if (!shiftdown)
-				input_sel[chat] = input_cur[chat];
+				input_sel[ingamechat] = input_cur[ingamechat];
 
 			return true;
 		}
@@ -1394,9 +1394,9 @@ boolean CON_Responder(event_t *ev)
 		key = key + 'a' - 'A';
 #endif
 
-	if (input_sel[chat] != input_cur[chat])
+	if (input_sel[ingamechat] != input_cur[ingamechat])
 		CON_InputDelSelection();
-	CON_InputAddChar(key, chat);
+	CON_InputAddChar(key, ingamechat);
 
 	return true;
 }
