@@ -833,6 +833,13 @@ static void CON_InputDelChar(boolean chat)
 // ----
 //
 
+static boolean G_SegregatedGametype (void)
+{
+	return (gametype == GT_TEAMMATCH || gametype == GT_CTF
+			|| gametype == GT_TAG || gametype == GT_HIDEANDSEEK
+			|| gametype == GT_MATCH);
+}
+
 static void jumptoword (boolean left)
 {
 	int (*f)(int) = ((isspace(INPUTLINE[input_cur[con_chat]])) ? &isspace
@@ -889,7 +896,7 @@ boolean CON_Responder(event_t *ev)
 			if (cv_mute.value && !(server || adminplayer == consoleplayer))
 				return true;
 			con_chat = true;
-			chat_team = (key == gamecontrol[gc_teamkey][0] && G_GametypeHasSpectators());  // team modes imply spectators
+			chat_team = (key == gamecontrol[gc_teamkey][0] && G_SegregatedGametype());
 			consoletoggle = true;
 			return true;
 		}
@@ -1010,7 +1017,7 @@ boolean CON_Responder(event_t *ev)
 		{
 			if (shiftdown)
 			{
-				if (G_GametypeHasSpectators())  // team modes imply spectators
+				if (G_SegregatedGametype())
 					chat_team = !chat_team;
 			}
 			else
