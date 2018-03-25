@@ -779,10 +779,12 @@ void Command_Setcontinues_f(void)
 static CV_PossibleValue_t op_mapthing_t[] = {{0, "MIN"}, {4095, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_speed_t[] = {{1, "MIN"}, {128, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_flags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t op_hoopflags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
 
 consvar_t cv_mapthingnum = {"op_mapthingnum", "0", CV_NOTINNET, op_mapthing_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_speed = {"op_speed", "16", CV_NOTINNET, op_speed_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_opflags = {"op_flags", "0", CV_NOTINNET, op_flags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ophoopflags = {"op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 boolean objectplacing = false;
 mobjtype_t op_currentthing = 0; // For the object placement mode
@@ -986,17 +988,10 @@ void OP_NightsObjectplace(player_t *player)
 	{
 		UINT16 angle = (UINT16)(player->anotherflyangle % 360);
 		INT16 temp = (INT16)FixedInt(AngleFixed(player->mo->angle)); // Traditional 2D Angle
-		sector_t *sec = player->mo->subsector->sector;
-#ifdef ESLOPE
-		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
-#else
-		fixed_t fheight = sec->floorheight;
-#endif
-
 
 		player->pflags |= PF_ATTACKDOWN;
 
-		mt = OP_CreateNewMapThing(player, 1705, false);
+		mt = OP_CreateNewMapThing(player, 1713, false);
 
 		// Tilt
 		mt->angle = (INT16)FixedInt(FixedDiv(angle*FRACUNIT, 360*(FRACUNIT/256)));
@@ -1007,7 +1002,7 @@ void OP_NightsObjectplace(player_t *player)
 			temp += 90;
 		temp %= 360;
 
-		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+		mt->options = (mt->options ^ (UINT16)cv_opflags.value) | (UINT16)cv_ophoopflags.value;
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
 		P_SpawnHoopsAndRings(mt);
