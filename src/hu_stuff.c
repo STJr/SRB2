@@ -584,9 +584,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		else if (G_TagGametype())
 		{
 			cend = "\x80";
-			if (players[playernum].pflags & PF_TAGIT && gametype == GT_HIDEANDSEEK)
-				cstart = "\x82*\x87";  // Yellow star shows that this is the ALPHA.
-			else if (players[playernum].pflags & (PF_TAGIT|PF_TAGGED))
+			if (players[playernum].pflags & PF_TAGIT)
 				cstart = "\x87";
 		}
 		else if (gametype == GT_RACE || gametype == GT_COMPETITION)
