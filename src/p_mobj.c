@@ -10261,6 +10261,14 @@ domaceagain:
 		}
 	}
 
+	// ignore MTF_ flags and return early
+	if (i == MT_NIGHTSBUMPER)
+	{
+		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
+		mthing->mobj = mobj;
+		return;
+	}
+
 	mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 
 	if ((mthing->options & MTF_AMBUSH)
