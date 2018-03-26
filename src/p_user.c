@@ -758,6 +758,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marebegunat = leveltime;
 
 		player->rings = 0;
+		player->flyangle = 0;
+		player->anotherflyangle = 0;
 	}
 	else
 	{
