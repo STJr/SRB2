@@ -586,6 +586,8 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->climbing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
@@ -659,6 +661,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->speed = 0;
 	player->climbing = 0;
 	player->secondjump = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -758,8 +762,6 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marebegunat = leveltime;
 
 		player->rings = 0;
-		player->flyangle = 0;
-		player->anotherflyangle = 0;
 	}
 	else
 	{
