@@ -917,8 +917,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
 		if (pl->bonustime && (pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
-		   !(pl->flyangle >= 90 &&   pl->flyangle <= 270)
-		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
+		   !(pl->flyangle > 90 &&   pl->flyangle < 270)
+		^ (droneobj->extravalue1 > 90 && droneobj->extravalue1 < 270)
 		))
 		{
 			// Reload all the fancy ring stuff!
