@@ -2585,13 +2585,11 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 			else
 				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
-			if (leveltime & 4)
-			{
-				if (player->gotflag & GF_REDFLAG)
-					P_SetMobjStateNF(sign, S_GOTREDFLAG);
-			}
-			else if (player->gotflag & GF_BLUEFLAG)
-				P_SetMobjStateNF(sign, S_GOTBLUEFLAG);
+
+			if (player->gotflag & GF_REDFLAG)
+				sign->frame = 1|FF_FULLBRIGHT;
+			else //if (player->gotflag & GF_BLUEFLAG)
+				sign->frame = 2|FF_FULLBRIGHT;
 		}
 	}
 }

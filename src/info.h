@@ -1834,6 +1834,7 @@ typedef enum state
 	S_BOXSPARKLE1,
 	S_BOXSPARKLE2,
 	S_BOXSPARKLE3,
+	S_BOXSPARKLE4,
 
 	S_BOX_FLICKER,
 	S_BOX_POP1,
@@ -2826,8 +2827,6 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
-	S_GOTREDFLAG,
-	S_GOTBLUEFLAG,
 
 	S_CORK,
 
@@ -3167,6 +3166,10 @@ typedef enum state
 	S_XPLD_FLICKY,
 	S_XPLD1,
 	S_XPLD2,
+	S_XPLD3,
+	S_XPLD4,
+	S_XPLD5,
+	S_XPLD6,
 	S_XPLD_EGGTRAP,
 
 	// Underwater Explosion

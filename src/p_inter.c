@@ -3365,8 +3365,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_KillPlayer(player, source, damage);
 		}
 
-		P_HitDeathMessages(player, inflictor, source, damagetype);
-
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}
 
@@ -3380,6 +3378,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		target->health = 0;
 	else
 		target->health -= damage;
+
+	if (player)
+		P_HitDeathMessages(player, inflictor, source, damagetype);
 
 	if (source && source->player && target)
 		G_GhostAddHit(target);

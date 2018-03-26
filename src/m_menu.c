@@ -1196,24 +1196,25 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
-	{IT_STRING | IT_CVAR, NULL, "Time Display",              &cv_timetic,          71},
+	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
+	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         76},
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         81},
 #endif
 
-	{IT_HEADER, NULL, "Console", NULL, 85},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      91},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,     96},
+	{IT_HEADER, NULL, "Console", NULL, 90},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      96},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    101},
 
-	{IT_HEADER, NULL, "Level", NULL, 105},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        111},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 116},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 121},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   126},
+	{IT_HEADER, NULL, "Level", NULL, 110},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        116},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 121},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 126},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   131},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 135},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         141},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      146},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 140},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         146},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      151},
 };
 
 static menuitem_t OP_VideoModeMenu[] =

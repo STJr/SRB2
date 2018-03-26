@@ -440,6 +440,18 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
+	INT32 basey = BASEVIDHEIGHT;
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (splitscreen)
+			basey -= 8;
+		else if (((maptol & TOL_NIGHTS) && (modeattacking == ATTACKING_NIGHTS))
+		|| (cv_powerupdisplay.value == 2)
+		|| (cv_powerupdisplay.value == 1 && ((stplyr == &players[displayplayer] && !camera.chase)
+		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))
+			basey -= 16;
+	}
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
@@ -456,7 +468,7 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = BASEVIDHEIGHT-((i + 2)*10);
+		y = basey-((i + 2)*10);
 
 		if (closedcaptions[i].b)
 			y -= (closedcaptions[i].b--)*vid.dupy;

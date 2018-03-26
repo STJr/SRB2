@@ -680,7 +680,7 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_OBJPLACE_DUMMY}, //S_OBJPLACE_DUMMY
 
 	// 1-Up box sprites (uses player sprite)
-	{SPR_PLAY, SPR2_LIFE,  2, {NULL}, 0, 16, S_PLAY_BOX2},  // S_PLAY_BOX1
+	{SPR_PLAY, SPR2_LIFE,  2, {NULL}, 0, 18, S_PLAY_BOX2},  // S_PLAY_BOX1
 	{SPR_NULL,         0,  1, {NULL}, 0,  0, S_PLAY_BOX1},  // S_PLAY_BOX2
 	{SPR_PLAY, SPR2_LIFE,  4, {NULL}, 0,  4, S_PLAY_ICON2}, // S_PLAY_ICON1
 	{SPR_NULL,         0, 12, {NULL}, 0,  0, S_PLAY_ICON3}, // S_PLAY_ICON2
@@ -1727,9 +1727,10 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 2, {A_SetRandomTics},     TICRATE/2, 3*TICRATE, S_CANNONLAUNCHER1}, // S_CANNONLAUNCHER3
 
 	// Monitor Miscellany
-	{SPR_NSPK, FF_TRANS40, 20, {NULL}, 0, 0, S_BOXSPARKLE2}, // S_BOXSPARKLE1
-	{SPR_NSPK, FF_TRANS60, 10, {NULL}, 0, 0, S_BOXSPARKLE3}, // S_BOXSPARKLE2
-	{SPR_NSPK, FF_TRANS80,  5, {NULL}, 0, 0, S_NULL}, // S_BOXSPARKLE3
+	{SPR_NSPK, 0, 16, {NULL}, 0, 0, S_BOXSPARKLE2}, // S_BOXSPARKLE1
+	{SPR_NSPK, 1, 12, {NULL}, 0, 0, S_BOXSPARKLE3}, // S_BOXSPARKLE2
+	{SPR_NSPK, 2,  8, {NULL}, 0, 0, S_BOXSPARKLE4}, // S_BOXSPARKLE3
+	{SPR_NSPK, 3,  4, {NULL}, 0, 0, S_NULL},        // S_BOXSPARKLE4
 
 	{SPR_MSTV, 0,  1, {NULL}, 0, 0, S_SPAWNSTATE},  // S_BOX_FLICKER
 	{SPR_MSTV, 0,  4, {A_MonitorPop}, 0, 0, S_BOX_POP2}, // S_BOX_POP1
@@ -2735,8 +2736,6 @@ state_t states[NUMSTATES] =
 
 	// CTF Sign
 	{SPR_GFLG,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
-	{SPR_GFLG, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTREDFLAG
-	{SPR_GFLG, 2|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTBLUEFLAG
 
 	{SPR_CORK, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
 
@@ -3121,11 +3120,15 @@ state_t states[NUMSTATES] =
 	{SPR_SPRK, FF_TRANS90|3, 1, {NULL}, 0, 0, S_NULL},   // S_SPRK16
 
 	// Robot Explosion
-	{SPR_BOM1, 0,             0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
-	{SPR_BOM1, 0,             1, {A_Scream},      0, 0, S_XPLD2}, // S_XPLD1
-	{SPR_BOM1, FF_ANIMATE|1, 15, {NULL},          2, 5, S_NULL},  // S_XPLD2
+	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
+	{SPR_BOM1, 0, 2, {A_Scream},      0, 0, S_XPLD2}, // S_XPLD1
+	{SPR_BOM1, 1, 2, {NULL},          0, 0, S_XPLD3}, // S_XPLD2
+	{SPR_BOM1, 2, 3, {NULL},          0, 0, S_XPLD4}, // S_XPLD3
+	{SPR_BOM1, 3, 3, {NULL},          0, 0, S_XPLD5}, // S_XPLD4
+	{SPR_BOM1, 4, 4, {NULL},          0, 0, S_XPLD6}, // S_XPLD5
+	{SPR_BOM1, 5, 4, {NULL},          0, 0, S_NULL},  // S_XPLD6
 
-	{SPR_BOM1, FF_ANIMATE,   20, {NULL},          3, 5, S_INVISIBLE}, // S_XPLD_EGGTRAP
+	{SPR_BOM1, FF_ANIMATE,   21, {NULL},          5, 4, S_INVISIBLE}, // S_XPLD_EGGTRAP
 
 	// Underwater Explosion
 	{SPR_BOM4, 0, 3, {A_Scream}, 0, 0, S_WPLD2}, // S_WPLD1
@@ -6386,8 +6389,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_RING_ICON,   // damage
@@ -6413,8 +6416,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_PITY_ICON,   // damage
@@ -6440,8 +6443,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ATTRACT_ICON,// damage
@@ -6467,8 +6470,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_FORCE_ICON,  // damage
@@ -6494,8 +6497,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ARMAGEDDON_ICON, // damage
@@ -6521,8 +6524,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_WHIRLWIND_ICON, // damage
@@ -6548,8 +6551,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ELEMENTAL_ICON, // damage
@@ -6575,8 +6578,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_SNEAKERS_ICON, // damage
@@ -6602,8 +6605,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_INVULN_ICON, // damage
@@ -6629,8 +6632,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_1UP_ICON,    // damage
@@ -6656,8 +6659,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_EGGMAN_ICON, // damage
@@ -6683,8 +6686,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_MIXUP_ICON,  // damage
@@ -6710,8 +6713,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_UNKNOWN,     // damage
@@ -6737,8 +6740,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_GRAVITY_ICON, // damage
@@ -6764,8 +6767,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_RECYCLER_ICON, // damage
@@ -6791,8 +6794,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_SCORE1K_ICON, // damage
@@ -6818,8 +6821,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_SCORE10K_ICON, // damage
@@ -6845,8 +6848,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_FLAMEAURA_ICON, // damage
@@ -6872,8 +6875,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_BUBBLEWRAP_ICON, // damage
@@ -6899,8 +6902,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_THUNDERCOIN_ICON, // damage
@@ -6926,8 +6929,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_PITY_ICON,   // damage
@@ -6953,8 +6956,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ATTRACT_ICON,// damage
@@ -6980,8 +6983,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_FORCE_ICON,  // damage
@@ -7007,8 +7010,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ARMAGEDDON_ICON, // damage
@@ -7034,8 +7037,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_WHIRLWIND_ICON, // damage
@@ -7061,8 +7064,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ELEMENTAL_ICON, // damage
@@ -7088,8 +7091,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_SNEAKERS_ICON, // damage
@@ -7115,8 +7118,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_INVULN_ICON, // damage
@@ -7142,8 +7145,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_EGGMAN_ICON, // damage
@@ -7169,8 +7172,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_GRAVITY_ICON, // damage
@@ -7196,8 +7199,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_FLAMEAURA_ICON, // damage
@@ -7223,8 +7226,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_BUBBLEWRAP_ICON, // damage
@@ -7250,8 +7253,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		36*FRACUNIT,    // height
+		20*FRACUNIT,    // radius
+		44*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_THUNDERCOIN_ICON, // damage
@@ -7277,8 +7280,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_RING_ICON,   // damage
@@ -7304,8 +7307,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		0,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		18*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_RING_ICON,   // damage
