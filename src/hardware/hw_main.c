@@ -2676,7 +2676,7 @@ static void HWR_AddLine(seg_t * line)
 	angle_t span, tspan;
 
 	// SoM: Backsector needs to be run through R_FakeFlat
-	sector_t tempsec;
+	static sector_t tempsec;
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
@@ -3235,7 +3235,7 @@ static void HWR_Subsector(size_t num)
 	INT16 count;
 	seg_t *line;
 	subsector_t *sub;
-	sector_t tempsec; //SoM: 4/7/2000
+	static sector_t tempsec; //SoM: 4/7/2000
 	INT32 floorlightlevel;
 	INT32 ceilinglightlevel;
 	INT32 locFloorHeight, locCeilingHeight;
@@ -3418,8 +3418,6 @@ static void HWR_Subsector(size_t num)
 	{
 		/// \todo fix light, xoffs, yoffs, extracolormap ?
 		ffloor_t * rover;
-
-		R_Prep3DFloors(gr_frontsector);
 		for (rover = gr_frontsector->ffloors;
 			rover; rover = rover->next)
 		{
