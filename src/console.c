@@ -565,7 +565,7 @@ boolean CON_Ready(void)
 void CON_Ticker(void)
 {
 	INT32 i;
-	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+	INT32 minheight = ((con_chat) ? 12 : 20) * con_scalefactor;	// 20 = 8 + 12 = 8+4
 
 	// cursor blinking
 	con_tick++;
@@ -2023,39 +2023,39 @@ static void CON_DrawConsole(void)
 	}
 
 	// draw console text lines from top to bottom
-	if (con_curlines < minheight)
-		return;
-
-	i = con_cy - con_scrollup;
-
-	// skip the last empty line due to the cursor being at the start of a new line
-	if (!con_scrollup && !con_cx)
-		i--;
-
-	i -= (con_curlines - minheight) / charheight;
-
-	if (rendermode == render_none) return;
-
-	for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
+	if (con_curlines >= minheight)
 	{
-		INT32 x;
-		size_t c;
+		i = con_cy - con_scrollup;
 
-		p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+		// skip the last empty line due to the cursor being at the start of a new line
+		if (!con_scrollup && !con_cx)
+			i--;
 
-		for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
+		i -= (con_curlines - minheight) / charheight;
+
+		if (rendermode == render_none) return;
+
+		for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
 		{
-			while (*p & 0x80)
+			INT32 x;
+			size_t c;
+
+			p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+
+			for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
 			{
-				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
-				p++;
+				while (*p & 0x80)
+				{
+					charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
+					p++;
+				}
+				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 			}
-			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 		}
 	}
 
-	// draw prompt if enough place (not while game startup)
-	if ((con_curlines == con_destlines) && (con_curlines >= minheight) && !con_startup)
+	// draw prompt once fully down (not while game startup)
+	if ((con_curlines == con_destlines) && !con_startup)
 		CON_DrawInput();
 }
 
