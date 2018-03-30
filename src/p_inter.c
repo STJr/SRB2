@@ -577,25 +577,27 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_TOKEN:
 			if (player->bot)
 				return;
-			tokenlist += special->health;
 
 			P_AddPlayerScore(player, 1000);
 
-			if (!modeattacking) // score only there...
+			if (gametype != GT_COOP || modeattacking) // score only?
+				break;
+
+			tokenlist += special->health;
+
+			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
-				if (ALL7EMERALDS(emeralds)) // Got all 7
+				if (!(netgame || multiplayer))
 				{
-					if (!(netgame || multiplayer))
-					{
-						player->continues += 1;
-						players->gotcontinue = true;
-						if (P_IsLocalPlayer(player))
-							S_StartSound(NULL, sfx_s3kac);
-					}
+					player->continues += 1;
+					players->gotcontinue = true;
+					if (P_IsLocalPlayer(player))
+						S_StartSound(NULL, sfx_s3kac);
 				}
-				else
-					token++;
 			}
+			else
+				token++;
+
 			break;
 
 		// Emerald Hunt

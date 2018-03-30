@@ -2336,12 +2336,17 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 {
 	tic_t timeleft = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
 
-	if ((timeleft == 11*TICRATE + 1) // 5
-	 || (timeleft ==  9*TICRATE + 1) // 4
-	 || (timeleft ==  7*TICRATE + 1) // 3
-	 || (timeleft ==  5*TICRATE + 1) // 2
-	 || (timeleft ==  3*TICRATE + 1) // 1
-	 || (timeleft ==  1*TICRATE + 1) // 0
+	if (player->exiting)
+		player->powers[pw_underwater] = player->powers[pw_spacetime] = 0;
+
+	timeleft--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
+
+	if ((timeleft == 11*TICRATE) // 5
+	 || (timeleft ==  9*TICRATE) // 4
+	 || (timeleft ==  7*TICRATE) // 3
+	 || (timeleft ==  5*TICRATE) // 2
+	 || (timeleft ==  3*TICRATE) // 1
+	 || (timeleft ==  1*TICRATE) // 0
 	) {
 		fixed_t height = (player->mo->eflags & MFE_VERTICALFLIP)
 		? player->mo->z - FixedMul(8*FRACUNIT + mobjinfo[MT_DROWNNUMBERS].height, FixedMul(player->mo->scale, player->shieldscale))
@@ -2349,7 +2354,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 
 		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
 
-		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be (((timeleft - 1)/TICRATE) - 1)/2, but integer division rounds down for us
+		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be ((timeleft/TICRATE) - 1)/2, but integer division rounds down for us
 
 		if (player->charflags & SF_MACHINE)
 		{
@@ -2407,14 +2412,6 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 			S_StopMusic();
 			S_ChangeMusicInternal("_drown", false);
 		}
-	}
-
-	if (player->exiting)
-	{
-		if (player->powers[pw_underwater] > 1)
-			player->powers[pw_underwater] = 0;
-
-		player->powers[pw_spacetime] = 0;
 	}
 }
 

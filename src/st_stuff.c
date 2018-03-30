@@ -1251,7 +1251,6 @@ static void ST_drawFirstPersonHUD(void)
 {
 	patch_t *p = NULL;
 	UINT32 airtime;
-	UINT32 frame = 0;
 	spriteframe_t *sprframe;
 	// If both air timers are active, use the air timer with the least time left
 	if (stplyr->powers[pw_underwater] && stplyr->powers[pw_spacetime])
@@ -1259,34 +1258,32 @@ static void ST_drawFirstPersonHUD(void)
 	else // Use whichever one is active otherwise
 		airtime = (stplyr->powers[pw_spacetime]) ? stplyr->powers[pw_spacetime] : stplyr->powers[pw_underwater];
 
-	if (!airtime)
+	if (airtime < 1)
 		return; // No air timers are active, nothing would be drawn anyway
 
 	airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
 
 	if (airtime > 11*TICRATE)
 		return; // Not time to draw any drown numbers yet
-	// Choose which frame to use based on time left
-	if (airtime <= 11*TICRATE && airtime >= 10*TICRATE)
-		frame = 5;
-	else if (airtime <= 9*TICRATE && airtime >= 8*TICRATE)
-		frame = 4;
-	else if (airtime <= 7*TICRATE && airtime >= 6*TICRATE)
-		frame = 3;
-	else if (airtime <= 5*TICRATE && airtime >= 4*TICRATE)
-		frame = 2;
-	else if (airtime <= 3*TICRATE && airtime >= 2*TICRATE)
-		frame = 1;
-	else if (airtime <= 1*TICRATE && airtime > 0)
-		frame = 0;
-	else
+
+	if (!((airtime > 10*TICRATE - 5)
+	|| (airtime <= 9*TICRATE && airtime > 8*TICRATE - 5)
+	|| (airtime <= 7*TICRATE && airtime > 6*TICRATE - 5)
+	|| (airtime <= 5*TICRATE && airtime > 4*TICRATE - 5)
+	|| (airtime <= 3*TICRATE && airtime > 2*TICRATE - 5)
+	|| (airtime <= 1*TICRATE)))
 		return; // Don't draw anything between numbers
 
+	if (!((airtime % 10) < 5))
+		return; // Keep in line with the flashing thing from third person.
+
+	airtime /= (2*TICRATE); // To be strictly accurate it'd need to be ((airtime/TICRATE) - 1)/2, but integer division rounds down for us
+
 	if (stplyr->charflags & SF_MACHINE)
-		frame += 6;  // Robots use different drown numbers
+		airtime += 6;  // Robots use different drown numbers
 
 	// Get the front angle patch for the frame
-	sprframe = &sprites[SPR_DRWN].spriteframes[frame];
+	sprframe = &sprites[SPR_DRWN].spriteframes[airtime];
 	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
