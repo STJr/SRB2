@@ -456,7 +456,7 @@ typedef struct
 	INT32 affectee;     ///< Number of affected line
 	INT32 destvalue;    ///< Transparency value to fade to
 	INT32 speed;        ///< Speed to fade by
-	UINT8 ignoreflags;  ///< Do not handle FF_EXISTS
+	UINT8 handleflags;  ///< Do not handle FF_EXISTS
 } fade_t;
 
 void T_Fade(fade_t *d);

@@ -1565,7 +1565,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->affectee);
 	WRITEINT32(save_p, ht->destvalue);
 	WRITEINT32(save_p, ht->speed);
-	WRITEUINT8(save_p, ht->ignoreflags);
+	WRITEUINT8(save_p, ht->handleflags);
 }
 
 //
@@ -2563,7 +2563,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->affectee = READINT32(save_p);
 	ht->destvalue = READINT32(save_p);
 	ht->speed = READINT32(save_p);
-	ht->ignoreflags = READUINT8(save_p);
+	ht->handleflags = READUINT8(save_p);
 	P_AddThinker(&ht->thinker);
 }
 

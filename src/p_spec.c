@@ -102,7 +102,7 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT32 line);
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOOL handlesolid, BOOL handletrans, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3100,7 +3100,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
 				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
 					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[0]].rowoffset>>FRACBITS, (line->flags & ML_BLOCKMONSTERS), (INT32)(sectors[s].lines[j]-lines));
+						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
+						                 sides[line->sidenum[0]].rowoffset>>FRACBITS, 
+										 (line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
+										 (line->flags & ML_NOCLIMB), 		// handle FF_SOLID
+										 !(line->flags & ML_EFFECT1),		// do not handle FF_TRANSLUCENT
+										 (INT32)(sectors[s].lines[j]-lines));
 			break;
 		}
 		
@@ -7075,24 +7080,37 @@ void T_Disappear(disappear_t *d)
   *
   * \param destvalue	transparency value to fade to
   * \param speed		speed to fade by
-  * \param ignoreexists	do not handle FF_EXISTS	
+  * \param handleexist	handle FF_EXISTS
+  * \param handlesolid	handle FF_SOLID
+  * \param handletrans	do not handle FF_TRANSLUCENT
   * \param line			line to target FOF
   */
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT32 line)
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOOL handlesolid, BOOL handletrans, INT32 line)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
-	//CONS_Printf("Adding fader | Dest %i | Speed %i | Ignore %i\n", destvalue, speed, ignoreflags);
+	//CONS_Printf("Adding fader | Dest %i | Speed %i | Ignore %i\n", destvalue, speed, handleflags);
 
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
 	d->affectee = line;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
 	d->speed = max(1, speed); // minimum speed 1/tic
-	d->ignoreflags = (UINT8)ignoreflags;
+
+	// combine the flags-to-handle, this is more convenient than separate BOOLS
+	d->handleflags = 0;
+
+	if (handleexist)
+		d->handleflags |= FF_EXISTS;
+
+	if (handlesolid)
+		d->handleflags |= FF_SOLID;
+
+	if (handletrans)
+		d->handleflags |= FF_TRANSLUCENT;
 
 	P_AddThinker(&d->thinker);
 
-	//CONS_Printf("Added  fader | Dest %i | Speed %i | Ignore %i\n", d->destvalue, d->speed, d->ignoreflags);
+	//CONS_Printf("Added  fader | Dest %i | Speed %i | Ignore %i\n", d->destvalue, d->speed, d->handleflags);
 }
 
 /** Makes a FOF fade
@@ -7120,19 +7138,49 @@ void T_Fade(fade_t *d)
 				// we'll reach our destvalue
 				if (rover->alpha - d->speed <= d->destvalue + d->speed)
 				{
-					//CONS_Printf("Finished fading out\n");
-					rover->alpha = d->destvalue;
-					if (!d->ignoreflags && rover->alpha <= 1)
-						rover->flags &= ~FF_EXISTS;
-					else
-						rover->flags |= FF_EXISTS;
+					if (rover->alpha != d->destvalue)
+					{
+						//CONS_Printf("Finished fading out\n");
+						rover->alpha = d->destvalue;
+
+						if (d->handleflags & FF_EXISTS)
+						{
+							if (rover->alpha <= 1)
+								rover->flags &= ~FF_EXISTS;
+							else
+								rover->flags |= FF_EXISTS;
+						}
+
+						if ((d->handleflags & FF_SOLID)
+							&& !(rover->flags & FF_SWIMMABLE)
+							&& !(rover->flags & FF_QUICKSAND))
+							rover->flags &= ~FF_SOLID; // make intangible at end of fade-out
+
+						if (d->handleflags & FF_TRANSLUCENT)
+						{
+							if (rover->alpha >= 256)
+								rover->flags &= ~FF_TRANSLUCENT;
+							else
+								rover->flags |= FF_TRANSLUCENT;
+						}
+					}
 				}
 				else
 				{
 					//CONS_Printf("Fading out...\n");
 					rover->alpha -= d->speed;
-					if (!d->ignoreflags)
+
+					if (d->handleflags & FF_EXISTS)
 						rover->flags |= FF_EXISTS;
+
+					if ((d->handleflags & FF_SOLID)
+						&& !(rover->flags & FF_SWIMMABLE)
+						&& !(rover->flags & FF_QUICKSAND))
+						rover->flags |= FF_SOLID; // keep solid during fade
+
+					if (d->handleflags & FF_TRANSLUCENT)
+						rover->flags |= FF_TRANSLUCENT; // assume we're not completely opaque
+
 					affectedffloors++;
 				}
 			}
@@ -7141,17 +7189,49 @@ void T_Fade(fade_t *d)
 				// we'll reach our destvalue
 				if (rover->alpha + d->speed >= d->destvalue - d->speed)
 				{
-					//CONS_Printf("Finished fading in\n");
-					rover->alpha = d->destvalue;
-					if (!d->ignoreflags)
-						rover->flags |= FF_EXISTS;
+					if (rover->alpha != d->destvalue)
+					{
+						//CONS_Printf("Finished fading in\n");
+						rover->alpha = d->destvalue;
+						
+						if (d->handleflags & FF_EXISTS)
+						{
+							if (rover->alpha <= 1)
+								rover->flags &= ~FF_EXISTS;
+							else
+								rover->flags |= FF_EXISTS;
+						}
+
+						if ((d->handleflags & FF_SOLID)
+							&& !(rover->flags & FF_SWIMMABLE)
+							&& !(rover->flags & FF_QUICKSAND))
+							rover->flags |= FF_SOLID; // make solid at end of fade-in
+
+						if (d->handleflags & FF_TRANSLUCENT)
+						{
+							if (rover->alpha >= 256)
+								rover->flags &= ~FF_TRANSLUCENT;
+							else
+								rover->flags |= FF_TRANSLUCENT;
+						}
+					}
 				}
 				else
 				{
 					//CONS_Printf("Fading in...\n");
 					rover->alpha += d->speed;
-					if (!d->ignoreflags)
+					
+					if (d->handleflags & FF_EXISTS)
 						rover->flags |= FF_EXISTS;
+
+					if ((d->handleflags & FF_SOLID)
+						&& !(rover->flags & FF_SWIMMABLE)
+						&& !(rover->flags & FF_QUICKSAND))
+						rover->flags |= FF_SOLID; // keep solid during fade
+
+					if (d->handleflags & FF_TRANSLUCENT)
+						rover->flags |= FF_TRANSLUCENT; // assume we're not completely opaque
+
 					affectedffloors++;
 				}
 			}
