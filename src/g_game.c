@@ -2230,6 +2230,8 @@ void G_PlayerReborn(INT32 player)
 	if (p->mare == 255)
 		p->mare = 0;
 
+	p->marelap = p->marebonuslap = 0;
+
 	// Check to make sure their color didn't change somehow...
 	if (G_GametypeHasTeams())
 	{

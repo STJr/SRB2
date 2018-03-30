@@ -288,6 +288,10 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, plr->capsule, META_MOBJ);
 	else if (fastcmp(field,"mare"))
 		lua_pushinteger(L, plr->mare);
+	else if (fastcmp(field,"marelap"))
+		lua_pushinteger(L, plr->marelap);
+	else if (fastcmp(field,"marebonuslap"))
+		lua_pushinteger(L, plr->marebonuslap);
 	else if (fastcmp(field,"marebegunat"))
 		lua_pushinteger(L, plr->marebegunat);
 	else if (fastcmp(field,"startedtime"))
@@ -564,6 +568,10 @@ static int player_set(lua_State *L)
 	}
 	else if (fastcmp(field,"mare"))
 		plr->mare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marelap"))
+		plr->marelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marebonuslap"))
+		plr->marebonuslap = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"marebegunat"))
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"startedtime"))
