@@ -1092,7 +1092,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	INT32   solid, i;
 	lightlist_t *  list = sector->lightlist;
 	const UINT8 alpha = Surf->FlatColor.s.alpha;
-	FUINT lightnum;
+	FUINT lightnum = sector->lightlevel;
 	extracolormap_t *colormap = NULL;
 
 	realtop = top = wallVerts[3].y;
