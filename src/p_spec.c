@@ -102,6 +102,7 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3091,6 +3092,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			P_LinedefExecute((INT16)result, mo, NULL);
 			break;
 		}
+
+		case 452: // Fade FOF
+		{
+			//CONS_Printf("Hello! Found a Fade special!\n");
+			INT32 s, j;
+			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
+				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
+						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[0]].rowoffset>>FRACBITS, (line->flags & ML_BLOCKMONSTERS), (INT32)(sectors[s].lines[j]-lines));
+			break;
+		}
+		
+		case 453: // Stop fading FOF
+			break;
 
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
@@ -7067,13 +7082,17 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
-	d->thinker.function.acp1 = (actionf_p1)T_Disappear;
+	//CONS_Printf("Adding fader | Dest %i | Speed %i | Ignore %i\n", destvalue, speed, ignoreflags);
+
+	d->thinker.function.acp1 = (actionf_p1)T_Fade;
 	d->affectee = line;
-	d->destvalue = destvalue;
-	d->speed = speed;
+	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
+	d->speed = max(1, speed); // minimum speed 1/tic
 	d->ignoreflags = (UINT8)ignoreflags;
 
 	P_AddThinker(&d->thinker);
+
+	//CONS_Printf("Added  fader | Dest %i | Speed %i | Ignore %i\n", d->destvalue, d->speed, d->ignoreflags);
 }
 
 /** Makes a FOF fade
@@ -7083,7 +7102,69 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT
   */
 void T_Fade(fade_t *d)
 {
-	// \todo everything
+	ffloor_t *rover;
+	register INT32 s;
+	INT32 affectedffloors = 0;
+
+	for (s = -1; (s = P_FindSectorFromLineTag(&lines[d->affectee], s)) >= 0 ;)
+	{
+		for (rover = sectors[s].ffloors; rover; rover = rover->next)
+		{
+			if (rover->master != &lines[d->affectee])
+				continue;
+
+			// fade out
+			//CONS_Printf("Fading from %i to %i\n", rover->alpha, d->destvalue);
+			if (rover->alpha > d->destvalue)
+			{
+				// we'll reach our destvalue
+				if (rover->alpha - d->speed <= d->destvalue + d->speed)
+				{
+					//CONS_Printf("Finished fading out\n");
+					rover->alpha = d->destvalue;
+					if (!d->ignoreflags && rover->alpha <= 1)
+						rover->flags &= ~FF_EXISTS;
+					else
+						rover->flags |= FF_EXISTS;
+				}
+				else
+				{
+					//CONS_Printf("Fading out...\n");
+					rover->alpha -= d->speed;
+					if (!d->ignoreflags)
+						rover->flags |= FF_EXISTS;
+					affectedffloors++;
+				}
+			}
+			else // fade in
+			{
+				// we'll reach our destvalue
+				if (rover->alpha + d->speed >= d->destvalue - d->speed)
+				{
+					//CONS_Printf("Finished fading in\n");
+					rover->alpha = d->destvalue;
+					if (!d->ignoreflags)
+						rover->flags |= FF_EXISTS;
+				}
+				else
+				{
+					//CONS_Printf("Fading in...\n");
+					rover->alpha += d->speed;
+					if (!d->ignoreflags)
+						rover->flags |= FF_EXISTS;
+					affectedffloors++;
+				}
+			}
+		}
+	}
+
+	// no more ffloors to fade? remove myself
+	if (affectedffloors == 0)
+	{
+		//CONS_Printf("No more FOFs to fade!\n");
+		// \todo how to erase the fade_t struct?
+		P_RemoveThinker(&d->thinker);
+	}
 }
 
 /*
