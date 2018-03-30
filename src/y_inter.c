@@ -825,7 +825,7 @@ void Y_Ticker(void)
 		{
 			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
@@ -870,7 +870,7 @@ void Y_Ticker(void)
 			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_s3kac); // cha-ching!
+				S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
 			}
 			return;
 		}
@@ -890,7 +890,7 @@ void Y_Ticker(void)
 			if (!(data.spec.continues & 0x80)) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
