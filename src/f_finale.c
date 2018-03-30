@@ -234,7 +234,7 @@ static void F_SkyScroll(INT32 scrollspeed)
 	else if (rendermode != render_none)
 	{ // if only software rendering could be this simple and retarded
 		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-		INT32 x, y, pw = SHORT(pat->width) * dupz, ph = SHORT(pat->height) * dupz;
+		INT32 y, pw = SHORT(pat->width) * dupz, ph = SHORT(pat->height) * dupz;
 		scrolled = animtimer * dupz;
 		for (x = 0; x < vid.width; x += pw)
 		{

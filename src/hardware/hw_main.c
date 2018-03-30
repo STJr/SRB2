@@ -5055,7 +5055,7 @@ static void HWR_CreateDrawNodes(void)
 // --------------------------------------------------------------------------
 #ifdef SORTING
 // added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
-static void HWR_DrawSprites()
+static void HWR_DrawSprites(void)
 {
 	if (gr_visspritecount > 0)
 	{
