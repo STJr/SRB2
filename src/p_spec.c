@@ -7058,23 +7058,20 @@ void T_Disappear(disappear_t *d)
 
 /** Adds master fader thinker.
   *
-  * \param appeartime		tics to be existent
-  * \param disappeartime	tics to be nonexistent
-  * \param sector			pointer to control sector
+  * \param destvalue	transparency value to fade to
+  * \param speed		speed to fade by
+  * \param ignoreexists	do not handle FF_EXISTS	
+  * \param line			line to target FOF
   */
-static void P_AddMasterFader(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline)
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL ignoreflags, INT32 line)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
-	// \todo fields
 	d->thinker.function.acp1 = (actionf_p1)T_Disappear;
-	d->appeartime = appeartime;
-	d->disappeartime = disappeartime;
-	d->offset = offset;
 	d->affectee = line;
-	d->sourceline = sourceline;
-	d->exists = true;
-	d->timer = 1;
+	d->destvalue = destvalue;
+	d->speed = speed;
+	d->ignoreflags = (UINT8)ignoreflags;
 
 	P_AddThinker(&d->thinker);
 }
