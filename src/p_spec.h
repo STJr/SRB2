@@ -449,6 +449,22 @@ typedef struct
 
 void T_Disappear(disappear_t *d);
 
+// Model for fading FOFs
+typedef struct
+{
+	// \todo fields
+	thinker_t thinker;  ///< Thinker structure for effect.
+	tic_t appeartime;   ///< Tics to be appeared for
+	tic_t disappeartime;///< Tics to be disappeared for
+	tic_t offset;       ///< Time to wait until thinker starts
+	tic_t timer;        ///< Timer between states
+	INT32 affectee;     ///< Number of affected line
+	INT32 sourceline;   ///< Number of source line
+	INT32 exists;       ///< Exists toggle
+} fade_t;
+
+void T_Fade(fade_t *d);
+
 // Prototype functions for pushers
 void T_Pusher(pusher_t *p);
 mobj_t *P_GetPushThing(UINT32 s);

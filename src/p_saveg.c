@@ -988,6 +988,7 @@ typedef enum
 	tc_noenemies,
 	tc_eachtime,
 	tc_disappear,
+	tc_fade,
 	tc_planedisplace,
 #ifdef POLYOBJECTS
 	tc_polyrotate, // haleyjd 03/26/06: polyobjects
@@ -1553,6 +1554,25 @@ static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveFadeThinker
+//
+// Saves a fade_t thinker
+//
+static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
+{
+	const fade_t *ht = (const void *)th;
+	// \todo fields
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, ht->appeartime);
+	WRITEUINT32(save_p, ht->disappeartime);
+	WRITEUINT32(save_p, ht->offset);
+	WRITEUINT32(save_p, ht->timer);
+	WRITEINT32(save_p, ht->affectee);
+	WRITEINT32(save_p, ht->sourceline);
+	WRITEINT32(save_p, ht->exists);
+}
+
+//
 // SavePlaneDisplaceThinker
 //
 // Saves a planedisplace_t thinker
@@ -1852,6 +1872,11 @@ static void P_NetArchiveThinkers(void)
 		else if (th->function.acp1 == (actionf_p1)T_Disappear)
 		{
 			SaveDisappearThinker(th, tc_disappear);
+			continue;
+		}
+		else if (th->function.acp1 == (actionf_p1)T_Fade)
+		{
+			SaveFadeThinker(th, tc_fade);
 			continue;
 		}
 
@@ -2531,6 +2556,26 @@ static inline void LoadDisappearThinker(actionf_p1 thinker)
 }
 
 //
+// LoadFadeThinker
+//
+// Loads a fade_t thinker
+//
+static inline void LoadFadeThinker(actionf_p1 thinker)
+{
+	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	// \todo fields
+	ht->appeartime = READUINT32(save_p);
+	ht->disappeartime = READUINT32(save_p);
+	ht->offset = READUINT32(save_p);
+	ht->timer = READUINT32(save_p);
+	ht->affectee = READINT32(save_p);
+	ht->sourceline = READINT32(save_p);
+	ht->exists = READINT32(save_p);
+	P_AddThinker(&ht->thinker);
+}
+
+//
 // LoadPlaneDisplaceThinker
 //
 // Loads a planedisplace_t thinker
@@ -2831,6 +2876,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_disappear:
 				LoadDisappearThinker((actionf_p1)T_Disappear);
+				break;
+
+			case tc_fade:
+				LoadFadeThinker((actionf_p1)T_Fade);
 				break;
 
 			case tc_planedisplace:

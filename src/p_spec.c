@@ -7056,6 +7056,39 @@ void T_Disappear(disappear_t *d)
 	}
 }
 
+/** Adds master fader thinker.
+  *
+  * \param appeartime		tics to be existent
+  * \param disappeartime	tics to be nonexistent
+  * \param sector			pointer to control sector
+  */
+static void P_AddMasterFader(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline)
+{
+	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
+
+	// \todo fields
+	d->thinker.function.acp1 = (actionf_p1)T_Disappear;
+	d->appeartime = appeartime;
+	d->disappeartime = disappeartime;
+	d->offset = offset;
+	d->affectee = line;
+	d->sourceline = sourceline;
+	d->exists = true;
+	d->timer = 1;
+
+	P_AddThinker(&d->thinker);
+}
+
+/** Makes a FOF fade
+  *
+  * \param d Fade thinker.
+  * \sa P_AddMasterFader
+  */
+void T_Fade(fade_t *d)
+{
+	// \todo everything
+}
+
 /*
  SoM: 3/8/2000: Friction functions start.
  Add_Friction,
