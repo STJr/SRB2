@@ -399,6 +399,8 @@ boolean P_TransferToNextMare(player_t *player)
 	CONS_Debug(DBG_NIGHTS, "Mare is %d\n", mare);
 
 	player->mare = mare;
+	player->marelap = 0;
+	player->marebonuslap = 0;
 
 	// scan the thinkers
 	// to find the closest axis point

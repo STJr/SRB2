@@ -2350,6 +2350,7 @@ static void P_LevelInitStuff(void)
 		players[i].linkcount = players[i].linktimer = 0;
 		players[i].flyangle = players[i].anotherflyangle = 0;
 		players[i].nightstime = players[i].mare = 0;
+		players[i].marelap = 0; players[i].marebonuslap = 0;
 		P_SetTarget(&players[i].capsule, NULL);
 		players[i].drillmeter = 40*20;
 
