@@ -905,7 +905,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		P_SetTarget(&thing->target, tmthing);
 	}
 
-	// Respawn rings and items
+	// NiGHTS lap logic
 	if ((tmthing->type == MT_NIGHTSDRONE || thing->type == MT_NIGHTSDRONE)
 	 && (tmthing->player || thing->player))
 	{
@@ -921,8 +921,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
 		))
 		{
-			// Reload all the fancy ring stuff!
+			// Respawn rings and items
 			P_ReloadRings();
+
+			// \todo store current lap in player mobj
+			P_RunNightsLapExecutors(pl->mo);
 		}
 		droneobj->extravalue1 = pl->anotherflyangle;
 		droneobj->extravalue2 = (INT32)leveltime + TICRATE;

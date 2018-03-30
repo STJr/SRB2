@@ -5487,6 +5487,48 @@ static void P_RunLevelLoadExecutors(void)
 	}
 }
 
+//
+// P_RunNightserizeExecutors
+//
+static void P_RunNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 323 || lines[i].special == 324)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunDeNightserizeExecutors
+//
+static void P_RunDeNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 325 || lines[i].special == 326)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunNightsLapExecutors
+//
+static void P_RunNightsLapExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 327 || lines[i].special == 328)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
 /** Before things are loaded, initialises certain stuff in case they're needed
   * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
   * P_SpawnSpecials, in case you couldn't tell.
@@ -6406,6 +6448,12 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					sec = sides[*lines[i].sidenum].sector - sectors;
 					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				}
+				break;
+
+			// NiGHTS trigger executors
+			case 323:
+			case 324:
+			case 325:
 				break;
 
 			case 399: // Linedef execute on map load
