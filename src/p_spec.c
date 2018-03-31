@@ -7129,7 +7129,7 @@ void T_Fade(fade_t *d)
 			// fade out
 			if (rover->alpha > d->destvalue)
 			{
-				// we'll reach our destvalue
+				// finish fading out
 				if (rover->alpha - d->speed <= d->destvalue + d->speed)
 				{
 					if (rover->alpha != d->destvalue)
@@ -7197,7 +7197,7 @@ void T_Fade(fade_t *d)
 			}
 			else // fade in
 			{
-				// we'll reach our destvalue
+				// finish fading in
 				if (rover->alpha + d->speed >= d->destvalue - d->speed)
 				{
 					if (rover->alpha != d->destvalue)
