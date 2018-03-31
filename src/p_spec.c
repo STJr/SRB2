@@ -102,6 +102,8 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
+static void P_ResetFading(line_t *line, fade_t *data);
+#define P_RemoveFading(l) P_ResetFading(l, NULL);
 static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOOL handlesolid, BOOL handletrans, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
@@ -3109,7 +3111,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 		
 		case 453: // Stop fading FOF
+		{
+			INT32 s, j;
+			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
+				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
+						P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
 			break;
+		}
 
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
@@ -7075,6 +7084,35 @@ void T_Disappear(disappear_t *d)
 	}
 }
 
+/** Removes fadingdata from FOF control sector
+ * 
+ * \param line	line to search for target faders
+ * \param data	pointer to set new fadingdata to. Can be NULL to erase.
+ */
+static void P_ResetFading(line_t *line, fade_t *data)
+{
+	ffloor_t *rover;
+	register INT32 s;
+
+	// find any existing thinkers and remove them, then replace with new data
+	for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
+	{
+		for (rover = sectors[s].ffloors; rover; rover = rover->next)
+		{
+			if (rover->master != line)
+				continue;
+			
+			if(((fade_t *)rover->master->frontsector->fadingdata) != data)
+			{
+				if(&((fade_t *)rover->master->frontsector->fadingdata)->thinker)
+					P_RemoveThinker(&((fade_t *)rover->master->frontsector->fadingdata)->thinker);
+
+				rover->master->frontsector->fadingdata = data;
+			}
+		}
+	}
+}
+
 /** Adds master fader thinker.
   *
   * \param destvalue	transparency value to fade to
@@ -7104,6 +7142,9 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOO
 
 	if (handletrans)
 		d->handleflags |= FF_TRANSLUCENT;
+
+	// find any existing thinkers and remove them, then replace with new data
+	P_ResetFading(&lines[d->affectee], d);
 
 	P_AddThinker(&d->thinker);
 }
@@ -7268,10 +7309,7 @@ void T_Fade(fade_t *d)
 
 	// no more ffloors to fade? remove myself
 	if (affectedffloors == 0)
-	{
-		// \todo how to erase the fade_t struct?
-		P_RemoveThinker(&d->thinker);
-	}
+		P_RemoveFading(&lines[d->affectee]);
 }
 
 /*
