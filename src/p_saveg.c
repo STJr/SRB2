@@ -2564,6 +2564,11 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->destvalue = READINT32(save_p);
 	ht->speed = READINT32(save_p);
 	ht->handleflags = READUINT32(save_p);
+
+	sector_t *ffloorsector = LoadSector(ht->affectee);
+	if (ffloorsector)
+		ffloorsector->fadingdata = ht;
+
 	P_AddThinker(&ht->thinker);
 }
 
@@ -2753,7 +2758,7 @@ static void P_NetUnArchiveThinkers(void)
 	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
 	for (i = 0; i < numsectors; i++)
 	{
-		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
+		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = sectors[i].fadingdata = NULL;
 	}
 
 	// read in saved thinkers
