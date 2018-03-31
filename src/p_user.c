@@ -639,7 +639,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	// Restore from drowning music
 	P_RestoreMusic(player);
 
-	P_RunDeNightserizeExecutors();
+	P_RunDeNightserizeExecutors(player->mo);
 }
 
 //
@@ -774,9 +774,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
 
-	player->powers[pw_carry] = CR_NIGHTSMODE;
-
+	// Do this before setting CR_NIGHTSMODE so we can tell if player was non-NiGHTS
 	P_RunNightserizeExecutors(player->mo);
+
+	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
 
 pflags_t P_GetJumpFlags(player_t *player)

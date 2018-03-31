@@ -1374,6 +1374,48 @@ void P_ChangeSectorTag(UINT32 sector, INT16 newtag)
 	}
 }
 
+//
+// P_RunNightserizeExecutors
+//
+void P_RunNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 323 || lines[i].special == 324)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunDeNightserizeExecutors
+//
+void P_RunDeNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 325 || lines[i].special == 326)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunNightsLapExecutors
+//
+void P_RunNightsLapExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 327 || lines[i].special == 328)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
 /** Hashes the sector tags across the sectors and linedefs.
   *
   * \sa P_FindSectorFromTag, P_ChangeSectorTag
@@ -1665,6 +1707,69 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{
 				if (--triggerline->callcount > 0)
 					return false;
+			}
+			break;
+		case 323: // each time
+		case 324: // once
+			{ // nightserize
+				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
+				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
+				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
+				BOOL ltelap = triggerline->flags & ML_EFFECT1;
+				BOOL gtelap = triggerline->flags & ML_EFFECT2;
+				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
+				BOOL doglobal = triggerline->flags & ML_EFFECT4;
+				BOOL donomares = triggerline->flags & ML_EFFECT5; // unused for nights lap
+				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
+
+				CONS_Printf("Trigger Nightserize %i\n", triggerline->special);
+				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
+					, mareinput, actor->player->mare, gtemare, ltemare
+					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
+				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
+			}
+			break;
+		case 325: // each time
+		case 326: // once
+			{ // denightserize
+				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
+				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
+				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
+				BOOL ltelap = triggerline->flags & ML_EFFECT1;
+				BOOL gtelap = triggerline->flags & ML_EFFECT2;
+				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
+				BOOL doglobal = triggerline->flags & ML_EFFECT4;
+				BOOL donomares = triggerline->flags & ML_EFFECT5; // all no nights // unused for nights lap
+				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
+
+				CONS_Printf("Trigger DeNightserize %i\n", triggerline->special);
+				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
+					, mareinput, actor->player->mare, gtemare, ltemare
+					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
+				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
+			}
+			break;
+		case 327: // each time
+		case 328: // once
+			{ // nights lap
+				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
+				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
+				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
+				BOOL ltelap = triggerline->flags & ML_EFFECT1;
+				BOOL gtelap = triggerline->flags & ML_EFFECT2;
+				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
+				BOOL doglobal = triggerline->flags & ML_EFFECT4;
+				BOOL donomares = triggerline->flags & ML_EFFECT5; // unused for nights lap
+				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
+
+				CONS_Printf("Trigger NiGHTS Lap %i\n", triggerline->special);
+				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
+					, mareinput, actor->player->mare, gtemare, ltemare
+					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
+				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
 			}
 			break;
 		default:
@@ -5484,48 +5589,6 @@ static void P_RunLevelLoadExecutors(void)
 	{
 		if (lines[i].special == 399)
 			P_RunTriggerLinedef(&lines[i], NULL, NULL);
-	}
-}
-
-//
-// P_RunNightserizeExecutors
-//
-static void P_RunNightserizeExecutors(mobj_t *actor)
-{
-	size_t i;
-
-	for (i = 0; i < numlines; i++)
-	{
-		if (lines[i].special == 323 || lines[i].special == 324)
-			P_RunTriggerLinedef(&lines[i], actor, NULL);
-	}
-}
-
-//
-// P_RunDeNightserizeExecutors
-//
-static void P_RunDeNightserizeExecutors(mobj_t *actor)
-{
-	size_t i;
-
-	for (i = 0; i < numlines; i++)
-	{
-		if (lines[i].special == 325 || lines[i].special == 326)
-			P_RunTriggerLinedef(&lines[i], actor, NULL);
-	}
-}
-
-//
-// P_RunNightsLapExecutors
-//
-static void P_RunNightsLapExecutors(mobj_t *actor)
-{
-	size_t i;
-
-	for (i = 0; i < numlines; i++)
-	{
-		if (lines[i].special == 327 || lines[i].special == 328)
-			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
 
