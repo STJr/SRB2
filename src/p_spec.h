@@ -69,6 +69,7 @@ void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
 void P_RunNightserizeExecutors(mobj_t *actor);
 void P_RunDeNightserizeExecutors(mobj_t *actor);
 void P_RunNightsLapExecutors(mobj_t *actor);
+void P_RunNightsBonusTimeExecutors(mobj_t *actor);
 
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 

@@ -1416,6 +1416,20 @@ void P_RunNightsLapExecutors(mobj_t *actor)
 	}
 }
 
+//
+// P_RunNightsBonusTimeExecutors
+//
+void P_RunNightsBonusTimeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 329 || lines[i].special == 330)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
 /** Hashes the sector tags across the sectors and linedefs.
   *
   * \sa P_FindSectorFromTag, P_ChangeSectorTag
@@ -1709,69 +1723,117 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
-		case 323: // each time
-		case 324: // once
+
+		// Let's do the NiGHTS triggers in one code block; they mostly have the same logic
+		case 323: // nightserize - each time
+		case 324: // nightserize - once
+		case 325: // denightserize - each time
+		case 326: // denightserize - once
+		case 327: // nights lap - each time
+		case 328: // nights lap - once
+		case 329: // nights bonus time - each time
+		case 330: // nights bonus time - once
 			{ // nightserize
-				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
-				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
+				UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
+				UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
+
 				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
 				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
 				BOOL ltelap = triggerline->flags & ML_EFFECT1;
 				BOOL gtelap = triggerline->flags & ML_EFFECT2;
-				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
-				BOOL doglobal = triggerline->flags & ML_EFFECT4;
-				BOOL donomares = triggerline->flags & ML_EFFECT5; // unused for nights lap
-				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
 
-				CONS_Printf("Trigger Nightserize %i\n", triggerline->special);
-				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
-					, mareinput, actor->player->mare, gtemare, ltemare
-					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
-				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
+				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
+				BOOL perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
+				BOOL perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
+
+				BOOL donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
+				BOOL fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
+
+				UINT8 currentmare = UINT8_MAX;
+				UINT8 currentlap = UINT8_MAX;
+
+				// Do early returns for Nightserize
+				if (specialtype >= 323 && specialtype <= 324)
+				{
+					// run only when no mares are found
+					if (donomares && P_FindLowestMare() != UINT8_MAX)
+						return false;
+
+					// run only if player is nightserizing from non-nights
+					if (fromnonights)
+					{
+						if (!actor->player)
+							return false;
+						else if (actor->player->powers[pw_carry] == CR_NIGHTSMODE)
+							return false;
+					}
+				}
+
+				// Get current mare and lap (and check early return for DeNightserize)
+				if (perglobal || perglobalinverse 
+					|| (specialtype >= 325 && specialtype <= 326 && fromnonights)) 
+				{
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i] || players[i].spectator)
+							continue;
+
+						// denightserize: run only if all players are not nights
+						if (specialtype >= 325 && specialtype <= 326 && fromnonights
+						    && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+							return false;
+
+						UINT8 lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
+
+						// get highest mare/lap of players
+						if (perglobal)
+						{
+							if (players[i].mare > currentmare || currentmare == UINT8_MAX)
+							{
+								currentmare = players[i].mare;
+								currentlap = UINT8_MAX;
+							}
+							if (players[i].mare == currentmare 
+							    && (lap > currentlap || currentlap == UINT8_MAX))
+								currentlap = lap;
+						}
+						// get lowest mare/lap of players
+						else if (perglobalinverse)
+						{
+							if (players[i].mare < currentmare || currentmare == UINT8_MAX)
+							{
+								currentmare = players[i].mare;
+								currentlap = UINT8_MAX;
+							}
+							if (players[i].mare == currentmare 
+							    && (lap < currentlap || currentlap == UINT8_MAX))
+								currentlap = lap;
+						}
+					}
+				}
+				
+				// get current mare/lap from triggering player
+				if (!perglobal && !perglobalinverse)
+				{
+					if (!actor->player)
+						return false;
+					currentmare = actor->player->mare;
+					currentlap = lapfrombonustime ? actor->player->marebonuslap : actor->player->marelap;
+				}
+
+				// Compare current mare/lap to input mare/lap based on rules
+				if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
+				    && ((ltemare && currentmare > inputmare)
+				    || (gtemare && currentmare < inputmare)
+					|| (!ltemare && !gtemare && currentmare != inputmare)
+					|| (ltelap && currentlap > inputlap)
+					|| (gtelap && currentlap < inputlap)
+					|| (!ltelap && !gtelap && currentlap != inputlap))
+					)
+					return false;
 			}
 			break;
-		case 325: // each time
-		case 326: // once
-			{ // denightserize
-				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
-				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
-				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
-				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
-				BOOL ltelap = triggerline->flags & ML_EFFECT1;
-				BOOL gtelap = triggerline->flags & ML_EFFECT2;
-				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
-				BOOL doglobal = triggerline->flags & ML_EFFECT4;
-				BOOL donomares = triggerline->flags & ML_EFFECT5; // all no nights // unused for nights lap
-				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
 
-				CONS_Printf("Trigger DeNightserize %i\n", triggerline->special);
-				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
-					, mareinput, actor->player->mare, gtemare, ltemare
-					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
-				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
-			}
-			break;
-		case 327: // each time
-		case 328: // once
-			{ // nights lap
-				INT32 mareinput = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
-				INT32 lapinput = sides[triggerline->sidenum[0]].rowoffset>>FRACBITS;
-				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
-				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
-				BOOL ltelap = triggerline->flags & ML_EFFECT1;
-				BOOL gtelap = triggerline->flags & ML_EFFECT2;
-				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
-				BOOL doglobal = triggerline->flags & ML_EFFECT4;
-				BOOL donomares = triggerline->flags & ML_EFFECT5; // unused for nights lap
-				BOOL fromnonights = triggerline->flags & ML_BOUNCY; // unused for nights lap
-
-				CONS_Printf("Trigger NiGHTS Lap %i\n", triggerline->special);
-				CONS_Printf("M-I %i | M-V %i | M-GTE %i | M-LTE %i | L-I %i | L-V %i/%i | L-GTE %i | L-LTE %i\n"
-					, mareinput, actor->player->mare, gtemare, ltemare
-					, lapinput, actor->player->marebonuslap, actor->player->marelap, gtelap, ltelap);
-				CONS_Printf("L-Bonus %i | Global %i | No Mares %i | From No NiGHTS %i\n", lapfrombonustime, doglobal, donomares, fromnonights);
-			}
-			break;
 		default:
 			break;
 	}
@@ -1900,6 +1962,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
 	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
+	 || specialtype == 324 // Nightserize - Once
+	 || specialtype == 326 // DeNightserize - Once
+	 || specialtype == 328 // Nights lap - Once
+	 || specialtype == 330 // Nights Bonus Time - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -6517,6 +6583,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 323:
 			case 324:
 			case 325:
+			case 326:
+			case 327:
+			case 328:
+			case 329:
+			case 330:
 				break;
 
 			case 399: // Linedef execute on map load

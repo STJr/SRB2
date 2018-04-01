@@ -6031,6 +6031,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					if (playeringame[i] && players[i].mare == player->mare)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
+				P_RunNightsBonusTimeExecutors(player->mo);
 			}
 		}
 		else
