@@ -6731,21 +6731,10 @@ void P_MobjThinker(mobj_t *mobj)
 
 		switch (mobj->type)
 		{
-			case MT_CHAINPOINT:
-			case MT_CHAINMACEPOINT:
-				if (leveltime & 1)
-				{
-					if (mobj->lastlook > mobj->movecount)
-						mobj->lastlook--;
-	/*
-					if (mobj->threshold > mobj->movefactor)
-						mobj->threshold -= FRACUNIT;
-					else if (mobj->threshold < mobj->movefactor)
-						mobj->threshold += FRACUNIT;*/
-				}
-				/* FALLTHRU */
 			case MT_MACEPOINT:
+			case MT_CHAINMACEPOINT:
 			case MT_SPRINGBALLPOINT:
+			case MT_CHAINPOINT:
 			case MT_FIREBARPOINT:
 			case MT_CUSTOMMACEPOINT:
 			case MT_HIDDEN_SLING:
@@ -9768,7 +9757,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_FIREBARPOINT:
 	case MT_CUSTOMMACEPOINT:
 	{
-		fixed_t mlength, mlengthset, mspeed, mphase, myaw, mpitch, mmaxspeed, mnumspokes, mnumspokesset, mpinch, mroll, mnumnospokes, mwidth, mmin, msound, radiusfactor;
+		fixed_t mlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mnumspokesset, mpinch, mroll, mnumnospokes, mwidth, mmin, msound, radiusfactor;
 		angle_t mspokeangle;
 		mobjtype_t chainlink, macetype, firsttype, linktype;
 		boolean mdoall = true;
@@ -9809,8 +9798,8 @@ ML_EFFECT4 : Don't clip inside the ground
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
 		mphase = (sides[lines[line].sidenum[0]].textureoffset >> FRACBITS) % 360;
-		if ((mmaxspeed = sides[lines[line].sidenum[0]].rowoffset >> (FRACBITS - 4)) < mspeed)
-			mmaxspeed = mspeed;
+		if ((mminlength = sides[lines[line].sidenum[0]].rowoffset>>FRACBITS) < 0)
+			mminlength = 0;
 		mpitch = (lines[line].frontsector->floorheight >> FRACBITS) % 360;
 		myaw = (lines[line].frontsector->ceilingheight >> FRACBITS) % 360;
 
@@ -9829,18 +9818,16 @@ ML_EFFECT4 : Don't clip inside the ground
 			mpinch = mroll = mnumnospokes = mwidth = 0;
 
 		CONS_Debug(DBG_GAMELOGIC, "Mace/Chain (mapthing #%s):\n"
-				"Length is %d\n"
+				"Length is %d (minus %d)\n"
 				"Speed is %d\n"
 				"Phase is %d\n"
 				"Yaw is %d\n"
 				"Pitch is %d\n"
-				"Max. speed is %d\n"
-				"No. of spokes is %d\n"
+				"No. of spokes is %d (%d antispokes)\n"
 				"Pinch is %d\n"
 				"Roll is %d\n"
-				"No. of antispokes is %d\n"
 				"Width is %d\n",
-				sizeu1(mthingi), mlength, mspeed, mphase, myaw, mpitch, mmaxspeed, mnumspokes, mpinch, mroll, mnumnospokes, mwidth);
+				sizeu1(mthingi), mlength, mminlength, mspeed, mphase, myaw, mpitch, mnumspokes, mnumnospokes, mpinch, mroll, mwidth);
 
 		if (mnumnospokes > 0 && (mnumnospokes < mnumspokes))
 			mnumnospokes = mnumspokes/mnumnospokes;
@@ -9852,7 +9839,6 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->angle = FixedAngle(myaw*FRACUNIT);
 		doangle = false;
 		mobj->threshold = (FixedAngle(mpitch*FRACUNIT)>>ANGLETOFINESHIFT);
-		mobj->friction = mmaxspeed;
 		mobj->movefactor = mpinch;
 		mobj->movedir = 0;
 
@@ -10011,7 +9997,7 @@ domaceagain:
 				continue;
 
 			// The rest of the links
-			while (mlengthset > 0)
+			while (mlengthset > mminlength)
 				{ spawnee = makemace(linktype, radiusfactor*(mlengthset--), 0); }
 		}
 

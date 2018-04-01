@@ -10421,21 +10421,10 @@ void P_PlayerAfterThink(player_t *player)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 
-			if (cmd->forwardmove > 0)
-			{
-				if ((player->mo->tracer->tracer->lastlook += 2) > player->mo->tracer->tracer->friction)
-					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->friction;
-			}
-			else if (cmd->forwardmove < 0)
-			{
-				if ((player->mo->tracer->tracer->lastlook -= 2) < player->mo->tracer->tracer->movecount)
-					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->movecount;
-			}
-
 			if ((player->mo->tracer->tracer->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
 			&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
 			{
-				player->mo->tracer->tracer->health += cmd->sidemove;
+				player->mo->tracer->tracer->angle += cmd->sidemove<<ANGLETOFINESHIFT;
 				player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
 				if (!demoplayback || P_AnalogMove(player))
