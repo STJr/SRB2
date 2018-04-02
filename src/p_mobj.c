@@ -8673,9 +8673,9 @@ void P_RemoveMobj(mobj_t *mobj)
 	// Remove any references to other mobjs.
 	P_SetTarget(&mobj->target, P_SetTarget(&mobj->tracer, NULL));
 
-	if (mobj->hnext)
+	if (mobj->hnext && !P_MobjWasRemoved(mobj->hnext))
 		P_SetTarget(&mobj->hnext->hprev, mobj->hprev);
-	if (mobj->hprev)
+	if (mobj->hprev && !P_MobjWasRemoved(mobj->hprev))
 		P_SetTarget(&mobj->hprev->hnext, mobj->hnext);
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
