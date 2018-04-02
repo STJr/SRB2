@@ -1002,7 +1002,7 @@ void OP_NightsObjectplace(player_t *player)
 			temp += 90;
 		temp %= 360;
 
-		mt->options = (mt->options ^ (UINT16)cv_opflags.value) | (UINT16)cv_ophoopflags.value;
+		mt->options = (mt->options & ~(UINT16)cv_opflags.value) | (UINT16)cv_ophoopflags.value;
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
 		P_SpawnHoopsAndRings(mt);
