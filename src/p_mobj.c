@@ -6184,8 +6184,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	TVector *res;
 	fixed_t radius, dist, mag, zstore;
 	angle_t fa;
-	boolean donetwice = false;
-	boolean dosound = false;
+	boolean donetwice, dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
 
 	INT32 rot = (baserot &= FINEMASK);
@@ -6268,13 +6267,13 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 			if (!baseuo[3])
 			{
 				baseuo[1] = FRACUNIT;
-				baseuo[3] = center->scale;
 				baseuo[0] = baseuo[2] = 0;
+				baseuo[3] = center->scale;
 
 				res = VectorMatrixMultiply(baseuo, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
-				M_Memcpy(&baseuo, res, sizeof(unit));
+				M_Memcpy(&baseuo, res, sizeof(baseuo));
 				res = VectorMatrixMultiply(baseuo, *RotateZMatrix(center->angle));
-				M_Memcpy(&baseuo, res, sizeof(unit));
+				M_Memcpy(&baseuo, res, sizeof(baseuo));
 			}
 
 			if (mobj->movefactor)
@@ -6293,6 +6292,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 		// Radius of the link's rotation.
 		mag = (dist * mobj->movecount) + mobj->extravalue1;
 
+		donetwice = false;
 maceretry:
 		P_UnsetThingPosition(mobj);
 
@@ -6303,13 +6303,12 @@ maceretry:
 		// Add on the appropriate distances to the center's co-ordinates.
 		if (mag)
 		{
-			zstore = FixedMul(unit[2], mag);
 			mobj->x += FixedMul(unit[0], mag);
 			mobj->y += FixedMul(unit[1], mag);
+			zstore = FixedMul(unit[2], mag) + unitoffset[2];
 		}
 		else
-			zstore = 0;
-		zstore += unitoffset[2];
+			zstore = unitoffset[2];
 
 		mobj->x += unitoffset[0];
 		mobj->y += unitoffset[1];
@@ -6323,7 +6322,7 @@ maceretry:
 		mobj->z += zstore;
 
 #if 0 // toaster's testing flashie!
-		if (!mobj->threshold && !mobj->friction && !(leveltime & TICRATE)) // I had a brainfart and the flashing isn't exactly what I expected it to be, but it's actually much more useful.
+		if (!donetwice && mobj->movefactor != -5 && !(leveltime & TICRATE)) // I had a brainfart and the flashing isn't exactly what I expected it to be, but it's actually much more useful.
 			mobj->flags2 ^= MF2_DONTDRAW;
 #endif
 
@@ -9772,11 +9771,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_FIREBARPOINT:
 	case MT_CUSTOMMACEPOINT:
 	{
-		fixed_t mlength, mlengthmax, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor;
+		fixed_t mlength, mmaxlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor;
 		angle_t mspokeangle;
 		mobjtype_t chainlink, macetype, firsttype, linktype;
-		boolean mdoall = true, mdocenter;
-		mobj_t *spawnee, *hprev;
+		boolean mdosound, mdocenter;
+		mobj_t *spawnee = NULL, *hprev = mobj;
 		mobjflag_t mflagsapply;
 		mobjflag2_t mflags2apply;
 		mobjeflag_t meflagsapply;
@@ -9815,6 +9814,8 @@ ML_EFFECT4 : Don't clip inside the ground
 		mphase = (sides[lines[line].sidenum[0]].textureoffset >> FRACBITS) % 360;
 		if ((mminlength = -sides[lines[line].sidenum[0]].rowoffset>>FRACBITS) < 0)
 			mminlength = 0;
+		else if (mminlength > mlength-1)
+			mminlength = mlength-1;
 		mpitch = (lines[line].frontsector->floorheight >> FRACBITS) % 360;
 		myaw = (lines[line].frontsector->ceilingheight >> FRACBITS) % 360;
 
@@ -9940,22 +9941,23 @@ ML_EFFECT4 : Don't clip inside the ground
 		mphase = (FixedAngle(mphase*FRACUNIT)>>ANGLETOFINESHIFT);
 		mroll = (FixedAngle(mroll*FRACUNIT)>>ANGLETOFINESHIFT);
 
-		hprev = mobj;
+#define makemace(mobjtype, dist, moreflags2) {\
+	spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobjtype);\
+	P_SetTarget(&spawnee->tracer, mobj);\
+	spawnee->threshold = mphase;\
+	spawnee->friction = mroll;\
+	spawnee->movefactor = mwidthset;\
+	spawnee->movecount = dist;\
+	spawnee->angle = myaw;\
+	spawnee->flags |= (MF_NOGRAVITY|mflagsapply);\
+	spawnee->flags2 |= (mflags2apply|moreflags2);\
+	spawnee->eflags |= meflagsapply;\
+	P_SetTarget(&hprev->hnext, spawnee);\
+	P_SetTarget(&spawnee->hprev, hprev);\
+	hprev = spawnee;\
+}
 
-#define makemace(mobjtype, dist, moreflags2) P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobjtype);\
-				P_SetTarget(&spawnee->tracer, mobj);\
-				spawnee->threshold = mphase;\
-				spawnee->friction = mroll;\
-				spawnee->movefactor = mwidthset;\
-				spawnee->movecount = dist;\
-				spawnee->angle = myaw;\
-				spawnee->flags |= (MF_NOGRAVITY|mflagsapply);\
-				spawnee->flags2 |= (mflags2apply|moreflags2);\
-				spawnee->eflags |= meflagsapply;\
-				P_SetTarget(&hprev->hnext, spawnee);\
-				P_SetTarget(&spawnee->hprev, hprev);\
-				hprev = spawnee
-
+		mdosound = (mspeed && !(mthing->options & MTF_OBJECTSPECIAL));
 		mdocenter = (lines[line].flags & ML_EFFECT3);
 
 		// The actual spawning of spokes
@@ -9973,7 +9975,7 @@ ML_EFFECT4 : Don't clip inside the ground
 					continue;
 
 				firsttype = linktype = chainlink;
-				mlengthmax = 1 + (mlength - 1)*radiusfactor;
+				mmaxlength = 1 + (mlength - 1)*radiusfactor;
 				radiusfactor = 1;
 			}
 			else
@@ -9995,43 +9997,46 @@ ML_EFFECT4 : Don't clip inside the ground
 					firsttype = macetype;
 				}
 
-				mlengthmax = mlength;
+				mmaxlength = mlength;
 			}
 
 			mwidthset = mwidth;
-			mdoall = true;
-			while (1)
+			//fixed_t base = 0;
+			mlengthset = mminlength;
+
+			if (mdocenter) // Innermost mace/link
+				makemace(macetype, 0, 0);
+
+			//base = mlengthset*((mobjinfo[macetype].speed) ? mobjinfo[macetype].speed : mobjinfo[MT_SMALLMACECHAIN].speed);
+
+			while ((++mlengthset) < mmaxlength)
+				makemace(linktype, radiusfactor*mlengthset, 0);
+
+			// Outermost mace/link
+			makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
+
+			if (!mwidth)
 			{
-				mlengthset = mlengthmax;
+				if (mdosound && mnumspokes <= mmin) // Can it make a sound?
+					spawnee->flags2 |= MF2_BOSSNOTRAP;
+			}
+			else
+			{
+				while ((mwidthset -= ((firsttype == chainlink) ? 1 : 2)) > -mwidth)
+				{
+					makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
+					if (mdosound && (mwidthset == msound) && mnumspokes <= mmin) // Can it make a sound?
+						spawnee->flags2 |= MF2_BOSSNOTRAP;
+				}
+
+				// Outermost mace/link again!
+				makemace(firsttype, radiusfactor*(mlengthset--), MF2_AMBUSH);
+
+				while (mlengthset > mminlength)
+					makemace(linktype, radiusfactor*(mlengthset--), 0);
 
 				if (mdocenter) // Innermost mace/link
-				{
-					spawnee = makemace(macetype, 0, 0);
-				}
-
-				// Outermost mace/link
-				spawnee = makemace(firsttype, radiusfactor*(mlengthset--), MF2_AMBUSH);
-
-				if (mspeed && (mwidthset == msound) && !(mthing->options & MTF_OBJECTSPECIAL) && mnumspokes <= mmin) // Can it make a sound?
-					spawnee->flags2 |= MF2_BOSSNOTRAP;
-
-				if (mdoall && linktype)
-				{
-					// The rest of the links
-					while (mlengthset > mminlength)
-					{
-						spawnee = makemace(linktype, radiusfactor*(mlengthset--), 0);
-					}
-				}
-
-				if (mwidthset > 0)
-					mwidthset *= -1;
-				else if (!mwidthset
-				|| ((mwidthset = -(mwidthset + ((firsttype == chainlink) ? 1 : 2))) < 0))
-					break;
-				else
-					mdocenter = mdoall = false;
-
+					makemace(macetype, 0, 0);
 			}
 		}
 
