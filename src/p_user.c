@@ -770,10 +770,14 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
 
-	// make NiGHTS face you only upon Nightserizing (w/ attitude!)
+	// force NiGHTS to face forward or backward
 	// calculate player->angle_pos ourselves because it won't be set the first time
 	if (player->mo->target)
-		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y)
+							+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
+								(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
+								: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90)
+								);
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
