@@ -770,6 +770,11 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
 
+	// make NiGHTS face you only upon Nightserizing (w/ attitude!)
+	// calculate player->angle_pos ourselves because it won't be set the first time
+	if (player->mo->target)
+		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
 
