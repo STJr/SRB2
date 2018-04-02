@@ -1513,6 +1513,118 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 	P_AddThinker(&e->thinker);
 }
 
+/** Used by P_RunTriggerLinedef to check a NiGHTS trigger linedef's conditions
+  *
+  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
+  * \param actor Object initiating the action; should not be NULL.
+  * \sa P_RunTriggerLinedef
+  */
+static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
+{
+	INT16 specialtype = triggerline->special;
+	size_t i;
+
+	UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
+	UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
+
+	boolean ltemare = triggerline->flags & ML_NOCLIMB;
+	boolean gtemare = triggerline->flags & ML_BLOCKMONSTERS;
+	boolean ltelap = triggerline->flags & ML_EFFECT1;
+	boolean gtelap = triggerline->flags & ML_EFFECT2;
+
+	boolean lapfrombonustime = triggerline->flags & ML_EFFECT3;
+	boolean perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
+	boolean perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
+
+	boolean donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
+	boolean fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
+
+	UINT8 currentmare = UINT8_MAX;
+	UINT8 currentlap = UINT8_MAX;
+
+	// Do early returns for Nightserize
+	if (specialtype >= 323 && specialtype <= 324)
+	{
+		// run only when no mares are found
+		if (donomares && P_FindLowestMare() != UINT8_MAX)
+			return false;
+
+		// run only if player is nightserizing from non-nights
+		if (fromnonights)
+		{
+			if (!actor->player)
+				return false;
+			else if (actor->player->powers[pw_carry] == CR_NIGHTSMODE)
+				return false;
+		}
+	}
+
+	// Get current mare and lap (and check early return for DeNightserize)
+	if (perglobal || perglobalinverse 
+		|| (specialtype >= 325 && specialtype <= 326 && fromnonights)) 
+	{
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+
+			// denightserize: run only if all players are not nights
+			if (specialtype >= 325 && specialtype <= 326 && fromnonights
+				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
+				return false;
+
+			UINT8 lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
+
+			// get highest mare/lap of players
+			if (perglobal)
+			{
+				if (players[i].mare > currentmare || currentmare == UINT8_MAX)
+				{
+					currentmare = players[i].mare;
+					currentlap = UINT8_MAX;
+				}
+				if (players[i].mare == currentmare 
+					&& (lap > currentlap || currentlap == UINT8_MAX))
+					currentlap = lap;
+			}
+			// get lowest mare/lap of players
+			else if (perglobalinverse)
+			{
+				if (players[i].mare < currentmare || currentmare == UINT8_MAX)
+				{
+					currentmare = players[i].mare;
+					currentlap = UINT8_MAX;
+				}
+				if (players[i].mare == currentmare 
+					&& (lap < currentlap || currentlap == UINT8_MAX))
+					currentlap = lap;
+			}
+		}
+	}
+	
+	// get current mare/lap from triggering player
+	if (!perglobal && !perglobalinverse)
+	{
+		if (!actor->player)
+			return false;
+		currentmare = actor->player->mare;
+		currentlap = lapfrombonustime ? actor->player->marebonuslap : actor->player->marelap;
+	}
+
+	// Compare current mare/lap to input mare/lap based on rules
+	if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
+		&& ((ltemare && currentmare > inputmare)
+		|| (gtemare && currentmare < inputmare)
+		|| (!ltemare && !gtemare && currentmare != inputmare)
+		|| (ltelap && currentlap > inputlap)
+		|| (gtelap && currentlap < inputlap)
+		|| (!ltelap && !gtelap && currentlap != inputlap))
+		)
+		return false;
+
+	return true;
+}
+
 /** Used by P_LinedefExecute to check a trigger linedef's conditions
   * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
   * Return false cancels P_LinedefExecute, this happens if a condition is not met.
@@ -1733,105 +1845,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 328: // nights lap - once
 		case 329: // nights bonus time - each time
 		case 330: // nights bonus time - once
-			{ // nightserize
-				UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
-				UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
-
-				BOOL ltemare = triggerline->flags & ML_NOCLIMB;
-				BOOL gtemare = triggerline->flags & ML_BLOCKMONSTERS;
-				BOOL ltelap = triggerline->flags & ML_EFFECT1;
-				BOOL gtelap = triggerline->flags & ML_EFFECT2;
-
-				BOOL lapfrombonustime = triggerline->flags & ML_EFFECT3;
-				BOOL perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
-				BOOL perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
-
-				BOOL donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
-				BOOL fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
-
-				UINT8 currentmare = UINT8_MAX;
-				UINT8 currentlap = UINT8_MAX;
-
-				// Do early returns for Nightserize
-				if (specialtype >= 323 && specialtype <= 324)
-				{
-					// run only when no mares are found
-					if (donomares && P_FindLowestMare() != UINT8_MAX)
-						return false;
-
-					// run only if player is nightserizing from non-nights
-					if (fromnonights)
-					{
-						if (!actor->player)
-							return false;
-						else if (actor->player->powers[pw_carry] == CR_NIGHTSMODE)
-							return false;
-					}
-				}
-
-				// Get current mare and lap (and check early return for DeNightserize)
-				if (perglobal || perglobalinverse 
-					|| (specialtype >= 325 && specialtype <= 326 && fromnonights)) 
-				{
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i] || players[i].spectator)
-							continue;
-
-						// denightserize: run only if all players are not nights
-						if (specialtype >= 325 && specialtype <= 326 && fromnonights
-						    && players[i].powers[pw_carry] == CR_NIGHTSMODE)
-							return false;
-
-						UINT8 lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
-
-						// get highest mare/lap of players
-						if (perglobal)
-						{
-							if (players[i].mare > currentmare || currentmare == UINT8_MAX)
-							{
-								currentmare = players[i].mare;
-								currentlap = UINT8_MAX;
-							}
-							if (players[i].mare == currentmare 
-							    && (lap > currentlap || currentlap == UINT8_MAX))
-								currentlap = lap;
-						}
-						// get lowest mare/lap of players
-						else if (perglobalinverse)
-						{
-							if (players[i].mare < currentmare || currentmare == UINT8_MAX)
-							{
-								currentmare = players[i].mare;
-								currentlap = UINT8_MAX;
-							}
-							if (players[i].mare == currentmare 
-							    && (lap < currentlap || currentlap == UINT8_MAX))
-								currentlap = lap;
-						}
-					}
-				}
-				
-				// get current mare/lap from triggering player
-				if (!perglobal && !perglobalinverse)
-				{
-					if (!actor->player)
-						return false;
-					currentmare = actor->player->mare;
-					currentlap = lapfrombonustime ? actor->player->marebonuslap : actor->player->marelap;
-				}
-
-				// Compare current mare/lap to input mare/lap based on rules
-				if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
-				    && ((ltemare && currentmare > inputmare)
-				    || (gtemare && currentmare < inputmare)
-					|| (!ltemare && !gtemare && currentmare != inputmare)
-					|| (ltelap && currentlap > inputlap)
-					|| (gtelap && currentlap < inputlap)
-					|| (!ltelap && !gtelap && currentlap != inputlap))
-					)
-					return false;
-			}
+			if (!P_CheckNightsTriggerLine(triggerline, actor))
+				return false;
 			break;
 
 		default:
