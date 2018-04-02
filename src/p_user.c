@@ -588,6 +588,8 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->climbing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
+	player->marelap = 0;
+	player->marebonuslap = 0;
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
