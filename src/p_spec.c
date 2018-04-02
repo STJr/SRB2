@@ -1549,6 +1549,10 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		if (donomares && P_FindLowestMare() != UINT8_MAX)
 			return false;
 
+		// run only if there is a mare present
+		if (!donomares && P_FindLowestMare() == UINT8_MAX)
+			return false;
+
 		// run only if player is nightserizing from non-nights
 		if (fromnonights)
 		{
@@ -1601,9 +1605,8 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 			}
 		}
 	}
-	
 	// get current mare/lap from triggering player
-	if (!perglobal && !perglobalinverse)
+	else if (!perglobal && !perglobalinverse)
 	{
 		if (!actor->player)
 			return false;
