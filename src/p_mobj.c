@@ -6180,11 +6180,11 @@ static void P_NightsItemChase(mobj_t *thing)
 //
 void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 {
-	TVector unit, baseuo, unitoffset;
+	TVector unit_lengthways, unit_sideways, pos_lengthways, pos_sideways;
 	TVector *res;
-	fixed_t radius, dist, mag, zstore;
+	fixed_t radius, dist, zstore;
 	angle_t fa;
-	boolean donetwice, dosound = false;
+	boolean dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
 
 	INT32 rot = (baserot &= FINEMASK);
@@ -6193,7 +6193,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	INT32 lastthreshold = FINEMASK; // needs to never be equal at start of loop
 	fixed_t lastfriction = INT32_MIN; // ditto; almost certainly never, but...
 
-	fixed_t movefac = unitoffset[0] = unitoffset[1] = unitoffset[2] = baseuo[3] = 0;
+	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] = pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
 
 	while (mobj)
 	{
@@ -6211,10 +6211,15 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 			rot = (baserot + mobj->threshold) & FINEMASK;
 			prevrot = (baseprevrot + mobj->threshold) & FINEMASK;
 
-			fa = (FixedAngle(center->movefactor*FRACUNIT) >> ANGLETOFINESHIFT); // mpinch
-			radius = FINECOSINE(fa);
-			unit[1] = -FixedMul(FINESINE(fa), radius);
-			unit[3] = center->scale;
+			pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+
+			dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
+			dist = ((center->scale == FRACUNIT) ? dist : FixedMul(dist, center->scale));
+
+			fa = (FixedAngle(center->movefactor*FRACUNIT) >> ANGLETOFINESHIFT);
+			radius = FixedMul(dist, FINECOSINE(fa));
+			unit_lengthways[1] = -FixedMul(dist, FINESINE(fa));
+			unit_lengthways[3] = FRACUNIT;
 
 			// Swinging Chain.
 			if (center->flags2 & MF2_STRONGBOX)
@@ -6224,12 +6229,11 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 
 				if ((prevswingmag > 0) != (swingmag > 0)) // just passed its lowest point
 					dosound = true;
-					//S_StartSound(mobj, mobj->info->activesound);
 
 				fa = ((FixedAngle(swingmag) >> ANGLETOFINESHIFT) + mobj->friction) & FINEMASK;
 
-				unit[0] = FixedMul(FINESINE(fa), -radius);
-				unit[2] = FixedMul(FINECOSINE(fa), -radius);
+				unit_lengthways[0] = FixedMul(FINESINE(fa), -radius);
+				unit_lengthways[2] = FixedMul(FINECOSINE(fa), -radius);
 			}
 			// Rotating Chain.
 			else
@@ -6240,15 +6244,15 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 				if (!(prevfa > (FINEMASK/2)) && (fa > (FINEMASK/2))) // completed a full swing
 					dosound = true;
 
-				unit[0] = FixedMul(FINECOSINE(fa), radius);
-				unit[2] = FixedMul(FINESINE(fa), radius);
+				unit_lengthways[0] = FixedMul(FINECOSINE(fa), radius);
+				unit_lengthways[2] = FixedMul(FINESINE(fa), radius);
 			}
 
 			// Calculate the angle matrixes for the link.
-			res = VectorMatrixMultiply(unit, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
-			M_Memcpy(&unit, res, sizeof(unit));
-			res = VectorMatrixMultiply(unit, *RotateZMatrix(center->angle));
-			M_Memcpy(&unit, res, sizeof(unit));
+			res = VectorMatrixMultiply(unit_lengthways, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
+			M_Memcpy(&unit_lengthways, res, sizeof(unit_lengthways));
+			res = VectorMatrixMultiply(unit_lengthways, *RotateZMatrix(center->angle));
+			M_Memcpy(&unit_lengthways, res, sizeof(unit_lengthways));
 
 			lastthreshold = mobj->threshold;
 			lastfriction = mobj->friction;
@@ -6260,40 +6264,65 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 			dosound = false;
 		}
 
-		dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
-
-		if (dist*mobj->movefactor != movefac)
+		if (pos_sideways[3] != mobj->movefactor)
 		{
-			if (!baseuo[3])
+			if (!unit_sideways[3])
 			{
-				baseuo[1] = FRACUNIT;
-				baseuo[0] = baseuo[2] = 0;
-				baseuo[3] = center->scale;
+				unit_sideways[1] = dist;
+				unit_sideways[0] = unit_sideways[2] = 0;
+				unit_sideways[3] = FRACUNIT;
 
-				res = VectorMatrixMultiply(baseuo, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
-				M_Memcpy(&baseuo, res, sizeof(baseuo));
-				res = VectorMatrixMultiply(baseuo, *RotateZMatrix(center->angle));
-				M_Memcpy(&baseuo, res, sizeof(baseuo));
+				res = VectorMatrixMultiply(unit_sideways, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
+				M_Memcpy(&unit_sideways, res, sizeof(unit_sideways));
+				res = VectorMatrixMultiply(unit_sideways, *RotateZMatrix(center->angle));
+				M_Memcpy(&unit_sideways, res, sizeof(unit_sideways));
 			}
 
-			if (mobj->movefactor)
+			if (pos_sideways[3] > mobj->movefactor)
 			{
-				movefac = dist*mobj->movefactor;
-				unitoffset[0] = FixedMul(movefac, baseuo[0]);
-				unitoffset[1] = FixedMul(movefac, baseuo[1]);
-				unitoffset[2] = FixedMul(movefac, baseuo[2]);
+				do
+				{
+					pos_sideways[0] -= unit_sideways[0];
+					pos_sideways[1] -= unit_sideways[1];
+					pos_sideways[2] -= unit_sideways[2];
+				}
+				while ((--pos_sideways[3]) != mobj->movefactor);
 			}
 			else
-				movefac = unitoffset[0] = unitoffset[1] = unitoffset[2] = 0;
+			{
+				do
+				{
+					pos_sideways[0] += unit_sideways[0];
+					pos_sideways[1] += unit_sideways[1];
+					pos_sideways[2] += unit_sideways[2];
+				}
+				while ((++pos_sideways[3]) != mobj->movefactor);
+			}
 		}
 
 		hnext = mobj->hnext; // just in case the mobj is removed
 
-		// Radius of the link's rotation.
-		mag = (dist * mobj->movecount) + mobj->extravalue1;
+		if (pos_lengthways[3] > mobj->movecount)
+		{
+			do
+			{
+				pos_lengthways[0] -= unit_lengthways[0];
+				pos_lengthways[1] -= unit_lengthways[1];
+				pos_lengthways[2] -= unit_lengthways[2];
+			}
+			while ((--pos_lengthways[3]) != mobj->movecount);
+		}
+		else if (pos_lengthways[3] < mobj->movecount)
+		{
+			do
+			{
+				pos_lengthways[0] += unit_lengthways[0];
+				pos_lengthways[1] += unit_lengthways[1];
+				pos_lengthways[2] += unit_lengthways[2];
+			}
+			while ((++pos_lengthways[3]) != mobj->movecount);
+		}
 
-		donetwice = false;
-maceretry:
 		P_UnsetThingPosition(mobj);
 
 		mobj->x = center->x;
@@ -6301,17 +6330,17 @@ maceretry:
 		mobj->z = center->z;
 
 		// Add on the appropriate distances to the center's co-ordinates.
-		if (mag)
+		if (pos_lengthways[3])
 		{
-			mobj->x += FixedMul(unit[0], mag);
-			mobj->y += FixedMul(unit[1], mag);
-			zstore = FixedMul(unit[2], mag) + unitoffset[2];
+			mobj->x += pos_lengthways[0];
+			mobj->y += pos_lengthways[1];
+			zstore = pos_lengthways[2] + pos_sideways[2];
 		}
 		else
-			zstore = unitoffset[2];
+			zstore = pos_sideways[2];
 
-		mobj->x += unitoffset[0];
-		mobj->y += unitoffset[1];
+		mobj->x += pos_sideways[0];
+		mobj->y += pos_sideways[1];
 
 		// Cut the height to align the link with the axis.
 		if (mobj->type == MT_SMALLMACECHAIN || mobj->type == MT_BIGMACECHAIN)
@@ -6322,41 +6351,40 @@ maceretry:
 		mobj->z += zstore;
 
 #if 0 // toaster's testing flashie!
-		if (!donetwice && mobj->movefactor != -5 && !(leveltime & TICRATE)) // I had a brainfart and the flashing isn't exactly what I expected it to be, but it's actually much more useful.
+		if (!(mobj->movecount & 1) && !(leveltime & TICRATE)) // I had a brainfart and the flashing isn't exactly what I expected it to be, but it's actually much more useful.
 			mobj->flags2 ^= MF2_DONTDRAW;
 #endif
 
 		P_SetThingPosition(mobj);
 
-		if (!mag || donetwice || P_MobjWasRemoved(mobj))
+#if 0 // toaster's height-clipping dealie!
+		if (!pos_lengthways[3] || P_MobjWasRemoved(mobj) || (mobj->flags & MF_NOCLIPHEIGHT))
 			goto cont;
 
-		if (mobj->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT))
-			goto cont;
-
-		if ((fa = ((mobj->tracer->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move towards center when the motion is towards/away from the ground, rather than alongside it
+		if ((fa = ((center->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move towards center when the motion is towards/away from the ground, rather than alongside it
 			goto cont;
 
 		if (mobj->subsector->sector->ffloors)
 			P_AdjustMobjFloorZ_FFloors(mobj, mobj->subsector->sector, 2);
 
-		// Variable reuse
 		if (mobj->floorz > mobj->z)
-			dist = (mobj->floorz - mobj->tracer->z);
+			zstore = (mobj->floorz - zstore);
 		else if (mobj->ceilingz < mobj->z)
-			dist = (mobj->ceilingz - mobj->tracer->z);
+			zstore = (mobj->ceilingz - mobj->height - zstore);
 		else
 			goto cont;
 
-		if ((dist = FixedDiv(dist, zstore)) > FRACUNIT)
-			goto cont;
+		zstore = FixedDiv(zstore, dist); // Still needs work... scaling factor is wrong!
 
-		mag = FixedMul(mag, dist);
-		donetwice = true;
-		dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
-		goto maceretry;
+		P_UnsetThingPosition(mobj);
+
+		mobj->x -= FixedMul(unit_lengthways[0], zstore);
+		mobj->y -= FixedMul(unit_lengthways[1], zstore);
+
+		P_SetThingPosition(mobj);
 
 cont:
+#endif
 		mobj = hnext;
 	}
 }
@@ -9771,7 +9799,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_FIREBARPOINT:
 	case MT_CUSTOMMACEPOINT:
 	{
-		fixed_t mlength, mmaxlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor;
+		fixed_t mlength, mmaxlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor, widthfactor;
 		angle_t mspokeangle;
 		mobjtype_t chainlink, macetype, firsttype, linktype;
 		boolean mdosound, mdocenter;
@@ -9848,7 +9876,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		if (mnumnospokes > 0 && (mnumnospokes < mnumspokes))
 			mnumnospokes = mnumspokes/mnumnospokes;
 		else
-			mnumnospokes = ((mobj->type == MT_CHAINMACEPOINT) ? (mnumspokes - 1) : 0);
+			mnumnospokes = ((mobj->type == MT_CHAINMACEPOINT) ? (mnumspokes) : 0);
 
 		mobj->lastlook = mspeed;
 		mobj->movecount = mobj->lastlook;
@@ -9894,7 +9922,7 @@ ML_EFFECT4 : Don't clip inside the ground
 				break;
 		}
 
-		if (!macetype)
+		if (!macetype && !chainlink)
 			break;
 
 		if (mobj->type != MT_CHAINPOINT)
@@ -9958,7 +9986,7 @@ ML_EFFECT4 : Don't clip inside the ground
 }
 
 		mdosound = (mspeed && !(mthing->options & MTF_OBJECTSPECIAL));
-		mdocenter = (lines[line].flags & ML_EFFECT3);
+		mdocenter = (macetype && (lines[line].flags & ML_EFFECT3));
 
 		// The actual spawning of spokes
 		while (mnumspokes-- > 0)
@@ -9999,6 +10027,7 @@ ML_EFFECT4 : Don't clip inside the ground
 
 				mmaxlength = mlength;
 			}
+			widthfactor = ((firsttype == chainlink) ? 1 : 2);
 
 			mwidthset = mwidth;
 			//fixed_t base = 0;
@@ -10009,11 +10038,18 @@ ML_EFFECT4 : Don't clip inside the ground
 
 			//base = mlengthset*((mobjinfo[macetype].speed) ? mobjinfo[macetype].speed : mobjinfo[MT_SMALLMACECHAIN].speed);
 
-			while ((++mlengthset) < mmaxlength)
-				makemace(linktype, radiusfactor*mlengthset, 0);
+			// Out from the center...
+			if (linktype)
+			{
+				while ((++mlengthset) < mmaxlength)
+					makemace(linktype, radiusfactor*mlengthset, 0);
+			}
+			else
+				mlengthset = mmaxlength;
 
 			// Outermost mace/link
-			makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
+			if (firsttype)
+				makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
 
 			if (!mwidth)
 			{
@@ -10022,18 +10058,37 @@ ML_EFFECT4 : Don't clip inside the ground
 			}
 			else
 			{
-				while ((mwidthset -= ((firsttype == chainlink) ? 1 : 2)) > -mwidth)
+				// Across the bar!
+				if (!firsttype)
+					mwidthset = -mwidth;
+				else if (mwidth > 0)
 				{
-					makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
-					if (mdosound && (mwidthset == msound) && mnumspokes <= mmin) // Can it make a sound?
-						spawnee->flags2 |= MF2_BOSSNOTRAP;
+					while ((mwidthset -= widthfactor) > -mwidth)
+					{
+						makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
+						if (mdosound && (mwidthset == msound) && mnumspokes <= mmin) // Can it make a sound?
+							spawnee->flags2 |= MF2_BOSSNOTRAP;
+					}
 				}
+				else
+				{
+					while ((mwidthset += widthfactor) < -mwidth)
+					{
+						makemace(firsttype, radiusfactor*mlengthset, MF2_AMBUSH);
+						if (mdosound && (mwidthset == msound) && mnumspokes <= mmin) // Can it make a sound?
+							spawnee->flags2 |= MF2_BOSSNOTRAP;
+					}
+				}
+				mwidth = -mwidth;
 
 				// Outermost mace/link again!
-				makemace(firsttype, radiusfactor*(mlengthset--), MF2_AMBUSH);
+				if (firsttype)
+					makemace(firsttype, radiusfactor*(mlengthset--), MF2_AMBUSH);
 
-				while (mlengthset > mminlength)
-					makemace(linktype, radiusfactor*(mlengthset--), 0);
+				// ...and then back into the center!
+				if (linktype)
+					while (mlengthset > mminlength)
+						makemace(linktype, radiusfactor*(mlengthset--), 0);
 
 				if (mdocenter) // Innermost mace/link
 					makemace(macetype, 0, 0);
