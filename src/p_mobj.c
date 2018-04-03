@@ -9959,6 +9959,8 @@ ML_EFFECT4 : Don't clip inside the ground
 		else
 			radiusfactor = (((linktype = chainlink) == MT_NULL) ? 2 : 1);
 
+		widthfactor = ((firsttype == chainlink) ? 1 : 2);
+
 		mflagsapply = ((lines[line].flags & ML_EFFECT4) ? 0 : (MF_NOCLIP|MF_NOCLIPHEIGHT));
 		mflags2apply = ((mthing->options & MTF_OBJECTFLIP) ? MF2_OBJECTFLIP : 0);
 		meflagsapply = ((mthing->options & MTF_OBJECTFLIP) ? MFE_VERTICALFLIP : 0);
@@ -10004,7 +10006,7 @@ ML_EFFECT4 : Don't clip inside the ground
 
 				firsttype = linktype = chainlink;
 				mmaxlength = 1 + (mlength - 1)*radiusfactor;
-				radiusfactor = 1;
+				radiusfactor = widthfactor = 1;
 			}
 			else
 			{
@@ -10023,20 +10025,17 @@ ML_EFFECT4 : Don't clip inside the ground
 					}
 
 					firsttype = macetype;
+					widthfactor = 2;
 				}
 
 				mmaxlength = mlength;
 			}
-			widthfactor = ((firsttype == chainlink) ? 1 : 2);
 
 			mwidthset = mwidth;
-			//fixed_t base = 0;
 			mlengthset = mminlength;
 
 			if (mdocenter) // Innermost mace/link
 				makemace(macetype, 0, 0);
-
-			//base = mlengthset*((mobjinfo[macetype].speed) ? mobjinfo[macetype].speed : mobjinfo[MT_SMALLMACECHAIN].speed);
 
 			// Out from the center...
 			if (linktype)

@@ -1503,10 +1503,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_flashing])
 				return;
 
-			if (special->movefactor && special->tracer && (angle_t)special->tracer->angle != ANGLE_90 && (angle_t)special->tracer->angle != ANGLE_270)
+			if (special->movefactor && special->tracer && special->tracer->angle != ANGLE_90 && special->tracer->angle != ANGLE_270)
 			{ // I don't expect you to understand this, Mr Bond...
-				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->threshold;
-				if ((special->movefactor > 0) == ((angle_t)special->tracer->angle > ANGLE_90 && (angle_t)special->tracer->angle < ANGLE_270))
+				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->angle;
+				if ((special->movefactor > 0) == (special->tracer->angle > ANGLE_90 && special->tracer->angle < ANGLE_270))
 					ang += ANGLE_180;
 				if (ang < ANGLE_180)
 					return; // I expect you to die.
