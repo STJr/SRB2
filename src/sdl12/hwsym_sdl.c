@@ -100,6 +100,7 @@ void *hwSym(const char *funcName,void *handle)
 #ifdef SHUFFLE
 	GETFUNC(PostImgRedraw);
 #endif //SHUFFLE
+	GETFUNC(FlushScreenTextures);
 	GETFUNC(StartScreenWipe);
 	GETFUNC(EndScreenWipe);
 	GETFUNC(DoScreenWipe);
