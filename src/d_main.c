@@ -1230,7 +1230,9 @@ void D_SRB2Main(void)
 		nomidimusic = nodigimusic = true;
 	}
 	else
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	{
+		CONS_Printf("S_Init(): Setting up sound.\n");
+	}
 	if (M_CheckParm("-nosound"))
 		nosound = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
@@ -1245,7 +1247,7 @@ void D_SRB2Main(void)
 	I_StartupSound();
 	I_InitMusic();
 	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-	
+
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
 
