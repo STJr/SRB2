@@ -8433,17 +8433,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BLUETEAMRING:
 			mobj->color = skincolor_blueteam;
 			break;
-		case MT_THZTREE:
-			{
-				mobj_t *branch1 = P_SpawnMobj(mobj->x+FRACUNIT, mobj->y, mobj->z, MT_THZTREEBRANCH);
-				mobj_t *branch2 = P_SpawnMobj(mobj->x, mobj->y+FRACUNIT, mobj->z, MT_THZTREEBRANCH);
-				mobj_t *branch3 = P_SpawnMobj(mobj->x-FRACUNIT, mobj->y, mobj->z, MT_THZTREEBRANCH);
-				
-				branch1->angle = mobj->angle + ANGLE_22h;
-				branch2->angle = mobj->angle + ANGLE_157h;
-				branch3->angle = mobj->angle + ANGLE_270;
-			}
-			break;
 		case MT_RING:
 		case MT_COIN:
 		case MT_BLUEBALL:
