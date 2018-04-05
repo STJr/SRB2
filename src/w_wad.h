@@ -78,12 +78,18 @@ typedef struct
 #endif
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
-enum restype {RET_WAD, RET_PK3};
+typedef enum restype
+{
+	RET_WAD,
+	RET_SOC,
+	RET_LUA,
+	RET_PK3
+} restype_t;
 
 typedef struct wadfile_s
 {
 	char *filename;
-	enum restype type;
+	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 #ifdef HWRENDER
@@ -132,6 +138,8 @@ UINT8 W_LumpExists(const char *name); // Lua uses this.
 
 size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump);
 size_t W_LumpLength(lumpnum_t lumpnum);
+
+boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
 
 void zerr(int ret); // zlib error checking
 

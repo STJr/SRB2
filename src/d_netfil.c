@@ -333,7 +333,7 @@ INT32 CL_CheckFiles(void)
 //		return 1;
 
 	// the first is the iwad (the main wad file)
-	// we don't care if it's called srb2.srb or srb2.wad.
+	// we don't care if it's called srb2.pk3 or not.
 	// Never download the IWAD, just assume it's there and identical
 	fileneeded[0].status = FS_OPEN;
 
@@ -423,7 +423,7 @@ void CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename, NULL);
+			P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 		}
@@ -754,6 +754,7 @@ void Got_Filetxpak(void)
 	static INT32 filetime = 0;
 
 	if (!(strcmp(filename, "srb2.pk3")
+		&& strcmp(filename, "srb2.srb")
 		&& strcmp(filename, "srb2.wad")
 		&& strcmp(filename, "zones.dta")
 		&& strcmp(filename, "player.dta")
