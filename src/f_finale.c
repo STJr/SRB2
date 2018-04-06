@@ -242,11 +242,19 @@ static void F_SkyScroll(INT32 scrollspeed)
 #ifdef HWRENDER
 	else if (rendermode != render_none)
 	{ // if only software rendering could be this simple and retarded
-		scrolled = animtimer;
-		if (scrolled > 0)
-			V_DrawScaledPatch(scrolled - patwidth, 0, 0, pat);
-		for (x = 0; x < fakedwidth; x += patwidth)
-			V_DrawScaledPatch(x + scrolled, 0, 0, pat);
+		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+		INT32 y, pw = patwidth * dupz, ph = SHORT(pat->height) * dupz;
+		scrolled = animtimer * dupz;
+		for (x = 0; x < vid.width; x += pw)
+		{
+			for (y = 0; y < vid.height; y += ph)
+			{
+				if (scrolled > 0)
+					V_DrawScaledPatch(scrolled - pw, y, V_NOSCALESTART, pat);
+
+				V_DrawScaledPatch(x + scrolled, y, V_NOSCALESTART, pat);
+			}
+		}
 	}
 #endif
 

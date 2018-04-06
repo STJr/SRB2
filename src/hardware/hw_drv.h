@@ -79,6 +79,7 @@ EXPORT char *HWRAPI(GetRenderer) (void);
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 #endif
+EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
 EXPORT void HWRAPI(DoScreenWipe) (float alpha);
@@ -124,6 +125,7 @@ struct hwdriver_s
 #ifdef SHUFFLE
 	PostImgRedraw       pfnPostImgRedraw;
 #endif
+	FlushScreenTextures pfnFlushScreenTextures;
 	StartScreenWipe     pfnStartScreenWipe;
 	EndScreenWipe       pfnEndScreenWipe;
 	DoScreenWipe        pfnDoScreenWipe;
