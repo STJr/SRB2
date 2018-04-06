@@ -858,7 +858,7 @@ void Y_Ticker(void)
 			tallydonetic = -1;
 		}
 
-		if (intertic < 2*TICRATE) // one second pause before tally begins
+		if (intertic < 2*TICRATE) // TWO second pause before tally begins, thank you mazmazz
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -1822,13 +1822,13 @@ static void Y_AwardCoopBonuses(void)
 				players[i].score = MAXSCORE;
 		}
 
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = ptlives;
+			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -1866,15 +1866,14 @@ static void Y_AwardSpecialStageBonus(void)
 			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
+			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.spec.bonus, &localbonus, sizeof(data.spec.bonus));
-
-			data.spec.gotlife = ptlives;
 
 			// Continues related
 			data.spec.continues = min(players[i].continues, 8);

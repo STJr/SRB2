@@ -909,8 +909,12 @@ void P_ResetPlayer(player_t *player)
 // Gives rings to the player, and does any special things required.
 // Call this function when you want to increment the player's health.
 //
+
 void P_GivePlayerRings(player_t *player, INT32 num_rings)
 {
+	if (!player)
+		return;
+
 	if (player->bot)
 		player = &players[consoleplayer];
 
@@ -929,7 +933,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
-	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives())
+	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != 0x7f)
 	{
 		INT32 gainlives = 0;
 
@@ -941,7 +945,12 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 		if (gainlives)
 		{
-			P_GivePlayerLives(player, gainlives);
+			player->lives += gainlives;
+			if (player->lives > 99)
+				player->lives = 99;
+			else if (player->lives < 1)
+				player->lives = 1;
+
 			P_PlayLivesJingle(player);
 		}
 	}
@@ -955,7 +964,30 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 //
 void P_GivePlayerLives(player_t *player, INT32 numlives)
 {
-	if (player->lives == 0x7f) return;
+	if (!player)
+		return;
+
+	if (player->bot)
+		player = &players[consoleplayer];
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (player->lives == 0x7f || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		{
+			P_GivePlayerRings(player, 100*numlives);
+			return;
+		}
+
+		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
+		{
+			UINT8 prevlives = player->lives;
+			P_GivePlayerRings(player, 100*numlives);
+			if (player->lives - prevlives >= numlives)
+				return;
+
+			numlives = (numlives + prevlives - player->lives);
+		}
+	}
 
 	player->lives += numlives;
 
@@ -1159,11 +1191,7 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if ((player && player->lives == 0x7f)
-	|| (!player && &players[consoleplayer] && players[consoleplayer].lives == 0x7f)
-	|| (gametype == GT_COOP && (netgame || multiplayer) && cv_cooplives.value == 0))
-		S_StartSound(NULL, sfx_lose);
-	else if (use1upSound)
+	if (use1upSound)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);

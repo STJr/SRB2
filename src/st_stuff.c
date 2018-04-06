@@ -776,7 +776,7 @@ static void ST_drawLivesArea(void)
 		}
 		else
 		{
-			livescount = ((cv_cooplives.value == 0) ? 0x7f : stplyr->lives);
+			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0x7f : stplyr->lives);
 			notgreyedout = true;
 		}
 
