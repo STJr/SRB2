@@ -101,6 +101,7 @@ static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
 static patch_t *nonicon;
+static patch_t *nonicon2;
 static patch_t *bluestat;
 static patch_t *byelstat;
 static patch_t *orngstat;
@@ -125,42 +126,32 @@ static boolean facefreed[MAXPLAYERS];
 
 hudinfo_t hudinfo[NUMHUDITEMS] =
 {
-	{  34, 176}, // HUD_LIVESNAME
-	{  16, 176}, // HUD_LIVESPIC
-	{  74, 184}, // HUD_LIVESNUM
-	{  38, 186}, // HUD_LIVESX
+	{  16, 176, V_SNAPTOLEFT|V_SNAPTOBOTTOM}, // HUD_LIVES
 
-	{  16,  42}, // HUD_RINGS
-	{ 220,  10}, // HUD_RINGSSPLIT
-	{  96,  42}, // HUD_RINGSNUM
-	{ 296,  10}, // HUD_RINGSNUMSPLIT
-	{ 120,  42}, // HUD_RINGSNUMTICS
+	{  16,  42, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_RINGS
+	{  96,  42, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_RINGSNUM
+	{ 120,  42, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_RINGSNUMTICS
 
-	{  16,  10}, // HUD_SCORE
-	{ 120,  10}, // HUD_SCORENUM
+	{  16,  10, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_SCORE
+	{ 120,  10, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_SCORENUM
 
-	{  16,  26}, // HUD_TIME
-	{ 128,  10}, // HUD_TIMESPLIT
-	{  72,  26}, // HUD_MINUTES
-	{ 188,  10}, // HUD_MINUTESSPLIT
-	{  72,  26}, // HUD_TIMECOLON
-	{ 188,  10}, // HUD_TIMECOLONSPLIT
-	{  96,  26}, // HUD_SECONDS
-	{ 212,  10}, // HUD_SECONDSSPLIT
-	{  96,  26}, // HUD_TIMETICCOLON
-	{ 120,  26}, // HUD_TICS
+	{  16,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_TIME
+	{  72,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_MINUTES
+	{  72,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_TIMECOLON
+	{  96,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_SECONDS
+	{  96,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_TIMETICCOLON
+	{ 120,  26, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_TICS
 
-	{ 120,  56}, // HUD_SS_TOTALRINGS
-	{ 296,  40}, // HUD_SS_TOTALRINGS_SPLIT
+	{   0,  56, V_SNAPTOLEFT|V_SNAPTOTOP}, // HUD_SS_TOTALRINGS
 
-	{ 110,  93}, // HUD_GETRINGS
-	{ 160,  93}, // HUD_GETRINGSNUM
-	{ 124, 160}, // HUD_TIMELEFT
-	{ 168, 176}, // HUD_TIMELEFTNUM
-	{ 130,  93}, // HUD_TIMEUP
-	{ 152, 168}, // HUD_HUNTPICS
-	{ 152,  24}, // HUD_GRAVBOOTSICO
-	{ 240, 160}, // HUD_LAP
+	{ 110,  93, 0}, // HUD_GETRINGS
+	{ 160,  93, 0}, // HUD_GETRINGSNUM
+	{ 124, 160, 0}, // HUD_TIMELEFT
+	{ 168, 176, 0}, // HUD_TIMELEFTNUM
+	{ 130,  93, 0}, // HUD_TIMEUP
+	{ 152, 168, 0}, // HUD_HUNTPICS
+
+	{ 288, 176, V_SNAPTORIGHT|V_SNAPTOBOTTOM}, // HUD_POWERUPS
 };
 
 //
@@ -285,18 +276,18 @@ void ST_LoadGraphics(void)
 	scatterring = W_CachePatchName("SCATIND", PU_HUDGFX);
 	grenadering = W_CachePatchName("GRENIND", PU_HUDGFX);
 	railring = W_CachePatchName("RAILIND", PU_HUDGFX);
-	jumpshield = W_CachePatchName("TVWWC0", PU_HUDGFX);
-	forceshield = W_CachePatchName("TVFOC0", PU_HUDGFX);
-	ringshield = W_CachePatchName("TVATC0", PU_HUDGFX);
-	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
-	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
-	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
-	flameshield = W_CachePatchName("TVFLC0", PU_HUDGFX);
-	bubbleshield = W_CachePatchName("TVBBC0", PU_HUDGFX);
-	thundershield = W_CachePatchName("TVZPC0", PU_HUDGFX);
-	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
-	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
-	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
+	jumpshield = W_CachePatchName("TVWWICON", PU_HUDGFX);
+	forceshield = W_CachePatchName("TVFOICON", PU_HUDGFX);
+	ringshield = W_CachePatchName("TVATICON", PU_HUDGFX);
+	watershield = W_CachePatchName("TVELICON", PU_HUDGFX);
+	bombshield = W_CachePatchName("TVARICON", PU_HUDGFX);
+	pityshield = W_CachePatchName("TVPIICON", PU_HUDGFX);
+	flameshield = W_CachePatchName("TVFLICON", PU_HUDGFX);
+	bubbleshield = W_CachePatchName("TVBBICON", PU_HUDGFX);
+	thundershield = W_CachePatchName("TVZPICON", PU_HUDGFX);
+	invincibility = W_CachePatchName("TVIVICON", PU_HUDGFX);
+	sneakers = W_CachePatchName("TVSSICON", PU_HUDGFX);
+	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
@@ -306,6 +297,7 @@ void ST_LoadGraphics(void)
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
 	nonicon = W_CachePatchName("NONICON", PU_HUDGFX);
+	nonicon2 = W_CachePatchName("NONICON2", PU_HUDGFX);
 
 	// NiGHTS HUD things
 	bluestat = W_CachePatchName("BLUESTAT", PU_HUDGFX);
@@ -418,89 +410,13 @@ void ST_changeDemoView(void)
 
 boolean st_overlay;
 
-static INT32 SCZ(INT32 z)
-{
-	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
-}
-
-static INT32 SCY(INT32 y)
-{
-	//31/10/99: fixed by Hurdler so it _works_ also in hardware mode
-	// do not scale to resolution for hardware accelerated
-	// because these modes always scale by default
-	y = SCZ(y); // scale to resolution
-	if (splitscreen)
-	{
-		y >>= 1;
-		if (stplyr != &players[displayplayer])
-			y += vid.height / 2;
-	}
-	return y;
-}
-
-static INT32 STRINGY(INT32 y)
-{
-	//31/10/99: fixed by Hurdler so it _works_ also in hardware mode
-	// do not scale to resolution for hardware accelerated
-	// because these modes always scale by default
-	if (splitscreen)
-	{
-		y >>= 1;
-		if (stplyr != &players[displayplayer])
-			y += BASEVIDHEIGHT / 2;
-	}
-	return y;
-}
-
-static INT32 SPLITFLAGS(INT32 f)
-{
-	// Pass this V_SNAPTO(TOP|BOTTOM) and it'll trim them to account for splitscreen! -Red
-	if (splitscreen)
-	{
-		if (stplyr != &players[displayplayer])
-			f &= ~V_SNAPTOTOP;
-		else
-			f &= ~V_SNAPTOBOTTOM;
-	}
-	return f;
-}
-
-static INT32 SCX(INT32 x)
-{
-	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
-}
-
-#if 0
-static INT32 SCR(INT32 r)
-{
-	fixed_t y;
-		//31/10/99: fixed by Hurdler so it _works_ also in hardware mode
-	// do not scale to resolution for hardware accelerated
-	// because these modes always scale by default
-	y = FixedMul(r*FRACUNIT, vid.fdupy); // scale to resolution
-	if (splitscreen)
-	{
-		y >>= 1;
-		if (stplyr != &players[displayplayer])
-			y += vid.height / 2;
-	}
-	return FixedInt(FixedDiv(y, vid.fdupy));
-}
-#endif
-
 // =========================================================================
 //                          INTERNAL DRAWING
 // =========================================================================
-#define ST_DrawOverlayNum(x,y,n)           V_DrawTallNum(x, y, V_NOSCALESTART|V_HUDTRANS, n)
-#define ST_DrawPaddedOverlayNum(x,y,n,d)   V_DrawPaddedTallNum(x, y, V_NOSCALESTART|V_HUDTRANS, n, d)
-#define ST_DrawOverlayPatch(x,y,p)         V_DrawScaledPatch(x, y, V_NOSCALESTART|V_HUDTRANS, p)
-#define ST_DrawMappedOverlayPatch(x,y,p,c) V_DrawMappedScaledPatch(x, y, V_NOSCALESTART|V_HUDTRANS, p, c)
-#define ST_DrawNumFromHud(h,n,f)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, n)
-#define ST_DrawPadNumFromHud(h,n,q,f)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, n, q)
-#define ST_DrawPatchFromHud(h,p,f)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, p)
-#define ST_DrawNumFromHudWS(h,n,f)      V_DrawTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, n)
-#define ST_DrawPadNumFromHudWS(h,n,q,f) V_DrawPaddedTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, n, q)
-#define ST_DrawPatchFromHudWS(h,p,f)    V_DrawScaledPatch(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, p)
+#define ST_DrawTopLeftOverlayPatch(x,y,p)         V_DrawScaledPatch(x, y, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, p)
+#define ST_DrawNumFromHud(h,n,flags)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, n)
+#define ST_DrawPadNumFromHud(h,n,q,flags)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, n, q)
+#define ST_DrawPatchFromHud(h,p,flags)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f|V_PERPLAYER|flags, p)
 
 // Draw a number, scaled, over the view, maybe with set translucency
 // Always draw the number completely since it's overlay
@@ -537,77 +453,145 @@ static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fix
 // Devmode information
 static void ST_drawDebugInfo(void)
 {
-	INT32 height = 192;
-	INT32 dist = 8;
+	INT32 height = 0;
 
 	if (!(stplyr->mo && cv_debug))
 		return;
 
-	if (cv_ticrate.value)
+#define VFLAGS V_MONOSPACE|V_SNAPTOTOP|V_SNAPTORIGHT
+
+	if (vid.dupx == 1)
 	{
-		height -= 12;
-		dist >>= 1;
+		if (cv_debug & DBG_BASIC)
+		{
+			const fixed_t d = AngleFixed(stplyr->mo->angle);
+			V_DrawRightAlignedString(320,  0, VFLAGS, va("X: %6d", stplyr->mo->x>>FRACBITS));
+			V_DrawRightAlignedString(320,  8, VFLAGS, va("Y: %6d", stplyr->mo->y>>FRACBITS));
+			V_DrawRightAlignedString(320, 16, VFLAGS, va("Z: %6d", stplyr->mo->z>>FRACBITS));
+			V_DrawRightAlignedString(320, 24, VFLAGS, va("A: %6d", FixedInt(d)));
+
+			height += 4*9;
+		}
+
+		if (cv_debug & (DBG_MEMORY|DBG_RANDOMIZER|DBG_DETAILED))
+		{
+			V_DrawRightAlignedThinString(320,   height, VFLAGS|V_REDMAP, "INFO NOT AVAILABLE");
+			V_DrawRightAlignedThinString(320, 8+height, VFLAGS|V_REDMAP, "AT THIS RESOLUTION");
+		}
+	}
+	else
+	{
+#define h 4
+#define dist 2
+#define V_DrawDebugLine(str) V_DrawRightAlignedSmallString(320, height, VFLAGS, str);\
+								height += h
+
+		if (cv_debug & DBG_MEMORY)
+		{
+			V_DrawDebugLine(va("Heap: %8sKB", sizeu1(Z_TotalUsage()>>10)));
+
+			height += dist;
+		}
+
+		if (cv_debug & DBG_RANDOMIZER) // randomizer testing
+		{
+			fixed_t peekres = P_RandomPeek();
+			peekres *= 10000;     // Change from fixed point
+			peekres >>= FRACBITS; // to displayable decimal
+
+			V_DrawDebugLine(va("Init: %08x", P_GetInitSeed()));
+			V_DrawDebugLine(va("Seed: %08x", P_GetRandSeed()));
+			V_DrawDebugLine(va("==  :    .%04d", peekres));
+
+			height += dist;
+		}
+
+		if (cv_debug & DBG_DETAILED)
+		{
+#define V_DrawDebugFlag(f, str) V_DrawRightAlignedSmallString(w, height, VFLAGS|f, str);\
+								w -= 9
+			const fixed_t d = AngleFixed(stplyr->drawangle);
+			INT32 w = 320;
+
+			V_DrawDebugLine(va("SHIELD: %5x", stplyr->powers[pw_shield]));
+			V_DrawDebugLine(va("SCALE: %5d%%", (stplyr->mo->scale*100)>>FRACBITS));
+			V_DrawDebugLine(va("CARRY: %5x", stplyr->powers[pw_carry]));
+			V_DrawDebugLine(va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
+			V_DrawDebugLine(va("ABILITY: %3d, %3d", stplyr->charability, stplyr->charability2));
+			V_DrawDebugLine(va("ACTIONSPD: %5d", stplyr->actionspd>>FRACBITS));
+			V_DrawDebugLine(va("PEEL: %3d", stplyr->dashmode));
+			V_DrawDebugLine(va("SCOREADD: %3d", stplyr->scoreadd));
+
+			// Flags
+			V_DrawDebugFlag(((stplyr->pflags & PF_SHIELDABILITY)  ? V_GREENMAP : V_REDMAP), "SH");
+			V_DrawDebugFlag(((stplyr->pflags & PF_THOKKED)        ? V_GREENMAP : V_REDMAP), "TH");
+			V_DrawDebugFlag(((stplyr->pflags & PF_STARTDASH)      ? V_GREENMAP : V_REDMAP), "ST");
+			V_DrawDebugFlag(((stplyr->pflags & PF_SPINNING)       ? V_GREENMAP : V_REDMAP), "SP");
+			V_DrawDebugFlag(((stplyr->pflags & PF_NOJUMPDAMAGE)   ? V_GREENMAP : V_REDMAP), "ND");
+			V_DrawDebugFlag(((stplyr->pflags & PF_JUMPED)         ? V_GREENMAP : V_REDMAP), "JD");
+			V_DrawDebugFlag(((stplyr->pflags & PF_STARTJUMP)      ? V_GREENMAP : V_REDMAP), "SJ");
+			V_DrawDebugFlag(0, "PF/SF:");
+			height += h;
+			w = 320;
+			V_DrawDebugFlag(((stplyr->pflags & PF_INVIS)          ? V_GREENMAP : V_REDMAP), "*I");
+			V_DrawDebugFlag(((stplyr->pflags & PF_NOCLIP)         ? V_GREENMAP : V_REDMAP), "*C");
+			V_DrawDebugFlag(((stplyr->pflags & PF_GODMODE)        ? V_GREENMAP : V_REDMAP), "*G");
+			V_DrawDebugFlag(((stplyr->charflags & SF_SUPER)       ? V_GREENMAP : V_REDMAP), "SU");
+			V_DrawDebugFlag(((stplyr->pflags & PF_APPLYAUTOBRAKE) ? V_GREENMAP : V_REDMAP), "AA");
+			V_DrawDebugFlag(((stplyr->pflags & PF_SLIDING)        ? V_GREENMAP : V_REDMAP), "SL");
+			V_DrawDebugFlag(((stplyr->pflags & PF_BOUNCING)       ? V_GREENMAP : V_REDMAP), "BO");
+			V_DrawDebugFlag(((stplyr->pflags & PF_GLIDING)        ? V_GREENMAP : V_REDMAP), "GL");
+			height += h;
+
+			V_DrawDebugLine(va("CEILINGZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
+			V_DrawDebugLine(va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
+
+			V_DrawDebugLine(va("CMOMX: %6d", stplyr->cmomx>>FRACBITS));
+			V_DrawDebugLine(va("CMOMY: %6d", stplyr->cmomy>>FRACBITS));
+			V_DrawDebugLine(va("PMOMZ: %6d", stplyr->mo->pmomz>>FRACBITS));
+
+			w = 320;
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_APPLYPMOMZ)      ? V_GREENMAP : V_REDMAP), "AP");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_SPRUNG)          ? V_GREENMAP : V_REDMAP), "SP");
+			//V_DrawDebugFlag(((stplyr->mo->eflags & MFE_PUSHED)          ? V_GREENMAP : V_REDMAP), "PU"); -- not relevant to players
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_GOOWATER)        ? V_GREENMAP : V_REDMAP), "GW");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_VERTICALFLIP)    ? V_GREENMAP : V_REDMAP), "VF");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_JUSTSTEPPEDDOWN) ? V_GREENMAP : V_REDMAP), "JS");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_UNDERWATER)      ? V_GREENMAP : V_REDMAP), "UW");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_TOUCHWATER)      ? V_GREENMAP : V_REDMAP), "TW");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_JUSTHITFLOOR)    ? V_GREENMAP : V_REDMAP), "JH");
+			V_DrawDebugFlag(((stplyr->mo->eflags & MFE_ONGROUND)        ? V_GREENMAP : V_REDMAP), "OG");
+			V_DrawDebugFlag(0, "MFE:");
+			height += h;
+
+			V_DrawDebugLine(va("MOMX: %6d", stplyr->rmomx>>FRACBITS));
+			V_DrawDebugLine(va("MOMY: %6d", stplyr->rmomy>>FRACBITS));
+			V_DrawDebugLine(va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
+
+			V_DrawDebugLine(va("SPEED: %6d", stplyr->speed>>FRACBITS));
+
+			V_DrawDebugLine(va("DRAWANGLE: %6d", FixedInt(d)));
+
+			height += dist;
+#undef V_DrawDebugFlag
+		}
+
+		if (cv_debug & DBG_BASIC)
+		{
+			const fixed_t d = AngleFixed(stplyr->mo->angle);
+			V_DrawDebugLine(va("X: %6d", stplyr->mo->x>>FRACBITS));
+			V_DrawDebugLine(va("Y: %6d", stplyr->mo->y>>FRACBITS));
+			V_DrawDebugLine(va("Z: %6d", stplyr->mo->z>>FRACBITS));
+			V_DrawDebugLine(va("A: %6d", FixedInt(d)));
+
+			//height += dist;
+		}
 	}
 
-	if (cv_debug & DBG_BASIC)
-	{
-		const fixed_t d = AngleFixed(stplyr->mo->angle);
-		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("A: %6d", FixedInt(d)));
-
-		height -= (32+dist);
-	}
-
-	if (cv_debug & DBG_DETAILED)
-	{
-		V_DrawRightAlignedString(320, height - 104, V_MONOSPACE, va("SHIELD: %5x", stplyr->powers[pw_shield]));
-		V_DrawRightAlignedString(320, height - 96,  V_MONOSPACE, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
-		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("CARRY: %5x", stplyr->powers[pw_carry]));
-		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
-
-		// Flags
-		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-90,             height - 72, (stplyr->pflags & PF_STARTJUMP) ? V_GREENMAP : V_REDMAP, "SJ");
-		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
-		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
-
-		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
-
-		V_DrawRightAlignedString(320, height - 48, V_MONOSPACE, va("CNVX: %6d", stplyr->cmomx>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 40, V_MONOSPACE, va("CNVY: %6d", stplyr->cmomy>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 32, V_MONOSPACE, va("PLTZ: %6d", stplyr->mo->pmomz>>FRACBITS));
-
-		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("MOMX: %6d", stplyr->rmomx>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("MOMY: %6d", stplyr->rmomy>>FRACBITS));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("SPEED: %6d", stplyr->speed>>FRACBITS));
-
-		height -= (112+dist);
-	}
-
-	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
-	{
-		fixed_t peekres = P_RandomPeek();
-		peekres *= 10000;     // Change from fixed point
-		peekres >>= FRACBITS; // to displayable decimal
-
-		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Init: %08x", P_GetInitSeed()));
-		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
-
-		height -= (24+dist);
-	}
-
-	if (cv_debug & DBG_MEMORY)
-	{
-		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap: %7sKB", sizeu1(Z_TotalUsage()>>10)));
-	}
+#undef V_DrawDebugLine
+#undef dist
+#undef h
+#undef VFLAGS
 }
 
 static void ST_drawScore(void)
@@ -617,20 +601,51 @@ static void ST_drawScore(void)
 	if (objectplacing)
 	{
 		if (op_displayflags > UINT16_MAX)
-			ST_DrawOverlayPatch(SCX(hudinfo[HUD_SCORENUM].x-tallminus->width), SCY(hudinfo[HUD_SCORENUM].y), tallminus);
+			ST_DrawTopLeftOverlayPatch((hudinfo[HUD_SCORENUM].x-tallminus->width), hudinfo[HUD_SCORENUM].y, tallminus);
 		else
 			ST_DrawNumFromHud(HUD_SCORENUM, op_displayflags, V_HUDTRANS);
 	}
 	else
-		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score,V_HUDTRANS);
+		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score, V_HUDTRANS);
+}
+
+static void ST_drawRaceNum(INT32 time)
+{
+	INT32 height, bounce;
+	patch_t *racenum;
+
+	time += TICRATE;
+	height = ((3*BASEVIDHEIGHT)>>2) - 8;
+	bounce = TICRATE - (1 + (time % TICRATE));
+
+	switch (time/TICRATE)
+	{
+		case 3:
+			racenum = race3;
+			break;
+		case 2:
+			racenum = race2;
+			break;
+		case 1:
+			racenum = race1;
+			break;
+		default:
+			racenum = racego;
+			break;
+	}
+	if (bounce < 3)
+	{
+		height -= (2 - bounce);
+		if (!(P_AutoPause() || paused) && !bounce)
+				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+	}
+	V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
 }
 
 static void ST_drawTime(void)
 {
 	INT32 seconds, minutes, tictrn, tics;
-
-	// TIME:
-	ST_DrawPatchFromHudWS(HUD_TIME, ((mapheaderinfo[gamemap-1]->countdown && countdowntimer < 11*TICRATE && leveltime/5 & 1) ? sboredtime : sbotime), V_HUDTRANS);
+	boolean downwards = false;
 
 	if (objectplacing)
 	{
@@ -641,21 +656,70 @@ static void ST_drawTime(void)
 	}
 	else
 	{
-		tics = (mapheaderinfo[gamemap-1]->countdown ? countdowntimer : stplyr->realtime);
-		seconds = G_TicsToSeconds(tics);
+		// Counting down the hidetime?
+		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime <= (hidetime*TICRATE)))
+		{
+			tics = (hidetime*TICRATE - leveltime);
+			if (tics < 3*TICRATE)
+				ST_drawRaceNum(tics);
+			downwards = true;
+		}
+		else
+		{
+			// Hidetime finish!
+			if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime < ((hidetime+1)*TICRATE)))
+				ST_drawRaceNum(hidetime*TICRATE - leveltime);
+
+			// Time limit?
+			if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP && cv_timelimit.value && timelimitintics > 0)
+			{
+				if (timelimitintics >= leveltime)
+				{
+					tics = (timelimitintics - leveltime);
+					if (tics < 3*TICRATE)
+						ST_drawRaceNum(tics);
+				}
+				else // Overtime!
+					tics = 0;
+				downwards = true;
+			}
+			// Post-hidetime normal.
+			else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+				tics = stplyr->realtime - hidetime*TICRATE;
+			// "Shadow! What are you doing? Hurry and get back here
+			// right now before the island blows up with you on it!"
+			// "Blows up??" *awkward silence* "I've got to get outta
+			// here and find Amy and Tails right away!"
+			else if (mapheaderinfo[gamemap-1]->countdown)
+			{
+				tics = countdowntimer;
+				downwards = true;
+			}
+			// Normal.
+			else
+				tics = stplyr->realtime;
+		}
+
 		minutes = G_TicsToMinutes(tics, true);
+		seconds = G_TicsToSeconds(tics);
 		tictrn  = G_TicsToCentiseconds(tics);
 	}
 
-	if (cv_timetic.value == 1) // Tics only -- how simple is this?
-		ST_DrawNumFromHudWS(HUD_SECONDS, tics, V_HUDTRANS);
+	// TIME:
+	ST_DrawPatchFromHud(HUD_TIME, ((downwards && (tics < 30*TICRATE) && (leveltime/5 & 1)) ? sboredtime : sbotime), V_HUDTRANS);
+
+	if (!tics && downwards && (leveltime/5 & 1)) // overtime!
+		return;
+
+	if (cv_timetic.value == 3) // Tics only -- how simple is this?
+		ST_DrawNumFromHud(HUD_SECONDS, tics, V_HUDTRANS);
 	else
 	{
-		ST_DrawNumFromHudWS(HUD_MINUTES, minutes, V_HUDTRANS); // Minutes
-		ST_DrawPatchFromHudWS(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
-		ST_DrawPadNumFromHudWS(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
+		ST_DrawNumFromHud(HUD_MINUTES, minutes, V_HUDTRANS); // Minutes
+		ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
+		ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
 
-		if (!splitscreen && (cv_timetic.value == 2 || cv_timetic.value == 3 || modeattacking)) // there's not enough room for tics in splitscreen, don't even bother trying!
+		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
 		{
 			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod, V_HUDTRANS); // Period
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2, V_HUDTRANS); // Tics
@@ -667,7 +731,7 @@ static inline void ST_drawRings(void)
 {
 	INT32 ringnum;
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
+	ST_DrawPatchFromHud(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -682,35 +746,41 @@ static inline void ST_drawRings(void)
 	else
 		ringnum = max(stplyr->rings, 0);
 
-	if (!splitscreen && cv_timetic.value == 3) // Yes, even in modeattacking
-		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
+	if (cv_timetic.value == 2) // Yes, even in modeattacking
+		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, V_PERPLAYER|((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 	else
-		ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
+		ST_DrawNumFromHud(HUD_RINGSNUM, ringnum, V_PERPLAYER|((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 }
 
-static void ST_drawLives(void)
+static void ST_drawLivesArea(void)
 {
-	const INT32 v_splitflag = (splitscreen && stplyr == &players[displayplayer] ? V_SPLITSCREEN : 0);
-	INT32 livescount;
+	INT32 v_colmap = V_YELLOWMAP, livescount;
 	boolean notgreyedout;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
 
 	// face background
-	V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, livesback);
+	V_DrawSmallScaledPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
+		hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, livesback);
 
 	// face
-	if (stplyr->mo && stplyr->mo->color)
+	if (stplyr->spectator)
+	{
+		// spectator face
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, SKINCOLOR_CLOUDY, GTC_CACHE);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
+			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANSHALF, faceprefix[stplyr->skin], colormap);
+	}
+	else if (stplyr->mo && stplyr->mo->color)
 	{
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
 		if (stplyr->powers[pw_super])
 			face = superprefix[stplyr->skin];
-		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
+			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, face, colormap);
 		if (cv_translucenthud.value == 10 && stplyr->powers[pw_super] == 1 && stplyr->mo->tracer)
 		{
 			INT32 v_supertrans = (stplyr->mo->tracer->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
@@ -718,8 +788,8 @@ static void ST_drawLives(void)
 			{
 				v_supertrans <<= V_ALPHASHIFT;
 				colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->tracer->color, GTC_CACHE);
-				V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-					V_SNAPTOLEFT|V_SNAPTOBOTTOM|v_supertrans|v_splitflag,face, colormap);
+				V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
+					hudinfo[HUD_LIVES].f|V_PERPLAYER|v_supertrans, face, colormap);
 			}
 		}
 	}
@@ -727,94 +797,158 @@ static void ST_drawLives(void)
 	{
 		// skincolor face
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
-		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,faceprefix[stplyr->skin], colormap);
+		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
+			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
+	}
+
+	// Lives number
+	if (G_GametypeUsesLives() || gametype == GT_RACE)
+	{
+		// x
+		V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10,
+			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
+
+		// lives number
+		if (gametype == GT_RACE)
+		{
+			livescount = 0x7f;
+			notgreyedout = true;
+		}
+		else if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
+		{
+			INT32 i;
+			livescount = 0;
+			notgreyedout = (stplyr->lives > 0);
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+
+				if (players[i].lives < 1)
+					continue;
+
+				if (players[i].lives > 1)
+					notgreyedout = true;
+
+				if (players[i].lives == 0x7f)
+				{
+					livescount = 0x7f;
+					break;
+				}
+				else if (livescount < 99)
+					livescount += (players[i].lives);
+			}
+		}
+		else
+		{
+			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0x7f : stplyr->lives);
+			notgreyedout = true;
+		}
+
+		if (livescount == 0x7f)
+			V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
+				'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
+		else
+		{
+			if (livescount > 99)
+				livescount = 99;
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
+				hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
+		}
+	}
+	// Spectator
+	else if (stplyr->spectator)
+		v_colmap = V_GRAYMAP;
+	// Tag
+	else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	{
+		if (stplyr->pflags & PF_TAGIT)
+		{
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
+			v_colmap = V_ORANGEMAP;
+		}
+	}
+	// Team name
+	else if (G_GametypeHasTeams())
+	{
+		if (stplyr->ctfteam == 1)
+		{
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
+			v_colmap = V_REDMAP;
+		}
+		else if (stplyr->ctfteam == 2)
+		{
+			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
+			v_colmap = V_BLUEMAP;
+		}
 	}
 
 	// name
-	if (strlen(skins[stplyr->skin].hudname) > 8)
-		V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+	v_colmap |= (V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER);
+	if (strlen(skins[stplyr->skin].hudname) <= 5)
+		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+	else if (V_ThinStringWidth(skins[stplyr->skin].hudname, v_colmap) <= 40)
+		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
 	else
-		V_DrawString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
-	// x
-	V_DrawScaledPatch(hudinfo[HUD_LIVESX].x, hudinfo[HUD_LIVESX].y + (v_splitflag ? -4 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, stlivex);
+		V_DrawThinString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
 
-	// lives number
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
+	// Power Stones collected
+	if (G_RingSlingerGametype()
+#ifdef HAVE_BLUA
+	&& LUA_HudEnabled(hud_powerstones)
+#endif
+	)
 	{
-		INT32 i;
-		livescount = 0;
-		notgreyedout = (stplyr->lives > 0);
-		for (i = 0; i < MAXPLAYERS; i++)
+		INT32 workx = hudinfo[HUD_LIVES].x+1, j;
+		if ((leveltime & 1) && stplyr->powers[pw_invulnerability] && (stplyr->powers[pw_sneakers] == stplyr->powers[pw_invulnerability])) // hack; extremely unlikely to be activated unintentionally
 		{
-			if (!playeringame[i])
-				continue;
-
-			if (players[i].lives < 1)
-				continue;
-
-			if (players[i].lives > 1)
-				notgreyedout = true;
-
-			if (players[i].lives == 0x7f)
+			for (j = 0; j < 7; ++j) // "super" indicator
 			{
-				livescount = 0x7f;
-				break;
+				V_DrawScaledPatch(workx, hudinfo[HUD_LIVES].y-9, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, emeraldpics[1][j]);
+				workx += 8;
 			}
-			else if (livescount < 99)
-				livescount += (players[i].lives);
 		}
-	}
-	else
-	{
-		livescount = stplyr->lives;
-		notgreyedout = true;
-	}
-
-	if (livescount == 0x7f)
-		V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0), '\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, false);
-	else
-	{
-		if (livescount > 99)
-			livescount = 99;
-		V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
-			((livescount > 99) ? "!!" : va("%d",livescount)));
+		else
+		{
+			for (j = 0; j < 7; ++j) // powerstones
+			{
+				if (stplyr->powers[pw_emeralds] & (1 << j))
+					V_DrawScaledPatch(workx, hudinfo[HUD_LIVES].y-9, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, emeraldpics[1][j]);
+				workx += 8;
+			}
+		}
 	}
 }
 
 static void ST_drawInput(void)
 {
-	//const INT32 v_splitflag = (splitscreen && stplyr == &players[displayplayer] ? V_SPLITSCREEN : 0); -- no splitscreen support - record attack only for base game
-	const UINT8 accent = (stplyr->skincolor ? Color_Index[stplyr->skincolor-1][4] : 0);
-	UINT8 col, offs;
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? Color_Index[stplyr->skincolor-1][4] : 0);
+	INT32 col;
+	UINT8 offs;
 
-	INT32 x = hudinfo[HUD_LIVESPIC].x, y = hudinfo[HUD_LIVESPIC].y;
+	INT32 x = hudinfo[HUD_LIVES].x, y = hudinfo[HUD_LIVES].y;
 
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y -= 16;
 
 	// O backing
-	V_DrawFill(x, y-1, 16, 16, 20);
-	V_DrawFill(x, y+15, 16, 1, 29);
+	V_DrawFill(x, y-1, 16, 16, hudinfo[HUD_LIVES].f|20);
+	V_DrawFill(x, y+15, 16, 1, hudinfo[HUD_LIVES].f|29);
 
 	if (cv_showinputjoy.value) // joystick render!
 	{
-		/*V_DrawFill(x   , y   , 16,  1, 16);
-		V_DrawFill(x   , y+15, 16,  1, 16);
-		V_DrawFill(x   , y+ 1,  1, 14, 16);
-		V_DrawFill(x+15, y+ 1,  1, 14, 16); -- red's outline*/
+		/*V_DrawFill(x   , y   , 16,  1, hudinfo[HUD_LIVES].f|16);
+		V_DrawFill(x   , y+15, 16,  1, hudinfo[HUD_LIVES].f|16);
+		V_DrawFill(x   , y+ 1,  1, 14, hudinfo[HUD_LIVES].f|16);
+		V_DrawFill(x+15, y+ 1,  1, 14, hudinfo[HUD_LIVES].f|16); -- red's outline*/
 		if (stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
 		{
 			// joystick hole
-			V_DrawFill(x+5, y+4, 6, 6, 29);
+			V_DrawFill(x+5, y+4, 6, 6, hudinfo[HUD_LIVES].f|29);
 			// joystick top
 			V_DrawFill(x+3+stplyr->cmd.sidemove/12,
 				y+2-stplyr->cmd.forwardmove/12,
-				10, 10, 29);
+				10, 10, hudinfo[HUD_LIVES].f|29);
 			V_DrawFill(x+3+stplyr->cmd.sidemove/9,
 				y+1-stplyr->cmd.forwardmove/9,
 				10, 10, accent);
@@ -822,10 +956,10 @@ static void ST_drawInput(void)
 		else
 		{
 			// just a limited, greyed out joystick top
-			V_DrawFill(x+3, y+11, 10, 1, 29);
+			V_DrawFill(x+3, y+11, 10, 1, hudinfo[HUD_LIVES].f|29);
 			V_DrawFill(x+3,
 				y+1,
-				10, 10, 16);
+				10, 10, hudinfo[HUD_LIVES].f|16);
 		}
 	}
 	else // arrows!
@@ -839,10 +973,10 @@ static void ST_drawInput(void)
 		else
 		{
 			offs = 1;
-			col = 16;
-			V_DrawFill(x- 2, y+10,  6,  1, 29);
-			V_DrawFill(x+ 4, y+ 9,  1,  1, 29);
-			V_DrawFill(x+ 5, y+ 8,  1,  1, 29);
+			col = hudinfo[HUD_LIVES].f|16;
+			V_DrawFill(x- 2, y+10,  6,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+ 4, y+ 9,  1,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+ 5, y+ 8,  1,  1, hudinfo[HUD_LIVES].f|29);
 		}
 		V_DrawFill(x- 2, y+ 5-offs,  6,  6, col);
 		V_DrawFill(x+ 4, y+ 6-offs,  1,  4, col);
@@ -857,12 +991,12 @@ static void ST_drawInput(void)
 		else
 		{
 			offs = 1;
-			col = 16;
-			V_DrawFill(x+ 5, y+ 3,  1,  1, 29);
-			V_DrawFill(x+ 6, y+ 4,  1,  1, 29);
-			V_DrawFill(x+ 7, y+ 5,  2,  1, 29);
-			V_DrawFill(x+ 9, y+ 4,  1,  1, 29);
-			V_DrawFill(x+10, y+ 3,  1,  1, 29);
+			col = hudinfo[HUD_LIVES].f|16;
+			V_DrawFill(x+ 5, y+ 3,  1,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+ 6, y+ 4,  1,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+ 7, y+ 5,  2,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+ 9, y+ 4,  1,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+10, y+ 3,  1,  1, hudinfo[HUD_LIVES].f|29);
 		}
 		V_DrawFill(x+ 5, y- 2-offs,  6,  6, col);
 		V_DrawFill(x+ 6, y+ 4-offs,  4,  1, col);
@@ -877,10 +1011,10 @@ static void ST_drawInput(void)
 		else
 		{
 			offs = 1;
-			col = 16;
-			V_DrawFill(x+12, y+10,  6,  1, 29);
-			V_DrawFill(x+11, y+ 9,  1,  1, 29);
-			V_DrawFill(x+10, y+ 8,  1,  1, 29);
+			col = hudinfo[HUD_LIVES].f|16;
+			V_DrawFill(x+12, y+10,  6,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+11, y+ 9,  1,  1, hudinfo[HUD_LIVES].f|29);
+			V_DrawFill(x+10, y+ 8,  1,  1, hudinfo[HUD_LIVES].f|29);
 		}
 		V_DrawFill(x+12, y+ 5-offs,  6,  6, col);
 		V_DrawFill(x+11, y+ 6-offs,  1,  4, col);
@@ -895,8 +1029,8 @@ static void ST_drawInput(void)
 		else
 		{
 			offs = 1;
-			col = 16;
-			V_DrawFill(x+ 5, y+17,  6,  1, 29);
+			col = hudinfo[HUD_LIVES].f|16;
+			V_DrawFill(x+ 5, y+17,  6,  1, hudinfo[HUD_LIVES].f|29);
 		}
 		V_DrawFill(x+ 5, y+12-offs,  6,  6, col);
 		V_DrawFill(x+ 6, y+11-offs,  4,  1, col);
@@ -912,16 +1046,16 @@ static void ST_drawInput(void)
 	else\
 	{\
 		offs = 1;\
-		col = 16;\
-		V_DrawFill(x+16+(xoffs), y+9+(yoffs), 10, 1, 29);\
+		col = hudinfo[HUD_LIVES].f|16;\
+		V_DrawFill(x+16+(xoffs), y+9+(yoffs), 10, 1, hudinfo[HUD_LIVES].f|29);\
 	}\
 	V_DrawFill(x+16+(xoffs), y+(yoffs)-offs, 10, 10, col);\
-	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, symb, false)
+	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_LIVES].f|symb, false)
 
 	drawbutt( 4,-3, BT_JUMP, 'J');
 	drawbutt(15,-3, BT_USE,  'S');
 
-	V_DrawFill(x+16+4, y+8, 21, 10, 20); // sundial backing
+	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_LIVES].f|20); // sundial backing
 	if (stplyr->mo)
 	{
 		UINT8 i, precision;
@@ -941,7 +1075,7 @@ static void ST_drawInput(void)
 		{
 			V_DrawFill(x+16+14-(i*xcomp)/precision,
 				y+12-(i*ycomp)/precision,
-				1, 1, 16);
+				1, 1, hudinfo[HUD_LIVES].f|16);
 		}
 
 		if (ycomp <= 0)
@@ -958,6 +1092,7 @@ static void ST_drawInput(void)
 		if (stplyr->pflags & PF_AUTOBRAKE)
 		{
 			V_DrawThinString(x, y,
+				hudinfo[HUD_LIVES].f|
 				((!stplyr->powers[pw_carry]
 				&& (stplyr->pflags & PF_APPLYAUTOBRAKE)
 				&& !(stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
@@ -968,12 +1103,12 @@ static void ST_drawInput(void)
 		}
 		if (stplyr->pflags & PF_ANALOGMODE)
 		{
-			V_DrawThinString(x, y, 0, "ANALOG");
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "ANALOG");
 			y -= 8;
 		}
 	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
-		V_DrawThinString(x, y, ((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
+		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
 static void ST_drawLevelTitle(void)
@@ -981,13 +1116,8 @@ static void ST_drawLevelTitle(void)
 	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
 	char *subttl = mapheaderinfo[gamemap-1]->subttl;
 	INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
-	INT32 lvlttlxpos;
+	INT32 lvlttly, zoney, lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
-	INT32 ttlnumxpos;
-	INT32 zonexpos;
-
-	INT32 lvlttly;
-	INT32 zoney;
 
 	if (!(timeinmap > 2 && timeinmap-3 < 110))
 		return;
@@ -1002,10 +1132,41 @@ static void ST_drawLevelTitle(void)
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
 	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
+	ttlnumxpos++;
 
 	if (lvlttlxpos < 0)
 		lvlttlxpos = 0;
 
+#if 0 // toaster's experiment. srb2&toast.exe one day, maybe? Requires stuff below to be converted to fixed point.
+#define MIDTTLY 79
+#define MIDZONEY 105
+#define MIDDIFF 4
+
+	if (timeinmap < 10)
+	{
+		fixed_t z = ((timeinmap - 3)<<FRACBITS)/7;
+		INT32 ttlh = V_LevelNameHeight(lvlttl);
+		zoney = (200<<FRACBITS) - ((200 - (MIDZONEY + MIDDIFF))*z);
+		lvlttly = ((MIDTTLY + ttlh - MIDDIFF)*z) - (ttlh<<FRACBITS);
+	}
+	else if (timeinmap < 105)
+	{
+		fixed_t z = (((timeinmap - 10)*MIDDIFF)<<(FRACBITS+1))/95;
+		zoney = ((MIDZONEY + MIDDIFF)<<FRACBITS) - z;
+		lvlttly = ((MIDTTLY - MIDDIFF)<<FRACBITS) + z;
+	}
+	else
+	{
+		fixed_t z = ((timeinmap - 105)<<FRACBITS)/7;
+		INT32 zoneh = V_LevelNameHeight(M_GetText("ZONE"));
+		zoney = (MIDZONEY + zoneh - MIDDIFF)*(FRACUNIT - z) - (zoneh<<FRACBITS);
+		lvlttly = ((MIDTTLY + MIDDIFF)<<FRACBITS) + ((200 - (MIDTTLY + MIDDIFF))*z);
+	}
+
+#undef MIDTTLY
+#undef MIDZONEY
+#undef MIDDIFF
+#else
 	// There's no consistent algorithm that can accurately define the old positions
 	// so I just ended up resorting to a single switct statement to define them
 	switch (timeinmap-3)
@@ -1024,151 +1185,200 @@ static void ST_drawLevelTitle(void)
 		case 109: zoney =   0; lvlttly = 200; break;
 		default:  zoney = 104; lvlttly =  80; break;
 	}
+#endif
 
 	if (actnum)
-		V_DrawScaledPatch(ttlnumxpos, zoney, 0, ttlnum);
+		V_DrawScaledPatch(ttlnumxpos, zoney, V_PERPLAYER, ttlnum);
 
-	V_DrawLevelTitle(lvlttlxpos, lvlttly, 0, lvlttl);
+	V_DrawLevelTitle(lvlttlxpos, lvlttly, V_PERPLAYER, lvlttl);
 
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		V_DrawLevelTitle(zonexpos, zoney, 0, M_GetText("ZONE"));
+		V_DrawLevelTitle(zonexpos, zoney, V_PERPLAYER, M_GetText("ZONE"));
 
 	if (lvlttly+48 < 200)
-		V_DrawCenteredString(subttlxpos, lvlttly+48, V_ALLOWLOWERCASE, subttl);
+		V_DrawCenteredString(subttlxpos, lvlttly+48, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
+}
+
+static void ST_drawPowerupHUD(void)
+{
+	patch_t *p = NULL;
+	UINT16 invulntime = 0;
+	INT32 offs = hudinfo[HUD_POWERUPS].x;
+	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0};
+#define ICONSEP (16+4) // matches weapon rings HUD
+
+	if (stplyr->spectator || stplyr->playerstate != PST_LIVE)
+		return;
+
+	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
+	if (stplyr->powers[pw_shield] & SH_NOSTACK)
+	{
+		shieldoffs[q] = ICONSEP;
+
+		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
+		{
+			UINT8 i, max = (stplyr->powers[pw_shield] & SH_FORCEHP);
+			for (i = 0; i <= max; i++)
+			{
+				V_DrawSmallScaledPatch(offs-(i<<1), hudinfo[HUD_POWERUPS].y-(i<<1), (V_PERPLAYER|hudinfo[HUD_POWERUPS].f)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF), forceshield);
+			}
+		}
+		else
+		{
+			switch (stplyr->powers[pw_shield] & SH_NOSTACK)
+			{
+				case SH_WHIRLWIND:   p = jumpshield;    break;
+				case SH_ELEMENTAL:   p = watershield;   break;
+				case SH_ARMAGEDDON:  p = bombshield;    break;
+				case SH_ATTRACT:     p = ringshield;    break;
+				case SH_PITY:        p = pityshield;    break;
+				case SH_FLAMEAURA:   p = flameshield;   break;
+				case SH_BUBBLEWRAP:  p = bubbleshield;  break;
+				case SH_THUNDERCOIN: p = thundershield; break;
+				default: break;
+			}
+
+			if (p)
+				V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, p);
+		}
+	}
+	else if (shieldoffs[q])
+	{
+		if (shieldoffs[q] > 1)
+			shieldoffs[q] = 2*shieldoffs[q]/3;
+		else
+			shieldoffs[q] = 0;
+	}
+
+	offs -= shieldoffs[q];
+
+	// YOU have a flag. Display a monitor-like icon for it.
+	if (stplyr->gotflag)
+	{
+		flagoffs[q] = ICONSEP;
+		p = (stplyr->gotflag & GF_REDFLAG) ? gotrflag : gotbflag;
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, p);
+	}
+	else if (flagoffs[q])
+	{
+		if (flagoffs[q] > 1)
+			flagoffs[q] = 2*flagoffs[q]/3;
+		else
+			flagoffs[q] = 0;
+	}
+
+	offs -= flagoffs[q];
+
+	invulntime = stplyr->powers[pw_flashing] ? stplyr->powers[pw_flashing] : stplyr->powers[pw_invulnerability];
+	if (stplyr->powers[pw_invulnerability] > 3*TICRATE || (invulntime && leveltime & 1))
+	{
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, invincibility);
+		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", invulntime/TICRATE));
+	}
+
+	if (invulntime > 7)
+		offs -= ICONSEP;
+	else
+	{
+		UINT8 a = ICONSEP, b = 7-invulntime;
+		while (b--)
+			a = 2*a/3;
+		offs -= a;
+	}
+
+	if (stplyr->powers[pw_sneakers] > 3*TICRATE || (stplyr->powers[pw_sneakers] && leveltime & 1))
+	{
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, sneakers);
+		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_sneakers]/TICRATE));
+	}
+
+	if (stplyr->powers[pw_sneakers] > 7)
+		offs -= ICONSEP;
+	else
+	{
+		UINT8 a = ICONSEP, b = 7-stplyr->powers[pw_sneakers];
+		while (b--)
+			a = 2*a/3;
+		offs -= a;
+	}
+
+	if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
+	{
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, gravboots);
+		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_gravityboots]/TICRATE));
+	}
+
+#undef ICONSEP
 }
 
 static void ST_drawFirstPersonHUD(void)
 {
-	player_t *player = stplyr;
 	patch_t *p = NULL;
-	UINT16 invulntime = 0;
+	UINT32 airtime;
+	spriteframe_t *sprframe;
+	// If both air timers are active, use the air timer with the least time left
+	if (stplyr->powers[pw_underwater] && stplyr->powers[pw_spacetime])
+		airtime = min(stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]);
+	else // Use whichever one is active otherwise
+		airtime = (stplyr->powers[pw_spacetime]) ? stplyr->powers[pw_spacetime] : stplyr->powers[pw_underwater];
 
-	if (player->playerstate != PST_LIVE)
-		return;
+	if (airtime < 1)
+		return; // No air timers are active, nothing would be drawn anyway
 
-	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
-	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
-	{
-		UINT8 i, max = (player->powers[pw_shield] & SH_FORCEHP);
-		for (i = 0; i <= max; i++)
-		{
-			INT32 flags = (V_SNAPTORIGHT|V_SNAPTOTOP)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF);
-			if (splitscreen)
-				V_DrawSmallScaledPatch(312-(3*i), STRINGY(24)+(3*i), flags, forceshield);
-			else
-				V_DrawScaledPatch(304-(3*i), 24+(3*i), flags, forceshield);
-		}
-	}
-	else switch (player->powers[pw_shield] & SH_NOSTACK)
-	{
-	case SH_WHIRLWIND:   p = jumpshield;    break;
-	case SH_ELEMENTAL:   p = watershield;   break;
-	case SH_ARMAGEDDON:  p = bombshield;    break;
-	case SH_ATTRACT:     p = ringshield;    break;
-	case SH_PITY:        p = pityshield;    break;
-	case SH_FLAMEAURA:   p = flameshield;   break;
-	case SH_BUBBLEWRAP:  p = bubbleshield;  break;
-	case SH_THUNDERCOIN: p = thundershield; break;
-	default: break;
-	}
+	airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
 
-	if (p)
-	{
-		if (splitscreen)
-			V_DrawSmallScaledPatch(312, STRINGY(24), V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, p);
-		else
-			V_DrawScaledPatch(304, 24, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, p);
-	}
+	if (airtime > 11*TICRATE)
+		return; // Not time to draw any drown numbers yet
 
-	// pw_flashing just sets the icon to flash no matter what.
-	invulntime = player->powers[pw_flashing] ? 1 : player->powers[pw_invulnerability];
-	if (invulntime > 3*TICRATE || (invulntime && leveltime & 1))
-	{
-		if (splitscreen)
-			V_DrawSmallScaledPatch(312, STRINGY(24) + 14, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, invincibility);
-		else
-			V_DrawScaledPatch(304, 24 + 28, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, invincibility);
-	}
+	if (!((airtime > 10*TICRATE - 5)
+	|| (airtime <= 9*TICRATE && airtime > 8*TICRATE - 5)
+	|| (airtime <= 7*TICRATE && airtime > 6*TICRATE - 5)
+	|| (airtime <= 5*TICRATE && airtime > 4*TICRATE - 5)
+	|| (airtime <= 3*TICRATE && airtime > 2*TICRATE - 5)
+	|| (airtime <= 1*TICRATE)))
+		return; // Don't draw anything between numbers
 
-	if (player->powers[pw_sneakers] > 3*TICRATE || (player->powers[pw_sneakers] && leveltime & 1))
-	{
-		if (splitscreen)
-			V_DrawSmallScaledPatch(312, STRINGY(24) + 28, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, sneakers);
-		else
-			V_DrawScaledPatch(304, 24 + 56, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, sneakers);
-	}
+	if (!((airtime % 10) < 5))
+		return; // Keep in line with the flashing thing from third person.
 
-	p = NULL;
+	airtime /= (2*TICRATE); // To be strictly accurate it'd need to be ((airtime/TICRATE) - 1)/2, but integer division rounds down for us
 
-	{
-		UINT32 airtime;
-		UINT32 frame = 0;
-		spriteframe_t *sprframe;
-		// If both air timers are active, use the air timer with the least time left
-		if (player->powers[pw_underwater] && player->powers[pw_spacetime])
-			airtime = min(player->powers[pw_underwater], player->powers[pw_spacetime]);
-		else // Use whichever one is active otherwise
-			airtime = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
+	if (stplyr->charflags & SF_MACHINE)
+		airtime += 6;  // Robots use different drown numbers
 
-		if (!airtime)
-			return; // No air timers are active, nothing would be drawn anyway
-
-		airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
-
-		if (airtime > 11*TICRATE)
-			return; // Not time to draw any drown numbers yet
-		// Choose which frame to use based on time left
-		if (airtime <= 11*TICRATE && airtime >= 10*TICRATE)
-			frame = 5;
-		else if (airtime <= 9*TICRATE && airtime >= 8*TICRATE)
-			frame = 4;
-		else if (airtime <= 7*TICRATE && airtime >= 6*TICRATE)
-			frame = 3;
-		else if (airtime <= 5*TICRATE && airtime >= 4*TICRATE)
-			frame = 2;
-		else if (airtime <= 3*TICRATE && airtime >= 2*TICRATE)
-			frame = 1;
-		else if (airtime <= 1*TICRATE && airtime > 0)
-			frame = 0;
-		else
-			return; // Don't draw anything between numbers
-
-		if (player->charflags & SF_MACHINE)
-			frame += 6;  // Robots use different drown numbers
-
-		// Get the front angle patch for the frame
-		sprframe = &sprites[SPR_DRWN].spriteframes[frame];
-		p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
-	}
+	// Get the front angle patch for the frame
+	sprframe = &sprites[SPR_DRWN].spriteframes[airtime];
+	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
 	if (p)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset)), SCY(60 - SHORT(p->topoffset)),
-			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
+		V_DrawScaledPatch((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
+			V_PERPLAYER|V_PERPLAYER|V_TRANSLUCENT, p);
 }
 
 static void ST_drawNightsRecords(void)
 {
-	INT32 aflag = 0;
+	INT32 aflag = V_PERPLAYER;
 
 	if (!stplyr->texttimer)
 		return;
 
 	if (stplyr->texttimer < TICRATE/2)
-		aflag = (9 - 9*stplyr->texttimer/(TICRATE/2)) << V_ALPHASHIFT;
+		aflag |= (9 - 9*stplyr->texttimer/(TICRATE/2)) << V_ALPHASHIFT;
 
 	// A "Bonus Time Start" by any other name...
 	if (stplyr->textvar == 1)
 	{
-		V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(52), V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
-		V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60),            aflag, M_GetText("SCORE MULTIPLIER START!"));
+		V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
+		V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
 
 		if (stplyr->finishedtime)
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 48, STRINGY(140), aflag, "TIME:");
-			V_DrawString(BASEVIDWIDTH/2 - 48, STRINGY(148), aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(140), V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(148), V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+			V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
 		}
 	}
 
@@ -1179,7 +1389,7 @@ static void ST_drawNightsRecords(void)
 			return;
 
 		// Yes, this string is an abomination.
-		V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60), aflag,
+		V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
 		                     va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
 		                        (stplyr->textvar == 3) ? M_GetText("MORE ") : "",
 		                        (G_IsSpecialStage(gamemap)) ? "SPHERE" : "RING",
@@ -1189,26 +1399,26 @@ static void ST_drawNightsRecords(void)
 	// End Bonus
 	else if (stplyr->textvar == 4)
 	{
-		V_DrawString(BASEVIDWIDTH/2 - 48, STRINGY(140), aflag, (G_IsSpecialStage(gamemap)) ? "ORBS:" : "RINGS:");
-		V_DrawString(BASEVIDWIDTH/2 - 48, STRINGY(148), aflag, "BONUS:");
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(140), V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings));
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, STRINGY(148), V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings * 50));
-		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 48)<<FRACBITS, STRINGY(160)<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+		V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "RINGS:");
+		V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
+		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings));
+		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings * 50));
+		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 		// If new record, say so!
 		if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
 		{
 			if (stplyr->texttimer & 16)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(184), V_YELLOWMAP|aflag, "* NEW RECORD *");
+				V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
 		}
 
 		if (P_HasGrades(gamemap, stplyr->lastmare + 1))
 		{
 			if (aflag)
-				V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, STRINGY(160), aflag,
+				V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
 				                       ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
 			else
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, STRINGY(160), 0,
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
 				                  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
 		}
 	}
@@ -1251,7 +1461,6 @@ static void ST_drawNiGHTSHUD(void)
 	INT32 origamount;
 	INT32 minlink = 1;
 	INT32 total_ringcount;
-	boolean nosshack = false;
 
 	// When debugging, show "0 Link".
 	if (cv_debug & DBG_NIGHTSBASIC)
@@ -1261,15 +1470,6 @@ static void ST_drawNiGHTSHUD(void)
 	if (stplyr->texttimer && stplyr->textvar == 4)
 		minlink = INT32_MAX;
 
-	if (G_IsSpecialStage(gamemap))
-	{ // Since special stages share score, time, rings, etc.
-		// disable splitscreen mode for its HUD.
-		if (stplyr != &players[displayplayer])
-			return;
-		nosshack = splitscreen;
-		splitscreen = false;
-	}
-
 	// Drill meter
 	if (
 #ifdef HAVE_BLUA
@@ -1277,20 +1477,9 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 	{
-		INT32 locx, locy;
+		INT32 locx = 16, locy = 180;
 		INT32 dfill;
 		UINT8 fillpatch;
-
-		if (splitscreen || nosshack)
-		{
-			locx = 110;
-			locy = 188;
-		}
-		else
-		{
-			locx = 16;
-			locy = 180;
-		}
 
 		// Use which patch?
 		if (stplyr->pflags & PF_DRILLING)
@@ -1298,45 +1487,31 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			fillpatch = 0;
 
-		if (splitscreen)
-		{ // 11-5-14 Replaced the old hack with a slightly better hack. -Red
-			V_DrawScaledPatch(locx, STRINGY(locy)-3, SPLITFLAGS(V_SNAPTOBOTTOM)|V_HUDTRANS, drillbar);
-			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), SPLITFLAGS(V_SNAPTOBOTTOM)|V_HUDTRANS, drillfill[fillpatch]);
-		}
-		else if (nosshack)
-		{ // Even dirtier hack-of-a-hack to draw seperate drill meters in splitscreen special stages but nothing else.
-			splitscreen = true;
-			V_DrawScaledPatch(locx, STRINGY(locy)-3, V_HUDTRANS, drillbar);
-			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_HUDTRANS, drillfill[fillpatch]);
-			stplyr = &players[secondarydisplayplayer];
-			if (stplyr->pflags & PF_DRILLING)
-				fillpatch = (stplyr->drillmeter & 1) + 1;
-			else
-				fillpatch = 0;
-			V_DrawScaledPatch(locx, STRINGY(locy-3), V_SNAPTOBOTTOM|V_HUDTRANS, drillbar);
-			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
-			stplyr = &players[displayplayer];
-			splitscreen = false;
-		}
-		else
-		{ // Draw normally. <:3
-			V_DrawScaledPatch(locx, locy, V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillbar);
-			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, locy + 3, V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
-		}
+		V_DrawScaledPatch(locx, locy, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillbar);
+		for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
+			V_DrawScaledPatch(locx + 2 + dfill, locy + 3, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
 
 		// Display actual drill amount and bumper time
-		if (cv_debug & DBG_NIGHTSBASIC)
+		if (!splitscreen && (cv_debug & DBG_NIGHTSBASIC))
 		{
 			if (stplyr->bumpertime)
-				V_DrawString(SCX(locx), SCY(locy - 8), V_NOSCALESTART|V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
+				V_DrawString(locx, locy - 8, V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
 			else
-				V_DrawString(SCX(locx), SCY(locy - 8), V_NOSCALESTART|V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
+				V_DrawString(locx, locy - 8, V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
 		}
 	}
+
+	/*if (G_IsSpecialStage(gamemap))
+	{ // Since special stages share score, time, rings, etc.
+		// disable splitscreen mode for its HUD.
+		// --------------------------------------
+		// NOPE! Consistency between different splitscreen stuffs
+		// now we've got the screen squashing instead. ~toast
+		if (stplyr != &players[displayplayer])
+			return;
+		nosshack = splitscreen;
+		splitscreen = false;
+	}*/
 
 	// Link drawing
 	if (
@@ -1345,44 +1520,39 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	stplyr->linkcount > minlink)
 	{
+		static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
+		const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+		INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
 		skincolors_t colornum;
-		INT32 aflag;
 		fixed_t x, y, scale;
+
+		if (sel != prevsel[q])
+		{
+			prevsel[q] = sel;
+			prevtime[q] = 2 + mag;
+		}
 
 		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
 			colornum = SKINCOLOR_ICY;
 		else
-			colornum = linkColor[((stplyr->linkcount-1 >= 300) ? 1 : 0)][((stplyr->linkcount-1) / 5) % NUMLINKCOLORS];
+			colornum = linkColor[mag][sel];
 
-		aflag = ((stplyr->linktimer < 2*TICRATE/3)
+		aflag |= ((stplyr->linktimer < 2*TICRATE/3)
 		? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
 		: 0);
 
-		if (splitscreen)
+		y = (160+11)<<FRACBITS;
+		aflag |= V_SNAPTOBOTTOM;
+
+		x = (160+4)<<FRACBITS;
+
+		if (prevtime[q])
 		{
-			x = (256+4)<<FRACBITS;
-			y = (STRINGY(152)+11)<<FRACBITS;
-			aflag |= SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT;
+			scale = ((32 + prevtime[q])<<FRACBITS)/32;
+			prevtime[q]--;
 		}
 		else
-		{
-			x = (160+4)<<FRACBITS;
-			y = (160+11)<<FRACBITS;
-			aflag |= V_SNAPTOBOTTOM;
-		}
-
-		switch (stplyr->linktimer)
-		{
-			case (2*TICRATE):
-				scale = (36*FRACUNIT)/32;
-				break;
-			case (2*TICRATE - 1):
-				scale = (34*FRACUNIT)/32;
-				break;
-			default:
-				scale = FRACUNIT;
-				break;
-		}
+			scale = FRACUNIT;
 
 		y -= (11*scale);
 
@@ -1407,11 +1577,11 @@ static void ST_drawNiGHTSHUD(void)
 	if (LUA_HudEnabled(hud_nightsrings))
 	{
 #endif
-	ST_DrawOverlayPatch(SCX(16), SCY(8), nbracket);
+	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-		ST_DrawOverlayPatch(SCX(24), SCY(8) + SCZ(8), nsshud);
+		ST_DrawTopLeftOverlayPatch(24, 16, nsshud);
 	else
-		ST_DrawOverlayPatch(SCX(24), SCY(8) + SCZ(8), nhud[(leveltime/2)%12]);
+		ST_DrawTopLeftOverlayPatch(24, 16, nhud[(leveltime/2)%12]);
 
 	if (G_IsSpecialStage(gamemap))
 	{
@@ -1432,8 +1602,8 @@ static void ST_drawNiGHTSHUD(void)
 		origamount = stplyr->capsule->spawnpoint->angle;
 		I_Assert(origamount > 0); // should not happen now
 
-		ST_DrawOverlayPatch(SCX(72), SCY(8), nbracket);
-		ST_DrawOverlayPatch(SCX(74), SCY(8) + SCZ(4), minicaps);
+		ST_DrawTopLeftOverlayPatch(72, 8, nbracket);
+		ST_DrawTopLeftOverlayPatch(74, 8 + 4, minicaps);
 
 		if (stplyr->capsule->reactiontime != 0)
 		{
@@ -1442,10 +1612,10 @@ static void ST_drawNiGHTSHUD(void)
 
 			for (r = 0; r < 5; r++)
 			{
-				ST_DrawOverlayPatch(SCX(230 - (7*r)), SCY(144), redstat);
-				ST_DrawOverlayPatch(SCX(188 - (7*r)), SCY(144), orngstat);
-				ST_DrawOverlayPatch(SCX(146 - (7*r)), SCY(144), yelstat);
-				ST_DrawOverlayPatch(SCX(104 - (7*r)), SCY(144), byelstat);
+				V_DrawScaledPatch(230 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, redstat);
+				V_DrawScaledPatch(188 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, orngstat);
+				V_DrawScaledPatch(146 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, yelstat);
+				V_DrawScaledPatch(104 - (7*r), 144, V_PERPLAYER|V_HUDTRANS, byelstat);
 			}
 
 			amount = (origamount - stplyr->capsule->health);
@@ -1464,7 +1634,7 @@ static void ST_drawNiGHTSHUD(void)
 					if (r > 10) ++t;
 					if (r > 5)  ++t;
 
-					ST_DrawOverlayPatch(SCX(69 + (7*t)), SCY(144), bluestat);
+					V_DrawScaledPatch(69 + (7*t), 144, V_PERPLAYER|V_HUDTRANS, bluestat);
 				}
 			}
 		}
@@ -1473,27 +1643,27 @@ static void ST_drawNiGHTSHUD(void)
 			INT32 cfill;
 
 			// Lil' white box!
-			V_DrawScaledPatch(15, STRINGY(8) + 34, V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulebar);
+			V_DrawScaledPatch(15, 8 + 34, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulebar);
 
 			amount = (origamount - stplyr->capsule->health);
 			amount = (amount * length)/origamount;
 
 			for (cfill = 0; cfill < amount && cfill < 88; ++cfill)
-				V_DrawScaledPatch(15 + cfill + 1, STRINGY(8) + 35, V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulefill);
+				V_DrawScaledPatch(15 + cfill + 1, 8 + 35, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulefill);
 		}
 
 		if (total_ringcount >= stplyr->capsule->health)
-			ST_DrawOverlayPatch(SCX(40), SCY(8) + SCZ(5), nredar[leveltime%8]);
+			ST_DrawTopLeftOverlayPatch(40, 8 + 5, nredar[leveltime%8]);
 		else
-			ST_DrawOverlayPatch(SCX(40), SCY(8) + SCZ(5), narrow[(leveltime/2)%8]);
+			ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[(leveltime/2)%8]);
 	}
 	else
-		ST_DrawOverlayPatch(SCX(40), SCY(8) + SCZ(5), narrow[8]);
+		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[8]);
 
 	if (total_ringcount >= 100)
-		ST_DrawOverlayNum((total_ringcount >= 1000) ? SCX(76) : SCX(72), SCY(8) + SCZ(11), total_ringcount);
+		V_DrawTallNum((total_ringcount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
 	else
-		ST_DrawOverlayNum(SCX(68), SCY(8) + SCZ(11), total_ringcount);
+		V_DrawTallNum(68, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
 #ifdef HAVE_BLUA
 	}
 #endif
@@ -1504,9 +1674,7 @@ static void ST_drawNiGHTSHUD(void)
 	&& LUA_HudEnabled(hud_nightsscore)
 #endif
 	)
-	{
-		ST_DrawNightsOverlayNum(304<<FRACBITS, STRINGY(16)<<FRACBITS, FRACUNIT, SPLITFLAGS(V_SNAPTOTOP)|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
-	}
+		ST_DrawNightsOverlayNum(304<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
 
 	if (!stplyr->exiting
 #ifdef HAVE_BLUA
@@ -1518,22 +1686,21 @@ static void ST_drawNiGHTSHUD(void)
 		if (modeattacking == ATTACKING_NIGHTS)
 		{
 			INT32 maretime = max(stplyr->realtime - stplyr->marebegunat, 0);
-			fixed_t cornerx = vid.width, cornery = vid.height-SCZ(20);
 
-#define ASSISHHUDFIX(n) (n*vid.dupx)
-			ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(22), cornery, W_CachePatchName("NGRTIMER", PU_HUDGFX));
-			ST_DrawPaddedOverlayNum(cornerx-ASSISHHUDFIX(22), cornery, G_TicsToCentiseconds(maretime), 2);
-			ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(46), cornery, sboperiod);
+#define VFLAGS V_SNAPTOBOTTOM|V_SNAPTORIGHT|V_PERPLAYER|V_HUDTRANS
+			V_DrawScaledPatch(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, W_CachePatchName("NGRTIMER", PU_HUDGFX));
+			V_DrawPaddedTallNum(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, G_TicsToCentiseconds(maretime), 2);
+			V_DrawScaledPatch(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, sboperiod);
 			if (maretime < 60*TICRATE)
-				ST_DrawOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime));
+				V_DrawTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime));
 			else
 			{
-				ST_DrawPaddedOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime), 2);
-				ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(70), cornery, sbocolon);
-				ST_DrawOverlayNum(cornerx-ASSISHHUDFIX(70), cornery, G_TicsToMinutes(maretime, true));
+				V_DrawPaddedTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime), 2);
+				V_DrawScaledPatch(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, sbocolon);
+				V_DrawTallNum(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, G_TicsToMinutes(maretime, true));
 			}
+#undef VFLAGS
 		}
-#undef ASSISHHUDFIX
 	}
 
 	// Ideya time remaining
@@ -1562,10 +1729,10 @@ static void ST_drawNiGHTSHUD(void)
 			if (flashingLeft < TICRATE/2) // Start fading out
 			{
 				UINT32 fadingFlag = (9 - 9*flashingLeft/(TICRATE/2)) << V_ALPHASHIFT;
-				V_DrawTranslucentPatch(SCX(160 - (minus5sec->width/2)), SCY(28), V_NOSCALESTART|fadingFlag, minus5sec);
+				V_DrawTranslucentPatch(160 - (minus5sec->width/2), 28, V_PERPLAYER|fadingFlag, minus5sec);
 			}
 			else
-				V_DrawScaledPatch(SCX(160 - (minus5sec->width/2)), SCY(28), V_NOSCALESTART, minus5sec);
+				V_DrawScaledPatch(160 - (minus5sec->width/2), 28, V_PERPLAYER, minus5sec);
 		}
 
 		if (realnightstime < 10)
@@ -1575,7 +1742,7 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, STRINGY(12)<<FRACBITS, FRACUNIT, SPLITFLAGS(V_SNAPTOTOP), realnightstime, nightsnum,
+		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum,
 			((realnightstime < 10) ? SKINCOLOR_RED : SKINCOLOR_SUPERGOLD4));
 
 		// Show exact time in debug
@@ -1591,22 +1758,22 @@ static void ST_drawNiGHTSHUD(void)
 		if (stplyr->powers[pw_nights_superloop])
 		{
 			pwr = stplyr->powers[pw_nights_superloop];
-			V_DrawSmallScaledPatch(SCX(110), SCY(44), V_NOSCALESTART, W_CachePatchName("NPRUA0",PU_CACHE));
-			V_DrawThinString(SCX(106), SCY(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_CACHE));
+			V_DrawThinString(106, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 
 		if (stplyr->powers[pw_nights_helper])
 		{
 			pwr = stplyr->powers[pw_nights_helper];
-			V_DrawSmallScaledPatch(SCX(150), SCY(44), V_NOSCALESTART, W_CachePatchName("NPRUC0",PU_CACHE));
-			V_DrawThinString(SCX(146), SCY(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_CACHE));
+			V_DrawThinString(146, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 
 		if (stplyr->powers[pw_nights_linkfreeze])
 		{
 			pwr = stplyr->powers[pw_nights_linkfreeze];
-			V_DrawSmallScaledPatch(SCX(190), SCY(44), V_NOSCALESTART, W_CachePatchName("NPRUE0",PU_CACHE));
-			V_DrawThinString(SCX(186), SCY(52), V_NOSCALESTART|V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_CACHE));
+			V_DrawThinString(186, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 		}
 	}
 
@@ -1615,12 +1782,31 @@ static void ST_drawNiGHTSHUD(void)
 	if (LUA_HudEnabled(hud_nightsrecords))
 #endif
 	ST_drawNightsRecords();
-
-	if (nosshack)
-		splitscreen = true;
 }
 
-static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, patch_t *pat)
+static inline void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
+{
+	INT32 q = stplyr->weapondelay, del = 0, p = 16;
+	while (q)
+	{
+		if (q > p)
+		{
+			del += p;
+			q -= p;
+			q /= 2;
+			if (p > 1)
+				p /= 2;
+		}
+		else
+		{
+			del += q;
+			break;
+		}
+	}
+	V_DrawScaledPatch(6 + xoffs, y-2 - del/2, V_PERPLAYER|V_SNAPTOBOTTOM, curweapon);
+}
+
+static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, INT32 y, patch_t *pat)
 {
 	INT32 txtflags = 0, patflags = 0;
 
@@ -1631,30 +1817,27 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 
 		if (weapon == pw_infinityring
 		|| (stplyr->ringweapons & rwflag))
-			txtflags |= V_20TRANS;
+			; //txtflags |= V_20TRANS;
 		else
 		{
 			txtflags |= V_TRANSLUCENT;
 			patflags =  V_80TRANS;
 		}
 
-		V_DrawScaledPatch(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|patflags, pat);
-
-		if (stplyr->powers[weapon] > 99)
-			V_DrawThinString(8 + xoffs + 1, STRINGY(162), V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
-		else
-			V_DrawString(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|txtflags, va("%d", stplyr->powers[weapon]));
+		V_DrawScaledPatch(8 + xoffs, y, V_PERPLAYER|V_SNAPTOBOTTOM|patflags, pat);
+		V_DrawRightAlignedThinString(24 + xoffs, y + 8, V_PERPLAYER|V_SNAPTOBOTTOM|txtflags, va("%d", stplyr->powers[weapon]));
 
 		if (stplyr->currentweapon == wepflag)
-			V_DrawScaledPatch(6 + xoffs, STRINGY(162 - (splitscreen ? 4 : 2)), V_SNAPTOLEFT, curweapon);
+			ST_drawWeaponSelect(xoffs, y);
 	}
 	else if (stplyr->ringweapons & rwflag)
-		V_DrawScaledPatch(8 + xoffs, STRINGY(162), V_SNAPTOLEFT|V_TRANSLUCENT, pat);
+		V_DrawScaledPatch(8 + xoffs, y, V_PERPLAYER|V_SNAPTOBOTTOM|V_TRANSLUCENT, pat);
 }
 
 static void ST_drawMatchHUD(void)
 {
-	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10);
+	const INT32 y = 176; // HUD_LIVES
+	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 
 	if (!G_RingSlingerGametype())
 		return;
@@ -1662,239 +1845,240 @@ static void ST_drawMatchHUD(void)
 	if (G_TagGametype() && !(stplyr->pflags & PF_TAGIT))
 		return;
 
-#ifdef HAVE_BLUA
-	if (LUA_HudEnabled(hud_weaponrings)) {
-#endif
+	{
+		if (stplyr->powers[pw_infinityring])
+			ST_drawWeaponRing(pw_infinityring, 0, 0, offset, y, infinityring);
+		else
+		{
+			if (stplyr->rings > 0)
+				V_DrawScaledPatch(8 + offset, y, V_PERPLAYER|V_SNAPTOBOTTOM, normring);
+			else
+				V_DrawTranslucentPatch(8 + offset, y, V_PERPLAYER|V_SNAPTOBOTTOM|V_80TRANS, normring);
 
-	if (stplyr->powers[pw_infinityring])
-		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
-	else if (stplyr->rings > 0)
-		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
-	else
-		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
+			if (!stplyr->currentweapon)
+				ST_drawWeaponSelect(offset, y);
+		}
 
-	if (!stplyr->currentweapon)
-		V_DrawScaledPatch(6 + offset, STRINGY(162 - (splitscreen ? 4 : 2)), V_SNAPTOLEFT, curweapon);
-
-	offset += 20;
-	ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset, autoring);
-	offset += 20;
-	ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset, bouncering);
-	offset += 20;
-	ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset, scatterring);
-	offset += 20;
-	ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset, grenadering);
-	offset += 20;
-	ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, explosionring);
-	offset += 20;
-	ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, railring);
-
-#ifdef HAVE_BLUA
+		offset += 20;
+		ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset, y, autoring);
+		offset += 20;
+		ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset, y, bouncering);
+		offset += 20;
+		ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset, y, scatterring);
+		offset += 20;
+		ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset, y, grenadering);
+		offset += 20;
+		ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, y, explosionring);
+		offset += 20;
+		ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, y, railring);
 	}
-
-	if (LUA_HudEnabled(hud_powerstones)) {
-#endif
-
-	// Power Stones collected
-	offset = 136; // Used for Y now
-
-	if (stplyr->powers[pw_emeralds] & EMERALD1)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[0]);
-
-	offset += 8;
-
-	if (stplyr->powers[pw_emeralds] & EMERALD2)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[1]);
-
-	if (stplyr->powers[pw_emeralds] & EMERALD6)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[5]);
-
-	offset += 16;
-
-	if (stplyr->powers[pw_emeralds] & EMERALD3)
-		V_DrawScaledPatch(40, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[2]);
-
-	if (stplyr->powers[pw_emeralds] & EMERALD5)
-		V_DrawScaledPatch(16, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[4]);
-
-	offset += 8;
-
-	if (stplyr->powers[pw_emeralds] & EMERALD4)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[3]);
-
-	offset -= 16;
-
-	if (stplyr->powers[pw_emeralds] & EMERALD7)
-		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[6]);
-
-#ifdef HAVE_BLUA
-	}
-#endif
 }
 
-static inline void ST_drawRaceHUD(void)
+static void ST_drawTextHUD(void)
 {
-	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
+	INT32 y = 176 - 16; // HUD_LIVES
+	boolean dof12 = false, dospecheader = false;
+
+#define textHUDdraw(str) \
+{\
+	V_DrawThinString(16, y, V_PERPLAYER|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, str);\
+	y -= 8;\
+}
+
+	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
 	{
-		INT32 height = ((3*BASEVIDHEIGHT)>>2) - 8;
-		INT32 bounce = (leveltime % TICRATE);
-		patch_t *racenum;
-		switch (leveltime/TICRATE)
+		if (leveltime < hidetime * TICRATE)
 		{
-			case 1:
-				racenum = race3;
-				break;
-			case 2:
-				racenum = race2;
-				break;
-			case 3:
-				racenum = race1;
-				break;
-			default:
-				racenum = racego;
-				break;
+			if (stplyr->pflags & PF_TAGIT)
+			{
+				textHUDdraw(M_GetText("Waiting for players to hide..."))
+				textHUDdraw(M_GetText("\x82""You are blindfolded!"))
+			}
+			else if (gametype == GT_HIDEANDSEEK)
+				textHUDdraw(M_GetText("Hide before time runs out!"))
+			else
+				textHUDdraw(M_GetText("Flee before you are hunted!"))
 		}
-		if (bounce < 3)
+		else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
 		{
-			height -= (2 - bounce);
-			if (!bounce)
-					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+			textHUDdraw(M_GetText("You cannot move while hiding."))
+			dof12 = true;
 		}
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, racenum);
 	}
+
+	if (!stplyr->spectator && stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
+	{
+		INT32 i, total = 0, exiting = 0;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+			if (players[i].lives <= 0)
+				continue;
+
+			total++;
+			if (players[i].exiting)
+				exiting++;
+		}
+
+		if (cv_playersforexit.value != 4)
+		{
+			total *= cv_playersforexit.value;
+			if (total & 3)
+				total += 4; // round up
+			total /= 4;
+		}
+
+		if (exiting < total)
+		{
+			total -= exiting;
+			textHUDdraw(va(M_GetText("%d player%s remaining"), total, ((total == 1) ? "" : "s")))
+			dof12 = true;
+		}
+	}
+	else if (gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
+		dof12 = true;
+	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
+	{
+		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
+
+		if (respawntime > 0 && !stplyr->spectator)
+			textHUDdraw(va(M_GetText("Respawn in %d..."), respawntime))
+		else
+			textHUDdraw(M_GetText("\x82""JUMP:""\x80 Respawn"))
+	}
+	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
+	{
+		if (G_IsSpecialStage(gamemap) && useNightsSS)
+			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
+		else if (gametype == GT_COOP)
+		{
+			if (stplyr->lives <= 0
+			&& cv_cooplives.value == 2
+			&& (netgame || multiplayer))
+			{
+				INT32 i;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i])
+						continue;
+
+					if (&players[i] == stplyr)
+						continue;
+
+					if (players[i].lives > 1)
+						break;
+					}
+
+				if (i != MAXPLAYERS)
+					textHUDdraw(M_GetText("You'll steal a life on respawn..."))
+				else
+					textHUDdraw(M_GetText("Wait to respawn..."))
+			}
+			else
+				textHUDdraw(M_GetText("Wait to respawn..."))
+		}
+		else
+			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
+
+		textHUDdraw(M_GetText("\x82""SPIN:""\x80 Lower"))
+		textHUDdraw(M_GetText("\x82""JUMP:""\x80 Rise"))
+
+		dof12 = true;
+		dospecheader = true;
+	}
+
+	if (!splitscreen && dof12)
+		textHUDdraw(M_GetText("\x82""F12:""\x80 Switch view"))
 
 	if (circuitmap)
 	{
 		if (stplyr->exiting)
-			V_DrawString(hudinfo[HUD_LAP].x, STRINGY(hudinfo[HUD_LAP].y), V_YELLOWMAP, "FINISHED!");
+			textHUDdraw(M_GetText("\x82""FINISHED!"))
 		else
-			V_DrawString(hudinfo[HUD_LAP].x, STRINGY(hudinfo[HUD_LAP].y), 0, va("Lap: %u/%d", stplyr->laps+1, cv_numlaps.value));
+			textHUDdraw(va("Lap:""\x82 %u/%d", stplyr->laps+1, cv_numlaps.value))
 	}
+
+	if (dospecheader)
+		textHUDdraw(M_GetText("\x86""Spectator mode:"))
+
+#undef textHUDdraw
+
 }
 
-static void ST_drawTagHUD(void)
+static inline void ST_drawRaceHUD(void)
 {
-	char pstime[33] = "";
-	char pstext[33] = "";
+	if (leveltime > TICRATE && leveltime <= 5*TICRATE)
+		ST_drawRaceNum(4*TICRATE - leveltime);
+}
 
-	// Figure out what we're going to print.
-	if (leveltime < hidetime * TICRATE) //during the hide time, the seeker and hiders have different messages on their HUD.
-	{
-		if (hidetime)
-			sprintf(pstime, "%d", (hidetime - leveltime/TICRATE)); //hide time is in seconds, not tics.
+static void ST_drawTeamHUD(void)
+{
+	patch_t *p;
+#define SEP 20
 
-		if (stplyr->pflags & PF_TAGIT && !stplyr->spectator)
-			sprintf(pstext, "%s", M_GetText("WAITING FOR PLAYERS TO HIDE..."));
-		else
-		{
-			if (!stplyr->spectator) //spectators get a generic HUD message rather than a gametype specific one.
-			{
-				if (gametype == GT_HIDEANDSEEK) //hide and seek.
-					sprintf(pstext, "%s", M_GetText("HIDE BEFORE TIME RUNS OUT!"));
-				else //default
-					sprintf(pstext, "%s", M_GetText("FLEE BEFORE YOU ARE HUNTED!"));
-			}
-			else
-				sprintf(pstext, "%s", M_GetText("HIDE TIME REMAINING:"));
-		}
-	}
+	if (gametype == GT_CTF)
+		p = bflagico;
 	else
-	{
-		if (cv_timelimit.value && timelimitintics >= leveltime)
-			sprintf(pstime, "%d", (timelimitintics-leveltime)/TICRATE);
+		p = bmatcico;
 
-		if (stplyr->pflags & PF_TAGIT)
-			sprintf(pstext, "%s", M_GetText("YOU'RE IT!"));
-		else
-		{
-			if (cv_timelimit.value)
-				sprintf(pstext, "%s", M_GetText("TIME REMAINING:"));
-			else //Since having no hud message in tag is not characteristic:
-				sprintf(pstext, "%s", M_GetText("NO TIME LIMIT"));
-		}
-	}
+	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
-	// Print the stuff.
-	if (pstext[0])
-	{
-		if (splitscreen)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(168), 0, pstext);
-		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(184), 0, pstext);
-	}
-	if (pstime[0])
-	{
-		if (splitscreen)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(184), 0, pstime);
-		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(192), 0, pstime);
-	}
-}
-
-static void ST_drawCTFHUD(void)
-{
-	INT32 i;
-	UINT16 whichflag = 0;
-
-	// Draw the flags
-	V_DrawSmallScaledPatch(256, (splitscreen) ? STRINGY(160) : STRINGY(176), V_HUDTRANS, rflagico);
-	V_DrawSmallScaledPatch(288, (splitscreen) ? STRINGY(160) : STRINGY(176), V_HUDTRANS, bflagico);
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (players[i].gotflag & GF_REDFLAG) // Red flag isn't at base
-			V_DrawScaledPatch(256, (splitscreen) ? STRINGY(156) : STRINGY(174), V_HUDTRANS, nonicon);
-		else if (players[i].gotflag & GF_BLUEFLAG) // Blue flag isn't at base
-			V_DrawScaledPatch(288, (splitscreen) ? STRINGY(156) : STRINGY(174), V_HUDTRANS, nonicon);
-
-		whichflag |= players[i].gotflag;
-		if ((whichflag & (GF_REDFLAG|GF_BLUEFLAG)) == (GF_REDFLAG|GF_BLUEFLAG))
-			break; // both flags were found, let's stop early
-	}
-
-	// YOU have a flag. Display a monitor-like icon for it.
-	if (stplyr->gotflag)
-	{
-		patch_t *p = (stplyr->gotflag & GF_REDFLAG) ? gotrflag : gotbflag;
-
-		if (splitscreen)
-			V_DrawSmallScaledPatch(312, STRINGY(24) + 42, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, p);
-		else
-			V_DrawScaledPatch(304, 24 + 84, V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, p);
-	}
-
-	// Display a countdown timer showing how much time left until the flag your team dropped returns to base.
-	{
-		char timeleft[33];
-		if (redflag && redflag->fuse > 1)
-		{
-			sprintf(timeleft, "%u", (redflag->fuse / TICRATE));
-			V_DrawCenteredString(268, STRINGY(184), V_YELLOWMAP|V_HUDTRANS, timeleft);
-		}
-
-		if (blueflag && blueflag->fuse > 1)
-		{
-			sprintf(timeleft, "%u", (blueflag->fuse / TICRATE));
-			V_DrawCenteredString(300, STRINGY(184), V_YELLOWMAP|V_HUDTRANS, timeleft);
-		}
-	}
-}
-
-// Draws "Red Team", "Blue Team", or "Spectator" for team gametypes.
-static inline void ST_drawTeamName(void)
-{
-	if (stplyr->ctfteam == 1)
-		V_DrawString(256, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "RED TEAM");
-	else if (stplyr->ctfteam == 2)
-		V_DrawString(248, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "BLUE TEAM");
+	if (gametype == GT_CTF)
+		p = rflagico;
 	else
-		V_DrawString(244, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "SPECTATOR");
+		p = rmatcico;
+
+	V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+
+	if (gametype != GT_CTF)
+		goto num;
+	{
+		INT32 i;
+		UINT16 whichflag = 0;
+
+		// Show which flags aren't at base.
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (players[i].gotflag & GF_BLUEFLAG) // Blue flag isn't at base
+				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
+			if (players[i].gotflag & GF_REDFLAG) // Red flag isn't at base
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
+
+			whichflag |= players[i].gotflag;
+			if ((whichflag & (GF_REDFLAG|GF_BLUEFLAG)) == (GF_REDFLAG|GF_BLUEFLAG))
+				break; // both flags were found, let's stop early
+		}
+
+		// Display a countdown timer showing how much time left until the flag returns to base.
+		{
+			if (blueflag && blueflag->fuse > 1)
+				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (blueflag->fuse / TICRATE)));
+
+			if (redflag && redflag->fuse > 1)
+				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (redflag->fuse / TICRATE)));
+		}
+	}
+
+num:
+	V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", bluescore));
+	V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", redscore));
+
+#undef SEP
 }
 
 static void ST_drawSpecialStageHUD(void)
 {
 	if (totalrings > 0)
-		ST_DrawNumFromHudWS(HUD_SS_TOTALRINGS, totalrings, V_HUDTRANS);
+	{
+		if (hudinfo[HUD_SS_TOTALRINGS].x)
+			ST_DrawNumFromHud(HUD_SS_TOTALRINGS, totalrings, V_HUDTRANS);
+		else if (cv_timetic.value == 2)
+			V_DrawTallNum(hudinfo[HUD_RINGSNUMTICS].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUMTICS].f|V_PERPLAYER|V_HUDTRANS, totalrings);
+		else
+			V_DrawTallNum(hudinfo[HUD_RINGSNUM].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUM].f|V_PERPLAYER|V_HUDTRANS, totalrings);
+	}
 
 	if (leveltime < 5*TICRATE && totalrings > 0)
 	{
@@ -1904,7 +2088,7 @@ static void ST_drawSpecialStageHUD(void)
 
 	if (sstimer)
 	{
-		V_DrawString(hudinfo[HUD_TIMELEFT].x, STRINGY(hudinfo[HUD_TIMELEFT].y), V_HUDTRANS, M_GetText("TIME LEFT"));
+		V_DrawString(hudinfo[HUD_TIMELEFT].x, hudinfo[HUD_TIMELEFT].y, hudinfo[HUD_TIMELEFT].f|V_PERPLAYER|V_HUDTRANS, M_GetText("TIME LEFT"));
 		ST_DrawNumFromHud(HUD_TIMELEFTNUM, sstimer/TICRATE, V_HUDTRANS);
 	}
 	else
@@ -1947,7 +2131,7 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 		interval = 0;
 	}
 
-	V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, STRINGY(hudinfo[HUD_HUNTPICS].y), V_HUDTRANS, patches[i]);
+	V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, hudinfo[HUD_HUNTPICS].y, hudinfo[HUD_HUNTPICS].f|V_PERPLAYER|V_HUDTRANS, patches[i]);
 	return interval;
 }
 
@@ -2061,12 +2245,13 @@ static void ST_overlayDrawer(void)
 			if (LUA_HudEnabled(hud_rings))
 #endif
 			ST_drawRings();
-			if (G_GametypeUsesLives()
+
+			if (!modeattacking
 #ifdef HAVE_BLUA
 			&& LUA_HudEnabled(hud_lives)
 #endif
 			)
-				ST_drawLives();
+				ST_drawLivesArea();
 		}
 	}
 
@@ -2106,45 +2291,52 @@ static void ST_overlayDrawer(void)
 		}
 
 		if (p)
-			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)) - (splitscreen ? 4 : 0), (stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
+			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, BASEVIDHEIGHT/2 - (SHORT(p->height)/2), V_PERPLAYER|(stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
 	}
 
+	if (G_GametypeHasTeams())
+		ST_drawTeamHUD();
 
 	if (!hu_showscores) // hide the following if TAB is held
 	{
 		// Countdown timer for Race Mode
-		if (countdown)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(176), 0, va("%d", countdown/TICRATE));
+		if (countdown > 1)
+		{
+			tic_t time = countdown/TICRATE + 1;
+			if (time < 4)
+				ST_drawRaceNum(countdown);
+			else
+			{
+				tic_t num = time;
+				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				do
+				{
+					width += sz;
+					num /= 10;
+				} while (num);
+				V_DrawTallNum((BASEVIDWIDTH/2) + width, ((3*BASEVIDHEIGHT)>>2) - 7, V_PERPLAYER, time);
+				//V_DrawCenteredString(BASEVIDWIDTH/2, 176, V_PERPLAYER, va("%d", countdown/TICRATE + 1));
+			}
+		}
 
 		// If you are in overtime, put a big honkin' flashin' message on the screen.
 		if (G_RingSlingerGametype() && cv_overtime.value
-			&& (leveltime > (timelimitintics + TICRATE/2)) && cv_timelimit.value && (leveltime/TICRATE % 2 == 0))
-		{
-			if (splitscreen)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(168), 0, M_GetText("OVERTIME!"));
-			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(184), 0, M_GetText("OVERTIME!"));
-		}
+		&& (leveltime > (timelimitintics + TICRATE/2)) && cv_timelimit.value && (leveltime/TICRATE % 2 == 0))
+			V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_PERPLAYER, M_GetText("OVERTIME!"));
 
 		// Draw Match-related stuff
 		//\note Match HUD is drawn no matter what gametype.
 		// ... just not if you're a spectator.
-		if (!stplyr->spectator)
+		if (!stplyr->spectator
+#ifdef HAVE_BLUA
+		&& (LUA_HudEnabled(hud_weaponrings))
+#endif
+		)
 			ST_drawMatchHUD();
 
 		// Race HUD Stuff
 		if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			ST_drawRaceHUD();
-		// Tag HUD Stuff
-		else if (gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
-			ST_drawTagHUD();
-		// CTF HUD Stuff
-		else if (gametype == GT_CTF)
-			ST_drawCTFHUD();
-
-		// Team names for team gametypes
-		if (G_GametypeHasTeams())
-			ST_drawTeamName();
 
 		// Special Stage HUD
 		if (!useNightsSS && G_IsSpecialStage(gamemap) && stplyr == &players[displayplayer])
@@ -2155,9 +2347,6 @@ static void ST_overlayDrawer(void)
 			ST_doItemFinderIconsAndSound();
 		else
 			ST_doHuntIconsAndSound();
-
-		if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
-			V_DrawScaledPatch(hudinfo[HUD_GRAVBOOTSICO].x, STRINGY(hudinfo[HUD_GRAVBOOTSICO].y), V_SNAPTORIGHT, gravboots);
 
 		if(!P_IsLocalPlayer(stplyr))
 		{
@@ -2172,10 +2361,14 @@ static void ST_overlayDrawer(void)
 
 		// This is where we draw all the fun cheese if you have the chasecam off!
 		if ((stplyr == &players[displayplayer] && !camera.chase)
-			|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
+		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
 		{
 			ST_drawFirstPersonHUD();
+			if (cv_powerupdisplay.value)
+				ST_drawPowerupHUD();
 		}
+		else if (cv_powerupdisplay.value == 2)
+			ST_drawPowerupHUD();
 	}
 
 #ifdef HAVE_BLUA
@@ -2191,102 +2384,12 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawLevelTitle();
 
-	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
-	{
-		if (!stplyr->spectator && stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
-		{
-			INT32 i, total = 0, exiting = 0;
-
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator)
-					continue;
-				if (players[i].lives <= 0)
-					continue;
-
-				total++;
-				if (players[i].exiting)
-					exiting++;
-			}
-
-			if (cv_playersforexit.value != 4)
-			{
-				total *= cv_playersforexit.value;
-				if (total % 4) total += 4; // round up
-				total /= 4;
-			}
-
-			if (exiting >= total)
-				;
-			else
-			{
-				total -= exiting;
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(124), 0, va(M_GetText("%d more player%s required to exit."), total, ((total == 1) ? "" : "s")));
-				if (!splitscreen)
-					V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
-			}
-		}
-		else if (!splitscreen && gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
-			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
-		else if (gametype == GT_HIDEANDSEEK &&
-		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
-		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(116), 0, M_GetText("You cannot move while hiding."));
-			if (!splitscreen)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
-		}
-		else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
-		{
-			INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
-			if (respawntime > 0 && !stplyr->spectator)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, va(M_GetText("Respawn in: %d second%s."), respawntime, respawntime == 1 ? "" : "s"));
-			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Jump to respawn."));
-		}
-		else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE)
+	if (!hu_showscores && (netgame || multiplayer)
 #ifdef HAVE_BLUA
 		&& LUA_HudEnabled(hud_textspectator)
 #endif
-		)
-		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60), V_HUDTRANSHALF, M_GetText("You are a spectator."));
-			if (G_GametypeHasTeams())
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
-			else if (G_IsSpecialStage(gamemap) && useNightsSS)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot play until the stage has ended."));
-			else if (gametype == GT_COOP && stplyr->lives <= 0)
-			{
-				if (cv_cooplives.value == 1
-				&& (netgame || multiplayer))
-				{
-					INT32 i;
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i])
-							continue;
-
-						if (&players[i] == stplyr)
-							continue;
-
-						if (players[i].lives > 1)
-							break;
-					}
-
-					if (i != MAXPLAYERS)
-						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 12 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
-				}
-			}
-			else if (gametype != GT_COOP)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
-			if (!splitscreen)
-			{
-				V_DrawCenteredString(BASEVIDWIDTH/2, 148, V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
-				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
-			}
-			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(136), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
-		}
-	}
+	)
+		ST_drawTextHUD();
 
 	if (modeattacking)
 		ST_drawInput();
@@ -2327,6 +2430,22 @@ void ST_Drawer(void)
 	if (rendermode == render_soft)
 #endif
 		if (rendermode != render_none) ST_doPaletteStuff();
+
+	// Blindfold!
+	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	&& (leveltime < hidetime * TICRATE))
+	{
+		if (players[displayplayer].pflags & PF_TAGIT)
+		{
+			stplyr = &players[displayplayer];
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31|V_PERPLAYER);
+		}
+		else if (splitscreen && players[secondarydisplayplayer].pflags & PF_TAGIT)
+		{
+			stplyr = &players[secondarydisplayplayer];
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31|V_PERPLAYER);
+		}
+	}
 
 	if (st_overlay)
 	{

@@ -1125,7 +1125,7 @@ static inline void CL_DrawConnectionStatus(void)
 	INT32 ccstime = I_GetTime();
 
 	// Draw background fade
-	V_DrawFadeScreen();
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw the bottom box.
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
