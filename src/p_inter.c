@@ -577,25 +577,27 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_TOKEN:
 			if (player->bot)
 				return;
-			tokenlist += special->health;
 
 			P_AddPlayerScore(player, 1000);
 
-			if (!modeattacking) // score only there...
+			if (gametype != GT_COOP || modeattacking) // score only?
+				break;
+
+			tokenlist += special->health;
+
+			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
-				if (ALL7EMERALDS(emeralds)) // Got all 7
+				if (!(netgame || multiplayer))
 				{
-					if (!(netgame || multiplayer))
-					{
-						player->continues += 1;
-						players->gotcontinue = true;
-						if (P_IsLocalPlayer(player))
-							S_StartSound(NULL, sfx_s3kac);
-					}
+					player->continues += 1;
+					players->gotcontinue = true;
+					if (P_IsLocalPlayer(player))
+						S_StartSound(NULL, sfx_s3kac);
 				}
-				else
-					token++;
 			}
+			else
+				token++;
+
 			break;
 
 		// Emerald Hunt
@@ -3365,8 +3367,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_KillPlayer(player, source, damage);
 		}
 
-		P_HitDeathMessages(player, inflictor, source, damagetype);
-
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}
 
@@ -3380,6 +3380,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		target->health = 0;
 	else
 		target->health -= damage;
+
+	if (player)
+		P_HitDeathMessages(player, inflictor, source, damagetype);
 
 	if (source && source->player && target)
 		G_GhostAddHit(target);

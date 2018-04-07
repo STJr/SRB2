@@ -133,8 +133,8 @@ boolean useNightsSS = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;
 UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_RED;
-UINT8 skincolor_bluering = SKINCOLOR_AZURE;
+UINT8 skincolor_redring = SKINCOLOR_SALMON;
+UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -888,7 +888,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && player->playerstate == PST_REBORN))
+	// ...OR if we're blindfolded. No looking into the floor.
+	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{
 		cmd->angleturn = (INT16)(localangle >> 16);
 		cmd->aiming = G_ClipAimingPitch(&localaiming);

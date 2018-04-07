@@ -214,15 +214,7 @@ static int lib_pRandomRange(lua_State *L)
 	return 1;
 }
 
-// Deprecated, macros, etc.
-static int lib_pRandom(lua_State *L)
-{
-	NOHUD
-	LUA_Deprecated(L, "P_Random", "P_RandomByte");
-	lua_pushinteger(L, P_RandomByte());
-	return 1;
-}
-
+// Macros.
 static int lib_pSignedRandom(lua_State *L)
 {
 	NOHUD
@@ -2494,7 +2486,6 @@ static luaL_Reg lib[] = {
 	{"P_RandomByte",lib_pRandomByte},
 	{"P_RandomKey",lib_pRandomKey},
 	{"P_RandomRange",lib_pRandomRange},
-	{"P_Random",lib_pRandom}, // DEPRECATED
 	{"P_SignedRandom",lib_pSignedRandom}, // MACRO
 	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
