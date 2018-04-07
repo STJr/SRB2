@@ -7138,7 +7138,7 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed,
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
 	d->affectee = line;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
-	d->speed = speed; // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
+	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 	d->doexists = doexists;
 	d->dotranslucent = dotranslucent;
 	d->dosolid = dosolid;
