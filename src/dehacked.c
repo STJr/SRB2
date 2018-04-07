@@ -1584,6 +1584,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 			{
 				hudinfo[num].y = i;
 			}
+			else if (fastcmp(word, "F"))
+			{
+				hudinfo[num].f = i;
+			}
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -4517,6 +4521,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOXSPARKLE1",
 	"S_BOXSPARKLE2",
 	"S_BOXSPARKLE3",
+	"S_BOXSPARKLE4",
 
 	"S_BOX_FLICKER",
 	"S_BOX_POP1",
@@ -5010,6 +5015,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARMF14",
 	"S_ARMF15",
 	"S_ARMF16",
+	"S_ARMF17",
+	"S_ARMF18",
+	"S_ARMF19",
+	"S_ARMF20",
+	"S_ARMF21",
+	"S_ARMF22",
+	"S_ARMF23",
+	"S_ARMF24",
+	"S_ARMF25",
+	"S_ARMF26",
+	"S_ARMF27",
+	"S_ARMF28",
+	"S_ARMF29",
+	"S_ARMF30",
+	"S_ARMF31",
+	"S_ARMF32",
 
 	"S_ARMB1",
 	"S_ARMB2",
@@ -5027,6 +5048,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARMB14",
 	"S_ARMB15",
 	"S_ARMB16",
+	"S_ARMB17",
+	"S_ARMB18",
+	"S_ARMB19",
+	"S_ARMB20",
+	"S_ARMB21",
+	"S_ARMB22",
+	"S_ARMB23",
+	"S_ARMB24",
+	"S_ARMB25",
+	"S_ARMB26",
+	"S_ARMB27",
+	"S_ARMB28",
+	"S_ARMB29",
+	"S_ARMB30",
+	"S_ARMB31",
+	"S_ARMB32",
 
 	"S_WIND1",
 	"S_WIND2",
@@ -5507,8 +5544,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
-	"S_GOTREDFLAG",
-	"S_GOTBLUEFLAG",
 
 	"S_CORK",
 
@@ -5848,6 +5883,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_XPLD_FLICKY",
 	"S_XPLD1",
 	"S_XPLD2",
+	"S_XPLD3",
+	"S_XPLD4",
+	"S_XPLD5",
+	"S_XPLD6",
 	"S_XPLD_EGGTRAP",
 
 	// Underwater Explosion
@@ -6788,32 +6827,22 @@ static const char *const POWERS_LIST[] = {
 };
 
 static const char *const HUDITEMS_LIST[] = {
-	"LIVESNAME",
-	"LIVESPIC",
-	"LIVESNUM",
-	"LIVESX",
+	"LIVES",
 
 	"RINGS",
-	"RINGSSPLIT",
 	"RINGSNUM",
-	"RINGSNUMSPLIT",
 
 	"SCORE",
 	"SCORENUM",
 
 	"TIME",
-	"TIMESPLIT",
 	"MINUTES",
-	"MINUTESSPLIT",
 	"TIMECOLON",
-	"TIMECOLONSPLIT",
 	"SECONDS",
-	"SECONDSSPLIT",
 	"TIMETICCOLON",
 	"TICS",
 
 	"SS_TOTALRINGS",
-	"SS_TOTALRINGS_SPLIT",
 
 	"GETRINGS",
 	"GETRINGSNUM",
@@ -6821,7 +6850,7 @@ static const char *const HUDITEMS_LIST[] = {
 	"TIMELEFTNUM",
 	"TIMEUP",
 	"HUNTPICS",
-	"GRAVBOOTSICO",
+	"POWERUPS",
 	"LAP"
 };
 
@@ -7310,13 +7339,21 @@ struct {
 	{"V_6WIDTHSPACE",V_6WIDTHSPACE},
 	{"V_OLDSPACING",V_OLDSPACING},
 	{"V_MONOSPACE",V_MONOSPACE},
-	{"V_PURPLEMAP",V_PURPLEMAP},
+	{"V_MAGENTAMAP",V_MAGENTAMAP},
 	{"V_YELLOWMAP",V_YELLOWMAP},
 	{"V_GREENMAP",V_GREENMAP},
 	{"V_BLUEMAP",V_BLUEMAP},
 	{"V_REDMAP",V_REDMAP},
 	{"V_GRAYMAP",V_GRAYMAP},
 	{"V_ORANGEMAP",V_ORANGEMAP},
+	{"V_SKYMAP",V_SKYMAP},
+	{"V_PURPLEMAP",V_PURPLEMAP},
+	{"V_AQUAMAP",V_AQUAMAP},
+	{"V_PERIDOTMAP",V_PERIDOTMAP},
+	{"V_AZUREMAP",V_AZUREMAP},
+	{"V_BROWNMAP",V_BROWNMAP},
+	{"V_ROSYMAP",V_ROSYMAP},
+	{"V_INVERTMAP",V_INVERTMAP},
 	{"V_TRANSLUCENT",V_TRANSLUCENT},
 	{"V_10TRANS",V_10TRANS},
 	{"V_20TRANS",V_20TRANS},
@@ -7342,7 +7379,7 @@ struct {
 	{"V_WRAPX",V_WRAPX},
 	{"V_WRAPY",V_WRAPY},
 	{"V_NOSCALESTART",V_NOSCALESTART},
-	{"V_SPLITSCREEN",V_SPLITSCREEN},
+	{"V_PERPLAYER",V_PERPLAYER},
 
 	{"V_PARAMMASK",V_PARAMMASK},
 	{"V_SCALEPATCHMASK",V_SCALEPATCHMASK},
@@ -7492,7 +7529,7 @@ static hudnum_t get_huditem(const char *word)
 		if (fastcmp(word, HUDITEMS_LIST[i]))
 			return i;
 	deh_warning("Couldn't find huditem named 'HUD_%s'",word);
-	return HUD_LIVESNAME;
+	return HUD_LIVES;
 }
 
 #ifndef HAVE_BLUA

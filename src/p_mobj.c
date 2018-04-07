@@ -9539,7 +9539,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
-	if (i == MT_TOKEN && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	// Objectplace landing point
@@ -10060,9 +10060,6 @@ domaceagain:
 		// the bumper in 30 degree increments.
 		mobj->threshold = (mthing->options & 15) % 12; // It loops over, etc
 		P_SetMobjState(mobj, mobj->info->spawnstate+mobj->threshold);
-
-		// you can shut up now, OBJECTFLIP.  And all of the other options, for that matter.
-		mthing->options &= ~0xF;
 		break;
 	case MT_EGGCAPSULE:
 		if (mthing->angle <= 0)
@@ -10262,6 +10259,14 @@ domaceagain:
 			if (i == MT_PULL)
 				P_SetMobjState(mobj, S_GRAVWELLRED);
 		}
+	}
+
+	// ignore MTF_ flags and return early
+	if (i == MT_NIGHTSBUMPER)
+	{
+		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
+		mthing->mobj = mobj;
+		return;
 	}
 
 	mobj->angle = FixedAngle(mthing->angle*FRACUNIT);

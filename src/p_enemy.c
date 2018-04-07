@@ -3243,14 +3243,7 @@ void A_ExtraLife(mobj_t *actor)
 		return;
 	}
 
-	// In shooter gametypes, give the player 100 rings instead of an extra life.
-	if (gametype != GT_COOP && gametype != GT_COMPETITION)
-	{
-		P_GivePlayerRings(player, 100);
-		P_PlayLivesJingle(player);
-	}
-	else
-		P_GiveCoopLives(player, 1, true);
+	P_GiveCoopLives(player, 1, true);
 }
 
 // Function: A_GiveShield

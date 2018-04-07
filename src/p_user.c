@@ -918,8 +918,12 @@ void P_ResetPlayer(player_t *player)
 // Gives rings to the player, and does any special things required.
 // Call this function when you want to increment the player's health.
 //
+
 void P_GivePlayerRings(player_t *player, INT32 num_rings)
 {
+	if (!player)
+		return;
+
 	if (player->bot)
 		player = &players[consoleplayer];
 
@@ -938,7 +942,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
-	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives())
+	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != 0x7f)
 	{
 		INT32 gainlives = 0;
 
@@ -950,7 +954,12 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 		if (gainlives)
 		{
-			P_GivePlayerLives(player, gainlives);
+			player->lives += gainlives;
+			if (player->lives > 99)
+				player->lives = 99;
+			else if (player->lives < 1)
+				player->lives = 1;
+
 			P_PlayLivesJingle(player);
 		}
 	}
@@ -964,7 +973,30 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 //
 void P_GivePlayerLives(player_t *player, INT32 numlives)
 {
-	if (player->lives == 0x7f) return;
+	if (!player)
+		return;
+
+	if (player->bot)
+		player = &players[consoleplayer];
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (player->lives == 0x7f || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		{
+			P_GivePlayerRings(player, 100*numlives);
+			return;
+		}
+
+		if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0)
+		{
+			UINT8 prevlives = player->lives;
+			P_GivePlayerRings(player, 100*numlives);
+			if (player->lives - prevlives >= numlives)
+				return;
+
+			numlives = (numlives + prevlives - player->lives);
+		}
+	}
 
 	player->lives += numlives;
 
@@ -1168,11 +1200,7 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if ((player && player->lives == 0x7f)
-	|| (!player && &players[consoleplayer] && players[consoleplayer].lives == 0x7f)
-	|| (gametype == GT_COOP && (netgame || multiplayer) && cv_cooplives.value == 0))
-		S_StartSound(NULL, sfx_lose);
-	else if (use1upSound)
+	if (use1upSound)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
@@ -1734,7 +1762,7 @@ void P_DoPlayerExit(player_t *player)
 	else if (gametype == GT_RACE || gametype == GT_COMPETITION) // If in Race Mode, allow
 	{
 		if (!countdown) // a 60-second wait ala Sonic 2.
-			countdown = cv_countdowntime.value*TICRATE + 1; // Use cv_countdowntime
+			countdown = (cv_countdowntime.value - 1)*TICRATE + 1; // Use cv_countdowntime
 
 		player->exiting = 3*TICRATE;
 
@@ -2345,12 +2373,17 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 {
 	tic_t timeleft = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
 
-	if ((timeleft == 11*TICRATE + 1) // 5
-	 || (timeleft ==  9*TICRATE + 1) // 4
-	 || (timeleft ==  7*TICRATE + 1) // 3
-	 || (timeleft ==  5*TICRATE + 1) // 2
-	 || (timeleft ==  3*TICRATE + 1) // 1
-	 || (timeleft ==  1*TICRATE + 1) // 0
+	if (player->exiting)
+		player->powers[pw_underwater] = player->powers[pw_spacetime] = 0;
+
+	timeleft--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
+
+	if ((timeleft == 11*TICRATE) // 5
+	 || (timeleft ==  9*TICRATE) // 4
+	 || (timeleft ==  7*TICRATE) // 3
+	 || (timeleft ==  5*TICRATE) // 2
+	 || (timeleft ==  3*TICRATE) // 1
+	 || (timeleft ==  1*TICRATE) // 0
 	) {
 		fixed_t height = (player->mo->eflags & MFE_VERTICALFLIP)
 		? player->mo->z - FixedMul(8*FRACUNIT + mobjinfo[MT_DROWNNUMBERS].height, FixedMul(player->mo->scale, player->shieldscale))
@@ -2358,7 +2391,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 
 		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
 
-		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be (((timeleft - 1)/TICRATE) - 1)/2, but integer division rounds down for us
+		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be ((timeleft/TICRATE) - 1)/2, but integer division rounds down for us
 
 		if (player->charflags & SF_MACHINE)
 		{
@@ -2416,14 +2449,6 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 			S_StopMusic();
 			S_ChangeMusicInternal("_drown", false);
 		}
-	}
-
-	if (player->exiting)
-	{
-		if (player->powers[pw_underwater] > 1)
-			player->powers[pw_underwater] = 0;
-
-		player->powers[pw_spacetime] = 0;
 	}
 }
 
@@ -2594,13 +2619,11 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 			else
 				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
-			if (leveltime & 4)
-			{
-				if (player->gotflag & GF_REDFLAG)
-					P_SetMobjStateNF(sign, S_GOTREDFLAG);
-			}
-			else if (player->gotflag & GF_BLUEFLAG)
-				P_SetMobjStateNF(sign, S_GOTBLUEFLAG);
+
+			if (player->gotflag & GF_REDFLAG)
+				sign->frame = 1|FF_FULLBRIGHT;
+			else //if (player->gotflag & GF_BLUEFLAG)
+				sign->frame = 2|FF_FULLBRIGHT;
 		}
 	}
 }
@@ -9548,7 +9571,7 @@ void P_PlayerThink(player_t *player)
 		if (i == MAXPLAYERS && player->exiting == 3*TICRATE) // finished
 			player->exiting = (14*TICRATE)/5 + 1;
 
-		// If 10 seconds are left on the timer,
+		// If 11 seconds are left on the timer,
 		// begin the drown music for countdown!
 		if (countdown == 11*TICRATE - 1)
 		{
@@ -9721,7 +9744,7 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 
-	if (player->linktimer && (player->linktimer >= (2*TICRATE - 1) || !player->powers[pw_nights_linkfreeze]))
+	if (player->linktimer && !player->powers[pw_nights_linkfreeze])
 	{
 		if (--player->linktimer <= 0) // Link timer
 			player->linkcount = 0;
