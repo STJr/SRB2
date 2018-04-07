@@ -1539,6 +1539,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 
 	boolean donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
 	boolean fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
+	boolean fromnights = triggerline->flags & ML_DONTPEGTOP; // nightserize: from nights // denightserize: >0 players are nights
 
 	UINT8 currentmare = UINT8_MAX;
 	UINT8 currentlap = UINT8_MAX;
@@ -1562,12 +1563,22 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 			else if (actor->player->powers[pw_carry] == CR_NIGHTSMODE)
 				return false;
 		}
+		// run only if player is nightserizing from nights
+		else if (fromnights)
+		{
+			if (!actor->player)
+				return false;
+			else if (actor->player->powers[pw_carry] != CR_NIGHTSMODE)
+				return false;
+		}
 	}
 
 	// Get current mare and lap (and check early return for DeNightserize)
 	if (perglobal || perglobalinverse 
-		|| (specialtype >= 325 && specialtype <= 326 && fromnonights)) 
+		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights))) 
 	{
+		UINT8 playersarenights = 0;
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i] || players[i].spectator)
@@ -1577,6 +1588,11 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 			if (specialtype >= 325 && specialtype <= 326 && fromnonights
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				return false;
+
+			// count number of nights players for denightserize return
+			if (specialtype >= 325 && specialtype <= 326 && fromnights
+				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
+				playersarenights++;
 
 			UINT8 lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
 
@@ -1605,6 +1621,11 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 					currentlap = lap;
 			}
 		}
+
+		// denightserize: run only if >0 players are nights
+		if (specialtype >= 325 && specialtype <= 326 && fromnights
+			&& playersarenights < 1)
+			return false;
 	}
 	// get current mare/lap from triggering player
 	else if (!perglobal && !perglobalinverse)
@@ -1839,8 +1860,6 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
-
-		// Let's do the NiGHTS triggers in one code block; they mostly have the same logic
 		case 323: // nightserize - each time
 		case 324: // nightserize - once
 		case 325: // denightserize - each time
