@@ -1563,8 +1563,8 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEINT32(save_p, ht->affectee);
-	WRITEINT32(save_p, ht->destvalue);
-	WRITEINT32(save_p, ht->speed);
+	WRITEINT16(save_p, ht->destvalue);
+	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
 	WRITEUINT8(save_p, ht->dosolid);
@@ -2565,8 +2565,8 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->affectee = READINT32(save_p);
-	ht->destvalue = READINT32(save_p);
-	ht->speed = READINT32(save_p);
+	ht->destvalue = READINT16(save_p);
+	ht->speed = READINT16(save_p);
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
 	ht->dosolid = READUINT8(save_p);

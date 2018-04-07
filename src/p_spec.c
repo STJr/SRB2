@@ -105,9 +105,12 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFading(line_t *line, fade_t *data);
 #define P_RemoveFading(l) P_ResetFading(l, NULL);
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, 
-							 BOOL doexists, BOOL dotranslucent, BOOL dosolid, BOOL dospawnflags
-							 , BOOL dofadeinonly, INT32 line);
+static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed, 
+	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
+	boolean dofadeinonly, INT32 line);
+static void P_AddMasterFader(INT16 destvalue, INT16 speed, 
+	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
+	boolean dofadeinonly, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3104,14 +3107,29 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
 				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
 					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
-						                 sides[line->sidenum[0]].rowoffset>>FRACBITS, 
-										 (line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-										 !(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
-										 (line->flags & ML_BOUNCY), 		// handle FF_SOLID
-										 (line->flags & ML_EFFECT1), 		// handle spawnflags
-										 (line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
-										 (INT32)(sectors[s].lines[j]-lines));
+					{
+						if (sides[line->sidenum[0]].rowoffset>>FRACBITS > 0)
+							P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
+								sides[line->sidenum[0]].rowoffset>>FRACBITS, 
+								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
+								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
+								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
+								(line->flags & ML_EFFECT1), 		// handle spawnflags
+								(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
+								(INT32)(sectors[s].lines[j]-lines));
+						else
+						{
+							P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
+							P_FindFakeFloorsDoAlpha(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
+								0,									// set alpha immediately 
+								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
+								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
+								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
+								(line->flags & ML_EFFECT1), 		// handle spawnflags
+								(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
+								(INT32)(sectors[s].lines[j]-lines));
+						}
+					}
 			break;
 		}
 		
@@ -7118,6 +7136,171 @@ static void P_ResetFading(line_t *line, fade_t *data)
 	}
 }
 
+static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
+	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
+	boolean dofadeinonly)
+{
+	boolean result = false;
+
+	if (rover->alpha == destvalue)
+		return result;
+	// fade out
+	else if (rover->alpha > destvalue)
+	{
+		// finish fading out
+		if (speed < 1 || rover->alpha - speed <= destvalue + speed)
+		{
+			rover->alpha = destvalue;
+
+			if (doexists)
+			{
+				if (rover->alpha <= 1)
+					rover->flags &= ~FF_EXISTS;
+				else
+					rover->flags |= FF_EXISTS;
+			}
+
+			if (dosolid
+				&& !(rover->flags & FF_SWIMMABLE)
+				&& !(rover->flags & FF_QUICKSAND))
+				rover->flags &= ~FF_SOLID; // make intangible at end of fade-out
+
+			if (dotranslucent)
+			{
+				if (rover->alpha >= 256)
+				{
+					rover->flags |= FF_CUTLEVEL;
+					rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
+				}
+				else
+				{
+					rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+					rover->flags &= ~FF_CUTLEVEL;
+				}
+
+				if (rover->flags & FF_SOLID)
+					rover->flags &= ~FF_CUTSPRITES;
+				else
+					rover->flags |= FF_CUTSPRITES;
+			}
+		}
+		else // continue fading out
+		{
+			rover->alpha -= speed;
+
+			if (doexists)
+				rover->flags |= FF_EXISTS;
+
+			if (dosolid
+				&& !(rover->flags & FF_SWIMMABLE)
+				&& !(rover->flags & FF_QUICKSAND))
+				rover->flags |= FF_SOLID; // keep solid during fade
+
+			if (dotranslucent)
+			{
+				rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+				rover->flags &= ~FF_CUTLEVEL;
+
+				if (rover->flags & FF_SOLID)
+					rover->flags &= ~FF_CUTSPRITES;
+				else
+					rover->flags |= FF_CUTSPRITES;
+			}
+
+			result = true;
+		}
+	}
+	else // fade in
+	{
+		// finish fading in
+		if (speed < 1 || rover->alpha + speed >= destvalue - speed)
+		{
+			rover->alpha = destvalue;
+			
+			if (doexists)
+			{
+				if (rover->alpha <= 1)
+					rover->flags &= ~FF_EXISTS;
+				else
+					rover->flags |= FF_EXISTS;
+			}
+
+			if (dosolid
+				&& !(rover->flags & FF_SWIMMABLE)
+				&& !(rover->flags & FF_QUICKSAND))
+				rover->flags |= FF_SOLID; // make solid at end of fade-in
+
+			if (dotranslucent)
+			{
+				if (rover->alpha >= 256)
+				{
+					rover->flags |= FF_CUTLEVEL;
+					rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
+				}
+				else
+				{
+					rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+					rover->flags &= ~FF_CUTLEVEL;
+				}
+
+				if (rover->flags & FF_SOLID)
+					rover->flags &= ~FF_CUTSPRITES;
+				else
+					rover->flags |= FF_CUTSPRITES;
+			}
+		}
+		else // continue fading in
+		{
+			rover->alpha += speed;
+			
+			if (doexists)
+				rover->flags |= FF_EXISTS;
+
+			if (dosolid
+				&& !(rover->flags & FF_SWIMMABLE)
+				&& !(rover->flags & FF_QUICKSAND))
+				rover->flags |= FF_SOLID; // keep solid during fade
+
+			if (dotranslucent)
+			{
+				rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+				rover->flags &= ~FF_CUTLEVEL;
+
+				if (rover->flags & FF_SOLID)
+					rover->flags &= ~FF_CUTSPRITES;
+				else
+					rover->flags |= FF_CUTSPRITES;
+			}
+
+			result = true;
+		}
+	}
+
+	return result;
+}
+
+static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed, 
+	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
+	boolean dofadeinonly, INT32 line)
+{
+	ffloor_t *rover;
+	register INT32 s;
+	INT32 affectedffloors = 0;
+
+	for (s = -1; (s = P_FindSectorFromLineTag(&lines[line], s)) >= 0 ;)
+	{
+		for (rover = sectors[s].ffloors; rover; rover = rover->next)
+		{
+			if (rover->master != &lines[line])
+				continue;
+
+			affectedffloors += (INT32)P_DoFakeFloorAlpha(rover, destvalue, speed, doexists, dotranslucent, dosolid, dospawnflags, dofadeinonly);
+		}
+	}
+
+	return affectedffloors;
+}
+
 /** Adds master fader thinker.
   *
   * \param destvalue	transparency value to fade to
@@ -7129,9 +7312,9 @@ static void P_ResetFading(line_t *line, fade_t *data)
   * \param dofadeinonly	enable flags when fade-in is finished; never on fade-out
   * \param line			line to target FOF
   */
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, 
-							 BOOL doexists, BOOL dotranslucent, BOOL dosolid, BOOL dospawnflags
-							 , BOOL dofadeinonly, INT32 line)
+static void P_AddMasterFader(INT16 destvalue, INT16 speed, 
+	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
+	boolean dofadeinonly, INT32 line)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
@@ -7158,156 +7341,9 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed,
   */
 void T_Fade(fade_t *d)
 {
-	ffloor_t *rover;
-	register INT32 s;
-	INT32 affectedffloors = 0;
-
-	for (s = -1; (s = P_FindSectorFromLineTag(&lines[d->affectee], s)) >= 0 ;)
-	{
-		for (rover = sectors[s].ffloors; rover; rover = rover->next)
-		{
-			if (rover->master != &lines[d->affectee])
-				continue;
-
-			// fade out
-			if (rover->alpha > d->destvalue)
-			{
-				// finish fading out
-				if (d->speed < 1 || rover->alpha - d->speed <= d->destvalue + d->speed)
-				{
-					if (rover->alpha != d->destvalue)
-					{
-						rover->alpha = d->destvalue;
-
-						if (d->doexists)
-						{
-							if (rover->alpha <= 1)
-								rover->flags &= ~FF_EXISTS;
-							else
-								rover->flags |= FF_EXISTS;
-						}
-
-						if (d->dosolid
-							&& !(rover->flags & FF_SWIMMABLE)
-							&& !(rover->flags & FF_QUICKSAND))
-							rover->flags &= ~FF_SOLID; // make intangible at end of fade-out
-
-						if (d->dotranslucent)
-						{
-							if (rover->alpha >= 256)
-							{
-								rover->flags |= FF_CUTLEVEL;
-								rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
-							}
-							else
-							{
-								rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-								rover->flags &= ~FF_CUTLEVEL;
-							}
-
-							if (rover->flags & FF_SOLID)
-								rover->flags &= ~FF_CUTSPRITES;
-							else
-								rover->flags |= FF_CUTSPRITES;
-						}
-					}
-				}
-				else // continue fading out
-				{
-					rover->alpha -= d->speed;
-
-					if (d->doexists)
-						rover->flags |= FF_EXISTS;
-
-					if (d->dosolid
-						&& !(rover->flags & FF_SWIMMABLE)
-						&& !(rover->flags & FF_QUICKSAND))
-						rover->flags |= FF_SOLID; // keep solid during fade
-
-					if (d->dotranslucent)
-					{
-						rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-						rover->flags &= ~FF_CUTLEVEL;
-
-						if (rover->flags & FF_SOLID)
-							rover->flags &= ~FF_CUTSPRITES;
-						else
-							rover->flags |= FF_CUTSPRITES;
-					}
-
-					affectedffloors++;
-				}
-			}
-			else // fade in
-			{
-				// finish fading in
-				if (d->speed < 1 || rover->alpha + d->speed >= d->destvalue - d->speed)
-				{
-					if (rover->alpha != d->destvalue)
-					{
-						rover->alpha = d->destvalue;
-						
-						if (d->doexists)
-						{
-							if (rover->alpha <= 1)
-								rover->flags &= ~FF_EXISTS;
-							else
-								rover->flags |= FF_EXISTS;
-						}
-
-						if (d->dosolid
-							&& !(rover->flags & FF_SWIMMABLE)
-							&& !(rover->flags & FF_QUICKSAND))
-							rover->flags |= FF_SOLID; // make solid at end of fade-in
-
-						if (d->dotranslucent)
-						{
-							if (rover->alpha >= 256)
-							{
-								rover->flags |= FF_CUTLEVEL;
-								rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
-							}
-							else
-							{
-								rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-								rover->flags &= ~FF_CUTLEVEL;
-							}
-
-							if (rover->flags & FF_SOLID)
-								rover->flags &= ~FF_CUTSPRITES;
-							else
-								rover->flags |= FF_CUTSPRITES;
-						}
-					}
-				}
-				else // continue fading in
-				{
-					rover->alpha += d->speed;
-					
-					if (d->doexists)
-						rover->flags |= FF_EXISTS;
-
-					if (d->dosolid
-						&& !(rover->flags & FF_SWIMMABLE)
-						&& !(rover->flags & FF_QUICKSAND))
-						rover->flags |= FF_SOLID; // keep solid during fade
-
-					if (d->dotranslucent)
-					{
-						rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-						rover->flags &= ~FF_CUTLEVEL;
-
-						if (rover->flags & FF_SOLID)
-							rover->flags &= ~FF_CUTSPRITES;
-						else
-							rover->flags |= FF_CUTSPRITES;
-					}
-
-					affectedffloors++;
-				}
-			}
-		}
-	}
+	INT32 affectedffloors = P_FindFakeFloorsDoAlpha(d->destvalue, d->speed, 
+		d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags,
+		d->dofadeinonly, d->affectee);
 
 	// no more ffloors to fade? remove myself
 	if (affectedffloors == 0)
