@@ -439,11 +439,22 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		height = SHORT(realpatch->height);
 		x2 = x1 + width;
 
+		if (x1 > texture->width || x2 < 0)
+			continue; // patch not located within texture's x bounds, ignore
+
+		if (patch->originy > texture->height || (patch->originy + height) < 0)
+			continue; // patch not located within texture's y bounds, ignore
+
+		// patch is actually inside the texture!
+		// now check if texture is partly off-screen and adjust accordingly
+
+		// left edge
 		if (x1 < 0)
 			x = 0;
 		else
 			x = x1;
 
+		// right edge
 		if (x2 > texture->width)
 			x2 = texture->width;
 

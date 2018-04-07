@@ -62,19 +62,31 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	UINT8 texel;
 	UINT16 texelu16;
 
+	if (!ptexturewidth)
+		return;
+
 	x1 = originx;
 	x2 = x1 + SHORT(realpatch->width);
 
+	if (x1 > ptexturewidth || x2 < 0)
+		return; // patch not located within texture's x bounds, ignore
+
+	if (originy > ptextureheight || (originy + SHORT(realpatch->height)) < 0)
+		return; // patch not located within texture's y bounds, ignore
+
+	// patch is actually inside the texture!
+	// now check if texture is partly off-screen and adjust accordingly
+
+	// left edge
 	if (x1 < 0)
 		x = 0;
 	else
 		x = x1;
 
+	// right edge
 	if (x2 > ptexturewidth)
 		x2 = ptexturewidth;
 
-	if (!ptexturewidth)
-		return;
 
 	col = x * pblockwidth / ptexturewidth;
 	ncols = ((x2 - x) * pblockwidth) / ptexturewidth;
