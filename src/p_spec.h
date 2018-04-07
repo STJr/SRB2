@@ -456,7 +456,11 @@ typedef struct
 	INT32 affectee;     ///< Number of affected line
 	INT32 destvalue;    ///< Transparency value to fade to
 	INT32 speed;        ///< Speed to fade by
-	UINT32 handleflags;  ///< FOF flags to handle
+	boolean doexists;      ///< Handle FF_EXISTS handling
+	boolean dotranslucent; ///< Handle FF_TRANSLUCENT handling
+	boolean dosolid;       ///< Handle FF_SOLID handling
+	boolean dospawnflags;  ///< Enable spawnflags handling
+	boolean dofadeinonly;  ///< Set flags only when fade-in is finished; never during fade-out
 } fade_t;
 
 void T_Fade(fade_t *d);

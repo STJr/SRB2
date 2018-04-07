@@ -105,7 +105,9 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFading(line_t *line, fade_t *data);
 #define P_RemoveFading(l) P_ResetFading(l, NULL);
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOOL handlesolid, BOOL handletrans, INT32 line);
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, 
+							 BOOL doexists, BOOL dotranslucent, BOOL dosolid, BOOL dospawnflags
+							 , BOOL dofadeinonly, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3105,8 +3107,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
 						                 sides[line->sidenum[0]].rowoffset>>FRACBITS, 
 										 (line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-										 (line->flags & ML_EFFECT1), 		// handle FF_SOLID
 										 !(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
+										 (line->flags & ML_BOUNCY), 		// handle FF_SOLID
+										 (line->flags & ML_EFFECT1), 		// handle spawnflags
+										 (line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
 										 (INT32)(sectors[s].lines[j]-lines));
 			break;
 		}
@@ -7118,12 +7122,16 @@ static void P_ResetFading(line_t *line, fade_t *data)
   *
   * \param destvalue	transparency value to fade to
   * \param speed		speed to fade by
-  * \param handleexist	handle FF_EXISTS
-  * \param handlesolid	handle FF_SOLID
-  * \param handletrans	do not handle FF_TRANSLUCENT
+  * \param doexists	handle FF_EXISTS
+  * \param dotranslucent	handle FF_TRANSLUCENT
+  * \param dosolid	handle FF_SOLID
+  * \param dospawnflags	handle spawnflags
+  * \param dofadeinonly	enable flags when fade-in is finished; never on fade-out
   * \param line			line to target FOF
   */
-static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOOL handlesolid, BOOL handletrans, INT32 line)
+static void P_AddMasterFader(INT32 destvalue, INT32 speed, 
+							 BOOL doexists, BOOL dotranslucent, BOOL dosolid, BOOL dospawnflags
+							 , BOOL dofadeinonly, INT32 line)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
@@ -7131,18 +7139,11 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOO
 	d->affectee = line;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
 	d->speed = speed; // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
-
-	// combine the flags-to-handle, this is more convenient than separate BOOLS
-	d->handleflags = 0;
-
-	if (handleexist)
-		d->handleflags |= FF_EXISTS;
-
-	if (handlesolid)
-		d->handleflags |= FF_SOLID;
-
-	if (handletrans)
-		d->handleflags |= FF_TRANSLUCENT;
+	d->doexists = doexists;
+	d->dotranslucent = dotranslucent;
+	d->dosolid = dosolid;
+	d->dospawnflags = dospawnflags;
+	d->dofadeinonly = dofadeinonly;
 
 	// find any existing thinkers and remove them, then replace with new data
 	P_ResetFading(&lines[d->affectee], d);
@@ -7178,7 +7179,7 @@ void T_Fade(fade_t *d)
 					{
 						rover->alpha = d->destvalue;
 
-						if (d->handleflags & FF_EXISTS)
+						if (d->doexists)
 						{
 							if (rover->alpha <= 1)
 								rover->flags &= ~FF_EXISTS;
@@ -7186,12 +7187,12 @@ void T_Fade(fade_t *d)
 								rover->flags |= FF_EXISTS;
 						}
 
-						if ((d->handleflags & FF_SOLID)
+						if (d->dosolid
 							&& !(rover->flags & FF_SWIMMABLE)
 							&& !(rover->flags & FF_QUICKSAND))
 							rover->flags &= ~FF_SOLID; // make intangible at end of fade-out
 
-						if (d->handleflags & FF_TRANSLUCENT)
+						if (d->dotranslucent)
 						{
 							if (rover->alpha >= 256)
 							{
@@ -7215,15 +7216,15 @@ void T_Fade(fade_t *d)
 				{
 					rover->alpha -= d->speed;
 
-					if (d->handleflags & FF_EXISTS)
+					if (d->doexists)
 						rover->flags |= FF_EXISTS;
 
-					if ((d->handleflags & FF_SOLID)
+					if (d->dosolid
 						&& !(rover->flags & FF_SWIMMABLE)
 						&& !(rover->flags & FF_QUICKSAND))
 						rover->flags |= FF_SOLID; // keep solid during fade
 
-					if (d->handleflags & FF_TRANSLUCENT)
+					if (d->dotranslucent)
 					{
 						rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
 						rover->flags &= ~FF_CUTLEVEL;
@@ -7246,7 +7247,7 @@ void T_Fade(fade_t *d)
 					{
 						rover->alpha = d->destvalue;
 						
-						if (d->handleflags & FF_EXISTS)
+						if (d->doexists)
 						{
 							if (rover->alpha <= 1)
 								rover->flags &= ~FF_EXISTS;
@@ -7254,12 +7255,12 @@ void T_Fade(fade_t *d)
 								rover->flags |= FF_EXISTS;
 						}
 
-						if ((d->handleflags & FF_SOLID)
+						if (d->dosolid
 							&& !(rover->flags & FF_SWIMMABLE)
 							&& !(rover->flags & FF_QUICKSAND))
 							rover->flags |= FF_SOLID; // make solid at end of fade-in
 
-						if (d->handleflags & FF_TRANSLUCENT)
+						if (d->dotranslucent)
 						{
 							if (rover->alpha >= 256)
 							{
@@ -7283,15 +7284,15 @@ void T_Fade(fade_t *d)
 				{
 					rover->alpha += d->speed;
 					
-					if (d->handleflags & FF_EXISTS)
+					if (d->doexists)
 						rover->flags |= FF_EXISTS;
 
-					if ((d->handleflags & FF_SOLID)
+					if (d->dosolid
 						&& !(rover->flags & FF_SWIMMABLE)
 						&& !(rover->flags & FF_QUICKSAND))
 						rover->flags |= FF_SOLID; // keep solid during fade
 
-					if (d->handleflags & FF_TRANSLUCENT)
+					if (d->dotranslucent)
 					{
 						rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
 						rover->flags &= ~FF_CUTLEVEL;
