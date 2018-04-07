@@ -3105,8 +3105,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
 						                 sides[line->sidenum[0]].rowoffset>>FRACBITS, 
 										 (line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-										 (line->flags & ML_NOCLIMB), 		// handle FF_SOLID
-										 !(line->flags & ML_EFFECT1),		// do not handle FF_TRANSLUCENT
+										 (line->flags & ML_EFFECT1), 		// handle FF_SOLID
+										 !(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
 										 (INT32)(sectors[s].lines[j]-lines));
 			break;
 		}
@@ -7130,7 +7130,7 @@ static void P_AddMasterFader(INT32 destvalue, INT32 speed, BOOL handleexist, BOO
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
 	d->affectee = line;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
-	d->speed = max(1, speed); // minimum speed 1/tic
+	d->speed = speed; // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 
 	// combine the flags-to-handle, this is more convenient than separate BOOLS
 	d->handleflags = 0;
@@ -7172,7 +7172,7 @@ void T_Fade(fade_t *d)
 			if (rover->alpha > d->destvalue)
 			{
 				// finish fading out
-				if (rover->alpha - d->speed <= d->destvalue + d->speed)
+				if (d->speed < 1 || rover->alpha - d->speed <= d->destvalue + d->speed)
 				{
 					if (rover->alpha != d->destvalue)
 					{
@@ -7240,7 +7240,7 @@ void T_Fade(fade_t *d)
 			else // fade in
 			{
 				// finish fading in
-				if (rover->alpha + d->speed >= d->destvalue - d->speed)
+				if (d->speed < 1 || rover->alpha + d->speed >= d->destvalue - d->speed)
 				{
 					if (rover->alpha != d->destvalue)
 					{
