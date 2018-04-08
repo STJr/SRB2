@@ -3244,14 +3244,7 @@ void A_ExtraLife(mobj_t *actor)
 		return;
 	}
 
-	// In shooter gametypes, give the player 100 rings instead of an extra life.
-	if (gametype != GT_COOP && gametype != GT_COMPETITION)
-	{
-		P_GivePlayerRings(player, 100);
-		P_PlayLivesJingle(player);
-	}
-	else
-		P_GiveCoopLives(player, 1, true);
+	P_GiveCoopLives(player, 1, true);
 }
 
 // Function: A_GiveShield
@@ -4918,6 +4911,7 @@ void A_SlingAppear(mobj_t *actor)
 	boolean firsttime = true;
 	UINT8 mlength = 4;
 	mobj_t *spawnee;
+	mobj_t *hprev = actor;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SlingAppear", actor))
 		return;
@@ -4928,7 +4922,6 @@ void A_SlingAppear(mobj_t *actor)
 	P_SetThingPosition(actor);
 	actor->lastlook = 128;
 	actor->movecount = actor->lastlook;
-	actor->health = actor->angle>>ANGLETOFINESHIFT;
 	actor->threshold = 0;
 	actor->movefactor = actor->threshold;
 	actor->friction = 128;
@@ -4937,10 +4930,13 @@ void A_SlingAppear(mobj_t *actor)
 	{
 		spawnee = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLMACECHAIN);
 
-		P_SetTarget(&spawnee->target, actor);
+		P_SetTarget(&spawnee->tracer, actor);
+		P_SetTarget(&spawnee->hprev, hprev);
+		P_SetTarget(&hprev->hnext, spawnee);
+		hprev = spawnee;
 
-		spawnee->threshold = 0;
-		spawnee->reactiontime = mlength;
+		spawnee->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+		spawnee->movecount = mlength;
 
 		if (firsttime)
 		{
