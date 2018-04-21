@@ -1223,8 +1223,16 @@ void D_SRB2Main(void)
 	CONS_Printf("R_Init(): Init SRB2 refresh daemon.\n");
 	R_Init();
 
-	// setting up sound
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	// setting up sound	
+	if (dedicated)
+	{
+		nosound = true;
+		nomidimusic = nodigimusic = true;
+	}
+	else
+	{
+		CONS_Printf("S_Init(): Setting up sound.\n");
+	}
 	if (M_CheckParm("-nosound"))
 		nosound = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
