@@ -310,7 +310,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k54",  false,  64, 64, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing"}, // MetalSonic shot fire
   {"s3k55",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical movement"},
   {"s3k56",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy landing"},
-  {"s3k57",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Splash"},
+  {"s3k57",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
   {"s3k58",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical movement"},
   {"s3k59",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crumbling"},
   {"s3k5a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},

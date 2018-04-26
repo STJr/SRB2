@@ -7379,9 +7379,7 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 			break;
 		case MT_AQUABUZZ:
-			P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
-			/* FALLTHRU */
-		case MT_BIGAIRMINE:
+			mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 			{
 				if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
 					&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius * 16)
@@ -7406,34 +7404,11 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 			break;
 		case MT_BIGMINE:
-			{
-				if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
-					&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius * 16)
-				{
-					P_MobjCheckWater(mobj);
-
-					// Home in on the target.
-					P_HomingAttack(mobj, mobj->tracer);
-
-					// Don't let it go out of water
-					if (mobj->z + mobj->height > mobj->watertop)
-						mobj->z = mobj->watertop - mobj->height;
-
-					if (mobj->z < mobj->floorz)
-						mobj->z = mobj->floorz;
-
-					if (leveltime % mobj->info->painchance == 0)
-						S_StartSound(mobj, mobj->info->activesound);
-				}
-				else
-				{
-					// Try to find a player
-					P_LookForPlayers(mobj, true, true, mobj->radius * 16);
-					mobj->momx >>= 1;
-					mobj->momy >>= 1;
-					mobj->momz >>= 1;
-				}
-			}
+			mobj->extravalue1 += 3;
+			mobj->extravalue1 %= 360;
+			P_UnsetThingPosition(mobj);
+			mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
+			P_SetThingPosition(mobj);
 			break;
 		case MT_EGGCAPSULE:
 			if (!mobj->reactiontime)
@@ -8496,6 +8471,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 			break;
 		}
+		case MT_BIGMINE:
+			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
+			break;
 		case MT_EGGMOBILE2:
 			// Special condition for the 2nd boss.
 			mobj->watertop = mobj->info->speed;

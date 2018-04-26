@@ -412,7 +412,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		////////////////////////////////////////////////////////
 		/////ENEMIES!!//////////////////////////////////////////
 		////////////////////////////////////////////////////////
-		if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+		if (special->type == MT_BIGMINE)
+		{
+			special->momx = toucher->momx/3;
+			special->momy = toucher->momy/3;
+			special->momz = toucher->momz/3;
+			toucher->momx /= -8;
+			toucher->momy /= -8;
+			toucher->momz /= -8;
+			special->flags &= ~MF_SPECIAL;
+			if (special->info->activesound)
+				S_StartSound(special, special->info->activesound);
+			P_SetTarget(&special->tracer, toucher);
+			player->homing = 0;
+			return;
+		}
+		else if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
 		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
 		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
@@ -1530,14 +1545,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			player->pflags |= PF_JUMPSTASIS;
 
 			return;
-		case MT_BIGMINE:
-		case MT_BIGAIRMINE:
-			// Spawn explosion!
-			P_SpawnMobj(special->x, special->y, special->z, special->info->mass);
-			P_RadiusAttack(special, special, special->info->damage);
-			S_StartSound(special, special->info->deathsound);
-			P_SetMobjState(special, special->info->deathstate);
-			return;
 		case MT_SPECIALSPIKEBALL:
 			if (!useNightsSS && G_IsSpecialStage(gamemap)) // Only for old special stages
 				P_SpecialStageDamage(player, special, NULL);
@@ -2349,78 +2356,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (source && target && target->player && source->player)
 		P_PlayVictorySound(source); // Killer laughs at you. LAUGHS! BWAHAHAHA!
 
-#ifdef OLDANIMALSPAWNING
-	// Drop stuff.
-	// This determines the kind of object spawned
-	// during the death frame of a thing.
-	if (!mariomode // Don't show birds, etc. in Mario Mode Tails 12-23-2001
-	&& target->flags & MF_ENEMY)
-	{
-		mobjtype_t item;
-		INT32 prandom;
-
-		switch (target->type)
-		{
-			case MT_REDCRAWLA:
-			case MT_GOLDBUZZ:
-			case MT_SKIM:
-			case MT_UNIDUS:
-				item = MT_FLICKY_02/*MT_BUNNY*/;
-				break;
-
-			case MT_BLUECRAWLA:
-			case MT_JETTBOMBER:
-			case MT_GFZFISH:
-				item = MT_FLICKY_01/*MT_BIRD*/;
-				break;
-
-			case MT_JETTGUNNER:
-			case MT_CRAWLACOMMANDER:
-			case MT_REDBUZZ:
-			case MT_DETON:
-				item = MT_FLICKY_12/*MT_MOUSE*/;
-				break;
-
-			case MT_GSNAPPER:
-			case MT_EGGGUARD:
-			case MT_SPRINGSHELL:
-				item = MT_FLICKY_11/*MT_COW*/;
-				break;
-
-			case MT_MINUS:
-			case MT_VULTURE:
-			case MT_POINTY:
-			case MT_YELLOWSHELL:
-				item = MT_FLICKY_03/*MT_CHICKEN*/;
-				break;
-
-			case MT_AQUABUZZ:
-				item = MT_FLICKY_01/*MT_REDBIRD*/;
-				break;
-
-			default:
-				if (target->info->doomednum)
-					prandom = target->info->doomednum%5; // "Random" animal for new enemies.
-				else
-					prandom = P_RandomKey(5); // No placable object, just use a random number.
-
-				switch(prandom)
-				{
-					default: item = MT_FLICKY_02/*MT_BUNNY*/; break;
-					case 1: item = MT_FLICKY_01/*MT_BIRD*/; break;
-					case 2: item = MT_FLICKY_12/*MT_MOUSE*/; break;
-					case 3: item = MT_FLICKY_11/*MT_COW*/; break;
-					case 4: item = MT_FLICKY_03/*MT_CHICKEN*/; break;
-				}
-				break;
-		}
-
-		mo = P_SpawnMobj(target->x, target->y, target->z + (target->height / 2) - FixedMul(mobjinfo[item].height / 2, target->scale), item);
-		mo->destscale = target->scale;
-		P_SetScale(mo, mo->destscale);
-	}
-	else
-#endif
 	// Other death animation effects
 	switch(target->type)
 	{
@@ -2432,6 +2367,64 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		case MT_GRENADEPICKUP:
 			P_SetObjectMomZ(target, FRACUNIT, false);
 			target->fuse = target->info->damage;
+			break;
+
+		case MT_AQUABUZZ:
+			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
+			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
+			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
+			&& inflictor->z + inflictor->height >= target->z - FixedMul(8*FRACUNIT, inflictor->scale))
+				mo = P_SpawnMobj(inflictor->x + inflictor->momx, inflictor->y + inflictor->momy, inflictor->z + (inflictor->height / 2) + inflictor->momz, MT_EXTRALARGEBUBBLE);
+			else
+				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
+			mo->destscale = target->scale;
+			P_SetScale(mo, mo->destscale);
+			break;
+
+		case MT_YELLOWSHELL:
+			P_SpawnMobjFromMobj(target, 0, 0, 0, MT_YELLOWSPRING);
+			break;
+
+		case MT_EGGMOBILE3:
+			{
+				thinker_t *th;
+				UINT32 i = 0; // to check how many clones we've removed
+
+				// scan the thinkers to make sure all the old pinch dummies are gone on death
+				// this can happen if the boss was hurt earlier than expected
+				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				{
+					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+						continue;
+
+					mo = (mobj_t *)th;
+					if (mo->type == (mobjtype_t)target->info->mass && mo->tracer == target)
+					{
+						P_RemoveMobj(mo);
+						i++;
+					}
+					if (i == 2) // we've already removed 2 of these, let's stop now
+						break;
+				}
+			}
+			break;
+
+		case MT_BIGMINE:
+			if (inflictor)
+			{
+				fixed_t dx = target->x - inflictor->x, dy = target->y - inflictor->y, dz = target->z - inflictor->z;
+				fixed_t dm = FixedHypot(dz, FixedHypot(dy, dx));
+				target->momx = FixedDiv(FixedDiv(dx, dm), dm)*512;
+				target->momy = FixedDiv(FixedDiv(dy, dm), dm)*512;
+				target->momz = FixedDiv(FixedDiv(dz, dm), dm)*512;
+			}
+			if (source)
+				P_SetTarget(&target->tracer, source);
+			break;
+
+		case MT_BLASTEXECUTOR:
+			if (target->spawnpoint)
+				P_LinedefExecute(target->spawnpoint->angle, (source ? source : inflictor), target->subsector->sector);
 			break;
 
 		case MT_EGGTRAP:
@@ -2467,57 +2460,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			break;
 	}
 
-	// Enemy drops that ALWAYS occur regardless of mode
-	if (target->type == MT_AQUABUZZ) // Additionally spawns breathable bubble for players to get
-	{
-		if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so he's bound to get it
-		&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
-		&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
-		&& inflictor->z + inflictor->height >= target->z - FixedMul(8*FRACUNIT, inflictor->scale))
-			mo = P_SpawnMobj(inflictor->x + inflictor->momx, inflictor->y + inflictor->momy, inflictor->z + (inflictor->height / 2) + inflictor->momz, MT_EXTRALARGEBUBBLE);
-		else
-			mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
-		mo->destscale = target->scale;
-		P_SetScale(mo, mo->destscale);
-	}
-	else if (target->type == MT_YELLOWSHELL) // Spawns a spring that falls to the ground
-	{
-		mobjtype_t spawnspring = MT_YELLOWSPRING;
-		fixed_t spawnheight = target->z;
-		if (!(target->eflags & MFE_VERTICALFLIP))
-			spawnheight += target->height;
-
-		mo = P_SpawnMobj(target->x, target->y, spawnheight, spawnspring);
-		mo->destscale = target->scale;
-		P_SetScale(mo, mo->destscale);
-
-		if (target->flags2 & MF2_OBJECTFLIP)
-			mo->flags2 |= MF2_OBJECTFLIP;
-	}
-
-	if (target->type == MT_EGGMOBILE3)
-	{
-		thinker_t *th;
-		UINT32 i = 0; // to check how many clones we've removed
-
-		// scan the thinkers to make sure all the old pinch dummies are gone on death
-		// this can happen if the boss was hurt earlier than expected
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo = (mobj_t *)th;
-			if (mo->type == (mobjtype_t)target->info->mass && mo->tracer == target)
-			{
-				P_RemoveMobj(mo);
-				i++;
-			}
-			if (i == 2) // we've already removed 2 of these, let's stop now
-				break;
-		}
-	}
-
+	// Final state setting - do something instead of P_SetMobjState;
 	if (target->type == MT_SPIKE && target->info->deathstate != S_NULL)
 	{
 		const angle_t ang = ((inflictor) ? inflictor->angle : 0) + ANGLE_90;

@@ -247,6 +247,8 @@ void A_FlameParticle(mobj_t *actor);
 void A_FadeOverlay(mobj_t *actor);
 void A_Boss5Jump(mobj_t *actor);
 void A_LightBeamReset(mobj_t *actor);
+void A_MineExplode(mobj_t *actor);
+void A_MineRange(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10615,8 +10617,9 @@ void A_Boss5Jump(mobj_t *actor)
 		actor->z++;
 
 	// Horizontal axes first. First parameter is initial horizontal impulse, second is to correct its angle.
-	actor->momx = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINECOSINE(actor->angle >> ANGLETOFINESHIFT));
-	actor->momy = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINESINE(actor->angle >> ANGLETOFINESHIFT));
+	fixedHypotenuse = FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)); // variable reuse
+	actor->momx = FixedMul(fixedHypotenuse, FINECOSINE(actor->angle >> ANGLETOFINESHIFT));
+	actor->momy = FixedMul(fixedHypotenuse, FINESINE(actor->angle >> ANGLETOFINESHIFT));
 	// Then the vertical axis. No angle-correction needed here.
 	actor->momz = FixedMul(v, FINESINE(theta >> ANGLETOFINESHIFT));
 	// I hope that's all that's needed, ugh
@@ -10630,6 +10633,9 @@ void A_Boss5Jump(mobj_t *actor)
 //
 void A_LightBeamReset(mobj_t *actor)
 {
+	// INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LightBeamReset", actor))
 		return;
@@ -10650,4 +10656,83 @@ void A_LightBeamReset(mobj_t *actor)
 	actor->y = actor->spawnpoint->y*FRACUNIT + P_SignedRandom()*FINESINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/2;
 	actor->z = actor->spawnpoint->z*FRACUNIT + P_SignedRandom()*FRACUNIT/2;
 	P_SetThingPosition(actor);
+}
+
+// Function: A_MineExplode
+// Description: Handles the explosion of a DSZ mine.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_MineExplode(mobj_t *actor)
+{
+	// INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MineExplode", actor))
+		return;
+#endif
+
+	A_Scream(actor);
+	actor->flags = MF_NOGRAVITY|MF_NOCLIP;
+
+	quake.epicenter = NULL;
+	quake.radius = 512*FRACUNIT;
+	quake.intensity = 8*FRACUNIT;
+	quake.time = TICRATE/3;
+
+	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT);
+	P_MobjCheckWater(actor);
+
+	{
+#define dist 64
+		UINT8 i;
+		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_BOSSEXPLODE);
+		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
+		P_SpawnMobj(actor->x, actor->y, actor->z, type);
+		for (i = 0; i < 16; i++)
+		{
+			mobj_t *b = P_SpawnMobj(actor->x+P_RandomRange(-dist, dist)*FRACUNIT,
+				actor->y+P_RandomRange(-dist, dist)*FRACUNIT,
+				actor->z+P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT,
+				type);
+			fixed_t dx = b->x - actor->x, dy = b->y - actor->y, dz = b->z - actor->z;
+			fixed_t dm = P_AproxDistance(dz, P_AproxDistance(dy, dx));
+			b->momx = FixedDiv(dx, dm)*3;
+			b->momy = FixedDiv(dy, dm)*3;
+			b->momz = FixedDiv(dz, dm)*3;
+			if ((actor->watertop == INT32_MAX) || (b->z + b->height > actor->watertop))
+				b->flags &= ~MF_NOGRAVITY;
+		}
+#undef dist
+
+		if (actor->watertop != INT32_MAX)
+			P_SpawnMobj(actor->x, actor->y, actor->watertop, MT_SPLISH);
+	}
+}
+
+// Function: A_MineRange
+// Description: If the target gets too close, change the state to meleestate.
+//
+// var1 = Distance to alert at
+// var2 = unused
+//
+void A_MineRange(mobj_t *actor)
+{
+	fixed_t dm;
+	INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MineRange", actor))
+		return;
+#endif
+
+	if (!actor->target)
+		return;
+
+	dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
+	if ((dm>>FRACBITS) < locvar1)
+		P_SetMobjState(actor, actor->info->meleestate);
 }

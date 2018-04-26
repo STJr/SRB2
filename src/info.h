@@ -219,6 +219,8 @@ void A_FlameParticle();
 void A_FadeOverlay();
 void A_Boss5Jump();
 void A_LightBeamReset();
+void A_MineExplode();
+void A_MineRange();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -334,6 +336,7 @@ typedef enum sprite
 	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
+	SPR_BMNB,
 
 	// Monitor Boxes
 	SPR_MSTV, // MiSc TV sprites
@@ -1822,14 +1825,18 @@ typedef enum state
 	S_STARPOST_ENDSPIN,
 
 	// Big floating mine
-	S_BIGMINE1,
-	S_BIGMINE2,
-	S_BIGMINE3,
-	S_BIGMINE4,
-	S_BIGMINE5,
-	S_BIGMINE6,
-	S_BIGMINE7,
-	S_BIGMINE8,
+	S_BIGMINE_IDLE,
+	S_BIGMINE_ALERT1,
+	S_BIGMINE_ALERT2,
+	S_BIGMINE_ALERT3,
+	S_BIGMINE_SET1,
+	S_BIGMINE_SET2,
+	S_BIGMINE_SET3,
+	S_BIGMINE_BLAST1,
+	S_BIGMINE_BLAST2,
+	S_BIGMINE_BLAST3,
+	S_BIGMINE_BLAST4,
+	S_BIGMINE_BLAST5,
 
 	// Cannon Launcher
 	S_CANNONLAUNCHER1,
@@ -2100,12 +2107,6 @@ typedef enum state
 	S_LIGHTBEAM10,
 	S_LIGHTBEAM11,
 	S_LIGHTBEAM12,
-	S_LIGHTBEAM13,
-	S_LIGHTBEAM14,
-	S_LIGHTBEAM15,
-	S_LIGHTBEAM16,
-	S_LIGHTBEAM17,
-	S_LIGHTBEAM18,
 
 	// CEZ Chain
 	S_CEZCHAIN,
@@ -3451,7 +3452,7 @@ typedef enum mobj_type
 	MT_WALLSPIKEBASE,
 	MT_STARPOST,
 	MT_BIGMINE,
-	MT_BIGAIRMINE,
+	MT_BLASTEXECUTOR,
 	MT_CANNONLAUNCHER,
 
 	// Monitor miscellany

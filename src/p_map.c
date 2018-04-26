@@ -622,6 +622,31 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	// Billiards mines!
+	if (thing->type == MT_BIGMINE && tmthing->type == MT_BIGMINE)
+	{
+		if (!tmthing->momx && !tmthing->momy)
+			return true;
+		if ((statenum_t)(thing->state-states) != thing->info->spawnstate)
+			return true;
+		if (thing->z > tmthing->z + tmthing->height)
+			return true; // overhead
+		if (thing->z + thing->height < tmthing->z)
+			return true; // underneath
+
+		thing->momx = tmthing->momx/3;
+		thing->momy = tmthing->momy/3;
+		thing->momz = tmthing->momz/3;
+		tmthing->momx /= -8;
+		tmthing->momy /= -8;
+		tmthing->momz /= -8;
+		if (thing->info->activesound)
+			S_StartSound(thing, thing->info->activesound);
+		P_SetMobjState(thing, thing->info->meleestate);
+		P_SetTarget(&thing->tracer, tmthing->tracer);
+		return true;
+	}
+
 	// When solid spikes move, assume they just popped up and teleport things on top of them to hurt.
 	if (tmthing->type == MT_SPIKE && tmthing->flags & MF_SOLID)
 	{

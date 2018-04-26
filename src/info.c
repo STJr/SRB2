@@ -134,6 +134,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"WSPB", // Wall spike base
 	"STPT", // Starpost
 	"BMNE", // Big floating mine
+	"BMNB",
 
 	// Monitor Boxes
 	"MSTV", // MiSc TV sprites
@@ -1717,14 +1718,18 @@ state_t states[NUMSTATES] =
 	{SPR_STPT, FF_ANIMATE|15,  2, {NULL},  1, 1, S_STARPOST_FLASH}, // S_STARPOST_ENDSPIN
 
 	// Big floating mine
-	{SPR_BMNE, 0, 5, {NULL}, 0, 0, S_BIGMINE2},    // S_BIGMINE1
-	{SPR_BMNE, 1, 5, {NULL}, 0, 0, S_BIGMINE3},    // S_BIGMINE2
-	{SPR_BMNE, 2, 5, {NULL}, 0, 0, S_BIGMINE4},    // S_BIGMINE3
-	{SPR_BMNE, 3, 5, {NULL}, 0, 0, S_BIGMINE5},    // S_BIGMINE4
-	{SPR_BMNE, 4, 5, {NULL}, 0, 0, S_BIGMINE6},    // S_BIGMINE5
-	{SPR_BMNE, 5, 5, {NULL}, 0, 0, S_BIGMINE7},    // S_BIGMINE6
-	{SPR_BMNE, 6, 5, {NULL}, 0, 0, S_BIGMINE8},    // S_BIGMINE7
-	{SPR_BMNE, 7, 5, {NULL}, 0, 0, S_BIGMINE1},    // S_BIGMINE8
+	{SPR_BMNE, 0,  2, {A_Look},      ((224<<FRACBITS)|1), 0, S_BIGMINE_IDLE},   // S_BIGMINE_IDLE
+	{SPR_BMNE, 1,  2, {A_MineRange}, 112,                 0, S_BIGMINE_ALERT2}, // S_BIGMINE_ALERT1
+	{SPR_BMNE, 2,  2, {A_MineRange}, 112,                 0, S_BIGMINE_ALERT3}, // S_BIGMINE_ALERT2
+	{SPR_BMNE, 0,  1, {A_Look},      ((224<<FRACBITS)|1), 1, S_BIGMINE_IDLE},   // S_BIGMINE_ALERT3
+	{SPR_BMNE, 3, 25, {A_Pain},           0,            0, S_BIGMINE_SET2},   // S_BIGMINE_SET1
+	{SPR_BMNE, 3, 10, {A_SetObjectFlags}, MF_SHOOTABLE, 1, S_BIGMINE_SET3},   // S_BIGMINE_SET1
+	{SPR_BMNE, 3,  1, {A_MineExplode},    0,            0, S_BIGMINE_BLAST1}, // S_BIGMINE_SET3
+	{SPR_BMNB,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_BIGMINE_BLAST2}, // S_BIGMINE_BLAST1
+	{SPR_BMNB, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_BIGMINE_BLAST3}, // S_BIGMINE_BLAST2
+	{SPR_BMNB, 2|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_BIGMINE_BLAST4}, // S_BIGMINE_BLAST3
+	{SPR_BMNB, 3|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_BIGMINE_BLAST5}, // S_BIGMINE_BLAST4
+	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_BIGMINE_BLAST5
 
 	// Cannon launcher
 	{SPR_NULL, 0, 1,    {A_FindTarget},     MT_PLAYER,         0, S_CANNONLAUNCHER2}, // S_CANNONLAUNCHER1
@@ -1980,24 +1985,18 @@ state_t states[NUMSTATES] =
 	{SPR_DSTG, 1, -1, {NULL}, 0, 0, S_NULL}, // S_DSZ2STALAGMITE
 
 	// DSZ Light beam
-	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {A_LightBeamReset}, 0, 0, S_LIGHTBEAM2}, // S_LIGHTBEAM1
-	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM3}, // S_LIGHTBEAM2
-	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM4}, // S_LIGHTBEAM3
-	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM5}, // S_LIGHTBEAM4
-	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM6}, // S_LIGHTBEAM5
-	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM7}, // S_LIGHTBEAM6
-	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM8}, // S_LIGHTBEAM7
-	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM9}, // S_LIGHTBEAM8
-	{SPR_LIBE, 0|FF_TRANS30|FF_FULLBRIGHT|FF_PAPERSPRITE, 9, {NULL}, 0, 0, S_LIGHTBEAM10}, // S_LIGHTBEAM9
-	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM11}, // S_LIGHTBEAM10
-	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM12}, // S_LIGHTBEAM11
-	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM13}, // S_LIGHTBEAM12
-	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM14}, // S_LIGHTBEAM13
-	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM15}, // S_LIGHTBEAM14
-	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM16}, // S_LIGHTBEAM15
-	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM17}, // S_LIGHTBEAM16
-	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM18}, // S_LIGHTBEAM17
-	{SPR_NULL, 0, 2, {A_SetRandomTics}, 4, 35, S_LIGHTBEAM1}, // S_LIGHTBEAM18
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {A_LightBeamReset}, 0, 0, S_LIGHTBEAM2}, // S_LIGHTBEAM1
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {NULL}, 0, 0, S_LIGHTBEAM3},  // S_LIGHTBEAM2
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {NULL}, 0, 0, S_LIGHTBEAM4},  // S_LIGHTBEAM3
+	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM5},  // S_LIGHTBEAM4
+	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM6},  // S_LIGHTBEAM5
+	{SPR_LIBE, 0|FF_TRANS30|FF_FULLBRIGHT|FF_PAPERSPRITE, 9, {NULL}, 0, 0, S_LIGHTBEAM7},  // S_LIGHTBEAM6
+	{SPR_LIBE, 0|FF_TRANS40|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM8},  // S_LIGHTBEAM7
+	{SPR_LIBE, 0|FF_TRANS50|FF_FULLBRIGHT|FF_PAPERSPRITE, 2, {NULL}, 0, 0, S_LIGHTBEAM9},  // S_LIGHTBEAM8
+	{SPR_LIBE, 0|FF_TRANS60|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {NULL}, 0, 0, S_LIGHTBEAM10}, // S_LIGHTBEAM9
+	{SPR_LIBE, 0|FF_TRANS70|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {NULL}, 0, 0, S_LIGHTBEAM11}, // S_LIGHTBEAM10
+	{SPR_LIBE, 0|FF_TRANS80|FF_FULLBRIGHT|FF_PAPERSPRITE, 4, {NULL}, 0, 0, S_LIGHTBEAM12}, // S_LIGHTBEAM11
+	{SPR_NULL, 0, 2, {A_SetRandomTics}, 4, 35, S_LIGHTBEAM1}, // S_LIGHTBEAM12
 
 	// CEZ Chain
 	{SPR_CHAN, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CEZCHAIN
@@ -6348,55 +6347,55 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_BIGMINE
 		524,            // doomednum
-		S_BIGMINE1,     // spawnstate
+		S_BIGMINE_IDLE, // spawnstate
+		1,              // spawnhealth
+		S_BIGMINE_ALERT1, // seestate
+		sfx_s3k5c,      // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_s3k86,      // painsound
+		S_BIGMINE_SET1, // meleestate
+		S_NULL,         // missilestate
+		S_BIGMINE_SET2, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		2*FRACUNIT,     // speed
+		28*FRACUNIT,    // radius
+		56*FRACUNIT,    // height
+		0,              // display offset
+		MT_UWEXPLODE,   // mass
+		0,              // damage
+		sfx_s3k9e,      // activesound
+		MF_SPECIAL|MF_NOGRAVITY|MF_SHOOTABLE|MF_ENEMY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BLASTEXECUTOR
+		1505,           // doomednum
+		S_INVISIBLE,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		TICRATE,        // painchance
+		0,              // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		2*FRACUNIT,     // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		8,              // speed
+		32*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
 		0,              // display offset
-		MT_UWEXPLODE,   // mass
-		64*FRACUNIT,    // damage
-		sfx_gbeep,      // activesound
-		MF_SPECIAL|MF_NOGRAVITY,     // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_BIGAIRMINE
-		527,            // doomednum
-		S_BIGMINE1,     // spawnstate
-		1,              // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		TICRATE,        // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_bexpld,     // deathsound
-		2*FRACUNIT,     // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
-		0,              // display offset
-		MT_BOSSEXPLODE, // mass
-		64*FRACUNIT,    // damage
-		sfx_gbeep,      // activesound
-		MF_SPECIAL|MF_NOGRAVITY,     // flags
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SHOOTABLE|MF_NOGRAVITY|MF_NOCLIPTHING, // flags
 		S_NULL          // raisestate
 	},
 
@@ -15512,7 +15511,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

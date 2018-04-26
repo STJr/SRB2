@@ -1811,6 +1811,8 @@ static actionpointer_t actionpointers[] =
 	{{A_FadeOverlay},          "A_FADEOVERLAY"},
 	{{A_Boss5Jump},            "A_BOSS5JUMP"},
 	{{A_LightBeamReset},       "A_LIGHTBEAMRESET"},
+	{{A_MineExplode},          "A_MINEEXPLODE"},
+	{{A_MineRange},            "A_MINERANGE"},
 
 	{{NULL},                   "NONE"},
 
@@ -4504,14 +4506,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_STARPOST_ENDSPIN",
 
 	// Big floating mine
-	"S_BIGMINE1",
-	"S_BIGMINE2",
-	"S_BIGMINE3",
-	"S_BIGMINE4",
-	"S_BIGMINE5",
-	"S_BIGMINE6",
-	"S_BIGMINE7",
-	"S_BIGMINE8",
+	"S_BIGMINE_IDLE",
+	"S_BIGMINE_ALERT1",
+	"S_BIGMINE_ALERT2",
+	"S_BIGMINE_ALERT3",
+	"S_BIGMINE_SET1",
+	"S_BIGMINE_SET2",
+	"S_BIGMINE_SET3",
+	"S_BIGMINE_BLAST1",
+	"S_BIGMINE_BLAST2",
+	"S_BIGMINE_BLAST3",
+	"S_BIGMINE_BLAST4",
+	"S_BIGMINE_BLAST5",
 
 	// Cannon Launcher
 	"S_CANNONLAUNCHER1",
@@ -4780,12 +4786,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LIGHTBEAM10",
 	"S_LIGHTBEAM11",
 	"S_LIGHTBEAM12",
-	"S_LIGHTBEAM13",
-	"S_LIGHTBEAM14",
-	"S_LIGHTBEAM15",
-	"S_LIGHTBEAM16",
-	"S_LIGHTBEAM17",
-	"S_LIGHTBEAM18",
 
 	// CEZ Chain
 	"S_CEZCHAIN",
@@ -6111,7 +6111,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_WALLSPIKEBASE",
 	"MT_STARPOST",
 	"MT_BIGMINE",
-	"MT_BIGAIRMINE",
+	"MT_BLASTEXECUTOR",
 	"MT_CANNONLAUNCHER",
 
 	// Monitor miscellany
