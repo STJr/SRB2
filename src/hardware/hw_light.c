@@ -349,6 +349,12 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
 
+	// Halloween Scenery
+	&lspr[RINGLIGHT_L], // SPR_PUMK
+	&lspr[NOLIGHT],     // SPR_HHPL
+	&lspr[NOLIGHT],     // SPR_SHRM
+	&lspr[NOLIGHT],     // SPR_HHZM
+
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1
 	&lspr[NOLIGHT],     // SPR_BSZ2
@@ -399,6 +405,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FL14
 	&lspr[NOLIGHT],     // SPR_FL15
 	&lspr[NOLIGHT],     // SPR_FL16
+	&lspr[NOLIGHT],     // SPR_FS01
+	&lspr[NOLIGHT],     // SPR_FS02
 
 	// Springs
 	&lspr[NOLIGHT],     // SPR_SPRY
@@ -479,6 +487,16 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
+
+	// Secret badniks and hazards, shhhh
+	&lspr[NOLIGHT],     // SPR_FMCE",
+	&lspr[NOLIGHT],     // SPR_HMCE",
+	&lspr[NOLIGHT],     // SPR_CACO",
+	&lspr[BLUEBALL_L],  // SPR_BAL2",
+	&lspr[NOLIGHT],     // SPR_SBOB",
+	&lspr[BLUEBALL_L],  // SPR_SBFL",
+	&lspr[BLUEBALL_L],  // SPR_SBSK",
+	&lspr[NOLIGHT],     // SPR_BATT",
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK

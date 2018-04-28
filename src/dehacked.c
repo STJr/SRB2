@@ -853,25 +853,27 @@ static const struct {
 	const char *name;
 	const mobjtype_t type;
 } FLICKYTYPES[] = {
-	{"BLUEBIRD", MT_FLICKY_01},
-	{"RABBIT",   MT_FLICKY_02},
-	{"CHICKEN",  MT_FLICKY_03},
-	{"SEAL",     MT_FLICKY_04},
-	{"PIG",      MT_FLICKY_05},
-	{"CHIPMUNK", MT_FLICKY_06},
-	{"PENGUIN",  MT_FLICKY_07},
-	{"FISH",     MT_FLICKY_08},
-	{"RAM",      MT_FLICKY_09},
-	{"PUFFIN",   MT_FLICKY_10},
-	{"COW",      MT_FLICKY_11},
-	{"RAT",      MT_FLICKY_12},
-	{"BEAR",     MT_FLICKY_13},
-	{"DOVE",     MT_FLICKY_14},
-	{"CAT",      MT_FLICKY_15},
-	{"CANARY",   MT_FLICKY_16},
+	{"BLUEBIRD", MT_FLICKY_01}, // Flicky (Flicky)
+	{"RABBIT",   MT_FLICKY_02}, // Pocky (1)
+	{"CHICKEN",  MT_FLICKY_03}, // Cucky (1)
+	{"SEAL",     MT_FLICKY_04}, // Rocky (1)
+	{"PIG",      MT_FLICKY_05}, // Picky (1)
+	{"CHIPMUNK", MT_FLICKY_06}, // Ricky (1)
+	{"PENGUIN",  MT_FLICKY_07}, // Pecky (1)
+	{"FISH",     MT_FLICKY_08}, // Nicky (CD)
+	{"RAM",      MT_FLICKY_09}, // Flocky (CD)
+	{"PUFFIN",   MT_FLICKY_10}, // Wicky (CD)
+	{"COW",      MT_FLICKY_11}, // Macky (SRB2)
+	{"RAT",      MT_FLICKY_12}, // Micky (2)
+	{"BEAR",     MT_FLICKY_13}, // Becky (2)
+	{"DOVE",     MT_FLICKY_14}, // Docky (CD)
+	{"CAT",      MT_FLICKY_15}, // Nyannyan (Flicky)
+	{"CANARY",   MT_FLICKY_16}, // Lucky (CD)
 	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
-	//{"FLICKER",  MT_FLICKER},
-	{"SEED",          MT_SEED},
+	//{"FLICKER",          MT_FLICKER}, // Flacky (SRB2)
+	{"SPIDER",   MT_SECRETFLICKY_01}, // Sticky (SRB2)
+	{"BAT",      MT_SECRETFLICKY_02}, // Backy (SRB2)
+	{"SEED",                MT_SEED}, // Seed (CD)
 	{NULL, 0}
 };
 
@@ -1813,6 +1815,9 @@ static actionpointer_t actionpointers[] =
 	{{A_LightBeamReset},       "A_LIGHTBEAMRESET"},
 	{{A_MineExplode},          "A_MINEEXPLODE"},
 	{{A_MineRange},            "A_MINERANGE"},
+	{{A_ConnectToGround},      "A_CONNECTTOGROUND"},
+	{{A_SpawnParticleRelative},"A_SPAWNPARTICLERELATIVE"},
+	{{A_MultiShotDist},        "A_MULTISHOTDIST"},
 
 	{{NULL},                   "NONE"},
 
@@ -4968,6 +4973,51 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_XMASBERRYBUSH",
 	"S_XMASBUSH",
 
+	// Halloween Scenery
+	// Pumpkins
+	"S_JACKO1",
+	"S_JACKO1OVERLAY_1",
+	"S_JACKO1OVERLAY_2",
+	"S_JACKO1OVERLAY_3",
+	"S_JACKO1OVERLAY_4",
+	"S_JACKO2",
+	"S_JACKO2OVERLAY_1",
+	"S_JACKO2OVERLAY_2",
+	"S_JACKO2OVERLAY_3",
+	"S_JACKO2OVERLAY_4",
+	"S_JACKO3",
+	"S_JACKO3OVERLAY_1",
+	"S_JACKO3OVERLAY_2",
+	"S_JACKO3OVERLAY_3",
+	"S_JACKO3OVERLAY_4",
+	// Dr Seuss Trees
+	"S_HHZTREE_TOP",
+	"S_HHZTREE_TRUNK",
+	"S_HHZTREE_LEAF",
+	// Mushroom
+	"S_HHZSHROOM_1",
+	"S_HHZSHROOM_2",
+	"S_HHZSHROOM_3",
+	"S_HHZSHROOM_4",
+	"S_HHZSHROOM_5",
+	"S_HHZSHROOM_6",
+	"S_HHZSHROOM_7",
+	"S_HHZSHROOM_8",
+	"S_HHZSHROOM_9",
+	"S_HHZSHROOM_10",
+	"S_HHZSHROOM_11",
+	"S_HHZSHROOM_12",
+	"S_HHZSHROOM_13",
+	"S_HHZSHROOM_14",
+	"S_HHZSHROOM_15",
+	"S_HHZSHROOM_16",
+	// Misc
+	"S_HHZGRASS",
+	"S_HHZTENT1",
+	"S_HHZTENT2",
+	"S_HHZSTALAGMITE_TALL",
+	"S_HHZSTALAGMITE_SHORT",
+
 	// Botanic Serenity's loads of scenery states
 	"S_BSZTALLFLOWER_RED",
 	"S_BSZTALLFLOWER_PURPLE",
@@ -5406,6 +5456,19 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_16_FLAP1",
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
+
+	// Spider
+	"S_SECRETFLICKY_01_OUT",
+	"S_SECRETFLICKY_01_AIM",
+	"S_SECRETFLICKY_01_HOP",
+	"S_SECRETFLICKY_01_UP",
+	"S_SECRETFLICKY_01_DOWN",
+
+	// Bat
+	"S_SECRETFLICKY_02_OUT",
+	"S_SECRETFLICKY_02_FLAP1",
+	"S_SECRETFLICKY_02_FLAP2",
+	"S_SECRETFLICKY_02_FLAP3",
 
 	"S_YELLOWSPRING",
 	"S_YELLOWSPRING2",
@@ -5903,6 +5966,85 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTOPIANHELPER8",
 	"S_NIGHTOPIANHELPER9",
 
+	// Secret badniks and hazards, shhhh
+	"S_SMASHSPIKE_FLOAT",
+	"S_SMASHSPIKE_EASE1",
+	"S_SMASHSPIKE_EASE2",
+	"S_SMASHSPIKE_FALL",
+	"S_SMASHSPIKE_STOMP1",
+	"S_SMASHSPIKE_STOMP2",
+	"S_SMASHSPIKE_RISE1",
+	"S_SMASHSPIKE_RISE2",
+
+	"S_HHZDUST1",
+	"S_HHZDUST2",
+	"S_HHZDUST3",
+	"S_HHZDUST4",
+
+	"S_CACO_LOOK",
+	"S_CACO_WAKE1",
+	"S_CACO_WAKE2",
+	"S_CACO_WAKE3",
+	"S_CACO_WAKE4",
+	"S_CACO_ROAR",
+	"S_CACO_CHASE",
+	"S_CACO_CHASE_REPEAT",
+	"S_CACO_RANDOM",
+	"S_CACO_PREPARE_SOUND",
+	"S_CACO_PREPARE1",
+	"S_CACO_PREPARE2",
+	"S_CACO_PREPARE3",
+	"S_CACO_SHOOT_SOUND",
+	"S_CACO_SHOOT1",
+	"S_CACO_SHOOT2",
+	"S_CACO_CLOSE",
+	"S_CACO_DIE_FLAGS",
+	"S_CACO_DIE_GIB1",
+	"S_CACO_DIE_GIB2",
+	"S_CACO_DIE_SCREAM",
+	"S_CACO_DIE_SHATTER",
+	"S_CACO_DIE_FALL",
+	"S_CACOSHARD_RANDOMIZE",
+	"S_CACOSHARD1_1",
+	"S_CACOSHARD1_2",
+	"S_CACOSHARD2_1",
+	"S_CACOSHARD2_2",
+	"S_CACOFIRE1",
+	"S_CACOFIRE2",
+	"S_CACOFIRE3",
+	"S_CACOFIRE_EXPLODE1",
+	"S_CACOFIRE_EXPLODE2",
+	"S_CACOFIRE_EXPLODE3",
+	"S_CACOFIRE_EXPLODE4",
+
+	"S_SPINBOBERT_MOVE_FLIPUP",
+	"S_SPINBOBERT_MOVE_UP",
+	"S_SPINBOBERT_MOVE_FLIPDOWN",
+	"S_SPINBOBERT_MOVE_DOWN",
+	"S_SPINBOBERT_FIRE_MOVE",
+	"S_SPINBOBERT_FIRE_GHOST",
+	"S_SPINBOBERT_FIRE_TRAIL1",
+	"S_SPINBOBERT_FIRE_TRAIL2",
+	"S_SPINBOBERT_FIRE_TRAIL3",
+
+	"S_HANGSTER_LOOK",
+	"S_HANGSTER_SWOOP1",
+	"S_HANGSTER_SWOOP2",
+	"S_HANGSTER_ARC1",
+	"S_HANGSTER_ARC2",
+	"S_HANGSTER_ARC3",
+	"S_HANGSTER_FLY1",
+	"S_HANGSTER_FLY2",
+	"S_HANGSTER_FLY3",
+	"S_HANGSTER_FLY4",
+	"S_HANGSTER_FLYREPEAT",
+	"S_HANGSTER_ARCUP1",
+	"S_HANGSTER_ARCUP2",
+	"S_HANGSTER_ARCUP3",
+	"S_HANGSTER_RETURN1",
+	"S_HANGSTER_RETURN2",
+	"S_HANGSTER_RETURN3",
+
 	"S_CRUMBLE1",
 	"S_CRUMBLE2",
 
@@ -6309,6 +6451,22 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_XMASBERRYBUSH",
 	"MT_XMASBUSH",
 
+	// Halloween Scenery
+	// Pumpkins
+	"MT_JACKO1",
+	"MT_JACKO2",
+	"MT_JACKO3",
+	// Dr Seuss Trees
+	"MT_HHZTREE_TOP",
+	"MT_HHZTREE_PART",
+	// Misc
+	"MT_HHZSHROOM",
+	"MT_HHZGRASS",
+	"MT_HHZTENTACLE1",
+	"MT_HHZTENTACLE2",
+	"MT_HHZSTALAGMITE_TALL",
+	"MT_HHZSTALAGMITE_SHORT",
+
 	// Botanic Serenity
 	"MT_BSZTALLFLOWER_RED",
 	"MT_BSZTALLFLOWER_PURPLE",
@@ -6394,6 +6552,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FLICKY_14", // Dove
 	"MT_FLICKY_15", // Cat
 	"MT_FLICKY_16", // Canary
+	"MT_SECRETFLICKY_01", // Spider
+	"MT_SECRETFLICKY_02", // Bat
+	"MT_SEED",
 
 	// Environmental Effects
 	"MT_RAIN", // Rain
@@ -6406,7 +6567,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_WATERZAP",
 	"MT_SPINDUST", // Spindash dust
 	"MT_TFOG",
-	"MT_SEED",
 	"MT_PARTICLE",
 	"MT_PARTICLEGEN", // For fans, etc.
 
@@ -6429,6 +6589,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AWATERH", // Ambient Water Sound 8
 	"MT_RANDOMAMBIENT",
 	"MT_RANDOMAMBIENT2",
+	"MT_MACHINEAMBIENCE",
 
 	"MT_CORK",
 
@@ -6495,6 +6656,17 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSLINKFREEZE",
 	"MT_EGGCAPSULE",
 	"MT_NIGHTOPIANHELPER", // the actual helper object that orbits you
+
+	// Secret badniks and hazards, shhhh
+	"MT_SMASHINGSPIKEBALL",
+	"MT_HHZDUST",
+	"MT_CACOLANTERN",
+	"MT_CACOSHARD",
+	"MT_CACOFIRE",
+	"MT_SPINBOBERT",
+	"MT_SPINBOBERT_FIRE1",
+	"MT_SPINBOBERT_FIRE2",
+	"MT_HANGSTER",
 
 	// Utility Objects
 	"MT_TELEPORTMAN",

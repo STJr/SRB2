@@ -673,10 +673,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (tmthing->player && tmthing->flags & MF_SHOOTABLE && thing->health > 0)
 		{
-			UINT8 damagetype = 0;
-			if (thing->flags & MF_FIRE) // BURN!
+			UINT8 damagetype = thing->info->mass;
+			if (!damagetype && thing->flags & MF_FIRE) // BURN!
 				damagetype = DMG_FIRE;
-			P_DamageMobj(tmthing, thing, thing, 1, damagetype);
+			if (P_DamageMobj(tmthing, thing, thing, 1, damagetype) && thing->info->attacksound)
+				S_StartSound(thing, thing->info->attacksound);
 		}
 		return true;
 	}
@@ -689,10 +690,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->player && thing->flags & MF_SHOOTABLE && tmthing->health > 0)
 		{
-			UINT8 damagetype = 0;
-			if (tmthing->flags & MF_FIRE) // BURN!
+			UINT8 damagetype = tmthing->info->mass;
+			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
 				damagetype = DMG_FIRE;
-			P_DamageMobj(thing, tmthing, tmthing, 1, damagetype);
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, damagetype) && tmthing->info->attacksound)
+				S_StartSound(tmthing, tmthing->info->attacksound);
 		}
 		return true;
 	}
@@ -860,7 +862,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_SetThingPosition(tmthing);
 		}
 		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
-			P_DamageMobj(thing, tmthing, tmthing->target, 1, 0);
+		{
+			UINT8 damagetype = tmthing->info->mass;
+			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			P_DamageMobj(thing, tmthing, tmthing->target, 1, damagetype);
+		}
 
 		// don't traverse any more
 

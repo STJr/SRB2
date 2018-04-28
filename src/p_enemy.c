@@ -249,6 +249,9 @@ void A_Boss5Jump(mobj_t *actor);
 void A_LightBeamReset(mobj_t *actor);
 void A_MineExplode(mobj_t *actor);
 void A_MineRange(mobj_t *actor);
+void A_ConnectToGround(mobj_t *actor);
+void A_SpawnParticleRelative(mobj_t *actor);
+void A_MultiShotDist(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -3420,7 +3423,7 @@ void A_BubbleSpawn(mobj_t *actor)
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		// Quick! Look through players!
-		// Don't spawn bubbles unless a player is relatively close by (var2).
+		// Don't spawn bubbles unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
 			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
@@ -7061,6 +7064,7 @@ void A_SpawnObjectRelative(mobj_t *actor)
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		mo->flags2 |= MF2_OBJECTFLIP;
+
 }
 
 // Function: A_ChangeAngleRelative
@@ -10735,4 +10739,147 @@ void A_MineRange(mobj_t *actor)
 	dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
 	if ((dm>>FRACBITS) < locvar1)
 		P_SetMobjState(actor, actor->info->meleestate);
+}
+
+// Function: A_ConnectToGround
+// Description: Create a palm tree trunk/mine chain.
+//
+// var1 = Object type to connect to ground
+// var2 = Object type to place on ground
+//
+void A_ConnectToGround(mobj_t *actor)
+{
+	mobj_t *work;
+	fixed_t workz;
+	fixed_t workh;
+	INT8 dir;
+	angle_t ang;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ConnectToGround", actor))
+		return;
+#endif
+
+	P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
+
+	if (actor->flags2 & MF2_OBJECTFLIP)
+	{
+		workz = actor->ceilingz - (actor->z + actor->height);
+		dir = -1;
+	}
+	else
+	{
+		workz = actor->floorz - actor->z;
+		dir = 1;
+	}
+
+	if (locvar2)
+	{
+		if (actor->flags2 & MF2_OBJECTFLIP)
+			workz -= FixedMul(mobjinfo[locvar2].height, actor->scale);
+		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
+	}
+
+	if (!locvar1)
+		return;
+
+	workh = FixedMul(mobjinfo[locvar1].height, actor->scale);
+
+	if (actor->flags2 & MF2_OBJECTFLIP)
+		workz -= workh;
+
+	ang = actor->angle + ANGLE_45;
+	while (dir*workz < 0)
+	{
+		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
+		if (work)
+			work->angle = ang;
+		ang += ANGLE_90;
+		workz += dir*workh;
+	}
+
+	if (workz != 0)
+		actor->z += workz;
+}
+
+// Function: A_SpawnParticleRelative
+//
+// Description: Spawns a particle effect relative to the location of the actor
+//
+// var1:
+//		var1 >> 16 = x
+//		var1 & 65535 = y
+// var2:
+//		var2 >> 16 = z
+//		var2 & 65535 = state
+//
+void A_SpawnParticleRelative(mobj_t *actor)
+{
+	INT16 x, y, z; // Want to be sure we can use negative values
+	statenum_t state;
+	mobj_t *mo;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SpawnParticleRelative", actor))
+		return;
+#endif
+
+	CONS_Debug(DBG_GAMELOGIC, "A_SpawnParticleRelative called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
+
+	x = (INT16)(locvar1>>16);
+	y = (INT16)(locvar1&65535);
+	z = (INT16)(locvar2>>16);
+	state = (mobjtype_t)(locvar2&65535);
+
+	// Spawn objects correctly in reverse gravity.
+	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
+	mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
+		actor->y + FixedMul(y<<FRACBITS, actor->scale),
+		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - mobjinfo[MT_PARTICLE].height) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
+
+	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
+	mo->angle = actor->angle;
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		mo->flags2 |= MF2_OBJECTFLIP;
+
+	P_SetMobjState(mo, state);
+}
+
+// Function: A_MultiShotDist
+//
+// Description: Spawns multiple shots based on player proximity
+//
+// var1:
+//		same as A_MultiShot
+// var2:
+//		same as A_MultiShot
+//
+void A_MultiShotDist(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MultiShotDist", actor))
+		return;
+#endif
+
+	{
+		UINT8 i;
+		// Quick! Look through players!
+		// Don't spawn dust unless a player is relatively close by (var1).
+		for (i = 0; i < MAXPLAYERS; ++i)
+			if (playeringame[i] && players[i].mo
+			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
+				break; // Stop looking.
+		if (i == MAXPLAYERS)
+			return; // don't make bubble!
+	}
+
+	var1 = locvar1;
+	var2 = locvar2;
+	A_MultiShot(actor);
 }

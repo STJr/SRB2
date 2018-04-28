@@ -142,6 +142,8 @@ typedef enum
 	sfx_steam1,
 	sfx_steam2,
 	sfx_wbreak,
+	sfx_ambmac,
+	sfx_spsmsh,
 
 	sfx_rainin,
 	sfx_litng1,
@@ -291,6 +293,12 @@ typedef enum
 	sfx_hidden,
 	sfx_prloop,
 	sfx_timeup, // Was gonna be played when less than ten seconds are on the clock; uncomment uses of this to see it in-context
+
+	// Halloween
+	sfx_lntsit,
+	sfx_lntdie,
+	sfx_pumpkn,
+	sfx_ghosty,
 
 	// Mario
 	sfx_koopfr,

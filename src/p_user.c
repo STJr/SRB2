@@ -3565,7 +3565,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				if (mo)
 				{
 					//P_InstaThrust(mo, player->mo->angle, FixedMul(mo->info->speed, player->mo->scale));
-					mo->fuse = mo->info->mass;
+					mo->fuse = mo->info->reactiontime;
 				}
 			}
 			// Scatter

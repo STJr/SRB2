@@ -2427,6 +2427,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				P_LinedefExecute(target->spawnpoint->angle, (source ? source : inflictor), target->subsector->sector);
 			break;
 
+		case MT_SPINBOBERT:
+			if (target->hnext)
+				P_KillMobj(target->hnext, inflictor, source, damagetype);
+			if (target->hprev)
+				P_KillMobj(target->hprev, inflictor, source, damagetype);
+			break;
+
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
 			target->fuse = TICRATE*2;

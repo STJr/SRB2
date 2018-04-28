@@ -2200,7 +2200,7 @@ static void P_SceneryXYMovement(mobj_t *mo)
 // 1 - forces false check for water (rings)
 // 2 - forces false check for water + different quicksand behaviour (scenery)
 //
-static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
+void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
 {
 	ffloor_t *rover;
 	fixed_t delta1, delta2, thingtop;
@@ -2764,7 +2764,7 @@ static boolean P_ZMovement(mobj_t *mo)
 				else if (mo->type == MT_FALLINGROCK)
 				{
 					if (P_MobjFlip(mo)*mom.z > FixedMul(2*FRACUNIT, mo->scale))
-						S_StartSound(mo, mo->info->activesound + P_RandomKey(mo->info->mass));
+						S_StartSound(mo, mo->info->activesound + P_RandomKey(mo->info->reactiontime));
 
 					mom.z /= 2; // Rocks not so bouncy
 
@@ -7410,6 +7410,61 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
 			P_SetThingPosition(mobj);
 			break;
+		case MT_SMASHINGSPIKEBALL:
+			mobj->momx = mobj->momy = 0;
+			if (mobj->state-states == S_SMASHSPIKE_FALL && P_IsObjectOnGround(mobj))
+			{
+				P_SetMobjState(mobj, S_SMASHSPIKE_STOMP1);
+				S_StartSound(mobj, sfx_spsmsh);
+			}
+			else if (mobj->state-states == S_SMASHSPIKE_RISE2 && P_MobjFlip(mobj)*(mobj->z - mobj->movecount) >= 0)
+			{
+				mobj->momz = 0;
+				P_SetMobjState(mobj, S_SMASHSPIKE_FLOAT);
+			}
+			break;
+		case MT_HANGSTER:
+			{
+				statenum_t st =  mobj->state-states;
+				//ghost image trail when flying down
+				if (st == S_HANGSTER_SWOOP1 || st == S_HANGSTER_SWOOP2)
+				{
+					P_SpawnGhostMobj(mobj);
+					//curve when in line with target, otherwise curve to avoid crashing into floor
+					if ((mobj->z - mobj->floorz <= 80*FRACUNIT) || (mobj->target && (mobj->z - mobj->target->z <= 80*FRACUNIT)))
+						P_SetMobjState(mobj, (st = S_HANGSTER_ARC1));
+				}
+
+				//swoop arc movement stuff
+				if (st == S_HANGSTER_ARC1)
+				{
+					A_FaceTarget(mobj);
+					P_Thrust(mobj, mobj->angle, 1*FRACUNIT);
+				}
+				else if (st == S_HANGSTER_ARC2)
+					P_Thrust(mobj, mobj->angle, 2*FRACUNIT);
+				else if (st == S_HANGSTER_ARC3)
+					P_Thrust(mobj, mobj->angle, 4*FRACUNIT);
+				//if movement has stopped while flying (like hitting a wall), fly up immediately
+				else if (st == S_HANGSTER_FLY1 && !mobj->momx && !mobj->momy)
+				{
+					mobj->extravalue1 = 0;
+					P_SetMobjState(mobj, S_HANGSTER_ARCUP1);
+				}
+				//after swooping back up, check for ceiling
+				else if ((st == S_HANGSTER_RETURN1 || st == S_HANGSTER_RETURN2) && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height))
+					P_SetMobjState(mobj, (st = S_HANGSTER_RETURN3));
+
+				//should you roost on a ceiling with F_SKY1 as its flat, disappear forever
+				if (st == S_HANGSTER_RETURN3 && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height)
+				&& mobj->subsector->sector->ceilingpic == skyflatnum
+				&& mobj->subsector->sector->ceilingheight == mobj->ceilingz)
+				{
+					P_RemoveMobj(mobj);
+					return;
+				}
+			}
+			break;
 		case MT_EGGCAPSULE:
 			if (!mobj->reactiontime)
 			{
@@ -8015,6 +8070,8 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 				case MT_WALLSPIKE:
 					P_SetMobjState(mobj, mobj->state->nextstate);
 					mobj->fuse = mobj->info->speed;
+					if (mobj->spawnpoint)
+						mobj->fuse += (mobj->spawnpoint->angle/360);
 					break;
 				case MT_NIGHTSCORE:
 					P_RemoveMobj(mobj);
@@ -8396,7 +8453,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			if (titlemapinaction) mobj->flags &= ~MF_NOTHINK;
 			break;
 		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
-			mobj->fuse = mobj->info->mass;
+			mobj->fuse = mobj->info->painchance;
 			break;
 		case MT_BLACKEGGMAN:
 			{
@@ -8410,8 +8467,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Collision helper can be stood on but not pushed
 			mobj->flags2 |= MF2_STANDONME;
 			break;
-		case MT_WALLSPIKE:
 		case MT_SPIKE:
+		case MT_WALLSPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
 		case MT_GFZTREE:
@@ -8480,6 +8537,20 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
+			break;
+		case MT_SMASHINGSPIKEBALL:
+			mobj->movecount = mobj->z;
+			break;
+		case MT_SPINBOBERT:
+			{
+				mobj_t *fire;
+				fire = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SPINBOBERT_FIRE1);
+				P_SetTarget(&fire->target, mobj);
+				P_SetTarget(&mobj->hnext, fire);
+				fire = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SPINBOBERT_FIRE2);
+				P_SetTarget(&fire->target, mobj);
+				P_SetTarget(&mobj->hprev, fire);
+			}
 			break;
 		case MT_REDRING: // Make MT_REDRING red by default
 			mobj->color = skincolor_redring;
@@ -10208,11 +10279,41 @@ ML_EFFECT4 : Don't clip inside the ground
 		break;
 	case MT_THZTREE:
 		{ // Spawn the branches
-			angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT);
+			angle_t mobjangle = FixedAngle((mthing->angle % 113)*FRACUNIT);
 			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
 			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
 			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 		}
+		break;
+	case MT_HHZTREE_TOP:
+		{ // Spawn the branches
+			angle_t mobjangle;
+			mobj_t *leaf;
+			mobjangle = FixedAngle((mthing->angle % 90)*FRACUNIT);
+#define doleaf(x, y) \
+			leaf = P_SpawnMobjFromMobj(mobj, x, y, 0, MT_HHZTREE_PART);\
+			leaf->angle = mobjangle;\
+			P_SetMobjState(leaf, leaf->info->seestate);\
+			mobjangle += ANGLE_90
+			doleaf(1*FRACUNIT, 0);
+			doleaf(0, 1*FRACUNIT);
+			doleaf(-1*FRACUNIT, 0);
+			doleaf(0, -1*FRACUNIT);
+#undef doleaf
+		}
+		break;
+	case MT_JACKO1:
+	case MT_JACKO2:
+	case MT_JACKO3:
+		{
+			mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&overlay->target, mobj);
+			P_SetMobjState(overlay, mobj->info->raisestate);
+		}
+		break;
+	case MT_SMASHINGSPIKEBALL:
+		if (mthing->angle > 0)
+			mobj->tics += mthing->angle;
 		break;
 	default:
 		break;
@@ -10246,9 +10347,6 @@ ML_EFFECT4 : Don't clip inside the ground
 	}
 	else if (i == MT_TOKEN)
 	{
-		if (mthing->options & MTF_OBJECTSPECIAL) // Mario Block version
-			mobj->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-
 		// We advanced tokenbits earlier due to the return check.
 		// Subtract 1 here for the correct value.
 		mobj->health = 1 << (tokenbits - 1);
@@ -10296,7 +10394,9 @@ ML_EFFECT4 : Don't clip inside the ground
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
 			mobj->flags &= ~MF_SCENERY;
-			mobj->fuse = mthing->angle + mobj->info->speed;
+			mobj->fuse = (16 - mthing->extrainfo) * (mthing->angle + mobj->info->speed) / 16;
+			if (mthing->options & MTF_EXTRA)
+				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
 		// Use per-thing collision for spikes if the deaf flag isn't checked.
 		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
@@ -10313,7 +10413,9 @@ ML_EFFECT4 : Don't clip inside the ground
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
 			mobj->flags &= ~MF_SCENERY;
-			mobj->fuse = mobj->info->speed;
+			mobj->fuse = (16 - mthing->extrainfo) * ((mthing->angle/360) + mobj->info->speed) / 16;
+			if (mthing->options & MTF_EXTRA)
+				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
 		// Use per-thing collision for spikes if the deaf flag isn't checked.
 		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
