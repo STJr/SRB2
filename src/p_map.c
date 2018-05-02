@@ -117,7 +117,12 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t horizspeed = spring->info->damage;
 	UINT8 secondjump;
 
-	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
+	// Does nothing?
+	if (!vertispeed && !horizspeed)
+		return false;
+
+	// Object was already sprung this tic
+	if (object->eflags & MFE_SPRUNG)
 		return false;
 
 	// Spectators don't trigger springs.
@@ -130,26 +135,32 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
+	if (spring->eflags & MFE_VERTICALFLIP)
+		vertispeed *= -1;
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
+#endif
+
 	if (object->player
 	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
 	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
 	{
 		S_StartSound(object, sfx_s3k8b);
-		horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
-		vertispeed = FixedMul(vertispeed, (6*FRACUNIT)/5); // aprox square root of above
+		if (horizspeed)
+			horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
+		if (vertispeed)
+			vertispeed = FixedMul(vertispeed, (6*FRACUNIT)/5); // aprox square root of above
 	}
 
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
-	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
+	spring->flags &= ~(MF_SPRING|MF_SPECIAL); // De-solidify
 
 	if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 	{
 		object->momx = object->momy = 0;
 		P_TryMove(object, spring->x, spring->y, true);
 	}
-
-	if (spring->eflags & MFE_VERTICALFLIP)
-		vertispeed *= -1;
 
 	if (vertispeed > 0)
 		object->z = spring->z + spring->height + 1;
@@ -186,7 +197,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		P_InstaThrustEvenIn2D(object, spring->angle, FixedMul(horizspeed,FixedSqrt(FixedMul(object->scale, spring->scale))));
 
 	// Re-solidify
-	spring->flags |= (spring->info->flags & (MF_SPECIAL|MF_SOLID));
+	spring->flags |= (spring->info->flags & (MF_SPRING|MF_SPECIAL));
 
 	P_SetMobjState(spring, spring->info->raisestate);
 
@@ -239,7 +250,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	}
 
 #ifdef ESLOPE
-	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
+	object->standingslope = NULL; // And again.
 #endif
 
 	return true;
@@ -398,7 +409,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 static boolean PIT_CheckThing(mobj_t *thing)
 {
 	fixed_t blockdist;
-	boolean iwassprung = false;
 
 	// don't clip against self
 	if (thing == tmthing)
@@ -514,7 +524,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)))
+	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE|MF_SPRING)))
 		return true;
 
 	// Don't collide with your buddies while NiGHTS-flying.
@@ -1062,12 +1072,17 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (tmthing->flags & MF_PUSHABLE)
 	{
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		{
 			P_DoFanAndGasJet(thing, tmthing);
+			return true;
+		}
 		else if (thing->flags & MF_SPRING)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				iwassprung = P_DoSpring(thing, tmthing);
+				if (P_DoSpring(thing, tmthing))
+					return false;
+			return true;
 		}
 	}
 
@@ -1158,7 +1173,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				iwassprung = P_DoSpring(thing, tmthing);
+				if (P_DoSpring(thing, tmthing))
+					return false;
+			return true;
 		}
 		// Are you touching the side of the object you're interacting with?
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
@@ -1206,15 +1223,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if (!(tmthing->player) && (thing->player))
+	if ((!tmthing->player) && (thing->player))
 		; // no solid thing should ever be able to step up onto a player
-	else if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
-	{
-		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
-			return false; // "cancel" P_TryMove via blocking so you keep your current position
-	}
-	else if (tmthing->flags & MF_SPRING && (thing->flags & MF_PUSHABLE))
-		; // Fix a few nasty spring-jumping bugs that happen sometimes.
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
 	else if (thing->flags & MF_MONITOR && tmthing->player
@@ -1253,13 +1263,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
-			if (thing->flags & MF_SPRING)
-				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			else if (tmthing->player && tmthing->z + tmthing->height > topz
+			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
@@ -1299,13 +1307,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
-			if (thing->flags & MF_SPRING)
-				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			else if (tmthing->player && tmthing->z < topz
+			if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
