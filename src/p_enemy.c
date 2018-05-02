@@ -2718,7 +2718,6 @@ void A_GoldMonitorPop(mobj_t *actor)
 	// Players can now stand on top of us.
 	P_UnsetThingPosition(actor);
 	actor->flags  &= ~(MF_MONITOR|MF_SHOOTABLE);
-	actor->flags2 |= MF2_STANDONME;
 	P_SetThingPosition(actor);
 
 	// Don't count this box in statistics. Sorry.
@@ -2791,7 +2790,6 @@ void A_GoldMonitorRestore(mobj_t *actor)
 #endif
 
 	actor->flags |= MF_MONITOR|MF_SHOOTABLE;
-	actor->flags2 &= ~MF2_STANDONME;
 	actor->health = 1; // Just in case.
 }
 

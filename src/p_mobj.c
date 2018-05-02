@@ -2701,9 +2701,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mom.z < 0) // falling
 		{
-			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER)
-				mo->eflags |= MFE_JUSTHITFLOOR;
+			mo->eflags |= MFE_JUSTHITFLOOR;
 
 			if (mo->flags2 & MF2_SKULLFLY) // the skull slammed into something
 				mom.z = -mom.z;
@@ -2783,14 +2781,11 @@ static boolean P_ZMovement(mobj_t *mo)
 						mom.z = 0;
 				}
 			}
-			else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-				mom.z = tmfloorthing->momz;
-			else if (!tmfloorthing)
-				mom.z = 0;
+			else
+				mom.z = (tmfloorthing ? tmfloorthing->momz : 0);
+
 		}
-		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
+		else if (tmfloorthing)
 			mom.z = tmfloorthing->momz;
 
 #ifdef ESLOPE
@@ -2968,100 +2963,89 @@ static void P_PlayerZMovement(mobj_t *mo)
 			if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
 				mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
 
-			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER) // Spin Attack
+			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
+
 			{
-				mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
-
-				if (mo->eflags & MFE_JUSTHITFLOOR)
-				{
 #ifdef POLYOBJECTS
-					// Check if we're on a polyobject
-					// that triggers a linedef executor.
-					msecnode_t *node;
-					boolean stopmovecut = false;
+				// Check if we're on a polyobject
+				// that triggers a linedef executor.
+				msecnode_t *node;
+				boolean stopmovecut = false;
 
-					for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+				{
+					sector_t *sec = node->m_sector;
+					subsector_t *newsubsec;
+					size_t i;
+
+					for (i = 0; i < numsubsectors; i++)
 					{
-						sector_t *sec = node->m_sector;
-						subsector_t *newsubsec;
-						size_t i;
+						newsubsec = &subsectors[i];
 
-						for (i = 0; i < numsubsectors; i++)
+						if (newsubsec->sector != sec)
+							continue;
+
+						if (newsubsec->polyList)
 						{
-							newsubsec = &subsectors[i];
+							polyobj_t *po = newsubsec->polyList;
+							sector_t *polysec;
 
-							if (newsubsec->sector != sec)
-								continue;
-
-							if (newsubsec->polyList)
+							while(po)
 							{
-								polyobj_t *po = newsubsec->polyList;
-								sector_t *polysec;
-
-								while(po)
+								if (!P_MobjInsidePolyobj(po, mo) || !(po->flags & POF_SOLID))
 								{
-									if (!P_MobjInsidePolyobj(po, mo) || !(po->flags & POF_SOLID))
-									{
-										po = (polyobj_t *)(po->link.next);
-										continue;
-									}
-
-									// We're inside it! Yess...
-									polysec = po->lines[0]->backsector;
-
-									// Moving polyobjects should act like conveyors if the player lands on one. (I.E. none of the momentum cut thing below) -Red
-									if ((mo->z == polysec->ceilingheight || mo->z+mo->height == polysec->floorheight) && po->thinker)
-										stopmovecut = true;
-
-									if (!(po->flags & POF_LDEXEC))
-									{
-										po = (polyobj_t *)(po->link.next);
-										continue;
-									}
-
-									if (mo->z == polysec->ceilingheight)
-									{
-										// We're landing on a PO, so check for
-										// a linedef executor.
-										// Trigger tags are 32000 + the PO's ID number.
-										P_LinedefExecute((INT16)(32000 + po->id), mo, NULL);
-									}
-
 									po = (polyobj_t *)(po->link.next);
+									continue;
 								}
+
+								// We're inside it! Yess...
+								polysec = po->lines[0]->backsector;
+
+								// Moving polyobjects should act like conveyors if the player lands on one. (I.E. none of the momentum cut thing below) -Red
+								if ((mo->z == polysec->ceilingheight || mo->z+mo->height == polysec->floorheight) && po->thinker)
+									stopmovecut = true;
+
+								if (!(po->flags & POF_LDEXEC))
+								{
+									po = (polyobj_t *)(po->link.next);
+									continue;
+								}
+
+								if (mo->z == polysec->ceilingheight)
+								{
+									// We're landing on a PO, so check for
+									// a linedef executor.
+									// Trigger tags are 32000 + the PO's ID number.
+									P_LinedefExecute((INT16)(32000 + po->id), mo, NULL);
+								}
+
+								po = (polyobj_t *)(po->link.next);
 							}
 						}
 					}
-
-					if (!stopmovecut)
-#endif
-
-					// Cut momentum in half when you hit the ground and
-					// aren't pressing any controls.
-					if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
-					{
-						mo->momx >>= 1;
-						mo->momy >>= 1;
-					}
 				}
 
-				clipmomz = P_PlayerHitFloor(mo->player);
+			if (!stopmovecut)
+#endif
+
+				// Cut momentum in half when you hit the ground and
+				// aren't pressing any controls.
+				if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
+				{
+					mo->momx >>= 1;
+					mo->momy >>= 1;
+				}
 			}
+
+			clipmomz = P_PlayerHitFloor(mo->player);
+
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
 
 			if (clipmomz)
-			{
-				if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-					mo->momz = tmfloorthing->momz;
-				else if (!tmfloorthing)
-					mo->momz = 0;
-			}
+				mo->momz = (tmfloorthing ? tmfloorthing->momz : 0);
 		}
-		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
+		else if (tmfloorthing)
 			mo->momz = tmfloorthing->momz;
 	}
 	else if (!(mo->flags & MF_NOGRAVITY)) // Gravity here!
@@ -3266,12 +3250,9 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
-			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER)
-					mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
+			mo->eflags |= MFE_JUSTHITFLOOR; // Spin Attack
 
-			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
+			if (tmfloorthing)
 				mo->momz = tmfloorthing->momz;
 			else if (!tmfloorthing)
 				mo->momz = 0;
@@ -8463,23 +8444,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				P_SetTarget(&spawn->target, mobj);
 			}
 			break;
-		case MT_BLACKEGGMAN_HELPER:
-			// Collision helper can be stood on but not pushed
-			mobj->flags2 |= MF2_STANDONME;
-			break;
-		case MT_SPIKE:
-		case MT_WALLSPIKE:
-			mobj->flags2 |= MF2_STANDONME;
-			break;
-		case MT_GFZTREE:
-		case MT_GFZBERRYTREE:
-		case MT_GFZCHERRYTREE:
-		case MT_LAMPPOST1:
-		case MT_LAMPPOST2:
-		case MT_DSZSTALAGMITE:
-		case MT_DSZ2STALAGMITE:
-			mobj->flags2 |= MF2_STANDONME;
-			break;
 		case MT_DETON:
 			mobj->movedir = 0;
 			break;
@@ -10524,10 +10488,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			}
 
 			if (mobj->flags & MF_PUSHABLE)
-			{
 				mobj->flags &= ~MF_PUSHABLE;
-				mobj->flags2 |= MF2_STANDONME;
-			}
 
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
