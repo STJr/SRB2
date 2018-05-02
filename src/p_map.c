@@ -1177,66 +1177,57 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					return false;
 			return true;
 		}
-		// Are you touching the side of the object you're interacting with?
-		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
-			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
+		// Monitor?
+		else if (thing->flags & MF_MONITOR
+		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2)))
 		{
 			// 0 = none, 1 = elemental pierce, 2 = bubble bounce
 			UINT8 elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)
 			? (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
 			: 0);
-			if (thing->flags & MF_MONITOR
-				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-				|| ((tmthing->player->pflags & PF_JUMPED)
-					&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
-					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
-				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-				|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
-					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
-				|| elementalpierce))
+			if (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+			|| ((tmthing->player->pflags & PF_JUMPED)
+				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
+				|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
+				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+			|| elementalpierce)
 			{
-				player_t *player = tmthing->player;
-				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
-				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
-				fixed_t *z = &tmthing->z; // aau.
-				P_DamageMobj(thing, tmthing, tmthing, 1, 0); // break the monitor
-				// Going down? Then bounce back up.
-				if ((P_MobjWasRemoved(thing) // Monitor was removed
-					|| !thing->health) // or otherwise popped
-				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
+				&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 				{
-					if (elementalpierce == 2)
-						P_DoBubbleBounce(player);
-					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+					player_t *player = tmthing->player;
+					SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
+					fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
+					fixed_t *z = &tmthing->z; // aau.
+					// Going down? Then bounce back up.
+					if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
+					&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+					&& (elementalpierce != 1)) // you're not piercing through the monitor...
+					{
+						if (elementalpierce == 2)
+							P_DoBubbleBounce(player);
+						else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+							*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+					}
+					if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+					{
+						if (player->pflags & PF_BOUNCING)
+							P_DoAbilityBounce(player, false);
+						return false;
+					}
+					else
+						*z -= *momz; // to ensure proper collision.
 				}
-				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
-				{
-					if (player->pflags & PF_BOUNCING)
-						P_DoAbilityBounce(player, false);
-					return false;
-				}
-				else
-					*z -= *momz; // to ensure proper collision.
+
+				return true;
 			}
 		}
 	}
 
 	if ((!tmthing->player) && (thing->player))
 		; // no solid thing should ever be able to step up onto a player
-	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
-	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player
-	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
-			|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
-		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-		|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
-			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
-	&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2)))
-		;
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
