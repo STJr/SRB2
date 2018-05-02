@@ -3760,7 +3760,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_CCOMMAND3,    // seestate
 		sfx_None,       // seesound
 		2*TICRATE,      // reactiontime
-		sfx_None,       // attacksound
+		sfx_s3k60,      // attacksound
 		S_CCOMMAND3,    // painstate
 		200,            // painchance
 		sfx_dmpain,     // painsound
@@ -3775,7 +3775,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // display offset
 		100,            // mass
 		0,              // damage
-		sfx_None,       // activesound
+		sfx_s3k5d,      // activesound
 		MF_SLIDEME|MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
 		S_NULL          // raisestate
 	},

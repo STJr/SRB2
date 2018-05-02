@@ -5005,11 +5005,6 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	else
 		thefloor = actor->floorz;
 
-	if (actor->fuse & 1)
-		actor->flags2 |= MF2_DONTDRAW;
-	else
-		actor->flags2 &= ~MF2_DONTDRAW;
-
 	if (actor->reactiontime > 0)
 		actor->reactiontime--;
 
@@ -5043,14 +5038,13 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 
 	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
 
-	if (actor->target->player && actor->health > 1)
+	if (actor->target->player)
 	{
-		if (dist < FixedMul(128*FRACUNIT, actor->scale)
+		if (dist < FixedMul(64<<(FRACBITS+(actor->health == 1 ? 0 : 1)), actor->scale)
 			&& ((actor->target->player->pflags & PF_JUMPED) || (actor->target->player->pflags & PF_SPINNING)))
 		{
-			// Auugh! He's trying to kill you! Strafe! STRAAAAFFEEE!!
-			if (actor->target->momx || actor->target->momy)
-				P_InstaThrust(actor, actor->angle - ANGLE_180, FixedMul(20*FRACUNIT, actor->scale));
+			// Auugh! She's trying to kill you! Strafe! STRAAAAFFEEE!!
+			P_InstaThrust(actor, actor->angle - ANGLE_180, FixedMul(20*FRACUNIT, actor->scale));
 			return;
 		}
 	}
@@ -5076,7 +5070,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		actor->angle -= (P_RandomByte()<<10);
 
 		if (actor->health > 1)
-			P_InstaThrust(actor, actor->angle, FixedMul(10*FRACUNIT, actor->scale));
+			P_Thrust(actor, actor->angle, 2*actor->scale);
 	}
 	else if (!actor->reactiontime)
 	{
@@ -5085,8 +5079,9 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 			if (dist < FixedMul(512*FRACUNIT, actor->scale))
 			{
 				actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-				P_InstaThrust(actor, actor->angle, FixedMul(60*FRACUNIT, actor->scale));
+				P_InstaThrust(actor, actor->angle, FixedMul(30*FRACUNIT, actor->scale));
 				actor->threshold = 1;
+				S_StartSound(actor, actor->info->attacksound);
 			}
 		}
 		actor->reactiontime = 2*TICRATE + P_RandomByte()/2;
@@ -5103,6 +5098,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 			actor->momz = FixedMul(locvar2, actor->scale);
 			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 			P_InstaThrust(actor, actor->angle, FixedMul(locvar2/8, actor->scale));
+			S_StartSound(actor, actor->info->activesound);
 			// pogo on player
 		}
 		else

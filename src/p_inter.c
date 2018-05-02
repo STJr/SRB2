@@ -349,8 +349,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (player->spectator)
 		return;
 
-	// Ignore eggman in "ouchie" mode
-	if (special->flags & MF_BOSS && special->flags2 & MF2_FRET)
+	// Ignore multihits in "ouchie" mode
+	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
 #ifdef HAVE_BLUA
@@ -363,12 +363,50 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
 	: 0);
 
-	if (special->flags & MF_BOSS)
+	if ((special->flags & (MF_ENEMY|MF_BOSS)) && !(special->flags & MF_MISSILE))
 	{
+		////////////////////////////////////////////////////////
+		/////ENEMIES & BOSSES!!/////////////////////////////////
+		////////////////////////////////////////////////////////
+
 		if (special->type == MT_BLACKEGGMAN)
 		{
 			P_DamageMobj(toucher, special, special, 1, 0); // ouch
 			return;
+		}
+
+		if (special->type == MT_BIGMINE)
+		{
+			special->momx = toucher->momx/3;
+			special->momy = toucher->momy/3;
+			special->momz = toucher->momz/3;
+			toucher->momx /= -8;
+			toucher->momy /= -8;
+			toucher->momz /= -8;
+			special->flags &= ~MF_SPECIAL;
+			if (special->info->activesound)
+				S_StartSound(special, special->info->activesound);
+			P_SetTarget(&special->tracer, toucher);
+			player->homing = 0;
+			return;
+		}
+
+		if (special->type == MT_GSNAPPER && !elementalpierce
+		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
+		&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+			return; // Can only hit snapper from above
+
+		if (special->type == MT_SHARP
+		&& ((special->state == &states[special->info->xdeathstate]) || (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0)))
+		{
+			if (player->pflags & PF_BOUNCING)
+			{
+				toucher->momz = -toucher->momz;
+				P_DoAbilityBounce(player, false);
+				return;
+			}
+			else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+				return; // Cannot hit sharp from above or when red and angry
 		}
 
 		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
@@ -388,92 +426,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			if (player->pflags & PF_BOUNCING)
 				P_DoAbilityBounce(player, false);
-			toucher->momx = -toucher->momx;
-			toucher->momy = -toucher->momy;
+			if (special->info->spawnhealth > 1) // Multi-hit? Bounce back!
+			{
+				toucher->momx = -toucher->momx;
+				toucher->momy = -toucher->momy;
+			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
 		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
 		&& player->charability == CA_FLY
 		&& (player->powers[pw_tailsfly]
-		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
+		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with her propeller.
 		{
 			toucher->momz = -toucher->momz/2;
-
-			P_DamageMobj(special, toucher, toucher, 1, 0);
-		}
-		else
-			P_DamageMobj(toucher, special, special, 1, 0);
-
-		return;
-	}
-	else if ((special->flags & MF_ENEMY) && !(special->flags & MF_MISSILE))
-	{
-		////////////////////////////////////////////////////////
-		/////ENEMIES!!//////////////////////////////////////////
-		////////////////////////////////////////////////////////
-		if (special->type == MT_BIGMINE)
-		{
-			special->momx = toucher->momx/3;
-			special->momy = toucher->momy/3;
-			special->momz = toucher->momz/3;
-			toucher->momx /= -8;
-			toucher->momy /= -8;
-			toucher->momz /= -8;
-			special->flags &= ~MF_SPECIAL;
-			if (special->info->activesound)
-				S_StartSound(special, special->info->activesound);
-			P_SetTarget(&special->tracer, toucher);
-			player->homing = 0;
-			return;
-		}
-		else if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
-		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
-		{
-			// Can only hit snapper from above
-			P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
-		}
-		else if (special->type == MT_SHARP
-		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2))
-		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
-		{
-			if (player->pflags & PF_BOUNCING)
-			{
-				toucher->momz = -toucher->momz;
-				P_DoAbilityBounce(player, false);
-			}
-			else // Cannot hit sharp from above or when red and angry
-				P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
-		}
-		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
-		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
-		{
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
-			{
-				if (elementalpierce == 2)
-					P_DoBubbleBounce(player);
-				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-					toucher->momz = -toucher->momz;
-			}
-			if (player->pflags & PF_BOUNCING)
-				P_DoAbilityBounce(player, false);
-
-			P_DamageMobj(special, toucher, toucher, 1, 0);
-		}
-		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
-		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
-		&& player->charability == CA_FLY
-		&& (player->powers[pw_tailsfly]
-		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
-		{
-			if (P_MobjFlip(toucher)*toucher->momz < 0)
-				toucher->momz = -toucher->momz/2;
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
@@ -2195,21 +2161,27 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			{
 				if (target->flags & MF_BOSS)
 					score = 1000;
-				else if ((target->flags & MF_ENEMY) && !(target->flags & MF_MISSILE))
+				else if ((target->flags & MF_ENEMY) && !(target->flags & MF_MISSILE) && target->info->spawnhealth)
 				{
+					UINT8 locscoreadd = source->player->scoreadd + target->info->spawnhealth;
 					mobj_t *scoremobj;
 					UINT32 scorestate = mobjinfo[MT_SCORE].spawnstate;
 
 					scoremobj = P_SpawnMobj(target->x, target->y, target->z + (target->height / 2), MT_SCORE);
 
-					// On ground? No chain starts.
-					if (!source->player->powers[pw_invulnerability] && P_IsObjectOnGround(source))
+					// More Sonic-like point system
+					if (!mariomode) switch (locscoreadd)
 					{
-						source->player->scoreadd = 0;
-						score = 100;
+						case 1:  score = 100;   break;
+						case 2:  score = 200;   scorestate += 1; break;
+						case 3:  score = 500;   scorestate += 2; break;
+						case 4: case 5: case 6: case 7: case 8: case 9:
+						case 10: case 11: case 12: case 13: case 14:
+						         score = 1000;  scorestate += 3; break;
+						default: score = 10000; scorestate += 4; break;
 					}
 					// Mario Mode has Mario-like chain point values
-					else if (mariomode) switch (++source->player->scoreadd)
+					else switch (locscoreadd)
 					{
 						case 1: score = 100;  break;
 						case 2: score = 200;  scorestate += 1; break;
@@ -2229,19 +2201,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 							scorestate += 10;
 							break;
 					}
-					// More Sonic-like point system
-					else switch (++source->player->scoreadd)
-					{
-						case 1:  score = 100;   break;
-						case 2:  score = 200;   scorestate += 1; break;
-						case 3:  score = 500;   scorestate += 2; break;
-						case 4: case 5: case 6: case 7: case 8: case 9:
-						case 10: case 11: case 12: case 13: case 14:
-						         score = 1000;  scorestate += 3; break;
-						default: score = 10000; scorestate += 4; break;
-					}
 
 					P_SetMobjState(scoremobj, scorestate);
+
+					// On ground? No chain starts.
+					if (!source->player->powers[pw_invulnerability] && P_IsObjectOnGround(source))
+						source->player->scoreadd = locscoreadd;
 				}
 			}
 
@@ -2383,6 +2348,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_YELLOWSHELL:
 			P_SpawnMobjFromMobj(target, 0, 0, 0, MT_YELLOWSPRING);
+			break;
+
+		case MT_CRAWLACOMMANDER:
+			target->momx = target->momy = target->momz = 0;
 			break;
 
 		case MT_EGGMOBILE3:
@@ -3131,36 +3100,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 	}
 
-	// Special case for Crawla Commander
-	if (target->type == MT_CRAWLACOMMANDER)
-	{
-		if (!force && target->fuse) // Invincible
-			return false;
-
-#ifdef HAVE_BLUA
-		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
-			return true;
-#endif
-
-		if (target->health > 1)
-		{
-			if (target->info->painsound)
-				S_StartSound(target, target->info->painsound);
-
-			target->fuse = TICRATE/2;
-			target->flags2 |= MF2_FRET;
-		}
-		else
-		{
-			target->flags |= MF_NOGRAVITY;
-			target->fuse = 0;
-		}
-
-		target->momx = target->momy = target->momz = 0;
-
-		P_InstaThrust(target, target->angle-ANGLE_180, FixedMul(5*FRACUNIT, target->scale));
-	}
-	else if (target->flags & MF_BOSS)
+	if (target->flags & (MF_ENEMY|MF_BOSS))
 	{
 		if (!force && target->flags2 & MF2_FRET) // Currently flashing from being hit
 			return false;
@@ -3173,13 +3113,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
 	}
-#ifdef HAVE_BLUA
-	else if (target->flags & MF_ENEMY)
-	{
-		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
-			return true;
-	}
-#endif
 
 	player = target->player;
 
@@ -3348,6 +3281,18 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	else
 		switch (target->type)
 		{
+		case MT_CRAWLACOMMANDER:
+			if (target->info->painsound)
+				S_StartSound(target, target->info->painsound);
+
+			target->fuse = TICRATE/2;
+			target->momz = 0;
+
+			P_InstaThrust(target, target->angle-ANGLE_180, FixedMul(5*FRACUNIT, target->scale));
+
+			P_SetMobjState(target, target->info->painstate);
+
+			break;
 		case MT_EGGMOBILE2: // egg slimer
 			if (target->health < target->info->damage) // in pinch phase
 			{
