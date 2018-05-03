@@ -4994,6 +4994,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	fixed_t thefloor;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	boolean hovermode = (actor->health > 1 || actor->fuse);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_CrawlaCommanderThink", actor))
 		return;
@@ -5005,6 +5006,17 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	else
 		thefloor = actor->floorz;
 
+	if (!actor->fuse && actor->flags2 & MF2_FRET)
+	{
+		if (actor->info->painsound)
+			S_StartSound(actor, actor->info->painsound);
+
+		actor->fuse = TICRATE/2;
+		actor->momz = 0;
+
+		P_InstaThrust(actor, actor->angle-ANGLE_180, FixedMul(5*FRACUNIT, actor->scale));
+	}
+
 	if (actor->reactiontime > 0)
 		actor->reactiontime--;
 
@@ -5015,7 +5027,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	}
 
 	// Hover mode
-	if (actor->health > 1 || actor->fuse)
+	if (hovermode)
 	{
 		if (actor->z < thefloor + FixedMul(16*FRACUNIT, actor->scale))
 			actor->momz += FixedMul(FRACUNIT, actor->scale);
@@ -5025,7 +5037,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 			actor->momz += FixedMul(16, actor->scale);
 	}
 
-	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
+	if (!actor->target)
 	{
 		// look for a new target
 		if (P_LookForPlayers(actor, true, false, 0))
@@ -5038,9 +5050,9 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 
 	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
 
-	if (actor->target->player)
+	if (actor->target->player && (!hovermode || actor->reactiontime <= 2*TICRATE))
 	{
-		if (dist < FixedMul(64<<(FRACBITS+(actor->health == 1 ? 0 : 1)), actor->scale)
+		if (dist < FixedMul(64<<(FRACBITS+(hovermode ? 1 : 0)), actor->scale)
 			&& ((actor->target->player->pflags & PF_JUMPED) || (actor->target->player->pflags & PF_SPINNING)))
 		{
 			// Auugh! She's trying to kill you! Strafe! STRAAAAFFEEE!!
@@ -5069,36 +5081,49 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		actor->angle += (P_RandomByte()<<10);
 		actor->angle -= (P_RandomByte()<<10);
 
-		if (actor->health > 1)
+		if (hovermode)
+		{
+			fixed_t mom;
 			P_Thrust(actor, actor->angle, 2*actor->scale);
+			mom = P_AproxDistance(actor->momx, actor->momy);
+			if (mom > 20*actor->scale)
+			{
+				mom += 20*actor->scale;
+				mom >>= 1;
+				P_InstaThrust(actor, R_PointToAngle2(0, 0, actor->momx, actor->momy), mom);
+			}
+		}
 	}
 	else if (!actor->reactiontime)
 	{
-		if (actor->health > 1) // Hover Mode
+		if (hovermode && !(actor->flags2 & MF2_FRET)) // Hover Mode
 		{
 			if (dist < FixedMul(512*FRACUNIT, actor->scale))
 			{
 				actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-				P_InstaThrust(actor, actor->angle, FixedMul(30*FRACUNIT, actor->scale));
+				P_InstaThrust(actor, actor->angle, FixedMul(40*FRACUNIT, actor->scale));
 				actor->threshold = 1;
-				S_StartSound(actor, actor->info->attacksound);
+				if (actor->info->attacksound)
+					S_StartSound(actor, actor->info->attacksound);
 			}
 		}
-		actor->reactiontime = 2*TICRATE + P_RandomByte()/2;
+		actor->reactiontime = 3*TICRATE + (P_RandomByte()>>2);
 	}
 
 	if (actor->health == 1)
 		P_Thrust(actor, actor->angle, 1);
 
 	// Pogo Mode
-	if (!actor->fuse && actor->health == 1 && actor->z <= actor->floorz)
+	if (!hovermode && actor->z <= actor->floorz)
 	{
+		if (actor->info->activesound)
+			S_StartSound(actor, actor->info->activesound);
+
 		if (dist < FixedMul(256*FRACUNIT, actor->scale))
 		{
 			actor->momz = FixedMul(locvar2, actor->scale);
 			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 			P_InstaThrust(actor, actor->angle, FixedMul(locvar2/8, actor->scale));
-			S_StartSound(actor, actor->info->activesound);
 			// pogo on player
 		}
 		else

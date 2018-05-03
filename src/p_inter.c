@@ -3281,18 +3281,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	else
 		switch (target->type)
 		{
-		case MT_CRAWLACOMMANDER:
-			if (target->info->painsound)
-				S_StartSound(target, target->info->painsound);
-
-			target->fuse = TICRATE/2;
-			target->momz = 0;
-
-			P_InstaThrust(target, target->angle-ANGLE_180, FixedMul(5*FRACUNIT, target->scale));
-
-			P_SetMobjState(target, target->info->painstate);
-
-			break;
 		case MT_EGGMOBILE2: // egg slimer
 			if (target->health < target->info->damage) // in pinch phase
 			{
