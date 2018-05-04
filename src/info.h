@@ -224,6 +224,9 @@ void A_MineRange();
 void A_ConnectToGround();
 void A_SpawnParticleRelative();
 void A_MultiShotDist();
+void A_WhoCaresIfYourSonIsABee();
+void A_ParentTriesToSleep();
+void A_CryingToMomma();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -266,7 +269,6 @@ typedef enum sprite
 	SPR_MNUS, // Minus
 	SPR_SSHL, // Spring Shell
 	SPR_UNID, // Unidus
-	SPR_BBUZ, // AquaBuzz, for Azure Temple
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -587,6 +589,9 @@ typedef enum sprite
 	SPR_CAPS, // Capsule thingy for NiGHTS
 
 	// Secret badniks and hazards, shhhh
+	SPR_HIVE,
+	SPR_BUMB,
+	SPR_BBUZ,
 	SPR_FMCE,
 	SPR_HMCE,
 	SPR_CACO,
@@ -920,10 +925,6 @@ typedef enum state
 	S_RBUZZFLY1,
 	S_RBUZZFLY2,
 
-	// AquaBuzz
-	S_BBUZZFLY1,
-	S_BBUZZFLY2,
-
 	// Jetty-Syn Bomber
 	S_JETBLOOK1,
 	S_JETBLOOK2,
@@ -1075,6 +1076,10 @@ typedef enum state
 	S_FACESTABBER_CHARGE2,
 	S_FACESTABBER_CHARGE3,
 	S_FACESTABBER_CHARGE4,
+	S_FACESTABBER_PAIN,
+	S_FACESTABBER_DIE1,
+	S_FACESTABBER_DIE2,
+	S_FACESTABBER_DIE3,
 
 	// Egg Guard
 	S_EGGGUARD_STND,
@@ -3304,6 +3309,32 @@ typedef enum state
 	S_NIGHTOPIANHELPER9,
 
 	// Secret badniks and hazards, shhhh
+	S_HIVEELEMENTAL_LOOK,
+	S_HIVEELEMENTAL_PREPARE1,
+	S_HIVEELEMENTAL_PREPARE2,
+	S_HIVEELEMENTAL_SHOOT1,
+	S_HIVEELEMENTAL_SHOOT2,
+	S_HIVEELEMENTAL_DORMANT,
+	S_HIVEELEMENTAL_PAIN,
+	S_HIVEELEMENTAL_DIE1,
+	S_HIVEELEMENTAL_DIE2,
+	S_HIVEELEMENTAL_DIE3,
+
+	S_BUMBLEBORE_SPAWN,
+	S_BUMBLEBORE_LOOK1,
+	S_BUMBLEBORE_LOOK2,
+	S_BUMBLEBORE_FLY1,
+	S_BUMBLEBORE_FLY2,
+	S_BUMBLEBORE_RAISE,
+	S_BUMBLEBORE_FALL1,
+	S_BUMBLEBORE_FALL2,
+	S_BUMBLEBORE_STUCK1,
+	S_BUMBLEBORE_STUCK2,
+	S_BUMBLEBORE_DIE,
+
+	S_BBUZZFLY1,
+	S_BBUZZFLY2,
+
 	S_SMASHSPIKE_FLOAT,
 	S_SMASHSPIKE_EASE1,
 	S_SMASHSPIKE_EASE2,
@@ -3312,11 +3343,6 @@ typedef enum state
 	S_SMASHSPIKE_STOMP2,
 	S_SMASHSPIKE_RISE1,
 	S_SMASHSPIKE_RISE2,
-
-	S_HHZDUST1,
-	S_HHZDUST2,
-	S_HHZDUST3,
-	S_HHZDUST4,
 
 	S_CACO_LOOK,
 	S_CACO_WAKE1,
@@ -3421,6 +3447,11 @@ typedef enum state
 	S_WPLD5,
 	S_WPLD6,
 
+	S_DUST1,
+	S_DUST2,
+	S_DUST3,
+	S_DUST4,
+
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -3482,7 +3513,6 @@ typedef enum mobj_type
 	MT_GFZFISH, // Greenflower Fish
 	MT_GOLDBUZZ,
 	MT_REDBUZZ,
-	MT_AQUABUZZ, // AquaBuzz for ATZ
 	MT_JETTBOMBER, // Jetty-Syn Bomber
 	MT_JETTGUNNER, // Jetty-Syn Gunner
 	MT_CRAWLACOMMANDER, // Crawla Commander
@@ -4015,17 +4045,18 @@ typedef enum mobj_type
 	MT_NIGHTOPIANHELPER, // the actual helper object that orbits you
 
 	// Secret badniks and hazards, shhhh
-	MT_SMASHINGSPIKEBALL,
-	MT_HHZDUST,
+	MT_HIVEELEMENTAL,
+	MT_BUMBLEBORE,
 
+	MT_BUBBLEBUZZ,
+
+	MT_SMASHINGSPIKEBALL,
 	MT_CACOLANTERN,
 	MT_CACOSHARD,
 	MT_CACOFIRE,
-
 	MT_SPINBOBERT,
 	MT_SPINBOBERT_FIRE1,
 	MT_SPINBOBERT_FIRE2,
-
 	MT_HANGSTER,
 
 	// Utility Objects
@@ -4048,6 +4079,7 @@ typedef enum mobj_type
 	MT_SPARK, //spark
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
+	MT_DUST,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,

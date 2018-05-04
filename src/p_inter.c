@@ -2334,7 +2334,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = target->info->damage;
 			break;
 
-		case MT_AQUABUZZ:
+		case MT_BUBBLEBUZZ:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
 			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
@@ -3278,20 +3278,14 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (player)
 		P_ResetPlayer(target->player);
+	else if ((target->type == MT_EGGMOBILE2) // egg slimer
+	&& (target->health < target->info->damage)) // in pinch phase
+		P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 	else
-		switch (target->type)
-		{
-		case MT_EGGMOBILE2: // egg slimer
-			if (target->health < target->info->damage) // in pinch phase
-			{
-				P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
-				break;
-			}
-			/* FALLTHRU */
-		default:
-			P_SetMobjState(target, target->info->painstate);
-			break;
-		}
+		P_SetMobjState(target, target->info->painstate);
+
+	if (target->type == MT_HIVEELEMENTAL)
+		target->extravalue1 += 3;
 
 	target->reactiontime = 0; // we're awake now...
 

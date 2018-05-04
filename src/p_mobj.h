@@ -175,8 +175,8 @@ typedef enum
 	MF2_SCATTER        = 1<<8,  // Thrown ring has scatter properties
 	MF2_BEYONDTHEGRAVE = 1<<9,  // Source of this missile has died and has since respawned.
 	MF2_SLIDEPUSH      = 1<<10, // MF_PUSHABLE that pushes continuously.
-	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative Z.
-	MF2_STANDONME      = 1<<12, // While not pushable, stand on me anyway.
+	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative momz.
+	MF2_INVERTAIMABLE  = 1<<12, // Flips whether it's targetable by A_LookForEnemies (enemies no, decoys yes)
 	MF2_INFLOAT        = 1<<13, // Floating to a height for a move, don't auto float to target's height.
 	MF2_DEBRIS         = 1<<14, // Splash ring from explosion ring
 	MF2_NIGHTSPULL     = 1<<15, // Attracted from a paraloop

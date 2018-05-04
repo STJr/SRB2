@@ -174,7 +174,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_MNUS
 	&lspr[NOLIGHT],     // SPR_SSHL
 	&lspr[NOLIGHT],     // SPR_UNID
-	&lspr[NOLIGHT],     // SPR_BBUZ
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -489,14 +488,17 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_CAPS
 
 	// Secret badniks and hazards, shhhh
-	&lspr[NOLIGHT],     // SPR_FMCE",
-	&lspr[NOLIGHT],     // SPR_HMCE",
-	&lspr[NOLIGHT],     // SPR_CACO",
-	&lspr[BLUEBALL_L],  // SPR_BAL2",
-	&lspr[NOLIGHT],     // SPR_SBOB",
-	&lspr[BLUEBALL_L],  // SPR_SBFL",
-	&lspr[BLUEBALL_L],  // SPR_SBSK",
-	&lspr[NOLIGHT],     // SPR_BATT",
+	&lspr[NOLIGHT],     // SPR_HIVE
+	&lspr[NOLIGHT],     // SPR_BUMB,
+	&lspr[NOLIGHT],     // SPR_BBUZ
+	&lspr[NOLIGHT],     // SPR_FMCE,
+	&lspr[NOLIGHT],     // SPR_HMCE,
+	&lspr[NOLIGHT],     // SPR_CACO,
+	&lspr[BLUEBALL_L],  // SPR_BAL2,
+	&lspr[NOLIGHT],     // SPR_SBOB,
+	&lspr[BLUEBALL_L],  // SPR_SBFL,
+	&lspr[BLUEBALL_L],  // SPR_SBSK,
+	&lspr[NOLIGHT],     // SPR_BATT,
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK

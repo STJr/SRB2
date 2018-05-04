@@ -7364,7 +7364,7 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 				}
 				break;
-			case MT_AQUABUZZ:
+			case MT_BUBBLEBUZZ:
 				mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 				{
 					if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -7387,6 +7387,49 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momy >>= 1;
 						mobj->momz >>= 1;
 					}
+				}
+				break;
+			case MT_BUMBLEBORE:
+				{
+					statenum_t st = mobj->state-states;
+					if (st == S_BUMBLEBORE_FLY1 || st == S_BUMBLEBORE_FLY2)
+					{
+						if (!mobj->target)
+							P_SetMobjState(mobj, mobj->info->spawnstate);
+						else if (P_MobjFlip(mobj)*((mobj->z + (mobj->height>>1)) - (mobj->target->z + (mobj->target->height>>1))) > 0
+							&& R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) <= 32*FRACUNIT)
+						{
+							mobj->momx >>= 1;
+							mobj->momy >>= 1;
+							if (++mobj->movefactor == 4)
+							{
+								S_StartSound(mobj, mobj->info->seesound);
+								mobj->momx = mobj->momy = mobj->momz = 0;
+								mobj->flags = (mobj->flags|MF_PAIN) & ~MF_NOGRAVITY;
+								P_SetMobjState(mobj, mobj->info->meleestate);
+							}
+						}
+						else
+							mobj->movefactor = 0;
+					}
+					else if (st == S_BUMBLEBORE_RAISE || st == S_BUMBLEBORE_FALL2) // no _FALL1 because it's an 0-tic
+					{
+						if (P_IsObjectOnGround(mobj))
+						{
+							S_StopSound(mobj);
+							S_StartSound(mobj, mobj->info->attacksound);
+							mobj->flags = (mobj->flags|MF_NOGRAVITY) & ~MF_PAIN;
+							mobj->momx = mobj->momy = mobj->momz = 0;
+							P_SetMobjState(mobj, mobj->info->painstate);
+						}
+						else
+						{
+							mobj->angle += ANGLE_22h;
+							mobj->frame = mobj->state->frame + ((mobj->tics & 2)>>1);
+						}
+					}
+					else if (st == S_BUMBLEBORE_STUCK2 && mobj->tics < TICRATE)
+						mobj->frame = mobj->state->frame + ((mobj->tics & 2)>>1);
 				}
 				break;
 			case MT_BIGMINE:
@@ -8450,6 +8493,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				P_SetTarget(&spawn->target, mobj);
 			}
 			break;
+		case MT_FAKEMOBILE:
+		case MT_EGGSHIELD:
+			mobj->flags2 |= MF2_INVERTAIMABLE;
+			break;
 		case MT_DETON:
 			mobj->movedir = 0;
 			break;
@@ -8507,6 +8554,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
+			break;
+		case MT_HIVEELEMENTAL:
+			mobj->extravalue1 = 5;
 			break;
 		case MT_SMASHINGSPIKEBALL:
 			mobj->movecount = mobj->z;
@@ -10231,6 +10281,10 @@ ML_EFFECT4 : Don't clip inside the ground
 	case MT_NIGHTSDRONE:
 		if (mthing->angle > 0)
 			mobj->health = mthing->angle;
+		break;
+	case MT_HIVEELEMENTAL:
+		if (mthing->extrainfo)
+			mobj->extravalue1 = mthing->extrainfo;
 		break;
 	case MT_TRAPGOYLE:
 	case MT_TRAPGOYLEUP:

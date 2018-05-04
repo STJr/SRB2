@@ -8174,9 +8174,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if (!(mo->flags & targetmask
-		|| mo->type == MT_FAKEMOBILE // hehehehe
-		|| mo->type == MT_EGGSHIELD))
+		if (!(mo->flags & targetmask) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
 			continue; // not a valid target
 
 		if (mo->health <= 0) // dead

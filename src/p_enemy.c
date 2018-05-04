@@ -252,6 +252,9 @@ void A_MineRange(mobj_t *actor);
 void A_ConnectToGround(mobj_t *actor);
 void A_SpawnParticleRelative(mobj_t *actor);
 void A_MultiShotDist(mobj_t *actor);
+void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
+void A_ParentTriesToSleep(mobj_t *actor);
+void A_CryingToMomma(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -4153,7 +4156,8 @@ void A_JetbThink(mobj_t *actor)
 	{
 		A_JetChase(actor);
 		// check for melee attack
-		if ((actor->z > (actor->floorz + FixedMul((32<<FRACBITS), actor->scale)))
+		if (actor->info->raisestate
+			&& (actor->z > (actor->floorz + FixedMul((32<<FRACBITS), actor->scale)))
 			&& P_JetbCheckMeleeRange(actor) && !actor->reactiontime
 			&& (actor->target->z >= actor->floorz))
 		{
@@ -10851,7 +10855,7 @@ void A_SpawnParticleRelative(mobj_t *actor)
 	x = (INT16)(locvar1>>16);
 	y = (INT16)(locvar1&65535);
 	z = (INT16)(locvar2>>16);
-	state = (mobjtype_t)(locvar2&65535);
+	state = (statenum_t)(locvar2&65535);
 
 	// Spawn objects correctly in reverse gravity.
 	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
@@ -10872,10 +10876,8 @@ void A_SpawnParticleRelative(mobj_t *actor)
 //
 // Description: Spawns multiple shots based on player proximity
 //
-// var1:
-//		same as A_MultiShot
-// var2:
-//		same as A_MultiShot
+// var1 = same as A_MultiShot
+// var2 = same as A_MultiShot
 //
 void A_MultiShotDist(mobj_t *actor)
 {
@@ -10901,4 +10903,110 @@ void A_MultiShotDist(mobj_t *actor)
 	var1 = locvar1;
 	var2 = locvar2;
 	A_MultiShot(actor);
+}
+
+// Function: A_WhoCaresIfYourSonIsABee
+//
+// Description: Makes a child object, storing the number of created children in the parent's extravalue1.
+//
+// var1 = mobjtype of child
+//		var2 >> 16 = mobjtype of child
+//		var2 & 65535 = vertical momentum
+// var2:
+//		var2 >> 16 = forward offset
+//		var2 & 65535 = vertical offset
+//
+void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t foffsetx;
+	fixed_t foffsety;
+	mobj_t *son;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_WhoCaresIfYourSonIsABee", actor))
+		return;
+#endif
+
+	A_FaceTarget(actor);
+
+	if (actor->extravalue1)
+		actor->extravalue1--;
+
+	if (actor->info->attacksound)
+		S_StartSound(actor, actor->info->attacksound);
+
+	foffsetx = P_ReturnThrustX(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+	foffsety = P_ReturnThrustY(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+
+	if (!(son = P_SpawnMobjFromMobj(actor, foffsetx, foffsety, (locvar2&65535)*FRACUNIT, (mobjtype_t)(locvar1 >> 16))))
+		return;
+
+	P_SetObjectMomZ(son, (locvar1 & 65535)<<FRACBITS, true);
+
+	P_SetTarget(&son->tracer, actor);
+	P_SetTarget(&son->target, actor->target);
+}
+
+// Function: A_ParentTriesToSleep
+//
+// Description: If extravalue1 is less than or equal to var1, go to var2.
+//
+// var1 = state to go to when extravalue1
+// var2 = unused
+//
+void A_ParentTriesToSleep(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ParentTriesToSleep", actor))
+		return;
+#endif
+
+	if (actor->extravalue1)
+	{
+		if (actor->info->seesound)
+			S_StartSound(actor, actor->info->seesound);
+		actor->reactiontime = 0;
+		P_SetMobjState(actor, locvar1);
+	}
+	else if (!actor->reactiontime)
+	{
+		actor->reactiontime = 1;
+		if (actor->info->activesound) // more like INactivesound doy hoy hoy
+			S_StartSound(actor, actor->info->activesound);
+	}
+}
+
+
+// Function: A_CryingToMomma
+//
+// Description: If you're a child, let your parent know something's happened to you through extravalue1. Also, prepare to die.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_CryingToMomma(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CryingToMomma", actor))
+		return;
+#endif
+
+	if (actor->tracer)
+		actor->tracer->extravalue1++;
+
+	actor->momx = actor->momy = actor->momz = 0;
+
+	P_UnsetThingPosition(actor);
+	if (sector_list)
+	{
+		P_DelSeclist(sector_list);
+		sector_list = NULL;
+	}
+	actor->flags = MF_NOBLOCKMAP|MF_NOCLIPTHING;
+	P_SetThingPosition(actor);
 }
