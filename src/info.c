@@ -5422,7 +5422,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,        // radius
 		48*FRACUNIT,        // height
 		0,                  // display offset
-		sfx_s3k5a,          // mass
+		0,                  // mass
 		3,                  // damage
 		sfx_mswarp,         // activesound
 		MF_NOGRAVITY|MF_BOSS|MF_SLIDEME, // flags

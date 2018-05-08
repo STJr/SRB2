@@ -363,7 +363,7 @@ void P_DelPrecipSeclist(mprecipsecnode_t *node);
 void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y);
 void P_Initsecnode(void);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
@@ -413,6 +413,8 @@ typedef struct BasicFF_s
 #define DMG_DEATHPIT   0x80+3
 #define DMG_CRUSHED    0x80+4
 #define DMG_SPECTATOR  0x80+5
+// Masks
+#define DMG_CANHURTSELF 0x40 // Flag - can hurt self/team indirectly, such as through mines
 #define DMG_DEATHMASK  DMG_INSTAKILL // if bit 7 is set, this is a death type instead of a damage type
 
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period);

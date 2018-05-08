@@ -877,7 +877,7 @@ void P_ExplodeMissile(mobj_t *mo)
 
 	if (mo->type == MT_DETON)
 	{
-		P_RadiusAttack(mo, mo, 96*FRACUNIT);
+		P_RadiusAttack(mo, mo, 96*FRACUNIT, 0);
 
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);

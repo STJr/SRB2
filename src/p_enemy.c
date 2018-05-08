@@ -2824,16 +2824,17 @@ void A_GoldMonitorSparkle(mobj_t *actor)
 //
 // Description: Explodes an object, doing damage to any objects nearby. The target is used as the cause of the explosion. Damage value is used as explosion range.
 //
-// var1 = unused
+// var1 = damagetype
 // var2 = unused
 //
 void A_Explode(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Explode", actor))
 		return;
 #endif
-	P_RadiusAttack(actor, actor->target, actor->info->damage);
+	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1);
 }
 
 // Function: A_BossDeath
@@ -9580,7 +9581,7 @@ void A_VileAttack(mobj_t *actor)
 						actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						fire->z);
-		P_RadiusAttack(fire, actor, 70*FRACUNIT);
+		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
 	}
 	else
 	{
@@ -9625,7 +9626,7 @@ void A_VileAttack(mobj_t *actor)
 							actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							fire->z);
-			P_RadiusAttack(fire, actor, 70*FRACUNIT);
+			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
 		}
 	}
 
@@ -10709,7 +10710,7 @@ void A_MineExplode(mobj_t *actor)
 	quake.intensity = 8*FRACUNIT;
 	quake.time = TICRATE/3;
 
-	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT);
+	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF);
 	P_MobjCheckWater(actor);
 
 	{

@@ -2670,7 +2670,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 	}
 }
 
-static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player = target->player;
 	(void)damage; //unused parm
@@ -2680,7 +2680,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !(cv_friendlyfire.value &&
+	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
 		source && source->player && source->player->pflags & PF_TAGIT)))
 		return false;
 
@@ -2690,7 +2690,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
-	if (!cv_friendlyfire.value && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
+	if (!(cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
 		if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
@@ -2745,21 +2745,26 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	return true;
 }
 
-static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player = target->player;
 
-	// You can't kill yourself, idiot...
-	if (source == target)
-		return false;
+	if (!(damagetype & DMG_CANHURTSELF))
+	{
+		// You can't kill yourself, idiot...
+		if (source == target)
+			return false;
 
-	// In COOP/RACE/CHAOS, you can't hurt other players unless cv_friendlyfire is on
-	if (!cv_friendlyfire.value && (G_PlatformGametype()))
-		return false;
+		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
+		if (!cv_friendlyfire.value && (G_PlatformGametype()))
+			return false;
+	}
 
 	// Tag handling
 	if (G_TagGametype())
-		return P_TagDamage(target, inflictor, source, damage);
+		return P_TagDamage(target, inflictor, source, damage, damagetype);
+	else if (damagetype & DMG_CANHURTSELF)
+		return true;
 	else if (G_GametypeHasTeams()) // CTF + Team Match
 	{
 		// Don't allow players on the same team to hurt one another,
@@ -3177,7 +3182,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		// Player hits another player
 		if (!force && source && source->player)
 		{
-			if (!P_PlayerHitsPlayer(target, inflictor, source, damage))
+			if (!P_PlayerHitsPlayer(target, inflictor, source, damage, damagetype))
 				return false;
 		}
 

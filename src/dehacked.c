@@ -7400,6 +7400,7 @@ struct {
 	{"DMG_CRUSHED",DMG_CRUSHED},
 	{"DMG_SPECTATOR",DMG_SPECTATOR},
 	//// Masks
+	{"DMG_CANHURTSELF",DMG_CANHURTSELF},
 	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
 	// Gametypes, for use with global var "gametype"

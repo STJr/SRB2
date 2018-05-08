@@ -674,14 +674,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	if (thing->flags & MF_PAIN)
+	if (thing->flags & MF_PAIN && tmthing->player)
 	{ // Player touches painful thing sitting on the floor
 		// see if it went over / under
 		if (thing->z > tmthing->z + tmthing->height)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (tmthing->player && tmthing->flags & MF_SHOOTABLE && thing->health > 0)
+		if (tmthing->flags & MF_SHOOTABLE && thing->health > 0)
 		{
 			UINT8 damagetype = thing->info->mass;
 			if (!damagetype && thing->flags & MF_FIRE) // BURN!
@@ -691,14 +691,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 		return true;
 	}
-	else if (tmthing->flags & MF_PAIN)
+	else if (tmthing->flags & MF_PAIN && thing->player)
 	{ // Painful thing splats player in the face
 		// see if it went over / under
 		if (tmthing->z > thing->z + thing->height)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->player && thing->flags & MF_SHOOTABLE && tmthing->health > 0)
+		if (thing->flags & MF_SHOOTABLE && tmthing->health > 0)
 		{
 			UINT8 damagetype = tmthing->info->mass;
 			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
@@ -751,6 +751,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (tmz > thzh - sprarea && tmz < thzh) // Don't damage people springing up / down
 			return true;
 	}
+
 	// missiles can hit other things
 	if (tmthing->flags & MF_MISSILE || tmthing->type == MT_SHELL)
 	{
@@ -805,30 +806,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->type == MT_EGGSHIELD)
 		{
-			fixed_t touchx, touchy;
-			angle_t angle;
+			angle_t angle = (R_PointToAngle2(thing->x, thing->y, tmthing->x - tmthing->momx, tmthing->y - tmthing->momy) - thing->angle) - ANGLE_90;
 
-			if (P_AproxDistance(tmthing->x-thing->x, tmthing->y-thing->y) >
-				P_AproxDistance((tmthing->x-tmthing->momx)-thing->x, (tmthing->y-tmthing->momy)-thing->y))
-			{
-				touchx = tmthing->x + tmthing->momx;
-				touchy = tmthing->y + tmthing->momy;
-			}
-			else
-			{
-				touchx = tmthing->x;
-				touchy = tmthing->y;
-			}
-
-			angle = R_PointToAngle2(thing->x, thing->y, touchx, touchy) - thing->angle;
-
-			if (!(angle > ANGLE_90 && angle < ANGLE_270)) // hit front of shield, didn't destroy it
-				return false;
-			else // hit shield from behind, shield is destroyed!
-			{
+			if (angle < ANGLE_180) // hit shield from behind, shield is destroyed!
 				P_KillMobj(thing, tmthing, tmthing, 0);
-				return false;
-			}
+			return false;
 		}
 
 		// damage / explode
@@ -1086,6 +1068,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
+	// thanks to sal for solidenemies dot lua
+	if (thing->flags & (MF_ENEMY|MF_BOSS) && tmthing->flags & (MF_ENEMY|MF_BOSS))
+	{
+		if ((thing->z + thing->height >= tmthing->z)
+		&& (tmthing->z + tmthing->height >= thing->z))
+			return false;
+	}
+
 	// Damage other players when invincible
 	if (tmthing->player && thing->player
 	// Make sure they aren't able to damage you ANYWHERE along the Z axis, you have to be TOUCHING the person.
@@ -1150,7 +1140,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				// Objects kill you if it falls from above.
 				if (thing != tmthing->target)
-					P_DamageMobj(thing, tmthing, tmthing->target, 1, DMG_INSTAKILL);
+					P_DamageMobj(thing, tmthing, tmthing->target, 1, DMG_CRUSHED);
 
 				tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
 				// The tmthing->target allows the pusher of the object
@@ -1185,7 +1175,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			UINT8 elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)
 			? (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
 			: 0);
-			if (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+			if (!(thing->flags & MF_SOLID)
+			|| tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 			|| ((tmthing->player->pflags & PF_JUMPED)
 				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
 				|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
@@ -1194,8 +1185,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
 			|| elementalpierce)
 			{
-				if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
-				&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
+				if (thing->z - thing->scale <= tmthing->z + tmthing->height
+				&& thing->z + thing->height + thing->scale >= tmthing->z)
 				{
 					player_t *player = tmthing->player;
 					SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
@@ -3527,6 +3518,7 @@ bounceback:
 static fixed_t bombdamage;
 static mobj_t *bombsource;
 static mobj_t *bombspot;
+static UINT8 bombdamagetype;
 
 //
 // PIT_RadiusAttack
@@ -3537,17 +3529,13 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 {
 	fixed_t dx, dy, dz, dist;
 
-	if (thing == bombspot // ignore the bomb itself (Deton fix)
-	|| (bombsource && thing->type == bombsource->type)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
+	if (thing == bombspot) // ignore the bomb itself (Deton fix)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE))
+	if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) != MF_SHOOTABLE)
 		return true;
 
-	if (thing->flags & MF_BOSS)
-		return true;
-
-	if (thing->flags & MF_MONITOR)
+	 if (bombsource && thing->type == bombsource->type && !(bombdamagetype & DMG_CANHURTSELF)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
 		return true;
 
 	dx = abs(thing->x - bombspot->x);
@@ -3571,7 +3559,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 
 	if (P_CheckSight(thing, bombspot))
 	{	// must be in direct path
-		P_DamageMobj(thing, bombspot, bombsource, 1, 0); // Tails 01-11-2001
+		P_DamageMobj(thing, bombspot, bombsource, 1, bombdamagetype); // Tails 01-11-2001
 	}
 
 	return true;
@@ -3581,7 +3569,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype)
 {
 	INT32 x, y;
 	INT32 xl, xh, yl, yh;
@@ -3598,6 +3586,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	bombspot = spot;
 	bombsource = source;
 	bombdamage = FixedMul(damagedist, spot->scale);
+	bombdamagetype = damagetype;
 
 	for (y = yl; y <= yh; y++)
 		for (x = xl; x <= xh; x++)
