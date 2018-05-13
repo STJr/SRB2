@@ -26,7 +26,6 @@
 #include <string.h>
 #include <math.h>
 
-#include "../d_main.h"
 #include "../doomdef.h"
 #include "../doomstat.h"
 
@@ -34,6 +33,7 @@
 #include "hw_drv.h"
 #include "hw_light.h"
 #include "hw_md2.h"
+#include "../d_main.h"
 #include "../r_bsp.h"
 #include "../r_main.h"
 #include "../m_misc.h"
