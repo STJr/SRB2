@@ -26,6 +26,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "../d_main.h"
 #include "../doomdef.h"
 #include "../doomstat.h"
 
