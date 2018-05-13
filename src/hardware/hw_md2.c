@@ -67,6 +67,10 @@
  #endif
 #endif
 
+#ifndef errno
+#include "errno.h"
+#endif
+
 #define NUMVERTEXNORMALS 162
 float avertexnormals[NUMVERTEXNORMALS][3] = {
 {-0.525731f, 0.000000f, 0.850651f},
