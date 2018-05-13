@@ -62,7 +62,7 @@ static dynlights_t *dynlights = &view_dynlights[0];
 light_t lspr[NUMLIGHTS] =
 {
 	// type       offset x,   y  coronas color, c_size,light color,l_radius, sqr radius computed at init
-	// UNDEFINED: 0
+	// NOLIGHT: 0
 	{ UNDEFINED_SPR,  0.0f,   0.0f, 0x00000000,  24.0f, 0x00000000,   0.0f, 0.0f},
 	// weapons
 	// RINGSPARK_L
@@ -151,10 +151,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_POSS
 	&lspr[NOLIGHT],     // SPR_SPOS
 	&lspr[NOLIGHT],     // SPR_FISH
-	&lspr[NOLIGHT],     // SPR_BUZZ Graue 03-10-2004
-	&lspr[NOLIGHT],     // SPR_RBUZ Graue 03-10-2004
+	&lspr[NOLIGHT],     // SPR_BUZZ
+	&lspr[NOLIGHT],     // SPR_RBUZ
 	&lspr[NOLIGHT],     // SPR_JETB
-	&lspr[NOLIGHT],     // SPR_JETW
 	&lspr[NOLIGHT],     // SPR_JETG
 	&lspr[NOLIGHT],     // SPR_CCOM
 	&lspr[NOLIGHT],     // SPR_DETN
@@ -226,8 +225,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RING
 	&lspr[NOLIGHT],     // SPR_TRNG
 	&lspr[NOLIGHT],     // SPR_TOKE
-	&lspr[REDBALL_L],     // SPR_RFLG
-	&lspr[BLUEBALL_L],     // SPR_BFLG
+	&lspr[REDBALL_L],   // SPR_RFLG
+	&lspr[BLUEBALL_L],  // SPR_BFLG
 	&lspr[NOLIGHT],     // SPR_NWNG
 	&lspr[NOLIGHT],     // SPR_EMBM
 	&lspr[NOLIGHT],     // SPR_CEMG
@@ -304,7 +303,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
 	&lspr[NOLIGHT],     // SPR_FWR5
-	&lspr[REDBALL_L],     // SPR_ALRM
+	&lspr[REDBALL_L],   // SPR_ALRM
 
 	// Deep Sea Scenery
 	&lspr[NOLIGHT],     // SPR_GARG
@@ -381,8 +380,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FIRS
 	&lspr[NOLIGHT],     // SPR_BUBS
 	&lspr[NOLIGHT],     // SPR_ZAPS
-	&lspr[INVINCIBLE_L],     // SPR_IVSP
-	&lspr[SUPERSPARK_L],     // SPR_SSPK
+	&lspr[INVINCIBLE_L], // SPR_IVSP
+	&lspr[SUPERSPARK_L], // SPR_SSPK
 
 	&lspr[NOLIGHT],     // SPR_GOAL
 
@@ -410,7 +409,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Springs
 	&lspr[NOLIGHT],     // SPR_SPRY
 	&lspr[NOLIGHT],     // SPR_SPRR
-	&lspr[NOLIGHT],     // SPR_SPRB Graue
+	&lspr[NOLIGHT],     // SPR_SPRB
 	&lspr[NOLIGHT],     // SPR_YSPR
 	&lspr[NOLIGHT],     // SPR_RSPR
 	&lspr[NOLIGHT],     // SPR_SSWY
@@ -428,7 +427,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_DUST
 	&lspr[NOLIGHT],     // SPR_FPRT
 	&lspr[SUPERSPARK_L], // SPR_TFOG
-	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
+	&lspr[NIGHTSLIGHT_L], // SPR_SEED
 	&lspr[NOLIGHT],     // SPR_PRTL
 
 	// Game Indicators
@@ -467,19 +466,19 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GOOM
 	&lspr[NOLIGHT],     // SPR_BGOM
 	&lspr[REDBALL_L],     // SPR_FFWR
-	&lspr[SMALLREDBALL_L],     // SPR_FBLL
+	&lspr[SMALLREDBALL_L], // SPR_FBLL
 	&lspr[NOLIGHT],     // SPR_SHLL
-	&lspr[REDBALL_L],     // SPR_PUMA
+	&lspr[REDBALL_L],   // SPR_PUMA
 	&lspr[NOLIGHT],     // SPR_HAMM
 	&lspr[NOLIGHT],     // SPR_KOOP
-	&lspr[REDBALL_L],     // SPR_BFLM
+	&lspr[REDBALL_L],   // SPR_BFLM
 	&lspr[NOLIGHT],     // SPR_MAXE
 	&lspr[NOLIGHT],     // SPR_MUS1
 	&lspr[NOLIGHT],     // SPR_MUS2
 	&lspr[NOLIGHT],     // SPR_TOAD
 
 	// NiGHTS Stuff
-	&lspr[SUPERSONIC_L],     // SPR_NDRN // NiGHTS drone
+	&lspr[SUPERSONIC_L], // SPR_NDRN // NiGHTS drone
 	&lspr[NOLIGHT],     // SPR_NSPK
 	&lspr[NOLIGHT],     // SPR_NBMP
 	&lspr[NOLIGHT],     // SPR_HOOP

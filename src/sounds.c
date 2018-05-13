@@ -65,7 +65,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"buzz1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
   {"buzz2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
   {"buzz3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wacky worksurface"},
-  {"buzz4",  false,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Buzz"},
+  {"buzz4",   true,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Buzz"},
   {"crumbl",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crumbling"}, // Platform Crumble Tails 03-16-2001
   {"fire",   false,   8, 32, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},
   {"grind",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic grinding"},
@@ -179,15 +179,17 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"spring", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spring"},
   {"statu1",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pushing a statue"},
   {"statu2",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pushing a statue"},
-  {"strpst",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"}, // Starpost Sound Tails 07-04-2002
+  {"strpst",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"},
   {"supert",  true, 127,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Transformation"},
   {"telept", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Dash"},
   {"tink" ,  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tink"},
-  {"token" ,  true, 224,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Token"}, // SS token
+  {"token" ,  true, 224,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Token"},
   {"trfire",  true,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laser fired"},
   {"trpowr",  true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"turhit", false,  40,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laser hit"},
   {"wdjump", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Whirlwind jump"},
+  {"shrpsp",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spincushion"},
+  {"shrpgo", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Launch"},
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning out"},
   {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},

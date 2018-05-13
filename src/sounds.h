@@ -254,6 +254,8 @@ typedef enum
 	sfx_trpowr,
 	sfx_turhit,
 	sfx_wdjump,
+	sfx_shrpsp,
+	sfx_shrpgo,
 	sfx_mswarp,
 	sfx_mspogo,
 	sfx_boingf,

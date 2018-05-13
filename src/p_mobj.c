@@ -7439,6 +7439,10 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
 				P_SetThingPosition(mobj);
 				break;
+			case MT_SPINCUSHION:
+				if (mobj->target && mobj->state-states >= S_SPINCUSHION_AIM1 && mobj->state-states <= S_SPINCUSHION_AIM5)
+					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+				break;
 			case MT_SMASHINGSPIKEBALL:
 				mobj->momx = mobj->momy = 0;
 				if (mobj->state-states == S_SMASHSPIKE_FALL && P_IsObjectOnGround(mobj))

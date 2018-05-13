@@ -64,6 +64,7 @@ void A_ArrowCheck(mobj_t *actor);
 void A_SnailerThink(mobj_t *actor);
 void A_SharpChase(mobj_t *actor);
 void A_SharpSpin(mobj_t *actor);
+void A_SharpDecel(mobj_t *actor);
 void A_VultureVtol(mobj_t *actor);
 void A_VultureCheck(mobj_t *actor);
 void A_SkimChase(mobj_t *actor);
@@ -1491,7 +1492,7 @@ void A_SnailerThink(mobj_t *actor)
 
 // Function: A_SharpChase
 //
-// Description: Thinker/Chase routine for Sharps
+// Description: Thinker/Chase routine for Spincushions
 //
 // var1 = unused
 // var2 = unused
@@ -1502,12 +1503,6 @@ void A_SharpChase(mobj_t *actor)
 	if (LUA_CallAction("A_SharpChase", actor))
 		return;
 #endif
-
-	if (!actor->health)
-	{
-		P_SetMobjState(actor, actor->info->deathstate);
-		return;
-	}
 
 	if (actor->reactiontime)
 	{
@@ -1551,40 +1546,73 @@ void A_SharpChase(mobj_t *actor)
 
 // Function: A_SharpSpin
 //
-// Description: Spin chase routine for Sharps
+// Description: Spin chase routine for Spincushions
 //
-// var1 = unused
-// var2 = unused
+// var1 = object # to spawn as dust (if not provided not done)
+// var2 = if nonzero, do the old-style spinning using this as the angle difference
 //
 void A_SharpSpin(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	angle_t oldang = actor->angle;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SharpSpin", actor))
 		return;
 #endif
 
-	if (!actor->health)
-	{
-		P_SetMobjState(actor, actor->info->deathstate);
-		return;
-	}
-
 	if (actor->threshold && actor->target)
 	{
-		actor->angle += ANGLE_22h;
-		P_Thrust(actor, R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y), FixedMul(actor->info->speed*FRACUNIT, actor->scale));
+		angle_t ang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		P_Thrust(actor, ang, actor->info->speed*actor->scale);
+		if (locvar2)
+			actor->angle += locvar2; // ANGLE_22h;
+		else
+			actor->angle = ang;
 		actor->threshold--;
+		if (leveltime & 1)
+			S_StartSound(actor, actor->info->painsound);
 	}
 	else
 	{
 		actor->reactiontime = actor->info->reactiontime;
-		P_SetMobjState(actor, actor->info->spawnstate);
-
-		var1 = 1;
-		A_Look(actor);
-		if (actor->target)
-			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		P_SetMobjState(actor, actor->info->meleestate);
 	}
+
+	if (!locvar1 || !P_IsObjectOnGround(actor))
+		return;
+
+	{
+		mobj_t *dust = P_SpawnMobjFromMobj(actor,
+						-P_ReturnThrustX(actor, oldang, 16<<FRACBITS),
+						-P_ReturnThrustY(actor, oldang, 16<<FRACBITS),
+						0, locvar1);
+		P_SetObjectMomZ(dust, P_RandomRange(1, 4)<<FRACBITS, false);
+	}
+}
+
+// Function: A_SharpDecel
+//
+// Description: Slow down the Spincushion
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SharpDecel(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SharpDecel", actor))
+		return;
+#endif
+
+	if (actor->momx > 2 || actor->momy > 2)
+	{
+		actor->momx >>= 1;
+		actor->momy >>= 1;
+	}
+	else
+		P_SetMobjState(actor, actor->info->xdeathstate);
 }
 
 // Function: A_VultureVtol

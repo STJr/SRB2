@@ -36,18 +36,17 @@ char sprnames[NUMSPRITES + 1][5] =
 	"PLAY",
 
 	// Enemies
-	"POSS",
-	"SPOS",
-	"FISH", // Greenflower Fish
+	"POSS", // Crawla (Blue)
+	"SPOS", // Crawla (Red)
+	"FISH", // SDURF
 	"BUZZ", // Buzz (Gold)
 	"RBUZ", // Buzz (Red)
 	"JETB", // Jetty-Syn Bomber
-	"JETW", // Jetty-Syn Water Bomber
 	"JETG", // Jetty-Syn Gunner
 	"CCOM", // Crawla Commander
 	"DETN", // Deton
 	"SKIM", // Skim mine dropper
-	"TRET",
+	"TRET", // Industrial Turret
 	"TURR", // Pop-Up Turret
 	"SHRP", // Sharp
 	"JJAW", // Jet Jaw
@@ -55,7 +54,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"VLTR", // Vulture
 	"PNTY", // Pointy
 	"ARCH", // Robo-Hood
-	"CBFS", // CastleBot FaceStabber (Egg Knight?)
+	"CBFS", // Castlebot Facestabber
 	"SPSH", // Egg Guard
 	"ESHI", // Egg Shield for Egg Guard
 	"GSNP", // Green Snapper
@@ -845,7 +844,6 @@ state_t states[NUMSTATES] =
 	{SPR_DETN, 3,  1, {A_DetonChase}, 0, 0, S_DETON14}, // S_DETON13
 	{SPR_DETN, 2,  1, {A_DetonChase}, 0, 0, S_DETON15}, // S_DETON14
 	{SPR_DETN, 1,  1, {A_DetonChase}, 0, 0, S_DETON2},  // S_DETON15
-	{SPR_DETN, 0, -1, {NULL},         0, 0, S_DETON16}, // S_DETON16
 
 	// Skim Mine Dropper
 	{SPR_SKIM, 0,  1, {A_SkimChase}, 0, 0, S_SKIM2},    // S_SKIM1
@@ -886,14 +884,25 @@ state_t states[NUMSTATES] =
 	{SPR_TURR, 1, 2, {NULL}, 0, 0, S_TURRETPOPDOWN8},        // S_TURRETPOPDOWN7
 	{SPR_TURR, 0, 69,{A_SetTics}, 0, 1, S_TURRETLOOK},       // S_TURRETPOPDOWN8
 
-	// Sharp
-	{SPR_SHRP, 0, 1, {A_Look},       0, 0, S_SHARP_ROAM1}, // S_SHARP_ROAM1,
-	{SPR_SHRP, 0, 1, {A_SharpChase}, 0, 0, S_SHARP_ROAM2}, // S_SHARP_ROAM2,
-	{SPR_SHRP, 1, 2, {A_FaceTarget}, 0, 0, S_SHARP_AIM2}, // S_SHARP_AIM1,
-	{SPR_SHRP, 2, 2, {A_FaceTarget}, 0, 0, S_SHARP_AIM3}, // S_SHARP_AIM2,
-	{SPR_SHRP, 3, 2, {A_FaceTarget}, 0, 0, S_SHARP_AIM4}, // S_SHARP_AIM3,
-	{SPR_SHRP, 4, 7, {A_FaceTarget}, 0, 0, S_SHARP_SPIN}, // S_SHARP_AIM4,
-	{SPR_SHRP, 4, 1, {A_SharpSpin},  0, 0, S_SHARP_SPIN}, // S_SHARP_SPIN,
+	// Spincushion
+	{SPR_SHRP, 0,  2, {A_Look},                 0, 0, S_SPINCUSHION_LOOK},   // S_SPINCUSHION_LOOK
+	{SPR_SHRP, 1,  2, {A_SharpChase},           0, 0, S_SPINCUSHION_CHASE2}, // S_SPINCUSHION_CHASE1
+	{SPR_SHRP, 2,  2, {A_SharpChase},           0, 0, S_SPINCUSHION_CHASE3}, // S_SPINCUSHION_CHASE2
+	{SPR_SHRP, 3,  2, {A_SharpChase},           0, 0, S_SPINCUSHION_CHASE4}, // S_SPINCUSHION_CHASE3
+	{SPR_SHRP, 0,  2, {A_SharpChase},           0, 0, S_SPINCUSHION_CHASE1}, // S_SPINCUSHION_CHASE4
+	{SPR_SHRP, 0,  2, {NULL},                   0, 0, S_SPINCUSHION_AIM2},   // S_SPINCUSHION_AIM1
+	{SPR_SHRP, 4,  2, {NULL},                   0, 0, S_SPINCUSHION_AIM3},   // S_SPINCUSHION_AIM2
+	{SPR_SHRP, 5,  2, {A_SetObjectFlags}, MF_PAIN, 2, S_SPINCUSHION_AIM4},   // S_SPINCUSHION_AIM3
+	{SPR_SHRP, 6, 16, {A_MultiShotDist}, (MT_DUST<<16)|6, -32, S_SPINCUSHION_AIM5}, // S_SPINCUSHION_AIM4
+	{SPR_SHRP, 6,  0, {A_PlaySound},   sfx_shrpgo, 1, S_SPINCUSHION_SPIN1},  // S_SPINCUSHION_AIM5
+	{SPR_SHRP, 6,  1, {A_SharpSpin},            0, 0, S_SPINCUSHION_SPIN2},  // S_SPINCUSHION_SPIN1
+	{SPR_SHRP, 8,  1, {A_SharpSpin},            0, 0, S_SPINCUSHION_SPIN3},  // S_SPINCUSHION_SPIN2
+	{SPR_SHRP, 7,  1, {A_SharpSpin},            0, 0, S_SPINCUSHION_SPIN4},  // S_SPINCUSHION_SPIN3
+	{SPR_SHRP, 8,  1, {A_SharpSpin},  MT_SPINDUST, 0, S_SPINCUSHION_SPIN1},  // S_SPINCUSHION_SPIN4
+	{SPR_SHRP, 6,  1, {A_PlaySound},    sfx_s3k69, 1, S_SPINCUSHION_STOP2},  // S_SPINCUSHION_STOP1
+	{SPR_SHRP, 6,  4, {A_SharpDecel},           0, 0, S_SPINCUSHION_STOP2},  // S_SPINCUSHION_STOP2
+	{SPR_SHRP, 5,  4, {A_FaceTarget},           0, 0, S_SPINCUSHION_STOP4},  // S_SPINCUSHION_STOP3
+	{SPR_SHRP, 4,  4, {A_SetObjectFlags}, MF_PAIN, 1, S_SPINCUSHION_LOOK},   // S_SPINCUSHION_STOP4
 
 	// Jet Jaw
 	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM2},   // S_JETJAW_ROAM1
@@ -3402,7 +3411,7 @@ state_t states[NUMSTATES] =
 	{SPR_DUST,   FF_TRANS40, 4, {NULL}, 0, 0, S_DUST2}, // S_DUST1
 	{SPR_DUST, 1|FF_TRANS50, 5, {NULL}, 0, 0, S_DUST3}, // S_DUST2
 	{SPR_DUST, 2|FF_TRANS60, 3, {NULL}, 0, 0, S_DUST4}, // S_DUST3
-	{SPR_DUST, 3|FF_TRANS70, 2, {NULL}, 0, 0, S_NULL},     // S_DUST4
+	{SPR_DUST, 3|FF_TRANS70, 2, {NULL}, 0, 0, S_NULL},  // S_DUST4
 
 	{SPR_NULL, 0, 1, {A_RockSpawn}, 0, 0, S_ROCKSPAWN}, // S_ROCKSPAWN
 
@@ -3795,7 +3804,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_XPLD_FLICKY,  // deathstate
-		S_DETON16,      // xdeathstate
+		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
 		1*FRACUNIT,     // speed
 		20*FRACUNIT,    // radius
@@ -3889,29 +3898,29 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		(statenum_t)MT_JETTBULLET// raisestate
 	},
 
-	{           // MT_SHARP
+	{           // MT_SPINCUSHION
 		112,            // doomednum
-		S_SHARP_ROAM1,  // spawnstate
+		S_SPINCUSHION_LOOK, // spawnstate
 		1,              // spawnhealth
-		S_SHARP_ROAM2,  // seestate
+		S_SPINCUSHION_CHASE1, // seestate
 		sfx_None,       // seesound
 		3*TICRATE,      // reactiontime
 		sfx_s3kd8s,     // attacksound
 		S_NULL,         // painstate
 		5*TICRATE,      // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_SHARP_AIM1,   // missilestate
+		sfx_shrpsp,     // painsound
+		S_SPINCUSHION_STOP1, // meleestate
+		S_SPINCUSHION_AIM1, // missilestate
 		S_XPLD_FLICKY,  // deathstate
-		S_SHARP_SPIN,   // xdeathstate
+		S_SPINCUSHION_STOP3, // xdeathstate
 		sfx_pop,        // deathsound
 		2,              // speed
 		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
-		sfx_None,       // activesound
+		sfx_s3kaa,      // activesound
 		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_BOUNCE, // flags
 		S_NULL          // raisestate
 	},
@@ -15866,7 +15875,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
-		sfx_ghosty,     // attacksound
+		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound
@@ -15879,7 +15888,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,    // radius
 		16*FRACUNIT,    // height
 		0,              // display offset
-		0,              // mass
+		(sfx_ghosty<<8),// mass
 		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
@@ -15893,7 +15902,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
-		sfx_ghosty,     // attacksound
+		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound
@@ -15906,7 +15915,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,    // radius
 		16*FRACUNIT,    // height
 		0,              // display offset
-		0,              // mass
+		(sfx_ghosty<<8),// mass
 		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags

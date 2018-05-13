@@ -396,8 +396,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
 			return; // Can only hit snapper from above
 
-		if (special->type == MT_SHARP
-		&& ((special->state == &states[special->info->xdeathstate]) || (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0)))
+		if (special->type == MT_SPINCUSHION
+		&& (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0))
 		{
 			if (player->pflags & PF_BOUNCING)
 			{
@@ -406,7 +406,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			}
 			else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
-				return; // Cannot hit sharp from above or when red and angry
+				return; // Cannot hit sharp from above
 		}
 
 		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))

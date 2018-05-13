@@ -1704,6 +1704,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnailerThink},           "A_SNAILERTHINK"},
 	{{A_SharpChase},             "A_SHARPCHASE"},
 	{{A_SharpSpin},              "A_SHARPSPIN"},
+	{{A_SharpDecel},             "A_SHARPDECEL"},
 	{{A_VultureVtol},            "A_VULTUREVTOL"},
 	{{A_VultureCheck},           "A_VULTURECHECK"},
 	{{A_SkimChase},              "A_SKIMCHASE"},
@@ -3624,7 +3625,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DETON13",
 	"S_DETON14",
 	"S_DETON15",
-	"S_DETON16",
 
 	// Skim Mine Dropper
 	"S_SKIM1",
@@ -3666,14 +3666,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TURRETPOPDOWN7",
 	"S_TURRETPOPDOWN8",
 
-	// Sharp
-	"S_SHARP_ROAM1",
-	"S_SHARP_ROAM2",
-	"S_SHARP_AIM1",
-	"S_SHARP_AIM2",
-	"S_SHARP_AIM3",
-	"S_SHARP_AIM4",
-	"S_SHARP_SPIN",
+	// Spincushion
+	"S_SPINCUSHION_LOOK",
+	"S_SPINCUSHION_CHASE1",
+	"S_SPINCUSHION_CHASE2",
+	"S_SPINCUSHION_CHASE3",
+	"S_SPINCUSHION_CHASE4",
+	"S_SPINCUSHION_AIM1",
+	"S_SPINCUSHION_AIM2",
+	"S_SPINCUSHION_AIM3",
+	"S_SPINCUSHION_AIM4",
+	"S_SPINCUSHION_AIM5",
+	"S_SPINCUSHION_SPIN1",
+	"S_SPINCUSHION_SPIN2",
+	"S_SPINCUSHION_SPIN3",
+	"S_SPINCUSHION_SPIN4",
+	"S_SPINCUSHION_STOP1",
+	"S_SPINCUSHION_STOP2",
+	"S_SPINCUSHION_STOP3",
+	"S_SPINCUSHION_STOP4",
 
 	// Jet Jaw
 	"S_JETJAW_ROAM1",
@@ -6161,7 +6172,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SKIM", // Skim mine dropper
 	"MT_TURRET",
 	"MT_POPUPTURRET",
-	"MT_SHARP", // Sharp
+	"MT_SPINCUSHION", // Spincushion
 	"MT_JETJAW", // Jet Jaw
 	"MT_SNAILER", // Snailer
 	"MT_VULTURE", // Vulture

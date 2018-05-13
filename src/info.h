@@ -103,6 +103,7 @@ void A_ArrowCheck();
 void A_SnailerThink();
 void A_SharpChase();
 void A_SharpSpin();
+void A_SharpDecel();
 void A_VultureVtol();
 void A_VultureCheck();
 void A_SkimChase();
@@ -243,18 +244,17 @@ typedef enum sprite
 	SPR_PLAY,
 
 	// Enemies
-	SPR_POSS,
-	SPR_SPOS,
-	SPR_FISH, // Greenflower Fish
+	SPR_POSS, // Crawla (Blue)
+	SPR_SPOS, // Crawla (Red)
+	SPR_FISH, // SDURF
 	SPR_BUZZ, // Buzz (Gold)
 	SPR_RBUZ, // Buzz (Red)
 	SPR_JETB, // Jetty-Syn Bomber
-	SPR_JETW, // Jetty-Syn Water Bomber
 	SPR_JETG, // Jetty-Syn Gunner
 	SPR_CCOM, // Crawla Commander
 	SPR_DETN, // Deton
 	SPR_SKIM, // Skim mine dropper
-	SPR_TRET,
+	SPR_TRET, // Industrial Turret
 	SPR_TURR, // Pop-Up Turret
 	SPR_SHRP, // Sharp
 	SPR_JJAW, // Jet Jaw
@@ -262,7 +262,7 @@ typedef enum sprite
 	SPR_VLTR, // Vulture
 	SPR_PNTY, // Pointy
 	SPR_ARCH, // Robo-Hood
-	SPR_CBFS, // CastleBot FaceStabber (Egg Knight?)
+	SPR_CBFS, // Castlebot Facestabber
 	SPR_SPSH, // Egg Guard
 	SPR_ESHI, // Egg Shield for Egg Guard
 	SPR_GSNP, // Green Snapper
@@ -961,7 +961,6 @@ typedef enum state
 	S_DETON13,
 	S_DETON14,
 	S_DETON15,
-	S_DETON16,
 
 	// Skim Mine Dropper
 	S_SKIM1,
@@ -1003,14 +1002,25 @@ typedef enum state
 	S_TURRETPOPDOWN7,
 	S_TURRETPOPDOWN8,
 
-	// Sharp
-	S_SHARP_ROAM1,
-	S_SHARP_ROAM2,
-	S_SHARP_AIM1,
-	S_SHARP_AIM2,
-	S_SHARP_AIM3,
-	S_SHARP_AIM4,
-	S_SHARP_SPIN,
+	// Spincushion
+	S_SPINCUSHION_LOOK,
+	S_SPINCUSHION_CHASE1,
+	S_SPINCUSHION_CHASE2,
+	S_SPINCUSHION_CHASE3,
+	S_SPINCUSHION_CHASE4,
+	S_SPINCUSHION_AIM1,
+	S_SPINCUSHION_AIM2,
+	S_SPINCUSHION_AIM3,
+	S_SPINCUSHION_AIM4,
+	S_SPINCUSHION_AIM5,
+	S_SPINCUSHION_SPIN1,
+	S_SPINCUSHION_SPIN2,
+	S_SPINCUSHION_SPIN3,
+	S_SPINCUSHION_SPIN4,
+	S_SPINCUSHION_STOP1,
+	S_SPINCUSHION_STOP2,
+	S_SPINCUSHION_STOP3,
+	S_SPINCUSHION_STOP4,
 
 	// Jet Jaw
 	S_JETJAW_ROAM1,
@@ -3520,7 +3530,7 @@ typedef enum mobj_type
 	MT_SKIM, // Skim mine dropper
 	MT_TURRET,
 	MT_POPUPTURRET,
-	MT_SHARP, // Sharp
+	MT_SPINCUSHION, // Spincushion
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
 	MT_VULTURE, // Vulture
