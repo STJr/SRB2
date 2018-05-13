@@ -2205,7 +2205,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					P_SetMobjState(scoremobj, scorestate);
 
 					// On ground? No chain starts.
-					if (!source->player->powers[pw_invulnerability] && P_IsObjectOnGround(source))
+					if (source->player->powers[pw_invulnerability] || !P_IsObjectOnGround(source))
 						source->player->scoreadd = locscoreadd;
 				}
 			}
