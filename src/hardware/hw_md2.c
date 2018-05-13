@@ -799,7 +799,7 @@ void HWR_InitMD2(void)
 
 	if (!f)
 	{
-		CONS_Printf("%s", M_GetText("Error while loading md2.dat\n"));
+		CONS_Printf("%s %s\n", M_GetText("Error while loading md2.dat:"), strerror(errno));
 		nomd2s = true;
 		return;
 	}
