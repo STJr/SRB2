@@ -5527,6 +5527,30 @@ void P_InitSpecials(void)
 	P_InitTagLists();   // Create xref tables for tags
 }
 
+static void P_ApplyFlatAlignment(line_t* master, sector_t* sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+{
+	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
+	{
+		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floor_xoffs += xoffs;
+		sector->floor_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_flr_xoffs = sector->floor_xoffs;
+		sector->spawn_flr_yoffs = sector->floor_yoffs;
+	}
+
+	if (!(master->flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
+	{
+		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceiling_xoffs += xoffs;
+		sector->ceiling_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
+		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
+	}
+
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -5730,27 +5754,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						yoffs = lines[i].v1->y;
 					}
 
-					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+					//If no tag is given, apply to front sector
+					if (lines[i].tag == 0)
+						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
+					else
 					{
-						if (!(lines[i].flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
-						{
-							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = flatangle;
-							sectors[s].floor_xoffs += xoffs;
-							sectors[s].floor_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
-							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
-						}
-
-						if (!(lines[i].flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
-						{
-							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
-							sectors[s].ceiling_xoffs += xoffs;
-							sectors[s].ceiling_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
-							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
-						}
+						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0;)
+							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
 					}
 				}
 				else // Otherwise, print a helpful warning. Can I do no less?
