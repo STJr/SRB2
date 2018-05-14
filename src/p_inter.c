@@ -2354,6 +2354,20 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->momx = target->momy = target->momz = 0;
 			break;
 
+		case MT_CRUSHSTACEAN:
+			if (target->tracer)
+			{
+				mobj_t *chain = target->tracer->target, *chainnext;
+				while (chain)
+				{
+					chainnext = chain->target;
+					P_RemoveMobj(chain);
+					chain = chainnext;
+				}
+				P_KillMobj(target->tracer, inflictor, source, damagetype);
+			}
+			break;
+
 		case MT_EGGMOBILE3:
 			{
 				thinker_t *th;

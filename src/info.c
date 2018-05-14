@@ -49,14 +49,15 @@ char sprnames[NUMSPRITES + 1][5] =
 	"TRET", // Industrial Turret
 	"TURR", // Pop-Up Turret
 	"SHRP", // Sharp
+	"CRAB", // Crushstacean
 	"JJAW", // Jet Jaw
 	"SNLR", // Snailer
-	"VLTR", // Vulture
+	"VLTR", // BASH
 	"PNTY", // Pointy
 	"ARCH", // Robo-Hood
 	"CBFS", // Castlebot Facestabber
 	"SPSH", // Egg Guard
-	"ESHI", // Egg Shield for Egg Guard
+	"ESHI", // Egg Guard's shield
 	"GSNP", // Green Snapper
 	"MNUS", // Minus
 	"SSHL", // Spring Shell
@@ -903,6 +904,21 @@ state_t states[NUMSTATES] =
 	{SPR_SHRP, 6,  4, {A_SharpDecel},           0, 0, S_SPINCUSHION_STOP2},  // S_SPINCUSHION_STOP2
 	{SPR_SHRP, 5,  4, {A_FaceTarget},           0, 0, S_SPINCUSHION_STOP4},  // S_SPINCUSHION_STOP3
 	{SPR_SHRP, 4,  4, {A_SetObjectFlags}, MF_PAIN, 1, S_SPINCUSHION_LOOK},   // S_SPINCUSHION_STOP4
+
+	// Crushstacean
+	{SPR_CRAB, 0,  3, {A_CrushstaceanWalk}, 0, S_CRUSHSTACEAN_ROAMPAUSE, S_CRUSHSTACEAN_ROAM2}, // S_CRUSHSTACEAN_ROAM1
+	{SPR_CRAB, 1,  3, {A_CrushstaceanWalk}, 0, S_CRUSHSTACEAN_ROAMPAUSE, S_CRUSHSTACEAN_ROAM3}, // S_CRUSHSTACEAN_ROAM2
+	{SPR_CRAB, 0,  3, {A_CrushstaceanWalk}, 0, S_CRUSHSTACEAN_ROAMPAUSE, S_CRUSHSTACEAN_ROAM4}, // S_CRUSHSTACEAN_ROAM3
+	{SPR_CRAB, 2,  3, {A_CrushstaceanWalk}, 0, S_CRUSHSTACEAN_ROAMPAUSE, S_CRUSHSTACEAN_ROAM1}, // S_CRUSHSTACEAN_ROAM4
+	{SPR_CRAB, 0, 40, {NULL}, 0, 0, S_CRUSHSTACEAN_ROAM1},  // S_CRUSHSTACEAN_ROAMPAUSE
+	{SPR_CRAB, 0, 10, {NULL}, 0, 0, S_CRUSHSTACEAN_PUNCH2}, // S_CRUSHSTACEAN_PUNCH1
+	{SPR_CRAB, 0, -1, {A_CrushstaceanPunch}, 0, 0, S_CRUSHSTACEAN_ROAMPAUSE}, // S_CRUSHSTACEAN_PUNCH2
+	{SPR_CRAB, 3,  1, {A_CrushclawAim},    0,                0, S_CRUSHCLAW_AIM},      // S_CRUSHCLAW_AIM
+	{SPR_CRAB, 3,  1, {A_CrushclawLaunch}, 0, S_CRUSHCLAW_STAY, S_CRUSHCLAW_OUT}, // S_CRUSHCLAW_OUT
+	{SPR_CRAB, 3, 10, {NULL}, 0, 0, S_CRUSHCLAW_IN}, // S_CRUSHCLAW_STAY
+	{SPR_CRAB, 3,  1, {A_CrushclawLaunch}, 1, S_CRUSHCLAW_WAIT, S_CRUSHCLAW_IN}, // S_CRUSHCLAW_IN
+	{SPR_CRAB, 3, 37, {NULL}, 0, 0, S_CRUSHCLAW_AIM}, // S_CRUSHCLAW_WAIT
+	{SPR_CRAB, 4, -1, {NULL}, 0, 0, S_NULL}, // S_CRUSHCHAIN
 
 	// Jet Jaw
 	{SPR_JJAW, 0, 1, {A_JetJawRoam},  0, 0, S_JETJAW_ROAM2},   // S_JETJAW_ROAM1
@@ -3455,7 +3471,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8,              // speed
+		0,              // speed
 		0,              // radius
 		0,              // height
 		0,              // display offset
@@ -3544,7 +3560,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_THOK,        // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE, // flags
-		(statenum_t)MT_NULL // raisestate
+		MT_NULL         // raisestate
 	},
 
 	{           // MT_TAILSOVERLAY
@@ -3922,6 +3938,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_s3kaa,      // activesound
 		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_BOUNCE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CRUSHSTACEAN
+		126,            // doomednum
+		S_CRUSHSTACEAN_ROAM1, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		32,             // reactiontime
+		sfx_s3k6b,      // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_CRUSHSTACEAN_PUNCH1, // missilestate
+		S_XPLD_FLICKY,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		8,              // speed
+		24*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CRUSHCLAW
+		-1,             // doomednum
+		S_CRUSHCLAW_AIM, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		16,             // reactiontime
+		sfx_s3k6b,      // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_CRUSHCLAW_OUT,// missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		1,              // speed
+		32*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
+		0,              // display offset
+		(sfx_s3k49<<8), // mass
+		0,              // damage
+		sfx_s3kd2l,     // activesound
+		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		MT_CRUSHCHAIN   // raisestate
+	},
+
+	{           // MT_CRUSHCHAIN
+		-1,             // doomednum
+		S_CRUSHCHAIN,   // spawnstate
+		0,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		0,              // radius
+		0,              // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -8997,7 +9094,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_BIGGARGOYLE
-		1009,           // doomednum
+		1011,           // doomednum
 		S_BIGGARGOYLE,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -9267,7 +9364,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_DSZ2STALAGMITE
-		999,           // doomednum
+		1009,           // doomednum
 		S_DSZ2STALAGMITE, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate

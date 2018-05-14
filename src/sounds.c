@@ -340,7 +340,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k68",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Unknown possibilities"},
   {"s3k69",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Switch click"},
   {"s3k6a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage clear"},
-  {"s3k6b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"s3k6b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Punch"},
   {"s3k6c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
   {"s3k6d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k6e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical damage"},
@@ -465,7 +465,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kd1s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3kd1l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd2s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"},
-  {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"}, // ditto
+  {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Moving chain"}, // ditto
   {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"},

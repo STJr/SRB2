@@ -65,6 +65,10 @@ void A_SnailerThink(mobj_t *actor);
 void A_SharpChase(mobj_t *actor);
 void A_SharpSpin(mobj_t *actor);
 void A_SharpDecel(mobj_t *actor);
+void A_CrushstaceanWalk(mobj_t *actor);
+void A_CrushstaceanPunch(mobj_t *actor);
+void A_CrushclawAim(mobj_t *actor);
+void A_CrushclawLaunch(mobj_t *actor);
 void A_VultureVtol(mobj_t *actor);
 void A_VultureCheck(mobj_t *actor);
 void A_SkimChase(mobj_t *actor);
@@ -1613,6 +1617,264 @@ void A_SharpDecel(mobj_t *actor)
 	}
 	else
 		P_SetMobjState(actor, actor->info->xdeathstate);
+}
+
+// Function: A_CrushstaceanWalk
+//
+// Description: Crushstacean movement
+//
+// var1 = speed (actor info's speed if 0)
+// var2 = state to switch to when blocked (spawnstate if 0)
+//
+void A_CrushstaceanWalk(mobj_t *actor)
+{
+	INT32 locvar1 = (var1 ? var1 : (INT32)actor->info->speed);
+	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
+	angle_t ang = actor->angle + ((actor->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushstaceanWalk", actor))
+		return;
+#endif
+
+	actor->reactiontime--;
+
+	if (!P_TryMove(actor,
+		actor->x + P_ReturnThrustX(actor, ang, locvar1*actor->scale),
+		actor->y + P_ReturnThrustY(actor, ang, locvar1*actor->scale),
+		false)
+	|| (actor->reactiontime-- <= 0))
+	{
+		actor->flags2 ^= MF2_AMBUSH;
+		P_SetMobjState(actor, locvar2);
+		actor->reactiontime = actor->info->reactiontime;
+	}
+}
+
+// Function: A_CrushstaceanPunch
+//
+// Description: Crushstacean attack
+//
+// var1 = unused
+// var2 = state to go to if unsuccessful (spawnstate if 0)
+//
+void A_CrushstaceanPunch(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushstaceanPunch", actor))
+		return;
+#endif
+
+	if (!actor->tracer)
+		return;
+
+	if (!actor->target)
+	{
+		P_SetMobjState(actor, locvar2);
+		return;
+	}
+
+	actor->tracer->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+	P_SetMobjState(actor->tracer, actor->tracer->info->missilestate);
+	actor->tracer->extravalue1 = actor->tracer->extravalue2 = 0;
+	S_StartSound(actor, actor->info->attacksound);
+}
+
+// Function: A_CrushclawAim
+//
+// Description: Crushstacean claw aiming
+//
+// var1 = unused
+// var2 = unused
+//
+void A_CrushclawAim(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	mobj_t *crab = actor->tracer;
+	angle_t ang;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushclawAim", actor))
+		return;
+#endif
+
+	if (!crab)
+	{
+		P_RemoveMobj(actor);
+		return; // there is only one step and it is crab
+	}
+
+	if (crab->target || P_LookForPlayers(crab, true, false, 600*crab->scale))
+		ang = R_PointToAngle2(crab->x, crab->y, crab->target->x, crab->target->y);
+	else
+		ang = crab->angle + ((crab->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
+	ang -= actor->angle;
+
+#define anglimit ANGLE_22h
+#define angfactor 5
+	if (ang < ANGLE_180)
+	{
+		if (ang > anglimit)
+			ang = anglimit;
+		ang /= angfactor;
+	}
+	else
+	{
+		ang = InvAngle(ang);
+		if (ang > anglimit)
+			ang = anglimit;
+		ang = InvAngle(ang/angfactor);
+	}
+	actor->angle += ang;
+#undef anglimit
+#undef angfactor
+
+	P_TeleportMove(actor,
+		crab->x + P_ReturnThrustX(actor, actor->angle, 40*crab->scale),
+		crab->y + P_ReturnThrustY(actor, actor->angle, 40*crab->scale),
+		crab->z + 20*crab->scale);
+
+	if (!crab->target || (statenum_t)(crab->state-states) == crab->info->missilestate)
+		return;
+
+	if (((ang + ANG1) < ANG2) || P_AproxDistance(crab->x - crab->target->x, crab->y - crab->target->y) < 333*crab->scale)
+		P_SetMobjState(crab, crab->info->missilestate);
+}
+
+// Function: A_CrushclawLaunch
+//
+// Description: Crushstacean claw launching
+//
+// var1:
+//		0 - forwards
+//		anything else - backwards
+// var2 = state to change to when done
+//
+void A_CrushclawLaunch(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *crab = actor->tracer;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushclawLaunch", actor))
+		return;
+#endif
+
+	if (!crab)
+	{
+		mobj_t *chainnext;
+		while (actor)
+		{
+			chainnext = actor->target;
+			P_RemoveMobj(actor);
+			actor = chainnext;
+		}
+		return; // there is only one step and it is crab
+	}
+
+	if (!actor->extravalue1)
+	{
+		S_StartSound(actor, actor->info->activesound);
+		actor->extravalue1 = ((locvar1) ? -1 : 32);
+	}
+	else if (actor->extravalue1 != 1)
+		actor->extravalue1 -= 1;
+
+#define CSEGS 5
+	if (!actor->target)
+	{
+		mobj_t *prevchain = actor;
+		UINT8 i = 0;
+		for (i = 0; (i < CSEGS); i++)
+		{
+			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
+			prevchain->target = newchain;
+			prevchain = newchain;
+		}
+		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
+	}
+
+	if ((!locvar1) && crab->target)
+	{
+#define anglimit ANGLE_22h
+#define angfactor 7
+		angle_t ang = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y) - actor->target->angle;
+		if (ang < ANGLE_180)
+		{
+			if (ang > anglimit)
+				ang = anglimit;
+			ang /= angfactor;
+		}
+		else
+		{
+			ang = InvAngle(ang);
+			if (ang > anglimit)
+				ang = anglimit;
+			ang /= angfactor;
+			ang = InvAngle(ang);
+		}
+		actor->target->angle += ang;
+		actor->angle = actor->target->angle;
+	}
+
+	actor->extravalue2 += actor->extravalue1;
+
+	if (!P_TryMove(actor,
+		actor->target->x + P_ReturnThrustX(actor, actor->target->angle, actor->extravalue2*actor->scale),
+		actor->target->y + P_ReturnThrustY(actor, actor->target->angle, actor->extravalue2*actor->scale),
+		true)
+		&& !locvar1)
+	{
+		actor->extravalue1 = 0;
+		actor->extravalue2 = FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y)>>FRACBITS;
+		P_SetMobjState(actor, locvar2);
+		S_StopSound(actor);
+		S_StartSound(actor, sfx_s3k49);
+	}
+	else
+	{
+		actor->z = actor->target->z;
+		if ((!locvar1 && (actor->extravalue2 > 256)) || (locvar1 && (actor->extravalue2 < 16)))
+		{
+			if (locvar1) // In case of retracting, resume crab and remove the chain.
+			{
+				mobj_t *chain = actor->target, *chainnext;
+				while (chain)
+				{
+					chainnext = chain->target;
+					P_RemoveMobj(chain);
+					chain = chainnext;
+				}
+				actor->extravalue2 = 0;
+				actor->angle = R_PointToAngle2(crab->x, crab->y, actor->x, actor->y);
+				P_SetTarget(&actor->target, NULL);
+				P_SetTarget(&crab->target, NULL);
+				P_SetMobjState(crab, crab->state->nextstate);
+			}
+			actor->extravalue1 = 0;
+			P_SetMobjState(actor, locvar2);
+			S_StopSound(actor);
+		}
+	}
+
+	if (!actor->target)
+		return;
+
+	{
+		mobj_t *chain = actor->target->target;
+		fixed_t dx = (actor->x - actor->target->x)/CSEGS, dy = (actor->y - actor->target->y)/CSEGS, dz = (actor->z - actor->target->z)/CSEGS;
+		fixed_t idx = dx, idy = dy, idz = dz;
+		while (chain)
+		{
+			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
+			idx += dx;
+			idy += dy;
+			idz += dz;
+			chain = chain->target;
+		}
+	}
+#undef CSEGS
 }
 
 // Function: A_VultureVtol

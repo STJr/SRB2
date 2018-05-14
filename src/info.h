@@ -104,6 +104,10 @@ void A_SnailerThink();
 void A_SharpChase();
 void A_SharpSpin();
 void A_SharpDecel();
+void A_CrushstaceanWalk();
+void A_CrushstaceanPunch();
+void A_CrushclawAim();
+void A_CrushclawLaunch();
 void A_VultureVtol();
 void A_VultureCheck();
 void A_SkimChase();
@@ -257,14 +261,15 @@ typedef enum sprite
 	SPR_TRET, // Industrial Turret
 	SPR_TURR, // Pop-Up Turret
 	SPR_SHRP, // Sharp
+	SPR_CRAB, // Crushstacean
 	SPR_JJAW, // Jet Jaw
 	SPR_SNLR, // Snailer
-	SPR_VLTR, // Vulture
+	SPR_VLTR, // BASH
 	SPR_PNTY, // Pointy
 	SPR_ARCH, // Robo-Hood
 	SPR_CBFS, // Castlebot Facestabber
 	SPR_SPSH, // Egg Guard
-	SPR_ESHI, // Egg Shield for Egg Guard
+	SPR_ESHI, // Egg Guard's shield
 	SPR_GSNP, // Green Snapper
 	SPR_MNUS, // Minus
 	SPR_SSHL, // Spring Shell
@@ -1021,6 +1026,21 @@ typedef enum state
 	S_SPINCUSHION_STOP2,
 	S_SPINCUSHION_STOP3,
 	S_SPINCUSHION_STOP4,
+
+	// Crushstacean
+	S_CRUSHSTACEAN_ROAM1,
+	S_CRUSHSTACEAN_ROAM2,
+	S_CRUSHSTACEAN_ROAM3,
+	S_CRUSHSTACEAN_ROAM4,
+	S_CRUSHSTACEAN_ROAMPAUSE,
+	S_CRUSHSTACEAN_PUNCH1,
+	S_CRUSHSTACEAN_PUNCH2,
+	S_CRUSHCLAW_AIM,
+	S_CRUSHCLAW_OUT,
+	S_CRUSHCLAW_STAY,
+	S_CRUSHCLAW_IN,
+	S_CRUSHCLAW_WAIT,
+	S_CRUSHCHAIN,
 
 	// Jet Jaw
 	S_JETJAW_ROAM1,
@@ -3518,28 +3538,31 @@ typedef enum mobj_type
 	MT_TAILSOVERLAY, // c:
 
 	// Enemies
-	MT_BLUECRAWLA,
-	MT_REDCRAWLA,
-	MT_GFZFISH, // Greenflower Fish
-	MT_GOLDBUZZ,
-	MT_REDBUZZ,
+	MT_BLUECRAWLA, // Crawla (Blue)
+	MT_REDCRAWLA, // Crawla (Red)
+	MT_GFZFISH, // SDURF
+	MT_GOLDBUZZ, // Buzz (Gold)
+	MT_REDBUZZ, // Buzz (Red)
 	MT_JETTBOMBER, // Jetty-Syn Bomber
 	MT_JETTGUNNER, // Jetty-Syn Gunner
 	MT_CRAWLACOMMANDER, // Crawla Commander
 	MT_DETON, // Deton
 	MT_SKIM, // Skim mine dropper
-	MT_TURRET,
-	MT_POPUPTURRET,
+	MT_TURRET, // Industrial Turret
+	MT_POPUPTURRET, // Pop-Up Turret
 	MT_SPINCUSHION, // Spincushion
+	MT_CRUSHSTACEAN, // Crushstacean
+	MT_CRUSHCLAW, // Big meaty claw
+	MT_CRUSHCHAIN, // Chain
 	MT_JETJAW, // Jet Jaw
 	MT_SNAILER, // Snailer
-	MT_VULTURE, // Vulture
+	MT_VULTURE, // BASH
 	MT_POINTY, // Pointy
 	MT_POINTYBALL, // Pointy Ball
 	MT_ROBOHOOD, // Robo-Hood
-	MT_FACESTABBER, // CastleBot FaceStabber
+	MT_FACESTABBER, // Castlebot Facestabber
 	MT_EGGGUARD, // Egg Guard
-	MT_EGGSHIELD, // Egg Shield for Egg Guard
+	MT_EGGSHIELD, // Egg Guard's shield
 	MT_GSNAPPER, // Green Snapper
 	MT_MINUS, // Minus
 	MT_SPRINGSHELL, // Spring Shell

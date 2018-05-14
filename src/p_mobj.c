@@ -8514,41 +8514,56 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 			break;
 		case MT_UNIDUS:
-		{
-			INT32 i;
-			mobj_t *ball;
-			// Spawn "damage" number of "painchance" spikeball mobjs
-			// threshold is the distance they should keep from the MT_UNIDUS (touching radius + ball painchance)
-			for (i = 0; i < mobj->info->damage; i++)
 			{
-				ball = P_SpawnMobj(x, y, z, mobj->info->painchance);
-				ball->destscale = mobj->scale;
-				P_SetScale(ball, mobj->scale);
-				P_SetTarget(&ball->target, mobj);
-				ball->movedir = FixedAngle(FixedMul(FixedDiv(i<<FRACBITS, mobj->info->damage<<FRACBITS), 360<<FRACBITS));
-				ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
+				INT32 i;
+				mobj_t *ball;
+				// Spawn "damage" number of "painchance" spikeball mobjs
+				// threshold is the distance they should keep from the MT_UNIDUS (touching radius + ball painchance)
+				for (i = 0; i < mobj->info->damage; i++)
+				{
+					ball = P_SpawnMobj(x, y, z, mobj->info->painchance);
+					ball->destscale = mobj->scale;
+					P_SetScale(ball, mobj->scale);
+					P_SetTarget(&ball->target, mobj);
+					ball->movedir = FixedAngle(FixedMul(FixedDiv(i<<FRACBITS, mobj->info->damage<<FRACBITS), 360<<FRACBITS));
+					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
 
-				var1 = ball->state->var1, var2 = ball->state->var2;
-				ball->state->action.acp1(ball);
+					var1 = ball->state->var1, var2 = ball->state->var2;
+					ball->state->action.acp1(ball);
+				}
 			}
 			break;
-		}
 		case MT_POINTY:
-		{
-			INT32 q;
-			mobj_t *ball, *lastball = mobj;
-
-			for (q = 0; q < mobj->info->painchance; q++)
 			{
-				ball = P_SpawnMobj(x, y, z, mobj->info->mass);
-				ball->destscale = mobj->scale;
-				P_SetScale(ball, mobj->scale);
-				P_SetTarget(&lastball->tracer, ball);
-				P_SetTarget(&ball->target, mobj);
-				lastball = ball;
+				INT32 q;
+				mobj_t *ball, *lastball = mobj;
+
+				for (q = 0; q < mobj->info->painchance; q++)
+				{
+					ball = P_SpawnMobj(x, y, z, mobj->info->mass);
+					ball->destscale = mobj->scale;
+					P_SetScale(ball, mobj->scale);
+					P_SetTarget(&lastball->tracer, ball);
+					P_SetTarget(&ball->target, mobj);
+					lastball = ball;
+				}
 			}
 			break;
-		}
+		case MT_CRUSHSTACEAN:
+			{
+				mobj_t *bigmeatyclaw;
+				angle_t ang = mobj->angle + ((mobj->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
+				bigmeatyclaw = P_SpawnMobjFromMobj(mobj,
+					P_ReturnThrustX(mobj, ang, 40<<FRACBITS),
+					P_ReturnThrustY(mobj, ang, 40<<FRACBITS),
+					20*FRACUNIT,
+					MT_CRUSHCLAW);
+				bigmeatyclaw->angle = ang;
+				P_SetTarget(&mobj->tracer, bigmeatyclaw);
+				P_SetTarget(&bigmeatyclaw->tracer, mobj);
+				mobj->reactiontime >>= 1;
+			}
+			break;
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
