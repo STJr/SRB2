@@ -1685,13 +1685,13 @@ void A_CrushstaceanPunch(mobj_t *actor)
 //
 // Description: Crushstacean claw aiming
 //
-// var1 = unused
-// var2 = unused
+// var1 = sideways offset
+// var2 = vertical offset
 //
 void A_CrushclawAim(mobj_t *actor)
 {
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	mobj_t *crab = actor->tracer;
 	angle_t ang;
 #ifdef HAVE_BLUA
@@ -1731,11 +1731,11 @@ void A_CrushclawAim(mobj_t *actor)
 #undef angfactor
 
 	P_TeleportMove(actor,
-		crab->x + P_ReturnThrustX(actor, actor->angle, 40*crab->scale),
-		crab->y + P_ReturnThrustY(actor, actor->angle, 40*crab->scale),
-		crab->z + 20*crab->scale);
+		crab->x + P_ReturnThrustX(actor, actor->angle, locvar1*crab->scale),
+		crab->y + P_ReturnThrustY(actor, actor->angle, locvar1*crab->scale),
+		crab->z + locvar2*crab->scale);
 
-	if (!crab->target || (statenum_t)(crab->state-states) == crab->info->missilestate)
+	if (!crab->target || !crab->info->missilestate || (statenum_t)(crab->state-states) == crab->info->missilestate)
 		return;
 
 	if (((ang + ANG1) < ANG2) || P_AproxDistance(crab->x - crab->target->x, crab->y - crab->target->y) < 333*crab->scale)
@@ -1855,6 +1855,8 @@ void A_CrushclawLaunch(mobj_t *actor)
 			actor->extravalue1 = 0;
 			P_SetMobjState(actor, locvar2);
 			S_StopSound(actor);
+			if (!locvar1)
+				S_StartSound(actor, sfx_s3k64);
 		}
 	}
 
@@ -1868,6 +1870,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		while (chain)
 		{
 			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
+			chain->watertop = chain->z;
 			idx += dx;
 			idy += dy;
 			idz += dz;

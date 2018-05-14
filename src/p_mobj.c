@@ -7443,6 +7443,19 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->target && mobj->state-states >= S_SPINCUSHION_AIM1 && mobj->state-states <= S_SPINCUSHION_AIM5)
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 				break;
+			case MT_CRUSHCLAW:
+				if (mobj->state-states == S_CRUSHCLAW_STAY && mobj->target)
+				{
+					mobj_t *chain = mobj->target->target;
+					SINT8 sign = ((mobj->tics & 1) ? mobj->tics : -(SINT8)(mobj->tics));
+					while (chain)
+					{
+						chain->z = chain->watertop + sign*mobj->scale;
+						sign = -sign;
+						chain = chain->target;
+					}
+				}
+				break;
 			case MT_SMASHINGSPIKEBALL:
 				mobj->momx = mobj->momy = 0;
 				if (mobj->state-states == S_SMASHSPIKE_FALL && P_IsObjectOnGround(mobj))
@@ -8551,14 +8564,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_CRUSHSTACEAN:
 			{
-				mobj_t *bigmeatyclaw;
-				angle_t ang = mobj->angle + ((mobj->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
-				bigmeatyclaw = P_SpawnMobjFromMobj(mobj,
-					P_ReturnThrustX(mobj, ang, 40<<FRACBITS),
-					P_ReturnThrustY(mobj, ang, 40<<FRACBITS),
-					20*FRACUNIT,
-					MT_CRUSHCLAW);
-				bigmeatyclaw->angle = ang;
+				mobj_t *bigmeatyclaw = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_CRUSHCLAW);
+				bigmeatyclaw->angle = mobj->angle + ((mobj->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);;
 				P_SetTarget(&mobj->tracer, bigmeatyclaw);
 				P_SetTarget(&bigmeatyclaw->tracer, mobj);
 				mobj->reactiontime >>= 1;
