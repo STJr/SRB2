@@ -5527,7 +5527,7 @@ void P_InitSpecials(void)
 	P_InitTagLists();   // Create xref tables for tags
 }
 
-static void P_ApplyFlatAlignment(line_t* master, sector_t* sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
 {
 	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
 	{
