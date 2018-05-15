@@ -225,7 +225,6 @@ void A_SetScale(mobj_t *actor);
 void A_RemoteDamage(mobj_t *actor);
 void A_HomingChase(mobj_t *actor);
 void A_TrapShot(mobj_t *actor);
-//for p_enemy.c
 void A_Boss1Chase(mobj_t *actor);
 void A_Boss2Chase(mobj_t *actor);
 void A_Boss2Pogo(mobj_t *actor);
@@ -260,6 +259,7 @@ void A_MultiShotDist(mobj_t *actor);
 void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
+//for p_enemy.c
 
 //
 // ENEMY THINKING
@@ -10385,6 +10385,8 @@ void A_SpawnFreshCopy(mobj_t *actor)
 
 	newObject = P_SpawnMobj(actor->x, actor->y, actor->z, actor->type);
 	newObject->angle = actor->angle;
+	newObject->flags2 |= (actor->flags2 & (MF2_AMBUSH|MF2_OBJECTFLIP));
+	newObject->eflags |= (actor->eflags & MFE_VERTICALFLIP);
 	P_SetScale(newObject, actor->scale);
 	newObject->destscale = actor->destscale;
 	P_SetTarget(&newObject->target, actor->target);
@@ -10392,6 +10394,14 @@ void A_SpawnFreshCopy(mobj_t *actor)
 
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
+
+
+	if (actor->spawnpoint)
+	{
+		newObject->spawnpoint = actor->spawnpoint;
+		actor->spawnpoint->mobj = newObject;
+		actor->spawnpoint = NULL;
+	}
 }
 
 // Internal Flicky spawning function.

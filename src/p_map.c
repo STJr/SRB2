@@ -109,13 +109,27 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================
 
+// P_DoSpring
+//
+// MF_SPRING does some weird, mildly hacky stuff sometimes.
+//   mass = vertical speed
+//   damage = horizontal speed
+//   raisestate = state to change spring to on collision
+//   painchance = spring mode:
+//       0 = standard vanilla spring behaviour
+//     Positive spring modes are minor variants of vanilla spring behaviour.
+//       1 = launch players in jump
+//       2 = don't modify player at all, just add momentum
+//     Negative spring modes are mildly-related gimmicks with customisation.
+//      -1 = pinball bumper
+//     Any other spring mode defaults to standard vanilla spring behaviour,
+//      ***** but forward compatibility is not guaranteed for these. *****
+//
+
 boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
-	INT32 pflags;
-	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-	UINT8 secondjump;
 
 	// Does nothing?
 	if (!vertispeed && !horizspeed)
@@ -129,18 +143,108 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	if (object->player && object->player->spectator)
 		return false;
 
+	// "Even in Death" is a song from Volume 8, not a command.
+	if (!spring->health || !object->health)
+		return false;
+
+	if (spring->info->painchance == -1) // Pinball bumper mode.
+	{
+		// The first of the entirely different spring modes!
+		// Some of the attributes mean different things here.
+		//   mass = default strength (can be controlled by mapthing's spawnangle)
+		//   damage = unused
+		//   reactiontime = number of times it can give points
+		angle_t horizangle, vertiangle;
+		if (object->player && object->player->homing) // Sonic Heroes, the only game to contain homing-attackable bumpers!
+		{
+			horizangle = 0;
+			vertiangle = ((object->eflags & MFE_VERTICALFLIP) ? ANGLE_270 : ANGLE_90) >> ANGLETOFINESHIFT;
+			object->player->pflags &= ~PF_THOKKED;
+			if (spring->eflags & MFE_VERTICALFLIP)
+				object->z = spring->z - object->height - 1;
+			else
+				object->z = spring->z + spring->height + 1;
+		}
+		else
+		{
+			horizangle = R_PointToAngle2(spring->x, spring->y, object->x, object->y);
+			vertiangle = (R_PointToAngle2(
+							0,
+							spring->z + spring->height/2,
+							FixedHypot(object->x - spring->x, object->y - spring->y),
+							object->z + object->height/2)
+								>> ANGLETOFINESHIFT) & FINEMASK;
+		}
+
+		if (spring->spawnpoint && spring->spawnpoint->angle > 0)
+			vertispeed = (spring->spawnpoint->angle<<(FRACBITS-1))/5;
+		vertispeed = FixedMul(vertispeed, FixedMul(object->scale, spring->scale));
+
+		if (object->player)
+		{
+			fixed_t playervelocity;
+
+			if (!(object->player->pflags & PF_THOKKED) && !(object->player->homing)
+			&& ((playervelocity = FixedDiv(9*FixedHypot(object->player->speed, object->momz), 10<<FRACBITS)) > vertispeed))
+				vertispeed = playervelocity;
+
+			if (object->player->powers[pw_carry] == CR_NIGHTSMODE) // THIS has NiGHTS support, at least...
+			{
+				if (object->player->bumpertime >= TICRATE/4)
+					return false;
+
+				object->player->flyangle = AngleFixed(R_PointToAngle2(
+					0,
+					spring->z + spring->height/2,
+					FixedMul(
+						FINECOSINE((object->angle >> ANGLETOFINESHIFT) & FINEMASK),
+						FixedHypot(object->x - spring->x, object->y - spring->y)),
+					object->z + object->height/2))>>FRACBITS;
+				object->player->bumpertime = TICRATE/2;
+			}
+			else
+			{
+				INT32 pflags = object->player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // Not identical to below...
+				UINT8 secondjump = object->player->secondjump;
+				if (object->player->pflags & PF_GLIDING)
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_ResetPlayer(object->player);
+				object->player->pflags |= pflags;
+				object->player->secondjump = secondjump;
+			}
+		}
+
+		object->eflags |= MFE_SPRUNG; // apply this flag asap!
+
+		object->momz = FixedMul(vertispeed, FINESINE(vertiangle));
+		P_InstaThrust(object, horizangle, FixedMul(vertispeed, FINECOSINE(vertiangle)));
+
+		if ((statenum_t)(spring->state-states) == spring->info->spawnstate)
+		{
+			P_SetMobjState(spring, spring->info->raisestate);
+			if (object->player && spring->reactiontime)
+			{
+				mobj_t *scoremobj = P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE);
+				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate);//+11); -- 10 points state not hardcoded yet
+				P_AddPlayerScore(object->player, 10);
+				spring->reactiontime--;
+			}
+		}
+		return false;
+	}
+
 	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
 		return false;
 	}
 
-	if (spring->eflags & MFE_VERTICALFLIP)
-		vertispeed *= -1;
-
 #ifdef ESLOPE
 	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
 #endif
+
+	if (spring->eflags & MFE_VERTICALFLIP)
+		vertispeed *= -1;
 
 	if (object->player
 	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
@@ -156,38 +260,42 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SPRING|MF_SPECIAL); // De-solidify
 
-	if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
+	if (spring->info->painchance != 2)
 	{
-		object->momx = object->momy = 0;
-		P_TryMove(object, spring->x, spring->y, true);
-	}
+		if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
+		{
+			object->momx = object->momy = 0;
+			P_TryMove(object, spring->x, spring->y, true);
+		}
 
-	if (vertispeed > 0)
-		object->z = spring->z + spring->height + 1;
-	else if (vertispeed < 0)
-		object->z = spring->z - object->height - 1;
-	else
-	{
-		// Horizontal springs teleport you in FRONT of them.
-		object->momx = object->momy = 0;
+		if (vertispeed > 0)
+			object->z = spring->z + spring->height + 1;
+		else if (vertispeed < 0)
+			object->z = spring->z - object->height - 1;
+		else
+		{
+			fixed_t offx, offy;
+			// Horizontal springs teleport you in FRONT of them.
+			object->momx = object->momy = 0;
 
-		// Overestimate the distance to position you at
-		offx = P_ReturnThrustX(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
-		offy = P_ReturnThrustY(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
+			// Overestimate the distance to position you at
+			offx = P_ReturnThrustX(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
+			offy = P_ReturnThrustY(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
 
-		// Make it square by clipping
-		if (offx > (spring->radius + object->radius + 1))
-			offx = spring->radius + object->radius + 1;
-		else if (offx < -(spring->radius + object->radius + 1))
-			offx = -(spring->radius + object->radius + 1);
+			// Make it square by clipping
+			if (offx > (spring->radius + object->radius + 1))
+				offx = spring->radius + object->radius + 1;
+			else if (offx < -(spring->radius + object->radius + 1))
+				offx = -(spring->radius + object->radius + 1);
 
-		if (offy > (spring->radius + object->radius + 1))
-			offy = spring->radius + object->radius + 1;
-		else if (offy < -(spring->radius + object->radius + 1))
-			offy = -(spring->radius + object->radius + 1);
+			if (offy > (spring->radius + object->radius + 1))
+				offy = spring->radius + object->radius + 1;
+			else if (offy < -(spring->radius + object->radius + 1))
+				offy = -(spring->radius + object->radius + 1);
 
-		// Set position!
-		P_TryMove(object, spring->x + offx, spring->y + offy, true);
+			// Set position!
+			P_TryMove(object, spring->x + offx, spring->y + offy, true);
+		}
 	}
 
 	if (vertispeed)
@@ -203,6 +311,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (object->player)
 	{
+		INT32 pflags;
+		UINT8 secondjump;
+		boolean washoming;
+
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
 
@@ -223,19 +335,28 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY|PF_BOUNCING); // I still need these.
+		pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // I still need these.
 		secondjump = object->player->secondjump;
+		washoming = object->player->homing;
+		if (object->player->pflags & PF_GLIDING)
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		P_ResetPlayer(object->player);
 
-		if (spring->info->painchance)
+		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
 		{
 			object->player->pflags |= P_GetJumpFlags(object->player);
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
-		else if (!vertispeed || (pflags & PF_BOUNCING)) // horizontal spring or bouncing
+		else if ((spring->info->painchance == 2) || (pflags & PF_BOUNCING)) // Adding momentum only.
 		{
-			if ((pflags & PF_BOUNCING)
-			|| (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL)))
+			object->player->pflags |= (pflags &~ PF_STARTJUMP);
+			object->player->secondjump = secondjump;
+			if (washoming)
+				object->player->pflags &= ~PF_THOKKED;
+		}
+		else if (!vertispeed)
+		{
+			if (pflags & (PF_JUMPED|PF_SPINNING))
 			{
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
