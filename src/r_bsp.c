@@ -1243,6 +1243,7 @@ void R_Prep3DFloors(sector_t *sector)
 	fixed_t bestheight, maxheight;
 	INT32 count, i, mapnum;
 	sector_t *sec;
+	boolean doubleshadowbottom; // is this the bottom of a doubleshadow FOF?
 #ifdef ESLOPE
 	pslope_t *bestslope = NULL;
 	fixed_t heighttest; // I think it's better to check the Z height at the sector's center
@@ -1303,6 +1304,7 @@ void R_Prep3DFloors(sector_t *sector)
 				best = rover;
 				bestheight = heighttest;
 				bestslope = *rover->t_slope;
+				doubleshadowbottom = false;
 				continue;
 			}
 			if (rover->flags & FF_DOUBLESHADOW) {
@@ -1314,6 +1316,7 @@ void R_Prep3DFloors(sector_t *sector)
 					best = rover;
 					bestheight = heighttest;
 					bestslope = *rover->b_slope;
+					doubleshadowbottom = true;
 					continue;
 				}
 			}
@@ -1322,6 +1325,7 @@ void R_Prep3DFloors(sector_t *sector)
 			{
 				best = rover;
 				bestheight = *rover->topheight;
+				doubleshadowbottom = false;
 				continue;
 			}
 			if (rover->flags & FF_DOUBLESHADOW && *rover->bottomheight > bestheight
@@ -1329,6 +1333,7 @@ void R_Prep3DFloors(sector_t *sector)
 			{
 				best = rover;
 				bestheight = *rover->bottomheight;
+				doubleshadowbottom = true;
 				continue;
 			}
 #endif
@@ -1352,6 +1357,19 @@ void R_Prep3DFloors(sector_t *sector)
 		else
 			sec->extra_colormap = NULL;
 
+		if (best->flags & FF_DOUBLESHADOW)
+		{
+			if (doubleshadowbottom)
+			{
+				sector->lightlist[i].lightlevel = sector->lightlist[best->lastlight].lightlevel;
+				sector->lightlist[i].extra_colormap =
+					sector->lightlist[best->lastlight].extra_colormap;
+				continue;
+			}
+			else
+				best->lastlight = i - 1;
+		}
+
 		if (best->flags & FF_NOSHADE)
 		{
 			sector->lightlist[i].lightlevel = sector->lightlist[i-1].lightlevel;
@@ -1366,23 +1384,6 @@ void R_Prep3DFloors(sector_t *sector)
 		{
 			sector->lightlist[i].lightlevel = best->toplightlevel;
 			sector->lightlist[i].extra_colormap = sec->extra_colormap;
-		}
-
-		if (best->flags & FF_DOUBLESHADOW)
-		{
-#ifdef ESLOPE
-			heighttest = *best->b_slope ? P_GetZAt(*best->b_slope, sector->soundorg.x, sector->soundorg.y) : *best->bottomheight;
-			if (bestheight == heighttest) ///TODO: do this in a more efficient way -Red
-#else
-			if (bestheight == *best->bottomheight)
-#endif
-			{
-				sector->lightlist[i].lightlevel = sector->lightlist[best->lastlight].lightlevel;
-				sector->lightlist[i].extra_colormap =
-					sector->lightlist[best->lastlight].extra_colormap;
-			}
-			else
-				best->lastlight = i - 1;
 		}
 	}
 }
