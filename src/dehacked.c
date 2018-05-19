@@ -1826,6 +1826,7 @@ static actionpointer_t actionpointers[] =
 	{{A_WhoCaresIfYourSonIsABee},"A_WHOCARESIFYOURSONISABEE"},
 	{{A_ParentTriesToSleep},     "A_PARENTTRIESTOSLEEP"},
 	{{A_CryingToMomma},          "A_CRYINGTOMOMMA"},
+	{{A_CheckFlags2},            "A_CHECKFLAGS2"},
 
 	{{NULL},                   "NONE"},
 
@@ -4420,12 +4421,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Emeralds (for hunt)
 	"S_EMER1",
 
-	"S_FAN",
-	"S_FAN2",
-	"S_FAN3",
-	"S_FAN4",
-	"S_FAN5",
-
 	// Bubble Source
 	"S_BUBBLES1",
 	"S_BUBBLES2",
@@ -4486,16 +4481,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGN51",
 	"S_SIGN52", // Eggman
 	"S_SIGN53",
-
-	// Steam Riser
-	"S_STEAM1",
-	"S_STEAM2",
-	"S_STEAM3",
-	"S_STEAM4",
-	"S_STEAM5",
-	"S_STEAM6",
-	"S_STEAM7",
-	"S_STEAM8",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -5503,19 +5488,51 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SECRETFLICKY_02_FLAP2",
 	"S_SECRETFLICKY_02_FLAP3",
 
+	// Fan
+	"S_FAN",
+	"S_FAN2",
+	"S_FAN3",
+	"S_FAN4",
+	"S_FAN5",
+
+	// Steam Riser
+	"S_STEAM1",
+	"S_STEAM2",
+	"S_STEAM3",
+	"S_STEAM4",
+	"S_STEAM5",
+	"S_STEAM6",
+	"S_STEAM7",
+	"S_STEAM8",
+
+	// Bumpers
+	"S_BUMPER",
+	"S_BUMPERHIT",
+
+	// Balloons
+	"S_BALLOON",
+	"S_BALLOONPOP1",
+	"S_BALLOONPOP2",
+	"S_BALLOONPOP3",
+	"S_BALLOONPOP4",
+	"S_BALLOONPOP5",
+	"S_BALLOONPOP6",
+
+	// Yellow Spring
 	"S_YELLOWSPRING",
 	"S_YELLOWSPRING2",
 	"S_YELLOWSPRING3",
 	"S_YELLOWSPRING4",
 	"S_YELLOWSPRING5",
 
+	// Red Spring
 	"S_REDSPRING",
 	"S_REDSPRING2",
 	"S_REDSPRING3",
 	"S_REDSPRING4",
 	"S_REDSPRING5",
 
-	// Blue Springs
+	// Blue Spring
 	"S_BLUESPRING",
 	"S_BLUESPRING2",
 	"S_BLUESPRING3",
@@ -5541,6 +5558,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RDIAG6",
 	"S_RDIAG7",
 	"S_RDIAG8",
+
+	// Blue Diagonal Spring
+	"S_BDIAG1",
+	"S_BDIAG2",
+	"S_BDIAG3",
+	"S_BDIAG4",
+	"S_BDIAG5",
+	"S_BDIAG6",
+	"S_BDIAG7",
+	"S_BDIAG8",
 
 	// Yellow Side Spring
 	"S_YHORIZ1",
@@ -5661,6 +5688,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SCRI", // 4000 (mario)
 	"S_SCRJ", // 8000 (mario)
 	"S_SCRK", // 1UP (mario)
+	"S_SCRL", // 10
 
 	// Drowning Timer Numbers
 	"S_ZERO1",
@@ -6293,15 +6321,19 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Springs and others
 	"MT_FAN",
-	"MT_STEAM", // Steam riser
-	"MT_BLUESPRING",
+	"MT_STEAM",
+	"MT_BUMPER",
+	"MT_BALLOON",
+
 	"MT_YELLOWSPRING",
 	"MT_REDSPRING",
-	"MT_YELLOWDIAG", // Yellow Diagonal Spring
-	"MT_REDDIAG", // Red Diagonal Spring
-	"MT_YELLOWHORIZ", // Yellow Side Spring
-	"MT_REDHORIZ", // Red Side Spring
-	"MT_BLUEHORIZ", // Blue Side Spring
+	"MT_BLUESPRING",
+	"MT_YELLOWDIAG",
+	"MT_REDDIAG",
+	"MT_BLUEDIAG",
+	"MT_YELLOWHORIZ",
+	"MT_REDHORIZ",
+	"MT_BLUEHORIZ",
 
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source

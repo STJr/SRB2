@@ -123,10 +123,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"EMER", // Emerald Hunt
 
 	// Interactive Objects
-	"FANS",
 	"BBLS", // water bubble source
 	"SIGN", // Level end sign
-	"STEM", // Steam riser
 	"SPIK", // Spike Ball
 	"SFLM", // Spin fire
 	"USPK", // Floor spike
@@ -134,7 +132,6 @@ char sprnames[NUMSPRITES + 1][5] =
 	"WSPB", // Wall spike base
 	"STPT", // Starpost
 	"BMNE", // Big floating mine
-	"BMNB",
 
 	// Monitor Boxes
 	"MSTV", // MiSc TV sprites
@@ -302,11 +299,16 @@ char sprnames[NUMSPRITES + 1][5] =
 	"FS02", // Bat
 
 	// Springs
-	"SPRY", // yellow spring
-	"SPRR", // red spring
-	"SPRB", // Blue springs
+	"FANS", // Fan
+	"STEM", // Steam riser
+	"BUMP", // Bumpers
+	"BLON", // Balloons
+	"SPRY", // Yellow spring
+	"SPRR", // Red spring
+	"SPRB", // Blue spring
 	"YSPR", // Yellow Diagonal Spring
 	"RSPR", // Red Diagonal Spring
+	"BSPR", // Blue Diagonal Spring
 	"SSWY", // Yellow Side Spring
 	"SSWR", // Red Side Spring
 	"SSWB", // Blue Side Spring
@@ -395,11 +397,12 @@ char sprnames[NUMSPRITES + 1][5] =
 	"HBAT",
 
 	// Debris
-	"SPRK", // spark
+	"SPRK", // Sparkle
 	"BOM1", // Robot Explosion
 	"BOM2", // Boss Explosion 1
 	"BOM3", // Boss Explosion 2
 	"BOM4", // Underwater Explosion
+	"BMNB", // Mine Explosion
 
 	// Crumbly rocks
 	"ROIA",
@@ -1639,13 +1642,6 @@ state_t states[NUMSTATES] =
 	// Emeralds (for hunt)
 	{SPR_EMER, 0, -1, {NULL}, 0, 0, S_NULL}, // S_EMER1
 
-	// Fan
-	{SPR_FANS, 0, 1, {A_FanBubbleSpawn}, 2048, 0, S_FAN2}, // S_FAN
-	{SPR_FANS, 1, 1, {A_FanBubbleSpawn}, 1024, 0, S_FAN3}, // S_FAN2
-	{SPR_FANS, 2, 1, {A_FanBubbleSpawn},  512, 0, S_FAN4}, // S_FAN3
-	{SPR_FANS, 3, 1, {A_FanBubbleSpawn}, 1024, 0, S_FAN5}, // S_FAN4
-	{SPR_FANS, 4, 1, {A_FanBubbleSpawn},  512, 0, S_FAN},  // S_FAN5
-
 	// Bubble Source
 	{SPR_BBLS, 0, 8, {A_BubbleSpawn}, 2048, 0, S_BUBBLES2}, // S_BUBBLES1
 	{SPR_BBLS, 1, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES3}, // S_BUBBLES2
@@ -1706,16 +1702,6 @@ state_t states[NUMSTATES] =
 	{SPR_SIGN, 2, 1, {NULL}, 0, 0, S_SIGN53},        // S_SIGN51
 	{SPR_SIGN, 3, -1, {NULL}, 0, 0, S_NULL},         // S_SIGN52 Eggman
 	{SPR_SIGN, 7, -1, {A_SignPlayer}, 0, 0, S_NULL}, // S_SIGN53 Blank
-
-	// Steam Riser
-	{SPR_STEM, 0, 2, {A_SetSolidSteam}, 0, 0, S_STEAM2},   // S_STEAM1
-	{SPR_STEM, 1, 2, {A_UnsetSolidSteam}, 0, 0, S_STEAM3}, // S_STEAM2
-	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},              // S_STEAM3
-	{SPR_STEM, 3, 2, {NULL}, 0, 0, S_STEAM5},              // S_STEAM4
-	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},              // S_STEAM5
-	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},              // S_STEAM6
-	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},              // S_STEAM7
-	{SPR_STEM, 7, 18, {NULL}, 0, 0, S_STEAM1},             // S_STEAM8
 
 	// Spike Ball
 	{SPR_SPIK, 0, 1, {A_RotateSpikeBall}, 0, 0, S_SPIKEBALL2}, // S_SPIKEBALL1
@@ -2733,6 +2719,36 @@ state_t states[NUMSTATES] =
 	{SPR_FS02, 2, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP3}, // S_SECRETFLICKY_02_FLAP2
 	{SPR_FS02, 3, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP1}, // S_SECRETFLICKY_02_FLAP3
 
+	// Fan
+	{SPR_FANS, 0, 1, {A_FanBubbleSpawn}, 2048, 0, S_FAN2}, // S_FAN
+	{SPR_FANS, 1, 1, {A_FanBubbleSpawn}, 1024, 0, S_FAN3}, // S_FAN2
+	{SPR_FANS, 2, 1, {A_FanBubbleSpawn},  512, 0, S_FAN4}, // S_FAN3
+	{SPR_FANS, 3, 1, {A_FanBubbleSpawn}, 1024, 0, S_FAN5}, // S_FAN4
+	{SPR_FANS, 4, 1, {A_FanBubbleSpawn},  512, 0, S_FAN},  // S_FAN5
+
+	// Steam Riser
+	{SPR_STEM, 0, 2, {A_SetSolidSteam}, 0, 0, S_STEAM2},   // S_STEAM1
+	{SPR_STEM, 1, 2, {A_UnsetSolidSteam}, 0, 0, S_STEAM3}, // S_STEAM2
+	{SPR_STEM, 2, 2, {NULL}, 0, 0, S_STEAM4},              // S_STEAM3
+	{SPR_STEM, 3, 2, {NULL}, 0, 0, S_STEAM5},              // S_STEAM4
+	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},              // S_STEAM5
+	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},              // S_STEAM6
+	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},              // S_STEAM7
+	{SPR_STEM, 7, 18, {NULL}, 0, 0, S_STEAM1},             // S_STEAM8
+
+	// Bumpers
+	{SPR_BUMP, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL},   3, 4, S_NULL},   // S_BUMPER
+	{SPR_BUMP, FF_ANIMATE|4,             12, {A_Pain}, 1, 3, S_BUMPER}, //S_BUMPERHIT
+
+	// Balloons
+	{SPR_BLON, FF_ANIMATE, -1, {NULL}, 2, 5, S_NULL}, // S_BALLOON
+	{SPR_BLON, 3, 0, {A_RemoteDamage},   0, 1, S_BALLOONPOP2}, // S_BALLOONPOP1
+	{SPR_BLON, 3, 1, {A_Pain},           0, 0, S_BALLOONPOP3}, // S_BALLOONPOP2
+	{SPR_BLON, 4, 1, {NULL},             0, 0, S_BALLOONPOP4}, // S_BALLOONPOP3
+	{SPR_NULL, 0, TICRATE, {A_CheckFlags2}, MF2_AMBUSH, S_BALLOONPOP5, S_NULL}, // S_BALLOONPOP4
+	{SPR_NULL, 0, 15*TICRATE, {NULL},    0, 0, S_BALLOONPOP6}, // S_BALLOONPOP5
+	{SPR_NULL, 0, 0, {A_SpawnFreshCopy}, 0, 0, S_NULL},        // S_BALLOONPOP6
+
 	// Yellow Spring
 	{SPR_SPRY, 0, -1, {NULL}, 0, 0, S_NULL},           // S_YELLOWSPRING
 	{SPR_SPRY, 4, 4, {A_Pain}, 0, 0, S_YELLOWSPRING3}, // S_YELLOWSPRING2
@@ -2773,6 +2789,16 @@ state_t states[NUMSTATES] =
 	{SPR_RSPR, 3, 1, {NULL}, 0, 0, S_RDIAG7},   // S_RDIAG6
 	{SPR_RSPR, 2, 1, {NULL}, 0, 0, S_RDIAG8},   // S_RDIAG7
 	{SPR_RSPR, 1, 1, {NULL}, 0, 0, S_RDIAG1},   // S_RDIAG8
+
+	// Blue Diagonal Spring
+	{SPR_BSPR, 0, -1, {NULL}, 0, 0, S_NULL},    // S_BDIAG1
+	{SPR_BSPR, 1, 1, {A_Pain}, 0, 0, S_BDIAG3}, // S_BDIAG2
+	{SPR_BSPR, 2, 1, {NULL}, 0, 0, S_BDIAG4},   // S_BDIAG3
+	{SPR_BSPR, 3, 1, {NULL}, 0, 0, S_BDIAG5},   // S_BDIAG4
+	{SPR_BSPR, 4, 1, {NULL}, 0, 0, S_BDIAG6},   // S_BDIAG5
+	{SPR_BSPR, 3, 1, {NULL}, 0, 0, S_BDIAG7},   // S_BDIAG6
+	{SPR_BSPR, 2, 1, {NULL}, 0, 0, S_BDIAG8},   // S_BDIAG7
+	{SPR_BSPR, 1, 1, {NULL}, 0, 0, S_BDIAG1},   // S_BDIAG8
 
 	// Yellow Side Spring
 	{SPR_SSWY, 0, -1, {NULL}, 0, 0, S_NULL},    // S_YHORIZ1
@@ -2898,6 +2924,7 @@ state_t states[NUMSTATES] =
 	{SPR_SCOR, 8, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRI  - 4000 (mario mode)
 	{SPR_SCOR, 9, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRJ  - 8000 (mario mode)
 	{SPR_SCOR, 10, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRK - 1UP (mario mode)
+	{SPR_SCOR, 11, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRL - 10
 
 	// Drowning Timer Numbers
 	{SPR_DRWN, 0, 40, {NULL}, 0, 0, S_NULL}, // S_ZERO1
@@ -6150,40 +6177,67 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_BLUESPRING
-		552,            // doomednum
-		S_BLUESPRING,   // spawnstate
+	{           // MT_BUMPER
+		542,            // doomednum
+		S_BUMPER,       // spawnstate
 		1000,           // spawnhealth
-		S_BLUESPRING2,  // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		5,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
-		sfx_spring,     // painsound
+		-1,             // painchance
+		sfx_s3kaa,      // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		20*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
 		0,              // display offset
-		11*FRACUNIT,    // mass
+		16*FRACUNIT,    // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SPRING, // flags
-		S_BLUESPRING2   // raisestate
+		MF_SPRING|MF_NOGRAVITY, // flags
+		S_BUMPERHIT     // raisestate
+	},
+
+	{           // MT_BALLOON
+		543,            // doomednum
+		S_BALLOON,      // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		2,              // painchance
+		sfx_s3k77,      // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_BALLOONPOP2,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		20*FRACUNIT,    // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPRING|MF_NOGRAVITY, // flags
+		S_BALLOONPOP1   // raisestate
 	},
 
 	{           // MT_YELLOWSPRING
 		550,            // doomednum
 		S_YELLOWSPRING, // spawnstate
 		1000,           // spawnhealth
-		S_YELLOWSPRING2,// seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6208,9 +6262,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		551,            // doomednum
 		S_REDSPRING,    // spawnstate
 		1000,           // spawnhealth
-		S_REDSPRING2,   // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6231,13 +6285,40 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_REDSPRING2    // raisestate
 	},
 
+	{           // MT_BLUESPRING
+		552,            // doomednum
+		S_BLUESPRING,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		11*FRACUNIT,    // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPRING, // flags
+		S_BLUESPRING2   // raisestate
+	},
+
 	{           // MT_YELLOWDIAG
 		555,            // doomednum
 		S_YDIAG1,       // spawnstate
 		1,              // spawnhealth
-		S_YDIAG2,       // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6262,9 +6343,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		556,            // doomednum
 		S_RDIAG1,       // spawnstate
 		1,              // spawnhealth
-		S_RDIAG2,       // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6285,13 +6366,40 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_RDIAG2        // raisestate
 	},
 
+	{           // MT_BLUEDIAG
+		557,            // doomednum
+		S_BDIAG1,       // spawnstate
+		1,              // spawnhealth
+		S_BDIAG2,       // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		11*FRACUNIT,    // mass
+		11*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SPRING, // flags
+		S_BDIAG2        // raisestate
+	},
+
 	{           // MT_YELLOWHORIZ
 		558,            // doomednum
 		S_YHORIZ1,      // spawnstate
 		1,              // spawnhealth
-		S_YHORIZ2,      // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6316,9 +6424,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		559,            // doomednum
 		S_RHORIZ1,      // spawnstate
 		1,              // spawnhealth
-		S_RHORIZ2,      // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6343,9 +6451,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		560,            // doomednum
 		S_BHORIZ1,      // spawnstate
 		1,              // spawnhealth
-		S_BHORIZ2,      // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -6360,7 +6468,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		32*FRACUNIT,    // height
 		0,              // display offset
 		0,              // mass
-		4*FRACUNIT,    // damage
+		1*FRACUNIT,     // damage
 		sfx_None,       // activesound
 		MF_SPRING|MF_NOGRAVITY, // flags
 		S_BHORIZ2       // raisestate
@@ -13760,7 +13868,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		3*FRACUNIT,     // speed
 		8*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
-		0,              // display offset
+		1,              // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound

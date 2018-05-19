@@ -115,6 +115,7 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //   mass = vertical speed
 //   damage = horizontal speed
 //   raisestate = state to change spring to on collision
+//   reactiontime = number of times it can give 10 points (0 is standard)
 //   painchance = spring mode:
 //       0 = standard vanilla spring behaviour
 //     Positive spring modes are minor variants of vanilla spring behaviour.
@@ -123,17 +124,14 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //     Negative spring modes are mildly-related gimmicks with customisation.
 //      -1 = pinball bumper
 //     Any other spring mode defaults to standard vanilla spring behaviour,
-//      ***** but forward compatibility is not guaranteed for these. *****
+//     ****** but forward compatibility is not guaranteed for these. ******
 //
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-
-	// Does nothing?
-	if (!vertispeed && !horizspeed)
-		return false;
+	boolean final;
 
 	// Object was already sprung this tic
 	if (object->eflags & MFE_SPRUNG)
@@ -153,9 +151,12 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		// Some of the attributes mean different things here.
 		//   mass = default strength (can be controlled by mapthing's spawnangle)
 		//   damage = unused
-		//   reactiontime = number of times it can give points
 		angle_t horizangle, vertiangle;
-		if (object->player && object->player->homing) // Sonic Heroes, the only game to contain homing-attackable bumpers!
+
+		if (!vertispeed)
+			return false;
+
+		if (object->player && object->player->homing) // Sonic Heroes and Shadow the Hedgehog are the only games to contain homing-attackable bumpers!
 		{
 			horizangle = 0;
 			vertiangle = ((object->eflags & MFE_VERTICALFLIP) ? ANGLE_270 : ANGLE_90) >> ANGLETOFINESHIFT;
@@ -190,16 +191,32 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 			if (object->player->powers[pw_carry] == CR_NIGHTSMODE) // THIS has NiGHTS support, at least...
 			{
+				angle_t nightsangle = 0;
+
 				if (object->player->bumpertime >= TICRATE/4)
 					return false;
+
+				if ((object->player->pflags & PF_TRANSFERTOCLOSEST) && object->player->axis1 && object->player->axis2)
+				{
+					nightsangle = R_PointToAngle2(object->player->axis1->x, object->player->axis1->y, object->player->axis2->x, object->player->axis2->y);
+					nightsangle += ANGLE_90;
+				}
+				else if (object->target)
+				{
+					if (object->target->flags2 & MF2_AMBUSH)
+						nightsangle = R_PointToAngle2(object->target->x, object->target->y, object->x, object->y);
+					else
+						nightsangle = R_PointToAngle2(object->x, object->y, object->target->x, object->target->y);
+				}
 
 				object->player->flyangle = AngleFixed(R_PointToAngle2(
 					0,
 					spring->z + spring->height/2,
 					FixedMul(
-						FINECOSINE((object->angle >> ANGLETOFINESHIFT) & FINEMASK),
+						FINESINE(((nightsangle - horizangle) >> ANGLETOFINESHIFT) & FINEMASK),
 						FixedHypot(object->x - spring->x, object->y - spring->y)),
 					object->z + object->height/2))>>FRACBITS;
+
 				object->player->bumpertime = TICRATE/2;
 			}
 			else
@@ -214,30 +231,18 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		object->eflags |= MFE_SPRUNG; // apply this flag asap!
-
-		object->momz = FixedMul(vertispeed, FINESINE(vertiangle));
+		if (!P_IsObjectOnGround(object)) // prevents uncurling when spinning due to "landing"
+			object->momz = FixedMul(vertispeed, FINESINE(vertiangle));
 		P_InstaThrust(object, horizangle, FixedMul(vertispeed, FINECOSINE(vertiangle)));
 
-		if ((statenum_t)(spring->state-states) == spring->info->spawnstate)
-		{
-			P_SetMobjState(spring, spring->info->raisestate);
-			if (object->player && spring->reactiontime)
-			{
-				mobj_t *scoremobj = P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE);
-				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate);//+11); -- 10 points state not hardcoded yet
-				P_AddPlayerScore(object->player, 10);
-				spring->reactiontime--;
-			}
-		}
-		return false;
+		object->eflags |= MFE_SPRUNG; // apply this flag asap!
+
+		goto springstate;
 	}
 
-	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
-	{
-		/*Someone want to make these work like bumpers?*/
+	// Does nothing?
+	if (!vertispeed && !horizspeed)
 		return false;
-	}
 
 #ifdef ESLOPE
 	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
@@ -245,6 +250,12 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (spring->eflags & MFE_VERTICALFLIP)
 		vertispeed *= -1;
+
+	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
+	{
+		/*Someone want to make these work like bumpers?*/
+		return false;
+	}
 
 	if (object->player
 	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
@@ -306,8 +317,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	// Re-solidify
 	spring->flags |= (spring->info->flags & (MF_SPRING|MF_SPECIAL));
-
-	P_SetMobjState(spring, spring->info->raisestate);
 
 	if (object->player)
 	{
@@ -374,7 +383,22 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	object->standingslope = NULL; // And again.
 #endif
 
-	return true;
+	final = true;
+
+springstate:
+	if ((statenum_t)(spring->state-states) < spring->info->raisestate)
+	{
+		P_SetMobjState(spring, spring->info->raisestate);
+		if (object->player && spring->reactiontime && !(spring->info->flags & MF_ENEMY))
+		{
+			mobj_t *scoremobj = P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE);
+			P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+11);
+			P_AddPlayerScore(object->player, 10);
+			spring->reactiontime--;
+		}
+	}
+
+	return final;
 }
 
 static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)

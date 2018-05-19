@@ -232,6 +232,7 @@ void A_MultiShotDist();
 void A_WhoCaresIfYourSonIsABee();
 void A_ParentTriesToSleep();
 void A_CryingToMomma();
+void A_CheckFlags2();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -335,10 +336,8 @@ typedef enum sprite
 	SPR_EMER, // Emerald Hunt
 
 	// Interactive Objects
-	SPR_FANS,
 	SPR_BBLS, // water bubble source
 	SPR_SIGN, // Level end sign
-	SPR_STEM, // Steam riser
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
 	SPR_USPK, // Floor spike
@@ -346,7 +345,6 @@ typedef enum sprite
 	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
-	SPR_BMNB,
 
 	// Monitor Boxes
 	SPR_MSTV, // MiSc TV sprites
@@ -514,11 +512,16 @@ typedef enum sprite
 	SPR_FS02, // Bat
 
 	// Springs
-	SPR_SPRY, // yellow spring
-	SPR_SPRR, // red spring
-	SPR_SPRB, // Blue springs
+	SPR_FANS, // Fan
+	SPR_STEM, // Steam riser
+	SPR_BUMP, // Bumpers
+	SPR_BLON, // Balloons
+	SPR_SPRY, // Yellow spring
+	SPR_SPRR, // Red spring
+	SPR_SPRB, // Blue spring
 	SPR_YSPR, // Yellow Diagonal Spring
 	SPR_RSPR, // Red Diagonal Spring
+	SPR_BSPR, // Blue Diagonal Spring
 	SPR_SSWY, // Yellow Side Spring
 	SPR_SSWR, // Red Side Spring
 	SPR_SSWB, // Blue Side Spring
@@ -607,11 +610,12 @@ typedef enum sprite
 	SPR_HBAT,
 
 	// Debris
-	SPR_SPRK, // spark
+	SPR_SPRK, // Sparkle
 	SPR_BOM1, // Robot Explosion
 	SPR_BOM2, // Boss Explosion 1
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
+	SPR_BMNB, // Mine Explosion
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -1757,12 +1761,6 @@ typedef enum state
 	// Emeralds (for hunt)
 	S_EMER1,
 
-	S_FAN,
-	S_FAN2,
-	S_FAN3,
-	S_FAN4,
-	S_FAN5,
-
 	// Bubble Source
 	S_BUBBLES1,
 	S_BUBBLES2,
@@ -1823,16 +1821,6 @@ typedef enum state
 	S_SIGN51,
 	S_SIGN52, // Eggman
 	S_SIGN53,
-
-	// Steam Riser
-	S_STEAM1,
-	S_STEAM2,
-	S_STEAM3,
-	S_STEAM4,
-	S_STEAM5,
-	S_STEAM6,
-	S_STEAM7,
-	S_STEAM8,
 
 	// Spike Ball
 	S_SPIKEBALL1,
@@ -2842,19 +2830,51 @@ typedef enum state
 	S_SECRETFLICKY_02_FLAP2,
 	S_SECRETFLICKY_02_FLAP3,
 
+	// Fan
+	S_FAN,
+	S_FAN2,
+	S_FAN3,
+	S_FAN4,
+	S_FAN5,
+
+	// Steam Riser
+	S_STEAM1,
+	S_STEAM2,
+	S_STEAM3,
+	S_STEAM4,
+	S_STEAM5,
+	S_STEAM6,
+	S_STEAM7,
+	S_STEAM8,
+
+	// Bumpers
+	S_BUMPER,
+	S_BUMPERHIT,
+
+	// Balloons
+	S_BALLOON,
+	S_BALLOONPOP1,
+	S_BALLOONPOP2,
+	S_BALLOONPOP3,
+	S_BALLOONPOP4,
+	S_BALLOONPOP5,
+	S_BALLOONPOP6,
+
+	// Yellow Spring
 	S_YELLOWSPRING,
 	S_YELLOWSPRING2,
 	S_YELLOWSPRING3,
 	S_YELLOWSPRING4,
 	S_YELLOWSPRING5,
 
+	// Red Spring
 	S_REDSPRING,
 	S_REDSPRING2,
 	S_REDSPRING3,
 	S_REDSPRING4,
 	S_REDSPRING5,
 
-	// Blue Springs
+	// Blue Spring
 	S_BLUESPRING,
 	S_BLUESPRING2,
 	S_BLUESPRING3,
@@ -2880,6 +2900,16 @@ typedef enum state
 	S_RDIAG6,
 	S_RDIAG7,
 	S_RDIAG8,
+
+	// Blue Diagonal Spring
+	S_BDIAG1,
+	S_BDIAG2,
+	S_BDIAG3,
+	S_BDIAG4,
+	S_BDIAG5,
+	S_BDIAG6,
+	S_BDIAG7,
+	S_BDIAG8,
 
 	// Yellow Side Spring
 	S_YHORIZ1,
@@ -3000,6 +3030,7 @@ typedef enum state
 	S_SCRI, // 4000 (mario)
 	S_SCRJ, // 8000 (mario)
 	S_SCRK, // 1UP (mario)
+	S_SCRL, // 10
 
 	// Drowning Timer Numbers
 	S_ZERO1,
@@ -3652,15 +3683,19 @@ typedef enum mobj_type
 
 	// Springs and others
 	MT_FAN,
-	MT_STEAM, // Steam riser
-	MT_BLUESPRING,
+	MT_STEAM,
+	MT_BUMPER,
+	MT_BALLOON,
+
 	MT_YELLOWSPRING,
 	MT_REDSPRING,
-	MT_YELLOWDIAG, // Yellow Diagonal Spring
-	MT_REDDIAG, // Red Diagonal Spring
-	MT_YELLOWHORIZ, // Yellow Side Spring
-	MT_REDHORIZ, // Red Side Spring
-	MT_BLUEHORIZ, // Blue Side Spring
+	MT_BLUESPRING,
+	MT_YELLOWDIAG,
+	MT_REDDIAG,
+	MT_BLUEDIAG,
+	MT_YELLOWHORIZ,
+	MT_REDHORIZ,
+	MT_BLUEHORIZ,
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source

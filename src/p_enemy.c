@@ -259,6 +259,7 @@ void A_MultiShotDist(mobj_t *actor);
 void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
+void A_CheckFlags2(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -763,6 +764,12 @@ static boolean P_LookForShield(mobj_t *actor)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
+
+			if (actor->hnext)
+				P_SetTarget(&actor->hnext->hprev, actor->hprev);
+			if (actor->hprev)
+				P_SetTarget(&actor->hprev->hnext, actor->hnext);
+
 			return true;
 		}
 	}
@@ -10383,25 +10390,15 @@ void A_SpawnFreshCopy(mobj_t *actor)
 		return;
 #endif
 
-	newObject = P_SpawnMobj(actor->x, actor->y, actor->z, actor->type);
+	newObject = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->type);
+	newObject->flags2 = actor->flags2 & MF2_AMBUSH;
 	newObject->angle = actor->angle;
-	newObject->flags2 |= (actor->flags2 & (MF2_AMBUSH|MF2_OBJECTFLIP));
-	newObject->eflags |= (actor->eflags & MFE_VERTICALFLIP);
-	P_SetScale(newObject, actor->scale);
-	newObject->destscale = actor->destscale;
+	newObject->color = actor->color;
 	P_SetTarget(&newObject->target, actor->target);
 	P_SetTarget(&newObject->tracer, actor->tracer);
 
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
-
-
-	if (actor->spawnpoint)
-	{
-		newObject->spawnpoint = actor->spawnpoint;
-		actor->spawnpoint->mobj = newObject;
-		actor->spawnpoint = NULL;
-	}
 }
 
 // Internal Flicky spawning function.
@@ -11313,4 +11310,24 @@ void A_CryingToMomma(mobj_t *actor)
 	}
 	actor->flags = MF_NOBLOCKMAP|MF_NOCLIPTHING;
 	P_SetThingPosition(actor);
+}
+
+// Function: A_CheckFlags2
+//
+// Description: If actor->flags2 & var1, goto var2.
+//
+// var1 = mask
+// var2 = state to go
+//
+void A_CheckFlags2(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CheckFlags2", actor))
+		return;
+#endif
+
+	if (actor->flags2 & locvar1)
+		P_SetMobjState(actor, (statenum_t)locvar2);
 }

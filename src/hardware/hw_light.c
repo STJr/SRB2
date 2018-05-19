@@ -234,10 +234,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EMER
 
 	// Interactive Objects
-	&lspr[NOLIGHT],     // SPR_FANS
 	&lspr[NOLIGHT],     // SPR_BBLS
 	&lspr[NOLIGHT],     // SPR_SIGN
-	&lspr[NOLIGHT],     // SPR_STEM
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
 	&lspr[NOLIGHT],     // SPR_USPK
@@ -245,7 +243,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_WSPB
 	&lspr[NOLIGHT],     // SPR_STPT
 	&lspr[NOLIGHT],     // SPR_BMNE
-	&lspr[REDBALL_L],   // SPR_BMNB
 
 	// Monitor Boxes
 	&lspr[NOLIGHT],     // SPR_MSTV
@@ -408,11 +405,16 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FS02
 
 	// Springs
+	&lspr[NOLIGHT],     // SPR_FANS
+	&lspr[NOLIGHT],     // SPR_STEM
+	&lspr[NOLIGHT],     // SPR_BUMP
+	&lspr[NOLIGHT],     // SPR_BLON
 	&lspr[NOLIGHT],     // SPR_SPRY
 	&lspr[NOLIGHT],     // SPR_SPRR
 	&lspr[NOLIGHT],     // SPR_SPRB
 	&lspr[NOLIGHT],     // SPR_YSPR
 	&lspr[NOLIGHT],     // SPR_RSPR
+	&lspr[NOLIGHT],     // SPR_BSPR
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
@@ -506,6 +508,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM2
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
+	&lspr[REDBALL_L],    // SPR_BMNB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA

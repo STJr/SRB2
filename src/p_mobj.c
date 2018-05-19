@@ -8581,6 +8581,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
 			break;
+		case MT_BALLOON:
+			mobj->color = SKINCOLOR_RED;
+			break;
 		case MT_HIVEELEMENTAL:
 			mobj->extravalue1 = 5;
 			break;
@@ -9872,6 +9875,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			mobj->health = mthing->angle;
 		else
 			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+		break;
+	case MT_BALLOON:
+		if (mthing->angle > 0)
+			mobj->color = ((mthing->angle-1) % (MAXSKINCOLORS-1))+1;
 		break;
 	case MT_WATERDRIP:
 		if (mthing->angle)
