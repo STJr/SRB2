@@ -1289,6 +1289,7 @@ void R_Prep3DFloors(sector_t *sector)
 	{
 		bestheight = INT32_MAX * -1;
 		best = NULL;
+		doubleshadowbottom = false;
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
 			rover->lastlight = 0;
@@ -1299,7 +1300,8 @@ void R_Prep3DFloors(sector_t *sector)
 #ifdef ESLOPE
 			heighttest = *rover->t_slope ? P_GetZAt(*rover->t_slope, sector->soundorg.x, sector->soundorg.y) : *rover->topheight;
 
-			if (heighttest > bestheight && heighttest < maxheight)
+			if ((heighttest > bestheight && heighttest < maxheight)
+			|| (heighttest == bestheight && doubleshadowbottom)) // override bottoms of doubleshadow FOFs
 			{
 				best = rover;
 				bestheight = heighttest;
@@ -1321,7 +1323,8 @@ void R_Prep3DFloors(sector_t *sector)
 				}
 			}
 #else
-			if (*rover->topheight > bestheight && *rover->topheight < maxheight)
+			if ((*rover->topheight > bestheight && *rover->topheight < maxheight)
+			|| (*rover->topheight == bestheight && doubleshadowbottom)) // override bottoms of doubleshadow FOFs
 			{
 				best = rover;
 				bestheight = *rover->topheight;
