@@ -6862,47 +6862,77 @@ void A_GuardChase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	if ((!actor->tracer || !actor->tracer->health) && actor->threshold != 42)
+	if (actor->threshold != 42) // In formation...
 	{
-		P_SetTarget(&actor->tracer, NULL);
-		actor->threshold = 42;
-		P_SetMobjState(actor, actor->info->painstate);
-		actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
-		return;
+		fixed_t speed;
+
+		if (!actor->tracer || !actor->tracer->health)
+		{
+			P_SetTarget(&actor->tracer, NULL);
+			actor->threshold = 42;
+			P_SetMobjState(actor, actor->info->painstate);
+			actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
+			return;
+		}
+
+		speed = actor->extravalue1*actor->scale;
+
+		if (actor->flags2 & MF2_AMBUSH)
+			speed <<= 1;
+
+		if (speed
+		&& !P_TryMove(actor,
+			actor->x + P_ReturnThrustX(actor, actor->angle, speed),
+			actor->y + P_ReturnThrustY(actor, actor->angle, speed),
+			false)
+		&& speed > 0) // can't be the same check as previous so that P_TryMove gets to happen.
+		{
+			if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_OBJECTSPECIAL))
+				actor->angle += ANGLE_90;
+			else if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_EXTRA))
+				actor->angle -= ANGLE_90;
+			else
+				actor->angle += ANGLE_180;
+		}
+
+		if (actor->extravalue1 < actor->info->speed)
+			actor->extravalue1++;
 	}
-
-	// turn towards movement direction if not there yet
-	if (actor->movedir < NUMDIRS)
+	else // Break ranks!
 	{
-		actor->angle &= (7<<29);
-		delta = actor->angle - (actor->movedir << 29);
+		// turn towards movement direction if not there yet
+		if (actor->movedir < NUMDIRS)
+		{
+			actor->angle &= (7<<29);
+			delta = actor->angle - (actor->movedir << 29);
 
-		if (delta > 0)
-			actor->angle -= ANGLE_45;
-		else if (delta < 0)
-			actor->angle += ANGLE_45;
-	}
+			if (delta > 0)
+				actor->angle -= ANGLE_45;
+			else if (delta < 0)
+				actor->angle += ANGLE_45;
+		}
 
-	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
-	{
-		// look for a new target
-		if (P_LookForPlayers(actor, true, false, 0))
+		if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
+		{
+			// look for a new target
+			if (P_LookForPlayers(actor, true, false, 0))
+				return; // got a new target
+
+			P_SetMobjStateNF(actor, actor->info->spawnstate);
+			return;
+		}
+
+		// possibly choose another target
+		if (multiplayer && (actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
+			&& P_LookForPlayers(actor, true, false, 0))
 			return; // got a new target
 
-		P_SetMobjStateNF(actor, actor->info->spawnstate);
-		return;
-	}
-
-	// possibly choose another target
-	if (multiplayer && (actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
-		&& P_LookForPlayers(actor, true, false, 0))
-		return; // got a new target
-
-	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
-	{
-		P_NewChaseDir(actor);
-		actor->movecount += 5; // Increase tics before change in direction allowed.
+		// chase towards player
+		if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
+		{
+			P_NewChaseDir(actor);
+			actor->movecount += 5; // Increase tics before change in direction allowed.
+		}
 	}
 
 	// Now that we've moved, its time for our shield to move!

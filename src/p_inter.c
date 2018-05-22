@@ -1406,23 +1406,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		case MT_EGGSHIELD:
 			{
-				fixed_t touchx, touchy, touchspeed;
-				angle_t angle;
-
-				if (P_AproxDistance(toucher->x-special->x, toucher->y-special->y) >
-					P_AproxDistance((toucher->x-toucher->momx)-special->x, (toucher->y-toucher->momy)-special->y))
-				{
-					touchx = toucher->x + toucher->momx;
-					touchy = toucher->y + toucher->momy;
-				}
-				else
-				{
-					touchx = toucher->x;
-					touchy = toucher->y;
-				}
-
-				angle = R_PointToAngle2(special->x, special->y, touchx, touchy) - special->angle;
-				touchspeed = P_AproxDistance(toucher->momx, toucher->momy);
+				angle_t angle = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->angle;
+				fixed_t touchspeed = P_AproxDistance(toucher->momx, toucher->momy);
+				if (touchspeed < special->scale)
+					touchspeed = special->scale;
 
 				// Blocked by the shield?
 				if (!(angle > ANGLE_90 && angle < ANGLE_270))
@@ -1439,6 +1426,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					// Play a bounce sound?
 					S_StartSound(toucher, special->info->painsound);
+
+					// experimental bounce
+					if (special->target)
+						special->target->extravalue1 = -special->target->info->speed;
 					return;
 				}
 				else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))

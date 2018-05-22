@@ -8594,21 +8594,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				mobj->reactiontime >>= 1;
 			}
 			break;
-		case MT_THZTREE:
-			// Spawn the branches
-			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_22h;
-			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_157h;
-			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_270;
-			break;
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
-			break;
-		case MT_CEZPOLE:
-			// Spawn the banner
-			P_SpawnMobjFromMobj(mobj,
-				P_ReturnThrustX(mobj, mobj->angle, 4<<FRACBITS),
-				P_ReturnThrustY(mobj, mobj->angle, 4<<FRACBITS),
-				0, MT_CEZBANNER)->angle = mobj->angle + ANGLE_90;
 			break;
 		case MT_WAVINGFLAG:
 			{
@@ -8623,22 +8610,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					cur->extravalue1 = i;
 					prev = cur;
 				}
-			}
-			break;
-		case MT_HHZTREE_TOP:
-			{ // Spawn the branches
-				angle_t mobjangle = mobj->angle & (ANGLE_90-1);
-				mobj_t *leaf;
-#define doleaf(x, y) \
-				leaf = P_SpawnMobjFromMobj(mobj, x, y, 0, MT_HHZTREE_PART);\
-				leaf->angle = mobjangle;\
-				P_SetMobjState(leaf, leaf->info->seestate);\
-				mobjangle += ANGLE_90
-				doleaf(1*FRACUNIT, 0);
-				doleaf(0, 1*FRACUNIT);
-				doleaf(-1*FRACUNIT, 0);
-				doleaf(0, -1*FRACUNIT);
-#undef doleaf
 			}
 			break;
 		case MT_JACKO1:
@@ -10410,6 +10381,39 @@ ML_EFFECT4 : Don't clip inside the ground
 			mobj->destscale = mobj->scale;
 		}
 		break;
+	case MT_THZTREE:
+		{ // Spawn the branches
+			angle_t mobjangle = FixedAngle((mthing->angle % 113)<<FRACBITS);
+			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
+			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
+			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
+		}
+		break;
+	case MT_CEZPOLE:
+		{ // Spawn the banner
+			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS);
+			P_SpawnMobjFromMobj(mobj,
+				P_ReturnThrustX(mobj, mobjangle, 4<<FRACBITS),
+				P_ReturnThrustY(mobj, mobjangle, 4<<FRACBITS),
+				0, MT_CEZBANNER)->angle = mobjangle + ANGLE_90;
+		}
+			break;
+	case MT_HHZTREE_TOP:
+		{ // Spawn the branches
+			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS) & (ANGLE_90-1);
+			mobj_t *leaf;
+#define doleaf(x, y) \
+			leaf = P_SpawnMobjFromMobj(mobj, x, y, 0, MT_HHZTREE_PART);\
+			leaf->angle = mobjangle;\
+			P_SetMobjState(leaf, leaf->info->seestate);\
+			mobjangle += ANGLE_90
+			doleaf(1*FRACUNIT, 0);
+			doleaf(0, 1*FRACUNIT);
+			doleaf(-1*FRACUNIT, 0);
+			doleaf(0, -1*FRACUNIT);
+#undef doleaf
+		}
+		break;
 	case MT_FLAMEHOLDER:
 		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
 			P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
@@ -10459,7 +10463,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj_t *elecmobj;
 		elecmobj = P_SpawnMobj(x, y, z, MT_CYBRAKDEMON_ELECTRIC_BARRIER);
 		P_SetTarget(&elecmobj->target, mobj);
-		elecmobj->angle = FixedAngle(mthing->angle*FRACUNIT);;
+		elecmobj->angle = FixedAngle(mthing->angle<<FRACBITS);;
 		elecmobj->destscale = mobj->scale*2;
 		P_SetScale(elecmobj, elecmobj->destscale);
 	}
@@ -10531,7 +10535,7 @@ ML_EFFECT4 : Don't clip inside the ground
 
 		// spawn base
 		{
-			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
+			const angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS); // the mobj's own angle hasn't been set quite yet so...
 			const fixed_t baseradius = mobj->radius - mobj->scale;
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
@@ -10599,7 +10603,7 @@ ML_EFFECT4 : Don't clip inside the ground
 	}
 
 	if (doangle)
-		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
+		mobj->angle = FixedAngle(mthing->angle<<FRACBITS);
 
 	// ignore MTF_ flags and return early
 	if (i == MT_NIGHTSBUMPER)
