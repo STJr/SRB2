@@ -10794,36 +10794,33 @@ void A_FlickyFlutter(mobj_t *actor)
 //
 // Description: Creates the mobj's painchance at a random position around the object's radius.
 //
-// var1 = momz of particle.
-// var2 = chance of particle spawn
+// var1 = unused
+// var2 = unused
 //
 void A_FlameParticle(mobj_t *actor)
 {
 	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
 	fixed_t rad, hei;
 	mobj_t *particle;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlameParticle", actor))
 		return;
 #endif
 
-	if (!P_RandomChance(locvar2))
-		return;
-
 	if (!type)
 		return;
 
-	rad = 2*actor->radius>>FRACBITS;
+	rad = actor->radius>>FRACBITS;
 	hei = actor->height>>FRACBITS;
 	particle = P_SpawnMobjFromMobj(actor,
 		P_RandomRange(rad, -rad)<<FRACBITS,
 		P_RandomRange(rad, -rad)<<FRACBITS,
 		P_RandomRange(hei/2, hei)<<FRACBITS,
 		type);
-	P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+	P_SetObjectMomZ(particle, 2<<FRACBITS, false);
 }
 
 // Function: A_FadeOverlay

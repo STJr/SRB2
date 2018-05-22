@@ -4814,14 +4814,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CEZCHAIN",
 
 	// Flame
-	"S_FLAME1",
-	"S_FLAME2",
-	"S_FLAME3",
-	"S_FLAME4",
-	"S_FLAME5",
-	"S_FLAME6",
+	"S_FLAME",
 	"S_FLAMEPARTICLE",
-
 	"S_FLAMEREST",
 
 	// Eggman Statue
@@ -4887,7 +4881,19 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BIGFIREBAR15",
 	"S_BIGFIREBAR16",
 
-	"S_CEZFLOWER1",
+	"S_CEZFLOWER",
+	"S_CEZPOLE",
+	"S_CEZBANNER",
+	"S_PINETREE",
+	"S_CEZBUSH1",
+	"S_CEZBUSH2",
+	"S_CANDLE",
+	"S_CANDLEPRICKET",
+	"S_FLAMEHOLDER",
+	"S_FIRETORCH",
+	"S_WAVINGFLAG",
+	"S_WAVINGFLAGSEG",
+	"S_CRAWLASTATUE",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -6489,7 +6495,19 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
 	"MT_BIGFIREBAR", // Big Firebar
-	"MT_CEZFLOWER",
+	"MT_CEZFLOWER", // Flower
+	"MT_CEZPOLE", // Pole
+	"MT_CEZBANNER", // Banner
+	"MT_PINETREE", // Pine Tree
+	"MT_CEZBUSH1", // Bush 1
+	"MT_CEZBUSH2", // Bush 2
+	"MT_CANDLE", // Candle
+	"MT_CANDLEPRICKET", // Candle pricket
+	"MT_FLAMEHOLDER", // Flame holder
+	"MT_FIRETORCH", // Fire torch
+	"MT_WAVINGFLAG", // Waving flag
+	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_CRAWLASTATUE", // Crawla statue
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",

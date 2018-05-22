@@ -324,6 +324,14 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RSPB
 	&lspr[REDBALL_L],   // SPR_SFBR
 	&lspr[REDBALL_L],   // SPR_BFBR
+	&lspr[NOLIGHT],     // SPR_BANR
+	&lspr[NOLIGHT],     // SPR_PINE
+	&lspr[NOLIGHT],     // SPR_CEZB
+	&lspr[REDBALL_L],   // SPR_CNDL
+	&lspr[NOLIGHT],     // SPR_FLMH
+	&lspr[REDBALL_L],   // SPR_CTRC
+	&lspr[NOLIGHT],     // SPR_CFLG
+	&lspr[NOLIGHT],     // SPR_CSTA
 
 	// Arid Canyon Scenery
 	&lspr[NOLIGHT],     // SPR_BTBL

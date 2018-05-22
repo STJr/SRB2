@@ -7439,6 +7439,29 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
 				P_SetThingPosition(mobj);
 				break;
+			case MT_WAVINGFLAG:
+				{
+					fixed_t base = (leveltime<<(FRACBITS+1));
+					mobj_t *seg = mobj->tracer, *prev = mobj;
+					mobj->movedir = mobj->angle
+						+ ((((FINESINE((FixedAngle(base<<1)>>ANGLETOFINESHIFT) & FINEMASK)
+							+ FINESINE((FixedAngle(base<<4)>>ANGLETOFINESHIFT) & FINEMASK))>>1)
+						+ FINESINE((FixedAngle(base*9)>>ANGLETOFINESHIFT) & FINEMASK)
+						+ FINECOSINE(((FixedAngle(base*9))>>ANGLETOFINESHIFT) & FINEMASK))<<12); //*2^12
+					while (seg)
+					{
+						seg->movedir = seg->angle;
+						seg->angle = prev->movedir;
+						P_UnsetThingPosition(seg);
+						seg->x = prev->x + P_ReturnThrustX(prev, prev->angle, prev->radius);
+						seg->y = prev->y + P_ReturnThrustY(prev, prev->angle, prev->radius);
+						seg->z = prev->z + prev->height - (seg->scale>>1);
+						P_SetThingPosition(seg);
+						prev = seg;
+						seg = seg->tracer;
+					}
+				}
+				break;
 			case MT_SPINCUSHION:
 				if (mobj->target && mobj->state-states >= S_SPINCUSHION_AIM1 && mobj->state-states <= S_SPINCUSHION_AIM5)
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
@@ -8571,8 +8594,61 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				mobj->reactiontime >>= 1;
 			}
 			break;
+		case MT_THZTREE:
+			// Spawn the branches
+			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_22h;
+			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_157h;
+			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobj->angle + ANGLE_270;
+			break;
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
+			break;
+		case MT_CEZPOLE:
+			// Spawn the banner
+			P_SpawnMobjFromMobj(mobj,
+				P_ReturnThrustX(mobj, mobj->angle, 4<<FRACBITS),
+				P_ReturnThrustY(mobj, mobj->angle, 4<<FRACBITS),
+				0, MT_CEZBANNER)->angle = mobj->angle + ANGLE_90;
+			break;
+		case MT_WAVINGFLAG:
+			{
+				mobj_t *prev = mobj, *cur;
+				UINT8 i;
+				mobj->destscale <<= 2;
+				P_SetScale(mobj, mobj->destscale);
+				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
+				{
+					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
+					P_SetTarget(&prev->tracer, cur);
+					cur->extravalue1 = i;
+					prev = cur;
+				}
+			}
+			break;
+		case MT_HHZTREE_TOP:
+			{ // Spawn the branches
+				angle_t mobjangle = mobj->angle & (ANGLE_90-1);
+				mobj_t *leaf;
+#define doleaf(x, y) \
+				leaf = P_SpawnMobjFromMobj(mobj, x, y, 0, MT_HHZTREE_PART);\
+				leaf->angle = mobjangle;\
+				P_SetMobjState(leaf, leaf->info->seestate);\
+				mobjangle += ANGLE_90
+				doleaf(1*FRACUNIT, 0);
+				doleaf(0, 1*FRACUNIT);
+				doleaf(-1*FRACUNIT, 0);
+				doleaf(0, -1*FRACUNIT);
+#undef doleaf
+			}
+			break;
+		case MT_JACKO1:
+		case MT_JACKO2:
+		case MT_JACKO3:
+			{
+				mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
+				P_SetTarget(&overlay->target, mobj);
+				P_SetMobjState(overlay, mobj->info->raisestate);
+			}
 			break;
 		case MT_EGGMOBILE2:
 			// Special condition for the 2nd boss.
@@ -10334,39 +10410,9 @@ ML_EFFECT4 : Don't clip inside the ground
 			mobj->destscale = mobj->scale;
 		}
 		break;
-	case MT_THZTREE:
-		{ // Spawn the branches
-			angle_t mobjangle = FixedAngle((mthing->angle % 113)*FRACUNIT);
-			P_SpawnMobjFromMobj(mobj, 1*FRACUNIT,  0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
-			P_SpawnMobjFromMobj(mobj, 0,           1*FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
-			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
-		}
-		break;
-	case MT_HHZTREE_TOP:
-		{ // Spawn the branches
-			angle_t mobjangle;
-			mobj_t *leaf;
-			mobjangle = FixedAngle((mthing->angle % 90)*FRACUNIT);
-#define doleaf(x, y) \
-			leaf = P_SpawnMobjFromMobj(mobj, x, y, 0, MT_HHZTREE_PART);\
-			leaf->angle = mobjangle;\
-			P_SetMobjState(leaf, leaf->info->seestate);\
-			mobjangle += ANGLE_90
-			doleaf(1*FRACUNIT, 0);
-			doleaf(0, 1*FRACUNIT);
-			doleaf(-1*FRACUNIT, 0);
-			doleaf(0, -1*FRACUNIT);
-#undef doleaf
-		}
-		break;
-	case MT_JACKO1:
-	case MT_JACKO2:
-	case MT_JACKO3:
-		{
-			mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
-			P_SetTarget(&overlay->target, mobj);
-			P_SetMobjState(overlay, mobj->info->raisestate);
-		}
+	case MT_FLAMEHOLDER:
+		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
+			P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
 		break;
 	case MT_SMASHINGSPIKEBALL:
 		if (mthing->angle > 0)
