@@ -6324,7 +6324,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 		mobj->y += pos_sideways[1];
 
 		// Cut the height to align the link with the axis.
-		if (mobj->type == MT_SMALLMACECHAIN || mobj->type == MT_BIGMACECHAIN)
+		if (mobj->type == MT_SMALLMACECHAIN || mobj->type == MT_BIGMACECHAIN || mobj->type == MT_SMALLGRABCHAIN || mobj->type == MT_BIGGRABCHAIN)
 			zstore -= P_MobjFlip(mobj)*mobj->height/4;
 		else
 			zstore -= P_MobjFlip(mobj)*mobj->height/2;
@@ -9953,7 +9953,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		fixed_t mlength, mmaxlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor, widthfactor;
 		angle_t mspokeangle;
 		mobjtype_t chainlink, macetype, firsttype, linktype;
-		boolean mdosound, mdocenter;
+		boolean mdosound, mdocenter, mchainlike;
 		mobj_t *spawnee = NULL, *hprev = mobj;
 		mobjflag_t mflagsapply;
 		mobjflag2_t mflags2apply;
@@ -10059,6 +10059,19 @@ ML_EFFECT4 : Don't clip inside the ground
 				else
 					chainlink = MT_NULL;
 				break;
+			case MT_CHAINPOINT:
+				if (mthing->options & MTF_AMBUSH)
+				{
+					macetype = MT_BIGGRABCHAIN;
+					chainlink = MT_BIGMACECHAIN;
+				}
+				else
+				{
+					macetype = MT_SMALLGRABCHAIN;
+					chainlink = MT_SMALLMACECHAIN;
+				}
+				mchainlike = true;
+				break;
 			default:
 				if (mthing->options & MTF_AMBUSH)
 				{
@@ -10076,17 +10089,15 @@ ML_EFFECT4 : Don't clip inside the ground
 		if (!macetype && !chainlink)
 			break;
 
-		if (mobj->type != MT_CHAINPOINT)
-		{
-			firsttype = macetype;
-			mlength++;
-		}
-		else
+		if (mobj->type == MT_CHAINPOINT)
 		{
 			if (!mlength)
 				break;
-			firsttype = chainlink;
 		}
+		else
+			mlength++;
+
+		firsttype = macetype;
 
 		// Adjustable direction
 		if (lines[line].flags & ML_NOCLIMB)
@@ -10110,13 +10121,15 @@ ML_EFFECT4 : Don't clip inside the ground
 		else
 			radiusfactor = (((linktype = chainlink) == MT_NULL) ? 2 : 1);
 
-		widthfactor = ((firsttype == chainlink) ? 1 : 2);
+		if (!mchainlike)
+			mchainlike = (firsttype == chainlink);
+		widthfactor = (mchainlike ? 1 : 2);
 
 		mflagsapply = ((lines[line].flags & ML_EFFECT4) ? 0 : (MF_NOCLIP|MF_NOCLIPHEIGHT));
 		mflags2apply = ((mthing->options & MTF_OBJECTFLIP) ? MF2_OBJECTFLIP : 0);
 		meflagsapply = ((mthing->options & MTF_OBJECTFLIP) ? MFE_VERTICALFLIP : 0);
 
-		msound = ((firsttype == chainlink) ? 0 : (mwidth & 1));
+		msound = (mchainlike ? 0 : (mwidth & 1));
 
 		// Quick and easy preparatory variable setting
 		mphase = (FixedAngle(mphase*FRACUNIT)>>ANGLETOFINESHIFT);
@@ -10155,7 +10168,8 @@ ML_EFFECT4 : Don't clip inside the ground
 				if (mobj->type != MT_CHAINMACEPOINT)
 					continue;
 
-				firsttype = linktype = chainlink;
+				linktype = chainlink;
+				firsttype = ((mthing->options & MTF_AMBUSH) ? MT_BIGGRABCHAIN : MT_SMALLGRABCHAIN);
 				mmaxlength = 1 + (mlength - 1)*radiusfactor;
 				radiusfactor = widthfactor = 1;
 			}
@@ -10170,10 +10184,7 @@ ML_EFFECT4 : Don't clip inside the ground
 						radiusfactor = 2;
 					}
 					else
-					{
-						linktype = chainlink;
 						radiusfactor = (((linktype = chainlink) == MT_NULL) ? 2 : 1);
-					}
 
 					firsttype = macetype;
 					widthfactor = 2;
@@ -10185,8 +10196,8 @@ ML_EFFECT4 : Don't clip inside the ground
 			mwidthset = mwidth;
 			mlengthset = mminlength;
 
-			if (mdocenter) // Innermost mace/link
-				makemace(macetype, 0, 0);
+			if (mdocenter) // Innermost link
+				makemace(linktype, 0, 0);
 
 			// Out from the center...
 			if (linktype)
@@ -10240,8 +10251,8 @@ ML_EFFECT4 : Don't clip inside the ground
 					while (mlengthset > mminlength)
 						makemace(linktype, radiusfactor*(mlengthset--), 0);
 
-				if (mdocenter) // Innermost mace/link
-					makemace(macetype, 0, 0);
+				if (mdocenter) // Innermost link
+					makemace(linktype, 0, 0);
 			}
 		}
 

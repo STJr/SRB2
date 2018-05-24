@@ -34,6 +34,10 @@ void A_GoldMonitorSparkle();
 void A_Look();
 void A_Chase();
 void A_FaceStabChase();
+void A_FaceStabRev();
+void A_FaceStabHurl();
+void A_FaceStabMiss();
+void A_StatueBurst();
 void A_FaceTarget();
 void A_FaceTracer();
 void A_Scream();
@@ -269,6 +273,7 @@ typedef enum sprite
 	SPR_PNTY, // Pointy
 	SPR_ARCH, // Robo-Hood
 	SPR_CBFS, // Castlebot Facestabber
+	SPR_STAB, // Castlebot Facestabber spear aura
 	SPR_SPSH, // Egg Guard
 	SPR_ESHI, // Egg Guard's shield
 	SPR_GSNP, // Green Snapper
@@ -439,6 +444,7 @@ typedef enum sprite
 	SPR_CTRC, // Fire torch
 	SPR_CFLG, // Waving flag/segment
 	SPR_CSTA, // Crawla statue
+	SPR_CBBS, // Facestabber statue
 
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
@@ -1107,7 +1113,7 @@ typedef enum state
 	S_ROBOHOOD_JUMP2,
 	S_ROBOHOOD_FALL,
 
-	// CastleBot FaceStabber
+	// Castlebot Facestabber
 	S_FACESTABBER_STND1,
 	S_FACESTABBER_STND2,
 	S_FACESTABBER_STND3,
@@ -1122,6 +1128,7 @@ typedef enum state
 	S_FACESTABBER_DIE1,
 	S_FACESTABBER_DIE2,
 	S_FACESTABBER_DIE3,
+	S_FACESTABBERSPEAR,
 
 	// Egg Guard
 	S_EGGGUARD_STND,
@@ -2180,6 +2187,8 @@ typedef enum state
 	S_BIGMACECHAIN,
 	S_SMALLMACE,
 	S_BIGMACE,
+	S_SMALLGRABCHAIN,
+	S_BIGGRABCHAIN,
 
 	// Yellow spring on a ball
 	S_YELLOWSPRINGBALL,
@@ -2244,6 +2253,10 @@ typedef enum state
 	S_WAVINGFLAG,
 	S_WAVINGFLAGSEG,
 	S_CRAWLASTATUE,
+	S_FACESTABBERSTATUE,
+	S_SUSPICIOUSFACESTABBERSTATUE_WAIT,
+	S_SUSPICIOUSFACESTABBERSTATUE_BURST1,
+	S_SUSPICIOUSFACESTABBERSTATUE_BURST2,
 
 	// Big Tumbleweed
 	S_BIGTUMBLEWEED,
@@ -3606,6 +3619,7 @@ typedef enum mobj_type
 	MT_POINTYBALL, // Pointy Ball
 	MT_ROBOHOOD, // Robo-Hood
 	MT_FACESTABBER, // Castlebot Facestabber
+	MT_FACESTABBERSPEAR, // Castlebot Facestabber spear aura
 	MT_EGGGUARD, // Egg Guard
 	MT_EGGSHIELD, // Egg Guard's shield
 	MT_GSNAPPER, // Green Snapper
@@ -3861,6 +3875,8 @@ typedef enum mobj_type
 	MT_BIGMACECHAIN, // Big Mace Chain
 	MT_SMALLMACE, // Small Mace
 	MT_BIGMACE, // Big Mace
+	MT_SMALLGRABCHAIN, // Small Grab Chain
+	MT_BIGGRABCHAIN, // Big Grab Chain
 	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
 	MT_REDSPRINGBALL, // Red spring on a ball
 	MT_SMALLFIREBAR, // Small Firebar
@@ -3878,6 +3894,8 @@ typedef enum mobj_type
 	MT_WAVINGFLAG, // Waving flag
 	MT_WAVINGFLAGSEG, // Waving flag segment
 	MT_CRAWLASTATUE, // Crawla statue
+	MT_FACESTABBERSTATUE, // Facestabber statue
+	MT_SUSPICIOUSFACESTABBERSTATUE, // :eggthinking:
 
 	// Arid Canyon Scenery
 	MT_BIGTUMBLEWEED,

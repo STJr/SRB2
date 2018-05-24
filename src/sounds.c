@@ -439,8 +439,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kc3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Levitation"}, // ditto
   {"s3kc4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
   {"s3kc4l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"}, // ditto
-  {"s3kc5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3kc5l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
+  {"s3kc5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Revving up"},
+  {"s3kc5l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Revving up"}, // ditto
   {"s3kc6s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"},
   {"s3kc6l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"}, // ditto
   {"s3kc7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},

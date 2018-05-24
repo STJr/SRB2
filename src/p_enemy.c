@@ -55,6 +55,10 @@ void A_Fall(mobj_t *actor);
 void A_Look(mobj_t *actor);
 void A_Chase(mobj_t *actor);
 void A_FaceStabChase(mobj_t *actor);
+void A_FaceStabRev(mobj_t *actor);
+void A_FaceStabHurl(mobj_t *actor);
+void A_FaceStabMiss(mobj_t *actor);
+void A_StatueBurst(mobj_t *actor);
 void A_JetJawRoam(mobj_t *actor);
 void A_JetJawChomp(mobj_t *actor);
 void A_PointyThink(mobj_t *actor);
@@ -1040,7 +1044,7 @@ nomissile:
 
 // Function: A_FaceStabChase
 //
-// Description: A_Chase for CastleBot FaceStabber.
+// Description: Unused variant of A_Chase for Castlebot Facestabber.
 //
 // var1 = unused
 // var2 = unused
@@ -1126,6 +1130,241 @@ nomissile:
 	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
+}
+
+static void P_SharpDust(mobj_t *actor, mobjtype_t type, angle_t ang)
+{
+	mobj_t *dust;
+
+	if (!type || !P_IsObjectOnGround(actor))
+		return;
+
+	dust = P_SpawnMobjFromMobj(actor,
+			-P_ReturnThrustX(actor, ang, 16<<FRACBITS),
+			-P_ReturnThrustY(actor, ang, 16<<FRACBITS),
+			0, type);
+	P_SetObjectMomZ(dust, P_RandomRange(1, 4)<<FRACBITS, false);
+}
+
+static void P_FaceStabFlume(mobj_t *actor)
+{
+	mobj_t *flume;
+	if (leveltime & 1)
+		return;
+
+	flume = P_SpawnMobjFromMobj(actor,
+		-P_ReturnThrustX(actor, actor->angle, actor->radius),
+		-P_ReturnThrustY(actor, actor->angle, actor->radius),
+		actor->height/3,
+		MT_PARTICLE);
+	flume->destscale = actor->scale*3;
+	P_SetScale(flume, flume->destscale);
+	P_SetTarget(&flume->target, actor);
+	flume->sprite = SPR_JETF;
+	flume->frame = FF_FULLBRIGHT;
+	flume->tics = 2;
+}
+
+// Function: A_FaceStabRev
+//
+// Description: Facestabber rev action
+//
+// var1 = effective duration
+// var2 = effective nextstate
+//
+void A_FaceStabRev(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabRev", actor))
+		return;
+#endif
+
+	if (!actor->target)
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	if (actor->hnext)
+		P_SetTarget(&actor->hnext, NULL);
+	actor->extravalue1 = 0;
+
+	if (!actor->reactiontime)
+	{
+		actor->reactiontime = locvar1;
+		S_StartSound(actor, actor->info->activesound);
+	}
+	else
+	{
+		if ((--actor->reactiontime) == 0)
+		{
+			S_StartSound(actor, actor->info->attacksound);
+			P_SetMobjState(actor, locvar2);
+		}
+		else
+		{
+			P_TryMove(actor, actor->x - P_ReturnThrustX(actor, actor->angle, 2<<FRACBITS), actor->y - P_ReturnThrustY(actor, actor->angle, 2<<FRACBITS), false);
+			P_FaceStabFlume(actor);
+		}
+	}
+}
+
+// Function: A_FaceStabHurl
+//
+// Description: Facestabber hurl action
+//
+// var1 = homing strength (recommended strength between 0-8)
+// var2 = effective nextstate
+//
+void A_FaceStabHurl(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabHurl", actor))
+		return;
+#endif
+
+	if (actor->target)
+	{
+		angle_t visang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		// Calculate new direction.
+		angle_t dirang = actor->angle;
+		angle_t diffang = visang - dirang;
+
+		if (locvar1) // Allow homing?
+		{
+			if (diffang > ANGLE_180)
+			{
+				angle_t workang = locvar1*(InvAngle(diffang)>>5);
+				diffang += InvAngle(workang);
+			}
+			else
+				diffang += (locvar1*(diffang>>5));
+		}
+		diffang += ANGLE_45;
+
+		// Check the sight cone.
+		if (diffang < ANGLE_90)
+		{
+			actor->angle = dirang;
+			if (++actor->extravalue2 < 4)
+				actor->extravalue2 = 4;
+			else if (actor->extravalue2 > 26)
+				actor->extravalue2 = 26;
+
+			if (P_TryMove(actor,
+				actor->x + P_ReturnThrustX(actor, dirang, actor->extravalue2<<FRACBITS),
+				actor->y + P_ReturnThrustY(actor, dirang, actor->extravalue2<<FRACBITS),
+				false))
+			{
+				// Do the spear damage.
+#define NUMSTEPS 3
+#define NUMGRADS 5
+#define MAXVAL (NUMSTEPS*NUMGRADS)
+				SINT8 step = ++actor->extravalue1;
+				fixed_t basesize = FRACUNIT/MAXVAL;
+				mobj_t *hwork = actor;
+				INT32 dist = 113;
+				fixed_t xo = P_ReturnThrustX(actor, actor->angle, dist*basesize);
+				fixed_t yo = P_ReturnThrustY(actor, actor->angle, dist*basesize);
+				while (step > 0)
+				{
+					if (!hwork->hnext)
+						P_SetTarget(&hwork->hnext, P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_FACESTABBERSPEAR));
+					hwork = hwork->hnext;
+					hwork->angle = actor->angle + ANGLE_90;
+					hwork->destscale = FixedSqrt(basesize*step);
+					hwork->fuse = 2;
+					P_TeleportMove(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
+					step -= NUMGRADS;
+				}
+
+				if ((step % 5) == 0)
+					P_SharpDust(actor, MT_SPINDUST, actor->angle);
+
+				if (actor->extravalue1 >= MAXVAL)
+					actor->extravalue1 -= NUMGRADS;
+
+				P_FaceStabFlume(actor);
+				return;
+#undef MAXVAL
+#undef NUMGRADS
+#undef NUMSTEPS
+			}
+		}
+	}
+
+	P_SetMobjState(actor, locvar2);
+	actor->reactiontime = actor->info->reactiontime;
+}
+
+// Function: A_FaceStabMiss
+//
+// Description: Facestabber miss action
+//
+// var1 = unused
+// var2 = effective nextstate
+//
+void A_FaceStabMiss(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabMiss", actor))
+		return;
+#endif
+
+	if (++actor->extravalue1 >= 3)
+	{
+		actor->extravalue2 -= 2;
+		actor->extravalue1 = 0;
+		S_StartSound(actor, sfx_s3k47);
+		P_SharpDust(actor, MT_SPINDUST, actor->angle);
+	}
+
+	if (actor->extravalue2 <= 0 || !P_TryMove(actor,
+		actor->x + P_ReturnThrustX(actor, actor->angle, actor->extravalue2<<FRACBITS),
+		actor->y + P_ReturnThrustY(actor, actor->angle, actor->extravalue2<<FRACBITS),
+		false))
+	{
+		actor->extravalue2 = 0;
+		P_SetMobjState(actor, locvar2);
+	}
+}
+
+// Function: A_StatueBurst
+//
+// Description: For suspicious statues only...
+//
+// var1 = unused
+// var2 = effective nextstate for created object
+//
+void A_StatueBurst(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *new;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_StatueBurst", actor))
+		return;
+#endif
+
+	if (!(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, (mobjtype_t)actor->info->raisestate)))
+		return;
+
+	new->angle = actor->angle;
+	new->target = actor->target;
+	if (locvar2)
+		P_SetMobjState(new, (statenum_t)locvar2);
+	S_StopSound(actor);
+	S_StartSound(actor, sfx_s3k96);
 }
 
 // Function: A_JetJawRoam
@@ -1591,16 +1830,7 @@ void A_SharpSpin(mobj_t *actor)
 		P_SetMobjState(actor, actor->info->meleestate);
 	}
 
-	if (!locvar1 || !P_IsObjectOnGround(actor))
-		return;
-
-	{
-		mobj_t *dust = P_SpawnMobjFromMobj(actor,
-						-P_ReturnThrustX(actor, oldang, 16<<FRACBITS),
-						-P_ReturnThrustY(actor, oldang, 16<<FRACBITS),
-						0, locvar1);
-		P_SetObjectMomZ(dust, P_RandomRange(1, 4)<<FRACBITS, false);
-	}
+	P_SharpDust(actor, locvar1, oldang);
 }
 
 // Function: A_SharpDecel
@@ -5216,10 +5446,8 @@ void A_RockSpawn(mobj_t *actor)
 //
 void A_SlingAppear(mobj_t *actor)
 {
-	boolean firsttime = true;
 	UINT8 mlength = 4;
-	mobj_t *spawnee;
-	mobj_t *hprev = actor;
+	mobj_t *spawnee, *hprev;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SlingAppear", actor))
 		return;
@@ -5234,10 +5462,18 @@ void A_SlingAppear(mobj_t *actor)
 	actor->movefactor = actor->threshold;
 	actor->friction = 128;
 
+	hprev = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLGRABCHAIN);
+	P_SetTarget(&hprev->tracer, actor);
+	P_SetTarget(&hprev->hprev, actor);
+	P_SetTarget(&actor->hnext, hprev);
+	hprev->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+	hprev->movecount = mlength;
+
+	mlength--;
+
 	while (mlength > 0)
 	{
 		spawnee = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLMACECHAIN);
-
 		P_SetTarget(&spawnee->tracer, actor);
 		P_SetTarget(&spawnee->hprev, hprev);
 		P_SetTarget(&hprev->hnext, spawnee);
@@ -5245,13 +5481,6 @@ void A_SlingAppear(mobj_t *actor)
 
 		spawnee->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 		spawnee->movecount = mlength;
-
-		if (firsttime)
-		{
-			// This is the outermost link in the chain
-			spawnee->flags2 |= MF2_AMBUSH;
-			firsttime = false;
-		}
 
 		mlength--;
 	}
@@ -11357,4 +11586,4 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
-}
+}

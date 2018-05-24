@@ -1628,6 +1628,10 @@ static actionpointer_t actionpointers[] =
 	{{A_Look},                   "A_LOOK"},
 	{{A_Chase},                  "A_CHASE"},
 	{{A_FaceStabChase},          "A_FACESTABCHASE"},
+	{{A_FaceStabRev},            "A_FACESTABREV"},
+	{{A_FaceStabHurl},           "A_FACESTABHURL"},
+	{{A_FaceStabMiss},           "A_FACESTABMISS"},
+	{{A_StatueBurst},            "A_STATUEBURST"},
 	{{A_FaceTarget},             "A_FACETARGET"},
 	{{A_FaceTracer},             "A_FACETRACER"},
 	{{A_Scream},                 "A_SCREAM"},
@@ -3774,6 +3778,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FACESTABBER_DIE1",
 	"S_FACESTABBER_DIE2",
 	"S_FACESTABBER_DIE3",
+	"S_FACESTABBERSPEAR",
 
 	// Egg Guard
 	"S_EGGGUARD_STND",
@@ -4830,6 +4835,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BIGMACECHAIN",
 	"S_SMALLMACE",
 	"S_BIGMACE",
+	"S_SMALLGRABCHAIN",
+	"S_BIGGRABCHAIN",
 
 	// Yellow spring on a ball
 	"S_YELLOWSPRINGBALL",
@@ -4894,6 +4901,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WAVINGFLAG",
 	"S_WAVINGFLAGSEG",
 	"S_CRAWLASTATUE",
+	"S_FACESTABBERSTATUE",
+	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
+	"S_SUSPICIOUSFACESTABBERSTATUE_BURST1",
+	"S_SUSPICIOUSFACESTABBERSTATUE_BURST2",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -6235,7 +6246,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_POINTY", // Pointy
 	"MT_POINTYBALL", // Pointy Ball
 	"MT_ROBOHOOD", // Robo-Hood
-	"MT_FACESTABBER", // CastleBot FaceStabber
+	"MT_FACESTABBER", // Castlebot Facestabber
+	"MT_FACESTABBERSPEAR", // Castlebot Facestabber spear aura
 	"MT_EGGGUARD", // Egg Guard
 	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
@@ -6491,6 +6503,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BIGMACECHAIN", // Big Mace Chain
 	"MT_SMALLMACE", // Small Mace
 	"MT_BIGMACE", // Big Mace
+	"MT_SMALLGRABCHAIN", // Small Grab Chain
+	"MT_BIGGRABCHAIN", // Big Grab Chain
 	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
@@ -6508,6 +6522,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_WAVINGFLAG", // Waving flag
 	"MT_WAVINGFLAGSEG", // Waving flag segment
 	"MT_CRAWLASTATUE", // Crawla statue
+	"MT_FACESTABBERSTATUE", // Facestabber statue
+	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
