@@ -1266,29 +1266,31 @@ void A_FaceStabHurl(mobj_t *actor)
 #define NUMSTEPS 3
 #define NUMGRADS 5
 #define MAXVAL (NUMSTEPS*NUMGRADS)
-				SINT8 step = ++actor->extravalue1;
+				SINT8 step = (++actor->extravalue1);
 				fixed_t basesize = FRACUNIT/MAXVAL;
 				mobj_t *hwork = actor;
 				INT32 dist = 113;
 				fixed_t xo = P_ReturnThrustX(actor, actor->angle, dist*basesize);
 				fixed_t yo = P_ReturnThrustY(actor, actor->angle, dist*basesize);
+
 				while (step > 0)
 				{
 					if (!hwork->hnext)
 						P_SetTarget(&hwork->hnext, P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_FACESTABBERSPEAR));
 					hwork = hwork->hnext;
 					hwork->angle = actor->angle + ANGLE_90;
-					hwork->destscale = FixedSqrt(basesize*step);
+					hwork->destscale = FixedSqrt(step*basesize);
+					P_SetScale(hwork, hwork->destscale);
 					hwork->fuse = 2;
 					P_TeleportMove(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
 					step -= NUMGRADS;
 				}
 
-				if ((step % 5) == 0)
-					P_SharpDust(actor, MT_SPINDUST, actor->angle);
-
 				if (actor->extravalue1 >= MAXVAL)
 					actor->extravalue1 -= NUMGRADS;
+
+				if ((step % 5) == 0)
+					P_SharpDust(actor, MT_SPINDUST, actor->angle);
 
 				P_FaceStabFlume(actor);
 				return;
