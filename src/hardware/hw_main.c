@@ -2901,8 +2901,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngle(px1, py1) - dup_viewangle;
-	angle2 = R_PointToAngle(px2, py2) - dup_viewangle;
+	angle1 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px1>>1, py1>>1) - dup_viewangle;
+	angle2 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px2>>1, py2>>1) - dup_viewangle;
 
 	span = angle1 - angle2;
 
