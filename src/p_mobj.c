@@ -6670,6 +6670,10 @@ void P_MobjThinker(mobj_t *mobj)
 		P_SetTarget(&mobj->target, NULL);
 	if (mobj->tracer && P_MobjWasRemoved(mobj->tracer))
 		P_SetTarget(&mobj->tracer, NULL);
+	if (mobj->hnext && P_MobjWasRemoved(mobj->hnext))
+		P_SetTarget(&mobj->hnext, NULL);
+	if (mobj->hprev && P_MobjWasRemoved(mobj->hprev))
+		P_SetTarget(&mobj->hprev, NULL);
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
@@ -8610,6 +8614,20 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					cur->extravalue1 = i;
 					prev = cur;
 				}
+			}
+			break;
+		case MT_CANDLE:
+		case MT_CANDLEPRICKET:
+			{
+				// Fake corona!!
+				mobj_t *corona = P_SpawnMobjFromMobj(mobj, 0, 0, ((mobj->type == MT_CANDLE) ? 40 : 176)<<FRACBITS, MT_PARTICLE);
+				//P_SetTarget(&corona->tracer, mobj);
+				//corona->flags2 |= MF2_LINKDRAW; -- crash??????? can't debug right now...
+				corona->sprite = SPR_FLAM;
+				corona->frame = (FF_FULLBRIGHT|FF_TRANS90|12);
+				corona->tics = -1;
+				if (mobj->type == MT_CANDLE)
+					P_SetScale(corona, (corona->destscale = mobj->scale*3));
 			}
 			break;
 		case MT_JACKO1:

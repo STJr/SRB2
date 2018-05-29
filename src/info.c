@@ -2137,9 +2137,9 @@ state_t states[NUMSTATES] =
 
 	{SPR_CBBS, 0, -1, {NULL}, 0, 0, S_NULL}, // S_FACESTABBERSTATUE
 
-	{SPR_CBBS, 0,  5,        {A_Look}, 768*FRACUNIT, 0, S_SUSPICIOUSFACESTABBERSTATUE_WAIT},   // S_SUSPICIOUSFACESTABBERSTATUE_WAIT
-	{SPR_CBBS, 0, 23,          {NULL},            0, 0, S_SUSPICIOUSFACESTABBERSTATUE_BURST2}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST1
-	{SPR_NULL, 0, 40, {A_StatueBurst},            0, S_FACESTABBER_CHARGE2, S_NULL}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST2
+	{SPR_CBBS, 0,  5,        {A_Look},   768*FRACUNIT, 0, S_SUSPICIOUSFACESTABBERSTATUE_WAIT},   // S_SUSPICIOUSFACESTABBERSTATUE_WAIT
+	{SPR_CBBS, 0, 23,          {NULL},              0, 0, S_SUSPICIOUSFACESTABBERSTATUE_BURST2}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST1
+	{SPR_NULL, 0, 40, {A_StatueBurst}, MT_FACESTABBER, S_FACESTABBER_CHARGE2, S_NULL}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST2
 
 	// Big Tumbleweed
 	{SPR_BTBL, 0, -1, {NULL}, 0, 0, S_NULL},                // S_BIGTUMBLEWEED
@@ -10048,7 +10048,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_YELLOWSPRINGBALL2, // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -10075,7 +10075,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_REDSPRINGBALL2, // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -10552,7 +10552,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SOLID|MF_PUSHABLE, // flags
-		MT_FACESTABBER  // raisestate
+		MT_ROCKCRUMBLE3 // raisestate
 	},
 
 	{           // MT_BIGTUMBLEWEED
@@ -14304,7 +14304,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4*FRACUNIT,     // speed
 		4*FRACUNIT,     // radius
 		4*FRACUNIT,     // height
-		0,              // display offset
+		1,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
