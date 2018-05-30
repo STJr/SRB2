@@ -63,7 +63,9 @@ void A_JetJawRoam(mobj_t *actor);
 void A_JetJawChomp(mobj_t *actor);
 void A_PointyThink(mobj_t *actor);
 void A_CheckBuddy(mobj_t *actor);
+void A_HoodFire(mobj_t *actor);
 void A_HoodThink(mobj_t *actor);
+void A_HoodFall(mobj_t *actor);
 void A_ArrowCheck(mobj_t *actor);
 void A_SnailerThink(mobj_t *actor);
 void A_SharpChase(mobj_t *actor);
@@ -1591,6 +1593,62 @@ void A_CheckBuddy(mobj_t *actor)
 		P_RemoveMobj(actor);
 }
 
+// Helper function for the Robo Hood.
+// Don't ask me how it works. Nev3r made it with dark majyks.
+void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixed_t speed)
+{
+	fixed_t dh;
+
+	x -= actor->x;
+	y -= actor->y;
+	z -= actor->z;
+
+	dh = P_AproxDistance(x, y);
+
+	actor->momx = FixedMul(FixedDiv(x, dh), speed);
+	actor->momy = FixedMul(FixedDiv(y, dh), speed);
+
+	if (!gravity)
+		return;
+
+	dh = FixedDiv(FixedMul(dh, gravity), speed);
+	actor->momz = (dh>>1) + FixedDiv(z, dh<<1);
+}
+
+// Function: A_HoodFire
+//
+// Description: Firing Robo-Hood
+//
+// var1 = object type to fire
+// var2 = unused
+//
+void A_HoodFire(mobj_t *actor)
+{
+	mobj_t *arrow;
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_HoodFire", actor))
+		return;
+#endif
+
+	// Check target first.
+	if (!actor->target)
+	{
+		actor->reactiontime = actor->info->reactiontime;
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	A_FaceTarget(actor);
+
+	if (!(arrow = P_SpawnMissile(actor, actor->target, (mobjtype_t)locvar1)))
+		return;
+
+	// Set a parabolic trajectory for the arrow.
+	P_ParabolicMove(arrow, actor->target->x, actor->target->y, actor->target->z, arrow->info->speed);
+}
+
 // Function: A_HoodThink
 //
 // Description: Thinker for Robo-Hood
@@ -1600,53 +1658,87 @@ void A_CheckBuddy(mobj_t *actor)
 //
 void A_HoodThink(mobj_t *actor)
 {
+	fixed_t dx, dy, dz, dm;
+	boolean checksight;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_HoodThink", actor))
 		return;
 #endif
-	// Currently in the air...
-	if (!(actor->eflags & MFE_VERTICALFLIP) && actor->z > actor->floorz)
-	{
-		if (actor->momz > 0)
-			P_SetMobjStateNF(actor, actor->info->xdeathstate); // Rising
-		else
-			P_SetMobjStateNF(actor, actor->info->raisestate); // Falling
 
-		return;
-	}
-	else if ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height < actor->ceilingz)
-	{
-		if (actor->momz < 0)
-			P_SetMobjStateNF(actor, actor->info->xdeathstate); // Rising
-		else
-			P_SetMobjStateNF(actor, actor->info->raisestate); // Falling
-
-		return;
-	}
-
-	if (actor->state == &states[actor->info->xdeathstate]
-		|| actor->state == &states[actor->info->raisestate])
-		P_SetMobjStateNF(actor, actor->info->seestate);
-
+	// Check target first.
 	if (!actor->target)
 	{
+		actor->reactiontime = actor->info->reactiontime;
 		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
 	}
 
-	A_FaceTarget(actor); // Aiming... aiming...
+	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
+	dm = P_AproxDistance(dx, dy);
+	// Target dangerously close to robohood, retreat then.
+	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
+	{
+		P_SetMobjState(actor, actor->info->raisestate);
+		return;
+	}
 
-	if (--actor->reactiontime > 0)
+	// If target on sight, look at it.
+	if ((checksight = P_CheckSight(actor, actor->target)))
+	{
+		angle_t dang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		if (actor->angle >= ANGLE_180)
+		{
+			actor->angle = InvAngle(actor->angle)>>1;
+			actor->angle = InvAngle(actor->angle);
+		}
+		else
+			actor->angle >>= 1;
+
+		if (dang >= ANGLE_180)
+		{
+			dang = InvAngle(dang)>>1;
+			dang = InvAngle(dang);
+		}
+		else
+			dang >>= 1;
+
+		actor->angle += dang;
+	}
+
+	// Check whether to do anything.
+	if ((--actor->reactiontime) <= 0)
+	{
+		actor->reactiontime = actor->info->reactiontime;
+
+		// If way too far, don't shoot.
+		if ((dm < (3072<<FRACBITS)) && checksight)
+		{
+			P_SetMobjState(actor, actor->info->missilestate);
+			return;
+		}
+	}
+}
+
+// Function: A_HoodFall
+//
+// Description: Falling Robo-Hood
+//
+// var1 = unused
+// var2 = unused
+//
+void A_HoodFall(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_HoodFall", actor))
+		return;
+#endif
+
+	if (!P_IsObjectOnGround(actor))
 		return;
 
-	// Shoot, if not too close (cheap shots are lame)
-	if ((P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) > FixedMul(192*FRACUNIT, actor->scale))
-	|| (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))) // If you can't jump, might as well shoot regardless of distance!
-		P_SetMobjState(actor, actor->info->missilestate);
-	else if (!(actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH)))// But we WILL jump!
-		P_SetMobjState(actor, actor->info->painstate);
-
+	actor->momx = actor->momy = 0;
 	actor->reactiontime = actor->info->reactiontime;
+	P_SetMobjState(actor, actor->info->seestate);
 }
 
 // Function: A_ArrowCheck

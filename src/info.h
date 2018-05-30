@@ -102,7 +102,9 @@ void A_JetJawRoam();
 void A_JetJawChomp();
 void A_PointyThink();
 void A_CheckBuddy();
+void A_HoodFire();
 void A_HoodThink();
+void A_HoodFall();
 void A_ArrowCheck();
 void A_SnailerThink();
 void A_SharpChase();
@@ -1107,11 +1109,12 @@ typedef enum state
 
 	// Robo-Hood
 	S_ROBOHOOD_LOOK,
-	S_ROBOHOOD_STND,
-	S_ROBOHOOD_SHOOT,
-	S_ROBOHOOD_JUMP,
+	S_ROBOHOOD_STAND,
+	S_ROBOHOOD_FIRE1,
+	S_ROBOHOOD_FIRE2,
+	S_ROBOHOOD_JUMP1,
 	S_ROBOHOOD_JUMP2,
-	S_ROBOHOOD_FALL,
+	S_ROBOHOOD_JUMP3,
 
 	// Castlebot Facestabber
 	S_FACESTABBER_STND1,

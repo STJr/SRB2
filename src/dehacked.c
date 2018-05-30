@@ -1703,7 +1703,9 @@ static actionpointer_t actionpointers[] =
 	{{A_JetJawChomp},            "A_JETJAWCHOMP"},
 	{{A_PointyThink},            "A_POINTYTHINK"},
 	{{A_CheckBuddy},             "A_CHECKBUDDY"},
+	{{A_HoodFire},               "A_HOODFIRE"},
 	{{A_HoodThink},              "A_HOODTHINK"},
+	{{A_HoodFall},               "A_HOODFALL"},
 	{{A_ArrowCheck},             "A_ARROWCHECK"},
 	{{A_SnailerThink},           "A_SNAILERTHINK"},
 	{{A_SharpChase},             "A_SHARPCHASE"},
@@ -3757,11 +3759,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Robo-Hood
 	"S_ROBOHOOD_LOOK",
-	"S_ROBOHOOD_STND",
-	"S_ROBOHOOD_SHOOT",
-	"S_ROBOHOOD_JUMP",
+	"S_ROBOHOOD_STAND",
+	"S_ROBOHOOD_FIRE1",
+	"S_ROBOHOOD_FIRE2",
+	"S_ROBOHOOD_JUMP1",
 	"S_ROBOHOOD_JUMP2",
-	"S_ROBOHOOD_FALL",
+	"S_ROBOHOOD_JUMP3",
 
 	// CastleBot FaceStabber
 	"S_FACESTABBER_STND1",
