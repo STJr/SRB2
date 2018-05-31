@@ -1706,7 +1706,7 @@ static actionpointer_t actionpointers[] =
 	{{A_HoodFire},               "A_HOODFIRE"},
 	{{A_HoodThink},              "A_HOODTHINK"},
 	{{A_HoodFall},               "A_HOODFALL"},
-	{{A_ArrowCheck},             "A_ARROWCHECK"},
+	{{A_ArrowBonks},             "A_ARROWBONKS"},
 	{{A_SnailerThink},           "A_SNAILERTHINK"},
 	{{A_SharpChase},             "A_SHARPCHASE"},
 	{{A_SharpSpin},              "A_SHARPSPIN"},
@@ -4709,8 +4709,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Arrow
 	"S_ARROW",
-	"S_ARROWUP",
-	"S_ARROWDOWN",
+	"S_TEMPSHI",
+	"S_ARROWBONK",
 
 	// Trapgoyle Demon fire
 	"S_DEMONFIRE1",

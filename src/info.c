@@ -1933,9 +1933,9 @@ state_t states[NUMSTATES] =
 
 	{SPR_CBLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CANNONBALL1
 
-	{SPR_AROW, 0, 1, {A_ArrowCheck}, 0, 0, S_ARROW},     // S_ARROW
-	{SPR_AROW, 1, 1, {A_ArrowCheck}, 0, 0, S_ARROWUP},   // S_ARROWUP
-	{SPR_AROW, 2, 1, {A_ArrowCheck}, 0, 0, S_ARROWDOWN}, // S_ARROWDOWN
+	{SPR_AROW, 0, -1, {NULL}, 0, 0, S_NULL}, // S_ARROW
+	{SPR_ESHI, 0, TICRATE/2, {NULL}, 0, 0, S_NULL}, // S_TEMPSHI
+	{SPR_AROW, FF_ANIMATE, TICRATE, {A_ArrowBonks}, 7, 2, S_NULL}, // S_ARROWBONK
 
 	{SPR_CFIR, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_DEMONFIRE2}, // S_DEMONFIRE1
 	{SPR_CFIR, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_DEMONFIRE3}, // S_DEMONFIRE2
@@ -2138,8 +2138,8 @@ state_t states[NUMSTATES] =
 
 	{SPR_CBBS, 0, -1, {NULL}, 0, 0, S_NULL}, // S_FACESTABBERSTATUE
 
-	{SPR_CBBS, 0,  5,        {A_Look},   768*FRACUNIT, 0, S_SUSPICIOUSFACESTABBERSTATUE_WAIT},   // S_SUSPICIOUSFACESTABBERSTATUE_WAIT
-	{SPR_CBBS, 0, 23,          {NULL},              0, 0, S_SUSPICIOUSFACESTABBERSTATUE_BURST2}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST1
+	{SPR_CBBS, 0, 5, {A_Look}, 768*FRACUNIT, 0, S_SUSPICIOUSFACESTABBERSTATUE_WAIT},   // S_SUSPICIOUSFACESTABBERSTATUE_WAIT
+	{SPR_CBBS, FF_ANIMATE, 23, {NULL},    6, 1, S_SUSPICIOUSFACESTABBERSTATUE_BURST2}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST1
 	{SPR_NULL, 0, 40, {A_StatueBurst}, MT_FACESTABBER, S_FACESTABBER_CHARGE2, S_NULL}, // S_SUSPICIOUSFACESTABBERSTATUE_BURST2
 
 	// Big Tumbleweed
@@ -4260,7 +4260,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_cybdth,     // deathsound
 		3,              // speed
-		36*FRACUNIT,    // radius
+		32*FRACUNIT,    // radius
 		72*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
@@ -4287,7 +4287,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,          // xdeathstate
 		sfx_None,        // deathsound
 		0,               // speed
-		36*FRACUNIT,     // radius
+		32*FRACUNIT,     // radius
 		72*FRACUNIT,     // height
 		0,               // display offset
 		DMG_SPIKE,       // mass
@@ -4337,7 +4337,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_s3k7b,       // painsound
 		S_NULL,          // meleestate
 		S_NULL,          // missilestate
-		S_XPLD1,         // deathstate
+		S_TEMPSHI,       // deathstate
 		S_NULL,          // xdeathstate
 		sfx_wbreak,      // deathsound
 		3,               // speed
@@ -8625,18 +8625,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_ARROWDOWN,    // xdeathstate
+		S_ARROWBONK,    // deathstate
+		S_NULL,         // xdeathstate
 		sfx_s3k52,      // deathsound
 		16*FRACUNIT,    // speed
 		4*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		1,              // damage
 		sfx_s3k51,      // activesound
 		MF_NOBLOCKMAP|MF_MISSILE, // flags
-		S_ARROWUP       // raisestate
+		S_NULL          // raisestate
 	},
 
 	{           // MT_DEMONFIRE
@@ -10519,7 +10519,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		36*FRACUNIT,    // radius
+		32*FRACUNIT,    // radius
 		72*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
@@ -10546,7 +10546,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		36*FRACUNIT,    // radius
+		32*FRACUNIT,    // radius
 		72*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass

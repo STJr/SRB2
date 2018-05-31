@@ -1430,13 +1430,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					// experimental bounce
 					if (special->target)
 						special->target->extravalue1 = -special->target->info->speed;
-					return;
 				}
-				else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-						|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-						|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
-						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
+				else
 				{
 					// Shatter the shield!
 					toucher->momx = -toucher->momx/2;
@@ -2356,6 +2351,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 				P_KillMobj(target->tracer, inflictor, source, damagetype);
 			}
+			break;
+
+		case MT_EGGSHIELD:
+			P_SetObjectMomZ(target, 4*target->scale, false);
+			P_InstaThrust(target, target->angle, 3*target->scale);
+			target->flags = (target->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
 			break;
 
 		case MT_EGGMOBILE3:
