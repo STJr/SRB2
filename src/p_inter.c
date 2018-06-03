@@ -23,6 +23,7 @@
 #include "hu_stuff.h"
 #include "lua_hook.h"
 #include "m_cond.h" // unlockables, emblems, etc
+#include "p_setup.h"
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
@@ -471,39 +472,48 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			/* FALLTHRU */
 		case MT_RING:
 		case MT_FLINGRING:
-			if (!(P_CanPickupItem(player, false)))
-				return;
-
-			special->momx = special->momy = special->momz = 0;
-			P_GivePlayerRings(player, 1);
-
-			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGRING)
-				P_DoNightsScore(player);
-			break;
-
 		case MT_COIN:
 		case MT_FLINGCOIN:
 			if (!(P_CanPickupItem(player, false)))
 				return;
 
-			special->momx = special->momy = 0;
+			special->momx = special->momy = special->momz = 0;
 			P_GivePlayerRings(player, 1);
 
-			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGCOIN)
+			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGRING && special->type != MT_FLINGCOIN)
 				P_DoNightsScore(player);
 			break;
-		case MT_BLUEBALL:
+		case MT_BLUESPHERE:
 			if (!(P_CanPickupItem(player, false)))
 				return;
 
-			P_GivePlayerRings(player, 1);
-
 			special->momx = special->momy = special->momz = 0;
-			special->destscale = FixedMul(8*FRACUNIT, special->scale);
+			P_GivePlayerSpheres(player, 1);
+
+			special->destscale = ((player->powers[pw_carry] == CR_NIGHTSMODE) ? 4 : 2)*special->scale;
 			if (states[special->info->deathstate].tics > 0)
 				special->scalespeed = FixedDiv(FixedDiv(special->destscale, special->scale), states[special->info->deathstate].tics<<FRACBITS);
 			else
 				special->scalespeed = 4*FRACUNIT/5;
+
+			if (maptol & TOL_NIGHTS)
+				P_DoNightsScore(player);
+			break;
+		case MT_NIGHTSCHIP:
+			if (!(P_CanPickupItem(player, false)))
+				return;
+
+			special->momx = special->momy = special->momz = 0;
+			P_GivePlayerSpheres(player, 1);
+
+			if (maptol & TOL_NIGHTS)
+				P_DoNightsScore(player);
+			break;
+		case MT_NIGHTSSTAR:
+			if (!(P_CanPickupItem(player, false)))
+				return;
+
+			special->momx = special->momy = special->momz = 0;
 
 			if (maptol & TOL_NIGHTS)
 				P_DoNightsScore(player);
@@ -562,7 +572,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_AddPlayerScore(player, 1000);
 
 			if (gametype != GT_COOP || modeattacking) // score only?
+			{
+				S_StartSound(toucher, sfx_chchng);
 				break;
+			}
 
 			tokenlist += special->health;
 
@@ -574,10 +587,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					players->gotcontinue = true;
 					if (P_IsLocalPlayer(player))
 						S_StartSound(NULL, sfx_s3kac);
+					else
+						S_StartSound(toucher, sfx_chchng);
 				}
+				else
+					S_StartSound(toucher, sfx_chchng);
 			}
 			else
+			{
 				token++;
+				S_StartSound(toucher, sfx_token);
+			}
 
 			break;
 
@@ -602,7 +622,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					players[i].exiting = (14*TICRATE)/5 + 1;
 				}
-				S_StartSound(NULL, sfx_lvpass);
+				//S_StartSound(NULL, sfx_lvpass);
 			}
 			break;
 
@@ -733,45 +753,71 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // NiGHTS gameplay items and powerups //
 // ********************************** //
 		case MT_NIGHTSDRONE:
-			if (player->bot)
-				return;
-			if (player->exiting)
-				return;
-			if (player->bonustime)
 			{
-				if (G_IsSpecialStage(gamemap)) //After-mare bonus time/emerald reward in special stages.
-				{
-					// only allow the player with the emerald in-hand to leave.
-					if (toucher->tracer
-					&& toucher->tracer->type == MT_GOTEMERALD)
-					{
-					}
-					else // Make sure that SOMEONE has the emerald, at least!
-					{
-						for (i = 0; i < MAXPLAYERS; i++)
-							if (playeringame[i] && players[i].playerstate == PST_LIVE
-							&& players[i].mo->tracer
-							&& players[i].mo->tracer->type == MT_GOTEMERALD)
-								return;
-						// Well no one has an emerald, so exit anyway!
-					}
-					P_GiveEmerald(false);
-					// Don't play Ideya sound in special stage mode
-				}
-				else
-					S_StartSound(toucher, special->info->activesound);
-			}
-			else //Initial transformation. Don't allow second chances in special stages!
-			{
-				if (player->powers[pw_carry] == CR_NIGHTSMODE)
+				boolean spec = G_IsSpecialStage(gamemap);
+				if (player->bot)
 					return;
+				if (player->exiting)
+					return;
+				if (player->bonustime)
+				{
+					if (spec) //After-mare bonus time/emerald reward in special stages.
+					{
+						// only allow the player with the emerald in-hand to leave.
+						if (toucher->tracer
+						&& toucher->tracer->type == MT_GOTEMERALD)
+						{}
+						else // Make sure that SOMEONE has the emerald, at least!
+						{
+							for (i = 0; i < MAXPLAYERS; i++)
+								if (playeringame[i] && players[i].playerstate == PST_LIVE
+								&& players[i].mo->tracer
+								&& players[i].mo->tracer->type == MT_GOTEMERALD)
+									return;
+							// Well no one has an emerald, so exit anyway!
+						}
+						P_GiveEmerald(false);
+						// Don't play Ideya sound in special stage mode
+					}
+					else
+						S_StartSound(toucher, special->info->activesound);
+				}
+				else //Initial transformation. Don't allow second chances in special stages!
+				{
+					if (player->powers[pw_carry] == CR_NIGHTSMODE)
+						return;
 
-				S_StartSound(toucher, sfx_supert);
+					S_StartSound(toucher, sfx_supert);
+				}
+				P_SwitchSpheresBonusMode(false);
+				if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
+					P_SetTarget(&special->tracer, toucher);
+				P_NightserizePlayer(player, special->health); // Transform!
+				if (!spec)
+				{
+					if (toucher->tracer) // Move the ideya over to the drone!
+					{
+						mobj_t *hnext = special->hnext;
+						P_SetTarget(&special->hnext, toucher->tracer);
+						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						P_SetTarget(&special->hnext->target, special);
+						P_SetTarget(&toucher->tracer, NULL);
+						if (hnext)
+						{
+							special->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
+							if (special->hnext->extravalue1 > hnext->extravalue1)
+								special->hnext->extravalue1 -= (72*ANG1)/special->hnext->extravalue1;
+						}
+					}
+					if (player->exiting) // ...then move it back?
+					{
+						mobj_t *hnext = special;
+						while ((hnext = hnext->hnext))
+							P_SetTarget(&hnext->target, toucher);
+					}
+				}
+				return;
 			}
-			if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
-				P_SetTarget(&special->tracer, toucher);
-			P_NightserizePlayer(player, special->health); // Transform!
-			return;
 		case MT_NIGHTSLOOPHELPER:
 			// One second delay
 			if (special->fuse < toucher->fuse - TICRATE)
@@ -876,8 +922,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						}
 					}
 
-					if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-					   || mo2->type == MT_BLUEBALL
+					if (!(mo2->type == MT_RING || mo2->type == MT_COIN || mo2->type == MT_BLUESPHERE
+						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
 					   || ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
 						continue;
 
@@ -903,16 +949,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 
 			if (G_IsSpecialStage(gamemap) && !player->exiting)
-			{ // In special stages, share rings. Everyone gives up theirs to the player who touched the capsule
+			{ // In special stages, share spheres. Everyone gives up theirs to the player who touched the capsule
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && (&players[i] != player) && players[i].rings > 0)
+					if (playeringame[i] && (&players[i] != player) && players[i].spheres > 0)
 					{
-						player->rings += players[i].rings;
-						players[i].rings = 0;
+						player->spheres += players[i].spheres;
+						players[i].spheres = 0;
 					}
 			}
 
-			if (player->rings <= 0 || player->exiting)
+			if (player->spheres <= 0 || player->exiting)
 				return;
 
 			// Mark the player as 'pull into the capsule'
@@ -1119,17 +1165,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				HU_SetCEchoDuration(4);
 				HU_DoCEcho(M_GetText("\\\\\\\\\\\\\\\\Link Freeze"));
 			}
-			break;
-		case MT_NIGHTSWING:
-			if (G_IsSpecialStage(gamemap) && useNightsSS)
-			{ // Pseudo-ring.
-				S_StartSound(toucher, special->info->painsound);
-				player->totalring++;
-			}
-			else
-				S_StartSound(toucher, special->info->activesound);
-
-			P_DoNightsScore(player);
 			break;
 		case MT_HOOPCOLLIDE:
 			// This produces a kind of 'domino effect' with the hoop's pieces.
@@ -1495,12 +1530,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
 
-			return;
-		case MT_SPECIALSPIKEBALL:
-			if (!useNightsSS && G_IsSpecialStage(gamemap)) // Only for old special stages
-				P_SpecialStageDamage(player, special, NULL);
-			else
-				P_DamageMobj(toucher, special, special, 1, 0);
 			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
@@ -2070,8 +2099,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (inflictor && (inflictor->type == MT_SHELL || inflictor->type == MT_FIREBALL))
 		P_SetTarget(&target->tracer, inflictor);
 
-	if (!useNightsSS && G_IsSpecialStage(gamemap) && target->player && sstimer > 6)
-		sstimer = 6; // Just let P_Ticker take care of the rest.
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && target->player && target->player->nightstime > 6)
+		target->player->nightstime = 6; // Just let P_Ticker take care of the rest.
 
 	if (target->flags & (MF_ENEMY|MF_BOSS))
 		target->momx = target->momy = target->momz = 0;
@@ -2633,20 +2662,10 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 			player->drillmeter -= 5*20;
 		else
 		{
-			if (source && source->player)
-			{
-				if (player->nightstime > 20*TICRATE)
-					player->nightstime -= 20*TICRATE;
-				else
-					player->nightstime = 1;
-			}
+			if (player->nightstime > 5*TICRATE)
+				player->nightstime -= 5*TICRATE;
 			else
-			{
-				if (player->nightstime > 5*TICRATE)
-					player->nightstime -= 5*TICRATE;
-				else
-					player->nightstime = 1;
-			}
+				player->nightstime = 1;
 		}
 
 		if (player->pflags & PF_TRANSFERTOCLOSEST)
@@ -2670,7 +2689,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 			&& player->nightstime < 10*TICRATE)
 		{
 			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusicInternal("_drown",false);
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 		}
 	}
 }
@@ -3000,11 +3019,13 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 // P_SpecialStageDamage
 //
 // Do old special stage-style damaging
-// Removes 10 rings from the player, or knocks off their shield if they have one.
+// Removes 5 seconds from the player, or knocks off their shield if they have one.
 // If they don't have anything, just knock the player back anyway (this doesn't kill them).
 //
 void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 {
+	tic_t oldnightstime = player->nightstime;
+
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
@@ -3015,17 +3036,24 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	}
 	else
 	{
-		P_PlayRinglossSound(player->mo);
-		if (player->rings >= 10)
-			player->rings -= 10;
+		S_StartSound(player->mo, sfx_nghurt);
+		if (player->nightstime > 5*TICRATE)
+			player->nightstime -= 5*TICRATE;
 		else
-			player->rings = 0;
+			player->nightstime = 0;
 	}
 
 	P_DoPlayerPain(player, inflictor, source);
 
 	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
 		P_PlayerFlagBurst(player, false);
+
+	if (oldnightstime > 10*TICRATE
+		&& player->nightstime < 10*TICRATE)
+	{
+		//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
+		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+	}
 }
 
 /** Damages an object, which may or may not be a player.
@@ -3172,6 +3200,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return true;
 #endif
 			P_NiGHTSDamage(target, source); // -5s :(
+			return true;
+		}
+
+		if (G_IsSpecialStage(gamemap))
+		{
+			P_SpecialStageDamage(player, inflictor, source);
 			return true;
 		}
 

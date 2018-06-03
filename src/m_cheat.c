@@ -728,7 +728,7 @@ void Command_Setrings_f(void)
 		// P_GivePlayerRings does value clamping
 		players[consoleplayer].rings = 0;
 		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
-		if (!G_IsSpecialStage(gamemap) || !useNightsSS)
+		if (!G_IsSpecialStage(gamemap) || !(maptol & TOL_NIGHTS))
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
 
 		G_SetGameModified(multiplayer);
@@ -1010,7 +1010,7 @@ void OP_NightsObjectplace(player_t *player)
 		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
-		P_SpawnHoopsAndRings(mt);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
 	// This places a bumper!
@@ -1024,26 +1024,26 @@ void OP_NightsObjectplace(player_t *player)
 		P_SpawnMapThing(mt);
 	}
 
-	// This places a ring!
+	// This places a sphere!
 	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_RING].doomednum, false);
-		P_SpawnHoopsAndRings(mt);
+		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_BLUESPHERE].doomednum, false);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
-	// This places a wing item!
+	// This places a ring!
 	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_NIGHTSWING].doomednum, false);
-		P_SpawnHoopsAndRings(mt);
+		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_RING].doomednum, false);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
 	// This places a custom object as defined in the console cv_mapthingnum.
@@ -1077,12 +1077,12 @@ void OP_NightsObjectplace(player_t *player)
 
 		if (mt->type == 300 // Ring
 		|| mt->type == 308 || mt->type == 309 // Team Rings
-		|| mt->type == 1706 // Nights Wing
+		|| mt->type == 1706 // Sphere
 		|| (mt->type >= 600 && mt->type <= 609) // Placement patterns
 		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
 		|| mt->type == 1800) // Mario Coin
 		{
-			P_SpawnHoopsAndRings(mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 		else
 			P_SpawnMapThing(mt);
@@ -1227,7 +1227,7 @@ void OP_ObjectplaceMovement(player_t *player)
 		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
 		|| mt->type == 1800) // Mario Coin
 		{
-			P_SpawnHoopsAndRings(mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 		else
 			P_SpawnMapThing(mt);

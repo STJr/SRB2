@@ -141,7 +141,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"bnce1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"}, // Boing!
   {"bnce2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Scatter"}, // Boing!
   {"cannon", false,  64,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful shot"},
-  {"cgot" ,   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Chaos Emerald"}, // Got Emerald! Tails 09-02-2001
+  {"cgot" ,   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Emerald"}, // Got Emerald! Tails 09-02-2001
   {"cybdth", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Explosion"},
   {"deton",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous beeping"},
   {"ding",   false, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ding"},
@@ -214,11 +214,12 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"xideya", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Success"}, // Xmas
   {"nbmper", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"},
   {"nxbump", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"}, // Xmas
+  {"ncchip", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got chip"},
   {"ncitem", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got special"},
   {"nxitem", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got special"}, // Xmas
   {"ngdone",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonus time start"},
   {"nxdone",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonus time start"}, // Xmas
-  {"drill1", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill start"},
+  {"drill1", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill"},
   {"drill2", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill"},
   {"ncspec", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power-up"}, // Tails 12-15-2003
   {"nghurt", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hurt"},
@@ -228,12 +229,13 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"hoop3",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hoop++"},
   {"hidden", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
   {"prloop", false, 104,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gust of wind"},
-  {"timeup",  true, 256,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous Countdown"},
+  {"ngjump", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
+  {"peww",   false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pew"},
 
   // Halloween
   {"lntsit", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cacolantern awake"},
   {"lntdie", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cacolantern death"},
-  {"pumpkn", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pumpkin smash"},
+  {"pumpkn", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pumpkin smash"}, // idspispopd
   {"ghosty", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laughter"},
 
   // Mario
@@ -334,10 +336,10 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k62",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
   {"s3k63",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"},
   {"s3k64",  false,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Clatter"},
-  {"s3k65",  false, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got blue sphere"}, // Blue Spheres
+  {"s3k65",  false, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got sphere"}, // Blue Spheres
   {"s3k66",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage end"},
   {"s3k67",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing missile"},
-  {"s3k68",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Unknown possibilities"},
+  {"s3k68",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
   {"s3k69",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Switch click"},
   {"s3k6a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage clear"},
   {"s3k6b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Punch"},

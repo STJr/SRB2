@@ -283,22 +283,9 @@ boolean P_PlayerMoving(INT32 pnum)
 //
 UINT8 P_GetNextEmerald(void)
 {
-	if (!useNightsSS) // In order
-	{
-		if (!(emeralds & EMERALD1)) return 0;
-		if (!(emeralds & EMERALD2)) return 1;
-		if (!(emeralds & EMERALD3)) return 2;
-		if (!(emeralds & EMERALD4)) return 3;
-		if (!(emeralds & EMERALD5)) return 4;
-		if (!(emeralds & EMERALD6)) return 5;
-		return 6;
-	}
-	else // Depends on stage
-	{
-		if (gamemap < sstage_start || gamemap > sstage_end)
-			return 0;
-		return (UINT8)(gamemap - sstage_start);
-	}
+	if (gamemap < sstage_start || gamemap > sstage_end)
+		return 0;
+	return (UINT8)(gamemap - sstage_start);
 }
 
 //
@@ -309,20 +296,20 @@ UINT8 P_GetNextEmerald(void)
 //
 void P_GiveEmerald(boolean spawnObj)
 {
-	INT32 i;
-	UINT8 em;
+	UINT8 em = P_GetNextEmerald();
 
 	S_StartSound(NULL, sfx_cgot); // Got the emerald!
-	em = P_GetNextEmerald();
 	emeralds |= (1 << em);
 
-	if (spawnObj)
+	if (spawnObj && playeringame[consoleplayer])
 	{
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
-				P_SetMobjState(P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z + players[i].mo->info->height, MT_GOTEMERALD),
-				mobjinfo[MT_GOTEMERALD].spawnstate + em);
-
+		// The Chaos Emerald begins to orbit us!
+		UINT8 em = P_GetNextEmerald();
+		// Only give it to ONE person!
+		mobj_t *emmo = P_SpawnMobjFromMobj(players[consoleplayer].mo, 0, 0, players[consoleplayer].mo->height, MT_GOTEMERALD);
+		P_SetTarget(&emmo->target, players[consoleplayer].mo);
+		P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
+		P_SetTarget(&players[consoleplayer].mo->tracer, emmo);
 	}
 }
 
@@ -692,10 +679,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	oldmare = player->mare;
 
-	if (P_TransferToNextMare(player) == false)
+	if (!P_TransferToNextMare(player))
 	{
 		INT32 i;
-		INT32 total_rings = 0;
+		INT32 total_spheres = 0;
 
 		P_SetTarget(&player->mo->target, NULL);
 
@@ -703,7 +690,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i]/* && players[i].powers[pw_carry] == CR_NIGHTSMODE*/)
-					total_rings += players[i].rings;
+					total_spheres += players[i].spheres;
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -716,13 +703,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmare = players[i].mare;
 			if (G_IsSpecialStage(gamemap))
 			{
-				players[i].finishedrings = (INT16)total_rings;
-				P_AddPlayerScore(player, total_rings * 50);
+				players[i].finishedspheres = (INT16)total_spheres;
+				P_AddPlayerScore(player, total_spheres * 50);
 			}
 			else
 			{
-				players[i].finishedrings = (INT16)(players[i].rings);
-				P_AddPlayerScore(&players[i], (players[i].rings) * 50);
+				players[i].finishedspheres = (INT16)(players[i].spheres);
+				P_AddPlayerScore(&players[i], (players[i].spheres) * 50);
 			}
 
 			// Add score to leaderboards now
@@ -733,20 +720,20 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
-			players[i].rings = 0;
+			players[i].spheres = 0;
 			P_DoPlayerExit(&players[i]);
 		}
 	}
 	else if (oldmare != player->mare)
 	{
 		/// \todo Handle multi-mare special stages.
-		// Ring bonus
-		P_AddPlayerScore(player, (player->rings) * 50);
+		// Spheres bonus
+		P_AddPlayerScore(player, (player->spheres) * 50);
 
 		player->lastmare = (UINT8)oldmare;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
-		player->finishedrings = (INT16)(player->rings);
+		player->finishedspheres = (INT16)(player->spheres);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
@@ -757,7 +744,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marescore = 0;
 		player->marebegunat = leveltime;
 
-		player->rings = 0;
+		player->spheres = 0;
 	}
 	else
 	{
@@ -857,7 +844,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 		}
 		else
 		{
-			ang = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0);
+			ang = ((player->mo->momx || player->mo->momy) ? R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0) : player->drawangle);
 			fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
 		}
 
@@ -923,8 +910,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 	player->rings += num_rings;
 
-	if (!G_IsSpecialStage(gamemap) || !useNightsSS)
-		player->totalring += num_rings;
+	player->totalring += num_rings;
 
 	// Can only get up to 9999 rings, sorry!
 	if (player->rings > 9999)
@@ -954,6 +940,26 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 			P_PlayLivesJingle(player);
 		}
 	}
+}
+
+void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
+{
+	if (!player)
+		return;
+
+	if (player->bot)
+		player = &players[consoleplayer];
+
+	if (!player->mo)
+		return;
+
+	player->spheres += num_spheres;
+
+	// Can only get up to 9999 spheres, sorry!
+	if (player->spheres > 9999)
+		player->spheres = 9999;
+	else if (player->spheres < 0)
+		player->spheres = 0;
 }
 
 //
@@ -1035,10 +1041,11 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
 
+	player->mo->momx = player->mo->momy = player->mo->momz = player->cmomx = player->cmomy = player->rmomx = player->rmomy = 0;
+
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 	player->pflags |= PF_NOJUMPDAMAGE; // just to avoid recurling but still allow thok
 
 	if (giverings)
@@ -3793,12 +3800,15 @@ static void P_DoSuperStuff(player_t *player)
 //
 boolean P_SuperReady(player_t *player)
 {
-	if ((ALL7EMERALDS(emeralds) && player->rings >= 50) && !player->powers[pw_super] && !player->powers[pw_tailsfly]
-	&& !(player->powers[pw_shield] & SH_NOSTACK)
+	if (!player->powers[pw_super]
 	&& !player->powers[pw_invulnerability]
-	&& !(maptol & TOL_NIGHTS || (player->powers[pw_carry] == CR_NIGHTSMODE)) // don't turn 'regular super' in nights levels
-	&& player->pflags & PF_JUMPED
-	&& player->charflags & SF_SUPER)
+	&& !player->powers[pw_tailsfly]
+	&& (player->charflags & SF_SUPER)
+	&& (player->pflags & PF_JUMPED)
+	&& !(player->powers[pw_shield] & SH_NOSTACK)
+	&& !(maptol & TOL_NIGHTS)
+	&& ALL7EMERALDS(emeralds)
+	&& (player->rings >= 50))
 		return true;
 
 	return false;
@@ -4484,12 +4494,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
 			;
-		else if (P_SuperReady(player))
+		/*else if (P_SuperReady(player))
 		{
 			// If you can turn super and aren't already,
 			// and you don't have a shield, do it!
 			P_DoSuperTransformation(player, false);
-		}
+		}*/
 		else if (player->pflags & PF_JUMPED)
 		{
 #ifdef HAVE_BLUA
@@ -5953,10 +5963,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (&players[i] != player) && players[i].rings > 0)
+			if (playeringame[i] && (&players[i] != player) && players[i].spheres > 0)
 			{
-				player->rings += players[i].rings;
-				players[i].rings = 0;
+				player->spheres += players[i].spheres;
+				players[i].spheres = 0;
 			}
 	}
 
@@ -5965,9 +5975,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		&& player->mo->y == player->capsule->y
 		&& player->mo->z == player->capsule->z+(player->capsule->height/3))
 	{
-		if (player->rings > 0)
+		if (player->spheres > 0)
 		{
-			player->rings--;
+			player->spheres--;
 			player->capsule->health--;
 			player->capsule->extravalue1++;
 
@@ -5999,9 +6009,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 				if (G_IsSpecialStage(gamemap))
 				{
-					// The Chaos Emerald begins to orbit us!
-					mobj_t *emmo;
-					UINT8 em = P_GetNextEmerald();
 					tic_t lowest_time;
 
 					/*for (i = 0; i < MAXPLAYERS; i++)
@@ -6016,8 +6023,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 					if (player->powers[pw_carry] == CR_NIGHTSMODE)
 					{
+						// The Chaos Emerald begins to orbit us!
+						UINT8 em = P_GetNextEmerald();
 						// Only give it to ONE person, and THAT player has to get to the goal!
-						emmo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->info->height, MT_GOTEMERALD);
+						mobj_t *emmo = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 						P_SetTarget(&player->mo->tracer, emmo);
@@ -6035,18 +6044,24 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				}
 				else
 				{
-					for (i = 0; i < 16; i++)
+					/*for (i = 0; i < 16; i++)
 					{
 						mobj_t *flicky = P_InternalFlickySpawn(player->capsule, 0, ((i%4) + 1)*2*FRACUNIT, true);
 						flicky->z += player->capsule->height/2;
 						flicky->angle = (i*(ANGLE_MAX/16));
 						P_InstaThrust(flicky, flicky->angle, 8*FRACUNIT);
-					}
+					}*/
+					mobj_t *idya = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
+					idya->extravalue2 = player->mare/5;
+					P_SetTarget(&idya->target, player->mo);
+					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
+					P_SetTarget(&player->mo->tracer, idya);
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && players[i].mare == player->mare)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
+				P_SwitchSpheresBonusMode(true);
 			}
 		}
 		else
@@ -6139,7 +6154,7 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal("_drown",false);
+		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 
 
 	if (player->mo->z < player->mo->floorz)
@@ -7477,7 +7492,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 			{
 				if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
-					&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
+					&& (!(player->powers[pw_shield] & SH_NOSTACK) || !(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped/turning super
 				{
 					// Force shield activation
 					if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -7490,6 +7505,11 @@ static void P_MovePlayer(player_t *player)
 					{
 						switch (player->powers[pw_shield] & SH_NOSTACK)
 						{
+							// Super!
+							case SH_NONE:
+								if (P_SuperReady(player))
+									P_DoSuperTransformation(player, false);
+								break;
 							// Whirlwind/Thundercoin shield activation
 							case SH_WHIRLWIND:
 							case SH_THUNDERCOIN:
@@ -9563,11 +9583,8 @@ void P_PlayerThink(player_t *player)
 
 		// If 11 seconds are left on the timer,
 		// begin the drown music for countdown!
-		if (countdown == 11*TICRATE - 1)
-		{
-			if (P_IsLocalPlayer(player))
-				S_ChangeMusicInternal("_drown", false);
-		}
+		if (countdown == 11*TICRATE - 1 && P_IsLocalPlayer(player))
+			S_ChangeMusicInternal("_drown", false);
 
 		// If you've hit the countdown and you haven't made
 		//  it to the exit, you're a goner!
@@ -9667,7 +9684,7 @@ void P_PlayerThink(player_t *player)
 		if (gametype != GT_COOP)
 			player->score = 0;
 		player->mo->health = 1;
-		player->rings = 0;
+		player->rings = player->spheres = 0;
 	}
 	else if ((netgame || multiplayer) && player->lives <= 0 && gametype != GT_COOP)
 	{
@@ -9720,8 +9737,8 @@ void P_PlayerThink(player_t *player)
 
 			mo2 = (mobj_t *)th;
 
-			if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-			   || mo2->type == MT_BLUEBALL))
+			if (!(mo2->type == MT_RING || mo2->type == MT_COIN || mo2->type == MT_BLUESPHERE
+				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 
 			if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > FixedMul(128*FRACUNIT, player->mo->scale))
@@ -10210,7 +10227,7 @@ void P_PlayerAfterThink(player_t *player)
 		if (player->followmobj)
 		{
 			P_RemoveMobj(player->followmobj);
-			player->followmobj = NULL;
+			P_SetTarget(&player->followmobj, NULL);
 		}
 		return;
 	}
@@ -10495,14 +10512,14 @@ void P_PlayerAfterThink(player_t *player)
 	if (player->followmobj && (player->spectator || player->mo->health <= 0 || player->followmobj->type != player->followitem))
 	{
 		P_RemoveMobj(player->followmobj);
-		player->followmobj = NULL;
+		P_SetTarget(&player->followmobj, NULL);
 	}
 
 	if (!player->spectator && player->mo->health && player->followitem)
 	{
 		if (!player->followmobj || P_MobjWasRemoved(player->followmobj))
 		{
-			player->followmobj = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, player->followitem);
+			P_SetTarget(&player->followmobj, P_SpawnMobjFromMobj(player->mo, 0, 0, 0, player->followitem));
 			P_SetTarget(&player->followmobj->tracer, player->mo);
 			player->followmobj->flags2 |= MF2_LINKDRAW;
 		}

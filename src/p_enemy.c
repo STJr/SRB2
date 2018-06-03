@@ -8604,10 +8604,12 @@ void A_OrbitNights(mobj_t* actor)
 		return;
 #endif
 
-	if (!actor->target || !actor->target->player ||
-	    !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE) || !actor->target->player->nightstime
+	if (!actor->target
+	|| (actor->target->player &&
+		// if NiGHTS special stage and not NiGHTSmode.
+	    (((maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE))
 	    // Also remove this object if they no longer have a NiGHTS helper
-		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
+		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))))
 	{
 		P_RemoveMobj(actor);
 		return;
@@ -8633,7 +8635,7 @@ void A_OrbitNights(mobj_t* actor)
 		}
 		P_SetThingPosition(actor);
 
-		if (ishelper) // Flash a helper that's about to be removed.
+		if (ishelper && actor->target->player) // Flash a helper that's about to be removed.
 		{
 			if ((actor->target->player->powers[pw_nights_helper] < TICRATE)
 			&& (actor->target->player->powers[pw_nights_helper] & 1))
@@ -11185,7 +11187,7 @@ void A_FlameParticle(mobj_t *actor)
 //
 // Description: Makes a pretty overlay (primarily for super/NiGHTS transformation).
 //
-// var1 = bit 1 = don't halt momentum, bit 2 = don't make fast, bit 3 = don't set tracer
+// var1 = bit 1 = bit 1 = don't make fast, bit 2 = don't set tracer
 // var2 = unused
 //
 void A_FadeOverlay(mobj_t *actor)
@@ -11199,13 +11201,10 @@ void A_FadeOverlay(mobj_t *actor)
 		return;
 #endif
 
-	if (!(locvar1 & 1))
-		actor->momx = actor->momy = actor->momz = 0;
-
 	fade = P_SpawnGhostMobj(actor);
 	fade->frame = actor->frame;
 
-	if (!(locvar1 & 2))
+	if (!(locvar1 & 1))
 	{
 		fade->fuse = 15;
 		fade->flags2 |= MF2_BOSSNOTRAP;
@@ -11213,7 +11212,7 @@ void A_FadeOverlay(mobj_t *actor)
 	else
 		fade->fuse = 20;
 
-	if (!(locvar1 & 4))
+	if (!(locvar1 & 2))
 		P_SetTarget(&actor->tracer, fade);
 }
 

@@ -280,6 +280,7 @@ typedef enum
 	sfx_xideya, // Xmas
 	sfx_nbmper,
 	sfx_nxbump, // Xmas
+	sfx_ncchip,
 	sfx_ncitem,
 	sfx_nxitem, // Xmas
 	sfx_ngdone,
@@ -294,7 +295,8 @@ typedef enum
 	sfx_hoop3,
 	sfx_hidden,
 	sfx_prloop,
-	sfx_timeup, // Was gonna be played when less than ten seconds are on the clock; uncomment uses of this to see it in-context
+	sfx_ngjump,
+	sfx_peww,
 
 	// Halloween
 	sfx_lntsit,

@@ -337,10 +337,12 @@ typedef enum sprite
 	SPR_TOKE, // Special Stage Token
 	SPR_RFLG, // Red CTF Flag
 	SPR_BFLG, // Blue CTF Flag
-	SPR_NWNG, // NiGHTS Wing collectable item.
+	SPR_SPHR, // Sphere
+	SPR_NCHP, // NiGHTS chip
+	SPR_NSTR, // NiGHTS star
 	SPR_EMBM, // Emblem
 	SPR_CEMG, // Chaos Emeralds
-	SPR_EMER, // Emerald Hunt
+	SPR_SHRD, // Emerald Hunt
 
 	// Interactive Objects
 	SPR_BBLS, // water bubble source
@@ -406,6 +408,7 @@ typedef enum sprite
 	SPR_TRE3, // Frozen Hillside
 	SPR_TRE4, // Polygon
 	SPR_TRE5, // Bush tree
+	SPR_TRE6, // Spring tree
 
 	// Techno Hill Scenery
 	SPR_THZP, // THZ1 Steam Flower
@@ -611,6 +614,9 @@ typedef enum sprite
 	SPR_NSCR, // NiGHTS score sprite
 	SPR_NPRU, // Nights Powerups
 	SPR_CAPS, // Capsule thingy for NiGHTS
+	SPR_IDYA, // Ideya
+	SPR_NTPN, // Nightopian
+	SPR_SHLP, // Shleep
 
 	// Secret badniks and hazards, shhhh
 	SPR_HIVE,
@@ -650,9 +656,6 @@ typedef enum sprite
 	SPR_ROIN,
 	SPR_ROIO,
 	SPR_ROIP,
-
-	// Blue Spheres
-	SPR_BBAL,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -1149,6 +1152,7 @@ typedef enum state
 
 	// Egg Shield for Egg Guard
 	S_EGGSHIELD,
+	S_EGGSHIELDBREAK,
 
 	// Green Snapper
 	S_GSNAPPER_STND,
@@ -1717,17 +1721,21 @@ typedef enum state
 	S_RING,
 
 	// Blue Sphere for special stages
-	S_BLUEBALL,
-	S_BLUEBALLSPARK,
+	S_BLUESPHERE,
+	S_BLUESPHEREBONUS,
+	S_BLUESPHERESPARK,
+
+	// NiGHTS Chip
+	S_NIGHTSCHIP,
+	S_NIGHTSCHIPBONUS,
+
+	// NiGHTS Star
+	S_NIGHTSSTAR,
+	S_NIGHTSSTARXMAS,
 
 	// Gravity Wells for special stages
 	S_GRAVWELLGREEN,
-	S_GRAVWELLGREEN2,
-	S_GRAVWELLGREEN3,
-
 	S_GRAVWELLRED,
-	S_GRAVWELLRED2,
-	S_GRAVWELLRED3,
 
 	// Individual Team Rings
 	S_TEAMRING,
@@ -1776,8 +1784,10 @@ typedef enum state
 	S_CEMG6,
 	S_CEMG7,
 
-	// Emeralds (for hunt)
-	S_EMER1,
+	// Emerald hunt shards
+	S_SHRD1,
+	S_SHRD2,
+	S_SHRD3,
 
 	// Bubble Source
 	S_BUBBLES1,
@@ -2061,7 +2071,6 @@ typedef enum state
 
 	// Arrow
 	S_ARROW,
-	S_TEMPSHI,
 	S_ARROWBONK,
 
 	// Trapgoyle Demon fire
@@ -2091,6 +2100,7 @@ typedef enum state
 	S_POLYGONTREE,
 	S_BUSHTREE,
 	S_BUSHREDTREE,
+	S_SPRINGTREE,
 
 	// THZ flowers
 	S_THZFLOWERA, // THZ1 Steam flower
@@ -3359,9 +3369,6 @@ typedef enum state
 	S_NIGHTSCORE90_2,
 	S_NIGHTSCORE100_2,
 
-	S_NIGHTSWING,
-	S_NIGHTSWING_XMAS,
-
 	// NiGHTS Paraloop Powerups
 	S_NIGHTSSUPERLOOP,
 	S_NIGHTSDRILLREFILL,
@@ -3379,14 +3386,11 @@ typedef enum state
 	S_ORBITEM6,
 	S_ORBITEM7,
 	S_ORBITEM8,
-	S_ORBITEM9,
-	S_ORBITEM10,
-	S_ORBITEM11,
-	S_ORBITEM12,
-	S_ORBITEM13,
-	S_ORBITEM14,
-	S_ORBITEM15,
-	S_ORBITEM16,
+	S_ORBIDYA1,
+	S_ORBIDYA2,
+	S_ORBIDYA3,
+	S_ORBIDYA4,
+	S_ORBIDYA5,
 
 	// "Flicky" helper
 	S_NIGHTOPIANHELPER1,
@@ -3398,6 +3402,25 @@ typedef enum state
 	S_NIGHTOPIANHELPER7,
 	S_NIGHTOPIANHELPER8,
 	S_NIGHTOPIANHELPER9,
+
+	// Nightopian
+	S_PIAN0,
+	S_PIAN1,
+	S_PIAN2,
+	S_PIAN3,
+	S_PIAN4,
+	S_PIAN5,
+	S_PIAN6,
+	S_PIANSING,
+
+	// Shleep
+	S_SHLEEP1,
+	S_SHLEEP2,
+	S_SHLEEP3,
+	S_SHLEEP4,
+	S_SHLEEPBOUNCE1,
+	S_SHLEEPBOUNCE2,
+	S_SHLEEPBOUNCE3,
 
 	// Secret badniks and hazards, shhhh
 	S_HIVEELEMENTAL_LOOK,
@@ -3694,7 +3717,7 @@ typedef enum mobj_type
 	// Collectible Items
 	MT_RING,
 	MT_FLINGRING, // Lost ring
-	MT_BLUEBALL,  // Blue sphere replacement for special stages
+	MT_BLUESPHERE,  // Blue sphere replacement for special stages
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
 	MT_TOKEN, // Special Stage token for special stage
@@ -3838,6 +3861,7 @@ typedef enum mobj_type
 	MT_POLYGONTREE,
 	MT_BUSHTREE,
 	MT_BUSHREDTREE,
+	MT_SPRINGTREE,
 
 	// Techno Hill Scenery
 	MT_THZFLOWER1,
@@ -4150,7 +4174,8 @@ typedef enum mobj_type
 	MT_HOOPCOLLIDE, // Collision detection for NiGHTS hoops
 	MT_HOOPCENTER, // Center of a hoop
 	MT_NIGHTSCORE,
-	MT_NIGHTSWING,
+	MT_NIGHTSCHIP, // NiGHTS Chip
+	MT_NIGHTSSTAR, // NiGHTS Star
 	MT_NIGHTSSUPERLOOP,
 	MT_NIGHTSDRILLREFILL,
 	MT_NIGHTSHELPER,
@@ -4158,6 +4183,8 @@ typedef enum mobj_type
 	MT_NIGHTSLINKFREEZE,
 	MT_EGGCAPSULE,
 	MT_NIGHTOPIANHELPER, // the actual helper object that orbits you
+	MT_PIAN, // decorative singing friend
+	MT_SHLEEP, // almost-decorative sleeping enemy
 
 	// Secret badniks and hazards, shhhh
 	MT_HIVEELEMENTAL,

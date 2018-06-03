@@ -118,10 +118,12 @@ char sprnames[NUMSPRITES + 1][5] =
 	"TOKE", // Special Stage Token
 	"RFLG", // Red CTF Flag
 	"BFLG", // Blue CTF Flag
-	"NWNG", // NiGHTS Wing collectable item.
+	"SPHR", // Sphere
+	"NCHP", // NiGHTS chip
+	"NSTR", // NiGHTS star
 	"EMBM", // Emblem
 	"CEMG", // Chaos Emeralds
-	"EMER", // Emerald Hunt
+	"SHRD", // Emerald hunt shards
 
 	// Interactive Objects
 	"BBLS", // water bubble source
@@ -187,6 +189,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"TRE3", // Frozen Hillside
 	"TRE4", // Polygon
 	"TRE5", // Bush tree
+	"TRE6", // Spring tree
 
 	// Techno Hill Scenery
 	"THZP", // THZ1 Steam Flower
@@ -392,6 +395,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"NSCR", // NiGHTS score sprite
 	"NPRU", // Nights Powerups
 	"CAPS", // Capsule thingy for NiGHTS
+	"IDYA", // Ideya
+	"NTPN", // Nightopian
+	"SHLP", // Shleep
 
 	// Secret badniks and hazards, shhhh
 	"HIVE",
@@ -431,9 +437,6 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROIN",
 	"ROIO",
 	"ROIP",
-
-	// Blue Spheres
-	"BBAL",
 
 	// Gravity Well Objects
 	"GWLG",
@@ -715,7 +718,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER|FF_FULLBRIGHT,  2, {NULL},          0, 0, S_PLAY_SUPER_TRANS4}, // S_PLAY_SUPER_TRANS3
 	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER|FF_FULLBRIGHT,  2, {NULL},          0, 0, S_PLAY_SUPER_TRANS5}, // S_PLAY_SUPER_TRANS4
 	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER|FF_FULLBRIGHT,  2, {NULL},          0, 0, S_PLAY_SUPER_TRANS6}, // S_PLAY_SUPER_TRANS5
-	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER|FF_FULLBRIGHT, 20, {A_FadeOverlay}, 0, 0, S_PLAY_FALL},         // S_PLAY_SUPER_TRANS6
+	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER|FF_FULLBRIGHT, 20, {A_FadeOverlay}, 0, 0, S_PLAY_FLOAT},        // S_PLAY_SUPER_TRANS6
 
 	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_OBJPLACE_DUMMY}, //S_OBJPLACE_DUMMY
 
@@ -1021,7 +1024,8 @@ state_t states[NUMSTATES] =
 	{SPR_SPSH, 10,  1, {A_GuardChase}, 0, 0, S_EGGGUARD_RUN4},  // S_EGGGUARD_RUN3
 	{SPR_SPSH, 11,  1, {A_GuardChase}, 0, 0, S_EGGGUARD_RUN1},  // S_EGGGUARD_RUN4
 
-	{SPR_ESHI, 0, 8, {A_EggShield}, 0, 0, S_EGGSHIELD}, // S_EGGSHIELD
+	{SPR_ESHI, 0, 8, {A_EggShield}, 0, 0, S_EGGSHIELD},  // S_EGGSHIELD
+	{SPR_ESHI, 0, TICRATE/2, {NULL}, 0, 0, S_NULL}, // S_EGGSHIELDBREAK
 
 	// Green Snapper
 	{SPR_GSNP, 0, 1,  {A_Look}, 0, 0, S_GSNAPPER_STND}, // S_GSNAPPER_STND
@@ -1591,18 +1595,22 @@ state_t states[NUMSTATES] =
 	// Ring
 	{SPR_RING, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 23, 1, S_RING}, // S_RING
 
-	// Blue Sphere Replacement for special stages
-	{SPR_BBAL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BLUEBALL
-	{SPR_BBAL, 0, 20, {NULL}, 0, 0, S_NULL}, // S_BLUEBALLSPARK
+	// Blue Sphere for special stages
+	{SPR_SPHR, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_BLUESPHERE
+	{SPR_SPHR, FF_FULLBRIGHT|FF_RANDOMANIM|FF_ANIMATE, -1, {NULL}, 1, 4, S_NULL}, // S_BLUESPHEREBONUS
+	{SPR_SPHR, 0, 20, {NULL}, 0, 0, S_NULL}, // S_BLUESPHERESPARK
+
+	// NiGHTS Chip
+	{SPR_NCHP, FF_FULLBRIGHT|FF_ANIMATE,    -1, {NULL}, 15, 2, S_NULL}, // S_NIGHTSCHIP
+	{SPR_NCHP, FF_FULLBRIGHT|FF_ANIMATE|16, -1, {NULL}, 15, 2, S_NULL}, // S_NIGHTSCHIPBONUS
+
+	// NiGHTS Star
+	{SPR_NSTR, FF_ANIMATE, -1, {NULL}, 14, 2, S_NULL}, // S_NIGHTSSTAR
+	{SPR_NSTR, 15, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSSTARXMAS
 
 	// Gravity Well sprites for Egg Rock's Special Stage
-	{SPR_GWLG, 0, 1, {NULL}, 0, 0, S_GRAVWELLGREEN2}, // S_GRAVWELLGREEN
-	{SPR_GWLG, 1, 1, {NULL}, 0, 0, S_GRAVWELLGREEN3}, // S_GRAVWELLGREEN2
-	{SPR_GWLG, 2, 1, {NULL}, 0, 0, S_GRAVWELLGREEN},  // S_GRAVWELLGREEN3
-
-	{SPR_GWLR, 0, 1, {NULL}, 0, 0, S_GRAVWELLRED2},   // S_GRAVWELLRED
-	{SPR_GWLR, 1, 1, {NULL}, 0, 0, S_GRAVWELLRED3},   // S_GRAVWELLRED2
-	{SPR_GWLR, 2, 1, {NULL}, 0, 0, S_GRAVWELLRED},    // S_GRAVWELLRED3
+	{SPR_GWLG, FF_ANIMATE, -1, {NULL}, 2, 1, S_NULL}, // S_GRAVWELLGREEN
+	{SPR_GWLR, FF_ANIMATE, -1, {NULL}, 2, 1, S_NULL}, // S_GRAVWELLRED
 
 	// Individual Team Rings (now with shield attracting action! =P)
 	{SPR_TRNG, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 23, 1, S_TEAMRING},  // S_TEAMRING
@@ -1651,8 +1659,10 @@ state_t states[NUMSTATES] =
 	{SPR_CEMG, FF_FULLBRIGHT|5, -1, {NULL}, 0, 0, S_NULL}, // S_CEMG6
 	{SPR_CEMG, FF_FULLBRIGHT|6, -1, {NULL}, 0, 0, S_NULL}, // S_CEMG7
 
-	// Emeralds (for hunt)
-	{SPR_EMER, 0, -1, {NULL}, 0, 0, S_NULL}, // S_EMER1
+	// Emerald hunt shards
+	{SPR_SHRD, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SHRD1
+	{SPR_SHRD, 1, -1, {NULL}, 0, 0, S_NULL}, // S_SHRD2
+	{SPR_SHRD, 2, -1, {NULL}, 0, 0, S_NULL}, // S_SHRD3
 
 	// Bubble Source
 	{SPR_BBLS, 0, 8, {A_BubbleSpawn}, 2048, 0, S_BUBBLES2}, // S_BUBBLES1
@@ -1934,7 +1944,6 @@ state_t states[NUMSTATES] =
 	{SPR_CBLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CANNONBALL1
 
 	{SPR_AROW, 0, -1, {NULL}, 0, 0, S_NULL}, // S_ARROW
-	{SPR_ESHI, 0, TICRATE/2, {NULL}, 0, 0, S_NULL}, // S_TEMPSHI
 	{SPR_AROW, FF_ANIMATE, TICRATE, {A_ArrowBonks}, 7, 2, S_NULL}, // S_ARROWBONK
 
 	{SPR_CFIR, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_DEMONFIRE2}, // S_DEMONFIRE1
@@ -1963,6 +1972,7 @@ state_t states[NUMSTATES] =
 	{SPR_TRE4, 0, -1, {NULL}, 0, 0, S_NULL}, // S_POLYGONTREE
 	{SPR_TRE5, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BUSHTREE
 	{SPR_TRE5, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BUSHREDTREE
+	{SPR_TRE6, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SPRINGTREE
 
 	// THZ flowers
 	{SPR_THZP, FF_ANIMATE, -1, {NULL},  7, 4, S_NULL}, // S_THZFLOWERA
@@ -3301,9 +3311,6 @@ state_t states[NUMSTATES] =
 	{SPR_NSCR, FF_FULLBRIGHT|18, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSCORE90_2
 	{SPR_NSCR, FF_FULLBRIGHT|19, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSCORE100_2
 
-	{SPR_NWNG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSWING
-	{SPR_NWNG, 1, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSWING_XMAS
-
 	// NiGHTS Paraloop Powerups
 	{SPR_NPRU, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSSUPERLOOP
 	{SPR_NPRU, 1, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSDRILLREFILL
@@ -3313,7 +3320,7 @@ state_t states[NUMSTATES] =
 
 	{SPR_CAPS, 0, -1, {NULL}, 0, 0, S_NULL}, // S_EGGCAPSULE
 
-	// Orbiting Chaos Emeralds for NiGHTS
+	// Orbiting Chaos Emeralds/Ideya for NiGHTS
 	{SPR_CEMG, FF_FULLBRIGHT,   1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM1}, // S_ORBITEM1
 	{SPR_CEMG, FF_FULLBRIGHT|1, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM2}, // S_ORBITEM2
 	{SPR_CEMG, FF_FULLBRIGHT|2, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM3}, // S_ORBITEM3
@@ -3322,14 +3329,11 @@ state_t states[NUMSTATES] =
 	{SPR_CEMG, FF_FULLBRIGHT|5, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM6}, // S_ORBITEM6
 	{SPR_CEMG, FF_FULLBRIGHT|6, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM7}, // S_ORBITEM7
 	{SPR_CEMG, FF_FULLBRIGHT|7, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM8
-	{SPR_CEMG, FF_FULLBRIGHT|8, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM9
-	{SPR_CEMG, FF_FULLBRIGHT|9, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM10
-	{SPR_CEMG, FF_FULLBRIGHT|10, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM11
-	{SPR_CEMG, FF_FULLBRIGHT|11, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM12
-	{SPR_CEMG, FF_FULLBRIGHT|12, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM13
-	{SPR_CEMG, FF_FULLBRIGHT|13, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM14
-	{SPR_CEMG, FF_FULLBRIGHT|14, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM15
-	{SPR_CEMG, FF_FULLBRIGHT|15, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBITEM8}, // S_ORBITEM16
+	{SPR_IDYA, FF_TRANS20|FF_FULLBRIGHT,   1, {A_OrbitNights}, ANG2*2, 0, S_ORBIDYA1}, // S_ORBIDYA1
+	{SPR_IDYA, FF_TRANS20|FF_FULLBRIGHT|1, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBIDYA2}, // S_ORBIDYA2
+	{SPR_IDYA, FF_TRANS20|FF_FULLBRIGHT|2, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBIDYA3}, // S_ORBIDYA3
+	{SPR_IDYA, FF_TRANS20|FF_FULLBRIGHT|3, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBIDYA4}, // S_ORBIDYA4
+	{SPR_IDYA, FF_TRANS20|FF_FULLBRIGHT|4, 1, {A_OrbitNights}, ANG2*2, 0, S_ORBIDYA5}, // S_ORBIDYA5
 
 	// Flicky helper for NiGHTS
 	{SPR_FL01, 1, 1, {A_OrbitNights}, ANG2*2, 180 | 0x10000, S_NIGHTOPIANHELPER2}, // S_NIGHTOPIANHELPER1
@@ -3341,6 +3345,25 @@ state_t states[NUMSTATES] =
 	{SPR_FL01, 3, 1, {A_OrbitNights}, ANG2*2, 180 | 0x10000, S_NIGHTOPIANHELPER8}, // S_NIGHTOPIANHELPER7
 	{SPR_FL01, 3, 1, {A_OrbitNights}, ANG2*2, 180 | 0x10000, S_NIGHTOPIANHELPER9}, // S_NIGHTOPIANHELPER8
 	{SPR_FL01, 3, 1, {A_OrbitNights}, ANG2*2, 180 | 0x10000, S_NIGHTOPIANHELPER1}, // S_NIGHTOPIANHELPER9
+
+	// Nightopian
+	{SPR_NTPN, 0, 4, {A_Look}, 0, 0, S_PIAN0}, // S_PIAN0
+	{SPR_NTPN, 0, 4, {A_JetgThink}, 0, 0, S_PIAN2}, // S_PIAN1
+	{SPR_NTPN, 1, 4, {NULL}, 0, 0, S_PIAN3}, // S_PIAN2
+	{SPR_NTPN, 2, 4, {NULL}, 0, 0, S_PIAN4}, // S_PIAN3
+	{SPR_NTPN, 3, 4, {NULL}, 0, 0, S_PIAN5}, // S_PIAN4
+	{SPR_NTPN, 2, 4, {NULL}, 0, 0, S_PIAN6}, // S_PIAN5
+	{SPR_NTPN, 1, 4, {NULL}, 0, 0, S_PIAN1}, // S_PIAN6
+	{SPR_NTPN, 5|FF_ANIMATE, 4, {NULL}, 1, 4, S_PIAN1}, // S_PIANSING
+
+	// Shleep
+	{SPR_SHLP, 0, 15, {NULL}, 0, 0, S_SHLEEP2}, // S_SHLEEP1
+	{SPR_SHLP, 1, 15, {NULL}, 0, 0, S_SHLEEP3}, // S_SHLEEP2
+	{SPR_SHLP, 2, 15, {NULL}, 0, 0, S_SHLEEP4}, // S_SHLEEP3
+	{SPR_SHLP, 1, 15, {NULL}, 0, 0, S_SHLEEP1}, // S_SHLEEP4
+	{SPR_SHLP, 3, 1, {A_Scream},  0, 0, S_SHLEEPBOUNCE2}, // S_SHLEEPBOUNCE1
+	{SPR_SHLP, 3, 1, {A_ZThrust}, 9, 0, S_SHLEEPBOUNCE3}, // S_SHLEEPBOUNCE2
+	{SPR_SHLP, 3, 400, {A_SetObjectFlags}, MF_SLIDEME|MF_ENEMY|MF_BOUNCE|MF_NOCLIP|MF_NOCLIPHEIGHT, 0, S_NULL}, // S_SHLEEPBOUNCE3
 
 	// Secret badniks and hazards, shhhh
 	{SPR_HIVE, 0,  5, {A_Look}, 1, 1, S_HIVEELEMENTAL_LOOK}, // S_HIVEELEMENTAL_LOOK
@@ -4337,7 +4360,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_s3k7b,       // painsound
 		S_NULL,          // meleestate
 		S_NULL,          // missilestate
-		S_TEMPSHI,       // deathstate
+		S_EGGSHIELDBREAK,// deathstate
 		S_NULL,          // xdeathstate
 		sfx_wbreak,      // deathsound
 		3,               // speed
@@ -5729,9 +5752,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_BLUEBALL
-		-1,             // doomednum
-		S_BLUEBALL,    // spawnstate
+	{           // MT_BLUESPHERE
+		1706,           // doomednum
+		S_BLUESPHERE,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -5742,7 +5765,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_BLUEBALLSPARK, // deathstate
+		S_BLUESPHERESPARK, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_s3k65,      // deathsound
 		38*FRACUNIT,    // speed
@@ -5753,7 +5776,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
-		S_NULL          // raisestate
+		S_BLUESPHEREBONUS // raisestate
 	},
 
 	{           // MT_REDTEAMRING
@@ -5825,7 +5848,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
-		sfx_token,      // deathsound
+		sfx_None,       // deathsound
 		0,              // speed
 		8*FRACUNIT,     // radius
 		16*FRACUNIT,    // height
@@ -6103,7 +6126,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_EMERHUNT
 		320,            // doomednum
-		S_EMER1,        // spawnstate
+		S_SHRD1,        // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -6118,8 +6141,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		8,              // speed
-		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		12*FRACUNIT,    // radius
+		42*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
@@ -6588,7 +6611,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_SPIKEBALL
-		-1,            // doomednum
+		521,            // doomednum
 		S_SPIKEBALL1,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -6604,7 +6627,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		10*FRACUNIT,    // speed
-		4*FRACUNIT,     // radius
+		12*FRACUNIT,    // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
 		DMG_SPIKE,      // mass
@@ -8803,7 +8826,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GFZTREE
 		806,            // doomednum
-		S_GFZTREE,         // spawnstate
+		S_GFZTREE,      // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8830,7 +8853,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GFZBERRYTREE
 		807,            // doomednum
-		S_GFZBERRYTREE,         // spawnstate
+		S_GFZBERRYTREE, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8857,7 +8880,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GFZCHERRYTREE
 		808,            // doomednum
-		S_GFZCHERRYTREE,         // spawnstate
+		S_GFZCHERRYTREE, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8884,7 +8907,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_CHECKERTREE
 		810,            // doomednum
-		S_CHECKERTREE,         // spawnstate
+		S_CHECKERTREE,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8911,7 +8934,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_CHECKERSUNSETTREE
 		811,            // doomednum
-		S_CHECKERSUNSETTREE,         // spawnstate
+		S_CHECKERSUNSETTREE, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8938,7 +8961,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FHZTREE
 		812,            // doomednum
-		S_FHZTREE,         // spawnstate
+		S_FHZTREE,      // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8965,7 +8988,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FHZPINKTREE
 		813,            // doomednum
-		S_FHZPINKTREE,         // spawnstate
+		S_FHZPINKTREE,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -8992,7 +9015,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_POLYGONTREE
 		814,            // doomednum
-		S_POLYGONTREE,         // spawnstate
+		S_POLYGONTREE,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -9019,7 +9042,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_BUSHTREE
 		815,            // doomednum
-		S_BUSHTREE,         // spawnstate
+		S_BUSHTREE,     // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -9046,7 +9069,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_BUSHREDTREE
 		816,            // doomednum
-		S_BUSHREDTREE,         // spawnstate
+		S_BUSHREDTREE,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -9063,6 +9086,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // speed
 		20*FRACUNIT,    // radius
 		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SPRINGTREE
+		1600,           // doomednum
+		S_SPRINGTREE,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
@@ -14406,7 +14456,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // painchance
 		sfx_None,       // painsound
 		S_ORBITEM1,     // meleestate
-		S_NULL,         // missilestate
+		S_ORBIDYA1,     // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
@@ -16131,11 +16181,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_NIGHTSWING
-		1706,           // doomednum
-		S_NIGHTSWING,   // spawnstate
+	{           // MT_NIGHTSCHIP
+		-1,             // doomednum
+		S_NIGHTSCHIP,   // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSWING_XMAS, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -16146,14 +16196,41 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
+		sfx_ncchip,     // deathsound
 		1,              // speed
-		12*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
-		sfx_ncitem,     // activesound
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		S_NIGHTSCHIPBONUS // raisestate
+	},
+
+	{           // MT_NIGHTSSTAR
+		-1,             // doomednum
+		S_NIGHTSSTAR,   // spawnstate
+		1000,           // spawnhealth
+		S_NIGHTSSTARXMAS, // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_s3k33,      // painsound
+		S_RING,         // meleestate
+		S_NULL,         // missilestate
+		S_SPRK1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_ncitem,     // deathsound
+		1,              // speed
+		16*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
@@ -16320,7 +16397,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	// the flicky that orbits the player when they have a Nightopian helper
 	{           // MT_NIGHTOPIANHELPER
 		-1,             // doomednum
 		S_NIGHTOPIANHELPER1, // spawnstate
@@ -16345,6 +16421,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY,   // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PIAN
+		1602,           // doomednum
+		S_PIAN0,        // spawnstate
+		1000,           // spawnhealth
+		S_PIAN1,        // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,            // painchance
+		sfx_None,       // painsound
+		S_PIANSING,     // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		FRACUNIT,       // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SHLEEP
+		1601,           // doomednum
+		S_SHLEEP1,      // spawnstate
+		1,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,            // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_SHLEEPBOUNCE1, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_peww,       // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

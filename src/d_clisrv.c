@@ -513,7 +513,8 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	rsp->rings = LONG(players[i].rings);
+	rsp->rings = SHORT(players[i].rings);
+	rsp->spheres = SHORT(players[i].spheres);
 	rsp->lives = players[i].lives;
 	rsp->continues = players[i].continues;
 	rsp->scoreadd = players[i].scoreadd;
@@ -643,7 +644,8 @@ static void resynch_read_player(resynch_pak *rsp)
 		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	players[i].rings = LONG(rsp->rings);
+	players[i].rings = SHORT(rsp->rings);
+	players[i].spheres = SHORT(rsp->spheres);
 	players[i].lives = rsp->lives;
 	players[i].continues = rsp->continues;
 	players[i].scoreadd = rsp->scoreadd;
@@ -2377,11 +2379,11 @@ static void CL_RemovePlayer(INT32 playernum)
 	if (gametype == GT_CTF)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
-	// If in a special stage, redistribute the player's rings across
+	// If in a special stage, redistribute the player's spheres across
 	// the remaining players.
 	if (G_IsSpecialStage(gamemap))
 	{
-		INT32 i, count, increment, rings;
+		INT32 i, count, increment, spheres;
 
 		for (i = 0, count = 0; i < MAXPLAYERS; i++)
 		{
@@ -2390,19 +2392,19 @@ static void CL_RemovePlayer(INT32 playernum)
 		}
 
 		count--;
-		rings = players[playernum].rings;
-		increment = rings/count;
+		spheres = players[playernum].spheres;
+		increment = spheres/count;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && i != playernum)
 			{
-				if (rings < increment)
-					P_GivePlayerRings(&players[i], rings);
+				if (spheres < increment)
+					P_GivePlayerSpheres(&players[i], spheres);
 				else
-					P_GivePlayerRings(&players[i], increment);
+					P_GivePlayerSpheres(&players[i], increment);
 
-				rings -= increment;
+				spheres -= increment;
 			}
 		}
 	}
