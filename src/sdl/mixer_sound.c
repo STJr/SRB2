@@ -475,12 +475,24 @@ void I_ShutdownMusic(void)
 void I_PauseSong(INT32 handle)
 {
 	(void)handle;
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		Mix_HookMusic(NULL, NULL);
+	}
+#endif
 	Mix_PauseMusic();
 }
 
 void I_ResumeSong(INT32 handle)
 {
 	(void)handle;
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		Mix_HookMusic(mix_gme, gme);
+	}
+#endif
 	Mix_ResumeMusic();
 }
 
