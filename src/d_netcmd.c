@@ -2731,7 +2731,10 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 	READMEM(*cp, sentmd5, 16);
 
 	if (!adminpasswordset)
+	{
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
 
 	if (client)
 		return;
