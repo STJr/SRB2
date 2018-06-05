@@ -1093,7 +1093,8 @@ static void ST_drawInput(void)
 				((!stplyr->powers[pw_carry]
 				&& (stplyr->pflags & PF_APPLYAUTOBRAKE)
 				&& !(stplyr->cmd.sidemove || stplyr->cmd.forwardmove)
-				&& (stplyr->rmomx || stplyr->rmomy))
+				&& (stplyr->rmomx || stplyr->rmomy)
+				&& (!stplyr->capsule || (stplyr->capsule->reactiontime != (stplyr-players)+1)))
 				? 0 : V_GRAYMAP),
 				"AUTOBRAKE");
 			y -= 8;

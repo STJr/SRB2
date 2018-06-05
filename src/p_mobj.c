@@ -2133,7 +2133,7 @@ void P_XYMovement(mobj_t *mo)
 	if (mo->flags & MF_NOCLIPHEIGHT)
 		return; // no frictions for objects that can pass through floors
 
-	if (mo->flags & MF_MISSILE || mo->flags2 & MF2_SKULLFLY || mo->type == MT_SHELL || mo->type == MT_VULTURE)
+	if (mo->flags & MF_MISSILE || mo->flags2 & MF2_SKULLFLY || mo->type == MT_SHELL || mo->type == MT_VULTURE || mo->type == MT_PENGUINATOR)
 		return; // no friction for missiles ever
 
 	if (player && player->homing) // no friction for homing
@@ -2514,6 +2514,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		case MT_RING: // Ignore still rings
 		case MT_COIN:
 		case MT_BLUESPHERE:
+		case MT_BOMBSPHERE:
 		case MT_NIGHTSCHIP:
 		case MT_NIGHTSSTAR:
 		case MT_REDTEAMRING:
@@ -7747,109 +7748,79 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_NIGHTSDRONE:
+				// GOAL mode?
 				if (mobj->state >= &states[S_NIGHTSDRONE_SPARKLING1] && mobj->state <= &states[S_NIGHTSDRONE_SPARKLING16])
 				{
-					mobj->flags2 &= ~MF2_DONTDRAW;
-					mobj->z = mobj->floorz + mobj->height + (mobj->spawnpoint->options >> ZSHIFT) * FRACUNIT;
-					mobj->angle = 0;
+					INT32 i;
+					boolean bonustime = false;
 
-					if (!mobj->target)
-					{
-						mobj_t *goalpost = P_SpawnMobj(mobj->x, mobj->y, mobj->z + FRACUNIT, MT_NIGHTSGOAL);
-						CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
-						goalpost->angle = mobj->angle;
-						P_SetTarget(&mobj->target, goalpost);
-					}
+					for (i = 0; i < MAXPLAYERS; i++)
+						if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+						{
+							bonustime = true;
+							break;
+						}
 
-					if (G_IsSpecialStage(gamemap))
-					{ // Never show the NiGHTS drone in special stages. Check ANYONE for bonustime.
-						INT32 i;
-						boolean bonustime = false;
-						for (i = 0; i < MAXPLAYERS; i++)
-							if (playeringame[i] && players[i].bonustime)
-							{
-								bonustime = true;
-								break;
-							}
-						if (!bonustime)
-						{
-							/*mobj->flags &= ~MF_NOGRAVITY;
-							P_SetMobjState(mobj, S_NIGHTSDRONE1);*/
-							mobj->flags2 |= MF2_DONTDRAW;
-						}
-					}
-					else if (mobj->tracer && mobj->tracer->player)
+					if (!bonustime)
 					{
-						if (!(mobj->tracer->player->powers[pw_carry] == CR_NIGHTSMODE))
-						{
-							mobj->flags &= ~MF_NOGRAVITY;
-							mobj->flags2 &= ~MF2_DONTDRAW;
-							P_SetMobjState(mobj, S_NIGHTSDRONE1);
-						}
-						else if (!mobj->tracer->player->bonustime)
-						{
-							mobj->flags &= ~MF_NOGRAVITY;
-							P_SetMobjState(mobj, S_NIGHTSDRONE1);
-						}
+						CONS_Debug(DBG_NIGHTSBASIC, "Removing goal post\n");
+						P_RemoveMobj(mobj->target);
+						P_SetTarget(&mobj->target, NULL);
+
+						mobj->flags &= ~MF_NOGRAVITY;
+						mobj->flags2 |= MF2_DONTDRAW;
+						P_SetMobjState(mobj, S_NIGHTSDRONE1);
 					}
 				}
+				// Invisible/bouncing mode.
 				else
 				{
-					if (G_IsSpecialStage(gamemap))
-					{ // Never show the NiGHTS drone in special stages. Check ANYONE for bonustime.
-						INT32 i;
+					INT32 i;
+					boolean bonustime = false;
 
-						boolean bonustime = false;
-						for (i = 0; i < MAXPLAYERS; i++)
-							if (playeringame[i] && players[i].bonustime)
-							{
-								bonustime = true;
-								break;
-							}
-
-						if (bonustime)
-						{
-							P_SetMobjState(mobj, S_NIGHTSDRONE_SPARKLING1);
-							mobj->flags |= MF_NOGRAVITY;
-						}
-						else
-						{
-							if (mobj->target)
-							{
-								CONS_Debug(DBG_NIGHTSBASIC, "Removing goal post\n");
-								P_RemoveMobj(mobj->target);
-								P_SetTarget(&mobj->target, NULL);
-							}
-							mobj->flags2 |= MF2_DONTDRAW;
-						}
-					}
-					else if (mobj->tracer && mobj->tracer->player)
-					{
-						if (mobj->target)
-						{
-							CONS_Debug(DBG_NIGHTSBASIC, "Removing goal post\n");
-							P_RemoveMobj(mobj->target);
-							P_SetTarget(&mobj->target, NULL);
-						}
-
-						if (mobj->tracer->player->powers[pw_carry] == CR_NIGHTSMODE)
-						{
-							if (mobj->tracer->player->bonustime)
-							{
-								P_SetMobjState(mobj, S_NIGHTSDRONE_SPARKLING1);
-								mobj->flags |= MF_NOGRAVITY;
-							}
-							else
-								mobj->flags2 |= MF2_DONTDRAW;
-						}
-						else // Not NiGHTS
-							mobj->flags2 &= ~MF2_DONTDRAW;
-					}
+					// Bouncy bouncy!
 					mobj->angle += ANG10;
 					if (mobj->flags2 & MF2_DONTDRAW)
 						mobj->momz = 0;
 					else if (mobj->z <= mobj->floorz)
 						mobj->momz = 5*FRACUNIT;
+
+					for (i = 0; i < MAXPLAYERS; i++)
+						if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+						{
+							bonustime = true;
+							break;
+						}
+
+					if (bonustime)
+					{
+						mobj->z = mobj->floorz + mobj->height;
+						mobj->angle = mobj->momz = 0;
+
+						if (mobj->spawnpoint)
+							mobj->z += (mobj->spawnpoint->options >> ZSHIFT)<<FRACBITS;
+
+						CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
+						P_SetTarget(&mobj->target, P_SpawnMobjFromMobj(mobj, 0, 0, FRACUNIT, MT_NIGHTSGOAL));
+
+						mobj->flags2 &= ~MF2_DONTDRAW;
+						mobj->flags |= MF_NOGRAVITY;
+						P_SetMobjState(mobj, S_NIGHTSDRONE_SPARKLING1);
+					}
+					else if (!G_IsSpecialStage(gamemap))
+					{
+						for (i = 0; i < MAXPLAYERS; i++)
+							if (playeringame[i] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
+							{
+								bonustime = true; // variable reuse
+								break;
+							}
+
+						if (bonustime)
+							mobj->flags2 &= ~MF2_DONTDRAW;
+						else
+							mobj->flags2 |= MF2_DONTDRAW;
+					}
 				}
 				break;
 			case MT_PLAYER:
@@ -7882,6 +7853,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_RING:
 			case MT_COIN:
 			case MT_BLUESPHERE:
+			case MT_BOMBSPHERE:
 			case MT_NIGHTSCHIP:
 			case MT_NIGHTSSTAR:
 			case MT_REDTEAMRING:
@@ -8712,6 +8684,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_MEDIUMBUBBLE:
 		case MT_EXTRALARGEBUBBLE:
 			mobj->fuse += 30 * TICRATE;
+			break;
+		case MT_NIGHTSDRONE:
+			if (G_IsSpecialStage(gamemap))
+				mobj->flags2 |= MF2_DONTDRAW;
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
@@ -9869,7 +9845,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
+	else if (i == MT_BOMBSPHERE || i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -11063,10 +11039,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		else if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
 			ringthing = MT_BLUESPHERE;
 
+		if (ringthing != MT_BLUESPHERE && ultimatemode)
+			return; // No rings in Ultimate!
+
 		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 			ringthing = ((ringthing == MT_BLUESPHERE) ? MT_NIGHTSCHIP : MT_NIGHTSSTAR);
-		else if (ringthing != MT_BLUESPHERE && ultimatemode)
-			return; // No rings in Ultimate!
 
 		// Set proper height
 		if (mthing->options & MTF_OBJECTFLIP)
@@ -11130,10 +11107,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (mthing->type == 601)
 			dist = 128*FRACUNIT;
 
+		if (ultimatemode)
+			return; // No rings in Ultimate!
+
 		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 			ringthing = MT_NIGHTSSTAR;
-		else if (ultimatemode)
-			return; // No rings in Ultimate!
 
 		for (r = 1; r <= 5; r++)
 		{
@@ -11181,10 +11159,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (mthing->type == 603)
 			iterations = 10;
 
+		if (ultimatemode)
+			return; // No rings in Ultimate!
+
 		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 			ringthing = MT_NIGHTSSTAR;
-		else if (ultimatemode)
-			return; // No rings in Ultimate!
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 		fa = (closestangle >> ANGLETOFINESHIFT);
@@ -11274,10 +11253,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 					break;
 			}
 
+			if (ringthing != MT_BLUESPHERE && ultimatemode)
+				continue; // No rings in Ultimate!
+
 			if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
 				ringthing = ((ringthing == MT_BLUESPHERE) ? MT_NIGHTSCHIP : MT_NIGHTSSTAR);
-			else if (ringthing == MT_RING && ultimatemode)
-				continue; // No rings in Ultimate!
 
 			fa = i*FINEANGLES/numitems;
 			v[0] = FixedMul(FINECOSINE(fa),size);

@@ -402,6 +402,7 @@ typedef enum sprite
 	SPR_FWR4,
 	SPR_BUS1, // GFZ Bush w/ berries
 	SPR_BUS2, // GFZ Bush w/o berries
+	SPR_BUS3, // GFZ Bush w/ BLUE berries
 	// Trees (both GFZ and misc)
 	SPR_TRE1, // GFZ
 	SPR_TRE2, // Checker
@@ -470,6 +471,7 @@ typedef enum sprite
 	SPR_XMS3, // Snowman
 	SPR_XMS4, // Lamppost
 	SPR_XMS5, // Hanging Star
+	SPR_FHZI, // FHZ Ice
 
 	// Halloween Scenery
 	SPR_PUMK, // Pumpkins
@@ -481,7 +483,13 @@ typedef enum sprite
 	SPR_BSZ1, // Tall flowers
 	SPR_BSZ2, // Medium flowers
 	SPR_BSZ3, // Small flowers
-	SPR_BSZ4, // Tulip
+	//SPR_BSZ4, -- Tulips
+	SPR_BST1, // Red tulip
+	SPR_BST2, // Purple tulip
+	SPR_BST3, // Blue tulip
+	SPR_BST4, // Cyan tulip
+	SPR_BST5, // Yellow tulip
+	SPR_BST6, // Orange tulip
 	SPR_BSZ5, // Cluster of Tulips
 	SPR_BSZ6, // Bush
 	SPR_BSZ7, // Vine
@@ -619,6 +627,8 @@ typedef enum sprite
 	SPR_SHLP, // Shleep
 
 	// Secret badniks and hazards, shhhh
+	SPR_PENG,
+	SPR_POPH,
 	SPR_HIVE,
 	SPR_BUMB,
 	SPR_BBUZ,
@@ -1210,13 +1220,7 @@ typedef enum state
 	S_UNIDUS_BALL,
 
 	// Boss Explosion
-	S_BPLD1,
-	S_BPLD2,
-	S_BPLD3,
-	S_BPLD4,
-	S_BPLD5,
-	S_BPLD6,
-	S_BPLD7,
+	S_BOSSEXPLODE,
 
 	// S3&K Boss Explosion
 	S_SONIC3KBOSSEXPLOSION1,
@@ -1725,6 +1729,12 @@ typedef enum state
 	S_BLUESPHEREBONUS,
 	S_BLUESPHERESPARK,
 
+	// Bomb Sphere
+	S_BOMBSPHERE1,
+	S_BOMBSPHERE2,
+	S_BOMBSPHERE3,
+	S_BOMBSPHERE4,
+
 	// NiGHTS Chip
 	S_NIGHTSCHIP,
 	S_NIGHTSCHIPBONUS,
@@ -2074,18 +2084,14 @@ typedef enum state
 	S_ARROWBONK,
 
 	// Trapgoyle Demon fire
-	S_DEMONFIRE1,
-	S_DEMONFIRE2,
-	S_DEMONFIRE3,
-	S_DEMONFIRE4,
-	S_DEMONFIRE5,
-	S_DEMONFIRE6,
+	S_DEMONFIRE,
 
 	// GFZ flowers
 	S_GFZFLOWERA,
 	S_GFZFLOWERB,
 	S_GFZFLOWERC,
 
+	S_BLUEBERRYBUSH,
 	S_BERRYBUSH,
 	S_BUSH,
 
@@ -2370,8 +2376,12 @@ typedef enum state
 	S_LAMPPOST2,  // with snow
 	S_HANGSTAR,
 	// Xmas GFZ bushes
+	S_XMASBLUEBERRYBUSH,
 	S_XMASBERRYBUSH,
 	S_XMASBUSH,
+	// FHZ
+	S_FHZICE1,
+	S_FHZICE2,
 
 	// Halloween Scenery
 	// Pumpkins
@@ -3423,6 +3433,22 @@ typedef enum state
 	S_SHLEEPBOUNCE3,
 
 	// Secret badniks and hazards, shhhh
+	S_PENGUINATOR_LOOK,
+	S_PENGUINATOR_WADDLE1,
+	S_PENGUINATOR_WADDLE2,
+	S_PENGUINATOR_WADDLE3,
+	S_PENGUINATOR_WADDLE4,
+	S_PENGUINATOR_SLIDE1,
+	S_PENGUINATOR_SLIDE2,
+	S_PENGUINATOR_SLIDE3,
+	S_PENGUINATOR_SLIDE4,
+	S_PENGUINATOR_SLIDE5,
+
+	S_POPHAT_LOOK,
+	S_POPHAT_SHOOT1,
+	S_POPHAT_SHOOT2,
+	S_POPHAT_SHOOT3,
+
 	S_HIVEELEMENTAL_LOOK,
 	S_HIVEELEMENTAL_PREPARE1,
 	S_HIVEELEMENTAL_PREPARE2,
@@ -3717,7 +3743,8 @@ typedef enum mobj_type
 	// Collectible Items
 	MT_RING,
 	MT_FLINGRING, // Lost ring
-	MT_BLUESPHERE,  // Blue sphere replacement for special stages
+	MT_BLUESPHERE,  // Blue sphere for special stages
+	MT_BOMBSPHERE,
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
 	MT_TOKEN, // Special Stage token for special stage
@@ -3755,7 +3782,6 @@ typedef enum mobj_type
 	MT_BUBBLES, // Bubble source
 	MT_SIGN, // Level end sign
 	MT_SPIKEBALL, // Spike Ball
-	MT_SPECIALSPIKEBALL,
 	MT_SPINFIRE,
 	MT_SPIKE,
 	MT_WALLSPIKE,
@@ -3848,8 +3874,11 @@ typedef enum mobj_type
 	MT_GFZFLOWER1,
 	MT_GFZFLOWER2,
 	MT_GFZFLOWER3,
+
+	MT_BLUEBERRYBUSH,
 	MT_BERRYBUSH,
 	MT_BUSH,
+
 	// Trees (both GFZ and misc)
 	MT_GFZTREE,
 	MT_GFZBERRYTREE,
@@ -3974,8 +4003,12 @@ typedef enum mobj_type
 	MT_LAMPPOST2,  // with snow
 	MT_HANGSTAR,
 	// Xmas GFZ bushes
+	MT_XMASBLUEBERRYBUSH,
 	MT_XMASBERRYBUSH,
 	MT_XMASBUSH,
+	// FHZ
+	MT_FHZICE1,
+	MT_FHZICE2,
 
 	// Halloween Scenery
 	// Pumpkins
@@ -4187,6 +4220,10 @@ typedef enum mobj_type
 	MT_SHLEEP, // almost-decorative sleeping enemy
 
 	// Secret badniks and hazards, shhhh
+	MT_PENGUINATOR,
+	MT_POPHAT,
+	MT_POPSHOT,
+
 	MT_HIVEELEMENTAL,
 	MT_BUMBLEBORE,
 

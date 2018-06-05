@@ -6953,12 +6953,17 @@ static void P_MovePlayer(player_t *player)
 		if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& (player->exiting
 		|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
-			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))
+			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6]))) // Note the < instead of <=
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
-			if (skin->flags & SF_SUPER && player->mo->color < MAXSKINCOLORS)
+			if (skin->flags & SF_SUPER)
+			{
+				player->mo->color = skin->supercolor
+					+ ((player->nightstime == player->startedtime)
+						? 4
+						: abs((((signed)leveltime >> 1) % 9) - 4)); // This is where super flashing is handled.
 				G_GhostAddColor(GHC_SUPER);
-			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + abs((((signed)(player->startedtime - player->nightstime) >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
+			}
 		}
 
 		if (!player->capsule && !player->bonustime)
@@ -7961,16 +7966,17 @@ static void P_DoRopeHang(player_t *player)
 
 	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
 	{
-		P_SetTarget(&player->mo->tracer, NULL);
-
 		player->pflags |= P_GetJumpFlags(player);
+		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+
+		P_SetTarget(&player->mo->tracer, NULL);
 		player->powers[pw_carry] = CR_NONE;
 
-		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-		&& !(player->panim == PA_JUMP))
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		return;
 	}
+
+	if (player->mo->state-states != S_PLAY_RIDE)
+		P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 
 	// If not allowed to move, we're done here.
 	if (!speed)
@@ -8062,10 +8068,7 @@ static void P_DoRopeHang(player_t *player)
 			if (player->mo->tracer->flags & MF_SLIDEME)
 			{
 				player->pflags |= P_GetJumpFlags(player);
-
-				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-				&& !(player->panim == PA_JUMP))
-					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 
 			P_SetTarget(&player->mo->tracer, NULL);
@@ -9737,7 +9740,8 @@ void P_PlayerThink(player_t *player)
 
 			mo2 = (mobj_t *)th;
 
-			if (!(mo2->type == MT_RING || mo2->type == MT_COIN || mo2->type == MT_BLUESPHERE
+			if (!(mo2->type == MT_RING || mo2->type == MT_COIN
+				|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 
@@ -9774,8 +9778,6 @@ void P_PlayerThink(player_t *player)
 				ticmiss++;
 
 			P_DoRopeHang(player);
-			if (player->mo->state-states != S_PLAY_RIDE)
-				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 			P_DoJumpStuff(player, &player->cmd);
 		}
 		else //if (player->powers[pw_carry] == CR_ZOOMTUBE)
@@ -9891,7 +9893,8 @@ void P_PlayerThink(player_t *player)
 			if (!player->powers[pw_carry]
 			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
 			&& !(cmd->forwardmove || cmd->sidemove)
-			&& (player->rmomx || player->rmomy))
+			&& (player->rmomx || player->rmomy)
+			&& (!player->capsule || (player->capsule->reactiontime != (player-players)+1)))
 			{
 				fixed_t acceleration = (player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration) * player->thrustfactor * 20;
 				angle_t moveAngle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
@@ -9913,7 +9916,7 @@ void P_PlayerThink(player_t *player)
 			|| player->climbing
 			|| player->pflags & (PF_SPINNING|PF_SLIDING))
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
-			else if (currentlyonground)
+			else if (currentlyonground || player->powers[pw_tailsfly])
 				player->pflags |= PF_APPLYAUTOBRAKE;
 		}
 	}
@@ -10345,7 +10348,7 @@ void P_PlayerAfterThink(player_t *player)
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)
 		S_StartSound(NULL, sfx_wepchg);
 
-	if (player->pflags & PF_SLIDING)
+	if ((player->pflags & PF_SLIDING) && ((player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE)) != PF_JUMPED))
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
