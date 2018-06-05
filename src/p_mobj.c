@@ -7116,6 +7116,59 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 				break;
+			case MT_PARTICLEGEN:
+				if (!mobj->lastlook)
+					return;
+
+				if (!mobj->threshold)
+					return;
+
+				if (--mobj->fuse <= 0)
+				{
+					INT32 i = 0;
+					mobj_t *spawn;
+					fixed_t bottomheight, topheight;
+					INT32 type = mobj->threshold, line = mobj->cvmem;
+
+					mobj->fuse = (tic_t)mobj->reactiontime;
+
+					bottomheight = lines[line].frontsector->floorheight;
+					topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+
+					if (mobj->waterbottom != bottomheight || mobj->watertop != topheight)
+					{
+						if (mobj->movefactor && (topheight > bottomheight))
+							mobj->health = (tic_t)(FixedDiv((topheight - bottomheight), abs(mobj->movefactor)) >> FRACBITS);
+						else
+							mobj->health = 0;
+
+						mobj->z = ((mobj->flags2 & MF2_OBJECTFLIP) ? topheight : bottomheight);
+					}
+
+					if (!mobj->health)
+						return;
+
+					for (i = 0; i < mobj->lastlook; i++)
+					{
+						spawn = P_SpawnMobj(
+							mobj->x + FixedMul(FixedMul(mobj->friction, mobj->scale), FINECOSINE(mobj->angle>>ANGLETOFINESHIFT)),
+							mobj->y + FixedMul(FixedMul(mobj->friction, mobj->scale), FINESINE(mobj->angle>>ANGLETOFINESHIFT)),
+							mobj->z,
+							(mobjtype_t)mobj->threshold);
+						P_SetScale(spawn, mobj->scale);
+						spawn->momz = FixedMul(mobj->movefactor, spawn->scale);
+						spawn->destscale = spawn->scale/100;
+						spawn->scalespeed = spawn->scale/mobj->health;
+						spawn->tics = (tic_t)mobj->health;
+						spawn->flags2 |= (mobj->flags2 & MF2_OBJECTFLIP);
+						spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+
+						mobj->angle += mobj->movedir;
+					}
+
+					mobj->angle += (angle_t)mobj->movecount;
+				}
+				break;
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -10321,8 +10374,8 @@ ML_EFFECT4 : Don't clip inside the ground
 	}
 	case MT_PARTICLEGEN:
 	{
-		fixed_t radius, speed, bottomheight, topheight;
-		INT32 type, numdivisions, time, anglespeed, ticcount;
+		fixed_t radius, speed;
+		INT32 type, numdivisions, anglespeed, ticcount;
 		angle_t angledivision;
 		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
@@ -10341,13 +10394,9 @@ ML_EFFECT4 : Don't clip inside the ground
 		else
 			type = (INT32)MT_PARTICLE;
 
-		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
-		bottomheight = lines[line].frontsector->floorheight;
-		topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
-
 		if (!lines[line].backsector
 		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
-			ticcount = states[S_PARTICLEGEN].tics;
+			ticcount = 3;
 
 		numdivisions = (mthing->options >> ZSHIFT);
 
@@ -10365,18 +10414,9 @@ ML_EFFECT4 : Don't clip inside the ground
 			angledivision = 0;
 		}
 
-		if ((speed) && (topheight > bottomheight))
-			time = (INT32)(FixedDiv((topheight - bottomheight), speed) >> FRACBITS);
-		else
-			time = 1; // There's no reasonable way to set it, so just show the object for one tic and move on.
-
+		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
 		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->z = topheight;
 			speed *= -1;
-		}
-		else
-			mobj->z = bottomheight;
 
 		CONS_Debug(DBG_GAMELOGIC, "Particle Generator (mapthing #%s):\n"
 				"Radius is %d\n"
@@ -10384,20 +10424,20 @@ ML_EFFECT4 : Don't clip inside the ground
 				"Anglespeed is %d\n"
 				"Numdivisions is %d\n"
 				"Angledivision is %d\n"
-				"Time is %d\n"
 				"Type is %d\n"
 				"Tic seperation is %d\n",
-				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, time, type, ticcount);
+				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, type, ticcount);
 
 		mobj->angle = 0;
 		mobj->movefactor = speed;
 		mobj->lastlook = numdivisions;
 		mobj->movedir = angledivision*ANG1;
 		mobj->movecount = anglespeed*ANG1;
-		mobj->health = time;
 		mobj->friction = radius;
 		mobj->threshold = type;
 		mobj->reactiontime = ticcount;
+		mobj->cvmem = line;
+		mobj->watertop = mobj->waterbottom = 0;
 
 		break;
 	}

@@ -2786,7 +2786,7 @@ state_t states[NUMSTATES] =
 	{SPR_STEM, 4, 2, {NULL}, 0, 0, S_STEAM6},              // S_STEAM5
 	{SPR_STEM, 5, 2, {NULL}, 0, 0, S_STEAM7},              // S_STEAM6
 	{SPR_STEM, 6, 2, {NULL}, 0, 0, S_STEAM8},              // S_STEAM7
-	{SPR_STEM, 7, 18, {NULL}, 0, 0, S_STEAM1},             // S_STEAM8
+	{SPR_NULL, 0, 18, {NULL}, 0, 0, S_STEAM1},             // S_STEAM8
 
 	// Bumpers
 	{SPR_BUMP, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL},   3, 4, S_NULL},   // S_BUMPER
@@ -2963,7 +2963,6 @@ state_t states[NUMSTATES] =
 
 	// Particle sprite
 	{SPR_PRTL, 0, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_PARTICLE
-	{SPR_NULL, 0, 3, {A_ParticleSpawn}, 0, 0, S_PARTICLEGEN}, // S_PARTICLEGEN
 
 	{SPR_SCOR, 0, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRA  - 100
 	{SPR_SCOR, 1, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRB  - 200
@@ -14499,7 +14498,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_PARTICLEGEN
 		757,            // doomednum
-		S_PARTICLEGEN,  // spawnstate
+		S_INVISIBLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -14520,7 +14519,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -16619,7 +16618,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_PENGUINATOR_WADDLE1, // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
-		sfx_s3k8a,      // attacksound
+		sfx_ngjump,     // attacksound
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound

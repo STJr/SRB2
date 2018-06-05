@@ -1651,7 +1651,6 @@ static actionpointer_t actionpointers[] =
 	{{A_GiveShield},             "A_GIVESHIELD"},
 	{{A_GravityBox},             "A_GRAVITYBOX"},
 	{{A_ScoreRise},              "A_SCORERISE"},
-	{{A_ParticleSpawn},          "A_PARTICLESPAWN"},
 	{{A_AttractChase},           "A_ATTRACTCHASE"},
 	{{A_DropMine},               "A_DROPMINE"},
 	{{A_FishJump},               "A_FISHJUMP"},
@@ -5702,7 +5701,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SEED",
 
 	"S_PARTICLE",
-	"S_PARTICLEGEN",
 
 	// Score Logos
 	"S_SCRA", // 100
