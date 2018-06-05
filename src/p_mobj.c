@@ -2404,6 +2404,7 @@ boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 static boolean P_ZMovement(mobj_t *mo)
 {
 	fixed_t dist, delta;
+	boolean onground;
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -2421,13 +2422,14 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+	onground = P_IsObjectOnGround(mo);
 
 #ifdef ESLOPE
 	if (mo->standingslope)
 	{
 		if (mo->flags & MF_NOCLIPHEIGHT)
 			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
+		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
 #endif
@@ -2571,15 +2573,9 @@ static boolean P_ZMovement(mobj_t *mo)
 			break;
 	}
 
-	if (P_CheckDeathPitCollide(mo))
+	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_PUSHABLE)
-		{
-			// Remove other pushable items from death pits.
-			P_RemoveMobj(mo);
-			return false;
-		}
-		else if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
+		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
 		{
 			// Kill enemies and bosses that fall into death pits.
 			if (mo->health)
@@ -2587,6 +2583,11 @@ static boolean P_ZMovement(mobj_t *mo)
 				P_KillMobj(mo, NULL, NULL, 0);
 				return false;
 			}
+		}
+		else
+		{
+			P_RemoveMobj(mo);
+			return false;
 		}
 	}
 
@@ -2870,6 +2871,8 @@ static boolean P_ZMovement(mobj_t *mo)
 
 static void P_PlayerZMovement(mobj_t *mo)
 {
+	boolean onground;
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
@@ -2903,6 +2906,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	mo->z += mo->momz;
+	onground = P_IsObjectOnGround(mo);
 
 	// Have player fall through floor?
 	if (mo->player->playerstate == PST_DEAD
@@ -2914,13 +2918,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 	{
 		if (mo->flags & MF_NOCLIPHEIGHT)
 			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
+		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
 #endif
 
 	// clip movement
-	if (P_IsObjectOnGround(mo) && !(mo->flags & MF_NOCLIPHEIGHT))
+	if (onground && !(mo->flags & MF_NOCLIPHEIGHT))
 	{
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = mo->ceilingz - mo->height;
@@ -3222,19 +3226,14 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 				P_RemoveMobj(mo);
 				return false;
 			}
-
 		default:
 			break;
 	}
 
-	// Fix for any silly pushables like the egg statues that are also scenery for some reason -- Monster Iestyn
 	if (P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_PUSHABLE)
-		{
-			P_RemoveMobj(mo);
-			return false;
-		}
+		P_RemoveMobj(mo);
+		return false;
 	}
 
 	// clip movement
@@ -7483,6 +7482,19 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
 				P_SetThingPosition(mobj);
 				break;
+			case MT_FLAME:
+				if (mobj->flags2 & MF2_BOSSNOTRAP)
+				{
+					if (!mobj->target || P_MobjWasRemoved(mobj->target))
+					{
+						P_RemoveMobj(mobj);
+						return;
+					}
+					mobj->z = mobj->target->z + mobj->target->momz;
+					if (!(mobj->eflags & MFE_VERTICALFLIP))
+						mobj->z += mobj->target->height;
+				}
+				break;
 			case MT_WAVINGFLAG:
 				{
 					fixed_t base = (leveltime<<(FRACBITS+1));
@@ -10474,7 +10486,11 @@ ML_EFFECT4 : Don't clip inside the ground
 		break;
 	case MT_FLAMEHOLDER:
 		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
-			P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+		{
+			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+			P_SetTarget(&flame->target, mobj);
+			flame->flags2 |= MF2_BOSSNOTRAP;
+		}
 		break;
 	case MT_SMASHINGSPIKEBALL:
 		if (mthing->angle > 0)
