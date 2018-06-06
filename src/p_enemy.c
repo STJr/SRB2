@@ -11391,7 +11391,8 @@ void A_ConnectToGround(mobj_t *actor)
 		return;
 #endif
 
-	P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
+	if (actor->subsector->sector->ffloors)
+		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
 
 	if (actor->flags2 & MF2_OBJECTFLIP)
 	{
@@ -11406,15 +11407,18 @@ void A_ConnectToGround(mobj_t *actor)
 
 	if (locvar2)
 	{
+		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
 		if (actor->flags2 & MF2_OBJECTFLIP)
-			workz -= FixedMul(mobjinfo[locvar2].height, actor->scale);
+			workz -= workh;
 		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
+		workz += dir*workh;
 	}
 
 	if (!locvar1)
 		return;
 
-	workh = FixedMul(mobjinfo[locvar1].height, actor->scale);
+	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
+		return;
 
 	if (actor->flags2 & MF2_OBJECTFLIP)
 		workz -= workh;
