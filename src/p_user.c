@@ -3491,194 +3491,199 @@ static void P_SetWeaponDelay(player_t *player, INT32 delay)
 static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 {
 	INT32 i;
+	mobj_t *mo = NULL;
 
 	I_Assert(player != NULL);
 	I_Assert(!P_MobjWasRemoved(player->mo));
 
-	if (cmd->buttons & BT_ATTACK || cmd->buttons & BT_FIRENORMAL)
+	if (!(cmd->buttons & (BT_ATTACK|BT_FIRENORMAL)))
 	{
-		if (!(player->pflags & PF_ATTACKDOWN) && (player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER && !player->climbing)
-		{
-			player->pflags |= PF_ATTACKDOWN;
-			P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
-			S_StartSound(player->mo, sfx_mario7);
-		}
-		else if (G_RingSlingerGametype() && (!G_TagGametype() || player->pflags & PF_TAGIT)
-		  && !player->weapondelay && !player->climbing
-		  && !(player->pflags & PF_ATTACKDOWN))
-		{
-			mobj_t *mo = NULL;
-			player->pflags |= PF_ATTACKDOWN;
-
-			#define TAKE_AMMO(player, power) \
-			player->powers[power]--; \
-			if (player->rings < 1) \
-			{ \
-				if (player->powers[power] > 0) \
-					player->powers[power]--; \
-			} \
-			else \
-				player->rings--;
-
-			if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
-				goto firenormal; //code repetition sucks.
-			// Bounce ring
-			else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
-			{
-				TAKE_AMMO(player, pw_bouncering);
-				P_SetWeaponDelay(player, TICRATE/4);
-
-				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
-
-				if (mo)
-					mo->fuse = 3*TICRATE; // Bounce Ring time
-			}
-			// Rail ring
-			else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
-			{
-				TAKE_AMMO(player, pw_railring);
-				P_SetWeaponDelay(player, (3*TICRATE)/2);
-
-				mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
-
-				// Rail has no unique thrown object, therefore its sound plays here.
-				S_StartSound(player->mo, sfx_rail1);
-			}
-			// Automatic
-			else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
-			{
-				TAKE_AMMO(player, pw_automaticring);
-				player->pflags &= ~PF_ATTACKDOWN;
-				P_SetWeaponDelay(player, 2);
-
-				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNAUTOMATIC, MF2_AUTOMATIC);
-			}
-			// Explosion
-			else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
-			{
-				TAKE_AMMO(player, pw_explosionring);
-				P_SetWeaponDelay(player, (3*TICRATE)/2);
-
-				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
-			}
-			// Grenade
-			else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
-			{
-				TAKE_AMMO(player, pw_grenadering);
-				P_SetWeaponDelay(player, TICRATE/3);
-
-				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
-
-				if (mo)
-				{
-					//P_InstaThrust(mo, player->mo->angle, FixedMul(mo->info->speed, player->mo->scale));
-					mo->fuse = mo->info->reactiontime;
-				}
-			}
-			// Scatter
-			// Note: Ignores MF2_RAILRING
-			else if (player->currentweapon == WEP_SCATTER && player->powers[pw_scatterring])
-			{
-				fixed_t oldz = player->mo->z;
-				angle_t shotangle = player->mo->angle;
-				angle_t oldaiming = player->aiming;
-
-				TAKE_AMMO(player, pw_scatterring);
-				P_SetWeaponDelay(player, (2*TICRATE)/3);
-
-				// Center
-				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNSCATTER, MF2_SCATTER);
-				if (mo)
-					shotangle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y);
-
-				// Left
-				mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle-ANG2, true, MF2_SCATTER);
-
-				// Right
-				mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle+ANG2, true, MF2_SCATTER);
-
-				// Down
-				player->mo->z += FixedMul(12*FRACUNIT, player->mo->scale);
-				player->aiming += ANG1;
-				mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle, true, MF2_SCATTER);
-
-				// Up
-				player->mo->z -= FixedMul(24*FRACUNIT, player->mo->scale);
-				player->aiming -= ANG2;
-				mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle, true, MF2_SCATTER);
-
-				player->mo->z = oldz;
-				player->aiming = oldaiming;
-				return;
-			}
-			// No powers, just a regular ring.
-			else
-			{
-firenormal:
-				// Infinity ring was selected.
-				// Mystic wants this ONLY to happen specifically if it's selected,
-				// and to not be able to get around it EITHER WAY with firenormal.
-
-				// Infinity Ring
-				if (player->currentweapon == 0
-				&& player->powers[pw_infinityring])
-				{
-					P_SetWeaponDelay(player, TICRATE/4);
-
-					mo = P_SpawnPlayerMissile(player->mo, MT_THROWNINFINITY, 0);
-
-					player->powers[pw_infinityring]--;
-				}
-				// Red Ring
-				else
-				{
-					if (player->rings <= 0)
-						return;
-					P_SetWeaponDelay(player, TICRATE/4);
-
-					mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, 0);
-
-					if (mo)
-						P_ColorTeamMissile(mo, player);
-
-					player->rings--;
-				}
-			}
-
-			#undef TAKE_AMMO
-
-			if (mo)
-			{
-				if (mo->flags & MF_MISSILE && mo->flags2 & MF2_RAILRING)
-				{
-					const boolean nblockmap = !(mo->flags & MF_NOBLOCKMAP);
-					for (i = 0; i < 256; i++)
-					{
-						if (nblockmap)
-						{
-							P_UnsetThingPosition(mo);
-							mo->flags |= MF_NOBLOCKMAP;
-							P_SetThingPosition(mo);
-						}
-
-						if (i&1)
-							P_SpawnMobj(mo->x, mo->y, mo->z, MT_SPARK);
-
-						if (P_RailThinker(mo))
-							break; // mobj was removed (missile hit a wall) or couldn't move
-					}
-
-					// Other rail sound plays at contact point.
-					S_StartSound(mo, sfx_rail2);
-				}
-			}
-		}
+		// Not holding any firing buttons anymore.
+		// Release the grenade / whatever.
+		player->pflags &= ~PF_ATTACKDOWN;
 		return;
 	}
 
-	// Not holding any firing buttons anymore.
-	// Release the grenade / whatever.
-	player->pflags &= ~PF_ATTACKDOWN;
+	if (player->pflags & PF_ATTACKDOWN || player->climbing || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
+		return;
+
+	if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+	{
+		player->pflags |= PF_ATTACKDOWN;
+		mo = P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
+		if (mo && ((mo->info->speed>>FRACBITS) * mo->scale) < player->speed)
+			P_InstaThrust(mo, player->mo->angle, player->speed);
+		S_StartSound(player->mo, sfx_mario7);
+		return;
+	}
+
+	if (!G_RingSlingerGametype() || player->weapondelay)
+		return;
+
+	player->pflags |= PF_ATTACKDOWN;
+
+#define TAKE_AMMO(player, power) \
+		player->powers[power]--; \
+		if (player->rings < 1) \
+		{ \
+			if (player->powers[power] > 0) \
+				player->powers[power]--; \
+		} \
+		else \
+			player->rings--;
+
+	if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
+		goto firenormal; //code repetition sucks.
+	// Bounce ring
+	else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
+	{
+		TAKE_AMMO(player, pw_bouncering);
+		P_SetWeaponDelay(player, TICRATE/4);
+
+		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
+
+	if (mo)
+		mo->fuse = 3*TICRATE; // Bounce Ring time
+	}
+	// Rail ring
+	else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
+	{
+		TAKE_AMMO(player, pw_railring);
+		P_SetWeaponDelay(player, (3*TICRATE)/2);
+
+		mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
+
+		// Rail has no unique thrown object, therefore its sound plays here.
+		S_StartSound(player->mo, sfx_rail1);
+	}
+	// Automatic
+	else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
+	{
+		TAKE_AMMO(player, pw_automaticring);
+		player->pflags &= ~PF_ATTACKDOWN;
+		P_SetWeaponDelay(player, 2);
+
+		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNAUTOMATIC, MF2_AUTOMATIC);
+	}
+	// Explosion
+	else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
+	{
+		TAKE_AMMO(player, pw_explosionring);
+		P_SetWeaponDelay(player, (3*TICRATE)/2);
+
+		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
+	}
+	// Grenade
+	else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
+	{
+		TAKE_AMMO(player, pw_grenadering);
+		P_SetWeaponDelay(player, TICRATE/3);
+
+		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
+
+		if (mo)
+		{
+			//P_InstaThrust(mo, player->mo->angle, FixedMul(mo->info->speed, player->mo->scale));
+			mo->fuse = mo->info->reactiontime;
+		}
+	}
+	// Scatter
+	// Note: Ignores MF2_RAILRING
+	else if (player->currentweapon == WEP_SCATTER && player->powers[pw_scatterring])
+	{
+		fixed_t oldz = player->mo->z;
+		angle_t shotangle = player->mo->angle;
+		angle_t oldaiming = player->aiming;
+
+		TAKE_AMMO(player, pw_scatterring);
+		P_SetWeaponDelay(player, (2*TICRATE)/3);
+
+		// Center
+		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNSCATTER, MF2_SCATTER);
+		if (mo)
+			shotangle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y);
+
+		// Left
+		mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle-ANG2, true, MF2_SCATTER);
+
+		// Right
+		mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle+ANG2, true, MF2_SCATTER);
+
+		// Down
+		player->mo->z += FixedMul(12*FRACUNIT, player->mo->scale);
+		player->aiming += ANG1;
+		mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle, true, MF2_SCATTER);
+
+		// Up
+		player->mo->z -= FixedMul(24*FRACUNIT, player->mo->scale);
+		player->aiming -= ANG2;
+		mo = P_SPMAngle(player->mo, MT_THROWNSCATTER, shotangle, true, MF2_SCATTER);
+
+		player->mo->z = oldz;
+		player->aiming = oldaiming;
+		return;
+	}
+	// No powers, just a regular ring.
+	else
+	{
+firenormal:
+		// Infinity ring was selected.
+		// Mystic wants this ONLY to happen specifically if it's selected,
+		// and to not be able to get around it EITHER WAY with firenormal.
+
+		// Infinity Ring
+		if (player->currentweapon == 0
+		&& player->powers[pw_infinityring])
+		{
+			P_SetWeaponDelay(player, TICRATE/4);
+
+			mo = P_SpawnPlayerMissile(player->mo, MT_THROWNINFINITY, 0);
+
+			player->powers[pw_infinityring]--;
+		}
+		// Red Ring
+		else
+		{
+			if (player->rings <= 0)
+				return;
+			P_SetWeaponDelay(player, TICRATE/4);
+
+			mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, 0);
+
+			if (mo)
+				P_ColorTeamMissile(mo, player);
+
+			player->rings--;
+		}
+	}
+
+	#undef TAKE_AMMO
+
+	if (mo)
+	{
+		if (mo->flags & MF_MISSILE && mo->flags2 & MF2_RAILRING)
+		{
+			const boolean nblockmap = !(mo->flags & MF_NOBLOCKMAP);
+			for (i = 0; i < 256; i++)
+			{
+				if (nblockmap)
+				{
+					P_UnsetThingPosition(mo);
+					mo->flags |= MF_NOBLOCKMAP;
+					P_SetThingPosition(mo);
+				}
+
+				if (i&1)
+					P_SpawnMobj(mo->x, mo->y, mo->z, MT_SPARK);
+
+				if (P_RailThinker(mo))
+					break; // mobj was removed (missile hit a wall) or couldn't move
+			}
+
+			// Other rail sound plays at contact point.
+			S_StartSound(mo, sfx_rail2);
+		}
+	}
 }
 
 //

@@ -331,14 +331,15 @@ void Y_IntermissionDrawer(void)
 
 		if (animatetic && intertic >= animatetic)
 		{
+			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
 			if (animatetimer <= 14)
 			{
-				xoffset1 = -(animatetimer     * 40);
-				xoffset2 = -((animatetimer-2) * 40);
-				xoffset3 = -((animatetimer-4) * 40);
-				xoffset4 = -((animatetimer-6) * 40);
-				xoffset5 = -((animatetimer-8) * 40);
+				xoffset1 = -(animatetimer     * scradjust);
+				xoffset2 = -((animatetimer-2) * scradjust);
+				xoffset3 = -((animatetimer-4) * scradjust);
+				xoffset4 = -((animatetimer-6) * scradjust);
+				xoffset5 = -((animatetimer-8) * scradjust);
 				if (xoffset2 > 0) xoffset2 = 0;
 				if (xoffset3 > 0) xoffset3 = 0;
 				if (xoffset4 > 0) xoffset4 = 0;
@@ -347,12 +348,12 @@ void Y_IntermissionDrawer(void)
 			else if (animatetimer < 32)
 			{
 				drawsection = 1;
-				xoffset1 = (22-animatetimer) * 40;
-				xoffset2 = (24-animatetimer) * 40;
-				xoffset3 = (26-animatetimer) * 40;
-				xoffset4 = (28-animatetimer) * 40;
-				xoffset5 = (30-animatetimer) * 40;
-				xoffset6 = (32-animatetimer) * 40;
+				xoffset1 = (22-animatetimer) * scradjust;
+				xoffset2 = (24-animatetimer) * scradjust;
+				xoffset3 = (26-animatetimer) * scradjust;
+				xoffset4 = (28-animatetimer) * scradjust;
+				xoffset5 = (30-animatetimer) * scradjust;
+				xoffset6 = (32-animatetimer) * scradjust;
 				if (xoffset1 < 0) xoffset1 = 0;
 				if (xoffset2 < 0) xoffset2 = 0;
 				if (xoffset3 < 0) xoffset3 = 0;

@@ -240,8 +240,8 @@ sfxinfo_t S_sfx[NUMSFX] =
 
   // Mario
   {"koopfr" , true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fire"},
-  {"mario1", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hitting a ceiling"},
-  {"mario2", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Koopa shell"},
+  {"mario1", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hit"},
+  {"mario2", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonk"},
   {"mario3", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power-up"},
   {"mario4",  true,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got coin"},
   {"mario5", false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boot-stomp"},
