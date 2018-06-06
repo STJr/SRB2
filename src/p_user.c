@@ -3513,8 +3513,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		mo = P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
-		if (mo && ((mo->info->speed>>FRACBITS) * mo->scale) < player->speed)
-			P_InstaThrust(mo, player->mo->angle, player->speed);
+		P_InstaThrust(mo, player->mo->angle, ((mo->info->speed>>FRACBITS)*player->mo->scale) + player->speed);
 		S_StartSound(player->mo, sfx_mario7);
 		return;
 	}
