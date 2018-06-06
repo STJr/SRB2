@@ -679,14 +679,7 @@ static void ST_drawTime(void)
 				ST_drawRaceNum(hidetime*TICRATE - stplyr->realtime);
 
 			// Time limit?
-			if (gametype == GT_RACE || gametype == GT_COMPETITION)
-			{
-				if (stplyr->realtime >= 4*TICRATE)
-					tics = stplyr->realtime - 4*TICRATE;
-				else
-					tics = 0;
-			}
-			else if (gametype != GT_COOP && cv_timelimit.value && timelimitintics > 0)
+			if (gametype != GT_COOP && gametype != GT_RACE && gametype != GT_COMPETITION && cv_timelimit.value && timelimitintics > 0)
 			{
 				if (timelimitintics >= stplyr->realtime)
 				{

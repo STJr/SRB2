@@ -9711,7 +9711,17 @@ void P_PlayerThink(player_t *player)
 
 	// Synchronizes the "real" amount of time spent in the level.
 	if (!player->exiting)
-		player->realtime = leveltime;
+	{
+		if (gametype == GT_RACE || gametype == GT_COMPETITION)
+		{
+			if (leveltime >= 4*TICRATE)
+				player->realtime = leveltime - 4*TICRATE;
+			else
+				player->realtime = 0;
+		}
+		else
+			player->realtime = leveltime;
+	}
 
 	if (player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing] && G_GametypeHasSpectators())
 	{
