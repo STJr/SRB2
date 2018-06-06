@@ -4938,6 +4938,7 @@ static void M_DrawAddons(void)
 {
 	INT32 x, y;
 	ssize_t i, max;
+	const char* topstr;
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
@@ -4949,9 +4950,16 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
-	? "\x85""Adding files mid-game may cause problems."
-	: LOCATIONSTRING));
+	if (Playing())
+		topstr = "\x85""Adding files mid-game may cause problems.";
+	else if (savemoddata)
+		topstr = "\x83""Add-on has its own data, saving enabled.";
+	else if (modifiedgame)
+		topstr = "\x87""Game is modified, saving is disabled.";
+	else
+		topstr = LOCATIONSTRING;
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, topstr);
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;

@@ -665,9 +665,9 @@ static void ST_drawTime(void)
 	else
 	{
 		// Counting down the hidetime?
-		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime <= (hidetime*TICRATE)))
+		if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (stplyr->realtime <= (hidetime*TICRATE)))
 		{
-			tics = (hidetime*TICRATE - leveltime);
+			tics = (hidetime*TICRATE - stplyr->realtime);
 			if (tics < 3*TICRATE)
 				ST_drawRaceNum(tics);
 			downwards = true;
@@ -675,15 +675,22 @@ static void ST_drawTime(void)
 		else
 		{
 			// Hidetime finish!
-			if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (leveltime < ((hidetime+1)*TICRATE)))
-				ST_drawRaceNum(hidetime*TICRATE - leveltime);
+			if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (stplyr->realtime < ((hidetime+1)*TICRATE)))
+				ST_drawRaceNum(hidetime*TICRATE - stplyr->realtime);
 
 			// Time limit?
-			if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP && cv_timelimit.value && timelimitintics > 0)
+			if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			{
-				if (timelimitintics >= leveltime)
+				if (stplyr->realtime >= 4*TICRATE)
+					tics = stplyr->realtime - 4*TICRATE;
+				else
+					tics = 0;
+			}
+			else if (gametype != GT_COOP && cv_timelimit.value && timelimitintics > 0)
+			{
+				if (timelimitintics >= stplyr->realtime)
 				{
-					tics = (timelimitintics - leveltime);
+					tics = (timelimitintics - stplyr->realtime);
 					if (tics < 3*TICRATE)
 						ST_drawRaceNum(tics);
 				}
