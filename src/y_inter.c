@@ -427,7 +427,7 @@ void Y_IntermissionDrawer(void)
 		{
 			boolean drawthistic = !(ALL7EMERALDS(emeralds) && (intertic & 1));
 			INT32 emeraldx = 152 - 3*28;
-			INT32 em = (gamemap - sstage_start);
+			INT32 em = P_GetNextEmerald();
 
 			if (em == 7)
 			{
@@ -1358,7 +1358,7 @@ void Y_StartIntermission(void)
 				else
 					strcpy(data.spec.passed1, "YOU GOT");
 				strcpy(data.spec.passed2, "A CHAOS EMERALD");
-				if (gamemap > (sstage_start + 5))
+				if (P_GetNextEmerald() > 6)
 				{
 					data.spec.passed2[15] = '?';
 					data.spec.passed2[16] = '\0';

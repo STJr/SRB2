@@ -283,9 +283,11 @@ boolean P_PlayerMoving(INT32 pnum)
 //
 UINT8 P_GetNextEmerald(void)
 {
-	if (gamemap < sstage_start || gamemap > sstage_end)
-		return 0;
-	return (UINT8)(gamemap - sstage_start);
+	if (gamemap >= sstage_start && gamemap <= sstage_end)
+		return (UINT8)(gamemap - sstage_start);
+	if (gamemap >= smpstage_start || gamemap <= smpstage_end)
+		return (UINT8)(gamemap - smpstage_start);
+	return 0;
 }
 
 //
