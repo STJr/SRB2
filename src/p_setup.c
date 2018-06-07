@@ -852,7 +852,12 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt, true);
+			P_SpawnHoopsAndRings(mt,
+#ifdef MANIASPHERES
+				true);
+#else
+				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
+#endif
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -865,6 +870,11 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 {
 	mobj_t *mo;
 	thinker_t *th;
+
+#ifndef MANIASPHERES
+	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
+		return;
+#endif
 
 	// scan the thinkers to find spheres to switch
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)

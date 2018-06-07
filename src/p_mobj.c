@@ -8765,6 +8765,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_RING:
 		case MT_COIN:
+		case MT_NIGHTSSTAR:
 			nummaprings++;
 		default:
 			break;
