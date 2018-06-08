@@ -1801,7 +1801,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 			if (!playeringame[i]) continue;
 			sharedringtotal += players[i].rings;
 		}
-		if (!sharedringtotal || sharedringtotal < nummaprings)
+		if (!sharedringtotal || nummaprings == -1 || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;
 		else
 			data.coop.gotperfbonus = 1;

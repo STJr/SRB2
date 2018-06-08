@@ -842,9 +842,10 @@ void P_ReloadRings(void)
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
 		// Notice an omission? We handle hoops differently.
-		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || (mt->type >= 600 && mt->type <= 609)) // circles
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609)) // circles and diagonals
 		{
 			mt->mobj = NULL;
 
@@ -1085,9 +1086,11 @@ static void P_LoadThings(void)
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
-		if (mt->type == 300 || mt->type == 308 || mt->type == 309
-		 || mt->type == 1706 || (mt->type >= 600 && mt->type <= 609)
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800)
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
+		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
 		{
 			mt->mobj = NULL;
 
