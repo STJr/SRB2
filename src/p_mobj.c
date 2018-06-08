@@ -9728,7 +9728,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	}
 
 	// check for players specially
-	if (mthing->type > 0 && mthing->type <= 32)
+#if MAXPLAYERS > 32
+You should think about modifying the deathmatch starts to take full advantage of this!
+#endif
+	if (mthing->type > 0 && mthing->type <= MAXPLAYERS)
 	{
 		// save spots for respawning in network games
 		if (!metalrecording)
