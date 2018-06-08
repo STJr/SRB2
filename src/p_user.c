@@ -1048,8 +1048,6 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	player->pflags |= PF_NOJUMPDAMAGE; // just to avoid recurling but still allow thok
-
 	if (giverings)
 		player->rings = 50;
 
