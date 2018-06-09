@@ -47,7 +47,7 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32)
+#ifdef _WIN32
 #include "SDL_syswm.h"
 #endif
 
@@ -107,6 +107,9 @@ static SDL_bool disable_mouse = SDL_FALSE;
 // first entry in the modelist which is not bigger than MAXVIDWIDTHxMAXVIDHEIGHT
 static      INT32          firstEntry = 0;
 
+// Total mouse motion X/Y offsets
+static      INT32        mousemovex = 0, mousemovey = 0;
+
 // SDL vars
 static      SDL_Surface *vidSurface = NULL;
 static      SDL_Surface *bufSurface = NULL;
@@ -119,7 +122,8 @@ static       Uint8       BitsPerPixel = 16;
 Uint16      realwidth = BASEVIDWIDTH;
 Uint16      realheight = BASEVIDHEIGHT;
 static       SDL_bool    mousegrabok = SDL_TRUE;
-#define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
+static       SDL_bool    wrapmouseok = SDL_FALSE;
+#define HalfWarpMouse(x,y) if (wrapmouseok) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 static       SDL_bool    usesdl2soft = SDL_FALSE;
@@ -158,7 +162,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
-static void Impl_SetWindowName(const char *title);
+//static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
@@ -181,18 +185,16 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (wasfullscreen)
+		else // windowed mode
 		{
-			wasfullscreen = SDL_FALSE;
-			SDL_SetWindowFullscreen(window, 0);
-			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
-		}
-		else
-		{
+			if (wasfullscreen)
+			{
+				wasfullscreen = SDL_FALSE;
+				SDL_SetWindowFullscreen(window, 0);
+			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
 	else
@@ -350,6 +352,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 static void SDLdoUngrabMouse(void)
 {
 	SDL_SetWindowGrab(window, SDL_FALSE);
+	wrapmouseok = SDL_FALSE;
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 }
 
 void SDLforceUngrabMouse(void)
@@ -357,6 +361,8 @@ void SDLforceUngrabMouse(void)
 	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO && window != NULL)
 	{
 		SDL_SetWindowGrab(window, SDL_FALSE);
+		wrapmouseok = SDL_FALSE;
+		SDL_SetRelativeMouseMode(SDL_FALSE);
 	}
 }
 
@@ -605,36 +611,43 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
-	event_t event;
-	int wwidth, wheight;
-
 	if (USE_MOUSEINPUT)
 	{
-		SDL_GetWindowSize(window, &wwidth, &wheight);
-
 		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
 		{
 			SDLdoUngrabMouse();
 			return;
 		}
 
+		// If using relative mouse mode, don't post an event_t just now,
+		// add on the offsets so we can make an overall event later.
+		if (SDL_GetRelativeMouseMode())
+		{
+			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+			{
+				mousemovex +=  evt.xrel;
+				mousemovey += -evt.yrel;
+				SDL_SetWindowGrab(window, SDL_TRUE);
+			}
+			return;
+		}
+
+		// If the event is from warping the pointer to middle
+		// of the screen then ignore it.
 		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
-		else
-		{
-			event.data2 = (INT32)lround((evt.xrel) * ((float)wwidth / (float)realwidth));
-			event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
-		}
 
-		event.type = ev_mouse;
-
+		// Don't send an event_t if not in relative mouse mode anymore,
+		// just grab and set relative mode
+		// this fixes the stupid camera jerk on mouse entering bug
+		// -- Monster Iestyn
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			D_PostEvent(&event);
 			SDL_SetWindowGrab(window, SDL_TRUE);
-			HalfWarpMouse(wwidth, wheight);
+			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
+				wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
 		}
 	}
 }
@@ -644,6 +657,14 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 	event_t event;
 
 	SDL_memset(&event, 0, sizeof(event_t));
+
+	// Ignore the event if the mouse is not actually focused on the window.
+	// This can happen if you used the mouse to restore keyboard focus;
+	// this apparently makes a mouse button down event but not a mouse button up event,
+	// resulting in whatever key was pressed down getting "stuck" if we don't ignore it.
+	// -- Monster Iestyn (28/05/18)
+	if (SDL_GetMouseFocus() != window)
+		return;
 
 	/// \todo inputEvent.button.which
 	if (USE_MOUSEINPUT)
@@ -782,12 +803,14 @@ void I_GetEvent(void)
 	SDL_Event evt;
 	// We only want the first motion event,
 	// otherwise we'll end up catching the warp back to center.
-	int mouseMotionOnce = 0;
+	//int mouseMotionOnce = 0;
 
 	if (!graphics_started)
 	{
 		return;
 	}
+
+	mousemovex = mousemovey = 0;
 
 	while (SDL_PollEvent(&evt))
 	{
@@ -801,8 +824,9 @@ void I_GetEvent(void)
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!mouseMotionOnce) Impl_HandleMouseMotionEvent(evt.motion);
-				mouseMotionOnce = 1;
+				//if (!mouseMotionOnce)
+				Impl_HandleMouseMotionEvent(evt.motion);
+				//mouseMotionOnce = 1;
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
@@ -825,6 +849,20 @@ void I_GetEvent(void)
 		}
 	}
 
+	// Send all relative mouse movement as one single mouse event.
+	if (mousemovex || mousemovey)
+	{
+		event_t event;
+		int wwidth, wheight;
+		SDL_GetWindowSize(window, &wwidth, &wheight);
+		//SDL_memset(&event, 0, sizeof(event_t));
+		event.type = ev_mouse;
+		event.data1 = 0;
+		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
+		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
+		D_PostEvent(&event);
+	}
+
 	// In order to make wheels act like buttons, we have to set their state to Up.
 	// This is because wheel messages don't have an up/down state.
 	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
@@ -838,7 +876,9 @@ void I_StartupMouse(void)
 		return;
 
 	if (!firsttimeonmouse)
+	{
 		HalfWarpMouse(realwidth, realheight); // warp to center
+	}
 	else
 		firsttimeonmouse = SDL_FALSE;
 	if (cv_usemouse.value)
@@ -899,7 +939,7 @@ static inline boolean I_SkipFrame(void)
 {
 	static boolean skip = false;
 
-	if (render_soft != rendermode)
+	if (rendermode != render_soft)
 		return false;
 
 	skip = !skip;
@@ -909,6 +949,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
+			/* FALLTHRU */
 		case GS_TIMEATTACK:
 		case GS_WAITINGPLAYERS:
 			return skip; // Skip odd frames
@@ -931,7 +972,7 @@ void I_FinishUpdate(void)
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
-	if (render_soft == rendermode && screens[0])
+	if (rendermode == render_soft && screens[0])
 	{
 		SDL_Rect rect;
 
@@ -958,7 +999,7 @@ void I_FinishUpdate(void)
 	}
 
 #ifdef HWRENDER
-	else
+	else if (rendermode == render_opengl)
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
@@ -1186,11 +1227,11 @@ INT32 VID_SetMode(INT32 modeNum)
 		}
 		vid.modenum = -1;
 	}
-	Impl_SetWindowName("SRB2 "VERSIONSTRING);
+	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
-	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 
-	if (render_soft == rendermode)
+	if (rendermode == render_soft)
 	{
 		if (bufSurface)
 		{
@@ -1209,30 +1250,20 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	int flags = 0;
 
 	if (rendermode == render_none) // dedicated
-	{
 		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
-	}
 
 	if (window != NULL)
-	{
 		return SDL_FALSE;
-	}
 
 	if (fullscreen)
-	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
 
 	if (borderlesswindow)
-	{
 		flags |= SDL_WINDOW_BORDERLESS;
-	}
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-	{
 		flags |= SDL_WINDOW_OPENGL;
-	}
 #endif
 
 	// Create a window
@@ -1261,7 +1292,13 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #endif
 	if (rendermode == render_soft)
 	{
-		renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
+		flags = 0; // Use this to set SDL_RENDERER_* flags now
+		if (usesdl2soft)
+			flags |= SDL_RENDERER_SOFTWARE;
+		else if (cv_vidwait.value)
+			flags |= SDL_RENDERER_PRESENTVSYNC;
+
+		renderer = SDL_CreateRenderer(window, -1, flags);
 		if (renderer == NULL)
 		{
 			CONS_Printf(M_GetText("Couldn't create rendering context: %s\n"), SDL_GetError());
@@ -1273,14 +1310,16 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	return SDL_TRUE;
 }
 
+/*
 static void Impl_SetWindowName(const char *title)
 {
-	if (window != NULL)
+	if (window == NULL)
 	{
 		return;
 	}
 	SDL_SetWindowTitle(window, title);
 }
+*/
 
 static void Impl_SetWindowIcon(void)
 {
@@ -1411,6 +1450,7 @@ void I_StartupGraphics(void)
 #ifdef SHUFFLE
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 #endif
+		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
@@ -1483,7 +1523,7 @@ void I_ShutdownGraphics(void)
 	rendermode = render_none;
 	if (icoSurface) SDL_FreeSurface(icoSurface);
 	icoSurface = NULL;
-	if (render_soft == oldrendermode)
+	if (oldrendermode == render_soft)
 	{
 		if (vidSurface) SDL_FreeSurface(vidSurface);
 		vidSurface = NULL;

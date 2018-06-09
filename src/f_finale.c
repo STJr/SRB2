@@ -233,11 +233,19 @@ static void F_SkyScroll(INT32 scrollspeed)
 #ifdef HWRENDER
 	else if (rendermode != render_none)
 	{ // if only software rendering could be this simple and retarded
-		scrolled = animtimer;
-		if (scrolled > 0)
-			V_DrawScaledPatch(scrolled - SHORT(pat->width), 0, 0, pat);
-		for (x = 0; x < fakedwidth; x += SHORT(pat->width))
-			V_DrawScaledPatch(x + scrolled, 0, 0, pat);
+		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+		INT32 y, pw = SHORT(pat->width) * dupz, ph = SHORT(pat->height) * dupz;
+		scrolled = animtimer * dupz;
+		for (x = 0; x < vid.width; x += pw)
+		{
+			for (y = 0; y < vid.height; y += ph)
+			{
+				if (scrolled > 0)
+					V_DrawScaledPatch(scrolled - pw, y, V_NOSCALESTART, pat);
+
+				V_DrawScaledPatch(x + scrolled, y, V_NOSCALESTART, pat);
+			}
+		}
 	}
 #endif
 
@@ -969,7 +977,7 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
-	"Tim \"RedEnchilada\" Bordelon",
+	"Colette \"fickle\" Bordelon",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
@@ -978,12 +986,12 @@ static const char *credits[] = {
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
+	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
-	"Matthew \"Inuyasha\" Walsh",
 	"",
 	"\1Programming",
 	"\1Assistance",
-	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
+	"\"chi.miru\"", // helped port slope drawing code from ZDoom
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
@@ -999,7 +1007,7 @@ static const char *credits[] = {
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
-	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // AraÃºjo -- sorry for our limited font! D:
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -1017,7 +1025,7 @@ static const char *credits[] = {
 	"\1Music and Sound",
 	"\1Production",
 	"Malcolm \"RedXVI\" Brown",
-	"David \"Bulmybag\" Bulmer",
+	"Dave \"DemonTomatoDave\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
 	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
@@ -1041,13 +1049,13 @@ static const char *credits[] = {
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Erik \"Torgo\" Nielsen",
+	"\"Kaito Sinclaire\"",
 	"Wessel \"Spherallic\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Matthew \"Inuyasha\" Walsh",
 	"Marco \"Digiku\" Zafra",
 	"",
 	"\1Boss Design",

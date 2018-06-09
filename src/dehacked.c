@@ -11,6 +11,7 @@
 /// \brief Load dehacked file and change tables and text
 
 #include "doomdef.h"
+#include "d_main.h" // for srb2home
 #include "g_game.h"
 #include "sounds.h"
 #include "info.h"
@@ -1859,7 +1860,6 @@ static void readframe(MYFILE *f, INT32 num)
 	char *word1;
 	char *word2 = NULL;
 	char *tmp;
-	INT32 j;
 
 	do
 	{
@@ -1873,16 +1873,6 @@ static void readframe(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
-
-			for (j = 0; s[j] != '\n'; j++)
-			{
-				if (s[j] == '=')
-				{
-					j += 2;
-					j = atoi(&s[j]);
-					break;
-				}
-			}
 
 			word1 = strtok(s, " ");
 			if (word1)
@@ -3070,6 +3060,8 @@ static void readmaincfg(MYFILE *f)
 
 				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
+				// can't use sprintf since there is %u in savegamename
+				strcatbf(savegamename, srb2home, PATHSEP);
 
 				gamedataadded = true;
 			}

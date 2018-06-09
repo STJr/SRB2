@@ -937,14 +937,6 @@ void V_DrawPatchFill(patch_t *pat)
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	INT32 x, y, pw = SHORT(pat->width) * dupz, ph = SHORT(pat->height) * dupz;
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-	{
-		pw = FixedMul(SHORT(pat->width)*FRACUNIT, vid.fdupx)>>FRACBITS;
-		ph = FixedMul(SHORT(pat->height)*FRACUNIT, vid.fdupy)>>FRACBITS;
-	}
-#endif
-
 	for (x = 0; x < vid.width; x += pw)
 	{
 		for (y = 0; y < vid.height; y += ph)
@@ -1083,6 +1075,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1160,6 +1153,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1269,6 +1263,7 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 4;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 4;
 			break;
@@ -1370,6 +1365,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 5;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 5;
 			break;
@@ -1463,6 +1459,7 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1747,6 +1744,7 @@ INT32 V_StringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 8;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 8;
 			break;
@@ -1785,6 +1783,7 @@ INT32 V_SmallStringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 4;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 4;
 			break;
@@ -1823,6 +1822,7 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 	{
 		case V_MONOSPACE:
 			spacewidth = 5;
+			/* FALLTHRU */
 		case V_OLDSPACING:
 			charwidth = 5;
 			break;

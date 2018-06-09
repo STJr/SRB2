@@ -711,6 +711,13 @@ void Net_CloseConnection(INT32 node)
 #else
 	INT32 i;
 	boolean forceclose = (node & FORCECLOSE) != 0;
+
+	if (node == -1)
+	{
+		DEBFILE(M_GetText("Net_CloseConnection: node -1 detected!\n"));
+		return; // nope, just ignore it
+	}
+
 	node &= ~FORCECLOSE;
 
 	if (!node)
@@ -718,7 +725,7 @@ void Net_CloseConnection(INT32 node)
 
 	if (node < 0 || node >= MAXNETNODES) // prevent invalid nodes from crashing the game
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node);
+		DEBFILE(va(M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node));
 		return;
 	}
 
@@ -1021,6 +1028,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 #endif
 			return false;
 		}
+		netbuffer->ack = netbuffer->ackreturn = 0; // don't hold over values from last packet sent/received
 		M_Memcpy(&reboundstore[rebound_head], netbuffer,
 			doomcom->datalength);
 		reboundsize[rebound_head] = doomcom->datalength;
@@ -1356,7 +1364,7 @@ boolean D_CheckNetGame(void)
 #else
 	if (M_CheckParm("-debugfile"))
 	{
-		char filename[20];
+		char filename[21];
 		INT32 k = doomcom->consoleplayer - 1;
 		if (M_IsNextParm())
 			k = atoi(M_GetNextParm()) - 1;
