@@ -5311,7 +5311,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float tr_x, tr_y;
 	float tz;
 	float x1, x2;
-	float z1, z2;
 	float rightsin, rightcos;
 	float this_scale;
 	float gz, gzt;
@@ -5326,9 +5325,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	INT32 heightsec, phs;
 	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
-//	float offset;
-//	float ang_scale = 1.0f, ang_scalez = 0.0f;
-//	float z1, z2;
+	float z1, z2;
 
 	if (!thing)
 		return;
@@ -5383,27 +5380,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (papersprite)
-	{
-		// Use the actual view angle, rather than the angle formed
-		// between the view point and the thing
-		// this makes sure paper sprites always appear at the right angle!
-		// Note: DO NOT do this in software mode version, it actually
-		// makes papersprites look WORSE there (I know, I've tried)
-		// Monster Iestyn - 13/05/17
-		ang = dup_viewangle - mobjangle;
-/*
-		ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
-		ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
-
-		if (ang_scale < 0)
-		{
-			ang_scale = -ang_scale;
-			ang_scalez = -ang_scalez;
-		}
-*/
-	}
-	else if (sprframe->rotate != SRF_SINGLE)
+	if (sprframe->rotate != SRF_SINGLE)
 		ang = R_PointToAngle (thing->x, thing->y) - mobjangle;
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -5412,6 +5389,14 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rot = 0;                        //Fab: for vis->patch below
 		lumpoff = sprframe->lumpid[0];     //Fab: see note above
 		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+
+		if (papersprite && (R_PointToAngle (thing->x, thing->y) - mobjangle < ANGLE_180))
+		{
+			if (flip)
+				flip = 0;
+			else
+				flip = 255;
+		}
 	}
 	else
 	{
@@ -5431,14 +5416,17 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
-	if (papersprite) // replaces the ang_scale and scalez thing above
+	if (papersprite)
 	{
-		rightsin = FIXED_TO_FLOAT(FINESINE(mobjangle>>ANGLETOFINESHIFT));
-		rightcos = FIXED_TO_FLOAT(FINECOSINE(mobjangle>>ANGLETOFINESHIFT));
-		if (flip) // flip the signs of the above values so you don't end up displaying the sprite backwards
+		if (flip && sprframe->rotate != SRF_SINGLE)
 		{
-			rightsin *= -1.0;
-			rightcos *= -1.0;
+			rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle+ANGLE_180)>>ANGLETOFINESHIFT));
+			rightcos = FIXED_TO_FLOAT(FINECOSINE((mobjangle+ANGLE_180)>>ANGLETOFINESHIFT));
+		}
+		else
+		{
+			rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle)>>ANGLETOFINESHIFT));
+			rightcos = FIXED_TO_FLOAT(FINECOSINE((mobjangle)>>ANGLETOFINESHIFT));
 		}
 	}
 	else
@@ -5511,13 +5499,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
 	vis->x2 = x2;
-	vis->z1 = z1;
-	vis->z2 = z2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = thing;
+	vis->z1 = z1;
+	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
