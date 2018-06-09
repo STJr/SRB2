@@ -10809,6 +10809,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	sector_t *sec;
 	TVector v, *res;
 	angle_t closestangle, fa;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
@@ -11095,7 +11096,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (ultimatemode)
 			return; // No rings in Ultimate!
 
-		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
+		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
 		for (r = 1; r <= 5; r++)
@@ -11147,7 +11148,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (ultimatemode)
 			return; // No rings in Ultimate!
 
-		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
+		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
@@ -11217,32 +11218,41 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 
+		switch (mthing->type)
+		{
+			case 604:
+			case 605:
+				if (ultimatemode)
+					return; // No rings in Ultimate!
+				if (nightsreplace)
+					ringthing = MT_NIGHTSSTAR;
+				break;
+			case 608:
+			case 609:
+				/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
+				break;*/
+			case 606:
+			case 607:
+				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+				break;
+			default:
+				break;
+		}
+
 		// Create the hoop!
 		for (i = 0; i < numitems; i++)
 		{
-			switch (mthing->type)
+			if (mthing->type == 608 || mthing->type == 609)
 			{
-				case 604:
-				case 605:
-					ringthing = MT_BLUESPHERE;
-					break;
-				case 608:
-				case 609:
-					ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE;
-					break;
-				case 606:
-				case 607:
-					ringthing = MT_RING;
-					break;
-				default:
-					break;
+				if (i & 1)
+				{
+					if (ultimatemode)
+						continue; // No rings in Ultimate!
+					ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
+				}
+				else
+					ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
 			}
-
-			if (ringthing != MT_BLUESPHERE && ultimatemode)
-				continue; // No rings in Ultimate!
-
-			if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
-				ringthing = ((ringthing == MT_BLUESPHERE) ? MT_NIGHTSCHIP : MT_NIGHTSSTAR);
 
 			fa = i*FINEANGLES/numitems;
 			v[0] = FixedMul(FINECOSINE(fa),size);
@@ -11282,7 +11292,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 
 		// Which ringthing to use
 		if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-			ringthing = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+			ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
 		else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
 			ringthing = MT_BOMBSPHERE;
 		else
@@ -11290,7 +11300,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			if (ultimatemode)
 				return; // No rings in Ultimate!
 
-			if (mthing->type == mobjinfo[MT_COIN].doomednum)
+			if (nightsreplace)
+				ringthing = MT_NIGHTSSTAR;
+			else if (mthing->type == mobjinfo[MT_COIN].doomednum)
 				ringthing = MT_COIN;
 			else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
 				ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
