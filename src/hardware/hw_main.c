@@ -3032,8 +3032,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	return gld_clipper_SafeCheckRange(angle2, angle1);
 #else
 	// check clip list for an open space
-	angle1 = R_PointToAngle(px1, py1) - dup_viewangle;
-	angle2 = R_PointToAngle(px2, py2) - dup_viewangle;
+	angle1 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px1>>1, py1>>1) - dup_viewangle;
+	angle2 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px2>>1, py2>>1) - dup_viewangle;
 
 	span = angle1 - angle2;
 
@@ -4359,6 +4359,9 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
+	if (spr->mobj->frame & FF_FULLBRIGHT)
+		lightlevel = 255;
+
 #ifdef ESLOPE
 	for (i = 1; i < sector->numlights; i++)
 	{
@@ -4366,14 +4369,16 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 					: sector->lightlist[i].height;
 		if (h <= temp)
 		{
-			lightlevel = *list[i-1].lightlevel;
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *list[i-1].lightlevel;
 			colormap = list[i-1].extra_colormap;
 			break;
 		}
 	}
 #else
 	i = R_GetPlaneLight(sector, temp, false);
-	lightlevel = *list[i].lightlevel;
+	if (!(spr->mobj->frame & FF_FULLBRIGHT))
+		lightlevel = *list[i].lightlevel;
 	colormap = list[i].extra_colormap;
 #endif
 
@@ -4388,7 +4393,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		// even if we aren't changing colormap or lightlevel, we still need to continue drawing down the sprite
 		if (!(list[i].flags & FF_NOSHADE) && (list[i].flags & FF_CUTSPRITES))
 		{
-			lightlevel = *list[i].lightlevel;
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *list[i].lightlevel;
 			colormap = list[i].extra_colormap;
 		}
 
