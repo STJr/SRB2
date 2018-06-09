@@ -2360,6 +2360,8 @@ static void P_LevelInitStuff(void)
 		}
 	}
 
+	countdown = countdown2 = 0;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
@@ -2368,42 +2370,36 @@ static void P_LevelInitStuff(void)
 			players[i].lives = cv_startinglives.value;
 		}
 
-		players[i].realtime = countdown = countdown2 = 0;
+		// obliteration station...
+		players[i].rings = players[i].spheres =
+		 players[i].xtralife = players[i].deadtimer =
+		 players[i].numboxes = players[i].totalring =
+		 players[i].laps = players[i].aiming =
+		 players[i].losstime = players[i].timeshit =
+		 players[i].marescore = players[i].lastmarescore =
+		 players[i].maxlink = players[i].startedtime =
+		 players[i].finishedtime = players[i].finishedspheres =
+		 players[i].lastmare = players[i].marebegunat =
+		 players[i].textvar = players[i].texttimer =
+		 players[i].linkcount = players[i].linktimer =
+		 players[i].flyangle = players[i].anotherflyangle =
+		 players[i].nightstime = players[i].mare =
+		 players[i].realtime = players[i].exiting = 0;
 
+		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;
 
-		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-		players[i].rings = 0;
-		players[i].spheres = 0;
-		players[i].aiming = 0;
-		players[i].pflags &= ~PF_GAMETYPEOVER;
-
-		players[i].losstime = 0;
-		players[i].timeshit = 0;
-
-		players[i].marescore = players[i].lastmarescore = players[i].maxlink = 0;
-		players[i].startedtime = players[i].finishedtime = players[i].finishedspheres = 0;
-		players[i].lastmare = players[i].marebegunat = 0;
-
-		// Don't show anything
-		players[i].textvar = players[i].texttimer = 0;
-
-		players[i].linkcount = players[i].linktimer = 0;
-		players[i].flyangle = players[i].anotherflyangle = 0;
-		players[i].nightstime = players[i].mare = 0;
-		P_SetTarget(&players[i].capsule, NULL);
+		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		players[i].exiting = 0;
 		P_ResetPlayer(&players[i]);
+		// hit these too
+		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
 
-		players[i].mo = NULL;
-
-		// we must unset axis details too
-		players[i].axis1 = players[i].axis2 = NULL;
-
-		// and this stupid flag as a result
-		players[i].pflags &= ~PF_TRANSFERTOCLOSEST;
+		// unset ALL the pointers. P_SetTarget isn't needed here because if this
+		// function is being called we're just going to clobber the data anyways
+		players[i].mo = players[i].followmobj = players[i].awayviewmobj = NULL;
+		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
 	}
 }
 
