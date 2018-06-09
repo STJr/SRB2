@@ -483,6 +483,7 @@ static inline void P_DoSpecialStageStuff(void)
 
 				sstimer = 0;
 				P_GiveEmerald(true);
+				P_RestoreMusic(&players[consoleplayer]);
 			}
 		}
 		else
