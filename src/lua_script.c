@@ -478,10 +478,10 @@ static const struct {
 	{NULL,          ARCH_NULL}
 };
 
-static UINT8 GetUserdataArchType(void)
+static UINT8 GetUserdataArchType(int index)
 {
 	UINT8 i;
-	lua_getmetatable(gL, -1);
+	lua_getmetatable(gL, index);
 
 	for (i = 0; meta2arch[i].meta; i++)
 	{
@@ -560,20 +560,20 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TUSERDATA:
-		switch (GetUserdataArchType())
+		switch (GetUserdataArchType(myindex))
 		{
 		case ARCH_MOBJINFO:
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:
@@ -715,8 +715,15 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 	for (i = 0; lua_next(gL, -2); i++)
 		lua_pop(gL, 1);
 
-	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	// skip anything that has an empty table and isn't a player.
+	if (i == 0)
+	{
+		if (fastcmp(ptype,"player")) // always include players even if they have no extra variables
+			WRITEUINT16(save_p, 0);
+		lua_pop(gL, 1);
 		return;
+	}
+
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
@@ -760,16 +767,25 @@ static void ArchiveTables(void)
 		lua_pushnil(gL);
 		while (lua_next(gL, -2))
 		{
-			ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			// Write key
+			e = ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
+			{
+				lua_pushvalue(gL, -2);
+				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -1), luaL_typename(gL, -1), i);
+				lua_pop(gL, 1);
+			}
+			// Write value
 			e = ArchiveValue(TABLESINDEX, -1);
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
-			else if (e == 2)
+			else if (e == 2) // invalid value type
 			{
 				lua_pushvalue(gL, -2);
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
 				lua_pop(gL, 1);
 			}
+
 			lua_pop(gL, 1);
 		}
 		lua_pop(gL, 1);
@@ -905,11 +921,17 @@ static void UnArchiveTables(void)
 		lua_rawgeti(gL, TABLESINDEX, i);
 		while (true)
 		{
-			if (UnArchiveValue(TABLESINDEX) == 1)
+			if (UnArchiveValue(TABLESINDEX) == 1) // read key
 				break;
-			if (UnArchiveValue(TABLESINDEX) == 2)
+			if (UnArchiveValue(TABLESINDEX) == 2) // read value
 				n++;
-			lua_rawset(gL, -3);
+			if (lua_isnil(gL, -2)) // if key is nil (if a function etc was accidentally saved)
+			{
+				CONS_Alert(CONS_ERROR, "A nil key in table %d was found! (Invalid key type or corrupted save?)\n", i);
+				lua_pop(gL, 2); // pop key and value instead of setting them in the table, to prevent Lua panic errors
+			}
+			else
+				lua_rawset(gL, -3);
 		}
 		lua_pop(gL, 1);
 	}

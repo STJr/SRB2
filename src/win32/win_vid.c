@@ -322,6 +322,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
+			/* FALLTHRU */
 		case GS_TIMEATTACK:
 #ifndef CLIENT_LOADINGSCREEN
 		case GS_WAITINGPLAYERS:
