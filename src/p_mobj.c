@@ -6187,17 +6187,18 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	boolean dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
 
-	INT32 rot = (baserot &= FINEMASK);
-	INT32 prevrot = (baseprevrot &= FINEMASK);
-
-	INT32 lastthreshold = FINEMASK; // needs to never be equal at start of loop
+	INT32 lastthreshold = -1; // needs to never be equal at start of loop
 	fixed_t lastfriction = INT32_MIN; // ditto; almost certainly never, but...
 
-	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] = pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+	INT32 rot;
+	INT32 prevrot;
+
+	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] =\
+	 pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
 
 	while (mobj)
 	{
-		if (!mobj->health)
+		if (P_MobjWasRemoved(mobj) || !mobj->health)
 		{
 			mobj = mobj->hnext;
 			continue;
@@ -6780,10 +6781,67 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FIREBARPOINT:
 			case MT_CUSTOMMACEPOINT:
 			case MT_HIDDEN_SLING:
-				// The following was pretty good, but liked breaking whenever mobj->lastlook changed.
-				//P_MaceRotate(mobj, ((leveltime + 1) * mobj->lastlook), (leveltime * mobj->lastlook));
-				P_MaceRotate(mobj, mobj->movedir + mobj->lastlook, mobj->movedir);
-				mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+				{
+					angle_t oldmovedir = mobj->movedir;
+
+					// Always update movedir to prevent desyncing (in the traditional sense, not the netplay sense).
+					mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+
+					// If too far away and not deliberately spitting in the face of optimisation, don't think!
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP))
+					{
+						UINT8 i;
+						// Quick! Look through players! Don't move unless a player is relatively close by.
+						// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
+						for (i = 0; i < MAXPLAYERS; ++i)
+							if (playeringame[i] && players[i].mo
+							 && P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200<<FRACBITS))
+								break; // Stop looking.
+						if (i == MAXPLAYERS)
+						{
+							if (!(mobj->flags2 & MF2_BEYONDTHEGRAVE))
+							{
+								mobj_t *ref = mobj;
+
+								// stop/hide all your babies
+								while ((ref = ref->hnext))
+								{
+									ref->eflags = (((ref->flags & MF_NOTHINK) ? 0 : 1)
+										| ((ref->flags & MF_NOCLIPTHING) ? 0 : 2)
+										| ((ref->flags2 & MF2_DONTDRAW) ? 0 : 4)); // oh my god this is nasty.
+									ref->flags |= MF_NOTHINK|MF_NOCLIPTHING;
+									ref->flags2 |= MF2_DONTDRAW;
+									ref->momx = ref->momy = ref->momz = 0;
+								}
+
+								mobj->flags2 |= MF2_BEYONDTHEGRAVE;
+							}
+
+							break; // don't make bubble!
+						}
+						else if (mobj->flags2 & MF2_BEYONDTHEGRAVE)
+						{
+							mobj_t *ref = mobj;
+
+							// start/show all your babies
+							while ((ref = ref->hnext))
+							{
+								if (ref->eflags & 1)
+									ref->flags &= ~MF_NOTHINK;
+								if (ref->eflags & 2)
+									ref->flags &= ~MF_NOCLIPTHING;
+								if (ref->eflags & 4)
+									ref->flags2 &= ~MF2_DONTDRAW;
+								ref->eflags = 0; // le sign
+							}
+
+							mobj->flags2 &= ~MF2_BEYONDTHEGRAVE;
+						}
+					}
+
+					// Okay, time to MOVE
+					P_MaceRotate(mobj, mobj->movedir, oldmovedir);
+				}
 				break;
 			case MT_HOOP:
 				if (mobj->fuse > 1)
@@ -9834,8 +9892,9 @@ ML_NOCLIMB :
 	anything else - no functionality
 ML_EFFECT1 : Swings instead of spins
 ML_EFFECT2 : Linktype is replaced with macetype for all spokes not ending in chains (inverted for MT_FIREBARPOINT)
-ML_EFFECT3 : Spawn a bonus macetype at the hinge point
+ML_EFFECT3 : Spawn a bonus linktype at the hinge point
 ML_EFFECT4 : Don't clip inside the ground
+ML_EFFECT5 : Don't stop thinking when too far away
 */
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
@@ -9949,6 +10008,10 @@ ML_EFFECT4 : Don't clip inside the ground
 		}
 		else
 			mmin = mnumspokes;
+
+		// If over distance away, don't move UNLESS this flag is applied
+		if (lines[line].flags & ML_EFFECT5)
+			mobj->flags2 |= MF2_BOSSNOTRAP;
 
 		// Make the links the same type as the end - repeated below
 		if ((mobj->type != MT_CHAINPOINT) && (((lines[line].flags & ML_EFFECT2) == ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
