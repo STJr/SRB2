@@ -105,10 +105,10 @@ void P_ClearStarPost(INT32 postnum)
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type != MT_STARPOST)
-			return;
+			continue;
 
 		if (mo2->health > postnum)
-			return;
+			continue;
 
 		P_SetMobjState(mo2, mo2->info->seestate);
 	}
