@@ -1120,6 +1120,29 @@ void HU_Drawer(void)
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
 	}
+
+	if (modeattacking && pausedelay > 1)
+	{
+		UINT8 strength = (pausedelay*10)/(NEWTICRATE/3);
+		INT32 y = hudinfo[HUD_LIVES].y - 13;
+
+		if (strength > 9)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		else if (strength)
+			V_DrawFadeScreen(0, strength);
+
+		if (players[consoleplayer].powers[pw_carry] == CR_NIGHTSMODE)
+			y -= 16;
+		else
+		{
+			if (players[consoleplayer].pflags & PF_AUTOBRAKE)
+				y -= 8;
+			if (players[consoleplayer].pflags & PF_ANALOGMODE)
+				y -= 8;
+		}
+
+		V_DrawThinString(hudinfo[HUD_LIVES].x-2, y, hudinfo[HUD_LIVES].f|((leveltime & 2) ? V_SKYMAP : V_BLUEMAP), "RETRYING...");
+	}
 }
 
 //======================================================================

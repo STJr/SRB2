@@ -1672,7 +1672,7 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
-static INT32 pausedelay = 0;
+INT32 pausedelay = 0;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
 //
@@ -1822,17 +1822,30 @@ boolean G_Responder(event_t *ev)
 			if (ev->data1 == gamecontrol[gc_pause][0]
 				|| ev->data1 == gamecontrol[gc_pause][1])
 			{
-				if (!pausedelay)
+				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					// don't let busy scripts prevent pausing
-					pausedelay = NEWTICRATE/7;
+					if (menuactive || pausedelay < 0 || leveltime < 2)
+						return true;
 
-					// command will handle all the checks for us
-					COM_ImmedExecute("pause");
-					return true;
+					if (++pausedelay > (NEWTICRATE/3))
+					{
+						pausedelay = INT32_MIN;
+						G_SetRetryFlag();
+						return true;
+					}
+					pausedelay++; // counteract subsequent subtraction this frame
 				}
 				else
-					pausedelay = NEWTICRATE/7;
+				{
+					INT32 oldpausedelay = pausedelay;
+					pausedelay = (NEWTICRATE/7);
+					if (!oldpausedelay)
+					{
+						// command will handle all the checks for us
+						COM_ImmedExecute("pause");
+						return true;
+					}
+				}
 			}
 			if (ev->data1 == gamecontrol[gc_camtoggle][0]
 				|| ev->data1 == gamecontrol[gc_camtoggle][1])
@@ -1892,11 +1905,16 @@ void G_Ticker(boolean run)
 		{
 			G_ClearRetryFlag();
 
-			// Costs a life to retry ... unless the player in question is dead already.
-			if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != 0x7f)
-				players[consoleplayer].lives -= 1;
+			if (modeattacking)
+				M_ModeAttackRetry(0);
+			else
+			{
+				// Costs a life to retry ... unless the player in question is dead already.
+				if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != 0x7f)
+					players[consoleplayer].lives -= 1;
 
-			G_DoReborn(consoleplayer);
+				G_DoReborn(consoleplayer);
+			}
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -1994,8 +2012,13 @@ void G_Ticker(boolean run)
 
 	if (run)
 	{
-		if (pausedelay)
-			pausedelay--;
+		if (pausedelay && pausedelay != INT32_MIN)
+		{
+			if (pausedelay > 0)
+				pausedelay--;
+			else
+				pausedelay++;
+		}
 
 		if (camtoggledelay)
 			camtoggledelay--;
@@ -2934,6 +2957,9 @@ static void G_DoCompleted(void)
 	INT32 i;
 
 	tokenlist = 0; // Reset the list
+
+	if (modeattacking && pausedelay)
+		pausedelay = 0;
 
 	gameaction = ga_nothing;
 

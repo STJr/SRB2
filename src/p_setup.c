@@ -2728,7 +2728,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	if (modeattacking && pausedelay == INT32_MIN)
+		ranspecialwipe = 2;
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
@@ -2776,6 +2778,12 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_level_toblack], false);
+	}
+
+	if (ranspecialwipe == 2)
+	{
+		pausedelay = -NEWTICRATE;
+		S_StartSound(NULL, sfx_s3k73);
 	}
 
 	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."

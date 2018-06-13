@@ -282,7 +282,6 @@ static void M_Statistics(INT32 choice);
 static void M_ReplayTimeAttack(INT32 choice);
 static void M_ChooseTimeAttack(INT32 choice);
 static void M_ChooseNightsAttack(INT32 choice);
-static void M_ModeAttackRetry(INT32 choice);
 static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_HandleChoosePlayerMenu(INT32 choice);
@@ -1083,7 +1082,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Game Status",
     M_ChangeControl, gc_scores      },
-	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause       },
+	{IT_CALL | IT_STRING2, NULL, "Pause / Run Retry", M_ChangeControl, gc_pause       },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
 	{IT_HEADER, NULL, "Multiplayer", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
@@ -7841,9 +7840,10 @@ static void M_SetGuestReplay(INT32 choice)
 		which(0);
 }
 
-static void M_ModeAttackRetry(INT32 choice)
+void M_ModeAttackRetry(INT32 choice)
 {
 	(void)choice;
+	// todo -- maybe seperate this out and G_SetRetryFlag() here instead? is just calling this from the menu 100% safe?
 	G_CheckDemoStatus(); // Cancel recording
 	if (modeattacking == ATTACKING_RECORD)
 		M_ChooseTimeAttack(0);

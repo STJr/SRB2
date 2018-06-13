@@ -235,7 +235,7 @@ extern INT16 startmap;
 extern INT32 ultimate_selectable;
 extern INT16 char_on, startchar;
 
-#define MAXSAVEGAMES 31 //note: last save game is "no save"
+#define MAXSAVEGAMES 31
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
 
 #define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
@@ -243,6 +243,8 @@ extern INT16 char_on, startchar;
 void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
+
+void M_ModeAttackRetry(INT32 choice);
 
 // Level select updating
 void Nextmap_OnChange(void);

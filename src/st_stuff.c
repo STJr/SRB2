@@ -2367,11 +2367,13 @@ static void ST_overlayDrawer(void)
 		{
 			ST_drawFirstPersonHUD();
 			if (cv_powerupdisplay.value)
-				ST_drawPowerupHUD();
+				ST_drawPowerupHUD(); // same as it ever was...
 		}
 		else if (cv_powerupdisplay.value == 2)
-			ST_drawPowerupHUD();
+			ST_drawPowerupHUD(); // same as it ever was...
 	}
+	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2)
+		ST_drawPowerupHUD(); // same as it ever was...
 
 #ifdef HAVE_BLUA
 	if (!(netgame || multiplayer) || !hu_showscores)
@@ -2393,7 +2395,7 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawTextHUD();
 
-	if (modeattacking && !hu_showscores)
+	if (modeattacking && !(demoplayback && hu_showscores))
 		ST_drawInput();
 
 	ST_drawDebugInfo();
