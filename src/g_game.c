@@ -1893,7 +1893,7 @@ void G_Ticker(boolean run)
 			G_ClearRetryFlag();
 
 			// Costs a life to retry ... unless the player in question is dead already.
-			if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE)
+			if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != 0x7f)
 				players[consoleplayer].lives -= 1;
 
 			G_DoReborn(consoleplayer);

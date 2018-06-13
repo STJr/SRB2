@@ -2393,7 +2393,7 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawTextHUD();
 
-	if (modeattacking)
+	if (modeattacking && !hu_showscores)
 		ST_drawInput();
 
 	ST_drawDebugInfo();
