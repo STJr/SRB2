@@ -317,7 +317,7 @@ void F_StartIntro(void)
 	introtext[2] = M_GetText(
 	"As it was about to drain the rings\n"
 	"away from the planet, Sonic burst into\n"
-	"the Satellite and for what he thought\n"
+	"the control room and for what he thought\n"
 	"would be the last time,\xB4 defeated\n"
 	"Dr. Eggman.\n#");
 
@@ -327,11 +327,11 @@ void F_StartIntro(void)
 	"return,\xB8 bringing an all new threat.\n#");
 
 	introtext[4] = M_GetText(
-	"\xA8""About once every year, a strange asteroid\n"
+	"\xA8""About every five years, a strange asteroid\n"
 	"hovers around the planet.\xBF It suddenly\n"
 	"appears from nowhere, circles around, and\n"
 	"\xB6- just as mysteriously as it arrives -\xB6\n"
-	"vanishes after about one week.\xBF\n"
+	"vanishes after only one week.\xBF\n"
 	"No one knows why it appears, or how.\n#");
 
 	introtext[5] = M_GetText(
@@ -384,7 +384,7 @@ void F_StartIntro(void)
 	"\xA5\"6...\xD2""5...\xD2""4...\"\xA8\xD2\n"
 	"Sonic knew he was getting closer to the\n"
 	"zone, and pushed himself harder.\xB4 Finally,\n"
-	"the mountain appeared in the horizon.\xD2\xD2\n"
+	"the mountain appeared on the horizon.\xD2\xD2\n"
 	"\xA5\"3...\xD2""2...\xD2""1...\xD2""Zero.\"\n#");
 
 	introtext[11] = M_GetText(
