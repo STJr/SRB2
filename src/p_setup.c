@@ -56,8 +56,11 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-// wipes
-#include "f_finale.h"
+#ifdef HAVE_BLUA
+#include "lua_hud.h" // level title
+#endif
+
+#include "f_finale.h" // wipes
 
 #include "md5.h" // map MD5
 
@@ -2673,7 +2676,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
 
-
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
@@ -2726,6 +2728,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Cancel all d_main.c fadeouts (keep fade in though).
+	wipegamestate = -2;
+
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
 	if (modeattacking && pausedelay == INT32_MIN)
@@ -2763,41 +2768,42 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_StopSounds();
 	S_ClearSfx();
 
-	// As oddly named as this is, this handles music only.
-	// We should be fine starting it here.
-	/// ... as long as this isn't a titlemap transition, that is
 	if (!titlemapinaction)
+	{
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
 		S_Start();
 
-	// Let's fade to black here
-	// But only if we didn't do the special stage wipe
-	if (rendermode != render_none && !ranspecialwipe)
-	{
-		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		// Let's fade to black here
+		// But only if we didn't do the special stage wipe
+		if (rendermode != render_none && !ranspecialwipe)
+		{
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_level_toblack], false);
-	}
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipe_level_toblack], false);
+		}
 
-	if (ranspecialwipe == 2)
-	{
-		pausedelay = -NEWTICRATE;
-		S_StartSound(NULL, sfx_s3k73);
-	}
+		if (ranspecialwipe == 2)
+		{
+			pausedelay = -NEWTICRATE;
+			S_StartSound(NULL, sfx_s3k73);
+		}
 
-	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
-	if (!titlemapinaction && rendermode != render_none)
-	{
-		// Don't include these in the fade!
-		char tx[64];
-		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-		snprintf(tx, 63, "%s%s%s",
-			mapheaderinfo[gamemap-1]->lvlttl,
-			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-		I_UpdateNoVsync();
+		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+		if (rendermode != render_none)
+		{
+			// Don't include these in the fade!
+			char tx[64];
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			snprintf(tx, 63, "%s%s%s",
+				mapheaderinfo[gamemap-1]->lvlttl,
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+			I_UpdateNoVsync();
+		}
 	}
 
 #ifdef HAVE_BLUA
@@ -3176,7 +3182,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
-	if (rendermode != render_none)
+	if (rendermode != render_none && !titlemapinaction)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
 
 	if (precache || dedicated)
@@ -3225,6 +3231,45 @@ boolean P_SetupLevel(boolean skipprecip)
 #ifdef HAVE_BLUA
 		LUAh_MapLoad();
 #endif
+	}
+
+	// Stage title!
+	if (rendermode != render_none
+		&& (!titlemapinaction)
+		&& ranspecialwipe != 2
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
+#ifdef HAVE_BLUA
+		&& LUA_HudEnabled(hud_stagetitle)
+#endif
+	)
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (10*NEWTICRATERATIO);
+		tic_t nowtime = starttime;
+		tic_t lasttime = starttime;
+		while (nowtime < endtime)
+		{
+			// draw loop
+			while (!((nowtime = I_GetTime()) - lasttime))
+				I_Sleep();
+			lasttime = nowtime;
+
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
+			stplyr = &players[consoleplayer];
+			ST_drawLevelTitle(nowtime - starttime);
+			if (splitscreen)
+			{
+				stplyr = &players[secondarydisplayplayer];
+				ST_drawLevelTitle(nowtime - starttime);
+			}
+
+			I_OsPolling();
+			I_UpdateNoBlit();
+			I_FinishUpdate(); // page flip or blit buffer
+
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 	}
 
 	return true;

@@ -766,8 +766,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 		// Don't show before title card
 		// Not consistency safe, but this only affects drawing
-		if (timeinmap + 40 < 110)
-			player->texttimer = (UINT8)(110 - timeinmap);
+		if (timeinmap + 40 < (110 - 70))
+			player->texttimer = (UINT8)((110 - 70) - timeinmap);
 	}
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;

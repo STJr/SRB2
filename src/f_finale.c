@@ -29,6 +29,7 @@
 #include "g_input.h"
 #include "console.h"
 #include "m_random.h"
+#include "m_misc.h" // moviemode functionality
 #include "y_inter.h"
 #include "m_cond.h"
 #include "p_local.h"
@@ -816,18 +817,27 @@ void F_IntroDrawer(void)
 
 			// Stay on black for a bit. =)
 			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				tic_t nowtime, quittime, lasttime;
+				nowtime = lasttime = I_GetTime();
+				quittime = nowtime + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+				while (quittime > nowtime)
 				{
+					while (!((nowtime = I_GetTime()) - lasttime))
+						I_Sleep();
+					lasttime = nowtime;
+
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
 					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+
+					if (moviemode) // make sure we save frames for the white hold too
+						M_SaveFrame();
 				}
 			}
 
 			D_StartTitle();
+			wipegamestate = GS_INTRO;
 			return;
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);
@@ -1532,7 +1542,7 @@ void F_TitleScreenDrawer(void)
 	if (!titlemapinaction)
 		F_SkyScroll(titlescrollspeed);
 
-	// Don't draw outside of the title screewn, or if the patch isn't there.
+	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
@@ -1876,6 +1886,9 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 		return;
 
 	G_SetGamestate(GS_CUTSCENE);
+
+	if (wipegamestate == GS_CUTSCENE)
+		wipegamestate = -1;
 
 	gameaction = ga_nothing;
 	paused = false;
