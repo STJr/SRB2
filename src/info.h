@@ -1834,6 +1834,7 @@ typedef enum state
 	S_BOXSPARKLE1,
 	S_BOXSPARKLE2,
 	S_BOXSPARKLE3,
+	S_BOXSPARKLE4,
 
 	S_BOX_FLICKER,
 	S_BOX_POP1,
@@ -2329,6 +2330,22 @@ typedef enum state
 	S_ARMF14,
 	S_ARMF15,
 	S_ARMF16,
+	S_ARMF17,
+	S_ARMF18,
+	S_ARMF19,
+	S_ARMF20,
+	S_ARMF21,
+	S_ARMF22,
+	S_ARMF23,
+	S_ARMF24,
+	S_ARMF25,
+	S_ARMF26,
+	S_ARMF27,
+	S_ARMF28,
+	S_ARMF29,
+	S_ARMF30,
+	S_ARMF31,
+	S_ARMF32,
 
 	S_ARMB1,
 	S_ARMB2,
@@ -2346,6 +2363,22 @@ typedef enum state
 	S_ARMB14,
 	S_ARMB15,
 	S_ARMB16,
+	S_ARMB17,
+	S_ARMB18,
+	S_ARMB19,
+	S_ARMB20,
+	S_ARMB21,
+	S_ARMB22,
+	S_ARMB23,
+	S_ARMB24,
+	S_ARMB25,
+	S_ARMB26,
+	S_ARMB27,
+	S_ARMB28,
+	S_ARMB29,
+	S_ARMB30,
+	S_ARMB31,
+	S_ARMB32,
 
 	S_WIND1,
 	S_WIND2,
@@ -2826,8 +2859,6 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
-	S_GOTREDFLAG,
-	S_GOTBLUEFLAG,
 
 	S_CORK,
 
@@ -3167,6 +3198,10 @@ typedef enum state
 	S_XPLD_FLICKY,
 	S_XPLD1,
 	S_XPLD2,
+	S_XPLD3,
+	S_XPLD4,
+	S_XPLD5,
+	S_XPLD6,
 	S_XPLD_EGGTRAP,
 
 	// Underwater Explosion

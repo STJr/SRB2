@@ -1125,7 +1125,7 @@ static inline void CL_DrawConnectionStatus(void)
 	INT32 ccstime = I_GetTime();
 
 	// Draw background fade
-	V_DrawFadeScreen();
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw the bottom box.
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
@@ -1173,22 +1173,37 @@ static inline void CL_DrawConnectionStatus(void)
 		if (lastfilenum != -1)
 		{
 			INT32 dldlength;
-			static char tempname[32];
+			static char tempname[28];
+			fileneeded_t *file = &fileneeded[lastfilenum];
+			char *filename = file->filename;
 
 			Net_GetNetStat();
-			dldlength = (INT32)((fileneeded[lastfilenum].currentsize/(double)fileneeded[lastfilenum].totalsize) * 256);
+			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
 			if (dldlength > 256)
 				dldlength = 256;
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 111);
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 96);
 
 			memset(tempname, 0, sizeof(tempname));
-			nameonly(strncpy(tempname, fileneeded[lastfilenum].filename, 31));
+			// offset filename to just the name only part
+			filename += strlen(filename) - nameonlylength(filename);
+
+			if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
+			{
+				size_t endhalfpos = strlen(filename)-10;
+				// display as first 14 chars + ... + last 10 chars
+				// which should add up to 27 if our math(s) is correct
+				snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
+			}
+			else // we can copy the whole thing in safely
+			{
+				strncpy(tempname, filename, sizeof(tempname)-1);
+			}
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
 				va(M_GetText("Downloading \"%s\""), tempname));
 			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,fileneeded[lastfilenum].totalsize>>10));
+				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
 			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
 				va("%3.1fK/s ", ((double)getbps)/1024));
 		}
@@ -2239,7 +2254,7 @@ static void Command_connect(void)
 	// Assume we connect directly.
 	boolean viams = false;
 
-	if (COM_Argc() < 2)
+	if (COM_Argc() < 2 || *COM_Argv(1) == 0)
 	{
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"

@@ -214,15 +214,7 @@ static int lib_pRandomRange(lua_State *L)
 	return 1;
 }
 
-// Deprecated, macros, etc.
-static int lib_pRandom(lua_State *L)
-{
-	NOHUD
-	LUA_Deprecated(L, "P_Random", "P_RandomByte");
-	lua_pushinteger(L, P_RandomByte());
-	return 1;
-}
-
+// Macros.
 static int lib_pSignedRandom(lua_State *L)
 {
 	NOHUD
@@ -774,6 +766,19 @@ static int lib_pCanRunOnWater(lua_State *L)
 		return LUA_ErrInvalid(L, "ffloor_t");
 	lua_pushboolean(L, P_CanRunOnWater(player, rover));
 	return 1;
+}
+
+static int lib_pMaceRotate(lua_State *L)
+{
+	mobj_t *center = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	INT32 baserot = luaL_checkinteger(L, 2);
+	INT32 baseprevrot = luaL_checkinteger(L, 3);
+	NOHUD
+	INLEVEL
+	if (!center)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_MaceRotate(center, baserot, baseprevrot);
+	return 0;
 }
 
 // P_USER
@@ -2481,7 +2486,6 @@ static luaL_Reg lib[] = {
 	{"P_RandomByte",lib_pRandomByte},
 	{"P_RandomKey",lib_pRandomKey},
 	{"P_RandomRange",lib_pRandomRange},
-	{"P_Random",lib_pRandom}, // DEPRECATED
 	{"P_SignedRandom",lib_pSignedRandom}, // MACRO
 	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
@@ -2526,6 +2530,7 @@ static luaL_Reg lib[] = {
 	{"P_CheckDeathPitCollide",lib_pCheckDeathPitCollide},
 	{"P_CheckSolidLava",lib_pCheckSolidLava},
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
+	{"P_MaceRotate",lib_pMaceRotate},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},

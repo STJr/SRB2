@@ -161,27 +161,25 @@ static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
 // Stuff copy+pasted from st_stuff.c
-static INT32 SCX(INT32 x)
-{
-	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
-}
-static INT32 SCY(INT32 z)
-{
-	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
-}
-
-#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n)
-#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n, q)
-#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, p)
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, p)
 
 static void Y_IntermissionTokenDrawer(void)
 {
-	INT32 y;
-	INT32 offs = 0;
+	INT32 y, offs, lowy, calc;
 	UINT32 tokencount;
-	INT32 lowy = BASEVIDHEIGHT - 32;
-	INT16 temp = SHORT(tokenicon->height)/2;
-	INT32 calc;
+	INT16 temp;
+	UINT8 em;
+
+	offs = 0;
+	lowy = BASEVIDHEIGHT - 32 - 8;
+	temp = SHORT(tokenicon->height)/2;
+
+	em = 0;
+	while (emeralds & (1 << em))
+		if (++em == 7)
+			return;
 
 	if (tallydonetic != -1)
 	{
@@ -190,7 +188,7 @@ static void Y_IntermissionTokenDrawer(void)
 			offs = 8;
 	}
 
-	V_DrawFill(32, lowy-1, 16, 1, 31); // slot
+	V_DrawSmallScaledPatch(32, lowy-1, 0, emeraldpics[2][em]); // coinbox
 
 	y = (lowy + offs + 1) - (temp + (token + 1)*8);
 
@@ -255,31 +253,34 @@ void Y_IntermissionDrawer(void)
 		if (gottoken) // first to be behind everything else
 			Y_IntermissionTokenDrawer();
 
-		// draw score
-		ST_DrawPatchFromHud(HUD_SCORE, sboscore);
-		ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
-
-		// draw time
-		ST_DrawPatchFromHud(HUD_TIME, sbotime);
-		if (cv_timetic.value == 1)
-			ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
-		else
+		if (!splitscreen)
 		{
-			INT32 seconds, minutes, tictrn;
+			// draw score
+			ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+			ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
 
-			seconds = G_TicsToSeconds(data.coop.tics);
-			minutes = G_TicsToMinutes(data.coop.tics, true);
-			tictrn  = G_TicsToCentiseconds(data.coop.tics);
-
-			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
-			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
-			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
-
-			// we should show centiseconds on the intermission screen too, if the conditions are right.
-			if (modeattacking || cv_timetic.value == 2)
+			// draw time
+			ST_DrawPatchFromHud(HUD_TIME, sbotime);
+			if (cv_timetic.value == 1)
+				ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
+			else
 			{
-				ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
-				ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
+				INT32 seconds, minutes, tictrn;
+
+				seconds = G_TicsToSeconds(data.coop.tics);
+				minutes = G_TicsToMinutes(data.coop.tics, true);
+				tictrn  = G_TicsToCentiseconds(data.coop.tics);
+
+				ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
+				ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
+				ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
+
+				// we should show centiseconds on the intermission screen too, if the conditions are right.
+				if (modeattacking || cv_timetic.value == 2)
+				{
+					ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
+					ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
+				}
 			}
 		}
 
@@ -320,7 +321,7 @@ void Y_IntermissionDrawer(void)
 			Y_IntermissionTokenDrawer();
 
 		// draw the header
-		if (intertic <= TICRATE)
+		if (intertic <= 2*TICRATE)
 			animatetic = 0;
 		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
 			animatetic = intertic;
@@ -370,14 +371,64 @@ void Y_IntermissionDrawer(void)
 		}
 
 		// draw the emeralds
-		if (intertic & 1)
+		//if (intertic & 1)
 		{
-			INT32 emeraldx = 80;
+			INT32 emeraldx = 152 - 3*28;
+			INT32 em = (gamemap - sstage_start);
+
 			for (i = 0; i < 7; ++i)
 			{
-				if (emeralds & (1 << i))
-					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[i]);
-				emeraldx += 24;
+				if ((i != em) && !(intertic & 1) && (emeralds & (1 << i)))
+					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
+				emeraldx += 28;
+			}
+
+			if (em < 7)
+			{
+				static UINT8 emeraldbounces = 0;
+				static INT32 emeraldmomy = 20;
+				static INT32 emeraldy = -40;
+
+				emeraldx = 152 + (em-3)*28;
+
+				if (intertic <= 1)
+				{
+					emeraldbounces = 0;
+					emeraldmomy = 20;
+					emeraldy = -40;
+				}
+				else
+				{
+					if (emeralds & (1 << em))
+					{
+						if (emeraldbounces < 3)
+						{
+							emeraldmomy += 1;
+							emeraldy += emeraldmomy;
+							if (emeraldy > 74)
+							{
+								S_StartSound(NULL, sfx_tink); // tink
+								emeraldbounces++;
+								emeraldmomy = -(emeraldmomy/2);
+								emeraldy = 74;
+							}
+						}
+					}
+					else
+					{
+						emeraldmomy += 1;
+						emeraldy += emeraldmomy;
+						emeraldx += intertic - 6;
+						if (emeraldbounces < 1 && emeraldy > 74)
+						{
+							S_StartSound(NULL, sfx_shldls); // nope
+							emeraldbounces++;
+							emeraldmomy = -(emeraldmomy/2);
+							emeraldy = 74;
+						}
+					}
+					V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
+				}
 			}
 		}
 
@@ -774,7 +825,7 @@ void Y_Ticker(void)
 		{
 			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
@@ -807,7 +858,7 @@ void Y_Ticker(void)
 			tallydonetic = -1;
 		}
 
-		if (intertic < TICRATE) // one second pause before tally begins
+		if (intertic < 2*TICRATE) // TWO second pause before tally begins, thank you mazmazz
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -819,7 +870,7 @@ void Y_Ticker(void)
 			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_s3kac); // cha-ching!
+				S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
 			}
 			return;
 		}
@@ -839,7 +890,7 @@ void Y_Ticker(void)
 			if (!(data.spec.continues & 0x80)) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
@@ -1767,13 +1818,13 @@ static void Y_AwardCoopBonuses(void)
 				players[i].score = MAXSCORE;
 		}
 
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = ptlives;
+			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -1811,15 +1862,14 @@ static void Y_AwardSpecialStageBonus(void)
 			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
+			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.spec.bonus, &localbonus, sizeof(data.spec.bonus));
-
-			data.spec.gotlife = ptlives;
 
 			// Continues related
 			data.spec.continues = min(players[i].continues, 8);

@@ -2693,7 +2693,7 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#if defined(LINUX) || defined(LINUX64)
+#ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
 #define MEMFREE "MemFree:"
@@ -2713,20 +2713,23 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	};
 	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
 	{
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_nlist(kd, namelist) != 0)
 	{
 		kvm_close (kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
 		sizeof (sum)) != sizeof (sum))
 	{
 		kvm_close(kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	kvm_close(kd);
@@ -2747,7 +2750,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (LINUX) || defined (LINUX64)
+#elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2763,25 +2766,28 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (n < 0)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	buf[n] = '\0';
-	if (NULL == (memTag = strstr(buf, MEMTOTAL)))
+	if ((memTag = strstr(buf, MEMTOTAL)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if (NULL == (memTag = strstr(buf, MEMFREE)))
+	if ((memTag = strstr(buf, MEMFREE)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
@@ -2796,7 +2802,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 48<<20;
 	return 48<<20;
-#endif /* LINUX */
+#endif
 }
 
 const CPUInfoFlags *I_CPUInfo(void)

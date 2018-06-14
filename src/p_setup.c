@@ -2675,11 +2675,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
@@ -2737,6 +2732,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
+		tic_t nowtime;
 
 		S_StartSound(NULL, sfx_s3kaf);
 
@@ -2746,9 +2742,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
+		nowtime = lastwipetic;
 		// Hold on white for extra effect.
-		while (I_GetTime() < endtime)
-			I_Sleep();
+		while (nowtime < endtime)
+		{
+			// wait loop
+			while (!((nowtime = I_GetTime()) - lastwipetic))
+				I_Sleep();
+			lastwipetic = nowtime;
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 
 		ranspecialwipe = 1;
 	}
@@ -3336,7 +3340,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else
