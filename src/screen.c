@@ -442,14 +442,16 @@ void SCR_ClosedCaptions(void)
 	boolean gamestopped = (paused || P_AutoPause());
 	INT32 basey = BASEVIDHEIGHT;
 
+	if (gamestate != wipegamestate)
+		return;
+
 	if (gamestate == GS_LEVEL)
 	{
 		if (splitscreen)
 			basey -= 8;
-		else if (((maptol & TOL_NIGHTS) && (modeattacking == ATTACKING_NIGHTS))
+		else if ((modeattacking == ATTACKING_NIGHTS)
 		|| (cv_powerupdisplay.value == 2)
-		|| (cv_powerupdisplay.value == 1 && ((stplyr == &players[displayplayer] && !camera.chase)
-		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))
+		|| (cv_powerupdisplay.value == 1 && !splitscreen && !camera.chase))
 			basey -= 16;
 	}
 

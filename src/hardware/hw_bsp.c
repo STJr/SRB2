@@ -29,6 +29,7 @@
 #include "../m_argv.h"
 #include "../i_video.h"
 #include "../w_wad.h"
+#include "../p_setup.h" // levelfadecol
 
 // --------------------------------------------------------------------------
 // This is global data for planes rendering
@@ -644,7 +645,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 				sprintf(s, "%d%%", (++ls_percent)<<1);
 				x = BASEVIDWIDTH/2;
 				y = BASEVIDHEIGHT/2;
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // Black background to match fade in effect
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol); // Background to match fade in effect
 				//V_DrawPatchFill(W_CachePatchName("SRB2BACK",PU_CACHE)); // SRB2 background, ehhh too bright.
 				M_DrawTextBox(x-58, y-8, 13, 1);
 				V_DrawString(x-50, y, V_YELLOWMAP, "Loading...");

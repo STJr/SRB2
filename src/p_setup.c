@@ -103,6 +103,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 boolean levelloading;
+UINT8 levelfadecol;
 
 // BLOCKMAP
 // Created from axis aligned bounding box
@@ -2806,6 +2807,8 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 	}
 
+	levelfadecol = (ranspecialwipe) ? 0 : 31;
+
 #ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
 #endif
@@ -3183,7 +3186,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !titlemapinaction)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3254,7 +3257,7 @@ boolean P_SetupLevel(boolean skipprecip)
 				I_Sleep();
 			lasttime = nowtime;
 
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 			stplyr = &players[consoleplayer];
 			ST_drawLevelTitle(nowtime - starttime);
 			if (splitscreen)
