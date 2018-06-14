@@ -1428,6 +1428,7 @@ static void P_LoadRawSideDefs2(void *data)
 		{
 			case 63: // variable colormap via 242 linedef
 			case 606: //SoM: 4/4/2000: Just colormap transfer
+			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
 				if (rendermode == render_soft || rendermode == render_none)
