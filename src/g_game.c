@@ -1827,7 +1827,9 @@ boolean G_Responder(event_t *ev)
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
-					if (++pausedelay > (NEWTICRATE/3))
+					if (pausedelay < 1+(NEWTICRATE/2))
+						pausedelay = 1+(NEWTICRATE/2);
+					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
 						pausedelay = INT32_MIN;
 						G_SetRetryFlag();
