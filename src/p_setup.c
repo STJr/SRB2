@@ -2734,7 +2734,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (modeattacking && pausedelay == INT32_MIN)
+	if (modeattacking && !demoplayback && (pausedelay == INT32_MIN))
 		ranspecialwipe = 2;
 	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
@@ -2788,7 +2788,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		if (ranspecialwipe == 2)
 		{
-			pausedelay = -NEWTICRATE;
+			pausedelay = -3; // preticker plus one
 			S_StartSound(NULL, sfx_s3k73);
 		}
 

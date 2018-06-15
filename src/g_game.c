@@ -1831,7 +1831,6 @@ boolean G_Responder(event_t *ev)
 						pausedelay = 1+(NEWTICRATE/2);
 					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
-						pausedelay = INT32_MIN;
 						G_SetRetryFlag();
 						return true;
 					}
@@ -1908,7 +1907,10 @@ void G_Ticker(boolean run)
 			G_ClearRetryFlag();
 
 			if (modeattacking)
+			{
+				pausedelay = INT32_MIN;
 				M_ModeAttackRetry(0);
+			}
 			else
 			{
 				// Costs a life to retry ... unless the player in question is dead already.
