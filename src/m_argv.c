@@ -198,17 +198,16 @@ void M_FindResponseFile(void)
 					k++;
 			} while (k < size);
 
-			free(file);
-
 			for (k = 0; k < pindex; k++)
 				myargv[indexinfile++] = moreargs[k];
 			myargc = indexinfile;
 
 			// display arguments
-			CONS_Printf(M_GetText("%d command-line args:\n"), myargc);
+			CONS_Printf(M_GetText("%d command-line args:\n"), myargc-1); // -1 so @ don't actually get counted for
 			for (k = 1; k < myargc; k++)
 				CONS_Printf("%s\n", myargv[k]);
 
 			break;
+			free(file); // Needs to be called after everything else, or we would end up with garbage data
 		}
 }
