@@ -5048,13 +5048,11 @@ static void M_DrawAddons(void)
 	x -= (21 + 5 + 16);
 	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
 
-#define CANSAVE (!modifiedgame || savemoddata)
 	x = BASEVIDWIDTH - x - 16;
-	V_DrawSmallScaledPatch(x, y + 4, (CANSAVE ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
+	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
 
 	if (modifiedgame)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
-#undef CANSAVE
 }
 
 #ifdef FIXUPO0
@@ -5119,11 +5117,15 @@ static void M_HandleAddons(INT32 choice)
 
 	if (M_ChangeStringAddons(choice))
 	{
-		if (!preparefilemenu(true))
+		char *tempname = NULL;
+		if (dirmenu && dirmenu[dir_on[menudepthleft]])
+			tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
+		searchfilemenu(tempname);
+		/*if (!preparefilemenu(true))
 		{
 			UNEXIST;
 			return;
-		}
+		}*/
 	}
 
 	switch (choice)
@@ -5242,14 +5244,7 @@ static void M_HandleAddons(INT32 choice)
 	}
 	if (exitmenu)
 	{
-		for (; sizedirmenu > 0; sizedirmenu--)
-		{
-			Z_Free(dirmenu[sizedirmenu-1]);
-			dirmenu[sizedirmenu-1] = NULL;
-		}
-
-		Z_Free(dirmenu);
-		dirmenu = NULL;
+		closefilemenu(true);
 
 		// secrets disabled by addfile...
 		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);

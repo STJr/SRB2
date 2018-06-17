@@ -87,6 +87,8 @@ typedef enum
 	REFRESHDIR_MAX = 32
 } refreshdir_enum;
 
+void closefilemenu(boolean validsize);
+void searchfilemenu(char *tempname);
 boolean preparefilemenu(boolean samedepth);
 
 #endif // __FILESRCH_H__

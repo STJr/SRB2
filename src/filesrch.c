@@ -326,8 +326,8 @@ size_t menudepthleft = menudepth;
 
 char menusearch[MAXSTRINGLENGTH+1];
 
-char **dirmenu;
-size_t sizedirmenu;
+char **dirmenu, **coredirmenu; // core only local for this file
+size_t sizedirmenu, sizecoredirmenu; // ditto
 size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
 
@@ -446,7 +446,7 @@ char exttable[NUM_EXT_TABLE][5] = {
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
 
-static boolean filemenusearch(char *haystack, char *needle)
+static boolean filemenucmp(char *haystack, char *needle)
 {
 	static char localhaystack[128];
 	strlcpy(localhaystack, haystack, 128);
@@ -457,21 +457,126 @@ static boolean filemenusearch(char *haystack, char *needle)
 		: (!strncmp(localhaystack, needle, menusearch[0])));
 }
 
-#define searchdir if (menusearch[0] && !filemenusearch(dent->d_name, localmenusearch))\
-					{\
-						rejected++;\
-						continue;\
-					}\
+void closefilemenu(boolean validsize)
+{
+	// search
+	if (dirmenu)
+	{
+		if (dirmenu != coredirmenu)
+		{
+			if (dirmenu[0] && ((UINT8)(dirmenu[0][DIR_TYPE]) == EXT_NORESULTS))
+			{
+				Z_Free(dirmenu[0]);
+				dirmenu[0] = NULL;
+			}
+			Z_Free(dirmenu);
+		}
+		dirmenu = NULL;
+		sizedirmenu = 0;
+	}
+
+	if (coredirmenu)
+	{
+		// core
+		if (validsize)
+		{
+			for (; sizecoredirmenu > 0; sizecoredirmenu--)
+			{
+				Z_Free(coredirmenu[sizecoredirmenu-1]);
+				coredirmenu[sizecoredirmenu-1] = NULL;
+			}
+		}
+		else
+			sizecoredirmenu = 0;
+
+		Z_Free(coredirmenu);
+		coredirmenu = NULL;
+	}
+}
+
+void searchfilemenu(char *tempname)
+{
+	size_t i, first;
+	char localmenusearch[MAXSTRINGLENGTH] = "";
+
+	if (dirmenu)
+	{
+		if (dirmenu != coredirmenu)
+		{
+			if (dirmenu[0] && ((UINT8)(dirmenu[0][DIR_TYPE]) == EXT_NORESULTS))
+			{
+				Z_Free(dirmenu[0]);
+				dirmenu[0] = NULL;
+			}
+			//Z_Free(dirmenu); -- Z_Realloc later tho...
+		}
+		else
+			dirmenu = NULL;
+	}
+
+	if (!menusearch[0])
+	{
+		if (dirmenu)
+			Z_Free(dirmenu);
+		dirmenu = coredirmenu;
+		sizedirmenu = sizecoredirmenu;
+		if (tempname)
+			Z_Free(tempname);
+		return;
+	}
+
+	strcpy(localmenusearch, menusearch+1);
+	if (!cv_addons_search_case.value)
+		strupr(localmenusearch);
+
+	first = (((UINT8)(coredirmenu[0][DIR_TYPE]) == EXT_UP) ? 1 : 0); // skip UP...
+
+	sizedirmenu = 0;
+	for (i = first; i < sizecoredirmenu; i++)
+	{
+		if (filemenucmp(coredirmenu[i]+DIR_STRING, localmenusearch))
+			sizedirmenu++;
+	}
+
+	if (!sizedirmenu) // no results...
+	{
+		if ((!(dirmenu = Z_Realloc(dirmenu, sizeof(char *), PU_STATIC, NULL)))
+			|| !(dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS))))
+				I_Error("Ran out of memory whilst preparing add-ons menu");
+		sizedirmenu = 1;
+		if (tempname)
+			Z_Free(tempname);
+		return;
+	}
+
+	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+		I_Error("Ran out of memory whilst preparing add-ons menu");
+
+	sizedirmenu = 0;
+	for (i = first; i < sizecoredirmenu; i++)
+	{
+		if (filemenucmp(coredirmenu[i]+DIR_STRING, localmenusearch))
+		{
+			dirmenu[sizedirmenu++] = coredirmenu[i]; // pointer reuse
+			if (tempname && !strcmp(coredirmenu[i]+DIR_STRING, tempname))
+				dir_on[menudepthleft] = i;
+		}
+	}
+
+	if (dir_on[menudepthleft] >= sizedirmenu)
+		dir_on[menudepthleft] = sizedirmenu-1;
+
+	if (tempname)
+		Z_Free(tempname);
+}
 
 boolean preparefilemenu(boolean samedepth)
 {
 	DIR *dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
-	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
+	size_t pos = 0, folderpos = 0, numfolders = 0;
 	char *tempname = NULL;
-	boolean noresults = false;
-	char localmenusearch[MAXSTRINGLENGTH] = "";
 
 	if (samedepth)
 	{
@@ -481,20 +586,16 @@ boolean preparefilemenu(boolean samedepth)
 	else
 		menusearch[0] = menusearch[1] = 0; // clear search
 
-	for (; sizedirmenu > 0; sizedirmenu--) // clear out existing items
+	if (!(dirhandle = opendir(menupath))) // get directory
 	{
-		Z_Free(dirmenu[sizedirmenu-1]);
-		dirmenu[sizedirmenu-1] = NULL;
+		closefilemenu(true);
+		return false;
 	}
 
-	if (!(dirhandle = opendir(menupath))) // get directory
-		return false;
-
-	if (menusearch[0])
+	for (; sizecoredirmenu > 0; sizecoredirmenu--) // clear out existing items
 	{
-		strcpy(localmenusearch, menusearch+1);
-		if (!cv_addons_search_case.value)
-			strupr(localmenusearch);
+		Z_Free(coredirmenu[sizecoredirmenu-1]);
+		coredirmenu[sizecoredirmenu-1] = NULL;
 	}
 
 	while (true)
@@ -526,43 +627,42 @@ boolean preparefilemenu(boolean samedepth)
 						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
 					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				}
-				searchdir;
 			}
 			else // directory
-			{
-				searchdir;
 				numfolders++;
-			}
-			sizedirmenu++;
+
+			sizecoredirmenu++;
 		}
 	}
 
-	if (!rejected && !sizedirmenu)
+	if (!sizecoredirmenu)
 	{
+		closedir(dirhandle);
+		closefilemenu(false);
 		if (tempname)
 			Z_Free(tempname);
-		closedir(dirhandle);
 		return false;
 	}
 
-	if (((noresults = (menusearch[0] && !sizedirmenu)))
-		|| (!menusearch[0] && menudepthleft != menudepth-1)) // Make room for UP... or search entry
+	if (menudepthleft != menudepth-1) // Make room for UP...
 	{
-		sizedirmenu++;
+		sizecoredirmenu++;
 		numfolders++;
 		folderpos++;
 	}
 
-	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+	if (dirmenu && dirmenu == coredirmenu)
+		dirmenu = NULL;
+
+	if (!(coredirmenu = Z_Realloc(coredirmenu, sizecoredirmenu*sizeof(char *), PU_STATIC, NULL)))
 	{
 		closedir(dirhandle); // just in case
 		I_Error("Ran out of memory whilst preparing add-ons menu");
 	}
 
-	rejected = 0;
 	rewinddir(dirhandle);
 
-	while ((pos+folderpos) < sizedirmenu)
+	while ((pos+folderpos) < sizecoredirmenu)
 	{
 		menupath[menupathindex[menudepthleft]] = 0;
 		dent = readdir(dirhandle);
@@ -588,13 +688,11 @@ boolean preparefilemenu(boolean samedepth)
 
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
-				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
+				if (!((numfolders+pos) < sizecoredirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
 				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
-
-				searchdir;
 
 				if (ext >= EXT_LOADSTART)
 				{
@@ -628,10 +726,7 @@ boolean preparefilemenu(boolean samedepth)
 				folder = 0;
 			}
 			else // directory
-			{
-				searchdir;
 				len += (folder = 1);
-			}
 
 			if (len > 255)
 				len = 255;
@@ -644,45 +739,30 @@ boolean preparefilemenu(boolean samedepth)
 			if (folder)
 			{
 				strcpy(temp+len, "/");
-				dirmenu[folderpos++] = temp;
+				coredirmenu[folderpos++] = temp;
 			}
 			else
-				dirmenu[numfolders + pos++] = temp;
+				coredirmenu[numfolders + pos++] = temp;
 		}
 	}
 
 	closedir(dirhandle);
 
-	if (noresults) // no results
-		dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
-	else if (!menusearch[0] &&menudepthleft != menudepth-1) // now for UP... entry
-		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
+	if ((menudepthleft != menudepth-1) // now for UP... entry
+		&& !(coredirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP))))
+			I_Error("Ran out of memory whilst preparing add-ons menu");
 
 	menupath[menupathindex[menudepthleft]] = 0;
-	sizedirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
+	sizecoredirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
 
-	if (tempname)
-	{
-		size_t i;
-		for (i = 0; i < sizedirmenu; i++)
-		{
-			if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
-			{
-				dir_on[menudepthleft] = i;
-				break;
-			}
-		}
-		Z_Free(tempname);
-	}
-
-	if (!sizedirmenu)
+	if (!sizecoredirmenu)
 	{
 		dir_on[menudepthleft] = 0;
-		Z_Free(dirmenu);
+		closefilemenu(false);
 		return false;
 	}
-	else if (dir_on[menudepthleft] >= sizedirmenu)
-		dir_on[menudepthleft] = sizedirmenu-1;
+
+	searchfilemenu(tempname);
 
 	return true;
 }
