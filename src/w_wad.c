@@ -360,9 +360,7 @@ UINT16 W_InitFile(const char *filename)
 	// see PutFileNeeded in d_netfil.c
 	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize = packetsizetally;
-
-		packetsize += nameonlylength(filename) + 22;
+		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
 		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 		{

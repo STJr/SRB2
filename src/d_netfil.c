@@ -324,10 +324,6 @@ INT32 CL_CheckFiles(void)
 	INT32 ret = 1;
 	size_t packetsize = 0;
 	size_t filestoget = 0;
-	serverinfo_pak *dummycheck = NULL;
-
-	// Shut the compiler up.
-	(void)dummycheck;
 
 //	if (M_CheckParm("-nofiles"))
 //		return 1;
@@ -371,8 +367,7 @@ INT32 CL_CheckFiles(void)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+	packetsize = packetsizetally;
 
 	for (i = 1; i < fileneedednum; i++)
 	{
@@ -396,7 +391,7 @@ INT32 CL_CheckFiles(void)
 		packetsize += nameonlylength(fileneeded[i].filename) + 22;
 
 		if ((numwadfiles+filestoget >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		|| (packetsize > MAXFILENEEDED*sizeof(UINT8)))
 			return 3;
 
 		filestoget++;
