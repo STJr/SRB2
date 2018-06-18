@@ -3318,6 +3318,9 @@ static void Command_Playintro_f(void)
 	if (netgame)
 		return;
 
+	if (dirmenu)
+		closefilemenu(true);
+
 	F_StartIntro();
 }
 
@@ -4075,6 +4078,9 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	if (!modeattacking)
 		D_StartTitle();

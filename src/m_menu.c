@@ -341,7 +341,6 @@ static void M_EraseData(INT32 choice);
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+6];
-static UINT8 addonsresponselimit = 0;
 
 #define numaddonsshown 4
 
@@ -2110,15 +2109,19 @@ static void M_GoBack(INT32 choice)
 		if (!Playing() && netgame && multiplayer)
 		{
 			MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
-			netgame = false;
-			multiplayer = false;
+			netgame = multiplayer = false;
 		}
 
 		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
-			Z_Free(levelselect.rows);
-			levelselect.rows = NULL;
+
+			if (levelselect.rows)
+			{
+				Z_Free(levelselect.rows);
+				levelselect.rows = NULL;
+			}
+
 			menuactive = false;
 			D_StartTitle();
 		}
@@ -4759,22 +4762,24 @@ static void M_Addons(INT32 choice)
 
 	(void)choice;
 
-	/*if (cv_addons_option.value == 0)
-		pathname = srb2home; usehome ? srb2home : srb2path;
+#if 1
+	if (cv_addons_option.value == 0)
+		pathname = usehome ? srb2home : srb2path;
 	else if (cv_addons_option.value == 1)
 		pathname = srb2home;
 	else if (cv_addons_option.value == 2)
 		pathname = srb2path;
-	else*/
+	else
+#endif
 	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
 		pathname = cv_addons_folder.string;
 
 	strlcpy(menupath, pathname, 1024);
 	menupathindex[(menudepthleft = menudepth-1)] = strlen(menupath) + 1;
 
-	if (menupath[menupathindex[menudepthleft]-2] != '/')
+	if (menupath[menupathindex[menudepthleft]-2] != PATHSEP[0])
 	{
-		menupath[menupathindex[menudepthleft]-1] = '/';
+		menupath[menupathindex[menudepthleft]-1] = PATHSEP[0];
 		menupath[menupathindex[menudepthleft]] = 0;
 	}
 	else
@@ -4868,11 +4873,7 @@ static char *M_AddonsHeaderPath(void)
 	UINT32 len;
 	static char header[1024];
 
-	if (menupath[0] == '.')
-		strlcpy(header, va("SRB2 folder%s", menupath+1), 1024);
-	else
-		strcpy(header, menupath);
-
+	strlcpy(header, va("%s folder%s", cv_addons_option.string, menupath+menupathindex[menudepth-1]-1), 1024);
 	len = strlen(header);
 	if (len > 34)
 	{
@@ -4889,6 +4890,15 @@ static char *M_AddonsHeaderPath(void)
 		M_SetupNextMenu(MISC_AddonsDef.prevMenu);\
 		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING)
 
+#define CLEARNAME Z_Free(refreshdirname);\
+					refreshdirname = NULL
+
+static void M_AddonsClearName(INT32 choice)
+{
+	CLEARNAME;
+	M_StopMessage(choice);
+}
+
 // returns whether to do message draw
 static boolean M_AddonsRefresh(void)
 {
@@ -4900,34 +4910,34 @@ static boolean M_AddonsRefresh(void)
 
 	if (refreshdirmenu & REFRESHDIR_ADDFILE)
 	{
-		addonsresponselimit = 0;
+		char *message = NULL;
 
 		if (refreshdirmenu & REFRESHDIR_NOTLOADED)
 		{
-			char *message = NULL;
 			S_StartSound(NULL, sfx_lose);
 			if (refreshdirmenu & REFRESHDIR_MAX)
-				message = va("\x82%s\x80\nMaximum number of add-ons reached.\nThis file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
+				message = va("\x82%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", refreshdirname);
 			else
-				message = va("\x82%s\x80\nThe file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
-			M_StartMessage(message,NULL,MM_NOTHING);
-			return true;
+				message = va("\x82%s\x80\nA file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", refreshdirname);
 		}
-
-		if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
+		else if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
 		{
 			S_StartSound(NULL, sfx_skid);
-			M_StartMessage(va("\x82%s\x80\nThe file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings")),NULL,MM_NOTHING);
+			message = va("\x82%s\x80\nA file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", refreshdirname, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings"));
+		}
+
+		if (message)
+		{
+			M_StartMessage(message,M_AddonsClearName,MM_EVENTHANDLER);
 			return true;
 		}
 
 		S_StartSound(NULL, sfx_strpst);
+		CLEARNAME;
 	}
 
 	return false;
 }
-
-#define offs 1
 
 #ifdef FIXUPO0
 #pragma GCC optimize ("0")
@@ -4945,10 +4955,7 @@ static void M_DrawAddons(void)
 		return;
 	}
 
-	if (addonsresponselimit)
-		addonsresponselimit--;
-
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
+	V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, (Playing()
 	? "\x85""Adding files mid-game may cause problems."
 	: LOCATIONSTRING));
 
@@ -4970,7 +4977,7 @@ static void M_DrawAddons(void)
 
 	// DRAW MENU
 	x = currentMenu->x;
-	y = currentMenu->y + offs;
+	y = currentMenu->y + 1;
 
 	//M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true, true); -- wanted different width
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), V_YELLOWMAP|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
@@ -4978,7 +4985,7 @@ static void M_DrawAddons(void)
 	V_DrawFill(x-21 + (MAXSTRINGLENGTH*8+6 - 1), (y - 16) + (lsheadingheight - 3), 1, 1, 26);
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 26);
 
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1 + offs) - (y - 1), 159);
+	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1), 159);
 
 	// get bottom...
 	max = dir_on[menudepthleft] + numaddonsshown + 1;
@@ -5034,7 +5041,7 @@ static void M_DrawAddons(void)
 	if (max != (ssize_t)sizedirmenu)
 		V_DrawString(19, y-12 + (skullAnimCounter/5), V_YELLOWMAP, "\x1B");
 
-	y = BASEVIDHEIGHT - currentMenu->y + offs;
+	y = BASEVIDHEIGHT - currentMenu->y + 1;
 
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
 	if (menusearch[0])
@@ -5058,8 +5065,6 @@ static void M_DrawAddons(void)
 #ifdef FIXUPO0
 #pragma GCC reset_options
 #endif
-
-#undef offs
 
 static void M_AddonExec(INT32 ch)
 {
@@ -5111,9 +5116,6 @@ static boolean M_ChangeStringAddons(INT32 choice)
 static void M_HandleAddons(INT32 choice)
 {
 	boolean exitmenu = false; // exit to previous menu
-
-	if (addonsresponselimit)
-		return;
 
 	if (M_ChangeStringAddons(choice))
 	{
@@ -5224,7 +5226,6 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_WAD:
 						case EXT_PK3:
 							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
-							addonsresponselimit = 5;
 							break;
 						default:
 							S_StartSound(NULL, sfx_lose);

@@ -306,9 +306,14 @@ closedir (DIR * dirp)
 }
 #endif
 
-static CV_PossibleValue_t addons_cons_t[] = {{0, "SRB2 Folder"}, /*{1, "HOME"}, {2, "SRB2 Folder"},*/ {3, "CUSTOM"}, {0, NULL}};
-consvar_t cv_addons_option = {"addons_option", "SRB2 Folder", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_addons_folder = {"addons_folder", "./", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
+#if 1
+												{1, "HOME"}, {2, "SRB2"},
+#endif
+													{3, "CUSTOM"}, {0, NULL}};
+
+consvar_t cv_addons_option = {"addons_option", "Default", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_addons_folder = {"addons_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t addons_md5_cons_t[] = {{0, "Name"}, {1, "Contents"}, {0, NULL}};
 consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -330,6 +335,7 @@ char **dirmenu, **coredirmenu; // core only local for this file
 size_t sizedirmenu, sizecoredirmenu; // ditto
 size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
+char *refreshdirname = NULL;
 
 size_t packetsizetally = 0;
 size_t mainwadstally = 0;
@@ -362,9 +368,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		return FS_NOTFOUND;
 	}
 
-	if (searchpath[searchpathindex[depthleft]-2] != '/')
+	if (searchpath[searchpathindex[depthleft]-2] != PATHSEP[0])
 	{
-		searchpath[searchpathindex[depthleft]-1] = '/';
+		searchpath[searchpathindex[depthleft]-1] = PATHSEP[0];
 		searchpath[searchpathindex[depthleft]] = 0;
 	}
 	else
@@ -406,7 +412,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 					depthleft++;
 			}
 
-			searchpath[searchpathindex[depthleft]-1]='/';
+			searchpath[searchpathindex[depthleft]-1]=PATHSEP[0];
 			searchpath[searchpathindex[depthleft]]=0;
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
@@ -492,6 +498,10 @@ void closefilemenu(boolean validsize)
 		Z_Free(coredirmenu);
 		coredirmenu = NULL;
 	}
+
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	refreshdirname = NULL;
 }
 
 void searchfilemenu(char *tempname)
@@ -759,7 +769,7 @@ boolean preparefilemenu(boolean samedepth)
 			strlcpy(temp+DIR_STRING, dent->d_name, len);
 			if (folder)
 			{
-				strcpy(temp+len, "/");
+				strcpy(temp+len, PATHSEP);
 				coredirmenu[folderpos++] = temp;
 			}
 			else
