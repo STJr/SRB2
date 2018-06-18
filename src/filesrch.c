@@ -514,22 +514,38 @@ void searchfilemenu(char *tempname)
 			dirmenu = NULL;
 	}
 
+	first = (((UINT8)(coredirmenu[0][DIR_TYPE]) == EXT_UP) ? 1 : 0); // skip UP...
+
 	if (!menusearch[0])
 	{
 		if (dirmenu)
 			Z_Free(dirmenu);
 		dirmenu = coredirmenu;
 		sizedirmenu = sizecoredirmenu;
+
 		if (tempname)
+		{
+			for (i = first; i < sizedirmenu; i++)
+			{
+				if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
+				{
+					dir_on[menudepthleft] = i;
+					break;
+				}
+			}
+
+			if (i == sizedirmenu)
+				dir_on[menudepthleft] = first;
+
 			Z_Free(tempname);
+		}
+
 		return;
 	}
 
 	strcpy(localmenusearch, menusearch+1);
 	if (!cv_addons_search_case.value)
 		strupr(localmenusearch);
-
-	first = (((UINT8)(coredirmenu[0][DIR_TYPE]) == EXT_UP) ? 1 : 0); // skip UP...
 
 	sizedirmenu = 0;
 	for (i = first; i < sizecoredirmenu; i++)
@@ -544,6 +560,7 @@ void searchfilemenu(char *tempname)
 			|| !(dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS))))
 				I_Error("Ran out of memory whilst preparing add-ons menu");
 		sizedirmenu = 1;
+		dir_on[menudepthleft] = 0;
 		if (tempname)
 			Z_Free(tempname);
 		return;
@@ -557,17 +574,21 @@ void searchfilemenu(char *tempname)
 	{
 		if (filemenucmp(coredirmenu[i]+DIR_STRING, localmenusearch))
 		{
-			dirmenu[sizedirmenu++] = coredirmenu[i]; // pointer reuse
 			if (tempname && !strcmp(coredirmenu[i]+DIR_STRING, tempname))
-				dir_on[menudepthleft] = i;
+			{
+				dir_on[menudepthleft] = sizedirmenu;
+				Z_Free(tempname);
+				tempname = NULL;
+			}
+			dirmenu[sizedirmenu++] = coredirmenu[i]; // pointer reuse
 		}
 	}
 
-	if (dir_on[menudepthleft] >= sizedirmenu)
-		dir_on[menudepthleft] = sizedirmenu-1;
-
 	if (tempname)
+	{
+		dir_on[menudepthleft] = first;
 		Z_Free(tempname);
+	}
 }
 
 boolean preparefilemenu(boolean samedepth)
