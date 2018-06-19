@@ -2145,7 +2145,7 @@ state_t states[NUMSTATES] =
 
 	{SPR_FLMH, 0, -1, {NULL}, 0, 0, S_NULL}, // S_FLAMEHOLDER
 
-	{SPR_CTRC, FF_FULLBRIGHT|FF_ANIMATE, 8*3, {A_FlameParticle}, 3, 3, S_NULL}, // S_FIRETORCH
+	{SPR_CTRC, FF_FULLBRIGHT|FF_ANIMATE, 8*3, {A_FlameParticle}, 3, 3, S_FIRETORCH}, // S_FIRETORCH
 
 	{SPR_CFLG,                0, -1, {NULL}, 0, 0, S_NULL}, // S_WAVINGFLAG
 	{SPR_CFLG, FF_PAPERSPRITE|1, -1, {NULL}, 0, 0, S_NULL}, // S_WAVINGFLAGSEG
@@ -10505,7 +10505,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
+		MT_FLAMEPARTICLE, // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
@@ -10513,7 +10513,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		80*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
@@ -10546,7 +10546,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_PUSHABLE, // flags
+		MF_SOLID,       // flags
 		S_NULL          // raisestate
 	},
 
@@ -10573,7 +10573,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
