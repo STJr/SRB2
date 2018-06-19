@@ -7540,12 +7540,20 @@ void P_MobjThinker(mobj_t *mobj)
 				{
 					if (!mobj->target || P_MobjWasRemoved(mobj->target))
 					{
+						if (mobj->tracer && !P_MobjWasRemoved(mobj->tracer))
+							P_RemoveMobj(mobj->tracer);
 						P_RemoveMobj(mobj);
 						return;
 					}
 					mobj->z = mobj->target->z + mobj->target->momz;
 					if (!(mobj->eflags & MFE_VERTICALFLIP))
 						mobj->z += mobj->target->height;
+				}
+				if (mobj->tracer && !P_MobjWasRemoved(mobj->tracer))
+				{
+					mobj->tracer->z = mobj->z + P_MobjFlip(mobj)*20*mobj->scale;
+					if (mobj->eflags & MFE_VERTICALFLIP)
+						mobj->tracer->z += mobj->height;
 				}
 				break;
 			case MT_WAVINGFLAG:
@@ -8690,29 +8698,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					cur->extravalue1 = i;
 					prev = cur;
 				}
-			}
-			break;
-		case MT_CANDLE:
-		case MT_CANDLEPRICKET:
-			{
-				// Fake corona!!
-				mobj_t *corona = P_SpawnMobjFromMobj(mobj, 0, 0, ((mobj->type == MT_CANDLE) ? 40 : 176)<<FRACBITS, MT_PARTICLE);
-				//P_SetTarget(&corona->tracer, mobj);
-				//corona->flags2 |= MF2_LINKDRAW; -- crash??????? can't debug right now...
-				corona->sprite = SPR_FLAM;
-				corona->frame = (FF_FULLBRIGHT|FF_TRANS90|12);
-				corona->tics = -1;
-				if (mobj->type == MT_CANDLE)
-					P_SetScale(corona, (corona->destscale = mobj->scale*3));
-			}
-			break;
-		case MT_JACKO1:
-		case MT_JACKO2:
-		case MT_JACKO3:
-			{
-				mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
-				P_SetTarget(&overlay->target, mobj);
-				P_SetMobjState(overlay, mobj->info->raisestate);
 			}
 			break;
 		case MT_EGGMOBILE2:
@@ -10041,6 +10026,54 @@ You should think about modifying the deathmatch starts to take full advantage of
 		if (mthing->angle > 0)
 			mobj->color = ((mthing->angle-1) % (MAXSKINCOLORS-1))+1;
 		break;
+#define makesoftwarecorona(mo, h) \
+			corona = P_SpawnMobjFromMobj(mo, 0, 0, h<<FRACBITS, MT_PARTICLE);\
+			corona->sprite = SPR_FLAM;\
+			corona->frame = (FF_FULLBRIGHT|FF_TRANS90|12);\
+			corona->tics = -1
+	case MT_FLAME:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj_t *corona;
+			makesoftwarecorona(mobj, 20);
+			P_SetScale(corona, (corona->destscale = mobj->scale*3));
+			P_SetTarget(&mobj->tracer, corona);
+		}
+		break;
+	case MT_FLAMEHOLDER:
+		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
+		{
+			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+			P_SetTarget(&flame->target, mobj);
+			flame->flags2 |= MF2_BOSSNOTRAP;
+			if (mthing->options & MTF_EXTRA)
+			{
+				mobj_t *corona;
+				makesoftwarecorona(flame, 20);
+				P_SetScale(corona, (corona->destscale = flame->scale*3));
+				P_SetTarget(&flame->tracer, corona);
+			}
+		}
+		break;
+	case MT_CANDLE:
+	case MT_CANDLEPRICKET:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj_t *corona;
+			makesoftwarecorona(mobj, ((mobj->type == MT_CANDLE) ? 42 : 176));
+		}
+		break;
+#undef makesoftwarecorona
+	case MT_JACKO1:
+	case MT_JACKO2:
+	case MT_JACKO3:
+		if (!(mthing->options & MTF_EXTRA)) // take the torch out of the crafting recipe
+		{
+			mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&overlay->target, mobj);
+			P_SetMobjState(overlay, mobj->info->raisestate);
+		}
+		break;
 	case MT_WATERDRIP:
 		if (mthing->angle)
 			mobj->tics = 3*TICRATE + mthing->angle;
@@ -10524,14 +10557,6 @@ ML_EFFECT4 : Don't clip inside the ground
 			doleaf(-1*FRACUNIT, 0);
 			doleaf(0, -1*FRACUNIT);
 #undef doleaf
-		}
-		break;
-	case MT_FLAMEHOLDER:
-		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
-		{
-			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
-			P_SetTarget(&flame->target, mobj);
-			flame->flags2 |= MF2_BOSSNOTRAP;
 		}
 		break;
 	case MT_SMASHINGSPIKEBALL:
