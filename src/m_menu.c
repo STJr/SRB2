@@ -2095,12 +2095,15 @@ boolean M_Responder(event_t *ev)
 			case KEY_JOY1 + 2:
 				ch = KEY_ENTER;
 				break;
-			case KEY_JOY1 + 3:
-				ch = 'n';
+			case KEY_JOY1 + 7:
+				ch = KEY_ESCAPE;
 				break;
 			case KEY_MOUSE1 + 1:
 			case KEY_JOY1 + 1:
 				ch = KEY_BACKSPACE;
+				break;
+			case KEY_JOY1 + 3:
+				ch = KEY_DEL;
 				break;
 			case KEY_HAT1:
 				ch = KEY_UPARROW;
@@ -2424,9 +2427,10 @@ boolean M_Responder(event_t *ev)
 				return true;
 			}
 			// Why _does_ backspace go back anyway?
-			//currentMenu->lastOn = itemOn;
-			//if (currentMenu->prevMenu)
-			//	M_SetupNextMenu(currentMenu->prevMenu);
+			//Why doesn't it?
+			currentMenu->lastOn = itemOn;
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
 			return false;
 
 		default:
@@ -4721,7 +4725,7 @@ static void M_HandleLoadSave(INT32 choice)
 			exitmenu = true;
 			break;
 
-		case KEY_BACKSPACE:
+		case KEY_DEL:
 			S_StartSound(NULL, sfx_menu1);
 			// Don't allow people to 'delete' "Play without Saving."
 			// Nor allow people to 'delete' slots with no saves in them.
@@ -6332,11 +6336,13 @@ static void M_HandleConnectIP(INT32 choice)
 			break;
 
 		case KEY_BACKSPACE:
-			if ((l = strlen(setupm_ip))!=0 && itemOn == 0)
+			if ((l = strlen(setupm_ip)) != 0 && itemOn == 0)
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l-1] =0;
+				S_StartSound(NULL, sfx_menu1); // Tails
+				setupm_ip[l - 1] = 0;
 			}
+			else
+				exitmenu = true;
 			break;
 
 		default:
@@ -6537,6 +6543,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[l-1] =0;
 			}
+			else
+				exitmenu = true;
 			break;
 
 		default:
