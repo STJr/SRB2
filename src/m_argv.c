@@ -208,6 +208,5 @@ void M_FindResponseFile(void)
 				CONS_Printf("%s\n", myargv[k]);
 
 			break;
-			free(file); // Needs to be called after everything else, or we would end up with garbage data
 		}
 }
