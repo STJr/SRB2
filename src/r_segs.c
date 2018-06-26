@@ -743,6 +743,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Render FOF sides kinda like normal sides, with the frac and step and everything
 	// NOTE: INT64 instead of fixed_t because overflow concerns
 	INT64         top_frac, top_step, bottom_frac, bottom_step;
+	// skew FOF walls with slopes?
+	boolean	      slopeskew = false;
+	fixed_t       ffloortextureslide = 0;
+	INT32         oldx = -1;
+	fixed_t       left_top, left_bottom; // needed here for slope skewing
+	pslope_t      *skewslope = NULL;
 #endif
 
 	void (*colfunc_2s) (column_t *);
@@ -966,20 +972,70 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	mceilingclip = ds->sprtopclip;
 	dc_texheight = textureheight[texnum]>>FRACBITS;
 
+#ifdef ESLOPE
+	// calculate both left ends
+	if (*pfloor->t_slope)
+		left_top = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
+	else
+		left_top = *pfloor->topheight - viewz;
+
+	if (*pfloor->b_slope)
+		left_bottom = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
+	else
+		left_bottom = *pfloor->bottomheight - viewz;
+	skewslope = *pfloor->t_slope; // skew using top slope by default
+	if (newline)
+	{
+		if (newline->flags & ML_DONTPEGTOP)
+			slopeskew = true;
+	}
+	else if (pfloor->master->flags & ML_DONTPEGTOP)
+		slopeskew = true;
+
+	if (slopeskew)
+		dc_texturemid = left_top;
+	else
+#endif
 	dc_texturemid = *pfloor->topheight - viewz;
 
 	if (newline)
 	{
 		offsetvalue = sides[newline->sidenum[0]].rowoffset;
 		if (newline->flags & ML_DONTPEGBOTTOM)
+		{
+#ifdef ESLOPE
+			skewslope = *pfloor->b_slope; // skew using bottom slope
+			if (slopeskew)
+				dc_texturemid = left_bottom;
+			else
+#endif
 			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
+		}
 	}
 	else
 	{
 		offsetvalue = sides[pfloor->master->sidenum[0]].rowoffset;
 		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
+		{
+#ifdef ESLOPE
+			skewslope = *pfloor->b_slope; // skew using bottom slope
+			if (slopeskew)
+				dc_texturemid = left_bottom;
+			else
+#endif
 			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
+		}
 	}
+
+#ifdef ESLOPE
+	if (slopeskew)
+	{
+		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
+
+		if (skewslope)
+			ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
+	}
+#endif
 
 	dc_texturemid += offsetvalue;
 
@@ -999,23 +1055,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #ifdef ESLOPE
 	// Set heights according to plane, or slope, whichever
 	{
-		fixed_t left_top, right_top, left_bottom, right_bottom;
+		fixed_t right_top, right_bottom;
 
+		// calculate right ends now
 		if (*pfloor->t_slope)
-		{
-			left_top = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
 			right_top = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
-		}
 		else
-			left_top = right_top = *pfloor->topheight - viewz;
+			right_top = *pfloor->topheight - viewz;
 
 		if (*pfloor->b_slope)
-		{
-			left_bottom = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
 			right_bottom = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
-		}
 		else
-			left_bottom = right_bottom = *pfloor->bottomheight - viewz;
+			right_bottom = *pfloor->bottomheight - viewz;
 
 		// using INT64 to avoid 32bit overflow
 		top_frac =    (INT64)centeryfrac - (((INT64)left_top     * ds->scale1) >> FRACBITS);
@@ -1039,6 +1090,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		if (maskedtexturecol[dc_x] != INT16_MAX)
 		{
+#ifdef ESLOPE
+			if (ffloortextureslide) { // skew FOF walls
+				if (oldx != -1)
+					dc_texturemid += FixedMul(ffloortextureslide, (maskedtexturecol[oldx]-maskedtexturecol[dc_x])<<FRACBITS);
+				oldx = dc_x;
+			}
+#endif
 			// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 			// will (hopefully) put less strain on the stack.
 			if (dc_numlights)
