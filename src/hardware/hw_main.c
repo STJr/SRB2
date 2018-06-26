@@ -2119,12 +2119,14 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 		INT32 texnum;
 		line_t * newline = NULL; // Multi-Property FOF
+		INT32 slopeskew = 0;	// do we have to skew that?
 
         ///TODO add slope support (fixing cutoffs, proper wall clipping) - maybe just disable highcut/lowcut if either sector or FOF has a slope
         ///     to allow fun plane intersecting in OGL? But then people would abuse that and make software look bad. :C
 		highcut = gr_frontsector->ceilingheight < gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
 		lowcut = gr_frontsector->floorheight > gr_backsector->floorheight ? gr_frontsector->floorheight : gr_backsector->floorheight;
-
+		
+	
 		if (gr_backsector->ffloors)
 		{
 			for (rover = gr_backsector->ffloors; rover; rover = rover->next)
@@ -2155,7 +2157,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
-
+				
 				wallVerts[3].y = FIXED_TO_FLOAT(h);
 				wallVerts[2].y = FIXED_TO_FLOAT(hS);
 				wallVerts[0].y = FIXED_TO_FLOAT(l);
@@ -2167,6 +2169,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					h = highcut;
 				if (l < lowcut)
 					l = lowcut;
+						
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
@@ -2185,11 +2188,45 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #ifdef ESLOPE // P.S. this is better-organized than the old version
 					fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
 					grTex = HWR_GetTexture(texnum);
-
-					wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
-					wallVerts[2].t = (*rover->topheight - hS + offs) * grTex->scaleY;
-					wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
-					wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
+					
+					// 26/6/18: Lat': Make FOF account for slope skew		
+					
+					if (newline)	// transfer line skewing:
+					{
+						if ((newline->flags & ML_DONTPEGTOP) && (newline->flags & ML_EFFECT1))
+							slopeskew = 2;
+						else if (newline->flags & ML_EFFECT1)	// skew by top
+							slopeskew = 1;
+					}		
+					else			// normal skewing?
+					{
+						if ((rover->master->flags & ML_DONTPEGTOP) && (rover->master->flags & ML_EFFECT1))
+							slopeskew = 2;
+						else if (rover->master->flags & ML_EFFECT1)	// skew by top
+							slopeskew = 1;
+					}
+					
+					if 	(slopeskew == 0)	//(!(gr_linedef->flags & ML_EFFECT1))
+					{
+						// Unskewed
+						wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
+						wallVerts[2].t = (*rover->topheight - hS + offs) * grTex->scaleY;
+						wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
+						wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
+					}
+					else if (slopeskew == 1) //(gr_linedef->flags & ML_DONTPEGTOP)
+					{
+						// Skewed by top
+						wallVerts[0].t = (*rover->topheight - *rover->bottomheight) * grTex->scaleY;
+						wallVerts[1].t = (h - l) * grTex->scaleY;
+					}
+					else if (slopeskew == 2)
+					{
+						// Skewed by bottom
+						wallVerts[0].t = wallVerts[1].t = (*rover->topheight - *rover->bottomheight) * grTex->scaleY;
+						wallVerts[3].t = wallVerts[0].t - (*rover->topheight - *rover->bottomheight) * grTex->scaleY;
+						wallVerts[2].t = wallVerts[1].t - (h - l) * grTex->scaleY;
+					}
 #else
 					grTex = HWR_GetTexture(texnum);
 
