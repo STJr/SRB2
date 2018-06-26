@@ -2193,20 +2193,20 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					
 					if (newline)	// transfer line skewing:
 					{
-						if ((newline->flags & ML_DONTPEGTOP) && (newline->flags & ML_EFFECT1))
+						if ((newline->flags & ML_DONTPEGTOP) && (newline->flags & ML_DONTPEGBOTTOM))	// skew by bottom
 							slopeskew = 2;
-						else if (newline->flags & ML_EFFECT1)	// skew by top
+						else if (newline->flags & ML_DONTPEGTOP)	// skew by top
 							slopeskew = 1;
 					}		
 					else			// normal skewing?
 					{
-						if ((rover->master->flags & ML_DONTPEGTOP) && (rover->master->flags & ML_EFFECT1))
-							slopeskew = 2;
-						else if (rover->master->flags & ML_EFFECT1)	// skew by top
+						if ((rover->master->flags & ML_DONTPEGTOP) && (gr_linedef->flags & ML_DONTPEGBOTTOM))	// skew by bottom
+							slopeskew = 2;	// wow above's setup sucks.
+						else if ((rover->master->flags & ML_DONTPEGTOP))	// skew by top
 							slopeskew = 1;
 					}
 					
-					if 	(slopeskew == 0)	//(!(gr_linedef->flags & ML_EFFECT1))
+					if 	(slopeskew == 0)
 					{
 						// Unskewed
 						wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
@@ -2214,7 +2214,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 						wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
 						wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
 					}
-					else if (slopeskew == 1) //(gr_linedef->flags & ML_DONTPEGTOP)
+					else if (slopeskew == 1)
 					{
 						// Skewed by top
 						wallVerts[0].t = (*rover->topheight - *rover->bottomheight) * grTex->scaleY;
