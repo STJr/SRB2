@@ -33,7 +33,9 @@
 */
 fixed_t FixedMul(fixed_t a, fixed_t b)
 {
-	return (fixed_t)((((INT64)a * b) ) / FRACUNIT);
+	// Need to cast to unsigned before shifting to avoid undefined behaviour
+	// for negative integers
+	return (fixed_t)(((UINT64)((INT64)a * b)) >> FRACBITS);
 }
 
 #endif //__USE_C_FIXEDMUL__
