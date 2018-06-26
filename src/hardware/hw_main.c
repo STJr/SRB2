@@ -2125,8 +2125,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
         ///     to allow fun plane intersecting in OGL? But then people would abuse that and make software look bad. :C
 		highcut = gr_frontsector->ceilingheight < gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
 		lowcut = gr_frontsector->floorheight > gr_backsector->floorheight ? gr_frontsector->floorheight : gr_backsector->floorheight;
-		
-	
+
+
 		if (gr_backsector->ffloors)
 		{
 			for (rover = gr_backsector->ffloors; rover; rover = rover->next)
@@ -2157,7 +2157,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
-				
+
 				wallVerts[3].y = FIXED_TO_FLOAT(h);
 				wallVerts[2].y = FIXED_TO_FLOAT(hS);
 				wallVerts[0].y = FIXED_TO_FLOAT(l);
@@ -2169,7 +2169,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					h = highcut;
 				if (l < lowcut)
 					l = lowcut;
-						
+
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
@@ -2188,16 +2188,16 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #ifdef ESLOPE // P.S. this is better-organized than the old version
 					fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
 					grTex = HWR_GetTexture(texnum);
-					
-					// 26/6/18: Lat': Make FOF account for slope skew		
-					
+
+					// 26/6/18: Lat': Make FOF account for slope skew
+
 					if (newline)	// transfer line skewing:
 					{
 						if ((newline->flags & ML_DONTPEGTOP) && (newline->flags & ML_DONTPEGBOTTOM))	// skew by bottom
 							slopeskew = 2;
 						else if (newline->flags & ML_DONTPEGTOP)	// skew by top
 							slopeskew = 1;
-					}		
+					}
 					else			// normal skewing?
 					{
 						if ((rover->master->flags & ML_DONTPEGTOP) && (gr_linedef->flags & ML_DONTPEGBOTTOM))	// skew by bottom
@@ -2205,7 +2205,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 						else if ((rover->master->flags & ML_DONTPEGTOP))	// skew by top
 							slopeskew = 1;
 					}
-					
+
 					if 	(slopeskew == 0)
 					{
 						// Unskewed
