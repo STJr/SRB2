@@ -3204,7 +3204,7 @@ void G_LoadGameSettings(void)
 	// defaults
 	spstage_start = 1;
 	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 57; // 7 special stages in vanilla SRB2
+	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
 
 	// initialize free sfx slots for skin sounds
