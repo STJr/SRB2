@@ -11686,7 +11686,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FHZICE2
 		4029,           // doomednum
-		S_FHZICE1,      // spawnstate
+		S_FHZICE2,      // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
