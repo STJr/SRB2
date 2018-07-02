@@ -3021,7 +3021,6 @@ static void G_DoCompleted(void)
 
 	if ((gottoken = (gametype == GT_COOP && token)))
 	{
-		INT16 i;
 		token--;
 
 		for (i = 0; i < 7; i++)

@@ -306,7 +306,6 @@ void P_GiveEmerald(boolean spawnObj)
 	if (spawnObj && playeringame[consoleplayer])
 	{
 		// The Chaos Emerald begins to orbit us!
-		UINT8 em = P_GetNextEmerald();
 		// Only give it to ONE person!
 		mobj_t *emmo = P_SpawnMobjFromMobj(players[consoleplayer].mo, 0, 0, players[consoleplayer].mo->height, MT_GOTEMERALD);
 		P_SetTarget(&emmo->target, players[consoleplayer].mo);
