@@ -77,7 +77,9 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	lua_settop(gL, 0); // clear stack
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
 	{
