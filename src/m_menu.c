@@ -6543,7 +6543,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (choice < 32 || choice > 127 || itemOn != 0)
 				break;
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[l] =(char)choice;
