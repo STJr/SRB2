@@ -117,6 +117,7 @@ static loadfunc_t hwdFuncTable[] = {
 #ifdef SHUFFLE
 	{"PostImgRedraw@4",     &hwdriver.pfnPostImgRedraw},
 #endif
+	{"FlushScreenTextures@0",&hwdriver.pfnFlushScreenTextures},
 	{"StartScreenWipe@0",   &hwdriver.pfnStartScreenWipe},
 	{"EndScreenWipe@0",     &hwdriver.pfnEndScreenWipe},
 	{"DoScreenWipe@4",      &hwdriver.pfnDoScreenWipe},
@@ -147,6 +148,7 @@ static loadfunc_t hwdFuncTable[] = {
 #ifdef SHUFFLE
 	{"PostImgRedraw",       &hwdriver.pfnPostImgRedraw},
 #endif
+	{"FlushScreenTextures"},&hwdriver.pfnFlushScreenTextures},
 	{"StartScreenWipe",     &hwdriver.pfnStartScreenWipe},
 	{"EndScreenWipe",       &hwdriver.pfnEndScreenWipe},
 	{"DoScreenWipe",        &hwdriver.pfnDoScreenWipe},
