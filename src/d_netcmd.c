@@ -2656,10 +2656,12 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 #define BASESALT "basepasswordstorage"
 static UINT8 adminpassmd5[16];
+static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
+	adminpasswordset = true;
 }
 
 // Remote Administration
@@ -2727,6 +2729,12 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 	UINT8 sentmd5[16], finalmd5[16];
 
 	READMEM(*cp, sentmd5, 16);
+
+	if (!adminpasswordset)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
 
 	if (client)
 		return;
@@ -3951,7 +3959,7 @@ static void Command_RestartAudio_f(void)
 	I_ShutdownSound();
 	I_StartupSound();
 	I_InitMusic();
-	
+
 // These must be called or no sound and music until manually set.
 
 	I_SetSfxVolume(cv_soundvolume.value);
@@ -3959,7 +3967,7 @@ static void Command_RestartAudio_f(void)
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
-	
+
 }
 
 /** Quits a game and returns to the title screen.
