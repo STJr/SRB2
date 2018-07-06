@@ -68,6 +68,10 @@
  #endif
 #endif
 
+#ifndef errno
+#include "errno.h"
+#endif
+
 #define NUMVERTEXNORMALS 162
 float avertexnormals[NUMVERTEXNORMALS][3] = {
 {-0.525731f, 0.000000f, 0.850651f},
@@ -804,7 +808,7 @@ void HWR_InitMD2(void)
 
 	if (!f)
 	{
-		CONS_Printf("%s", M_GetText("Error while loading md2.dat\n"));
+		CONS_Printf("%s %s\n", M_GetText("Error while loading md2.dat:"), strerror(errno));
 		nomd2s = true;
 		return;
 	}
