@@ -56,7 +56,9 @@ typedef off_t off64_t;
 #endif
 #endif
 
-#if defined (_WIN32)
+#if defined(__MINGW32__) &&(__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3)
+#define PRIdS "u"
+#elif defined (_WIN32) 
 #define PRIdS "Iu"
 #elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
 #define PRIdS "u"
