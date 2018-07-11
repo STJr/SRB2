@@ -3941,7 +3941,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 		angle_t shadowdir;
 
 		// Set direction
-		if (splitscreen && stplyr != &players[displayplayer])
+		if (splitscreen && stplyr == &players[secondarydisplayplayer])
 			shadowdir = localangle2 + FixedAngle(cv_cam2_rotate.value);
 		else
 			shadowdir = localangle + FixedAngle(cv_cam_rotate.value);
@@ -5302,7 +5302,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	}
 
 	heightsec = thing->subsector->sector->heightsec;
-	phs = players[displayplayer].mo->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
 
 	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
 	{
