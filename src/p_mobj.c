@@ -6410,9 +6410,9 @@ void P_RunShields(void)
 	for (i = 0; i < numshields; i++)
 	{
 		P_ShieldLook(shields[i], shields[i]->threshold);
-		P_SetTarget(&shields[i], NULL);
+		//P_SetTarget(&shields[i], NULL);
 	}
-	numshields = 0;
+	//numshields = 0;
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -6461,7 +6461,7 @@ void P_RunOverlays(void)
 
 		// grab next in chain, then unset the chain target
 		next = mo->hnext;
-		P_SetTarget(&mo->hnext, NULL);
+		//P_SetTarget(&mo->hnext, NULL);
 
 		if (!mo->target)
 			continue;
@@ -6520,7 +6520,7 @@ void P_RunOverlays(void)
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 	}
-	P_SetTarget(&overlaycap, NULL);
+	//P_SetTarget(&overlaycap, NULL);
 }
 
 // Called only when MT_OVERLAY thinks.
@@ -6555,6 +6555,27 @@ static void P_RemoveOverlay(mobj_t *thing)
 			P_SetTarget(&thing->hnext, NULL);
 			return;
 		}
+}
+
+void P_ClearShieldsAndOverlays(void)
+{
+	INT32 i;
+    mobj_t *mo, *next = NULL;
+
+    // clear overlay list
+    for (mo = overlaycap; mo; mo = next)
+    {
+        // grab next in chain, then unset the chain target
+        next = mo->hnext;
+        P_SetTarget(&mo->hnext, NULL);
+    }
+    P_SetTarget(&overlaycap, NULL);
+
+	// clear shields list
+	for (i = 0; i < numshields; i++)
+		P_SetTarget(&shields[i], NULL);
+
+    numshields = 0;
 }
 
 void A_BossDeath(mobj_t *mo);

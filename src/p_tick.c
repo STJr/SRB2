@@ -618,9 +618,12 @@ void P_Ticker(boolean run)
 
 	if (runemeraldmanager)
 		P_EmeraldManager(); // Power stone mode
-
+	
 	if (run)
+	{
+		P_ClearShieldsAndOverlays();
 		P_RunThinkers();
+	}
 	else
 		P_RunPlayerThinkers();
 
