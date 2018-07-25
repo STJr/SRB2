@@ -746,6 +746,7 @@ void P_PreTicker(INT32 frames)
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
 			}
 
+		P_ClearShieldsAndOverlays();
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
