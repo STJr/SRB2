@@ -73,13 +73,21 @@ extern RGBA_t *pMasterPalette;
 #define V_CHARCOLORSHIFT     12
 #define V_CHARCOLORMASK      0x0000F000
 // for simplicity's sake, shortcuts to specific colors
-#define V_PURPLEMAP          0x00001000
+#define V_MAGENTAMAP         0x00001000
 #define V_YELLOWMAP          0x00002000
 #define V_GREENMAP           0x00003000
 #define V_BLUEMAP            0x00004000
 #define V_REDMAP             0x00005000
 #define V_GRAYMAP            0x00006000
 #define V_ORANGEMAP          0x00007000
+#define V_SKYMAP             0x00008000
+#define V_PURPLEMAP          0x00009000
+#define V_AQUAMAP            0x0000A000
+#define V_PERIDOTMAP         0x0000B000
+#define V_AZUREMAP           0x0000C000
+#define V_BROWNMAP           0x0000D000
+#define V_ROSYMAP            0x0000E000
+#define V_INVERTMAP          0x0000F000
 
 // use bits 17-20 for alpha transparency
 #define V_ALPHASHIFT         16
@@ -112,8 +120,8 @@ extern RGBA_t *pMasterPalette;
 #define V_WRAPX              0x10000000 // Don't clamp texture on X (for HW mode)
 #define V_WRAPY              0x20000000 // Don't clamp texture on Y (for HW mode)
 
-#define V_NOSCALESTART       0x40000000  // don't scale x, y, start coords
-#define V_SPLITSCREEN        0x80000000
+#define V_NOSCALESTART       0x40000000 // don't scale x, y, start coords
+#define V_PERPLAYER          0x80000000 // automatically adjust coordinates/scaling for splitscreen mode
 
 // defines for old functions
 #define V_DrawPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s|V_NOSCALESTART|V_NOSCALEPATCH, p, NULL)
@@ -147,7 +155,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 
 // fade down the screen buffer before drawing the menu over
-void V_DrawFadeScreen(void);
+void V_DrawFadeScreen(UINT16 color, UINT8 strength);
 
 void V_DrawFadeConsBack(INT32 plines);
 

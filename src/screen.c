@@ -414,7 +414,7 @@ void SCR_DisplayTicRate(void)
 	tic_t ontic = I_GetTime();
 	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
-	INT32 offs = (cv_debug ? 8 : 0);
+	const INT32 h = vid.height-(8*vid.dupy);
 
 	for (i = lasttic + 1; i < NEWTICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % NEWTICRATE] = false;
@@ -428,9 +428,9 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= NEWTICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == NEWTICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-((24+(6*offs))*vid.dupx), vid.height-((16-offs)*vid.dupy),
-		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-(40*vid.dupx), vid.height-(8*vid.dupy),
+	V_DrawString(vid.width-(72*vid.dupx), h,
+		V_YELLOWMAP|V_NOSCALESTART, "FPS:");
+	V_DrawString(vid.width-(40*vid.dupx), h,
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, NEWTICRATE));
 
 	lasttic = ontic;
@@ -440,6 +440,18 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
+	INT32 basey = BASEVIDHEIGHT;
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (splitscreen)
+			basey -= 8;
+		else if (((maptol & TOL_NIGHTS) && (modeattacking == ATTACKING_NIGHTS))
+		|| (cv_powerupdisplay.value == 2)
+		|| (cv_powerupdisplay.value == 1 && ((stplyr == &players[displayplayer] && !camera.chase)
+		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))
+			basey -= 16;
+	}
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
@@ -455,9 +467,8 @@ void SCR_ClosedCaptions(void)
 		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
 			continue;
 
-		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
-		y = vid.height-((i + 2)*10*vid.dupy);
-		dot = ' ';
+		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
+		y = basey-((i + 2)*10);
 
 		if (closedcaptions[i].b)
 			y -= (closedcaptions[i].b--)*vid.dupy;
@@ -469,8 +480,10 @@ void SCR_ClosedCaptions(void)
 			dot = '\x19';
 		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
 			dot = '\x1E';
+		else
+			dot = ' ';
 
-		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }

@@ -194,7 +194,6 @@ typedef enum
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
 	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
-	MF2_MACEROTATE     = 1<<30, // Thinker calls P_MaceRotate around tracer
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -389,6 +388,7 @@ typedef struct precipmobj_s
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears

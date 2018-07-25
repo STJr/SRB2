@@ -281,6 +281,8 @@ mobj_t *P_GetClosestAxis(mobj_t *source);
 
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover);
 
+void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot);
+
 void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 #define PAL_WHITE    1
 #define PAL_MIXUP    2

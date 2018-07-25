@@ -31,6 +31,7 @@
 #include "p_polyobj.h"
 #include "p_slopes.h"
 #include "hu_stuff.h"
+#include "v_video.h" // V_AUTOFADEOUT|V_ALLOWLOWERCASE
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
@@ -3815,9 +3816,9 @@ DoneSection2:
 					if (!P_IsFlagAtBase(MT_REDFLAG))
 						break;
 
-					HU_SetCEchoFlags(0);
+					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s\\captured the blue flag.\\\\\\\\"), player_names[player-players]));
+					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sBLUE FLAG%s.\\\\\\\\"), "\x85", player_names[player-players], "\x80", "\x84", "\x80"));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
@@ -3848,9 +3849,9 @@ DoneSection2:
 					if (!P_IsFlagAtBase(MT_BLUEFLAG))
 						break;
 
-					HU_SetCEchoFlags(0);
+					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s\\captured the red flag.\\\\\\\\"), player_names[player-players]));
+					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sRED FLAG%s.\\\\\\\\"), "\x84", player_names[player-players], "\x80", "\x85", "\x80"));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
@@ -5526,6 +5527,30 @@ void P_InitSpecials(void)
 	P_InitTagLists();   // Create xref tables for tags
 }
 
+static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+{
+	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
+	{
+		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floor_xoffs += xoffs;
+		sector->floor_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_flr_xoffs = sector->floor_xoffs;
+		sector->spawn_flr_yoffs = sector->floor_yoffs;
+	}
+
+	if (!(master->flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
+	{
+		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceiling_xoffs += xoffs;
+		sector->ceiling_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
+		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
+	}
+
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -5729,27 +5754,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						yoffs = lines[i].v1->y;
 					}
 
-					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+					//If no tag is given, apply to front sector
+					if (lines[i].tag == 0)
+						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
+					else
 					{
-						if (!(lines[i].flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
-						{
-							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = flatangle;
-							sectors[s].floor_xoffs += xoffs;
-							sectors[s].floor_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
-							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
-						}
-
-						if (!(lines[i].flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
-						{
-							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
-							sectors[s].ceiling_xoffs += xoffs;
-							sectors[s].ceiling_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
-							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
-						}
+						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0;)
+							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
 					}
 				}
 				else // Otherwise, print a helpful warning. Can I do no less?
@@ -6688,6 +6699,7 @@ void T_Scroll(scroll_t *s)
 		line_t *line;
 		size_t i;
 		INT32 sect;
+		ffloor_t *rover;
 
 		case sc_side: // scroll wall texture
 			side = sides + s->affectee;
@@ -6728,6 +6740,19 @@ void T_Scroll(scroll_t *s)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
+
+					// Find the FOF corresponding to the control linedef
+					for (rover = psec->ffloors; rover; rover = rover->next)
+					{
+						if (rover->master == sec->lines[i])
+							break;
+					}
+
+					if (!rover) // This should be impossible, but don't complain if it is the case somehow
+						continue;
+
+					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
@@ -6791,6 +6816,19 @@ void T_Scroll(scroll_t *s)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
+
+					// Find the FOF corresponding to the control linedef
+					for (rover = psec->ffloors; rover; rover = rover->next)
+					{
+						if (rover->master == sec->lines[i])
+							break;
+					}
+
+					if (!rover) // This should be impossible, but don't complain if it is the case somehow
+						continue;
+
+					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{

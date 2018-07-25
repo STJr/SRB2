@@ -20,6 +20,7 @@
 #include "i_video.h" // rendermode
 #include "p_local.h" // camera_t
 #include "screen.h" // screen width/height
+#include "m_random.h" // m_random
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -63,12 +64,14 @@ static const char *const hud_disable_options[] = {
 
 enum hudinfo {
 	hudinfo_x = 0,
-	hudinfo_y
+	hudinfo_y,
+	hudinfo_f
 };
 
 static const char *const hudinfo_opt[] = {
 	"x",
 	"y",
+	"f",
 	NULL};
 
 enum patch {
@@ -198,6 +201,9 @@ static int hudinfo_get(lua_State *L)
 	case hudinfo_y:
 		lua_pushinteger(L, info->y);
 		break;
+	case hudinfo_f:
+		lua_pushinteger(L, info->f);
+		break;
 	}
 	return 1;
 }
@@ -215,6 +221,9 @@ static int hudinfo_set(lua_State *L)
 		break;
 	case hudinfo_y:
 		info->y = (INT32)luaL_checkinteger(L, 3);
+		break;
+	case hudinfo_f:
+		info->f = (INT32)luaL_checkinteger(L, 3);
 		break;
 	}
 	return 0;
@@ -679,6 +688,30 @@ static int libd_getColormap(lua_State *L)
 	return 1;
 }
 
+static int libd_fadeScreen(lua_State *L)
+{
+	UINT16 color = luaL_checkinteger(L, 1);
+	UINT8 strength = luaL_checkinteger(L, 2);
+	const UINT8 maxstrength = ((color & 0xFF00) ? 32 : 10);
+
+	HUDONLY
+
+	if (!strength)
+		return 0;
+
+	if (strength > maxstrength)
+		return luaL_error(L, "%s fade strength %d out of range (0 - %d)", ((color & 0xFF00) ? "COLORMAP" : "TRANSMAP"), strength, maxstrength);
+
+	if (strength == maxstrength) // Allow as a shortcut for drawfill...
+	{
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, ((color & 0xFF00) ? 31 : color));
+		return 0;
+	}
+
+	V_DrawFadeScreen(color, strength);
+	return 0;
+}
+
 static int libd_width(lua_State *L)
 {
 	HUDONLY
@@ -720,19 +753,92 @@ static int libd_renderer(lua_State *L)
 	return 1;
 }
 
+// M_RANDOM
+//////////////
+
+static int libd_RandomFixed(lua_State *L)
+{
+	HUDONLY
+	lua_pushfixed(L, M_RandomFixed());
+	return 1;
+}
+
+static int libd_RandomByte(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, M_RandomByte());
+	return 1;
+}
+
+static int libd_RandomKey(lua_State *L)
+{
+	INT32 a = (INT32)luaL_checkinteger(L, 1);
+
+	HUDONLY
+	if (a > 65536)
+		LUA_UsageWarning(L, "v.RandomKey: range > 65536 is undefined behavior");
+	lua_pushinteger(L, M_RandomKey(a));
+	return 1;
+}
+
+static int libd_RandomRange(lua_State *L)
+{
+	INT32 a = (INT32)luaL_checkinteger(L, 1);
+	INT32 b = (INT32)luaL_checkinteger(L, 2);
+
+	HUDONLY
+	if (b < a) {
+		INT32 c = a;
+		a = b;
+		b = c;
+	}
+	if ((b-a+1) > 65536)
+		LUA_UsageWarning(L, "v.RandomRange: range > 65536 is undefined behavior");
+	lua_pushinteger(L, M_RandomRange(a, b));
+	return 1;
+}
+
+// Macros.
+static int libd_SignedRandom(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, M_SignedRandom());
+	return 1;
+}
+
+static int libd_RandomChance(lua_State *L)
+{
+	fixed_t p = luaL_checkfixed(L, 1);
+	HUDONLY
+	lua_pushboolean(L, M_RandomChance(p));
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
+	// cache
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
+	{"getColormap", libd_getColormap},
+	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
+	{"fadeScreen", libd_fadeScreen},
+	// misc
 	{"stringWidth", libd_stringWidth},
-	{"getColormap", libd_getColormap},
+	// m_random
+	{"RandomFixed",libd_RandomFixed},
+	{"RandomByte",libd_RandomByte},
+	{"RandomKey",libd_RandomKey},
+	{"RandomRange",libd_RandomRange},
+	{"SignedRandom",libd_SignedRandom}, // MACRO
+	{"RandomChance",libd_RandomChance}, // MACRO
+	// properties
 	{"width", libd_width},
 	{"height", libd_height},
 	{"dupx", libd_dupx},
