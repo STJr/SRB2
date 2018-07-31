@@ -460,7 +460,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * music_volume / 31;
+		*p = ((INT32)*p) * music_volume*2 / 42;
 }
 #endif
 
