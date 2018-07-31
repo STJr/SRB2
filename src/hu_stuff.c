@@ -1860,7 +1860,7 @@ void HU_Drawer(void)
 		// count down the scroll timer. 
 		if (chat_scrolltime > 0)
 			chat_scrolltime--;
-		if (!cv_consolechat.value && vid.width >= 640)	// don't even bother with 200p
+		if (!cv_consolechat.value && vid.width > 320)	// don't even bother with 200p
 			HU_DrawChat();
 		else
 			HU_DrawChat_Old();	// why the fuck.........................
