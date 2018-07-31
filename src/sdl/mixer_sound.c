@@ -66,6 +66,7 @@ static boolean midimode;
 static Mix_Music *music;
 static UINT8 music_volume, midi_volume, sfx_volume;
 static float loop_point;
+static boolean songpaused;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -102,6 +103,7 @@ void I_StartupSound(void)
 	}
 
 	sound_started = true;
+	songpaused = false;
 	Mix_AllocateChannels(256);
 }
 
@@ -450,7 +452,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 	(void)udata;
 
 	// no gme? no music.
-	if (!gme || gme_track_ended(gme))
+	if (!gme || gme_track_ended(gme) || songpaused)
 		return;
 
 	// play gme into stream
@@ -476,12 +478,14 @@ void I_PauseSong(INT32 handle)
 {
 	(void)handle;
 	Mix_PauseMusic();
+	songpaused = true;
 }
 
 void I_ResumeSong(INT32 handle)
 {
 	(void)handle;
 	Mix_ResumeMusic();
+	songpaused = false;
 }
 
 //
