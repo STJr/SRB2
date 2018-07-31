@@ -72,6 +72,18 @@ extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
 
+/*typedef struct
+{
+	const char *msg;				// The final message we display on the HUD
+	tic_t time;				// how much time do we still keep the message around for in the mini chat?
+	boolean hasmention;		// make the message yellow if it has a mention because that's pretty cool.	
+} chatmsg_t;*/
+
+#define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
+
+// some functions
+void HU_AddChatText(const char *text);
+
 // set true when entering a chat message
 extern boolean chat_on;
 
@@ -90,12 +102,12 @@ void HU_LoadGraphics(void);
 FUNCMATH void HU_Start(void);
 
 boolean HU_Responder(event_t *ev);
-
 void HU_Ticker(void);
 void HU_Drawer(void);
 char HU_dequeueChatChar(void);
 void HU_Erase(void);
 void HU_clearChatChars(void);
+void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext);	// Lat': Ping drawer for scoreboard.
 void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer);
 void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);

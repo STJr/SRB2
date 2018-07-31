@@ -181,6 +181,7 @@ void D_PostEvent_end(void) {};
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
+boolean capslock = 0;	// you'd never guess what this does.
 //
 // D_ModifierKeyResponder
 // Sets global shift/ctrl/alt variables, never actually eats events
@@ -730,6 +731,11 @@ void D_StartTitle(void)
 	CON_ToggleOff();
 
 	// Reset the palette
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_SetPaletteColor(0);
+	else
+#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 }
@@ -1063,7 +1069,7 @@ void D_SRB2Main(void)
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
+	if (!(M_CheckParm("-connect")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1219,15 +1225,7 @@ void D_SRB2Main(void)
 	R_Init();
 
 	// setting up sound
-	if (dedicated)
-	{
-		nosound = true;
-		nomidimusic = nodigimusic = true;
-	}
-	else
-	{
-		CONS_Printf("S_Init(): Setting up sound.\n");
-	}
+	CONS_Printf("S_Init(): Setting up sound.\n");
 	if (M_CheckParm("-nosound"))
 		nosound = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
@@ -1326,7 +1324,7 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
-	if (autostart || netgame)
+	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
 	{
 		gameaction = ga_nothing;
 
@@ -1364,7 +1362,8 @@ void D_SRB2Main(void)
 			}
 		}
 
-		if (server && !M_CheckParm("+map"))
+		if (server && !M_CheckParm("+map") && !M_CheckParm("+connect")
+			&& !M_CheckParm("-connect"))
 		{
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)

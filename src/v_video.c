@@ -834,6 +834,130 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		memset(dest, (UINT8)(c&255), w * vid.bpp);
 }
 
+// THANK YOU MPC!!!
+
+void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
+{
+	UINT8 *dest;
+	const UINT8 *deststop;
+    INT32 u, v;
+	UINT32 alphalevel = 0;
+
+	if (rendermode == render_none)
+		return;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor;
+		switch (cons_backcolor.value)
+		{
+			case 0:		hwcolor = 0xffffff00;	break; // White
+			case 1:		hwcolor = 0x80808000;	break; // Gray
+			case 2:		hwcolor = 0x40201000;	break; // Brown
+			case 3:		hwcolor = 0xff000000;	break; // Red
+			case 4:		hwcolor = 0xff800000;	break; // Orange
+			case 5:		hwcolor = 0x80800000;	break; // Yellow
+			case 6:		hwcolor = 0x00800000;	break; // Green
+			case 7:		hwcolor = 0x0000ff00;	break; // Blue
+			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
+		}
+		HWR_DrawConsoleFill(x, y, w, h, hwcolor, c);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
+		return;
+	}
+#endif
+
+	if (!(c & V_NOSCALESTART))
+	{
+		INT32 dupx = vid.dupx, dupy = vid.dupy;
+
+		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
+		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
+			memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
+			return;
+		}
+
+		x *= dupx;
+		y *= dupy;
+		w *= dupx;
+		h *= dupy;
+
+		// Center it if necessary
+		if (vid.width != BASEVIDWIDTH * dupx)
+		{
+			// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+			// so center this imaginary screen
+			if (c & V_SNAPTORIGHT)
+				x += (vid.width - (BASEVIDWIDTH * dupx));
+			else if (!(c & V_SNAPTOLEFT))
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+		}
+		if (vid.height != BASEVIDHEIGHT * dupy)
+		{
+			// same thing here
+			if (c & V_SNAPTOBOTTOM)
+				y += (vid.height - (BASEVIDHEIGHT * dupy));
+			else if (!(c & V_SNAPTOTOP))
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+		}
+	}
+
+	if (x >= vid.width || y >= vid.height)
+		return; // off the screen
+	if (x < 0) {
+		w += x;
+		x = 0;
+	}
+	if (y < 0) {
+		h += y;
+		y = 0;
+	}
+
+	if (w <= 0 || h <= 0)
+		return; // zero width/height wouldn't draw anything
+	if (x + w > vid.width)
+		w = vid.width-x;
+	if (y + h > vid.height)
+		h = vid.height-y;
+
+	dest = screens[0] + y*vid.width + x;
+
+	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	{
+		if (alphalevel == 13)
+			alphalevel = hudminusalpha[cv_translucenthud.value];
+		else if (alphalevel == 14)
+			alphalevel = 10 - cv_translucenthud.value;
+		else if (alphalevel == 15)
+			alphalevel = hudplusalpha[cv_translucenthud.value];
+
+		if (alphalevel >= 10)
+			return; // invis
+	}
+
+	c &= 255;
+
+	if (!alphalevel) {
+        for (v = 0; v < h; v++, dest += vid.width) {
+            for (u = 0; u < w; u++) {
+                dest[u] = consolebgmap[dest[u]];
+            }
+        }
+	} else {        // mpc 12-04-2018
+        const UINT8 *fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+        #define clip(x,y) (x>y) ? y : x
+        w = clip(w,vid.width);
+        h = clip(h,vid.height);
+        for (v = 0; v < h; v++, dest += vid.width) {
+            for (u = 0; u < w; u++) {
+                dest[u] = fadetable[consolebgmap[dest[u]]];
+            }
+        }
+	}
+}
+
 //
 // Fills a box of pixels using a flat texture as a pattern, scaled to screen size.
 //
@@ -1052,6 +1176,32 @@ void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
 		V_DrawMappedPatch(x, y, flags, hu_font[c], colormap);
 	else
 		V_DrawScaledPatch(x, y, flags, hu_font[c]);
+}
+
+// Writes a single character for the chat. (draw WHITE if bit 7 set)
+// Essentially the same as the above but it's small or big depending on what resolution you've chosen to huge..
+//
+void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap)
+{
+	INT32 w, flags;
+	//const UINT8 *colormap = V_GetStringColormap(c);
+
+	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
+	c &= 0x7f;
+	if (lowercaseallowed)
+		c -= HU_FONTSTART;
+	else
+		c = toupper(c) - HU_FONTSTART;
+	if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		return;
+
+	w = (vid.width < 640 ) ? (SHORT(hu_font[c]->width)/2) : (SHORT(hu_font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
+	if (x + w > vid.width)
+		return;
+	
+	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font[c], colormap);
+
+	
 }
 
 // Precompile a wordwrapped string to any given width.

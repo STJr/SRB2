@@ -52,6 +52,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
 void HWR_PrepLevelCache(size_t pnumtextures);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32 options);	// Lat: separate flags from color since color needs to be an uint to work right.
 void HWR_DrawPic(INT32 x,INT32 y,lumpnum_t lumpnum);
 
 void HWR_AddCommands(void);
@@ -70,6 +71,7 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so MD2's can use them
 UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane);
+UINT32 HWR_NoColormapLighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane);	// do it like cv_grfog off for non colormap stuff
 FUNCMATH UINT8 LightLevelToLum(INT32 l);
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
