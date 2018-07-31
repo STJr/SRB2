@@ -8829,7 +8829,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				break;
 			S_StartSound(NULL,sfx_menu1); // Tails
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				setupm_name[l] = (char)choice;
 				setupm_name[l+1] = 0;
