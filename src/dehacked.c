@@ -8286,33 +8286,6 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
-	} else if (fastcmp(word,"consoleplayer")) {
-		if (!playeringame[consoleplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"displayplayer")) {
-		if (!playeringame[displayplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[displayplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"secondarydisplayplayer")) {
-		if (!playeringame[displayplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
-		return 1;	
-	} else if (fastcmp(word, "timelimitintics")) {
-		lua_pushinteger(L, timelimitintics);
-		return 1;
-	} else if (fastcmp(word,"hidetime")) {
-		lua_pushinteger(L, hidetime);
-		return 1;	
-	} else if (fastcmp(word, "pointlimit")) {
-		lua_pushinteger(L, cv_pointlimit.value);
-		return 1;
-	} else if (fastcmp(word,"allowjoin")) {
-		lua_pushboolean(L, cv_allownewplayer.value);
-		return 1;
 	}
 	return 0;
 }
