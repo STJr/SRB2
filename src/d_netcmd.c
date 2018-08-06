@@ -2730,14 +2730,14 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 	READMEM(*cp, sentmd5, 16);
 
+	if (client)
+		return;
+
 	if (!adminpasswordset)
 	{
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
 		return;
 	}
-
-	if (client)
-		return;
 
 	// Do the final pass to compare with the sent md5
 	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", playernum), &finalmd5);
