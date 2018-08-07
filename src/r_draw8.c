@@ -297,7 +297,7 @@ void R_DrawTranslucentColumn_8(void)
 				// Re-map color indices from wall texture column
 				// using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				*dest = colormap[*(transmap + (source[frac>>FRACBITS]<<8) + (*dest))];
+				*dest = *(transmap + (colormap[source[frac>>FRACBITS]]<<8) + (*dest));
 				dest += vid.width;
 				if ((frac += fracstep) >= heightmask)
 					frac -= heightmask;
@@ -308,15 +308,15 @@ void R_DrawTranslucentColumn_8(void)
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				*dest = colormap[*(transmap + ((source[(frac>>FRACBITS)&heightmask]<<8)) + (*dest))];
+				*dest = *(transmap + (colormap[source[(frac>>FRACBITS)&heightmask]]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
-				*dest = colormap[*(transmap + ((source[(frac>>FRACBITS)&heightmask]<<8)) + (*dest))];
+				*dest = *(transmap + (colormap[source[(frac>>FRACBITS)&heightmask]]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
-				*dest = colormap[*(transmap + ((source[(frac>>FRACBITS)&heightmask]<<8)) + (*dest))];
+				*dest = *(transmap + (colormap[source[(frac>>FRACBITS)&heightmask]]<<8) + (*dest));
 		}
 	}
 }
@@ -367,8 +367,7 @@ void R_DrawTranslatedTranslucentColumn_8(void)
 				//  using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
 
-				*dest = dc_colormap[*(dc_transmap
-					+ (dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]]<<8) + (*dest))];
+				*dest = *(dc_transmap + (dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]]<<8) + (*dest));
 
 				dest += vid.width;
 				if ((frac += fracstep) >= heightmask)
@@ -380,17 +379,15 @@ void R_DrawTranslatedTranslucentColumn_8(void)
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				*dest = dc_colormap[*(dc_transmap
-					+ (dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]]<<8) + (*dest))];
+				*dest = *(dc_transmap + (dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
-				*dest = dc_colormap[*(dc_transmap
-					+ (dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]]<<8) + (*dest))];
+				*dest = *(dc_transmap + (dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
-				*dest = dc_colormap[*(dc_transmap + (dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]] <<8) + (*dest))];
+				*dest = *(dc_transmap + (dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]]<<8) + (*dest));
 		}
 	}
 }
@@ -1220,35 +1217,35 @@ void R_DrawTranslucentSpan_8 (void)
 		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 		// have the uber complicated math to calculate it now, so that was a memory write we didn't
 		// need!
-		dest[0] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[0])];
+		dest[0] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[0]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[1] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[1])];
+		dest[1] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[1]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[2] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[2])];
+		dest[2] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[2]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[3] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[3])];
+		dest[3] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[3]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[4] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[4])];
+		dest[4] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[4]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[5] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[5])];
+		dest[5] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[5]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[6] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[6])];
+		dest[6] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[6]);
 		xposition += xstep;
 		yposition += ystep;
 
-		dest[7] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + dest[7])];
+		dest[7] = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + dest[7]);
 		xposition += xstep;
 		yposition += ystep;
 
@@ -1257,7 +1254,7 @@ void R_DrawTranslucentSpan_8 (void)
 	}
 	while (count--)
 	{
-		*dest = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dest)];
+		*dest = *(ds_transmap + (colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]] << 8) + *dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
