@@ -2639,6 +2639,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL01, 2, 3, {A_FlickyFly},          4*FRACUNIT,       16*FRACUNIT, S_FLICKY_01_FLAP3}, // S_FLICKY_01_FLAP2
 	{SPR_FL01, 3, 3, {A_FlickyFly},          4*FRACUNIT,       16*FRACUNIT, S_FLICKY_01_FLAP1}, // S_FLICKY_01_FLAP3
 	{SPR_FL01, FF_ANIMATE|1, -1, {NULL}, 2, 3, S_NULL},                                         // S_FLICKY_01_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_01, 128*FRACUNIT, S_FLICKY_01_CENTER},        // S_FLICKY_01_CENTER
 
 	// Rabbit
 	{SPR_FL02, 0, 2, {A_FlickyCheck}, S_FLICKY_02_AIM,                0, S_FLICKY_02_OUT},  // S_FLICKY_02_OUT
@@ -2647,6 +2648,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL02, 2, 2, {A_FlickyCheck}, S_FLICKY_02_AIM, S_FLICKY_02_DOWN, S_FLICKY_02_UP},   // S_FLICKY_02_UP
 	{SPR_FL02, 3, 2, {A_FlickyCheck}, S_FLICKY_02_AIM,                0, S_FLICKY_02_DOWN}, // S_FLICKY_02_DOWN
 	{SPR_FL02, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_02_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_02, 128*FRACUNIT, S_FLICKY_02_CENTER},        // S_FLICKY_02_CENTER
 
 	// Chicken
 	{SPR_FL03, 0, 2, {A_FlickyCheck},   S_FLICKY_03_AIM, S_FLICKY_03_FLAP1, S_FLICKY_03_OUT},   // S_FLICKY_03_OUT
@@ -2656,6 +2658,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL03, 3, 2, {A_FlickyFlutter}, S_FLICKY_03_HOP,                 0, S_FLICKY_03_FLAP2}, // S_FLICKY_03_FLAP1
 	{SPR_FL03, 4, 2, {A_FlickyFlutter}, S_FLICKY_03_HOP,                 0, S_FLICKY_03_FLAP1}, // S_FLICKY_03_FLAP2
 	{SPR_FL03, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_03_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_03, 128*FRACUNIT, S_FLICKY_03_CENTER},        // S_FLICKY_03_CENTER
 
 	// Seal
 	{SPR_FL04, 0, 2, {A_FlickyCheck}, S_FLICKY_04_AIM,                 0, S_FLICKY_04_OUT},   // S_FLICKY_04_OUT
@@ -2668,6 +2671,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL04, 3, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_04_SWIM1, S_FLICKY_04_SWIM4}, // S_FLICKY_04_SWIM3
 	{SPR_FL04, 5, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_04_SWIM1, S_FLICKY_04_SWIM1}, // S_FLICKY_04_SWIM4
 	{SPR_FL04, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_04_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_04, 128*FRACUNIT, S_FLICKY_04_CENTER},        // S_FLICKY_04_CENTER
 
 	// Pig
 	{SPR_FL05, 0, 2, {A_FlickyCheck}, S_FLICKY_05_AIM,                0, S_FLICKY_05_OUT},  // S_FLICKY_05_OUT
@@ -2676,6 +2680,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL05, 2, 2, {A_FlickyCheck}, S_FLICKY_05_AIM, S_FLICKY_05_DOWN, S_FLICKY_05_UP},   // S_FLICKY_05_UP
 	{SPR_FL05, 3, 2, {A_FlickyCheck}, S_FLICKY_05_AIM,                0, S_FLICKY_05_DOWN}, // S_FLICKY_05_DOWN
 	{SPR_FL05, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_05_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_05, 128*FRACUNIT, S_FLICKY_05_CENTER},        // S_FLICKY_05_CENTER
 
 	// Chipmunk
 	{SPR_FL06, 0, 2, {A_FlickyCheck}, S_FLICKY_06_AIM,                0, S_FLICKY_06_OUT},  // S_FLICKY_06_OUT
@@ -2684,6 +2689,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL06, 2, 2, {A_FlickyCheck}, S_FLICKY_06_AIM, S_FLICKY_06_DOWN, S_FLICKY_06_UP},   // S_FLICKY_06_UP
 	{SPR_FL06, 3, 2, {A_FlickyCheck}, S_FLICKY_06_AIM,                0, S_FLICKY_06_DOWN}, // S_FLICKY_06_DOWN
 	{SPR_FL06, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_06_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_06, 128*FRACUNIT, S_FLICKY_06_CENTER},        // S_FLICKY_06_CENTER
 
 	// Penguin
 	{SPR_FL07, 0, 2, {A_FlickyCheck}, S_FLICKY_07_AIML,                 0, S_FLICKY_07_OUT},   // S_FLICKY_07_OUT
@@ -2699,6 +2705,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL07, 5, 4, {A_FlickyCoast},         FRACUNIT, S_FLICKY_07_SWIM1, S_FLICKY_07_SWIM3}, // S_FLICKY_07_SWIM2
 	{SPR_FL07, 6, 4, {A_FlickyCoast},       2*FRACUNIT, S_FLICKY_07_SWIM1, S_FLICKY_07_SWIM3}, // S_FLICKY_07_SWIM3
 	{SPR_FL07, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_07_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_07, 128*FRACUNIT, S_FLICKY_07_CENTER},        // S_FLICKY_07_CENTER
 
 	// Fish
 	{SPR_FL08, 0, 2, {A_FlickyCheck}, S_FLICKY_08_AIM,                 0, S_FLICKY_08_OUT},   // S_FLICKY_08_OUT
@@ -2713,6 +2720,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL08, 0, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_08_SWIM1, S_FLICKY_08_SWIM4}, // S_FLICKY_08_SWIM3
 	{SPR_FL08, 2, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_08_SWIM1, S_FLICKY_08_SWIM4}, // S_FLICKY_08_SWIM4
 	{SPR_FL08, FF_ANIMATE, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_08_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_08, 128*FRACUNIT, S_FLICKY_08_CENTER},        // S_FLICKY_08_CENTER
 
 	// Ram
 	{SPR_FL09, 0, 2, {A_FlickyCheck}, S_FLICKY_09_AIM,                0, S_FLICKY_09_OUT},  // S_FLICKY_09_OUT
@@ -2721,12 +2729,14 @@ state_t states[NUMSTATES] =
 	{SPR_FL09, 2, 2, {A_FlickyCheck}, S_FLICKY_09_AIM, S_FLICKY_09_DOWN, S_FLICKY_09_UP},   // S_FLICKY_09_UP
 	{SPR_FL09, 3, 2, {A_FlickyCheck}, S_FLICKY_09_AIM,                0, S_FLICKY_09_DOWN}, // S_FLICKY_09_DOWN
 	{SPR_FL09, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_09_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_09, 128*FRACUNIT, S_FLICKY_09_CENTER},        // S_FLICKY_09_CENTER
 
 	// Puffin
 	{SPR_FL10, 0, 2, {A_FlickyCheck}, S_FLICKY_10_FLAP1, S_FLICKY_10_FLAP1, S_FLICKY_10_OUT},   // S_FLICKY_10_OUT
 	{SPR_FL10, 1, 3, {A_FlickySoar},         4*FRACUNIT,       16*FRACUNIT, S_FLICKY_10_FLAP2}, // S_FLICKY_10_FLAP1
 	{SPR_FL10, 2, 3, {A_FlickySoar},         4*FRACUNIT,       16*FRACUNIT, S_FLICKY_10_FLAP1}, // S_FLICKY_10_FLAP2
 	{SPR_FL10, FF_ANIMATE|1, -1, {NULL}, 1, 3, S_NULL}, // S_FLICKY_10_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_10, 128*FRACUNIT, S_FLICKY_10_CENTER},        // S_FLICKY_10_CENTER
 
 	// Cow
 	{SPR_FL11, 0, 2, {A_FlickyCheck}, S_FLICKY_11_AIM,           0, S_FLICKY_11_OUT},  // S_FLICKY_11_OUT
@@ -2735,6 +2745,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL11, 2, 4, {A_FlickyHop},        FRACUNIT/2,  2*FRACUNIT, S_FLICKY_11_RUN3}, // S_FLICKY_11_RUN2
 	{SPR_FL11, 3, 4, {A_FlickyHop},        FRACUNIT/2,  2*FRACUNIT, S_FLICKY_11_AIM},  // S_FLICKY_11_RUN3
 	{SPR_FL11, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_11_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_11, 128*FRACUNIT, S_FLICKY_11_CENTER},        // S_FLICKY_11_CENTER
 
 	// Rat
 	{SPR_FL12, 0, 2, {A_FlickyCheck}, S_FLICKY_12_AIM,           0, S_FLICKY_12_OUT},  // S_FLICKY_12_OUT
@@ -2743,6 +2754,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL12, 2, 3, {A_FlickyHop},                 1, 12*FRACUNIT, S_FLICKY_12_RUN3}, // S_FLICKY_12_RUN2
 	{SPR_FL12, 3, 3, {A_FlickyHop},                 1, 12*FRACUNIT, S_FLICKY_12_AIM},  // S_FLICKY_12_RUN3
 	{SPR_FL12, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_12_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_12, 128*FRACUNIT, S_FLICKY_12_CENTER},        // S_FLICKY_12_CENTER
 
 	// Bear
 	{SPR_FL13, 0, 2, {A_FlickyCheck}, S_FLICKY_13_AIM,                0, S_FLICKY_13_OUT},  // S_FLICKY_13_OUT
@@ -2751,6 +2763,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL13, 2, 2, {A_FlickyCheck}, S_FLICKY_13_AIM, S_FLICKY_13_DOWN, S_FLICKY_13_UP},   // S_FLICKY_13_UP
 	{SPR_FL13, 3, 2, {A_FlickyCheck}, S_FLICKY_13_AIM,                0, S_FLICKY_13_DOWN}, // S_FLICKY_13_DOWN
 	{SPR_FL13, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_13_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_13, 128*FRACUNIT, S_FLICKY_13_CENTER},        // S_FLICKY_13_CENTER
 
 	// Dove
 	{SPR_FL14, 0, 2, {A_FlickyCheck}, S_FLICKY_14_FLAP1, S_FLICKY_14_FLAP1, S_FLICKY_14_OUT},   // S_FLICKY_14_OUT
@@ -2758,6 +2771,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL14, 2, 3, {A_FlickySoar},         4*FRACUNIT,       32*FRACUNIT, S_FLICKY_14_FLAP3}, // S_FLICKY_14_FLAP2
 	{SPR_FL14, 3, 3, {A_FlickySoar},         4*FRACUNIT,       32*FRACUNIT, S_FLICKY_14_FLAP1}, // S_FLICKY_14_FLAP3
 	{SPR_FL14, FF_ANIMATE|1, -1, {NULL}, 2, 3, S_NULL}, // S_FLICKY_14_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_14, 128*FRACUNIT, S_FLICKY_14_CENTER},        // S_FLICKY_14_CENTER
 
 	// Cat
 	{SPR_FL15, 0, 2, {A_FlickyCheck}, S_FLICKY_15_AIM,                0, S_FLICKY_15_OUT},  // S_FLICKY_15_OUT
@@ -2766,6 +2780,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL15, 2, 2, {A_FlickyCheck}, S_FLICKY_15_AIM, S_FLICKY_15_DOWN, S_FLICKY_15_UP},   // S_FLICKY_15_UP
 	{SPR_FL15, 3, 2, {A_FlickyCheck}, S_FLICKY_15_AIM,                0, S_FLICKY_15_DOWN}, // S_FLICKY_15_DOWN
 	{SPR_FL15, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_15_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_15, 128*FRACUNIT, S_FLICKY_15_CENTER},        // S_FLICKY_15_CENTER
 
 	// Canary
 	{SPR_FL16, 0, 2, {A_FlickyHeightCheck}, S_FLICKY_16_FLAP1,          0, S_FLICKY_16_OUT},   // S_FLICKY_16_OUT
@@ -2773,6 +2788,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL16, 2, 3, {A_SetObjectFlags},         MF_NOGRAVITY,          1, S_FLICKY_16_FLAP3}, // S_FLICKY_16_FLAP2
 	{SPR_FL16, 3, 3, {A_FlickyHeightCheck}, S_FLICKY_16_FLAP1,          0, S_FLICKY_16_FLAP3}, // S_FLICKY_16_FLAP3
 	{SPR_FL16, FF_ANIMATE|1, -1, {NULL}, 2, 3, S_NULL}, // S_FLICKY_16_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_FLICKY_16, 128*FRACUNIT, S_FLICKY_16_CENTER},        // S_FLICKY_16_CENTER
 
 	// Spider
 	{SPR_FS01, 0, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM,                      0, S_SECRETFLICKY_01_OUT},  // S_SECRETFLICKY_01_OUT
@@ -2781,6 +2797,7 @@ state_t states[NUMSTATES] =
 	{SPR_FS01, 2, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM, S_SECRETFLICKY_01_DOWN, S_SECRETFLICKY_01_UP},   // S_SECRETFLICKY_01_UP
 	{SPR_FS01, 3, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM,                      0, S_SECRETFLICKY_01_DOWN}, // S_SECRETFLICKY_01_DOWN
 	{SPR_FS01, FF_ANIMATE|1, -1, {NULL}, 2, 4, S_NULL}, // S_SECRETFLICKY_01_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_SECRETFLICKY_01, 128*FRACUNIT, S_SECRETFLICKY_01_CENTER},        // S_SECRETFLICKY_01_CENTER
 
 	// Bat
 	{SPR_FS02, 0, 2, {A_FlickyHeightCheck}, S_SECRETFLICKY_02_FLAP1, S_SECRETFLICKY_02_FLAP1, S_SECRETFLICKY_02_OUT},   // S_SECRETFLICKY_02_OUT
@@ -2788,6 +2805,7 @@ state_t states[NUMSTATES] =
 	{SPR_FS02, 2, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP3}, // S_SECRETFLICKY_02_FLAP2
 	{SPR_FS02, 3, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP1}, // S_SECRETFLICKY_02_FLAP3
 	{SPR_FS02, FF_ANIMATE|1, -1, {NULL}, 2, 2, S_NULL}, // S_SECRETFLICKY_02_STAND
+	{SPR_NULL, 0, 15, {A_FlickyCenter}, MT_SECRETFLICKY_02, 128*FRACUNIT, S_SECRETFLICKY_02_CENTER},        // S_SECRETFLICKY_02_CENTER
 
 	// Fan
 	{SPR_FANS, 0, 1, {A_FanBubbleSpawn}, 2048, 0, S_FAN2}, // S_FAN
@@ -13705,7 +13723,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	// Bluebird
 	{           // MT_FLICKY_01
-		570,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_01_STAND, // seestate
@@ -13731,8 +13749,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_01_CENTER
+		570,             // doomednum
+		S_FLICKY_01_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_02
-		571,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_02_STAND, // seestate
@@ -13758,8 +13803,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_02_CENTER
+		571,             // doomednum
+		S_FLICKY_02_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_03
-		572,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_03_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_03_STAND, // seestate
@@ -13785,8 +13857,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_03_CENTER
+		572,             // doomednum
+		S_FLICKY_03_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_04
-		573,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_04_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_04_STAND, // seestate
@@ -13812,8 +13911,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{           // MT_FLICKY_04_CENTER
+		573,             // doomednum
+		S_FLICKY_04_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_05
-		574,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_05_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_05_STAND, // seestate
@@ -13839,8 +13965,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_05_CENTER
+		574,             // doomednum
+		S_FLICKY_05_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_06
-		575,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_06_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_06_STAND, // seestate
@@ -13866,8 +14019,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_06_CENTER
+		575,             // doomednum
+		S_FLICKY_06_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_07
-		576,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_07_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_07_STAND, // seestate
@@ -13893,8 +14073,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{           // MT_FLICKY_07_CENTER
+		576,             // doomednum
+		S_FLICKY_07_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_08
-		577,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_08_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_08_STAND, // seestate
@@ -13920,8 +14127,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{           // MT_FLICKY_08_CENTER
+		577,             // doomednum
+		S_FLICKY_08_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_09
-		578,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_09_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_09_STAND, // seestate
@@ -13947,8 +14181,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_09_CENTER
+		578,             // doomednum
+		S_FLICKY_09_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_10
-		579,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_10_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_10_STAND, // seestate
@@ -13974,8 +14235,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_10_CENTER
+		579,             // doomednum
+		S_FLICKY_10_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_11
-		580,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_11_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_11_STAND, // seestate
@@ -14001,8 +14289,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_11_CENTER
+		580,             // doomednum
+		S_FLICKY_11_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_12
-		581,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_12_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_12_STAND, // seestate
@@ -14028,8 +14343,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_12_CENTER
+		581,             // doomednum
+		S_FLICKY_12_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_13
-		582,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_13_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_13_STAND, // seestate
@@ -14055,8 +14397,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_13_CENTER
+		582,             // doomednum
+		S_FLICKY_13_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_14
-		583,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_14_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_14_STAND, // seestate
@@ -14082,8 +14451,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_14_CENTER
+		583,             // doomednum
+		S_FLICKY_14_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_15
-		584,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_15_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_15_STAND, // seestate
@@ -14109,8 +14505,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_15_CENTER
+		584,             // doomednum
+		S_FLICKY_15_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_FLICKY_16
-		585,             // doomednum
+		-1,             // doomednum
 		S_FLICKY_16_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_FLICKY_16_STAND, // seestate
@@ -14136,8 +14559,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_FLICKY_16_CENTER
+		585,             // doomednum
+		S_FLICKY_16_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_SECRETFLICKY_01
-		586,             // doomednum
+		-1,             // doomednum
 		S_SECRETFLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_SECRETFLICKY_01_STAND, // seestate
@@ -14163,8 +14613,35 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLICKY_BUBBLE // raisestate
 	},
 
+	{           // MT_SECRETFLICKY_01_CENTER
+		586,             // doomednum
+		S_SECRETFLICKY_01_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
+	},
+
 	{           // MT_SECRETFLICKY_02
-		587,             // doomednum
+		-1,             // doomednum
 		S_SECRETFLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_SECRETFLICKY_02_STAND, // seestate
@@ -14188,6 +14665,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_NOCLIPTHING, // flags
 		S_FLICKY_BUBBLE // raisestate
+	},
+
+	{           // MT_SECRETFLICKY_02_CENTER
+		587,             // doomednum
+		S_SECRETFLICKY_02_CENTER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		8*FRACUNIT,     // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SCENERY|MF_RUNSPAWNFUNC, // flags
+		S_NULL // raisestate
 	},
 
 	{           // MT_SEED
