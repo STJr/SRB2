@@ -10884,14 +10884,13 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	if (actor->target && abs(chasez - actor->z) > targetdist)
 		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
 
-	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))
-		actor->momz = 0;
+	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_OBJECTSPECIAL))
+		vertangle = 0;
 	else
-	{
 		vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
-		P_InstaThrust(actor, actor->angle, FixedMul(FINECOSINE(vertangle), flyspeed));
-		actor->momz = FixedMul(FINESINE(vertangle), flyspeed);
-	}
+
+	P_InstaThrust(actor, actor->angle, FixedMul(FINECOSINE(vertangle), flyspeed));
+	actor->momz = FixedMul(FINESINE(vertangle), flyspeed);
 }
 
 // Function: A_FlickyFly
