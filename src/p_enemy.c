@@ -243,6 +243,7 @@ void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
 void A_FlickySpawn(mobj_t *actor);
+void A_FlickyCenter(mobj_t *actor);
 void A_FlickyAim(mobj_t *actor);
 void A_FlickyFly(mobj_t *actor);
 void A_FlickySoar(mobj_t *actor);
@@ -10774,6 +10775,105 @@ void A_FlickySpawn(mobj_t *actor)
 	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
 }
 
+// Internal Flicky color setting
+void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
+{
+	UINT8 flickycolors[] = {
+		SKINCOLOR_RED, 
+		SKINCOLOR_CYAN, 
+		SKINCOLOR_BLUE, 
+		SKINCOLOR_VAPOR, 
+		SKINCOLOR_PURPLE, 
+		SKINCOLOR_BUBBLEGUM,
+		SKINCOLOR_NEON,
+		SKINCOLOR_BLACK,
+		SKINCOLOR_BEIGE,
+		SKINCOLOR_LAVENDER,
+		SKINCOLOR_RUBY,
+		SKINCOLOR_SALMON,
+		SKINCOLOR_SUNSET,
+		SKINCOLOR_ORANGE,
+		SKINCOLOR_YELLOW,
+	};
+
+	if (extrainfo == 0)
+		actor->color = flickycolors[P_RandomKey(sizeof(flickycolors))];
+	else if (extrainfo-1 < sizeof(flickycolors))
+		actor->color = flickycolors[extrainfo-1];
+}
+
+// Function: A_FlickyCenter
+//
+// Description: Place flickies in-level.
+//
+// var1 = if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+// var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
+//
+// If MTF_EXTRA is flagged, Flickies move independently of a target. Else, move around the target. 
+// If MTF_OBJECTSPECIAL and NOT MTF_EXTRA are flagged, Angle sign determines direction of circular movement.
+// If MTF_AMBUSH is flagged, Flickies hop in-place.
+// If MTF_AMBUSH and MTF_OBJECTSPECIAL is flagged, Flickies stand in-place without gravity.
+//
+void A_FlickyCenter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCenter", actor))
+		return;
+#endif
+
+	if (!actor->tracer)
+	{
+		if (actor->spawnpoint && (actor->spawnpoint->options & MTF_EXTRA))
+		{
+			actor->tracer = P_InternalFlickySpawn(actor, locvar1, 1, false);
+			P_SetTarget(&actor->tracer->target, actor);
+			actor->tracer->fuse = 0; // < 2*TICRATE means move aimlessly.
+
+			if (!(actor->spawnpoint->options & MTF_AMBUSH))
+				actor->tracer->angle = P_RandomKey(180)*ANG2;
+		}
+		else
+		{
+			actor->tracer = P_InternalFlickySpawn(actor, locvar1, 1, false);
+			P_SetTarget(&actor->tracer->target, actor);
+			actor->tracer->fuse = FRACUNIT;
+
+			if (actor->spawnpoint 
+				&& (actor->spawnpoint->options & MTF_OBJECTSPECIAL)
+				&& !(actor->spawnpoint->options & MTF_EXTRA))
+				actor->tracer->movedir = actor->spawnpoint->angle >= 0 ? 1 : -1;
+		}
+
+		if (locvar1 == MT_FLICKY_08 && actor->spawnpoint)
+			P_InternalFlickySetColor(actor->tracer, actor->spawnpoint->extrainfo);
+
+		actor->extravalue1 = 0;
+	}
+
+	if (actor->spawnpoint && !(actor->spawnpoint->options & MTF_EXTRA) && !(actor->spawnpoint->options & MTF_AMBUSH))
+	{
+		actor->tracer->fuse = FRACUNIT;
+
+		if (actor->spawnpoint->angle)
+			locvar2 = abs(actor->spawnpoint->angle)*FRACUNIT;
+
+		P_LookForPlayers(actor, true, false, locvar2);
+
+		if (actor->target && P_AproxDistance(actor->target->x - actor->spawnpoint->x*FRACUNIT, actor->target->y - actor->spawnpoint->y*FRACUNIT) < locvar2)
+		{
+			actor->extravalue1 = 1;
+		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
+		}
+		else if(actor->extravalue1)
+		{
+			actor->extravalue1 = 0;
+			P_TeleportMove(actor, actor->spawnpoint->x*FRACUNIT, actor->spawnpoint->y*FRACUNIT, actor->spawnpoint->z*FRACUNIT);
+		}
+	}
+}
+
 // Internal Flicky bubbling function.
 void P_InternalFlickyBubble(mobj_t *actor)
 {
@@ -10884,7 +10984,11 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	if (actor->target && abs(chasez - actor->z) > targetdist)
 		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
 
-	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_OBJECTSPECIAL))
+	if (actor->target 
+		&& P_IsFlickyCenter(actor->target->type) 
+		&& actor->target->spawnpoint 
+		&& (actor->target->spawnpoint->options & MTF_OBJECTSPECIAL)
+		&& (actor->target->spawnpoint->options & MTF_EXTRA))
 		vertangle = 0;
 	else
 		vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
@@ -10899,6 +11003,8 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 //
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
+//
+// If MTF_EXTRA and MTF_OBJECTSPECIAL are flagged, Flicky will always fly at same Z height.
 //
 void A_FlickyFly(mobj_t *actor)
 {
@@ -10919,6 +11025,8 @@ void A_FlickyFly(mobj_t *actor)
 //
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
+//
+// If MTF_EXTRA and MTF_OBJECTSPECIAL are flagged, Flicky will always fly at same Z height.
 //
 void A_FlickySoar(mobj_t *actor)
 {
@@ -11040,9 +11148,12 @@ void A_FlickyCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyCheck", actor))
 		return;
 #endif
-	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))
+	if (actor->target 
+		&& P_IsFlickyCenter(actor->target->type) 
+		&& actor->target->spawnpoint
+		&& (actor->target->spawnpoint->options & MTF_AMBUSH))
 	{
-		if (actor->spawnpoint->options & MTF_OBJECTSPECIAL)
+		if (actor->target->spawnpoint->options & MTF_OBJECTSPECIAL)
 		{
 			actor->momz = 0;
 			actor->flags |= MF_NOGRAVITY;
@@ -11075,9 +11186,12 @@ void A_FlickyHeightCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyHeightCheck", actor))
 		return;
 #endif
-	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))
+	if (actor->target 
+		&& P_IsFlickyCenter(actor->target->type) 
+		&& actor->target->spawnpoint
+		&& (actor->target->spawnpoint->options & MTF_AMBUSH))
 	{
-		if (actor->spawnpoint->options & MTF_OBJECTSPECIAL)
+		if (actor->target->spawnpoint->options & MTF_OBJECTSPECIAL)
 		{
 			actor->momz = 0;
 			actor->flags |= MF_NOGRAVITY;

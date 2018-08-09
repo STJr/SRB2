@@ -7089,32 +7089,33 @@ void P_MobjThinker(mobj_t *mobj)
 					S_StartSound(flame, sfx_fire);
 				}
 				break;
-			case MT_FLICKY_01:
-			case MT_FLICKY_02:
-			case MT_FLICKY_03:
-			case MT_FLICKY_04:
-			case MT_FLICKY_05:
-			case MT_FLICKY_06:
-			case MT_FLICKY_07:
-			case MT_FLICKY_08:
-			case MT_FLICKY_09:
-			case MT_FLICKY_10:
-			case MT_FLICKY_11:
-			case MT_FLICKY_12:
-			case MT_FLICKY_13:
-			case MT_FLICKY_14:
-			case MT_FLICKY_15:
-			case MT_FLICKY_16:
-			case MT_SECRETFLICKY_01:
-			case MT_SECRETFLICKY_02:
-				if (mobj->spawnpoint 
+			case MT_FLICKY_01_CENTER:
+			case MT_FLICKY_02_CENTER:
+			case MT_FLICKY_03_CENTER:
+			case MT_FLICKY_04_CENTER:
+			case MT_FLICKY_05_CENTER:
+			case MT_FLICKY_06_CENTER:
+			case MT_FLICKY_07_CENTER:
+			case MT_FLICKY_08_CENTER:
+			case MT_FLICKY_09_CENTER:
+			case MT_FLICKY_10_CENTER:
+			case MT_FLICKY_11_CENTER:
+			case MT_FLICKY_12_CENTER:
+			case MT_FLICKY_13_CENTER:
+			case MT_FLICKY_14_CENTER:
+			case MT_FLICKY_15_CENTER:
+			case MT_FLICKY_16_CENTER:
+			case MT_SECRETFLICKY_01_CENTER:
+			case MT_SECRETFLICKY_02_CENTER:
+				if (mobj->tracer
+					&& mobj->spawnpoint 
 					&& (mobj->spawnpoint->options & MTF_AMBUSH) 
 					&& !(mobj->spawnpoint->options & MTF_OBJECTSPECIAL))
 				{
-					if (!(mobj->flags2 & MF2_OBJECTFLIP) && mobj->z <= mobj->floorz)
-						mobj->momz = 7*FRACUNIT;
-					else if ((mobj->flags2 & MF2_OBJECTFLIP) && mobj->z >= mobj->ceilingz - mobj->height)
-						mobj->momz = -7*FRACUNIT;
+					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
+						mobj->tracer->momz = 7*FRACUNIT;
+					else if ((mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z >= mobj->tracer->ceilingz - mobj->tracer->height)
+						mobj->tracer->momz = -7*FRACUNIT;
 				}
 				break;
 			case MT_SEED:
@@ -10435,38 +10436,6 @@ ML_EFFECT4 : Don't clip inside the ground
 
 		break;
 	}
-	case MT_FLICKY_08:
-		if (mthing->extrainfo == 1)
-			mobj->color = SKINCOLOR_RED;
-		else if (mthing->extrainfo == 2)
-			mobj->color = SKINCOLOR_CYAN;
-		else if (mthing->extrainfo == 3)
-			mobj->color = SKINCOLOR_BLUE;
-		else if (mthing->extrainfo == 4)
-			mobj->color = SKINCOLOR_VAPOR;
-		else if (mthing->extrainfo == 5)
-			mobj->color = SKINCOLOR_PURPLE;
-		else if (mthing->extrainfo == 6)
-			mobj->color = SKINCOLOR_BUBBLEGUM;
-		else if (mthing->extrainfo == 7)
-			mobj->color = SKINCOLOR_NEON;
-		else if (mthing->extrainfo == 8)
-			mobj->color = SKINCOLOR_BLACK;
-		else if (mthing->extrainfo == 9)
-			mobj->color = SKINCOLOR_BEIGE;
-		else if (mthing->extrainfo == 10)
-			mobj->color = SKINCOLOR_LAVENDER;
-		else if (mthing->extrainfo == 11)
-			mobj->color = SKINCOLOR_RUBY;
-		else if (mthing->extrainfo == 12)
-			mobj->color = SKINCOLOR_SALMON;
-		else if (mthing->extrainfo == 13)
-			mobj->color = SKINCOLOR_SUNSET;
-		else if (mthing->extrainfo == 14)
-			mobj->color = SKINCOLOR_ORANGE;
-		else if (mthing->extrainfo == 15)
-			mobj->color = SKINCOLOR_YELLOW;
-		break;
 	case MT_PARTICLEGEN:
 	{
 		fixed_t radius, speed;

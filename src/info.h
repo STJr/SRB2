@@ -216,6 +216,7 @@ void A_BrakLobShot();
 void A_NapalmScatter();
 void A_SpawnFreshCopy();
 void A_FlickySpawn();
+void A_FlickyCenter();
 void A_FlickyAim();
 void A_FlickyFly();
 void A_FlickySoar();
