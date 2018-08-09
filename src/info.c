@@ -14119,7 +14119,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_SECRETFLICKY_01
-		-1,             // doomednum
+		586,             // doomednum
 		S_SECRETFLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14146,7 +14146,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_SECRETFLICKY_02
-		-1,             // doomednum
+		587,             // doomednum
 		S_SECRETFLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
