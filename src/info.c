@@ -2638,6 +2638,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL01, 1, 3, {A_FlickyFly},          4*FRACUNIT,       16*FRACUNIT, S_FLICKY_01_FLAP2}, // S_FLICKY_01_FLAP1
 	{SPR_FL01, 2, 3, {A_FlickyFly},          4*FRACUNIT,       16*FRACUNIT, S_FLICKY_01_FLAP3}, // S_FLICKY_01_FLAP2
 	{SPR_FL01, 3, 3, {A_FlickyFly},          4*FRACUNIT,       16*FRACUNIT, S_FLICKY_01_FLAP1}, // S_FLICKY_01_FLAP3
+	{SPR_FL01, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL},                                           // S_FLICKY_01_STAND
 
 	// Rabbit
 	{SPR_FL02, 0, 2, {A_FlickyCheck}, S_FLICKY_02_AIM,                0, S_FLICKY_02_OUT},  // S_FLICKY_02_OUT
@@ -2645,6 +2646,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL02, 1, 1, {A_FlickyHop},        6*FRACUNIT,       4*FRACUNIT, S_FLICKY_02_UP},   // S_FLICKY_02_HOP
 	{SPR_FL02, 2, 2, {A_FlickyCheck}, S_FLICKY_02_AIM, S_FLICKY_02_DOWN, S_FLICKY_02_UP},   // S_FLICKY_02_UP
 	{SPR_FL02, 3, 2, {A_FlickyCheck}, S_FLICKY_02_AIM,                0, S_FLICKY_02_DOWN}, // S_FLICKY_02_DOWN
+	{SPR_FL02, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_02_STAND
 
 	// Chicken
 	{SPR_FL03, 0, 2, {A_FlickyCheck},   S_FLICKY_03_AIM, S_FLICKY_03_FLAP1, S_FLICKY_03_OUT},   // S_FLICKY_03_OUT
@@ -2653,6 +2655,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL03, 2, 2, {A_FlickyFlutter}, S_FLICKY_03_HOP, S_FLICKY_03_FLAP1, S_FLICKY_03_UP},    // S_FLICKY_03_UP
 	{SPR_FL03, 3, 2, {A_FlickyFlutter}, S_FLICKY_03_HOP,                 0, S_FLICKY_03_FLAP2}, // S_FLICKY_03_FLAP1
 	{SPR_FL03, 4, 2, {A_FlickyFlutter}, S_FLICKY_03_HOP,                 0, S_FLICKY_03_FLAP1}, // S_FLICKY_03_FLAP2
+	{SPR_FL03, FF_ANIMATE, -1, {NULL}, 4, 2, S_NULL}, // S_FLICKY_03_STAND
 
 	// Seal
 	{SPR_FL04, 0, 2, {A_FlickyCheck}, S_FLICKY_04_AIM,                 0, S_FLICKY_04_OUT},   // S_FLICKY_04_OUT
@@ -2664,6 +2667,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL04, 4, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_04_SWIM1, S_FLICKY_04_SWIM3}, // S_FLICKY_04_SWIM2
 	{SPR_FL04, 3, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_04_SWIM1, S_FLICKY_04_SWIM4}, // S_FLICKY_04_SWIM3
 	{SPR_FL04, 5, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_04_SWIM1, S_FLICKY_04_SWIM1}, // S_FLICKY_04_SWIM4
+	{SPR_FL04, FF_ANIMATE, -1, {NULL}, 5, 4, S_NULL}, // S_FLICKY_04_STAND
 
 	// Pig
 	{SPR_FL05, 0, 2, {A_FlickyCheck}, S_FLICKY_05_AIM,                0, S_FLICKY_05_OUT},  // S_FLICKY_05_OUT
@@ -2671,6 +2675,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL05, 1, 1, {A_FlickyHop},        4*FRACUNIT,       3*FRACUNIT, S_FLICKY_05_UP},   // S_FLICKY_05_HOP
 	{SPR_FL05, 2, 2, {A_FlickyCheck}, S_FLICKY_05_AIM, S_FLICKY_05_DOWN, S_FLICKY_05_UP},   // S_FLICKY_05_UP
 	{SPR_FL05, 3, 2, {A_FlickyCheck}, S_FLICKY_05_AIM,                0, S_FLICKY_05_DOWN}, // S_FLICKY_05_DOWN
+	{SPR_FL05, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_05_STAND
 
 	// Chipmunk
 	{SPR_FL06, 0, 2, {A_FlickyCheck}, S_FLICKY_06_AIM,                0, S_FLICKY_06_OUT},  // S_FLICKY_06_OUT
@@ -2678,6 +2683,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL06, 1, 1, {A_FlickyHop},        5*FRACUNIT,       6*FRACUNIT, S_FLICKY_06_UP},   // S_FLICKY_06_HOP
 	{SPR_FL06, 2, 2, {A_FlickyCheck}, S_FLICKY_06_AIM, S_FLICKY_06_DOWN, S_FLICKY_06_UP},   // S_FLICKY_06_UP
 	{SPR_FL06, 3, 2, {A_FlickyCheck}, S_FLICKY_06_AIM,                0, S_FLICKY_06_DOWN}, // S_FLICKY_06_DOWN
+	{SPR_FL06, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_06_STAND
 
 	// Penguin
 	{SPR_FL07, 0, 2, {A_FlickyCheck}, S_FLICKY_07_AIML,                 0, S_FLICKY_07_OUT},   // S_FLICKY_07_OUT
@@ -2692,6 +2698,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL07, 4, 4, {A_FlickyFly},         3*FRACUNIT,       72*FRACUNIT, S_FLICKY_07_SWIM2}, // S_FLICKY_07_SWIM1
 	{SPR_FL07, 5, 4, {A_FlickyCoast},         FRACUNIT, S_FLICKY_07_SWIM1, S_FLICKY_07_SWIM3}, // S_FLICKY_07_SWIM2
 	{SPR_FL07, 6, 4, {A_FlickyCoast},       2*FRACUNIT, S_FLICKY_07_SWIM1, S_FLICKY_07_SWIM3}, // S_FLICKY_07_SWIM3
+	{SPR_FL07, FF_ANIMATE, -1, {NULL}, 6, 4, S_NULL}, // S_FLICKY_07_STAND
 
 	// Fish
 	{SPR_FL08, 0, 2, {A_FlickyCheck}, S_FLICKY_08_AIM,                 0, S_FLICKY_08_OUT},   // S_FLICKY_08_OUT
@@ -2705,6 +2712,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL08, 1, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_08_SWIM1, S_FLICKY_08_SWIM3}, // S_FLICKY_08_SWIM2
 	{SPR_FL08, 0, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_08_SWIM1, S_FLICKY_08_SWIM4}, // S_FLICKY_08_SWIM3
 	{SPR_FL08, 2, 4, {A_FlickyCoast},        FRACUNIT, S_FLICKY_08_SWIM1, S_FLICKY_08_SWIM4}, // S_FLICKY_08_SWIM4
+	{SPR_FL08, FF_ANIMATE, -1, {NULL}, 2, 4, S_NULL}, // S_FLICKY_08_STAND
 
 	// Ram
 	{SPR_FL09, 0, 2, {A_FlickyCheck}, S_FLICKY_09_AIM,                0, S_FLICKY_09_OUT},  // S_FLICKY_09_OUT
@@ -2712,11 +2720,13 @@ state_t states[NUMSTATES] =
 	{SPR_FL09, 1, 1, {A_FlickyHop},        7*FRACUNIT,       2*FRACUNIT, S_FLICKY_09_UP},   // S_FLICKY_09_HOP
 	{SPR_FL09, 2, 2, {A_FlickyCheck}, S_FLICKY_09_AIM, S_FLICKY_09_DOWN, S_FLICKY_09_UP},   // S_FLICKY_09_UP
 	{SPR_FL09, 3, 2, {A_FlickyCheck}, S_FLICKY_09_AIM,                0, S_FLICKY_09_DOWN}, // S_FLICKY_09_DOWN
+	{SPR_FL09, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_09_STAND
 
 	// Puffin
 	{SPR_FL10, 0, 2, {A_FlickyCheck}, S_FLICKY_10_FLAP1, S_FLICKY_10_FLAP1, S_FLICKY_10_OUT},   // S_FLICKY_10_OUT
 	{SPR_FL10, 1, 3, {A_FlickySoar},         4*FRACUNIT,       16*FRACUNIT, S_FLICKY_10_FLAP2}, // S_FLICKY_10_FLAP1
 	{SPR_FL10, 2, 3, {A_FlickySoar},         4*FRACUNIT,       16*FRACUNIT, S_FLICKY_10_FLAP1}, // S_FLICKY_10_FLAP2
+	{SPR_FL10, FF_ANIMATE, -1, {NULL}, 2, 3, S_NULL}, // S_FLICKY_10_STAND
 
 	// Cow
 	{SPR_FL11, 0, 2, {A_FlickyCheck}, S_FLICKY_11_AIM,           0, S_FLICKY_11_OUT},  // S_FLICKY_11_OUT
@@ -2724,6 +2734,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL11, 1, 3, {A_FlickyHop},        FRACUNIT/2,  2*FRACUNIT, S_FLICKY_11_RUN2}, // S_FLICKY_11_RUN1
 	{SPR_FL11, 2, 4, {A_FlickyHop},        FRACUNIT/2,  2*FRACUNIT, S_FLICKY_11_RUN3}, // S_FLICKY_11_RUN2
 	{SPR_FL11, 3, 4, {A_FlickyHop},        FRACUNIT/2,  2*FRACUNIT, S_FLICKY_11_AIM},  // S_FLICKY_11_RUN3
+	{SPR_FL11, FF_ANIMATE, -1, {NULL}, 3, 4, S_NULL}, // S_FLICKY_11_STAND
 
 	// Rat
 	{SPR_FL12, 0, 2, {A_FlickyCheck}, S_FLICKY_12_AIM,           0, S_FLICKY_12_OUT},  // S_FLICKY_12_OUT
@@ -2731,6 +2742,7 @@ state_t states[NUMSTATES] =
 	{SPR_FL12, 1, 2, {A_FlickyHop},                 1, 12*FRACUNIT, S_FLICKY_12_RUN2}, // S_FLICKY_12_RUN1
 	{SPR_FL12, 2, 3, {A_FlickyHop},                 1, 12*FRACUNIT, S_FLICKY_12_RUN3}, // S_FLICKY_12_RUN2
 	{SPR_FL12, 3, 3, {A_FlickyHop},                 1, 12*FRACUNIT, S_FLICKY_12_AIM},  // S_FLICKY_12_RUN3
+	{SPR_FL12, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL}, // S_FLICKY_12_STAND
 
 	// Bear
 	{SPR_FL13, 0, 2, {A_FlickyCheck}, S_FLICKY_13_AIM,                0, S_FLICKY_13_OUT},  // S_FLICKY_13_OUT
@@ -2738,12 +2750,14 @@ state_t states[NUMSTATES] =
 	{SPR_FL13, 1, 1, {A_FlickyHop},        5*FRACUNIT,       3*FRACUNIT, S_FLICKY_13_UP},   // S_FLICKY_13_HOP
 	{SPR_FL13, 2, 2, {A_FlickyCheck}, S_FLICKY_13_AIM, S_FLICKY_13_DOWN, S_FLICKY_13_UP},   // S_FLICKY_13_UP
 	{SPR_FL13, 3, 2, {A_FlickyCheck}, S_FLICKY_13_AIM,                0, S_FLICKY_13_DOWN}, // S_FLICKY_13_DOWN
+	{SPR_FL13, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_13_STAND
 
 	// Dove
 	{SPR_FL14, 0, 2, {A_FlickyCheck}, S_FLICKY_14_FLAP1, S_FLICKY_14_FLAP1, S_FLICKY_14_OUT},   // S_FLICKY_14_OUT
 	{SPR_FL14, 1, 3, {A_FlickySoar},         4*FRACUNIT,       32*FRACUNIT, S_FLICKY_14_FLAP2}, // S_FLICKY_14_FLAP1
 	{SPR_FL14, 2, 3, {A_FlickySoar},         4*FRACUNIT,       32*FRACUNIT, S_FLICKY_14_FLAP3}, // S_FLICKY_14_FLAP2
 	{SPR_FL14, 3, 3, {A_FlickySoar},         4*FRACUNIT,       32*FRACUNIT, S_FLICKY_14_FLAP1}, // S_FLICKY_14_FLAP3
+	{SPR_FL14, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL}, // S_FLICKY_14_STAND
 
 	// Cat
 	{SPR_FL15, 0, 2, {A_FlickyCheck}, S_FLICKY_15_AIM,                0, S_FLICKY_15_OUT},  // S_FLICKY_15_OUT
@@ -2751,12 +2765,14 @@ state_t states[NUMSTATES] =
 	{SPR_FL15, 1, 1, {A_FlickyFlounder},   2*FRACUNIT,       6*FRACUNIT, S_FLICKY_15_UP},   // S_FLICKY_15_HOP
 	{SPR_FL15, 2, 2, {A_FlickyCheck}, S_FLICKY_15_AIM, S_FLICKY_15_DOWN, S_FLICKY_15_UP},   // S_FLICKY_15_UP
 	{SPR_FL15, 3, 2, {A_FlickyCheck}, S_FLICKY_15_AIM,                0, S_FLICKY_15_DOWN}, // S_FLICKY_15_DOWN
+	{SPR_FL15, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_FLICKY_15_STAND
 
 	// Canary
 	{SPR_FL16, 0, 2, {A_FlickyHeightCheck}, S_FLICKY_16_FLAP1,          0, S_FLICKY_16_OUT},   // S_FLICKY_16_OUT
 	{SPR_FL16, 1, 3, {A_FlickyFly},                4*FRACUNIT, 8*FRACUNIT, S_FLICKY_16_FLAP2}, // S_FLICKY_16_FLAP1
 	{SPR_FL16, 2, 3, {A_SetObjectFlags},         MF_NOGRAVITY,          1, S_FLICKY_16_FLAP3}, // S_FLICKY_16_FLAP2
 	{SPR_FL16, 3, 3, {A_FlickyHeightCheck}, S_FLICKY_16_FLAP1,          0, S_FLICKY_16_FLAP3}, // S_FLICKY_16_FLAP3
+	{SPR_FL16, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL}, // S_FLICKY_16_STAND
 
 	// Spider
 	{SPR_FS01, 0, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM,                      0, S_SECRETFLICKY_01_OUT},  // S_SECRETFLICKY_01_OUT
@@ -2764,12 +2780,14 @@ state_t states[NUMSTATES] =
 	{SPR_FS01, 1, 1, {A_FlickyFlounder},         2*FRACUNIT,             6*FRACUNIT, S_SECRETFLICKY_01_UP},   // S_SECRETFLICKY_01_HOP
 	{SPR_FS01, 2, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM, S_SECRETFLICKY_01_DOWN, S_SECRETFLICKY_01_UP},   // S_SECRETFLICKY_01_UP
 	{SPR_FS01, 3, 2, {A_FlickyCheck}, S_SECRETFLICKY_01_AIM,                      0, S_SECRETFLICKY_01_DOWN}, // S_SECRETFLICKY_01_DOWN
+	{SPR_FS01, FF_ANIMATE, -1, {NULL}, 3, 2, S_NULL}, // S_SECRETFLICKY_01_STAND
 
 	// Bat
 	{SPR_FS02, 0, 2, {A_FlickyHeightCheck}, S_SECRETFLICKY_02_FLAP1, S_SECRETFLICKY_02_FLAP1, S_SECRETFLICKY_02_OUT},   // S_SECRETFLICKY_02_OUT
 	{SPR_FS02, 1, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP2}, // S_SECRETFLICKY_02_FLAP1
 	{SPR_FS02, 2, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP3}, // S_SECRETFLICKY_02_FLAP2
 	{SPR_FS02, 3, 3, {A_FlickyFly},                      4*FRACUNIT,             16*FRACUNIT, S_SECRETFLICKY_02_FLAP1}, // S_SECRETFLICKY_02_FLAP3
+	{SPR_FS02, FF_ANIMATE, -1, {NULL}, 3, 3, S_NULL}, // S_SECRETFLICKY_02_STAND
 
 	// Fan
 	{SPR_FANS, 0, 1, {A_FanBubbleSpawn}, 2048, 0, S_FAN2}, // S_FAN
@@ -13690,7 +13708,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		570,             // doomednum
 		S_FLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_01_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13717,7 +13735,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		571,             // doomednum
 		S_FLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_02_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13744,7 +13762,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		572,             // doomednum
 		S_FLICKY_03_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_03_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13771,7 +13789,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		573,             // doomednum
 		S_FLICKY_04_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_04_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13798,7 +13816,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		574,             // doomednum
 		S_FLICKY_05_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_05_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13825,7 +13843,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		575,             // doomednum
 		S_FLICKY_06_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_06_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13852,7 +13870,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		576,             // doomednum
 		S_FLICKY_07_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_07_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13879,7 +13897,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		577,             // doomednum
 		S_FLICKY_08_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_08_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13906,7 +13924,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		578,             // doomednum
 		S_FLICKY_09_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_09_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13933,7 +13951,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		579,             // doomednum
 		S_FLICKY_10_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_10_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13960,7 +13978,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		580,             // doomednum
 		S_FLICKY_11_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_11_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -13987,7 +14005,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		581,             // doomednum
 		S_FLICKY_12_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_12_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14014,7 +14032,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		582,             // doomednum
 		S_FLICKY_13_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_13_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14041,7 +14059,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		583,             // doomednum
 		S_FLICKY_14_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_14_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14068,7 +14086,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		584,             // doomednum
 		S_FLICKY_15_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_15_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14095,7 +14113,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		585,             // doomednum
 		S_FLICKY_16_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_FLICKY_16_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14122,7 +14140,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		586,             // doomednum
 		S_SECRETFLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_SECRETFLICKY_01_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
@@ -14149,7 +14167,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		587,             // doomednum
 		S_SECRETFLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
-		S_NULL,         // seestate
+		S_SECRETFLICKY_02_STAND, // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound

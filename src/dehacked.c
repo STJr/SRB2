@@ -5393,6 +5393,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_01_FLAP1",
 	"S_FLICKY_01_FLAP2",
 	"S_FLICKY_01_FLAP3",
+	"S_FLICKY_01_STAND",
 
 	// Rabbit
 	"S_FLICKY_02_OUT",
@@ -5400,6 +5401,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_02_HOP",
 	"S_FLICKY_02_UP",
 	"S_FLICKY_02_DOWN",
+	"S_FLICKY_02_STAND",
 
 	// Chicken
 	"S_FLICKY_03_OUT",
@@ -5408,6 +5410,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_03_UP",
 	"S_FLICKY_03_FLAP1",
 	"S_FLICKY_03_FLAP2",
+	"S_FLICKY_03_STAND",
 
 	// Seal
 	"S_FLICKY_04_OUT",
@@ -5419,6 +5422,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_04_SWIM2",
 	"S_FLICKY_04_SWIM3",
 	"S_FLICKY_04_SWIM4",
+	"S_FLICKY_04_STAND",
 
 	// Pig
 	"S_FLICKY_05_OUT",
@@ -5426,6 +5430,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_05_HOP",
 	"S_FLICKY_05_UP",
 	"S_FLICKY_05_DOWN",
+	"S_FLICKY_05_STAND",
 
 	// Chipmunk
 	"S_FLICKY_06_OUT",
@@ -5433,6 +5438,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_06_HOP",
 	"S_FLICKY_06_UP",
 	"S_FLICKY_06_DOWN",
+	"S_FLICKY_06_STAND",
 
 	// Penguin
 	"S_FLICKY_07_OUT",
@@ -5447,6 +5453,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_07_SWIM1",
 	"S_FLICKY_07_SWIM2",
 	"S_FLICKY_07_SWIM3",
+	"S_FLICKY_07_STAND",
 
 	// Fish
 	"S_FLICKY_08_OUT",
@@ -5460,6 +5467,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_08_SWIM2",
 	"S_FLICKY_08_SWIM3",
 	"S_FLICKY_08_SWIM4",
+	"S_FLICKY_08_STAND",
 
 	// Ram
 	"S_FLICKY_09_OUT",
@@ -5467,11 +5475,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_09_HOP",
 	"S_FLICKY_09_UP",
 	"S_FLICKY_09_DOWN",
+	"S_FLICKY_09_STAND",
 
 	// Puffin
 	"S_FLICKY_10_OUT",
 	"S_FLICKY_10_FLAP1",
 	"S_FLICKY_10_FLAP2",
+	"S_FLICKY_10_STAND",
 
 	// Cow
 	"S_FLICKY_11_OUT",
@@ -5479,6 +5489,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_11_RUN1",
 	"S_FLICKY_11_RUN2",
 	"S_FLICKY_11_RUN3",
+	"S_FLICKY_11_STAND",
 
 	// Rat
 	"S_FLICKY_12_OUT",
@@ -5486,6 +5497,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_12_RUN1",
 	"S_FLICKY_12_RUN2",
 	"S_FLICKY_12_RUN3",
+	"S_FLICKY_12_STAND",
 
 	// Bear
 	"S_FLICKY_13_OUT",
@@ -5493,12 +5505,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_13_HOP",
 	"S_FLICKY_13_UP",
 	"S_FLICKY_13_DOWN",
+	"S_FLICKY_13_STAND",
 
 	// Dove
 	"S_FLICKY_14_OUT",
 	"S_FLICKY_14_FLAP1",
 	"S_FLICKY_14_FLAP2",
 	"S_FLICKY_14_FLAP3",
+	"S_FLICKY_14_STAND",
 
 	// Cat
 	"S_FLICKY_15_OUT",
@@ -5506,12 +5520,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_15_HOP",
 	"S_FLICKY_15_UP",
 	"S_FLICKY_15_DOWN",
+	"S_FLICKY_15_STAND",
 
 	// Canary
 	"S_FLICKY_16_OUT",
 	"S_FLICKY_16_FLAP1",
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
+	"S_FLICKY_16_STAND",
 
 	// Spider
 	"S_SECRETFLICKY_01_OUT",
@@ -5519,12 +5535,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SECRETFLICKY_01_HOP",
 	"S_SECRETFLICKY_01_UP",
 	"S_SECRETFLICKY_01_DOWN",
+	"S_SECRETFLICKY_01_STAND",
 
 	// Bat
 	"S_SECRETFLICKY_02_OUT",
 	"S_SECRETFLICKY_02_FLAP1",
 	"S_SECRETFLICKY_02_FLAP2",
 	"S_SECRETFLICKY_02_FLAP3",
+	"S_SECRETFLICKY_02_STAND",
 
 	// Fan
 	"S_FAN",
