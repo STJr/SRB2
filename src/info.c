@@ -13687,7 +13687,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	// Bluebird
 	{           // MT_FLICKY_01
-		-1,             // doomednum
+		570,             // doomednum
 		S_FLICKY_01_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13714,7 +13714,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_02
-		-1,             // doomednum
+		571,             // doomednum
 		S_FLICKY_02_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13741,7 +13741,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_03
-		-1,             // doomednum
+		572,             // doomednum
 		S_FLICKY_03_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13768,7 +13768,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_04
-		-1,             // doomednum
+		573,             // doomednum
 		S_FLICKY_04_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13795,7 +13795,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_05
-		-1,             // doomednum
+		574,             // doomednum
 		S_FLICKY_05_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13822,7 +13822,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_06
-		-1,             // doomednum
+		575,             // doomednum
 		S_FLICKY_06_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13849,7 +13849,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_07
-		-1,             // doomednum
+		576,             // doomednum
 		S_FLICKY_07_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13876,7 +13876,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_08
-		-1,             // doomednum
+		577,             // doomednum
 		S_FLICKY_08_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13903,7 +13903,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_09
-		-1,             // doomednum
+		578,             // doomednum
 		S_FLICKY_09_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13930,7 +13930,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_10
-		-1,             // doomednum
+		579,             // doomednum
 		S_FLICKY_10_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13957,7 +13957,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_11
-		-1,             // doomednum
+		580,             // doomednum
 		S_FLICKY_11_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13984,7 +13984,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_12
-		-1,             // doomednum
+		581,             // doomednum
 		S_FLICKY_12_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14011,7 +14011,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_13
-		-1,             // doomednum
+		582,             // doomednum
 		S_FLICKY_13_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14038,7 +14038,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_14
-		-1,             // doomednum
+		583,             // doomednum
 		S_FLICKY_14_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14065,7 +14065,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_15
-		-1,             // doomednum
+		584,             // doomednum
 		S_FLICKY_15_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14092,7 +14092,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_16
-		-1,             // doomednum
+		585,             // doomednum
 		S_FLICKY_16_OUT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
