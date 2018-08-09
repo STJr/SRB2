@@ -7089,6 +7089,34 @@ void P_MobjThinker(mobj_t *mobj)
 					S_StartSound(flame, sfx_fire);
 				}
 				break;
+			case MT_FLICKY_01:
+			case MT_FLICKY_02:
+			case MT_FLICKY_03:
+			case MT_FLICKY_04:
+			case MT_FLICKY_05:
+			case MT_FLICKY_06:
+			case MT_FLICKY_07:
+			case MT_FLICKY_08:
+			case MT_FLICKY_09:
+			case MT_FLICKY_10:
+			case MT_FLICKY_11:
+			case MT_FLICKY_12:
+			case MT_FLICKY_13:
+			case MT_FLICKY_14:
+			case MT_FLICKY_15:
+			case MT_FLICKY_16:
+			case MT_SECRETFLICKY_01:
+			case MT_SECRETFLICKY_02:
+				if (mobj->spawnpoint 
+					&& (mobj->spawnpoint->options & MTF_AMBUSH) 
+					&& !(mobj->spawnpoint->options & MTF_OBJECTSPECIAL))
+				{
+					if (!(mobj->flags2 & MF2_OBJECTFLIP) && mobj->z <= mobj->floorz)
+						mobj->momz = 7*FRACUNIT;
+					else if ((mobj->flags2 & MF2_OBJECTFLIP) && mobj->z >= mobj->ceilingz - mobj->height)
+						mobj->momz = -7*FRACUNIT;
+				}
+				break;
 			case MT_SEED:
 				if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
 					mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
