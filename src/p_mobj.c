@@ -7848,7 +7848,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 						mobj->flags &= ~MF_NOGRAVITY;
 						mobj->flags2 |= MF2_DONTDRAW;
-						P_SetMobjState(mobj, S_NIGHTSDRONE1);
+						//P_SetMobjState(mobj, S_NIGHTSDRONE);
 					}
 				}
 				// Invisible/bouncing mode.
@@ -7880,7 +7880,7 @@ void P_MobjThinker(mobj_t *mobj)
 							mobj->z += (mobj->spawnpoint->options >> ZSHIFT)<<FRACBITS;
 
 						CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
-						P_SetTarget(&mobj->target, P_SpawnMobjFromMobj(mobj, 0, 0, FRACUNIT, MT_NIGHTSGOAL));
+						P_SetTarget(&mobj->target, P_SpawnMobjFromMobj(mobj, 0, 0, FRACUNIT, MT_NIGHTSDRONE_GOAL));
 
 						mobj->flags2 &= ~MF2_DONTDRAW;
 						mobj->flags |= MF_NOGRAVITY;

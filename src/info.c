@@ -3239,8 +3239,8 @@ state_t states[NUMSTATES] =
 	{SPR_TOAD, 0, -1, {NULL}, 0, 0, S_NULL}, // S_TOAD
 
 	// Nights Drone
-	{SPR_NDRN, 0, -1, {NULL}, 0, 0, S_NIGHTSDRONE2}, // S_NIGHTSDRONE1
-	{SPR_NDRN, 0, -1, {NULL}, 0, 0, S_NIGHTSDRONE1}, // S_NIGHTSDRONE2
+	{SPR_NDRN, 0, -1, {NULL}, 0, 0, S_NIGHTSDRONE_MAN2}, // S_NIGHTSDRONE_MAN1
+	{SPR_NDRN, 0, -1, {NULL}, 0, 0, S_NIGHTSDRONE_MAN1}, // S_NIGHTSDRONE_MAN2
 
 	// Sparkling point (RETURN TO THE GOAL, etc)
 	{SPR_IVSP, 0, 1, {A_GhostMe}, 0, 0, S_NIGHTSDRONE_SPARKLING2},   // S_NIGHTSDRONE_SPARKLING1
@@ -3261,10 +3261,10 @@ state_t states[NUMSTATES] =
 	{SPR_IVSP, 30, 1, {A_GhostMe}, 0, 0, S_NIGHTSDRONE_SPARKLING1}, // S_NIGHTSDRONE_SPARKLING16
 
 	// NiGHTS GOAL banner (inside the sparkles!)
-	{SPR_GOAL, 0, 4, {NULL}, 0, 0, S_NIGHTSGOAL2}, // S_NIGHTSGOAL1
-	{SPR_GOAL, 1, 4, {NULL}, 0, 0, S_NIGHTSGOAL3}, // S_NIGHTSGOAL2
-	{SPR_GOAL, 2, 4, {NULL}, 0, 0, S_NIGHTSGOAL4}, // S_NIGHTSGOAL3
-	{SPR_GOAL, 3, 4, {NULL}, 0, 0, S_NIGHTSGOAL1}, // S_NIGHTSGOAL4
+	{SPR_GOAL, 0, 4, {NULL}, 0, 0, S_NIGHTSDRONE_GOAL2}, // S_NIGHTSDRONE_GOAL1
+	{SPR_GOAL, 1, 4, {NULL}, 0, 0, S_NIGHTSDRONE_GOAL3}, // S_NIGHTSDRONE_GOAL2
+	{SPR_GOAL, 2, 4, {NULL}, 0, 0, S_NIGHTSDRONE_GOAL4}, // S_NIGHTSDRONE_GOAL3
+	{SPR_GOAL, 3, 4, {NULL}, 0, 0, S_NIGHTSDRONE_GOAL1}, // S_NIGHTSDRONE_GOAL4
 
 	// Nights Sparkle
 	{SPR_NSPK, FF_FULLBRIGHT, 140, {NULL}, 0, 0, S_NIGHTSPARKLE2},   // S_NIGHTSPARKLE1
@@ -16100,7 +16100,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSDRONE
 		1703,           // doomednum
-		S_NIGHTSDRONE1, // spawnstate
+		S_INVISIBLE,  // spawnstate
 		120,            // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -16125,9 +16125,36 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_NIGHTSGOAL
+	{           // MT_NIGHTSDRONE_MAN
+		-1,           // doomednum
+		S_INVISIBLE,  // spawnstate
+		120,            // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		255,            // painchance
+		sfx_None,       // painsound
+		S_NIGHTSDRONE_MAN1, // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		56*FRACUNIT,    // height
+		1,              // display offset
+		1000,           // mass
+		0,              // damage
+		sfx_None,      // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_NIGHTSDRONE_SPARKLING
 		-1,             // doomednum
-		S_NIGHTSGOAL1,  // spawnstate
+		S_INVISIBLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -16136,7 +16163,34 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // painstate
 		255,            // painchance
 		sfx_None,       // painsound
-		S_NULL,         // meleestate
+		S_NIGHTSDRONE_SPARKLING1, // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		56*FRACUNIT,    // height
+		1,              // display offset
+		1000,           // mass
+		0,              // damage
+		sfx_None,      // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_NIGHTSDRONE_GOAL
+		-1,             // doomednum
+		S_INVISIBLE,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		255,            // painchance
+		sfx_None,       // painsound
+		S_NIGHTSDRONE_GOAL1,  // meleestate
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
