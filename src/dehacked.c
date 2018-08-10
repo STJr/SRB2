@@ -2730,11 +2730,14 @@ static void readmaincfg(MYFILE *f)
 			{
 				extralifetics = (UINT16)get_number(word2);
 			}
+			else if (fastcmp(word, "NIGHTSLINKTICS"))
+			{
+				nightslinktics = (UINT16)get_number(word2);
+			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				gameovertics = get_number(word2);
 			}
-
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
 				introtoplay = (UINT8)get_number(word2);

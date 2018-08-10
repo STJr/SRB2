@@ -413,6 +413,7 @@ extern UINT16 tailsflytics;
 extern UINT16 underwatertics;
 extern UINT16 spacetimetics;
 extern UINT16 extralifetics;
+extern UINT16 nightslinktics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
