@@ -458,7 +458,7 @@ consvar_t cv_ghost_guest     = {"ghost_guest",     "Show", CV_SAVE, ghost2_cons_
 static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t liveslimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t liveslimit_cons_t[] = {{-1, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
@@ -4938,6 +4938,7 @@ static void M_DrawAddons(void)
 {
 	INT32 x, y;
 	ssize_t i, max;
+	const char* topstr;
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
@@ -4949,9 +4950,16 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
-	? "\x85""Adding files mid-game may cause problems."
-	: LOCATIONSTRING));
+	if (Playing())
+		topstr = "\x85""Adding files mid-game may cause problems.";
+	else if (savemoddata)
+		topstr = "\x83""Add-on has its own data, saving enabled.";
+	else if (modifiedgame)
+		topstr = "\x87""Game is modified, saving is disabled.";
+	else
+		topstr = LOCATIONSTRING;
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, topstr);
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -5222,7 +5230,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_SOC:
 						case EXT_WAD:
 						case EXT_PK3:
-							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							addonsresponselimit = 5;
 							break;
 						default:
@@ -5266,7 +5274,10 @@ static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
 	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
-	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
+	if (players[consoleplayer].lives == 0x7f)
+		CV_StealthSetValue(&cv_dummylives, -1);
+	else
+		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
 #ifndef DEVELOP
@@ -8441,6 +8452,13 @@ Update the maxplayers label...
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
+
+	if (*setupm_ip == 0)
+	{
+		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
+		return;
+	}
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.
@@ -8822,7 +8840,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				break;
 			S_StartSound(NULL,sfx_menu1); // Tails
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				setupm_name[l] = (char)choice;
 				setupm_name[l+1] = 0;

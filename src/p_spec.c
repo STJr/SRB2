@@ -2868,7 +2868,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					// Unlocked something?
 					if (M_UpdateUnlockablesAndExtraEmblems())
 					{
-						S_StartSound(NULL, sfx_ncitem);
+						S_StartSound(NULL, sfx_s3k68);
 						G_SaveGameData(); // only save if unlocked something
 					}
 				}
@@ -3527,7 +3527,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
 				break;
 
-			if (!(player->powers[pw_shield] || player->rings > 0)) // Don't do anything if no shield or rings anyway
+			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
 				break;
 
 			P_SpecialStageDamage(player, NULL, NULL);
@@ -3775,8 +3775,8 @@ DoneSection2:
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
 			if (player->bot)
 				break;
-			if (!useNightsSS && G_IsSpecialStage(gamemap) && sstimer > 6)
-				sstimer = 6; // Just let P_Ticker take care of the rest.
+			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+				player->nightstime = 6; // Just let P_Ticker take care of the rest.
 
 			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 			{
@@ -4643,7 +4643,7 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 	switch(GETSECSPECIAL(sector->special, 4))
 	{
 		case 2: // Level Exit / GOAL Sector / Flag Return
-			if (!useNightsSS && G_IsSpecialStage(gamemap))
+			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 			{
 				// Special stage GOAL sector
 				// requires touching floor.
@@ -5502,7 +5502,7 @@ void P_InitSpecials(void)
 
 	// Defaults in case levels don't have them set.
 	sstimer = 90*TICRATE + 6;
-	totalrings = 1;
+	ssspheres = 1;
 
 	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
@@ -5525,6 +5525,30 @@ void P_InitSpecials(void)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 	P_InitTagLists();   // Create xref tables for tags
+}
+
+static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+{
+	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
+	{
+		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
+		sector->floor_xoffs += xoffs;
+		sector->floor_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_flr_xoffs = sector->floor_xoffs;
+		sector->spawn_flr_yoffs = sector->floor_yoffs;
+	}
+
+	if (!(master->flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
+	{
+		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
+		sector->ceiling_xoffs += xoffs;
+		sector->ceiling_yoffs += yoffs;
+		// saved for netgames
+		sector->spawn_ceil_xoffs = sector->ceiling_xoffs;
+		sector->spawn_ceil_yoffs = sector->ceiling_yoffs;
+	}
+
 }
 
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
@@ -5572,7 +5596,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		{
 			case 10: // Time for special stage
 				sstimer = (sector->floorheight>>FRACBITS) * TICRATE + 6; // Time to finish
-				totalrings = sector->ceilingheight>>FRACBITS; // Ring count for special stage
+				ssspheres = sector->ceilingheight>>FRACBITS; // Ring count for special stage
 				break;
 
 			case 11: // Custom global gravity!
@@ -5730,27 +5754,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						yoffs = lines[i].v1->y;
 					}
 
-					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+					//If no tag is given, apply to front sector
+					if (lines[i].tag == 0)
+						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
+					else
 					{
-						if (!(lines[i].flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
-						{
-							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = flatangle;
-							sectors[s].floor_xoffs += xoffs;
-							sectors[s].floor_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
-							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
-						}
-
-						if (!(lines[i].flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
-						{
-							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
-							sectors[s].ceiling_xoffs += xoffs;
-							sectors[s].ceiling_yoffs += yoffs;
-							// saved for netgames
-							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
-							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
-						}
+						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0;)
+							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
 					}
 				}
 				else // Otherwise, print a helpful warning. Can I do no less?
@@ -6689,6 +6699,7 @@ void T_Scroll(scroll_t *s)
 		line_t *line;
 		size_t i;
 		INT32 sect;
+		ffloor_t *rover;
 
 		case sc_side: // scroll wall texture
 			side = sides + s->affectee;
@@ -6729,6 +6740,19 @@ void T_Scroll(scroll_t *s)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
+
+					// Find the FOF corresponding to the control linedef
+					for (rover = psec->ffloors; rover; rover = rover->next)
+					{
+						if (rover->master == sec->lines[i])
+							break;
+					}
+
+					if (!rover) // This should be impossible, but don't complain if it is the case somehow
+						continue;
+
+					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
@@ -6792,6 +6816,19 @@ void T_Scroll(scroll_t *s)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
+
+					// Find the FOF corresponding to the control linedef
+					for (rover = psec->ffloors; rover; rover = rover->next)
+					{
+						if (rover->master == sec->lines[i])
+							break;
+					}
+
+					if (!rover) // This should be impossible, but don't complain if it is the case somehow
+						continue;
+
+					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
@@ -7646,7 +7683,6 @@ void T_Pusher(pusher_t *p)
 					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
-				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
 				if (!demoplayback || P_AnalogMove(thing->player))

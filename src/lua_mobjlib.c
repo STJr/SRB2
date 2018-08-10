@@ -530,10 +530,22 @@ static int mobj_set(lua_State *L)
 	case mobj_bprev:
 		return UNIMPLEMENTED;
 	case mobj_hnext:
-		mo->hnext = luaL_checkudata(L, 3, META_MOBJ);
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->hnext, NULL);
+		else
+		{
+			mobj_t *hnext = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->hnext, hnext);
+		}
 		break;
 	case mobj_hprev:
-		mo->hprev = luaL_checkudata(L, 3, META_MOBJ);
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->hprev, NULL);
+		else
+		{
+			mobj_t *hprev = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->hprev, hprev);
+		}
 		break;
 	case mobj_type: // yeah sure, we'll let you change the mobj's type.
 	{

@@ -499,56 +499,211 @@ void Command_Teleport_f(void)
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 
-	if (COM_Argc() < 3 || COM_Argc() > 7)
+	if (COM_Argc() < 3 || COM_Argc() > 11)
 	{
-		CONS_Printf(M_GetText("teleport -x <value> -y <value> -z <value>: teleport to a location\n"));
+		CONS_Printf(M_GetText("teleport -x <value> -y <value> -z <value> -ang <value> -aim <value>: teleport to a location\nteleport -sp <sequence> <placement>: teleport to specified checkpoint\n"));
 		return;
 	}
 
 	if (!p->mo)
 		return;
 
-	i = COM_CheckParm("-x");
-	if (i)
-		intx = atoi(COM_Argv(i + 1));
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "X");
-		return;
-	}
-
-	i = COM_CheckParm("-y");
-	if (i)
-		inty = atoi(COM_Argv(i + 1));
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "Y");
-		return;
-	}
-
-	ss = R_PointInSubsector(intx*FRACUNIT, inty*FRACUNIT);
-	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
-		return;
-	}
-	i = COM_CheckParm("-z");
+	i = COM_CheckParm("-sp");
 	if (i)
 	{
-		intz = atoi(COM_Argv(i + 1));
-		intz <<= FRACBITS;
-		if (intz < ss->sector->floorheight)
-			intz = ss->sector->floorheight;
-		if (intz > ss->sector->ceilingheight - p->mo->height)
-			intz = ss->sector->ceilingheight - p->mo->height;
+		INT32 starpostnum = atoi(COM_Argv(i + 1)); // starpost number
+		INT32 starpostpath = atoi(COM_Argv(i + 2)); // quick, dirty way to distinguish between paths
+
+		if (starpostnum < 0 || starpostpath < 0)
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("Negative starpost indexing is not valid.\n"));
+			return;
+		}
+
+		if (!starpostnum) // spawnpoints...
+		{
+			mapthing_t *mt;
+
+			if (starpostpath >= numcoopstarts)
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("Player %d spawnpoint not found (%d max).\n"), starpostpath+1, numcoopstarts-1);
+				return;
+			}
+
+			mt = playerstarts[starpostpath]; // Given above check, should never be NULL.
+			intx = mt->x<<FRACBITS;
+			inty = mt->y<<FRACBITS;
+
+			ss = R_IsPointInSubsector(intx, inty);
+			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("Spawnpoint not in a valid location.\n"));
+				return;
+			}
+
+			// Flagging a player's ambush will make them start on the ceiling
+			// Objectflip inverts
+			if (!!(mt->options & MTF_AMBUSH) ^ !!(mt->options & MTF_OBJECTFLIP))
+			{
+				intz = ss->sector->ceilingheight - p->mo->height;
+				if (mt->options >> ZSHIFT)
+					intz -= ((mt->options >> ZSHIFT) << FRACBITS);
+			}
+			else
+			{
+				intz = ss->sector->floorheight;
+				if (mt->options >> ZSHIFT)
+					intz += ((mt->options >> ZSHIFT) << FRACBITS);
+			}
+
+			if (mt->options & MTF_OBJECTFLIP) // flip the player!
+			{
+				p->mo->eflags |= MFE_VERTICALFLIP;
+				p->mo->flags2 |= MF2_OBJECTFLIP;
+			}
+			else
+			{
+				p->mo->eflags &= ~MFE_VERTICALFLIP;
+				p->mo->flags2 &= ~MF2_OBJECTFLIP;
+			}
+
+			localangle = p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+		}
+		else // scan the thinkers to find starposts...
+		{
+			mobj_t *mo2;
+			thinker_t *th;
+
+			INT32 starpostmax = 0;
+			intz = starpostpath; // variable reuse - counting down for selection purposes
+
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type != MT_STARPOST)
+					continue;
+
+				if (mo2->health != starpostnum)
+				{
+					if (mo2->health > starpostmax)
+						starpostmax = mo2->health;
+					continue;
+				}
+
+				if (intz--)
+					continue;
+
+				break;
+			}
+
+			if (th == &thinkercap)
+			{
+				if (intz == starpostpath)
+					CONS_Alert(CONS_NOTICE, M_GetText("No starpost of position %d found (%d max).\n"), starpostnum, starpostmax);
+				else
+					CONS_Alert(CONS_NOTICE, M_GetText("Starpost of position %d, %d not found (%d, %d max).\n"), starpostnum, starpostpath, starpostmax, (starpostpath-intz)-1);
+				return;
+			}
+
+			ss = R_IsPointInSubsector(mo2->x, mo2->y);
+			if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("Starpost not in a valid location.\n"));
+				return;
+			}
+
+			intx = mo2->x;
+			inty = mo2->y;
+			intz = mo2->z;
+
+			if (mo2->flags2 & MF2_OBJECTFLIP) // flip the player!
+			{
+				p->mo->eflags |= MFE_VERTICALFLIP;
+				p->mo->flags2 |= MF2_OBJECTFLIP;
+			}
+			else
+			{
+				p->mo->eflags &= ~MFE_VERTICALFLIP;
+				p->mo->flags2 &= ~MF2_OBJECTFLIP;
+			}
+
+			localangle = p->mo->angle = p->drawangle = mo2->angle;
+		}
+
+		CONS_Printf(M_GetText("Teleporting to checkpoint %d, %d...\n"), starpostnum, starpostpath);
 	}
 	else
-		intz = ss->sector->floorheight;
+	{
+		i = COM_CheckParm("-nop"); // undocumented stupid addition to allow pivoting on the spot with -ang and -aim
+		if (i)
+		{
+			intx = p->mo->x;
+			inty = p->mo->y;
+		}
+		else
+		{
+			i = COM_CheckParm("-x");
+			if (i)
+				intx = atoi(COM_Argv(i + 1))<<FRACBITS;
+			else
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified.\n"), "X");
+				return;
+			}
 
-	CONS_Printf(M_GetText("Teleporting to %d, %d, %d...\n"), intx, inty, FixedInt(intz));
+			i = COM_CheckParm("-y");
+			if (i)
+				inty = atoi(COM_Argv(i + 1))<<FRACBITS;
+			else
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified.\n"), "Y");
+				return;
+			}
+		}
+
+		ss = R_IsPointInSubsector(intx, inty);
+		if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
+			return;
+		}
+		i = COM_CheckParm("-z");
+		if (i)
+		{
+			intz = atoi(COM_Argv(i + 1))<<FRACBITS;
+			if (intz < ss->sector->floorheight)
+				intz = ss->sector->floorheight;
+			if (intz > ss->sector->ceilingheight - p->mo->height)
+				intz = ss->sector->ceilingheight - p->mo->height;
+		}
+		else
+			intz = ((p->mo->eflags & MFE_VERTICALFLIP) ? ss->sector->ceilingheight : ss->sector->floorheight);
+
+		i = COM_CheckParm("-ang");
+		if (i)
+			localangle = p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+
+		i = COM_CheckParm("-aim");
+		if (i)
+		{
+			angle_t aim = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+			if (aim >= ANGLE_90 && aim <= ANGLE_270)
+			{
+				CONS_Alert(CONS_NOTICE, M_GetText("Not a valid aiming angle (between +/-90).\n"));
+				return;
+			}
+			localaiming = p->aiming = aim;
+		}
+
+		CONS_Printf(M_GetText("Teleporting to %d, %d, %d...\n"), FixedInt(intx), FixedInt(inty), FixedInt(intz));
+	}
 
 	P_MapStart();
-	if (!P_TeleportMove(p->mo, intx*FRACUNIT, inty*FRACUNIT, intz))
+	if (!P_TeleportMove(p->mo, intx, inty, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
 		S_StartSound(p->mo, sfx_mixup);
@@ -728,7 +883,7 @@ void Command_Setrings_f(void)
 		// P_GivePlayerRings does value clamping
 		players[consoleplayer].rings = 0;
 		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
-		if (!G_IsSpecialStage(gamemap) || !useNightsSS)
+		if (!G_IsSpecialStage(gamemap) || !(maptol & TOL_NIGHTS))
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
 
 		G_SetGameModified(multiplayer);
@@ -744,9 +899,15 @@ void Command_Setlives_f(void)
 
 	if (COM_Argc() > 1)
 	{
-		// P_GivePlayerLives does value clamping
-		players[consoleplayer].lives = 0;
-		P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
+		SINT8 lives = atoi(COM_Argv(1));
+		if (lives == -1)
+			players[consoleplayer].lives = 0x7f; // infinity!
+		else
+		{
+			// P_GivePlayerLives does value clamping
+			players[consoleplayer].lives = 0;
+			P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
+		}
 
 		G_SetGameModified(multiplayer);
 	}
@@ -1010,7 +1171,7 @@ void OP_NightsObjectplace(player_t *player)
 		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
-		P_SpawnHoopsAndRings(mt);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
 	// This places a bumper!
@@ -1024,26 +1185,26 @@ void OP_NightsObjectplace(player_t *player)
 		P_SpawnMapThing(mt);
 	}
 
-	// This places a ring!
+	// This places a sphere!
 	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_RING].doomednum, false);
-		P_SpawnHoopsAndRings(mt);
+		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_BLUESPHERE].doomednum, false);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
-	// This places a wing item!
+	// This places a ring!
 	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_NIGHTSWING].doomednum, false);
-		P_SpawnHoopsAndRings(mt);
+		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_RING].doomednum, false);
+		P_SpawnHoopsAndRings(mt, false);
 	}
 
 	// This places a custom object as defined in the console cv_mapthingnum.
@@ -1077,12 +1238,12 @@ void OP_NightsObjectplace(player_t *player)
 
 		if (mt->type == 300 // Ring
 		|| mt->type == 308 || mt->type == 309 // Team Rings
-		|| mt->type == 1706 // Nights Wing
+		|| mt->type == 1706 // Sphere
 		|| (mt->type >= 600 && mt->type <= 609) // Placement patterns
 		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
 		|| mt->type == 1800) // Mario Coin
 		{
-			P_SpawnHoopsAndRings(mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 		else
 			P_SpawnMapThing(mt);
@@ -1227,7 +1388,7 @@ void OP_ObjectplaceMovement(player_t *player)
 		|| mt->type == 1705 || mt->type == 1713 // NiGHTS Hoops
 		|| mt->type == 1800) // Mario Coin
 		{
-			P_SpawnHoopsAndRings(mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 		else
 			P_SpawnMapThing(mt);

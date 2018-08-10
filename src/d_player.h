@@ -324,7 +324,8 @@ typedef struct player_s
 	angle_t drawangle;
 
 	// player's ring count
-	INT32 rings;
+	INT16 rings;
+	INT16 spheres;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
@@ -462,7 +463,7 @@ typedef struct player_s
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
 	tic_t finishedtime; // Time it took you to finish the mare (used for display)
-	INT16 finishedrings; // The rings you had left upon finishing the mare
+	INT16 finishedspheres; // The spheres you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
 	UINT8 lastmare; // previous mare
