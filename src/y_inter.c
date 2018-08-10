@@ -70,7 +70,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		patch_t *ttlnum; // act number being displayed
+		INT32 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
@@ -288,8 +288,8 @@ void Y_IntermissionDrawer(void)
 		V_DrawLevelTitle(data.coop.passedx1, 49, 0, data.coop.passed1);
 		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed2)+2, 0, data.coop.passed2);
 
-		if (mapheaderinfo[gamemap-1]->actnum)
-			V_DrawScaledPatch(244, 57, 0, data.coop.ttlnum);
+		if (data.coop.actnum)
+			V_DrawLevelActNum(244, 57, 0, data.coop.actnum);
 
 		bonusy = 150;
 		// Total
@@ -1183,11 +1183,7 @@ void Y_StartIntermission(void)
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_STATIC);
 
 			// get act number
-			if (mapheaderinfo[prevmap]->actnum)
-				data.coop.ttlnum = W_CachePatchName(va("TTL%.2d", mapheaderinfo[prevmap]->actnum),
-					PU_STATIC);
-			else
-				data.coop.ttlnum = W_CachePatchName("TTL01", PU_STATIC);
+			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
 			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
@@ -1994,7 +1990,6 @@ static void Y_UnloadData(void)
 	{
 		case int_coop:
 			// unload the coop and single player patches
-			UNLOAD(data.coop.ttlnum);
 			UNLOAD(data.coop.bonuspatches[3]);
 			UNLOAD(data.coop.bonuspatches[2]);
 			UNLOAD(data.coop.bonuspatches[1]);
