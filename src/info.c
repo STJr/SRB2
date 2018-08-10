@@ -5783,7 +5783,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		MT_NULL,        // reactiontime
+		MT_FLINGBLUESPHERE,        // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -5801,6 +5801,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		S_BLUESPHEREBONUS // raisestate
+	},
+
+	{           // MT_FLINGBLUESPHERE
+		-1,             // doomednum
+		S_BLUESPHERE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		MT_FLINGBLUESPHERE,   // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		MT_BLUESPHERE,        // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_BLUESPHERESPARK, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k65,     // deathsound
+		38*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_SPECIAL, // flags
 		S_BLUESPHEREBONUS // raisestate
 	},
 
@@ -16320,7 +16347,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		8,              // reactiontime
+		MT_FLINGNIGHTSCHIP, // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
@@ -16338,6 +16365,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		S_NIGHTSCHIPBONUS // raisestate
+	},
+
+	{           // MT_FLINGNIGHTSCHIP
+		-1,             // doomednum
+		S_NIGHTSCHIP,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		MT_FLINGNIGHTSCHIP,   // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		MT_NIGHTSCHIP,        // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_SPRK1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_ncchip,     // deathsound
+		38*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SLIDEME|MF_SPECIAL, // flags
 		S_NIGHTSCHIPBONUS // raisestate
 	},
 

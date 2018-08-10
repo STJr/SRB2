@@ -890,6 +890,23 @@ void Command_Setrings_f(void)
 	}
 }
 
+void Command_Setspheres_f(void)
+{
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+	REQUIRE_NOULTIMATE;
+	REQUIRE_PANDORA;
+
+	if (COM_Argc() > 1)
+	{
+		// P_GivePlayerRings does value clamping
+		players[consoleplayer].spheres = 0;
+		P_GivePlayerSpheres(&players[consoleplayer], atoi(COM_Argv(1)));
+
+		G_SetGameModified(multiplayer);
+	}
+}
+
 void Command_Setlives_f(void)
 {
 	REQUIRE_INLEVEL;

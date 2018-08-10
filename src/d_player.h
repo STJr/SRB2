@@ -464,6 +464,7 @@ typedef struct player_s
 	tic_t startedtime; // Time which you started this mare with.
 	tic_t finishedtime; // Time it took you to finish the mare (used for display)
 	INT16 finishedspheres; // The spheres you had left upon finishing the mare
+	INT16 finishedrings; // The rings/stars you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
 	UINT8 lastmare; // previous mare
