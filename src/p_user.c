@@ -6635,6 +6635,13 @@ static void P_NiGHTSMovement(player_t *player)
 			S_StartSound(player->mo, sfx_drill1);
 			player->drilltimer = 32;
 		}
+		else if (player->drilltimer == 32)
+		{
+			player->drilltimer = 31;
+			player->drillmeter -= TICRATE/2;
+			if (player->drillmeter <= 0)
+				player->drillmeter = TICRATE/10;
+		}
 		else if (--player->drilltimer <= 0)
 		{
 			player->drilltimer = 10;
