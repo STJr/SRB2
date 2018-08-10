@@ -853,25 +853,27 @@ static const struct {
 	const char *name;
 	const mobjtype_t type;
 } FLICKYTYPES[] = {
-	{"BLUEBIRD", MT_FLICKY_01},
-	{"RABBIT",   MT_FLICKY_02},
-	{"CHICKEN",  MT_FLICKY_03},
-	{"SEAL",     MT_FLICKY_04},
-	{"PIG",      MT_FLICKY_05},
-	{"CHIPMUNK", MT_FLICKY_06},
-	{"PENGUIN",  MT_FLICKY_07},
-	{"FISH",     MT_FLICKY_08},
-	{"RAM",      MT_FLICKY_09},
-	{"PUFFIN",   MT_FLICKY_10},
-	{"COW",      MT_FLICKY_11},
-	{"RAT",      MT_FLICKY_12},
-	{"BEAR",     MT_FLICKY_13},
-	{"DOVE",     MT_FLICKY_14},
-	{"CAT",      MT_FLICKY_15},
-	{"CANARY",   MT_FLICKY_16},
+	{"BLUEBIRD", MT_FLICKY_01}, // Flicky (Flicky)
+	{"RABBIT",   MT_FLICKY_02}, // Pocky (1)
+	{"CHICKEN",  MT_FLICKY_03}, // Cucky (1)
+	{"SEAL",     MT_FLICKY_04}, // Rocky (1)
+	{"PIG",      MT_FLICKY_05}, // Picky (1)
+	{"CHIPMUNK", MT_FLICKY_06}, // Ricky (1)
+	{"PENGUIN",  MT_FLICKY_07}, // Pecky (1)
+	{"FISH",     MT_FLICKY_08}, // Nicky (CD)
+	{"RAM",      MT_FLICKY_09}, // Flocky (CD)
+	{"PUFFIN",   MT_FLICKY_10}, // Wicky (CD)
+	{"COW",      MT_FLICKY_11}, // Macky (SRB2)
+	{"RAT",      MT_FLICKY_12}, // Micky (2)
+	{"BEAR",     MT_FLICKY_13}, // Becky (2)
+	{"DOVE",     MT_FLICKY_14}, // Docky (CD)
+	{"CAT",      MT_FLICKY_15}, // Nyannyan (Flicky)
+	{"CANARY",   MT_FLICKY_16}, // Lucky (CD)
 	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
-	//{"FLICKER",  MT_FLICKER},
-	{"SEED",          MT_SEED},
+	//{"FLICKER",          MT_FLICKER}, // Flacky (SRB2)
+	{"SPIDER",   MT_SECRETFLICKY_01}, // Sticky (SRB2)
+	{"BAT",      MT_SECRETFLICKY_02}, // Backy (SRB2)
+	{"SEED",                MT_SEED}, // Seed (CD)
 	{NULL, 0}
 };
 
@@ -1616,200 +1618,220 @@ typedef struct
   */
 static actionpointer_t actionpointers[] =
 {
-	{{A_Explode},              "A_EXPLODE"},
-	{{A_Pain},                 "A_PAIN"},
-	{{A_Fall},                 "A_FALL"},
-	{{A_MonitorPop},           "A_MONITORPOP"},
-	{{A_GoldMonitorPop},       "A_GOLDMONITORPOP"},
-	{{A_GoldMonitorRestore},   "A_GOLDMONITORRESTORE"},
-	{{A_GoldMonitorSparkle},   "A_GOLDMONITORSPARKLE"},
-	{{A_Look},                 "A_LOOK"},
-	{{A_Chase},                "A_CHASE"},
-	{{A_FaceStabChase},        "A_FACESTABCHASE"},
-	{{A_FaceTarget},           "A_FACETARGET"},
-	{{A_FaceTracer},           "A_FACETRACER"},
-	{{A_Scream},               "A_SCREAM"},
-	{{A_BossDeath},            "A_BOSSDEATH"},
-	{{A_CustomPower},          "A_CUSTOMPOWER"},
-	{{A_GiveWeapon},           "A_GIVEWEAPON"},
-	{{A_RingBox},              "A_RINGBOX"},
-	{{A_Invincibility},        "A_INVINCIBILITY"},
-	{{A_SuperSneakers},        "A_SUPERSNEAKERS"},
-	{{A_BunnyHop},             "A_BUNNYHOP"},
-	{{A_BubbleSpawn},          "A_BUBBLESPAWN"},
-	{{A_FanBubbleSpawn},       "A_FANBUBBLESPAWN"},
-	{{A_BubbleRise},           "A_BUBBLERISE"},
-	{{A_BubbleCheck},          "A_BUBBLECHECK"},
-	{{A_AwardScore},           "A_AWARDSCORE"},
-	{{A_ExtraLife},            "A_EXTRALIFE"},
-	{{A_GiveShield},           "A_GIVESHIELD"},
-	{{A_GravityBox},           "A_GRAVITYBOX"},
-	{{A_ScoreRise},            "A_SCORERISE"},
-	{{A_ParticleSpawn},        "A_PARTICLESPAWN"},
-	{{A_AttractChase},         "A_ATTRACTCHASE"},
-	{{A_DropMine},             "A_DROPMINE"},
-	{{A_FishJump},             "A_FISHJUMP"},
-	{{A_ThrownRing},           "A_THROWNRING"},
-	{{A_SetSolidSteam},        "A_SETSOLIDSTEAM"},
-	{{A_UnsetSolidSteam},      "A_UNSETSOLIDSTEAM"},
-	{{A_SignPlayer},           "A_SIGNPLAYER"},
-	{{A_OverlayThink},         "A_OVERLAYTHINK"},
-	{{A_JetChase},             "A_JETCHASE"},
-	{{A_JetbThink},            "A_JETBTHINK"},
-	{{A_JetgThink},            "A_JETGTHINK"},
-	{{A_JetgShoot},            "A_JETGSHOOT"},
-	{{A_ShootBullet},          "A_SHOOTBULLET"},
-	{{A_MinusDigging},         "A_MINUSDIGGING"},
-	{{A_MinusPopup},           "A_MINUSPOPUP"},
-	{{A_MinusCheck},           "A_MINUSCHECK"},
-	{{A_ChickenCheck},         "A_CHICKENCHECK"},
-	{{A_MouseThink},           "A_MOUSETHINK"},
-	{{A_DetonChase},           "A_DETONCHASE"},
-	{{A_CapeChase},            "A_CAPECHASE"},
-	{{A_RotateSpikeBall},      "A_ROTATESPIKEBALL"},
-	{{A_SlingAppear},          "A_SLINGAPPEAR"},
-	{{A_UnidusBall},           "A_UNIDUSBALL"},
-	{{A_RockSpawn},            "A_ROCKSPAWN"},
-	{{A_SetFuse},              "A_SETFUSE"},
-	{{A_CrawlaCommanderThink}, "A_CRAWLACOMMANDERTHINK"},
-	{{A_SmokeTrailer},         "A_SMOKETRAILER"},
-	{{A_RingExplode},          "A_RINGEXPLODE"},
-	{{A_OldRingExplode},       "A_OLDRINGEXPLODE"},
-	{{A_MixUp},                "A_MIXUP"},
-	{{A_RecyclePowers},        "A_RECYCLEPOWERS"},
-	{{A_Boss1Chase},           "A_BOSS1CHASE"},
-	{{A_FocusTarget},          "A_FOCUSTARGET"},
-	{{A_Boss2Chase},           "A_BOSS2CHASE"},
-	{{A_Boss2Pogo},            "A_BOSS2POGO"},
-	{{A_BossZoom},             "A_BOSSZOOM"},
-	{{A_BossScream},           "A_BOSSSCREAM"},
-	{{A_Boss2TakeDamage},      "A_BOSS2TAKEDAMAGE"},
-	{{A_Boss7Chase},           "A_BOSS7CHASE"},
-	{{A_GoopSplat},            "A_GOOPSPLAT"},
-	{{A_Boss2PogoSFX},         "A_BOSS2POGOSFX"},
-	{{A_Boss2PogoTarget},      "A_BOSS2POGOTARGET"},
-	{{A_BossJetFume},          "A_BOSSJETFUME"},
-	{{A_EggmanBox},            "A_EGGMANBOX"},
-	{{A_TurretFire},           "A_TURRETFIRE"},
-	{{A_SuperTurretFire},      "A_SUPERTURRETFIRE"},
-	{{A_TurretStop},           "A_TURRETSTOP"},
-	{{A_JetJawRoam},           "A_JETJAWROAM"},
-	{{A_JetJawChomp},          "A_JETJAWCHOMP"},
-	{{A_PointyThink},          "A_POINTYTHINK"},
-	{{A_CheckBuddy},           "A_CHECKBUDDY"},
-	{{A_HoodThink},            "A_HOODTHINK"},
-	{{A_ArrowCheck},           "A_ARROWCHECK"},
-	{{A_SnailerThink},         "A_SNAILERTHINK"},
-	{{A_SharpChase},           "A_SHARPCHASE"},
-	{{A_SharpSpin},            "A_SHARPSPIN"},
-	{{A_VultureVtol},          "A_VULTUREVTOL"},
-	{{A_VultureCheck},         "A_VULTURECHECK"},
-	{{A_SkimChase},            "A_SKIMCHASE"},
-	{{A_1upThinker},           "A_1UPTHINKER"},
-	{{A_SkullAttack},          "A_SKULLATTACK"},
-	{{A_LobShot},              "A_LOBSHOT"},
-	{{A_FireShot},             "A_FIRESHOT"},
-	{{A_SuperFireShot},        "A_SUPERFIRESHOT"},
-	{{A_BossFireShot},         "A_BOSSFIRESHOT"},
-	{{A_Boss7FireMissiles},    "A_BOSS7FIREMISSILES"},
-	{{A_Boss1Laser},           "A_BOSS1LASER"},
-	{{A_Boss4Reverse},         "A_BOSS4REVERSE"},
-	{{A_Boss4SpeedUp},         "A_BOSS4SPEEDUP"},
-	{{A_Boss4Raise},           "A_BOSS4RAISE"},
-	{{A_SparkFollow},          "A_SPARKFOLLOW"},
-	{{A_BuzzFly},              "A_BUZZFLY"},
-	{{A_GuardChase},           "A_GUARDCHASE"},
-	{{A_EggShield},            "A_EGGSHIELD"},
-	{{A_SetReactionTime},      "A_SETREACTIONTIME"},
-	{{A_Boss1Spikeballs},      "A_BOSS1SPIKEBALLS"},
-	{{A_Boss3TakeDamage},      "A_BOSS3TAKEDAMAGE"},
-	{{A_Boss3Path},            "A_BOSS3PATH"},
-	{{A_LinedefExecute},       "A_LINEDEFEXECUTE"},
-	{{A_PlaySeeSound},         "A_PLAYSEESOUND"},
-	{{A_PlayAttackSound},      "A_PLAYATTACKSOUND"},
-	{{A_PlayActiveSound},      "A_PLAYACTIVESOUND"},
-	{{A_SpawnObjectAbsolute},  "A_SPAWNOBJECTABSOLUTE"},
-	{{A_SpawnObjectRelative},  "A_SPAWNOBJECTRELATIVE"},
-	{{A_ChangeAngleRelative},  "A_CHANGEANGLERELATIVE"},
-	{{A_ChangeAngleAbsolute},  "A_CHANGEANGLEABSOLUTE"},
-	{{A_PlaySound},            "A_PLAYSOUND"},
-	{{A_FindTarget},           "A_FINDTARGET"},
-	{{A_FindTracer},           "A_FINDTRACER"},
-	{{A_SetTics},              "A_SETTICS"},
-	{{A_SetRandomTics},        "A_SETRANDOMTICS"},
-	{{A_ChangeColorRelative},  "A_CHANGECOLORRELATIVE"},
-	{{A_ChangeColorAbsolute},  "A_CHANGECOLORABSOLUTE"},
-	{{A_MoveRelative},         "A_MOVERELATIVE"},
-	{{A_MoveAbsolute},         "A_MOVEABSOLUTE"},
-	{{A_Thrust},               "A_THRUST"},
-	{{A_ZThrust},              "A_ZTHRUST"},
-	{{A_SetTargetsTarget},     "A_SETTARGETSTARGET"},
-	{{A_SetObjectFlags},       "A_SETOBJECTFLAGS"},
-	{{A_SetObjectFlags2},      "A_SETOBJECTFLAGS2"},
-	{{A_RandomState},          "A_RANDOMSTATE"},
-	{{A_RandomStateRange},     "A_RANDOMSTATERANGE"},
-	{{A_DualAction},           "A_DUALACTION"},
-	{{A_RemoteAction},         "A_REMOTEACTION"},
-	{{A_ToggleFlameJet},       "A_TOGGLEFLAMEJET"},
-	{{A_OrbitNights},          "A_ORBITNIGHTS"},
-	{{A_GhostMe},              "A_GHOSTME"},
-	{{A_SetObjectState},       "A_SETOBJECTSTATE"},
-	{{A_SetObjectTypeState},   "A_SETOBJECTTYPESTATE"},
-	{{A_KnockBack},            "A_KNOCKBACK"},
-	{{A_PushAway},             "A_PUSHAWAY"},
-	{{A_RingDrain},            "A_RINGDRAIN"},
-	{{A_SplitShot},            "A_SPLITSHOT"},
-	{{A_MissileSplit},         "A_MISSILESPLIT"},
-	{{A_MultiShot},            "A_MULTISHOT"},
-	{{A_InstaLoop},            "A_INSTALOOP"},
-	{{A_Custom3DRotate},       "A_CUSTOM3DROTATE"},
-	{{A_SearchForPlayers},     "A_SEARCHFORPLAYERS"},
-	{{A_CheckRandom},          "A_CHECKRANDOM"},
-	{{A_CheckTargetRings},     "A_CHECKTARGETRINGS"},
-	{{A_CheckRings},           "A_CHECKRINGS"},
-	{{A_CheckTotalRings},      "A_CHECKTOTALRINGS"},
-	{{A_CheckHealth},          "A_CHECKHEALTH"},
-	{{A_CheckRange},           "A_CHECKRANGE"},
-	{{A_CheckHeight},          "A_CHECKHEIGHT"},
-	{{A_CheckTrueRange},       "A_CHECKTRUERANGE"},
-	{{A_CheckThingCount},      "A_CHECKTHINGCOUNT"},
-	{{A_CheckAmbush},          "A_CHECKAMBUSH"},
-	{{A_CheckCustomValue},     "A_CHECKCUSTOMVALUE"},
-	{{A_CheckCusValMemo},      "A_CHECKCUSVALMEMO"},
-	{{A_SetCustomValue},       "A_SETCUSTOMVALUE"},
-	{{A_UseCusValMemo},        "A_USECUSVALMEMO"},
-	{{A_RelayCustomValue},     "A_RELAYCUSTOMVALUE"},
-	{{A_CusValAction},         "A_CUSVALACTION"},
-	{{A_ForceStop},            "A_FORCESTOP"},
-	{{A_ForceWin},             "A_FORCEWIN"},
-	{{A_SpikeRetract},         "A_SPIKERETRACT"},
-	{{A_InfoState},            "A_INFOSTATE"},
-	{{A_Repeat},               "A_REPEAT"},
-	{{A_SetScale},             "A_SETSCALE"},
-	{{A_RemoteDamage},         "A_REMOTEDAMAGE"},
-	{{A_HomingChase},          "A_HOMINGCHASE"},
-	{{A_TrapShot},             "A_TRAPSHOT"},
-	{{A_VileTarget},           "A_VILETARGET"},
-	{{A_VileAttack},           "A_VILEATTACK"},
-	{{A_VileFire},             "A_VILEFIRE"},
-	{{A_BrakChase},            "A_BRAKCHASE"},
-	{{A_BrakFireShot},         "A_BRAKFIRESHOT"},
-	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
-	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
-	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
-	{{A_FlickySpawn},          "A_FLICKYSPAWN"},
-	{{A_FlickyAim},            "A_FLICKYAIM"},
-	{{A_FlickyFly},            "A_FLICKYFLY"},
-	{{A_FlickySoar},           "A_FLICKYSOAR"},
-	{{A_FlickyCoast},          "A_FLICKYCOAST"},
-	{{A_FlickyHop},            "A_FLICKYHOP"},
-	{{A_FlickyFlounder},       "A_FLICKYFLOUNDER"},
-	{{A_FlickyCheck},          "A_FLICKYCHECK"},
-	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
-	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
-	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
-	{{A_FadeOverlay},          "A_FADEOVERLAY"},
-	{{A_Boss5Jump},            "A_BOSS5JUMP"},
+	{{A_Explode},                "A_EXPLODE"},
+	{{A_Pain},                   "A_PAIN"},
+	{{A_Fall},                   "A_FALL"},
+	{{A_MonitorPop},             "A_MONITORPOP"},
+	{{A_GoldMonitorPop},         "A_GOLDMONITORPOP"},
+	{{A_GoldMonitorRestore},     "A_GOLDMONITORRESTORE"},
+	{{A_GoldMonitorSparkle},     "A_GOLDMONITORSPARKLE"},
+	{{A_Look},                   "A_LOOK"},
+	{{A_Chase},                  "A_CHASE"},
+	{{A_FaceStabChase},          "A_FACESTABCHASE"},
+	{{A_FaceStabRev},            "A_FACESTABREV"},
+	{{A_FaceStabHurl},           "A_FACESTABHURL"},
+	{{A_FaceStabMiss},           "A_FACESTABMISS"},
+	{{A_StatueBurst},            "A_STATUEBURST"},
+	{{A_FaceTarget},             "A_FACETARGET"},
+	{{A_FaceTracer},             "A_FACETRACER"},
+	{{A_Scream},                 "A_SCREAM"},
+	{{A_BossDeath},              "A_BOSSDEATH"},
+	{{A_CustomPower},            "A_CUSTOMPOWER"},
+	{{A_GiveWeapon},             "A_GIVEWEAPON"},
+	{{A_RingBox},                "A_RINGBOX"},
+	{{A_Invincibility},          "A_INVINCIBILITY"},
+	{{A_SuperSneakers},          "A_SUPERSNEAKERS"},
+	{{A_BunnyHop},               "A_BUNNYHOP"},
+	{{A_BubbleSpawn},            "A_BUBBLESPAWN"},
+	{{A_FanBubbleSpawn},         "A_FANBUBBLESPAWN"},
+	{{A_BubbleRise},             "A_BUBBLERISE"},
+	{{A_BubbleCheck},            "A_BUBBLECHECK"},
+	{{A_AwardScore},             "A_AWARDSCORE"},
+	{{A_ExtraLife},              "A_EXTRALIFE"},
+	{{A_GiveShield},             "A_GIVESHIELD"},
+	{{A_GravityBox},             "A_GRAVITYBOX"},
+	{{A_ScoreRise},              "A_SCORERISE"},
+	{{A_AttractChase},           "A_ATTRACTCHASE"},
+	{{A_DropMine},               "A_DROPMINE"},
+	{{A_FishJump},               "A_FISHJUMP"},
+	{{A_ThrownRing},             "A_THROWNRING"},
+	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
+	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
+	{{A_SignPlayer},             "A_SIGNPLAYER"},
+	{{A_OverlayThink},           "A_OVERLAYTHINK"},
+	{{A_JetChase},               "A_JETCHASE"},
+	{{A_JetbThink},              "A_JETBTHINK"},
+	{{A_JetgThink},              "A_JETGTHINK"},
+	{{A_JetgShoot},              "A_JETGSHOOT"},
+	{{A_ShootBullet},            "A_SHOOTBULLET"},
+	{{A_MinusDigging},           "A_MINUSDIGGING"},
+	{{A_MinusPopup},             "A_MINUSPOPUP"},
+	{{A_MinusCheck},             "A_MINUSCHECK"},
+	{{A_ChickenCheck},           "A_CHICKENCHECK"},
+	{{A_MouseThink},             "A_MOUSETHINK"},
+	{{A_DetonChase},             "A_DETONCHASE"},
+	{{A_CapeChase},              "A_CAPECHASE"},
+	{{A_RotateSpikeBall},        "A_ROTATESPIKEBALL"},
+	{{A_SlingAppear},            "A_SLINGAPPEAR"},
+	{{A_UnidusBall},             "A_UNIDUSBALL"},
+	{{A_RockSpawn},              "A_ROCKSPAWN"},
+	{{A_SetFuse},                "A_SETFUSE"},
+	{{A_CrawlaCommanderThink},   "A_CRAWLACOMMANDERTHINK"},
+	{{A_SmokeTrailer},           "A_SMOKETRAILER"},
+	{{A_RingExplode},            "A_RINGEXPLODE"},
+	{{A_OldRingExplode},         "A_OLDRINGEXPLODE"},
+	{{A_MixUp},                  "A_MIXUP"},
+	{{A_RecyclePowers},          "A_RECYCLEPOWERS"},
+	{{A_Boss1Chase},             "A_BOSS1CHASE"},
+	{{A_FocusTarget},            "A_FOCUSTARGET"},
+	{{A_Boss2Chase},             "A_BOSS2CHASE"},
+	{{A_Boss2Pogo},              "A_BOSS2POGO"},
+	{{A_BossZoom},               "A_BOSSZOOM"},
+	{{A_BossScream},             "A_BOSSSCREAM"},
+	{{A_Boss2TakeDamage},        "A_BOSS2TAKEDAMAGE"},
+	{{A_Boss7Chase},             "A_BOSS7CHASE"},
+	{{A_GoopSplat},              "A_GOOPSPLAT"},
+	{{A_Boss2PogoSFX},           "A_BOSS2POGOSFX"},
+	{{A_Boss2PogoTarget},        "A_BOSS2POGOTARGET"},
+	{{A_BossJetFume},            "A_BOSSJETFUME"},
+	{{A_EggmanBox},              "A_EGGMANBOX"},
+	{{A_TurretFire},             "A_TURRETFIRE"},
+	{{A_SuperTurretFire},        "A_SUPERTURRETFIRE"},
+	{{A_TurretStop},             "A_TURRETSTOP"},
+	{{A_JetJawRoam},             "A_JETJAWROAM"},
+	{{A_JetJawChomp},            "A_JETJAWCHOMP"},
+	{{A_PointyThink},            "A_POINTYTHINK"},
+	{{A_CheckBuddy},             "A_CHECKBUDDY"},
+	{{A_HoodFire},               "A_HOODFIRE"},
+	{{A_HoodThink},              "A_HOODTHINK"},
+	{{A_HoodFall},               "A_HOODFALL"},
+	{{A_ArrowBonks},             "A_ARROWBONKS"},
+	{{A_SnailerThink},           "A_SNAILERTHINK"},
+	{{A_SharpChase},             "A_SHARPCHASE"},
+	{{A_SharpSpin},              "A_SHARPSPIN"},
+	{{A_SharpDecel},             "A_SHARPDECEL"},
+	{{A_CrushstaceanWalk},       "A_CRUSHSTACEANWALK"},
+	{{A_CrushstaceanPunch},      "A_CRUSHSTACEANPUNCH"},
+	{{A_CrushclawAim},           "A_CRUSHCLAWAIM"},
+	{{A_CrushclawLaunch},        "A_CRUSHCLAWLAUNCH"},
+	{{A_VultureVtol},            "A_VULTUREVTOL"},
+	{{A_VultureCheck},           "A_VULTURECHECK"},
+	{{A_SkimChase},              "A_SKIMCHASE"},
+	{{A_1upThinker},             "A_1UPTHINKER"},
+	{{A_SkullAttack},            "A_SKULLATTACK"},
+	{{A_LobShot},                "A_LOBSHOT"},
+	{{A_FireShot},               "A_FIRESHOT"},
+	{{A_SuperFireShot},          "A_SUPERFIRESHOT"},
+	{{A_BossFireShot},           "A_BOSSFIRESHOT"},
+	{{A_Boss7FireMissiles},      "A_BOSS7FIREMISSILES"},
+	{{A_Boss1Laser},             "A_BOSS1LASER"},
+	{{A_Boss4Reverse},           "A_BOSS4REVERSE"},
+	{{A_Boss4SpeedUp},           "A_BOSS4SPEEDUP"},
+	{{A_Boss4Raise},             "A_BOSS4RAISE"},
+	{{A_SparkFollow},            "A_SPARKFOLLOW"},
+	{{A_BuzzFly},                "A_BUZZFLY"},
+	{{A_GuardChase},             "A_GUARDCHASE"},
+	{{A_EggShield},              "A_EGGSHIELD"},
+	{{A_SetReactionTime},        "A_SETREACTIONTIME"},
+	{{A_Boss1Spikeballs},        "A_BOSS1SPIKEBALLS"},
+	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
+	{{A_Boss3Path},              "A_BOSS3PATH"},
+	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
+	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
+	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
+	{{A_PlayActiveSound},        "A_PLAYACTIVESOUND"},
+	{{A_SpawnObjectAbsolute},    "A_SPAWNOBJECTABSOLUTE"},
+	{{A_SpawnObjectRelative},    "A_SPAWNOBJECTRELATIVE"},
+	{{A_ChangeAngleRelative},    "A_CHANGEANGLERELATIVE"},
+	{{A_ChangeAngleAbsolute},    "A_CHANGEANGLEABSOLUTE"},
+	{{A_PlaySound},              "A_PLAYSOUND"},
+	{{A_FindTarget},             "A_FINDTARGET"},
+	{{A_FindTracer},             "A_FINDTRACER"},
+	{{A_SetTics},                "A_SETTICS"},
+	{{A_SetRandomTics},          "A_SETRANDOMTICS"},
+	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
+	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
+	{{A_MoveRelative},           "A_MOVERELATIVE"},
+	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
+	{{A_Thrust},                 "A_THRUST"},
+	{{A_ZThrust},                "A_ZTHRUST"},
+	{{A_SetTargetsTarget},       "A_SETTARGETSTARGET"},
+	{{A_SetObjectFlags},         "A_SETOBJECTFLAGS"},
+	{{A_SetObjectFlags2},        "A_SETOBJECTFLAGS2"},
+	{{A_RandomState},            "A_RANDOMSTATE"},
+	{{A_RandomStateRange},       "A_RANDOMSTATERANGE"},
+	{{A_DualAction},             "A_DUALACTION"},
+	{{A_RemoteAction},           "A_REMOTEACTION"},
+	{{A_ToggleFlameJet},         "A_TOGGLEFLAMEJET"},
+	{{A_OrbitNights},            "A_ORBITNIGHTS"},
+	{{A_GhostMe},                "A_GHOSTME"},
+	{{A_SetObjectState},         "A_SETOBJECTSTATE"},
+	{{A_SetObjectTypeState},     "A_SETOBJECTTYPESTATE"},
+	{{A_KnockBack},              "A_KNOCKBACK"},
+	{{A_PushAway},               "A_PUSHAWAY"},
+	{{A_RingDrain},              "A_RINGDRAIN"},
+	{{A_SplitShot},              "A_SPLITSHOT"},
+	{{A_MissileSplit},           "A_MISSILESPLIT"},
+	{{A_MultiShot},              "A_MULTISHOT"},
+	{{A_InstaLoop},              "A_INSTALOOP"},
+	{{A_Custom3DRotate},         "A_CUSTOM3DROTATE"},
+	{{A_SearchForPlayers},       "A_SEARCHFORPLAYERS"},
+	{{A_CheckRandom},            "A_CHECKRANDOM"},
+	{{A_CheckTargetRings},       "A_CHECKTARGETRINGS"},
+	{{A_CheckRings},             "A_CHECKRINGS"},
+	{{A_CheckTotalRings},        "A_CHECKTOTALRINGS"},
+	{{A_CheckHealth},            "A_CHECKHEALTH"},
+	{{A_CheckRange},             "A_CHECKRANGE"},
+	{{A_CheckHeight},            "A_CHECKHEIGHT"},
+	{{A_CheckTrueRange},         "A_CHECKTRUERANGE"},
+	{{A_CheckThingCount},        "A_CHECKTHINGCOUNT"},
+	{{A_CheckAmbush},            "A_CHECKAMBUSH"},
+	{{A_CheckCustomValue},       "A_CHECKCUSTOMVALUE"},
+	{{A_CheckCusValMemo},        "A_CHECKCUSVALMEMO"},
+	{{A_SetCustomValue},         "A_SETCUSTOMVALUE"},
+	{{A_UseCusValMemo},          "A_USECUSVALMEMO"},
+	{{A_RelayCustomValue},       "A_RELAYCUSTOMVALUE"},
+	{{A_CusValAction},           "A_CUSVALACTION"},
+	{{A_ForceStop},              "A_FORCESTOP"},
+	{{A_ForceWin},               "A_FORCEWIN"},
+	{{A_SpikeRetract},           "A_SPIKERETRACT"},
+	{{A_InfoState},              "A_INFOSTATE"},
+	{{A_Repeat},                 "A_REPEAT"},
+	{{A_SetScale},               "A_SETSCALE"},
+	{{A_RemoteDamage},           "A_REMOTEDAMAGE"},
+	{{A_HomingChase},            "A_HOMINGCHASE"},
+	{{A_TrapShot},               "A_TRAPSHOT"},
+	{{A_VileTarget},             "A_VILETARGET"},
+	{{A_VileAttack},             "A_VILEATTACK"},
+	{{A_VileFire},               "A_VILEFIRE"},
+	{{A_BrakChase},              "A_BRAKCHASE"},
+	{{A_BrakFireShot},           "A_BRAKFIRESHOT"},
+	{{A_BrakLobShot},            "A_BRAKLOBSHOT"},
+	{{A_NapalmScatter},          "A_NAPALMSCATTER"},
+	{{A_SpawnFreshCopy},         "A_SPAWNFRESHCOPY"},
+	{{A_FlickySpawn},            "A_FLICKYSPAWN"},
+	{{A_FlickyAim},              "A_FLICKYAIM"},
+	{{A_FlickyFly},              "A_FLICKYFLY"},
+	{{A_FlickySoar},             "A_FLICKYSOAR"},
+	{{A_FlickyCoast},            "A_FLICKYCOAST"},
+	{{A_FlickyHop},              "A_FLICKYHOP"},
+	{{A_FlickyFlounder},         "A_FLICKYFLOUNDER"},
+	{{A_FlickyCheck},            "A_FLICKYCHECK"},
+	{{A_FlickyHeightCheck},      "A_FLICKYHEIGHTCHECK"},
+	{{A_FlickyFlutter},          "A_FLICKYFLUTTER"},
+	{{A_FlameParticle},          "A_FLAMEPARTICLE"},
+	{{A_FadeOverlay},            "A_FADEOVERLAY"},
+	{{A_Boss5Jump},              "A_BOSS5JUMP"},
+	{{A_LightBeamReset},         "A_LIGHTBEAMRESET"},
+	{{A_MineExplode},            "A_MINEEXPLODE"},
+	{{A_MineRange},              "A_MINERANGE"},
+	{{A_ConnectToGround},        "A_CONNECTTOGROUND"},
+	{{A_SpawnParticleRelative},  "A_SPAWNPARTICLERELATIVE"},
+	{{A_MultiShotDist},          "A_MULTISHOTDIST"},
+	{{A_WhoCaresIfYourSonIsABee},"A_WHOCARESIFYOURSONISABEE"},
+	{{A_ParentTriesToSleep},     "A_PARENTTRIESTOSLEEP"},
+	{{A_CryingToMomma},          "A_CRYINGTOMOMMA"},
+	{{A_CheckFlags2},            "A_CHECKFLAGS2"},
 
 	{{NULL},                   "NONE"},
 
@@ -2648,11 +2670,21 @@ static void readmaincfg(MYFILE *f)
 					value = get_number(word2);
 
 				sstage_start = (INT16)value;
-				sstage_end = (INT16)(sstage_start+6); // 7 special stages total
+				sstage_end = (INT16)(sstage_start+7); // 7 special stages total plus one weirdo
 			}
-			else if (fastcmp(word, "USENIGHTSSS"))
+			else if (fastcmp(word, "SMPSTAGE_START"))
 			{
-				useNightsSS = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				smpstage_start = (INT16)value;
+				smpstage_end = (INT16)(smpstage_start+6); // 7 special stages total
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
@@ -3577,10 +3609,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RBUZZFLY1",
 	"S_RBUZZFLY2",
 
-	// AquaBuzz
-	"S_BBUZZFLY1",
-	"S_BBUZZFLY2",
-
 	// Jetty-Syn Bomber
 	"S_JETBLOOK1",
 	"S_JETBLOOK2",
@@ -3617,7 +3645,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DETON13",
 	"S_DETON14",
 	"S_DETON15",
-	"S_DETON16",
 
 	// Skim Mine Dropper
 	"S_SKIM1",
@@ -3659,14 +3686,40 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TURRETPOPDOWN7",
 	"S_TURRETPOPDOWN8",
 
-	// Sharp
-	"S_SHARP_ROAM1",
-	"S_SHARP_ROAM2",
-	"S_SHARP_AIM1",
-	"S_SHARP_AIM2",
-	"S_SHARP_AIM3",
-	"S_SHARP_AIM4",
-	"S_SHARP_SPIN",
+	// Spincushion
+	"S_SPINCUSHION_LOOK",
+	"S_SPINCUSHION_CHASE1",
+	"S_SPINCUSHION_CHASE2",
+	"S_SPINCUSHION_CHASE3",
+	"S_SPINCUSHION_CHASE4",
+	"S_SPINCUSHION_AIM1",
+	"S_SPINCUSHION_AIM2",
+	"S_SPINCUSHION_AIM3",
+	"S_SPINCUSHION_AIM4",
+	"S_SPINCUSHION_AIM5",
+	"S_SPINCUSHION_SPIN1",
+	"S_SPINCUSHION_SPIN2",
+	"S_SPINCUSHION_SPIN3",
+	"S_SPINCUSHION_SPIN4",
+	"S_SPINCUSHION_STOP1",
+	"S_SPINCUSHION_STOP2",
+	"S_SPINCUSHION_STOP3",
+	"S_SPINCUSHION_STOP4",
+
+	// Crushstacean
+	"S_CRUSHSTACEAN_ROAM1",
+	"S_CRUSHSTACEAN_ROAM2",
+	"S_CRUSHSTACEAN_ROAM3",
+	"S_CRUSHSTACEAN_ROAM4",
+	"S_CRUSHSTACEAN_ROAMPAUSE",
+	"S_CRUSHSTACEAN_PUNCH1",
+	"S_CRUSHSTACEAN_PUNCH2",
+	"S_CRUSHCLAW_AIM",
+	"S_CRUSHCLAW_OUT",
+	"S_CRUSHCLAW_STAY",
+	"S_CRUSHCLAW_IN",
+	"S_CRUSHCLAW_WAIT",
+	"S_CRUSHCHAIN",
 
 	// Jet Jaw
 	"S_JETJAW_ROAM1",
@@ -3715,11 +3768,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Robo-Hood
 	"S_ROBOHOOD_LOOK",
-	"S_ROBOHOOD_STND",
-	"S_ROBOHOOD_SHOOT",
-	"S_ROBOHOOD_JUMP",
+	"S_ROBOHOOD_STAND",
+	"S_ROBOHOOD_FIRE1",
+	"S_ROBOHOOD_FIRE2",
+	"S_ROBOHOOD_JUMP1",
 	"S_ROBOHOOD_JUMP2",
-	"S_ROBOHOOD_FALL",
+	"S_ROBOHOOD_JUMP3",
 
 	// CastleBot FaceStabber
 	"S_FACESTABBER_STND1",
@@ -3732,6 +3786,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FACESTABBER_CHARGE2",
 	"S_FACESTABBER_CHARGE3",
 	"S_FACESTABBER_CHARGE4",
+	"S_FACESTABBER_PAIN",
+	"S_FACESTABBER_DIE1",
+	"S_FACESTABBER_DIE2",
+	"S_FACESTABBER_DIE3",
+	"S_FACESTABBERSPEAR",
 
 	// Egg Guard
 	"S_EGGGUARD_STND",
@@ -3749,6 +3808,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Egg Shield for Egg Guard
 	"S_EGGSHIELD",
+	"S_EGGSHIELDBREAK",
 
 	// Green Snapper
 	"S_GSNAPPER_STND",
@@ -3806,13 +3866,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_UNIDUS_BALL",
 
 	// Boss Explosion
-	"S_BPLD1",
-	"S_BPLD2",
-	"S_BPLD3",
-	"S_BPLD4",
-	"S_BPLD5",
-	"S_BPLD6",
-	"S_BPLD7",
+	"S_BOSSEXPLODE",
 
 	// S3&K Boss Explosion
 	"S_SONIC3KBOSSEXPLOSION1",
@@ -4317,17 +4371,27 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RING",
 
 	// Blue Sphere for special stages
-	"S_BLUEBALL",
-	"S_BLUEBALLSPARK",
+	"S_BLUESPHERE",
+	"S_BLUESPHEREBONUS",
+	"S_BLUESPHERESPARK",
+
+	// Bomb Sphere
+	"S_BOMBSPHERE1",
+	"S_BOMBSPHERE2",
+	"S_BOMBSPHERE3",
+	"S_BOMBSPHERE4",
+
+	// NiGHTS Chip
+	"S_NIGHTSCHIP",
+	"S_NIGHTSCHIPBONUS",
+
+	// NiGHTS Star
+	"S_NIGHTSSTAR",
+	"S_NIGHTSSTARXMAS",
 
 	// Gravity Wells for special stages
 	"S_GRAVWELLGREEN",
-	"S_GRAVWELLGREEN2",
-	"S_GRAVWELLGREEN3",
-
 	"S_GRAVWELLRED",
-	"S_GRAVWELLRED2",
-	"S_GRAVWELLRED3",
 
 	// Individual Team Rings
 	"S_TEAMRING",
@@ -4376,14 +4440,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CEMG6",
 	"S_CEMG7",
 
-	// Emeralds (for hunt)
-	"S_EMER1",
-
-	"S_FAN",
-	"S_FAN2",
-	"S_FAN3",
-	"S_FAN4",
-	"S_FAN5",
+	// Emerald hunt shards
+	"S_SHRD1",
+	"S_SHRD2",
+	"S_SHRD3",
 
 	// Bubble Source
 	"S_BUBBLES1",
@@ -4446,16 +4506,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGN52", // Eggman
 	"S_SIGN53",
 
-	// Steam Riser
-	"S_STEAM1",
-	"S_STEAM2",
-	"S_STEAM3",
-	"S_STEAM4",
-	"S_STEAM5",
-	"S_STEAM6",
-	"S_STEAM7",
-	"S_STEAM8",
-
 	// Spike Ball
 	"S_SPIKEBALL1",
 	"S_SPIKEBALL2",
@@ -4503,14 +4553,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_STARPOST_ENDSPIN",
 
 	// Big floating mine
-	"S_BIGMINE1",
-	"S_BIGMINE2",
-	"S_BIGMINE3",
-	"S_BIGMINE4",
-	"S_BIGMINE5",
-	"S_BIGMINE6",
-	"S_BIGMINE7",
-	"S_BIGMINE8",
+	"S_BIGMINE_IDLE",
+	"S_BIGMINE_ALERT1",
+	"S_BIGMINE_ALERT2",
+	"S_BIGMINE_ALERT3",
+	"S_BIGMINE_SET1",
+	"S_BIGMINE_SET2",
+	"S_BIGMINE_SET3",
+	"S_BIGMINE_BLAST1",
+	"S_BIGMINE_BLAST2",
+	"S_BIGMINE_BLAST3",
+	"S_BIGMINE_BLAST4",
+	"S_BIGMINE_BLAST5",
 
 	// Cannon Launcher
 	"S_CANNONLAUNCHER1",
@@ -4642,6 +4696,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_THUNDERCOIN_ICON1",
 	"S_THUNDERCOIN_ICON2",
 
+	// ---
+
 	"S_ROCKET",
 
 	"S_LASER",
@@ -4671,22 +4727,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Arrow
 	"S_ARROW",
-	"S_ARROWUP",
-	"S_ARROWDOWN",
+	"S_ARROWBONK",
 
 	// Trapgoyle Demon fire
-	"S_DEMONFIRE1",
-	"S_DEMONFIRE2",
-	"S_DEMONFIRE3",
-	"S_DEMONFIRE4",
-	"S_DEMONFIRE5",
-	"S_DEMONFIRE6",
+	"S_DEMONFIRE",
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
 	"S_GFZFLOWERC",
 
+	"S_BLUEBERRYBUSH",
 	"S_BERRYBUSH",
 	"S_BUSH",
 
@@ -4701,10 +4752,28 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POLYGONTREE",
 	"S_BUSHTREE",
 	"S_BUSHREDTREE",
+	"S_SPRINGTREE",
 
-	// THZ Plant
-	"S_THZFLOWERA",
-	"S_THZFLOWERB",
+	// THZ flowers
+	"S_THZFLOWERA", // THZ1 Steam flower
+	"S_THZFLOWERB", // THZ1 Spin flower (red)
+	"S_THZFLOWERC", // THZ1 Spin flower (yellow)
+
+	// THZ Steam Whistle tree/bush
+	"S_THZTREE",
+	"S_THZTREEBRANCH1",
+	"S_THZTREEBRANCH2",
+	"S_THZTREEBRANCH3",
+	"S_THZTREEBRANCH4",
+	"S_THZTREEBRANCH5",
+	"S_THZTREEBRANCH6",
+	"S_THZTREEBRANCH7",
+	"S_THZTREEBRANCH8",
+	"S_THZTREEBRANCH9",
+	"S_THZTREEBRANCH10",
+	"S_THZTREEBRANCH11",
+	"S_THZTREEBRANCH12",
+	"S_THZTREEBRANCH13",
 
 	// THZ Alarm
 	"S_ALARM1",
@@ -4742,18 +4811,33 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
 
+	// Kelp,
+	"S_KELP",
+
+	// DSZ Stalagmites
+	"S_DSZSTALAGMITE",
+	"S_DSZ2STALAGMITE",
+
+	// DSZ Light beam
+	"S_LIGHTBEAM1",
+	"S_LIGHTBEAM2",
+	"S_LIGHTBEAM3",
+	"S_LIGHTBEAM4",
+	"S_LIGHTBEAM5",
+	"S_LIGHTBEAM6",
+	"S_LIGHTBEAM7",
+	"S_LIGHTBEAM8",
+	"S_LIGHTBEAM9",
+	"S_LIGHTBEAM10",
+	"S_LIGHTBEAM11",
+	"S_LIGHTBEAM12",
+
 	// CEZ Chain
 	"S_CEZCHAIN",
 
 	// Flame
-	"S_FLAME1",
-	"S_FLAME2",
-	"S_FLAME3",
-	"S_FLAME4",
-	"S_FLAME5",
-	"S_FLAME6",
+	"S_FLAME",
 	"S_FLAMEPARTICLE",
-
 	"S_FLAMEREST",
 
 	// Eggman Statue
@@ -4768,6 +4852,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BIGMACECHAIN",
 	"S_SMALLMACE",
 	"S_BIGMACE",
+	"S_SMALLGRABCHAIN",
+	"S_BIGGRABCHAIN",
 
 	// Yellow spring on a ball
 	"S_YELLOWSPRINGBALL",
@@ -4819,7 +4905,23 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BIGFIREBAR15",
 	"S_BIGFIREBAR16",
 
-	"S_CEZFLOWER1",
+	"S_CEZFLOWER",
+	"S_CEZPOLE",
+	"S_CEZBANNER",
+	"S_PINETREE",
+	"S_CEZBUSH1",
+	"S_CEZBUSH2",
+	"S_CANDLE",
+	"S_CANDLEPRICKET",
+	"S_FLAMEHOLDER",
+	"S_FIRETORCH",
+	"S_WAVINGFLAG",
+	"S_WAVINGFLAGSEG",
+	"S_CRAWLASTATUE",
+	"S_FACESTABBERSTATUE",
+	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
+	"S_SUSPICIOUSFACESTABBERSTATUE_BURST1",
+	"S_SUSPICIOUSFACESTABBERSTATUE_BURST2",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -4920,8 +5022,57 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
 	// Xmas GFZ bushes
+	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
 	"S_XMASBUSH",
+	// FHZ
+	"S_FHZICE1",
+	"S_FHZICE2",
+
+	// Halloween Scenery
+	// Pumpkins
+	"S_JACKO1",
+	"S_JACKO1OVERLAY_1",
+	"S_JACKO1OVERLAY_2",
+	"S_JACKO1OVERLAY_3",
+	"S_JACKO1OVERLAY_4",
+	"S_JACKO2",
+	"S_JACKO2OVERLAY_1",
+	"S_JACKO2OVERLAY_2",
+	"S_JACKO2OVERLAY_3",
+	"S_JACKO2OVERLAY_4",
+	"S_JACKO3",
+	"S_JACKO3OVERLAY_1",
+	"S_JACKO3OVERLAY_2",
+	"S_JACKO3OVERLAY_3",
+	"S_JACKO3OVERLAY_4",
+	// Dr Seuss Trees
+	"S_HHZTREE_TOP",
+	"S_HHZTREE_TRUNK",
+	"S_HHZTREE_LEAF",
+	// Mushroom
+	"S_HHZSHROOM_1",
+	"S_HHZSHROOM_2",
+	"S_HHZSHROOM_3",
+	"S_HHZSHROOM_4",
+	"S_HHZSHROOM_5",
+	"S_HHZSHROOM_6",
+	"S_HHZSHROOM_7",
+	"S_HHZSHROOM_8",
+	"S_HHZSHROOM_9",
+	"S_HHZSHROOM_10",
+	"S_HHZSHROOM_11",
+	"S_HHZSHROOM_12",
+	"S_HHZSHROOM_13",
+	"S_HHZSHROOM_14",
+	"S_HHZSHROOM_15",
+	"S_HHZSHROOM_16",
+	// Misc
+	"S_HHZGRASS",
+	"S_HHZTENT1",
+	"S_HHZTENT2",
+	"S_HHZSTALAGMITE_TALL",
+	"S_HHZSTALAGMITE_SHORT",
 
 	// Botanic Serenity's loads of scenery states
 	"S_BSZTALLFLOWER_RED",
@@ -5362,19 +5513,64 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
 
+	// Spider
+	"S_SECRETFLICKY_01_OUT",
+	"S_SECRETFLICKY_01_AIM",
+	"S_SECRETFLICKY_01_HOP",
+	"S_SECRETFLICKY_01_UP",
+	"S_SECRETFLICKY_01_DOWN",
+
+	// Bat
+	"S_SECRETFLICKY_02_OUT",
+	"S_SECRETFLICKY_02_FLAP1",
+	"S_SECRETFLICKY_02_FLAP2",
+	"S_SECRETFLICKY_02_FLAP3",
+
+	// Fan
+	"S_FAN",
+	"S_FAN2",
+	"S_FAN3",
+	"S_FAN4",
+	"S_FAN5",
+
+	// Steam Riser
+	"S_STEAM1",
+	"S_STEAM2",
+	"S_STEAM3",
+	"S_STEAM4",
+	"S_STEAM5",
+	"S_STEAM6",
+	"S_STEAM7",
+	"S_STEAM8",
+
+	// Bumpers
+	"S_BUMPER",
+	"S_BUMPERHIT",
+
+	// Balloons
+	"S_BALLOON",
+	"S_BALLOONPOP1",
+	"S_BALLOONPOP2",
+	"S_BALLOONPOP3",
+	"S_BALLOONPOP4",
+	"S_BALLOONPOP5",
+	"S_BALLOONPOP6",
+
+	// Yellow Spring
 	"S_YELLOWSPRING",
 	"S_YELLOWSPRING2",
 	"S_YELLOWSPRING3",
 	"S_YELLOWSPRING4",
 	"S_YELLOWSPRING5",
 
+	// Red Spring
 	"S_REDSPRING",
 	"S_REDSPRING2",
 	"S_REDSPRING3",
 	"S_REDSPRING4",
 	"S_REDSPRING5",
 
-	// Blue Springs
+	// Blue Spring
 	"S_BLUESPRING",
 	"S_BLUESPRING2",
 	"S_BLUESPRING3",
@@ -5400,6 +5596,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RDIAG6",
 	"S_RDIAG7",
 	"S_RDIAG8",
+
+	// Blue Diagonal Spring
+	"S_BDIAG1",
+	"S_BDIAG2",
+	"S_BDIAG3",
+	"S_BDIAG4",
+	"S_BDIAG5",
+	"S_BDIAG6",
+	"S_BDIAG7",
+	"S_BDIAG8",
 
 	// Yellow Side Spring
 	"S_YHORIZ1",
@@ -5506,7 +5712,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SEED",
 
 	"S_PARTICLE",
-	"S_PARTICLEGEN",
 
 	// Score Logos
 	"S_SCRA", // 100
@@ -5520,6 +5725,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SCRI", // 4000 (mario)
 	"S_SCRJ", // 8000 (mario)
 	"S_SCRK", // 1UP (mario)
+	"S_SCRL", // 10
 
 	// Drowning Timer Numbers
 	"S_ZERO1",
@@ -5818,9 +6024,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTSCORE90_2",
 	"S_NIGHTSCORE100_2",
 
-	"S_NIGHTSWING",
-	"S_NIGHTSWING_XMAS",
-
 	// NiGHTS Paraloop Powerups
 	"S_NIGHTSSUPERLOOP",
 	"S_NIGHTSDRILLREFILL",
@@ -5838,14 +6041,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ORBITEM6",
 	"S_ORBITEM7",
 	"S_ORBITEM8",
-	"S_ORBITEM9",
-	"S_ORBITEM10",
-	"S_ORBITEM11",
-	"S_ORBITEM12",
-	"S_ORBITEM13",
-	"S_ORBITEM14",
-	"S_ORBITEM15",
-	"S_ORBITEM16",
+	"S_ORBIDYA1",
+	"S_ORBIDYA2",
+	"S_ORBIDYA3",
+	"S_ORBIDYA4",
+	"S_ORBIDYA5",
 
 	// "Flicky" helper
 	"S_NIGHTOPIANHELPER1",
@@ -5857,6 +6057,141 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTOPIANHELPER7",
 	"S_NIGHTOPIANHELPER8",
 	"S_NIGHTOPIANHELPER9",
+
+	// Nightopian
+	"S_PIAN0",
+	"S_PIAN1",
+	"S_PIAN2",
+	"S_PIAN3",
+	"S_PIAN4",
+	"S_PIAN5",
+	"S_PIAN6",
+	"S_PIANSING",
+
+	// Shleep
+	"S_SHLEEP1",
+	"S_SHLEEP2",
+	"S_SHLEEP3",
+	"S_SHLEEP4",
+	"S_SHLEEPBOUNCE1",
+	"S_SHLEEPBOUNCE2",
+	"S_SHLEEPBOUNCE3",
+
+	// Secret badniks and hazards, shhhh
+	"S_PENGUINATOR_LOOK",
+	"S_PENGUINATOR_WADDLE1",
+	"S_PENGUINATOR_WADDLE2",
+	"S_PENGUINATOR_WADDLE3",
+	"S_PENGUINATOR_WADDLE4",
+	"S_PENGUINATOR_SLIDE1",
+	"S_PENGUINATOR_SLIDE2",
+	"S_PENGUINATOR_SLIDE3",
+	"S_PENGUINATOR_SLIDE4",
+	"S_PENGUINATOR_SLIDE5",
+
+	"S_POPHAT_LOOK",
+	"S_POPHAT_SHOOT1",
+	"S_POPHAT_SHOOT2",
+	"S_POPHAT_SHOOT3",
+
+	"S_HIVEELEMENTAL_LOOK",
+	"S_HIVEELEMENTAL_PREPARE1",
+	"S_HIVEELEMENTAL_PREPARE2",
+	"S_HIVEELEMENTAL_SHOOT1",
+	"S_HIVEELEMENTAL_SHOOT2",
+	"S_HIVEELEMENTAL_DORMANT",
+	"S_HIVEELEMENTAL_PAIN",
+	"S_HIVEELEMENTAL_DIE1",
+	"S_HIVEELEMENTAL_DIE2",
+	"S_HIVEELEMENTAL_DIE3",
+
+	"S_BUMBLEBORE_SPAWN",
+	"S_BUMBLEBORE_LOOK1",
+	"S_BUMBLEBORE_LOOK2",
+	"S_BUMBLEBORE_FLY1",
+	"S_BUMBLEBORE_FLY2",
+	"S_BUMBLEBORE_RAISE",
+	"S_BUMBLEBORE_FALL1",
+	"S_BUMBLEBORE_FALL2",
+	"S_BUMBLEBORE_STUCK1",
+	"S_BUMBLEBORE_STUCK2",
+	"S_BUMBLEBORE_DIE",
+
+	"S_BBUZZFLY1",
+	"S_BBUZZFLY2",
+
+	"S_SMASHSPIKE_FLOAT",
+	"S_SMASHSPIKE_EASE1",
+	"S_SMASHSPIKE_EASE2",
+	"S_SMASHSPIKE_FALL",
+	"S_SMASHSPIKE_STOMP1",
+	"S_SMASHSPIKE_STOMP2",
+	"S_SMASHSPIKE_RISE1",
+	"S_SMASHSPIKE_RISE2",
+
+	"S_CACO_LOOK",
+	"S_CACO_WAKE1",
+	"S_CACO_WAKE2",
+	"S_CACO_WAKE3",
+	"S_CACO_WAKE4",
+	"S_CACO_ROAR",
+	"S_CACO_CHASE",
+	"S_CACO_CHASE_REPEAT",
+	"S_CACO_RANDOM",
+	"S_CACO_PREPARE_SOUND",
+	"S_CACO_PREPARE1",
+	"S_CACO_PREPARE2",
+	"S_CACO_PREPARE3",
+	"S_CACO_SHOOT_SOUND",
+	"S_CACO_SHOOT1",
+	"S_CACO_SHOOT2",
+	"S_CACO_CLOSE",
+	"S_CACO_DIE_FLAGS",
+	"S_CACO_DIE_GIB1",
+	"S_CACO_DIE_GIB2",
+	"S_CACO_DIE_SCREAM",
+	"S_CACO_DIE_SHATTER",
+	"S_CACO_DIE_FALL",
+	"S_CACOSHARD_RANDOMIZE",
+	"S_CACOSHARD1_1",
+	"S_CACOSHARD1_2",
+	"S_CACOSHARD2_1",
+	"S_CACOSHARD2_2",
+	"S_CACOFIRE1",
+	"S_CACOFIRE2",
+	"S_CACOFIRE3",
+	"S_CACOFIRE_EXPLODE1",
+	"S_CACOFIRE_EXPLODE2",
+	"S_CACOFIRE_EXPLODE3",
+	"S_CACOFIRE_EXPLODE4",
+
+	"S_SPINBOBERT_MOVE_FLIPUP",
+	"S_SPINBOBERT_MOVE_UP",
+	"S_SPINBOBERT_MOVE_FLIPDOWN",
+	"S_SPINBOBERT_MOVE_DOWN",
+	"S_SPINBOBERT_FIRE_MOVE",
+	"S_SPINBOBERT_FIRE_GHOST",
+	"S_SPINBOBERT_FIRE_TRAIL1",
+	"S_SPINBOBERT_FIRE_TRAIL2",
+	"S_SPINBOBERT_FIRE_TRAIL3",
+
+	"S_HANGSTER_LOOK",
+	"S_HANGSTER_SWOOP1",
+	"S_HANGSTER_SWOOP2",
+	"S_HANGSTER_ARC1",
+	"S_HANGSTER_ARC2",
+	"S_HANGSTER_ARC3",
+	"S_HANGSTER_FLY1",
+	"S_HANGSTER_FLY2",
+	"S_HANGSTER_FLY3",
+	"S_HANGSTER_FLY4",
+	"S_HANGSTER_FLYREPEAT",
+	"S_HANGSTER_ARCUP1",
+	"S_HANGSTER_ARCUP2",
+	"S_HANGSTER_ARCUP3",
+	"S_HANGSTER_RETURN1",
+	"S_HANGSTER_RETURN2",
+	"S_HANGSTER_RETURN3",
 
 	"S_CRUMBLE1",
 	"S_CRUMBLE2",
@@ -5897,6 +6232,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WPLD5",
 	"S_WPLD6",
 
+	"S_DUST1",
+	"S_DUST2",
+	"S_DUST3",
+	"S_DUST4",
+
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -5933,32 +6273,35 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_TAILSOVERLAY", // c:
 
 	// Enemies
-	"MT_BLUECRAWLA",
-	"MT_REDCRAWLA",
-	"MT_GFZFISH", // Greenflower Fish
-	"MT_GOLDBUZZ",
-	"MT_REDBUZZ",
-	"MT_AQUABUZZ",
+	"MT_BLUECRAWLA", // Crawla (Blue)
+	"MT_REDCRAWLA", // Crawla (Red)
+	"MT_GFZFISH", // SDURF
+	"MT_GOLDBUZZ", // Buzz (Gold)
+	"MT_REDBUZZ", // Buzz (Red)
 	"MT_JETTBOMBER", // Jetty-Syn Bomber
 	"MT_JETTGUNNER", // Jetty-Syn Gunner
 	"MT_CRAWLACOMMANDER", // Crawla Commander
 	"MT_DETON", // Deton
 	"MT_SKIM", // Skim mine dropper
-	"MT_TURRET",
-	"MT_POPUPTURRET",
-	"MT_SHARP", // Sharp
+	"MT_TURRET", // Industrial Turret
+	"MT_POPUPTURRET", // Pop-Up Turret
+	"MT_SPINCUSHION", // Spincushion
+	"MT_CRUSHSTACEAN", // Crushstacean
+	"MT_CRUSHCLAW", // Big meaty claw
+	"MT_CRUSHCHAIN", // Chain
 	"MT_JETJAW", // Jet Jaw
 	"MT_SNAILER", // Snailer
-	"MT_VULTURE", // Vulture
+	"MT_VULTURE", // BASH
 	"MT_POINTY", // Pointy
 	"MT_POINTYBALL", // Pointy Ball
 	"MT_ROBOHOOD", // Robo-Hood
-	"MT_FACESTABBER", // CastleBot FaceStabber
+	"MT_FACESTABBER", // Castlebot Facestabber
+	"MT_FACESTABBERSPEAR", // Castlebot Facestabber spear aura
 	"MT_EGGGUARD", // Egg Guard
-	"MT_EGGSHIELD", // Egg Shield for Egg Guard
+	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
 	"MT_MINUS", // Minus
-	"MT_SPRINGSHELL", // Spring Shell (no drop)
+	"MT_SPRINGSHELL", // Spring Shell
 	"MT_YELLOWSHELL", // Spring Shell (yellow)
 	"MT_UNIDUS", // Unidus
 	"MT_UNIBALL", // Unidus Ball
@@ -6025,7 +6368,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Collectible Items
 	"MT_RING",
 	"MT_FLINGRING", // Lost ring
-	"MT_BLUEBALL",  // Blue sphere replacement for special stages
+	"MT_BLUESPHERE",  // Blue sphere for special stages
+	"MT_BOMBSPHERE",
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
 	"MT_TOKEN", // Special Stage Token
@@ -6045,28 +6389,31 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Springs and others
 	"MT_FAN",
-	"MT_STEAM", // Steam riser
-	"MT_BLUESPRING",
+	"MT_STEAM",
+	"MT_BUMPER",
+	"MT_BALLOON",
+
 	"MT_YELLOWSPRING",
 	"MT_REDSPRING",
-	"MT_YELLOWDIAG", // Yellow Diagonal Spring
-	"MT_REDDIAG", // Red Diagonal Spring
-	"MT_YELLOWHORIZ", // Yellow Side Spring
-	"MT_REDHORIZ", // Red Side Spring
-	"MT_BLUEHORIZ", // Blue Side Spring
+	"MT_BLUESPRING",
+	"MT_YELLOWDIAG",
+	"MT_REDDIAG",
+	"MT_BLUEDIAG",
+	"MT_YELLOWHORIZ",
+	"MT_REDHORIZ",
+	"MT_BLUEHORIZ",
 
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source
 	"MT_SIGN", // Level end sign
 	"MT_SPIKEBALL", // Spike Ball
-	"MT_SPECIALSPIKEBALL",
 	"MT_SPINFIRE",
 	"MT_SPIKE",
 	"MT_WALLSPIKE",
 	"MT_WALLSPIKEBASE",
 	"MT_STARPOST",
 	"MT_BIGMINE",
-	"MT_BIGAIRMINE",
+	"MT_BLASTEXECUTOR",
 	"MT_CANNONLAUNCHER",
 
 	// Monitor miscellany
@@ -6152,8 +6499,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZFLOWER1",
 	"MT_GFZFLOWER2",
 	"MT_GFZFLOWER3",
+
+	"MT_BLUEBERRYBUSH",
 	"MT_BERRYBUSH",
 	"MT_BUSH",
+
 	// Trees (both GFZ and misc)
 	"MT_GFZTREE",
 	"MT_GFZBERRYTREE",
@@ -6165,10 +6515,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_POLYGONTREE",
 	"MT_BUSHTREE",
 	"MT_BUSHREDTREE",
+	"MT_SPRINGTREE",
 
 	// Techno Hill Scenery
 	"MT_THZFLOWER1",
 	"MT_THZFLOWER2",
+	"MT_THZFLOWER3",
+	"MT_THZTREE", // Steam whistle tree/bush
+	"MT_THZTREEBRANCH", // branch of said tree
 	"MT_ALARM",
 
 	// Deep Sea Scenery
@@ -6181,6 +6535,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CORAL2", // Coral 2
 	"MT_CORAL3", // Coral 3
 	"MT_BLUECRYSTAL", // Blue Crystal
+	"MT_KELP", // Kelp
+	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
+	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
+	"MT_LIGHTBEAM", // DSZ Light beam
 
 	// Castle Eggman Scenery
 	"MT_CHAIN", // CEZ Chain
@@ -6198,11 +6556,27 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BIGMACECHAIN", // Big Mace Chain
 	"MT_SMALLMACE", // Small Mace
 	"MT_BIGMACE", // Big Mace
+	"MT_SMALLGRABCHAIN", // Small Grab Chain
+	"MT_BIGGRABCHAIN", // Big Grab Chain
 	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
 	"MT_BIGFIREBAR", // Big Firebar
-	"MT_CEZFLOWER",
+	"MT_CEZFLOWER", // Flower
+	"MT_CEZPOLE", // Pole
+	"MT_CEZBANNER", // Banner
+	"MT_PINETREE", // Pine Tree
+	"MT_CEZBUSH1", // Bush 1
+	"MT_CEZBUSH2", // Bush 2
+	"MT_CANDLE", // Candle
+	"MT_CANDLEPRICKET", // Candle pricket
+	"MT_FLAMEHOLDER", // Flame holder
+	"MT_FIRETORCH", // Fire torch
+	"MT_WAVINGFLAG", // Waving flag
+	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_CRAWLASTATUE", // Crawla statue
+	"MT_FACESTABBERSTATUE", // Facestabber statue
+	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
@@ -6254,8 +6628,28 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
 	// Xmas GFZ bushes
+	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
 	"MT_XMASBUSH",
+	// FHZ
+	"MT_FHZICE1",
+	"MT_FHZICE2",
+
+	// Halloween Scenery
+	// Pumpkins
+	"MT_JACKO1",
+	"MT_JACKO2",
+	"MT_JACKO3",
+	// Dr Seuss Trees
+	"MT_HHZTREE_TOP",
+	"MT_HHZTREE_PART",
+	// Misc
+	"MT_HHZSHROOM",
+	"MT_HHZGRASS",
+	"MT_HHZTENTACLE1",
+	"MT_HHZTENTACLE2",
+	"MT_HHZSTALAGMITE_TALL",
+	"MT_HHZSTALAGMITE_SHORT",
 
 	// Botanic Serenity
 	"MT_BSZTALLFLOWER_RED",
@@ -6342,6 +6736,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FLICKY_14", // Dove
 	"MT_FLICKY_15", // Cat
 	"MT_FLICKY_16", // Canary
+	"MT_SECRETFLICKY_01", // Spider
+	"MT_SECRETFLICKY_02", // Bat
+	"MT_SEED",
 
 	// Environmental Effects
 	"MT_RAIN", // Rain
@@ -6354,7 +6751,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_WATERZAP",
 	"MT_SPINDUST", // Spindash dust
 	"MT_TFOG",
-	"MT_SEED",
 	"MT_PARTICLE",
 	"MT_PARTICLEGEN", // For fans, etc.
 
@@ -6377,6 +6773,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AWATERH", // Ambient Water Sound 8
 	"MT_RANDOMAMBIENT",
 	"MT_RANDOMAMBIENT2",
+	"MT_MACHINEAMBIENCE",
 
 	"MT_CORK",
 
@@ -6435,7 +6832,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HOOPCOLLIDE", // Collision detection for NiGHTS hoops
 	"MT_HOOPCENTER", // Center of a hoop
 	"MT_NIGHTSCORE",
-	"MT_NIGHTSWING",
+	"MT_NIGHTSCHIP", // NiGHTS Chip
+	"MT_NIGHTSSTAR", // NiGHTS Star
 	"MT_NIGHTSSUPERLOOP",
 	"MT_NIGHTSDRILLREFILL",
 	"MT_NIGHTSHELPER",
@@ -6443,6 +6841,27 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSLINKFREEZE",
 	"MT_EGGCAPSULE",
 	"MT_NIGHTOPIANHELPER", // the actual helper object that orbits you
+	"MT_PIAN", // decorative singing friend
+	"MT_SHLEEP", // almost-decorative sleeping enemy
+
+	// Secret badniks and hazards, shhhh
+	"MT_PENGUINATOR",
+	"MT_POPHAT",
+	"MT_POPSHOT",
+
+	"MT_HIVEELEMENTAL",
+	"MT_BUMBLEBORE",
+
+	"MT_BUBBLEBUZZ",
+
+	"MT_SMASHINGSPIKEBALL",
+	"MT_CACOLANTERN",
+	"MT_CACOSHARD",
+	"MT_CACOFIRE",
+	"MT_SPINBOBERT",
+	"MT_SPINBOBERT_FIRE1",
+	"MT_SPINBOBERT_FIRE2",
+	"MT_HANGSTER",
 
 	// Utility Objects
 	"MT_TELEPORTMAN",
@@ -6464,6 +6883,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SPARK", //spark
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
+	"MT_DUST",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -6535,8 +6955,8 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"SCATTER",		  // Thrown ring has scatter properties
 	"BEYONDTHEGRAVE", // Source of this missile has died and has since respawned.
 	"SLIDEPUSH",	  // MF_PUSHABLE that pushes continuously.
-	"CLASSICPUSH",	  // Drops straight down when object has negative Z.
-	"STANDONME",	  // While not pushable, stand on me anyway.
+	"CLASSICPUSH",    // Drops straight down when object has negative momz.
+	"INVERTAIMABLE",  // Flips whether it's targetable by A_LookForEnemies (enemies no, decoys yes)
 	"INFLOAT",		  // Floating to a height for a move, don't auto float to target's height.
 	"DEBRIS",		  // Splash ring from explosion ring
 	"NIGHTSPULL",	  // Attracted from a paraloop
@@ -7143,6 +7563,7 @@ struct {
 	{"DMG_CRUSHED",DMG_CRUSHED},
 	{"DMG_SPECTATOR",DMG_SPECTATOR},
 	//// Masks
+	{"DMG_CANHURTSELF",DMG_CANHURTSELF},
 	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
 	// Gametypes, for use with global var "gametype"

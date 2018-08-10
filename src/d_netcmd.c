@@ -309,8 +309,8 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t timetic_cons_t[] = {{0, "Normal"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
-consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
+static CV_PossibleValue_t timetic_cons_t[] = {{0, "Classic"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
+consvar_t cv_timetic = {"timerres", "Classic", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-person only"}, {2, "Always"}, {0, NULL}};
 consvar_t cv_powerupdisplay = {"powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -2682,8 +2682,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	// Clear player score and rings if a spectator.
 	if (players[playernum].spectator)
 	{
-		players[playernum].score = 0;
-		players[playernum].rings = 0;
+		players[playernum].score = players[playernum].rings = 0;
 		if (players[playernum].mo)
 			players[playernum].mo->health = 1;
 	}
@@ -3938,28 +3937,7 @@ static void Command_ExitLevel_f(void)
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else
-	{
-		if ((netgame || multiplayer)
-		&& ((mapheaderinfo[gamemap-1]->nextlevel <= 0)
-		|| (mapheaderinfo[gamemap-1]->nextlevel > NUMMAPS)
-		|| !(mapvisited[mapheaderinfo[gamemap-1]->nextlevel-1])))
-		{
-			UINT8 i;
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (playeringame[i] && players[i].exiting)
-					break;
-			}
-
-			if (i == MAXPLAYERS)
-			{
-				CONS_Printf(M_GetText("Someone must finish the level for you to use this.\n"));
-				return;
-			}
-		}
-
 		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)

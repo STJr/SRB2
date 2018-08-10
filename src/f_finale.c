@@ -1344,7 +1344,7 @@ void F_GameEvaluationDrawer(void)
 				++timesBeatenUltimate;
 
 			if (M_UpdateUnlockablesAndExtraEmblems())
-				S_StartSound(NULL, sfx_ncitem);
+				S_StartSound(NULL, sfx_s3k68);
 
 			G_SaveGameData();
 		}
