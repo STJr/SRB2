@@ -685,6 +685,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		INT32 i;
 		INT32 total_spheres = 0;
+		INT32 total_rings = 0;
 
 		P_SetTarget(&player->mo->target, NULL);
 
@@ -692,7 +693,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i]/* && players[i].powers[pw_carry] == CR_NIGHTSMODE*/)
+				{
 					total_spheres += players[i].spheres;
+					total_rings += players[i].rings;
+				}
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -706,11 +710,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			if (G_IsSpecialStage(gamemap))
 			{
 				players[i].finishedspheres = (INT16)total_spheres;
+				players[i].finishedrings = (INT16)total_rings;
 				P_AddPlayerScore(player, total_spheres * 50);
 			}
 			else
 			{
 				players[i].finishedspheres = (INT16)(players[i].spheres);
+				players[i].finishedrings = (INT16)(players[i].rings);
 				P_AddPlayerScore(&players[i], (players[i].spheres) * 50);
 			}
 
