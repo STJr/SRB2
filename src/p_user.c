@@ -637,7 +637,7 @@ static void P_DeNightserizePlayer(player_t *player)
 // NiGHTS Time!
 void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
-	INT32 oldmare;
+	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot)
@@ -684,6 +684,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 
 	oldmare = player->mare;
+	oldmarelap = player->marelap;
+	oldmarebonuslap = player->marebonuslap;
 
 	if (!P_TransferToNextMare(player))
 	{
@@ -711,6 +713,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].texttimer = (3 * TICRATE) - 10;
 			players[i].textvar = 4; // Score and grades
 			players[i].lastmare = players[i].mare;
+			players[i].lastmarelap = players[i].marelap;
+			players[i].lastmarebonuslap = players[i].marebonuslap;
 			if (G_IsSpecialStage(gamemap))
 			{
 				players[i].finishedspheres = (INT16)total_spheres;
@@ -742,7 +746,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		// Spheres bonus
 		P_AddPlayerScore(player, (player->spheres) * 50);
 
-		player->lastmare = (UINT8)oldmare;
+		player->lastmare = oldmare;
+		player->lastmarelap = oldmarelap;
+		player->lastmarebonuslap = oldmarebonuslap;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);

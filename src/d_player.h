@@ -468,6 +468,8 @@ typedef struct player_s
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
 	UINT8 lastmare; // previous mare
+	UINT8 lastmarelap; // previous mare lap
+	UINT8 lastmarebonuslap; // previous mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
 	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks
