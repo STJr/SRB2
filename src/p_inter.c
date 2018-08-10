@@ -490,7 +490,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoNightsScore(player);
 			break;
 		case MT_BLUESPHERE:
+		case MT_FLINGBLUESPHERE:
 		case MT_NIGHTSCHIP:
+		case MT_FLINGNIGHTSCHIP:
 			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
 				return;
 
@@ -2774,18 +2776,26 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return true;
 	}
 
-	if (player->rings > 0) // Ring loss
+	if (player->powers[pw_carry] == CR_NIGHTSFALL)
+	{
+		if (player->spheres > 0)
+		{
+			P_PlayRinglossSound(target);
+			P_PlayerRingBurst(player, player->spheres);
+			player->spheres = 0;
+		}
+	}
+	else if (player->rings > 0) // Ring loss
 	{
 		P_PlayRinglossSound(target);
 		P_PlayerRingBurst(player, player->rings);
+		player->rings = 0;
 	}
 	else // Death
 	{
 		P_PlayDeathSound(target);
 		P_PlayVictorySound(source); // Killer laughs at you! LAUGHS! BWAHAHAHHAHAA!!
 	}
-
-	player->rings = 0;
 	return true;
 }
 
@@ -3000,7 +3010,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	}
 }
 
-static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
+static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype, boolean dospheres)
 {
 	P_DoPlayerPain(player, source, inflictor);
 
@@ -3030,9 +3040,19 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	// Ring loss sound plays despite hitting spikes
 	P_PlayRinglossSound(player->mo); // Ringledingle!
 	P_PlayerRingBurst(player, damage);
-	player->rings -= damage;
-	if (player->rings < 0)
-		player->rings = 0;
+
+	if (dospheres)
+	{
+		player->spheres -= damage;
+		if (player->spheres < 0)
+			player->spheres = 0;
+	}
+	else
+	{
+		player->rings -= damage;
+		if (player->rings < 0)
+			player->rings = 0;
+	}
 }
 
 //
@@ -3249,7 +3269,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (damagetype & DMG_DEATHMASK)
 		{
 			P_KillPlayer(player, source, damage);
-			player->rings = 0;
+			player->rings = player->spheres = 0;
 		}
 		else if (metalrecording)
 		{
@@ -3293,10 +3313,19 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;
 		}
+		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
+		{
+			if (player->spheres > 0)
+			{
+				damage = player->spheres;
+				P_RingDamage(player, inflictor, source, damage, damagetype, true);
+				damage = 0;
+			}
+		}
 		else if (player->rings > 0) // No shield but have rings.
 		{
 			damage = player->rings;
-			P_RingDamage(player, inflictor, source, damage, damagetype);
+			P_RingDamage(player, inflictor, source, damage, damagetype, false);
 			damage = 0;
 		}
 		// To reduce griefing potential, don't allow players to be killed
@@ -3377,13 +3406,14 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	angle_t fa;
 	fixed_t ns;
 	fixed_t z;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	// Better safe than sorry.
 	if (!player)
 		return;
 
 	// If no health, don't spawn ring!
-	if (player->rings <= 0)
+	if (((maptol & TOL_NIGHTS) && player->spheres <= 0) || (!(maptol & TOL_NIGHTS) && player->rings <= 0))
 		num_rings = 0;
 
 	if (num_rings > 32 && player->powers[pw_carry] != CR_NIGHTSFALL)
@@ -3400,6 +3430,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		INT32 objType = mobjinfo[MT_RING].reactiontime;
 		if (mariomode)
 			objType = mobjinfo[MT_COIN].reactiontime;
+		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
+			objType = mobjinfo[(nightsreplace ? MT_NIGHTSCHIP : MT_BLUESPHERE)].reactiontime;
 
 		z = player->mo->z;
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -3428,6 +3460,9 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 			P_SetObjectMomZ(mo, 8*FRACUNIT, false);
 			mo->fuse = 20*TICRATE; // Adjust fuse for NiGHTS
+
+			// Toggle bonus time colors
+			P_SetMobjState(mo, (player->bonustime ? mo->info->raisestate : mo->info->spawnstate));
 		}
 		else
 		{

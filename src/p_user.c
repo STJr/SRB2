@@ -590,8 +590,9 @@ static void P_DeNightserizePlayer(player_t *player)
 	else if (player == &players[secondarydisplayplayer])
 		localaiming2 = 0;
 
-	// If you screwed up, kiss your score goodbye.
+	// If you screwed up, kiss your score and ring bonus goodbye.
 	player->marescore = 0;
+	player->rings = 0;
 
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 
@@ -684,6 +685,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		INT32 i;
 		INT32 total_spheres = 0;
+		INT32 total_rings = 0;
 
 		P_SetTarget(&player->mo->target, NULL);
 
@@ -691,7 +693,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i]/* && players[i].powers[pw_carry] == CR_NIGHTSMODE*/)
+				{
 					total_spheres += players[i].spheres;
+					total_rings += players[i].rings;
+				}
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -705,11 +710,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			if (G_IsSpecialStage(gamemap))
 			{
 				players[i].finishedspheres = (INT16)total_spheres;
+				players[i].finishedrings = (INT16)total_rings;
 				P_AddPlayerScore(player, total_spheres * 50);
 			}
 			else
 			{
 				players[i].finishedspheres = (INT16)(players[i].spheres);
+				players[i].finishedrings = (INT16)(players[i].rings);
 				P_AddPlayerScore(&players[i], (players[i].spheres) * 50);
 			}
 
@@ -721,7 +728,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
-			players[i].spheres = 0;
+			players[i].spheres = players[i].rings = 0;
 			P_DoPlayerExit(&players[i]);
 		}
 	}
@@ -745,7 +752,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marescore = 0;
 		player->marebegunat = leveltime;
 
-		player->spheres = 0;
+		player->spheres = player->rings = 0;
 	}
 	else
 	{
@@ -7030,7 +7037,7 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->rings > 0)
+			else if (player->spheres > 0)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			player->powers[pw_carry] = CR_NONE;
 		}

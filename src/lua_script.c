@@ -572,9 +572,23 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TSTRING:
+	{
+		UINT16 len = (UINT16)lua_objlen(gL, myindex); // get length of string, including embedded zeros
+		const char *s = lua_tostring(gL, myindex);
+		UINT16 i = 0;
 		WRITEUINT8(save_p, ARCH_STRING);
-		WRITESTRING(save_p, lua_tostring(gL, myindex));
+		// if you're wondering why we're writing a string to save_p this way,
+		// it turns out that Lua can have embedded zeros ('\0') in the strings,
+		// so we can't use WRITESTRING as that cuts off when it finds a '\0'.
+		// Saving the size of the string also allows us to get the size of the string on the other end,
+		// fixing the awful crashes previously encountered for reading strings longer than 1024
+		// (yes I know that's kind of a stupid thing to care about, but it'd be evil to trim or ignore them?)
+		// -- Monster Iestyn 05/08/18
+		WRITEUINT16(save_p, len); // save size of string
+		while (i < len)
+			WRITECHAR(save_p, s[i++]); // write chars individually, including the embedded zeros
 		break;
+	}
 	case LUA_TTABLE:
 	{
 		boolean found = false;
@@ -905,9 +919,19 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_STRING:
 	{
-		char value[1024];
-		READSTRING(save_p, value);
-		lua_pushstring(gL, value);
+		UINT16 len = READUINT16(save_p); // length of string, including embedded zeros
+		char *value;
+		UINT16 i = 0;
+		// See my comments in the ArchiveValue function;
+		// it's much the same for reading strings as writing them!
+		// (i.e. we can't use READSTRING either)
+		// -- Monster Iestyn 05/08/18
+		value = malloc(len); // make temp buffer of size len
+		// now read the actual string
+		while (i < len)
+			value[i++] = READCHAR(save_p); // read chars individually, including the embedded zeros
+		lua_pushlstring(gL, value, len); // push the string (note: this function supports embedded zeros)
+		free(value); // free the buffer
 		break;
 	}
 	case ARCH_TABLE:
