@@ -2387,7 +2387,8 @@ static void P_LevelInitStuff(void)
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
 		 players[i].mare = players[i].marelap =\
-		 players[i].marebonuslap = players[i].realtime =\
+		 players[i].marebonuslap = players[i].lapbegunat =\
+		 players[i].lapstartedtime = players[i].realtime =\
 		 players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting

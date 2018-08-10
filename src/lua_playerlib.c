@@ -300,6 +300,10 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->startedtime);
 	else if (fastcmp(field,"finishedtime"))
 		lua_pushinteger(L, plr->finishedtime);
+	else if (fastcmp(field,"lapbegunat"))
+		lua_pushinteger(L, plr->lapbegunat);
+	else if (fastcmp(field,"lapstartedtime"))
+		lua_pushinteger(L, plr->lapstartedtime);
 	else if (fastcmp(field,"finishedspheres"))
 		lua_pushinteger(L, plr->finishedspheres);
 	else if (fastcmp(field,"finishedrings"))
@@ -588,6 +592,10 @@ static int player_set(lua_State *L)
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedtime"))
 		plr->finishedtime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapbegunat"))
+		plr->lapbegunat = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapstartedtime"))
+		plr->lapstartedtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedspheres"))
 		plr->finishedspheres = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedrings"))

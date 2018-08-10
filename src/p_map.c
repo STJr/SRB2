@@ -1114,6 +1114,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		))
 		{
 			pl->marelap++;
+			pl->lapbegunat = leveltime;
+			pl->lapstartedtime = pl->nightstime;
 
 			if (pl->bonustime) 
 			{

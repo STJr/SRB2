@@ -666,7 +666,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
-	player->nightstime = player->startedtime = nighttime*TICRATE;
+	player->nightstime = player->startedtime = player->lapstartedtime = nightstime*TICRATE;
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
@@ -762,6 +762,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->lastmarescore = player->marescore;
 		player->marescore = 0;
 		player->marebegunat = leveltime;
+		player->lapbegunat = leveltime;
 
 		player->spheres = player->rings = 0;
 	}
