@@ -395,8 +395,7 @@ static void ExtraDataTicker(void)
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
 						CONS_Alert(CONS_WARNING, M_GetText("Got unknown net command [%s]=%d (max %d)\n"), sizeu1(curpos - bufferstart), *curpos, bufferstart[0]);
-						D_FreeTextcmd(gametic);
-						return;
+						break;
 					}
 				}
 			}
@@ -513,7 +512,8 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	rsp->rings = LONG(players[i].rings);
+	rsp->rings = SHORT(players[i].rings);
+	rsp->spheres = SHORT(players[i].spheres);
 	rsp->lives = players[i].lives;
 	rsp->continues = players[i].continues;
 	rsp->scoreadd = players[i].scoreadd;
@@ -643,7 +643,8 @@ static void resynch_read_player(resynch_pak *rsp)
 		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	players[i].rings = LONG(rsp->rings);
+	players[i].rings = SHORT(rsp->rings);
+	players[i].spheres = SHORT(rsp->spheres);
 	players[i].lives = rsp->lives;
 	players[i].continues = rsp->continues;
 	players[i].scoreadd = rsp->scoreadd;
@@ -1125,7 +1126,7 @@ static inline void CL_DrawConnectionStatus(void)
 	INT32 ccstime = I_GetTime();
 
 	// Draw background fade
-	V_DrawFadeScreen();
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw the bottom box.
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
@@ -1173,22 +1174,37 @@ static inline void CL_DrawConnectionStatus(void)
 		if (lastfilenum != -1)
 		{
 			INT32 dldlength;
-			static char tempname[32];
+			static char tempname[28];
+			fileneeded_t *file = &fileneeded[lastfilenum];
+			char *filename = file->filename;
 
 			Net_GetNetStat();
-			dldlength = (INT32)((fileneeded[lastfilenum].currentsize/(double)fileneeded[lastfilenum].totalsize) * 256);
+			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
 			if (dldlength > 256)
 				dldlength = 256;
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 111);
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 96);
 
 			memset(tempname, 0, sizeof(tempname));
-			nameonly(strncpy(tempname, fileneeded[lastfilenum].filename, 31));
+			// offset filename to just the name only part
+			filename += strlen(filename) - nameonlylength(filename);
+
+			if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
+			{
+				size_t endhalfpos = strlen(filename)-10;
+				// display as first 14 chars + ... + last 10 chars
+				// which should add up to 27 if our math(s) is correct
+				snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
+			}
+			else // we can copy the whole thing in safely
+			{
+				strncpy(tempname, filename, sizeof(tempname)-1);
+			}
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
 				va(M_GetText("Downloading \"%s\""), tempname));
 			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,fileneeded[lastfilenum].totalsize>>10));
+				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
 			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
 				va("%3.1fK/s ", ((double)getbps)/1024));
 		}
@@ -2239,7 +2255,7 @@ static void Command_connect(void)
 	// Assume we connect directly.
 	boolean viams = false;
 
-	if (COM_Argc() < 2)
+	if (COM_Argc() < 2 || *COM_Argv(1) == 0)
 	{
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"
@@ -2362,11 +2378,11 @@ static void CL_RemovePlayer(INT32 playernum)
 	if (gametype == GT_CTF)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
-	// If in a special stage, redistribute the player's rings across
+	// If in a special stage, redistribute the player's spheres across
 	// the remaining players.
 	if (G_IsSpecialStage(gamemap))
 	{
-		INT32 i, count, increment, rings;
+		INT32 i, count, increment, spheres;
 
 		for (i = 0, count = 0; i < MAXPLAYERS; i++)
 		{
@@ -2375,19 +2391,19 @@ static void CL_RemovePlayer(INT32 playernum)
 		}
 
 		count--;
-		rings = players[playernum].rings;
-		increment = rings/count;
+		spheres = players[playernum].spheres;
+		increment = spheres/count;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && i != playernum)
 			{
-				if (rings < increment)
-					P_GivePlayerRings(&players[i], rings);
+				if (spheres < increment)
+					P_GivePlayerSpheres(&players[i], spheres);
 				else
-					P_GivePlayerRings(&players[i], increment);
+					P_GivePlayerSpheres(&players[i], increment);
 
-				rings -= increment;
+				spheres -= increment;
 			}
 		}
 	}
@@ -3311,7 +3327,7 @@ void SV_StopServer(void)
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
 
-	for (i = 0; i < BACKUPTICS; i++)
+	for (i = firstticstosend; i < firstticstosend + BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
 	consoleplayer = 0;

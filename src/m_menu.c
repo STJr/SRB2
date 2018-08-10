@@ -458,7 +458,7 @@ consvar_t cv_ghost_guest     = {"ghost_guest",     "Show", CV_SAVE, ghost2_cons_
 static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t liveslimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t liveslimit_cons_t[] = {{-1, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
@@ -1188,7 +1188,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 #endif
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,      36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,36},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
 	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
@@ -1196,24 +1196,25 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
-	{IT_STRING | IT_CVAR, NULL, "Time Display",              &cv_timetic,          71},
+	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
+	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         76},
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         81},
 #endif
 
-	{IT_HEADER, NULL, "Console", NULL, 85},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      91},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,     96},
+	{IT_HEADER, NULL, "Console", NULL, 90},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      96},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    101},
 
-	{IT_HEADER, NULL, "Level", NULL, 105},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        111},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 116},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 121},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   126},
+	{IT_HEADER, NULL, "Level", NULL, 110},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        116},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 121},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 126},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   131},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 135},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         141},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      146},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 140},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         146},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      151},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -2049,35 +2050,7 @@ static void Newgametype_OnChange(void)
 			P_AllocMapHeader((INT16)(cv_nextmap.value-1));
 
 		if (!M_CanShowLevelOnPlatter(cv_nextmap.value-1, cv_newgametype.value))
-		{
-			INT32 value = 0;
-
-			switch (cv_newgametype.value)
-			{
-				case GT_COOP:
-					value = TOL_COOP;
-					break;
-				case GT_COMPETITION:
-					value = TOL_COMPETITION;
-					break;
-				case GT_RACE:
-					value = TOL_RACE;
-					break;
-				case GT_MATCH:
-				case GT_TEAMMATCH:
-					value = TOL_MATCH;
-					break;
-				case GT_TAG:
-				case GT_HIDEANDSEEK:
-					value = TOL_TAG;
-					break;
-				case GT_CTF:
-					value = TOL_CTF;
-					break;
-			}
-
-			CV_SetValue(&cv_nextmap, M_GetFirstLevelInList(value));
-		}
+			CV_SetValue(&cv_nextmap, M_GetFirstLevelInList(cv_newgametype.value));
 	}
 }
 
@@ -2611,7 +2584,7 @@ void M_Drawer(void)
 	{
 		// now that's more readable with a faded background (yeah like Quake...)
 		if (!WipeInAction)
-			V_DrawFadeScreen();
+			V_DrawFadeScreen(0xFF00, 16);
 
 		if (currentMenu->drawroutine)
 			currentMenu->drawroutine(); // call current menu Draw routine
@@ -4453,14 +4426,14 @@ static void M_DrawLevelPlatterMenu(void)
 		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
 	// finds row at top of the screen
-	while (y > 0)
+	while (y > -8)
 	{
 		iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
 		y -= lsvseperation(iter);
 	}
 
 	// draw from top to bottom
-	while (y < 200)
+	while (y < (vid.height/vid.dupy))
 	{
 		M_DrawLevelPlatterRow(iter, y);
 		y += lsvseperation(iter);
@@ -4965,6 +4938,7 @@ static void M_DrawAddons(void)
 {
 	INT32 x, y;
 	ssize_t i, max;
+	const char* topstr;
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
@@ -4976,9 +4950,16 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
-	? "\x85""Adding files mid-game may cause problems."
-	: LOCATIONSTRING));
+	if (Playing())
+		topstr = "\x85""Adding files mid-game may cause problems.";
+	else if (savemoddata)
+		topstr = "\x83""Add-on has its own data, saving enabled.";
+	else if (modifiedgame)
+		topstr = "\x87""Game is modified, saving is disabled.";
+	else
+		topstr = LOCATIONSTRING;
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, topstr);
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -5249,7 +5230,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_SOC:
 						case EXT_WAD:
 						case EXT_PK3:
-							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							addonsresponselimit = 5;
 							break;
 						default:
@@ -5292,8 +5273,14 @@ static void M_HandleAddons(INT32 choice)
 static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
-	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
-	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
+	if (maptol & TOL_NIGHTS)
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].spheres, 0));
+	else
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
+	if (players[consoleplayer].lives == 0x7f)
+		CV_StealthSetValue(&cv_dummylives, -1);
+	else
+		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
 #ifndef DEVELOP
@@ -5307,7 +5294,12 @@ static void M_PandorasBox(INT32 choice)
 static boolean M_ExitPandorasBox(void)
 {
 	if (cv_dummyrings.value != max(players[consoleplayer].rings, 0))
-		COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	{
+		if (maptol & TOL_NIGHTS)
+			COM_ImmedExecute(va("setspheres %d", cv_dummyrings.value));
+		else
+			COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	}
 	if (cv_dummylives.value != players[consoleplayer].lives)
 		COM_ImmedExecute(va("setlives %d", cv_dummylives.value));
 	if (cv_dummycontinues.value != players[consoleplayer].continues)
@@ -5710,7 +5702,7 @@ static void M_DrawChecklist(void)
 												beat = va("Get %d points in %s", cond[condnum].requirement, level);
 												break;
 											case UC_MAPTIME:
-												beat = va("Beat %s in %d:%d.%d", level,
+												beat = va("Beat %s in %d:%02d.%02d", level,
 												G_TicsToMinutes(cond[condnum].requirement, true),
 												G_TicsToSeconds(cond[condnum].requirement),
 												G_TicsToCentiseconds(cond[condnum].requirement));
@@ -5735,7 +5727,7 @@ static void M_DrawChecklist(void)
 											beat = va("Get %d points over all maps", cond[condnum].requirement);
 											break;
 										case UC_OVERALLTIME:
-											beat = va("Get a total time of less than %d:%d.%d",
+											beat = va("Get a total time of less than %d:%02d.%02d",
 											G_TicsToMinutes(cond[condnum].requirement, true),
 											G_TicsToSeconds(cond[condnum].requirement),
 											G_TicsToCentiseconds(cond[condnum].requirement));
@@ -5783,12 +5775,12 @@ static void M_DrawChecklist(void)
 												break;
 											case UC_NIGHTSTIME:
 												if (cond[condnum].extrainfo2)
-													beat = va("Beat %s, mare %d in %d:%d.%d", level, cond[condnum].extrainfo2,
+													beat = va("Beat %s, mare %d in %d:%02d.%02d", level, cond[condnum].extrainfo2,
 													G_TicsToMinutes(cond[condnum].requirement, true),
 													G_TicsToSeconds(cond[condnum].requirement),
 													G_TicsToCentiseconds(cond[condnum].requirement));
 												else
-													beat = va("Beat %s in %d:%d.%d",
+													beat = va("Beat %s in %d:%02d.%02d",
 													level,
 													G_TicsToMinutes(cond[condnum].requirement, true),
 													G_TicsToSeconds(cond[condnum].requirement),
@@ -6193,7 +6185,7 @@ static void M_DrawLoadGameData(void)
 			{
 				V_DrawSmallScaledPatch(x+2, y+64, 0, savselp[5]);
 			}
-#ifndef PERFECTSAVE // disabled, don't touch
+#ifdef PERFECTSAVE // disabled on request
 			else if ((savegameinfo[savetodraw].skinnum == 1)
 			&& (savegameinfo[savetodraw].lives == 99)
 			&& (savegameinfo[savetodraw].gamemap & 8192)
@@ -6281,7 +6273,7 @@ static void M_DrawLoadGameData(void)
 			for (j = 0; j < 7; ++j)
 			{
 				if (savegameinfo[savetodraw].numemeralds & (1 << j))
-					V_DrawScaledPatch(workx, y, 0, tinyemeraldpics[j]);
+					V_DrawScaledPatch(workx, y, 0, emeraldpics[1][j]);
 				workx += 10;
 			}
 		}
@@ -8468,6 +8460,13 @@ Update the maxplayers label...
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
+
+	if (*setupm_ip == 0)
+	{
+		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
+		return;
+	}
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.
@@ -8849,7 +8848,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				break;
 			S_StartSound(NULL,sfx_menu1); // Tails
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				setupm_name[l] = (char)choice;
 				setupm_name[l+1] = 0;

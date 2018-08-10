@@ -65,7 +65,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"buzz1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
   {"buzz2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
   {"buzz3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wacky worksurface"},
-  {"buzz4",  false,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Buzz"},
+  {"buzz4",   true,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Buzz"},
   {"crumbl",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crumbling"}, // Platform Crumble Tails 03-16-2001
   {"fire",   false,   8, 32, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},
   {"grind",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic grinding"},
@@ -76,6 +76,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"steam1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
   {"steam2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Steam jet"}, // Tails 06-19-2001
   {"wbreak", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wood breaking"},
+  {"ambmac", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Machinery"},
+  {"spsmsh", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy impact"},
 
   {"rainin",  true,  24,  4, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rain"},
   {"litng1", false,  16,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning"},
@@ -85,14 +87,14 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"athun1", false,  16,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thunder"},
   {"athun2", false,  16,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thunder"},
 
-  {"amwtr1", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr2", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr3", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr4", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr5", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr6", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr7", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
-  {"amwtr8", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Running water"},
+  {"amwtr1", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr2", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr3", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr4", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr5", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr6", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr7", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
+  {"amwtr8", false,  12,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Stream"},
   {"bubbl1", false,  11,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Glub"},
   {"bubbl2", false,  11,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Glub"},
   {"bubbl3", false,  11,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Glub"},
@@ -139,14 +141,14 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"bnce1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"}, // Boing!
   {"bnce2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Scatter"}, // Boing!
   {"cannon", false,  64,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful shot"},
-  {"cgot" ,   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Chaos Emerald"}, // Got Emerald! Tails 09-02-2001
+  {"cgot" ,   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Emerald"}, // Got Emerald! Tails 09-02-2001
   {"cybdth", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Explosion"},
-  {"deton",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous beeping"},
+  {"deton",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Threatening beeping"},
   {"ding",   false, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ding"},
   {"dmpain", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Machine damage"},
   {"drown",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drowning"},
   {"fizzle", false, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric fizzle"},
-  {"gbeep",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous beeping"}, // Grenade beep
+  {"gbeep",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Threatening beeping"}, // Grenade beep
   {"wepfir", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing weapon"}, // defaults to thok
   {"ghit" ,  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Goop splash"},
   {"gloop",  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Splash"},
@@ -177,15 +179,17 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"spring", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spring"},
   {"statu1",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pushing a statue"},
   {"statu2",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pushing a statue"},
-  {"strpst",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"}, // Starpost Sound Tails 07-04-2002
+  {"strpst",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"},
   {"supert",  true, 127,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Transformation"},
   {"telept", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Dash"},
   {"tink" ,  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tink"},
-  {"token" ,  true, 224,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Token"}, // SS token
+  {"token" ,  true, 224,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Token"},
   {"trfire",  true,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laser fired"},
   {"trpowr",  true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"turhit", false,  40,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laser hit"},
   {"wdjump", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Whirlwind jump"},
+  {"shrpsp",  true,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spincushion"},
+  {"shrpgo", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Launch"},
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning out"},
   {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Breaking through"},
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},
@@ -210,11 +214,12 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"xideya", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Success"}, // Xmas
   {"nbmper", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"},
   {"nxbump", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"}, // Xmas
+  {"ncchip", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got chip"},
   {"ncitem", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got special"},
   {"nxitem", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got special"}, // Xmas
   {"ngdone",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonus time start"},
   {"nxdone",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonus time start"}, // Xmas
-  {"drill1", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill start"},
+  {"drill1", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill"},
   {"drill2", false,  48,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drill"},
   {"ncspec", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power-up"}, // Tails 12-15-2003
   {"nghurt", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hurt"},
@@ -224,19 +229,26 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"hoop3",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hoop++"},
   {"hidden", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
   {"prloop", false, 104,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gust of wind"},
-  {"timeup",  true, 256,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous Countdown"},
+  {"ngjump", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
+  {"peww",   false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pew"},
+
+  // Halloween
+  {"lntsit", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cacolantern awake"},
+  {"lntdie", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cacolantern death"},
+  {"pumpkn", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pumpkin smash"}, // idspispopd
+  {"ghosty", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Laughter"},
 
   // Mario
   {"koopfr" , true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fire"},
-  {"mario1", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hitting a ceiling"},
-  {"mario2", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Koopa shell"},
+  {"mario1", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hit"},
+  {"mario2", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bonk"},
   {"mario3", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power-up"},
   {"mario4",  true,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got coin"},
-  {"mario5", false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boot"},
+  {"mario5", false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boot-stomp"},
   {"mario6", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
   {"mario7", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fire"},
   {"mario8", false,  48,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hurt"},
-  {"mario9",  true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Emerging"},
+  {"mario9",  true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Emerging power-up"},
   {"marioa",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "One-up"},
   {"thwomp",  true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thwomp"},
 
@@ -287,7 +299,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k3d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop"},
   {"s3k3e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flame Shield"},
   {"s3k3f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bubble Shield"},
-  {"s3k40",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction shot"},
+  {"s3k40",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction blast"},
   {"s3k41",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning Shield"},
   {"s3k42",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Twinspin"},
   {"s3k43",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flame burst"},
@@ -295,22 +307,22 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k45",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning zap"},
   {"s3k46",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Transformation"},
   {"s3k47",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising dust"},
-  {"s3k48",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic clink"},
-  {"s3k49",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling rock"},
+  {"s3k48",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pulse"},
+  {"s3k49",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k4a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Grab"},
   {"s3k4b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Water splash"},
   {"s3k4c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy hit"},
   {"s3k4d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing bullet"},
-  {"s3k4e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bomb explosion"},
+  {"s3k4e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Big explosion"},
   {"s3k4f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},
   {"s3k50",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Siren"},
-  {"s3k51",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling bomb"},
+  {"s3k51",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling hazard"},
   {"s3k52",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spike"},
   {"s3k53",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"s3k54",  false,  64, 64, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing"}, // MetalSonic shot fire
   {"s3k55",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical movement"},
   {"s3k56",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy landing"},
-  {"s3k57",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Splash"},
+  {"s3k57",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
   {"s3k58",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical movement"},
   {"s3k59",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crumbling"},
   {"s3k5a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},
@@ -324,13 +336,13 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k62",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
   {"s3k63",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"},
   {"s3k64",  false,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR, "Clatter"},
-  {"s3k65",  false, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got blue sphere"}, // Blue Spheres
-  {"s3k66",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage clear"},
+  {"s3k65",  false, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got sphere"}, // Blue Spheres
+  {"s3k66",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage end"},
   {"s3k67",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing missile"},
-  {"s3k68",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Unknown possibilities"},
+  {"s3k68",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
   {"s3k69",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Switch click"},
   {"s3k6a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Special stage clear"},
-  {"s3k6b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"s3k6b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Punch"},
   {"s3k6c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
   {"s3k6d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k6e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical damage"},
@@ -363,16 +375,16 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k89",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Advanced technology"},
   {"s3k8a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boing"},
   {"s3k8b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful hit"},
-  {"s3k8c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"s3k8c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Humming power"},
   {"s3k8d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3k8e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
+  {"s3k8e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Accelerating"},
   {"s3k8f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Opening"},
   {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k91",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Closed"},
   {"s3k92",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ghost"},
   {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rebuilding"},
   {"s3k94",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spike"},
-  {"s3k95",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising from lava"},
+  {"s3k95",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lava burst"},
   {"s3k96",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling object"},
   {"s3k97",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wind"},
   {"s3k98",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling spike"},
@@ -429,8 +441,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kc3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Levitation"}, // ditto
   {"s3kc4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
   {"s3kc4l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"}, // ditto
-  {"s3kc5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3kc5l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
+  {"s3kc5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Revving up"},
+  {"s3kc5l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Revving up"}, // ditto
   {"s3kc6s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"},
   {"s3kc6l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Orbiting"}, // ditto
   {"s3kc7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aiming"},
@@ -455,7 +467,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kd1s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3kd1l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd2s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"},
-  {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"}, // ditto
+  {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Moving chain"}, // ditto
   {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"},

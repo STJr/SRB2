@@ -1,3 +1,4 @@
+
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
@@ -357,7 +358,8 @@ endif
 
 ifdef PROFILEMODE
 	# build with profiling information
-	CFLAGS:=-pg $(CFLAGS)
+	CFLAGS+=-pg
+	LDFLAGS+=-pg
 endif
 
 ifdef ZDEBUG

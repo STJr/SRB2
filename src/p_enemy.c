@@ -55,15 +55,26 @@ void A_Fall(mobj_t *actor);
 void A_Look(mobj_t *actor);
 void A_Chase(mobj_t *actor);
 void A_FaceStabChase(mobj_t *actor);
+void A_FaceStabRev(mobj_t *actor);
+void A_FaceStabHurl(mobj_t *actor);
+void A_FaceStabMiss(mobj_t *actor);
+void A_StatueBurst(mobj_t *actor);
 void A_JetJawRoam(mobj_t *actor);
 void A_JetJawChomp(mobj_t *actor);
 void A_PointyThink(mobj_t *actor);
 void A_CheckBuddy(mobj_t *actor);
+void A_HoodFire(mobj_t *actor);
 void A_HoodThink(mobj_t *actor);
-void A_ArrowCheck(mobj_t *actor);
+void A_HoodFall(mobj_t *actor);
+void A_ArrowBonks(mobj_t *actor);
 void A_SnailerThink(mobj_t *actor);
 void A_SharpChase(mobj_t *actor);
 void A_SharpSpin(mobj_t *actor);
+void A_SharpDecel(mobj_t *actor);
+void A_CrushstaceanWalk(mobj_t *actor);
+void A_CrushstaceanPunch(mobj_t *actor);
+void A_CrushclawAim(mobj_t *actor);
+void A_CrushclawLaunch(mobj_t *actor);
 void A_VultureVtol(mobj_t *actor);
 void A_VultureCheck(mobj_t *actor);
 void A_SkimChase(mobj_t *actor);
@@ -101,7 +112,6 @@ void A_ExtraLife(mobj_t *actor);
 void A_GiveShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
-void A_ParticleSpawn(mobj_t *actor);
 void A_BunnyHop(mobj_t *actor);
 void A_BubbleSpawn(mobj_t *actor);
 void A_FanBubbleSpawn(mobj_t *actor);
@@ -220,7 +230,6 @@ void A_SetScale(mobj_t *actor);
 void A_RemoteDamage(mobj_t *actor);
 void A_HomingChase(mobj_t *actor);
 void A_TrapShot(mobj_t *actor);
-//for p_enemy.c
 void A_Boss1Chase(mobj_t *actor);
 void A_Boss2Chase(mobj_t *actor);
 void A_Boss2Pogo(mobj_t *actor);
@@ -246,6 +255,17 @@ void A_FlickyFlutter(mobj_t *actor);
 void A_FlameParticle(mobj_t *actor);
 void A_FadeOverlay(mobj_t *actor);
 void A_Boss5Jump(mobj_t *actor);
+void A_LightBeamReset(mobj_t *actor);
+void A_MineExplode(mobj_t *actor);
+void A_MineRange(mobj_t *actor);
+void A_ConnectToGround(mobj_t *actor);
+void A_SpawnParticleRelative(mobj_t *actor);
+void A_MultiShotDist(mobj_t *actor);
+void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
+void A_ParentTriesToSleep(mobj_t *actor);
+void A_CryingToMomma(mobj_t *actor);
+void A_CheckFlags2(mobj_t *actor);
+//for p_enemy.c
 
 //
 // ENEMY THINKING
@@ -749,6 +769,12 @@ static boolean P_LookForShield(mobj_t *actor)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
+
+			if (actor->hnext)
+				P_SetTarget(&actor->hnext->hprev, actor->hprev);
+			if (actor->hprev)
+				P_SetTarget(&actor->hprev->hnext, actor->hnext);
+
 			return true;
 		}
 	}
@@ -1019,7 +1045,7 @@ nomissile:
 
 // Function: A_FaceStabChase
 //
-// Description: A_Chase for CastleBot FaceStabber.
+// Description: Unused variant of A_Chase for Castlebot Facestabber.
 //
 // var1 = unused
 // var2 = unused
@@ -1105,6 +1131,269 @@ nomissile:
 	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 		P_NewChaseDir(actor);
+}
+
+static void P_SharpDust(mobj_t *actor, mobjtype_t type, angle_t ang)
+{
+	mobj_t *dust;
+
+	if (!type || !P_IsObjectOnGround(actor))
+		return;
+
+	dust = P_SpawnMobjFromMobj(actor,
+			-P_ReturnThrustX(actor, ang, 16<<FRACBITS),
+			-P_ReturnThrustY(actor, ang, 16<<FRACBITS),
+			0, type);
+	P_SetObjectMomZ(dust, P_RandomRange(1, 4)<<FRACBITS, false);
+}
+
+static void P_FaceStabFlume(mobj_t *actor)
+{
+	mobj_t *flume;
+	if (leveltime & 1)
+		return;
+
+	flume = P_SpawnMobjFromMobj(actor,
+		-P_ReturnThrustX(actor, actor->angle, actor->radius),
+		-P_ReturnThrustY(actor, actor->angle, actor->radius),
+		actor->height/3,
+		MT_PARTICLE);
+	flume->destscale = actor->scale*3;
+	P_SetScale(flume, flume->destscale);
+	P_SetTarget(&flume->target, actor);
+	flume->sprite = SPR_JETF;
+	flume->frame = FF_FULLBRIGHT;
+	flume->tics = 2;
+}
+
+// Function: A_FaceStabRev
+//
+// Description: Facestabber rev action
+//
+// var1 = effective duration
+// var2 = effective nextstate
+//
+void A_FaceStabRev(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabRev", actor))
+		return;
+#endif
+
+	if (!actor->target)
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	actor->extravalue1 = 0;
+
+	if (!actor->reactiontime)
+	{
+		actor->reactiontime = locvar1;
+		S_StartSound(actor, actor->info->activesound);
+	}
+	else
+	{
+		if ((--actor->reactiontime) == 0)
+		{
+			S_StartSound(actor, actor->info->attacksound);
+			P_SetMobjState(actor, locvar2);
+		}
+		else
+		{
+			P_TryMove(actor, actor->x - P_ReturnThrustX(actor, actor->angle, 2<<FRACBITS), actor->y - P_ReturnThrustY(actor, actor->angle, 2<<FRACBITS), false);
+			P_FaceStabFlume(actor);
+		}
+	}
+}
+
+// Function: A_FaceStabHurl
+//
+// Description: Facestabber hurl action
+//
+// var1 = homing strength (recommended strength between 0-8)
+// var2 = effective nextstate
+//
+void A_FaceStabHurl(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabHurl", actor))
+		return;
+#endif
+
+	if (actor->target)
+	{
+		angle_t visang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		// Calculate new direction.
+		angle_t dirang = actor->angle;
+		angle_t diffang = visang - dirang;
+
+		if (locvar1) // Allow homing?
+		{
+			if (diffang > ANGLE_180)
+			{
+				angle_t workang = locvar1*(InvAngle(diffang)>>5);
+				diffang += InvAngle(workang);
+			}
+			else
+				diffang += (locvar1*(diffang>>5));
+		}
+		diffang += ANGLE_45;
+
+		// Check the sight cone.
+		if (diffang < ANGLE_90)
+		{
+			actor->angle = dirang;
+			if (++actor->extravalue2 < 4)
+				actor->extravalue2 = 4;
+			else if (actor->extravalue2 > 26)
+				actor->extravalue2 = 26;
+
+			if (P_TryMove(actor,
+				actor->x + P_ReturnThrustX(actor, dirang, actor->extravalue2<<FRACBITS),
+				actor->y + P_ReturnThrustY(actor, dirang, actor->extravalue2<<FRACBITS),
+				false))
+			{
+				// Do the spear damage.
+#define NUMSTEPS 3
+#define NUMGRADS 5
+#define MAXVAL (NUMSTEPS*NUMGRADS)
+				SINT8 step = (++actor->extravalue1);
+				fixed_t basesize = FRACUNIT/MAXVAL;
+				mobj_t *hwork = actor;
+				INT32 dist = 113;
+				fixed_t xo = P_ReturnThrustX(actor, actor->angle, dist*basesize);
+				fixed_t yo = P_ReturnThrustY(actor, actor->angle, dist*basesize);
+
+				while (step > 0)
+				{
+					if (!hwork->hnext)
+						P_SetTarget(&hwork->hnext, P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_FACESTABBERSPEAR));
+					hwork = hwork->hnext;
+					hwork->angle = actor->angle + ANGLE_90;
+					hwork->destscale = FixedSqrt(step*basesize);
+					P_SetScale(hwork, hwork->destscale);
+					hwork->fuse = 2;
+					P_TeleportMove(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
+					step -= NUMGRADS;
+				}
+
+				if (actor->extravalue1 >= MAXVAL)
+					actor->extravalue1 -= NUMGRADS;
+
+				if ((step % 5) == 0)
+					P_SharpDust(actor, MT_SPINDUST, actor->angle);
+
+				P_FaceStabFlume(actor);
+				return;
+#undef MAXVAL
+#undef NUMGRADS
+#undef NUMSTEPS
+			}
+		}
+	}
+
+	P_SetMobjState(actor, locvar2);
+	actor->reactiontime = actor->info->reactiontime;
+}
+
+// Function: A_FaceStabMiss
+//
+// Description: Facestabber miss action
+//
+// var1 = unused
+// var2 = effective nextstate
+//
+void A_FaceStabMiss(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FaceStabMiss", actor))
+		return;
+#endif
+
+	if (++actor->extravalue1 >= 3)
+	{
+		actor->extravalue2 -= 2;
+		actor->extravalue1 = 0;
+		S_StartSound(actor, sfx_s3k47);
+		P_SharpDust(actor, MT_SPINDUST, actor->angle);
+	}
+
+	if (actor->extravalue2 <= 0 || !P_TryMove(actor,
+		actor->x + P_ReturnThrustX(actor, actor->angle, actor->extravalue2<<FRACBITS),
+		actor->y + P_ReturnThrustY(actor, actor->angle, actor->extravalue2<<FRACBITS),
+		false))
+	{
+		actor->extravalue2 = 0;
+		P_SetMobjState(actor, locvar2);
+	}
+}
+
+// Function: A_StatueBurst
+//
+// Description: For suspicious statues only...
+//
+// var1 = object to create
+// var2 = effective nextstate for created object
+//
+void A_StatueBurst(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobjtype_t chunktype = (mobjtype_t)actor->info->raisestate;
+	mobj_t *new;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_StatueBurst", actor))
+		return;
+#endif
+
+	if (!locvar1 || !(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1)))
+		return;
+
+	new->angle = actor->angle;
+	new->target = actor->target;
+	if (locvar2)
+		P_SetMobjState(new, (statenum_t)locvar2);
+	S_StartSound(new, new->info->attacksound);
+	S_StopSound(actor);
+	S_StartSound(actor, sfx_s3k96);
+
+	{
+		fixed_t a, b;
+		fixed_t c = (actor->height>>2) - FixedMul(actor->scale, mobjinfo[chunktype].height>>1);
+		fixed_t v = 4<<FRACBITS;
+		const fixed_t r = (actor->radius>>1);
+		mobj_t *spawned;
+		UINT8 i;
+		for (i = 0; i < 8; i++)
+		{
+			a = ((i & 1) ? r : (-r));
+			b = ((i & 2) ? r : (-r));
+			if (i == 4)
+			{
+				c += (actor->height>>1);
+				v = 8<<FRACBITS;
+			}
+
+			spawned = P_SpawnMobjFromMobj(actor, a, b, c, chunktype);
+
+			P_InstaThrust(spawned, R_PointToAngle2(0, 0, a, b), 8<<FRACBITS);
+			P_SetObjectMomZ(spawned, v, false);
+
+			spawned->fuse = 3*TICRATE;
+		}
+	}
 }
 
 // Function: A_JetJawRoam
@@ -1303,6 +1592,62 @@ void A_CheckBuddy(mobj_t *actor)
 		P_RemoveMobj(actor);
 }
 
+// Helper function for the Robo Hood.
+// Don't ask me how it works. Nev3r made it with dark majyks.
+static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixed_t speed)
+{
+	fixed_t dh;
+
+	x -= actor->x;
+	y -= actor->y;
+	z -= actor->z;
+
+	dh = P_AproxDistance(x, y);
+
+	actor->momx = FixedMul(FixedDiv(x, dh), speed);
+	actor->momy = FixedMul(FixedDiv(y, dh), speed);
+
+	if (!gravity)
+		return;
+
+	dh = FixedDiv(FixedMul(dh, gravity), speed);
+	actor->momz = (dh>>1) + FixedDiv(z, dh<<1);
+}
+
+// Function: A_HoodFire
+//
+// Description: Firing Robo-Hood
+//
+// var1 = object type to fire
+// var2 = unused
+//
+void A_HoodFire(mobj_t *actor)
+{
+	mobj_t *arrow;
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_HoodFire", actor))
+		return;
+#endif
+
+	// Check target first.
+	if (!actor->target)
+	{
+		actor->reactiontime = actor->info->reactiontime;
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	A_FaceTarget(actor);
+
+	if (!(arrow = P_SpawnMissile(actor, actor->target, (mobjtype_t)locvar1)))
+		return;
+
+	// Set a parabolic trajectory for the arrow.
+	P_ParabolicMove(arrow, actor->target->x, actor->target->y, actor->target->z, arrow->info->speed);
+}
+
 // Function: A_HoodThink
 //
 // Description: Thinker for Robo-Hood
@@ -1312,97 +1657,112 @@ void A_CheckBuddy(mobj_t *actor)
 //
 void A_HoodThink(mobj_t *actor)
 {
+	fixed_t dx, dy, dz, dm;
+	boolean checksight;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_HoodThink", actor))
 		return;
 #endif
-	// Currently in the air...
-	if (!(actor->eflags & MFE_VERTICALFLIP) && actor->z > actor->floorz)
-	{
-		if (actor->momz > 0)
-			P_SetMobjStateNF(actor, actor->info->xdeathstate); // Rising
-		else
-			P_SetMobjStateNF(actor, actor->info->raisestate); // Falling
 
-		return;
-	}
-	else if ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height < actor->ceilingz)
-	{
-		if (actor->momz < 0)
-			P_SetMobjStateNF(actor, actor->info->xdeathstate); // Rising
-		else
-			P_SetMobjStateNF(actor, actor->info->raisestate); // Falling
-
-		return;
-	}
-
-	if (actor->state == &states[actor->info->xdeathstate]
-		|| actor->state == &states[actor->info->raisestate])
-		P_SetMobjStateNF(actor, actor->info->seestate);
-
+	// Check target first.
 	if (!actor->target)
 	{
+		actor->reactiontime = actor->info->reactiontime;
 		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
 	}
 
-	A_FaceTarget(actor); // Aiming... aiming...
-
-	if (--actor->reactiontime > 0)
+	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
+	dm = P_AproxDistance(dx, dy);
+	// Target dangerously close to robohood, retreat then.
+	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
+	{
+		P_SetMobjState(actor, actor->info->raisestate);
 		return;
+	}
 
-	// Shoot, if not too close (cheap shots are lame)
-	if ((P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) > FixedMul(192*FRACUNIT, actor->scale))
-	|| (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))) // If you can't jump, might as well shoot regardless of distance!
-		P_SetMobjState(actor, actor->info->missilestate);
-	else if (!(actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH)))// But we WILL jump!
-		P_SetMobjState(actor, actor->info->painstate);
+	// If target on sight, look at it.
+	if ((checksight = P_CheckSight(actor, actor->target)))
+	{
+		angle_t dang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		if (actor->angle >= ANGLE_180)
+		{
+			actor->angle = InvAngle(actor->angle)>>1;
+			actor->angle = InvAngle(actor->angle);
+		}
+		else
+			actor->angle >>= 1;
 
-	actor->reactiontime = actor->info->reactiontime;
+		if (dang >= ANGLE_180)
+		{
+			dang = InvAngle(dang)>>1;
+			dang = InvAngle(dang);
+		}
+		else
+			dang >>= 1;
+
+		actor->angle += dang;
+	}
+
+	// Check whether to do anything.
+	if ((--actor->reactiontime) <= 0)
+	{
+		actor->reactiontime = actor->info->reactiontime;
+
+		// If way too far, don't shoot.
+		if ((dm < (3072<<FRACBITS)) && checksight)
+		{
+			P_SetMobjState(actor, actor->info->missilestate);
+			return;
+		}
+	}
 }
 
-// Function: A_ArrowCheck
+// Function: A_HoodFall
 //
-// Description: Checks arrow direction and adjusts sprite accordingly
+// Description: Falling Robo-Hood
 //
 // var1 = unused
 // var2 = unused
 //
-void A_ArrowCheck(mobj_t *actor)
+void A_HoodFall(mobj_t *actor)
 {
-	fixed_t x,y,z;
-	angle_t angle;
-	fixed_t dist;
-
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ArrowCheck", actor))
+	if (LUA_CallAction("A_HoodFall", actor))
 		return;
 #endif
 
-	// Movement vector
-	x = actor->momx;
-	y = actor->momy;
-	z = actor->momz;
+	if (!P_IsObjectOnGround(actor))
+		return;
 
-	// Calculate the angle of movement.
-	/*
-	       Z
-	     / |
-	   /   |
-	 /     |
-	0------dist(X,Y)
-	*/
+	actor->momx = actor->momy = 0;
+	actor->reactiontime = actor->info->reactiontime;
+	P_SetMobjState(actor, actor->info->seestate);
+}
 
-	dist = P_AproxDistance(x, y);
+// Function: A_ArrowBonks
+//
+// Description: Arrow momentum setting on collision
+//
+// var1 = unused
+// var2 = unused
+//
+void A_ArrowBonks(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ArrowBonks", actor))
+		return;
+#endif
 
-	angle = R_PointToAngle2(0, 0, dist, z);
+	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)
+		|| (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
+		actor->angle += ANGLE_180;
 
-	if (angle > ANG20 && angle <= ANGLE_180)
-		P_SetMobjStateNF(actor, actor->info->raisestate);
-	else if (angle < ANG340 && angle > ANGLE_180)
-		P_SetMobjStateNF(actor, actor->info->xdeathstate);
-	else
-		P_SetMobjStateNF(actor, actor->info->spawnstate);
+	P_SetObjectMomZ(actor, 8*actor->scale, false);
+	P_InstaThrust(actor, actor->angle, -6*actor->scale);
+
+	actor->flags = (actor->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
+	actor->z += P_MobjFlip(actor);
 }
 
 // Function: A_SnailerThink
@@ -1482,7 +1842,7 @@ void A_SnailerThink(mobj_t *actor)
 
 // Function: A_SharpChase
 //
-// Description: Thinker/Chase routine for Sharps
+// Description: Thinker/Chase routine for Spincushions
 //
 // var1 = unused
 // var2 = unused
@@ -1493,12 +1853,6 @@ void A_SharpChase(mobj_t *actor)
 	if (LUA_CallAction("A_SharpChase", actor))
 		return;
 #endif
-
-	if (!actor->health)
-	{
-		P_SetMobjState(actor, actor->info->deathstate);
-		return;
-	}
 
 	if (actor->reactiontime)
 	{
@@ -1542,40 +1896,325 @@ void A_SharpChase(mobj_t *actor)
 
 // Function: A_SharpSpin
 //
-// Description: Spin chase routine for Sharps
+// Description: Spin chase routine for Spincushions
 //
-// var1 = unused
-// var2 = unused
+// var1 = object # to spawn as dust (if not provided not done)
+// var2 = if nonzero, do the old-style spinning using this as the angle difference
 //
 void A_SharpSpin(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	angle_t oldang = actor->angle;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SharpSpin", actor))
 		return;
 #endif
 
-	if (!actor->health)
-	{
-		P_SetMobjState(actor, actor->info->deathstate);
-		return;
-	}
-
 	if (actor->threshold && actor->target)
 	{
-		actor->angle += ANGLE_22h;
-		P_Thrust(actor, R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y), FixedMul(actor->info->speed*FRACUNIT, actor->scale));
+		angle_t ang = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		P_Thrust(actor, ang, actor->info->speed*actor->scale);
+		if (locvar2)
+			actor->angle += locvar2; // ANGLE_22h;
+		else
+			actor->angle = ang;
 		actor->threshold--;
+		if (leveltime & 1)
+			S_StartSound(actor, actor->info->painsound);
 	}
 	else
 	{
 		actor->reactiontime = actor->info->reactiontime;
-		P_SetMobjState(actor, actor->info->spawnstate);
-
-		var1 = 1;
-		A_Look(actor);
-		if (actor->target)
-			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		P_SetMobjState(actor, actor->info->meleestate);
 	}
+
+	P_SharpDust(actor, locvar1, oldang);
+}
+
+// Function: A_SharpDecel
+//
+// Description: Slow down the Spincushion
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SharpDecel(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SharpDecel", actor))
+		return;
+#endif
+
+	if (actor->momx > 2 || actor->momy > 2)
+	{
+		actor->momx >>= 1;
+		actor->momy >>= 1;
+	}
+	else
+		P_SetMobjState(actor, actor->info->xdeathstate);
+}
+
+// Function: A_CrushstaceanWalk
+//
+// Description: Crushstacean movement
+//
+// var1 = speed (actor info's speed if 0)
+// var2 = state to switch to when blocked (spawnstate if 0)
+//
+void A_CrushstaceanWalk(mobj_t *actor)
+{
+	INT32 locvar1 = (var1 ? var1 : (INT32)actor->info->speed);
+	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
+	angle_t ang = actor->angle + ((actor->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushstaceanWalk", actor))
+		return;
+#endif
+
+	actor->reactiontime--;
+
+	if (!P_TryMove(actor,
+		actor->x + P_ReturnThrustX(actor, ang, locvar1*actor->scale),
+		actor->y + P_ReturnThrustY(actor, ang, locvar1*actor->scale),
+		false)
+	|| (actor->reactiontime-- <= 0))
+	{
+		actor->flags2 ^= MF2_AMBUSH;
+		P_SetMobjState(actor, locvar2);
+		actor->reactiontime = actor->info->reactiontime;
+	}
+}
+
+// Function: A_CrushstaceanPunch
+//
+// Description: Crushstacean attack
+//
+// var1 = unused
+// var2 = state to go to if unsuccessful (spawnstate if 0)
+//
+void A_CrushstaceanPunch(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushstaceanPunch", actor))
+		return;
+#endif
+
+	if (!actor->tracer)
+		return;
+
+	if (!actor->target)
+	{
+		P_SetMobjState(actor, locvar2);
+		return;
+	}
+
+	actor->tracer->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+	P_SetMobjState(actor->tracer, actor->tracer->info->missilestate);
+	actor->tracer->extravalue1 = actor->tracer->extravalue2 = 0;
+	S_StartSound(actor, actor->info->attacksound);
+}
+
+// Function: A_CrushclawAim
+//
+// Description: Crushstacean claw aiming
+//
+// var1 = sideways offset
+// var2 = vertical offset
+//
+void A_CrushclawAim(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *crab = actor->tracer;
+	angle_t ang;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushclawAim", actor))
+		return;
+#endif
+
+	if (!crab)
+	{
+		P_RemoveMobj(actor);
+		return; // there is only one step and it is crab
+	}
+
+	if (crab->target || P_LookForPlayers(crab, true, false, 600*crab->scale))
+		ang = R_PointToAngle2(crab->x, crab->y, crab->target->x, crab->target->y);
+	else
+		ang = crab->angle + ((crab->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
+	ang -= actor->angle;
+
+#define anglimit ANGLE_22h
+#define angfactor 5
+	if (ang < ANGLE_180)
+	{
+		if (ang > anglimit)
+			ang = anglimit;
+		ang /= angfactor;
+	}
+	else
+	{
+		ang = InvAngle(ang);
+		if (ang > anglimit)
+			ang = anglimit;
+		ang = InvAngle(ang/angfactor);
+	}
+	actor->angle += ang;
+#undef anglimit
+#undef angfactor
+
+	P_TeleportMove(actor,
+		crab->x + P_ReturnThrustX(actor, actor->angle, locvar1*crab->scale),
+		crab->y + P_ReturnThrustY(actor, actor->angle, locvar1*crab->scale),
+		crab->z + locvar2*crab->scale);
+
+	if (!crab->target || !crab->info->missilestate || (statenum_t)(crab->state-states) == crab->info->missilestate)
+		return;
+
+	if (((ang + ANG1) < ANG2) || P_AproxDistance(crab->x - crab->target->x, crab->y - crab->target->y) < 333*crab->scale)
+		P_SetMobjState(crab, crab->info->missilestate);
+}
+
+// Function: A_CrushclawLaunch
+//
+// Description: Crushstacean claw launching
+//
+// var1:
+//		0 - forwards
+//		anything else - backwards
+// var2 = state to change to when done
+//
+void A_CrushclawLaunch(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *crab = actor->tracer;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CrushclawLaunch", actor))
+		return;
+#endif
+
+	if (!crab)
+	{
+		mobj_t *chainnext;
+		while (actor)
+		{
+			chainnext = actor->target;
+			P_RemoveMobj(actor);
+			actor = chainnext;
+		}
+		return; // there is only one step and it is crab
+	}
+
+	if (!actor->extravalue1)
+	{
+		S_StartSound(actor, actor->info->activesound);
+		actor->extravalue1 = ((locvar1) ? -1 : 32);
+	}
+	else if (actor->extravalue1 != 1)
+		actor->extravalue1 -= 1;
+
+#define CSEGS 5
+	if (!actor->target)
+	{
+		mobj_t *prevchain = actor;
+		UINT8 i = 0;
+		for (i = 0; (i < CSEGS); i++)
+		{
+			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
+			prevchain->target = newchain;
+			prevchain = newchain;
+		}
+		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
+	}
+
+	if ((!locvar1) && crab->target)
+	{
+#define anglimit ANGLE_22h
+#define angfactor 7
+		angle_t ang = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y) - actor->target->angle;
+		if (ang < ANGLE_180)
+		{
+			if (ang > anglimit)
+				ang = anglimit;
+			ang /= angfactor;
+		}
+		else
+		{
+			ang = InvAngle(ang);
+			if (ang > anglimit)
+				ang = anglimit;
+			ang /= angfactor;
+			ang = InvAngle(ang);
+		}
+		actor->target->angle += ang;
+		actor->angle = actor->target->angle;
+	}
+
+	actor->extravalue2 += actor->extravalue1;
+
+	if (!P_TryMove(actor,
+		actor->target->x + P_ReturnThrustX(actor, actor->target->angle, actor->extravalue2*actor->scale),
+		actor->target->y + P_ReturnThrustY(actor, actor->target->angle, actor->extravalue2*actor->scale),
+		true)
+		&& !locvar1)
+	{
+		actor->extravalue1 = 0;
+		actor->extravalue2 = FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y)>>FRACBITS;
+		P_SetMobjState(actor, locvar2);
+		S_StopSound(actor);
+		S_StartSound(actor, sfx_s3k49);
+	}
+	else
+	{
+		actor->z = actor->target->z;
+		if ((!locvar1 && (actor->extravalue2 > 256)) || (locvar1 && (actor->extravalue2 < 16)))
+		{
+			if (locvar1) // In case of retracting, resume crab and remove the chain.
+			{
+				mobj_t *chain = actor->target, *chainnext;
+				while (chain)
+				{
+					chainnext = chain->target;
+					P_RemoveMobj(chain);
+					chain = chainnext;
+				}
+				actor->extravalue2 = 0;
+				actor->angle = R_PointToAngle2(crab->x, crab->y, actor->x, actor->y);
+				P_SetTarget(&actor->target, NULL);
+				P_SetTarget(&crab->target, NULL);
+				P_SetMobjState(crab, crab->state->nextstate);
+			}
+			actor->extravalue1 = 0;
+			P_SetMobjState(actor, locvar2);
+			S_StopSound(actor);
+			if (!locvar1)
+				S_StartSound(actor, sfx_s3k64);
+		}
+	}
+
+	if (!actor->target)
+		return;
+
+	{
+		mobj_t *chain = actor->target->target;
+		fixed_t dx = (actor->x - actor->target->x)/CSEGS, dy = (actor->y - actor->target->y)/CSEGS, dz = (actor->z - actor->target->z)/CSEGS;
+		fixed_t idx = dx, idy = dy, idz = dz;
+		while (chain)
+		{
+			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
+			chain->watertop = chain->z;
+			idx += dx;
+			idy += dy;
+			idz += dz;
+			chain = chain->target;
+		}
+	}
+#undef CSEGS
 }
 
 // Function: A_VultureVtol
@@ -2712,7 +3351,6 @@ void A_GoldMonitorPop(mobj_t *actor)
 	// Players can now stand on top of us.
 	P_UnsetThingPosition(actor);
 	actor->flags  &= ~(MF_MONITOR|MF_SHOOTABLE);
-	actor->flags2 |= MF2_STANDONME;
 	P_SetThingPosition(actor);
 
 	// Don't count this box in statistics. Sorry.
@@ -2785,7 +3423,6 @@ void A_GoldMonitorRestore(mobj_t *actor)
 #endif
 
 	actor->flags |= MF_MONITOR|MF_SHOOTABLE;
-	actor->flags2 &= ~MF2_STANDONME;
 	actor->health = 1; // Just in case.
 }
 
@@ -2817,16 +3454,17 @@ void A_GoldMonitorSparkle(mobj_t *actor)
 //
 // Description: Explodes an object, doing damage to any objects nearby. The target is used as the cause of the explosion. Damage value is used as explosion range.
 //
-// var1 = unused
+// var1 = damagetype
 // var2 = unused
 //
 void A_Explode(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Explode", actor))
 		return;
 #endif
-	P_RadiusAttack(actor, actor->target, actor->info->damage);
+	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1);
 }
 
 // Function: A_BossDeath
@@ -3243,14 +3881,7 @@ void A_ExtraLife(mobj_t *actor)
 		return;
 	}
 
-	// In shooter gametypes, give the player 100 rings instead of an extra life.
-	if (gametype != GT_COOP && gametype != GT_COMPETITION)
-	{
-		P_GivePlayerRings(player, 100);
-		P_PlayLivesJingle(player);
-	}
-	else
-		P_GiveCoopLives(player, 1, true);
+	P_GiveCoopLives(player, 1, true);
 }
 
 // Function: A_GiveShield
@@ -3326,53 +3957,6 @@ void A_ScoreRise(mobj_t *actor)
 	P_SetObjectMomZ(actor, actor->info->speed, false);
 }
 
-// Function: A_ParticleSpawn
-//
-// Description: Hyper-specialised function for spawning a particle for MT_PARTICLEGEN.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_ParticleSpawn(mobj_t *actor)
-{
-	INT32 i = 0;
-	mobj_t *spawn;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ParticleSpawn", actor))
-		return;
-#endif
-	if (!actor->health)
-		return;
-
-	if (!actor->lastlook)
-		return;
-
-	if (!actor->threshold)
-		return;
-
-	for (i = 0; i < actor->lastlook; i++)
-	{
-		spawn = P_SpawnMobj(
-			actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
-			actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
-			actor->z,
-			(mobjtype_t)actor->threshold);
-		P_SetScale(spawn, actor->scale);
-		spawn->momz = FixedMul(actor->movefactor, spawn->scale);
-		spawn->destscale = spawn->scale/100;
-		spawn->scalespeed = spawn->scale/actor->health;
-		spawn->tics = (tic_t)actor->health;
-		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
-		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
-
-		actor->angle += actor->movedir;
-	}
-
-	actor->angle += (angle_t)actor->movecount;
-	actor->tics = (tic_t)actor->reactiontime;
-}
-
 // Function: A_BunnyHop
 //
 // Description: Makes object hop like a bunny.
@@ -3424,7 +4008,7 @@ void A_BubbleSpawn(mobj_t *actor)
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		// Quick! Look through players!
-		// Don't spawn bubbles unless a player is relatively close by (var2).
+		// Don't spawn bubbles unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
 			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
@@ -4156,7 +4740,8 @@ void A_JetbThink(mobj_t *actor)
 	{
 		A_JetChase(actor);
 		// check for melee attack
-		if ((actor->z > (actor->floorz + FixedMul((32<<FRACBITS), actor->scale)))
+		if (actor->info->raisestate
+			&& (actor->z > (actor->floorz + FixedMul((32<<FRACBITS), actor->scale)))
 			&& P_JetbCheckMeleeRange(actor) && !actor->reactiontime
 			&& (actor->target->z >= actor->floorz))
 		{
@@ -4713,9 +5298,6 @@ void A_RotateSpikeBall(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->type == MT_SPECIALSPIKEBALL) // don't remove this, these spikeballs share the same states as the rotating spikeballs
-		return;
-
 	if (!((!locvar1 && (actor->target)) || (locvar1 && (actor->tracer))))// This should NEVER happen.
 	{
 		CONS_Debug(DBG_GAMELOGIC, "A_RotateSpikeBall: Spikeball has no target\n");
@@ -4914,9 +5496,8 @@ void A_RockSpawn(mobj_t *actor)
 //
 void A_SlingAppear(mobj_t *actor)
 {
-	boolean firsttime = true;
 	UINT8 mlength = 4;
-	mobj_t *spawnee;
+	mobj_t *spawnee, *hprev;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SlingAppear", actor))
 		return;
@@ -4927,26 +5508,29 @@ void A_SlingAppear(mobj_t *actor)
 	P_SetThingPosition(actor);
 	actor->lastlook = 128;
 	actor->movecount = actor->lastlook;
-	actor->health = actor->angle>>ANGLETOFINESHIFT;
 	actor->threshold = 0;
 	actor->movefactor = actor->threshold;
 	actor->friction = 128;
 
+	hprev = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLGRABCHAIN);
+	P_SetTarget(&hprev->tracer, actor);
+	P_SetTarget(&hprev->hprev, actor);
+	P_SetTarget(&actor->hnext, hprev);
+	hprev->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+	hprev->movecount = mlength;
+
+	mlength--;
+
 	while (mlength > 0)
 	{
 		spawnee = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLMACECHAIN);
+		P_SetTarget(&spawnee->tracer, actor);
+		P_SetTarget(&spawnee->hprev, hprev);
+		P_SetTarget(&hprev->hnext, spawnee);
+		hprev = spawnee;
 
-		P_SetTarget(&spawnee->target, actor);
-
-		spawnee->threshold = 0;
-		spawnee->reactiontime = mlength;
-
-		if (firsttime)
-		{
-			// This is the outermost link in the chain
-			spawnee->flags2 |= MF2_AMBUSH;
-			firsttime = false;
-		}
+		spawnee->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+		spawnee->movecount = mlength;
 
 		mlength--;
 	}
@@ -4994,6 +5578,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	fixed_t thefloor;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	boolean hovermode = (actor->health > 1 || actor->fuse);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_CrawlaCommanderThink", actor))
 		return;
@@ -5005,10 +5590,16 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	else
 		thefloor = actor->floorz;
 
-	if (actor->fuse & 1)
-		actor->flags2 |= MF2_DONTDRAW;
-	else
-		actor->flags2 &= ~MF2_DONTDRAW;
+	if (!actor->fuse && actor->flags2 & MF2_FRET)
+	{
+		if (actor->info->painsound)
+			S_StartSound(actor, actor->info->painsound);
+
+		actor->fuse = TICRATE/2;
+		actor->momz = 0;
+
+		P_InstaThrust(actor, actor->angle-ANGLE_180, FixedMul(5*FRACUNIT, actor->scale));
+	}
 
 	if (actor->reactiontime > 0)
 		actor->reactiontime--;
@@ -5020,7 +5611,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	}
 
 	// Hover mode
-	if (actor->health > 1 || actor->fuse)
+	if (hovermode)
 	{
 		if (actor->z < thefloor + FixedMul(16*FRACUNIT, actor->scale))
 			actor->momz += FixedMul(FRACUNIT, actor->scale);
@@ -5030,7 +5621,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 			actor->momz += FixedMul(16, actor->scale);
 	}
 
-	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
+	if (!actor->target)
 	{
 		// look for a new target
 		if (P_LookForPlayers(actor, true, false, 0))
@@ -5043,14 +5634,13 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 
 	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
 
-	if (actor->target->player && actor->health > 1)
+	if (actor->target->player && (!hovermode || actor->reactiontime <= 2*TICRATE))
 	{
-		if (dist < FixedMul(128*FRACUNIT, actor->scale)
+		if (dist < FixedMul(64<<(FRACBITS+(hovermode ? 1 : 0)), actor->scale)
 			&& ((actor->target->player->pflags & PF_JUMPED) || (actor->target->player->pflags & PF_SPINNING)))
 		{
-			// Auugh! He's trying to kill you! Strafe! STRAAAAFFEEE!!
-			if (actor->target->momx || actor->target->momy)
-				P_InstaThrust(actor, actor->angle - ANGLE_180, FixedMul(20*FRACUNIT, actor->scale));
+			// Auugh! She's trying to kill you! Strafe! STRAAAAFFEEE!!
+			P_InstaThrust(actor, actor->angle - ANGLE_180, FixedMul(20*FRACUNIT, actor->scale));
 			return;
 		}
 	}
@@ -5075,29 +5665,44 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		actor->angle += (P_RandomByte()<<10);
 		actor->angle -= (P_RandomByte()<<10);
 
-		if (actor->health > 1)
-			P_InstaThrust(actor, actor->angle, FixedMul(10*FRACUNIT, actor->scale));
+		if (hovermode)
+		{
+			fixed_t mom;
+			P_Thrust(actor, actor->angle, 2*actor->scale);
+			mom = P_AproxDistance(actor->momx, actor->momy);
+			if (mom > 20*actor->scale)
+			{
+				mom += 20*actor->scale;
+				mom >>= 1;
+				P_InstaThrust(actor, R_PointToAngle2(0, 0, actor->momx, actor->momy), mom);
+			}
+		}
 	}
 	else if (!actor->reactiontime)
 	{
-		if (actor->health > 1) // Hover Mode
+		if (hovermode && !(actor->flags2 & MF2_FRET)) // Hover Mode
 		{
 			if (dist < FixedMul(512*FRACUNIT, actor->scale))
 			{
 				actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-				P_InstaThrust(actor, actor->angle, FixedMul(60*FRACUNIT, actor->scale));
+				P_InstaThrust(actor, actor->angle, FixedMul(40*FRACUNIT, actor->scale));
 				actor->threshold = 1;
+				if (actor->info->attacksound)
+					S_StartSound(actor, actor->info->attacksound);
 			}
 		}
-		actor->reactiontime = 2*TICRATE + P_RandomByte()/2;
+		actor->reactiontime = 3*TICRATE + (P_RandomByte()>>2);
 	}
 
 	if (actor->health == 1)
 		P_Thrust(actor, actor->angle, 1);
 
 	// Pogo Mode
-	if (!actor->fuse && actor->health == 1 && actor->z <= actor->floorz)
+	if (!hovermode && actor->z <= actor->floorz)
 	{
+		if (actor->info->activesound)
+			S_StartSound(actor, actor->info->activesound);
+
 		if (dist < FixedMul(256*FRACUNIT, actor->scale))
 		{
 			actor->momz = FixedMul(locvar2, actor->scale);
@@ -6536,47 +7141,77 @@ void A_GuardChase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	if ((!actor->tracer || !actor->tracer->health) && actor->threshold != 42)
+	if (actor->threshold != 42) // In formation...
 	{
-		P_SetTarget(&actor->tracer, NULL);
-		actor->threshold = 42;
-		P_SetMobjState(actor, actor->info->painstate);
-		actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
-		return;
+		fixed_t speed;
+
+		if (!actor->tracer || !actor->tracer->health)
+		{
+			P_SetTarget(&actor->tracer, NULL);
+			actor->threshold = 42;
+			P_SetMobjState(actor, actor->info->painstate);
+			actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
+			return;
+		}
+
+		speed = actor->extravalue1*actor->scale;
+
+		if (actor->flags2 & MF2_AMBUSH)
+			speed <<= 1;
+
+		if (speed
+		&& !P_TryMove(actor,
+			actor->x + P_ReturnThrustX(actor, actor->angle, speed),
+			actor->y + P_ReturnThrustY(actor, actor->angle, speed),
+			false)
+		&& speed > 0) // can't be the same check as previous so that P_TryMove gets to happen.
+		{
+			if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_OBJECTSPECIAL))
+				actor->angle += ANGLE_90;
+			else if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_EXTRA))
+				actor->angle -= ANGLE_90;
+			else
+				actor->angle += ANGLE_180;
+		}
+
+		if (actor->extravalue1 < actor->info->speed)
+			actor->extravalue1++;
 	}
-
-	// turn towards movement direction if not there yet
-	if (actor->movedir < NUMDIRS)
+	else // Break ranks!
 	{
-		actor->angle &= (7<<29);
-		delta = actor->angle - (actor->movedir << 29);
+		// turn towards movement direction if not there yet
+		if (actor->movedir < NUMDIRS)
+		{
+			actor->angle &= (7<<29);
+			delta = actor->angle - (actor->movedir << 29);
 
-		if (delta > 0)
-			actor->angle -= ANGLE_45;
-		else if (delta < 0)
-			actor->angle += ANGLE_45;
-	}
+			if (delta > 0)
+				actor->angle -= ANGLE_45;
+			else if (delta < 0)
+				actor->angle += ANGLE_45;
+		}
 
-	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
-	{
-		// look for a new target
-		if (P_LookForPlayers(actor, true, false, 0))
+		if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
+		{
+			// look for a new target
+			if (P_LookForPlayers(actor, true, false, 0))
+				return; // got a new target
+
+			P_SetMobjStateNF(actor, actor->info->spawnstate);
+			return;
+		}
+
+		// possibly choose another target
+		if (multiplayer && (actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
+			&& P_LookForPlayers(actor, true, false, 0))
 			return; // got a new target
 
-		P_SetMobjStateNF(actor, actor->info->spawnstate);
-		return;
-	}
-
-	// possibly choose another target
-	if (multiplayer && (actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
-		&& P_LookForPlayers(actor, true, false, 0))
-		return; // got a new target
-
-	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
-	{
-		P_NewChaseDir(actor);
-		actor->movecount += 5; // Increase tics before change in direction allowed.
+		// chase towards player
+		if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
+		{
+			P_NewChaseDir(actor);
+			actor->movecount += 5; // Increase tics before change in direction allowed.
+		}
 	}
 
 	// Now that we've moved, its time for our shield to move!
@@ -7062,6 +7697,7 @@ void A_SpawnObjectRelative(mobj_t *actor)
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		mo->flags2 |= MF2_OBJECTFLIP;
+
 }
 
 // Function: A_ChangeAngleRelative
@@ -7917,10 +8553,12 @@ void A_OrbitNights(mobj_t* actor)
 		return;
 #endif
 
-	if (!actor->target || !actor->target->player ||
-	    !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE) || !actor->target->player->nightstime
+	if (!actor->target
+	|| (actor->target->player &&
+		// if NiGHTS special stage and not NiGHTSmode.
+	    (((maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE))
 	    // Also remove this object if they no longer have a NiGHTS helper
-		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
+		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))))
 	{
 		P_RemoveMobj(actor);
 		return;
@@ -7946,7 +8584,7 @@ void A_OrbitNights(mobj_t* actor)
 		}
 		P_SetThingPosition(actor);
 
-		if (ishelper) // Flash a helper that's about to be removed.
+		if (ishelper && actor->target->player) // Flash a helper that's about to be removed.
 		{
 			if ((actor->target->player->powers[pw_nights_helper] < TICRATE)
 			&& (actor->target->player->powers[pw_nights_helper] & 1))
@@ -9554,7 +10192,7 @@ void A_VileAttack(mobj_t *actor)
 						actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						fire->z);
-		P_RadiusAttack(fire, actor, 70*FRACUNIT);
+		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
 	}
 	else
 	{
@@ -9599,7 +10237,7 @@ void A_VileAttack(mobj_t *actor)
 							actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							fire->z);
-			P_RadiusAttack(fire, actor, 70*FRACUNIT);
+			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
 		}
 	}
 
@@ -10063,10 +10701,10 @@ void A_SpawnFreshCopy(mobj_t *actor)
 		return;
 #endif
 
-	newObject = P_SpawnMobj(actor->x, actor->y, actor->z, actor->type);
+	newObject = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->type);
+	newObject->flags2 = actor->flags2 & MF2_AMBUSH;
 	newObject->angle = actor->angle;
-	P_SetScale(newObject, actor->scale);
-	newObject->destscale = actor->destscale;
+	newObject->color = actor->color;
 	P_SetTarget(&newObject->target, actor->target);
 	P_SetTarget(&newObject->tracer, actor->tracer);
 
@@ -10260,14 +10898,13 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 //
 void A_FlickyFly(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyFly", actor))
 		return;
 #endif
-	P_InternalFlickyFly(actor, var1, var2,
+	P_InternalFlickyFly(actor, locvar1, locvar2,
 	FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
 	);
 }
@@ -10281,14 +10918,13 @@ void A_FlickyFly(mobj_t *actor)
 //
 void A_FlickySoar(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickySoar", actor))
 		return;
 #endif
-	P_InternalFlickyFly(actor, var1, var2,
+	P_InternalFlickyFly(actor, locvar1, locvar2,
 	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
 	);
 
@@ -10353,14 +10989,13 @@ void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angl
 //
 void A_FlickyHop(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyHop instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyHop", actor))
 		return;
 #endif
-	P_InternalFlickyHop(actor, var1, var2, actor->angle);
+	P_InternalFlickyHop(actor, locvar1, locvar2, actor->angle);
 }
 
 // Function: A_FlickyFlounder
@@ -10443,13 +11078,14 @@ void A_FlickyHeightCheck(mobj_t *actor)
 //
 void A_FlickyFlutter(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to A_FlickyCheck instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyFlutter", actor))
 		return;
 #endif
+	var1 = locvar1;
+	var2 = locvar2;
 	A_FlickyCheck(actor);
 
 	var1 = ANG30;
@@ -10467,43 +11103,40 @@ void A_FlickyFlutter(mobj_t *actor)
 //
 // Description: Creates the mobj's painchance at a random position around the object's radius.
 //
-// var1 = momz of particle.
-// var2 = chance of particle spawn
+// var1 = unused
+// var2 = unused
 //
 void A_FlameParticle(mobj_t *actor)
 {
 	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
 	fixed_t rad, hei;
 	mobj_t *particle;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlameParticle", actor))
 		return;
 #endif
 
-	if (!P_RandomChance(locvar2))
-		return;
-
 	if (!type)
 		return;
 
-	rad = 2*actor->radius>>FRACBITS;
+	rad = actor->radius>>FRACBITS;
 	hei = actor->height>>FRACBITS;
 	particle = P_SpawnMobjFromMobj(actor,
 		P_RandomRange(rad, -rad)<<FRACBITS,
 		P_RandomRange(rad, -rad)<<FRACBITS,
 		P_RandomRange(hei/2, hei)<<FRACBITS,
 		type);
-	P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+	P_SetObjectMomZ(particle, 2<<FRACBITS, false);
 }
 
 // Function: A_FadeOverlay
 //
 // Description: Makes a pretty overlay (primarily for super/NiGHTS transformation).
 //
-// var1 = bit 1 = don't halt momentum, bit 2 = don't make fast, bit 3 = don't set tracer
+// var1 = bit 1 = bit 1 = don't make fast, bit 2 = don't set tracer
 // var2 = unused
 //
 void A_FadeOverlay(mobj_t *actor)
@@ -10517,13 +11150,10 @@ void A_FadeOverlay(mobj_t *actor)
 		return;
 #endif
 
-	if (!(locvar1 & 1))
-		actor->momx = actor->momy = actor->momz = 0;
-
 	fade = P_SpawnGhostMobj(actor);
 	fade->frame = actor->frame;
 
-	if (!(locvar1 & 2))
+	if (!(locvar1 & 1))
 	{
 		fade->fuse = 15;
 		fade->flags2 |= MF2_BOSSNOTRAP;
@@ -10531,7 +11161,7 @@ void A_FadeOverlay(mobj_t *actor)
 	else
 		fade->fuse = 20;
 
-	if (!(locvar1 & 4))
+	if (!(locvar1 & 2))
 		P_SetTarget(&actor->tracer, fade);
 }
 
@@ -10618,9 +11248,392 @@ void A_Boss5Jump(mobj_t *actor)
 		actor->z++;
 
 	// Horizontal axes first. First parameter is initial horizontal impulse, second is to correct its angle.
-	actor->momx = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINECOSINE(actor->angle >> ANGLETOFINESHIFT));
-	actor->momy = FixedMul(FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)), FINESINE(actor->angle >> ANGLETOFINESHIFT));
+	fixedHypotenuse = FixedMul(v, FINECOSINE(theta >> ANGLETOFINESHIFT)); // variable reuse
+	actor->momx = FixedMul(fixedHypotenuse, FINECOSINE(actor->angle >> ANGLETOFINESHIFT));
+	actor->momy = FixedMul(fixedHypotenuse, FINESINE(actor->angle >> ANGLETOFINESHIFT));
 	// Then the vertical axis. No angle-correction needed here.
 	actor->momz = FixedMul(v, FINESINE(theta >> ANGLETOFINESHIFT));
 	// I hope that's all that's needed, ugh
 }
+
+// Function: A_LightBeamReset
+// Description: Resets momentum and position for DSZ's projecting light beams
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LightBeamReset(mobj_t *actor)
+{
+	// INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LightBeamReset", actor))
+		return;
+#endif
+
+	actor->destscale = FRACUNIT + P_SignedRandom()*FRACUNIT/256;
+	P_SetScale(actor, actor->destscale);
+
+	if (!actor->spawnpoint)
+		return; // this can't work properly welp
+
+	actor->momx = -(P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
+	actor->momy = (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
+	actor->momz = (P_SignedRandom()*FRACUNIT)/128;
+
+	P_TeleportMove(actor,
+		actor->spawnpoint->x*FRACUNIT - (P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
+		actor->spawnpoint->y*FRACUNIT + (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
+		actor->spawnpoint->z*FRACUNIT + (P_SignedRandom()*FRACUNIT)/2);
+}
+
+// Function: A_MineExplode
+// Description: Handles the explosion of a DSZ mine.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_MineExplode(mobj_t *actor)
+{
+	// INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MineExplode", actor))
+		return;
+#endif
+
+	A_Scream(actor);
+	actor->flags = MF_NOGRAVITY|MF_NOCLIP;
+
+	quake.epicenter = NULL;
+	quake.radius = 512*FRACUNIT;
+	quake.intensity = 8*FRACUNIT;
+	quake.time = TICRATE/3;
+
+	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF);
+	P_MobjCheckWater(actor);
+
+	{
+#define dist 64
+		UINT8 i;
+		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_BOSSEXPLODE);
+		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
+		P_SpawnMobj(actor->x, actor->y, actor->z, type);
+		for (i = 0; i < 16; i++)
+		{
+			mobj_t *b = P_SpawnMobj(actor->x+P_RandomRange(-dist, dist)*FRACUNIT,
+				actor->y+P_RandomRange(-dist, dist)*FRACUNIT,
+				actor->z+P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT,
+				type);
+			fixed_t dx = b->x - actor->x, dy = b->y - actor->y, dz = b->z - actor->z;
+			fixed_t dm = P_AproxDistance(dz, P_AproxDistance(dy, dx));
+			b->momx = FixedDiv(dx, dm)*3;
+			b->momy = FixedDiv(dy, dm)*3;
+			b->momz = FixedDiv(dz, dm)*3;
+			if ((actor->watertop == INT32_MAX) || (b->z + b->height > actor->watertop))
+				b->flags &= ~MF_NOGRAVITY;
+		}
+#undef dist
+
+		if (actor->watertop != INT32_MAX)
+			P_SpawnMobj(actor->x, actor->y, actor->watertop, MT_SPLISH);
+	}
+}
+
+// Function: A_MineRange
+// Description: If the target gets too close, change the state to meleestate.
+//
+// var1 = Distance to alert at
+// var2 = unused
+//
+void A_MineRange(mobj_t *actor)
+{
+	fixed_t dm;
+	INT32 locvar1 = var1;
+	// INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MineRange", actor))
+		return;
+#endif
+
+	if (!actor->target)
+		return;
+
+	dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
+	if ((dm>>FRACBITS) < locvar1)
+		P_SetMobjState(actor, actor->info->meleestate);
+}
+
+// Function: A_ConnectToGround
+// Description: Create a palm tree trunk/mine chain.
+//
+// var1 = Object type to connect to ground
+// var2 = Object type to place on ground
+//
+void A_ConnectToGround(mobj_t *actor)
+{
+	mobj_t *work;
+	fixed_t workz;
+	fixed_t workh;
+	INT8 dir;
+	angle_t ang;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ConnectToGround", actor))
+		return;
+#endif
+
+	if (actor->subsector->sector->ffloors)
+		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
+
+	if (actor->flags2 & MF2_OBJECTFLIP)
+	{
+		workz = actor->ceilingz - (actor->z + actor->height);
+		dir = -1;
+	}
+	else
+	{
+		workz = actor->floorz - actor->z;
+		dir = 1;
+	}
+
+	if (locvar2)
+	{
+		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
+		if (actor->flags2 & MF2_OBJECTFLIP)
+			workz -= workh;
+		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
+		workz += dir*workh;
+	}
+
+	if (!locvar1)
+		return;
+
+	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
+		return;
+
+	if (actor->flags2 & MF2_OBJECTFLIP)
+		workz -= workh;
+
+	ang = actor->angle + ANGLE_45;
+	while (dir*workz < 0)
+	{
+		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
+		if (work)
+			work->angle = ang;
+		ang += ANGLE_90;
+		workz += dir*workh;
+	}
+
+	if (workz != 0)
+		actor->z += workz;
+}
+
+// Function: A_SpawnParticleRelative
+//
+// Description: Spawns a particle effect relative to the location of the actor
+//
+// var1:
+//		var1 >> 16 = x
+//		var1 & 65535 = y
+// var2:
+//		var2 >> 16 = z
+//		var2 & 65535 = state
+//
+void A_SpawnParticleRelative(mobj_t *actor)
+{
+	INT16 x, y, z; // Want to be sure we can use negative values
+	statenum_t state;
+	mobj_t *mo;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SpawnParticleRelative", actor))
+		return;
+#endif
+
+	CONS_Debug(DBG_GAMELOGIC, "A_SpawnParticleRelative called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
+
+	x = (INT16)(locvar1>>16);
+	y = (INT16)(locvar1&65535);
+	z = (INT16)(locvar2>>16);
+	state = (statenum_t)(locvar2&65535);
+
+	// Spawn objects correctly in reverse gravity.
+	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
+	mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
+		actor->y + FixedMul(y<<FRACBITS, actor->scale),
+		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - mobjinfo[MT_PARTICLE].height) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
+
+	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
+	mo->angle = actor->angle;
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		mo->flags2 |= MF2_OBJECTFLIP;
+
+	P_SetMobjState(mo, state);
+}
+
+// Function: A_MultiShotDist
+//
+// Description: Spawns multiple shots based on player proximity
+//
+// var1 = same as A_MultiShot
+// var2 = same as A_MultiShot
+//
+void A_MultiShotDist(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MultiShotDist", actor))
+		return;
+#endif
+
+	{
+		UINT8 i;
+		// Quick! Look through players!
+		// Don't spawn dust unless a player is relatively close by (var1).
+		for (i = 0; i < MAXPLAYERS; ++i)
+			if (playeringame[i] && players[i].mo
+			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
+				break; // Stop looking.
+		if (i == MAXPLAYERS)
+			return; // don't make bubble!
+	}
+
+	var1 = locvar1;
+	var2 = locvar2;
+	A_MultiShot(actor);
+}
+
+// Function: A_WhoCaresIfYourSonIsABee
+//
+// Description: Makes a child object, storing the number of created children in the parent's extravalue1.
+//
+// var1 = mobjtype of child
+//		var2 >> 16 = mobjtype of child
+//		var2 & 65535 = vertical momentum
+// var2:
+//		var2 >> 16 = forward offset
+//		var2 & 65535 = vertical offset
+//
+void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t foffsetx;
+	fixed_t foffsety;
+	mobj_t *son;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_WhoCaresIfYourSonIsABee", actor))
+		return;
+#endif
+
+	A_FaceTarget(actor);
+
+	if (actor->extravalue1)
+		actor->extravalue1--;
+
+	if (actor->info->attacksound)
+		S_StartSound(actor, actor->info->attacksound);
+
+	foffsetx = P_ReturnThrustX(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+	foffsety = P_ReturnThrustY(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
+
+	if (!(son = P_SpawnMobjFromMobj(actor, foffsetx, foffsety, (locvar2&65535)*FRACUNIT, (mobjtype_t)(locvar1 >> 16))))
+		return;
+
+	P_SetObjectMomZ(son, (locvar1 & 65535)<<FRACBITS, true);
+
+	P_SetTarget(&son->tracer, actor);
+	P_SetTarget(&son->target, actor->target);
+}
+
+// Function: A_ParentTriesToSleep
+//
+// Description: If extravalue1 is less than or equal to var1, go to var2.
+//
+// var1 = state to go to when extravalue1
+// var2 = unused
+//
+void A_ParentTriesToSleep(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ParentTriesToSleep", actor))
+		return;
+#endif
+
+	if (actor->extravalue1)
+	{
+		if (actor->info->seesound)
+			S_StartSound(actor, actor->info->seesound);
+		actor->reactiontime = 0;
+		P_SetMobjState(actor, locvar1);
+	}
+	else if (!actor->reactiontime)
+	{
+		actor->reactiontime = 1;
+		if (actor->info->activesound) // more like INactivesound doy hoy hoy
+			S_StartSound(actor, actor->info->activesound);
+	}
+}
+
+
+// Function: A_CryingToMomma
+//
+// Description: If you're a child, let your parent know something's happened to you through extravalue1. Also, prepare to die.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_CryingToMomma(mobj_t *actor)
+{
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CryingToMomma", actor))
+		return;
+#endif
+
+	if (actor->tracer)
+		actor->tracer->extravalue1++;
+
+	actor->momx = actor->momy = actor->momz = 0;
+
+	P_UnsetThingPosition(actor);
+	if (sector_list)
+	{
+		P_DelSeclist(sector_list);
+		sector_list = NULL;
+	}
+	actor->flags = MF_NOBLOCKMAP|MF_NOCLIPTHING;
+	P_SetThingPosition(actor);
+}
+
+// Function: A_CheckFlags2
+//
+// Description: If actor->flags2 & var1, goto var2.
+//
+// var1 = mask
+// var2 = state to go
+//
+void A_CheckFlags2(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CheckFlags2", actor))
+		return;
+#endif
+
+	if (actor->flags2 & locvar1)
+		P_SetMobjState(actor, (statenum_t)locvar2);
+}

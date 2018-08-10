@@ -89,8 +89,7 @@ patch_t *tallinfin;
 //              coop hud
 //-------------------------------------------
 
-patch_t *emeraldpics[7];
-patch_t *tinyemeraldpics[7];
+patch_t *emeraldpics[3][8]; // 0 = normal, 1 = tiny, 2 = coinbox
 static patch_t *emblemicon;
 patch_t *tokenicon;
 static patch_t *exiticon;
@@ -250,20 +249,32 @@ void HU_LoadGraphics(void)
 	tokenicon = W_CachePatchName("TOKNICON", PU_HUDGFX);
 	exiticon = W_CachePatchName("EXITICON", PU_HUDGFX);
 
-	emeraldpics[0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
-	emeraldpics[1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
-	emeraldpics[2] = W_CachePatchName("CHAOS3", PU_HUDGFX);
-	emeraldpics[3] = W_CachePatchName("CHAOS4", PU_HUDGFX);
-	emeraldpics[4] = W_CachePatchName("CHAOS5", PU_HUDGFX);
-	emeraldpics[5] = W_CachePatchName("CHAOS6", PU_HUDGFX);
-	emeraldpics[6] = W_CachePatchName("CHAOS7", PU_HUDGFX);
-	tinyemeraldpics[0] = W_CachePatchName("TEMER1", PU_HUDGFX);
-	tinyemeraldpics[1] = W_CachePatchName("TEMER2", PU_HUDGFX);
-	tinyemeraldpics[2] = W_CachePatchName("TEMER3", PU_HUDGFX);
-	tinyemeraldpics[3] = W_CachePatchName("TEMER4", PU_HUDGFX);
-	tinyemeraldpics[4] = W_CachePatchName("TEMER5", PU_HUDGFX);
-	tinyemeraldpics[5] = W_CachePatchName("TEMER6", PU_HUDGFX);
-	tinyemeraldpics[6] = W_CachePatchName("TEMER7", PU_HUDGFX);
+	emeraldpics[0][0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
+	emeraldpics[0][1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
+	emeraldpics[0][2] = W_CachePatchName("CHAOS3", PU_HUDGFX);
+	emeraldpics[0][3] = W_CachePatchName("CHAOS4", PU_HUDGFX);
+	emeraldpics[0][4] = W_CachePatchName("CHAOS5", PU_HUDGFX);
+	emeraldpics[0][5] = W_CachePatchName("CHAOS6", PU_HUDGFX);
+	emeraldpics[0][6] = W_CachePatchName("CHAOS7", PU_HUDGFX);
+	emeraldpics[0][7] = W_CachePatchName("CHAOS8", PU_HUDGFX);
+
+	emeraldpics[1][0] = W_CachePatchName("TEMER1", PU_HUDGFX);
+	emeraldpics[1][1] = W_CachePatchName("TEMER2", PU_HUDGFX);
+	emeraldpics[1][2] = W_CachePatchName("TEMER3", PU_HUDGFX);
+	emeraldpics[1][3] = W_CachePatchName("TEMER4", PU_HUDGFX);
+	emeraldpics[1][4] = W_CachePatchName("TEMER5", PU_HUDGFX);
+	emeraldpics[1][5] = W_CachePatchName("TEMER6", PU_HUDGFX);
+	emeraldpics[1][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
+	//emeraldpics[1][7] = W_CachePatchName("TEMER8", PU_HUDGFX); -- unused
+
+	emeraldpics[2][0] = W_CachePatchName("EMBOX1", PU_HUDGFX);
+	emeraldpics[2][1] = W_CachePatchName("EMBOX2", PU_HUDGFX);
+	emeraldpics[2][2] = W_CachePatchName("EMBOX3", PU_HUDGFX);
+	emeraldpics[2][3] = W_CachePatchName("EMBOX4", PU_HUDGFX);
+	emeraldpics[2][4] = W_CachePatchName("EMBOX5", PU_HUDGFX);
+	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
+	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
+	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
 }
 
 // Initialise Heads up
@@ -939,7 +950,7 @@ static void HU_DrawCEcho(void)
 	INT32 y = (BASEVIDHEIGHT/2)-4;
 	INT32 pnumlines = 0;
 
-	UINT32 realflags = cechoflags;
+	UINT32 realflags = cechoflags|V_PERPLAYER; // requested as part of splitscreen's stuff
 	INT32 realalpha = (INT32)((cechoflags & V_ALPHAMASK) >> V_ALPHASHIFT);
 
 	char *line;
@@ -982,6 +993,12 @@ static void HU_DrawCEcho(void)
 		*line = '\0';
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, y, realflags, echoptr);
+		if (splitscreen)
+		{
+			stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
+			V_DrawCenteredString(BASEVIDWIDTH/2, y, realflags, echoptr);
+			stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
+		}
 		y += ((realflags & V_RETURN8) ? 8 : 12);
 
 		echoptr = line;
@@ -1466,25 +1483,25 @@ void HU_DrawEmeralds(INT32 x, INT32 y, INT32 pemeralds)
 {
 	//Draw the emeralds, in the CORRECT order, using tiny emerald sprites.
 	if (pemeralds & EMERALD1)
-		V_DrawSmallScaledPatch(x  , y-6, 0, tinyemeraldpics[0]);
+		V_DrawSmallScaledPatch(x  , y-6, 0, emeraldpics[1][0]);
 
 	if (pemeralds & EMERALD2)
-		V_DrawSmallScaledPatch(x+4, y-3, 0, tinyemeraldpics[1]);
+		V_DrawSmallScaledPatch(x+4, y-3, 0, emeraldpics[1][1]);
 
 	if (pemeralds & EMERALD3)
-		V_DrawSmallScaledPatch(x+4, y+3, 0, tinyemeraldpics[2]);
+		V_DrawSmallScaledPatch(x+4, y+3, 0, emeraldpics[1][2]);
 
 	if (pemeralds & EMERALD4)
-		V_DrawSmallScaledPatch(x  , y+6, 0, tinyemeraldpics[3]);
+		V_DrawSmallScaledPatch(x  , y+6, 0, emeraldpics[1][3]);
 
 	if (pemeralds & EMERALD5)
-		V_DrawSmallScaledPatch(x-4, y+3, 0, tinyemeraldpics[4]);
+		V_DrawSmallScaledPatch(x-4, y+3, 0, emeraldpics[1][4]);
 
 	if (pemeralds & EMERALD6)
-		V_DrawSmallScaledPatch(x-4, y-3, 0, tinyemeraldpics[5]);
+		V_DrawSmallScaledPatch(x-4, y-3, 0, emeraldpics[1][5]);
 
 	if (pemeralds & EMERALD7)
-		V_DrawSmallScaledPatch(x,   y,   0, tinyemeraldpics[6]);
+		V_DrawSmallScaledPatch(x,   y,   0, emeraldpics[1][6]);
 }
 
 //
@@ -1539,7 +1556,7 @@ static inline void HU_DrawSpectatorTicker(void)
 					templength = length;
 				}
 
-				V_DrawString(templength, height + 8, V_TRANSLUCENT, current);
+				V_DrawString(templength, height + 8, V_TRANSLUCENT|V_ALLOWLOWERCASE, current);
 			}
 
 			length += (signed)strlen(player_names[i]) * 8 + 16;
@@ -1551,7 +1568,6 @@ static inline void HU_DrawSpectatorTicker(void)
 //
 static void HU_DrawRankings(void)
 {
-	patch_t *p;
 	playersort_t tab[MAXPLAYERS];
 	INT32 i, j, scorelines;
 	boolean completed[MAXPLAYERS];
@@ -1560,43 +1576,12 @@ static void HU_DrawRankings(void)
 	// draw the current gametype in the lower right
 	HU_drawGametype();
 
-	if (G_GametypeHasTeams())
-	{
-		if (gametype == GT_CTF)
-			p = bflagico;
-		else
-			p = bmatcico;
-
-		V_DrawSmallScaledPatch(128 - SHORT(p->width)/4, 4, 0, p);
-		V_DrawCenteredString(128, 16, 0, va("%u", bluescore));
-
-		if (gametype == GT_CTF)
-			p = rflagico;
-		else
-			p = rmatcico;
-
-		V_DrawSmallScaledPatch(192 - SHORT(p->width)/4, 4, 0, p);
-		V_DrawCenteredString(192, 16, 0, va("%u", redscore));
-	}
-
 	if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP)
 	{
 		if (cv_timelimit.value && timelimitintics > 0)
 		{
-			INT32 timeval = (timelimitintics+1-leveltime)/TICRATE;
-
-			if (leveltime <= timelimitintics)
-			{
-				V_DrawCenteredString(64, 8, 0, "TIME LEFT");
-				V_DrawCenteredString(64, 16, 0, va("%u", timeval));
-			}
-
-			// overtime
-			if ((leveltime > (timelimitintics + TICRATE/2)) && cv_overtime.value)
-			{
-				V_DrawCenteredString(64, 8, 0, "TIME LEFT");
-				V_DrawCenteredString(64, 16, 0, "OVERTIME");
-			}
+			V_DrawCenteredString(64, 8, 0, "TIME");
+			V_DrawCenteredString(64, 16, 0, va("%i:%02i", G_TicsToMinutes(stplyr->realtime, true), G_TicsToSeconds(stplyr->realtime)));
 		}
 
 		if (cv_pointlimit.value > 0)
@@ -1753,19 +1738,19 @@ static void HU_DrawCoopOverlay(void)
 #endif
 
 	if (emeralds & EMERALD1)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, 0, emeraldpics[0]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, 0, emeraldpics[0][0]);
 	if (emeralds & EMERALD2)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[1]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[0][1]);
 	if (emeralds & EMERALD3)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[2]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[0][2]);
 	if (emeralds & EMERALD4)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)+32, 0, emeraldpics[3]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)+32, 0, emeraldpics[0][3]);
 	if (emeralds & EMERALD5)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[4]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[0][4]);
 	if (emeralds & EMERALD6)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[5]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[0][5]);
 	if (emeralds & EMERALD7)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)   , 0, emeraldpics[6]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)   , 0, emeraldpics[0][6]);
 }
 
 static void HU_DrawNetplayCoopOverlay(void)
@@ -1780,7 +1765,7 @@ static void HU_DrawNetplayCoopOverlay(void)
 	for (i = 0; i < 7; ++i)
 	{
 		if (emeralds & (1 << i))
-			V_DrawScaledPatch(20 + (i * 20), 6, 0, emeraldpics[i]);
+			V_DrawScaledPatch(20 + (i * 20), 6, 0, emeraldpics[0][i]);
 	}
 }
 

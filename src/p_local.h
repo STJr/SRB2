@@ -146,6 +146,7 @@ void P_SpawnShieldOrb(player_t *player);
 void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
+void P_GivePlayerSpheres(player_t *player, INT32 num_spheres);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
@@ -256,6 +257,7 @@ fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, f
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
+void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype);
 
 mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type);
 
@@ -279,6 +281,8 @@ void P_Attract(mobj_t *source, mobj_t *enemy, boolean nightsgrab);
 mobj_t *P_GetClosestAxis(mobj_t *source);
 
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover);
+
+void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot);
 
 void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 #define PAL_WHITE    1
@@ -360,7 +364,7 @@ void P_DelPrecipSeclist(mprecipsecnode_t *node);
 void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y);
 void P_Initsecnode(void);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
@@ -410,6 +414,8 @@ typedef struct BasicFF_s
 #define DMG_DEATHPIT   0x80+3
 #define DMG_CRUSHED    0x80+4
 #define DMG_SPECTATOR  0x80+5
+// Masks
+#define DMG_CANHURTSELF 0x40 // Flag - can hurt self/team indirectly, such as through mines
 #define DMG_DEATHMASK  DMG_INSTAKILL // if bit 7 is set, this is a death type instead of a damage type
 
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period);

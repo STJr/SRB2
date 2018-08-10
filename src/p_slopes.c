@@ -251,7 +251,7 @@ void P_SpawnSlope_Line(int linenum)
 	UINT8 flags = 0; // Slope flags
 	if (line->flags & ML_NOSONIC)
 		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NOTAILS)
+	if (!(line->flags & ML_NOTAILS))
 		flags |= SL_NODYNAMIC;
 	if (line->flags & ML_NOKNUX)
 		flags |= SL_ANCHORVERTEX;

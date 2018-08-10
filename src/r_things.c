@@ -717,7 +717,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
@@ -2497,11 +2497,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->flags = 0;
 
 	strcpy(skin->realname, "Someone");
-#ifdef SKINNAMEPADDING
-	strcpy(skin->hudname, "  ???");
-#else
 	strcpy(skin->hudname, "???");
-#endif
 	strncpy(skin->charsel, "CHRSONIC", 8);
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
@@ -2677,7 +2673,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		if (player->followmobj)
 		{
 			P_RemoveMobj(player->followmobj);
-			player->followmobj = NULL;
+			P_SetTarget(&player->followmobj, NULL);
 		}
 
 		if (player->mo)
@@ -2733,11 +2729,7 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-#ifdef SKINNAMEPADDING
-#define HUDNAMEWRITE(value) snprintf(skin->hudname, sizeof(skin->hudname), "%5s", value)
-#else
 #define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
-#endif
 
 // turn _ into spaces and . into katana dot
 #define SYMBOLCONVERT(name) for (value = name; *value; value++)\

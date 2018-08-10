@@ -226,13 +226,9 @@ static void CONS_Bind_f(void)
 // Font colormap colors
 // TODO: This could probably be improved somehow...
 // These colormaps are 99% identical, with just a few changed bytes
-UINT8 *yellowmap;
-UINT8 *purplemap;
-UINT8 *lgreenmap;
-UINT8 *bluemap;
-UINT8 *graymap;
-UINT8 *redmap;
-UINT8 *orangemap;
+// This could EASILY be handled by modifying a centralised colormap
+// for software depending on the prior state - but yknow, OpenGL...
+UINT8 *yellowmap, *magentamap, *lgreenmap, *bluemap, *graymap, *redmap, *orangemap, *skymap, *purplemap, *aquamap, *peridotmap, *azuremap, *brownmap, *rosymap, *invertmap;
 
 // Console BG color
 UINT8 *consolebgmap = NULL;
@@ -280,45 +276,55 @@ static void CONS_backcolor_Change(void)
 static void CON_SetupColormaps(void)
 {
 	INT32 i;
+	UINT8 *memorysrc = (UINT8 *)Z_Malloc((256*15), PU_STATIC, NULL);
 
-	yellowmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	graymap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	purplemap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	lgreenmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	bluemap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	redmap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	orangemap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+	magentamap = memorysrc;
+	yellowmap  = (magentamap+256);
+	lgreenmap  = (yellowmap+256);
+	bluemap    = (lgreenmap+256);
+	redmap     = (bluemap+256);
+	graymap    = (redmap+256);
+	orangemap  = (graymap+256);
+	skymap     = (orangemap+256);
+	purplemap  = (skymap+256);
+	aquamap    = (purplemap+256);
+	peridotmap = (aquamap+256);
+	azuremap   = (peridotmap+256);
+	brownmap   = (azuremap+256);
+	rosymap    = (brownmap+256);
+	invertmap  = (rosymap+256);
 
 	// setup the other colormaps, for console text
 
 	// these don't need to be aligned, unless you convert the
 	// V_DrawMappedPatch() into optimised asm.
 
-	for (i = 0; i < 256; i++)
-	{
-		yellowmap[i] = (UINT8)i; // remap each color to itself...
-		graymap[i] = (UINT8)i;
-		purplemap[i] = (UINT8)i;
-		lgreenmap[i] = (UINT8)i;
-		bluemap[i] = (UINT8)i;
-		redmap[i] = (UINT8)i;
-		orangemap[i] = (UINT8)i;
-	}
+	for (i = 0; i < (256*15); i++, ++memorysrc)
+		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-	yellowmap[3] = (UINT8)73;
-	yellowmap[9] = (UINT8)66;
-	purplemap[3] = (UINT8)184;
-	purplemap[9] = (UINT8)186;
-	lgreenmap[3] = (UINT8)98;
-	lgreenmap[9] = (UINT8)106;
-	bluemap[3]   = (UINT8)147;
-	bluemap[9]   = (UINT8)158;
-	graymap[3]   = (UINT8)10;
-	graymap[9]   = (UINT8)15;
-	redmap[3]    = (UINT8)210;
-	redmap[9]    = (UINT8)32;
-	orangemap[3] = (UINT8)52;
-	orangemap[9] = (UINT8)57;
+#define colset(map, a, b, c) \
+	map[1] = (UINT8)a;\
+	map[3] = (UINT8)b;\
+	map[9] = (UINT8)c
+
+	colset(magentamap, 177, 178, 184);
+	colset(yellowmap,   82,  73,  66);
+	colset(lgreenmap,   97,  98, 106);
+	colset(bluemap,    146, 147, 155);
+	colset(redmap,     210,  32,  39);
+	colset(graymap,      6,  8,   14);
+	colset(orangemap,   51,  52,  57);
+	colset(skymap,     129, 130, 133);
+	colset(purplemap,  160, 161, 163);
+	colset(aquamap,    120, 121, 123);
+	colset(peridotmap,  88, 188, 190);
+	colset(azuremap,   144, 145, 170);
+	colset(brownmap,   219, 221, 224);
+	colset(rosymap,    200, 201, 203);
+	colset(invertmap,   27,  26,  22);
+	invertmap[26] = (UINT8)3;
+
+#undef colset
 
 	// Init back colormap
 	CON_SetupBackColormap();
