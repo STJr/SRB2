@@ -1,5 +1,5 @@
 /* XPM */
-static char * C:\Repo\srb2\src\sdl\SDL_icon_xpm[] = {
+static const char * SDL_icon_xpm[] = {
 "32 32 390 2",
 "  	c None",
 ". 	c #4F4F70",
