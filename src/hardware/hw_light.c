@@ -62,7 +62,7 @@ static dynlights_t *dynlights = &view_dynlights[0];
 light_t lspr[NUMLIGHTS] =
 {
 	// type       offset x,   y  coronas color, c_size,light color,l_radius, sqr radius computed at init
-	// UNDEFINED: 0
+	// NOLIGHT: 0
 	{ UNDEFINED_SPR,  0.0f,   0.0f, 0x00000000,  24.0f, 0x00000000,   0.0f, 0.0f},
 	// weapons
 	// RINGSPARK_L
@@ -151,10 +151,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_POSS
 	&lspr[NOLIGHT],     // SPR_SPOS
 	&lspr[NOLIGHT],     // SPR_FISH
-	&lspr[NOLIGHT],     // SPR_BUZZ Graue 03-10-2004
-	&lspr[NOLIGHT],     // SPR_RBUZ Graue 03-10-2004
+	&lspr[NOLIGHT],     // SPR_BUZZ
+	&lspr[NOLIGHT],     // SPR_RBUZ
 	&lspr[NOLIGHT],     // SPR_JETB
-	&lspr[NOLIGHT],     // SPR_JETW
 	&lspr[NOLIGHT],     // SPR_JETG
 	&lspr[NOLIGHT],     // SPR_CCOM
 	&lspr[NOLIGHT],     // SPR_DETN
@@ -162,19 +161,20 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TRET
 	&lspr[NOLIGHT],     // SPR_TURR
 	&lspr[NOLIGHT],     // SPR_SHRP
+	&lspr[NOLIGHT],     // SPR_CRAB
 	&lspr[NOLIGHT],     // SPR_JJAW
 	&lspr[NOLIGHT],     // SPR_SNLR
 	&lspr[NOLIGHT],     // SPR_VLTR
 	&lspr[NOLIGHT],     // SPR_PNTY
 	&lspr[NOLIGHT],     // SPR_ARCH
 	&lspr[NOLIGHT],     // SPR_CBFS
+	&lspr[JETLIGHT_L],  // SPR_STAB
 	&lspr[NOLIGHT],     // SPR_SPSH
 	&lspr[NOLIGHT],     // SPR_ESHI
 	&lspr[NOLIGHT],     // SPR_GSNP
 	&lspr[NOLIGHT],     // SPR_MNUS
 	&lspr[NOLIGHT],     // SPR_SSHL
 	&lspr[NOLIGHT],     // SPR_UNID
-	&lspr[NOLIGHT],     // SPR_BBUZ
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -227,18 +227,18 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RING
 	&lspr[NOLIGHT],     // SPR_TRNG
 	&lspr[NOLIGHT],     // SPR_TOKE
-	&lspr[REDBALL_L],     // SPR_RFLG
-	&lspr[BLUEBALL_L],     // SPR_BFLG
-	&lspr[NOLIGHT],     // SPR_NWNG
+	&lspr[REDBALL_L],   // SPR_RFLG
+	&lspr[BLUEBALL_L],  // SPR_BFLG
+	&lspr[NOLIGHT],     // SPR_SPHR
+	&lspr[NOLIGHT],     // SPR_NCHP
+	&lspr[NOLIGHT],     // SPR_NSTR
 	&lspr[NOLIGHT],     // SPR_EMBM
 	&lspr[NOLIGHT],     // SPR_CEMG
-	&lspr[NOLIGHT],     // SPR_EMER
+	&lspr[NOLIGHT],     // SPR_SHRD
 
 	// Interactive Objects
-	&lspr[NOLIGHT],     // SPR_FANS
 	&lspr[NOLIGHT],     // SPR_BBLS
 	&lspr[NOLIGHT],     // SPR_SIGN
-	&lspr[NOLIGHT],     // SPR_STEM
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
 	&lspr[NOLIGHT],     // SPR_USPK
@@ -294,17 +294,19 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FWR4
 	&lspr[NOLIGHT],     // SPR_BUS1
 	&lspr[NOLIGHT],     // SPR_BUS2
+	&lspr[NOLIGHT],     // SPR_BUS3
 	// Trees (both GFZ and misc)
 	&lspr[NOLIGHT],     // SPR_TRE1
 	&lspr[NOLIGHT],     // SPR_TRE2
 	&lspr[NOLIGHT],     // SPR_TRE3
 	&lspr[NOLIGHT],     // SPR_TRE4
 	&lspr[NOLIGHT],     // SPR_TRE5
+	&lspr[NOLIGHT],     // SPR_TRE6
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
 	&lspr[NOLIGHT],     // SPR_FWR5
-	&lspr[REDBALL_L],     // SPR_ALRM
+	&lspr[REDBALL_L],   // SPR_ALRM
 
 	// Deep Sea Scenery
 	&lspr[NOLIGHT],     // SPR_GARG
@@ -327,6 +329,15 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RSPB
 	&lspr[REDBALL_L],   // SPR_SFBR
 	&lspr[REDBALL_L],   // SPR_BFBR
+	&lspr[NOLIGHT],     // SPR_BANR
+	&lspr[NOLIGHT],     // SPR_PINE
+	&lspr[NOLIGHT],     // SPR_CEZB
+	&lspr[REDBALL_L],   // SPR_CNDL
+	&lspr[NOLIGHT],     // SPR_FLMH
+	&lspr[REDBALL_L],   // SPR_CTRC
+	&lspr[NOLIGHT],     // SPR_CFLG
+	&lspr[NOLIGHT],     // SPR_CSTA
+	&lspr[NOLIGHT],     // SPR_CBBS
 
 	// Arid Canyon Scenery
 	&lspr[NOLIGHT],     // SPR_BTBL
@@ -347,12 +358,25 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS3
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
+	&lspr[NOLIGHT],     // SPR_FHZI
+
+	// Halloween Scenery
+	&lspr[RINGLIGHT_L], // SPR_PUMK
+	&lspr[NOLIGHT],     // SPR_HHPL
+	&lspr[NOLIGHT],     // SPR_SHRM
+	&lspr[NOLIGHT],     // SPR_HHZM
 
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1
 	&lspr[NOLIGHT],     // SPR_BSZ2
 	&lspr[NOLIGHT],     // SPR_BSZ3
-	&lspr[NOLIGHT],     // SPR_BSZ4
+	//&lspr[NOLIGHT],     -- SPR_BSZ4
+	&lspr[NOLIGHT],     // SPR_BST1
+	&lspr[NOLIGHT],     // SPR_BST2
+	&lspr[NOLIGHT],     // SPR_BST3
+	&lspr[NOLIGHT],     // SPR_BST4
+	&lspr[NOLIGHT],     // SPR_BST5
+	&lspr[NOLIGHT],     // SPR_BST6
 	&lspr[NOLIGHT],     // SPR_BSZ5
 	&lspr[NOLIGHT],     // SPR_BSZ6
 	&lspr[NOLIGHT],     // SPR_BSZ7
@@ -375,8 +399,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FIRS
 	&lspr[NOLIGHT],     // SPR_BUBS
 	&lspr[NOLIGHT],     // SPR_ZAPS
-	&lspr[INVINCIBLE_L],     // SPR_IVSP
-	&lspr[SUPERSPARK_L],     // SPR_SSPK
+	&lspr[INVINCIBLE_L], // SPR_IVSP
+	&lspr[SUPERSPARK_L], // SPR_SSPK
 
 	&lspr[NOLIGHT],     // SPR_GOAL
 
@@ -398,13 +422,20 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FL14
 	&lspr[NOLIGHT],     // SPR_FL15
 	&lspr[NOLIGHT],     // SPR_FL16
+	&lspr[NOLIGHT],     // SPR_FS01
+	&lspr[NOLIGHT],     // SPR_FS02
 
 	// Springs
+	&lspr[NOLIGHT],     // SPR_FANS
+	&lspr[NOLIGHT],     // SPR_STEM
+	&lspr[NOLIGHT],     // SPR_BUMP
+	&lspr[NOLIGHT],     // SPR_BLON
 	&lspr[NOLIGHT],     // SPR_SPRY
 	&lspr[NOLIGHT],     // SPR_SPRR
-	&lspr[NOLIGHT],     // SPR_SPRB Graue
+	&lspr[NOLIGHT],     // SPR_SPRB
 	&lspr[NOLIGHT],     // SPR_YSPR
 	&lspr[NOLIGHT],     // SPR_RSPR
+	&lspr[NOLIGHT],     // SPR_BSPR
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
@@ -420,7 +451,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_DUST
 	&lspr[NOLIGHT],     // SPR_FPRT
 	&lspr[SUPERSPARK_L], // SPR_TFOG
-	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
+	&lspr[NIGHTSLIGHT_L], // SPR_SEED
 	&lspr[NOLIGHT],     // SPR_PRTL
 
 	// Game Indicators
@@ -459,25 +490,43 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GOOM
 	&lspr[NOLIGHT],     // SPR_BGOM
 	&lspr[REDBALL_L],     // SPR_FFWR
-	&lspr[SMALLREDBALL_L],     // SPR_FBLL
+	&lspr[SMALLREDBALL_L], // SPR_FBLL
 	&lspr[NOLIGHT],     // SPR_SHLL
-	&lspr[REDBALL_L],     // SPR_PUMA
+	&lspr[REDBALL_L],   // SPR_PUMA
 	&lspr[NOLIGHT],     // SPR_HAMM
 	&lspr[NOLIGHT],     // SPR_KOOP
-	&lspr[REDBALL_L],     // SPR_BFLM
+	&lspr[REDBALL_L],   // SPR_BFLM
 	&lspr[NOLIGHT],     // SPR_MAXE
 	&lspr[NOLIGHT],     // SPR_MUS1
 	&lspr[NOLIGHT],     // SPR_MUS2
 	&lspr[NOLIGHT],     // SPR_TOAD
 
 	// NiGHTS Stuff
-	&lspr[SUPERSONIC_L],     // SPR_NDRN // NiGHTS drone
+	&lspr[SUPERSONIC_L], // SPR_NDRN // NiGHTS drone
 	&lspr[NOLIGHT],     // SPR_NSPK
 	&lspr[NOLIGHT],     // SPR_NBMP
 	&lspr[NOLIGHT],     // SPR_HOOP
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
+	&lspr[INVINCIBLE_L], // SPR_IDYA
+	&lspr[NOLIGHT],     // SPR_NTPN
+	&lspr[NOLIGHT],     // SPR_SHLP
+
+	// Secret badniks and hazards, shhhh
+	&lspr[NOLIGHT],     // SPR_PENG
+	&lspr[NOLIGHT],     // SPR_POPH,
+	&lspr[NOLIGHT],     // SPR_HIVE
+	&lspr[NOLIGHT],     // SPR_BUMB,
+	&lspr[NOLIGHT],     // SPR_BBUZ
+	&lspr[NOLIGHT],     // SPR_FMCE,
+	&lspr[NOLIGHT],     // SPR_HMCE,
+	&lspr[NOLIGHT],     // SPR_CACO,
+	&lspr[BLUEBALL_L],  // SPR_BAL2,
+	&lspr[NOLIGHT],     // SPR_SBOB,
+	&lspr[BLUEBALL_L],  // SPR_SBFL,
+	&lspr[BLUEBALL_L],  // SPR_SBSK,
+	&lspr[NOLIGHT],     // SPR_BATT,
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK
@@ -485,6 +534,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM2
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
+	&lspr[REDBALL_L],    // SPR_BMNB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA
@@ -503,9 +553,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIN
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
-
-	// Blue Spheres
-	&lspr[NOLIGHT],     // SPR_BBAL
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
