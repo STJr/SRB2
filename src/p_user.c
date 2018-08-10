@@ -590,8 +590,9 @@ static void P_DeNightserizePlayer(player_t *player)
 	else if (player == &players[secondarydisplayplayer])
 		localaiming2 = 0;
 
-	// If you screwed up, kiss your score goodbye.
+	// If you screwed up, kiss your score and ring bonus goodbye.
 	player->marescore = 0;
+	player->rings = 0;
 
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 
@@ -721,7 +722,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
-			players[i].spheres = 0;
+			players[i].spheres = players[i].rings = 0;
 			P_DoPlayerExit(&players[i]);
 		}
 	}
@@ -745,7 +746,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marescore = 0;
 		player->marebegunat = leveltime;
 
-		player->spheres = 0;
+		player->spheres = player->rings = 0;
 	}
 	else
 	{
