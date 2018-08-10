@@ -7023,7 +7023,7 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->rings > 0)
+			else if (player->spheres > 0)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			player->powers[pw_carry] = CR_NONE;
 		}

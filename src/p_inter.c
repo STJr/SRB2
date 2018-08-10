@@ -2772,18 +2772,26 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return true;
 	}
 
-	if (player->rings > 0) // Ring loss
+	if (player->powers[pw_carry] == CR_NIGHTSFALL)
+	{
+		if (player->spheres > 0)
+		{
+			P_PlayRinglossSound(target);
+			P_PlayerRingBurst(player, player->spheres);
+			player->spheres = 0;
+		}
+	}
+	else if (player->rings > 0) // Ring loss
 	{
 		P_PlayRinglossSound(target);
-		P_PlayerRingBurst(player, player->rings);
+		P_PlayerRingBurst(player, max(player->spheres, player->rings));
+		player->rings = 0;
 	}
 	else // Death
 	{
 		P_PlayDeathSound(target);
 		P_PlayVictorySound(source); // Killer laughs at you! LAUGHS! BWAHAHAHHAHAA!!
 	}
-
-	player->rings = 0;
 	return true;
 }
 
@@ -2998,7 +3006,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	}
 }
 
-static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
+static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype, boolean dospheres)
 {
 	P_DoPlayerPain(player, source, inflictor);
 
@@ -3028,9 +3036,19 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	// Ring loss sound plays despite hitting spikes
 	P_PlayRinglossSound(player->mo); // Ringledingle!
 	P_PlayerRingBurst(player, damage);
-	player->rings -= damage;
-	if (player->rings < 0)
-		player->rings = 0;
+
+	if (dospheres)
+	{
+		player->spheres -= damage;
+		if (player->spheres < 0)
+			player->spheres = 0;
+	}
+	else
+	{
+		player->rings -= damage;
+		if (player->rings < 0)
+			player->rings = 0;
+	}
 }
 
 //
@@ -3247,7 +3265,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (damagetype & DMG_DEATHMASK)
 		{
 			P_KillPlayer(player, source, damage);
-			player->rings = 0;
+			player->rings = player->spheres = 0;
 		}
 		else if (metalrecording)
 		{
@@ -3291,10 +3309,19 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;
 		}
+		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
+		{
+			if (player->spheres > 0)
+			{
+				damage = player->spheres;
+				P_RingDamage(player, inflictor, source, damage, damagetype, true);
+				damage = 0;
+			}
+		}
 		else if (player->rings > 0) // No shield but have rings.
 		{
 			damage = player->rings;
-			P_RingDamage(player, inflictor, source, damage, damagetype);
+			P_RingDamage(player, inflictor, source, damage, damagetype, false);
 			damage = 0;
 		}
 		// To reduce griefing potential, don't allow players to be killed
@@ -3430,6 +3457,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			P_SetObjectMomZ(mo, 8*FRACUNIT, false);
 			mo->fuse = 20*TICRATE; // Adjust fuse for NiGHTS
 
+			// Toggle bonus time colors
 			P_SetMobjState(mo, (player->bonustime ? mo->info->raisestate : mo->info->spawnstate));
 		}
 		else
