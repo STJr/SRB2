@@ -46,6 +46,9 @@ enum
 	ML_BLOCKMAP,  // LUT, motion clipping, walls/grid element
 };
 
+// Extra flag for objects.
+#define MTF_EXTRA 1
+
 // Reverse gravity flag for objects.
 #define MTF_OBJECTFLIP 2
 

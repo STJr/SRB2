@@ -2868,7 +2868,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					// Unlocked something?
 					if (M_UpdateUnlockablesAndExtraEmblems())
 					{
-						S_StartSound(NULL, sfx_ncitem);
+						S_StartSound(NULL, sfx_s3k68);
 						G_SaveGameData(); // only save if unlocked something
 					}
 				}
@@ -3536,7 +3536,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
 				break;
 
-			if (!(player->powers[pw_shield] || player->rings > 0)) // Don't do anything if no shield or rings anyway
+			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
 				break;
 
 			P_SpecialStageDamage(player, NULL, NULL);
@@ -3784,8 +3784,8 @@ DoneSection2:
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
 			if (player->bot)
 				break;
-			if (!useNightsSS && G_IsSpecialStage(gamemap) && sstimer > 6)
-				sstimer = 6; // Just let P_Ticker take care of the rest.
+			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+				player->nightstime = 6; // Just let P_Ticker take care of the rest.
 
 			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 			{
@@ -4652,7 +4652,7 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 	switch(GETSECSPECIAL(sector->special, 4))
 	{
 		case 2: // Level Exit / GOAL Sector / Flag Return
-			if (!useNightsSS && G_IsSpecialStage(gamemap))
+			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 			{
 				// Special stage GOAL sector
 				// requires touching floor.
@@ -5511,7 +5511,7 @@ void P_InitSpecials(void)
 
 	// Defaults in case levels don't have them set.
 	sstimer = 90*TICRATE + 6;
-	totalrings = 1;
+	ssspheres = 1;
 
 	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
@@ -5605,7 +5605,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		{
 			case 10: // Time for special stage
 				sstimer = (sector->floorheight>>FRACBITS) * TICRATE + 6; // Time to finish
-				totalrings = sector->ceilingheight>>FRACBITS; // Ring count for special stage
+				ssspheres = sector->ceilingheight>>FRACBITS; // Ring count for special stage
 				break;
 
 			case 11: // Custom global gravity!
@@ -7692,7 +7692,6 @@ void T_Pusher(pusher_t *p)
 					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
-				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
 				if (!demoplayback || P_AnalogMove(thing->player))
