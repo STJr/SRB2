@@ -90,7 +90,7 @@ patch_t *tallinfin;
 //              coop hud
 //-------------------------------------------
 
-patch_t *emeraldpics[3][7]; // 0 = normal, 1 = tiny, 2 = coinbox
+patch_t *emeraldpics[3][8]; // 0 = normal, 1 = tiny, 2 = coinbox
 static patch_t *emblemicon;
 patch_t *tokenicon;
 static patch_t *exiticon;
@@ -264,6 +264,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[0][4] = W_CachePatchName("CHAOS5", PU_HUDGFX);
 	emeraldpics[0][5] = W_CachePatchName("CHAOS6", PU_HUDGFX);
 	emeraldpics[0][6] = W_CachePatchName("CHAOS7", PU_HUDGFX);
+	emeraldpics[0][7] = W_CachePatchName("CHAOS8", PU_HUDGFX);
 
 	emeraldpics[1][0] = W_CachePatchName("TEMER1", PU_HUDGFX);
 	emeraldpics[1][1] = W_CachePatchName("TEMER2", PU_HUDGFX);
@@ -272,6 +273,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[1][4] = W_CachePatchName("TEMER5", PU_HUDGFX);
 	emeraldpics[1][5] = W_CachePatchName("TEMER6", PU_HUDGFX);
 	emeraldpics[1][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
+	//emeraldpics[1][7] = W_CachePatchName("TEMER8", PU_HUDGFX); -- unused
 
 	emeraldpics[2][0] = W_CachePatchName("EMBOX1", PU_HUDGFX);
 	emeraldpics[2][1] = W_CachePatchName("EMBOX2", PU_HUDGFX);
@@ -280,6 +282,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[2][4] = W_CachePatchName("EMBOX5", PU_HUDGFX);
 	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
 	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
+	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
 }
 
 // Initialise Heads up

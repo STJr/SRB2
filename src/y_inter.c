@@ -77,8 +77,8 @@ typedef union
 
 	struct
 	{
-		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
-		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
+		char passed1[29];             // KNUCKLES GOT     / CRAWLA HONCHO
+		char passed2[17];             // A CHAOS EMERALD? / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
 		INT32 passedx1;
@@ -315,6 +315,9 @@ void Y_IntermissionDrawer(void)
 		INT32 xoffset1 = 0; // Line 1 x offset
 		INT32 xoffset2 = 0; // Line 2 x offset
 		INT32 xoffset3 = 0; // Line 3 x offset
+		INT32 xoffset4 = 0; // Line 4 x offset
+		INT32 xoffset5 = 0; // Line 5 x offset
+		INT32 xoffset6 = 0; // Line 6 x offset
 		UINT8 drawsection = 0;
 
 		if (gottoken) // first to be behind everything else
@@ -324,70 +327,129 @@ void Y_IntermissionDrawer(void)
 		if (intertic <= 2*TICRATE)
 			animatetic = 0;
 		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
-			animatetic = intertic;
+			animatetic = intertic + TICRATE;
 
-		if (animatetic)
+		if (animatetic && (tic_t)intertic >= animatetic)
 		{
+			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
-			if (animatetimer <= 8)
+			if (animatetimer <= 14)
 			{
-				xoffset1 = -(animatetimer     * 40);
-				xoffset2 = -((animatetimer-2) * 40);
+				xoffset1 = -(animatetimer     * scradjust);
+				xoffset2 = -((animatetimer-2) * scradjust);
+				xoffset3 = -((animatetimer-4) * scradjust);
+				xoffset4 = -((animatetimer-6) * scradjust);
+				xoffset5 = -((animatetimer-8) * scradjust);
 				if (xoffset2 > 0) xoffset2 = 0;
+				if (xoffset3 > 0) xoffset3 = 0;
+				if (xoffset4 > 0) xoffset4 = 0;
+				if (xoffset5 > 0) xoffset5 = 0;
 			}
-			else if (animatetimer <= 19)
+			else if (animatetimer < 32)
 			{
 				drawsection = 1;
-				xoffset1 = (16-animatetimer) * 40;
-				xoffset2 = (18-animatetimer) * 40;
-				xoffset3 = (20-animatetimer) * 40;
+				xoffset1 = (22-animatetimer) * scradjust;
+				xoffset2 = (24-animatetimer) * scradjust;
+				xoffset3 = (26-animatetimer) * scradjust;
+				xoffset4 = (28-animatetimer) * scradjust;
+				xoffset5 = (30-animatetimer) * scradjust;
+				xoffset6 = (32-animatetimer) * scradjust;
 				if (xoffset1 < 0) xoffset1 = 0;
 				if (xoffset2 < 0) xoffset2 = 0;
+				if (xoffset3 < 0) xoffset3 = 0;
+				if (xoffset4 < 0) xoffset4 = 0;
+				if (xoffset5 < 0) xoffset5 = 0;
 			}
 			else
+			{
 				drawsection = 1;
+				if (animatetimer == 32)
+					S_StartSound(NULL, sfx_s3k68);
+			}
 		}
 
 		if (drawsection == 1)
 		{
+			const char *ringtext = "\x86" "50 RINGS, NO SHIELD";
+			const char *tut1text = "\x86" "PRESS " "\x82" "SPIN";
+			const char *tut2text = "\x86" "MID-" "\x82" "JUMP";
 			ttheight = 16;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
 			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
 			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
 			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
-		}
-		else if (data.spec.passed1[0] != '\0')
-		{
-			ttheight = 24;
-			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-			ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
-			V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
+
+			ttheight = 108;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset4 - (V_LevelNameWidth(ringtext)/2), ttheight, 0, ringtext);
+			ttheight += V_LevelNameHeight(ringtext) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
+			ttheight += V_LevelNameHeight(tut1text) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset6 - (V_LevelNameWidth(tut2text)/2), ttheight, 0, tut2text);
 		}
 		else
 		{
-			ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
-			V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
+			if (data.spec.passed1[0] != '\0')
+			{
+				ttheight = 24;
+				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+				ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
+				V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
+			}
+			else
+			{
+				ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
+				V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
+			}
+
+			V_DrawScaledPatch(152 + xoffset3, 108, 0, data.spec.bonuspatch);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset3 - 68, 109, 0, data.spec.bonus.points);
+			V_DrawScaledPatch(152 + xoffset4, 124, 0, data.spec.pscore);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125, 0, data.spec.score);
+
+			// Draw continues!
+			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			{
+				UINT8 continues = data.spec.continues & 0x7F;
+
+				V_DrawScaledPatch(152 + xoffset5, 150, 0, data.spec.pcontinues);
+				for (i = 0; i < continues; ++i)
+				{
+					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
+						break;
+					V_DrawContinueIcon(246 + xoffset5 - (i*12), 162, 0, *data.spec.playerchar, *data.spec.playercolor);
+				}
+			}
 		}
 
 		// draw the emeralds
 		//if (intertic & 1)
 		{
+			boolean drawthistic = !(ALL7EMERALDS(emeralds) && (intertic & 1));
 			INT32 emeraldx = 152 - 3*28;
-			INT32 em = (gamemap - sstage_start);
+			INT32 em = P_GetNextEmerald();
 
-			for (i = 0; i < 7; ++i)
+			if (em == 7)
 			{
-				if ((i != em) && !(intertic & 1) && (emeralds & (1 << i)))
-					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
-				emeraldx += 28;
+				if (!stagefailed)
+				{
+					fixed_t adjust = 2*(FINESINE(FixedAngle((intertic + 1)<<(FRACBITS-4)) & FINEMASK));
+					V_DrawFixedPatch(152<<FRACBITS, (74<<FRACBITS) - adjust, FRACUNIT, 0, emeraldpics[0][em], NULL);
+				}
 			}
-
-			if (em < 7)
+			else if (em < 7)
 			{
 				static UINT8 emeraldbounces = 0;
 				static INT32 emeraldmomy = 20;
 				static INT32 emeraldy = -40;
+
+				if (drawthistic)
+					for (i = 0; i < 7; ++i)
+					{
+						if ((i != em) && (emeralds & (1 << i)))
+							V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
+						emeraldx += 28;
+					}
 
 				emeraldx = 152 + (em-3)*28;
 
@@ -399,7 +461,7 @@ void Y_IntermissionDrawer(void)
 				}
 				else
 				{
-					if (emeralds & (1 << em))
+					if (!stagefailed)
 					{
 						if (emeraldbounces < 3)
 						{
@@ -427,27 +489,9 @@ void Y_IntermissionDrawer(void)
 							emeraldy = 74;
 						}
 					}
-					V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
+					if (drawthistic)
+						V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
 				}
-			}
-		}
-
-		V_DrawScaledPatch(152, 108, 0, data.spec.bonuspatch);
-		V_DrawTallNum(BASEVIDWIDTH - 68, 109, 0, data.spec.bonus.points);
-		V_DrawScaledPatch(152, 124, 0, data.spec.pscore);
-		V_DrawTallNum(BASEVIDWIDTH - 68, 125, 0, data.spec.score);
-
-		// Draw continues!
-		if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
-		{
-			UINT8 continues = data.spec.continues & 0x7F;
-
-			V_DrawScaledPatch(152, 150, 0, data.spec.pcontinues);
-			for (i = 0; i < continues; ++i)
-			{
-				if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
-					break;
-				V_DrawContinueIcon(246 - (i*12), 162, 0, *data.spec.playerchar, *data.spec.playercolor);
 			}
 		}
 	}
@@ -831,7 +875,7 @@ void Y_Ticker(void)
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
-					S_StartSound(NULL, sfx_ncitem);
+					S_StartSound(NULL, sfx_s3k68);
 
 				G_SaveGameData();
 			}
@@ -850,7 +894,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
-		boolean skip = false;
+		boolean skip = false, super = false;
 
 		if (!intertic) // first time only
 		{
@@ -862,15 +906,22 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
-				skip = true;
+			if (playeringame[i])
+			{
+				if (players[i].cmd.buttons & BT_USE)
+					skip = true;
+				if (players[i].charflags & SF_SUPER)
+					super = true;
+			}
 
-		if ((data.spec.continues & 0x80) && tallydonetic != -1)
+		if (tallydonetic != -1 && ((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds))))
 		{
 			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
+				if (data.spec.continues & 0x80)
+					S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
+
 			}
 			return;
 		}
@@ -887,7 +938,7 @@ void Y_Ticker(void)
 		if (!data.spec.bonus.points)
 		{
 			tallydonetic = intertic;
-			if (!(data.spec.continues & 0x80)) // don't set endtic yet!
+			if (!((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds)))) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
@@ -896,7 +947,7 @@ void Y_Ticker(void)
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
-					S_StartSound(NULL, sfx_ncitem);
+					S_StartSound(NULL, sfx_s3k68);
 
 				G_SaveGameData();
 			}
@@ -1282,7 +1333,7 @@ void Y_StartIntermission(void)
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "GOT THEM ALL!");
 
-				if (skins[players[consoleplayer].skin].flags & SF_SUPER)
+				if (players[consoleplayer].charflags & SF_SUPER)
 				{
 					strcpy(data.spec.passed3, "CAN NOW BECOME");
 					snprintf(data.spec.passed4,
@@ -1303,6 +1354,11 @@ void Y_StartIntermission(void)
 				else
 					strcpy(data.spec.passed1, "YOU GOT");
 				strcpy(data.spec.passed2, "A CHAOS EMERALD");
+				if (P_GetNextEmerald() > 6)
+				{
+					data.spec.passed2[15] = '?';
+					data.spec.passed2[16] = '\0';
+				}
 			}
 			data.spec.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed1))/2;
 			data.spec.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed2))/2;
@@ -1741,7 +1797,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 			if (!playeringame[i]) continue;
 			sharedringtotal += players[i].rings;
 		}
-		if (!sharedringtotal || sharedringtotal < nummaprings)
+		if (!sharedringtotal || nummaprings == -1 || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;
 		else
 			data.coop.gotperfbonus = 1;
@@ -1853,7 +1909,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
 			Y_SetNullBonus(&players[i], &localbonus);
-		else if (useNightsSS) // Link instead of Score
+		else if (maptol & TOL_NIGHTS) // Link instead of Rings
 			Y_SetLinkBonus(&players[i], &localbonus);
 		else
 			Y_SetRingBonus(&players[i], &localbonus);

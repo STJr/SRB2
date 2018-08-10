@@ -1624,7 +1624,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
-	INT32 charflags = 0;
+	INT32 charflags = (option & V_CHARCOLORMASK);
 	const UINT8 *colormap = NULL;
 	INT32 spacewidth = 4, charwidth = 0;
 
@@ -1643,8 +1643,6 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
 	}
-
-	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
 	{
@@ -2164,8 +2162,10 @@ INT32 V_CreditStringWidth(const char *string)
 //
 void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 {
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth = BASEVIDWIDTH;
+	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
 	const char *ch = string;
+	INT32 charflags = (option & V_CHARCOLORMASK);
+	const UINT8 *colormap = NULL;
 
 	if (option & V_NOSCALESTART)
 	{
@@ -2174,21 +2174,31 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth = vid.width;
 	}
 	else
-		dupx = dupy = 1;
-
-	for (;;)
 	{
-		c = *ch++;
-		if (!c)
+		dupx = dupy = 1;
+		scrwidth = vid.width/vid.dupx;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+	}
+
+	for (;;ch++)
+	{
+		if (!*ch)
 			break;
-		if (c == '\n')
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			if (!(option & V_CHARCOLORMASK))
+				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
 		{
 			cx = x;
 			cy += 12*dupy;
 			continue;
 		}
 
-		c = toupper(c) - LT_FONTSTART;
+		c = toupper(*ch) - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 		{
 			cx += 16*dupx;
@@ -2196,17 +2206,19 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		}
 
 		w = SHORT(lt_font[c]->width) * dupx;
-		if (cx + w > scrwidth)
-			break;
 
+		if (cx+left > scrwidth)
+			break;
 		//left boundary check
-		if (cx < 0)
+		if (cx+left + w < 0)
 		{
 			cx += w;
 			continue;
 		}
 
-		V_DrawScaledPatch(cx, cy, option, lt_font[c]);
+		colormap = V_GetStringColormap(charflags);
+		V_DrawFixedPatch(cx<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, lt_font[c], colormap);
+
 		cx += w;
 	}
 }
@@ -2220,6 +2232,8 @@ INT32 V_LevelNameWidth(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
+		if (string[i] & 0x80)
+			continue;
 		c = toupper(string[i]) - LT_FONTSTART;
 		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
 			w += 16;
@@ -2285,11 +2299,9 @@ INT32 V_StringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
 			w += spacewidth;
 		else
@@ -2327,11 +2339,9 @@ INT32 V_SmallStringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
 			w += spacewidth;
 		else
@@ -2366,11 +2376,9 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+		if (string[i] & 0x80)
 			continue;
-
-		c = toupper(c) - HU_FONTSTART;
+		c = toupper(string[i]) - HU_FONTSTART;
 		if (c < 0 || c >= HU_FONTSIZE || !tny_font[c])
 			w += spacewidth;
 		else
