@@ -2784,7 +2784,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	else if (player->rings > 0) // Ring loss
 	{
 		P_PlayRinglossSound(target);
-		P_PlayerRingBurst(player, max(player->spheres, player->rings));
+		P_PlayerRingBurst(player, player->rings);
 		player->rings = 0;
 	}
 	else // Death
