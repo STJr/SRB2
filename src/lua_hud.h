@@ -24,7 +24,7 @@ enum hud {
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,
-	hud_nightsrings,
+	hud_nightsspheres,
 	hud_nightsscore,
 	hud_nightstime,
 	hud_nightsrecords,

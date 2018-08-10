@@ -2144,6 +2144,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
 	msecnode_t *node;
+	ffloor_t *rover;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2190,6 +2191,19 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
+
+				// Find the FOF corresponding to the control linedef
+				for (rover = targetsec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master == sec->lines[i])
+						break;
+				}
+
+				if (!rover) // This should be impossible, but don't complain if it is the case somehow
+					continue;
+
+				if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					continue;
 
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
@@ -3304,7 +3318,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
 			P_DamageMobj(thing, puncher, puncher, 1, 0);
-		else if (thing->type == MT_RING || thing->type == MT_COIN)
+		else if (thing->type == MT_RING || thing->type == MT_COIN || thing->type == MT_TOKEN)
 		{
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);
 			P_TouchSpecialThing(thing, puncher, false);

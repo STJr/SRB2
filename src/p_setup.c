@@ -809,7 +809,7 @@ void P_ReloadRings(void)
 	mapthing_t *hoopsToRespawn[4096];
 	mapthing_t *mt = mapthings;
 
-	// scan the thinkers to find rings/wings/hoops to unset
+	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -827,7 +827,9 @@ void P_ReloadRings(void)
 			}
 			continue;
 		}
-		if (!(mo->type == MT_RING || mo->type == MT_NIGHTSWING || mo->type == MT_COIN || mo->type == MT_BLUEBALL))
+		if (!(mo->type == MT_RING || mo->type == MT_COIN
+			|| mo->type == MT_BLUESPHERE || mo->type == MT_BOMBSPHERE
+			|| mo->type == MT_NIGHTSCHIP || mo->type == MT_NIGHTSSTAR))
 			continue;
 
 		// Don't auto-disintegrate things being pulled to us
@@ -841,9 +843,10 @@ void P_ReloadRings(void)
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
 		// Notice an omission? We handle hoops differently.
-		if (mt->type == 300 || mt->type == 308 || mt->type == 309
-		 || mt->type == 1706 || (mt->type >= 600 && mt->type <= 609)
-		 || mt->type == 1800)
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609)) // circles and diagonals
 		{
 			mt->mobj = NULL;
 
@@ -851,12 +854,46 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings (mt);
+			P_SpawnHoopsAndRings(mt,
+#ifdef MANIASPHERES
+				true);
+#else
+				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
+#endif
 		}
 	}
 	for (i = 0; i < numHoops; i++)
 	{
-		P_SpawnHoopsAndRings(hoopsToRespawn[i]);
+		P_SpawnHoopsAndRings(hoopsToRespawn[i], false);
+	}
+}
+
+void P_SwitchSpheresBonusMode(boolean bonustime)
+{
+	mobj_t *mo;
+	thinker_t *th;
+
+#ifndef MANIASPHERES
+	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
+		return;
+#endif
+
+	// scan the thinkers to find spheres to switch
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mo = (mobj_t *)th;
+
+		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
+			&& mo->type != MT_FLINGBLUESPHERE && mo->type != MT_FLINGNIGHTSCHIP)
+			continue;
+
+		if (!mo->health)
+			continue;
+
+		P_SetMobjState(mo, ((bonustime) ? mo->info->raisestate : mo->info->spawnstate));
 	}
 }
 
@@ -1026,20 +1063,22 @@ static void P_LoadThings(void)
 		}
 
 		//decrement spawn values to the actual number because zero is valid.
-		if (emer1)
-			P_SpawnMobj(huntemeralds[emer1 - 1]->x<<FRACBITS,
-				huntemeralds[emer1 - 1]->y<<FRACBITS,
-				huntemeralds[emer1 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer1--)
+			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+				huntemeralds[emer1]->y<<FRACBITS,
+				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
 
-		if (emer2)
-			P_SpawnMobj(huntemeralds[emer2 - 1]->x<<FRACBITS,
-				huntemeralds[emer2 - 1]->y<<FRACBITS,
-				huntemeralds[emer2 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer2--)
+			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+				huntemeralds[emer2]->y<<FRACBITS,
+				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+1);
 
-		if (emer3)
-			P_SpawnMobj(huntemeralds[emer3 - 1]->x<<FRACBITS,
-				huntemeralds[emer3 - 1]->y<<FRACBITS,
-				huntemeralds[emer3 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer3--)
+			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+				huntemeralds[emer3]->y<<FRACBITS,
+				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+2);
 	}
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
@@ -1049,9 +1088,11 @@ static void P_LoadThings(void)
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
-		if (mt->type == 300 || mt->type == 308 || mt->type == 309
-		 || mt->type == 1706 || (mt->type >= 600 && mt->type <= 609)
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800)
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
+		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
 		{
 			mt->mobj = NULL;
 
@@ -1059,7 +1100,7 @@ static void P_LoadThings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings (mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
 }
@@ -2299,7 +2340,7 @@ static void P_LevelInitStuff(void)
 	// circuit, race and competition stuff
 	circuitmap = false;
 	numstarposts = 0;
-	totalrings = timeinmap = 0;
+	ssspheres = timeinmap = 0;
 
 	// special stage
 	stagefailed = false;
@@ -2321,6 +2362,8 @@ static void P_LevelInitStuff(void)
 		}
 	}
 
+	countdown = countdown2 = 0;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
@@ -2329,41 +2372,37 @@ static void P_LevelInitStuff(void)
 			players[i].lives = cv_startinglives.value;
 		}
 
-		players[i].realtime = countdown = countdown2 = 0;
+		// obliteration station...
+		players[i].rings = players[i].spheres =\
+		 players[i].xtralife = players[i].deadtimer =\
+		 players[i].numboxes = players[i].totalring =\
+		 players[i].laps = players[i].aiming =\
+		 players[i].losstime = players[i].timeshit =\
+		 players[i].marescore = players[i].lastmarescore =\
+		 players[i].maxlink = players[i].startedtime =\
+		 players[i].finishedtime = players[i].finishedspheres =\
+		 players[i].finishedrings = players[i].lastmare =\
+		 players[i].marebegunat = players[i].textvar =\
+		 players[i].texttimer = players[i].linkcount =\
+		 players[i].linktimer = players[i].flyangle =\
+		 players[i].anotherflyangle = players[i].nightstime =\
+		 players[i].mare = players[i].realtime =\
+		 players[i].exiting = 0;
 
+		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;
 
-		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-		players[i].rings = 0;
-		players[i].aiming = 0;
-		players[i].pflags &= ~PF_GAMETYPEOVER;
-
-		players[i].losstime = 0;
-		players[i].timeshit = 0;
-
-		players[i].marescore = players[i].lastmarescore = players[i].maxlink = 0;
-		players[i].startedtime = players[i].finishedtime = players[i].finishedrings = 0;
-		players[i].lastmare = players[i].marebegunat = 0;
-
-		// Don't show anything
-		players[i].textvar = players[i].texttimer = 0;
-
-		players[i].linkcount = players[i].linktimer = 0;
-		players[i].flyangle = players[i].anotherflyangle = 0;
-		players[i].nightstime = players[i].mare = 0;
-		P_SetTarget(&players[i].capsule, NULL);
+		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		players[i].exiting = 0;
 		P_ResetPlayer(&players[i]);
+		// hit these too
+		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
 
-		players[i].mo = NULL;
-
-		// we must unset axis details too
-		players[i].axis1 = players[i].axis2 = NULL;
-
-		// and this stupid flag as a result
-		players[i].pflags &= ~PF_TRANSFERTOCLOSEST;
+		// unset ALL the pointers. P_SetTarget isn't needed here because if this
+		// function is being called we're just going to clobber the data anyways
+		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
+		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
 	}
 }
 
@@ -2403,7 +2442,17 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
+	{ // HACK: Open wad file rather quickly so we can use the things lump
+		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+		fileinfo += ML_THINGS; // we only need the THINGS lump
+		P_PrepareRawThings(wadData + fileinfo->filepos, fileinfo->size);
+		Z_Free(wadData); // we're done with this now
+	}
+	else // phew it's just a WAD
+		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+
 	P_LoadThings();
 
 
@@ -2676,11 +2725,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
@@ -2738,6 +2782,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
+		tic_t nowtime;
 
 		S_StartSound(NULL, sfx_s3kaf);
 
@@ -2747,9 +2792,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
+		nowtime = lastwipetic;
 		// Hold on white for extra effect.
-		while (I_GetTime() < endtime)
-			I_Sleep();
+		while (nowtime < endtime)
+		{
+			// wait loop
+			while (!((nowtime = I_GetTime()) - lastwipetic))
+				I_Sleep();
+			lastwipetic = nowtime;
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 
 		ranspecialwipe = 1;
 	}
@@ -3337,7 +3390,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else
@@ -3351,7 +3404,7 @@ boolean P_AddWadFile(const char *wadfilename)
 		for (i = 0; i < numlumps; i++, lumpinfo++)
 		{
 //			lumpinfo = FindFolder("Lua/",      &luaPos, &luaNum, lumpinfo, &numlumps, &i);
-//			lumpinfo = FindFolder("SOCs/",     &socPos, &socNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("SOC/",      &socPos, &socNum, lumpinfo, &numlumps, &i);
 			lumpinfo = FindFolder("Sounds/",   &sfxPos, &sfxNum, lumpinfo, &numlumps, &i);
 			lumpinfo = FindFolder("Music/",    &musPos, &musNum, lumpinfo, &numlumps, &i);
 //			lumpinfo = FindFolder("Sprites/",  &sprPos, &sprNum, lumpinfo, &numlumps, &i);
