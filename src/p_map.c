@@ -1108,9 +1108,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		// must be flying in the SAME DIRECTION as the last time you came through.
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
-		if ((pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
-		   !(pl->anotherflyangle >= 90 &&   pl->anotherflyangle <= 270)
-		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
+		if (pl->bonustime && (pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
+		   !(pl->flyangle > 90 &&   pl->flyangle < 270)
+		^ (droneobj->extravalue1 > 90 && droneobj->extravalue1 < 270)
 		))
 		{
 			pl->marelap++;
@@ -1125,7 +1125,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			P_RunNightsLapExecutors(pl->mo);
 		}
-		droneobj->extravalue1 = pl->anotherflyangle;
+		droneobj->extravalue1 = pl->flyangle;
 		droneobj->extravalue2 = (INT32)leveltime + TICRATE;
 	}
 
