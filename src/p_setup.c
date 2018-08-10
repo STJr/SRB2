@@ -885,7 +885,8 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 
 		mo = (mobj_t *)th;
 
-		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP)
+		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
+			&& mo->type != MT_FLINGBLUESPHERE && mo->type != MT_FLINGNIGHTSCHIP)
 			continue;
 
 		if (!mo->health)
@@ -2379,12 +2380,13 @@ static void P_LevelInitStuff(void)
 		 players[i].marescore = players[i].lastmarescore =\
 		 players[i].maxlink = players[i].startedtime =\
 		 players[i].finishedtime = players[i].finishedspheres =\
-		 players[i].lastmare = players[i].marebegunat =\
-		 players[i].textvar = players[i].texttimer =\
-		 players[i].linkcount = players[i].linktimer =\
-		 players[i].flyangle = players[i].anotherflyangle =\
-		 players[i].nightstime = players[i].mare =\
-		 players[i].realtime = players[i].exiting = 0;
+		 players[i].finishedrings = players[i].lastmare =\
+		 players[i].marebegunat = players[i].textvar =\
+		 players[i].texttimer = players[i].linkcount =\
+		 players[i].linktimer = players[i].flyangle =\
+		 players[i].anotherflyangle = players[i].nightstime =\
+		 players[i].mare = players[i].realtime =\
+		 players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;

@@ -5273,7 +5273,10 @@ static void M_HandleAddons(INT32 choice)
 static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
-	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
+	if (maptol & TOL_NIGHTS)
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].spheres, 0));
+	else
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	if (players[consoleplayer].lives == 0x7f)
 		CV_StealthSetValue(&cv_dummylives, -1);
 	else
@@ -5291,7 +5294,12 @@ static void M_PandorasBox(INT32 choice)
 static boolean M_ExitPandorasBox(void)
 {
 	if (cv_dummyrings.value != max(players[consoleplayer].rings, 0))
-		COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	{
+		if (maptol & TOL_NIGHTS)
+			COM_ImmedExecute(va("setspheres %d", cv_dummyrings.value));
+		else
+			COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	}
 	if (cv_dummylives.value != players[consoleplayer].lives)
 		COM_ImmedExecute(va("setlives %d", cv_dummylives.value));
 	if (cv_dummycontinues.value != players[consoleplayer].continues)
