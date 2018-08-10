@@ -885,7 +885,8 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 
 		mo = (mobj_t *)th;
 
-		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP)
+		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
+			&& mo->type != MT_FLINGBLUESPHERE && mo->type != MT_FLINGNIGHTSCHIP)
 			continue;
 
 		if (!mo->health)

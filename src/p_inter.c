@@ -490,7 +490,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoNightsScore(player);
 			break;
 		case MT_BLUESPHERE:
+		case MT_FLINGBLUESPHERE:
 		case MT_NIGHTSCHIP:
+		case MT_FLINGNIGHTSCHIP:
 			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
 				return;
 
@@ -3373,6 +3375,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	angle_t fa;
 	fixed_t ns;
 	fixed_t z;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	// Better safe than sorry.
 	if (!player)
@@ -3396,6 +3399,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		INT32 objType = mobjinfo[MT_RING].reactiontime;
 		if (mariomode)
 			objType = mobjinfo[MT_COIN].reactiontime;
+		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
+			objType = mobjinfo[(nightsreplace ? MT_NIGHTSCHIP : MT_BLUESPHERE)].reactiontime;
 
 		z = player->mo->z;
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -3424,6 +3429,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 			P_SetObjectMomZ(mo, 8*FRACUNIT, false);
 			mo->fuse = 20*TICRATE; // Adjust fuse for NiGHTS
+
+			P_SetMobjState(mo, (player->bonustime ? mo->info->raisestate : mo->info->spawnstate));
 		}
 		else
 		{
