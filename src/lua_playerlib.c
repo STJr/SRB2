@@ -288,6 +288,8 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, plr->bonustime);
 	else if (fastcmp(field,"capsule"))
 		LUA_PushUserdata(L, plr->capsule, META_MOBJ);
+	else if (fastcmp(field,"drone"))
+		LUA_PushUserdata(L, plr->drone, META_MOBJ);
 	else if (fastcmp(field,"mare"))
 		lua_pushinteger(L, plr->mare);
 	else if (fastcmp(field,"marebegunat"))
@@ -567,6 +569,13 @@ static int player_set(lua_State *L)
 		if (!lua_isnil(L, 3))
 			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 		P_SetTarget(&plr->capsule, mo);
+	}
+	else if (fastcmp(field,"drone"))
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->drone, mo);
 	}
 	else if (fastcmp(field,"mare"))
 		plr->mare = (UINT8)luaL_checkinteger(L, 3);

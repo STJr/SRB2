@@ -6096,6 +6096,20 @@ static void P_DoNiGHTSCapsule(player_t *player)
 }
 
 //
+// P_MoveNiGHTSToDrone
+//
+// Pull NiGHTS to the drone during Nightserizing
+//
+static void P_MoveNiGHTSToDrone(player_t *player)
+{
+	if (!player->drone)
+		return;
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z);
+	P_SetTarget(&player->drone, NULL);
+}
+
+//
 // P_NiGHTSMovement
 //
 // Movement code for NiGHTS!
@@ -7004,6 +7018,13 @@ static void P_MovePlayer(player_t *player)
 		else if (player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1])
 		{
 			P_DoNiGHTSCapsule(player);
+			return;
+		}
+
+		// Suck player into their drone
+		if (player->drone)
+		{
+			P_MoveNiGHTSToDrone(player);
 			return;
 		}
 

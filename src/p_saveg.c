@@ -57,6 +57,7 @@ typedef enum
 	FIRSTAXIS  = 0x10,
 	SECONDAXIS = 0x20,
 	FOLLOW     = 0x40,
+	DRONE      = 0x80,
 } player_saveflags;
 
 //
@@ -226,6 +227,9 @@ static void P_NetArchivePlayers(void)
 		if (players[i].followmobj)
 			flags |= FOLLOW;
 
+		if (players[i].drone)
+			flags |= DRONE;
+
 		WRITEINT16(save_p, players[i].lastsidehit);
 		WRITEINT16(save_p, players[i].lastlinehit);
 
@@ -253,6 +257,9 @@ static void P_NetArchivePlayers(void)
 
 		if (flags & FOLLOW)
 			WRITEUINT32(save_p, players[i].followmobj->mobjnum);
+
+		if (flags & DRONE)
+			WRITEUINT32(save_p, players[i].drone->mobjnum);
 
 		WRITEFIXED(save_p, players[i].camerascale);
 		WRITEFIXED(save_p, players[i].shieldscale);
@@ -427,6 +434,9 @@ static void P_NetUnArchivePlayers(void)
 
 		if (flags & FOLLOW)
 			players[i].followmobj = (mobj_t *)(size_t)READUINT32(save_p);
+
+		if (flags & DRONE)
+			players[i].drone = (mobj_t *)(size_t)READUINT32(save_p);
 
 		players[i].camerascale = READFIXED(save_p);
 		players[i].shieldscale = READFIXED(save_p);
@@ -3098,6 +3108,13 @@ static void P_RelinkPointers(void)
 				mobj->player->followmobj = NULL;
 				if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(temp)))
 					CONS_Debug(DBG_GAMELOGIC, "followmobj not found on %d\n", mobj->type);
+			}
+			if (mobj->player && mobj->player->drone)
+			{
+				temp = (UINT32)(size_t)mobj->player->drone;
+				mobj->player->drone = NULL;
+				if (!P_SetTarget(&mobj->player->drone, P_FindNewPosition(temp)))
+					CONS_Debug(DBG_GAMELOGIC, "drone not found on %d\n", mobj->type);
 			}
 		}
 	}

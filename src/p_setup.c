@@ -2401,7 +2401,7 @@ static void P_LevelInitStuff(void)
 		// unset ALL the pointers. P_SetTarget isn't needed here because if this
 		// function is being called we're just going to clobber the data anyways
 		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
+		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
 	}
 }
 
