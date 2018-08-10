@@ -746,6 +746,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
+		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
