@@ -6114,8 +6114,39 @@ static void P_MoveNiGHTSToDrone(player_t *player)
 {
 	if (!player->drone)
 		return;
+
+	boolean flip = player->drone->flags2 & MF2_OBJECTFLIP;
+	boolean topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	boolean middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
+	boolean bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	fixed_t droneboxmandiff = max(player->drone->height - player->mo->height, 0);
+	fixed_t zofs;
+
+	if (!flip)
+	{
+		if (topaligned)
+			zofs = droneboxmandiff;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = 0;
+	}
+	else
+	{
+		if (topaligned)
+			zofs = 0;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = droneboxmandiff - FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = droneboxmandiff;
+	}
+
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
-	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + player->drone->height/2 - player->mo->height/2);
+	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
 	P_SetTarget(&player->drone, NULL);
 }
 

@@ -16116,7 +16116,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		56*FRACUNIT,    // height
+		80*FRACUNIT,    // height
 		1,              // display offset
 		1000,           // mass
 		0,              // damage
@@ -16170,7 +16170,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		56*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		1,              // display offset
 		1000,           // mass
 		0,              // damage
@@ -16197,7 +16197,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		56*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		-1,             // display offset
 		1000,           // mass
 		0,              // damage

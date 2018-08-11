@@ -7866,16 +7866,44 @@ void P_MobjThinker(mobj_t *mobj)
 					// Invisible/bouncing mode.
 					else
 					{
+						boolean flip = mobj->flags2 & MF2_OBJECTFLIP;
+						boolean topaligned = (mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
+						boolean middlealigned = (mobj->flags & MF_GRENADEBOUNCE) && !(mobj->flags & MF_SLIDEME);
+						boolean bottomoffsetted = !(mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
+						fixed_t droneboxmandiff = max(mobj->height - droneman->height, 0);
+
 						INT32 i;
 						boolean bonustime = false;
+						fixed_t zcomp;
+
+						if (!flip)
+						{
+							if (topaligned)
+								zcomp = droneboxmandiff + mobj->z;
+							else if (middlealigned)
+								zcomp = (droneboxmandiff / 2) + mobj->z;
+							else if (bottomoffsetted)
+								zcomp = mobj->z + FixedMul(24*FRACUNIT, mobj->scale);
+							else
+								zcomp = mobj->z;
+						}
+						else
+						{
+							if (topaligned)
+								zcomp = mobj->z;
+							else if (middlealigned)
+								zcomp = (droneboxmandiff / 2) + mobj->z;
+							else if (bottomoffsetted)
+								zcomp = mobj->z + droneboxmandiff - FixedMul(24*FRACUNIT, mobj->scale);
+							else
+								zcomp = mobj->z + droneboxmandiff;
+						}
 
 						// Bouncy bouncy!
 						droneman->angle += ANG10;
-						if (!(droneman->flags2 & MF2_OBJECTFLIP)
-							&& droneman->z <= mobj->z)
+						if (!flip && droneman->z <= zcomp)
 							droneman->momz = FixedMul(5*FRACUNIT, droneman->scale);
-						else if ((droneman->flags2 & MF2_OBJECTFLIP)
-							&& droneman->z + droneman->height >= mobj->z + mobj->height)
+						else if (flip && droneman->z >= zcomp)
 							droneman->momz = FixedMul(-5*FRACUNIT, droneman->scale);
 
 						for (i = 0; i < MAXPLAYERS; i++)
@@ -10541,24 +10569,111 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->threshold = mthing->angle >> 8;
 		break;
 	case MT_NIGHTSDRONE:
-		if (mthing->angle > 0)
-			mobj->health = mthing->angle;
-
-		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
+			boolean flip = mthing->options & MTF_OBJECTFLIP;
+			boolean topaligned = (mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
+			boolean middlealigned = (mthing->options & MTF_EXTRA) && !(mthing->options & MTF_OBJECTSPECIAL);
+			boolean bottomoffsetted = !(mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
 
-		// spawn visual components
-		{
-			mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_GOAL);
-			mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_SPARKLING);
-			mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_MAN);
+			fixed_t droneboxmandiff = max(mobj->height - mobjinfo[MT_NIGHTSDRONE_MAN].height, 0);
+			fixed_t dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
+
+			INT16 timelimit = mthing->angle;
+			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
+			fixed_t oldheight = mobj->height;
+				// if you want to use parameter for something else, do this instead:
+				// timelimit = mthing->angle & 0xFFF; hitboxheight = (mthing->extrainfo >> 12) * 32 * FRACUNIT;
+			fixed_t dronemanoffset, goaloffset, sparkleoffset;
+
+			if (mthing->angle > 0)
+				mobj->health = timelimit;
+
+			if (hitboxheight > 0)
+				mobj->height = hitboxheight;
+			else
+				mobj->height = mobjinfo[MT_NIGHTSDRONE].height;
+
+			if (flip && mobj->height != oldheight)
+				P_TeleportMove(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
+
+			if (!flip)
+			{
+				if (topaligned) // Align droneman to top of hitbox
+				{
+					dronemanoffset = droneboxmandiff;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+				else if (middlealigned) // Align droneman to center of hitbox
+				{
+					dronemanoffset = droneboxmandiff / 2;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+				else if (bottomoffsetted)
+				{
+					dronemanoffset = 24*FRACUNIT;
+					goaloffset = dronemangoaldiff + dronemanoffset;
+				}
+				else
+				{
+					dronemanoffset = 0;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+
+				sparkleoffset = goaloffset - FixedMul(15*FRACUNIT, mobj->scale);
+			}
+			else
+			{
+				mobj->eflags |= MFE_VERTICALFLIP;
+				mobj->flags2 |= MF2_OBJECTFLIP;
+
+				if (topaligned) // Align droneman to top of hitbox
+				{
+					dronemanoffset = 0;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+				else if (middlealigned) // Align droneman to center of hitbox
+				{
+					dronemanoffset = droneboxmandiff / 2;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+				else if (bottomoffsetted)
+				{
+					dronemanoffset = droneboxmandiff - FixedMul(24*FRACUNIT, mobj->scale);
+					goaloffset = dronemangoaldiff + dronemanoffset;
+				}
+				else
+				{
+					dronemanoffset = droneboxmandiff;
+					goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+				}
+
+				sparkleoffset = goaloffset + FixedMul(15*FRACUNIT, mobj->scale);
+			}
+
+			// spawn visual elements
+			mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, goaloffset, MT_NIGHTSDRONE_GOAL);
+			mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, sparkleoffset, MT_NIGHTSDRONE_SPARKLING);
+			mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, dronemanoffset, MT_NIGHTSDRONE_MAN);
 
 			P_SetTarget(&mobj->target, goalpost);
 			P_SetTarget(&goalpost->target, sparkle);
 			P_SetTarget(&goalpost->tracer, droneman);
+
+			// correct Z position
+			if (flip)
+			{
+				P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
+				P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
+				P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+			}
+
+			// Remember position preference for later
+			if (topaligned)
+				mobj->flags |= MF_SLIDEME;
+			else if (middlealigned)
+				mobj->flags |= MF_GRENADEBOUNCE;
+			else if (!bottomoffsetted)
+				mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
 		}
 		break;
 	case MT_HIVEELEMENTAL:
