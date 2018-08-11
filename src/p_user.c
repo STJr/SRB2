@@ -623,6 +623,10 @@ static void P_DeNightserizePlayer(player_t *player)
 		break;
 	}
 
+	if (player->mo->scale != player->oldscale)
+		player->mo->destscale = player->oldscale;
+	player->oldscale = 0;
+
 	// Restore from drowning music
 	P_RestoreMusic(player);
 }
@@ -640,7 +644,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
+	{
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
+		player->oldscale = player->mo->scale;
+	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
@@ -764,6 +771,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (timeinmap + 40 < 110)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
+
+	if (player->drone && player->drone->scale != player->mo->scale)
+		player->mo->destscale = player->drone->scale;
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
@@ -6105,7 +6115,7 @@ static void P_MoveNiGHTSToDrone(player_t *player)
 	if (!player->drone)
 		return;
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
-	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z);
+	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + player->drone->height/2 - player->mo->height/2);
 	P_SetTarget(&player->drone, NULL);
 }
 

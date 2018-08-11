@@ -793,8 +793,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_SwitchSpheresBonusMode(false);
 				if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 					P_SetTarget(&special->tracer, toucher);
-				P_NightserizePlayer(player, special->health); // Transform!
 				P_SetTarget(&player->drone, special); // Mark the player as 'center into the drone'
+				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
 					if (toucher->tracer) // Move the ideya over to the drone!
