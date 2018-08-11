@@ -7871,13 +7871,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 						// Bouncy bouncy!
 						droneman->angle += ANG10;
-						if (droneman->flags2 & MF2_DONTDRAW)
-							droneman->momz = 0;
-						else if (!(droneman->flags2 & MF2_OBJECTFLIP)
-							&& droneman->z <= droneman->floorz)
+						if (!(droneman->flags2 & MF2_OBJECTFLIP)
+							&& droneman->z <= mobj->z)
 							droneman->momz = FixedMul(5*FRACUNIT, droneman->scale);
 						else if ((droneman->flags2 & MF2_OBJECTFLIP)
-							&& droneman->z >= droneman->ceilingz - droneman->height)
+							&& droneman->z + droneman->height >= mobj->z + mobj->height)
 							droneman->momz = FixedMul(-5*FRACUNIT, droneman->scale);
 
 						for (i = 0; i < MAXPLAYERS; i++)
@@ -7890,8 +7888,8 @@ void P_MobjThinker(mobj_t *mobj)
 						if (bonustime)
 						{
 							CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
-							if (droneman && droneman->state != &states[S_INVISIBLE])
-								P_SetMobjState(droneman, S_INVISIBLE);
+							if (droneman && !(droneman->flags2 & MF2_DONTDRAW))
+								droneman->flags2 |= MF2_DONTDRAW;
 							if (goalpost && goalpost->state == &states[S_INVISIBLE])
 								P_SetMobjState(goalpost, mobjinfo[goalpost->type].meleestate);
 							if (sparkle && sparkle->state == &states[S_INVISIBLE])
@@ -7913,14 +7911,19 @@ void P_MobjThinker(mobj_t *mobj)
 									P_SetMobjState(goalpost, S_INVISIBLE);
 								if (sparkle && sparkle->state != &states[S_INVISIBLE])
 									P_SetMobjState(sparkle, S_INVISIBLE);
-								if (droneman && droneman->state == &states[S_INVISIBLE])
-									P_SetMobjState(droneman, mobjinfo[droneman->type].meleestate);
+								if (droneman)
+								{
+									if (droneman->state != &states[mobjinfo[droneman->type].meleestate])
+										P_SetMobjState(droneman, mobjinfo[droneman->type].meleestate);
+									if (droneman->flags2 & MF2_DONTDRAW)
+										droneman->flags2 &= ~MF2_DONTDRAW;
+								}
 							}
 							else
 							{
 								// else, hide it
-								if (droneman && droneman->state != &states[S_INVISIBLE])
-									P_SetMobjState(droneman, S_INVISIBLE);
+								if (droneman && !(droneman->flags2 & MF2_DONTDRAW))
+									droneman->flags2 |= MF2_DONTDRAW;
 							}
 						}
 					}
