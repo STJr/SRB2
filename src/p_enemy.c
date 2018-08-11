@@ -8542,12 +8542,16 @@ void A_ToggleFlameJet(mobj_t* actor)
 // Description: Used by Chaos Emeralds to orbit around Nights (aka Super Sonic.)
 //
 // var1 = Angle adjustment (aka orbit speed)
-// var2 = Lower four bits: height offset, Upper 4 bits = set if object is Nightopian Helper
+// var2:
+//        Lower 16 bits: height offset
+//        Upper 8 bits: set if object is Nightopian Helper
+//        Highest 8 bits: center height offset to target by this divisor
 //
 void A_OrbitNights(mobj_t* actor)
 {
 	INT32 ofs = (var2 & 0xFFFF);
-	boolean ishelper = (var2 & 0xFFFF0000);
+	boolean ishelper = ((var2 >> 16) & 0xFF);
+	INT32 ofsdiv = var2 >> 24;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_OrbitNights", actor))
 		return;
@@ -8577,7 +8581,10 @@ void A_OrbitNights(mobj_t* actor)
 
 			actor->x = actor->target->x + fc;
 			actor->y = actor->target->y + fs;
-			actor->z = actor->target->z + fh + FixedMul(16*FRACUNIT, actor->scale);
+			if (ofsdiv)
+				actor->z = (actor->target->z + actor->target->height / ofsdiv) + fh + FixedMul(16*FRACUNIT, actor->scale);
+			else
+				actor->z = actor->target->z + fh + FixedMul(16*FRACUNIT, actor->scale);
 
 			// Semi-lazy hack
 			actor->angle = (angle_t)actor->extravalue1 + ANGLE_90;
@@ -11636,4 +11643,4 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
-}
+}
