@@ -8801,8 +8801,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->fuse += 30 * TICRATE;
 			break;
 		case MT_NIGHTSDRONE:
-			if (G_IsSpecialStage(gamemap))
-				mobj->flags2 |= MF2_DONTDRAW;
 			nummaprings = -1; // no perfect bonus, rings are free
 			break;
 		case MT_EGGCAPSULE:
