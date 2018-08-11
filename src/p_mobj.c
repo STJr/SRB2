@@ -7828,9 +7828,18 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 			case MT_NIGHTSDRONE:
 				{
+					// variable setup
 					mobj_t *goalpost = NULL;
 					mobj_t *sparkle = NULL;
 					mobj_t *droneman = NULL;
+
+					boolean flip = mobj->flags2 & MF2_OBJECTFLIP;
+					boolean topaligned = (mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
+					boolean middlealigned = (mobj->flags & MF_GRENADEBOUNCE) && !(mobj->flags & MF_SLIDEME);
+					boolean bottomoffsetted = !(mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
+					boolean flipchanged = false;
+
+					fixed_t dronemanoffset, goaloffset, sparkleoffset, droneboxmandiff, dronemangoaldiff;
 
 					if (mobj->target && mobj->target->type == MT_NIGHTSDRONE_GOAL)
 					{
@@ -7841,6 +7850,108 @@ void P_MobjThinker(mobj_t *mobj)
 							droneman = goalpost->tracer;
 					}
 
+					if (!goalpost || !sparkle || !droneman)
+						break;
+
+					// did NIGHTSDRONE position, scale, or flip change? all elements need to be synced
+					droneboxmandiff = max(mobj->height - droneman->height, 0);
+					dronemangoaldiff = max(droneman->height - goalpost->height, 0);
+
+					if (!(goalpost->flags2 & MF2_OBJECTFLIP) && (mobj->flags2 & MF2_OBJECTFLIP))
+					{
+						goalpost->eflags |= MFE_VERTICALFLIP;
+						goalpost->flags2 |= MF2_OBJECTFLIP;
+						sparkle->eflags |= MFE_VERTICALFLIP;
+						sparkle->flags2 |= MF2_OBJECTFLIP;
+						droneman->eflags |= MFE_VERTICALFLIP;
+						droneman->flags2 |= MF2_OBJECTFLIP;
+						flipchanged = true;
+					}
+					else if ((goalpost->flags2 & MF2_OBJECTFLIP) && !(mobj->flags2 & MF2_OBJECTFLIP))
+					{
+						goalpost->eflags &= ~MFE_VERTICALFLIP;
+						goalpost->flags2 &= ~MF2_OBJECTFLIP;
+						sparkle->eflags &= ~MFE_VERTICALFLIP;
+						sparkle->flags2 &= ~MF2_OBJECTFLIP;
+						droneman->eflags &= ~MFE_VERTICALFLIP;
+						droneman->flags2 &= ~MF2_OBJECTFLIP;
+						flipchanged = true;
+					}
+
+					if (goalpost->destscale != mobj->destscale || goalpost->movefactor != mobj->z || flipchanged)
+					{
+						goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
+						goalpost->movefactor = mobj->z;
+
+						// straight copy-pasta from P_SpawnMapThing, case MT_NIGHTSDRONE
+						if (!flip)
+						{
+							if (topaligned) // Align droneman to top of hitbox
+							{
+								dronemanoffset = droneboxmandiff;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+							else if (middlealigned) // Align droneman to center of hitbox
+							{
+								dronemanoffset = droneboxmandiff / 2;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+							else if (bottomoffsetted)
+							{
+								dronemanoffset = 24*FRACUNIT;
+								goaloffset = dronemangoaldiff + dronemanoffset;
+							}
+							else
+							{
+								dronemanoffset = 0;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+
+							sparkleoffset = goaloffset - FixedMul(15*FRACUNIT, mobj->scale);
+						}
+						else
+						{
+							if (topaligned) // Align droneman to top of hitbox
+							{
+								dronemanoffset = 0;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+							else if (middlealigned) // Align droneman to center of hitbox
+							{
+								dronemanoffset = droneboxmandiff / 2;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+							else if (bottomoffsetted)
+							{
+								dronemanoffset = droneboxmandiff - FixedMul(24*FRACUNIT, mobj->scale);
+								goaloffset = dronemangoaldiff + dronemanoffset;
+							}
+							else
+							{
+								dronemanoffset = droneboxmandiff;
+								goaloffset = dronemangoaldiff / 2 + dronemanoffset;
+							}
+
+							sparkleoffset = goaloffset + FixedMul(15*FRACUNIT, mobj->scale);
+						}
+
+						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + FixedMul(goaloffset, mobj->scale));
+						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + FixedMul(sparkleoffset, mobj->scale));
+					}
+					else if (goalpost->x != mobj->x || goalpost->y != mobj->y)
+					{
+						P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
+						P_TeleportMove(sparkle, mobj->x, mobj->y, goalpost->z);
+					}
+
+					if (droneman->x != mobj->x || droneman->y != mobj->y)
+					{
+						// we just care about x/y positioning; z takes care of itself
+						P_TeleportMove(droneman, mobj->x, mobj->y,
+						               droneman->z >= mobj->floorz && droneman->z <= mobj->ceilingz ? droneman->z : mobj->z);
+					}
+
+					// now toggle states!
 					// GOAL mode?
 					if (sparkle->state >= &states[S_NIGHTSDRONE_SPARKLING1] && sparkle->state <= &states[S_NIGHTSDRONE_SPARKLING16])
 					{
@@ -7866,16 +7977,12 @@ void P_MobjThinker(mobj_t *mobj)
 					// Invisible/bouncing mode.
 					else
 					{
-						boolean flip = mobj->flags2 & MF2_OBJECTFLIP;
-						boolean topaligned = (mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
-						boolean middlealigned = (mobj->flags & MF_GRENADEBOUNCE) && !(mobj->flags & MF_SLIDEME);
-						boolean bottomoffsetted = !(mobj->flags & MF_SLIDEME) && !(mobj->flags & MF_GRENADEBOUNCE);
 						fixed_t droneboxmandiff = max(mobj->height - droneman->height, 0);
-
 						INT32 i;
 						boolean bonustime = false;
 						fixed_t zcomp;
 
+						// Bouncy bouncy!
 						if (!flip)
 						{
 							if (topaligned)
@@ -7899,13 +8006,13 @@ void P_MobjThinker(mobj_t *mobj)
 								zcomp = mobj->z + droneboxmandiff;
 						}
 
-						// Bouncy bouncy!
 						droneman->angle += ANG10;
 						if (!flip && droneman->z <= zcomp)
 							droneman->momz = FixedMul(5*FRACUNIT, droneman->scale);
 						else if (flip && droneman->z >= zcomp)
 							droneman->momz = FixedMul(-5*FRACUNIT, droneman->scale);
 
+						// state switching logic
 						for (i = 0; i < MAXPLAYERS; i++)
 							if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 							{
@@ -7916,11 +8023,11 @@ void P_MobjThinker(mobj_t *mobj)
 						if (bonustime)
 						{
 							CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
-							if (droneman && !(droneman->flags2 & MF2_DONTDRAW))
+							if (!(droneman->flags2 & MF2_DONTDRAW))
 								droneman->flags2 |= MF2_DONTDRAW;
-							if (goalpost && goalpost->state == &states[S_INVISIBLE])
+							if (goalpost->state == &states[S_INVISIBLE])
 								P_SetMobjState(goalpost, mobjinfo[goalpost->type].meleestate);
-							if (sparkle && sparkle->state == &states[S_INVISIBLE])
+							if (sparkle->state == &states[S_INVISIBLE])
 								P_SetMobjState(sparkle, mobjinfo[sparkle->type].meleestate);
 						}
 						else if (!G_IsSpecialStage(gamemap))
@@ -7935,22 +8042,19 @@ void P_MobjThinker(mobj_t *mobj)
 							if (bonustime)
 							{
 								// show droneman if at least one player is non-nights
-								if (goalpost && goalpost->state != &states[S_INVISIBLE])
+								if (goalpost->state != &states[S_INVISIBLE])
 									P_SetMobjState(goalpost, S_INVISIBLE);
-								if (sparkle && sparkle->state != &states[S_INVISIBLE])
+								if (sparkle->state != &states[S_INVISIBLE])
 									P_SetMobjState(sparkle, S_INVISIBLE);
-								if (droneman)
-								{
-									if (droneman->state != &states[mobjinfo[droneman->type].meleestate])
-										P_SetMobjState(droneman, mobjinfo[droneman->type].meleestate);
-									if (droneman->flags2 & MF2_DONTDRAW)
-										droneman->flags2 &= ~MF2_DONTDRAW;
-								}
+								if (droneman->state != &states[mobjinfo[droneman->type].meleestate])
+									P_SetMobjState(droneman, mobjinfo[droneman->type].meleestate);
+								if (droneman->flags2 & MF2_DONTDRAW)
+									droneman->flags2 &= ~MF2_DONTDRAW;
 							}
 							else
 							{
 								// else, hide it
-								if (droneman && !(droneman->flags2 & MF2_DONTDRAW))
+								if (!(droneman->flags2 & MF2_DONTDRAW))
 									droneman->flags2 |= MF2_DONTDRAW;
 							}
 						}
@@ -10575,7 +10679,6 @@ ML_EFFECT4 : Don't clip inside the ground
 
 			INT16 timelimit = mthing->angle;
 			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
-			fixed_t oldheight = mobj->height;
 				// if you want to use parameter for something else, do this instead:
 				// timelimit = mthing->angle & 0xFFF; hitboxheight = (mthing->extrainfo >> 12) * 32 * FRACUNIT;
 			fixed_t oldheight = mobj->height;
@@ -10657,6 +10760,9 @@ ML_EFFECT4 : Don't clip inside the ground
 			P_SetTarget(&mobj->target, goalpost);
 			P_SetTarget(&goalpost->target, sparkle);
 			P_SetTarget(&goalpost->tracer, droneman);
+
+			// Remember old Z position for correction detection
+			goalpost->movefactor = mobj->z;
 
 			// correct Z position
 			if (flip)
