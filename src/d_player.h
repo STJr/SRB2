@@ -457,6 +457,7 @@ typedef struct player_s
 	mobj_t *capsule; // Go inside the capsule
 	mobj_t *drone; // Move center to the drone
 	UINT8 mare; // Current mare
+	fixed_t oldscale; // Pre-Nightserize scale
 
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun

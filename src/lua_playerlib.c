@@ -292,6 +292,8 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, plr->drone, META_MOBJ);
 	else if (fastcmp(field,"mare"))
 		lua_pushinteger(L, plr->mare);
+	else if (fastcmp(field,"oldscale"))
+		lua_pushfixed(L, plr->oldscale);
 	else if (fastcmp(field,"marebegunat"))
 		lua_pushinteger(L, plr->marebegunat);
 	else if (fastcmp(field,"startedtime"))
@@ -579,6 +581,8 @@ static int player_set(lua_State *L)
 	}
 	else if (fastcmp(field,"mare"))
 		plr->mare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"oldscale"))
+		plr->oldscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"marebegunat"))
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"startedtime"))

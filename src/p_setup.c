@@ -2385,8 +2385,8 @@ static void P_LevelInitStuff(void)
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].realtime =\
-		 players[i].exiting = 0;
+		 players[i].mare = players[i].oldscale =\
+		 players[i].realtime = players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;

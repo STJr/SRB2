@@ -199,6 +199,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].drilldelay);
 		WRITEUINT8(save_p, players[i].bonustime);
 		WRITEUINT8(save_p, players[i].mare);
+		WRITEFIXED(save_p, players[i].oldscale);
 
 		WRITEUINT32(save_p, players[i].marebegunat);
 		WRITEUINT32(save_p, players[i].startedtime);
@@ -394,6 +395,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].drilldelay = READUINT8(save_p);
 		players[i].bonustime = (boolean)READUINT8(save_p);
 		players[i].mare = READUINT8(save_p);
+		players[i].oldscale = READFIXED(save_p);
 
 		players[i].marebegunat = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
