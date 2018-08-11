@@ -799,10 +799,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					if (toucher->tracer) // Move the ideya over to the drone!
 					{
+						statenum_t currentstate = toucher->tracer->state - states;
 						mobj_t *hnext = special->hnext;
 						P_SetTarget(&special->hnext, toucher->tracer);
 						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
 						P_SetTarget(&special->hnext->target, special);
+
+						// switch to centered orbit states
+						if (currentstate >= mobjinfo[MT_GOTEMERALD].missilestate
+							&& currentstate <= mobjinfo[MT_GOTEMERALD].missilestate + 4)
+							P_SetMobjState(toucher->tracer,
+							                mobjinfo[MT_GOTEMERALD].raisestate + currentstate - mobjinfo[MT_GOTEMERALD].missilestate);
+
 						P_SetTarget(&toucher->tracer, NULL);
 						if (hnext)
 						{
@@ -814,8 +822,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (player->exiting) // ...then move it back?
 					{
 						mobj_t *hnext = special;
+						statenum_t currentstate;
 						while ((hnext = hnext->hnext))
+						{
 							P_SetTarget(&hnext->target, toucher);
+							currentstate = hnext->state - states;
+
+							// switch to regular orbit states
+							if (currentstate >= mobjinfo[MT_GOTEMERALD].raisestate
+								&& currentstate <= mobjinfo[MT_GOTEMERALD].raisestate + 4)
+								P_SetMobjState(hnext,
+								 			   mobjinfo[MT_GOTEMERALD].missilestate + currentstate - mobjinfo[MT_GOTEMERALD].raisestate);
+						}
 					}
 					return;
 				}
