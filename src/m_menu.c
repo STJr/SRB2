@@ -273,6 +273,7 @@ menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 
 // Single Player
+static void M_StartTutorial(INT32 choice);
 static void M_LoadGame(INT32 choice);
 static void M_TimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttack(INT32 choice);
@@ -731,7 +732,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
-	{IT_STRING,                                 NULL, "Tutorial",      NULL,                       84},
+	{IT_STRING,                                 NULL, "Tutorial",      M_StartTutorial,            84},
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 92},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,              100},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            108},
@@ -6129,6 +6130,22 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	}
 
 	M_SetupNextMenu(&SP_LevelSelectDef);
+}
+
+static INT32 tutorialmap = 1000; // MAPZ0, temporary value
+
+// Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
+static void M_StartTutorial(INT32 choice)
+{
+	(void)choice;
+	if (!tutorialmap)
+		return; // no map to go to, don't bother
+
+	emeralds = 0;
+	M_ClearMenus(true);
+	gamecomplete = false;
+	cursaveslot = 0;
+	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
 // ==============
