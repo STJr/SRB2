@@ -731,6 +731,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
+	{IT_STRING,                                 NULL, "Tutorial",      NULL,                       84},
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 92},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,              100},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            108},
@@ -739,6 +740,7 @@ static menuitem_t SP_MainMenu[] =
 
 enum
 {
+	sptutorial,
 	sploadgame,
 	sprecordattack,
 	spnightsmode,
@@ -1554,7 +1556,18 @@ menu_t SR_EmblemHintDef =
 };
 
 // Single Player
-menu_t SP_MainDef = CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+menu_t SP_MainDef = //CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+{
+	NULL,
+	sizeof(SP_MainMenu)/sizeof(menuitem_t),
+	&MainDef,
+	SP_MainMenu,
+	M_DrawCenteredMenu,
+	BASEVIDWIDTH/2, 72,
+	1, // start at "Start Game" on first entry
+	NULL
+};
+
 menu_t SP_LoadDef =
 {
 	"M_PICKG",
