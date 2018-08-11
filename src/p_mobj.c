@@ -7827,78 +7827,102 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_NIGHTSDRONE:
-				// GOAL mode?
-				if (mobj->state >= &states[S_NIGHTSDRONE_SPARKLING1] && mobj->state <= &states[S_NIGHTSDRONE_SPARKLING16])
 				{
-					INT32 i;
-					boolean bonustime = false;
+					mobj_t *goalpost = NULL;
+					mobj_t *sparkle = NULL;
+					mobj_t *droneman = NULL;
 
-					for (i = 0; i < MAXPLAYERS; i++)
-						if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
-						{
-							bonustime = true;
-							break;
-						}
-
-					if (!bonustime)
+					if (mobj->target && mobj->target->type == MT_NIGHTSDRONE_GOAL)
 					{
-						CONS_Debug(DBG_NIGHTSBASIC, "Removing goal post\n");
-						P_RemoveMobj(mobj->target);
-						P_SetTarget(&mobj->target, NULL);
-
-						mobj->flags &= ~MF_NOGRAVITY;
-						mobj->flags2 |= MF2_DONTDRAW;
-						//P_SetMobjState(mobj, S_NIGHTSDRONE);
+						goalpost = mobj->target;
+						if (goalpost->target && goalpost->target->type == MT_NIGHTSDRONE_SPARKLING)
+							sparkle = goalpost->target;
+						if (goalpost->tracer && goalpost->tracer->type == MT_NIGHTSDRONE_MAN)
+							droneman = goalpost->tracer;
 					}
-				}
-				// Invisible/bouncing mode.
-				else
-				{
-					INT32 i;
-					boolean bonustime = false;
 
-					// Bouncy bouncy!
-					mobj->angle += ANG10;
-					if (mobj->flags2 & MF2_DONTDRAW)
-						mobj->momz = 0;
-					else if (mobj->z <= mobj->floorz)
-						mobj->momz = 5*FRACUNIT;
-
-					for (i = 0; i < MAXPLAYERS; i++)
-						if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
-						{
-							bonustime = true;
-							break;
-						}
-
-					if (bonustime)
+					// GOAL mode?
+					if (sparkle->state >= &states[S_NIGHTSDRONE_SPARKLING1] && sparkle->state <= &states[S_NIGHTSDRONE_SPARKLING16])
 					{
-						mobj->z = mobj->floorz + mobj->height;
-						mobj->angle = mobj->momz = 0;
+						INT32 i;
+						boolean bonustime = false;
 
-						if (mobj->spawnpoint)
-							mobj->z += (mobj->spawnpoint->options >> ZSHIFT)<<FRACBITS;
-
-						CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
-						P_SetTarget(&mobj->target, P_SpawnMobjFromMobj(mobj, 0, 0, FRACUNIT, MT_NIGHTSDRONE_GOAL));
-
-						mobj->flags2 &= ~MF2_DONTDRAW;
-						mobj->flags |= MF_NOGRAVITY;
-						P_SetMobjState(mobj, S_NIGHTSDRONE_SPARKLING1);
-					}
-					else if (!G_IsSpecialStage(gamemap))
-					{
 						for (i = 0; i < MAXPLAYERS; i++)
-							if (playeringame[i] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
+							if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 							{
-								bonustime = true; // variable reuse
+								bonustime = true;
+								break;
+							}
+
+						if (!bonustime)
+						{
+							CONS_Debug(DBG_NIGHTSBASIC, "Removing goal post\n");
+							if (goalpost && goalpost->state != &states[S_INVISIBLE])
+								P_SetMobjState(goalpost, S_INVISIBLE);
+							if (sparkle && sparkle->state != &states[S_INVISIBLE])
+								P_SetMobjState(sparkle, S_INVISIBLE);
+						}
+					}
+					// Invisible/bouncing mode.
+					else
+					{
+						INT32 i;
+						boolean bonustime = false;
+
+						// Bouncy bouncy!
+						droneman->angle += ANG10;
+						if (droneman->flags2 & MF2_DONTDRAW)
+							droneman->momz = 0;
+						else if (!(droneman->flags2 & MF2_OBJECTFLIP)
+							&& droneman->z <= droneman->floorz)
+							droneman->momz = FixedMul(5*FRACUNIT, droneman->scale);
+						else if ((droneman->flags2 & MF2_OBJECTFLIP)
+							&& droneman->z >= droneman->ceilingz - droneman->height)
+							droneman->momz = FixedMul(-5*FRACUNIT, droneman->scale);
+
+						for (i = 0; i < MAXPLAYERS; i++)
+							if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+							{
+								bonustime = true;
 								break;
 							}
 
 						if (bonustime)
-							mobj->flags2 &= ~MF2_DONTDRAW;
-						else
-							mobj->flags2 |= MF2_DONTDRAW;
+						{
+							CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
+							if (droneman && droneman->state != &states[S_INVISIBLE])
+								P_SetMobjState(droneman, S_INVISIBLE);
+							if (goalpost && goalpost->state == &states[S_INVISIBLE])
+								P_SetMobjState(goalpost, mobjinfo[goalpost->type].meleestate);
+							if (sparkle && sparkle->state == &states[S_INVISIBLE])
+								P_SetMobjState(sparkle, mobjinfo[sparkle->type].meleestate);
+						}
+						else if (!G_IsSpecialStage(gamemap))
+						{
+							for (i = 0; i < MAXPLAYERS; i++)
+								if (playeringame[i] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
+								{
+									bonustime = true; // variable reuse
+									break;
+								}
+
+							if (bonustime)
+							{
+								// show droneman if at least one player is non-nights
+								if (goalpost && goalpost->state != &states[S_INVISIBLE])
+									P_SetMobjState(goalpost, S_INVISIBLE);
+								if (sparkle && sparkle->state != &states[S_INVISIBLE])
+									P_SetMobjState(sparkle, S_INVISIBLE);
+								if (droneman && droneman->state == &states[S_INVISIBLE])
+									P_SetMobjState(droneman, mobjinfo[droneman->type].meleestate);
+							}
+							else
+							{
+								// else, hide it
+								if (droneman && droneman->state != &states[S_INVISIBLE])
+									P_SetMobjState(droneman, S_INVISIBLE);
+							}
+						}
 					}
 				}
 				break;
@@ -10516,6 +10540,23 @@ ML_EFFECT4 : Don't clip inside the ground
 	case MT_NIGHTSDRONE:
 		if (mthing->angle > 0)
 			mobj->health = mthing->angle;
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		// spawn visual components
+		{
+			mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_GOAL);
+			mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_SPARKLING);
+			mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_NIGHTSDRONE_MAN);
+
+			P_SetTarget(&mobj->target, goalpost);
+			P_SetTarget(&goalpost->target, sparkle);
+			P_SetTarget(&goalpost->tracer, droneman);
+		}
 		break;
 	case MT_HIVEELEMENTAL:
 		if (mthing->extrainfo)
