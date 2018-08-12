@@ -68,20 +68,6 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - gcc-4.9
-          compiler: gcc-4.9
-          #gcc-4.9 (Ubuntu 4.9.3-8ubuntu2~14.04) 4.9.3
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
               - gcc-6
           compiler: gcc-6
           env: WFLAGS="-Wno-tautological-compare"
