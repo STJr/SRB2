@@ -801,10 +801,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					{
 						mobj_t *orbittarget = special->target ? special->target : special;
 						mobj_t *hnext = orbittarget->hnext;
+
 						P_SetTarget(&orbittarget->hnext, toucher->tracer);
 						P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
 						P_SetTarget(&orbittarget->hnext->target, orbittarget); // goalpost
 						P_SetTarget(&toucher->tracer, NULL);
+
+						orbittarget->hnext->destscale = orbittarget->destscale;
 
 						if (hnext)
 						{

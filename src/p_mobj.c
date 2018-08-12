@@ -7883,7 +7883,14 @@ void P_MobjThinker(mobj_t *mobj)
 						|| flipchanged
 						|| goalpost->threshold != (mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
 					{
-						goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
+						if (goalpost->destscale != mobj->destscale)
+						{
+							goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
+							// get the orbiting ideyas and scale them too
+							mobj_t *hnext = goalpost;
+							while ((hnext = hnext->hnext))
+								hnext->destscale = mobj->destscale;
+						}
 
 						// straight copy-pasta from P_SpawnMapThing, case MT_NIGHTSDRONE
 						if (!flip)
