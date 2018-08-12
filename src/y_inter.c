@@ -1765,6 +1765,16 @@ static void Y_SetNightsBonus(player_t *player, y_bonus_t *bstruct)
 }
 
 //
+// Y_SetLapBonus
+//
+static void Y_SetLapBonus(player_t *player, y_bonus_t *bstruct)
+{
+	strncpy(bstruct->patch, "YB_LAP", sizeof(bstruct->patch));
+	bstruct->display = true;
+	bstruct->points = max(0, (player->totalmarebonuslap) * 100);
+}
+
+//
 // Y_SetLinkBonus
 //
 static void Y_SetLinkBonus(player_t *player, y_bonus_t *bstruct)
@@ -1825,7 +1835,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
-bonus_f bonuses_list[7][4] = {
+bonus_f bonuses_list[9][4] = {
 	{
 		Y_SetNullBonus,
 		Y_SetNullBonus,
@@ -1864,9 +1874,21 @@ bonus_f bonuses_list[7][4] = {
 	},
 	{
 		Y_SetNullBonus,
+		Y_SetNullBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
+	},
+	{
+		Y_SetNullBonus,
+		Y_SetLinkBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
+	},
+	{
+		Y_SetNullBonus,
 		Y_SetNightsBonus,
 		Y_SetLinkBonus,
-		Y_SetNullBonus,
+		Y_SetLapBonus,
 	},
 };
 

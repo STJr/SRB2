@@ -1198,9 +1198,11 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else if (fastcmp(word2, "ERZ3"))   i =  2;
 				else if (fastcmp(word2, "NIGHTS")) i =  3;
 				else if (fastcmp(word2, "NIGHTSLINK")) i =  4;
-				else if (fastcmp(word2, "NIGHTSALL")) i =  5;
+				else if (fastcmp(word2, "NIGHTSLAP")) i =  5;
+				else if (fastcmp(word2, "NIGHTSLINKLAP")) i =  6;
+				else if (fastcmp(word2, "NIGHTSALL")) i =  7;
 
-				if (i >= -1 && i <= 5) // -1 for no bonus. Max is 2.
+				if (i >= -1 && i <= 7) // -1 for no bonus. Max is 2.
 					mapheaderinfo[num-1]->bonustype = (SINT8)i;
 				else
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
