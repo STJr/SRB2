@@ -7114,9 +7114,8 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_SECRETFLICKY_01_CENTER:
 			case MT_SECRETFLICKY_02_CENTER:
 				if (mobj->tracer
-					&& mobj->spawnpoint 
-					&& (mobj->spawnpoint->options & MTF_AMBUSH) 
-					&& !(mobj->spawnpoint->options & MTF_OBJECTSPECIAL))
+					&& (mobj->flags & MF_NOCLIPTHING)
+					&& !(mobj->flags & MF_GRENADEBOUNCE))
 				{
 					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
 						mobj->tracer->momz = 7*FRACUNIT;
