@@ -456,17 +456,23 @@ typedef struct player_s
 	boolean bonustime; // Capsule destroyed, now it's bonus time!
 	mobj_t *capsule; // Go inside the capsule
 	UINT8 mare; // Current mare
+	UINT8 marelap; // Current mare lap
+	UINT8 marebonuslap; // Current mare lap starting from bonus time
 
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
 	tic_t finishedtime; // Time it took you to finish the mare (used for display)
+	tic_t lapbegunat; // Leveltime when lap begun
+	tic_t lapstartedtime; // Time which you started this lap with.
 	INT16 finishedspheres; // The spheres you had left upon finishing the mare
 	INT16 finishedrings; // The rings/stars you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
 	UINT32 totalmarescore; // score for all mares
 	UINT8 lastmare; // previous mare
+	UINT8 lastmarelap; // previous mare lap
+	UINT8 lastmarebonuslap; // previous mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
 	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks

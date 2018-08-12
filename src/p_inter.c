@@ -1134,6 +1134,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				player->nightstime += special->info->speed;
 				player->startedtime += special->info->speed;
+				player->lapstartedtime += special->info->speed;
 				P_RestoreMusic(player);
 			}
 			else
@@ -1143,6 +1144,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
+						players[i].lapstartedtime += special->info->speed;
 						P_RestoreMusic(&players[i]);
 					}
 				if (special->info->deathsound != sfx_None)

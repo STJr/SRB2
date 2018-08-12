@@ -2381,11 +2381,14 @@ static void P_LevelInitStuff(void)
 		 players[i].maxlink = players[i].startedtime =\
 		 players[i].finishedtime = players[i].finishedspheres =\
 		 players[i].finishedrings = players[i].lastmare =\
+		 players[i].lastmarelap = players[i].lastmarebonuslap =\
 		 players[i].marebegunat = players[i].textvar =\
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].totalmarescore =\
+		 players[i].mare = players[i].marelap =\
+		 players[i].marebonuslap = players[i].lapbegunat =\
+		 players[i].lapstartedtime = players[i].totalmarescore =\
 		 players[i].realtime = players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting

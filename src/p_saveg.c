@@ -198,16 +198,22 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].drilldelay);
 		WRITEUINT8(save_p, players[i].bonustime);
 		WRITEUINT8(save_p, players[i].mare);
+		WRITEUINT8(save_p, players[i].marelap);
+		WRITEUINT8(save_p, players[i].marebonuslap);
 
 		WRITEUINT32(save_p, players[i].marebegunat);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
+		WRITEUINT32(save_p, players[i].lapbegunat);
+		WRITEUINT32(save_p, players[i].lapstartedtime);
 		WRITEINT16(save_p, players[i].finishedspheres);
 		WRITEINT16(save_p, players[i].finishedrings);
 		WRITEUINT32(save_p, players[i].marescore);
 		WRITEUINT32(save_p, players[i].lastmarescore);
 		WRITEUINT32(save_p, players[i].totalmarescore);
 		WRITEUINT8(save_p, players[i].lastmare);
+		WRITEUINT8(save_p, players[i].lastmarelap);
+		WRITEUINT8(save_p, players[i].lastmarebonuslap);
 		WRITEINT32(save_p, players[i].maxlink);
 		WRITEUINT8(save_p, players[i].texttimer);
 		WRITEUINT8(save_p, players[i].textvar);
@@ -388,16 +394,22 @@ static void P_NetUnArchivePlayers(void)
 		players[i].drilldelay = READUINT8(save_p);
 		players[i].bonustime = (boolean)READUINT8(save_p);
 		players[i].mare = READUINT8(save_p);
+		players[i].marelap = READUINT8(save_p);
+		players[i].marebonuslap = READUINT8(save_p);
 
 		players[i].marebegunat = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
+		players[i].lapbegunat = READUINT32(save_p);
+		players[i].lapstartedtime = READUINT32(save_p);
 		players[i].finishedspheres = READINT16(save_p);
 		players[i].finishedrings = READINT16(save_p);
 		players[i].marescore = READUINT32(save_p);
 		players[i].lastmarescore = READUINT32(save_p);
 		players[i].totalmarescore = READUINT32(save_p);
 		players[i].lastmare = READUINT8(save_p);
+		players[i].lastmarelap = READUINT8(save_p);
+		players[i].lastmarebonuslap = READUINT8(save_p);
 		players[i].maxlink = READINT32(save_p);
 		players[i].texttimer = READUINT8(save_p);
 		players[i].textvar = READUINT8(save_p);
