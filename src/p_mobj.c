@@ -7935,8 +7935,8 @@ void P_MobjThinker(mobj_t *mobj)
 							sparkleoffset = goaloffset + FixedMul(15*FRACUNIT, mobj->scale);
 						}
 
-						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + FixedMul(goaloffset, mobj->scale));
-						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + FixedMul(sparkleoffset, mobj->scale));
+						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
+						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
 					}
 					else if (goalpost->x != mobj->x || goalpost->y != mobj->y)
 					{
