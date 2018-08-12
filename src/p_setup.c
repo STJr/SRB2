@@ -2382,6 +2382,7 @@ static void P_LevelInitStuff(void)
 		 players[i].finishedtime = players[i].finishedspheres =\
 		 players[i].finishedrings = players[i].lastmare =\
 		 players[i].lastmarelap = players[i].lastmarebonuslap =\
+		 players[i].totalmarelap = players[i].totalmarebonuslap =\
 		 players[i].marebegunat = players[i].textvar =\
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\

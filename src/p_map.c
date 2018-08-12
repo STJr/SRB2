@@ -1114,12 +1114,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		))
 		{
 			pl->marelap++;
+			pl->totalmarelap++;
 			pl->lapbegunat = leveltime;
 			pl->lapstartedtime = pl->nightstime;
 
-			if (pl->bonustime) 
+			if (pl->bonustime)
 			{
 				pl->marebonuslap++;
+				pl->totalmarebonuslap++;
 
 				// Respawn rings and items
 				P_ReloadRings();
