@@ -10685,15 +10685,17 @@ ML_EFFECT4 : Don't clip inside the ground
 			boolean middlealigned = (mthing->options & MTF_EXTRA) && !(mthing->options & MTF_OBJECTSPECIAL);
 			boolean bottomoffsetted = !(mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
 
-			INT16 timelimit = mthing->angle;
+			INT16 timelimit = mthing->angle & 0xFFF;
+			fixed_t hitboxradius = (mthing->angle & 0xF000) * 32 * FRACUNIT;
 			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
-				// if you want to use parameter for something else, do this instead:
-				// timelimit = mthing->angle & 0xFFF; hitboxheight = (mthing->extrainfo >> 12) * 32 * FRACUNIT;
 			fixed_t oldheight = mobj->height;
 			fixed_t dronemanoffset, goaloffset, sparkleoffset, droneboxmandiff, dronemangoaldiff;
 
-			if (mthing->angle > 0)
+			if (timelimit > 0)
 				mobj->health = timelimit;
+
+			if (hitboxradius > 0)
+				mobj->radius = hitboxradius;
 
 			if (hitboxheight > 0)
 				mobj->height = hitboxheight;
