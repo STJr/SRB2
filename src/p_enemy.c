@@ -10806,7 +10806,16 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 //
 // Description: Place flickies in-level.
 //
-// var1 = if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+// var1:
+//        Lower 16 bits = if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+//        Bits 17-20 = Flicky color, up to 15. Applies to fish.
+//        Bit 21 = Flag MF_SLIDEME (see below)
+//        Bit 22 = Flag MF_GRENADEBOUNCE (see below)
+//        Bit 23 = Flag MF_NOCLIPTHING (see below)
+//        Bit 24 = Flicky movedir, 0 or 1
+//
+//        If actor is placed from a spawnpoint (map Thing), the Thing's properties take precedence.
+//
 // var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
 //
 // If MTF_EXTRA (MF_SLIDEME) is flagged, Flickies move independently of a target. Else, move around the target.
@@ -10814,14 +10823,13 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 // If MTF_AMBUSH (MF_NOCLIPTHING) is flagged, Flickies hop in-place.
 // If MTF_AMBUSH (MF_NOCLIPTHING) and MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) is flagged, Flickies stand in-place without gravity.
 //
-// actor->friction = X origin
-// actor->movefactor = Y origin
-// actor->radius = Z origin
-//
 void A_FlickyCenter(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	UINT16 flickytype = (locvar1 & 0xFFFF);
+	UINT8 flickycolor = ((locvar1 >> 16) & 0xFF);
+	UINT8 flickyflags = ((locvar1 >> 20) & 0xF);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyCenter", actor))
 		return;
@@ -10843,6 +10851,21 @@ void A_FlickyCenter(mobj_t *actor)
 			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
 			actor->watertop = actor->spawnpoint->z*FRACUNIT;
 		}
+		else
+		{
+			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
+			actor->flags |= (
+				((flickyflags & 1) ? MF_SLIDEME : 0)
+				| ((flickyflags & 2) ? MF_GRENADEBOUNCE : 0)
+				| ((flickyflags & 4) ? MF_NOCLIPTHING : 0)
+			);
+			actor->extravalue1 = 0; // move sign from var1 bit 24, distance from var2
+			actor->extravalue2 = flickycolor;
+			actor->friction = actor->x;
+			actor->movefactor = actor->y;
+			actor->watertop = actor->z;
+			locvar1 = flickytype;
+		}
 
 		if (actor->flags & MF_SLIDEME)
 		{
@@ -10860,7 +10883,12 @@ void A_FlickyCenter(mobj_t *actor)
 			actor->tracer->fuse = FRACUNIT;
 
 			if ((actor->flags & MF_GRENADEBOUNCE) && !(actor->flags & MF_SLIDEME))
-				actor->tracer->movedir = actor->extravalue1 >= 0 ? 1 : -1;
+			{
+				if (!actor->spawnpoint)
+					actor->tracer->movedir = (flickyflags & 8) ? 1 : -1;
+				else
+					actor->tracer->movedir = actor->extravalue1 >= 0 ? 1 : -1;
+			}
 		}
 
 		if (locvar1 == MT_FLICKY_08)
