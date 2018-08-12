@@ -1852,14 +1852,14 @@ bonus_f bonuses_list[7][4] = {
 	},
 	{
 		Y_SetNullBonus,
-		Y_SetNightsBonus,
 		Y_SetNullBonus,
+		Y_SetNightsBonus,
 		Y_SetNullBonus,
 	},
 	{
 		Y_SetNullBonus,
-		Y_SetLinkBonus,
 		Y_SetNullBonus,
+		Y_SetLinkBonus,
 		Y_SetNullBonus,
 	},
 	{
