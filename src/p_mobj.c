@@ -10573,15 +10573,13 @@ ML_EFFECT4 : Don't clip inside the ground
 			boolean middlealigned = (mthing->options & MTF_EXTRA) && !(mthing->options & MTF_OBJECTSPECIAL);
 			boolean bottomoffsetted = !(mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
 
-			fixed_t droneboxmandiff = max(mobj->height - mobjinfo[MT_NIGHTSDRONE_MAN].height, 0);
-			fixed_t dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
-
 			INT16 timelimit = mthing->angle;
 			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
 			fixed_t oldheight = mobj->height;
 				// if you want to use parameter for something else, do this instead:
 				// timelimit = mthing->angle & 0xFFF; hitboxheight = (mthing->extrainfo >> 12) * 32 * FRACUNIT;
-			fixed_t dronemanoffset, goaloffset, sparkleoffset;
+			fixed_t oldheight = mobj->height;
+			fixed_t dronemanoffset, goaloffset, sparkleoffset, droneboxmandiff, dronemangoaldiff;
 
 			if (mthing->angle > 0)
 				mobj->health = timelimit;
@@ -10590,6 +10588,9 @@ ML_EFFECT4 : Don't clip inside the ground
 				mobj->height = hitboxheight;
 			else
 				mobj->height = mobjinfo[MT_NIGHTSDRONE].height;
+
+			droneboxmandiff = max(mobj->height - mobjinfo[MT_NIGHTSDRONE_MAN].height, 0);
+			dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
 			if (flip && mobj->height != oldheight)
 				P_TeleportMove(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
