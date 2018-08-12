@@ -312,6 +312,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->marescore);
 	else if (fastcmp(field,"lastmarescore"))
 		lua_pushinteger(L, plr->lastmarescore);
+	else if (fastcmp(field,"totalmarescore"))
+		lua_pushinteger(L, plr->totalmarescore);
 	else if (fastcmp(field,"lastmare"))
 		lua_pushinteger(L, plr->lastmare);
 	else if (fastcmp(field,"lastmarelap"))
@@ -608,6 +610,8 @@ static int player_set(lua_State *L)
 		plr->marescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmarescore"))
 		plr->lastmarescore = (UINT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarescore"))
+		plr->totalmarescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmare"))
 		plr->lastmare = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmarelap"))

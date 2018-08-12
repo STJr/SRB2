@@ -2389,8 +2389,8 @@ static void P_LevelInitStuff(void)
 		 players[i].anotherflyangle = players[i].nightstime =\
 		 players[i].mare = players[i].marelap =\
 		 players[i].marebonuslap = players[i].lapbegunat =\
-		 players[i].lapstartedtime = players[i].realtime =\
-		 players[i].exiting = 0;
+		 players[i].lapstartedtime = players[i].totalmarescore =\
+		 players[i].realtime = players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;

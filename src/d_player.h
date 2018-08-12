@@ -469,6 +469,7 @@ typedef struct player_s
 	INT16 finishedrings; // The rings/stars you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
+	UINT32 totalmarescore; // score for all mares
 	UINT8 lastmare; // previous mare
 	UINT8 lastmarelap; // previous mare lap
 	UINT8 lastmarebonuslap; // previous mare bonus lap
