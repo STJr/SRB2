@@ -760,7 +760,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			G_AddTempNightsRecords(player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
-		player->totalmarescore += players[i].marescore;
+		player->totalmarescore += player->marescore;
 		player->lastmarescore = player->marescore;
 		player->marescore = 0;
 		player->marebegunat = leveltime;
