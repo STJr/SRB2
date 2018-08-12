@@ -7853,7 +7853,7 @@ void P_MobjThinker(mobj_t *mobj)
 					if (!goalpost || !sparkle || !droneman)
 						break;
 
-					// did NIGHTSDRONE position, scale, or flip change? all elements need to be synced
+					// did NIGHTSDRONE position, scale, flip, or flags change? all elements need to be synced
 					droneboxmandiff = max(mobj->height - droneman->height, 0);
 					dronemangoaldiff = max(droneman->height - goalpost->height, 0);
 
@@ -7878,7 +7878,10 @@ void P_MobjThinker(mobj_t *mobj)
 						flipchanged = true;
 					}
 
-					if (goalpost->destscale != mobj->destscale || goalpost->movefactor != mobj->z || flipchanged)
+					if (goalpost->destscale != mobj->destscale
+					    || goalpost->movefactor != mobj->z
+						|| flipchanged
+						|| goalpost->threshold != (mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
 					{
 						goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
 
@@ -7941,18 +7944,20 @@ void P_MobjThinker(mobj_t *mobj)
 							P_TeleportMove(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
 							goalpost->movefactor = mobj->z;
 						}
+						goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 					}
-					else if (goalpost->x != mobj->x || goalpost->y != mobj->y)
+					else
 					{
-						P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
-						P_TeleportMove(sparkle, mobj->x, mobj->y, goalpost->z);
-					}
+						if (goalpost->x != mobj->x || goalpost->y != mobj->y)
+						{
+							P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
+							P_TeleportMove(sparkle, mobj->x, mobj->y, goalpost->z);
+						}
 
-					if (droneman->x != mobj->x || droneman->y != mobj->y)
-						// More complex changes like Z, gravity, and flags are handled earlier.
-						// Here, we just care if only X/Y changes.
-						P_TeleportMove(droneman, mobj->x, mobj->y,
-						               droneman->z >= mobj->floorz && droneman->z <= mobj->ceilingz ? droneman->z : mobj->z);
+						if (droneman->x != mobj->x || droneman->y != mobj->y)
+							P_TeleportMove(droneman, mobj->x, mobj->y,
+							               droneman->z >= mobj->floorz && droneman->z <= mobj->ceilingz ? droneman->z : mobj->z);
+					}
 
 					// now toggle states!
 					// GOAL mode?
@@ -10764,9 +10769,6 @@ ML_EFFECT4 : Don't clip inside the ground
 			P_SetTarget(&goalpost->target, sparkle);
 			P_SetTarget(&goalpost->tracer, droneman);
 
-			// Remember old Z position for correction detection
-			goalpost->movefactor = mobj->z;
-
 			// correct Z position
 			if (flip)
 			{
@@ -10782,6 +10784,10 @@ ML_EFFECT4 : Don't clip inside the ground
 				mobj->flags |= MF_GRENADEBOUNCE;
 			else if (!bottomoffsetted)
 				mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
+
+			// Remember old Z position and flags for correction detection
+			goalpost->movefactor = mobj->z;
+			goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 		}
 		break;
 	case MT_HIVEELEMENTAL:
