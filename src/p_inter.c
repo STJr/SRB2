@@ -799,17 +799,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					if (toucher->tracer) // Move the ideya over to the drone!
 					{
-						mobj_t *hnext = special->hnext;
-						P_SetTarget(&special->hnext, toucher->tracer);
-						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
-						P_SetTarget(&special->hnext->target, special->target ? special->target : special); // goalpost
+						mobj_t *orbittarget = special->target ? special->target : special;
+						mobj_t *hnext = orbittarget->hnext;
+						P_SetTarget(&orbittarget->hnext, toucher->tracer);
+						P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						P_SetTarget(&orbittarget->hnext->target, orbittarget); // goalpost
 						P_SetTarget(&toucher->tracer, NULL);
 
 						if (hnext)
 						{
-							special->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
-							if (special->hnext->extravalue1 > hnext->extravalue1)
-								special->hnext->extravalue1 -= (72*ANG1)/special->hnext->extravalue1;
+							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
+							if (orbittarget->hnext->extravalue1 > hnext->extravalue1)
+								orbittarget->hnext->extravalue1 -= (72*ANG1)/orbittarget->hnext->extravalue1;
 						}
 					}
 					if (player->exiting) // ...then move it back?
