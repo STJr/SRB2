@@ -10778,6 +10778,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			}
 
 			// Remember position preference for later
+			mobj->flags &= ~(MF_SLIDEME | MF_GRENADEBOUNCE);
 			if (topaligned)
 				mobj->flags |= MF_SLIDEME;
 			else if (middlealigned)
