@@ -7881,7 +7881,6 @@ void P_MobjThinker(mobj_t *mobj)
 					if (goalpost->destscale != mobj->destscale || goalpost->movefactor != mobj->z || flipchanged)
 					{
 						goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
-						goalpost->movefactor = mobj->z;
 
 						// straight copy-pasta from P_SpawnMapThing, case MT_NIGHTSDRONE
 						if (!flip)
@@ -7937,6 +7936,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
 						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
+						if (goalpost->movefactor != mobj->z)
+						{
+							P_TeleportMove(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
+							goalpost->movefactor = mobj->z;
+						}
 					}
 					else if (goalpost->x != mobj->x || goalpost->y != mobj->y)
 					{
@@ -7945,11 +7949,10 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 
 					if (droneman->x != mobj->x || droneman->y != mobj->y)
-					{
-						// we just care about x/y positioning; z takes care of itself
+						// More complex changes like Z, gravity, and flags are handled earlier.
+						// Here, we just care if only X/Y changes.
 						P_TeleportMove(droneman, mobj->x, mobj->y,
 						               droneman->z >= mobj->floorz && droneman->z <= mobj->ceilingz ? droneman->z : mobj->z);
-					}
 
 					// now toggle states!
 					// GOAL mode?
