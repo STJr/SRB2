@@ -8544,12 +8544,14 @@ void A_ToggleFlameJet(mobj_t* actor)
 // var1 = Angle adjustment (aka orbit speed)
 // var2:
 //        Lower 16 bits: height offset
-//        Upper 16 bits: set if object is Nightopian Helper
+//        Bits 17-20: set if object is Nightopian Helper
+//        Bits 21-24: set to not sync scale to player
 //
 void A_OrbitNights(mobj_t* actor)
 {
 	INT32 ofs = (var2 & 0xFFFF);
-	boolean ishelper = var2 >> 16;
+	boolean ishelper = (var2 & 0xF0000);
+	boolean donotrescale = (var2 & 0xF00000);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_OrbitNights", actor))
 		return;
@@ -8594,6 +8596,9 @@ void A_OrbitNights(mobj_t* actor)
 			else
 				actor->flags2 &= ~MF2_DONTDRAW;
 		}
+
+		if (!donotrescale && actor->destscale != actor->target->destscale)
+			actor->destscale = actor->target->destscale;
 	}
 }
 

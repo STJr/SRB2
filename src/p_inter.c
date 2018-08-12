@@ -807,8 +807,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						P_SetTarget(&orbittarget->hnext->target, orbittarget); // goalpost
 						P_SetTarget(&toucher->tracer, NULL);
 
-						orbittarget->hnext->destscale = orbittarget->destscale;
-
 						if (hnext)
 						{
 							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
