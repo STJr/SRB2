@@ -465,6 +465,7 @@ typedef struct player_s
 	INT16 finishedrings; // The rings/stars you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
+	UINT32 totalmarescore; // score for all mares
 	UINT8 lastmare; // previous mare
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
