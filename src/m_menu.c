@@ -6132,8 +6132,6 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	M_SetupNextMenu(&SP_LevelSelectDef);
 }
 
-static INT32 tutorialmap = 1000; // MAPZ0, temporary value
-
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
 static void M_StartTutorial(INT32 choice)
 {

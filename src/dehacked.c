@@ -2863,6 +2863,19 @@ static void readmaincfg(MYFILE *f)
 				startchar = (INT16)value;
 				char_on = -1;
 			}
+			else if (fastcmp(word, "TUTORIALMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				tutorialmap = (INT16)value;
+			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
 		}

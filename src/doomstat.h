@@ -132,6 +132,8 @@ extern INT16 titlemap;
 extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
+extern INT16 tutorialmap; // map to load for tutorial
+
 extern boolean looptitle;
 
 // CTF colors.
