@@ -7880,6 +7880,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 					if (goalpost->destscale != mobj->destscale
 					    || goalpost->movefactor != mobj->z
+						|| goalpost->friction != mobj->height
 						|| flipchanged
 						|| goalpost->threshold != (mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
 					{
@@ -7939,10 +7940,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
 						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
-						if (goalpost->movefactor != mobj->z)
+						if (goalpost->movefactor != mobj->z || goalpost->friction != mobj->height)
 						{
 							P_TeleportMove(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
 							goalpost->movefactor = mobj->z;
+							goalpost->friction = mobj->height;
 						}
 						goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 					}
@@ -7951,7 +7953,7 @@ void P_MobjThinker(mobj_t *mobj)
 						if (goalpost->x != mobj->x || goalpost->y != mobj->y)
 						{
 							P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
-							P_TeleportMove(sparkle, mobj->x, mobj->y, goalpost->z);
+							P_TeleportMove(sparkle, mobj->x, mobj->y, sparkle->z);
 						}
 
 						if (droneman->x != mobj->x || droneman->y != mobj->y)
@@ -10691,7 +10693,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			boolean bottomoffsetted = !(mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
 
 			INT16 timelimit = mthing->angle & 0xFFF;
-			fixed_t hitboxradius = (mthing->angle & 0xF000) * 32 * FRACUNIT;
+			fixed_t hitboxradius = ((mthing->angle & 0xF000) >> 12) * 32 * FRACUNIT;
 			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
 			fixed_t oldheight = mobj->height;
 			fixed_t dronemanoffset, goaloffset, sparkleoffset, droneboxmandiff, dronemangoaldiff;
@@ -10795,6 +10797,7 @@ ML_EFFECT4 : Don't clip inside the ground
 
 			// Remember old Z position and flags for correction detection
 			goalpost->movefactor = mobj->z;
+			goalpost->friction = mobj->height;
 			goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 		}
 		break;
