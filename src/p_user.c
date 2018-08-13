@@ -668,7 +668,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
-	player->nightstime = player->startedtime = player->lapstartedtime = nightstime*TICRATE;
+	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
@@ -735,6 +735,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 				G_AddTempNightsRecords(players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
 
 			// transfer scores anyway
+			players[i].totalmarescore += players[i].marescore;
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
@@ -761,6 +762,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			G_AddTempNightsRecords(player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
+		player->totalmarescore += player->marescore;
 		player->lastmarescore = player->marescore;
 		player->marescore = 0;
 		player->marebegunat = leveltime;
