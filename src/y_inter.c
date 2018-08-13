@@ -1835,7 +1835,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
-bonus_f bonuses_list[9][4] = {
+bonus_f bonuses_list[5][4] = {
 	{
 		Y_SetNullBonus,
 		Y_SetNullBonus,
@@ -1862,33 +1862,9 @@ bonus_f bonuses_list[9][4] = {
 	},
 	{
 		Y_SetNullBonus,
-		Y_SetNullBonus,
 		Y_SetNightsBonus,
-		Y_SetNullBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetNullBonus,
-		Y_SetLinkBonus,
-		Y_SetNullBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetNullBonus,
 		Y_SetLapBonus,
 		Y_SetNullBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetLinkBonus,
-		Y_SetLapBonus,
-		Y_SetNullBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetNightsBonus,
-		Y_SetLinkBonus,
-		Y_SetLapBonus,
 	},
 };
 
@@ -1964,7 +1940,7 @@ static void Y_AwardSpecialStageBonus(void)
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
 			Y_SetNullBonus(&players[i], &localbonus);
 		else if (maptol & TOL_NIGHTS) // Link instead of Rings
-			Y_SetLinkBonus(&players[i], &localbonus);
+			Y_SetNightsBonus(&players[i], &localbonus);
 		else
 			Y_SetRingBonus(&players[i], &localbonus);
 		players[i].score += localbonus.points;
