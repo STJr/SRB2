@@ -1930,7 +1930,7 @@ static void Y_AwardSpecialStageBonus(void)
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
 			Y_SetNullBonus(&players[i], &localbonus);
 		else if (maptol & TOL_NIGHTS) // Link instead of Rings
-			Y_SetLinkBonus(&players[i], &localbonus);
+			Y_SetNightsBonus(&players[i], &localbonus);
 		else
 			Y_SetRingBonus(&players[i], &localbonus);
 		players[i].score += localbonus.points;
