@@ -7880,6 +7880,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 					if (goalpost->destscale != mobj->destscale
 					    || goalpost->movefactor != mobj->z
+						|| goalpost->friction != mobj->height
 						|| flipchanged
 						|| goalpost->threshold != (mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
 					{
@@ -7939,10 +7940,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 						P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
 						P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
-						if (goalpost->movefactor != mobj->z)
+						if (goalpost->movefactor != mobj->z || goalpost->friction != mobj->height)
 						{
 							P_TeleportMove(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
 							goalpost->movefactor = mobj->z;
+							goalpost->friction = mobj->height;
 						}
 						goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 					}
@@ -10790,6 +10792,7 @@ ML_EFFECT4 : Don't clip inside the ground
 
 			// Remember old Z position and flags for correction detection
 			goalpost->movefactor = mobj->z;
+			goalpost->friction = mobj->height;
 			goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 		}
 		break;
