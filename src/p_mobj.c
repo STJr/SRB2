@@ -6120,11 +6120,11 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	if (dist < 1)
 		dist = 1;
 
-	if (nightsgrab && dest->player->powers[pw_carry] == CR_NIGHTSMODE)
+	if (nightsgrab && source->movefactor)
 	{
-		source->movecount += FRACUNIT/2;
+		source->movefactor += FRACUNIT/2;
 
-		if (dist < source->movecount)
+		if (dist < source->movefactor)
 		{
 			source->momx = source->momy = source->momz = 0;
 			P_TeleportMove(source, tx, ty, tz);
@@ -6133,9 +6133,9 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 		{
 			vangle = R_PointToAngle2(source->z, 0, tz, xydist);
 
-			source->momx = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINECOSINE(source->angle >> ANGLETOFINESHIFT), source->movecount));
-			source->momy = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINESINE(source->angle >> ANGLETOFINESHIFT), source->movecount));
-			source->momz = FixedMul(FINECOSINE(vangle >> ANGLETOFINESHIFT), source->movecount);
+			source->momx = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINECOSINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momy = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINESINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momz = FixedMul(FINECOSINE(vangle >> ANGLETOFINESHIFT), source->movefactor);
 		}
 	}
 	else
@@ -6173,7 +6173,7 @@ static void P_NightsItemChase(mobj_t *thing)
 	{
 		P_SetTarget(&thing->tracer, NULL);
 		thing->flags2 &= ~MF2_NIGHTSPULL;
-		//thing->movecount = 0;
+		thing->movefactor = 0;
 		return;
 	}
 

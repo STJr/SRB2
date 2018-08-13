@@ -9770,13 +9770,16 @@ void P_PlayerThink(player_t *player)
 				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 
+			if (mo2->flags2 & MF2_NIGHTSPULL)
+				continue;
+
 			if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > FixedMul(128*FRACUNIT, player->mo->scale))
 				continue;
 
 			// Yay! The thing's in reach! Pull it in!
 			mo2->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 			mo2->flags2 |= MF2_NIGHTSPULL;
-			mo2->movecount = 24*FRACUNIT; // initialize NightsItemChase timer
+			mo2->movefactor = 40*FRACUNIT; // initialize the NightsItemChase timer
 			P_SetTarget(&mo2->tracer, player->mo);
 		}
 	}
