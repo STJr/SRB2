@@ -797,7 +797,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
-					if (toucher->tracer) // Move the ideya!
+					if (player->exiting) // Move existing Ideyas back to player
+					{
+						mobj_t *hnext = special->target ? special->target : special; // goalpost
+						while ((hnext = hnext->hnext))
+						{
+							hnext->flags &= ~MF_GRENADEBOUNCE;
+							hnext->threshold = 0;
+							P_SetTarget(&hnext->target, toucher);
+						}
+					}
+					else if (toucher->tracer) // Move the Ideya to an anchor!
 					{
 						mobj_t *orbittarget = special->target ? special->target : special;
 						mobj_t *hnext = orbittarget->hnext, *anchorpoint = NULL;
@@ -845,16 +855,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
 							if (orbittarget->hnext->extravalue1 > hnext->extravalue1)
 								orbittarget->hnext->extravalue1 -= (72*ANG1)/orbittarget->hnext->extravalue1;
-						}
-					}
-					if (player->exiting) // ...then move it back?
-					{
-						mobj_t *hnext = special->target ? special->target : special; // goalpost
-						while ((hnext = hnext->hnext))
-						{
-							hnext->flags &= ~MF_GRENADEBOUNCE;
-							hnext->threshold = 0;
-							P_SetTarget(&hnext->target, toucher);
 						}
 					}
 					return;
