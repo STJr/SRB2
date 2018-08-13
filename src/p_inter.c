@@ -3311,12 +3311,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		}
 		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
 		{
-			if (player->spheres > 0)
-			{
-				damage = player->spheres;
-				P_RingDamage(player, inflictor, source, damage, damagetype, true);
-				damage = 0;
-			}
+			// always damage so we can recoil upon losing points
+			damage = player->spheres;
+			P_RingDamage(player, inflictor, source, damage, damagetype, true);
+			damage = 0;
 		}
 		else if (player->rings > 0) // No shield but have rings.
 		{

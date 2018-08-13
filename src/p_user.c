@@ -590,10 +590,6 @@ static void P_DeNightserizePlayer(player_t *player)
 	else if (player == &players[secondarydisplayplayer])
 		localaiming2 = 0;
 
-	// If you screwed up, kiss your score and ring bonus goodbye.
-	player->marescore = 0;
-	player->rings = 0;
-
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 
 	// If in a special stage, add some preliminary exit time.
@@ -605,6 +601,11 @@ static void P_DeNightserizePlayer(player_t *player)
 				players[i].nightstime = 1; // force everyone else to fall too.
 		player->exiting = 3*TICRATE;
 		stagefailed = true; // NIGHT OVER
+
+		// If you screwed up, kiss your score and ring bonus goodbye.
+		// But don't do this yet if not in special stage! Wait til we hit the ground.
+		player->marescore = 0;
+		player->rings = 0;
 	}
 
 	// Check to see if the player should be killed.
@@ -7030,8 +7031,14 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->spheres > 0)
+			else {
+				// Damage whether or not we have spheres, as player should recoil upon losing points
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
+
+				// Now deduct our mare score!
+				player->marescore = 0;
+				player->rings = 0;
+			}
 			player->powers[pw_carry] = CR_NONE;
 		}
 	}
