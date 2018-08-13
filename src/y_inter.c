@@ -1825,7 +1825,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
-bonus_f bonuses_list[7][4] = {
+bonus_f bonuses_list[5][4] = {
 	{
 		Y_SetNullBonus,
 		Y_SetNullBonus,
@@ -1849,18 +1849,6 @@ bonus_f bonuses_list[7][4] = {
 		Y_SetGuardBonus,
 		Y_SetRingBonus,
 		Y_SetPerfectBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetNullBonus,
-		Y_SetNightsBonus,
-		Y_SetNullBonus,
-	},
-	{
-		Y_SetNullBonus,
-		Y_SetNullBonus,
-		Y_SetLinkBonus,
-		Y_SetNullBonus,
 	},
 	{
 		Y_SetNullBonus,
