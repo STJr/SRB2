@@ -16639,7 +16639,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_IDEYAANCHOR
-		1717,           // doomednum
+		1714,           // doomednum
 		S_INVISIBLE,    // spawnstate
 		0,              // spawnhealth
 		S_NULL,         // seestate
