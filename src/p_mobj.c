@@ -7951,7 +7951,7 @@ void P_MobjThinker(mobj_t *mobj)
 						if (goalpost->x != mobj->x || goalpost->y != mobj->y)
 						{
 							P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
-							P_TeleportMove(sparkle, mobj->x, mobj->y, goalpost->z);
+							P_TeleportMove(sparkle, mobj->x, mobj->y, sparkle->z);
 						}
 
 						if (droneman->x != mobj->x || droneman->y != mobj->y)
@@ -10686,7 +10686,7 @@ ML_EFFECT4 : Don't clip inside the ground
 			boolean bottomoffsetted = !(mthing->options & MTF_OBJECTSPECIAL) && !(mthing->options & MTF_EXTRA);
 
 			INT16 timelimit = mthing->angle & 0xFFF;
-			fixed_t hitboxradius = (mthing->angle & 0xF000) * 32 * FRACUNIT;
+			fixed_t hitboxradius = ((mthing->angle & 0xF000) >> 12) * 32 * FRACUNIT;
 			fixed_t hitboxheight = mthing->extrainfo * 32 * FRACUNIT;
 			fixed_t oldheight = mobj->height;
 			fixed_t dronemanoffset, goaloffset, sparkleoffset, droneboxmandiff, dronemangoaldiff;
