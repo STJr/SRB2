@@ -4217,6 +4217,7 @@ typedef enum mobj_type
 	MT_NIGHTSEXTRATIME,
 	MT_NIGHTSLINKFREEZE,
 	MT_EGGCAPSULE,
+	MT_IDEYAANCHOR,
 	MT_NIGHTOPIANHELPER, // the actual helper object that orbits you
 	MT_PIAN, // decorative singing friend
 	MT_SHLEEP, // almost-decorative sleeping enemy
