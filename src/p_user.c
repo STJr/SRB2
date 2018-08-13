@@ -6055,6 +6055,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						UINT8 em = P_GetNextEmerald();
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						mobj_t *emmo = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
+						emmo->health = em; // for identification
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 						P_SetTarget(&player->mo->tracer, emmo);
@@ -6081,6 +6082,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					}*/
 					mobj_t *idya = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
 					idya->extravalue2 = player->mare/5;
+					idya->health = player->mare + 1; // for identification
 					P_SetTarget(&idya->target, player->mo);
 					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
 					P_SetTarget(&player->mo->tracer, idya);
