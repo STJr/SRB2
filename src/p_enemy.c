@@ -8543,20 +8543,41 @@ void A_ToggleFlameJet(mobj_t* actor)
 //
 // var1 = Angle adjustment (aka orbit speed)
 // var2:
-//        Lower 16 bits: height offset
+//        Bits 1-10: height offset, max 1023
+//        Bits 11-16: X radius factor (max 63, default 20)
 //        Bit 17: set if object is Nightopian Helper
-//        Bit 18: Unused
-//        Bit 19: set to not sync scale to player
+//        Bit 18: set to define X/Y/Z rotation factor
+//        Bits 19-20: Unused
+//        Bits 21-26: Y radius factor (max 63, default 32)
+//        Bits 27-32: Z radius factor (max 63, default 32)
 //
+// If MF_GRENADEBOUNCE is flagged on mobj, use actor->threshold to define X/Y/Z radius factor, max 1023 each:
+//        Bits 1-10: X factor
+//        Bits 11-20: Y factor
+//        Bits 21-30: Z factor
 void A_OrbitNights(mobj_t* actor)
 {
-	INT32 ofs = (var2 & 0xFFFF);
+	INT32 ofs = (var2 & 0x3FF);
 	boolean ishelper = (var2 & 0x10000);
 	boolean donotrescale = (var2 & 0x40000);
+	INT32 xfactor = 32, yfactor = 32, zfactor = 20;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_OrbitNights", actor))
 		return;
 #endif
+
+	if (actor->flags & MF_GRENADEBOUNCE)
+	{
+		xfactor = (actor->threshold & 0x3FF);
+		yfactor = (actor->threshold & 0xFFC00) >> 10;
+		zfactor = (actor->threshold & 0x3FF00000) >> 20;
+	}
+	else if (var2 & 0x20000)
+	{
+		xfactor = (var2 & 0xFC00) >> 10;
+		yfactor = (var2 & 0x3F00000) >> 20;
+		zfactor = (var2 & 0xFC000000) >> 26;
+	}
 
 	if (!actor->target
 	|| (actor->target->player &&
@@ -8576,9 +8597,9 @@ void A_OrbitNights(mobj_t* actor)
 			const angle_t fa  = (angle_t)actor->extravalue1 >> ANGLETOFINESHIFT;
 			const angle_t ofa = ((angle_t)actor->extravalue1 + (ofs*ANG1)) >> ANGLETOFINESHIFT;
 
-			const fixed_t fc = FixedMul(FINECOSINE(fa),FixedMul(32*FRACUNIT, actor->scale));
-			const fixed_t fh = FixedMul(FINECOSINE(ofa),FixedMul(20*FRACUNIT, actor->scale));
-			const fixed_t fs = FixedMul(FINESINE(fa),FixedMul(32*FRACUNIT, actor->scale));
+			const fixed_t fc = FixedMul(FINECOSINE(fa),FixedMul(xfactor*FRACUNIT, actor->scale));
+			const fixed_t fh = FixedMul(FINECOSINE(ofa),FixedMul(zfactor*FRACUNIT, actor->scale));
+			const fixed_t fs = FixedMul(FINESINE(fa),FixedMul(yfactor*FRACUNIT, actor->scale));
 
 			actor->x = actor->target->x + fc;
 			actor->y = actor->target->y + fs;

@@ -797,14 +797,47 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
-					if (toucher->tracer) // Move the ideya over to the drone!
+					if (toucher->tracer) // Move the ideya!
 					{
 						mobj_t *orbittarget = special->target ? special->target : special;
-						mobj_t *hnext = orbittarget->hnext;
+						mobj_t *hnext = orbittarget->hnext, *anchorpoint = NULL;
+
+						if (toucher->tracer->type == MT_GOTEMERALD
+							&& toucher->tracer->state-states >= S_ORBIDYA1
+							&& toucher->tracer->state-states <= S_ORBIDYA5)
+						{
+							mobj_t *mo2;
+							thinker_t *th;
+							UINT16 ideyanum = (toucher->tracer->state-states) - mobjinfo[MT_GOTEMERALD].missilestate;
+
+							// scan the thinkers to find the corresponding anchorpoint
+							for (th = thinkercap.next; th != &thinkercap; th = th->next)
+							{
+								if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+									continue;
+
+								mo2 = (mobj_t *)th;
+
+								if (mo2->type == MT_IDEYAANCHOR)
+								{
+									if(mo2->health == ideyanum)
+									{
+										anchorpoint = mo2;
+										break;
+									}
+								}
+							}
+
+							if (anchorpoint)
+							{
+								toucher->tracer->flags |= MF_GRENADEBOUNCE; // custom radius factors
+								toucher->tracer->threshold = 8 << 20; // X factor 0, Y factor 0, Z factor 8
+							}
+						}
 
 						P_SetTarget(&orbittarget->hnext, toucher->tracer);
 						P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
-						P_SetTarget(&orbittarget->hnext->target, orbittarget); // goalpost
+						P_SetTarget(&orbittarget->hnext->target, anchorpoint ? anchorpoint : orbittarget); // goalpost
 						P_SetTarget(&toucher->tracer, NULL);
 
 						if (hnext)
@@ -818,7 +851,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					{
 						mobj_t *hnext = special->target ? special->target : special; // goalpost
 						while ((hnext = hnext->hnext))
+						{
+							hnext->flags &= ~MF_GRENADEBOUNCE;
+							hnext->threshold = 0;
 							P_SetTarget(&hnext->target, toucher);
+						}
 					}
 					return;
 				}
