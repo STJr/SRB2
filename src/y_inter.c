@@ -1771,7 +1771,7 @@ static void Y_SetLapBonus(player_t *player, y_bonus_t *bstruct)
 {
 	strncpy(bstruct->patch, "YB_LAP", sizeof(bstruct->patch));
 	bstruct->display = true;
-	bstruct->points = max(0, (player->totalmarebonuslap) * 100);
+	bstruct->points = max(0, player->totalmarebonuslap * 1000);
 }
 
 //
