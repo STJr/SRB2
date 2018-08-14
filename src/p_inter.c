@@ -840,8 +840,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						}
 
 						P_SetTarget(&orbittarget->hnext, toucher->tracer);
-						P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
-						P_SetTarget(&orbittarget->hnext->target, anchorpoint ? anchorpoint : orbittarget); // goalpost
+						if (!orbittarget->hnext->hnext)
+							P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						else
+							P_SetTarget(&orbittarget->hnext->hnext->target, anchorpoint ? anchorpoint : orbittarget);
+						P_SetTarget(&orbittarget->hnext->target, anchorpoint ? anchorpoint : orbittarget);
 						P_SetTarget(&toucher->tracer, NULL);
 
 						if (hnext)
@@ -993,8 +996,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
-			if (toucher->tracer)
-				return; // Don't have multiple ideya
+			if (toucher->tracer && toucher->tracer->health > 0)
+				return; // Don't have multiple ideya, unless it's the first one given (health = 0)
 
 			if (player->mare != special->threshold) // wrong mare
 				return;

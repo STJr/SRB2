@@ -6085,6 +6085,14 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					idya->health = player->mare + 1; // for identification
 					P_SetTarget(&idya->target, player->mo);
 					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
+
+					if (player->mo->tracer)
+					{
+						P_SetTarget(&idya->hnext, player->mo->tracer);
+						idya->extravalue1 = (angle_t)(player->mo->tracer->extravalue1 - 72*ANG1);
+						if (idya->extravalue1 > player->mo->tracer->extravalue1)
+							idya->extravalue1 -= (72*ANG1)/idya->extravalue1;
+					}
 					P_SetTarget(&player->mo->tracer, idya);
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
