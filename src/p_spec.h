@@ -460,7 +460,7 @@ typedef struct
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT handling
 	boolean dosolid;       ///< Handle FF_SOLID handling
 	boolean dospawnflags;  ///< Enable spawnflags handling
-	boolean dofadeinonly;  ///< Set flags only when fade-in is finished; never during fade-out
+	boolean doghostfade;  ///< Set flags only when fade-in is finished; never during fade-out
 } fade_t;
 
 void T_Fade(fade_t *d);

@@ -107,10 +107,10 @@ static void P_ResetFading(line_t *line, fade_t *data);
 #define P_RemoveFading(l) P_ResetFading(l, NULL);
 static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean dofadeinonly, INT32 line);
+	boolean doghostfade, INT32 line);
 static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean dofadeinonly, INT32 line);
+	boolean doghostfade, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -7175,7 +7175,7 @@ static void P_ResetFading(line_t *line, fade_t *data)
 
 static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean dofadeinonly)
+	boolean doghostfade)
 {
 	boolean result = false;
 
@@ -7318,7 +7318,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 
 static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean dofadeinonly, INT32 line)
+	boolean doghostfade, INT32 line)
 {
 	ffloor_t *rover;
 	register INT32 s;
@@ -7331,7 +7331,7 @@ static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
 			if (rover->master != &lines[line])
 				continue;
 
-			affectedffloors += (INT32)P_DoFakeFloorAlpha(rover, destvalue, speed, doexists, dotranslucent, dosolid, dospawnflags, dofadeinonly);
+			affectedffloors += (INT32)P_DoFakeFloorAlpha(rover, destvalue, speed, doexists, dotranslucent, dosolid, dospawnflags, doghostfade);
 		}
 	}
 
@@ -7346,12 +7346,12 @@ static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
   * \param dotranslucent	handle FF_TRANSLUCENT
   * \param dosolid	handle FF_SOLID
   * \param dospawnflags	handle spawnflags
-  * \param dofadeinonly	enable flags when fade-in is finished; never on fade-out
+  * \param doghostfade	enable flags when fade-in is finished; never on fade-out
   * \param line			line to target FOF
   */
 static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean dofadeinonly, INT32 line)
+	boolean doghostfade, INT32 line)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
@@ -7363,7 +7363,7 @@ static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	d->dotranslucent = dotranslucent;
 	d->dosolid = dosolid;
 	d->dospawnflags = dospawnflags;
-	d->dofadeinonly = dofadeinonly;
+	d->doghostfade = doghostfade;
 
 	// find any existing thinkers and remove them, then replace with new data
 	P_ResetFading(&lines[d->affectee], d);
@@ -7380,7 +7380,7 @@ void T_Fade(fade_t *d)
 {
 	INT32 affectedffloors = P_FindFakeFloorsDoAlpha(d->destvalue, d->speed,
 		d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags,
-		d->dofadeinonly, d->affectee);
+		d->doghostfade, d->affectee);
 
 	// no more ffloors to fade? remove myself
 	if (affectedffloors == 0)
