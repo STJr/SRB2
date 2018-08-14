@@ -105,10 +105,10 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFading(line_t *line, fade_t *data);
 #define P_RemoveFading(l) P_ResetFading(l, NULL);
-static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed, 
+static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
 	boolean dofadeinonly, INT32 line);
-static void P_AddMasterFader(INT16 destvalue, INT16 speed, 
+static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
 	boolean dofadeinonly, INT32 line);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
@@ -3109,8 +3109,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
 					{
 						if (sides[line->sidenum[0]].rowoffset>>FRACBITS > 0)
-							P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
-								sides[line->sidenum[0]].rowoffset>>FRACBITS, 
+							P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS,
+								sides[line->sidenum[0]].rowoffset>>FRACBITS,
 								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
 								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
 								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
@@ -3120,8 +3120,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						else
 						{
 							P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
-							P_FindFakeFloorsDoAlpha(sides[line->sidenum[0]].textureoffset>>FRACBITS, 
-								0,									// set alpha immediately 
+							P_FindFakeFloorsDoAlpha(sides[line->sidenum[0]].textureoffset>>FRACBITS,
+								0,									// set alpha immediately
 								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
 								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
 								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
@@ -3132,7 +3132,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 			break;
 		}
-		
+
 		case 453: // Stop fading FOF
 		{
 			INT32 s, j;
@@ -7145,7 +7145,7 @@ void T_Disappear(disappear_t *d)
 }
 
 /** Removes fadingdata from FOF control sector
- * 
+ *
  * \param line	line to search for target faders
  * \param data	pointer to set new fadingdata to. Can be NULL to erase.
  */
@@ -7161,7 +7161,7 @@ static void P_ResetFading(line_t *line, fade_t *data)
 		{
 			if (rover->master != line)
 				continue;
-			
+
 			if(((fade_t *)rover->master->frontsector->fadingdata) != data)
 			{
 				if(&((fade_t *)rover->master->frontsector->fadingdata)->thinker)
@@ -7253,7 +7253,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		if (speed < 1 || rover->alpha + speed >= destvalue - speed)
 		{
 			rover->alpha = destvalue;
-			
+
 			if (doexists)
 			{
 				if (rover->alpha <= 1)
@@ -7289,7 +7289,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		else // continue fading in
 		{
 			rover->alpha += speed;
-			
+
 			if (doexists)
 				rover->flags |= FF_EXISTS;
 
@@ -7316,7 +7316,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	return result;
 }
 
-static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed, 
+static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
 	boolean dofadeinonly, INT32 line)
 {
@@ -7349,7 +7349,7 @@ static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
   * \param dofadeinonly	enable flags when fade-in is finished; never on fade-out
   * \param line			line to target FOF
   */
-static void P_AddMasterFader(INT16 destvalue, INT16 speed, 
+static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
 	boolean dofadeinonly, INT32 line)
 {
@@ -7378,7 +7378,7 @@ static void P_AddMasterFader(INT16 destvalue, INT16 speed,
   */
 void T_Fade(fade_t *d)
 {
-	INT32 affectedffloors = P_FindFakeFloorsDoAlpha(d->destvalue, d->speed, 
+	INT32 affectedffloors = P_FindFakeFloorsDoAlpha(d->destvalue, d->speed,
 		d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags,
 		d->dofadeinonly, d->affectee);
 
