@@ -6009,7 +6009,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 	}
 
-	if (player->capsule->extravalue2 <= 0)
+	if (player->capsule->extravalue2 <= 0 && player->capsule->health > 0)
 		P_RunNightsCapsuleTouchExecutors(player->mo, true, player->spheres >= player->capsule->health); // run capsule entrance executors
 
 	// Time to blow it up!
@@ -6118,7 +6118,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		}
 	}
 	else
-		player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+		player->capsule->extravalue1 = -1;
 }
 
 //
