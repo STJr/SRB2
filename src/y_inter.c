@@ -1774,6 +1774,7 @@ static void Y_SetLapBonus(player_t *player, y_bonus_t *bstruct)
 	bstruct->points = max(0, player->totalmarebonuslap * 1000);
 }
 
+#if 0
 //
 // Y_SetLinkBonus
 //
@@ -1783,6 +1784,7 @@ static void Y_SetLinkBonus(player_t *player, y_bonus_t *bstruct)
 	bstruct->display = true;
 	bstruct->points = max(0, (player->maxlink - 1) * 100);
 }
+#endif
 
 //
 // Y_SetGuardBonus
