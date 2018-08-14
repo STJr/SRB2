@@ -8751,7 +8751,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			nummaprings = -1; // no perfect bonus, rings are free
 			break;
 		case MT_EGGCAPSULE:
-			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			mobj->extravalue1 = -1; // sphere timer for how long a player has been at the capsule
+			mobj->extravalue2 = -1; // tic timer for how long a player has been at the capsule
 			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;

@@ -5946,6 +5946,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i;
 
+	player->capsule->extravalue2++; // tic counter
+
 	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
@@ -6007,6 +6009,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 	}
 
+	if (player->capsule->extravalue2 <= 0 && player->spheres >= player->capsule->health)
+		P_RunNightsBonusTimeExecutors(player->mo, true); // run pre-blowup executors
+
 	// Time to blow it up!
 	if (player->mo->x == player->capsule->x
 		&& player->mo->y == player->capsule->y
@@ -6014,9 +6019,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	{
 		if (player->spheres > 0)
 		{
-			if (player->capsule->extravalue1 <= 0 && player->spheres >= player->capsule->health)
-				P_RunNightsBonusTimeExecutors(player->mo, true);
-
 			player->spheres--;
 			player->capsule->health--;
 			player->capsule->extravalue1++;
@@ -6033,7 +6035,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = -1;
+				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6102,7 +6104,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
-				P_RunNightsBonusTimeExecutors(player->mo, false);
+				P_RunNightsBonusTimeExecutors(player->mo, false); // run post blow-up executors
 			}
 		}
 		else
@@ -6111,11 +6113,11 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 3; // Get more rings!
 			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = -1;
+			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 		}
 	}
 	else
-		player->capsule->extravalue1 = -1;
+		player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 }
 
 //
