@@ -1871,8 +1871,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 326: // denightserize - once
 		case 327: // nights lap - each time
 		case 328: // nights lap - once
-		case 329: // nights bonus time - each time
-		case 330: // nights bonus time - once
+		case 329: // nights egg capsule touch - each time
+		case 330: // nights egg capsule touch - once
 			if (!P_CheckNightsTriggerLine(triggerline, actor))
 				return false;
 			break;
