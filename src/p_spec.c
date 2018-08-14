@@ -1641,6 +1641,9 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		currentlap = lapfrombonustime ? actor->player->marebonuslap : actor->player->marelap;
 	}
 
+	if (lapfrombonustime && !currentlap)
+		return false; // special case: player->marebonuslap is 0 until passing through on bonus time. Don't trigger lines looking for inputlap 0.
+
 	// Compare current mare/lap to input mare/lap based on rules
 	if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
 		&& ((ltemare && currentmare > inputmare)
