@@ -2577,9 +2577,9 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->dospawnflags = READUINT8(save_p);
 	ht->dofadeinonly = READUINT8(save_p);
 
-	sector_t *ffloorsector = LoadSector(ht->affectee);
-	if (ffloorsector)
-		ffloorsector->fadingdata = ht;
+	line_t *ffloorline = LoadLine(ht->affectee);
+	if (ffloorline && ffloorline->frontsector)
+		ffloorline->frontsector->fadingdata = ht;
 
 	P_AddThinker(&ht->thinker);
 }
