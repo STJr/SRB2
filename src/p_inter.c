@@ -797,24 +797,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
-					if (player->exiting) // Move existing Ideyas back to player
-					{
-						mobj_t *hnext = special->target ? special->target : special; // goalpost
-						while ((hnext = hnext->hnext))
-						{
-							hnext->flags &= ~MF_GRENADEBOUNCE;
-							hnext->threshold = 0;
-							P_SetTarget(&hnext->target, toucher);
-						}
-					}
-					else if (toucher->tracer) // Move the Ideya to an anchor!
+					if (toucher->tracer) // Move the Ideya to an anchor!
 					{
 						mobj_t *orbittarget = special->target ? special->target : special;
-						mobj_t *hnext = orbittarget->hnext, *anchorpoint = NULL;
+						mobj_t *hnext = orbittarget->hnext, *anchorpoint = NULL, *anchorpoint2 = NULL;
 						mobj_t *mo2;
 						thinker_t *th;
-						UINT16 ideyanum = toucher->tracer->health;
 
+						// The player might have two Ideyas: toucher->tracer and toucher->tracer->hnext
+						// so handle their anchorpoints accordingly.
 						// scan the thinkers to find the corresponding anchorpoint
 						for (th = thinkercap.next; th != &thinkercap; th = th->next)
 						{
@@ -825,11 +816,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 							if (mo2->type == MT_IDEYAANCHOR)
 							{
-								if(mo2->health == ideyanum)
-								{
+								if (mo2->health == toucher->tracer->health) // do ideya numberes match?
 									anchorpoint = mo2;
+								else if (toucher->tracer->hnext && mo2->health == toucher->tracer->hnext->health)
+									anchorpoint2 = mo2;
+
+								if ((!toucher->tracer->hnext && anchorpoint)
+									|| (toucher->tracer->hnext && anchorpoint && anchorpoint2))
 									break;
-								}
 							}
 						}
 
@@ -839,11 +833,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 							toucher->tracer->threshold = 8 << 20; // X factor 0, Y factor 0, Z factor 8
 						}
 
+						if (anchorpoint2)
+						{
+							toucher->tracer->hnext->flags |= MF_GRENADEBOUNCE; // custom radius factors
+							toucher->tracer->hnext->threshold = 8 << 20; // X factor 0, Y factor 0, Z factor 8
+						}
+
 						P_SetTarget(&orbittarget->hnext, toucher->tracer);
 						if (!orbittarget->hnext->hnext)
 							P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
 						else
-							P_SetTarget(&orbittarget->hnext->hnext->target, anchorpoint ? anchorpoint : orbittarget);
+							P_SetTarget(&orbittarget->hnext->hnext->target, anchorpoint2 ? anchorpoint2 : orbittarget);
 						P_SetTarget(&orbittarget->hnext->target, anchorpoint ? anchorpoint : orbittarget);
 						P_SetTarget(&toucher->tracer, NULL);
 
@@ -852,6 +852,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
 							if (orbittarget->hnext->extravalue1 > hnext->extravalue1)
 								orbittarget->hnext->extravalue1 -= (72*ANG1)/orbittarget->hnext->extravalue1;
+						}
+					}
+					if (player->exiting) // ...then move it back?
+					{
+						mobj_t *hnext = special->target ? special->target : special; // goalpost
+						while ((hnext = hnext->hnext))
+						{
+							hnext->flags &= ~MF_GRENADEBOUNCE;
+							hnext->threshold = 0;
+							P_SetTarget(&hnext->target, toucher);
 						}
 					}
 					return;
