@@ -6014,6 +6014,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	{
 		if (player->spheres > 0)
 		{
+			if (player->capsule->extravalue1 <= 0 && player->spheres >= player->capsule->health)
+				P_RunNightsBonusTimeExecutors(player->mo, true);
+
 			player->spheres--;
 			player->capsule->health--;
 			player->capsule->extravalue1++;
@@ -6099,7 +6102,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
-				P_RunNightsBonusTimeExecutors(player->mo);
+				P_RunNightsBonusTimeExecutors(player->mo, false);
 			}
 		}
 		else

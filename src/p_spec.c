@@ -1420,13 +1420,15 @@ void P_RunNightsLapExecutors(mobj_t *actor)
 //
 // P_RunNightsBonusTimeExecutors
 //
-void P_RunNightsBonusTimeExecutors(mobj_t *actor)
+void P_RunNightsBonusTimeExecutors(mobj_t *actor, boolean preblowup)
 {
 	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 329 || lines[i].special == 330)
+		if ((lines[i].special == 329 || lines[i].special == 330)
+			&& ((preblowup && (lines[i].flags & ML_BOUNCY))
+				|| (!preblowup && !(lines[i].flags & ML_BOUNCY))))
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1574,8 +1576,8 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	}
 
 	// Get current mare and lap (and check early return for DeNightserize)
-	if (perglobal || perglobalinverse 
-		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights))) 
+	if (perglobal || perglobalinverse
+		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights)))
 	{
 		UINT8 playersarenights = 0;
 
@@ -1604,7 +1606,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 					currentmare = players[i].mare;
 					currentlap = UINT8_MAX;
 				}
-				if (players[i].mare == currentmare 
+				if (players[i].mare == currentmare
 					&& (lap > currentlap || currentlap == UINT8_MAX))
 					currentlap = lap;
 			}
@@ -1616,7 +1618,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 					currentmare = players[i].mare;
 					currentlap = UINT8_MAX;
 				}
-				if (players[i].mare == currentmare 
+				if (players[i].mare == currentmare
 					&& (lap < currentlap || currentlap == UINT8_MAX))
 					currentlap = lap;
 			}
