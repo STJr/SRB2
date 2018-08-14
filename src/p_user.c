@@ -5929,7 +5929,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 	player->capsule->extravalue2++;
 
-	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
+	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->capsule->x;
@@ -5937,7 +5937,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momx = 0;
 	}
 
-	if (abs(player->mo->y-player->capsule->y) <= 2*FRACUNIT)
+	if (abs(player->mo->y-player->capsule->y) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->y = player->capsule->y;
@@ -5952,19 +5952,19 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	}
 
 	if (player->mo->x > player->capsule->x)
-		player->mo->momx = -2*FRACUNIT;
+		player->mo->momx = -3*FRACUNIT;
 	else if (player->mo->x < player->capsule->x)
-		player->mo->momx = 2*FRACUNIT;
+		player->mo->momx = 3*FRACUNIT;
 
 	if (player->mo->y > player->capsule->y)
-		player->mo->momy = -2*FRACUNIT;
+		player->mo->momy = -3*FRACUNIT;
 	else if (player->mo->y < player->capsule->y)
-		player->mo->momy = 2*FRACUNIT;
+		player->mo->momy = 3*FRACUNIT;
 
 	if (player->mo->z > player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = -2*FRACUNIT;
+		player->mo->momz = -3*FRACUNIT;
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = 2*FRACUNIT;
+		player->mo->momz = 3*FRACUNIT;
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
