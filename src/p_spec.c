@@ -1493,10 +1493,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				if (!playeringame[i] || players[i].spectator)
 					continue;
 
-				if (!players[i].mo || players[i].rings <= 0)
+				if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
 					continue;
 
-				rings += players[i].rings;
+				rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
 			}
 		}
 		else
@@ -1504,7 +1504,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player))
 				return false; // no player to count rings from here, sorry
 
-			rings = actor->player->rings;
+			rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB)
