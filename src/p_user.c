@@ -5927,6 +5927,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i;
 
+	player->capsule->extravalue2++;
+
 	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
@@ -6011,7 +6013,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = -1;
+				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6088,7 +6090,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 3; // Get more rings!
 			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = -1;
+			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 		}
 	}
 	else
