@@ -6009,8 +6009,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 	}
 
-	if (player->capsule->extravalue2 <= 0 && player->spheres >= player->capsule->health)
-		P_RunNightsBonusTimeExecutors(player->mo, true); // run pre-blowup executors
+	if (player->capsule->extravalue2 <= 0)
+		P_RunNightsCapsuleTouchExecutors(player->mo, true, player->spheres >= player->capsule->health); // run capsule entrance executors
 
 	// Time to blow it up!
 	if (player->mo->x == player->capsule->x
@@ -6104,7 +6104,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
-				P_RunNightsBonusTimeExecutors(player->mo, false); // run post blow-up executors
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, true); // run capsule exit executors, and we destroyed it
 			}
 		}
 		else
@@ -6114,6 +6114,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->textvar = 3; // Get more rings!
 			player->capsule->reactiontime = 0;
 			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+			P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
 		}
 	}
 	else

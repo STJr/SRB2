@@ -1418,17 +1418,20 @@ void P_RunNightsLapExecutors(mobj_t *actor)
 }
 
 //
-// P_RunNightsBonusTimeExecutors
+// P_RunNightsCapsuleTouchExecutors
 //
-void P_RunNightsBonusTimeExecutors(mobj_t *actor, boolean preblowup)
+void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean enoughspheres)
 {
 	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
 		if ((lines[i].special == 329 || lines[i].special == 330)
-			&& ((preblowup && (lines[i].flags & ML_BOUNCY))
-				|| (!preblowup && !(lines[i].flags & ML_BOUNCY))))
+			&& ((entering && (lines[i].flags & ML_TFERLINE))
+				|| (!entering && !(lines[i].flags & ML_TFERLINE)))
+			&& ((lines[i].flags & ML_DONTPEGTOP)
+				|| (enoughspheres && !(lines[i].flags & ML_BOUNCY))
+				|| (!enoughspheres && (lines[i].flags & ML_BOUNCY))))
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
