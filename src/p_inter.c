@@ -1005,13 +1005,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						player->flyangle = special->threshold;
 
 					player->speed = FixedMul(special->info->speed, special->scale);
-					// Potentially causes axis transfer failures.
-					// Also rarely worked properly anyway.
-					//P_UnsetThingPosition(player->mo);
-					//player->mo->x = special->x;
-					//player->mo->y = special->y;
-					//P_SetThingPosition(player->mo);
-					toucher->z = special->z+(special->height/4);
+					P_SetTarget(&player->mo->hnext, special); // Reference bumper for position correction on next tic
 				}
 				else // More like a spring
 				{

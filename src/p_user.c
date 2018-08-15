@@ -6175,6 +6175,15 @@ static void P_NiGHTSMovement(player_t *player)
 		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 
 
+	if (player->bumpertime == TICRATE/2)
+	{
+		// Center player to bumper here because if you try to set player's position in P_TouchSpecialThing case MT_NIGHTSBUMPER,
+		// that position is fudged in the time between that routine in the previous tic
+		// and reaching here in the current tic
+		P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y, player->mo->hnext->z + (player->mo->hnext->height/4));
+		P_SetTarget(&player->mo->hnext, NULL);
+	}
+
 	if (player->mo->z < player->mo->floorz)
 		player->mo->z = player->mo->floorz;
 
