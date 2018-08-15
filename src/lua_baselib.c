@@ -2257,7 +2257,7 @@ static int lib_sSpeedMusic(lua_State *L)
 
 static int lib_sPositionMusic(lua_State *L)
 {
-	float position = 0;
+	UINT32 position = 0;
 	player_t *player = NULL;
 	NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
