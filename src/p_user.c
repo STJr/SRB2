@@ -5999,25 +5999,26 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		{
 			INT32 popduration = max(60 - player->capsule->extravalue2, 1);
 			INT32 spherecount = min(player->spheres, player->capsule->health);
+			player->capsule->extravalue1 = player->capsule->health - spherecount;
 			player->capsule->lastlook = max(FixedRound(FixedDiv(spherecount, popduration))/FRACUNIT, 1);
 			player->capsule->cusval = max(FixedFloor(FixedDiv(popduration, spherecount))/FRACUNIT, 1);
 			player->capsule->movecount = player->capsule->extravalue2;
 		}
 
-		if (player->spheres > 0)
+		if (player->capsule->extravalue2 - player->capsule->movecount < 60)
 		{
-			if (!((player->capsule->extravalue2 - player->capsule->movecount) % player->capsule->cusval))
+			if (!((player->capsule->extravalue2 - player->capsule->movecount) % player->capsule->cusval)
+				&& player->capsule->health > player->capsule->extravalue1)
 			{
 				player->spheres -= player->capsule->lastlook;
 				player->capsule->health -= player->capsule->lastlook;
-				player->capsule->extravalue1 += player->capsule->lastlook;
+
+				if (player->spheres < 0)
+					player->spheres = 0;
+
+				if (player->capsule->health < player->capsule->extravalue1)
+					player->capsule->health = player->capsule->extravalue1;
 			}
-
-			if (player->spheres < 0)
-				player->spheres = 0;
-
-			if (player->capsule->health < 0)
-				player->capsule->health = 0;
 
 			// Spawn a 'pop' for every 5 rings you deposit
 			if (!((player->capsule->extravalue2 - player->capsule->movecount) % 5))
@@ -6025,13 +6026,18 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
 				MT_BOSSEXPLODE),sfx_cybdth);
+		}
+		else
+		{
+			if (player->capsule->health > player->capsule->extravalue1)
+				player->capsule->health = player->capsule->extravalue1;
 
 			if (player->capsule->health <= 0)
 			{
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+				player->capsule->extravalue2 = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6101,14 +6107,14 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
 			}
-		}
-		else
-		{
-			S_StartScreamSound(player->mo, sfx_lose);
-			player->texttimer = 4*TICRATE;
-			player->textvar = 3; // Get more rings!
-			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = player->capsule->extravalue2 = player->capsule->lastlook = player->capsule->cusval = player->capsule->movecount = -1;
+			else
+			{
+				S_StartScreamSound(player->mo, sfx_lose);
+				player->texttimer = 4*TICRATE;
+				player->textvar = 3; // Get more rings!
+				player->capsule->reactiontime = 0;
+				player->capsule->extravalue1 = player->capsule->extravalue2 = player->capsule->lastlook = player->capsule->cusval = player->capsule->movecount = -1;
+			}
 		}
 	}
 	else
