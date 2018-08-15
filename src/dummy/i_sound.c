@@ -146,13 +146,13 @@ boolean I_SetSongTrack(int track)
 	return false;
 }
 
-boolean I_SetSongPosition(UINT32 position)
+boolean I_SetMusicPosition(UINT32 position)
 {
     (void)position;
     return false;
 }
 
-UINT32 I_GetSongPosition(void)
+UINT32 I_GetMusicPosition(void)
 {
     return 0;
 }

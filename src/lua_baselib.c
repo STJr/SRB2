@@ -2255,7 +2255,7 @@ static int lib_sSpeedMusic(lua_State *L)
 	return 1;
 }
 
-static int lib_sPositionMusic(lua_State *L)
+static int lib_sSetMusicPosition(lua_State *L)
 {
 	UINT32 position = 0;
 	player_t *player = NULL;
@@ -2267,16 +2267,16 @@ static int lib_sPositionMusic(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_PositionMusic(position));
+		lua_pushboolean(L, S_SetMusicPosition(position));
 	else
 		lua_pushboolean(L, false);
 	return 1;
 }
 
-static int lib_sGetPositionMusic(lua_State *L)
+static int lib_sGetMusicPosition(lua_State *L)
 {
 	NOHUD
-	lua_pushinteger(L, (UINT32)S_GetPositionMusic());
+	lua_pushinteger(L, (UINT32)S_GetMusicPosition());
 	return 1;
 }
 
@@ -2790,8 +2790,8 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
-	{"S_PositionMusic",lib_sPositionMusic},
-	{"S_GetPositionMusic",lib_sGetPositionMusic},
+	{"S_SetMusicPosition",lib_sSetMusicPosition},
+	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_PauseMusic",lib_sPauseMusic},
 	{"S_ResumeMusic",lib_sResumeMusic},
 	{"S_StopMusic",lib_sStopMusic},

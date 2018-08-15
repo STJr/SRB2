@@ -774,7 +774,7 @@ boolean I_SetSongSpeed(float speed)
 	return true;
 }
 
-boolean I_SetSongPosition(UINT32 position)
+boolean I_SetMusicPosition(UINT32 position)
 {
 	if(midimode)
 		// Dummy out; this works for some MIDI, but not others.
@@ -794,7 +794,7 @@ boolean I_SetSongPosition(UINT32 position)
 	}
 }
 
-UINT32 I_GetSongPosition(void)
+UINT32 I_GetMusicPosition(void)
 {
 	if(midimode)
 		// Dummy out because unsupported, even though FMOD does this correctly.

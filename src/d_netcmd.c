@@ -4045,7 +4045,7 @@ static void Command_Tunes_f(void)
 	if (argc > 4)
 	{
 		UINT32 position = (UINT32)atoi(COM_Argv(4));
-		S_PositionMusic(position);
+		S_SetMusicPosition(position);
 	}
 }
 
