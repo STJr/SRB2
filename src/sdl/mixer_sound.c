@@ -457,7 +457,7 @@ static void music_loop(void)
 	else
 	{
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
-		music_bytes = 0; 
+		music_bytes = 0;
 			// be consistent with FMOD, otherwise I'd prefer to freeze music_bytes
 			// since the other flags indicate music is still playing.
 	}
@@ -508,7 +508,7 @@ void I_ResumeSong(INT32 handle)
 	(void)handle;
 	if(!midimode)
 	{
-		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { } 
+		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
 		if(music && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 			// midimode and music must be checked in case nothing is actually playing
@@ -516,16 +516,6 @@ void I_ResumeSong(INT32 handle)
 	}
 	Mix_ResumeMusic();
 	songpaused = false;
-}
-
-boolean I_MIDIPlaying(void)
-{
-	return midimode && music;
-}
-
-boolean I_MusicPlaying(void)
-{
-	return (boolean)music;
 }
 
 boolean I_MIDIPlaying(void)
@@ -918,7 +908,7 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	is_looping = looping;
 
 	//MIDI does count correctly, but dummy out because unsupported
-	//If this is enabled, you need to edit Mix_PlayMusic above to never loop (0) 
+	//If this is enabled, you need to edit Mix_PlayMusic above to never loop (0)
 	//and register the music_loop callback
 	//music_bytes = 0;
 	//if(!Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
