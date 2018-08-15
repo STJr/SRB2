@@ -6147,8 +6147,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 		}
 	}
-	else
-		player->capsule->lastlook = -1;
+	else if (player->capsule->lastlook > -1)
+		// We somehow moved out of the capsule (OBJECTPLACE?)
+		// So recalculate all the timings
+		player->capsule->lastlook = player->capsule->extravalue2 = -1;
 }
 
 //
