@@ -6003,9 +6003,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->capsule->lastlook = max(FixedRound(FixedDiv(spherecount, popduration))/FRACUNIT, 1);
 			player->capsule->cusval = max(FixedFloor(FixedDiv(popduration, spherecount))/FRACUNIT, 1);
 			player->capsule->movecount = player->capsule->extravalue2;
+			player->capsule->cvmem = popduration;
 		}
 
-		if (player->capsule->extravalue2 - player->capsule->movecount < 60)
+		if (player->capsule->extravalue2 - player->capsule->movecount < player->capsule->cvmem)
 		{
 			if (!((player->capsule->extravalue2 - player->capsule->movecount) % player->capsule->cusval)
 				&& player->capsule->health > player->capsule->extravalue1)
