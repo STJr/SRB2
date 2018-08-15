@@ -2206,7 +2206,6 @@ static int lib_sChangeMusic(lua_State *L)
 		music_name = luaL_checkstring(L, 1);
 	}
 
-
 	looping = (boolean)lua_opttrueboolean(L, 2);
 
 #else
@@ -2231,6 +2230,8 @@ static int lib_sChangeMusic(lua_State *L)
 #endif
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
 
+	fadein_ms = luaL_optinteger(L, 5, 0);
+
 	if (!player || P_IsLocalPlayer(player))
 	{
 		S_ChangeMusic(music_name, music_flags, looping);
@@ -2238,7 +2239,7 @@ static int lib_sChangeMusic(lua_State *L)
 	}
 	else
 		lua_pushnil(L);
-	return 0;
+	return 1;
 }
 
 static int lib_sSpeedMusic(lua_State *L)
@@ -2348,7 +2349,7 @@ static int lib_sStopMusic(lua_State *L)
 	}
 	else
 		lua_pushnil(L);
-	return 0;
+	return 1;
 }
 
 static int lib_sDigitalPlaying(lua_State *L)
