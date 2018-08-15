@@ -736,21 +736,17 @@ boolean I_SetSongSpeed(float speed)
 	return false;
 }
 
-boolean I_SetSongPosition(float position)
+boolean I_SetSongPosition(UINT32 position)
 {
-	if (position > 0.0f) 
-	{
-		Mix_RewindMusic(); // needed for MP3
-		Mix_SetMusicPosition(position);
-		return true;
-	}
-	(void)position;
-	return false;
+	int r;
+	Mix_RewindMusic(); // needed for MP3
+	r = Mix_SetMusicPosition(position*1000);
+	return r == 0;
 }
 
-float I_GetSongPosition(void)
+UINT32 I_GetSongPosition(void)
 {
-	return 0.0f;
+	return 0;
 }
 
 boolean I_SetSongTrack(int track)

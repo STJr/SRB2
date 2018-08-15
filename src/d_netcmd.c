@@ -4041,6 +4041,15 @@ static void Command_Tunes_f(void)
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
+<<<<<<< HEAD
+=======
+
+	if (argc > 4)
+	{
+		UINT32 position = (UINT32)atoi(COM_Argv(4));
+		S_PositionMusic(position);
+	}
+>>>>>>> f453fb65... Change get/set music position to UINT32 parameter, milliseconds
 }
 
 static void Command_RestartAudio_f(void)

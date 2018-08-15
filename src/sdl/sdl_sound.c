@@ -1973,15 +1973,15 @@ boolean I_SetSongSpeed(float speed)
 	return false;
 }
 
-boolean I_SetSongPosition(float position)
+boolean I_SetSongPosition(UINT32 position)
 {
 	(void)position;
 	return false;
 }
 
-float I_GetSongPosition(void)
+UINT32 I_GetSongPosition(void)
 {
-	return 0.0f;
+	return 0;
 }
 
 boolean I_SetSongTrack(int track)

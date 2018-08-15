@@ -1404,12 +1404,12 @@ boolean S_SpeedMusic(float speed)
 	return I_SetSongSpeed(speed);
 }
 
-boolean S_PositionMusic(float position)
+boolean S_PositionMusic(UINT32 position)
 {
 	return I_SetSongPosition(position);
 }
 
-float S_GetPositionMusic(void)
+UINT32 S_GetPositionMusic(void)
 {
 	return I_GetSongPosition();
 }

@@ -136,10 +136,10 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
 boolean S_SpeedMusic(float speed);
 
 // Set Position of Music
-boolean S_PositionMusic(float position);
+boolean S_PositionMusic(UINT32 position);
 
 // Get Position of Music
-float S_GetPositionMusic(void);
+UINT32 S_GetPositionMusic(void);
 
 // Stops the music.
 void S_StopMusic(void);
