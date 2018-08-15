@@ -6180,7 +6180,11 @@ static void P_NiGHTSMovement(player_t *player)
 		// Center player to bumper here because if you try to set player's position in P_TouchSpecialThing case MT_NIGHTSBUMPER,
 		// that position is fudged in the time between that routine in the previous tic
 		// and reaching here in the current tic
-		P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y, player->mo->hnext->z + (player->mo->hnext->height/4));
+		P_UnsetThingPosition(player->mo);
+		player->mo->x = player->mo->hnext->x;
+		player->mo->y = player->mo->hnext->y;
+		player->mo->z = player->mo->hnext->z + FixedMul(player->mo->hnext->height/4, player->mo->hnext->scale);
+		P_SetThingPosition(player->mo);
 		P_SetTarget(&player->mo->hnext, NULL);
 	}
 
