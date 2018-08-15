@@ -1386,7 +1386,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 
 	char newmusic[7];
 #ifdef HAVE_BLUA
-	if(LUAh_MusicChange(music_name, mmusic, newmusic)) // todo: mflags and looping?
+	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
 		return;
 #else
 	strncpy(newmusic, mmusic, 7);	
