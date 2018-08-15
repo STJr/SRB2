@@ -5925,7 +5925,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 //
 static void P_DoNiGHTSCapsule(player_t *player)
 {
-	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic;
+	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic, startingspheres;
 	INT32 tictimer = ++player->capsule->extravalue2;
 
 	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
@@ -6021,11 +6021,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 		if (tictimer - firstpoptic < popduration)
 		{
-			if (!((tictimer - firstpoptic) % deductinterval)
-				&& player->capsule->health > sphereresult)
+			if (!((tictimer - firstpoptic) % deductinterval))
 			{
-				player->spheres -= deductquantity;
-				player->capsule->health -= deductquantity;
+				// Did you somehow get more spheres during destruct?
+				if (player->capsule->health <= sphereresult && player->spheres > 0 && player->capsule->health > 0)
+					sphereresult = max(sphereresult - player->spheres, 0);
+
+				if (player->capsule->health > sphereresult && player->spheres > 0)
+				{
+					player->spheres -= deductquantity;
+					player->capsule->health -= deductquantity;
+				}
 
 				if (player->spheres < 0)
 					player->spheres = 0;
@@ -6043,12 +6049,20 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		}
 		else
 		{
-			if (player->capsule->health > sphereresult)
-				player->capsule->health = sphereresult;
-
-			// did player somehow get more spheres? deduct that too
-			if (player->spheres > 0)
-				player->capsule->health -= player->spheres;
+			if (player->spheres != 0 && player->capsule->health > 0)
+			{
+				if (player->spheres < player->capsule->health)
+				{
+					player->capsule->health -= player->spheres;
+					player->spheres = 0;
+				}
+				else
+				{
+					startingspheres = player->spheres - player->capsule->health;
+					player->capsule->health = 0;
+					player->spheres = startingspheres;
+				}
+			}
 
 			if (player->capsule->health <= 0)
 			{
