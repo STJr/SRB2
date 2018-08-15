@@ -69,6 +69,11 @@ static float loop_point;
 static boolean songpaused;
 static UINT32 music_bytes;
 static boolean is_looping;
+static boolean is_fadingout;
+static boolean is_fadingin;
+static UINT8 fading_target;
+static INT32 fading_id;
+static UINT32 music_mslength;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -463,6 +468,30 @@ static void music_loop(void)
 	}
 }
 
+static UINT32 music_fadeout(UINT32 interval)
+{
+	if (is_fadingout)
+	{
+		CONS_Printf("Fading out\n");
+	}
+	else
+	{
+		SDL_RemoveTimer(fading_id);
+	}
+}
+
+static UINT32 music_fadein(UINT32 interval)
+{
+	if (is_fadingin)
+	{
+		CONS_Printf("Fading in\n");
+	}
+	else
+	{
+		SDL_RemoveTimer(fading_id);
+	}
+}
+
 #ifdef HAVE_LIBGME
 static void mix_gme(void *udata, Uint8 *stream, int len)
 {
@@ -559,8 +588,9 @@ void I_ShutdownDigMusic(void)
 #endif
 	if (!music)
 		return;
-	is_looping = false;
+	is_fadingin = is_fadingout = is_looping = false;
 	music_bytes = 0;
+	SDL_RemoveTimer(fading_id);
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
 	Mix_FreeMusic(music);
@@ -847,6 +877,51 @@ boolean I_SetSongTrack(int track)
 #endif
 	(void)track;
 	return false;
+}
+
+void I_StopFadingMusic()
+{
+	if (fading_id)
+		SDL_RemoveTimer(fading_id);
+	is_fadingout = is_fadingin = false;
+	fading_target = fading_id = -1;
+}
+
+void I_FadeMusic(UINT8 fading_target_in)
+{
+	I_StopFadingMusic();
+	if (!is_fadingout || fading_target != fading_target_in)
+	{
+		fading_id = SDL_AddTimer(1, music_fadeout, NULL);
+		if (fading_id)
+		{
+			is_fadingout = true;
+			fading_target = fading_target_in;
+		}
+	}
+}
+
+void I_FadeInMusic(UINT8 fading_target_in)
+{
+	I_StopFadingMusic();
+	// if (!is_fadingin)
+	// {
+
+	// }
+}
+
+void I_FadeOutMusic(UINT8 fading_target_in)
+{
+	I_StopFadingMusic();
+	if (!is_fadingout || fading_target != fading_target_in)
+	{
+		fading_id = SDL_AddTimer(1, music_fadeout, NULL);
+		if (fading_id)
+		{
+			is_fadingout = true;
+			fading_target = fading_target_in;
+		}
+	}
 }
 
 //
