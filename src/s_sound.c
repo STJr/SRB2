@@ -1590,3 +1590,20 @@ boolean S_MusicPaused(void)
 {
 	return I_MusicPaused();
 }
+
+const char *S_MusicName(void)
+{
+	// char *result[7];
+	// strncpy(result, music_name, 7);
+	// result[6] = 0;
+	// return (const char *)&result;
+	return music_name;
+}
+
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
+{
+	return (
+		(checkDigi ? W_CheckNumForName(va("O_%s", mname)) != LUMPERROR : false)
+		|| (checkMIDI ? W_CheckNumForName(va("D_%s", mname)) != LUMPERROR : false)
+	);
+}

@@ -157,6 +157,12 @@ boolean S_MusicPlaying(void);
 // Gets music pause status
 boolean S_MusicPaused(void);
 
+// Gets currently playing music name
+const char *S_MusicName(void);
+
+// Checks if music name exists
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+
 //
 // Updates music & sounds
 //
