@@ -474,6 +474,7 @@ void I_StopSong(INT32 handle)
 	stop_midi();
 }
 
+
 // Is the song playing?
 #if 0
 int I_QrySongPlaying(int handle)
@@ -559,4 +560,19 @@ boolean I_SetSongPosition(UINT32 position)
 UINT32 I_GetSongPosition(void)
 {
     return 0.;
+}
+
+boolean I_MIDIPlaying(void)
+{
+	return (boolean)currsong && music_started;
+}
+
+boolean I_MusicPlaying(void)
+{
+	return (boolean)currsong && music_started;
+}
+
+boolean I_MusicPaused(void)
+{
+	return false;
 }

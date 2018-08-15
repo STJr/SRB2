@@ -1649,6 +1649,22 @@ void I_StopSong(INT32 handle)
 #endif
 }
 
+boolean I_MIDIPlaying(void)
+{
+	// todo: no way to tell specifically if MIDI is playing, implement midimode
+	return !nomidimusic && nodigimusic && musicStarted;
+}
+
+boolean I_MusicPlaying(void)
+{
+	return musicStarted;
+}
+
+boolean I_MusicPaused(void)
+{
+	return Mix_PausedMusic();
+}
+
 void I_UnRegisterSong(INT32 handle)
 {
 #ifdef HAVE_MIXER
