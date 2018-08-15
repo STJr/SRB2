@@ -145,3 +145,14 @@ boolean I_SetSongTrack(int track)
 	(void)track;
 	return false;
 }
+
+boolean I_SetSongPosition(float position)
+{
+    (void)position;
+    return false;
+}
+
+float I_GetSongPosition(void)
+{
+    return 0.0f;
+}

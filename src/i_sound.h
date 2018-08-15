@@ -206,6 +206,10 @@ void I_ShutdownDigMusic(void);
 
 boolean I_SetSongSpeed(float speed);
 
+boolean I_SetSongPosition(float position);
+
+float I_GetSongPosition(void);
+
 boolean I_SetSongTrack(INT32 track);
 
 /**	\brief The I_StartDigSong function

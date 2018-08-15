@@ -756,6 +756,40 @@ boolean I_SetSongSpeed(float speed)
 	return true;
 }
 
+boolean I_SetSongPosition(float position)
+{
+	if(position > 0.0f) 
+	{
+		FMOD_RESULT e;
+		position *= 1000.0f;
+		e = FMOD_Channel_SetPosition(music_channel, (UINT32)position, FMOD_TIMEUNIT_MS);
+		if (e == FMOD_OK)
+			return true;
+		else if (e == FMOD_ERR_UNSUPPORTED // Only music modules, numbnuts!
+				|| e == FMOD_ERR_INVALID_POSITION) // Out-of-bounds!
+			return false;
+		else // Congrats, you horribly broke it somehow
+		{
+			FMR_MUSIC(e);
+			return false;
+		}
+		
+	}
+	(void)position;
+	return false;
+}
+
+float I_GetSongPosition(void)
+{
+	FMOD_RESULT e;
+	UINT32 fmposition = 0.0;
+	e = FMOD_Channel_GetPosition(music_channel, &fmposition, FMOD_TIMEUNIT_MS);
+	if (e == FMOD_OK)
+		return fmposition / 1000.0f;
+	else
+		return 0.0f;
+}
+
 boolean I_SetSongTrack(INT32 track)
 {
 	if (track != current_track) // If the track's already playing, then why bother?
