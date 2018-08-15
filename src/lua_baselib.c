@@ -2293,7 +2293,7 @@ static int lib_sPauseMusic(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		S_PauseAudio();
 	else
-		lua_pushboolean(L, false);
+		lua_pushnil(L);
 	return 1;
 }
 
