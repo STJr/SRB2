@@ -1192,6 +1192,9 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 	lua_settop(gL, 0);
 	return hooked;
 }
+
+#ifdef HAVE_LUA_MUSICPLUS
+
 // Hook for music changes
 boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping)
 {
@@ -1239,5 +1242,7 @@ boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusi
 	newmusic[6] = 0;
 	return hooked;
 }
+
+#endif
 
 #endif

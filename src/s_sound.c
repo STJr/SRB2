@@ -1385,7 +1385,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 		return;
 
 	char newmusic[7];
-#ifdef HAVE_BLUA
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
 		return;
 #else

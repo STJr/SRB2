@@ -2265,6 +2265,7 @@ static int lib_sSpeedMusic(lua_State *L)
 	return 1;
 }
 
+#ifdef HAVE_LUA_MUSICPLUS
 static int lib_sSetMusicPosition(lua_State *L)
 {
 	UINT32 position = 0;
@@ -2470,7 +2471,7 @@ static int lib_sMusicExists(lua_State *L)
 	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
 	return 1;
 }
-
+#endif
 static int lib_sOriginPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2848,6 +2849,7 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
+#ifdef HAVE_LUA_MUSICPLUS
 	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_PauseMusic",lib_sPauseMusic},
@@ -2859,6 +2861,7 @@ static luaL_Reg lib[] = {
 	{"S_MusicPaused",lib_sMusicPaused},
 	{"S_MusicName",lib_sMusicName},
 	{"S_MusicExists",lib_sMusicExists},
+#endif
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
