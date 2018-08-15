@@ -8927,7 +8927,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
-	else if (player->powers[pw_carry] == CR_NIGHTSMODE)
+	else if (player->powers[pw_carry] == CR_NIGHTSMODE
+		|| ((maptol & TOL_NIGHTS) && player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1]))
 		dist = 320<<FRACBITS;
 	else
 	{
