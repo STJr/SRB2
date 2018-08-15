@@ -738,10 +738,9 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_SetSongPosition(UINT32 position)
 {
-	int r;
-	Mix_RewindMusic(); // needed for MP3
-	r = Mix_SetMusicPosition(position*1000);
-	return r == 0;
+	Mix_PlayMusic(music, 0);
+	Mix_SetMusicPosition((float)(position/1000.0L));
+	return 1;
 }
 
 UINT32 I_GetSongPosition(void)
