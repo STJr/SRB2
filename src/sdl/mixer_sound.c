@@ -62,7 +62,7 @@
 
 UINT8 sound_started = false;
 
-static boolean midimode, music_paused;
+static boolean midimode;
 static Mix_Music *music;
 static UINT8 music_volume, midi_volume, sfx_volume;
 static float loop_point;
@@ -88,7 +88,7 @@ void I_StartupSound(void)
 		return;
 	}
 
-	midimode = music_paused = false;
+	midimode = false;
 	music = NULL;
 	music_volume = midi_volume = sfx_volume = 0;
 
@@ -488,9 +488,6 @@ void I_PauseSong(INT32 handle)
 	(void)handle;
 	if(!midimode)
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
-	if(music) 
-		// music is not paused if there's no music to begin with, see win_snd.c:I_PauseSong
-		music_paused = true;
 	Mix_PauseMusic();
 	songpaused = true;
 }
@@ -506,7 +503,6 @@ void I_ResumeSong(INT32 handle)
 			// midimode and music must be checked in case nothing is actually playing
 			CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 	}
-	music_paused = false;
 	Mix_ResumeMusic();
 	songpaused = false;
 }
@@ -533,7 +529,7 @@ boolean I_MusicPlaying(void)
 
 boolean I_MusicPaused(void)
 {
-	return music_paused;
+	return Mix_PausedMusic();
 }
 
 //
@@ -583,7 +579,6 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	if (lumpnum == LUMPERROR)
 		return false;
 	midimode = false;
-	music_paused = false;
 
 	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
 	len = W_LumpLength(lumpnum);
@@ -893,7 +888,6 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	(void)handle;
 
 	midimode = true;
-	music_paused = false;
 
 	if (Mix_PlayMusic(music, looping ? -1 : 0) == -1)
 	{
