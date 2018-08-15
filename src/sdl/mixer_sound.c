@@ -793,9 +793,15 @@ boolean I_SetSongPosition(UINT32 position)
 {
 	if(midimode || !music)
 		return false;
-	Mix_PlayMusic(music, 0);
-	Mix_SetMusicPosition((float)(position/1000.0L));
-	music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPositon)
+	Mix_RewindMusic(); // needed for mp3
+	if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
+		music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPositon)
+	else
+		// NOTE: This block fires on incorrect song format,
+		// NOT if position input is greater than song length.
+		// This means music_bytes will be inaccurate because we can't compare to
+		// max song length. So, don't write your scripts to seek beyond the song.
+		music_bytes = 0;
 	return true;
 }
 
