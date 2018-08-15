@@ -6046,6 +6046,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			if (player->capsule->health > sphereresult)
 				player->capsule->health = sphereresult;
 
+			// did player somehow get more spheres? deduct that too
+			if (player->spheres > 0)
+				player->capsule->health -= player->spheres;
+
 			if (player->capsule->health <= 0)
 			{
 				player->capsule->flags &= ~MF_NOGRAVITY;
