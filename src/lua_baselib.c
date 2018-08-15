@@ -2292,6 +2292,8 @@ static int lib_sPauseMusic(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		S_PauseAudio();
+	else
+		lua_pushboolean(L, false);
 	return 1;
 }
 
@@ -2302,11 +2304,19 @@ static int lib_sResumeMusic(lua_State *L)
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
 		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	UINT32 position = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
 		S_ResumeAudio();
+	else
+		lua_pushboolean(L, false);
 	return 1;
 }
 
