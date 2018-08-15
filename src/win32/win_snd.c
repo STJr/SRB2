@@ -758,6 +758,10 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_SetSongPosition(UINT32 position)
 {
+	if(midimode)
+		// Dummy out; this works for some MIDI, but not others.
+		// SDL does not support this for any MIDI.
+		return false;
 	FMOD_RESULT e;
 	e = FMOD_Channel_SetPosition(music_channel, position, FMOD_TIMEUNIT_MS);
 	if (e == FMOD_OK)
@@ -774,6 +778,9 @@ boolean I_SetSongPosition(UINT32 position)
 
 UINT32 I_GetSongPosition(void)
 {
+	if(midimode)
+		// Dummy out because unsupported, even though FMOD does this correctly.
+		return 0;
 	FMOD_RESULT e;
 	unsigned int fmposition = 0;
 	e = FMOD_Channel_GetPosition(music_channel, &fmposition, FMOD_TIMEUNIT_MS);
