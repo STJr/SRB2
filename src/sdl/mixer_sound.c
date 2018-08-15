@@ -497,6 +497,16 @@ void I_ResumeSong(INT32 handle)
 	songpaused = false;
 }
 
+boolean I_MIDIPlaying(void)
+{
+	return midimode && music;
+}
+
+boolean I_MusicPlaying(void)
+{
+	return (boolean)music;
+}
+
 //
 // Digital Music
 //

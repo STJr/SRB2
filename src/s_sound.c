@@ -1575,3 +1575,13 @@ void S_ResumeAudio(void)
 	// resume cd music
 	I_ResumeCD();
 }
+
+boolean S_MIDIPlaying(void)
+{
+	return I_MIDIPlaying();
+}
+
+boolean S_MusicPlaying(void)
+{
+	return I_MusicPlaying();
+}
