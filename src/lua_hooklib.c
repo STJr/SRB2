@@ -59,6 +59,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"MobjMoveBlocked",
 	"MapThingSpawn",
 	"FollowMobj",
+	"MusicChange",
 	NULL
 };
 
@@ -1189,6 +1190,42 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 		}
 
 	lua_settop(gL, 0);
+	return hooked;
+}
+// Hook for music changes
+boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic) // UINT16 mflags, boolean looping)
+{
+	hook_p hookp;
+	boolean hooked = false;
+
+	strncpy(newmusic, newname, 7);
+
+	if (!gL || !(hooksAvailable[hook_MusicChange/8] & (1<<(hook_MusicChange%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MusicChange)
+		{
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushstring(gL, oldname);
+			lua_pushstring(gL, newname);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+				lua_pop(gL, 1);
+				continue;
+			}
+			if (lua_isboolean(gL, -1) && lua_toboolean(gL, -1))
+				hooked = true;
+			else if (lua_isstring(gL, -1))
+				strncpy(newmusic, lua_tostring(gL, -1), 7);
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	newmusic[6] = 0;
 	return hooked;
 }
 

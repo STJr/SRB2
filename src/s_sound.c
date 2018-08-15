@@ -38,6 +38,10 @@ extern INT32 msg_id;
 #include "p_local.h" // camera info
 #include "fastcmp.h"
 
+#ifdef HAVE_BLUA
+#include "lua_hook.h" // MusicChange hook
+#endif
+
 #ifdef HW3SOUND
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
@@ -1380,19 +1384,28 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
 		return;
 
+	char newmusic[7];
+#ifdef HAVE_BLUA
+	if(LUAh_MusicChange(music_name, mmusic, newmusic)) // todo: mflags and looping?
+		return;
+#else
+	strncpy(newmusic, mmusic, 7);	
+#endif
+	newmusic[6] = 0;
+
 	// No Music (empty string)
-	if (mmusic[0] == 0)
+	if (newmusic[0] == 0)
 	{
 		S_StopMusic();
 		return;
 	}
 
-	if (strncmp(music_name, mmusic, 6))
+	if (strncmp(music_name, newmusic, 6))
 	{
 		S_StopMusic(); // shutdown old music
-		if (!S_DigMusic(mmusic, looping) && !S_MIDIMusic(mmusic, looping))
+		if (!S_DigMusic(newmusic, looping) && !S_MIDIMusic(newmusic, looping))
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
+			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
 			return;
 		}
 	}
