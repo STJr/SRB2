@@ -144,6 +144,12 @@ boolean I_MIDIPlaying(void);
 */
 boolean I_MusicPlaying(void);
 
+/**	\brief Get music pause status
+
+	\return boolean
+*/
+boolean I_MusicPaused(void);
+
 //
 //  MIDI I/O
 //

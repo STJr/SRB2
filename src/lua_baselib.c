@@ -2324,6 +2324,21 @@ static int lib_sMusicPlaying(lua_State *L)
 	return 1;
 }
 
+static int lib_sMusicPaused(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_MusicPaused());
+	return 1;
+}
+
 static int lib_sOriginPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2706,6 +2721,7 @@ static luaL_Reg lib[] = {
 	{"S_StopMusic",lib_sStopMusic},
 	{"S_MidiPlaying",lib_sMidiPlaying},
 	{"S_MusicPlaying",lib_sMusicPlaying},
+	{"S_MusicPaused",lib_sMusicPaused},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
