@@ -799,10 +799,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (toucher->tracer) // Move the ideya over to the drone!
 					{
 						mobj_t *hnext = special->hnext;
+
 						P_SetTarget(&special->hnext, toucher->tracer);
-						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						if (!special->hnext->hnext)
+							P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						else
+							P_SetTarget(&special->hnext->hnext->target, special);
 						P_SetTarget(&special->hnext->target, special);
 						P_SetTarget(&toucher->tracer, NULL);
+
 						if (hnext)
 						{
 							special->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
@@ -958,8 +963,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
-			if (toucher->tracer)
-				return; // Don't have multiple ideya
+			if (toucher->tracer && toucher->tracer->health > 0)
+				return; // Don't have multiple ideya, unless it's the first one given (health = 0)
 
 			if (player->mare != special->threshold) // wrong mare
 				return;
