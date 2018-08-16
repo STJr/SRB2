@@ -10682,8 +10682,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->threshold = mthing->angle >> 8;
 		break;
 	case MT_IDEYAANCHOR:
-		if (mthing->angle >= 0)
-			mobj->health = mthing->angle;
+		mobj->health = mthing->extrainfo;
 		break;
 	case MT_NIGHTSDRONE:
 		{
