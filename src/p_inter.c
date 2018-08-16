@@ -3409,7 +3409,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		return;
 
 	// If no health, don't spawn ring!
-	if (((maptol & TOL_NIGHTS) && player->spheres <= 0) || (!(maptol & TOL_NIGHTS) && player->rings <= 0))
+	if (player->rings <= 0)
 		num_rings = 0;
 
 	if (num_rings > 32 && player->powers[pw_carry] != CR_NIGHTSFALL)

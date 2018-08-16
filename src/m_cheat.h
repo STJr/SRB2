@@ -51,7 +51,6 @@ void Command_Savecheckpoint_f(void);
 void Command_Getallemeralds_f(void);
 void Command_Resetemeralds_f(void);
 void Command_Setrings_f(void);
-void Command_Setspheres_f(void);
 void Command_Setlives_f(void);
 void Command_Setcontinues_f(void);
 void Command_Devmode_f(void);
