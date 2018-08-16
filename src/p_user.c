@@ -5978,6 +5978,13 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_ATTACK);
 		}
 	}
+	else
+	{
+		if (!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING))
+			player->pflags |= PF_JUMPED;
+		if (player->panim != PA_ROLL)
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+	}
 
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
