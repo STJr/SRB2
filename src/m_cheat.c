@@ -880,11 +880,20 @@ void Command_Setrings_f(void)
 
 	if (COM_Argc() > 1)
 	{
-		// P_GivePlayerRings does value clamping
-		players[consoleplayer].rings = 0;
-		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
-		if (!G_IsSpecialStage(gamemap) || !(maptol & TOL_NIGHTS))
-			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
+		if (!(maptol & TOL_NIGHTS))
+		{
+			// P_GivePlayerRings does value clamping
+			players[consoleplayer].rings = 0;
+			P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
+			if (!G_IsSpecialStage(gamemap))
+				players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
+		}
+		else
+		{
+			players[consoleplayer].spheres = 0;
+			P_GivePlayerSpheres(&player[consoleplayer], atoi(COM_Argv(1)));
+			// no totalsphere addition to revert
+		}
 
 		G_SetGameModified(multiplayer);
 	}
