@@ -9943,7 +9943,8 @@ void P_PlayerThink(player_t *player)
 			|| player->panim == PA_PAIN
 			|| !player->mo->health
 			|| player->climbing
-			|| player->pflags & (PF_SPINNING|PF_SLIDING))
+			|| player->pflags & (PF_SPINNING|PF_SLIDING)
+			|| player->bumpertime)
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
 			else if (currentlyonground || player->powers[pw_tailsfly])
 				player->pflags |= PF_APPLYAUTOBRAKE;
