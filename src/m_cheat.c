@@ -892,7 +892,8 @@ void Command_Setrings_f(void)
 		{
 			players[consoleplayer].spheres = 0;
 			P_GivePlayerSpheres(&player[consoleplayer], atoi(COM_Argv(1)));
-			// no totalsphere addition to revert
+			if (!G_IsSpecialStage(gamemap))
+				players[consoleplayer].totalsphere -= atoi(COM_Argv(1)); //undo totalsphere addition done in P_GivePlayerRings
 		}
 
 		G_SetGameModified(multiplayer);

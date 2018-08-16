@@ -963,6 +963,8 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 
 	player->spheres += num_spheres;
 
+	player->totalsphere += num_spheres;
+
 	// Can only get up to 9999 spheres, sorry!
 	if (player->spheres > 9999)
 		player->spheres = 9999;
