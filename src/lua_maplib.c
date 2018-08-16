@@ -327,6 +327,7 @@ static int sector_get(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 	enum sector_e field = luaL_checkoption(L, 2, sector_opt[0], sector_opt);
+	INT16 i;
 
 	if (!sector)
 	{
@@ -349,11 +350,23 @@ static int sector_get(lua_State *L)
 		lua_pushfixed(L, sector->ceilingheight);
 		return 1;
 	case sector_floorpic: // floorpic
-		lua_pushlstring(L, levelflats[sector->floorpic].name, 8);
+	{
+		levelflat_t *levelflat = &levelflats[sector->floorpic];
+		for (i = 0; i < 8; i++)
+			if (!levelflat->name[i])
+				break;
+		lua_pushlstring(L, levelflat->name, i);
 		return 1;
+	}
 	case sector_ceilingpic: // ceilingpic
-		lua_pushlstring(L, levelflats[sector->ceilingpic].name, 8);
+	{
+		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
+		for (i = 0; i < 8; i++)
+			if (!levelflat->name[i])
+				break;
+		lua_pushlstring(L, levelflat->name, i);
 		return 1;
+	}
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
