@@ -103,15 +103,13 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
-static void P_ResetFading(ffloor_t *rover, fade_t *data);
-#define P_RemoveFading(l) P_ResetFading(l, NULL);
-static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade);
-static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data);
+#define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL);
+static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
+	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha);
+static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
 	INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade);
+	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3136,23 +3134,23 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 
 				if (speed > 0)
-					P_AddMasterFader(rover, secnum, j,
+					P_AddFakeFloorFader(rover, secnum, j,
 						destvalue, speed,
-						(line->flags & ML_BLOCKMONSTERS),   // handle FF_EXISTS
+						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						(line->flags & ML_BOUNCY),          // handle FF_SOLID
-						(line->flags & ML_EFFECT1),         // handle spawnflags
-						(line->flags & ML_EFFECT2));        // enable flags on fade-in finish only
+						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
+						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
+						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				else
 				{
-					P_RemoveFading(rover);
-					P_DoFakeFloorAlpha(rover,
-						destvalue, 0,   // set alpha immediately
-						(line->flags & ML_BLOCKMONSTERS),   // handle FF_EXISTS
+					P_RemoveFakeFloorFader(rover);
+					P_FadeFakeFloor(rover,
+						destvalue, 0, // set alpha immediately
+						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						(line->flags & ML_BOUNCY),          // handle FF_SOLID
-						(line->flags & ML_EFFECT1),         // handle spawnflags
-						(line->flags & ML_EFFECT2));        // enable flags on fade-in finish only
+						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
+						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
+						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				}
 			}
 			break;
@@ -3187,7 +3185,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					return;
 				}
 
-				P_RemoveFading(rover);
+				P_RemoveFakeFloorFader(rover);
 			}
 			break;
 		}
@@ -7198,7 +7196,7 @@ void T_Disappear(disappear_t *d)
  * \param line	line to search for target faders
  * \param data	pointer to set new fadingdata to. Can be NULL to erase.
  */
-static void P_ResetFading(ffloor_t *rover, fade_t *data)
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data)
 {
 	// find any existing thinkers and remove them, then replace with new data
 	if(((fade_t *)rover->fadingdata) != data)
@@ -7210,9 +7208,8 @@ static void P_ResetFading(ffloor_t *rover, fade_t *data)
 	}
 }
 
-static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade)
+static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
+	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	boolean stillfading = false;
 
@@ -7226,7 +7223,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		{
 			rover->alpha = destvalue;
 
-			if (dosolid)
+			if (docollision)
 			{
 				if (rover->spawnflags & FF_SOLID)
 					rover->flags &= ~FF_SOLID;
@@ -7251,7 +7248,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		{
 			rover->alpha = destvalue;
 
-			if (dosolid)
+			if (docollision)
 			{
 				if (rover->spawnflags & FF_SOLID)
 					rover->flags |= FF_SOLID;
@@ -7316,7 +7313,7 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 			// 	rover->flags |= FF_CUTSPRITES;
 		}
 
-		if (dosolid)
+		if (docollision)
 		{
 			if (doghostfade) // remove interaction flags during fade
 			{
@@ -7346,21 +7343,19 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	return stillfading;
 }
 
-/** Adds master fader thinker.
+/** Adds fake floor fader thinker.
   *
-  * \param destvalue	transparency value to fade to
-  * \param speed		speed to fade by
-  * \param doexists	handle FF_EXISTS
-  * \param dotranslucent	handle FF_TRANSLUCENT
-  * \param dosolid	handle FF_SOLID
-  * \param dospawnflags	handle spawnflags
-  * \param doghostfade	enable flags when fade-in is finished; never on fade-out
-  * \param line			line to target FOF
+  * \param destvalue    transparency value to fade to
+  * \param speed        speed to fade by
+  * \param doexists	    handle FF_EXISTS
+  * \param dotranslucent handle FF_TRANSLUCENT
+  * \param docollision handle interactive flags
+  * \param doghostfade  no interactive flags during fading
+  * \param exactalpha   use exact alpha values (opengl)
   */
-static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
 	INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade)
+	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
@@ -7372,12 +7367,12 @@ static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum
 	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 	d->doexists = doexists;
 	d->dotranslucent = dotranslucent;
-	d->dosolid = dosolid;
-	d->dospawnflags = dospawnflags;
+	d->docollision = docollision;
 	d->doghostfade = doghostfade;
+	d->exactalpha = exactalpha;
 
 	// find any existing thinkers and remove them, then replace with new data
-	P_ResetFading(rover, d);
+	P_ResetFakeFloorFader(rover, d);
 
 	P_AddThinker(&d->thinker);
 }
@@ -7385,12 +7380,12 @@ static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum
 /** Makes a FOF fade
   *
   * \param d Fade thinker.
-  * \sa P_AddMasterFader
+  * \sa P_AddFakeFloorFader
   */
 void T_Fade(fade_t *d)
 {
-	if (d->rover && !P_DoFakeFloorAlpha(d->rover, d->destvalue, d->speed, d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags, d->doghostfade))
-		P_RemoveFading(d->rover);
+	if (d->rover && !P_FadeFakeFloor(d->rover, d->destvalue, d->speed, d->doexists, d->dotranslucent, d->docollision, d->doghostfade, d->exactalpha))
+		P_RemoveFakeFloorFader(d->rover);
 }
 
 /*

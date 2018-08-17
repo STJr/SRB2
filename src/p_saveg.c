@@ -1572,9 +1572,9 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
-	WRITEUINT8(save_p, ht->dosolid);
-	WRITEUINT8(save_p, ht->dospawnflags);
+	WRITEUINT8(save_p, ht->docollision);
 	WRITEUINT8(save_p, ht->doghostfade);
+	WRITEUINT8(save_p, ht->exactalpha);
 }
 
 //
@@ -2575,9 +2575,9 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->speed = READINT16(save_p);
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
-	ht->dosolid = READUINT8(save_p);
-	ht->dospawnflags = READUINT8(save_p);
+	ht->docollision = READUINT8(save_p);
 	ht->doghostfade = READUINT8(save_p);
+	ht->exactalpha = READUINT8(save_p);
 
 	sector_t *ss = LoadSector(ht->sectornum);
 	if (ss)
