@@ -2075,7 +2075,6 @@ void G_PlayerReborn(INT32 player)
 	INT32 exiting;
 	INT16 numboxes;
 	INT16 totalring;
-	INT16 totalsphere;
 	UINT8 laps;
 	UINT8 mare;
 	UINT8 skincolor;
@@ -2104,7 +2103,6 @@ void G_PlayerReborn(INT32 player)
 	numboxes = players[player].numboxes;
 	laps = players[player].laps;
 	totalring = players[player].totalring;
-	totalsphere = players[player].totalsphere;
 
 	skincolor = players[player].skincolor;
 	skin = players[player].skin;
@@ -2189,7 +2187,6 @@ void G_PlayerReborn(INT32 player)
 	p->numboxes = numboxes;
 	p->laps = laps;
 	p->totalring = totalring;
-	p->totalsphere = totalsphere;
 
 	p->mare = mare;
 	if (bot)
