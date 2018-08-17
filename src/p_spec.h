@@ -453,14 +453,17 @@ void T_Disappear(disappear_t *d);
 typedef struct
 {
 	thinker_t thinker;  ///< Thinker structure for effect.
-	INT32 affectee;     ///< Number of affected line
+	ffloor_t *rover;    ///< Target ffloor
+	INT32 sectornum;    ///< Number of ffloor target sector
+	INT32 ffloornum;    ///< Number of ffloor of target sector
+	INT32 alpha;        ///< Internal alpha counter
 	INT16 destvalue;    ///< Transparency value to fade to
 	INT16 speed;        ///< Speed to fade by
-	boolean doexists;      ///< Handle FF_EXISTS handling
-	boolean dotranslucent; ///< Handle FF_TRANSLUCENT handling
-	boolean dosolid;       ///< Handle FF_SOLID handling
-	boolean dospawnflags;  ///< Enable spawnflags handling
-	boolean doghostfade;  ///< Set flags only when fade-in is finished; never during fade-out
+	boolean doexists;   ///< Handle FF_EXISTS
+	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean docollision; ///< Handle interactive flags
+	boolean doghostfade; ///< No interactive flags during fading
+	boolean exactalpha; ///< Use exact alpha values (opengl)
 } fade_t;
 
 void T_Fade(fade_t *d);

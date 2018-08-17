@@ -693,7 +693,6 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->floordata = NULL;
 		ss->ceilingdata = NULL;
 		ss->lightingdata = NULL;
-		ss->fadingdata = NULL;
 
 		ss->linecount = 0;
 		ss->lines = NULL;

@@ -177,6 +177,8 @@ typedef struct ffloor_s
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with
+
+	void *fadingdata; // fading FOF thinker
 } ffloor_t;
 
 
@@ -308,7 +310,6 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
-	void *fadingdata; // fading FOF thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;
