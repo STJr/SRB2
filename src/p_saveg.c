@@ -2578,8 +2578,8 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->doghostfade = READUINT8(save_p);
 
 	line_t *ffloorline = LoadLine(ht->affectee);
-	if (ffloorline && ffloorline->frontsector)
-		ffloorline->frontsector->fadingdata = ht;
+	if (ffloorline)
+		ffloorline->fadingdata = ht;
 
 	P_AddThinker(&ht->thinker);
 }

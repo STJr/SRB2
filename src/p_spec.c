@@ -3103,43 +3103,89 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 452: // Fade FOF
 		{
-			INT32 s, j;
-			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
-				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
-					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-					{
-						if (sides[line->sidenum[0]].rowoffset>>FRACBITS > 0)
-							P_AddMasterFader(sides[line->sidenum[0]].textureoffset>>FRACBITS,
-								sides[line->sidenum[0]].rowoffset>>FRACBITS,
-								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
-								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
-								(line->flags & ML_EFFECT1), 		// handle spawnflags
-								(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
-								(INT32)(sectors[s].lines[j]-lines));
-						else
-						{
-							P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
-							P_FindFakeFloorsDoAlpha(sides[line->sidenum[0]].textureoffset>>FRACBITS,
-								0,									// set alpha immediately
-								(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-								!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
-								(line->flags & ML_BOUNCY), 			// handle FF_SOLID
-								(line->flags & ML_EFFECT1), 		// handle spawnflags
-								(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
-								(INT32)(sectors[s].lines[j]-lines));
-						}
-					}
+			INT16 destvalue = (INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS);
+			INT16 speed = (INT16)(sides[line->sidenum[1]].rowoffset>>FRACBITS);
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to crumble
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				if (speed > 0)
+					P_AddMasterFader(destvalue, speed,
+						(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
+						(line->flags & ML_BOUNCY), 			// handle FF_SOLID
+						(line->flags & ML_EFFECT1), 		// handle spawnflags
+						(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
+						(INT32)(rover->master-lines));
+				else
+				{
+					P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
+					P_FindFakeFloorsDoAlpha(destvalue, 0,   // set alpha immediately
+						(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
+						(line->flags & ML_BOUNCY), 			// handle FF_SOLID
+						(line->flags & ML_EFFECT1), 		// handle spawnflags
+						(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
+						(INT32)(sectors[s].lines[j]-lines));
+				}
+			}
 			break;
 		}
 
 		case 453: // Stop fading FOF
 		{
-			INT32 s, j;
-			for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0 ;)
-				for (j = 0; (unsigned)j < sectors[s].linecount; j++)
-					if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-						P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to crumble
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				P_RemoveFading(&lines[(INT32)(sectors[s].lines[j]-lines)]);
+			}
 			break;
 		}
 
