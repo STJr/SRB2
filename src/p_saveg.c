@@ -1567,9 +1567,13 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEINT32(save_p, ht->affectee);
-	WRITEINT32(save_p, ht->destvalue);
-	WRITEINT32(save_p, ht->speed);
-	WRITEUINT32(save_p, ht->handleflags);
+	WRITEINT16(save_p, ht->destvalue);
+	WRITEINT16(save_p, ht->speed);
+	WRITEUINT8(save_p, ht->doexists);
+	WRITEUINT8(save_p, ht->dotranslucent);
+	WRITEUINT8(save_p, ht->dosolid);
+	WRITEUINT8(save_p, ht->dospawnflags);
+	WRITEUINT8(save_p, ht->doghostfade);
 }
 
 //
@@ -2565,9 +2569,18 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->affectee = READINT32(save_p);
-	ht->destvalue = READINT32(save_p);
-	ht->speed = READINT32(save_p);
-	ht->handleflags = READUINT32(save_p);
+	ht->destvalue = READINT16(save_p);
+	ht->speed = READINT16(save_p);
+	ht->doexists = READUINT8(save_p);
+	ht->dotranslucent = READUINT8(save_p);
+	ht->dosolid = READUINT8(save_p);
+	ht->dospawnflags = READUINT8(save_p);
+	ht->doghostfade = READUINT8(save_p);
+
+	line_t *ffloorline = LoadLine(ht->affectee);
+	if (ffloorline && ffloorline->frontsector)
+		ffloorline->frontsector->fadingdata = ht;
+
 	P_AddThinker(&ht->thinker);
 }
 
@@ -2757,7 +2770,7 @@ static void P_NetUnArchiveThinkers(void)
 	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
 	for (i = 0; i < numsectors; i++)
 	{
-		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
+		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = sectors[i].fadingdata = NULL;
 	}
 
 	// read in saved thinkers
