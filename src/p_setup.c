@@ -693,7 +693,6 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->floordata = NULL;
 		ss->ceilingdata = NULL;
 		ss->lightingdata = NULL;
-		ss->fadingdata = NULL;
 
 		ss->linecount = 0;
 		ss->lines = NULL;
@@ -1311,6 +1310,8 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 #ifdef POLYOBJECTS
 		ld->polyobj = NULL;
 #endif
+
+		ld->fadingdata = NULL;
 	}
 }
 

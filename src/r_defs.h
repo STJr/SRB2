@@ -308,7 +308,6 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
-	void *fadingdata; // fading FOF thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;
@@ -444,6 +443,8 @@ typedef struct line_s
 
 	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
+
+	void *fadingdata; // fading FOF thinker
 } line_t;
 
 //
