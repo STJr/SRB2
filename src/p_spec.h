@@ -456,6 +456,7 @@ typedef struct
 	ffloor_t *rover;    ///< Target ffloor
 	INT32 sectornum;    ///< Number of ffloor target sector
 	INT32 ffloornum;    ///< Number of ffloor of target sector
+	INT32 alpha;        ///< Internal alpha counter
 	INT16 destvalue;    ///< Transparency value to fade to
 	INT16 speed;        ///< Speed to fade by
 	boolean doexists;   ///< Handle FF_EXISTS

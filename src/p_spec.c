@@ -7212,16 +7212,23 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	boolean stillfading = false;
+	INT32 alpha;
+	fade_t *fadingdata = (fade_t *)rover->fadingdata;
+
+	if (fadingdata)
+		alpha = fadingdata->alpha;
+	else
+		alpha = rover->alpha;
 
 	// routines specific to fade in and fade out
-	if (rover->alpha == destvalue)
+	if (alpha == destvalue)
 		return stillfading;
-	else if (rover->alpha > destvalue) // fade out
+	else if (alpha > destvalue) // fade out
 	{
 		// finish fading out
-		if (speed < 1 || rover->alpha - speed <= destvalue + speed)
+		if (speed < 1 || alpha - speed <= destvalue + speed)
 		{
-			rover->alpha = destvalue;
+			alpha = destvalue;
 
 			if (docollision)
 			{
@@ -7237,16 +7244,16 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		}
 		else // continue fading out
 		{
-			rover->alpha -= speed;
+			alpha -= speed;
 			stillfading = true;
 		}
 	}
 	else // fade in
 	{
 		// finish fading in
-		if (speed < 1 || rover->alpha + speed >= destvalue - speed)
+		if (speed < 1 || alpha + speed >= destvalue - speed)
 		{
-			rover->alpha = destvalue;
+			alpha = destvalue;
 
 			if (docollision)
 			{
@@ -7262,7 +7269,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		}
 		else // continue fading in
 		{
-			rover->alpha += speed;
+			alpha += speed;
 			stillfading = true;
 		}
 	}
@@ -7272,7 +7279,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	{
 		if (doexists)
 		{
-			if (rover->alpha <= 1)
+			if (alpha <= 1)
 				rover->flags &= ~FF_EXISTS;
 			else
 				rover->flags |= FF_EXISTS;
@@ -7280,7 +7287,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 
 		if (dotranslucent)
 		{
-			if (rover->alpha >= 256)
+			if (alpha >= 256)
 			{
 				//rover->flags |= (FF_CUTLEVEL | FF_CUTEXTRA);
 				rover->flags &= ~FF_TRANSLUCENT;
@@ -7330,6 +7337,37 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		}
 	}
 
+	if (!stillfading || exactalpha)
+		rover->alpha = alpha;
+	else // clamp fadingdata->alpha to software's alpha levels
+	{
+		if (alpha < 12)
+			rover->alpha = destvalue < 12 ? destvalue : 1; // Don't even draw it
+		else if (alpha < 38)
+			rover->alpha = destvalue >= 12 && destvalue < 38 ? destvalue : 25;
+		else if (alpha < 64)
+			rover->alpha = destvalue >=38 && destvalue < 64 ? destvalue : 51;
+		else if (alpha < 89)
+			rover->alpha = destvalue >= 64 && destvalue < 89 ? destvalue : 76;
+		else if (alpha < 115)
+			rover->alpha = destvalue >= 89 && destvalue < 115 ? destvalue : 102;
+		else if (alpha < 140)
+			rover->alpha = destvalue >= 115 && destvalue < 140 ? destvalue : 128;
+		else if (alpha < 166)
+			rover->alpha = destvalue >= 140 && destvalue < 166 ? destvalue : 154;
+		else if (alpha < 192)
+			rover->alpha = destvalue >= 166 && destvalue < 192 ? destvalue : 179;
+		else if (alpha < 217)
+			rover->alpha = destvalue >= 192 && destvalue < 217 ? destvalue : 204;
+		else if (alpha < 243)
+			rover->alpha = destvalue >= 217 && destvalue < 243 ? destvalue : 230;
+		else // Opaque
+			rover->alpha = destvalue >= 243 ? destvalue : 256;
+	}
+
+	if (fadingdata)
+		fadingdata->alpha = alpha;
+
 	return stillfading;
 }
 
@@ -7353,6 +7391,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->rover = rover;
 	d->sectornum = (INT32)sectornum;
 	d->ffloornum = (INT32)ffloornum;
+	d->alpha = rover->alpha;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
 	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 	d->doexists = doexists;

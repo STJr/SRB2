@@ -1568,6 +1568,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEINT32(save_p, ht->sectornum);
 	WRITEINT32(save_p, ht->ffloornum);
+	WRITEINT32(save_p, ht->alpha);
 	WRITEINT16(save_p, ht->destvalue);
 	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->doexists);
@@ -2571,6 +2572,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->thinker.function.acp1 = thinker;
 	ht->sectornum = READINT32(save_p);
 	ht->ffloornum = READINT32(save_p);
+	ht->alpha = READINT32(save_p);
 	ht->destvalue = READINT16(save_p);
 	ht->speed = READINT16(save_p);
 	ht->doexists = READUINT8(save_p);
