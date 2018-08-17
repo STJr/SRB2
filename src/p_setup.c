@@ -1310,8 +1310,6 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 #ifdef POLYOBJECTS
 		ld->polyobj = NULL;
 #endif
-
-		ld->fadingdata = NULL;
 	}
 }
 

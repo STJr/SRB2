@@ -103,14 +103,15 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
-static void P_ResetFading(line_t *line, fade_t *data);
+static void P_ResetFading(ffloor_t *rover, fade_t *data);
 #define P_RemoveFading(l) P_ResetFading(l, NULL);
-static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
+static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade, INT32 line);
-static void P_AddMasterFader(INT16 destvalue, INT16 speed,
+	boolean doghostfade);
+static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+	INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade, INT32 line);
+	boolean doghostfade);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3109,6 +3110,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to crumble
+			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3124,6 +3126,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					if (rover->master->frontsector->tag == foftag)
 						break;
+					j++;
 				}
 
 				if (!rover)
@@ -3133,25 +3136,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 
 				if (speed > 0)
-					P_AddMasterFader(destvalue, speed,
-						(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-						!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
-						(line->flags & ML_BOUNCY), 			// handle FF_SOLID
-						(line->flags & ML_EFFECT1), 		// handle spawnflags
-						(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
-						(INT32)(rover->master-lines));
+					P_AddMasterFader(rover, secnum, j,
+						destvalue, speed,
+						(line->flags & ML_BLOCKMONSTERS),   // handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+						(line->flags & ML_BOUNCY),          // handle FF_SOLID
+						(line->flags & ML_EFFECT1),         // handle spawnflags
+						(line->flags & ML_EFFECT2));        // enable flags on fade-in finish only
 				else
 				{
-					P_RemoveFading(&lines[(INT32)(rover->master-lines)]);
-					P_FindFakeFloorsDoAlpha(destvalue, 0,   // set alpha immediately
-						(line->flags & ML_BLOCKMONSTERS),	// handle FF_EXISTS
-						!(line->flags & ML_NOCLIMB),		// do not handle FF_TRANSLUCENT
-						(line->flags & ML_BOUNCY), 			// handle FF_SOLID
-						(line->flags & ML_EFFECT1), 		// handle spawnflags
-						(line->flags & ML_EFFECT2), 		// enable flags on fade-in finish only
-						(INT32)(rover->master-lines));
+					P_RemoveFading(rover);
+					P_DoFakeFloorAlpha(rover,
+						destvalue, 0,   // set alpha immediately
+						(line->flags & ML_BLOCKMONSTERS),   // handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+						(line->flags & ML_BOUNCY),          // handle FF_SOLID
+						(line->flags & ML_EFFECT1),         // handle spawnflags
+						(line->flags & ML_EFFECT2));        // enable flags on fade-in finish only
 				}
-				break;
 			}
 			break;
 		}
@@ -3185,8 +3187,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					return;
 				}
 
-				P_RemoveFading(&lines[(INT32)(rover->master-lines)]);
-				break;
+				P_RemoveFading(rover);
 			}
 			break;
 		}
@@ -5036,7 +5037,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	ffloor->spawnflags = ffloor->flags = flags;
 	ffloor->master = master;
 	ffloor->norender = INFTICS;
-
+	ffloor->fadingdata = NULL;
 
 	// Scan the thinkers to check for special conditions applying to this FOF.
 	// If we have thinkers sorted by sector, just check the relevant ones;
@@ -7197,15 +7198,15 @@ void T_Disappear(disappear_t *d)
  * \param line	line to search for target faders
  * \param data	pointer to set new fadingdata to. Can be NULL to erase.
  */
-static void P_ResetFading(line_t *line, fade_t *data)
+static void P_ResetFading(ffloor_t *rover, fade_t *data)
 {
 	// find any existing thinkers and remove them, then replace with new data
-	if(((fade_t *)line->fadingdata) != data)
+	if(((fade_t *)rover->fadingdata) != data)
 	{
-		if(&((fade_t *)line->fadingdata)->thinker)
-			P_RemoveThinker(&((fade_t *)line->fadingdata)->thinker);
+		if(&((fade_t *)rover->fadingdata)->thinker)
+			P_RemoveThinker(&((fade_t *)rover->fadingdata)->thinker);
 
-		line->fadingdata = data;
+		rover->fadingdata = data;
 	}
 }
 
@@ -7352,28 +7353,6 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	return result;
 }
 
-static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade, INT32 line)
-{
-	ffloor_t *rover;
-	register INT32 s;
-	INT32 affectedffloors = 0;
-
-	for (s = -1; (s = P_FindSectorFromLineTag(&lines[line], s)) >= 0 ;)
-	{
-		for (rover = sectors[s].ffloors; rover; rover = rover->next)
-		{
-			if (rover->master != &lines[line])
-				continue;
-
-			affectedffloors += (INT32)P_DoFakeFloorAlpha(rover, destvalue, speed, doexists, dotranslucent, dosolid, dospawnflags, doghostfade);
-		}
-	}
-
-	return affectedffloors;
-}
-
 /** Adds master fader thinker.
   *
   * \param destvalue	transparency value to fade to
@@ -7385,14 +7364,17 @@ static INT32 P_FindFakeFloorsDoAlpha(INT16 destvalue, INT16 speed,
   * \param doghostfade	enable flags when fade-in is finished; never on fade-out
   * \param line			line to target FOF
   */
-static void P_AddMasterFader(INT16 destvalue, INT16 speed,
+static void P_AddMasterFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+	INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
-	boolean doghostfade, INT32 line)
+	boolean doghostfade)
 {
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
-	d->affectee = line;
+	d->rover = rover;
+	d->sectornum = (INT32)sectornum;
+	d->ffloornum = (INT32)ffloornum;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
 	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 	d->doexists = doexists;
@@ -7402,7 +7384,7 @@ static void P_AddMasterFader(INT16 destvalue, INT16 speed,
 	d->doghostfade = doghostfade;
 
 	// find any existing thinkers and remove them, then replace with new data
-	P_ResetFading(&lines[d->affectee], d);
+	P_ResetFading(rover, d);
 
 	P_AddThinker(&d->thinker);
 }
@@ -7414,13 +7396,8 @@ static void P_AddMasterFader(INT16 destvalue, INT16 speed,
   */
 void T_Fade(fade_t *d)
 {
-	INT32 affectedffloors = P_FindFakeFloorsDoAlpha(d->destvalue, d->speed,
-		d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags,
-		d->doghostfade, d->affectee);
-
-	// no more ffloors to fade? remove myself
-	if (affectedffloors == 0)
-		P_RemoveFading(&lines[d->affectee]);
+	if (d->rover && !P_DoFakeFloorAlpha(d->rover, d->destvalue, d->speed, d->doexists, d->dotranslucent, d->dosolid, d->dospawnflags, d->doghostfade))
+		P_RemoveFading(d->rover);
 }
 
 /*

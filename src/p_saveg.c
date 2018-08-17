@@ -1566,7 +1566,8 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEINT32(save_p, ht->affectee);
+	WRITEINT32(save_p, ht->sectornum);
+	WRITEINT32(save_p, ht->ffloornum);
 	WRITEINT16(save_p, ht->destvalue);
 	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->doexists);
@@ -2568,7 +2569,8 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 {
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->affectee = READINT32(save_p);
+	ht->sectornum = READINT32(save_p);
+	ht->ffloornum = READINT32(save_p);
 	ht->destvalue = READINT16(save_p);
 	ht->speed = READINT16(save_p);
 	ht->doexists = READUINT8(save_p);
@@ -2577,9 +2579,22 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->dospawnflags = READUINT8(save_p);
 	ht->doghostfade = READUINT8(save_p);
 
-	line_t *ffloorline = LoadLine(ht->affectee);
-	if (ffloorline)
-		ffloorline->fadingdata = ht;
+	sector_t *ss = LoadSector(ht->sectornum);
+	if (ss)
+	{
+		size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
+		ffloor_t *rover;
+		for (rover = ss->ffloors; rover; rover = rover->next)
+		{
+			if (j == ht->ffloornum)
+			{
+				ht->rover = rover;
+				rover->fadingdata = ht;
+				break;
+			}
+			j++;
+		}
+	}
 
 	P_AddThinker(&ht->thinker);
 }
@@ -2771,12 +2786,6 @@ static void P_NetUnArchiveThinkers(void)
 	for (i = 0; i < numsectors; i++)
 	{
 		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
-	}
-
-	// same for line thinker pointers
-	for (i = 0; i < numlines; i++)
-	{
-		lines[i].fadingdata = NULL;
 	}
 
 	// read in saved thinkers
