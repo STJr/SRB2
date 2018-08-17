@@ -7214,74 +7214,34 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dosolid, boolean dospawnflags,
 	boolean doghostfade)
 {
-	boolean result = false;
+	boolean stillfading = false;
 
+	// routines specific to fade in and fade out
 	if (rover->alpha == destvalue)
-		return result;
-	// fade out
-	else if (rover->alpha > destvalue)
+		return stillfading;
+	else if (rover->alpha > destvalue) // fade out
 	{
 		// finish fading out
 		if (speed < 1 || rover->alpha - speed <= destvalue + speed)
 		{
 			rover->alpha = destvalue;
 
-			if (doexists)
+			if (dosolid)
 			{
-				if (rover->alpha <= 1)
-					rover->flags &= ~FF_EXISTS;
-				else
-					rover->flags |= FF_EXISTS;
-			}
-
-			if (dosolid
-				&& !(rover->flags & FF_SWIMMABLE)
-				&& !(rover->flags & FF_QUICKSAND))
-				rover->flags &= ~FF_SOLID; // make intangible at end of fade-out
-
-			if (dotranslucent)
-			{
-				if (rover->alpha >= 256)
-				{
-					rover->flags |= FF_CUTLEVEL;
-					rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
-				}
-				else
-				{
-					rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-					rover->flags &= ~FF_CUTLEVEL;
-				}
-
-				if (rover->flags & FF_SOLID)
-					rover->flags &= ~FF_CUTSPRITES;
-				else
-					rover->flags |= FF_CUTSPRITES;
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags &= ~FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags &= ~FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags &= ~FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags &= ~FF_BUSTUP;
 			}
 		}
 		else // continue fading out
 		{
 			rover->alpha -= speed;
-
-			if (doexists)
-				rover->flags |= FF_EXISTS;
-
-			if (dosolid
-				&& !(rover->flags & FF_SWIMMABLE)
-				&& !(rover->flags & FF_QUICKSAND))
-				rover->flags |= FF_SOLID; // keep solid during fade
-
-			if (dotranslucent)
-			{
-				rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				rover->flags &= ~FF_CUTLEVEL;
-
-				if (rover->flags & FF_SOLID)
-					rover->flags &= ~FF_CUTSPRITES;
-				else
-					rover->flags |= FF_CUTSPRITES;
-			}
-
-			result = true;
+			stillfading = true;
 		}
 	}
 	else // fade in
@@ -7291,66 +7251,99 @@ static boolean P_DoFakeFloorAlpha(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		{
 			rover->alpha = destvalue;
 
-			if (doexists)
+			if (dosolid)
 			{
-				if (rover->alpha <= 1)
-					rover->flags &= ~FF_EXISTS;
-				else
-					rover->flags |= FF_EXISTS;
-			}
-
-			if (dosolid
-				&& !(rover->flags & FF_SWIMMABLE)
-				&& !(rover->flags & FF_QUICKSAND))
-				rover->flags |= FF_SOLID; // make solid at end of fade-in
-
-			if (dotranslucent)
-			{
-				if (rover->alpha >= 256)
-				{
-					rover->flags |= FF_CUTLEVEL;
-					rover->flags &= ~(FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
-				}
-				else
-				{
-					rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-					rover->flags &= ~FF_CUTLEVEL;
-				}
-
-				if (rover->flags & FF_SOLID)
-					rover->flags &= ~FF_CUTSPRITES;
-				else
-					rover->flags |= FF_CUTSPRITES;
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags |= FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags |= FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags |= FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags |= FF_BUSTUP;
 			}
 		}
 		else // continue fading in
 		{
 			rover->alpha += speed;
-
-			if (doexists)
-				rover->flags |= FF_EXISTS;
-
-			if (dosolid
-				&& !(rover->flags & FF_SWIMMABLE)
-				&& !(rover->flags & FF_QUICKSAND))
-				rover->flags |= FF_SOLID; // keep solid during fade
-
-			if (dotranslucent)
-			{
-				rover->flags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				rover->flags &= ~FF_CUTLEVEL;
-
-				if (rover->flags & FF_SOLID)
-					rover->flags &= ~FF_CUTSPRITES;
-				else
-					rover->flags |= FF_CUTSPRITES;
-			}
-
-			result = true;
+			stillfading = true;
 		}
 	}
 
-	return result;
+	// routines common to both fade in and fade out
+	if (!stillfading)
+	{
+		if (doexists)
+		{
+			if (rover->alpha <= 1)
+				rover->flags &= ~FF_EXISTS;
+			else
+				rover->flags |= FF_EXISTS;
+		}
+
+		if (dotranslucent)
+		{
+			if (rover->alpha >= 256)
+			{
+				//rover->flags |= FF_CUTLEVEL;
+				rover->flags &= ~FF_TRANSLUCENT;
+			}
+			else
+			{
+				rover->flags |= FF_TRANSLUCENT;
+				//rover->flags &= ~FF_CUTLEVEL;
+			}
+
+			// if (rover->flags & FF_SOLID)
+			// 	rover->flags &= ~FF_CUTSPRITES;
+			// else
+			// 	rover->flags |= FF_CUTSPRITES;
+		}
+	}
+	else
+	{
+		if (doexists)
+			rover->flags |= FF_EXISTS;
+
+		if (dotranslucent)
+		{
+			rover->flags |= FF_TRANSLUCENT;
+			//rover->flags &= ~FF_CUTLEVEL;
+
+			// if (rover->flags & FF_SOLID)
+			// 	rover->flags &= ~FF_CUTSPRITES;
+			// else
+			// 	rover->flags |= FF_CUTSPRITES;
+		}
+
+		if (dosolid)
+		{
+			if (doghostfade) // remove interaction flags during fade
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags &= ~FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags &= ~FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags &= ~FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags &= ~FF_BUSTUP;
+			}
+			else // keep interaction during fade
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags |= FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags |= FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags |= FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags |= FF_BUSTUP;
+			}
+		}
+	}
+
+	return stillfading;
 }
 
 /** Adds master fader thinker.
