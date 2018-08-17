@@ -1235,6 +1235,11 @@ void OP_NightsObjectplace(player_t *player)
 
 		mt->options = (newz << ZSHIFT) | newflags;
 
+		// if NiGHTS is facing backwards, orient the Thing angle forwards so that the sprite angle
+		// displays correctly. Backwards movement via the Thing flags is unaffected.
+		if (vertangle < 90 || vertangle > 270)
+			mt->angle = (mt->angle + 180) % 360;
+
 		P_SpawnMapThing(mt);
 	}
 
