@@ -6104,9 +6104,9 @@ static void P_NiGHTSMovement(player_t *player)
 
 	if (player->drillmeter > 96*20)
 		player->drillmeter = 96*20;
-
-	if (player->drilldelay)
-		player->drilldelay--;
+	if (gametic % NEWTICRATERATIO == 0)
+		if (player->drilldelay)
+			player->drilldelay--;
 
 	if (!(cmd->buttons & BT_JUMP))
 	{
@@ -6133,14 +6133,16 @@ static void P_NiGHTSMovement(player_t *player)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 		&& !player->exiting)
-			player->nightstime--;
+			if (gametic % NEWTICRATERATIO == 0)
+				player->nightstime--;
 	}
 	else if (gametype != GT_RACE && gametype != GT_COMPETITION
 	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	&& !(player->capsule && player->capsule->reactiontime)
 	&& !player->exiting)
-		player->nightstime--;
+		if (gametic % NEWTICRATERATIO == 0)
+			player->nightstime--;
 
 	if (!player->nightstime)
 	{
@@ -6386,9 +6388,11 @@ static void P_NiGHTSMovement(player_t *player)
 		{
 			if (player->speed < MAXDRILLSPEED)
 				player->speed += 150;
-
-			if (--player->drillmeter == 0)
-				player->drilldelay = TICRATE*2;
+			if (gametic % NEWTICRATERATIO == 0)
+			{
+				if (--player->drillmeter == 0)
+					player->drilldelay = TICRATE * 2;
+			}
 		}
 
 		if (player->speed < 0)
@@ -9610,7 +9614,8 @@ void P_PlayerThink(player_t *player)
 	// If it is set, start subtracting
 	// Don't allow it to go back to 0
 	if (player->exiting > 1 && player->exiting < 3*TICRATE)
-		player->exiting--;
+		if (gametic % NEWTICRATERATIO == 0)
+			player->exiting--;
 
 	if (player->exiting && countdown2)
 		player->exiting = 5;
@@ -9750,8 +9755,11 @@ void P_PlayerThink(player_t *player)
 
 	if (player->linktimer && !player->powers[pw_nights_linkfreeze])
 	{
-		if (--player->linktimer <= 0) // Link timer
-			player->linkcount = 0;
+		if (gametic % NEWTICRATERATIO == 0)
+		{
+			if (--player->linktimer <= 0) // Link timer
+				player->linkcount = 0;
+		}
 	}
 
 	// Move around.
