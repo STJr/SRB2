@@ -135,6 +135,9 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
 
+// Get Length of Music
+UINT32 S_GetMusicLength(void);
+
 // Set Position of Music
 boolean S_SetMusicPosition(UINT32 position);
 

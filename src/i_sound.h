@@ -224,6 +224,8 @@ void I_ShutdownDigMusic(void);
 
 boolean I_SetSongSpeed(float speed);
 
+UINT32 I_GetMusicLength(void);
+
 boolean I_SetMusicPosition(UINT32 position);
 
 UINT32 I_GetMusicPosition(void);

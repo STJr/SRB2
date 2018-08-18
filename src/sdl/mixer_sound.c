@@ -66,6 +66,7 @@ static boolean midimode;
 static Mix_Music *music;
 static UINT8 music_volume, midi_volume, sfx_volume;
 static float loop_point;
+static float music_length; // length in seconds
 static boolean songpaused;
 static UINT32 music_bytes;
 static boolean is_looping;
@@ -693,36 +694,49 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	// Find the OGG loop point.
 	is_looping = looping;
 	loop_point = 0.0f;
+	music_length = 0.0f;
 	if (looping)
 	{
 		const char *key1 = "LOOP";
 		const char *key2 = "POINT=";
 		const char *key3 = "MS=";
+		const char *key4 = "LENGTHMS=";
 		const size_t key1len = strlen(key1);
 		const size_t key2len = strlen(key2);
 		const size_t key3len = strlen(key3);
+		const size_t key4len = strlen(key4);
 		char *p = data;
 		while ((UINT32)(p - data) < len)
 		{
-			if (strncmp(p++, key1, key1len))
-				continue;
-			p += key1len-1; // skip OOP (the L was skipped in strncmp)
-			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
+			if (!loop_point && !strncmp(p, key1, key1len))
 			{
-				p += key2len; // skip POINT=
-				loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
-				// because SDL_Mixer is USELESS and can't even tell us
-				// something simple like the frequency of the streaming music,
-				// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
-				// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
+				p += key1len; // skip LOOP
+				if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
+				{
+					p += key2len; // skip POINT=
+					loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
+					// because SDL_Mixer is USELESS and can't even tell us
+					// something simple like the frequency of the streaming music,
+					// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
+					// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
+				}
+				else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
+				{
+					p += key3len; // skip MS=
+					loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
+					// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
+				}
 			}
-			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
+			else if (!music_length && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
 			{
-				p += key3len; // skip MS=
-				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
-				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
+				p += key4len; // skip LENGTHMS
+				music_length = (float)(atoi(p) / 1000.0L);
 			}
-			// Neither?! Continue searching.
+
+			if (loop_point && music_length) // Got what we needed
+				break;
+			else // continue searching
+				p++;
 		}
 	}
 
@@ -792,18 +806,37 @@ boolean I_SetSongSpeed(float speed)
 	return false;
 }
 
+UINT32 I_GetMusicLength(void)
+{
+	// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
+	// SDL mixer can't read music length itself.
+
+	if (midimode)
+		return 0;
+	UINT32 length = (UINT32)(music_length*1000);
+	if (!length)
+		CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
+	return length;
+}
+
 boolean I_SetMusicPosition(UINT32 position)
 {
 	if(midimode || !music)
 		return false;
+
+	// Because SDL mixer can't identify song length, if you have
+	// a position input greater than the real length, then
+	// music_bytes becomes inaccurate.
+	UINT32 length = I_GetMusicLength(); // get it in MS
+	if (length)
+		position %= length;
+
 	Mix_RewindMusic(); // needed for mp3
 	if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
-		music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPositon)
+		music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	else
 		// NOTE: This block fires on incorrect song format,
 		// NOT if position input is greater than song length.
-		// This means music_bytes will be inaccurate because we can't compare to
-		// max song length. So, don't write your scripts to seek beyond the song.
 		music_bytes = 0;
 	return true;
 }
