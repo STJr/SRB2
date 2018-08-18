@@ -98,6 +98,6 @@ void COM_Lua_f(void);
 // #define HAVE_LUA_SEGS
 
 // uncomment for extended music features
-// #define HAVE_LUA_MUSICPLUS
+#define HAVE_LUA_MUSICPLUS
 
 #endif
