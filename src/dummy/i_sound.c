@@ -162,11 +162,6 @@ UINT32 I_GetMusicPosition(void)
     return 0;
 }
 
-boolean I_MIDIPlaying(void)
-{
-	return false;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return false;

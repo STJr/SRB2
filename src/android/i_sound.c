@@ -74,11 +74,6 @@ void I_ResumeSong(INT32 handle)
         (void)handle;
 }
 
-boolean I_MIDIPlaying(void)
-{
-	return false;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return false;

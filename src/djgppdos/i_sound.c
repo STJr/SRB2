@@ -567,11 +567,6 @@ UINT32 I_GetMusicPosition(void)
     return 0;
 }
 
-boolean I_MIDIPlaying(void)
-{
-	return (boolean)currsong && music_started;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return (boolean)currsong && music_started;

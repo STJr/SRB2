@@ -468,11 +468,6 @@ void I_ResumeSong(INT32 handle)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
 }
 
-boolean I_MIDIPlaying(void)
-{
-	return midimode && music_stream;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return (boolean)music_stream;
