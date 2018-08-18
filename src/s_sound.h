@@ -155,9 +155,6 @@ void S_StopMusic(void);
 void S_PauseAudio(void);
 void S_ResumeAudio(void);
 
-// Gets MIDI music status
-boolean S_MIDIPlaying(void);
-
 // Gets general music status
 boolean S_MusicPlaying(void);
 

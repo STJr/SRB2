@@ -147,12 +147,6 @@ void I_PauseSong(INT32 handle);
 */
 void I_ResumeSong(INT32 handle);
 
-/**	\brief Get MIDI music status
-
-	\return boolean
-*/
-boolean I_MIDIPlaying(void);
-
 /**	\brief Get general music status
 
 	\return boolean
