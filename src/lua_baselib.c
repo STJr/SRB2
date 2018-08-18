@@ -2266,9 +2266,16 @@ static int lib_sSpeedMusic(lua_State *L)
 }
 
 #ifdef HAVE_LUA_MUSICPLUS
+static int lib_sGetMusicLength(lua_State *L)
+{
+	NOHUD
+	lua_pushinteger(L, (UINT32)S_GetMusicLength());
+	return 1;
+}
+
 static int lib_sSetMusicPosition(lua_State *L)
 {
-	UINT32 position = 0;
+	UINT32 position = (UINT32)luaL_checkinteger(L, 1);
 	player_t *player = NULL;
 	NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
@@ -2850,6 +2857,7 @@ static luaL_Reg lib[] = {
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 #ifdef HAVE_LUA_MUSICPLUS
+	{"S_GetMusicLength",lib_sGetMusicLength},
 	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_PauseMusic",lib_sPauseMusic},
