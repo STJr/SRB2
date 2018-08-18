@@ -441,9 +441,25 @@ void I_SetSfxVolume(UINT8 volume)
 // Music
 //
 
+musictype_t I_MusicType(void)
+{
+	if (gme)
+		return MU_GME;
+	else if (midimode)
+		return MU_MID;
+	else if (!music)
+		return MU_NONE;
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+		return MU_MOD;
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+		return MU_MP3;
+	else
+		return (musictype_t)Mix_GetMusicType(music);
+}
+
 static void count_music_bytes(int chan, void *stream, int len, void *udata)
 {
-	if(midimode || !music)
+	if (gme || midimode || !music || I_MusicType() == MU_MOD)
 		return;
 	music_bytes += len;
 }
@@ -797,17 +813,24 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 	}
 
-	if (Mix_PlayMusic(music, 0) == -1)
+	if (I_MusicType() != MU_MOD && Mix_PlayMusic(music, 0) == -1)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return true;
 	}
+	else if ((I_MusicType() == MU_MOD) && Mix_PlayMusic(music, -1) == -1) // if MOD, loop forever
+	{
+		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
+		return true;
+	}
+
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 
-	Mix_HookMusicFinished(music_loop);
+	if (I_MusicType() != MU_MOD)
+		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
 	music_bytes = 0;
-	if(!Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+	if(I_MusicType() != MU_MOD && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
 	return true;
@@ -893,15 +916,17 @@ UINT32 I_GetMusicLength(void)
 		gme_free_info(info);
 		return max(length, 0);
 	}
-	else if (midimode || !music)
+	else if (midimode || !music || I_MusicType() == MU_MOD)
 		return 0;
-
-	// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
-	// SDL mixer can't read music length itself.
-	length = (UINT32)(music_length*1000);
-	if (!length)
-		CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
-	return length;
+	else
+	{
+		// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
+		// SDL mixer can't read music length itself.
+		length = (UINT32)(music_length*1000);
+		if (!length)
+			CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
+		return length;
+	}
 }
 
 boolean I_SetMusicPosition(UINT32 position)
@@ -929,22 +954,27 @@ boolean I_SetMusicPosition(UINT32 position)
 	}
 	else if (midimode || !music)
 		return false;
-
-	// Because SDL mixer can't identify song length, if you have
-	// a position input greater than the real length, then
-	// music_bytes becomes inaccurate.
-	length = I_GetMusicLength(); // get it in MS
-	if (length)
-		position %= length;
-
-	Mix_RewindMusic(); // needed for mp3
-	if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
-		music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPosition)
+	else if (I_MusicType() == MU_MOD)
+		// Goes by channels
+		return Mix_SetMusicPosition(position);
 	else
-		// NOTE: This block fires on incorrect song format,
-		// NOT if position input is greater than song length.
-		music_bytes = 0;
-	return true;
+	{
+		// Because SDL mixer can't identify song length, if you have
+		// a position input greater than the real length, then
+		// music_bytes becomes inaccurate.
+		length = I_GetMusicLength(); // get it in MS
+		if (length)
+			position %= length;
+
+		Mix_RewindMusic(); // needed for mp3
+		if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
+			music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPosition)
+		else
+			// NOTE: This block fires on incorrect song format,
+			// NOT if position input is greater than song length.
+			music_bytes = 0;
+		return true;
+	}
 }
 
 UINT32 I_GetMusicPosition(void)
@@ -977,11 +1007,11 @@ UINT32 I_GetMusicPosition(void)
 	}
 	else if (midimode || !music)
 		return 0;
-
-	return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
-	// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
-	// This is hardcoded in I_StartupSound. Other formats for factor:
-	// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4
+	else
+		return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
+		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
+		// This is hardcoded in I_StartupSound. Other formats for factor:
+		// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4
 }
 
 boolean I_SetSongTrack(int track)
@@ -1010,7 +1040,10 @@ boolean I_SetSongTrack(int track)
 		SDL_UnlockAudio();
 		return false;
 	}
+	else
 #endif
+	if (I_MusicType() == MU_MOD)
+		Mix_SetMusicPosition(track);
 	(void)track;
 	return false;
 }

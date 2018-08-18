@@ -18,6 +18,21 @@
 #include "sounds.h"
 #include "command.h"
 
+// copied from SDL mixer, plus GME
+typedef enum {
+    MU_NONE,
+    MU_CMD,
+    MU_WAV,
+    MU_MOD,
+    MU_MID,
+    MU_OGG,
+    MU_MP3,
+    MU_MP3_MAD_UNUSED, // use MU_MP3 instead
+    MU_FLAC,
+    MU_MODPLUG_UNUSED, // use MU_MOD instead
+	MU_GME
+} musictype_t;
+
 /**	\brief Sound subsystem runing and waiting
 */
 extern UINT8 sound_started;
@@ -149,6 +164,8 @@ boolean I_MusicPlaying(void);
 	\return boolean
 */
 boolean I_MusicPaused(void);
+
+musictype_t I_MusicType(void);
 
 //
 //  MIDI I/O

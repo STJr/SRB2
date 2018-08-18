@@ -14,6 +14,7 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
+#include "i_sound.h"
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
@@ -131,6 +132,9 @@ void S_StopSound(void *origin);
 //       and the last bit we ignore (internal game flag for resetting music on reload)
 #define S_ChangeMusicInternal(a,b) S_ChangeMusic(a,0,b)
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
+
+// Get music type
+musictype_t S_MusicType();
 
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);

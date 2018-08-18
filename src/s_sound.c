@@ -1412,6 +1412,11 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
+musictype_t S_MusicType()
+{
+	return I_MusicType();
+}
+
 boolean S_SpeedMusic(float speed)
 {
 	return I_SetSongSpeed(speed);
