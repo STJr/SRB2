@@ -621,7 +621,7 @@ void R_ExecuteSetViewSize(void)
 	if (rendermode == render_soft)
 	{
 		// this is only used for planes rendering in software mode
-		j = viewheight*4;
+		j = viewheight*8;
 		for (i = 0; i < j; i++)
 		{
 			dy = ((i - viewheight*2)<<FRACBITS) + FRACUNIT/2;
@@ -968,6 +968,7 @@ void R_SkyboxFrame(player_t *player)
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
+	// 18/08/18: (No it's actually 8*viewheight, thanks MPC aka Jimita for finding this out)
 
 	if (rendermode == render_soft)
 	{
@@ -1093,6 +1094,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
+	// 18/08/18: (No it's actually 8*viewheight, thanks MPC aka Jimita for finding this out)
 
 	if (rendermode == render_soft)
 	{

@@ -86,7 +86,7 @@ static fixed_t planeheight;
 //                (this is to calculate yslopes only when really needed)
 //                (when mouselookin', yslope is moving into yslopetab)
 //                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*4];
+fixed_t yslopetab[MAXVIDHEIGHT*8];
 fixed_t *yslope;
 
 fixed_t distscale[MAXVIDWIDTH];
