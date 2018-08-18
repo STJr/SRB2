@@ -701,10 +701,17 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		const char *key2 = "POINT=";
 		const char *key3 = "MS=";
 		const char *key4 = "LENGTHMS=";
+		const char *key1w = "L\0O\0O\0P\0";
+		const char *key2w = "P\0O\0I\0N\0T\0=\0";
+		const char *key3w = "M\0S\0=\0";
+		const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0=\0";
+		const char *wterm = "\0\0";
 		const size_t key1len = strlen(key1);
 		const size_t key2len = strlen(key2);
 		const size_t key3len = strlen(key3);
 		const size_t key4len = strlen(key4);
+		char wval[10]; // millisecond range up to 30 hours!
+		size_t wstart, wp;
 		char *p = data;
 		while ((UINT32)(p - data) < len)
 		{
@@ -732,8 +739,56 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 				p += key4len; // skip LENGTHMS
 				music_length = (float)(atoi(p) / 1000.0L);
 			}
+			// below: search MP3 or other tags that use wide char encoding
+			else if (!loop_point && !strncmp(p, key1w, key1len*2)) // LOOP wide char
+			{
+				p += key1len*2;
+				if (!strncmp(p, key2w, key2len*2)) // POINT= wide char
+				{
+					p += key2len*2+2;
+					wstart = (size_t)p;
+					wp = 0;
+					while (wp < 9 && strncmp(p, wterm, 2))
+					{
+						wval[wp] = *p;
+						p += 2;
+						wp = ((size_t)(p-wstart))/2;
+					}
+					wval[min(wp, 9)] = 0;
+					loop_point = (float)((44.1L+atoi(wval) / 44100.0L));
+				}
+				else if (!strncmp(p, key3w, key3len*2)) // MS= wide char
+				{
+					p += key3len*2+2;
+					wstart = (size_t)p;
+					wp = 0;
+					while (wp < 9 && strncmp(p, wterm, 2))
+					{
+						wval[wp] = *p;
+						p += 2;
+						wp = ((size_t)(p-wstart))/2;
+					}
+					wval[min(wp, 9)] = 0;
+					loop_point = (float)(atoi(wval) / 1000.0L);
+				}
+			}
+			else if (!music_length && !strncmp(p, key4w, key4len*2)) // LENGTHMS= wide char
+			{
+				p += key4len*2+2;
+				wstart = (size_t)p;
+				wp = 0;
+				while (wp < 9 && strncmp(p, wterm, 2))
+				{
+					wval[wp] = *p;
+					p += 2;
+					wp = ((size_t)(p-wstart))/2;
+				}
+				wval[min(wp, 9)] = 0;
+				music_length = (float)(atoi(wval) / 1000.0L);
+			}
 
-			if (loop_point && music_length) // Got what we needed
+			if (loop_point && music_length && music_length > loop_point) // Got what we needed
+				// the last case is a sanity check, in case the wide char searches were false matches.
 				break;
 			else // continue searching
 				p++;
