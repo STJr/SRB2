@@ -311,6 +311,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 					len = (info->play_length * 441 / 10) << 2;
 					mem = Z_Malloc(len, PU_SOUND, NULL);
 					gme_play(emu, len >> 1, mem);
+					gme_free_info(info);
 					gme_delete(emu);
 
 					return Mix_QuickLoad_RAW((Uint8 *)mem, len);
@@ -383,6 +384,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		len = (info->play_length * 441 / 10) << 2;
 		mem = Z_Malloc(len, PU_SOUND, NULL);
 		gme_play(emu, len >> 1, mem);
+		gme_free_info(info);
 		gme_delete(emu);
 
 		return Mix_QuickLoad_RAW((Uint8 *)mem, len);
@@ -863,12 +865,40 @@ boolean I_SetSongSpeed(float speed)
 
 UINT32 I_GetMusicLength(void)
 {
+	INT32 length;
+
+	if (gme)
+	{
+		gme_info_t *info;
+		gme_err_t gme_e = gme_track_info(gme, &info, current_track);
+
+		if (gme_e != NULL)
+		{
+			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+			length = 0;
+		}
+		else
+		{
+			// reconstruct info->play_length, from GME source
+			// we only want intro + 1 loop, not 2
+			length = info->length;
+			if (length <= 0)
+			{
+				length = info->intro_length + info->loop_length; // intro + 1 loop
+				if (length <= 0)
+					length = 150 * 1000; // 2.5 minutes
+			}
+		}
+
+		gme_free_info(info);
+		return max(length, 0);
+	}
+	else if (midimode || !music)
+		return 0;
+
 	// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
 	// SDL mixer can't read music length itself.
-
-	if (midimode)
-		return 0;
-	UINT32 length = (UINT32)(music_length*1000);
+	length = (UINT32)(music_length*1000);
 	if (!length)
 		CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
 	return length;
@@ -876,13 +906,34 @@ UINT32 I_GetMusicLength(void)
 
 boolean I_SetMusicPosition(UINT32 position)
 {
-	if(midimode || !music)
+	UINT32 length;
+
+	if (gme)
+	{
+		// this isn't required technically, but GME thread-locks for a second
+		// if you seek too high from the counter
+		length = I_GetMusicLength();
+		if (length)
+			position %= length;
+
+		SDL_LockAudio();
+		gme_err_t gme_e = gme_seek(gme, position);
+		SDL_UnlockAudio();
+		if (gme_e != NULL)
+		{
+			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+			return false;
+		}
+		else
+			return true;
+	}
+	else if (midimode || !music)
 		return false;
 
 	// Because SDL mixer can't identify song length, if you have
 	// a position input greater than the real length, then
 	// music_bytes becomes inaccurate.
-	UINT32 length = I_GetMusicLength(); // get it in MS
+	length = I_GetMusicLength(); // get it in MS
 	if (length)
 		position %= length;
 
@@ -898,8 +949,35 @@ boolean I_SetMusicPosition(UINT32 position)
 
 UINT32 I_GetMusicPosition(void)
 {
-	if(midimode)
+	if (gme)
+	{
+		INT32 position = gme_tell(gme);
+
+		gme_info_t *info;
+		gme_err_t gme_e = gme_track_info(gme, &info, current_track);
+
+		if (gme_e != NULL)
+		{
+			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+			return position;
+		}
+		else
+		{
+			// adjust position, since GME's counter keeps going past loop
+			if (info->length > 0)
+				position %= info->length;
+			else if (info->intro_length + info->loop_length > 0)
+				position = ((position - info->intro_length) % info->loop_length) + info->intro_length;
+			else
+				position %= 150 * 1000; // 2.5 minutes
+		}
+
+		gme_free_info(info);
+		return max(position, 0);
+	}
+	else if (midimode || !music)
 		return 0;
+
 	return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
 	// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
 	// This is hardcoded in I_StartupSound. Other formats for factor:
