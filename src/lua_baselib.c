@@ -2293,8 +2293,18 @@ static int lib_sSetMusicPosition(lua_State *L)
 
 static int lib_sGetMusicPosition(lua_State *L)
 {
+	player_t *player = NULL;
 	NOHUD
-	lua_pushinteger(L, (UINT32)S_GetMusicPosition());
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, (int)S_GetMusicPosition());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2322,9 +2332,9 @@ static int lib_sResumeMusic(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
-		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
