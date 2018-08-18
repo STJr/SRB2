@@ -103,8 +103,8 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
-static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data);
-#define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL);
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
+#define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
@@ -3107,7 +3107,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover; // FOF that we are going to crumble
+			ffloor_t *rover; // FOF that we are going to operate
 			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3161,7 +3161,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover; // FOF that we are going to crumble
+			ffloor_t *rover; // FOF that we are going to operate
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3185,7 +3185,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					return;
 				}
 
-				P_RemoveFakeFloorFader(rover);
+				P_ResetFakeFloorFader(rover, NULL,
+					!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
 			}
 			break;
 		}
@@ -7196,15 +7197,28 @@ void T_Disappear(disappear_t *d)
  * \param line	line to search for target faders
  * \param data	pointer to set new fadingdata to. Can be NULL to erase.
  */
-static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data)
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize)
 {
+	fade_t *fadingdata = (fade_t *)rover->fadingdata;
 	// find any existing thinkers and remove them, then replace with new data
-	if (((fade_t *)rover->fadingdata) != data)
+	if (fadingdata != data)
 	{
-		if (&((fade_t *)rover->fadingdata)->thinker)
+		if (&fadingdata->thinker)
 		{
-			rover->alpha = ((fade_t *)rover->fadingdata)->alpha; // unclamp from software levels
-			P_RemoveThinker(&((fade_t *)rover->fadingdata)->thinker);
+			if (finalize)
+				P_FadeFakeFloor(rover,
+					fadingdata->alpha >= fadingdata->destvalue ?
+						fadingdata->alpha - 1 : // trigger fade-out finish
+						fadingdata->alpha + 1, // trigger fade-in finish
+					0,
+					fadingdata->doexists,
+					fadingdata->dotranslucent,
+					fadingdata->docollision,
+					fadingdata->doghostfade,
+					fadingdata->exactalpha);
+			rover->alpha = fadingdata->alpha;
+
+			P_RemoveThinker(&fadingdata->thinker);
 		}
 
 		rover->fadingdata = data;
@@ -7404,7 +7418,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->exactalpha = exactalpha;
 
 	// find any existing thinkers and remove them, then replace with new data
-	P_ResetFakeFloorFader(rover, d);
+	P_ResetFakeFloorFader(rover, d, false);
 
 	P_AddThinker(&d->thinker);
 }
