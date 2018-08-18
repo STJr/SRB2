@@ -486,6 +486,11 @@ boolean I_MusicPaused(void)
 	return fmpaused;
 }
 
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
+}
+
 void I_InitDigMusic(void)
 {
 }

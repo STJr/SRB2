@@ -176,3 +176,8 @@ boolean I_MusicPaused(void)
 {
 	return false;
 }
+
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
+}

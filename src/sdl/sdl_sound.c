@@ -1665,6 +1665,11 @@ boolean I_MusicPaused(void)
 	return Mix_PausedMusic();
 }
 
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
+}
+
 void I_UnRegisterSong(INT32 handle)
 {
 #ifdef HAVE_MIXER
