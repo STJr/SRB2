@@ -5677,7 +5677,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
-	v[0].sow = v[3].sow = ((float) (-angle) / ((ANGLE_90-1)*dimensionmultiply)); // left
+	v[0].sow = v[3].sow = (-1.0f * angle) / ((ANGLE_90-1)*dimensionmultiply); // left
 	v[2].sow = v[1].sow = v[0].sow + (1.0f/dimensionmultiply); // right (or left + 1.0f)
 	// use +angle and -1.0f above instead if you wanted old backwards behavior
 
