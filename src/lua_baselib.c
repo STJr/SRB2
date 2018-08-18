@@ -2426,6 +2426,23 @@ static int lib_sMusicPaused(lua_State *L)
 	return 1;
 }
 
+static int lib_sMusicType(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, S_MusicType());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 static int lib_sMusicName(lua_State *L)
 {
 	player_t *player = NULL;
@@ -2867,6 +2884,7 @@ static luaL_Reg lib[] = {
 	{"S_MidiPlaying",lib_sMidiPlaying},
 	{"S_MusicPlaying",lib_sMusicPlaying},
 	{"S_MusicPaused",lib_sMusicPaused},
+	{"S_MusicType",lib_sMusicType},
 	{"S_MusicName",lib_sMusicName},
 	{"S_MusicExists",lib_sMusicExists},
 #endif
