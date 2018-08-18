@@ -146,6 +146,11 @@ boolean I_SetSongTrack(int track)
 	return false;
 }
 
+UINT32 I_GetMusicLength(void)
+{
+	return 0;
+}
+
 boolean I_SetMusicPosition(UINT32 position)
 {
     (void)position;

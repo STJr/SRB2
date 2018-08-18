@@ -774,6 +774,15 @@ boolean I_SetSongSpeed(float speed)
 	return true;
 }
 
+UINT32 I_GetMusicLength()
+{
+	if (midimode)
+		return 0;
+	UINT32 length;
+	e = FMOD_Sound_GetLength(music_stream, length, FMOD_TIMEUNIT_MS);
+	return length;
+}
+
 boolean I_SetMusicPosition(UINT32 position)
 {
 	if(midimode)

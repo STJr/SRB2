@@ -158,6 +158,11 @@ boolean I_SetSongSpeed(float speed)
         return false;
 }
 
+UINT32 I_GetMusicLength(void)
+{
+        return 0;
+}
+
 boolean I_SetMusicPosition(UINT32 position)
 {
         (void)position;
