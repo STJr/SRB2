@@ -7199,10 +7199,13 @@ void T_Disappear(disappear_t *d)
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data)
 {
 	// find any existing thinkers and remove them, then replace with new data
-	if(((fade_t *)rover->fadingdata) != data)
+	if (((fade_t *)rover->fadingdata) != data)
 	{
-		if(&((fade_t *)rover->fadingdata)->thinker)
+		if (&((fade_t *)rover->fadingdata)->thinker)
+		{
+			rover->alpha = ((fade_t *)rover->fadingdata)->alpha; // unclamp from software levels
 			P_RemoveThinker(&((fade_t *)rover->fadingdata)->thinker);
+		}
 
 		rover->fadingdata = data;
 	}
