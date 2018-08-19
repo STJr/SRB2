@@ -452,9 +452,12 @@ void I_SetSfxVolume(UINT8 volume)
 
 musictype_t I_MusicType(void)
 {
+#ifdef HAVE_LIBGME
 	if (gme)
 		return MU_GME;
-	else if (midimode)
+	else
+#endif
+	if (midimode)
 		return MU_MID;
 	else if (!music)
 		return MU_NONE;
@@ -468,7 +471,11 @@ musictype_t I_MusicType(void)
 
 static void count_music_bytes(int chan, void *stream, int len, void *udata)
 {
-	if (gme || midimode || !music || I_MusicType() == MU_MOD)
+	if (
+#ifdef HAVE_LIBGME
+		gme ||
+#endif
+		midimode || !music || I_MusicType() == MU_MOD)
 		return;
 	music_bytes += len;
 }
@@ -524,7 +531,11 @@ void I_PauseSong(INT32 handle)
 	if(midimode) // really, SDL Mixer? why can't you pause MIDI???
 		return;
 
-	if(!gme && I_MusicType() != MU_MOD)
+	if(
+#ifdef HAVE_LIBGME
+		!gme &&
+#endif
+		I_MusicType() != MU_MOD)
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 
 	Mix_PauseMusic();
@@ -538,7 +549,11 @@ void I_ResumeSong(INT32 handle)
 	if (midimode)
 		return;
 
-	if (!gme && I_MusicType() != MU_MOD)
+	if (
+#ifdef HAVE_LIBGME
+		!gme &&
+#endif
+		I_MusicType() != MU_MOD)
 	{
 		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
@@ -901,6 +916,7 @@ UINT32 I_GetMusicLength(void)
 {
 	INT32 length;
 
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		gme_info_t *info;
@@ -927,7 +943,9 @@ UINT32 I_GetMusicLength(void)
 		gme_free_info(info);
 		return max(length, 0);
 	}
-	else if (midimode || !music || I_MusicType() == MU_MOD)
+	else
+#endif
+	if (midimode || !music || I_MusicType() == MU_MOD)
 		return 0;
 	else
 	{
@@ -942,7 +960,11 @@ UINT32 I_GetMusicLength(void)
 
 boolean I_SetMusicLoopPoint(UINT32 looppoint)
 {
-	if (midimode || gme || !music || I_MusicType() == MU_MOD || !is_looping)
+	if (
+#ifdef HAVE_LIBGME
+		gme ||
+#endif
+		midimode || !music || I_MusicType() == MU_MOD || !is_looping)
 		return false;
 	else
 	{
@@ -958,6 +980,7 @@ boolean I_SetMusicLoopPoint(UINT32 looppoint)
 
 UINT32 I_GetMusicLoopPoint(void)
 {
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		INT32 looppoint;
@@ -975,7 +998,9 @@ UINT32 I_GetMusicLoopPoint(void)
 		gme_free_info(info);
 		return max(looppoint, 0);
 	}
-	else if (midimode || !music || I_MusicType() == MU_MOD)
+	else
+#endif
+	if (midimode || !music || I_MusicType() == MU_MOD)
 		return 0;
 	else
 		return (UINT32)(loop_point * 1000);
@@ -984,7 +1009,7 @@ UINT32 I_GetMusicLoopPoint(void)
 boolean I_SetMusicPosition(UINT32 position)
 {
 	UINT32 length;
-
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		// this isn't required technically, but GME thread-locks for a second
@@ -1005,7 +1030,9 @@ boolean I_SetMusicPosition(UINT32 position)
 		else
 			return true;
 	}
-	else if (midimode || !music)
+	else
+#endif
+	if (midimode || !music)
 		return false;
 	else if (I_MusicType() == MU_MOD)
 		return Mix_SetMusicPosition(position); // Goes by channels
@@ -1033,6 +1060,7 @@ boolean I_SetMusicPosition(UINT32 position)
 
 UINT32 I_GetMusicPosition(void)
 {
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		INT32 position = gme_tell(gme);
@@ -1059,7 +1087,9 @@ UINT32 I_GetMusicPosition(void)
 		gme_free_info(info);
 		return max(position, 0);
 	}
-	else if (midimode || !music)
+	else
+#endif
+	if (midimode || !music)
 		return 0;
 	else
 		return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
