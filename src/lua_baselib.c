@@ -2305,9 +2305,9 @@ static int lib_sGetMusicLoopPoint(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
-		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
@@ -2340,9 +2340,9 @@ static int lib_sGetMusicPosition(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
-		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
@@ -2533,6 +2533,55 @@ static int lib_sSetInternalMusicVolume(lua_State *L)
 		S_SetInternalMusicVolume(volume);
 		lua_pushboolean(L, true);
 	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sStopFadingMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_StopFadingMusic();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeMusic(lua_State *L)
+{
+	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 2);
+	UINT32 ms = (UINT32)luaL_optinteger(L, 4, UINT32_MAX);
+	INT32 source_volume;
+
+	if (ms == UINT32_MAX)
+	{
+		ms = (UINT32)luaL_checkinteger(L, 3);
+		source_volume = -1;
+	}
+	else
+		source_volume = (INT32)luaL_checkinteger(L, 3);
+
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_FadeMusicFromLevel(target_volume, source_volume, ms));
 	else
 		lua_pushnil(L);
 	return 1;
@@ -2931,6 +2980,8 @@ static luaL_Reg lib[] = {
 	{"S_MusicName",lib_sMusicName},
 	{"S_MusicExists",lib_sMusicExists},
 	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
+	{"S_StopFadingMusic",lib_sStopFadingMusic},
+	{"S_FadeMusic",lib_sFadeMusic},
 #endif
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
