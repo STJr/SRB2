@@ -1057,12 +1057,16 @@ boolean HU_Responder(event_t *ev)
 			return true;
 		}	
 		
-		// use console translations		
-		if (shiftdown ^ capslock)
+		// use console translations	
+
+		if (c >= 'a' && c <= 'z')
+		{
+			if (capslock ^ shiftdown)
+				c = shiftxform[c];
+		}
+		else if (shiftdown)
 			c = shiftxform[c];
-		
-		// TODO: make chat behave like the console, so that we can go back and edit stuff when we fuck up.
-		
+				
 		// pasting. pasting is cool. chat is a bit limited, though :(
 		if ((c == 'v' || c == 'V') && ctrldown)
 		{

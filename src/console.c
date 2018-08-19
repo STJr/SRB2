@@ -1048,7 +1048,12 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}	
 	
-	if (capslock ^ shiftdown)	// gets capslock to work because capslock is cool
+	if (key >= 'a' && key <= 'z')
+	{
+		if (capslock ^ shiftdown)
+			key = shiftxform[key];
+	}
+	else if (shiftdown)
 		key = shiftxform[key];
 
 	// enter a char into the command prompt
