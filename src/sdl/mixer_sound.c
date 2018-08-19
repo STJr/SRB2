@@ -76,6 +76,15 @@ static Music_Emu *gme;
 static INT32 current_track;
 #endif
 
+static void varcleanup(void)
+{
+	loop_point = music_length =\
+	 music_bytes = 0;
+
+	songpaused = is_looping =\
+	 midimode = false;
+}
+
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
@@ -474,13 +483,7 @@ static void music_loop(void)
 		music_bytes = loop_point/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetMusicPosition)
 	}
 	else
-	{
-		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
-		music_bytes = 0;
-		songpaused = false;
-			// be consistent with FMOD, otherwise I'd prefer to freeze music_bytes
-			// since the other flags indicate music is still playing.
-	}
+		I_StopDigSong();
 }
 
 #ifdef HAVE_LIBGME
@@ -584,9 +587,8 @@ void I_ShutdownDigMusic(void)
 #endif
 	if (!music)
 		return;
-	is_looping = false;
-	songpaused = false;
-	music_bytes = 0;
+
+	varcleanup();
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
 	Mix_FreeMusic(music);
@@ -606,7 +608,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 
 	if (lumpnum == LUMPERROR)
 		return false;
-	midimode = false;
+
+	varcleanup();
 
 	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
 	len = W_LumpLength(lumpnum);
@@ -839,8 +842,6 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	if (I_MusicType() != MU_MOD)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
-	songpaused = false;
-	music_bytes = 0;
 	if(I_MusicType() != MU_MOD && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
@@ -863,9 +864,7 @@ void I_StopDigSong(void)
 #endif
 	if (!music)
 		return;
-	is_looping = false;
-	songpaused = false;
-	music_bytes = 0;
+	varcleanup();
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
 	Mix_FreeMusic(music);
@@ -997,6 +996,7 @@ boolean I_SetMusicPosition(UINT32 position)
 		SDL_LockAudio();
 		gme_err_t gme_e = gme_seek(gme, position);
 		SDL_UnlockAudio();
+
 		if (gme_e != NULL)
 		{
 			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
@@ -1008,13 +1008,13 @@ boolean I_SetMusicPosition(UINT32 position)
 	else if (midimode || !music)
 		return false;
 	else if (I_MusicType() == MU_MOD)
-		// Goes by channels
-		return Mix_SetMusicPosition(position);
+		return Mix_SetMusicPosition(position); // Goes by channels
 	else
 	{
 		// Because SDL mixer can't identify song length, if you have
 		// a position input greater than the real length, then
 		// music_bytes becomes inaccurate.
+
 		length = I_GetMusicLength(); // get it in MS
 		if (length)
 			position %= length;
@@ -1026,6 +1026,7 @@ boolean I_SetMusicPosition(UINT32 position)
 			// NOTE: This block fires on incorrect song format,
 			// NOT if position input is greater than song length.
 			music_bytes = 0;
+
 		return true;
 	}
 }
@@ -1096,7 +1097,7 @@ boolean I_SetSongTrack(int track)
 	else
 #endif
 	if (I_MusicType() == MU_MOD)
-		Mix_SetMusicPosition(track);
+		return !Mix_SetMusicPosition(track);
 	(void)track;
 	return false;
 }
@@ -1113,10 +1114,8 @@ void I_ShutdownMIDIMusic(void)
 {
 	if (!midimode || !music)
 		return;
-	is_looping = false;
-	songpaused = false;
+	varcleanup();
 	//MIDI does count correctly, but dummy out because unsupported
-	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_FreeMusic(music);
 	music = NULL;
@@ -1150,6 +1149,8 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 {
 	(void)handle;
 
+	varcleanup();
+
 	midimode = true;
 
 	if (Mix_PlayMusic(music, looping ? -1 : 0) == -1)
@@ -1159,11 +1160,10 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	}
 
 	is_looping = looping;
-	songpaused = false;
+
 	//MIDI does count correctly, but dummy out because unsupported
 	//If this is enabled, you need to edit Mix_PlayMusic above to never loop (0)
 	//and register the music_loop callback
-	//music_bytes = 0;
 	//if(!Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 	//	CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
@@ -1176,10 +1176,8 @@ void I_StopSong(INT32 handle)
 	if (!midimode || !music)
 		return;
 
-	is_looping = false;
-	songpaused = false;
+	varcleanup();
 	//MIDI does count correctly, but dummy out because unsupported
-	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	(void)handle;
 	Mix_HaltMusic();
@@ -1190,10 +1188,8 @@ void I_UnRegisterSong(INT32 handle)
 	if (!midimode || !music)
 		return;
 
-	is_looping = false;
-	songpaused = false;
+	varcleanup();
 	//MIDI does count correctly, but dummy out because unsupported
-	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	(void)handle;
 	Mix_FreeMusic(music);
