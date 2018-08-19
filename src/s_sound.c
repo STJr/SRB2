@@ -1427,6 +1427,16 @@ UINT32 S_GetMusicLength(void)
 	return I_GetMusicLength();
 }
 
+boolean S_SetMusicLoopPoint(UINT32 looppoint)
+{
+	return I_SetMusicPosition(looppoint);
+}
+
+UINT32 S_GetMusicLoopPoint(void)
+{
+	return I_GetMusicLoopPoint();
+}
+
 boolean S_SetMusicPosition(UINT32 position)
 {
 	return I_SetMusicPosition(position);

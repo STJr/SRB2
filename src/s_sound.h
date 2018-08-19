@@ -142,6 +142,12 @@ boolean S_SpeedMusic(float speed);
 // Get Length of Music
 UINT32 S_GetMusicLength(void);
 
+// Set LoopPoint of Music
+boolean S_SetMusicLoopPoint(UINT32 looppoint);
+
+// Get LoopPoint of Music
+UINT32 S_GetMusicLoopPoint(void);
+
 // Set Position of Music
 boolean S_SetMusicPosition(UINT32 position);
 

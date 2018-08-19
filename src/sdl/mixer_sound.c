@@ -477,6 +477,7 @@ static void music_loop(void)
 	{
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 		music_bytes = 0;
+		songpaused = false;
 			// be consistent with FMOD, otherwise I'd prefer to freeze music_bytes
 			// since the other flags indicate music is still playing.
 	}
@@ -516,8 +517,13 @@ void I_ShutdownMusic(void)
 void I_PauseSong(INT32 handle)
 {
 	(void)handle;
-	if(!midimode)
+
+	if(midimode) // really, SDL Mixer? why can't you pause MIDI???
+		return;
+
+	if(!gme && I_MusicType() != MU_MOD)
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
+
 	Mix_PauseMusic();
 	songpaused = true;
 }
@@ -525,14 +531,19 @@ void I_PauseSong(INT32 handle)
 void I_ResumeSong(INT32 handle)
 {
 	(void)handle;
-	if(!midimode)
+
+	if (midimode)
+		return;
+
+	if (!gme && I_MusicType() != MU_MOD)
 	{
 		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
+
 		if(music && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
-			// midimode and music must be checked in case nothing is actually playing
 			CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 	}
+
 	Mix_ResumeMusic();
 	songpaused = false;
 }
@@ -544,7 +555,7 @@ boolean I_MusicPlaying(void)
 
 boolean I_MusicPaused(void)
 {
-	return Mix_PausedMusic();
+	return songpaused;
 }
 
 //
@@ -574,6 +585,7 @@ void I_ShutdownDigMusic(void)
 	if (!music)
 		return;
 	is_looping = false;
+	songpaused = false;
 	music_bytes = 0;
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
@@ -714,16 +726,19 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		const char *key2 = "POINT=";
 		const char *key3 = "MS=";
 		const char *key4 = "LENGTHMS=";
-		const char *key1w = "L\0O\0O\0P\0";
-		const char *key2w = "P\0O\0I\0N\0T\0=\0";
-		const char *key3w = "M\0S\0=\0";
-		const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0=\0";
-		const char *wterm = "\0\0";
 		const size_t key1len = strlen(key1);
 		const size_t key2len = strlen(key2);
 		const size_t key3len = strlen(key3);
 		const size_t key4len = strlen(key4);
-		char wval[10]; // millisecond range up to 30 hours!
+
+		// for mp3 wide chars
+		const char *key1w = "L\0O\0O\0P\0";
+		const char *key2w = "P\0O\0I\0N\0T\0\0\0\xFF\xFE";
+		const char *key3w = "M\0S\0\0\0\xFF\xFE";
+		const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0\0\0\xFF\xFE";
+		const char *wterm = "\0\0";
+		char wval[10];
+
 		size_t wstart, wp;
 		char *p = data;
 		while ((UINT32)(p - data) < len)
@@ -753,15 +768,15 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 				music_length = (float)(atoi(p) / 1000.0L);
 			}
 			// below: search MP3 or other tags that use wide char encoding
-			else if (!loop_point && !strncmp(p, key1w, key1len*2)) // LOOP wide char
+			else if (!loop_point && !memcmp(p, key1w, key1len*2)) // LOOP wide char
 			{
 				p += key1len*2;
-				if (!strncmp(p, key2w, key2len*2)) // POINT= wide char
+				if (!memcmp(p, key2w, (key2len+1)*2)) // POINT= wide char
 				{
-					p += key2len*2+2;
+					p += (key2len+1)*2;
 					wstart = (size_t)p;
 					wp = 0;
-					while (wp < 9 && strncmp(p, wterm, 2))
+					while (wp < 9 && memcmp(p, wterm, 2))
 					{
 						wval[wp] = *p;
 						p += 2;
@@ -770,12 +785,12 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 					wval[min(wp, 9)] = 0;
 					loop_point = (float)((44.1L+atoi(wval) / 44100.0L));
 				}
-				else if (!strncmp(p, key3w, key3len*2)) // MS= wide char
+				else if (!memcmp(p, key3w, (key3len+1)*2)) // MS= wide char
 				{
-					p += key3len*2+2;
+					p += (key3len+1)*2;
 					wstart = (size_t)p;
 					wp = 0;
-					while (wp < 9 && strncmp(p, wterm, 2))
+					while (wp < 9 && memcmp(p, wterm, 2))
 					{
 						wval[wp] = *p;
 						p += 2;
@@ -785,12 +800,12 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 					loop_point = (float)(atoi(wval) / 1000.0L);
 				}
 			}
-			else if (!music_length && !strncmp(p, key4w, key4len*2)) // LENGTHMS= wide char
+			else if (!music_length && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
 			{
-				p += key4len*2+2;
+				p += (key4len+1)*2;
 				wstart = (size_t)p;
 				wp = 0;
-				while (wp < 9 && strncmp(p, wterm, 2))
+				while (wp < 9 && memcmp(p, wterm, 2))
 				{
 					wval[wp] = *p;
 					p += 2;
@@ -824,6 +839,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	if (I_MusicType() != MU_MOD)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
+	songpaused = false;
 	music_bytes = 0;
 	if(I_MusicType() != MU_MOD && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
@@ -848,6 +864,7 @@ void I_StopDigSong(void)
 	if (!music)
 		return;
 	is_looping = false;
+	songpaused = false;
 	music_bytes = 0;
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
@@ -922,6 +939,42 @@ UINT32 I_GetMusicLength(void)
 			CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
 		return length;
 	}
+}
+
+boolean I_SetMusicLoopPoint(UINT32 looppoint)
+{
+	if (midimode || gme || !music || I_MusicType() == MU_MOD)
+		return false;
+	else
+	{
+		loop_point = max((float)(looppoint / 1000.0L), 0);
+		return true;
+	}
+}
+
+UINT32 I_GetMusicLoopPoint(void)
+{
+	if (gme)
+	{
+		INT32 looppoint;
+		gme_info_t *info;
+		gme_err_t gme_e = gme_track_info(gme, &info, current_track);
+
+		if (gme_e != NULL)
+		{
+			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+			looppoint = 0;
+		}
+		else
+			looppoint = info->intro_length > 0 ? info->intro_length : 0;
+
+		gme_free_info(info);
+		return max(looppoint, 0);
+	}
+	else if (midimode || !music || I_MusicType() == MU_MOD)
+		return 0;
+	else
+		return (UINT32)(loop_point * 1000);
 }
 
 boolean I_SetMusicPosition(UINT32 position)
@@ -1056,6 +1109,7 @@ void I_ShutdownMIDIMusic(void)
 	if (!midimode || !music)
 		return;
 	is_looping = false;
+	songpaused = false;
 	//MIDI does count correctly, but dummy out because unsupported
 	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
@@ -1100,7 +1154,7 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	}
 
 	is_looping = looping;
-
+	songpaused = false;
 	//MIDI does count correctly, but dummy out because unsupported
 	//If this is enabled, you need to edit Mix_PlayMusic above to never loop (0)
 	//and register the music_loop callback
@@ -1118,7 +1172,7 @@ void I_StopSong(INT32 handle)
 		return;
 
 	is_looping = false;
-
+	songpaused = false;
 	//MIDI does count correctly, but dummy out because unsupported
 	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
@@ -1132,7 +1186,7 @@ void I_UnRegisterSong(INT32 handle)
 		return;
 
 	is_looping = false;
-
+	songpaused = false;
 	//MIDI does count correctly, but dummy out because unsupported
 	//music_bytes = 0;
 	//Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);

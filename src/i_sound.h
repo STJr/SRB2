@@ -237,6 +237,10 @@ boolean I_SetSongSpeed(float speed);
 
 UINT32 I_GetMusicLength(void);
 
+boolean I_SetMusicLoopPoint(UINT32 looppoint);
+
+UINT32 I_GetMusicLoopPoint(void);
+
 boolean I_SetMusicPosition(UINT32 position);
 
 UINT32 I_GetMusicPosition(void);
