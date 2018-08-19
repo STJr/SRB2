@@ -1429,7 +1429,7 @@ UINT32 S_GetMusicLength(void)
 
 boolean S_SetMusicLoopPoint(UINT32 looppoint)
 {
-	return I_SetMusicPosition(looppoint);
+	return I_SetMusicLoopPoint(looppoint);
 }
 
 UINT32 S_GetMusicLoopPoint(void)

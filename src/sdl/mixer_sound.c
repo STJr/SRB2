@@ -942,7 +942,7 @@ UINT32 I_GetMusicLength(void)
 
 boolean I_SetMusicLoopPoint(UINT32 looppoint)
 {
-	if (midimode || gme || !music || I_MusicType() == MU_MOD)
+	if (midimode || gme || !music || I_MusicType() == MU_MOD || !is_looping)
 		return false;
 	else
 	{
