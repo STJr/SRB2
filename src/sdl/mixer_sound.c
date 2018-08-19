@@ -1189,13 +1189,13 @@ void I_StopFadingMusic(void)
 	fading_target = fading_steps = fading_volume_step = fading_id = 0;
 }
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms)
 {
 	UINT32 target_steps, ms_per_step;
 	INT16 target_volume_step, volume_delta;
 
 	source_volume = min(source_volume, 100);
-	volume_delta = (INT16)(target_volume - (source_volume < 0 ? internal_volume : source_volume));
+	volume_delta = (INT16)(target_volume - source_volume));
 
 	I_StopFadingMusic();
 
@@ -1230,15 +1230,17 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms
 			fading_steps = target_steps;
 			fading_volume_step = target_volume_step;
 
-			if (source_volume >= 0 && internal_volume != source_volume)
+			if (internal_volume != source_volume)
 				I_SetInternalMusicVolume(source_volume);
 		}
 	}
 
-	CONS_Printf("Target %d> Source %d> MS %d> Steps %d> MSPer %d> VolPer %d> Fading %d\n",
-		target_volume, internal_volume, ms, target_steps, ms_per_step, target_volume_step, is_fading);
-
 	return is_fading;
+}
+
+boolean I_FadeMusic(UINT8 target_volume, UINT32 ms)
+{
+	return I_FadeMusicFromLevel(target_volume, internal_volume, ms);
 }
 
 //

@@ -251,9 +251,9 @@ void I_SetInternalMusicVolume(UINT8 volume);
 
 void I_StopFadingMusic(void);
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms);
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT16 source_volume, UINT32 ms);
 
-#define I_FadeMusic(a, b) I_FadeMusicFromLevel(a, -1, b)
+boolean I_FadeMusic(UINT8 target_volume, UINT32 ms);
 
 /**	\brief The I_StartDigSong function
 

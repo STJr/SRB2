@@ -1488,7 +1488,10 @@ void S_StopFadingMusic(void)
 
 boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
 {
-	return I_FadeMusicFromLevel(target_volume, source_volume, ms);
+	if (source_volume < 0)
+		return I_FadeMusic(target_volume, ms);
+	else
+		return I_FadeMusicFromLevel(target_volume, source_volume, ms);
 }
 
 void S_SetDigMusicVolume(INT32 volume)
