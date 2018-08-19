@@ -947,6 +947,11 @@ boolean I_SetMusicLoopPoint(UINT32 looppoint)
 		return false;
 	else
 	{
+		UINT32 length = I_GetMusicLength();
+
+		if (length > 0)
+			looppoint %= length;
+
 		loop_point = max((float)(looppoint / 1000.0L), 0);
 		return true;
 	}
