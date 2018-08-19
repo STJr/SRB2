@@ -592,3 +592,8 @@ musictype_t I_MusicType(void)
 {
 	return MU_NONE;
 }
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}

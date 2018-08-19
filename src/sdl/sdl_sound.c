@@ -1664,6 +1664,12 @@ musictype_t I_MusicType(void)
 	return MU_NONE;
 }
 
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
+
 void I_UnRegisterSong(INT32 handle)
 {
 #ifdef HAVE_MIXER
@@ -2019,6 +2025,11 @@ boolean I_SetSongTrack(int track)
 {
 	(void)track;
 	return false;
+}
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
 }
 
 #ifdef MIXER_POS

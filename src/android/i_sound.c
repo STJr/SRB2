@@ -184,3 +184,8 @@ UINT32 I_GetMusicPosition(void)
 {
         return 0;
 }
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}

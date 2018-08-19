@@ -146,6 +146,11 @@ boolean I_SetSongTrack(int track)
 	return false;
 }
 
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
 UINT32 I_GetMusicLength(void)
 {
 	return 0;

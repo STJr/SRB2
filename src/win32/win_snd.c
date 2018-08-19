@@ -873,6 +873,11 @@ boolean I_SetSongTrack(INT32 track)
 	return false;
 }
 
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
 //
 // Fuck MIDI. ... Okay fine, you can have your silly D_-only mode.
 //
