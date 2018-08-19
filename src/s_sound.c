@@ -1476,6 +1476,11 @@ void S_StopMusic(void)
 	}
 }
 
+void S_SetInternalMusicVolume(INT32 volume)
+{
+	I_SetInternalMusicVolume(min(max(volume, 0), 100));
+}
+
 void S_SetDigMusicVolume(INT32 volume)
 {
 	if (volume < 0 || volume > 31)

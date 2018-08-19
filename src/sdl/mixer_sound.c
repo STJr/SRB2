@@ -1160,6 +1160,14 @@ boolean I_SetSongTrack(int track)
 	return false;
 }
 
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	internal_volume = volume;
+	if (!music)
+		return;
+	Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
+}
+
 void I_StopFadingMusic()
 {
 	if (fading_id)

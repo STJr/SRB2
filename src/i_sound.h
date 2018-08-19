@@ -247,6 +247,8 @@ UINT32 I_GetMusicPosition(void);
 
 boolean I_SetSongTrack(INT32 track);
 
+void I_SetInternalMusicVolume(UINT8 volume);
+
 /**	\brief The I_StartDigSong function
 
 	\param	musicname	music lump name
