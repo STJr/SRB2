@@ -14,6 +14,7 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
+#include "i_sound.h"
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
@@ -132,8 +133,20 @@ void S_StopSound(void *origin);
 #define S_ChangeMusicInternal(a,b) S_ChangeMusic(a,0,b)
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
 
+// Get music type
+musictype_t S_MusicType();
+
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
+
+// Get Length of Music
+UINT32 S_GetMusicLength(void);
+
+// Set LoopPoint of Music
+boolean S_SetMusicLoopPoint(UINT32 looppoint);
+
+// Get LoopPoint of Music
+UINT32 S_GetMusicLoopPoint(void);
 
 // Set Position of Music
 boolean S_SetMusicPosition(UINT32 position);
@@ -147,9 +160,6 @@ void S_StopMusic(void);
 // Stop and resume music, during game PAUSE.
 void S_PauseAudio(void);
 void S_ResumeAudio(void);
-
-// Gets MIDI music status
-boolean S_MIDIPlaying(void);
 
 // Gets general music status
 boolean S_MusicPlaying(void);

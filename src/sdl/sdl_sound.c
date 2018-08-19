@@ -1649,12 +1649,6 @@ void I_StopSong(INT32 handle)
 #endif
 }
 
-boolean I_MIDIPlaying(void)
-{
-	// todo: no way to tell specifically if MIDI is playing, implement midimode
-	return !nomidimusic && nodigimusic && musicStarted;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return musicStarted;
@@ -1663,6 +1657,11 @@ boolean I_MusicPlaying(void)
 boolean I_MusicPaused(void)
 {
 	return Mix_PausedMusic();
+}
+
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
 }
 
 void I_UnRegisterSong(INT32 handle)
@@ -1987,6 +1986,22 @@ boolean I_SetSongSpeed(float speed)
 
 	(void)speed;
 	return false;
+}
+
+UINT32 I_GetMusicLength(void)
+{
+	return 0;
+}
+
+boolean I_SetMusicLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetMusicLoopPoint(void)
+{
+	return 0;
 }
 
 boolean I_SetMusicPosition(UINT32 position)

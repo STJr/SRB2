@@ -1389,7 +1389,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
 		return;
 #else
-	strncpy(newmusic, mmusic, 7);	
+	strncpy(newmusic, mmusic, 7);
 #endif
 	newmusic[6] = 0;
 
@@ -1412,9 +1412,29 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
+musictype_t S_MusicType()
+{
+	return I_MusicType();
+}
+
 boolean S_SpeedMusic(float speed)
 {
 	return I_SetSongSpeed(speed);
+}
+
+UINT32 S_GetMusicLength(void)
+{
+	return I_GetMusicLength();
+}
+
+boolean S_SetMusicLoopPoint(UINT32 looppoint)
+{
+	return I_SetMusicLoopPoint(looppoint);
+}
+
+UINT32 S_GetMusicLoopPoint(void)
+{
+	return I_GetMusicLoopPoint();
 }
 
 boolean S_SetMusicPosition(UINT32 position)
@@ -1587,11 +1607,6 @@ void S_ResumeAudio(void)
 
 	// resume cd music
 	I_ResumeCD();
-}
-
-boolean S_MIDIPlaying(void)
-{
-	return I_MIDIPlaying();
 }
 
 boolean S_MusicPlaying(void)

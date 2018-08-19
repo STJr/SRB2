@@ -18,6 +18,21 @@
 #include "sounds.h"
 #include "command.h"
 
+// copied from SDL mixer, plus GME
+typedef enum {
+    MU_NONE,
+    MU_CMD,
+    MU_WAV,
+    MU_MOD,
+    MU_MID,
+    MU_OGG,
+    MU_MP3,
+    MU_MP3_MAD_UNUSED, // use MU_MP3 instead
+    MU_FLAC,
+    MU_MODPLUG_UNUSED, // use MU_MOD instead
+	MU_GME
+} musictype_t;
+
 /**	\brief Sound subsystem runing and waiting
 */
 extern UINT8 sound_started;
@@ -132,12 +147,6 @@ void I_PauseSong(INT32 handle);
 */
 void I_ResumeSong(INT32 handle);
 
-/**	\brief Get MIDI music status
-
-	\return boolean
-*/
-boolean I_MIDIPlaying(void);
-
 /**	\brief Get general music status
 
 	\return boolean
@@ -149,6 +158,8 @@ boolean I_MusicPlaying(void);
 	\return boolean
 */
 boolean I_MusicPaused(void);
+
+musictype_t I_MusicType(void);
 
 //
 //  MIDI I/O
@@ -223,6 +234,12 @@ void I_InitDigMusic(void);
 void I_ShutdownDigMusic(void);
 
 boolean I_SetSongSpeed(float speed);
+
+UINT32 I_GetMusicLength(void);
+
+boolean I_SetMusicLoopPoint(UINT32 looppoint);
+
+UINT32 I_GetMusicLoopPoint(void);
 
 boolean I_SetMusicPosition(UINT32 position);
 

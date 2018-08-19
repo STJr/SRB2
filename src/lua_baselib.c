@@ -2266,9 +2266,61 @@ static int lib_sSpeedMusic(lua_State *L)
 }
 
 #ifdef HAVE_LUA_MUSICPLUS
+static int lib_sGetMusicLength(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, (int)S_GetMusicLength());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sSetMusicLoopPoint(lua_State *L)
+{
+	UINT32 looppoint = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_SetMusicLoopPoint(looppoint));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sGetMusicLoopPoint(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, (int)S_GetMusicLoopPoint());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 static int lib_sSetMusicPosition(lua_State *L)
 {
-	UINT32 position = 0;
+	UINT32 position = (UINT32)luaL_checkinteger(L, 1);
 	player_t *player = NULL;
 	NOHUD
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
@@ -2286,8 +2338,18 @@ static int lib_sSetMusicPosition(lua_State *L)
 
 static int lib_sGetMusicPosition(lua_State *L)
 {
+	player_t *player = NULL;
 	NOHUD
-	lua_pushinteger(L, (UINT32)S_GetMusicPosition());
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, (int)S_GetMusicPosition());
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -2315,9 +2377,9 @@ static int lib_sResumeMusic(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
-		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
@@ -2346,40 +2408,6 @@ static int lib_sStopMusic(lua_State *L)
 		S_StopMusic();
 		lua_pushboolean(L, true);
 	}
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sDigitalPlaying(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, !S_MIDIPlaying() && S_MusicPlaying());
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sMidiPlaying(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_MIDIPlaying());
 	else
 		lua_pushnil(L);
 	return 1;
@@ -2414,6 +2442,23 @@ static int lib_sMusicPaused(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_MusicPaused());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicType(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, S_MusicType());
 	else
 		lua_pushnil(L);
 	return 1;
@@ -2850,15 +2895,17 @@ static luaL_Reg lib[] = {
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 #ifdef HAVE_LUA_MUSICPLUS
+	{"S_GetMusicLength",lib_sGetMusicLength},
+	{"S_SetMusicLoopPoint",lib_sSetMusicLoopPoint},
+	{"S_GetMusicLoopPoint",lib_sGetMusicLoopPoint},
 	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_PauseMusic",lib_sPauseMusic},
 	{"S_ResumeMusic",lib_sResumeMusic},
 	{"S_StopMusic",lib_sStopMusic},
-	{"S_DigitalPlaying",lib_sDigitalPlaying},
-	{"S_MidiPlaying",lib_sMidiPlaying},
 	{"S_MusicPlaying",lib_sMusicPlaying},
 	{"S_MusicPaused",lib_sMusicPaused},
+	{"S_MusicType",lib_sMusicType},
 	{"S_MusicName",lib_sMusicName},
 	{"S_MusicExists",lib_sMusicExists},
 #endif

@@ -468,11 +468,6 @@ void I_ResumeSong(INT32 handle)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
 }
 
-boolean I_MIDIPlaying(void)
-{
-	return midimode && music_stream;
-}
-
 boolean I_MusicPlaying(void)
 {
 	return (boolean)music_stream;
@@ -484,6 +479,11 @@ boolean I_MusicPaused(void)
 	if (music_stream)
 		FMOD_Channel_GetPaused(music_channel, &fmpaused);
 	return fmpaused;
+}
+
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
 }
 
 void I_InitDigMusic(void)
@@ -772,6 +772,26 @@ boolean I_SetSongSpeed(float speed)
 		FMR_MUSIC(e);
 
 	return true;
+}
+
+UINT32 I_GetMusicLength()
+{
+	if (midimode)
+		return 0;
+	UINT32 length;
+	e = FMOD_Sound_GetLength(music_stream, length, FMOD_TIMEUNIT_MS);
+	return length;
+}
+
+boolean I_SetMusicLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetMusicLoopPoint(void)
+{
+	return 0;
 }
 
 boolean I_SetMusicPosition(UINT32 position)

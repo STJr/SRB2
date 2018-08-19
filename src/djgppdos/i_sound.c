@@ -551,6 +551,22 @@ boolean I_SetSongSpeed(float speed)
 	return false;
 }
 
+UINT32 I_GetMusicLength(void)
+{
+	return 0;
+}
+
+boolean I_SetMusicLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetMusicLoopPoint(void)
+{
+	return 0;
+}
+
 boolean I_SetMusicPosition(UINT32 position)
 {
     (void)position;
@@ -559,12 +575,7 @@ boolean I_SetMusicPosition(UINT32 position)
 
 UINT32 I_GetMusicPosition(void)
 {
-    return 0.;
-}
-
-boolean I_MIDIPlaying(void)
-{
-	return (boolean)currsong && music_started;
+    return 0;
 }
 
 boolean I_MusicPlaying(void)
@@ -575,4 +586,9 @@ boolean I_MusicPlaying(void)
 boolean I_MusicPaused(void)
 {
 	return false;
+}
+
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
 }
