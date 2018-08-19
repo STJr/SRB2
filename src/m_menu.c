@@ -1306,12 +1306,13 @@ static menuitem_t OP_GameOptionsMenu[] =
 
 static menuitem_t OP_ChatOptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR, NULL, "Chat Width",               &cv_chatwidth,     10},
-	{IT_STRING | IT_CVAR, NULL, "Chat Height",              &cv_chatheight,    20},
-	{IT_STRING | IT_CVAR, NULL, "Message Timer",              &cv_chattime,    30},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",            &cv_chatnotifications,  40},
-	{IT_STRING | IT_CVAR, NULL, "Spam Protection",            &cv_chatspamprotection,  50},
-	{IT_STRING | IT_CVAR, NULL, "Old Console Chat",            &cv_consolechat,  60},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     10},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    20},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    30},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  40},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  50},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  60},
+	{IT_STRING | IT_CVAR, NULL, "Old Console Chat",            		 &cv_consolechat,  70},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
