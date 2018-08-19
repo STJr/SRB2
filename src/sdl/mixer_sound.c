@@ -1153,12 +1153,7 @@ void I_ShutdownMIDIMusic(void)
 
 void I_SetMIDIMusicVolume(UINT8 volume)
 {
-	// HACK: Until we stop using native MIDI,
-	// disable volume changes
-	(void)volume;
-	midi_volume = 31;
-	//midi_volume = volume;
-
+	midi_volume = volume;
 	if (!midimode || !music)
 		return;
 	Mix_VolumeMusic((UINT32)midi_volume*128/31);
