@@ -1199,7 +1199,7 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms
 
 	I_StopFadingMusic();
 
-	if (!ms)
+	if (!ms && volume_delta)
 	{
 		I_SetInternalMusicVolume(target_volume);
 		return true;
