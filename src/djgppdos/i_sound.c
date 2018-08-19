@@ -597,3 +597,15 @@ void I_SetInternalMusicVolume(UINT8 volume)
 {
 	(void)volume;
 }
+
+void I_StopFadingMusic(void)
+{
+}
+
+boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+{
+	(void)target_volume;
+	(void)source_volume;
+	(void)ms;
+	return false;
+}
