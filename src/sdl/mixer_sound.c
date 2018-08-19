@@ -74,7 +74,6 @@ static boolean is_fadingout;
 static boolean is_fadingin;
 static UINT8 fading_target;
 static INT32 fading_id;
-static UINT32 music_mslength;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -104,7 +103,7 @@ void I_StartupSound(void)
 		return;
 	}
 
-	midimode = false;
+	varcleanup();
 	music = NULL;
 	music_volume = midi_volume = sfx_volume = 0;
 
@@ -866,7 +865,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		return true;
 	}
 
-	Mix_VolumeMusic((UINT32)music_volume*128/31);
+	I_SetDigMusicVolume(music_volume);
 
 	if (I_MusicType() != MU_MOD)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
