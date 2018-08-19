@@ -249,6 +249,12 @@ boolean I_SetSongTrack(INT32 track);
 
 void I_SetInternalMusicVolume(UINT8 volume);
 
+void I_StopFadingMusic(void);
+
+boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms);
+
+#define I_FadeMusic(a, b) I_FadeMusicFromLevel(a, -1, b)
+
 /**	\brief The I_StartDigSong function
 
 	\param	musicname	music lump name

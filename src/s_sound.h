@@ -173,6 +173,10 @@ const char *S_MusicName(void);
 // Checks if music name exists
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 
+void S_StopFadingMusic(void);
+boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms);
+#define S_FadeMusic(a, b) S_FadeMusicFromLevel(a, -1, b)
+
 //
 // Updates music & sounds
 //

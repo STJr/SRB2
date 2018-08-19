@@ -72,6 +72,8 @@ static UINT32 music_bytes;
 static boolean is_looping;
 static boolean is_fading;
 static UINT8 fading_target;
+static UINT32 fading_steps;
+static INT16 fading_volume_step;
 static INT32 fading_id;
 
 #ifdef HAVE_LIBGME
@@ -82,7 +84,8 @@ static INT32 current_track;
 static void varcleanup(void)
 {
 	loop_point = music_length =\
-	 music_bytes = 0;
+	 music_bytes = fading_target =\
+	 fading_steps = fading_volume_step = 0;
 
 	songpaused = is_looping =\
 	 is_fading = midimode = false;
@@ -103,7 +106,7 @@ void I_StartupSound(void)
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
-		CONS_Printf("SDL Audio already started\n");
+		CONS_Debug(DBG_BASIC, "SDL Audio already started\n");
 	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
@@ -507,18 +510,28 @@ static void music_loop(void)
 
 static UINT32 music_fade(UINT32 interval, void *param)
 {
-	if (!is_fading || internal_volume == fading_target)
+	if (!is_fading ||
+		internal_volume == fading_target ||
+		fading_steps == 0 ||
+		fading_volume_step == 0)
+	{
+		I_StopFadingMusic();
 		return 0;
-	else if (internal_volume > fading_target) // fading out
-	{
-		CONS_Printf("Fading out\n");
 	}
-	else //if (internval_volume < fading_target) // fading in
+	else if (
+		(internal_volume > fading_target && internal_volume + fading_volume_step <= fading_target) || // finish fade out
+		(internal_volume < fading_target && internal_volume + fading_volume_step >= fading_target)) // finish fade in
 	{
-		CONS_Printf("Fading in\n");
+		internal_volume = fading_target;
+		Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
+		return 0;
 	}
-
-	return interval;
+	else
+	{
+		internal_volume += fading_volume_step;
+		Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
+		return interval;
+	}
 }
 
 #ifdef HAVE_LIBGME
@@ -1168,26 +1181,64 @@ void I_SetInternalMusicVolume(UINT8 volume)
 	Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
 }
 
-void I_StopFadingMusic()
+void I_StopFadingMusic(void)
 {
 	if (fading_id)
 		SDL_RemoveTimer(fading_id);
 	is_fading = false;
-	fading_target = fading_id = 0;
+	fading_target = fading_steps = fading_volume_step = fading_id = 0;
 }
 
-void I_FadeMusic(UINT8 fading_target_in)
+boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
 {
+	UINT32 target_steps, ms_per_step;
+	INT16 target_volume_step, volume_delta;
+
+	source_volume = min(source_volume, 100);
+	volume_delta = (INT16)(target_volume - (source_volume < 0 ? internal_volume : source_volume));
+
 	I_StopFadingMusic();
-	if (!is_fading || fading_target != fading_target_in)
+
+	if (!ms)
 	{
-		fading_id = SDL_AddTimer(1, music_fade, NULL);
+		I_SetInternalMusicVolume(target_volume);
+		return true;
+	}
+	else if (!volume_delta)
+		return true;
+
+	// Round MS to nearest 10
+	// If n - lower > higher - n, then round up
+	ms = (ms - ((ms / 10) * 10) > (((ms / 10) * 10) + 10) - ms) ?
+		(((ms / 10) * 10) + 10) // higher
+		: ((ms / 10) * 10); // lower
+
+	ms_per_step = max(10, ms / abs(volume_delta));
+		// 10ms is the usual minimum timer granularity, but platform-dependent
+	target_steps = ms/ms_per_step;
+	target_volume_step = volume_delta / (INT16)target_steps;
+
+	if (!target_steps || !target_volume_step)
+		I_SetInternalMusicVolume(target_volume);
+	else if (source_volume != target_volume)
+	{
+		fading_id = SDL_AddTimer(ms_per_step, music_fade, NULL);
 		if (fading_id)
 		{
 			is_fading = true;
-			fading_target = fading_target_in;
+			fading_target = target_volume;
+			fading_steps = target_steps;
+			fading_volume_step = target_volume_step;
+
+			if (source_volume >= 0 && internal_volume != source_volume)
+				I_SetInternalMusicVolume(source_volume);
 		}
 	}
+
+	CONS_Printf("Target %d> Source %d> MS %d> Steps %d> MSPer %d> VolPer %d> Fading %d\n",
+		target_volume, internal_volume, ms, target_steps, ms_per_step, target_volume_step, is_fading);
+
+	return is_fading;
 }
 
 //

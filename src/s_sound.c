@@ -1481,6 +1481,16 @@ void S_SetInternalMusicVolume(INT32 volume)
 	I_SetInternalMusicVolume(min(max(volume, 0), 100));
 }
 
+void S_StopFadingMusic(void)
+{
+	I_StopFadingMusic();
+}
+
+boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+{
+	return I_FadeMusicFromLevel(target_volume, source_volume, ms);
+}
+
 void S_SetDigMusicVolume(INT32 volume)
 {
 	if (volume < 0 || volume > 31)
