@@ -2031,10 +2031,17 @@ void I_StopFadingMusic(void)
 {
 }
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT16 source_volume, UINT32 ms)
 {
 	(void)target_volume;
 	(void)source_volume;
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeMusic(UINT8 target_volume, UINT32 ms)
+{
+	(void)target_volume;
 	(void)ms;
 	return false;
 }
