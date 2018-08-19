@@ -96,7 +96,7 @@ static int lib_chatprint(lua_State *L)
 	if (len > 255)	// string is too long!!!
 		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
 	
-	if (cv_consolechat.value || !netgame)
+	if (OLDCHAT)
 		CONS_Printf("%s\n", str);
 	else
 		HU_AddChatText(str);
@@ -124,7 +124,7 @@ static int lib_chatprintf(lua_State *L)
 	if (len > 255)	// string is too long!!!
 		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
 	
-	if (cv_consolechat.value || !netgame)
+	if (OLDCHAT)
 		CONS_Printf("%s\n", str);
 	else
 		HU_AddChatText(str);

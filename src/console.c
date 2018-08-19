@@ -1443,7 +1443,7 @@ static void CON_DrawHudlines(void)
 	if (con_hudlines <= 0)
 		return;
 
-	if (chat_on && (cv_consolechat.value || vid.width < 640))
+	if (chat_on && OLDCHAT)
 		y = charheight; // leave place for chat input in the first row of text (only do it if consolechat is on.)
 	else
 		y = 0;

@@ -778,7 +778,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		
 		}		
 		
-		if (cv_consolechat.value)
+		if OLDCHAT
 		{	
 			CONS_Printf(fmt, prefix, cstart, dispname, cend, msg);	
 			HU_AddChatText(va(fmt2, prefix, cstart, dispname, cend, msg));	// add it reguardless, in case we decide to change our mind about our chat type.
@@ -1875,14 +1875,14 @@ void HU_Drawer(void)
 		// count down the scroll timer. 
 		if (chat_scrolltime > 0)
 			chat_scrolltime--;
-		if (!cv_consolechat.value && vid.width > 320)	// don't even bother with 200p
+		if (!OLDCHAT)
 			HU_DrawChat();
 		else
 			HU_DrawChat_Old();	// why the fuck.........................
 	}
 	else
 	{
-		if (!cv_consolechat.value)
+		if (!OLDCHAT)
 		{	
 			HU_drawMiniChat();		// draw messages in a cool fashion.
 			chat_scrolltime = 0;	// do scroll anyway.
@@ -2005,7 +2005,7 @@ void HU_Erase(void)
 	// clear the message lines that go away, so use _oldclearlines_
 	bottomline = oldclearlines;
 	oldclearlines = con_clearlines;
-	if (chat_on && cv_consolechat.value)
+	if (chat_on && OLDCHAT)
 		if (bottomline < 8)
 			bottomline = 8;	// only do it for consolechat. consolechat is gay.
 
