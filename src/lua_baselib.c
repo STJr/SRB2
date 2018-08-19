@@ -2516,6 +2516,28 @@ static int lib_sMusicExists(lua_State *L)
 	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
 	return 1;
 }
+
+static int lib_sSetInternalMusicVolume(lua_State *L)
+{
+	UINT32 volume = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_SetInternalMusicVolume(volume);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 #endif
 static int lib_sOriginPlaying(lua_State *L)
 {
@@ -2908,6 +2930,7 @@ static luaL_Reg lib[] = {
 	{"S_MusicType",lib_sMusicType},
 	{"S_MusicName",lib_sMusicName},
 	{"S_MusicExists",lib_sMusicExists},
+	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
 #endif
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
