@@ -64,14 +64,13 @@ UINT8 sound_started = false;
 
 static boolean midimode;
 static Mix_Music *music;
-static UINT8 music_volume, midi_volume, sfx_volume;
+static UINT8 music_volume, midi_volume, sfx_volume, internal_volume;
 static float loop_point;
 static float music_length; // length in seconds
 static boolean songpaused;
 static UINT32 music_bytes;
 static boolean is_looping;
-static boolean is_fadingout;
-static boolean is_fadingin;
+static boolean is_fading;
 static UINT8 fading_target;
 static INT32 fading_id;
 
@@ -86,7 +85,16 @@ static void varcleanup(void)
 	 music_bytes = 0;
 
 	songpaused = is_looping =\
-	 midimode = false;
+	 is_fading = midimode = false;
+
+	internal_volume = 100;
+}
+
+static UINT32 get_real_volume(UINT8 volume)
+{
+	// convert volume to mixer's 128 scale
+	// then apply internal_volume as a percentage
+	return ((UINT32)volume*128/31) * (UINT32)internal_volume / 100;
 }
 
 void I_StartupSound(void)
@@ -497,16 +505,20 @@ static void music_loop(void)
 		I_StopDigSong();
 }
 
-static UINT32 music_fadeout(UINT32 interval)
+static UINT32 music_fade(UINT32 interval, void *param)
 {
-	if (is_fadingout)
+	if (!is_fading || internal_volume == fading_target)
+		return 0;
+	else if (internal_volume > fading_target) // fading out
 	{
 		CONS_Printf("Fading out\n");
 	}
-	else
+	else //if (internval_volume < fading_target) // fading in
 	{
-		SDL_RemoveTimer(fading_id);
+		CONS_Printf("Fading in\n");
 	}
+
+	return interval;
 }
 
 #ifdef HAVE_LIBGME
@@ -526,7 +538,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * music_volume*2 / 42;
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 42;
 }
 #endif
 
@@ -907,7 +919,7 @@ void I_SetDigMusicVolume(UINT8 volume)
 	music_volume = volume;
 	if (midimode || !music)
 		return;
-	Mix_VolumeMusic((UINT32)volume*128/31);
+	Mix_VolumeMusic(get_real_volume(volume));
 }
 
 boolean I_SetSongSpeed(float speed)
@@ -1152,42 +1164,19 @@ void I_StopFadingMusic()
 {
 	if (fading_id)
 		SDL_RemoveTimer(fading_id);
-	is_fadingout = is_fadingin = false;
-	fading_target = fading_id = -1;
+	is_fading = false;
+	fading_target = fading_id = 0;
 }
 
 void I_FadeMusic(UINT8 fading_target_in)
 {
 	I_StopFadingMusic();
-	if (!is_fadingout || fading_target != fading_target_in)
+	if (!is_fading || fading_target != fading_target_in)
 	{
-		fading_id = SDL_AddTimer(1, music_fadeout, NULL);
+		fading_id = SDL_AddTimer(1, music_fade, NULL);
 		if (fading_id)
 		{
-			is_fadingout = true;
-			fading_target = fading_target_in;
-		}
-	}
-}
-
-void I_FadeInMusic(UINT8 fading_target_in)
-{
-	I_StopFadingMusic();
-	// if (!is_fadingin)
-	// {
-
-	// }
-}
-
-void I_FadeOutMusic(UINT8 fading_target_in)
-{
-	I_StopFadingMusic();
-	if (!is_fadingout || fading_target != fading_target_in)
-	{
-		fading_id = SDL_AddTimer(1, music_fadeout, NULL);
-		if (fading_id)
-		{
-			is_fadingout = true;
+			is_fading = true;
 			fading_target = fading_target_in;
 		}
 	}
@@ -1217,7 +1206,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 	midi_volume = volume;
 	if (!midimode || !music)
 		return;
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
+	Mix_VolumeMusic(get_real_volume(volume));
 }
 
 INT32 I_RegisterSong(void *data, size_t len)
@@ -1253,7 +1242,7 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	//if(!Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 	//	CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
+	I_SetMIDIMusicVolume(midi_volume);
 	return true;
 }
 
