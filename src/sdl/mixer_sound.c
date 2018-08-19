@@ -502,18 +502,6 @@ static UINT32 music_fadeout(UINT32 interval)
 	}
 }
 
-static UINT32 music_fadein(UINT32 interval)
-{
-	if (is_fadingin)
-	{
-		CONS_Printf("Fading in\n");
-	}
-	else
-	{
-		SDL_RemoveTimer(fading_id);
-	}
-}
-
 #ifdef HAVE_LIBGME
 static void mix_gme(void *udata, Uint8 *stream, int len)
 {
