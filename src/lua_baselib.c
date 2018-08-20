@@ -2274,9 +2274,9 @@ static int lib_sGetMusicLength(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 	{
-		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
@@ -2564,29 +2564,40 @@ static int lib_sStopFadingMusic(lua_State *L)
 
 static int lib_sFadeMusic(lua_State *L)
 {
-	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 2);
-	UINT32 ms = (UINT32)luaL_optinteger(L, 4, UINT32_MAX);
+	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 1);
+	UINT32 ms;// = (UINT32)luaL_optinteger(L, 3, UINT32_MAX);
 	INT32 source_volume;
-
-	if (ms == UINT32_MAX)
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
+		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		ms = (UINT32)luaL_checkinteger(L, 2);
+		source_volume = -1;
+	}
+	else if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
+	{
+		player = *((player_t **)luaL_checkudata(L, 4, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		source_volume = (INT32)luaL_checkinteger(L, 2);
 		ms = (UINT32)luaL_checkinteger(L, 3);
+	}
+	else if (luaL_optinteger(L, 3, UINT32_MAX) == UINT32_MAX)
+	{
+		ms = (UINT32)luaL_checkinteger(L, 2);
 		source_volume = -1;
 	}
 	else
 	{
-		source_volume = (INT32)luaL_checkinteger(L, 3);
-
+		source_volume = (INT32)luaL_checkinteger(L, 2);
+		ms = (UINT32)luaL_checkinteger(L, 3);
 	}
 
-	player_t *player = NULL;
 	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
+
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_FadeMusicFromLevel(target_volume, source_volume, ms));
 	else
