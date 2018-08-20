@@ -1294,21 +1294,21 @@ void S_StartSoundName(void *mo, const char *soundname)
 #ifdef MUSICSLOT_COMPATIBILITY
 const char *compat_special_music_slots[16] =
 {
-	"titles", // 1036  title screen
-	"read_m", // 1037  intro
-	"lclear", // 1038  level clear
-	"invinc", // 1039  invincibility
-	"shoes",  // 1040  super sneakers
-	"minvnc", // 1041  Mario invincibility
-	"drown",  // 1042  drowning
-	"gmover", // 1043  game over
-	"xtlife", // 1044  extra life
-	"contsc", // 1045  continue screen
-	"supers", // 1046  Super Sonic
-	"chrsel", // 1047  character select
-	"credit", // 1048  credits
-	"racent", // 1049  Race Results
-	"stjr",   // 1050  Sonic Team Jr. Presents
+	"_title", // 1036  title screen
+	"_intro", // 1037  intro
+	"_clear", // 1038  level clear
+	"_inv", // 1039  invincibility
+	"_shoes",  // 1040  super sneakers
+	"_minv", // 1041  Mario invincibility
+	"_drown",  // 1042  drowning
+	"_gover", // 1043  game over
+	"_1up", // 1044  extra life
+	"_conti", // 1045  continue screen
+	"_super", // 1046  Super Sonic
+	"_chsel", // 1047  character select
+	"_creds", // 1048  credits
+	"_inter", // 1049  Race Results
+	"_stjr",   // 1050  Sonic Team Jr. Presents
 	""
 };
 #endif
@@ -1423,12 +1423,30 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 		else if (strncmp(music_name, newmusic, 6))
 		{
 			S_StopMusic();
-			if (!S_DigMusic(newmusic, looping))
+			if (position || fadeinms)
+			{
+				if(!I_FadeInStartDigSong(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms, false))
+				{
+					CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
+					return;
+				}
+				else
+				{
+					strncpy(music_name, newmusic, 7);
+					music_name[6] = 0;
+					music_lumpnum = LUMPERROR;
+					music_data = NULL;
+					music_handle = 0;
+					return;
+				}
+			}
+			else if (!S_DigMusic(newmusic, looping))
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
 				return;
 			}
-			I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+			else
+				I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 		}
 	}
 	else if (strncmp(music_name, newmusic, 6) && midiexists && !nomidimusic && !music_disabled) // midimusic?
