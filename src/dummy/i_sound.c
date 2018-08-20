@@ -155,7 +155,7 @@ void I_StopFadingMusic(void)
 {
 }
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT16 source_volume, UINT32 ms)
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
 {
 	(void)target_volume;
 	(void)source_volume;
@@ -167,6 +167,20 @@ boolean I_FadeMusic(UINT8 target_volume, UINT32 ms)
 {
 	(void)target_volume;
 	(void)ms;
+	return false;
+}
+
+boolean I_FadeOutStopMusic(UINT32 ms)
+{
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
+{
+	(void)musicname;
+	(void)looping;
+	(void)fadeinms;
 	return false;
 }
 
