@@ -1408,7 +1408,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 		if (prefadems && I_MusicType() != MU_MID) //have to queue post-fade // allow even if the music is the same
 		{
 			I_FadeOutStopMusic(prefadems);
-			I_QueueDigSongPostFade(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
+			I_QueueDigSong(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
 
 			// HACK: set the vars now and hope everything works out
 			strncpy(music_name, newmusic, 7);

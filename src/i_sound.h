@@ -258,7 +258,7 @@ boolean I_FadeMusic(UINT8 target_volume, UINT32 ms);
 boolean I_FadeOutStopMusic(UINT32 ms);
 
 boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade);
-#define I_QueueDigSongPostFade(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
+#define I_QueueDigSong(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
 
 /**	\brief The I_StartDigSong function
 
