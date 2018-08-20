@@ -2565,7 +2565,7 @@ static int lib_sStopFadingMusic(lua_State *L)
 static int lib_sFadeMusic(lua_State *L)
 {
 	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 1);
-	UINT32 ms;// = (UINT32)luaL_optinteger(L, 3, UINT32_MAX);
+	UINT32 ms;
 	INT32 source_volume;
 	player_t *player = NULL;
 	NOHUD
