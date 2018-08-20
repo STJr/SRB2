@@ -510,19 +510,6 @@ static void count_music_bytes(int chan, void *stream, int len, void *udata)
 	music_bytes += len;
 }
 
-// Music hooks
-static void music_loop(void)
-{
-	if (is_looping)
-	{
-		Mix_PlayMusic(music, 0);
-		Mix_SetMusicPosition(loop_point);
-		music_bytes = loop_point*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetMusicPosition)
-	}
-	else
-		I_StopDigSong();
-}
-
 static void run_queue()
 {
 	if (queue_stopafterfade)
@@ -540,6 +527,21 @@ static void run_queue()
 		}
 	}
 	queuecleanup();
+}
+
+// Music hooks
+static void music_loop(void)
+{
+	if (queue_music_name[0] && !is_fading && !is_looping)
+		run_queue();
+	else if (is_looping)
+	{
+		Mix_PlayMusic(music, 0);
+		Mix_SetMusicPosition(loop_point);
+		music_bytes = loop_point*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetMusicPosition)
+	}
+	else
+		I_StopDigSong();
 }
 
 static UINT32 music_fade(UINT32 interval, void *param)
