@@ -1699,7 +1699,7 @@ boolean S_MusicPaused(void)
 
 const char *S_GetMusicName(void)
 {
-	return music_name;
+	return S_MusicPlaying() ? music_name : "\0";
 }
 
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
