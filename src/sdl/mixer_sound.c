@@ -75,6 +75,12 @@ static UINT8 fading_target;
 static UINT32 fading_steps;
 static INT16 fading_volume_step;
 static INT32 fading_id;
+static char queue_music_name[7]; // up to 6-character name
+static UINT16 queue_track;
+static boolean queue_looping;
+static UINT32 queue_position;
+static UINT32 queue_fadeinms;
+static boolean queue_stopafterfade;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -91,6 +97,14 @@ static void varcleanup(void)
 	 is_fading = midimode = false;
 
 	internal_volume = 100;
+}
+
+static void queuecleanup(void)
+{
+	queue_track = queue_looping =\
+	 queue_position = queue_fadeinms =\
+	 queue_stopafterfade = 0;
+	queue_music_name[0] = 0;
 }
 
 static UINT32 get_real_volume(UINT8 volume)
@@ -115,6 +129,7 @@ void I_StartupSound(void)
 	}
 
 	varcleanup();
+	queuecleanup();
 	music = NULL;
 	music_volume = midi_volume = sfx_volume = 0;
 
@@ -508,14 +523,31 @@ static void music_loop(void)
 		I_StopDigSong();
 }
 
+static void run_queue()
+{
+	if (queue_stopafterfade)
+		I_StopDigSong();
+	else if (queue_music_name[0] && I_StartDigSong(queue_music_name, queue_looping))
+	{
+		I_SetSongTrack(queue_track);
+		if (queue_fadeinms)
+			I_FadeMusicFromLevel(100, 0, queue_fadeinms, false);
+		if (queue_position)
+			I_SetMusicPosition(queue_position);
+	}
+	queuecleanup();
+}
+
 static UINT32 music_fade(UINT32 interval, void *param)
 {
 	if (!is_fading ||
+		midimode || // stub out MIDI, see bug in I_SetMIDIMusicVolume
 		internal_volume == fading_target ||
 		fading_steps == 0 ||
 		fading_volume_step == 0)
 	{
 		I_StopFadingMusic();
+		queuecleanup();
 		return 0;
 	}
 	else if (
@@ -524,6 +556,7 @@ static UINT32 music_fade(UINT32 interval, void *param)
 	{
 		internal_volume = fading_target;
 		Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
+		run_queue();
 		return 0;
 	}
 	else
@@ -644,6 +677,7 @@ void I_ShutdownDigMusic(void)
 	if (!music)
 		return;
 	varcleanup();
+	queuecleanup();
 	SDL_RemoveTimer(fading_id);
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
@@ -1176,7 +1210,7 @@ boolean I_SetSongTrack(int track)
 void I_SetInternalMusicVolume(UINT8 volume)
 {
 	internal_volume = volume;
-	if (!music)
+	if (midimode || !music) // stub out MIDI, see bug in I_SetMIDIMusicVolume
 		return;
 	Mix_VolumeMusic(get_real_volume(midimode ? midi_volume : music_volume));
 }
@@ -1189,23 +1223,39 @@ void I_StopFadingMusic(void)
 	fading_target = fading_steps = fading_volume_step = fading_id = 0;
 }
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms)
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
 {
 	UINT32 target_steps, ms_per_step;
 	INT16 target_volume_step, volume_delta;
 
 	source_volume = min(source_volume, 100);
-	volume_delta = (INT16)(target_volume - source_volume));
+	volume_delta = (INT16)(target_volume - source_volume);
 
 	I_StopFadingMusic();
 
 	if (!ms && volume_delta)
 	{
-		I_SetInternalMusicVolume(target_volume);
-		return true;
+		if (stopafterfade)
+		{
+			I_StopDigSong();
+			return true;
+		}
+		else
+		{
+			I_SetInternalMusicVolume(target_volume);
+			return true;
+		}
 	}
 	else if (!volume_delta)
-		return true;
+	{
+		if (stopafterfade)
+		{
+			I_StopDigSong();
+			return true;
+		}
+		else
+			return true;
+	}
 
 	// Round MS to nearest 10
 	// If n - lower > higher - n, then round up
@@ -1229,6 +1279,7 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 			fading_target = target_volume;
 			fading_steps = target_steps;
 			fading_volume_step = target_volume_step;
+			queue_stopafterfade = stopafterfade;
 
 			if (internal_volume != source_volume)
 				I_SetInternalMusicVolume(source_volume);
@@ -1240,7 +1291,45 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 
 boolean I_FadeMusic(UINT8 target_volume, UINT32 ms)
 {
-	return I_FadeMusicFromLevel(target_volume, internal_volume, ms);
+	return I_FadeMusicFromLevel(target_volume, internal_volume, ms, false);
+}
+
+boolean I_FadeOutStopMusic(UINT32 ms)
+{
+	return I_FadeMusicFromLevel(0, internal_volume, ms, true);
+}
+
+boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
+{
+	if (musicname[0] == 0)
+		return true; // nothing to play
+	else if (queuepostfade && is_fading)
+	{
+		strncpy(queue_music_name, musicname, 7);
+		queue_music_name[6] = 0;
+		queue_track = track;
+		queue_looping = looping;
+		queue_position = position;
+		queue_fadeinms = fadeinms;
+		queue_stopafterfade = false;
+
+		return true;
+	}
+	else
+	{
+		if (I_StartDigSong(musicname, looping))
+		{
+			I_SetSongTrack(track);
+			if (fadeinms)
+				I_FadeMusicFromLevel(100, 0, fadeinms, false);
+			if (position)
+				I_SetMusicPosition(position);
+			return true;
+		}
+		else
+			return false;
+	}
+
 }
 
 //
@@ -1264,10 +1353,18 @@ void I_ShutdownMIDIMusic(void)
 
 void I_SetMIDIMusicVolume(UINT8 volume)
 {
-	midi_volume = volume;
+	// HACK: Until we stop using native MIDI,
+	// disable volume changes
+	// Why: In Windows, MIDI volume messes with the executable's volume setting
+	// in the OS volume mixer. So any EXE sharing that same filename and directory
+	// will be affected by this volume bug.
+
+	(void)volume;
+	midi_volume = 31;
+	//midi_volume = volume;
 	if (!midimode || !music)
 		return;
-	Mix_VolumeMusic(get_real_volume(volume));
+	Mix_VolumeMusic((UINT32)midi_volume*128/31);
 }
 
 INT32 I_RegisterSong(void *data, size_t len)

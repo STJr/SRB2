@@ -251,9 +251,14 @@ void I_SetInternalMusicVolume(UINT8 volume);
 
 void I_StopFadingMusic(void);
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT16 source_volume, UINT32 ms);
+boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade);
 
 boolean I_FadeMusic(UINT8 target_volume, UINT32 ms);
+
+boolean I_FadeOutStopMusic(UINT32 ms);
+
+boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade);
+#define I_QueueDigSongPostFade(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
 
 /**	\brief The I_StartDigSong function
 

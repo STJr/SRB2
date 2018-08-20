@@ -1379,7 +1379,7 @@ static boolean S_DigMusic(const char *mname, boolean looping)
 	return true;
 }
 
-void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
+void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
 		return;
@@ -1402,13 +1402,47 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 
 	if (strncmp(music_name, newmusic, 6))
 	{
-		S_StopMusic(); // shutdown old music
-		if (!S_DigMusic(newmusic, looping) && !S_MIDIMusic(newmusic, looping))
+		if (S_MusicExists(newmusic, false, true) && !nodigimusic && !digital_disabled) // digmusic?
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
-			return;
+			if (prefadems) //have to queue post-fade
+			{
+				I_FadeOutStopMusic(prefadems);
+				I_QueueDigSongPostFade(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
+
+				// HACK: set the vars now and hope everything works out
+				strncpy(music_name, newmusic, 7);
+				music_name[6] = 0;
+				music_lumpnum = LUMPERROR;
+				music_data = NULL;
+				music_handle = 0;
+				return;
+			}
+			else
+			{
+				S_StopMusic();
+				if (!S_DigMusic(newmusic, looping))
+				{
+					CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
+					return;
+				}
+			}
+		}
+		else if (S_MusicExists(newmusic, true, false) && !nomidimusic && !music_disabled) // midimusic?
+		{
+			// HACK: We don't support fade for MIDI right now, so
+			// just fall to old behavior verbatim. This technically should be implemented in
+			// the interfaces, even as a stub.
+
+			S_StopMusic();
+
+			if (!S_MIDIMusic(newmusic, looping))
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
+				return;
+			}
 		}
 	}
+
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
@@ -1491,7 +1525,12 @@ boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms
 	if (source_volume < 0)
 		return I_FadeMusic(target_volume, ms);
 	else
-		return I_FadeMusicFromLevel(target_volume, source_volume, ms);
+		return I_FadeMusicFromLevel(target_volume, source_volume, ms, false);
+}
+
+boolean S_FadeOutStopMusic(UINT32 ms)
+{
+	return I_FadeOutStopMusic(ms);
 }
 
 void S_SetDigMusicVolume(INT32 volume)
