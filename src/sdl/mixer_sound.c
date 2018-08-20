@@ -821,6 +821,12 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		return true;
 	}
 
+	if (I_MusicType() == MU_MP3)
+	{
+		CONS_Debug(DBG_BASIC, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
+		CONS_Debug(DBG_DETAILED, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
+	}
+
 	// Find the OGG loop point.
 	is_looping = looping;
 	loop_point = 0.0f;
@@ -927,6 +933,9 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 				p++;
 		}
 	}
+
+	if (!music_length && (I_MusicType() == MU_OGG || I_MusicType() == MU_MP3 || I_MusicType() == MU_FLAC))
+		CONS_Debug(DBG_DETAILED, "This song is missing a LENGTHMS= tag! Required to make seeking work properly.");
 
 	if (I_MusicType() != MU_MOD && Mix_PlayMusic(music, 0) == -1)
 	{
@@ -1040,7 +1049,7 @@ UINT32 I_GetMusicLength(void)
 		// SDL mixer can't read music length itself.
 		length = (UINT32)(music_length*1000);
 		if (!length)
-			CONS_Debug(DBG_BASIC, "Getting music length: music is missing LENGTHMS= in music tag.\n");
+			CONS_Debug(DBG_DETAILED, "Getting music length: music is missing LENGTHMS= tag. Needed for seeking.\n");
 		return length;
 	}
 }

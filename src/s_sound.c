@@ -1403,6 +1403,8 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 	}
 
+	CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
+
 	if (digiexists && !nodigimusic && !digital_disabled) // digmusic?
 	{
 		if (prefadems && I_MusicType() != MU_MID) //have to queue post-fade // allow even if the music is the same
