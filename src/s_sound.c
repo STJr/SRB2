@@ -1400,50 +1400,46 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 	}
 
-	if (strncmp(music_name, newmusic, 6))
+	if (S_MusicExists(newmusic, false, true) && !nodigimusic && !digital_disabled) // digmusic?
 	{
-		if (S_MusicExists(newmusic, false, true) && !nodigimusic && !digital_disabled) // digmusic?
+		if (prefadems) //have to queue post-fade // allow even if the music is the same
 		{
-			if (prefadems) //have to queue post-fade
-			{
-				I_FadeOutStopMusic(prefadems);
-				I_QueueDigSongPostFade(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
+			I_FadeOutStopMusic(prefadems);
+			I_QueueDigSongPostFade(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
 
-				// HACK: set the vars now and hope everything works out
-				strncpy(music_name, newmusic, 7);
-				music_name[6] = 0;
-				music_lumpnum = LUMPERROR;
-				music_data = NULL;
-				music_handle = 0;
-				return;
-			}
-			else
-			{
-				S_StopMusic();
-				if (!S_DigMusic(newmusic, looping))
-				{
-					CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
-					return;
-				}
-			}
+			// HACK: set the vars now and hope everything works out
+			strncpy(music_name, newmusic, 7);
+			music_name[6] = 0;
+			music_lumpnum = LUMPERROR;
+			music_data = NULL;
+			music_handle = 0;
+			return;
 		}
-		else if (S_MusicExists(newmusic, true, false) && !nomidimusic && !music_disabled) // midimusic?
+		else if (strncmp(music_name, newmusic, 6))
 		{
-			// HACK: We don't support fade for MIDI right now, so
-			// just fall to old behavior verbatim. This technically should be implemented in
-			// the interfaces, even as a stub.
-
 			S_StopMusic();
-
-			if (!S_MIDIMusic(newmusic, looping))
+			if (!S_DigMusic(newmusic, looping))
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
 				return;
 			}
+			I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 		}
 	}
+	else if (strncmp(music_name, newmusic, 6) && S_MusicExists(newmusic, true, false) && !nomidimusic && !music_disabled) // midimusic?
+	{
+		// HACK: We don't support fade for MIDI right now, so
+		// just fall to old behavior verbatim. This technically should be implemented in
+		// the interfaces, even as a stub.
 
-	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+		S_StopMusic();
+
+		if (!S_MIDIMusic(newmusic, looping))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
+			return;
+		}
+	}
 }
 
 musictype_t S_MusicType()

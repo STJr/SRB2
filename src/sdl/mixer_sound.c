@@ -527,13 +527,17 @@ static void run_queue()
 {
 	if (queue_stopafterfade)
 		I_StopDigSong();
-	else if (queue_music_name[0] && I_StartDigSong(queue_music_name, queue_looping))
+	else if (queue_music_name[0])
 	{
-		I_SetSongTrack(queue_track);
-		if (queue_fadeinms)
-			I_FadeMusicFromLevel(100, 0, queue_fadeinms, false);
-		if (queue_position)
-			I_SetMusicPosition(queue_position);
+		I_StopDigSong();
+		if (I_StartDigSong(queue_music_name, queue_looping))
+		{
+			I_SetSongTrack(queue_track);
+			if (queue_fadeinms)
+				I_FadeMusicFromLevel(100, 0, queue_fadeinms, false);
+			if (queue_position)
+				I_SetMusicPosition(queue_position);
+		}
 	}
 	queuecleanup();
 }
