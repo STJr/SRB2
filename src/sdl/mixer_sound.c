@@ -512,11 +512,17 @@ static void count_music_bytes(int chan, void *stream, int len, void *udata)
 
 static void run_queue()
 {
-	if (queue_stopafterfade)
+	if (queue_stopafterfade && midimode)
+		I_StopSong(1337);
+	else if (queue_stopafterfade && !midimode)
 		I_StopDigSong();
 	else if (queue_music_name[0])
 	{
-		I_StopDigSong();
+		if (!midimode)
+			I_StopDigSong();
+		else
+			I_StopSong(1337);
+
 		if (I_StartDigSong(queue_music_name, queue_looping))
 		{
 			I_SetSongTrack(queue_track);
@@ -1252,15 +1258,13 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 			return true;
 		}
 	}
-	else if (!volume_delta)
+	else if (!volume_delta || midimode)
 	{
-		if (stopafterfade)
-		{
+		if (stopafterfade && !midimode)
 			I_StopDigSong();
-			return true;
-		}
-		else
-			return true;
+		else if (stopafterfade && midimode)
+			I_StopSong(1337);
+		return true;
 	}
 
 	// Round MS to nearest 10
@@ -1309,7 +1313,7 @@ boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean loopin
 {
 	if (musicname[0] == 0)
 		return true; // nothing to play
-	else if (queuepostfade && is_fading)
+	else if (queuepostfade && is_fading && !midimode)
 	{
 		strncpy(queue_music_name, musicname, 7);
 		queue_music_name[6] = 0;

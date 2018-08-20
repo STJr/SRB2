@@ -1386,7 +1386,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 
 	char newmusic[7];
 	boolean digiexists = S_DigExists(mmusic);
-	boolean midiexists = S_MIDIExists(newmusic);
+	boolean midiexists = S_MIDIExists(mmusic);
 
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
@@ -1405,7 +1405,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 
 	if (digiexists && !nodigimusic && !digital_disabled) // digmusic?
 	{
-		if (prefadems) //have to queue post-fade // allow even if the music is the same
+		if (prefadems && I_MusicType() != MU_MID) //have to queue post-fade // allow even if the music is the same
 		{
 			I_FadeOutStopMusic(prefadems);
 			I_QueueDigSongPostFade(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
