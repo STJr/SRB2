@@ -174,6 +174,8 @@ const char *S_MusicName(void);
 
 // Checks if music name exists
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+#define S_DigExists(a) S_MusicExists(a, false, true)
+#define S_MIDIExists(a) S_MusicExists(a, true, false)
 
 void S_StopFadingMusic(void);
 boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms);

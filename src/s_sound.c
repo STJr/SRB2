@@ -1385,6 +1385,9 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 
 	char newmusic[7];
+	boolean digiexists = S_DigExists(mmusic);
+	boolean midiexists = S_MIDIExists(newmusic);
+
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
 		return;
@@ -1400,7 +1403,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 	}
 
-	if (S_MusicExists(newmusic, false, true) && !nodigimusic && !digital_disabled) // digmusic?
+	if (digiexists && !nodigimusic && !digital_disabled) // digmusic?
 	{
 		if (prefadems) //have to queue post-fade // allow even if the music is the same
 		{
@@ -1426,7 +1429,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 			I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 		}
 	}
-	else if (strncmp(music_name, newmusic, 6) && S_MusicExists(newmusic, true, false) && !nomidimusic && !music_disabled) // midimusic?
+	else if (strncmp(music_name, newmusic, 6) && midiexists && !nomidimusic && !music_disabled) // midimusic?
 	{
 		// HACK: We don't support fade for MIDI right now, so
 		// just fall to old behavior verbatim. This technically should be implemented in
@@ -1440,6 +1443,8 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 			return;
 		}
 	}
+	else if (!midiexists && !digiexists)
+		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
 }
 
 musictype_t S_MusicType()
