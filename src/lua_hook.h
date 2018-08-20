@@ -89,7 +89,8 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mo); // Hook for P_PlayerAfterThink Smiles mobj-following
 #ifdef HAVE_LUA_MUSICPLUS
-boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping); // Hook for music changes
+boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping,
+	UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms); // Hook for music changes
 #endif
 
 #endif

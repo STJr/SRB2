@@ -1196,7 +1196,8 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 #ifdef HAVE_LUA_MUSICPLUS
 
 // Hook for music changes
-boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping)
+boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping,
+	UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -1217,25 +1218,37 @@ boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusi
 			lua_pushstring(gL, newname);
 			lua_pushinteger(gL, *mflags);
 			lua_pushboolean(gL, *looping);
-			if (lua_pcall(gL, 4, 3, 0)) {
+			lua_pushinteger(gL, *position);
+			lua_pushinteger(gL, *prefadems);
+			lua_pushinteger(gL, *fadeinms);
+			if (lua_pcall(gL, 7, 6, 0)) {
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 				lua_pop(gL, 1);
 				continue;
 			}
 
 			// output 1: true, false, or string musicname override
-			if (lua_isboolean(gL, -3) && lua_toboolean(gL, -3))
+			if (lua_isboolean(gL, -6) && lua_toboolean(gL, -6))
 				hooked = true;
-			else if (lua_isstring(gL, -3))
-				strncpy(newmusic, lua_tostring(gL, -3), 7);
-			// output 2: hook override
-			if (lua_isnumber(gL, -2))
-				*mflags = lua_tonumber(gL, -2);
+			else if (lua_isstring(gL, -6))
+				strncpy(newmusic, lua_tostring(gL, -6), 7);
+			// output 2: mflags override
+			if (lua_isnumber(gL, -5))
+				*mflags = lua_tonumber(gL, -5);
 			// output 3: looping override
+			if (lua_isboolean(gL, -4))
+				*looping = lua_toboolean(gL, -4);
+			// output 4: position override
+			if (lua_isboolean(gL, -3))
+				*position = lua_tonumber(gL, -3);
+			// output 5: prefadems override
+			if (lua_isboolean(gL, -2))
+				*prefadems = lua_tonumber(gL, -2);
+			// output 6: fadeinms override
 			if (lua_isboolean(gL, -1))
-				*looping = lua_toboolean(gL, -1);
+				*fadeinms = lua_tonumber(gL, -1);
 
-			lua_pop(gL, 3);
+			lua_pop(gL, 6);
 		}
 
 	lua_settop(gL, 0);

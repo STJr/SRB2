@@ -2184,7 +2184,7 @@ static int lib_sChangeMusic(lua_State *L)
 {
 #ifdef MUSICSLOT_COMPATIBILITY
 	const char *music_name;
-	UINT32 music_num;
+	UINT32 music_num, position, prefadems, fadeinms;
 	char music_compat_name[7];
 
 	boolean looping;
@@ -2236,9 +2236,13 @@ static int lib_sChangeMusic(lua_State *L)
 #endif
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
 
+	position = (UINT32)luaL_optinteger(L, 5, 0);
+	prefadems = (UINT32)luaL_optinteger(L, 6, 0);
+	fadeinms = (UINT32)luaL_optinteger(L, 7, 0);
+
 	if (!player || P_IsLocalPlayer(player))
 	{
-		S_ChangeMusic(music_name, music_flags, looping);
+		S_ChangeMusicWithFade(music_name, music_flags, looping, position, prefadems, fadeinms);
 		lua_pushboolean(L, true);
 	}
 	else
@@ -2570,7 +2574,10 @@ static int lib_sFadeMusic(lua_State *L)
 		source_volume = -1;
 	}
 	else
+	{
 		source_volume = (INT32)luaL_checkinteger(L, 3);
+
+	}
 
 	player_t *player = NULL;
 	NOHUD
@@ -2582,6 +2589,26 @@ static int lib_sFadeMusic(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_FadeMusicFromLevel(target_volume, source_volume, ms));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeOutStopMusic(lua_State *L)
+{
+	UINT32 ms = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		lua_pushboolean(L, S_FadeOutStopMusic(ms));
+	}
 	else
 		lua_pushnil(L);
 	return 1;
@@ -2982,6 +3009,7 @@ static luaL_Reg lib[] = {
 	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
 	{"S_FadeMusic",lib_sFadeMusic},
+	{"S_FadeOutStopMusic",lib_sFadeOutStopMusic},
 #endif
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
