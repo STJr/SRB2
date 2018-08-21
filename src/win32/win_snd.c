@@ -468,12 +468,12 @@ void I_ResumeSong(INT32 handle)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
 }
 
-boolean I_MusicPlaying(void)
+boolean I_SongPlaying(void)
 {
 	return (boolean)music_stream;
 }
 
-boolean I_MusicPaused(void)
+boolean I_SongPaused(void)
 {
 	boolean fmpaused = false;
 	if (music_stream)
@@ -481,7 +481,7 @@ boolean I_MusicPaused(void)
 	return fmpaused;
 }
 
-musictype_t I_MusicType(void)
+musictype_t I_GetSongType(void)
 {
 	return MU_NONE;
 }
@@ -774,7 +774,7 @@ boolean I_SetSongSpeed(float speed)
 	return true;
 }
 
-UINT32 I_GetMusicLength()
+UINT32 I_GetSongLength()
 {
 	if (midimode)
 		return 0;
@@ -783,18 +783,18 @@ UINT32 I_GetMusicLength()
 	return length;
 }
 
-boolean I_SetMusicLoopPoint(UINT32 looppoint)
+boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
         (void)looppoint;
         return false;
 }
 
-UINT32 I_GetMusicLoopPoint(void)
+UINT32 I_GetSongLoopPoint(void)
 {
 	return 0;
 }
 
-boolean I_SetMusicPosition(UINT32 position)
+boolean I_SetSongPosition(UINT32 position)
 {
 	if(midimode)
 		// Dummy out; this works for some MIDI, but not others.
@@ -814,7 +814,7 @@ boolean I_SetMusicPosition(UINT32 position)
 	}
 }
 
-UINT32 I_GetMusicPosition(void)
+UINT32 I_GetSongPosition(void)
 {
 	if(midimode)
 		// Dummy out because unsupported, even though FMOD does this correctly.
@@ -878,11 +878,11 @@ void I_SetInternalMusicVolume(UINT8 volume)
 	(void)volume;
 }
 
-void I_StopFadingMusic(void)
+void I_StopFadingSong(void)
 {
 }
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
 {
 	(void)target_volume;
 	(void)source_volume;
@@ -890,14 +890,14 @@ boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	return false;
 }
 
-boolean I_FadeMusic(UINT8 target_volume, UINT32 ms)
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms)
 {
 	(void)target_volume;
 	(void)ms;
 	return false;
 }
 
-boolean I_FadeOutStopMusic(UINT32 ms)
+boolean I_FadeOutStopSong(UINT32 ms)
 {
 	(void)ms;
 	return false;
