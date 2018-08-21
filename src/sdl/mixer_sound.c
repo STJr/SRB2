@@ -118,6 +118,17 @@ static UINT32 get_real_volume(UINT8 volume)
 	return ((UINT32)volume*128/31) * (UINT32)internal_volume / 100;
 }
 
+static UINT32 get_adjusted_position(UINT32 position)
+{
+	// all in milliseconds
+	UINT32 length = I_GetSongLength();
+	UINT32 looppoint = I_GetSongLoopPoint();
+	if (length)
+		return position >= length ? (position % (length-looppoint)) : position;
+	else
+		return position;
+}
+
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
@@ -1116,7 +1127,7 @@ boolean I_SetSongPosition(UINT32 position)
 		// if you seek too high from the counter
 		length = I_GetSongLength();
 		if (length)
-			position %= length;
+			position = get_adjusted_position(position);
 
 		SDL_LockAudio();
 		gme_err_t gme_e = gme_seek(gme, position);
@@ -1144,7 +1155,7 @@ boolean I_SetSongPosition(UINT32 position)
 
 		length = I_GetSongLength(); // get it in MS
 		if (length)
-			position %= length;
+			position = get_adjusted_position(position);
 
 		Mix_RewindMusic(); // needed for mp3
 		if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
@@ -1179,7 +1190,7 @@ UINT32 I_GetSongPosition(void)
 			if (info->length > 0)
 				position %= info->length;
 			else if (info->intro_length + info->loop_length > 0)
-				position = ((position - info->intro_length) % info->loop_length) + info->intro_length;
+				position = position >= (info->intro_length + info->loop_length) ? (position % info->loop_length) : position
 			else
 				position %= 150 * 1000; // 2.5 minutes
 		}
