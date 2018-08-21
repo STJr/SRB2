@@ -531,7 +531,7 @@ static void run_queue()
 		{
 			I_SetSongTrack(queue_track);
 			if (queue_fadeinms)
-				I_FadeSongFromLevel(100, 0, queue_fadeinms, false);
+				I_FadeSongFromVolume(100, 0, queue_fadeinms, false);
 			if (queue_position)
 				I_SetSongPosition(queue_position);
 		}
@@ -1248,7 +1248,7 @@ void I_StopFadingSong(void)
 	fading_target = fading_steps = fading_volume_step = fading_id = 0;
 }
 
-boolean I_FadeSongFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
 {
 	UINT32 target_steps, ms_per_step;
 	INT16 target_volume_step, volume_delta;
@@ -1314,12 +1314,12 @@ boolean I_FadeSongFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms,
 
 boolean I_FadeSong(UINT8 target_volume, UINT32 ms)
 {
-	return I_FadeSongFromLevel(target_volume, internal_volume, ms, false);
+	return I_FadeSongFromVolume(target_volume, internal_volume, ms, false);
 }
 
 boolean I_FadeOutStopSong(UINT32 ms)
 {
-	return I_FadeSongFromLevel(0, internal_volume, ms, true);
+	return I_FadeSongFromVolume(0, internal_volume, ms, true);
 }
 
 boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
@@ -1344,7 +1344,7 @@ boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean loopin
 		{
 			I_SetSongTrack(track);
 			if (fadeinms)
-				I_FadeSongFromLevel(100, 0, fadeinms, false);
+				I_FadeSongFromVolume(100, 0, fadeinms, false);
 			if (position)
 				I_SetSongPosition(position);
 			return true;

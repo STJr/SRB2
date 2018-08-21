@@ -130,10 +130,9 @@ void S_StopSound(void *origin);
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
 //       and the last bit we ignore (internal game flag for resetting music on reload)
-void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
-#define S_FadeInChangeMusic(a,b,c,d) S_ChangeMusicWithFade(a,b,c,0,0,d)
-#define S_ChangeMusicInternal(a,b) S_ChangeMusicWithFade(a,0,b,0,0,0)
-#define S_ChangeMusic(a,b,c) S_ChangeMusicWithFade(a,b,c,0,0,0)
+void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
+#define S_ChangeMusicInternal(a,b) S_ChangeMusicAdvanced(a,0,b,0,0,0)
+#define S_ChangeMusic(a,b,c) S_ChangeMusicAdvanced(a,b,c,0,0,0)
 
 // Get music type
 musictype_t S_MusicType();
@@ -170,7 +169,7 @@ boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
 
 // Gets currently playing music name
-const char *S_MusicName(void);
+const char *S_GetMusicName(void);
 
 // Checks if music name exists
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
@@ -178,8 +177,9 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
 
 void S_StopFadingMusic(void);
-boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms);
-#define S_FadeMusic(a, b) S_FadeMusicFromLevel(a, -1, b)
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms);
+#define S_FadeMusic(a, b) S_FadeMusicFromVolume(a, -1, b)
+#define S_FadeInChangeMusic(a,b,c,d) S_ChangeMusicAdvanced(a,b,c,0,0,d)
 boolean S_FadeOutStopMusic(UINT32 ms);
 
 //

@@ -1379,7 +1379,7 @@ static boolean S_DigMusic(const char *mname, boolean looping)
 	return true;
 }
 
-void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
+void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
 		return;
@@ -1523,12 +1523,12 @@ void S_StopFadingMusic(void)
 	I_StopFadingSong();
 }
 
-boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms)
 {
 	if (source_volume < 0)
 		return I_FadeSong(target_volume, ms);
 	else
-		return I_FadeSongFromLevel(target_volume, source_volume, ms, false);
+		return I_FadeSongFromVolume(target_volume, source_volume, ms, false);
 }
 
 boolean S_FadeOutStopMusic(UINT32 ms)
@@ -1679,7 +1679,7 @@ boolean S_MusicPaused(void)
 	return I_SongPaused();
 }
 
-const char *S_MusicName(void)
+const char *S_GetMusicName(void)
 {
 	return music_name;
 }
