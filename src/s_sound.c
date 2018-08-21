@@ -1407,9 +1407,9 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 
 	if (digiexists && !nodigimusic && !digital_disabled) // digmusic?
 	{
-		if (prefadems && I_MusicType() != MU_MID) //have to queue post-fade // allow even if the music is the same
+		if (prefadems && I_GetSongType() != MU_MID) //have to queue post-fade // allow even if the music is the same
 		{
-			I_FadeOutStopMusic(prefadems);
+			I_FadeOutStopSong(prefadems);
 			I_QueueDigSong(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
 
 			// HACK: set the vars now and hope everything works out
@@ -1451,7 +1451,7 @@ void S_ChangeMusicWithFade(const char *mmusic, UINT16 mflags, boolean looping, U
 
 musictype_t S_MusicType()
 {
-	return I_MusicType();
+	return I_GetSongType();
 }
 
 boolean S_SpeedMusic(float speed)
@@ -1461,27 +1461,27 @@ boolean S_SpeedMusic(float speed)
 
 UINT32 S_GetMusicLength(void)
 {
-	return I_GetMusicLength();
+	return I_GetSongLength();
 }
 
 boolean S_SetMusicLoopPoint(UINT32 looppoint)
 {
-	return I_SetMusicLoopPoint(looppoint);
+	return I_SetSongLoopPoint(looppoint);
 }
 
 UINT32 S_GetMusicLoopPoint(void)
 {
-	return I_GetMusicLoopPoint();
+	return I_GetSongLoopPoint();
 }
 
 boolean S_SetMusicPosition(UINT32 position)
 {
-	return I_SetMusicPosition(position);
+	return I_SetSongPosition(position);
 }
 
 UINT32 S_GetMusicPosition(void)
 {
-	return I_GetMusicPosition();
+	return I_GetSongPosition();
 }
 
 void S_StopMusic(void)
@@ -1520,20 +1520,20 @@ void S_SetInternalMusicVolume(INT32 volume)
 
 void S_StopFadingMusic(void)
 {
-	I_StopFadingMusic();
+	I_StopFadingSong();
 }
 
 boolean S_FadeMusicFromLevel(UINT8 target_volume, INT16 source_volume, UINT32 ms)
 {
 	if (source_volume < 0)
-		return I_FadeMusic(target_volume, ms);
+		return I_FadeSong(target_volume, ms);
 	else
-		return I_FadeMusicFromLevel(target_volume, source_volume, ms, false);
+		return I_FadeSongFromLevel(target_volume, source_volume, ms, false);
 }
 
 boolean S_FadeOutStopMusic(UINT32 ms)
 {
-	return I_FadeOutStopMusic(ms);
+	return I_FadeOutStopSong(ms);
 }
 
 void S_SetDigMusicVolume(INT32 volume)
@@ -1671,12 +1671,12 @@ void S_ResumeAudio(void)
 
 boolean S_MusicPlaying(void)
 {
-	return I_MusicPlaying();
+	return I_SongPlaying();
 }
 
 boolean S_MusicPaused(void)
 {
-	return I_MusicPaused();
+	return I_SongPaused();
 }
 
 const char *S_MusicName(void)

@@ -151,15 +151,15 @@ void I_ResumeSong(INT32 handle);
 
 	\return boolean
 */
-boolean I_MusicPlaying(void);
+boolean I_SongPlaying(void);
 
 /**	\brief Get music pause status
 
 	\return boolean
 */
-boolean I_MusicPaused(void);
+boolean I_SongPaused(void);
 
-musictype_t I_MusicType(void);
+musictype_t I_GetSongType(void);
 
 //
 //  MIDI I/O
@@ -235,27 +235,27 @@ void I_ShutdownDigMusic(void);
 
 boolean I_SetSongSpeed(float speed);
 
-UINT32 I_GetMusicLength(void);
+UINT32 I_GetSongLength(void);
 
-boolean I_SetMusicLoopPoint(UINT32 looppoint);
+boolean I_SetSongLoopPoint(UINT32 looppoint);
 
-UINT32 I_GetMusicLoopPoint(void);
+UINT32 I_GetSongLoopPoint(void);
 
-boolean I_SetMusicPosition(UINT32 position);
+boolean I_SetSongPosition(UINT32 position);
 
-UINT32 I_GetMusicPosition(void);
+UINT32 I_GetSongPosition(void);
 
 boolean I_SetSongTrack(INT32 track);
 
 void I_SetInternalMusicVolume(UINT8 volume);
 
-void I_StopFadingMusic(void);
+void I_StopFadingSong(void);
 
-boolean I_FadeMusicFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade);
+boolean I_FadeSongFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade);
 
-boolean I_FadeMusic(UINT8 target_volume, UINT32 ms);
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms);
 
-boolean I_FadeOutStopMusic(UINT32 ms);
+boolean I_FadeOutStopSong(UINT32 ms);
 
 boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade);
 #define I_QueueDigSong(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
