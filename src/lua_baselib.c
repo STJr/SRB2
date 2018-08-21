@@ -2242,7 +2242,7 @@ static int lib_sChangeMusic(lua_State *L)
 
 	if (!player || P_IsLocalPlayer(player))
 	{
-		S_ChangeMusicWithFade(music_name, music_flags, looping, position, prefadems, fadeinms);
+		S_ChangeMusicAdvanced(music_name, music_flags, looping, position, prefadems, fadeinms);
 		lua_pushboolean(L, true);
 	}
 	else
@@ -2468,7 +2468,7 @@ static int lib_sMusicType(lua_State *L)
 	return 1;
 }
 
-static int lib_sMusicName(lua_State *L)
+static int lib_sGetMusicName(lua_State *L)
 {
 	player_t *player = NULL;
 	NOHUD
@@ -2479,7 +2479,7 @@ static int lib_sMusicName(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
-		lua_pushstring(L, S_MusicName());
+		lua_pushstring(L, S_GetMusicName());
 	else
 		lua_pushnil(L);
 	return 1;
@@ -2599,7 +2599,7 @@ static int lib_sFadeMusic(lua_State *L)
 	NOHUD
 
 	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_FadeMusicFromLevel(target_volume, source_volume, ms));
+		lua_pushboolean(L, S_FadeMusicFromVolume(target_volume, source_volume, ms));
 	else
 		lua_pushnil(L);
 	return 1;
@@ -3015,7 +3015,7 @@ static luaL_Reg lib[] = {
 	{"S_MusicPlaying",lib_sMusicPlaying},
 	{"S_MusicPaused",lib_sMusicPaused},
 	{"S_MusicType",lib_sMusicType},
-	{"S_MusicName",lib_sMusicName},
+	{"S_GetMusicName",lib_sGetMusicName},
 	{"S_MusicExists",lib_sMusicExists},
 	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
