@@ -882,7 +882,7 @@ void I_StopFadingSong(void)
 {
 }
 
-boolean I_FadeSongFromLevel(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
 {
 	(void)target_volume;
 	(void)source_volume;
