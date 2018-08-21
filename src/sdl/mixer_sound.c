@@ -20,7 +20,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#include "SDL_mixer.h"
+#include <SDL2/SDL_mixer_ext.h>
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
@@ -686,6 +686,9 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 
 	if (loop_point != 0.0f)
 		Mix_HookMusicFinished(music_loop);
+
+	CONS_Printf("X Song length %.4f\n", Mix_GetMusicTotalTime(music));
+
 	return true;
 }
 
@@ -773,6 +776,7 @@ boolean I_SetSongTrack(int track)
 
 FUNCMATH void I_InitMIDIMusic(void)
 {
+	Mix_SetMidiPlayer(MIDI_Fluidsynth);
 }
 
 void I_ShutdownMIDIMusic(void)
