@@ -4935,6 +4935,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
 	"S_SUSPICIOUSFACESTABBERSTATUE_BURST1",
 	"S_SUSPICIOUSFACESTABBERSTATUE_BURST2",
+	"S_BRAMBLES",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -6591,6 +6592,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CRAWLASTATUE", // Crawla statue
 	"MT_FACESTABBERSTATUE", // Facestabber statue
 	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
+	"MT_BRAMBLES", // Brambles
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
