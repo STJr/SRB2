@@ -20,7 +20,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#include <SDL2/SDL_mixer_ext.h>
+#include "SDL2/SDL_mixer_ext.h"
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
@@ -776,7 +776,7 @@ boolean I_SetSongTrack(int track)
 
 FUNCMATH void I_InitMIDIMusic(void)
 {
-	Mix_SetMidiPlayer(MIDI_Fluidsynth);
+
 }
 
 void I_ShutdownMIDIMusic(void)
@@ -802,6 +802,8 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 
 INT32 I_RegisterSong(void *data, size_t len)
 {
+	Mix_SetMidiPlayer(MIDI_OPNMIDI);
+
 	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{

@@ -1,0 +1,1 @@
+SDL2.dll in this folder is newer than in libs/SDL2. Use this copy, or else SDL2_mixer_ext.dll will not work.
