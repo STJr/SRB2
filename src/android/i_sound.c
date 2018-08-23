@@ -84,13 +84,6 @@ void I_InitMIDIMusic(void){}
 
 void I_ShutdownMIDIMusic(void){}
 
-INT32 I_RegisterSong(void *data, size_t len)
-{
-        (void)data;
-        (void)len;
-        return -1;
-}
-
 boolean I_PlaySong(INT32 handle, INT32 looping)
 {
         (void)handle;

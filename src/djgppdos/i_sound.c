@@ -423,19 +423,6 @@ void I_ShutdownMusic(void)
 	I_ShutdownDigMusic();
 }
 
-boolean I_PlaySong(INT32 handle, INT32 looping)
-{
-	handle = 0;
-	if (nomidimusic)
-		return false;
-
-	islooping = looping;
-	musicdies = gametic + NEWTICRATE*30;
-	if (play_midi(currsong,looping)==0)
-		return true;
-	return false;
-}
-
 void I_PauseSong (INT32 handle)
 {
 	handle = 0;
@@ -486,11 +473,24 @@ void I_UnRegisterSong(INT32 handle)
 	//destroy_midi(currsong);
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_StartDigSong(const char *musicname, INT32 looping)
 {
+	/////////////////
+	// Load the song!
+
+	char *data;
+	size_t len;
+	lumpnum_t lumpnum = W_CheckNumForName(va("D_%s",musicname));
+
+	if (lumpnum == LUMPERROR)
+		return false;
+
+	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
+	len = W_LumpLength(lumpnum);
+
 	int e = len; //Alam: For error
 	if (nomidimusic)
-		return 0;
+		return false;
 
 	if (memcmp(data,"MThd",4)==0) // support mid file in WAD !!!
 	{
@@ -499,24 +499,25 @@ INT32 I_RegisterSong(void *data, size_t len)
 	else
 	{
 		CONS_Printf("Music Lump is not a MIDI lump\n");
-		return 0;
+		return false;
 	}
 
 	if (currsong==NULL)
 	{
 		CONS_Printf("Not a valid mid file : %d\n",e);
-		return 0;
+		return false;
 	}
 
-	return 1;
-}
+	/////////////////
+	// Play the song!
+	handle = 0;
+	if (nomidimusic)
+		return false;
 
-/// \todo Add OGG/MP3 support for dos
-boolean I_StartDigSong(const char *musicname, INT32 looping)
-{
-	musicname = NULL;
-	looping = 0;
-	//CONS_Printf("I_StartDigSong: Not yet supported under DOS.\n");
+	islooping = looping;
+	musicdies = gametic + NEWTICRATE*30;
+	if (play_midi(currsong,looping)==0)
+		return true;
 	return false;
 }
 

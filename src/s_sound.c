@@ -1308,52 +1308,8 @@ const char *compat_special_music_slots[16] =
 #define music_playing (music_name[0]) // String is empty if no music is playing
 
 static char      music_name[7]; // up to 6-character name
-static lumpnum_t music_lumpnum; // lump number of music (used??)
-static void     *music_data;    // music raw data
-static INT32     music_handle;  // once registered, the handle for the music
 
 static boolean mus_paused     = 0;  // whether songs are mus_paused
-
-static boolean S_MIDIMusic(const char *mname, boolean looping)
-{
-	lumpnum_t mlumpnum;
-	void *mdata;
-	INT32 mhandle;
-
-	if (nomidimusic || music_disabled)
-		return false; // didn't search.
-
-	if (W_CheckNumForName(va("d_%s", mname)) == LUMPERROR)
-		return false;
-	mlumpnum = W_GetNumForName(va("d_%s", mname));
-
-	// load & register it
-	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
-	mhandle = I_RegisterSong(mdata, W_LumpLength(mlumpnum));
-
-#ifdef MUSSERV
-	if (msg_id != -1)
-	{
-		struct musmsg msg_buffer;
-
-		msg_buffer.msg_type = 6;
-		memset(msg_buffer.msg_text, 0, sizeof (msg_buffer.msg_text));
-		sprintf(msg_buffer.msg_text, "d_%s", mname);
-		msgsnd(msg_id, (struct msgbuf*)&msg_buffer, sizeof (msg_buffer.msg_text), IPC_NOWAIT);
-	}
-#endif
-
-	// play it
-	if (!I_PlaySong(mhandle, looping))
-		return false;
-
-	strncpy(music_name, mname, 7);
-	music_name[6] = 0;
-	music_lumpnum = mlumpnum;
-	music_data = mdata;
-	music_handle = mhandle;
-	return true;
-}
 
 static boolean S_DigMusic(const char *mname, boolean looping)
 {
@@ -1365,9 +1321,6 @@ static boolean S_DigMusic(const char *mname, boolean looping)
 
 	strncpy(music_name, mname, 7);
 	music_name[6] = 0;
-	music_lumpnum = LUMPERROR;
-	music_data = NULL;
-	music_handle = 0;
 	return true;
 }
 
@@ -1386,7 +1339,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if (strncmp(music_name, mmusic, 6))
 	{
 		S_StopMusic(); // shutdown old music
-		if (!S_DigMusic(mmusic, looping) && !S_MIDIMusic(mmusic, looping))
+		if (!S_DigMusic(mmusic, looping))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
 			return;
