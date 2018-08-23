@@ -321,6 +321,7 @@ static MIDI* currsong;   //im assuming only 1 song will be played at once
 static int      islooping=0;
 static int      musicdies=-1;
 UINT8           music_started=0;
+boolean         songpaused=false;
 
 musictype_t I_GetMusicType(void)
 {
@@ -328,6 +329,16 @@ musictype_t I_GetMusicType(void)
 		return MU_MID;
 	else
 		return MU_NONE;
+}
+
+boolean I_MusicPlaying()
+{
+	return (boolean)currsong;
+}
+
+boolean I_MusicPaused()
+{
+	return songpaused;
 }
 
 /* load_midi_mem:
@@ -403,6 +414,7 @@ void I_InitMusic(void)
 
 	I_AddExitFunc(I_ShutdownMusic);
 	music_started = true;
+	songpaused = false;
 }
 
 void I_ShutdownMusic(void)
@@ -433,8 +445,8 @@ void I_PauseSong (INT32 handle)
 	handle = 0;
 	if (nomidimusic)
 		return;
-
 	midi_pause();
+	songpaused = true;
 }
 
 void I_ResumeSong (INT32 handle)
@@ -442,8 +454,8 @@ void I_ResumeSong (INT32 handle)
 	handle = 0;
 	if (nomidimusic)
 		return;
-
 	midi_resume();
+	songpaused = false;
 }
 
 void I_StopSong(void)
@@ -455,6 +467,7 @@ void I_StopSong(void)
 	islooping = 0;
 	musicdies = 0;
 	stop_midi();
+	songpaused = false;
 }
 
 // Is the song playing?

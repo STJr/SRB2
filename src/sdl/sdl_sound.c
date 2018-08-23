@@ -1336,6 +1336,16 @@ musictype_t I_GetMusicType(void)
 #endif
 }
 
+boolean I_MusicPlaying(void)
+{
+	return music_started;
+}
+
+boolean I_MusicPaused(void)
+{
+	return Mix_PausedMusic();
+}
+
 #ifdef HAVE_LIBGME
 static void I_ShutdownGMEMusic(void)
 {
