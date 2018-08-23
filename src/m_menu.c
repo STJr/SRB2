@@ -6955,7 +6955,7 @@ static void M_ToggleSFX(void)
 		nosound = false;
 		I_StartupSound();
 		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -6981,7 +6981,7 @@ static void M_ToggleDigital(void)
 		nodigimusic = false;
 		I_InitDigMusic();
 		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_StopMusic();
 		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
@@ -7009,7 +7009,7 @@ static void M_ToggleMIDI(void)
 		nomidimusic = false;
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
