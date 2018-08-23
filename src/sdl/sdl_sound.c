@@ -1313,7 +1313,7 @@ void I_StartupSound(void)
 // MUSIC API.
 //
 
-musictype_t I_GetMusicType(void)
+musictype_t I_MusicType(void)
 {
 #ifdef HAVE_MIXER
 #ifdef HAVE_LIBGME
@@ -1448,28 +1448,9 @@ static boolean LoadSong(void *data, size_t lumplength, size_t selectpos)
 }
 #endif
 
-
-void I_ShutdownMusic(void)
-{
-#ifdef HAVE_MIXER
-	if ((midi_disabled && digital_disabled) || !musicStarted)
-		return;
-
-	CONS_Printf("%s", M_GetText("I_ShutdownMusic: "));
-
-	I_UnloadSong();
-	I_StopSong();
-	Mix_CloseAudio();
-#ifdef MIX_INIT
-	Mix_Quit();
-#endif
-	CONS_Printf("%s", M_GetText("shut down\n"));
-	musicStarted = SDL_FALSE;
-	if (Msc_Mutex)
-		SDL_DestroyMutex(Msc_Mutex);
-	Msc_Mutex = NULL;
-#endif
-}
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
 void I_InitMusic(void)
 {
@@ -1584,11 +1565,106 @@ void I_InitMusic(void)
 #endif
 }
 
-boolean I_PlaySong(INT32 handle, boolean looping)
+void I_ShutdownMusic(void)
 {
-	(void)handle;
 #ifdef HAVE_MIXER
-	if (midi_disabled || !musicStarted || !music[handle])
+	if ((midi_disabled && digital_disabled) || !musicStarted)
+		return;
+
+	CONS_Printf("%s", M_GetText("I_ShutdownMusic: "));
+
+	I_UnloadSong();
+	I_StopSong();
+	Mix_CloseAudio();
+#ifdef MIX_INIT
+	Mix_Quit();
+#endif
+	CONS_Printf("%s", M_GetText("shut down\n"));
+	musicStarted = SDL_FALSE;
+	if (Msc_Mutex)
+		SDL_DestroyMutex(Msc_Mutex);
+	Msc_Mutex = NULL;
+#endif
+}
+
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
+
+musictype_t I_MusicType(void)
+{
+	return MU_NONE;
+}
+
+boolean I_MusicPlaying(void)
+{
+	return false;
+}
+
+boolean I_MusicPaused(void)
+{
+	return false;
+}
+
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
+{
+	(void)speed;
+	return false;
+}
+
+/// ------------------------
+//  MUSIC PLAYBACK
+//  \todo Merge Digital and MIDI
+/// ------------------------
+
+boolean I_LoadSong(char *data, size_t len)
+{
+#ifdef HAVE_MIXER
+	if (midi_disabled || !musicStarted)
+		return false;
+
+	if (!LoadSong(data, len, 0))
+		return false;
+
+	if (music[0])
+		return true;
+
+	CONS_Printf(M_GetText("Couldn't load MIDI: %s\n"), Mix_GetError());
+#else
+	(void)len;
+	(void)data;
+#endif
+	return false;
+}
+
+void I_UnloadSong(void)
+{
+#ifdef HAVE_MIXER
+
+	if (midi_disabled || !musicStarted)
+		return;
+
+	Mix_HaltMusic();
+	while (Mix_PlayingMusic())
+		;
+
+	if (music[handle])
+		Mix_FreeMusic(music[handle]);
+	music[handle] = NULL;
+	LoadSong(NULL, 0, handle);
+#else
+	(void)handle;
+#endif
+}
+
+boolean I_PlaySong(boolean looping)
+{
+#ifdef HAVE_MIXER
+	if (!musicStarted || !music[handle])
 		return false;
 
 #ifdef MIXER_POS
@@ -1607,6 +1683,28 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 	(void)looping;
 #endif
 	return false;
+}
+
+void I_StopSong(void)
+{
+	I_StopGME();
+#ifdef HAVE_MIXER
+	if (digital_disabled)
+		return;
+
+#ifdef MIXER_POS
+	if (canlooping)
+		Mix_HookMusicFinished(NULL);
+#endif
+
+	Mix_HaltMusic();
+	while (Mix_PlayingMusic())
+		;
+
+	if (music[1])
+		Mix_FreeMusic(music[1]);
+	music[1] = NULL;
+	LoadSong(NULL, 0, 1);
 }
 
 static void I_PauseGME(void)
@@ -1650,68 +1748,6 @@ void I_ResumeSong(void)
 #endif
 }
 
-void I_StopSong(void)
-{
-	I_StopGME();
-#ifdef HAVE_MIXER
-	if (digital_disabled)
-		return;
-
-#ifdef MIXER_POS
-	if (canlooping)
-		Mix_HookMusicFinished(NULL);
-#endif
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[1])
-		Mix_FreeMusic(music[1]);
-	music[1] = NULL;
-	LoadSong(NULL, 0, 1);
-}
-
-void I_UnloadSong(void)
-{
-#ifdef HAVE_MIXER
-
-	if (midi_disabled || !musicStarted)
-		return;
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[handle])
-		Mix_FreeMusic(music[handle]);
-	music[handle] = NULL;
-	LoadSong(NULL, 0, handle);
-#else
-	(void)handle;
-#endif
-}
-
-boolean I_LoadSong(char *data, size_t len)
-{
-#ifdef HAVE_MIXER
-	if (midi_disabled || !musicStarted)
-		return false;
-
-	if (!LoadSong(data, len, 0))
-		return false;
-
-	if (music[0])
-		return true;
-
-	CONS_Printf(M_GetText("Couldn't load MIDI: %s\n"), Mix_GetError());
-#else
-	(void)len;
-	(void)data;
-#endif
-	return false;
-}
-
 void I_SetMusicVolume(UINT8 volume)
 {
 #ifdef HAVE_MIXER
@@ -1726,6 +1762,18 @@ void I_SetMusicVolume(UINT8 volume)
 	(void)volume;
 #endif
 }
+
+boolean I_SetSongTrack(int track)
+{
+	(void)track;
+	return false;
+}
+
+/// ------------------------
+//  MUSIC LOADING AND CLEANUP
+//  \todo Split logic between loading and playing,
+//        then move to Playback section
+/// ------------------------
 
 #ifdef HAVE_LIBGME
 static void I_CleanupGME(void *userdata)
@@ -1959,19 +2007,6 @@ static void I_StopGME(void)
 	gme_seek(localdata.gme_emu, 0);
 	Snd_UnlockAudio();
 #endif
-}
-
-boolean I_SetSongSpeed(float speed)
-{
-
-	(void)speed;
-	return false;
-}
-
-boolean I_SetSongTrack(int track)
-{
-	(void)track;
-	return false;
 }
 
 #ifdef MIXER_POS
