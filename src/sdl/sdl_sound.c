@@ -1689,21 +1689,6 @@ INT32 I_RegisterSong(void *data, size_t len)
 	return false;
 }
 
-void I_SetMIDIMusicVolume(UINT8 volume)
-{
-#ifdef HAVE_MIXER
-	if ((nomidimusic && nodigimusic) || !musicStarted)
-		return;
-
-	if (Msc_Mutex) SDL_LockMutex(Msc_Mutex);
-	musicvol = volume * 2;
-	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
-	Mix_VolumeMusic(musicvol);
-#else
-	(void)volume;
-#endif
-}
-
 #ifdef HAVE_LIBGME
 static void I_CleanupGME(void *userdata)
 {
@@ -1963,7 +1948,17 @@ void I_StopDigSong(void)
 
 void I_SetDigMusicVolume(UINT8 volume)
 {
-	I_SetMIDIMusicVolume(volume);
+#ifdef HAVE_MIXER
+	if ((nomidimusic && nodigimusic) || !musicStarted)
+		return;
+
+	if (Msc_Mutex) SDL_LockMutex(Msc_Mutex);
+	musicvol = volume * 2;
+	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
+	Mix_VolumeMusic(musicvol);
+#else
+	(void)volume;
+#endif
 }
 
 boolean I_SetSongSpeed(float speed)

@@ -84,11 +84,6 @@ void I_InitMIDIMusic(void){}
 
 void I_ShutdownMIDIMusic(void){}
 
-void I_SetMIDIMusicVolume(INT32 volume)
-{
-        (void)volume;
-}
-
 INT32 I_RegisterSong(void *data, size_t len)
 {
         (void)data;

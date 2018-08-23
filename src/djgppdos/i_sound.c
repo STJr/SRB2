@@ -140,15 +140,6 @@ void I_SetSfxVolume(INT32 volume)
 	set_volume (Volset(volume),-1);
 }
 
-void I_SetMIDIMusicVolume(INT32 volume)
-{
-	if (nomidimusic)
-		return;
-
-	// Now set volume on output device.
-	set_volume (-1, Volset(volume));
-}
-
 //
 // Starting a sound means adding it
 //  to the current list of active sounds
@@ -541,7 +532,7 @@ void I_SetDigMusicVolume(INT32 volume)
 		return;
 
 	// Now set volume on output device.
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
+	set_volume (-1, Volset(volume));
 }
 
 boolean I_SetSongSpeed(float speed)

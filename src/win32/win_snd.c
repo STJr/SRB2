@@ -815,14 +815,6 @@ void I_ShutdownMIDIMusic(void)
 		I_StopSong(0);
 }
 
-void I_SetMIDIMusicVolume(UINT8 volume)
-{
-	// volume is 0 to 31.
-	midi_volume = volume;
-	if (midimode && music_stream)
-		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
-}
-
 INT32 I_RegisterSong(void *data, size_t len)
 {
 	FMOD_CREATESOUNDEXINFO fmt;
