@@ -1312,19 +1312,54 @@ const char *compat_special_music_slots[16] =
 #define music_playing (music_name[0]) // String is empty if no music is playing
 
 static char      music_name[7]; // up to 6-character name
-
-static boolean   mus_forcemidi  = 0;  // force midi even when digital exists
 static boolean   mus_paused     = 0;  // whether songs are mus_paused
+
+/// ------------------------
+/// Music Status
+/// ------------------------
+
+boolean S_DigMusicDisabled()
+{
+	return (nodigimusic || digital_disabled);
+}
+
+boolean S_MIDIMusicDisabled()
+{
+	return (nomidimusic || music_disabled);
+}
+
+boolean S_MusicDisabled()
+{
+	return (
+		(nodigimusic && nomidimusic) ||
+		(music_disabled && digital_disabled) ||
+		(nodigimusic && music_disabled) ||
+		(nomidimusic && digital_disabled)
+	);
+}
+
+/// ------------------------
+/// Music Properties
+/// ------------------------
+
+boolean S_SpeedMusic(float speed)
+{
+	return I_SetSongSpeed(speed);
+}
+
+/// ------------------------
+/// Music Routines
+/// ------------------------
 
 static boolean S_LoadMusic(const char *mname)
 {
 	lumpnum_t mlumpnum;
 	void *mdata;
 
-	if (nomidimusic || music_disabled)
-		return false; // didn't search.
+	if (S_MusicDisabled())
+		return false;
 
-	if (mus_forcemidi)
+	if (S_DigMusicDisabled())
 	{
 		if (W_CheckNumForName(va("d_%s", mname)) == LUMPERROR)
 			return false;
@@ -1370,12 +1405,13 @@ static boolean S_PlayMusic(boolean looping)
 		return false;
 	}
 
+	S_InitMusicVolume(); // switch between digi and sequence volume
 	return true;
 }
 
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 {
-	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
+	if (S_MusicDisabled())
 		return;
 
 	// No Music (empty string)
@@ -1404,11 +1440,6 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
-boolean S_SpeedMusic(float speed)
-{
-	return I_SetSongSpeed(speed);
-}
-
 void S_StopMusic(void)
 {
 	if (!music_playing)
@@ -1434,32 +1465,36 @@ void S_StopMusic(void)
 	}
 }
 
-void S_SetDigMusicVolume(INT32 volume)
+void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 {
-	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
+	if (digvolume < 0)
+		digvolume = cv_digmusicvolume.value;
+	if (seqvolume < 0)
+		seqvolume = cv_midimusicvolume.value;
 
-	CV_SetValue(&cv_digmusicvolume, volume&31);
+	if (digvolume < 0 || digvolume > 31)
+		CONS_Alert(CONS_WARNING, "digmusicvolume should be between 0-31\n");
+	CV_SetValue(&cv_digmusicvolume, digvolume&31);
 	actualdigmusicvolume = cv_digmusicvolume.value;   //check for change of var
 
-#ifdef DJGPPDOS
-	I_SetDigMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
-#endif
-	I_SetDigMusicVolume(volume&31);
-}
-
-void S_SetMIDIMusicVolume(INT32 volume)
-{
-	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
-
-	CV_SetValue(&cv_midimusicvolume, volume&0x1f);
+	if (digvolume < 0 || digvolume > 31)
+		CONS_Alert(CONS_WARNING, "midimusicvolume should be between 0-31\n");
+	CV_SetValue(&cv_midimusicvolume, seqvolume&31);
 	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
 
 #ifdef DJGPPDOS
-	I_SetMIDIMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
+	digvolume = seqvolume = 31;
 #endif
-	I_SetMIDIMusicVolume(volume&0x1f);
+
+	switch(I_GetMusicType())
+	{
+		case MU_MID:
+		case MU_MOD:
+		case MU_GME:
+			I_SetMusicVolume(seqvolume&31);
+		default:
+			I_SetMusicVolume(digvolume&31);
+	}
 }
 
 /// ------------------------
@@ -1479,8 +1514,7 @@ void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume)
 		return;
 
 	S_SetSfxVolume(sfxVolume);
-	S_SetDigMusicVolume(digMusicVolume);
-	S_SetMIDIMusicVolume(midiMusicVolume);
+	S_SetMusicVolume(digMusicVolume, midiMusicVolume);
 
 	SetChannelsNum();
 

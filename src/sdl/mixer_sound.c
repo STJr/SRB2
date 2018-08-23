@@ -522,14 +522,6 @@ void I_ResumeSong(void)
 // Digital Music
 //
 
-void I_SetDigMusicVolume(UINT8 volume)
-{
-	music_volume = volume;
-	if (I_GetMusicType() == MU_MID || !music)
-		return;
-	Mix_VolumeMusic((UINT32)volume*128/31);
-}
-
 boolean I_SetSongSpeed(float speed)
 {
 	if (speed > 250.0f)
@@ -773,17 +765,19 @@ void I_StopSong(void)
 	music = NULL;
 }
 
-void I_SetMIDIMusicVolume(UINT8 volume)
+void I_SetMusicVolume(UINT8 volume)
 {
-	// HACK: Until we stop using native MIDI,
-	// disable volume changes
-	(void)volume;
-	midi_volume = 31;
-	//midi_volume = volume;
-
-	if (I_GetMusicType() != MU_MID || !music)
+	if (!music)
 		return;
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
+
+	if (I_GetMusicType() == MU_MID)
+		// HACK: Until we stop using native MIDI,
+		// disable volume changes
+		music_volume = 31;
+	else
+		music_volume = volume;
+
+	Mix_VolumeMusic((UINT32)music_volume*128/31);
 }
 
 void I_UnloadSong(void)

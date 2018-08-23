@@ -125,15 +125,31 @@ void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
 
+//
+// Music Status
+//
+
+boolean S_DigMusicDisabled();
+boolean S_MIDIMusicDisabled();
+boolean S_MusicDisabled();
+
+//
+// Music Properties
+//
+
+// Set Speed of Music
+boolean S_SpeedMusic(float speed);
+
+//
+// Music Routines
+//
+
 // Start music track, arbitrary, given its name, and set whether looping
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
 //       and the last bit we ignore (internal game flag for resetting music on reload)
 #define S_ChangeMusicInternal(a,b) S_ChangeMusic(a,0,b)
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
-
-// Set Speed of Music
-boolean S_SpeedMusic(float speed);
 
 // Stops the music.
 void S_StopMusic(void);
@@ -149,9 +165,11 @@ void S_UpdateSounds(void);
 
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
-void S_SetDigMusicVolume(INT32 volume);
-void S_SetMIDIMusicVolume(INT32 volume);
 void S_SetSfxVolume(INT32 volume);
+void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume);
+#define S_SetDigMusicVolume(a) S_SetMusicVolume(a,-1)
+#define S_SetMIDIMusicVolume(a) S_SetMusicVolume(-1,a)
+#define S_InitMusicVolume() S_SetMusicVolume(-1,-1)
 
 INT32 S_OriginPlaying(void *origin);
 INT32 S_IdPlaying(sfxenum_t id);

@@ -154,13 +154,13 @@ void I_ResumeSong(void);
 //  MIDI I/O
 //
 
-/**	\brief	The I_SetMIDIMusicVolume function
+/**	\brief	The I_SetMusicVolume function
 
 	\param	volume	volume to set at
 
 	\return	void
 */
-void I_SetMIDIMusicVolume(UINT8 volume);
+void I_SetMusicVolume(UINT8 volume);
 
 /**	\brief	Registers a song handle to song data.
 
@@ -209,14 +209,6 @@ void I_UnloadSong(void);
 boolean I_SetSongSpeed(float speed);
 
 boolean I_SetSongTrack(INT32 track);
-
-/**	\brief The I_SetDigMusicVolume function
-
-	\param	volume	volume to set at
-
-	\return	void
-*/
-void I_SetDigMusicVolume(UINT8 volume);
 
 //
 // CD MUSIC I/O
