@@ -1605,7 +1605,7 @@ static void I_PauseGME(void)
 #endif
 }
 
-void I_PauseSong(INT32 handle)
+void I_PauseSong(void)
 {
 	(void)handle;
 	I_PauseGME();
@@ -1625,7 +1625,7 @@ static void I_ResumeGME(void)
 #endif
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong(void)
 {
 	(void)handle;
 	I_ResumeGME();
@@ -1669,7 +1669,7 @@ void I_UnRegisterSong(INT32 handle)
 #endif
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 #ifdef HAVE_MIXER
 	if (nomidimusic || !musicStarted)

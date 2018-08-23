@@ -64,12 +64,12 @@ void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
 
-void I_PauseSong(INT32 handle)
+void I_PauseSong(void)
 {
         (void)handle;
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong(void)
 {
         (void)handle;
 }
@@ -80,23 +80,19 @@ void I_ResumeSong(INT32 handle)
 
 UINT8 midimusic_started = 0;
 
-void I_InitMIDIMusic(void){}
-
-void I_ShutdownMIDIMusic(void){}
-
-void I_SetMIDIMusicVolume(INT32 volume)
-{
-        (void)volume;
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
         (void)data;
         (void)len;
         return -1;
 }
 
-boolean I_PlaySong(INT32 handle, INT32 looping)
+void I_SetMIDIMusicVolume(INT32 volume)
+{
+        (void)volume;
+}
+
+boolean I_PlaySong(boolean looping)
 {
         (void)handle;
         (void)looping;

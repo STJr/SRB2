@@ -408,31 +408,7 @@ void I_ShutdownMIDIMusic(void)
 	music_started=false;
 }
 
-void I_InitDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_ShutdownDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_InitMusic(void)
-{
-	if (!nodigimusic)
-		I_InitDigMusic();
-	if (!nomidimusic)
-		I_InitMIDIMusic();
-}
-
-void I_ShutdownMusic(void)
-{
-	I_ShutdownMIDIMusic();
-	I_ShutdownDigMusic();
-}
-
-boolean I_PlaySong(INT32 handle, INT32 looping)
+boolean I_PlaySong(boolean looping)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -495,7 +471,7 @@ void I_UnRegisterSong(INT32 handle)
 	//destroy_midi(currsong);
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 	int e = len; //Alam: For error
 	if (nomidimusic)

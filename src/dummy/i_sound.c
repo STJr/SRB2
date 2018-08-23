@@ -70,7 +70,7 @@ void I_PauseSong(INT32 handle)
 	(void)handle;
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong(void)
 {
 	(void)handle;
 }
@@ -79,23 +79,14 @@ void I_ResumeSong(INT32 handle)
 //  MIDI I/O
 //
 
-void I_InitMIDIMusic(void){}
-
-void I_ShutdownMIDIMusic(void){}
-
-void I_SetMIDIMusicVolume(UINT8 volume)
-{
-	(void)volume;
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 	(void)data;
 	(void)len;
 	return -1;
 }
 
-boolean I_PlaySong(INT32 handle, boolean looping)
+boolean I_PlaySong(boolean looping)
 {
 	(void)handle;
 	(void)looping;
