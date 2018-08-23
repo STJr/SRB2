@@ -80,30 +80,26 @@ void I_ResumeSong(INT32 handle)
 
 UINT8 midimusic_started = 0;
 
-void I_InitMIDIMusic(void){}
-
-void I_ShutdownMIDIMusic(void){}
-
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(void *data, size_t len)
 {
         (void)data;
         (void)len;
         return -1;
 }
 
-boolean I_PlaySong(INT32 handle, INT32 looping)
+boolean I_PlaySong(void)
 {
         (void)handle;
         (void)looping;
         return false;
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
         (void)handle;
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
         (void)handle;
 }
@@ -113,19 +109,6 @@ void I_UnRegisterSong(INT32 handle)
 //
 
 UINT8 digmusic_started = 0;
-
-void I_InitDigMusic(void){}
-
-void I_ShutdownDigMusic(void){}
-
-boolean I_StartDigSong(const char *musicname, INT32 looping)
-{
-        (void)musicname;
-        (void)looping;
-        return false;
-}
-
-void I_StopDigSong(void){}
 
 void I_SetDigMusicVolume(INT32 volume)
 {

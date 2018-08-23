@@ -380,7 +380,7 @@ static MIDI *load_midi_mem(char *mempointer,int *e)
 	return midi;
 }
 
-void I_InitMIDIMusic(void)
+void I_InitMusic(void)
 {
 	if (nomidimusic)
 		return;
@@ -389,7 +389,7 @@ void I_InitMIDIMusic(void)
 	music_started = true;
 }
 
-void I_ShutdownMIDIMusic(void)
+void I_ShutdownMusic(void)
 {
 	if ( !music_started )
 		return;
@@ -399,31 +399,7 @@ void I_ShutdownMIDIMusic(void)
 	music_started=false;
 }
 
-void I_InitDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_ShutdownDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_InitMusic(void)
-{
-	if (!nodigimusic)
-		I_InitDigMusic();
-	if (!nomidimusic)
-		I_InitMIDIMusic();
-}
-
-void I_ShutdownMusic(void)
-{
-	I_ShutdownMIDIMusic();
-	I_ShutdownDigMusic();
-}
-
-boolean I_PlaySong(INT32 handle, INT32 looping)
+boolean I_PlaySong(void)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -454,7 +430,7 @@ void I_ResumeSong (INT32 handle)
 	midi_resume();
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -477,7 +453,7 @@ int I_QrySongPlaying(int handle)
 }
 #endif
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -486,7 +462,7 @@ void I_UnRegisterSong(INT32 handle)
 	//destroy_midi(currsong);
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(void *data, size_t len)
 {
 	int e = len; //Alam: For error
 	if (nomidimusic)
@@ -509,20 +485,6 @@ INT32 I_RegisterSong(void *data, size_t len)
 	}
 
 	return 1;
-}
-
-/// \todo Add OGG/MP3 support for dos
-boolean I_StartDigSong(const char *musicname, INT32 looping)
-{
-	musicname = NULL;
-	looping = 0;
-	//CONS_Printf("I_StartDigSong: Not yet supported under DOS.\n");
-	return false;
-}
-
-void I_StopDigSong(void)
-{
-//	CONS_Printf("I_StopDigSong: Not yet supported under DOS.\n");
 }
 
 void I_SetDigMusicVolume(INT32 volume)

@@ -450,8 +450,7 @@ void I_InitMusic(void)
 
 void I_ShutdownMusic(void)
 {
-	I_ShutdownDigMusic();
-	I_ShutdownMIDIMusic();
+	I_StopSong();
 }
 
 void I_PauseSong(INT32 handle)
@@ -468,17 +467,7 @@ void I_ResumeSong(INT32 handle)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
 }
 
-void I_InitDigMusic(void)
-{
-}
-
-void I_ShutdownDigMusic(void)
-{
-	if (!midimode)
-		I_StopDigSong();
-}
-
-boolean I_StartDigSong(const char *musicname, boolean looping)
+boolean I_LoadSong(char *data, size_t len)
 {
 	char *data;
 	size_t len;
@@ -603,8 +592,6 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	{
 		gme_equalizer_t gmeq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
 		Z_Free(data); // We don't need this anymore.
-		gme_start_track(gme, 0);
-		current_track = 0;
 		gme_set_equalizer(gme,&gmeq);
 		fmt.format = FMOD_SOUND_FORMAT_PCM16;
 		fmt.defaultfrequency = 44100;
@@ -614,32 +601,21 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		fmt.pcmreadcallback = GMEReadCallback;
 		fmt.userdata = gme;
 		FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER | (looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream));
-		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-		FMR(FMOD_Channel_SetPriority(music_channel, 0));
 		return true;
 	}
 #endif
 
 	fmt.length = len;
+
+	FMOD_RESULT e = FMOD_System_CreateStream(fsys, data, FMOD_OPENMEMORY_POINT|(looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream);
+	if (e != FMOD_OK)
 	{
-		FMOD_RESULT e = FMOD_System_CreateStream(fsys, data, FMOD_OPENMEMORY_POINT|(looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream);
-		if (e != FMOD_OK)
-		{
-			if (e == FMOD_ERR_FORMAT)
-				CONS_Alert(CONS_WARNING, "Failed to play music lump %s due to invalid format.\n", W_CheckNameForNum(lumpnum));
-			else
-				FMR(e);
-			return false;
-		}
+		if (e == FMOD_ERR_FORMAT)
+			CONS_Alert(CONS_WARNING, "Failed to play music lump %s due to invalid format.\n", W_CheckNameForNum(lumpnum));
+		else
+			FMR(e);
+		return false;
 	}
-	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-	if (midimode)
-		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
-	else
-		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-	FMR(FMOD_Channel_SetPriority(music_channel, 0));
-	current_track = 0;
 
 	// Try to find a loop point in streaming music formats (ogg, mp3)
 	if (looping)
@@ -659,6 +635,13 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 				FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
 			return true;
 		}
+
+		// todo
+		// if(music type == MIDI)
+		// {
+		// 	FMR(FMOD_Sound_SetMode(music_stream, FMOD_LOOP_NORMAL));
+		// 	return true;
+		// }
 
 		// Use LOOPMS for time in miliseconds.
 		e = FMOD_Sound_GetTag(music_stream, "LOOPMS", 0, &tag);
@@ -698,21 +681,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 	}
 
-	// No special loop point, but we're playing so it's all good.
+	// No special loop point
 	return true;
-}
-
-void I_StopDigSong(void)
-{
-	if (music_stream)
-		FMR(FMOD_Sound_Release(music_stream));
-	music_stream = NULL;
-#ifdef HAVE_LIBGME
-	if (gme)
-		gme_delete(gme);
-	gme = NULL;
-#endif
-	current_track = -1;
 }
 
 void I_SetDigMusicVolume(UINT8 volume)
@@ -805,46 +775,44 @@ boolean I_SetSongTrack(INT32 track)
 // Fuck MIDI. ... Okay fine, you can have your silly D_-only mode.
 //
 
-void I_InitMIDIMusic(void)
+boolean I_PlaySong(void)
 {
-}
-
-void I_ShutdownMIDIMusic(void)
-{
-	if (midimode)
-		I_StopSong(0);
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
-{
-	FMOD_CREATESOUNDEXINFO fmt;
-	memset(&fmt, 0, sizeof(FMOD_CREATESOUNDEXINFO));
-	fmt.cbsize = sizeof(FMOD_CREATESOUNDEXINFO);
-	fmt.length = len;
-	FMR(FMOD_System_CreateStream(fsys, (char *)data, FMOD_OPENMEMORY_POINT, &fmt, &music_stream));
-	return 1337;
-}
-
-boolean I_PlaySong(INT32 handle, boolean looping)
-{
-	if (1337 == handle)
+#ifdef HAVE_LIBGME
+	if (gme)
 	{
-		midimode = true;
-		if (looping)
-			FMR(FMOD_Sound_SetMode(music_stream, FMOD_LOOP_NORMAL));
+		gme_start_track(gme, 0);
+		current_track = 0;
 		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
-		FMR_MUSIC(FMOD_Channel_SetPriority(music_channel, 0));
+		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
+		FMR(FMOD_Channel_SetPriority(music_channel, 0));
+		return true;
 	}
+#endif
+
+	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
+	if (midimode)
+		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
+	else
+		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
+	FMR(FMOD_Channel_SetPriority(music_channel, 0));
+	current_track = 0;
+
 	return true;
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
-	I_UnRegisterSong(handle);
+#ifdef HAVE_LIBGME
+	if (gme)
+		gme_delete(gme);
+	gme = NULL;
+#endif
+	current_track = -1;
+
+	I_UnloadSong();
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 	UNREFERENCED_PARAMETER(handle);
 	if (music_stream)

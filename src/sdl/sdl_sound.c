@@ -1313,12 +1313,6 @@ void I_StartupSound(void)
 // MUSIC API.
 //
 
-void I_ShutdownMIDIMusic(void)
-{
-	nomidimusic = false;
-	if (nodigimusic) I_ShutdownMusic();
-}
-
 #ifdef HAVE_LIBGME
 static void I_ShutdownGMEMusic(void)
 {
@@ -1329,12 +1323,6 @@ static void I_ShutdownGMEMusic(void)
 	Snd_UnlockAudio();
 }
 #endif
-
-void I_ShutdownDigMusic(void)
-{
-	nodigimusic = false;
-	if (nomidimusic) I_ShutdownMusic();
-}
 
 #ifdef HAVE_MIXER
 static boolean LoadSong(void *data, size_t lumplength, size_t selectpos)
@@ -1436,8 +1424,8 @@ void I_ShutdownMusic(void)
 
 	CONS_Printf("%s", M_GetText("I_ShutdownMusic: "));
 
-	I_UnRegisterSong(0);
-	I_StopDigSong();
+	I_UnloadSong();
+	I_StopSong();
 	Mix_CloseAudio();
 #ifdef MIX_INIT
 	Mix_Quit();
@@ -1448,16 +1436,6 @@ void I_ShutdownMusic(void)
 		SDL_DestroyMutex(Msc_Mutex);
 	Msc_Mutex = NULL;
 #endif
-}
-
-void I_InitMIDIMusic(void)
-{
-	if (nodigimusic) I_InitMusic();
-}
-
-void I_InitDigMusic(void)
-{
-	if (nomidimusic) I_InitMusic();
 }
 
 void I_InitMusic(void)
@@ -1639,17 +1617,29 @@ void I_ResumeSong(INT32 handle)
 #endif
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
-	(void)handle;
+	I_StopGME();
 #ifdef HAVE_MIXER
-	if (nomidimusic || !musicStarted)
+	if (nodigimusic)
 		return;
-	Mix_FadeOutMusic(MIDIfade);
+
+#ifdef MIXER_POS
+	if (canlooping)
+		Mix_HookMusicFinished(NULL);
 #endif
+
+	Mix_HaltMusic();
+	while (Mix_PlayingMusic())
+		;
+
+	if (music[1])
+		Mix_FreeMusic(music[1]);
+	music[1] = NULL;
+	LoadSong(NULL, 0, 1);
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 #ifdef HAVE_MIXER
 
@@ -1669,7 +1659,7 @@ void I_UnRegisterSong(INT32 handle)
 #endif
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(void *data, size_t len)
 {
 #ifdef HAVE_MIXER
 	if (nomidimusic || !musicStarted)
@@ -1771,7 +1761,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 
 	lumpnum = W_CheckNumForName(filename);
 
-	I_StopDigSong();
+	I_StopSong();
 
 	if (lumpnum == LUMPERROR)
 	{
@@ -1920,29 +1910,6 @@ static void I_StopGME(void)
 	Snd_LockAudio();
 	gme_seek(localdata.gme_emu, 0);
 	Snd_UnlockAudio();
-#endif
-}
-
-void I_StopDigSong(void)
-{
-	I_StopGME();
-#ifdef HAVE_MIXER
-	if (nodigimusic)
-		return;
-
-#ifdef MIXER_POS
-	if (canlooping)
-		Mix_HookMusicFinished(NULL);
-#endif
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[1])
-		Mix_FreeMusic(music[1]);
-	music[1] = NULL;
-	LoadSong(NULL, 0, 1);
 #endif
 }
 
