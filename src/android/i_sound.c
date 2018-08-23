@@ -65,6 +65,16 @@ musictype_t I_GetMusicType(void)
 	return MU_NONE;
 }
 
+boolean I_MusicPlaying(void)
+{
+	return false;
+}
+
+boolean I_MusicPaused(void)
+{
+	return false;
+}
+
 void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
