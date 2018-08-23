@@ -97,9 +97,9 @@ void S_RegisterSoundStuff(void);
 
 //
 // Initializes sound stuff, including volume
-// Sets channels, SFX and music volume, allocates channel buffer, sets S_sfx lookup.
+// Sets channels, SFX, allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume);
+void S_InitSfxChannels(INT32 sfxVolume);
 
 //
 // Per level startup code.
@@ -129,9 +129,16 @@ void S_StopSound(void *origin);
 // Music Status
 //
 
-boolean S_DigMusicDisabled();
-boolean S_MIDIMusicDisabled();
-boolean S_MusicDisabled();
+boolean S_DigMusicDisabled(void);
+boolean S_MIDIMusicDisabled(void);
+boolean S_MusicDisabled(void);
+boolean S_MusicPlaying(void);
+boolean S_MusicPaused(void);
+const char *S_MusicName(void);
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+#define S_DigExists(a) S_MusicExists(a, false, true)
+#define S_MIDIExists(a) S_MusicExists(a, true, false)
+
 
 //
 // Music Properties

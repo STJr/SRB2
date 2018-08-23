@@ -125,6 +125,8 @@ void I_SetSfxVolume(UINT8 volume);
 //
 
 musictype_t I_GetMusicType(void);
+boolean I_MusicPlaying(void);
+boolean I_MusicPaused(void);
 
 /** \brief Init the music systems
 */

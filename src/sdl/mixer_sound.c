@@ -453,6 +453,16 @@ musictype_t I_GetMusicType(void)
 		return (musictype_t)Mix_GetMusicType(music);
 }
 
+boolean I_MusicPlaying(void)
+{
+	return (boolean)music;
+}
+
+boolean I_MusicPaused(void)
+{
+	return songpaused;
+}
+
 // Music hooks
 static void music_loop(void)
 {

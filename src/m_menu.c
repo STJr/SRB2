@@ -9421,7 +9421,7 @@ static void M_ToggleSFX(INT32 choice)
 		nosound = false;
 		I_StartupSound();
 		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
 		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
@@ -9474,7 +9474,7 @@ static void M_ToggleDigital(INT32 choice)
 		nodigimusic = false;
 		I_InitMusic();
 		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -9531,7 +9531,7 @@ static void M_ToggleMIDI(INT32 choice)
 		nomidimusic = false;
 		I_InitMusic();
 		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		S_InitSfxChannels(cv_soundvolume.value);
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else

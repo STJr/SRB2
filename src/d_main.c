@@ -1197,7 +1197,7 @@ void D_SRB2Main(void)
 	}
 	else
 	{
-		CONS_Printf("S_Init(): Setting up sound.\n");
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
 	}
 	if (M_CheckParm("-nosound"))
 		nosound = true;
@@ -1212,7 +1212,7 @@ void D_SRB2Main(void)
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
