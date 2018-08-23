@@ -1361,60 +1361,64 @@ static void ST_drawNightsRecords(void)
 	if (stplyr->texttimer < TICRATE/2)
 		aflag |= (9 - 9*stplyr->texttimer/(TICRATE/2)) << V_ALPHASHIFT;
 
-	// A "Bonus Time Start" by any other name...
-	if (stplyr->textvar == 1)
+	switch (stplyr->textvar)
 	{
-		V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
-		V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
-
-		if (stplyr->finishedtime)
+		case 1: // A "Bonus Time Start" by any other name...
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
-			V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+			V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
+			V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
+
+			if (stplyr->finishedtime)
+			{
+				V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
+				V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+			}
+			break;
 		}
-	}
-
-	// Get n [more] Spheres
-	else if (stplyr->textvar <= 3 && stplyr->textvar >= 2)
-	{
-		if (!stplyr->capsule)
-			return;
-
-		// Yes, this string is an abomination.
-		V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
-		                     va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
-		                        (stplyr->textvar == 3) ? M_GetText("MORE ") : "",
-		                        (G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
-		                        (stplyr->capsule->health > 1) ? "S" : ""));
-	}
-
-	// End Bonus
-	else if (stplyr->textvar == 4)
-	{
-		V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
-		V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
-		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
-
-		// If new record, say so!
-		if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+		case 2: // Get n Spheres
+		case 3: // Get n more Spheres
 		{
-			if (stplyr->texttimer & 16)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
-		}
+			if (!stplyr->capsule)
+				return;
 
-		if (P_HasGrades(gamemap, stplyr->lastmare + 1))
-		{
-			if (aflag)
-				V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
-				                       ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
-			else
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
-				                  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+			// Yes, this string is an abomination.
+			V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
+								 va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
+									(stplyr->textvar == 3) ? M_GetText("MORE ") : "",
+									(G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
+									(stplyr->capsule->health > 1) ? "S" : ""));
+			break;
 		}
+		case 4: // End Bonus
+		{
+			V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
+			V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
+			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+
+			// If new record, say so!
+			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+			{
+				if (stplyr->texttimer & 16)
+					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
+			}
+
+			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
+			{
+				if (aflag)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
+										   ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+				else
+					V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
+									  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+			}
+			break;
+		}
+		default:
+			break;
 	}
 }
 
