@@ -72,6 +72,10 @@ static Music_Emu *gme;
 static INT32 current_track;
 #endif
 
+/// ------------------------
+/// Audio System
+/// ------------------------
+
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
@@ -127,6 +131,10 @@ void I_ShutdownSound(void)
 FUNCMATH void I_UpdateSound(void)
 {
 }
+
+/// ------------------------
+/// SFX
+/// ------------------------
 
 // this is as fast as I can possibly make it.
 // sorry. more asm needed.
@@ -430,11 +438,72 @@ void I_SetSfxVolume(UINT8 volume)
 	sfx_volume = volume;
 }
 
-//
-// Music
-//
+/// ------------------------
+/// Music Hooks
+/// ------------------------
 
-musictype_t I_GetMusicType(void)
+static void music_loop(void)
+{
+	Mix_PlayMusic(music, 0);
+	Mix_SetMusicPosition(loop_point);
+}
+
+#ifdef HAVE_LIBGME
+static void mix_gme(void *udata, Uint8 *stream, int len)
+{
+	int i;
+	short *p;
+
+	(void)udata;
+
+	// no gme? no music.
+	if (!gme || gme_track_ended(gme) || songpaused)
+		return;
+
+	// play gme into stream
+	gme_play(gme, len/2, (short *)stream);
+
+	// apply volume to stream
+	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
+		*p = ((INT32)*p) * music_volume*2 / 42;
+}
+#endif
+
+
+/// ------------------------
+/// Music System
+/// ------------------------
+
+FUNCMATH void I_InitMusic(void)
+{
+#ifdef HAVE_LIBGME
+	gme = NULL;
+	current_track = -1;
+#endif
+}
+
+void I_ShutdownMusic(void)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		Mix_HookMusic(NULL, NULL);
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (!music)
+		return;
+	Mix_HookMusicFinished(NULL);
+	Mix_FreeMusic(music);
+	music = NULL;
+}
+
+/// ------------------------
+/// Music Properties
+/// ------------------------
+
+musictype_t I_MusicType(void)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -463,74 +532,9 @@ boolean I_MusicPaused(void)
 	return songpaused;
 }
 
-// Music hooks
-static void music_loop(void)
-{
-	Mix_PlayMusic(music, 0);
-	Mix_SetMusicPosition(loop_point);
-}
-
-#ifdef HAVE_LIBGME
-static void mix_gme(void *udata, Uint8 *stream, int len)
-{
-	int i;
-	short *p;
-
-	(void)udata;
-
-	// no gme? no music.
-	if (!gme || gme_track_ended(gme) || songpaused)
-		return;
-
-	// play gme into stream
-	gme_play(gme, len/2, (short *)stream);
-
-	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * music_volume*2 / 42;
-}
-#endif
-
-FUNCMATH void I_InitMusic(void)
-{
-#ifdef HAVE_LIBGME
-	gme = NULL;
-	current_track = -1;
-#endif
-}
-
-void I_ShutdownMusic(void)
-{
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
-	}
-#endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
-}
-
-void I_PauseSong(void)
-{
-	Mix_PauseMusic();
-	songpaused = true;
-}
-
-void I_ResumeSong(void)
-{
-	Mix_ResumeMusic();
-	songpaused = false;
-}
-
-//
-// Digital Music
-//
+/// ------------------------
+/// Music Effects
+/// ------------------------
 
 boolean I_SetSongSpeed(float speed)
 {
@@ -550,40 +554,9 @@ boolean I_SetSongSpeed(float speed)
 	return false;
 }
 
-boolean I_SetSongTrack(int track)
-{
-#ifdef HAVE_LIBGME
-	if (current_track == track)
-		return false;
-
-	// If the specified track is within the number of tracks playing, then change it
-	if (gme)
-	{
-		SDL_LockAudio();
-		if (track >= 0
-			&& track < gme_track_count(gme))
-		{
-			gme_err_t gme_e = gme_start_track(gme, track);
-			if (gme_e != NULL)
-			{
-				CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
-				return false;
-			}
-			current_track = track;
-			SDL_UnlockAudio();
-			return true;
-		}
-		SDL_UnlockAudio();
-		return false;
-	}
-#endif
-	(void)track;
-	return false;
-}
-
-//
-// MIDI Music
-//
+/// ------------------------
+/// Music Playback
+/// ------------------------
 
 boolean I_LoadSong(char *data, size_t len)
 {
@@ -731,6 +704,12 @@ boolean I_LoadSong(char *data, size_t len)
 	return true;
 }
 
+void I_UnloadSong(void)
+{
+	Mix_FreeMusic(music);
+	music = NULL;
+}
+
 boolean I_PlaySong(boolean looping)
 {
 	if (!music)
@@ -775,25 +754,64 @@ void I_StopSong(void)
 	music = NULL;
 }
 
+void I_PauseSong(void)
+{
+	Mix_PauseMusic();
+	songpaused = true;
+}
+
+void I_ResumeSong(void)
+{
+	Mix_ResumeMusic();
+	songpaused = false;
+}
+
 void I_SetMusicVolume(UINT8 volume)
 {
 	if (!music)
 		return;
 
-	if (I_GetMusicType() == MU_MID)
+#ifdef _WIN32
+	if (I_MusicType() == MU_MID)
 		// HACK: Until we stop using native MIDI,
 		// disable volume changes
 		music_volume = 31;
 	else
+#endif
 		music_volume = volume;
 
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 }
 
-void I_UnloadSong(void)
+boolean I_SetSongTrack(int track)
 {
-	Mix_FreeMusic(music);
-	music = NULL;
+#ifdef HAVE_LIBGME
+	if (current_track == track)
+		return false;
+
+	// If the specified track is within the number of tracks playing, then change it
+	if (gme)
+	{
+		SDL_LockAudio();
+		if (track >= 0
+			&& track < gme_track_count(gme))
+		{
+			gme_err_t gme_e = gme_start_track(gme, track);
+			if (gme_e != NULL)
+			{
+				CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+				return false;
+			}
+			current_track = track;
+			SDL_UnlockAudio();
+			return true;
+		}
+		SDL_UnlockAudio();
+		return false;
+	}
+#endif
+	(void)track;
+	return false;
 }
 
 #endif
