@@ -439,11 +439,24 @@ void I_SetSfxVolume(UINT8 volume)
 	sfx_volume = volume;
 }
 
-//
-// MUSIC
-//
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
-musictype_t I_GetMusicType(void)
+void I_InitMusic(void)
+{
+}
+
+void I_ShutdownMusic(void)
+{
+	I_StopSong();
+}
+
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
+
+musictype_t I_MusicType(void)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -491,28 +504,46 @@ boolean I_MusicPaused(void)
 	return fmpaused;
 }
 
-void I_InitMusic(void)
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
 {
+	FMOD_RESULT e;
+	float frequency;
+	if (!music_stream)
+		return false;
+	if (speed > 250.0f)
+		speed = 250.0f; //limit speed up to 250x
+
+#ifdef HAVE_LIBGME
+	// Try to set GME speed
+	if (gme)
+	{
+		gme_set_tempo(gme, speed);
+		return true;
+	}
+#endif
+
+	// Try to set Mod/Midi speed
+	e = FMOD_Sound_SetMusicSpeed(music_stream, speed);
+
+	if (e == FMOD_ERR_FORMAT)
+	{
+		// Just change pitch instead for Ogg/etc.
+		FMR(FMOD_Sound_GetDefaults(music_stream, &frequency, NULL, NULL, NULL));
+		FMR_MUSIC(FMOD_Channel_SetFrequency(music_channel, speed*frequency));
+	}
+	else
+		FMR_MUSIC(e);
+
+	return true;
 }
 
-void I_ShutdownMusic(void)
-{
-	I_StopSong();
-}
-
-void I_PauseSong(void)
-{
-	UNREFERENCED_PARAMETER(handle);
-	if (music_stream)
-		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, true));
-}
-
-void I_ResumeSong(void)
-{
-	UNREFERENCED_PARAMETER(handle);
-	if (music_stream)
-		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
-}
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
 boolean I_LoadSong(char *data, size_t len)
 {
@@ -726,37 +757,77 @@ boolean I_LoadSong(char *data, size_t len)
 	return true;
 }
 
-boolean I_SetSongSpeed(float speed)
+void I_UnloadSong(void)
 {
-	FMOD_RESULT e;
-	float frequency;
-	if (!music_stream)
-		return false;
-	if (speed > 250.0f)
-		speed = 250.0f; //limit speed up to 250x
+	UNREFERENCED_PARAMETER(handle);
+	if (music_stream)
+		FMR(FMOD_Sound_Release(music_stream));
+	music_stream = NULL;
+}
 
+boolean I_PlaySong(boolean looping)
+{
 #ifdef HAVE_LIBGME
-	// Try to set GME speed
 	if (gme)
 	{
-		gme_set_tempo(gme, speed);
+		gme_start_track(gme, 0);
+		current_track = 0;
+		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
+		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
+		FMR(FMOD_Channel_SetPriority(music_channel, 0));
 		return true;
 	}
 #endif
 
-	// Try to set Mod/Midi speed
-	e = FMOD_Sound_SetMusicSpeed(music_stream, speed);
-
-	if (e == FMOD_ERR_FORMAT)
-	{
-		// Just change pitch instead for Ogg/etc.
-		FMR(FMOD_Sound_GetDefaults(music_stream, &frequency, NULL, NULL, NULL));
-		FMR_MUSIC(FMOD_Channel_SetFrequency(music_channel, speed*frequency));
-	}
+	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
+	if (I_MusicType() != MU_MID)
+		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
 	else
-		FMR_MUSIC(e);
+		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
+	FMR(FMOD_Channel_SetPriority(music_channel, 0));
+	current_track = 0;
 
 	return true;
+}
+
+void I_StopSong(void)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+		gme_delete(gme);
+	gme = NULL;
+#endif
+	current_track = -1;
+
+	I_UnloadSong();
+}
+
+void I_PauseSong(void)
+{
+	UNREFERENCED_PARAMETER(handle);
+	if (music_stream)
+		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, true));
+}
+
+void I_ResumeSong(void)
+{
+	UNREFERENCED_PARAMETER(handle);
+	if (music_stream)
+		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
+}
+
+void I_SetMusicVolume(UINT8 volume)
+{
+	if (!music_stream)
+		return;
+
+	// volume is 0 to 31.
+	if (I_MusicType() == MU_MID)
+		music_volume = 31; // windows bug hack
+	else
+		music_volume = volume;
+
+	FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 }
 
 boolean I_SetSongTrack(INT32 track)
@@ -802,67 +873,4 @@ boolean I_SetSongTrack(INT32 track)
 		}
 	}
 	return false;
-}
-
-//
-// Fuck MIDI. ... Okay fine, you can have your silly D_-only mode.
-//
-
-void I_SetMusicVolume(UINT8 volume)
-{
-	if (!music_stream)
-		return;
-
-	// volume is 0 to 31.
-	if (I_GetMusicType() == MU_MID)
-		music_volume = 31; // windows bug hack
-	else
-		music_volume = volume;
-
-	FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-}
-
-boolean I_PlaySong(boolean looping)
-{
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		gme_start_track(gme, 0);
-		current_track = 0;
-		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-		FMR(FMOD_Channel_SetPriority(music_channel, 0));
-		return true;
-	}
-#endif
-
-	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-	if (I_GetMusicType() != MU_MID)
-		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
-	else
-		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-	FMR(FMOD_Channel_SetPriority(music_channel, 0));
-	current_track = 0;
-
-	return true;
-}
-
-void I_StopSong(void)
-{
-#ifdef HAVE_LIBGME
-	if (gme)
-		gme_delete(gme);
-	gme = NULL;
-#endif
-	current_track = -1;
-
-	I_UnloadSong();
-}
-
-void I_UnloadSong(void)
-{
-	UNREFERENCED_PARAMETER(handle);
-	if (music_stream)
-		FMR(FMOD_Sound_Release(music_stream));
-	music_stream = NULL;
 }

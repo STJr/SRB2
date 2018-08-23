@@ -140,15 +140,6 @@ void I_SetSfxVolume(INT32 volume)
 	set_volume (Volset(volume),-1);
 }
 
-void I_SetMusicVolume(INT32 volume)
-{
-	if (midi_disabled)
-		return;
-
-	// Now set volume on output device.
-	set_volume (-1, Volset(volume));
-}
-
 //
 // Starting a sound means adding it
 //  to the current list of active sounds
@@ -323,23 +314,9 @@ static int      musicdies=-1;
 UINT8           music_started=0;
 boolean         songpaused=false;
 
-musictype_t I_GetMusicType(void)
-{
-	if (currsong)
-		return MU_MID;
-	else
-		return MU_NONE;
-}
-
-boolean I_MusicPlaying()
-{
-	return (boolean)currsong;
-}
-
-boolean I_MusicPaused()
-{
-	return songpaused;
-}
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
 /* load_midi_mem:
  *  Loads a standard MIDI file from memory, returning a pointer to
@@ -427,69 +404,41 @@ void I_ShutdownMusic(void)
 	music_started=false;
 }
 
-boolean I_PlaySong(boolean looping)
-{
-	handle = 0;
-	if (midi_disabled)
-		return false;
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
 
-	islooping = looping;
-	musicdies = gametic + NEWTICRATE*30;
-	if (play_midi(currsong,looping)==0)
-		return true;
+musictype_t I_MusicType(void)
+{
+	if (currsong)
+		return MU_MID;
+	else
+		return MU_NONE;
+}
+
+boolean I_MusicPlaying()
+{
+	return (boolean)currsong;
+}
+
+boolean I_MusicPaused()
+{
+	return songpaused;
+}
+
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
+{
+	(void)speed;
 	return false;
 }
 
-void I_PauseSong (INT32 handle)
-{
-	handle = 0;
-	if (midi_disabled)
-		return;
-	midi_pause();
-	songpaused = true;
-}
-
-void I_ResumeSong (INT32 handle)
-{
-	handle = 0;
-	if (midi_disabled)
-		return;
-	midi_resume();
-	songpaused = false;
-}
-
-void I_StopSong(void)
-{
-	handle = 0;
-	if (midi_disabled)
-		return;
-
-	islooping = 0;
-	musicdies = 0;
-	stop_midi();
-	songpaused = false;
-}
-
-// Is the song playing?
-#if 0
-int I_QrySongPlaying(int handle)
-{
-	if (midi_disabled)
-		return 0;
-
-	//return islooping || musicdies > gametic;
-	return (midi_pos==-1);
-}
-#endif
-
-void I_UnloadSong(void)
-{
-	handle = 0;
-	if (midi_disabled)
-		return;
-
-	//destroy_midi(currsong);
-}
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
 boolean I_LoadSong(char *data, size_t len)
 {
@@ -516,8 +465,81 @@ boolean I_LoadSong(char *data, size_t len)
 	return 1;
 }
 
-boolean I_SetSongSpeed(float speed)
+void I_UnloadSong(void)
 {
-	(void)speed;
+	handle = 0;
+	if (midi_disabled)
+		return;
+
+	//destroy_midi(currsong);
+}
+
+boolean I_PlaySong(boolean looping)
+{
+	handle = 0;
+	if (midi_disabled)
+		return false;
+
+	islooping = looping;
+	musicdies = gametic + NEWTICRATE*30;
+	if (play_midi(currsong,looping)==0)
+		return true;
 	return false;
 }
+
+void I_StopSong(void)
+{
+	handle = 0;
+	if (midi_disabled)
+		return;
+
+	islooping = 0;
+	musicdies = 0;
+	stop_midi();
+	songpaused = false;
+}
+
+void I_PauseSong (INT32 handle)
+{
+	handle = 0;
+	if (midi_disabled)
+		return;
+	midi_pause();
+	songpaused = true;
+}
+
+void I_ResumeSong (INT32 handle)
+{
+	handle = 0;
+	if (midi_disabled)
+		return;
+	midi_resume();
+	songpaused = false;
+}
+
+void I_SetMusicVolume(INT32 volume)
+{
+	if (midi_disabled)
+		return;
+
+	// Now set volume on output device.
+	set_volume (-1, Volset(volume));
+}
+
+boolean I_SetSongTrack(INT32 track)
+{
+	(void)track;
+	return false;
+}
+
+// Is the song playing?
+#if 0
+int I_QrySongPlaying(int handle)
+{
+	if (midi_disabled)
+		return 0;
+
+	//return islooping || musicdies > gametic;
+	return (midi_pos==-1);
+}
+#endif

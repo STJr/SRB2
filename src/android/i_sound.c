@@ -55,12 +55,22 @@ void I_SetSfxVolume(INT32 volume)
         (void)volume;
 }
 
-//
-//  MUSIC I/O
-//
-UINT8 music_started = 0;
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
-musictype_t I_GetMusicType(void)
+UINT8 music_started = 0;
+UINT8 digmusic_started = 0;
+
+void I_InitMusic(void){}
+
+void I_ShutdownMusic(void){}
+
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
+
+musictype_t I_MusicType(void)
 {
 	return MU_NONE;
 }
@@ -75,23 +85,19 @@ boolean I_MusicPaused(void)
 	return false;
 }
 
-void I_InitMusic(void){}
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
 
-void I_ShutdownMusic(void){}
-
-void I_PauseSong(void)
+boolean I_SetSongSpeed(float speed)
 {
-        (void)handle;
+        (void)speed;
+        return false;
 }
 
-void I_ResumeSong(void)
-{
-        (void)handle;
-}
-
-//
-//  MIDI I/O
-//
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
 UINT8 midimusic_started = 0;
 
@@ -102,9 +108,9 @@ boolean I_LoadSong(char *data, size_t len)
         return -1;
 }
 
-void I_SetMusicVolume(INT32 volume)
+void I_UnloadSong()
 {
-        (void)volume;
+
 }
 
 boolean I_PlaySong(boolean looping)
@@ -119,19 +125,17 @@ void I_StopSong(void)
         (void)handle;
 }
 
-void I_UnloadSong(void)
+void I_PauseSong(void)
 {
         (void)handle;
 }
 
-//
-//  DIGMUSIC I/O
-//
-
-UINT8 digmusic_started = 0;
-
-boolean I_SetSongSpeed(float speed)
+void I_ResumeSong(void)
 {
-        (void)speed;
-        return false;
+        (void)handle;
+}
+
+void I_SetMusicVolume(INT32 volume)
+{
+        (void)volume;
 }
