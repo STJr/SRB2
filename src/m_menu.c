@@ -5277,7 +5277,7 @@ static void M_PandorasBox(INT32 choice)
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].spheres, 0));
 	else
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
-	if (players[consoleplayer].lives == 0x7f)
+	if (players[consoleplayer].lives == INFLIVES)
 		CV_StealthSetValue(&cv_dummylives, -1);
 	else
 		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
@@ -6334,7 +6334,7 @@ skipsign:
 			y += 25;
 
 			tempx = x + 10;
-			if (savegameinfo[savetodraw].lives != 0x7f
+			if (savegameinfo[savetodraw].lives != INFLIVES
 			&& savegameinfo[savetodraw].lives > 9)
 				tempx -= 4;
 
@@ -6361,7 +6361,7 @@ skiplife:
 
 			V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
 			tempx += 16;
-			if (savegameinfo[savetodraw].lives == 0x7f)
+			if (savegameinfo[savetodraw].lives == INFLIVES)
 				V_DrawCharacter(tempx, y + 1, '\x16', false);
 			else
 				V_DrawString(tempx, y, 0, va("%d", savegameinfo[savetodraw].lives));

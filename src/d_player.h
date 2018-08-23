@@ -382,7 +382,7 @@ typedef struct player_s
 	fixed_t height; // Bounding box changes.
 	fixed_t spinheight;
 
-	SINT8 lives;
+	SINT8 lives; // number of lives - if == INFLIVES, the player has infinite lives
 	SINT8 continues; // continues that player has acquired
 
 	SINT8 xtralife; // Ring Extra Life counter
@@ -490,5 +490,8 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+// Value for infinite lives
+#define INFLIVES 0x7F
 
 #endif

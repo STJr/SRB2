@@ -1874,7 +1874,7 @@ static void Y_AwardCoopBonuses(void)
 				players[i].score = MAXSCORE;
 		}
 
-		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != INFLIVES) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
@@ -1918,7 +1918,7 @@ static void Y_AwardSpecialStageBonus(void)
 			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
-		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = (!ultimatemode && !modeattacking && players[i].lives != INFLIVES) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 

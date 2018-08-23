@@ -807,7 +807,7 @@ static void ST_drawLivesArea(void)
 		// lives number
 		if (gametype == GT_RACE)
 		{
-			livescount = 0x7f;
+			livescount = INFLIVES;
 			notgreyedout = true;
 		}
 		else if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
@@ -826,9 +826,9 @@ static void ST_drawLivesArea(void)
 				if (players[i].lives > 1)
 					notgreyedout = true;
 
-				if (players[i].lives == 0x7f)
+				if (players[i].lives == INFLIVES)
 				{
-					livescount = 0x7f;
+					livescount = INFLIVES;
 					break;
 				}
 				else if (livescount < 99)
@@ -837,11 +837,11 @@ static void ST_drawLivesArea(void)
 		}
 		else
 		{
-			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0x7f : stplyr->lives);
+			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 			notgreyedout = true;
 		}
 
-		if (livescount == 0x7f)
+		if (livescount == INFLIVES)
 			V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
 				'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
 		else

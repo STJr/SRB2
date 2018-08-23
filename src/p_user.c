@@ -927,7 +927,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
-	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != 0x7f)
+	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != INFLIVES)
 	{
 		INT32 gainlives = 0;
 
@@ -986,7 +986,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (player->lives == 0x7f || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		if (player->lives == INFLIVES || (gametype != GT_COOP && gametype != GT_COMPETITION))
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			return;
@@ -8377,7 +8377,7 @@ boolean P_GetLives(player_t *player)
 	if (!(netgame || multiplayer)
 	|| (gametype != GT_COOP)
 	|| (cv_cooplives.value == 1)
-	|| (player->lives == 0x7f))
+	|| (player->lives == INFLIVES))
 		return true;
 
 	if ((cv_cooplives.value == 2 || cv_cooplives.value == 0) && player->lives > 0)
@@ -8404,7 +8404,7 @@ boolean P_GetLives(player_t *player)
 	{
 		if (cv_cooplives.value == 2 && (P_IsLocalPlayer(player) || P_IsLocalPlayer(&players[maxlivesplayer])))
 			S_StartSound(NULL, sfx_jshard); // placeholder
-		if (players[maxlivesplayer].lives != 0x7f)
+		if (players[maxlivesplayer].lives != INFLIVES)
 			players[maxlivesplayer].lives--;
 		player->lives++;
 		if (player->lives < 1)

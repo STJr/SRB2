@@ -918,7 +918,7 @@ void Command_Setlives_f(void)
 	{
 		SINT8 lives = atoi(COM_Argv(1));
 		if (lives == -1)
-			players[consoleplayer].lives = 0x7f; // infinity!
+			players[consoleplayer].lives = INFLIVES; // infinity!
 		else
 		{
 			// P_GivePlayerLives does value clamping
