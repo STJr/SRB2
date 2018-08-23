@@ -1205,6 +1205,10 @@ static void ST_drawPowerupHUD(void)
 	if (stplyr->spectator || stplyr->playerstate != PST_LIVE)
 		return;
 
+// -------
+// Shields
+// -------
+
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if (stplyr->powers[pw_shield] & SH_NOSTACK)
 	{
@@ -1247,6 +1251,10 @@ static void ST_drawPowerupHUD(void)
 
 	offs -= shieldoffs[q];
 
+// ---------
+// CTF flags
+// ---------
+
 	// YOU have a flag. Display a monitor-like icon for it.
 	if (stplyr->gotflag)
 	{
@@ -1264,11 +1272,20 @@ static void ST_drawPowerupHUD(void)
 
 	offs -= flagoffs[q];
 
+// --------------------
+// Timer-based powerups
+// --------------------
+
+#define DRAWTIMERICON(patch, timer) \
+	V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, patch); \
+	V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", timer/TICRATE));
+
+	// Invincibility, both from monitor and after being hit
 	invulntime = stplyr->powers[pw_flashing] ? stplyr->powers[pw_flashing] : stplyr->powers[pw_invulnerability];
+	// Note: pw_flashing always makes the icon flicker regardless of time, unlike pw_invulnerability
 	if (stplyr->powers[pw_invulnerability] > 3*TICRATE || (invulntime && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, invincibility);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", invulntime/TICRATE));
+		DRAWTIMERICON(invincibility, invulntime)
 	}
 
 	if (invulntime > 7)
@@ -1281,10 +1298,10 @@ static void ST_drawPowerupHUD(void)
 		offs -= a;
 	}
 
+	// Super Sneakers
 	if (stplyr->powers[pw_sneakers] > 3*TICRATE || (stplyr->powers[pw_sneakers] && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, sneakers);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_sneakers]/TICRATE));
+		DRAWTIMERICON(sneakers, stplyr->powers[pw_sneakers])
 	}
 
 	if (stplyr->powers[pw_sneakers] > 7)
@@ -1297,12 +1314,13 @@ static void ST_drawPowerupHUD(void)
 		offs -= a;
 	}
 
+	// Gravity Boots
 	if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, gravboots);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_gravityboots]/TICRATE));
+		DRAWTIMERICON(gravboots, stplyr->powers[pw_gravityboots])
 	}
 
+#undef DRAWTIMERICON
 #undef ICONSEP
 }
 
