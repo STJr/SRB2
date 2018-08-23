@@ -66,9 +66,9 @@ void I_StartupSound(void);
 */
 void I_ShutdownSound(void);
 
-//
-//  SFX I/O
-//
+/// ------------------------
+///  SFX I/O
+/// ------------------------
 
 /**	\brief	Starts a sound in a particular sound channel.
 	\param	id	sfxid
@@ -120,13 +120,9 @@ void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch);
 */
 void I_SetSfxVolume(UINT8 volume);
 
-//
-//  MUSIC I/O
-//
-
-musictype_t I_GetMusicType(void);
-boolean I_MusicPlaying(void);
-boolean I_MusicPaused(void);
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
 /** \brief Init the music systems
 */
@@ -136,33 +132,23 @@ void I_InitMusic(void);
 */
 void I_ShutdownMusic(void);
 
-/**	\brief	PAUSE game handling.
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
 
-	\param	handle	song handle
+musictype_t I_MusicType(void);
+boolean I_MusicPlaying(void);
+boolean I_MusicPaused(void);
 
-	\return	void
-*/
-void I_PauseSong(void);
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
 
-/**	\brief	RESUME game handling
+boolean I_SetSongSpeed(float speed);
 
-	\param	handle	song handle
-
-	\return	void
-*/
-void I_ResumeSong(void);
-
-//
-//  MIDI I/O
-//
-
-/**	\brief	The I_SetMusicVolume function
-
-	\param	volume	volume to set at
-
-	\return	void
-*/
-void I_SetMusicVolume(UINT8 volume);
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
 /**	\brief	Registers a song handle to song data.
 
@@ -174,6 +160,15 @@ void I_SetMusicVolume(UINT8 volume);
 	\todo Remove this
 */
 boolean I_LoadSong(char *data, size_t len);
+
+/**	\brief	See ::I_LoadSong, then think backwards
+
+	\param	handle	song handle
+
+	\sa I_LoadSong
+	\todo remove midi handle
+*/
+void I_UnloadSong(void);
 
 /**	\brief	Called by anything that wishes to start music
 
@@ -195,27 +190,35 @@ boolean I_PlaySong(boolean looping);
 */
 void I_StopSong(void);
 
-/**	\brief	See ::I_LoadSong, then think backwards
+/**	\brief	PAUSE game handling.
 
 	\param	handle	song handle
 
-	\sa I_LoadSong
-	\todo remove midi handle
+	\return	void
 */
-void I_UnloadSong(void);
+void I_PauseSong(void);
 
-//
-//  DIGMUSIC I/O
-//
+/**	\brief	RESUME game handling
 
-boolean I_SetSongSpeed(float speed);
+	\param	handle	song handle
+
+	\return	void
+*/
+void I_ResumeSong(void);
+
+/**	\brief	The I_SetMusicVolume function
+
+	\param	volume	volume to set at
+
+	\return	void
+*/
+void I_SetMusicVolume(UINT8 volume);
 
 boolean I_SetSongTrack(INT32 track);
 
-//
-// CD MUSIC I/O
-//
-
+/// ------------------------
+//  CD MUSIC I/O
+/// ------------------------
 
 /**	\brief  cd music interface
 */

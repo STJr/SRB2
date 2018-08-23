@@ -1381,7 +1381,7 @@ boolean S_MusicPaused(void)
 
 musictype_t S_MusicType(void)
 {
-	return I_GetMusicType();
+	return I_MusicType();
 }
 
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
@@ -1406,7 +1406,7 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 }
 
 /// ------------------------
-/// Music Properties
+/// Music Effects
 /// ------------------------
 
 boolean S_SpeedMusic(float speed)
@@ -1415,7 +1415,7 @@ boolean S_SpeedMusic(float speed)
 }
 
 /// ------------------------
-/// Music Routines
+/// Music Playback
 /// ------------------------
 
 static boolean S_LoadMusic(const char *mname)
@@ -1584,7 +1584,7 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	digvolume = seqvolume = 31;
 #endif
 
-	switch(I_GetMusicType())
+	switch(I_MusicType())
 	{
 		case MU_MID:
 		case MU_MOD:
