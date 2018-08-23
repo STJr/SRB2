@@ -2470,22 +2470,26 @@ void ST_Drawer(void)
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{
+		INT32 c = 0;
 		switch (cv_seenames.value)
 		{
 			case 1: // Colorless
-				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF, player_names[seenplayer-players]);
 				break;
 			case 2: // Team
-				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-				va("%s%s", G_GametypeHasTeams() ? ((seenplayer->ctfteam == 1) ? "\x85" : "\x84") : "", player_names[seenplayer-players]));
+				if (G_GametypeHasTeams())
+					c = (seenplayer->ctfteam == 1) ? V_REDMAP : V_BLUEMAP;
 				break;
 			case 3: // Ally/Foe
 			default:
-				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-				va("%s%s", !G_RingSlingerGametype() || (G_GametypeHasTeams() && players[consoleplayer].ctfteam == seenplayer->ctfteam)
-				 ? "\x83" : "\x85", player_names[seenplayer-players]));
+				// Green = Ally, Red = Foe
+				if (G_GametypeHasTeams())
+					c = (players[consoleplayer].ctfteam == seenplayer->ctfteam) ? V_GREENMAP : V_REDMAP;
+				else // Everyone is an ally, or everyone is a foe!
+					c = (G_RingSlingerGametype()) ? V_REDMAP : V_GREENMAP;
 				break;
 		}
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|c, player_names[seenplayer-players]);
 	}
 #endif
 
