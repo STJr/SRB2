@@ -136,6 +136,14 @@ void I_ResumeSong(INT32 handle);
 //  MIDI I/O
 //
 
+/**	\brief	The I_SetMIDIMusicVolume function
+
+	\param	volume	volume to set at
+
+	\return	void
+*/
+void I_SetMIDIMusicVolume(UINT8 volume);
+
 /**	\brief	Registers a song handle to song data.
 
 	\param	data	pointer to song data

@@ -764,6 +764,19 @@ void I_StopSong(void)
 	music = NULL;
 }
 
+void I_SetMIDIMusicVolume(UINT8 volume)
+{
+	// HACK: Until we stop using native MIDI,
+	// disable volume changes
+	(void)volume;
+	midi_volume = 31;
+	//midi_volume = volume;
+
+	if (!midimode || !music)
+		return;
+	Mix_VolumeMusic((UINT32)midi_volume*128/31);
+}
+
 void I_UnloadSong(void)
 {
 	if (!midimode || !music)
