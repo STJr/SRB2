@@ -134,7 +134,7 @@ FUNCINLINE static ATTRINLINE int Volset(int vol)
 
 void I_SetSfxVolume(INT32 volume)
 {
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	set_volume (Volset(volume),-1);
@@ -142,7 +142,7 @@ void I_SetSfxVolume(INT32 volume)
 
 void I_SetMusicVolume(INT32 volume)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 
 	// Now set volume on output device.
@@ -169,7 +169,7 @@ INT32 I_StartSound ( sfxenum_t     id,
 {
 	int voice;
 
-	if (nosound)
+	if (sound_disabled)
 	return 0;
 
 	// UNUSED
@@ -190,7 +190,7 @@ void I_StopSound (INT32 handle)
 	//  an setting the channel to zero.
 	int voice=handle & (VIRTUAL_VOICES-1);
 
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	if (voice_check(voice)==S_sfx[handle>>VOICESSHIFT].data)
@@ -199,7 +199,7 @@ void I_StopSound (INT32 handle)
 
 INT32 I_SoundIsPlaying(INT32 handle)
 {
-	if (nosound)
+	if (sound_disabled)
 		return FALSE;
 
 	if (voice_check(handle & (VIRTUAL_VOICES-1))==S_sfx[handle>>VOICESSHIFT].data)
@@ -229,7 +229,7 @@ void I_UpdateSoundParams( INT32 handle,
 	int voice=handle & (VIRTUAL_VOICES-1);
 	int numsfx=handle>>VOICESSHIFT;
 
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	if (voice_check(voice)==S_sfx[numsfx].data)
@@ -270,17 +270,17 @@ void I_StartupSound(void)
 	char   err[255];
 #endif
 
-	if (nosound)
+	if (sound_disabled)
 		sfxcard=DIGI_NONE;
 	else
 		sfxcard=DIGI_AUTODETECT;
 
-	if (nomidimusic)
+	if (midi_disabled)
 		midicard=MIDI_NONE;
 	else
 		midicard=MIDI_AUTODETECT; //DetectMusicCard();
 
-	nodigimusic=true; //Alam: No OGG/MP3/IT/MOD support
+	digital_disabled=true; //Alam: No OGG/MP3/IT/MOD support
 
 	// Secure and configure sound device first.
 	CONS_Printf("I_StartupSound: ");
@@ -293,8 +293,8 @@ void I_StartupSound(void)
 	{
 		sprintf (err,"Sound init error : %s\n",allegro_error);
 		CONS_Error (err);
-		nosound=true;
-		nomidimusic=true;
+		sound_disabled=true;
+		midi_disabled=true;
 	}
 	else
 	{
@@ -409,7 +409,7 @@ static MIDI *load_midi_mem(char *mempointer,int *e)
 
 void I_InitMusic(void)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 
 	I_AddExitFunc(I_ShutdownMusic);
@@ -430,7 +430,7 @@ void I_ShutdownMusic(void)
 boolean I_PlaySong(boolean looping)
 {
 	handle = 0;
-	if (nomidimusic)
+	if (midi_disabled)
 		return false;
 
 	islooping = looping;
@@ -443,7 +443,7 @@ boolean I_PlaySong(boolean looping)
 void I_PauseSong (INT32 handle)
 {
 	handle = 0;
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 	midi_pause();
 	songpaused = true;
@@ -452,7 +452,7 @@ void I_PauseSong (INT32 handle)
 void I_ResumeSong (INT32 handle)
 {
 	handle = 0;
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 	midi_resume();
 	songpaused = false;
@@ -461,7 +461,7 @@ void I_ResumeSong (INT32 handle)
 void I_StopSong(void)
 {
 	handle = 0;
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 
 	islooping = 0;
@@ -474,7 +474,7 @@ void I_StopSong(void)
 #if 0
 int I_QrySongPlaying(int handle)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 		return 0;
 
 	//return islooping || musicdies > gametic;
@@ -485,7 +485,7 @@ int I_QrySongPlaying(int handle)
 void I_UnloadSong(void)
 {
 	handle = 0;
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 
 	//destroy_midi(currsong);
@@ -494,7 +494,7 @@ void I_UnloadSong(void)
 boolean I_LoadSong(char *data, size_t len)
 {
 	int e = len; //Alam: For error
-	if (nomidimusic)
+	if (midi_disabled)
 		return 0;
 
 	if (memcmp(data,"MThd",4)==0) // support mid file in WAD !!!
