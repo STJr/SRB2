@@ -122,7 +122,7 @@ void I_ShutdownMusic(void);
 
 	\return	void
 */
-void I_PauseSong(INT32 handle);
+void I_PauseSong(void);
 
 /**	\brief	RESUME game handling
 
@@ -130,7 +130,7 @@ void I_PauseSong(INT32 handle);
 
 	\return	void
 */
-void I_ResumeSong(INT32 handle);
+void I_ResumeSong(void);
 
 //
 //  MIDI I/O
@@ -153,7 +153,7 @@ void I_SetMIDIMusicVolume(UINT8 volume);
 
 	\todo Remove this
 */
-boolean I_LoadSong(void *data, size_t len);
+boolean I_LoadSong(char *data, size_t len);
 
 /**	\brief	Called by anything that wishes to start music
 
@@ -164,7 +164,7 @@ boolean I_LoadSong(void *data, size_t len);
 
 	\todo pass music name, not handle
 */
-boolean I_PlaySong(void);
+boolean I_PlaySong(boolean looping);
 
 /**	\brief	Stops a song over 3 seconds
 

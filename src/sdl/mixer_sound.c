@@ -491,16 +491,14 @@ void I_ShutdownMusic(void)
 	music = NULL;
 }
 
-void I_PauseSong(INT32 handle)
+void I_PauseSong(void)
 {
-	(void)handle;
 	Mix_PauseMusic();
 	songpaused = true;
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong(void)
 {
-	(void)handle;
 	Mix_ResumeMusic();
 	songpaused = false;
 }
@@ -570,7 +568,7 @@ boolean I_SetSongTrack(int track)
 // MIDI Music
 //
 
-boolean I_LoadSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 	I_Assert(!music);
 #ifdef HAVE_LIBGME
@@ -667,6 +665,8 @@ boolean I_LoadSong(void *data, size_t len)
 	else if (!gme_open_data(data, len, &gme, 44100))
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
+		gme_set_equalizer(gme, &eq);
+		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -680,43 +680,41 @@ boolean I_LoadSong(void *data, size_t len)
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
-	if (looping)
+
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	char *p = data;
+	while ((UINT32)(p - data) < len)
 	{
-		const char *key1 = "LOOP";
-		const char *key2 = "POINT=";
-		const char *key3 = "MS=";
-		const size_t key1len = strlen(key1);
-		const size_t key2len = strlen(key2);
-		const size_t key3len = strlen(key3);
-		char *p = data;
-		while ((UINT32)(p - data) < len)
+		if (strncmp(p++, key1, key1len))
+			continue;
+		p += key1len-1; // skip OOP (the L was skipped in strncmp)
+		if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
 		{
-			if (strncmp(p++, key1, key1len))
-				continue;
-			p += key1len-1; // skip OOP (the L was skipped in strncmp)
-			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
-			{
-				p += key2len; // skip POINT=
-				loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
-				// because SDL_Mixer is USELESS and can't even tell us
-				// something simple like the frequency of the streaming music,
-				// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
-				// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
-			}
-			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
-			{
-				p += key3len; // skip MS=
-				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
-				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
-			}
-			// Neither?! Continue searching.
+			p += key2len; // skip POINT=
+			loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
+			// because SDL_Mixer is USELESS and can't even tell us
+			// something simple like the frequency of the streaming music,
+			// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
+			// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
 		}
+		else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
+		{
+			p += key3len; // skip MS=
+			loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
+			// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
+		}
+		// Neither?! Continue searching.
 	}
 
 	return true;
 }
 
-boolean I_PlaySong(void)
+boolean I_PlaySong(boolean looping)
 {
 	if (!music)
 		return false;
@@ -725,8 +723,6 @@ boolean I_PlaySong(void)
 	{
 		gme_start_track(gme, 0);
 		current_track = 0;
-		gme_set_equalizer(gme, &eq);
-		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -782,7 +778,6 @@ void I_UnloadSong(void)
 	if (!midimode || !music)
 		return;
 
-	(void)handle;
 	Mix_FreeMusic(music);
 	music = NULL;
 }
