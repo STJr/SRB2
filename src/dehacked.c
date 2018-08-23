@@ -7610,6 +7610,9 @@ struct {
 	{"WEP_RAIL",WEP_RAIL},
 	{"NUM_WEAPONS",NUM_WEAPONS},
 
+	// Value for infinite lives
+	{"INFLIVES", INFLIVES},
+
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
 	{"GF_REDFLAG",GF_REDFLAG},
