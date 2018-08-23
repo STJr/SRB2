@@ -6950,11 +6950,11 @@ static void M_ChangeControl(INT32 choice)
 // Toggles sound systems in-game.
 static void M_ToggleSFX(void)
 {
-	if (nosound)
+	if (sound_disabled)
 	{
-		nosound = false;
+		sound_disabled = false;
 		I_StartupSound();
-		if (nosound) return;
+		if (sound_disabled) return;
 		S_InitSfxChannels(cv_soundvolume.value);
 		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
@@ -6976,56 +6976,44 @@ static void M_ToggleSFX(void)
 
 static void M_ToggleDigital(void)
 {
-	if (nodigimusic)
+	if (digital_disabled)
 	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_InitSfxChannels(cv_soundvolume.value);
+		digital_disabled = false;
+		I_InitMusic();
+		if (digital_disabled) return;
 		S_StopMusic();
-		S_ChangeMusicInternal("lclear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (digital_disabled)
-		{
-			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		digital_disabled = true;
+		S_StopMusic();
+		M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
 static void M_ToggleMIDI(void)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_InitSfxChannels(cv_soundvolume.value);
-		S_ChangeMusicInternal("lclear", false);
+		midi_disabled = false;
+		I_InitMusic();
+		if (midi_disabled) return;
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (music_disabled)
-		{
-			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		midi_disabled = true;
+		S_StopMusic();
+		M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
