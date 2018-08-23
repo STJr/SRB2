@@ -6991,7 +6991,8 @@ static void M_ToggleDigital(void)
 	else
 	{
 		digital_disabled = true;
-		S_StopMusic();
+		if (S_MusicType() != MU_MID)
+			S_StopMusic();
 		M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
@@ -7012,7 +7013,8 @@ static void M_ToggleMIDI(void)
 	else
 	{
 		midi_disabled = true;
-		S_StopMusic();
+		if (S_MusicType() == MU_MID)
+			S_StopMusic();
 		M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
