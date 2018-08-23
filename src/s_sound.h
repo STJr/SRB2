@@ -14,6 +14,7 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
+#include "i_sound.h" // musictype_t
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
@@ -134,6 +135,7 @@ boolean S_MIDIMusicDisabled(void);
 boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
+musictype_t S_MusicType(void);
 const char *S_MusicName(void);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)

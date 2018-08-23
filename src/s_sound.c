@@ -1377,6 +1377,11 @@ boolean S_MusicPaused(void)
 	return I_MusicPaused();
 }
 
+musictype_t S_MusicType(void)
+{
+	return I_GetMusicType();
+}
+
 const char *S_MusicName(void)
 {
 	return music_name;
@@ -1411,20 +1416,24 @@ static boolean S_LoadMusic(const char *mname)
 	if (S_MusicDisabled())
 		return false;
 
-	if (S_DigMusicDisabled())
-	{
-		if (!S_MIDIExists(mname))
-			return false;
+	if (!S_DigMusicDisabled() && S_DigExists(mname))
+		mlumpnum = W_GetNumForName(va("o_%s", mname));
+	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
 		mlumpnum = W_GetNumForName(va("d_%s", mname));
+	else if (S_DigMusicDisabled() && S_DigExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
+		return false;
+	}
+	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
+		return false;
 	}
 	else
 	{
-		if (S_DigExists(mname))
-			mlumpnum = W_GetNumForName(va("o_%s", mname));
-		else if (S_MIDIExists(mname))
-			mlumpnum = W_GetNumForName(va("d_%s", mname));
-		else
-			return false;
+		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mname);
+		return false;
 	}
 
 	// load & register it
@@ -1448,8 +1457,8 @@ static void S_UnloadMusic(void)
 
 static boolean S_PlayMusic(boolean looping)
 {
-	if (S_DigMusicDisabled())
-		return false; // try midi
+	if (S_MusicDisabled())
+		return false;
 
 	if (!I_PlaySong(looping))
 	{
@@ -1478,10 +1487,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 		S_StopMusic(); // shutdown old music
 
 		if (!S_LoadMusic(mmusic))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
 			return;
-		}
 
 		if (!S_PlayMusic(looping))
 		{
