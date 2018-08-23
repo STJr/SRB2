@@ -408,7 +408,7 @@ void I_ShutdownMusic(void)
 	music_started=false;
 }
 
-boolean I_PlaySong(void)
+boolean I_PlaySong(boolean looping)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -471,7 +471,7 @@ void I_UnloadSong(void)
 	//destroy_midi(currsong);
 }
 
-boolean I_LoadSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 	int e = len; //Alam: For error
 	if (nomidimusic)

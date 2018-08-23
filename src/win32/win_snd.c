@@ -453,14 +453,14 @@ void I_ShutdownMusic(void)
 	I_StopSong();
 }
 
-void I_PauseSong(INT32 handle)
+void I_PauseSong(void)
 {
 	UNREFERENCED_PARAMETER(handle);
 	if (music_stream)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, true));
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong(void)
 {
 	UNREFERENCED_PARAMETER(handle);
 	if (music_stream)
@@ -618,67 +618,64 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 
 	// Try to find a loop point in streaming music formats (ogg, mp3)
-	if (looping)
-	{
-		FMOD_RESULT e;
-		FMOD_TAG tag;
-		unsigned int loopstart, loopend;
+	FMOD_RESULT e;
+	FMOD_TAG tag;
+	unsigned int loopstart, loopend;
 
-		// A proper LOOPPOINT is its own tag, stupid.
-		e = FMOD_Sound_GetTag(music_stream, "LOOPPOINT", 0, &tag);
-		if (e != FMOD_ERR_TAGNOTFOUND)
+	// A proper LOOPPOINT is its own tag, stupid.
+	e = FMOD_Sound_GetTag(music_stream, "LOOPPOINT", 0, &tag);
+	if (e != FMOD_ERR_TAGNOTFOUND)
+	{
+		FMR(e);
+		loopstart = atoi((char *)tag.data); // assumed to be a string data tag.
+		FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_PCM, &loopend, FMOD_TIMEUNIT_PCM));
+		if (loopstart > 0)
+			FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
+		return true;
+	}
+
+	// todo
+	// if(music type == MIDI)
+	// {
+	// 	FMR(FMOD_Sound_SetMode(music_stream, FMOD_LOOP_NORMAL));
+	// 	return true;
+	// }
+
+	// Use LOOPMS for time in miliseconds.
+	e = FMOD_Sound_GetTag(music_stream, "LOOPMS", 0, &tag);
+	if (e != FMOD_ERR_TAGNOTFOUND)
+	{
+		FMR(e);
+		loopstart = atoi((char *)tag.data); // assumed to be a string data tag.
+		FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_MS, &loopend, FMOD_TIMEUNIT_PCM));
+		if (loopstart > 0)
+			FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_MS, loopend, FMOD_TIMEUNIT_PCM));
+		return true;
+	}
+
+	// Try to fetch it from the COMMENT tag, like A.J. Freda
+	e = FMOD_Sound_GetTag(music_stream, "COMMENT", 0, &tag);
+	if (e != FMOD_ERR_TAGNOTFOUND)
+	{
+		char *loopText;
+		// Handle any errors that arose, first
+		FMR(e);
+		// Figure out where the number starts
+		loopText = strstr((char *)tag.data,"LOOPPOINT=");
+		if (loopText != NULL)
 		{
-			FMR(e);
-			loopstart = atoi((char *)tag.data); // assumed to be a string data tag.
+			// Skip the "LOOPPOINT=" part.
+			loopText += 10;
+			// Convert it to our looppoint
+			// FMOD seems to ensure the tag is properly NULL-terminated.
+			// atoi will stop when it reaches anything that's not a number.
+			loopstart = atoi(loopText);
+			// Now do the rest like above
 			FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_PCM, &loopend, FMOD_TIMEUNIT_PCM));
 			if (loopstart > 0)
 				FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
-			return true;
 		}
-
-		// todo
-		// if(music type == MIDI)
-		// {
-		// 	FMR(FMOD_Sound_SetMode(music_stream, FMOD_LOOP_NORMAL));
-		// 	return true;
-		// }
-
-		// Use LOOPMS for time in miliseconds.
-		e = FMOD_Sound_GetTag(music_stream, "LOOPMS", 0, &tag);
-		if (e != FMOD_ERR_TAGNOTFOUND)
-		{
-			FMR(e);
-			loopstart = atoi((char *)tag.data); // assumed to be a string data tag.
-			FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_MS, &loopend, FMOD_TIMEUNIT_PCM));
-			if (loopstart > 0)
-				FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_MS, loopend, FMOD_TIMEUNIT_PCM));
-			return true;
-		}
-
-		// Try to fetch it from the COMMENT tag, like A.J. Freda
-		e = FMOD_Sound_GetTag(music_stream, "COMMENT", 0, &tag);
-		if (e != FMOD_ERR_TAGNOTFOUND)
-		{
-			char *loopText;
-			// Handle any errors that arose, first
-			FMR(e);
-			// Figure out where the number starts
-			loopText = strstr((char *)tag.data,"LOOPPOINT=");
-			if (loopText != NULL)
-			{
-				// Skip the "LOOPPOINT=" part.
-				loopText += 10;
-				// Convert it to our looppoint
-				// FMOD seems to ensure the tag is properly NULL-terminated.
-				// atoi will stop when it reaches anything that's not a number.
-				loopstart = atoi(loopText);
-				// Now do the rest like above
-				FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_PCM, &loopend, FMOD_TIMEUNIT_PCM));
-				if (loopstart > 0)
-					FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
-			}
-			return true;
-		}
+		return true;
 	}
 
 	// No special loop point
@@ -783,7 +780,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
 }
 
-boolean I_PlaySong(void)
+boolean I_PlaySong(boolean looping)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
