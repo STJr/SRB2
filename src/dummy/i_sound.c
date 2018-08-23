@@ -61,6 +61,11 @@ void I_SetSfxVolume(UINT8 volume)
 //  MUSIC I/O
 //
 
+musictype_t I_GetMusicType(void)
+{
+	return MU_NONE;
+}
+
 void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}

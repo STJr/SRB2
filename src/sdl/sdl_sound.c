@@ -1313,6 +1313,29 @@ void I_StartupSound(void)
 // MUSIC API.
 //
 
+musictype_t I_GetMusicType(void)
+{
+#ifdef HAVE_MIXER
+#ifdef HAVE_LIBGME
+	if (gme)
+		return MU_GME;
+	else
+#endif
+	if (!music)
+		return MU_NONE;
+	else if (Mix_GetMusicType(music) == MUS_MID)
+		return MU_MID;
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+		return MU_MOD;
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+		return MU_MP3;
+	else
+		return (musictype_t)Mix_GetMusicType(music);
+#else
+	return MU_NONE
+#endif
+}
+
 #ifdef HAVE_LIBGME
 static void I_ShutdownGMEMusic(void)
 {

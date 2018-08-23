@@ -322,6 +322,13 @@ static int      islooping=0;
 static int      musicdies=-1;
 UINT8           music_started=0;
 
+musictype_t I_GetMusicType(void)
+{
+	if (currsong)
+		return MU_MID;
+	else
+		return MU_NONE;
+}
 
 /* load_midi_mem:
  *  Loads a standard MIDI file from memory, returning a pointer to
@@ -403,7 +410,7 @@ void I_ShutdownMusic(void)
 	if ( !music_started )
 		return;
 
-	I_StopSong(1);
+	I_StopSong();
 
 	music_started=false;
 }

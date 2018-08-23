@@ -60,6 +60,11 @@ void I_SetSfxVolume(INT32 volume)
 //
 UINT8 music_started = 0;
 
+musictype_t I_GetMusicType(void)
+{
+	return MU_NONE;
+}
+
 void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}

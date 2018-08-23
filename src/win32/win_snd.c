@@ -42,7 +42,6 @@
 static FMOD_SYSTEM *fsys;
 static FMOD_SOUND *music_stream;
 static FMOD_CHANNEL *music_channel;
-static boolean midimode;
 
 static UINT8 music_volume, midi_volume, sfx_volume;
 static INT32 current_track;
@@ -444,6 +443,41 @@ void I_SetSfxVolume(UINT8 volume)
 // MUSIC
 //
 
+musictype_t I_GetMusicType(void)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+		return MU_GME;
+#endif
+
+	if (!music_stream)
+		return MU_NONE;
+
+	FMOD_SOUND_TYPE type;
+	if (FMOD_Sound_GetFormat(music_stream, &type, NULL, NULL, NULL) == FMOD_OK)
+	{
+		switch(type)
+		{
+			case FMOD_SOUND_TYPE_WAV:
+				return MU_WAV;
+			case FMOD_SOUND_TYPE_MOD:
+				return MU_MOD;
+			case FMOD_SOUND_TYPE_MID:
+				return MU_MID;
+			case FMOD_SOUND_TYPE_OGGVORBIS:
+				return MU_OGG;
+			case FMOD_SOUND_TYPE_MP3:
+				return MU_MP3;
+			case FMOD_SOUND_TYPE_FLAC:
+				return MU_FLAC;
+			default:
+				return MU_NONE;
+		}
+	}
+	else
+		return MU_NONE;
+}
+
 void I_InitMusic(void)
 {
 }
@@ -479,10 +513,7 @@ boolean I_LoadSong(char *data, size_t len)
 		lumpnum = W_CheckNumForName(va("D_%s",musicname));
 		if (lumpnum == LUMPERROR)
 			return false;
-		midimode = true;
 	}
-	else
-		midimode = false;
 
 	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
 	len = W_LumpLength(lumpnum);
@@ -686,7 +717,7 @@ void I_SetDigMusicVolume(UINT8 volume)
 {
 	// volume is 0 to 31.
 	music_volume = volume;
-	if (!midimode && music_stream)
+	if (I_GetMusicType() != MU_MID && music_stream)
 		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
 }
 
@@ -776,7 +807,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 {
 	// volume is 0 to 31.
 	midi_volume = volume;
-	if (midimode && music_stream)
+	if (I_GetMusicType() != MU_MID && music_stream)
 		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
 }
 
@@ -795,7 +826,7 @@ boolean I_PlaySong(boolean looping)
 #endif
 
 	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-	if (midimode)
+	if (I_GetMusicType() != MU_MID)
 		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
 	else
 		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
