@@ -807,7 +807,7 @@ void S_UpdateSounds(void)
 	if (actualsfxvolume != cv_soundvolume.value)
 		S_SetSfxVolume (cv_soundvolume.value);
 	if (actualdigmusicvolume != cv_digmusicvolume.value)
-		S_SetDigMusicVolume (cv_digmusicvolume.value);
+		S_SetMusicVolume (cv_digmusicvolume.value);
 
 	// We're done now, if we're not in a level.
 	if (gamestate != GS_LEVEL)
@@ -1308,13 +1308,11 @@ const char *compat_special_music_slots[16] =
 #define music_playing (music_name[0]) // String is empty if no music is playing
 
 static char      music_name[7]; // up to 6-character name
-static lumpnum_t music_lumpnum; // lump number of music (used??)
-static void     *music_data;    // music raw data
-static INT32     music_handle;  // once registered, the handle for the music
 
-static boolean mus_paused     = 0;  // whether songs are mus_paused
+static boolean   mus_forcemidi  = 0;  // force midi even when digital exists
+static boolean   mus_paused     = 0;  // whether songs are mus_paused
 
-static boolean S_MIDIMusic(const char *mname, boolean looping)
+static boolean S_LoadMusic(const char *mname, boolean looping)
 {
 	lumpnum_t mlumpnum;
 	void *mdata;
@@ -1323,51 +1321,57 @@ static boolean S_MIDIMusic(const char *mname, boolean looping)
 	if (nomidimusic || music_disabled)
 		return false; // didn't search.
 
-	if (W_CheckNumForName(va("d_%s", mname)) == LUMPERROR)
-		return false;
-	mlumpnum = W_GetNumForName(va("d_%s", mname));
+	if (mus_forcemidi)
+	{
+		if (W_CheckNumForName(va("d_%s", mname)) == LUMPERROR)
+			return false;
+		mlumpnum = W_GetNumForName(va("d_%s", mname));
+	}
+	else
+	{
+		if (W_CheckNumForName(va("o_%s", mname)) != LUMPERROR)
+			mlumpnum = W_GetNumForName(va("o_%s", mname));
+		else if (W_CheckNumForName(va("d_%s", mname)) != LUMPERROR)
+			mlumpnum = W_GetNumForName(va("d_%s", mname));
+		else
+			return false;
+	}
 
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
-	mhandle = I_RegisterSong(mdata, W_LumpLength(mlumpnum));
 
-#ifdef MUSSERV
-	if (msg_id != -1)
+	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
-		struct musmsg msg_buffer;
-
-		msg_buffer.msg_type = 6;
-		memset(msg_buffer.msg_text, 0, sizeof (msg_buffer.msg_text));
-		sprintf(msg_buffer.msg_text, "d_%s", mname);
-		msgsnd(msg_id, (struct msgbuf*)&msg_buffer, sizeof (msg_buffer.msg_text), IPC_NOWAIT);
+		strncpy(music_name, mname, 7);
+		music_name[6] = 0;
+		return true;
 	}
-#endif
-
-	// play it
-	if (!I_PlaySong(mhandle, looping))
+	else
 		return false;
-
-	strncpy(music_name, mname, 7);
-	music_name[6] = 0;
-	music_lumpnum = mlumpnum;
-	music_data = mdata;
-	music_handle = mhandle;
-	return true;
 }
 
-static boolean S_DigMusic(const char *mname, boolean looping)
+static void S_UnloadSong(void)
+{
+	I_UnloadSong();
+	music_name[0] = 0;
+}
+
+static boolean S_PlayMusic(const char *mname, boolean looping)
 {
 	if (nodigimusic || digital_disabled)
 		return false; // try midi
 
-	if (!I_StartDigSong(mname, looping))
+	if (!S_LoadSong(mname, looping))
 		return false;
+
+	if (!I_PlaySong())
+	{
+		S_UnloadSong();
+		return false;
+	}
 
 	strncpy(music_name, mname, 7);
 	music_name[6] = 0;
-	music_lumpnum = LUMPERROR;
-	music_data = NULL;
-	music_handle = 0;
 	return true;
 }
 
@@ -1386,7 +1390,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if (strncmp(music_name, mmusic, 6))
 	{
 		S_StopMusic(); // shutdown old music
-		if (!S_DigMusic(mmusic, looping) && !S_MIDIMusic(mmusic, looping))
+		if (!S_LoadMusic(mmusic, looping) && !S_PlayMusic(mmusic, looping))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
 			return;
@@ -1408,12 +1412,9 @@ void S_StopMusic(void)
 	if (mus_paused)
 		I_ResumeSong(music_handle);
 
-	if (!nodigimusic)
-		I_StopDigSong();
-
 	S_SpeedMusic(1.0f);
-	I_StopSong(music_handle);
-	I_UnRegisterSong(music_handle);
+	I_StopSong();
+	I_UnloadSong();
 
 #ifndef HAVE_SDL //SDL uses RWOPS
 	Z_ChangeTag(music_data, PU_CACHE);
@@ -1429,7 +1430,7 @@ void S_StopMusic(void)
 	}
 }
 
-void S_SetDigMusicVolume(INT32 volume)
+void S_SetMusicVolume(INT32 volume)
 {
 	if (volume < 0 || volume > 31)
 		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
@@ -1460,7 +1461,7 @@ void S_Init(INT32 sfxVolume, INT32 digMusicVolume)
 		return;
 
 	S_SetSfxVolume(sfxVolume);
-	S_SetDigMusicVolume(digMusicVolume);
+	S_SetMusicVolume(digMusicVolume);
 
 	SetChannelsNum();
 

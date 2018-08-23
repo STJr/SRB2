@@ -149,7 +149,7 @@ void S_UpdateSounds(void);
 
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
-void S_SetDigMusicVolume(INT32 volume);
+void S_SetMusicVolume(INT32 volume);
 void S_SetSfxVolume(INT32 volume);
 
 INT32 S_OriginPlaying(void *origin);

@@ -466,12 +466,29 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 FUNCMATH void I_InitMusic(void)
 {
+#ifdef HAVE_LIBGME
+	gme = NULL;
+	current_track = -1;
+#endif
 }
 
 void I_ShutdownMusic(void)
 {
-	I_ShutdownDigMusic();
-	I_ShutdownMIDIMusic();
+	if (midimode)
+		return;
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		Mix_HookMusic(NULL, NULL);
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (!music)
+		return;
+	Mix_HookMusicFinished(NULL);
+	Mix_FreeMusic(music);
+	music = NULL;
 }
 
 void I_PauseSong(INT32 handle)
@@ -492,50 +509,73 @@ void I_ResumeSong(INT32 handle)
 // Digital Music
 //
 
-void I_InitDigMusic(void)
+void I_SetDigMusicVolume(UINT8 volume)
 {
-#ifdef HAVE_LIBGME
-	gme = NULL;
-	current_track = -1;
-#endif
+	music_volume = volume;
+	if (midimode || !music)
+		return;
+	Mix_VolumeMusic((UINT32)volume*128/31);
 }
 
-void I_ShutdownDigMusic(void)
+boolean I_SetSongSpeed(float speed)
 {
-	if (midimode)
-		return;
+	if (speed > 250.0f)
+		speed = 250.0f; //limit speed up to 250x
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
-		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
+		SDL_LockAudio();
+		gme_set_tempo(gme, speed);
+		SDL_UnlockAudio();
+		return true;
 	}
+#else
+	(void)speed;
 #endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	return false;
 }
 
-boolean I_StartDigSong(const char *musicname, boolean looping)
+boolean I_SetSongTrack(int track)
 {
-	char *data;
-	size_t len;
-	lumpnum_t lumpnum = W_CheckNumForName(va("O_%s",musicname));
+#ifdef HAVE_LIBGME
+	if (current_track == track)
+		return false;
 
+	// If the specified track is within the number of tracks playing, then change it
+	if (gme)
+	{
+		SDL_LockAudio();
+		if (track >= 0
+			&& track < gme_track_count(gme))
+		{
+			gme_err_t gme_e = gme_start_track(gme, track);
+			if (gme_e != NULL)
+			{
+				CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+				return false;
+			}
+			current_track = track;
+			SDL_UnlockAudio();
+			return true;
+		}
+		SDL_UnlockAudio();
+		return false;
+	}
+#endif
+	(void)track;
+	return false;
+}
+
+//
+// MIDI Music
+//
+
+boolean I_LoadSong(void *data, size_t len)
+{
 	I_Assert(!music);
 #ifdef HAVE_LIBGME
 	I_Assert(!gme);
 #endif
-
-	if (lumpnum == LUMPERROR)
-		return false;
-	midimode = false;
-
-	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
-	len = W_LumpLength(lumpnum);
 
 #ifdef HAVE_LIBGME
 	if ((UINT8)data[0] == 0x1F
@@ -627,10 +667,6 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	else if (!gme_open_data(data, len, &gme, 44100))
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
-		gme_start_track(gme, 0);
-		current_track = 0;
-		gme_set_equalizer(gme, &eq);
-		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -639,7 +675,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
-		return true;
+		return false;
 	}
 
 	// Find the OGG loop point.
@@ -677,10 +713,28 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 	}
 
+	return true;
+}
+
+boolean I_PlaySong(void)
+{
+	if (!music)
+		return false;
+#ifdef HAVE_GME
+	if (gme)
+	{
+		gme_start_track(gme, 0);
+		current_track = 0;
+		gme_set_equalizer(gme, &eq);
+		Mix_HookMusic(mix_gme, gme);
+		return true;
+	}
+#endif
+
 	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
-		return true;
+		return false;
 	}
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 
@@ -689,7 +743,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	return true;
 }
 
-void I_StopDigSong(void)
+void I_StopSong(void)
 {
 	if (midimode)
 		return;
@@ -710,116 +764,7 @@ void I_StopDigSong(void)
 	music = NULL;
 }
 
-void I_SetDigMusicVolume(UINT8 volume)
-{
-	music_volume = volume;
-	if (midimode || !music)
-		return;
-	Mix_VolumeMusic((UINT32)volume*128/31);
-}
-
-boolean I_SetSongSpeed(float speed)
-{
-	if (speed > 250.0f)
-		speed = 250.0f; //limit speed up to 250x
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		SDL_LockAudio();
-		gme_set_tempo(gme, speed);
-		SDL_UnlockAudio();
-		return true;
-	}
-#else
-	(void)speed;
-#endif
-	return false;
-}
-
-boolean I_SetSongTrack(int track)
-{
-#ifdef HAVE_LIBGME
-	if (current_track == track)
-		return false;
-
-	// If the specified track is within the number of tracks playing, then change it
-	if (gme)
-	{
-		SDL_LockAudio();
-		if (track >= 0
-			&& track < gme_track_count(gme))
-		{
-			gme_err_t gme_e = gme_start_track(gme, track);
-			if (gme_e != NULL)
-			{
-				CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
-				return false;
-			}
-			current_track = track;
-			SDL_UnlockAudio();
-			return true;
-		}
-		SDL_UnlockAudio();
-		return false;
-	}
-#endif
-	(void)track;
-	return false;
-}
-
-//
-// MIDI Music
-//
-
-FUNCMATH void I_InitMIDIMusic(void)
-{
-}
-
-void I_ShutdownMIDIMusic(void)
-{
-	if (!midimode || !music)
-		return;
-	Mix_FreeMusic(music);
-	music = NULL;
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
-{
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
-	if (!music)
-	{
-		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
-		return -1;
-	}
-	return 1337;
-}
-
-boolean I_PlaySong(INT32 handle, boolean looping)
-{
-	(void)handle;
-
-	midimode = true;
-
-	if (Mix_PlayMusic(music, looping ? -1 : 0) == -1)
-	{
-		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
-		return false;
-	}
-
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
-	return true;
-}
-
-void I_StopSong(INT32 handle)
-{
-	if (!midimode || !music)
-		return;
-
-	(void)handle;
-	Mix_HaltMusic();
-}
-
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 	if (!midimode || !music)
 		return;

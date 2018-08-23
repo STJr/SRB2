@@ -9469,7 +9469,7 @@ static void M_ToggleDigital(INT32 choice)
 	if (nodigimusic)
 	{
 		nodigimusic = false;
-		I_InitDigMusic();
+		I_InitMusic();
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value);
 		S_StopMusic();
@@ -9526,7 +9526,7 @@ static void M_ToggleMIDI(INT32 choice)
 	if (nomidimusic)
 	{
 		nomidimusic = false;
-		I_InitMIDIMusic();
+		I_InitMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value);
 		if (Playing())

@@ -136,14 +136,6 @@ void I_ResumeSong(INT32 handle);
 //  MIDI I/O
 //
 
-/**	\brief Startup the MIDI music system
-*/
-void I_InitMIDIMusic(void);
-
-/**	\brief Shutdown the MIDI music system
-*/
-void I_ShutdownMIDIMusic(void);
-
 /**	\brief	Registers a song handle to song data.
 
 	\param	data	pointer to song data
@@ -153,7 +145,7 @@ void I_ShutdownMIDIMusic(void);
 
 	\todo Remove this
 */
-INT32 I_RegisterSong(void *data, size_t len);
+boolean I_LoadSong(void *data, size_t len);
 
 /**	\brief	Called by anything that wishes to start music
 
@@ -164,7 +156,7 @@ INT32 I_RegisterSong(void *data, size_t len);
 
 	\todo pass music name, not handle
 */
-boolean I_PlaySong(INT32 handle, boolean looping);
+boolean I_PlaySong(void);
 
 /**	\brief	Stops a song over 3 seconds
 
@@ -173,45 +165,24 @@ boolean I_PlaySong(INT32 handle, boolean looping);
 
 	/todo drop handle
 */
-void I_StopSong(INT32 handle);
+void I_StopSong(void);
 
-/**	\brief	See ::I_RegisterSong, then think backwards
+/**	\brief	See ::I_LoadSong, then think backwards
 
 	\param	handle	song handle
 
-	\sa I_RegisterSong
+	\sa I_LoadSong
 	\todo remove midi handle
 */
-void I_UnRegisterSong(INT32 handle);
+void I_UnloadSong(void);
 
 //
 //  DIGMUSIC I/O
 //
 
-/**	\brief Startup the music system
-*/
-void I_InitDigMusic(void);
-
-/**	\brief Shutdown the music system
-*/
-void I_ShutdownDigMusic(void);
-
 boolean I_SetSongSpeed(float speed);
 
 boolean I_SetSongTrack(INT32 track);
-
-/**	\brief The I_StartDigSong function
-
-	\param	musicname	music lump name
-	\param	looping	if true, loop the song
-
-	\return	if true, song playing
-*/
-boolean I_StartDigSong(const char *musicname, boolean looping);
-
-/**	\brief stop non-MIDI song
-*/
-void I_StopDigSong(void);
 
 /**	\brief The I_SetDigMusicVolume function
 
