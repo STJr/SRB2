@@ -1313,10 +1313,27 @@ void I_StartupSound(void)
 // MUSIC API.
 //
 
-void I_ShutdownMIDIMusic(void)
+musictype_t I_GetMusicType(void)
 {
-	nomidimusic = false;
-	if (nodigimusic) I_ShutdownMusic();
+#ifdef HAVE_MIXER
+#ifdef HAVE_LIBGME
+	if (gme)
+		return MU_GME;
+	else
+#endif
+	if (!music)
+		return MU_NONE;
+	else if (Mix_GetMusicType(music) == MUS_MID)
+		return MU_MID;
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+		return MU_MOD;
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+		return MU_MP3;
+	else
+		return (musictype_t)Mix_GetMusicType(music);
+#else
+	return MU_NONE
+#endif
 }
 
 #ifdef HAVE_LIBGME
@@ -1329,12 +1346,6 @@ static void I_ShutdownGMEMusic(void)
 	Snd_UnlockAudio();
 }
 #endif
-
-void I_ShutdownDigMusic(void)
-{
-	nodigimusic = false;
-	if (nomidimusic) I_ShutdownMusic();
-}
 
 #ifdef HAVE_MIXER
 static boolean LoadSong(void *data, size_t lumplength, size_t selectpos)
@@ -1436,8 +1447,8 @@ void I_ShutdownMusic(void)
 
 	CONS_Printf("%s", M_GetText("I_ShutdownMusic: "));
 
-	I_UnRegisterSong(0);
-	I_StopDigSong();
+	I_UnloadSong();
+	I_StopSong();
 	Mix_CloseAudio();
 #ifdef MIX_INIT
 	Mix_Quit();
@@ -1448,16 +1459,6 @@ void I_ShutdownMusic(void)
 		SDL_DestroyMutex(Msc_Mutex);
 	Msc_Mutex = NULL;
 #endif
-}
-
-void I_InitMIDIMusic(void)
-{
-	if (nodigimusic) I_InitMusic();
-}
-
-void I_InitDigMusic(void)
-{
-	if (nomidimusic) I_InitMusic();
 }
 
 void I_InitMusic(void)
@@ -1639,17 +1640,29 @@ void I_ResumeSong(void)
 #endif
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
-	(void)handle;
+	I_StopGME();
 #ifdef HAVE_MIXER
-	if (nomidimusic || !musicStarted)
+	if (nodigimusic)
 		return;
-	Mix_FadeOutMusic(MIDIfade);
+
+#ifdef MIXER_POS
+	if (canlooping)
+		Mix_HookMusicFinished(NULL);
 #endif
+
+	Mix_HaltMusic();
+	while (Mix_PlayingMusic())
+		;
+
+	if (music[1])
+		Mix_FreeMusic(music[1]);
+	music[1] = NULL;
+	LoadSong(NULL, 0, 1);
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 #ifdef HAVE_MIXER
 
@@ -1714,7 +1727,7 @@ static void I_CleanupGME(void *userdata)
 static boolean I_StartGMESong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_LIBGME
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1769,7 +1782,7 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 boolean I_StartDigSong(const char *musicname, boolean looping)
 {
 #ifdef HAVE_MIXER
-	XBOXSTATIC char filename[9];
+	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
 	size_t lumplength;
@@ -1786,7 +1799,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 
 	lumpnum = W_CheckNumForName(filename);
 
-	I_StopDigSong();
+	I_StopSong();
 
 	if (lumpnum == LUMPERROR)
 	{
@@ -1811,7 +1824,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	{
 		size_t scan;
 		const char *dataum = data;
-		XBOXSTATIC char looplength[64];
+		char looplength[64];
 		UINT32 loopstart = 0;
 		UINT8 newcount = 0;
 
@@ -1935,29 +1948,6 @@ static void I_StopGME(void)
 	Snd_LockAudio();
 	gme_seek(localdata.gme_emu, 0);
 	Snd_UnlockAudio();
-#endif
-}
-
-void I_StopDigSong(void)
-{
-	I_StopGME();
-#ifdef HAVE_MIXER
-	if (nodigimusic)
-		return;
-
-#ifdef MIXER_POS
-	if (canlooping)
-		Mix_HookMusicFinished(NULL);
-#endif
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[1])
-		Mix_FreeMusic(music[1]);
-	music[1] = NULL;
-	LoadSong(NULL, 0, 1);
 #endif
 }
 

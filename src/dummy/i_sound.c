@@ -61,11 +61,21 @@ void I_SetSfxVolume(UINT8 volume)
 //  MUSIC I/O
 //
 
+musictype_t I_GetMusicType(void)
+{
+	return MU_NONE;
+}
+
 void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
 
-void I_PauseSong(INT32 handle)
+void I_SetMIDIMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
+void I_PauseSong(void)
 {
 	(void)handle;
 }
@@ -93,12 +103,12 @@ boolean I_PlaySong(boolean looping)
 	return false;
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
 	(void)handle;
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 	(void)handle;
 }
@@ -106,19 +116,6 @@ void I_UnRegisterSong(INT32 handle)
 //
 //  DIGMUSIC I/O
 //
-
-void I_InitDigMusic(void){}
-
-void I_ShutdownDigMusic(void){}
-
-boolean I_StartDigSong(const char *musicname, boolean looping)
-{
-	(void)musicname;
-	(void)looping;
-	return false;
-}
-
-void I_StopDigSong(void){}
 
 void I_SetDigMusicVolume(UINT8 volume)
 {

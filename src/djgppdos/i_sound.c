@@ -322,6 +322,13 @@ static int      islooping=0;
 static int      musicdies=-1;
 UINT8           music_started=0;
 
+musictype_t I_GetMusicType(void)
+{
+	if (currsong)
+		return MU_MID;
+	else
+		return MU_NONE;
+}
 
 /* load_midi_mem:
  *  Loads a standard MIDI file from memory, returning a pointer to
@@ -389,7 +396,7 @@ static MIDI *load_midi_mem(char *mempointer,int *e)
 	return midi;
 }
 
-void I_InitMIDIMusic(void)
+void I_InitMusic(void)
 {
 	if (nomidimusic)
 		return;
@@ -398,12 +405,12 @@ void I_InitMIDIMusic(void)
 	music_started = true;
 }
 
-void I_ShutdownMIDIMusic(void)
+void I_ShutdownMusic(void)
 {
 	if ( !music_started )
 		return;
 
-	I_StopSong(1);
+	I_StopSong();
 
 	music_started=false;
 }
@@ -439,7 +446,7 @@ void I_ResumeSong (INT32 handle)
 	midi_resume();
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -462,7 +469,7 @@ int I_QrySongPlaying(int handle)
 }
 #endif
 
-void I_UnRegisterSong(INT32 handle)
+void I_UnloadSong(void)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -494,20 +501,6 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 
 	return 1;
-}
-
-/// \todo Add OGG/MP3 support for dos
-boolean I_StartDigSong(const char *musicname, INT32 looping)
-{
-	musicname = NULL;
-	looping = 0;
-	//CONS_Printf("I_StartDigSong: Not yet supported under DOS.\n");
-	return false;
-}
-
-void I_StopDigSong(void)
-{
-//	CONS_Printf("I_StopDigSong: Not yet supported under DOS.\n");
 }
 
 void I_SetDigMusicVolume(INT32 volume)
