@@ -1347,6 +1347,8 @@ const char *compat_special_music_slots[16] =
 #endif
 
 static char      music_name[7]; // up to 6-character name
+static UINT16    music_flags;
+static boolean   music_looping;
 
 /// ------------------------
 /// Music Status
@@ -1382,9 +1384,17 @@ musictype_t S_MusicType(void)
 	return I_GetMusicType();
 }
 
-const char *S_MusicName(void)
+boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
 {
-	return music_name;
+	if (!I_MusicPlaying())
+		return false;
+
+	strncpy(mname, music_name, 7);
+	mname[6] = 0;
+	*mflags = music_flags;
+	*looping = music_looping;
+
+	return (boolean)mname[0];
 }
 
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
@@ -1453,6 +1463,8 @@ static void S_UnloadMusic(void)
 {
 	I_UnloadSong();
 	music_name[0] = 0;
+	music_flags = 0;
+	music_looping = false;
 }
 
 static boolean S_PlayMusic(boolean looping)
@@ -1488,6 +1500,9 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 
 		if (!S_LoadMusic(mmusic))
 			return;
+
+		music_flags = mflags;
+		music_looping = looping;
 
 		if (!S_PlayMusic(looping))
 		{

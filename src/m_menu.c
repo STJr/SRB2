@@ -9485,7 +9485,24 @@ static void M_ToggleDigital(INT32 choice)
 	{
 		digital_disabled = true;
 		if (S_MusicType() != MU_MID)
-			S_StopMusic();
+		{
+			if (midi_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
 		//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
@@ -9503,6 +9520,12 @@ static void M_ToggleMIDI(INT32 choice)
 			S_StartSound(NULL, sfx_menu1);
 			itemOn--;
 			return;
+
+		case KEY_LEFTARROW:
+		case KEY_RIGHTARROW:
+			if (S_MusicType() != MU_MID && S_MusicType() != MU_NONE)
+				S_StartSound(NULL, sfx_menu1);
+			break;
 
 		case KEY_ESCAPE:
 			if (currentMenu->prevMenu)
@@ -9529,7 +9552,24 @@ static void M_ToggleMIDI(INT32 choice)
 	{
 		midi_disabled = true;
 		if (S_MusicType() == MU_MID)
-			S_StopMusic();
+		{
+			if (digital_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
 		//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
