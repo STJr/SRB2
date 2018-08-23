@@ -1212,7 +1212,7 @@ void D_SRB2Main(void)
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_Init(cv_soundvolume.value, cv_digmusicvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();

@@ -77,7 +77,6 @@ static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NUL
 // actual general (maximum) sound & music volume, saved into the config
 consvar_t cv_soundvolume = {"soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void Captioning_OnChange(void)
 {
@@ -788,7 +787,6 @@ void S_StopSound(void *origin)
 //
 static INT32 actualsfxvolume; // check for change through console
 static INT32 actualdigmusicvolume;
-static INT32 actualmidimusicvolume;
 
 void S_UpdateSounds(void)
 {
@@ -810,8 +808,6 @@ void S_UpdateSounds(void)
 		S_SetSfxVolume (cv_soundvolume.value);
 	if (actualdigmusicvolume != cv_digmusicvolume.value)
 		S_SetDigMusicVolume (cv_digmusicvolume.value);
-	if (actualmidimusicvolume != cv_midimusicvolume.value)
-		S_SetMIDIMusicVolume (cv_midimusicvolume.value);
 
 	// We're done now, if we're not in a level.
 	if (gamestate != GS_LEVEL)
@@ -1447,20 +1443,6 @@ void S_SetDigMusicVolume(INT32 volume)
 	I_SetDigMusicVolume(volume&31);
 }
 
-void S_SetMIDIMusicVolume(INT32 volume)
-{
-	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
-
-	CV_SetValue(&cv_midimusicvolume, volume&0x1f);
-	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
-
-#ifdef DJGPPDOS
-	I_SetMIDIMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
-#endif
-	I_SetMIDIMusicVolume(volume&0x1f);
-}
-
 /// ------------------------
 /// Init & Others
 /// ------------------------
@@ -1470,7 +1452,7 @@ void S_SetMIDIMusicVolume(INT32 volume)
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume)
+void S_Init(INT32 sfxVolume, INT32 digMusicVolume)
 {
 	INT32 i;
 
@@ -1479,7 +1461,6 @@ void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume)
 
 	S_SetSfxVolume(sfxVolume);
 	S_SetDigMusicVolume(digMusicVolume);
-	S_SetMIDIMusicVolume(midiMusicVolume);
 
 	SetChannelsNum();
 
