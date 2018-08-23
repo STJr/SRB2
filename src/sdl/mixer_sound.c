@@ -62,7 +62,6 @@
 
 UINT8 sound_started = false;
 
-static boolean midimode;
 static Mix_Music *music;
 static UINT8 music_volume, midi_volume, sfx_volume;
 static float loop_point;
@@ -87,7 +86,6 @@ void I_StartupSound(void)
 		return;
 	}
 
-	midimode = false;
 	music = NULL;
 	music_volume = midi_volume = sfx_volume = 0;
 
@@ -436,6 +434,25 @@ void I_SetSfxVolume(UINT8 volume)
 // Music
 //
 
+musictype_t I_GetMusicType(void)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+		return MU_GME;
+	else
+#endif
+	if (!music)
+		return MU_NONE;
+	else if (Mix_GetMusicType(music) == MUS_MID)
+		return MU_MID;
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+		return MU_MOD;
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+		return MU_MP3;
+	else
+		return (musictype_t)Mix_GetMusicType(music);
+}
+
 // Music hooks
 static void music_loop(void)
 {
@@ -470,8 +487,19 @@ FUNCMATH void I_InitMusic(void)
 
 void I_ShutdownMusic(void)
 {
-	I_ShutdownDigMusic();
-	I_ShutdownMIDIMusic();
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		Mix_HookMusic(NULL, NULL);
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (!music)
+		return;
+	Mix_HookMusicFinished(NULL);
+	Mix_FreeMusic(music);
+	music = NULL;
 }
 
 void I_PauseSong(INT32 handle)
@@ -492,7 +520,15 @@ void I_ResumeSong(INT32 handle)
 // Digital Music
 //
 
-void I_InitDigMusic(void)
+void I_SetDigMusicVolume(UINT8 volume)
+{
+	music_volume = volume;
+	if (I_GetMusicType() == MU_MID || !music)
+		return;
+	Mix_VolumeMusic((UINT32)volume*128/31);
+}
+
+boolean I_SetSongSpeed(float speed)
 {
 #ifdef HAVE_LIBGME
 	gme = NULL;
@@ -691,8 +727,6 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 
 void I_StopDigSong(void)
 {
-	if (midimode)
-		return;
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -791,7 +825,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 	midi_volume = 31;
 	//midi_volume = volume;
 
-	if (!midimode || !music)
+	if (I_GetMusicType() != MU_MID || !music)
 		return;
 	Mix_VolumeMusic((UINT32)midi_volume*128/31);
 }
@@ -834,10 +868,6 @@ void I_StopSong(INT32 handle)
 
 void I_UnRegisterSong(INT32 handle)
 {
-	if (!midimode || !music)
-		return;
-
-	(void)handle;
 	Mix_FreeMusic(music);
 	music = NULL;
 }
