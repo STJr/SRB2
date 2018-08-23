@@ -775,6 +775,14 @@ boolean I_SetSongTrack(INT32 track)
 // Fuck MIDI. ... Okay fine, you can have your silly D_-only mode.
 //
 
+void I_SetMIDIMusicVolume(UINT8 volume)
+{
+	// volume is 0 to 31.
+	midi_volume = volume;
+	if (midimode && music_stream)
+		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
+}
+
 boolean I_PlaySong(void)
 {
 #ifdef HAVE_LIBGME

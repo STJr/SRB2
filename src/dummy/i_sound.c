@@ -65,6 +65,11 @@ void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
 
+void I_SetMIDIMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
 void I_PauseSong(INT32 handle)
 {
 	(void)handle;

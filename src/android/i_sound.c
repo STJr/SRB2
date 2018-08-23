@@ -87,6 +87,11 @@ boolean I_LoadSong(void *data, size_t len)
         return -1;
 }
 
+void I_SetMIDIMusicVolume(INT32 volume)
+{
+        (void)volume;
+}
+
 boolean I_PlaySong(void)
 {
         (void)handle;
