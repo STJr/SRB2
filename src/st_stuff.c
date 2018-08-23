@@ -1454,19 +1454,59 @@ static skincolors_t linkColor[2][NUMLINKCOLORS] = {
 {SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
  SKINCOLOR_VIOLET, SKINCOLOR_RUBY, SKINCOLOR_FLAME, SKINCOLOR_SUNSET, SKINCOLOR_SANDY, SKINCOLOR_LIME}};
 
+static void ST_drawNiGHTSLink(void)
+{
+	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
+	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
+	skincolors_t colornum;
+	fixed_t x, y, scale;
+
+	if (sel != prevsel[q])
+	{
+		prevsel[q] = sel;
+		prevtime[q] = 2 + mag;
+	}
+
+	if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
+		colornum = SKINCOLOR_ICY;
+	else
+		colornum = linkColor[mag][sel];
+
+	aflag |= ((stplyr->linktimer < 2*TICRATE/3)
+	? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
+	: 0);
+
+	y = (160+11)<<FRACBITS;
+	aflag |= V_SNAPTOBOTTOM;
+
+	x = (160+4)<<FRACBITS;
+
+	if (prevtime[q])
+	{
+		scale = ((32 + prevtime[q])<<FRACBITS)/32;
+		prevtime[q]--;
+	}
+	else
+		scale = FRACUNIT;
+
+	y -= (11*scale);
+
+	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+	V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
+		colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
+
+	// Show remaining link time left in debug
+	if (cv_debug & DBG_NIGHTSBASIC)
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
+}
+
+
 static void ST_drawNiGHTSHUD(void)
 {
 	INT32 origamount;
-	INT32 minlink = 1;
 	INT32 total_spherecount;
 	const boolean oldspecialstage = (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS));
-
-	// Cheap hack: don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
-	if (oldspecialstage || (stplyr->texttimer && stplyr->textvar == 4))
-		minlink = INT32_MAX;
-	// When debugging, show "0 Link".
-	else if (cv_debug & DBG_NIGHTSBASIC)
-		minlink = 0;
 
 	// Drill meter
 	if (
@@ -1512,55 +1552,15 @@ static void ST_drawNiGHTSHUD(void)
 	}*/
 
 	// Link drawing
-	if (
+	if (!oldspecialstage
+	// Don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
+	&& !(stplyr->texttimer && stplyr->textvar == 4)
 #ifdef HAVE_BLUA
-	LUA_HudEnabled(hud_nightslink) &&
+	&& LUA_HudEnabled(hud_nightslink)
 #endif
-	stplyr->linkcount > minlink)
+	&& ((cv_debug & DBG_NIGHTSBASIC) || stplyr->linkcount > 1)) // When debugging, show "0 Link".
 	{
-		static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
-		const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-		INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
-		skincolors_t colornum;
-		fixed_t x, y, scale;
-
-		if (sel != prevsel[q])
-		{
-			prevsel[q] = sel;
-			prevtime[q] = 2 + mag;
-		}
-
-		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
-			colornum = SKINCOLOR_ICY;
-		else
-			colornum = linkColor[mag][sel];
-
-		aflag |= ((stplyr->linktimer < 2*TICRATE/3)
-		? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
-		: 0);
-
-		y = (160+11)<<FRACBITS;
-		aflag |= V_SNAPTOBOTTOM;
-
-		x = (160+4)<<FRACBITS;
-
-		if (prevtime[q])
-		{
-			scale = ((32 + prevtime[q])<<FRACBITS)/32;
-			prevtime[q]--;
-		}
-		else
-			scale = FRACUNIT;
-
-		y -= (11*scale);
-
-		ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
-		V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
-			colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-
-		// Show remaining link time left in debug
-		if (cv_debug & DBG_NIGHTSBASIC)
-			V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
+		ST_drawNiGHTSLink();
 	}
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
