@@ -70,7 +70,7 @@ void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
 
-void I_SetMIDIMusicVolume(UINT8 volume)
+void I_SetMusicVolume(UINT8 volume)
 {
 	(void)volume;
 }
@@ -116,11 +116,6 @@ void I_UnloadSong(void)
 //
 //  DIGMUSIC I/O
 //
-
-void I_SetDigMusicVolume(UINT8 volume)
-{
-	(void)volume;
-}
 
 boolean I_SetSongSpeed(float speed)
 {

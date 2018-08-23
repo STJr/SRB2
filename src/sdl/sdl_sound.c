@@ -1702,7 +1702,7 @@ boolean I_LoadSong(char *data, size_t len)
 	return false;
 }
 
-void I_SetMIDIMusicVolume(UINT8 volume)
+void I_SetMusicVolume(UINT8 volume)
 {
 #ifdef HAVE_MIXER
 	if ((nomidimusic && nodigimusic) || !musicStarted)
@@ -1949,11 +1949,6 @@ static void I_StopGME(void)
 	gme_seek(localdata.gme_emu, 0);
 	Snd_UnlockAudio();
 #endif
-}
-
-void I_SetDigMusicVolume(UINT8 volume)
-{
-	I_SetMIDIMusicVolume(volume);
 }
 
 boolean I_SetSongSpeed(float speed)

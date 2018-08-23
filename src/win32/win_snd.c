@@ -713,14 +713,6 @@ boolean I_LoadSong(char *data, size_t len)
 	return true;
 }
 
-void I_SetDigMusicVolume(UINT8 volume)
-{
-	// volume is 0 to 31.
-	music_volume = volume;
-	if (I_GetMusicType() != MU_MID && music_stream)
-		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
-}
-
 boolean I_SetSongSpeed(float speed)
 {
 	FMOD_RESULT e;
@@ -803,12 +795,18 @@ boolean I_SetSongTrack(INT32 track)
 // Fuck MIDI. ... Okay fine, you can have your silly D_-only mode.
 //
 
-void I_SetMIDIMusicVolume(UINT8 volume)
+void I_SetMusicVolume(UINT8 volume)
 {
+	if (!music_stream)
+		return;
+
 	// volume is 0 to 31.
-	midi_volume = volume;
-	if (I_GetMusicType() != MU_MID && music_stream)
-		FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, volume / 31.0));
+	if (I_GetMusicType() == MU_MID)
+		music_volume = 31; // windows bug hack
+	else
+		music_volume = volume;
+
+	FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 }
 
 boolean I_PlaySong(boolean looping)

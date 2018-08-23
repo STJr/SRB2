@@ -92,7 +92,7 @@ boolean I_LoadSong(char *data, size_t len)
         return -1;
 }
 
-void I_SetMIDIMusicVolume(INT32 volume)
+void I_SetMusicVolume(INT32 volume)
 {
         (void)volume;
 }
@@ -119,11 +119,6 @@ void I_UnloadSong(void)
 //
 
 UINT8 digmusic_started = 0;
-
-void I_SetDigMusicVolume(INT32 volume)
-{
-        (void)volume;
-}
 
 boolean I_SetSongSpeed(float speed)
 {
