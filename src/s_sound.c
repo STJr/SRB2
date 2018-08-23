@@ -1359,7 +1359,7 @@ static void S_UnloadMusic(void)
 	music_name[0] = 0;
 }
 
-static boolean S_PlayMusic(const char *mname, boolean looping)
+static boolean S_PlayMusic(boolean looping)
 {
 	if (nodigimusic || digital_disabled)
 		return false; // try midi
@@ -1370,8 +1370,6 @@ static boolean S_PlayMusic(const char *mname, boolean looping)
 		return false;
 	}
 
-	strncpy(music_name, mname, 7);
-	music_name[6] = 0;
 	return true;
 }
 
@@ -1390,9 +1388,16 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if (strncmp(music_name, mmusic, 6))
 	{
 		S_StopMusic(); // shutdown old music
-		if (!S_LoadMusic(mmusic) && !S_PlayMusic(mmusic, looping))
+
+		if (!S_LoadMusic(mmusic))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
+			return;
+		}
+
+		if (!S_PlayMusic(looping))
+		{
+			CONS_Alert(CONS_ERROR, "Music cannot be played!\n");
 			return;
 		}
 	}
