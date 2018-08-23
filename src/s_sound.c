@@ -230,7 +230,7 @@ void S_RegisterSoundStuff(void)
 {
 	if (dedicated)
 	{
-		nosound = true;
+		sound_disabled = true;
 		return;
 	}
 
@@ -494,7 +494,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 	mobj_t *listenmobj = players[displayplayer].mo;
 	mobj_t *listenmobj2 = NULL;
 
-	if (sound_disabled || !sound_started || nosound)
+	if (sound_disabled || !sound_started)
 		return;
 
 	// Don't want a sound? Okay then...
@@ -824,7 +824,7 @@ void S_UpdateSounds(void)
 		goto notinlevel;
 	}
 
-	if (dedicated || nosound)
+	if (dedicated || sound_disabled)
 		return;
 
 	if (players[displayplayer].awayviewtics)
@@ -1307,7 +1307,7 @@ void S_InitSfxChannels(INT32 sfxVolume)
 	}
 
 	// precache sounds if requested by cmdline, or precachesound var true
-	if (!nosound && (M_CheckParm("-precachesound") || precachesound.value))
+	if (!sound_disabled && (M_CheckParm("-precachesound") || precachesound.value))
 	{
 		// Initialize external data (all sounds) at start, keep static.
 		CONS_Printf(M_GetText("Loading sounds... "));
@@ -1352,24 +1352,19 @@ static char      music_name[7]; // up to 6-character name
 /// Music Status
 /// ------------------------
 
-boolean S_DigMusicDisabled()
+boolean S_DigMusicDisabled(void)
 {
-	return (nodigimusic || digital_disabled);
+	return digital_disabled;
 }
 
-boolean S_MIDIMusicDisabled()
+boolean S_MIDIMusicDisabled(void)
 {
-	return (nomidimusic || music_disabled);
+	return midi_disabled;
 }
 
-boolean S_MusicDisabled()
+boolean S_MusicDisabled(void)
 {
-	return (
-		(nodigimusic && nomidimusic) ||
-		(music_disabled && digital_disabled) ||
-		(nodigimusic && music_disabled) ||
-		(nomidimusic && digital_disabled)
-	);
+	return (midi_disabled && digital_disabled);
 }
 
 boolean S_MusicPlaying(void)
@@ -1453,7 +1448,7 @@ static void S_UnloadMusic(void)
 
 static boolean S_PlayMusic(boolean looping)
 {
-	if (nodigimusic || digital_disabled)
+	if (S_DigMusicDisabled())
 		return false; // try midi
 
 	if (!I_PlaySong(looping))
