@@ -675,7 +675,6 @@ boolean I_LoadSong(char *data, size_t len)
 		fmt.decodebuffersize = (44100 * 2) / 35;
 		fmt.pcmreadcallback = GMEReadCallback;
 		fmt.userdata = gme;
-		FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER | (looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream));
 		return true;
 	}
 #endif
@@ -772,6 +771,7 @@ boolean I_PlaySong(boolean looping)
 	{
 		gme_start_track(gme, 0);
 		current_track = 0;
+		FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER | (looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream));
 		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
 		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 		FMR(FMOD_Channel_SetPriority(music_channel, 0));

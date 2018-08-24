@@ -656,7 +656,6 @@ boolean I_LoadSong(char *data, size_t len)
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
 		gme_set_equalizer(gme, &eq);
-		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -712,16 +711,17 @@ void I_UnloadSong(void)
 
 boolean I_PlaySong(boolean looping)
 {
-	if (!music)
-		return false;
-#ifdef HAVE_GME
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		gme_start_track(gme, 0);
 		current_track = 0;
+		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
+	else if (!music)
+		return false;
 
 	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
 	{
