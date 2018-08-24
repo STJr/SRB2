@@ -2333,7 +2333,7 @@ static int lib_sMusicInfo(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 	{
-		char *mname;
+		char mname[7];
 		UINT16 mflags;
 		boolean looping;
 		if (S_MusicInfo(mname, &mflags, &looping))
