@@ -1088,10 +1088,10 @@ boolean I_LoadSong(char *data, size_t len)
 void I_UnloadSong(void)
 {
 	// \todo unhook looper
-
-	var_cleanup();
-	Mix_FreeMusic(music);
-	music = NULL;
+	//var_cleanup();
+	//Mix_FreeMusic(music);
+	//music = NULL;
+	I_StopSong();
 }
 
 boolean I_PlaySong(boolean looping)
