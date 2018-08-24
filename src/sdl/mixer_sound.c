@@ -634,7 +634,12 @@ musictype_t I_SongType(void)
 
 boolean I_SongPlaying(void)
 {
-	return (boolean)music;
+	return (
+#ifdef HAVE_LIBGME
+		(I_SongType() == MU_GME && gme) ||
+#endif
+		(boolean)music
+	);
 }
 
 boolean I_SongPaused(void)
