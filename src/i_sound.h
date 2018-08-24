@@ -233,17 +233,11 @@ boolean I_SetSongTrack(INT32 track);
 /// ------------------------
 
 void I_SetInternalMusicVolume(UINT8 volume);
-
 void I_StopFadingSong(void);
-
-boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade);
-
-boolean I_FadeSong(UINT8 target_volume, UINT32 ms);
-
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
 boolean I_FadeOutStopSong(UINT32 ms);
-
-boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade);
-#define I_QueueDigSong(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping);
 
 /// ------------------------
 //  CD MUSIC I/O

@@ -76,19 +76,26 @@ static UINT8 fading_target;
 static UINT32 fading_steps;
 static INT16 fading_volume_step;
 static INT32 fading_id;
-
-// queue
-static char queue_music_name[7]; // up to 6-character name
-static UINT16 queue_track;
-static boolean queue_looping;
-static UINT32 queue_position;
-static UINT32 queue_fadeinms;
-static boolean queue_stopafterfade;
+static void (*fading_callback)(void);
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
 static INT32 current_track;
 #endif
+
+static void var_cleanup(void)
+{
+	loop_point = song_length =\
+	 music_bytes = fading_target =\
+	 fading_steps = fading_volume_step = 0;
+
+	songpaused = is_looping =\
+	 is_fading = false;
+
+	fading_callback = NULL;
+
+	internal_volume = 100;
+}
 
 /// ------------------------
 /// Audio System
@@ -109,7 +116,6 @@ void I_StartupSound(void)
 	}
 
 	var_cleanup();
-	queue_cleanup();
 
 	music = NULL;
 	music_volume = sfx_volume = 0;
@@ -465,31 +471,18 @@ void I_SetSfxVolume(UINT8 volume)
 /// Music Utilities
 /// ------------------------
 
-static void var_cleanup(void)
-{
-	loop_point = song_length =\
-	 music_bytes = fading_target =\
-	 fading_steps = fading_volume_step = 0;
-
-	songpaused = is_looping =\
-	 is_fading = false;
-
-	internal_volume = 100;
-}
-
-static void queue_cleanup(void)
-{
-	queue_track = queue_looping =\
-	 queue_position = queue_fadeinms =\
-	 queue_stopafterfade = 0;
-	queue_music_name[0] = 0;
-}
-
 static UINT32 get_real_volume(UINT8 volume)
 {
-	// convert volume to mixer's 128 scale
-	// then apply internal_volume as a percentage
-	return ((UINT32)volume*128/31) * (UINT32)internal_volume / 100;
+#ifdef _WIN32
+	if (I_SongType() == MU_MID)
+		// HACK: Until we stop using native MIDI,
+		// disable volume changes
+		return ((UINT32)31*128/31); // volume = 31
+	else
+#endif
+		// convert volume to mixer's 128 scale
+		// then apply internal_volume as a percentage
+		return ((UINT32)volume*128/31) * (UINT32)internal_volume / 100;
 }
 
 static UINT32 get_adjusted_position(UINT32 position)
@@ -503,24 +496,11 @@ static UINT32 get_adjusted_position(UINT32 position)
 		return position;
 }
 
-static void run_queue()
+static void do_fading_callback()
 {
-	if (queue_stopafterfade)
-		I_StopSong();
-	else if (queue_music_name[0])
-	{
-		I_StopSong();
-
-		if (I_StartDigSong(queue_music_name, queue_looping))
-		{
-			I_SetSongTrack(queue_track);
-			if (queue_fadeinms)
-				I_FadeSongFromVolume(100, 0, queue_fadeinms, false);
-			if (queue_position)
-				I_SetSongPosition(queue_position);
-		}
-	}
-	queue_cleanup();
+	if (fading_callback)
+		(*fading_callback)();
+	fading_callback = NULL;
 }
 
 /// ------------------------
@@ -540,9 +520,7 @@ static void count_music_bytes(int chan, void *stream, int len, void *udata)
 
 static void music_loop(void)
 {
-	if (queue_music_name[0] && !is_fading && !is_looping)
-		run_queue();
-	else if (is_looping)
+	if (is_looping)
 	{
 		Mix_PlayMusic(music, 0);
 		Mix_SetMusicPosition(loop_point);
@@ -555,13 +533,12 @@ static void music_loop(void)
 static UINT32 music_fade(UINT32 interval, void *param)
 {
 	if (!is_fading ||
-		I_SongType() == MU_MID || // stub out MIDI, see bug in I_SetMIDIMusicVolume
 		internal_volume == fading_target ||
 		fading_steps == 0 ||
 		fading_volume_step == 0)
 	{
 		I_StopFadingSong();
-		queue_cleanup();
+		do_fading_callback();
 		return 0;
 	}
 	else if (
@@ -570,7 +547,8 @@ static UINT32 music_fade(UINT32 interval, void *param)
 	{
 		internal_volume = fading_target;
 		Mix_VolumeMusic(get_real_volume(music_volume));
-		run_queue();
+		I_StopFadingSong();
+		do_fading_callback();
 		return 0;
 	}
 	else
@@ -628,7 +606,6 @@ void I_ShutdownMusic(void)
 	if (!music)
 		return;
 	var_cleanup();
-	queue_cleanup();
 	SDL_RemoveTimer(fading_id);
 	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 	Mix_HookMusicFinished(NULL);
@@ -862,7 +839,7 @@ UINT32 I_GetSongPosition(void)
 			if (info->length > 0)
 				position %= info->length;
 			else if (info->intro_length + info->loop_length > 0)
-				position = position >= (info->intro_length + info->loop_length) ? (position % info->loop_length) : position
+				position = position >= (info->intro_length + info->loop_length) ? (position % info->loop_length) : position;
 			else
 				position %= 150 * 1000; // 2.5 minutes
 		}
@@ -985,7 +962,6 @@ boolean I_LoadSong(char *data, size_t len)
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
 		gme_set_equalizer(gme, &eq);
-		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -1120,19 +1096,21 @@ void I_UnloadSong(void)
 
 boolean I_PlaySong(boolean looping)
 {
-	if (!music)
-		return false;
-#ifdef HAVE_GME
+#ifdef HAVE_LIBGME
 	if (gme)
 	{
 		gme_start_track(gme, 0);
 		current_track = 0;
+		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
+	else
 #endif
+	if (!music)
+		return false;
 
 	if (!song_length && (I_SongType() == MU_OGG || I_SongType() == MU_MP3 || I_SongType() == MU_FLAC))
-		CONS_Debug(DBG_DETAILED, "This song is missing a LENGTHMS= tag! Required to make seeking work properly.");
+		CONS_Debug(DBG_DETAILED, "This song is missing a LENGTHMS= tag! Required to make seeking work properly.\n");
 
 	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && Mix_PlayMusic(music, 0) == -1)
 	{
@@ -1179,10 +1157,8 @@ void I_StopSong(void)
 	music = NULL;
 }
 
-void I_PauseSong(INT32 handle)
+void I_PauseSong()
 {
-	(void)handle;
-
 	if(I_SongType() == MU_MID) // really, SDL Mixer? why can't you pause MIDI???
 		return;
 
@@ -1197,10 +1173,8 @@ void I_PauseSong(INT32 handle)
 	songpaused = true;
 }
 
-void I_ResumeSong(INT32 handle)
+void I_ResumeSong()
 {
-	(void)handle;
-
 	if (I_SongType() == MU_MID)
 		return;
 
@@ -1213,7 +1187,7 @@ void I_ResumeSong(INT32 handle)
 		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
 
-		if(music && I_GetSongType() != MU_MOD && I_GetSongType() != MU_MID && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+		if(music && I_SongType() != MU_MOD && I_SongType() != MU_MID && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 			CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 	}
 
@@ -1235,7 +1209,7 @@ void I_SetMusicVolume(UINT8 volume)
 #endif
 		music_volume = volume;
 
-	Mix_VolumeMusic((UINT32)music_volume*128/31);
+	Mix_VolumeMusic(get_real_volume(music_volume));
 }
 
 boolean I_SetSongTrack(int track)
@@ -1279,7 +1253,7 @@ boolean I_SetSongTrack(int track)
 void I_SetInternalMusicVolume(UINT8 volume)
 {
 	internal_volume = volume;
-	if (!music || I_SongType() == MU_MID) // stub out MIDI, see bug in I_SetMIDIMusicVolume
+	if (!music)
 		return;
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
@@ -1292,7 +1266,7 @@ void I_StopFadingSong(void)
 	fading_target = fading_steps = fading_volume_step = fading_id = 0;
 }
 
-boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
 {
 	UINT32 target_steps, ms_per_step;
 	INT16 target_volume_step, volume_delta;
@@ -1304,21 +1278,16 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 
 	if (!ms && volume_delta)
 	{
-		if (stopafterfade)
-		{
-			I_StopSong();
-			return true;
-		}
-		else
-		{
-			I_SetInternalMusicVolume(target_volume);
-			return true;
-		}
+		I_SetInternalMusicVolume(target_volume);
+		if (callback)
+			(*callback)();
+		return true;
+
 	}
-	else if (!volume_delta || I_SongType() == MU_MID)
+	else if (!volume_delta)
 	{
-		if (stopafterfade)
-			I_StopSong();
+		if (callback)
+			(*callback)();
 		return true;
 	}
 
@@ -1344,7 +1313,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 			fading_target = target_volume;
 			fading_steps = target_steps;
 			fading_volume_step = target_volume_step;
-			queue_stopafterfade = stopafterfade;
+			fading_callback = callback;
 
 			if (internal_volume != source_volume)
 				I_SetInternalMusicVolume(source_volume);
@@ -1354,47 +1323,21 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	return is_fading;
 }
 
-boolean I_FadeSong(UINT8 target_volume, UINT32 ms)
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
 {
-	return I_FadeSongFromVolume(target_volume, internal_volume, ms, false);
+	return I_FadeSongFromVolume(target_volume, internal_volume, ms, callback);
 }
 
 boolean I_FadeOutStopSong(UINT32 ms)
 {
-	return I_FadeSongFromVolume(0, internal_volume, ms, true);
+	return I_FadeSongFromVolume(0, internal_volume, ms, &I_StopSong);
 }
 
-boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 {
-	if (musicname[0] == 0)
-		return true; // nothing to play
-	else if (queuepostfade && is_fading && I_SongType() != MU_MID)
-	{
-		strncpy(queue_music_name, musicname, 7);
-		queue_music_name[6] = 0;
-		queue_track = track;
-		queue_looping = looping;
-		queue_position = position;
-		queue_fadeinms = fadeinms;
-		queue_stopafterfade = false;
-
-		return true;
-	}
+	if (I_PlaySong(looping))
+		return I_FadeSongFromVolume(100, 0, ms, NULL);
 	else
-	{
-		if (I_StartDigSong(musicname, looping))
-		{
-			I_SetSongTrack(track);
-			if (fadeinms)
-				I_FadeSongFromVolume(100, 0, fadeinms, false);
-			if (position)
-				I_SetSongPosition(position);
-			return true;
-		}
-		else
-			return false;
-	}
-
+		return false;
 }
-
 #endif

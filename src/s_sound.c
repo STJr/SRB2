@@ -1354,6 +1354,12 @@ static char      music_name[7]; // up to 6-character name
 static UINT16    music_flags;
 static boolean   music_looping;
 
+static char      queue_name[7];
+static UINT16    queue_flags;
+static boolean   queue_looping;
+static UINT32    queue_position;
+static UINT32    queue_fadeinms;
+
 /// ------------------------
 /// Music Status
 /// ------------------------
@@ -1500,19 +1506,41 @@ static void S_UnloadMusic(void)
 	music_looping = false;
 }
 
-static boolean S_PlayMusic(boolean looping)
+static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 {
 	if (S_MusicDisabled())
 		return false;
 
-	if (!I_PlaySong(looping))
+	if ((!fadeinms && !I_PlaySong(looping)) ||
+		(fadeinms && !I_FadeInPlaySong(fadeinms, looping)))
 	{
 		S_UnloadMusic();
 		return false;
 	}
 
+
 	S_InitMusicVolume(); // switch between digi and sequence volume
 	return true;
+}
+
+static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 fadeinms)
+{
+	strncpy(queue_name, mmusic, 7);
+	queue_flags = mflags;
+	queue_looping = looping;
+	queue_position = position;
+	queue_fadeinms = fadeinms;
+}
+
+static void S_ClearQueue(void)
+{
+	queue_name[0] = queue_flags = queue_looping = queue_position = queue_fadeinms = 0;
+}
+
+static void S_ChangeMusicToQueue(void)
+{
+	S_ChangeMusicAdvanced(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
+	S_ClearQueue();
 }
 
 void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
@@ -1521,97 +1549,65 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 
 	char newmusic[7];
-	boolean digiexists = S_DigExists(mmusic);
-	boolean midiexists = S_MIDIExists(mmusic);
 
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
-	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping))
+	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
 		return;
 #else
 	strncpy(newmusic, mmusic, 7);
 #endif
+
 	newmusic[6] = 0;
+	int i;
+	for (i = 0; newmusic[i]; i++) {
+		newmusic[i] = tolower(newmusic[i]);
+	}
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
 	{
-		S_StopMusic();
+		if (prefadems)
+			I_FadeSong(0, prefadems, &S_StopMusic);
+		else
+			S_StopMusic();
 		return;
 	}
 
-	CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
-
-	if (digiexists && !digital_disabled) // digmusic?
+	if (prefadems && S_MusicPlaying()) // queue music change for after fade // allow even if the music is the same
 	{
-		if (prefadems && I_SongType() != MU_MID) //have to queue post-fade // allow even if the music is the same
-		{
-			I_FadeOutStopSong(prefadems);
-			I_QueueDigSong(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms);
-
-			// HACK: set the vars now and hope everything works out
-			strncpy(music_name, newmusic, 7);
-			music_name[6] = 0;
-			music_lumpnum = LUMPERROR;
-			music_data = NULL;
-			music_handle = 0;
-			return;
-		}
-		else if (strncmp(music_name, newmusic, 6))
-		{
-			S_StopMusic();
-			if (position || fadeinms)
-			{
-				if(!I_FadeInStartDigSong(newmusic, mflags & MUSIC_TRACKMASK, looping, position, fadeinms, false))
-				{
-					CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
-					return;
-				}
-				else
-				{
-					strncpy(music_name, newmusic, 7);
-					music_name[6] = 0;
-					music_lumpnum = LUMPERROR;
-					music_data = NULL;
-					music_handle = 0;
-					return;
-				}
-			}
-			else if (!S_DigMusic(newmusic, looping))
-			{
-				CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
-				return;
-			}
-			else
-				I_SetSongTrack(mflags & MUSIC_TRACKMASK);
-		}
+		CONS_Debug(DBG_DETAILED, "Now fading out song %s\n", music_name);
+		S_QueueMusic(newmusic, mflags, looping, position, fadeinms);
+		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
+		return;
 	}
-	else if (strncmp(music_name, newmusic, 6) && midiexists && !midi_disabled) // midimusic?
+	else if (strncmp(music_name, newmusic, 6))
 	{
-		// HACK: We don't support fade for MIDI right now, so
-		// just fall to old behavior verbatim. This technically should be implemented in
-		// the interfaces, even as a stub.
+		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
-		S_StopMusic(); // shutdown old music
+		S_StopMusic();
 
-		if (!S_LoadMusic(mmusic))
+		if (!S_LoadMusic(newmusic))
 			return;
 
 		music_flags = mflags;
 		music_looping = looping;
 
-		if (!S_PlayMusic(looping))
+		if (!S_PlayMusic(looping, fadeinms))
 		{
 			CONS_Alert(CONS_ERROR, "Music cannot be played!\n");
 			return;
 		}
-	}
-	else if (!midiexists && !digiexists)
-		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), newmusic);
-}
 
-musictype_t S_MusicType()
-{
-	return I_SongType();
+		if (position)
+			I_SetSongPosition(position);
+
+		I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+	}
+	else if (fadeinms) // let fades happen with same music
+	{
+		I_SetSongPosition(position);
+		I_FadeSong(100, fadeinms, NULL);
+	}
 }
 
 void S_StopMusic(void)
@@ -1713,14 +1709,14 @@ void S_StopFadingMusic(void)
 boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms)
 {
 	if (source_volume < 0)
-		return I_FadeSong(target_volume, ms);
+		return I_FadeSong(target_volume, ms, NULL);
 	else
 		return I_FadeSongFromVolume(target_volume, source_volume, ms, false);
 }
 
 boolean S_FadeOutStopMusic(UINT32 ms)
 {
-	return I_FadeOutStopSong(ms);
+	return I_FadeSong(0, ms, &S_StopMusic);
 }
 
 /// ------------------------
