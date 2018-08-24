@@ -1197,7 +1197,7 @@ void I_ResumeSong()
 
 void I_SetMusicVolume(UINT8 volume)
 {
-	if (!music)
+	if (!I_SongPlaying())
 		return;
 
 #ifdef _WIN32
@@ -1253,7 +1253,7 @@ boolean I_SetSongTrack(int track)
 void I_SetInternalMusicVolume(UINT8 volume)
 {
 	internal_volume = volume;
-	if (!music)
+	if (!I_SongPlaying())
 		return;
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
