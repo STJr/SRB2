@@ -719,8 +719,9 @@ boolean I_PlaySong(boolean looping)
 		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
+	else
 #endif
-	else if (!music)
+	if (!music)
 		return false;
 
 	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
