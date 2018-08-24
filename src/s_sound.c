@@ -1239,22 +1239,22 @@ boolean S_MusicDisabled(void)
 
 boolean S_MusicPlaying(void)
 {
-	return I_MusicPlaying();
+	return I_SongPlaying();
 }
 
 boolean S_MusicPaused(void)
 {
-	return I_MusicPaused();
+	return I_SongPaused();
 }
 
 musictype_t S_MusicType(void)
 {
-	return I_MusicType();
+	return I_SongType();
 }
 
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
 {
-	if (!I_MusicPlaying())
+	if (!I_SongPlaying())
 		return false;
 
 	strncpy(mname, music_name, 7);
@@ -1399,10 +1399,10 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 
 void S_StopMusic(void)
 {
-	if (!I_MusicPlaying())
+	if (!I_SongPlaying())
 		return;
 
-	if (I_MusicPaused())
+	if (I_SongPaused())
 		I_ResumeSong();
 
 	S_SpeedMusic(1.0f);
@@ -1421,7 +1421,7 @@ void S_StopMusic(void)
 //
 void S_PauseAudio(void)
 {
-	if (I_MusicPlaying() && !I_MusicPaused())
+	if (I_SongPlaying() && !I_SongPaused())
 		I_PauseSong();
 
 	// pause cd music
@@ -1434,7 +1434,7 @@ void S_PauseAudio(void)
 
 void S_ResumeAudio(void)
 {
-	if (I_MusicPlaying() && I_MusicPaused())
+	if (I_SongPlaying() && I_SongPaused())
 		I_ResumeSong();
 
 	// resume cd music
@@ -1462,7 +1462,7 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	digvolume = seqvolume = 31;
 #endif
 
-	switch(I_MusicType())
+	switch(I_SongType())
 	{
 		case MU_MID:
 		case MU_MOD:

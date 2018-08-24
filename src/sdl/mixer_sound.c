@@ -503,7 +503,7 @@ void I_ShutdownMusic(void)
 /// Music Properties
 /// ------------------------
 
-musictype_t I_MusicType(void)
+musictype_t I_SongType(void)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -522,12 +522,12 @@ musictype_t I_MusicType(void)
 		return (musictype_t)Mix_GetMusicType(music);
 }
 
-boolean I_MusicPlaying(void)
+boolean I_SongPlaying(void)
 {
 	return (boolean)music;
 }
 
-boolean I_MusicPaused(void)
+boolean I_SongPaused(void)
 {
 	return songpaused;
 }
@@ -772,7 +772,7 @@ void I_SetMusicVolume(UINT8 volume)
 		return;
 
 #ifdef _WIN32
-	if (I_MusicType() == MU_MID)
+	if (I_SongType() == MU_MID)
 		// HACK: Until we stop using native MIDI,
 		// disable volume changes
 		music_volume = 31;

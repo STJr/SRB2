@@ -136,9 +136,9 @@ void I_ShutdownMusic(void);
 //  MUSIC PROPERTIES
 /// ------------------------
 
-musictype_t I_MusicType(void);
-boolean I_MusicPlaying(void);
-boolean I_MusicPaused(void);
+musictype_t I_SongType(void);
+boolean I_SongPlaying(void);
+boolean I_SongPaused(void);
 
 /// ------------------------
 //  MUSIC EFFECTS
