@@ -588,7 +588,7 @@ void I_StopFadingSong(void)
 {
 }
 
-boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
 {
 	(void)target_volume;
 	(void)source_volume;
@@ -596,7 +596,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	return false;
 }
 
-boolean I_FadeSong(UINT8 target_volume, UINT32 ms)
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
 {
 	(void)target_volume;
 	(void)ms;
@@ -609,10 +609,9 @@ boolean I_FadeOutStopSong(UINT32 ms)
 	return false;
 }
 
-boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 {
-	(void)musicname;
-	(void)looping;
-	(void)fadeinms;
-	return false;
+        (void)ms;
+        (void)looping;
+        return false;
 }

@@ -95,6 +95,37 @@ boolean I_SetSongSpeed(float speed)
 }
 
 /// ------------------------
+//  MUSIC SEEKING
+/// ------------------------
+
+UINT32 I_GetSongLength(void)
+{
+	return 0;
+}
+
+boolean I_SetSongLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetSongLoopPoint(void)
+{
+	return 0;
+}
+
+boolean I_SetSongPosition(UINT32 position)
+{
+    (void)position;
+    return false;
+}
+
+UINT32 I_GetSongPosition(void)
+{
+    return 0;
+}
+
+/// ------------------------
 //  MUSIC PLAYBACK
 /// ------------------------
 
@@ -143,6 +174,10 @@ boolean I_SetSongTrack(int track)
 	return false;
 }
 
+/// ------------------------
+//  MUSIC FADING
+/// ------------------------
+
 void I_SetInternalMusicVolume(UINT8 volume)
 {
 	(void)volume;
@@ -152,7 +187,7 @@ void I_StopFadingSong(void)
 {
 }
 
-boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, boolean stopafterfade)
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
 {
 	(void)target_volume;
 	(void)source_volume;
@@ -160,7 +195,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	return false;
 }
 
-boolean I_FadeSong(UINT8 target_volume, UINT32 ms)
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
 {
 	(void)target_volume;
 	(void)ms;
@@ -173,52 +208,9 @@ boolean I_FadeOutStopSong(UINT32 ms)
 	return false;
 }
 
-boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade)
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 {
-	(void)musicname;
-	(void)looping;
-	(void)fadeinms;
-	return false;
-}
-
-UINT32 I_GetSongLength(void)
-{
-	return 0;
-}
-
-boolean I_SetSongLoopPoint(UINT32 looppoint)
-{
-        (void)looppoint;
+        (void)ms;
+        (void)looping;
         return false;
-}
-
-UINT32 I_GetSongLoopPoint(void)
-{
-	return 0;
-}
-
-boolean I_SetSongPosition(UINT32 position)
-{
-    (void)position;
-    return false;
-}
-
-UINT32 I_GetSongPosition(void)
-{
-    return 0;
-}
-
-boolean I_SongPlaying(void)
-{
-	return false;
-}
-
-boolean I_SongPaused(void)
-{
-	return false;
-}
-
-musictype_t I_SongType(void)
-{
-	return MU_NONE;
 }
