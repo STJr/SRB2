@@ -63,7 +63,7 @@
 UINT8 sound_started = false;
 
 static Mix_Music *music;
-static UINT8 music_volume, midi_volume, sfx_volume;
+static UINT8 music_volume, sfx_volume;
 static float loop_point;
 static boolean songpaused;
 
@@ -91,7 +91,7 @@ void I_StartupSound(void)
 	}
 
 	music = NULL;
-	music_volume = midi_volume = sfx_volume = 0;
+	music_volume = sfx_volume = 0;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
