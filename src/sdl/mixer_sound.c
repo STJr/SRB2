@@ -509,11 +509,7 @@ static void do_fading_callback()
 
 static void count_music_bytes(int chan, void *stream, int len, void *udata)
 {
-	if (
-#ifdef HAVE_LIBGME
-		gme ||
-#endif
-		!music || I_SongType() == MU_MOD || I_SongType() == MU_MID)
+	if (!music || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return;
 	music_bytes += len;
 }
@@ -720,11 +716,7 @@ UINT32 I_GetSongLength(void)
 
 boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
-	if (
-#ifdef HAVE_LIBGME
-		gme ||
-#endif
-		!music || I_SongType() == MU_MOD || I_SongType() == MU_MID || !is_looping)
+	if (!music || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID || !is_looping)
 		return false;
 	else
 	{
@@ -1162,11 +1154,7 @@ void I_PauseSong()
 	if(I_SongType() == MU_MID) // really, SDL Mixer? why can't you pause MIDI???
 		return;
 
-	if(
-#ifdef HAVE_LIBGME
-		!gme &&
-#endif
-		I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if(I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 
 	Mix_PauseMusic();
@@ -1178,11 +1166,7 @@ void I_ResumeSong()
 	if (I_SongType() == MU_MID)
 		return;
 
-	if (
-#ifdef HAVE_LIBGME
-		!gme &&
-#endif
-		I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if (I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
 	{
 		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
