@@ -20,16 +20,16 @@
 
 // copied from SDL mixer, plus GME
 typedef enum {
-    MU_NONE,
-    MU_CMD,
-    MU_WAV,
-    MU_MOD,
-    MU_MID,
-    MU_OGG,
-    MU_MP3,
-    MU_MP3_MAD_UNUSED, // use MU_MP3 instead
-    MU_FLAC,
-    MU_MODPLUG_UNUSED, // use MU_MOD instead
+	MU_NONE,
+	MU_CMD,
+	MU_WAV,
+	MU_MOD,
+	MU_MID,
+	MU_OGG,
+	MU_MP3,
+	MU_MP3_MAD_UNUSED, // use MU_MP3 instead
+	MU_FLAC,
+	MU_MODPLUG_UNUSED, // use MU_MOD instead
 	MU_GME
 } musictype_t;
 
@@ -66,9 +66,9 @@ void I_StartupSound(void);
 */
 void I_ShutdownSound(void);
 
-//
-//  SFX I/O
-//
+/// ------------------------
+///  SFX I/O
+/// ------------------------
 
 /**	\brief	Starts a sound in a particular sound channel.
 	\param	id	sfxid
@@ -120,9 +120,10 @@ void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch);
 */
 void I_SetSfxVolume(UINT8 volume);
 
-//
-//  MUSIC I/O
-//
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
+
 /** \brief Init the music systems
 */
 void I_InitMusic(void);
@@ -131,55 +132,35 @@ void I_InitMusic(void);
 */
 void I_ShutdownMusic(void);
 
-/**	\brief	PAUSE game handling.
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
 
-	\param	handle	song handle
-
-	\return	void
-*/
-void I_PauseSong(INT32 handle);
-
-/**	\brief	RESUME game handling
-
-	\param	handle	song handle
-
-	\return	void
-*/
-void I_ResumeSong(INT32 handle);
-
-/**	\brief Get general music status
-
-	\return boolean
-*/
+musictype_t I_SongType(void);
 boolean I_SongPlaying(void);
-
-/**	\brief Get music pause status
-
-	\return boolean
-*/
 boolean I_SongPaused(void);
 
-musictype_t I_GetSongType(void);
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
 
-//
-//  MIDI I/O
-//
+boolean I_SetSongSpeed(float speed);
 
-/**	\brief Startup the MIDI music system
-*/
-void I_InitMIDIMusic(void);
+/// ------------------------
+//  MUSIC SEEKING
+/// ------------------------
 
-/**	\brief Shutdown the MIDI music system
-*/
-void I_ShutdownMIDIMusic(void);
+UINT32 I_GetSongLength(void);
 
-/**	\brief	The I_SetMIDIMusicVolume function
+boolean I_SetSongLoopPoint(UINT32 looppoint);
+UINT32 I_GetSongLoopPoint(void);
 
-	\param	volume	volume to set at
+boolean I_SetSongPosition(UINT32 position);
+UINT32 I_GetSongPosition(void);
 
-	\return	void
-*/
-void I_SetMIDIMusicVolume(UINT8 volume);
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
 /**	\brief	Registers a song handle to song data.
 
@@ -190,7 +171,16 @@ void I_SetMIDIMusicVolume(UINT8 volume);
 
 	\todo Remove this
 */
-INT32 I_RegisterSong(void *data, size_t len);
+boolean I_LoadSong(char *data, size_t len);
+
+/**	\brief	See ::I_LoadSong, then think backwards
+
+	\param	handle	song handle
+
+	\sa I_LoadSong
+	\todo remove midi handle
+*/
+void I_UnloadSong(void);
 
 /**	\brief	Called by anything that wishes to start music
 
@@ -201,7 +191,7 @@ INT32 I_RegisterSong(void *data, size_t len);
 
 	\todo pass music name, not handle
 */
-boolean I_PlaySong(INT32 handle, boolean looping);
+boolean I_PlaySong(boolean looping);
 
 /**	\brief	Stops a song over 3 seconds
 
@@ -210,42 +200,37 @@ boolean I_PlaySong(INT32 handle, boolean looping);
 
 	/todo drop handle
 */
-void I_StopSong(INT32 handle);
+void I_StopSong(void);
 
-/**	\brief	See ::I_RegisterSong, then think backwards
+/**	\brief	PAUSE game handling.
 
 	\param	handle	song handle
 
-	\sa I_RegisterSong
-	\todo remove midi handle
+	\return	void
 */
-void I_UnRegisterSong(INT32 handle);
+void I_PauseSong(void);
 
-//
-//  DIGMUSIC I/O
-//
+/**	\brief	RESUME game handling
 
-/**	\brief Startup the music system
+	\param	handle	song handle
+
+	\return	void
 */
-void I_InitDigMusic(void);
+void I_ResumeSong(void);
 
-/**	\brief Shutdown the music system
+/**	\brief	The I_SetMusicVolume function
+
+	\param	volume	volume to set at
+
+	\return	void
 */
-void I_ShutdownDigMusic(void);
-
-boolean I_SetSongSpeed(float speed);
-
-UINT32 I_GetSongLength(void);
-
-boolean I_SetSongLoopPoint(UINT32 looppoint);
-
-UINT32 I_GetSongLoopPoint(void);
-
-boolean I_SetSongPosition(UINT32 position);
-
-UINT32 I_GetSongPosition(void);
+void I_SetMusicVolume(UINT8 volume);
 
 boolean I_SetSongTrack(INT32 track);
+
+/// ------------------------
+/// MUSIC FADING
+/// ------------------------
 
 void I_SetInternalMusicVolume(UINT8 volume);
 
@@ -260,31 +245,9 @@ boolean I_FadeOutStopSong(UINT32 ms);
 boolean I_FadeInStartDigSong(const char *musicname, UINT16 track, boolean looping, UINT32 position, UINT32 fadeinms, boolean queuepostfade);
 #define I_QueueDigSong(a,b,c,d,e) I_FadeInStartDigSong(a,b,c,d,e,1)
 
-/**	\brief The I_StartDigSong function
-
-	\param	musicname	music lump name
-	\param	looping	if true, loop the song
-
-	\return	if true, song playing
-*/
-boolean I_StartDigSong(const char *musicname, boolean looping);
-
-/**	\brief stop non-MIDI song
-*/
-void I_StopDigSong(void);
-
-/**	\brief The I_SetDigMusicVolume function
-
-	\param	volume	volume to set at
-
-	\return	void
-*/
-void I_SetDigMusicVolume(UINT8 volume);
-
-//
-// CD MUSIC I/O
-//
-
+/// ------------------------
+//  CD MUSIC I/O
+/// ------------------------
 
 /**	\brief  cd music interface
 */

@@ -57,87 +57,84 @@ void I_SetSfxVolume(UINT8 volume)
 	(void)volume;
 }
 
-//
-//  MUSIC I/O
-//
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
 void I_InitMusic(void){}
 
 void I_ShutdownMusic(void){}
 
-void I_PauseSong(INT32 handle)
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
+
+musictype_t I_SongType(void)
 {
-	(void)handle;
+	return MU_NONE;
 }
 
-void I_ResumeSong(INT32 handle)
+boolean I_SongPlaying(void)
 {
-	(void)handle;
+	return false;
 }
 
-//
-//  MIDI I/O
-//
-
-void I_InitMIDIMusic(void){}
-
-void I_ShutdownMIDIMusic(void){}
-
-void I_SetMIDIMusicVolume(UINT8 volume)
+boolean I_SongPaused(void)
 {
-	(void)volume;
+	return false;
 }
 
-INT32 I_RegisterSong(void *data, size_t len)
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
+{
+	(void)speed;
+	return false;
+}
+
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
+
+boolean I_LoadSong(char *data, size_t len)
 {
 	(void)data;
 	(void)len;
 	return -1;
 }
 
-boolean I_PlaySong(INT32 handle, boolean looping)
+void I_UnloadSong(void)
+{
+	(void)handle;
+}
+
+boolean I_PlaySong(boolean looping)
 {
 	(void)handle;
 	(void)looping;
 	return false;
 }
 
-void I_StopSong(INT32 handle)
+void I_StopSong(void)
 {
 	(void)handle;
 }
 
-void I_UnRegisterSong(INT32 handle)
+void I_PauseSong(void)
 {
 	(void)handle;
 }
 
-//
-//  DIGMUSIC I/O
-//
-
-void I_InitDigMusic(void){}
-
-void I_ShutdownDigMusic(void){}
-
-boolean I_StartDigSong(const char *musicname, boolean looping)
+void I_ResumeSong(void)
 {
-	(void)musicname;
-	(void)looping;
-	return false;
+	(void)handle;
 }
 
-void I_StopDigSong(void){}
-
-void I_SetDigMusicVolume(UINT8 volume)
+void I_SetMusicVolume(UINT8 volume)
 {
 	(void)volume;
-}
-
-boolean I_SetSongSpeed(float speed)
-{
-	(void)speed;
-	return false;
 }
 
 boolean I_SetSongTrack(int track)
@@ -221,7 +218,7 @@ boolean I_SongPaused(void)
 	return false;
 }
 
-musictype_t I_GetSongType(void)
+musictype_t I_SongType(void)
 {
 	return MU_NONE;
 }

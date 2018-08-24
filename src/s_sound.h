@@ -14,7 +14,7 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
-#include "i_sound.h"
+#include "i_sound.h" // musictype_t
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
@@ -98,9 +98,9 @@ void S_RegisterSoundStuff(void);
 
 //
 // Initializes sound stuff, including volume
-// Sets channels, SFX and music volume, allocates channel buffer, sets S_sfx lookup.
+// Sets channels, SFX, allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume);
+void S_InitSfxChannels(INT32 sfxVolume);
 
 //
 // Per level startup code.
@@ -126,19 +126,31 @@ void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
 
-// Start music track, arbitrary, given its name, and set whether looping
-// note: music flags 12 bits for tracknum (gme, other formats with more than one track)
-//       13-15 aren't used yet
-//       and the last bit we ignore (internal game flag for resetting music on reload)
-void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
-#define S_ChangeMusicInternal(a,b) S_ChangeMusicAdvanced(a,0,b,0,0,0)
-#define S_ChangeMusic(a,b,c) S_ChangeMusicAdvanced(a,b,c,0,0,0)
+//
+// Music Status
+//
 
-// Get music type
-musictype_t S_MusicType();
+boolean S_DigMusicDisabled(void);
+boolean S_MIDIMusicDisabled(void);
+boolean S_MusicDisabled(void);
+boolean S_MusicPlaying(void);
+boolean S_MusicPaused(void);
+musictype_t S_MusicType(void);
+boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+#define S_DigExists(a) S_MusicExists(a, false, true)
+#define S_MIDIExists(a) S_MusicExists(a, true, false)
+
+//
+// Music Effects
+//
 
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
+
+//
+// Music Seeking
+//
 
 // Get Length of Music
 UINT32 S_GetMusicLength(void);
@@ -155,6 +167,18 @@ boolean S_SetMusicPosition(UINT32 position);
 // Get Position of Music
 UINT32 S_GetMusicPosition(void);
 
+//
+// Music Playback
+//
+
+// Start music track, arbitrary, given its name, and set whether looping
+// note: music flags 12 bits for tracknum (gme, other formats with more than one track)
+//       13-15 aren't used yet
+//       and the last bit we ignore (internal game flag for resetting music on reload)
+void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
+#define S_ChangeMusicInternal(a,b) S_ChangeMusicAdvanced(a,0,b,0,0,0)
+#define S_ChangeMusic(a,b,c) S_ChangeMusicAdvanced(a,b,c,0,0,0)
+
 // Stops the music.
 void S_StopMusic(void);
 
@@ -162,20 +186,11 @@ void S_StopMusic(void);
 void S_PauseAudio(void);
 void S_ResumeAudio(void);
 
-// Gets general music status
-boolean S_MusicPlaying(void);
+//
+// Music Fading
+//
 
-// Gets music pause status
-boolean S_MusicPaused(void);
-
-// Gets currently playing music name
-const char *S_GetMusicName(void);
-
-// Checks if music name exists
-boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
-#define S_DigExists(a) S_MusicExists(a, false, true)
-#define S_MIDIExists(a) S_MusicExists(a, true, false)
-
+void S_SetInternalMusicVolume(INT32 volume);
 void S_StopFadingMusic(void);
 boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms);
 #define S_FadeMusic(a, b) S_FadeMusicFromVolume(a, -1, b)
@@ -189,10 +204,11 @@ void S_UpdateSounds(void);
 
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
-void S_SetInternalMusicVolume(INT32 volume);
-void S_SetDigMusicVolume(INT32 volume);
-void S_SetMIDIMusicVolume(INT32 volume);
 void S_SetSfxVolume(INT32 volume);
+void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume);
+#define S_SetDigMusicVolume(a) S_SetMusicVolume(a,-1)
+#define S_SetMIDIMusicVolume(a) S_SetMusicVolume(-1,a)
+#define S_InitMusicVolume() S_SetMusicVolume(-1,-1)
 
 INT32 S_OriginPlaying(void *origin);
 INT32 S_IdPlaying(sfxenum_t id);
