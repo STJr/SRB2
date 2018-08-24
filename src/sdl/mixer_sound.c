@@ -769,7 +769,7 @@ void I_ResumeSong(void)
 
 void I_SetMusicVolume(UINT8 volume)
 {
-	if (!music)
+	if (!I_SongPlaying())
 		return;
 
 #ifdef _WIN32
