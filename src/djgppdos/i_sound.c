@@ -408,7 +408,7 @@ void I_ShutdownMusic(void)
 //  MUSIC PROPERTIES
 /// ------------------------
 
-musictype_t I_MusicType(void)
+musictype_t I_SongType(void)
 {
 	if (currsong)
 		return MU_MID;
@@ -416,12 +416,12 @@ musictype_t I_MusicType(void)
 		return MU_NONE;
 }
 
-boolean I_MusicPlaying()
+boolean I_SongPlaying()
 {
 	return (boolean)currsong;
 }
 
-boolean I_MusicPaused()
+boolean I_SongPaused()
 {
 	return songpaused;
 }

@@ -456,7 +456,7 @@ void I_ShutdownMusic(void)
 //  MUSIC PROPERTIES
 /// ------------------------
 
-musictype_t I_MusicType(void)
+musictype_t I_SongType(void)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -491,12 +491,12 @@ musictype_t I_MusicType(void)
 		return MU_NONE;
 }
 
-boolean I_MusicPlaying(void)
+boolean I_SongPlaying(void)
 {
 	return (boolean)music_stream;
 }
 
-boolean I_MusicPaused(void)
+boolean I_SongPaused(void)
 {
 	boolean fmpaused = false;
 	if (music_stream)
@@ -780,7 +780,7 @@ boolean I_PlaySong(boolean looping)
 #endif
 
 	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-	if (I_MusicType() != MU_MID)
+	if (I_SongType() != MU_MID)
 		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
 	else
 		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
@@ -822,7 +822,7 @@ void I_SetMusicVolume(UINT8 volume)
 		return;
 
 	// volume is 0 to 31.
-	if (I_MusicType() == MU_MID)
+	if (I_SongType() == MU_MID)
 		music_volume = 31; // windows bug hack
 	else
 		music_volume = volume;

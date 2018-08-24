@@ -70,17 +70,17 @@ void I_ShutdownMusic(void){}
 //  MUSIC PROPERTIES
 /// ------------------------
 
-musictype_t I_MusicType(void)
+musictype_t I_SongType(void)
 {
 	return MU_NONE;
 }
 
-boolean I_MusicPlaying(void)
+boolean I_SongPlaying(void)
 {
 	return false;
 }
 
-boolean I_MusicPaused(void)
+boolean I_SongPaused(void)
 {
 	return false;
 }
