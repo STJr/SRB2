@@ -63,7 +63,7 @@
 UINT8 sound_started = false;
 
 static Mix_Music *music;
-static UINT8 music_volume, midi_volume, sfx_volume;
+static UINT8 music_volume, sfx_volume;
 static float loop_point;
 static boolean songpaused;
 
@@ -91,7 +91,7 @@ void I_StartupSound(void)
 	}
 
 	music = NULL;
-	music_volume = midi_volume = sfx_volume = 0;
+	music_volume = sfx_volume = 0;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
@@ -503,7 +503,7 @@ void I_ShutdownMusic(void)
 /// Music Properties
 /// ------------------------
 
-musictype_t I_MusicType(void)
+musictype_t I_SongType(void)
 {
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -522,12 +522,12 @@ musictype_t I_MusicType(void)
 		return (musictype_t)Mix_GetMusicType(music);
 }
 
-boolean I_MusicPlaying(void)
+boolean I_SongPlaying(void)
 {
 	return (boolean)music;
 }
 
-boolean I_MusicPaused(void)
+boolean I_SongPaused(void)
 {
 	return songpaused;
 }
@@ -772,7 +772,7 @@ void I_SetMusicVolume(UINT8 volume)
 		return;
 
 #ifdef _WIN32
-	if (I_MusicType() == MU_MID)
+	if (I_SongType() == MU_MID)
 		// HACK: Until we stop using native MIDI,
 		// disable volume changes
 		music_volume = 31;
