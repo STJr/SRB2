@@ -2270,6 +2270,122 @@ static int lib_sSpeedMusic(lua_State *L)
 }
 
 #ifdef HAVE_LUA_MUSICPLUS
+static int lib_sMusicType(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, S_MusicType());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicPlaying(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_MusicPlaying());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicPaused(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_MusicPaused());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicInfo(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		char *mname;
+		UINT16 mflags;
+		boolean looping;
+		if (S_MusicInfo(mname, &mflags, &looping))
+		{
+			lua_pushstring(L, mname);
+			lua_pushinteger(L, mflags);
+			lua_pushboolean(L, looping);
+		}
+		else
+			lua_pushboolean(L, false);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicExists(lua_State *L)
+{
+#ifdef MUSICSLOT_COMPATIBILITY
+	const char *music_name;
+	UINT32 music_num;
+	char music_compat_name[7];
+	UINT16 music_flags = 0;
+	NOHUD
+	if (lua_isnumber(L, 1))
+	{
+		music_num = (UINT32)luaL_checkinteger(L, 1);
+		music_flags = (UINT16)(music_num & 0x0000FFFF);
+		if (music_flags && music_flags <= 1035)
+			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
+		else if (music_flags && music_flags <= 1050)
+			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
+		else
+			music_compat_name[0] = 0; // becomes empty string
+		music_compat_name[6] = 0;
+		music_name = (const char *)&music_compat_name;
+	}
+	else
+	{
+		music_num = 0;
+		music_name = luaL_checkstring(L, 1);
+	}
+#else
+	const char *music_name = luaL_checkstring(L, 1);
+#endif
+	boolean checkMIDI = lua_opttrueboolean(L, 2);
+	boolean checkDigi = lua_opttrueboolean(L, 3);
+	NOHUD
+	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
+	return 1;
+}
+
 static int lib_sGetMusicLength(lua_State *L)
 {
 	player_t *player = NULL;
@@ -2357,6 +2473,26 @@ static int lib_sGetMusicPosition(lua_State *L)
 	return 1;
 }
 
+static int lib_sStopMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_StopMusic();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 static int lib_sPauseMusic(lua_State *L)
 {
 	player_t *player = NULL;
@@ -2394,130 +2530,6 @@ static int lib_sResumeMusic(lua_State *L)
 	}
 	else
 		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sStopMusic(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-	{
-		S_StopMusic();
-		lua_pushboolean(L, true);
-	}
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sMusicPlaying(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_MusicPlaying());
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sMusicPaused(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_MusicPaused());
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sMusicType(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushinteger(L, S_MusicType());
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sGetMusicName(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		lua_pushstring(L, S_GetMusicName());
-	else
-		lua_pushnil(L);
-	return 1;
-}
-
-static int lib_sMusicExists(lua_State *L)
-{
-#ifdef MUSICSLOT_COMPATIBILITY
-	const char *music_name;
-	UINT32 music_num;
-	char music_compat_name[7];
-	UINT16 music_flags = 0;
-	NOHUD
-	if (lua_isnumber(L, 1))
-	{
-		music_num = (UINT32)luaL_checkinteger(L, 1);
-		music_flags = (UINT16)(music_num & 0x0000FFFF);
-		if (music_flags && music_flags <= 1035)
-			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
-		else if (music_flags && music_flags <= 1050)
-			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
-		else
-			music_compat_name[0] = 0; // becomes empty string
-		music_compat_name[6] = 0;
-		music_name = (const char *)&music_compat_name;
-	}
-	else
-	{
-		music_num = 0;
-		music_name = luaL_checkstring(L, 1);
-	}
-#else
-	const char *music_name = luaL_checkstring(L, 1);
-#endif
-	boolean checkMIDI = lua_opttrueboolean(L, 2);
-	boolean checkDigi = lua_opttrueboolean(L, 3);
-	NOHUD
-	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
 	return 1;
 }
 
@@ -3004,6 +3016,11 @@ static luaL_Reg lib[] = {
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 #ifdef HAVE_LUA_MUSICPLUS
+	{"S_MusicType",lib_sMusicType},
+	{"S_MusicPlaying",lib_sMusicPlaying},
+	{"S_MusicPaused",lib_sMusicPaused},
+	{"S_MusicInfo",lib_sMusicInfo},
+	{"S_MusicExists",lib_sMusicExists},
 	{"S_GetMusicLength",lib_sGetMusicLength},
 	{"S_SetMusicLoopPoint",lib_sSetMusicLoopPoint},
 	{"S_GetMusicLoopPoint",lib_sGetMusicLoopPoint},
@@ -3012,11 +3029,6 @@ static luaL_Reg lib[] = {
 	{"S_PauseMusic",lib_sPauseMusic},
 	{"S_ResumeMusic",lib_sResumeMusic},
 	{"S_StopMusic",lib_sStopMusic},
-	{"S_MusicPlaying",lib_sMusicPlaying},
-	{"S_MusicPaused",lib_sMusicPaused},
-	{"S_MusicType",lib_sMusicType},
-	{"S_GetMusicName",lib_sGetMusicName},
-	{"S_MusicExists",lib_sMusicExists},
 	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
 	{"S_FadeMusic",lib_sFadeMusic},
