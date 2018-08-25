@@ -7308,6 +7308,7 @@ struct {
 
 	// doomdef.h constants
 	{"TICRATE",TICRATE},
+	{"MUSICRATE",MUSICRATE},
 	{"RING_DIST",RING_DIST},
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
