@@ -768,7 +768,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
-		if (pl->extra_colormap && pl->extra_colormap->fog)
+		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -822,7 +822,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
-			if (pl->extra_colormap && pl->extra_colormap->fog)
+			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;
