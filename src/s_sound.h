@@ -20,6 +20,9 @@
 #include "command.h"
 #include "tables.h" // angle_t
 
+// sound timing is calculated by milliseconds
+#define MUSICRATE 1000
+
 // mask used to indicate sound origin is player item pickup
 #define PICKUP_SOUND 0x8000
 
