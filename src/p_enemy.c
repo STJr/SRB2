@@ -3529,6 +3529,17 @@ void A_BossDeath(mobj_t *mo)
 		EV_DoElevator(&junk, elevateUp, false);
 		junk.tag = 682;
 		EV_DoElevator(&junk, elevateHighest, false);
+
+		// change the music if specified
+		if (mapheaderinfo[gamemap-1]->muspostbossname && !strncmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+		{
+			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
+			// So just park ourselves in the mapmus variables.
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = MUSIC_RELOADRESET;
+			S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, 0, (1*MUSICRATE)+(MUSICRATE/2), 0);
+		}
 	}
 
 bossjustdie:
@@ -11636,4 +11647,4 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
-}
+}
