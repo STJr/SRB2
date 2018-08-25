@@ -71,6 +71,7 @@ static void G_DoWorldDone(void);
 
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
+UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
 INT16 maptol;
@@ -2204,17 +2205,6 @@ void G_PlayerReborn(INT32 player)
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
-
-	if (p-players == consoleplayer)
-	{
-		if (mapmusflags & MUSIC_RELOADRESET)
-		{
-			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-			mapmusname[6] = 0;
-			mapmusflags = mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK;
-		}
-		S_ChangeMusic(mapmusname, mapmusflags, true);
-	}
 
 	if (gametype == GT_COOP)
 		P_FindEmerald(); // scan for emeralds to hunt for
