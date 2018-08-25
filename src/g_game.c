@@ -71,6 +71,7 @@ static void G_DoWorldDone(void);
 
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
+UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
 INT16 maptol;

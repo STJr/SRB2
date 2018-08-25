@@ -3979,6 +3979,7 @@ static void Command_Tunes_f(void)
 {
 	const char *tunearg;
 	UINT16 tunenum, track = 0;
+	UINT32 position = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
@@ -4030,22 +4031,21 @@ static void Command_Tunes_f(void)
 		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
 	else
 		strncpy(mapmusname, tunearg, 7);
+
+	if (argc > 4)
+		position = (UINT32)atoi(COM_Argv(4));
+
 	mapmusname[6] = 0;
 	mapmusflags = (track & MUSIC_TRACKMASK);
+	mapmusposition = position;
 
-	S_ChangeMusic(mapmusname, mapmusflags, true);
+	S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 
 	if (argc > 3)
 	{
 		float speed = (float)atof(COM_Argv(3));
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
-	}
-
-	if (argc > 4)
-	{
-		UINT32 position = (UINT32)atoi(COM_Argv(4));
-		S_SetMusicPosition(position);
 	}
 }
 
