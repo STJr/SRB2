@@ -257,7 +257,9 @@ typedef struct
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
 	// Music stuff.
-	char muspostbossname[7]; ///< Post-bossdeath music.
+	char muspostbossname[7];    ///< Post-bossdeath music.
+	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
+	UINT32 muspostbossposition; ///< Post-bossdeath position
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
