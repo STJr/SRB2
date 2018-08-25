@@ -356,6 +356,8 @@ typedef enum
 #define NEWTICRATERATIO 1 // try 4 for 140 fps :)
 #define NEWTICRATE (TICRATE*NEWTICRATERATIO)
 
+#define MUSICRATE 1000 // sound timing is calculated by milliseconds
+
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.

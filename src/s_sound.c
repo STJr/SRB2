@@ -1394,6 +1394,11 @@ musictype_t S_MusicType(void)
 	return I_SongType();
 }
 
+const char *S_MusicName(void)
+{
+	return music_name;
+}
+
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
 {
 	if (!I_SongPlaying())

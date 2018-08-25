@@ -20,9 +20,6 @@
 #include "command.h"
 #include "tables.h" // angle_t
 
-// sound timing is calculated by milliseconds
-#define MUSICRATE 1000
-
 // mask used to indicate sound origin is player item pickup
 #define PICKUP_SOUND 0x8000
 
@@ -139,6 +136,7 @@ boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
 musictype_t S_MusicType(void);
+const char *S_MusicName(void);
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
