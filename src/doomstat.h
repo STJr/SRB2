@@ -35,6 +35,7 @@ extern char mapmusname[7];
 extern UINT16 mapmusflags;
 #define MUSIC_TRACKMASK   0x0FFF // ----************
 #define MUSIC_RELOADRESET 0x8000 // *---------------
+#define MUSIC_FORCERESET  0x4000 // -*--------------
 // Use other bits if necessary.
 
 extern INT16 maptol;

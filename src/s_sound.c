@@ -1584,7 +1584,7 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strncmp(music_name, newmusic, 6))
+	else if (strncmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
 	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
