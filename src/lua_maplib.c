@@ -1760,6 +1760,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushstring(L, header->musname);
 	else if (fastcmp(field,"mustrack"))
 		lua_pushinteger(L, header->mustrack);
+	else if (fastcmp(field,"muspos"))
+		lua_pushinteger(L, header->muspos);
 	else if (fastcmp(field,"forcecharacter"))
 		lua_pushstring(L, header->forcecharacter);
 	else if (fastcmp(field,"weather"))

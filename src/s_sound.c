@@ -1741,7 +1741,7 @@ void S_Start(void)
 		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
 		mapmusname[6] = 0;
 		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-		mapmusposition = mapheaderinfo[gamemap-1]->musposition;
+		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
 	if (cv_resetmusic.value)

@@ -1151,8 +1151,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 #endif
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
-			else if (fastcmp(word, "MUSICPOSITION"))
-				mapheaderinfo[num-1]->musposition = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICPOS"))
+				mapheaderinfo[num-1]->muspos = (UINT32)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -1449,7 +1449,7 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			{
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
-			else if (fastcmp(word, "MUSICPOSITION"))
+			else if (fastcmp(word, "MUSICPOS"))
 			{
 				cutscenes[num]->scene[scenenum].musswitchposition = (UINT32)get_number(word2);
 			}
