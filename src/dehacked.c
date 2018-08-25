@@ -7316,6 +7316,8 @@ struct {
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
 	{"VERSION",VERSION}, // Grab the game's version!
 	{"SUBVERSION",SUBVERSION}, // more precise version number
+	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
+	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
 	// Special linedef executor tag numbers!
 	{"LE_PINCHPHASE",LE_PINCHPHASE}, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
