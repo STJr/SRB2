@@ -1158,8 +1158,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					sizeof(mapheaderinfo[num-1]->muspostbossname), va("Level header %d: post-boss music", num));
 			else if (fastcmp(word, "MUSICPOSTBOSSTRACK"))
 				mapheaderinfo[num-1]->muspostbosstrack = ((UINT16)i - 1);
-			else if (fastcmp(word, "MUSICPOSTBOSSPOSITION"))
-				mapheaderinfo[num-1]->muspostbossposition = (UINT8)get_number(word2);
+			else if (fastcmp(word, "MUSICPOSTBOSSPOS"))
+				mapheaderinfo[num-1]->muspostbosspos = (UINT8)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);

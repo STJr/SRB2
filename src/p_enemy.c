@@ -3538,7 +3538,7 @@ void A_BossDeath(mobj_t *mo)
 			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
 			mapmusname[6] = 0;
 			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
-			mapmusposition = mapheaderinfo[gamemap-1]->muspostbossposition;
+			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
 			S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2), 0);
 		}
 	}

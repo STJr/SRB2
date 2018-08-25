@@ -1764,8 +1764,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushstring(L, header->muspostbossname);
 	else if (fastcmp(field,"muspostbosstrack"))
 		lua_pushinteger(L, header->muspostbosstrack);
-	else if (fastcmp(field,"muspostbossposition"))
-		lua_pushinteger(L, header->muspostbossposition);
+	else if (fastcmp(field,"muspostbosspos"))
+		lua_pushinteger(L, header->muspostbosspos);
 	else if (fastcmp(field,"forcecharacter"))
 		lua_pushstring(L, header->forcecharacter);
 	else if (fastcmp(field,"weather"))

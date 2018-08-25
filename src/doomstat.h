@@ -262,7 +262,7 @@ typedef struct
 	// Music stuff.
 	char muspostbossname[7];    ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
-	UINT32 muspostbossposition; ///< Post-bossdeath position
+	UINT32 muspostbosspos; ///< Post-bossdeath position
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
