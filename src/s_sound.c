@@ -1562,10 +1562,6 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 #endif
 
 	newmusic[6] = 0;
-	int i;
-	for (i = 0; newmusic[i]; i++) {
-		newmusic[i] = tolower(newmusic[i]);
-	}
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
