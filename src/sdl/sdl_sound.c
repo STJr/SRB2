@@ -32,7 +32,7 @@
 #endif
 
 #ifdef HAVE_MIXER
-#include <SDL2/SDL_mixer_ext.h>
+#include <SDL_mixer.h>
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
 #define SDL_MIXER_COMPILEDVERSION \

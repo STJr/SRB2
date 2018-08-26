@@ -20,7 +20,11 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#include "SDL2/SDL_mixer_ext.h"
+#ifdef _WIN32
+#include "SDL_mixer_ext.h"
+#else
+#include "SDL_mixer.h"
+#endif
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
