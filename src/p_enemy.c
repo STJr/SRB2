@@ -3534,6 +3534,7 @@ void A_BossDeath(mobj_t *mo)
 		{
 			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
 			// So just park ourselves in the mapmus variables.
+			boolean changed = (boolean)strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
 			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
 			mapmusname[6] = 0;
 			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
@@ -3541,7 +3542,7 @@ void A_BossDeath(mobj_t *mo)
 
 			// don't change if we're in another tune
 			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
-			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			if (!changed)
 				S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2), 0);
 		}
 	}
