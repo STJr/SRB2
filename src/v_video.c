@@ -470,7 +470,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			{
 				// same thing here
 				if ((scrn & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
-					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy)) * vid.width;
+					y += (vid.height/2 - (BASEVIDHEIGHT/2 * dupy));
 				else if (scrn & V_SNAPTOBOTTOM)
 					y += (vid.height - (BASEVIDHEIGHT * dupy));
 				else if (!(scrn & V_SNAPTOTOP))
