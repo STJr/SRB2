@@ -3541,7 +3541,7 @@ void A_BossDeath(mobj_t *mo)
 
 			// don't change if we're in another tune
 			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
-			if (!strncmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
 				S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2), 0);
 		}
 	}
