@@ -9350,7 +9350,7 @@ static void M_SoundMenu(INT32 choice)
 {
 	(void)choice;
 
-	OP_SoundOptionsMenu[6].status = ((nosound || sound_disabled) ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
+	OP_SoundOptionsMenu[6].status = (sound_disabled ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
 	M_SetupNextMenu(&OP_SoundOptionsDef);
 }
 
@@ -9363,25 +9363,25 @@ void M_DrawSoundMenu(void)
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[0].alphaKey,
-		(nosound ? V_REDMAP : V_YELLOWMAP),
-		((nosound || sound_disabled) ? offstring : onstring));
+		(sound_disabled ? V_REDMAP : V_YELLOWMAP),
+		(sound_disabled ? offstring : onstring));
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[2].alphaKey,
-		(nodigimusic ? V_REDMAP : V_YELLOWMAP),
-		((nodigimusic || digital_disabled) ? offstring : onstring));
+		(digital_disabled ? V_REDMAP : V_YELLOWMAP),
+		(digital_disabled ? offstring : onstring));
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[4].alphaKey,
-		(nomidimusic ? V_REDMAP : V_YELLOWMAP),
-		((nomidimusic || music_disabled) ? offstring : onstring));
+		(midi_disabled ? V_REDMAP : V_YELLOWMAP),
+		(midi_disabled ? offstring : onstring));
 
 	if (itemOn == 0)
-		lengthstring = ((nosound || sound_disabled) ? 3 : 2);
+		lengthstring = (sound_disabled ? 3 : 2);
 	else if (itemOn == 2)
-		lengthstring = ((nodigimusic || digital_disabled) ? 3 : 2);
+		lengthstring = (digital_disabled ? 3 : 2);
 	else if (itemOn == 4)
-		lengthstring = ((nomidimusic || music_disabled) ? 3 : 2);
+		lengthstring = (midi_disabled ? 3 : 2);
 	else
 		return;
 
@@ -9416,12 +9416,12 @@ static void M_ToggleSFX(INT32 choice)
 			break;
 	}
 
-	if (nosound)
+	if (sound_disabled)
 	{
-		nosound = false;
+		sound_disabled = false;
 		I_StartupSound();
-		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		if (sound_disabled) return;
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
 		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
@@ -9469,12 +9469,11 @@ static void M_ToggleDigital(INT32 choice)
 			break;
 	}
 
-	if (nodigimusic)
+	if (digital_disabled)
 	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		digital_disabled = false;
+		I_InitMusic();
+		if (digital_disabled) return;
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -9484,21 +9483,27 @@ static void M_ToggleDigital(INT32 choice)
 	}
 	else
 	{
-		if (digital_disabled)
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
 		{
-			digital_disabled = false;
-			if (Playing())
-				P_RestoreMusic(&players[consoleplayer]);
+			if (midi_disabled)
+				S_StopMusic();
 			else
-				S_ChangeMusicInternal("_clear", false);
-			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -9516,6 +9521,12 @@ static void M_ToggleMIDI(INT32 choice)
 			itemOn--;
 			return;
 
+		case KEY_LEFTARROW:
+		case KEY_RIGHTARROW:
+			if (S_MusicType() != MU_MID && S_MusicType() != MU_NONE)
+				S_StartSound(NULL, sfx_menu1);
+			break;
+
 		case KEY_ESCAPE:
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
@@ -9526,12 +9537,11 @@ static void M_ToggleMIDI(INT32 choice)
 			break;
 	}
 
-	if (nomidimusic)
+	if (midi_disabled)
 	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		midi_disabled = false;
+		I_InitMusic();
+		if (midi_disabled) return;
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
@@ -9540,21 +9550,27 @@ static void M_ToggleMIDI(INT32 choice)
 	}
 	else
 	{
-		if (music_disabled)
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
 		{
-			music_disabled = false;
-			if (Playing())
-				P_RestoreMusic(&players[consoleplayer]);
+			if (digital_disabled)
+				S_StopMusic();
 			else
-				S_ChangeMusicInternal("_clear", false);
-			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 

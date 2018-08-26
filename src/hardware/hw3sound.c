@@ -361,7 +361,7 @@ INT32 HW3S_I_StartSound(const void *origin_p, source3D_data_t *source_parm, chan
 
 	if (splitscreen) listenmobj2 = players[secondarydisplayplayer].mo;
 
-	if (nosound)
+	if (sound_disabled)
 		return -1;
 
 	sfx = &S_sfx[sfx_id];

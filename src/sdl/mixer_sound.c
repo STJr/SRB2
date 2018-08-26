@@ -62,9 +62,8 @@
 
 UINT8 sound_started = false;
 
-static boolean midimode;
 static Mix_Music *music;
-static UINT8 music_volume, midi_volume, sfx_volume;
+static UINT8 music_volume, sfx_volume;
 static float loop_point;
 static boolean songpaused;
 
@@ -72,6 +71,10 @@ static boolean songpaused;
 static Music_Emu *gme;
 static INT32 current_track;
 #endif
+
+/// ------------------------
+/// Audio System
+/// ------------------------
 
 void I_StartupSound(void)
 {
@@ -87,9 +90,8 @@ void I_StartupSound(void)
 		return;
 	}
 
-	midimode = false;
 	music = NULL;
-	music_volume = midi_volume = sfx_volume = 0;
+	music_volume = sfx_volume = 0;
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
@@ -129,6 +131,10 @@ void I_ShutdownSound(void)
 FUNCMATH void I_UpdateSound(void)
 {
 }
+
+/// ------------------------
+/// SFX
+/// ------------------------
 
 // this is as fast as I can possibly make it.
 // sorry. more asm needed.
@@ -432,11 +438,10 @@ void I_SetSfxVolume(UINT8 volume)
 	sfx_volume = volume;
 }
 
-//
-// Music
-//
+/// ------------------------
+/// Music Hooks
+/// ------------------------
 
-// Music hooks
 static void music_loop(void)
 {
 	Mix_PlayMusic(music, 0);
@@ -464,35 +469,12 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 }
 #endif
 
+
+/// ------------------------
+/// Music System
+/// ------------------------
+
 FUNCMATH void I_InitMusic(void)
-{
-}
-
-void I_ShutdownMusic(void)
-{
-	I_ShutdownDigMusic();
-	I_ShutdownMIDIMusic();
-}
-
-void I_PauseSong(INT32 handle)
-{
-	(void)handle;
-	Mix_PauseMusic();
-	songpaused = true;
-}
-
-void I_ResumeSong(INT32 handle)
-{
-	(void)handle;
-	Mix_ResumeMusic();
-	songpaused = false;
-}
-
-//
-// Digital Music
-//
-
-void I_InitDigMusic(void)
 {
 #ifdef HAVE_LIBGME
 	gme = NULL;
@@ -500,10 +482,8 @@ void I_InitDigMusic(void)
 #endif
 }
 
-void I_ShutdownDigMusic(void)
+void I_ShutdownMusic(void)
 {
-	if (midimode)
-		return;
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -519,23 +499,76 @@ void I_ShutdownDigMusic(void)
 	music = NULL;
 }
 
-boolean I_StartDigSong(const char *musicname, boolean looping)
-{
-	char *data;
-	size_t len;
-	lumpnum_t lumpnum = W_CheckNumForName(va("O_%s",musicname));
+/// ------------------------
+/// Music Properties
+/// ------------------------
 
+musictype_t I_SongType(void)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+		return MU_GME;
+	else
+#endif
+	if (!music)
+		return MU_NONE;
+	else if (Mix_GetMusicType(music) == MUS_MID)
+		return MU_MID;
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+		return MU_MOD;
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+		return MU_MP3;
+	else
+		return (musictype_t)Mix_GetMusicType(music);
+}
+
+boolean I_SongPlaying(void)
+{
+	return (
+#ifdef HAVE_LIBGME
+		(I_SongType() == MU_GME && gme) ||
+#endif
+		(boolean)music
+	);
+}
+
+boolean I_SongPaused(void)
+{
+	return songpaused;
+}
+
+/// ------------------------
+/// Music Effects
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
+{
+	if (speed > 250.0f)
+		speed = 250.0f; //limit speed up to 250x
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		SDL_LockAudio();
+		gme_set_tempo(gme, speed);
+		SDL_UnlockAudio();
+		return true;
+	}
+#else
+	(void)speed;
+#endif
+	return false;
+}
+
+/// ------------------------
+/// Music Playback
+/// ------------------------
+
+boolean I_LoadSong(char *data, size_t len)
+{
 	I_Assert(!music);
 #ifdef HAVE_LIBGME
 	I_Assert(!gme);
 #endif
-
-	if (lumpnum == LUMPERROR)
-		return false;
-	midimode = false;
-
-	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
-	len = W_LumpLength(lumpnum);
 
 #ifdef HAVE_LIBGME
 	if ((UINT8)data[0] == 0x1F
@@ -627,10 +660,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	else if (!gme_open_data(data, len, &gme, 44100))
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
-		gme_start_track(gme, 0);
-		current_track = 0;
 		gme_set_equalizer(gme, &eq);
-		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
 #endif
@@ -639,48 +669,73 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
-		return true;
+		return false;
 	}
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
-	if (looping)
+
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	char *p = data;
+	while ((UINT32)(p - data) < len)
 	{
-		const char *key1 = "LOOP";
-		const char *key2 = "POINT=";
-		const char *key3 = "MS=";
-		const size_t key1len = strlen(key1);
-		const size_t key2len = strlen(key2);
-		const size_t key3len = strlen(key3);
-		char *p = data;
-		while ((UINT32)(p - data) < len)
+		if (strncmp(p++, key1, key1len))
+			continue;
+		p += key1len-1; // skip OOP (the L was skipped in strncmp)
+		if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
 		{
-			if (strncmp(p++, key1, key1len))
-				continue;
-			p += key1len-1; // skip OOP (the L was skipped in strncmp)
-			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
-			{
-				p += key2len; // skip POINT=
-				loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
-				// because SDL_Mixer is USELESS and can't even tell us
-				// something simple like the frequency of the streaming music,
-				// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
-				// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
-			}
-			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
-			{
-				p += key3len; // skip MS=
-				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
-				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
-			}
-			// Neither?! Continue searching.
+			p += key2len; // skip POINT=
+			loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
+			// because SDL_Mixer is USELESS and can't even tell us
+			// something simple like the frequency of the streaming music,
+			// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
+			// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
 		}
+		else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
+		{
+			p += key3len; // skip MS=
+			loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
+			// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
+		}
+		// Neither?! Continue searching.
 	}
+
+	return true;
+}
+
+void I_UnloadSong(void)
+{
+	// \todo unhook looper
+	//var_cleanup();
+	//Mix_FreeMusic(music);
+	//music = NULL;
+	I_StopSong();
+}
+
+boolean I_PlaySong(boolean looping)
+{
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_start_track(gme, 0);
+		current_track = 0;
+		Mix_HookMusic(mix_gme, gme);
+		return true;
+	}
+	else
+#endif
+	if (!music)
+		return false;
 
 	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
-		return true;
+		return false;
 	}
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 
@@ -692,10 +747,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	return true;
 }
 
-void I_StopDigSong(void)
+void I_StopSong(void)
 {
-	if (midimode)
-		return;
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -713,30 +766,33 @@ void I_StopDigSong(void)
 	music = NULL;
 }
 
-void I_SetDigMusicVolume(UINT8 volume)
+void I_PauseSong(void)
 {
-	music_volume = volume;
-	if (midimode || !music)
-		return;
-	Mix_VolumeMusic((UINT32)volume*128/31);
+	Mix_PauseMusic();
+	songpaused = true;
 }
 
-boolean I_SetSongSpeed(float speed)
+void I_ResumeSong(void)
 {
-	if (speed > 250.0f)
-		speed = 250.0f; //limit speed up to 250x
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		SDL_LockAudio();
-		gme_set_tempo(gme, speed);
-		SDL_UnlockAudio();
-		return true;
-	}
-#else
-	(void)speed;
+	Mix_ResumeMusic();
+	songpaused = false;
+}
+
+void I_SetMusicVolume(UINT8 volume)
+{
+	if (!I_SongPlaying())
+		return;
+
+#ifdef _WIN32
+	if (I_SongType() == MU_MID)
+		// HACK: Until we stop using native MIDI,
+		// disable volume changes
+		music_volume = 31;
+	else
 #endif
-	return false;
+		music_volume = volume;
+
+	Mix_VolumeMusic((UINT32)music_volume*128/31);
 }
 
 boolean I_SetSongTrack(int track)
@@ -768,84 +824,6 @@ boolean I_SetSongTrack(int track)
 #endif
 	(void)track;
 	return false;
-}
-
-//
-// MIDI Music
-//
-
-FUNCMATH void I_InitMIDIMusic(void)
-{
-
-}
-
-void I_ShutdownMIDIMusic(void)
-{
-	if (!midimode || !music)
-		return;
-	Mix_FreeMusic(music);
-	music = NULL;
-}
-
-void I_SetMIDIMusicVolume(UINT8 volume)
-{
-	// HACK: Until we stop using native MIDI,
-	// disable volume changes
-	(void)volume;
-	midi_volume = 31;
-	//midi_volume = volume;
-
-	if (!midimode || !music)
-		return;
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
-{
-	Mix_SetMidiPlayer(MIDI_OPNMIDI);
-
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
-	if (!music)
-	{
-		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
-		return -1;
-	}
-	return 1337;
-}
-
-boolean I_PlaySong(INT32 handle, boolean looping)
-{
-	(void)handle;
-
-	midimode = true;
-
-	if (Mix_PlayMusic(music, looping ? -1 : 0) == -1)
-	{
-		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
-		return false;
-	}
-
-	Mix_VolumeMusic((UINT32)midi_volume*128/31);
-	return true;
-}
-
-void I_StopSong(INT32 handle)
-{
-	if (!midimode || !music)
-		return;
-
-	(void)handle;
-	Mix_HaltMusic();
-}
-
-void I_UnRegisterSong(INT32 handle)
-{
-	if (!midimode || !music)
-		return;
-
-	(void)handle;
-	Mix_FreeMusic(music);
-	music = NULL;
 }
 
 #endif
