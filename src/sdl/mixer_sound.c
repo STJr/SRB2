@@ -100,6 +100,9 @@ void I_StartupSound(void)
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
+#if HAVE_MIXERX
+	Mix_SetMidiPlayer(MIDI_OPNMIDI);
+#endif
 
 	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048) < 0)
 	{
