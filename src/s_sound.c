@@ -1562,10 +1562,6 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 #endif
 
 	newmusic[6] = 0;
-	int i;
-	for (i = 0; newmusic[i]; i++) {
-		newmusic[i] = tolower(newmusic[i]);
-	}
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
@@ -1584,7 +1580,7 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strncmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
 	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
