@@ -1494,7 +1494,7 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 		return;
 	}
 
-	if (strnicmp(music_name, newmusic, 6))
+	if (strnicmp(music_name, mmusic, 6))
 	{
 		S_StopMusic(); // shutdown old music
 
