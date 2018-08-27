@@ -328,6 +328,9 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef;
+#endif
 static void M_ToggleSFX(INT32 choice);
 static void M_ToggleDigital(INT32 choice);
 static void M_ToggleMIDI(INT32 choice);
@@ -1320,13 +1323,20 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
 
 #ifdef HAVE_MIXERX
-	{IT_HEADER, NULL, "Advanced", NULL, 118},
-
-	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 130},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 140},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 168}
+	{IT_STRING 	  | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 120},
 #endif
 };
+
+#ifdef HAVE_MIXERX
+static menuitem_t OP_SoundAdvancedMenu[] =
+{
+	{IT_HEADER, NULL, "MIDI", NULL, 10},
+
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 32},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 60}
+};
+#endif
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
@@ -1842,6 +1852,9 @@ menu_t OP_SoundOptionsDef =
 	0,
 	NULL
 };
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
+#endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
