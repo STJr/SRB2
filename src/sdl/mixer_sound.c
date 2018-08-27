@@ -77,43 +77,35 @@ static INT32 current_track;
 #endif
 
 #ifdef HAVE_MIXERX
-static void change_midiplayer(void)
+static void Midiplayer_Onchange(void)
 {
+	boolean restart = false;
+
 	if (I_SongType() != MU_MID_EX)
 		return;
 
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 	{
 		Mix_SetMidiPlayer(cv_midiplayer.value);
-		S_Init();
+		restart = true;
 	}
-}
-
-static void change_midisoundfontpath(void)
-{
-	if (I_SongType() != MU_MID_EX)
-		return;
 
 	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		Mix_SetSoundFonts(cv_midisoundfontpath.string);
-		S_Init();
+		restart = true;
 	}
-}
-
-static void change_miditimiditypath(void)
-{
-	if (I_SongType() != MU_MID_EX)
-		return;
 
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
-	S_Init();
+
+	if (restart)
+		S_Start();
 }
 
 static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
-consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_SAVE, midiplayer_cons_t, change_midiplayer, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_CALL|CV_SAVE, NULL, change_midisoundfontpath, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_CALL|CV_SAVE, NULL, change_miditimiditypath, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 /// ------------------------
