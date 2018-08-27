@@ -562,33 +562,6 @@ void I_ShutdownMusic(void)
 	music = NULL;
 }
 
-#ifdef HAVE_MIXERX
-UINT8 I_SetMidiPlayer(int player)
-{
-	return Mix_SetMidiPlayer(player);
-}
-
-UINT8 I_GetMidiPlayer(void)
-{
-	return Mix_GetMidiPlayer();
-}
-
-boolean I_SetMidiSoundfontPath(const char *path)
-{
-	return Mix_SetSoundFonts(path);
-}
-
-const char *I_GetMidiSoundfontPath(void)
-{
-	return Mix_GetSoundFonts();
-}
-
-void I_SetMidiTimidityPath(const char *path)
-{
-	Mix_Timidity_addToPathList(path);
-}
-#endif
-
 /// ------------------------
 /// Music Properties
 /// ------------------------
