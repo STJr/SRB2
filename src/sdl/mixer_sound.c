@@ -152,9 +152,6 @@ void I_StartupSound(void)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
 #if HAVE_MIXERX
-	CV_RegisterVar(&cv_midiplayer);
-	CV_RegisterVar(&cv_midisoundfontpath);
-	CV_RegisterVar(&cv_miditimiditypath);
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
