@@ -81,7 +81,7 @@ static void Midiplayer_Onchange(void)
 {
 	boolean restart = false;
 
-	if (I_SongType() != MU_MID_EX)
+	if (I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
 		return;
 
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
@@ -102,9 +102,26 @@ static void Midiplayer_Onchange(void)
 		S_Start();
 }
 
+static void MidiSoundfontPath_Onchange(void)
+{
+	if (I_SongType() != MU_MID_EX && Mix_GetMidiPlayer() != MIDI_Fluidsynth)
+		return;
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		// check if file exists; menu calls this method at every keystroke
+		SDL_RWops *rw = SDL_RWFromFile(cv_midisoundfontpath.string, "r");
+		if (rw != NULL) {
+			SDL_RWclose(rw);
+			Mix_SetSoundFonts(cv_midisoundfontpath.string);
+			S_Start();
+		}
+	}
+}
+
 static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
 consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
