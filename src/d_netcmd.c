@@ -688,6 +688,9 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
+	CV_RegisterVar(&cv_midiplayer);
+	CV_RegisterVar(&cv_midisoundfontpath);
+	CV_RegisterVar(&cv_miditimiditypath);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_globalgamma);
