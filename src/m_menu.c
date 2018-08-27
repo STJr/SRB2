@@ -328,6 +328,7 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
+
 static void M_ToggleSFX(INT32 choice);
 static void M_ToggleDigital(INT32 choice);
 static void M_ToggleMIDI(INT32 choice);
@@ -1308,23 +1309,25 @@ static menuitem_t OP_OpenGLColorMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_STRING | IT_KEYHANDLER,  NULL,  "Sound Effects", M_ToggleSFX, 10},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 20},
+	{IT_HEADER, NULL, "General", NULL, 0},
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Sound Effects", M_ToggleSFX, 6},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 11},
 
-	{IT_STRING | IT_KEYHANDLER,  NULL,  "Digital Music", M_ToggleDigital, 40},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  50},
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Digital Music", M_ToggleDigital, 21},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  26},
 
-	{IT_STRING | IT_KEYHANDLER,  NULL,  "MIDI Music", M_ToggleMIDI, 70},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "MIDI Music", M_ToggleMIDI, 36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
 
-	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 51},
 
 #ifdef HAVE_MIXERX
-	{IT_HEADER, NULL, "Advanced", NULL, 118},
+	{IT_HEADER, NULL, "Advanced", NULL, 60},
 
-	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 130},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 140},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 168}
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 66},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 71},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 86},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 100}
 #endif
 };
 
@@ -9367,7 +9370,7 @@ void M_DrawSoundMenu(void)
 	const char* onstring = "ON";
 	const char* offstring = "OFF";
 	INT32 lengthstring;
-	M_DrawGenericMenu();
+	M_DrawGenericScrollMenu();
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[0].alphaKey,
