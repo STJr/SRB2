@@ -1736,6 +1736,7 @@ void I_StopSong(void)
 		Mix_FreeMusic(music[1]);
 	music[1] = NULL;
 	LoadSong(NULL, 0, 1);
+#endif
 }
 
 static void I_PauseGME(void)
