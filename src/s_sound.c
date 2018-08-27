@@ -1587,6 +1587,7 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	switch(I_SongType())
 	{
 		case MU_MID:
+		case MU_MID_EX:
 		//case MU_MOD:
 		//case MU_GME:
 			I_SetMusicVolume(seqvolume&31);

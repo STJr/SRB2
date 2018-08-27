@@ -20,7 +20,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#ifdef _WIN32
+#ifdef HAVE_MIXERX
 #include "SDL_mixer_ext.h"
 #else
 #include "SDL_mixer.h"
@@ -76,13 +76,55 @@ static Music_Emu *gme;
 static INT32 current_track;
 #endif
 
+#ifdef HAVE_MIXERX
+static void change_midiplayer(void)
+{
+	if (I_SongType() != MU_MID_EX)
+		return;
+
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+	{
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+		S_Init();
+	}
+}
+
+static void change_midisoundfontpath(void)
+{
+	if (I_SongType() != MU_MID_EX)
+		return;
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+		S_Init();
+	}
+}
+
+static void change_miditimiditypath(void)
+{
+	if (I_SongType() != MU_MID_EX)
+		return;
+
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+	S_Init();
+}
+
+static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_SAVE, midiplayer_cons_t, change_midiplayer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_CALL|CV_SAVE, NULL, change_midisoundfontpath, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_CALL|CV_SAVE, NULL, change_miditimiditypath, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
 /// ------------------------
 /// Audio System
 /// ------------------------
 
 void I_StartupSound(void)
 {
-	I_Assert(!sound_started);
+	//I_Assert(!sound_started);
+	if (sound_started)
+		return;
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
@@ -101,7 +143,12 @@ void I_StartupSound(void)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
 #if HAVE_MIXERX
-	Mix_SetMidiPlayer(MIDI_OPNMIDI);
+	CV_RegisterVar(&cv_midiplayer);
+	CV_RegisterVar(&cv_midisoundfontpath);
+	CV_RegisterVar(&cv_miditimiditypath);
+	Mix_SetMidiPlayer(cv_midiplayer.value);
+	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
 #endif
 
 	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048) < 0)
@@ -506,6 +553,33 @@ void I_ShutdownMusic(void)
 	music = NULL;
 }
 
+#ifdef HAVE_MIXERX
+UINT8 I_SetMidiPlayer(int player)
+{
+	return Mix_SetMidiPlayer(player);
+}
+
+UINT8 I_GetMidiPlayer(void)
+{
+	return Mix_GetMidiPlayer();
+}
+
+boolean I_SetMidiSoundfontPath(const char *path)
+{
+	return Mix_SetSoundFonts(path);
+}
+
+const char *I_GetMidiSoundfontPath(void)
+{
+	return Mix_GetSoundFonts();
+}
+
+void I_SetMidiTimidityPath(const char *path)
+{
+	Mix_Timidity_addToPathList(path);
+}
+#endif
+
 /// ------------------------
 /// Music Properties
 /// ------------------------
@@ -520,7 +594,14 @@ musictype_t I_SongType(void)
 	if (!music)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
+	{
+#ifdef HAVE_MIXERX
+		if (Mix_GetMidiPlayer() != MIDI_Native)
+			return MU_MID_EX;
+		else
+#endif
 		return MU_MID;
+	}
 	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
 		return MU_MOD;
 	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
@@ -672,6 +753,14 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_MIXERX
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
+
 	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
@@ -748,8 +837,6 @@ boolean I_PlaySong(boolean looping)
 
 	if (loop_point != 0.0f)
 		Mix_HookMusicFinished(music_loop);
-
-	CONS_Printf("X Song length %.4f\n", Mix_GetMusicTotalTime(music));
 
 	return true;
 }

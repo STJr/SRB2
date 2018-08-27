@@ -27,6 +27,12 @@ extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
 
+#ifdef HAVE_MIXERX
+extern consvar_t cv_midiplayer;
+extern consvar_t cv_midisoundfontpath;
+extern consvar_t cv_miditimiditypath;
+#endif
+
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;
 #endif

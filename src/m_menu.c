@@ -1318,6 +1318,14 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
 
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
+
+#ifdef HAVE_MIXERX
+	{IT_HEADER, NULL, "Advanced", NULL, 118},
+
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 130},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 140},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 168}
+#endif
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -9484,7 +9492,7 @@ static void M_ToggleDigital(INT32 choice)
 	else
 	{
 		digital_disabled = true;
-		if (S_MusicType() != MU_MID)
+		if (S_MusicType() != MU_MID && S_MusicType() != MU_MID_EX)
 		{
 			if (midi_disabled)
 				S_StopMusic();
@@ -9523,7 +9531,7 @@ static void M_ToggleMIDI(INT32 choice)
 
 		case KEY_LEFTARROW:
 		case KEY_RIGHTARROW:
-			if (S_MusicType() != MU_MID && S_MusicType() != MU_NONE)
+			if (S_MusicType() != MU_MID && S_MusicType() != MU_MID_EX && S_MusicType() != MU_NONE)
 				S_StartSound(NULL, sfx_menu1);
 			break;
 
@@ -9551,7 +9559,7 @@ static void M_ToggleMIDI(INT32 choice)
 	else
 	{
 		midi_disabled = true;
-		if (S_MusicType() == MU_MID)
+		if (S_MusicType() == MU_MID || S_MusicType() == MU_MID_EX)
 		{
 			if (digital_disabled)
 				S_StopMusic();
