@@ -20,7 +20,11 @@
 #pragma warning(default : 4214 4244)
 #endif
 
+#ifdef HAVE_MIXERX
+#include "SDL_mixer_ext.h"
+#else
 #include "SDL_mixer.h"
+#endif
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
@@ -83,6 +87,55 @@ static Music_Emu *gme;
 static INT32 current_track;
 #endif
 
+#ifdef HAVE_MIXERX
+static void Midiplayer_Onchange(void)
+{
+	boolean restart = false;
+
+	if (I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
+		return;
+
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+	{
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+		restart = true;
+	}
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+		restart = true;
+	}
+
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+
+	if (restart)
+		S_Start();
+}
+
+static void MidiSoundfontPath_Onchange(void)
+{
+	if (I_SongType() != MU_MID_EX && Mix_GetMidiPlayer() != MIDI_Fluidsynth)
+		return;
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		// check if file exists; menu calls this method at every keystroke
+		SDL_RWops *rw = SDL_RWFromFile(cv_midisoundfontpath.string, "r");
+		if (rw != NULL) {
+			SDL_RWclose(rw);
+			Mix_SetSoundFonts(cv_midisoundfontpath.string);
+			S_Start();
+		}
+	}
+}
+
+static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
 static void var_cleanup(void)
 {
 	loop_point = song_length =\
@@ -96,14 +149,15 @@ static void var_cleanup(void)
 
 	internal_volume = 100;
 }
-
 /// ------------------------
 /// Audio System
 /// ------------------------
 
 void I_StartupSound(void)
 {
-	I_Assert(!sound_started);
+	//I_Assert(!sound_started);
+	if (sound_started)
+		return;
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
@@ -122,6 +176,14 @@ void I_StartupSound(void)
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
+#endif
+#if HAVE_MIXERX
+	CV_RegisterVar(&cv_midiplayer);
+	CV_RegisterVar(&cv_midisoundfontpath);
+	CV_RegisterVar(&cv_miditimiditypath);
+	Mix_SetMidiPlayer(cv_midiplayer.value);
+	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
 #endif
 
 	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048) < 0)
@@ -623,7 +685,14 @@ musictype_t I_SongType(void)
 	if (!music)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
+	{
+#ifdef HAVE_MIXERX
+		if (Mix_GetMidiPlayer() != MIDI_Native)
+			return MU_MID_EX;
+		else
+#endif
 		return MU_MID;
+	}
 	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
 		return MU_MOD;
 	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
@@ -963,6 +1032,14 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_MIXERX
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
+
 	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
@@ -1114,7 +1191,7 @@ boolean I_PlaySong(boolean looping)
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
 	}
-	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID) && Mix_PlayMusic(music, -1) == -1) // if MOD, loop forever
+	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID || I_SongType() == MU_MID_EX) && Mix_PlayMusic(music, -1) == -1) // if MOD, loop forever
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
@@ -1124,11 +1201,14 @@ boolean I_PlaySong(boolean looping)
 
 	I_SetMusicVolume(music_volume);
 
-	if (I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
-	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
+
+	if (loop_point != 0.0f)
+		Mix_HookMusicFinished(music_loop);
 
 	return true;
 }
