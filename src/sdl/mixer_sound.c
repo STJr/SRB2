@@ -1047,11 +1047,15 @@ boolean I_LoadSong(char *data, size_t len)
 		return false;
 	}
 
+#ifdef _WIN32
+#ifndef HAVE_MIXERX
 	if (I_SongType() == MU_MP3)
 	{
 		CONS_Debug(DBG_BASIC, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
 		CONS_Debug(DBG_DETAILED, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
 	}
+#endif
+#endif
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
