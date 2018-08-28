@@ -312,7 +312,7 @@ static void CON_SetupColormaps(void)
 	colset(lgreenmap,   97,  98, 106);
 	colset(bluemap,    146, 147, 155);
 	colset(redmap,     210,  32,  39);
-	colset(graymap,      8,  10,  15);
+	colset(graymap,      6,  8,   14);
 	colset(orangemap,   51,  52,  57);
 	colset(skymap,     129, 130, 133);
 	colset(purplemap,  160, 161, 163);

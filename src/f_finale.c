@@ -997,7 +997,6 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
-	"Colette \"fickle\" Bordelon",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
@@ -1355,7 +1354,7 @@ void F_GameEvaluationDrawer(void)
 				++timesBeatenUltimate;
 
 			if (M_UpdateUnlockablesAndExtraEmblems())
-				S_StartSound(NULL, sfx_ncitem);
+				S_StartSound(NULL, sfx_s3k68);
 
 			G_SaveGameData();
 		}

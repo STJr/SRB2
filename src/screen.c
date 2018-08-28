@@ -450,8 +450,9 @@ void SCR_ClosedCaptions(void)
 		if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)
-		|| (cv_powerupdisplay.value == 2)
-		|| (cv_powerupdisplay.value == 1 && !splitscreen && !camera.chase))
+		|| (!(maptol & TOL_NIGHTS)
+		&& ((cv_powerupdisplay.value == 2)
+		|| (cv_powerupdisplay.value == 1 && !splitscreen && !camera.chase))))
 			basey -= 16;
 	}
 

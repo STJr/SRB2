@@ -69,6 +69,7 @@ patch_t *nightsnum[10]; // 0-9
 // Level title and credits fonts
 patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
+patch_t *ttlnum[20]; // act numbers (0-19)
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
@@ -89,7 +90,7 @@ patch_t *tallinfin;
 //              coop hud
 //-------------------------------------------
 
-patch_t *emeraldpics[3][7]; // 0 = normal, 1 = tiny, 2 = coinbox
+patch_t *emeraldpics[3][8]; // 0 = normal, 1 = tiny, 2 = coinbox
 static patch_t *emblemicon;
 patch_t *tokenicon;
 static patch_t *exiticon;
@@ -237,6 +238,13 @@ void HU_LoadGraphics(void)
 	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
 	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
 
+	// cache act numbers for level titles
+	for (i = 0; i < 20; i++)
+	{
+		sprintf(buffer, "TTL%.2d", i);
+		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+	}
+
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
 	for (i = 0; i < HU_CROSSHAIRS; i++)
@@ -256,6 +264,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[0][4] = W_CachePatchName("CHAOS5", PU_HUDGFX);
 	emeraldpics[0][5] = W_CachePatchName("CHAOS6", PU_HUDGFX);
 	emeraldpics[0][6] = W_CachePatchName("CHAOS7", PU_HUDGFX);
+	emeraldpics[0][7] = W_CachePatchName("CHAOS8", PU_HUDGFX);
 
 	emeraldpics[1][0] = W_CachePatchName("TEMER1", PU_HUDGFX);
 	emeraldpics[1][1] = W_CachePatchName("TEMER2", PU_HUDGFX);
@@ -264,6 +273,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[1][4] = W_CachePatchName("TEMER5", PU_HUDGFX);
 	emeraldpics[1][5] = W_CachePatchName("TEMER6", PU_HUDGFX);
 	emeraldpics[1][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
+	//emeraldpics[1][7] = W_CachePatchName("TEMER8", PU_HUDGFX); -- unused
 
 	emeraldpics[2][0] = W_CachePatchName("EMBOX1", PU_HUDGFX);
 	emeraldpics[2][1] = W_CachePatchName("EMBOX2", PU_HUDGFX);
@@ -272,6 +282,7 @@ void HU_LoadGraphics(void)
 	emeraldpics[2][4] = W_CachePatchName("EMBOX5", PU_HUDGFX);
 	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
 	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
+	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
 }
 
 // Initialise Heads up

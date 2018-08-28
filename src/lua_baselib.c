@@ -1356,11 +1356,12 @@ static int lib_pRadiusAttack(lua_State *L)
 	mobj_t *spot = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	fixed_t damagedist = luaL_checkfixed(L, 3);
+	UINT8 damagetype = luaL_optinteger(L, 4, 0);
 	NOHUD
 	INLEVEL
 	if (!spot || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_RadiusAttack(spot, source, damagedist);
+	P_RadiusAttack(spot, source, damagedist, damagetype);
 	return 0;
 }
 
