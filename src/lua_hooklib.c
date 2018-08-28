@@ -1196,13 +1196,11 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 #ifdef HAVE_LUA_MUSICPLUS
 
 // Hook for music changes
-boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusic, UINT16 *mflags, boolean *looping,
+boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boolean *looping,
 	UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms)
 {
 	hook_p hookp;
 	boolean hooked = false;
-
-	strncpy(newmusic, newname, 7);
 
 	if (!gL || !(hooksAvailable[hook_MusicChange/8] & (1<<(hook_MusicChange%8))))
 		return false;
@@ -1231,7 +1229,7 @@ boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusi
 			if (lua_isboolean(gL, -6) && lua_toboolean(gL, -6))
 				hooked = true;
 			else if (lua_isstring(gL, -6))
-				strncpy(newmusic, lua_tostring(gL, -6), 7);
+				strncpy(newname, lua_tostring(gL, -6), 7);
 			// output 2: mflags override
 			if (lua_isnumber(gL, -5))
 				*mflags = lua_tonumber(gL, -5);
@@ -1252,7 +1250,7 @@ boolean LUAh_MusicChange(const char *oldname, const char *newname, char *newmusi
 		}
 
 	lua_settop(gL, 0);
-	newmusic[6] = 0;
+	newname[6] = 0;
 	return hooked;
 }
 
