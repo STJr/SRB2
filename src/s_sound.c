@@ -1553,14 +1553,11 @@ void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, U
 		return;
 
 	char newmusic[7];
-
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
-	if(LUAh_MusicChange(music_name, mmusic, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
-		return;
-#else
 	strncpy(newmusic, mmusic, 7);
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+		return;
 #endif
-
 	newmusic[6] = 0;
 
 	// No Music (empty string)
