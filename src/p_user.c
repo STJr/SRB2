@@ -387,6 +387,8 @@ boolean P_TransferToNextMare(player_t *player)
 	CONS_Debug(DBG_NIGHTS, "Mare is %d\n", mare);
 
 	player->mare = mare;
+	player->marelap = 0;
+	player->marebonuslap = 0;
 
 	// scan the thinkers
 	// to find the closest axis point
@@ -574,6 +576,8 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->climbing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
+	player->marelap = 0;
+	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
 	P_SetTarget(&player->mo->target, NULL);
@@ -635,7 +639,7 @@ static void P_DeNightserizePlayer(player_t *player)
 // NiGHTS Time!
 void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
-	INT32 oldmare;
+	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot)
@@ -666,7 +670,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
-	player->nightstime = player->startedtime = nighttime*TICRATE;
+	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
@@ -684,6 +688,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 
 	oldmare = player->mare;
+	oldmarelap = player->marelap;
+	oldmarebonuslap = player->marebonuslap;
 
 	if (!P_TransferToNextMare(player))
 	{
@@ -711,6 +717,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].texttimer = (3 * TICRATE) - 10;
 			players[i].textvar = 4; // Score and grades
 			players[i].lastmare = players[i].mare;
+			players[i].lastmarelap = players[i].marelap;
+			players[i].lastmarebonuslap = players[i].marebonuslap;
 			if (G_IsSpecialStage(gamemap))
 			{
 				players[i].finishedspheres = (INT16)total_spheres;
@@ -729,6 +737,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 				G_AddTempNightsRecords(players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
 
 			// transfer scores anyway
+			players[i].totalmarescore += players[i].marescore;
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
@@ -742,19 +751,24 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		// Spheres bonus
 		P_AddPlayerScore(player, (player->spheres) * 50);
 
-		player->lastmare = (UINT8)oldmare;
+		player->lastmare = oldmare;
+		player->lastmarelap = oldmarelap;
+		player->lastmarebonuslap = oldmarebonuslap;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
+		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
 			G_AddTempNightsRecords(player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
+		player->totalmarescore += player->marescore;
 		player->lastmarescore = player->marescore;
 		player->marescore = 0;
 		player->marebegunat = leveltime;
+		player->lapbegunat = leveltime;
 
 		player->spheres = player->rings = 0;
 	}
