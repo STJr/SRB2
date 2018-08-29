@@ -6185,7 +6185,6 @@ static void P_NiGHTSMovement(player_t *player)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
 		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 
-
 	if (player->mo->z < player->mo->floorz)
 		player->mo->z = player->mo->floorz;
 
@@ -9819,7 +9818,19 @@ void P_PlayerThink(player_t *player)
 		P_ResetScore(player);
 	}
 	else
+	{
+		if (player->bumpertime == TICRATE/2 && player->mo->hnext)
+		{
+			// Center player to NiGHTS bumper here because if you try to set player's position in
+			// P_TouchSpecialThing case MT_NIGHTSBUMPER, that position is fudged in the time
+			// between that routine in the previous tic
+			// and reaching here in the current tic
+			P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y
+				, player->mo->hnext->z + FixedMul(player->mo->hnext->height/4, player->mo->hnext->scale));
+			P_SetTarget(&player->mo->hnext, NULL);
+		}
 		P_MovePlayer(player);
+	}
 
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
@@ -9943,7 +9954,8 @@ void P_PlayerThink(player_t *player)
 			|| player->panim == PA_PAIN
 			|| !player->mo->health
 			|| player->climbing
-			|| player->pflags & (PF_SPINNING|PF_SLIDING))
+			|| player->pflags & (PF_SPINNING|PF_SLIDING)
+			|| player->bumpertime)
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
 			else if (currentlyonground || player->powers[pw_tailsfly])
 				player->pflags |= PF_APPLYAUTOBRAKE;
