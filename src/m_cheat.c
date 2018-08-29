@@ -890,7 +890,7 @@ void Command_Setrings_f(void)
 		else
 		{
 			players[consoleplayer].spheres = 0;
-			P_GivePlayerSpheres(&player[consoleplayer], atoi(COM_Argv(1)));
+			P_GivePlayerSpheres(&players[consoleplayer], atoi(COM_Argv(1)));
 			// no totalsphere addition to revert
 		}
 
