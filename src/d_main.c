@@ -283,7 +283,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if ((wipegamestate != -2) // fades to black on its own timing, always
+			if ((wipegamestate != (gamestate_t)-2) // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
 				F_WipeStartScreen();

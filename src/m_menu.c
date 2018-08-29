@@ -4956,9 +4956,6 @@ static void M_DrawAddons(void)
 		return;
 	}
 
-	if (addonsresponselimit)
-		addonsresponselimit--;
-
 	if (Playing())
 		topstr = "\x85""Adding files mid-game may cause problems.";
 	else if (savemoddata)
