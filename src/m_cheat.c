@@ -880,28 +880,19 @@ void Command_Setrings_f(void)
 
 	if (COM_Argc() > 1)
 	{
-		// P_GivePlayerRings does value clamping
-		players[consoleplayer].rings = 0;
-		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
-		if (!G_IsSpecialStage(gamemap) || !(maptol & TOL_NIGHTS))
+		if (!(maptol & TOL_NIGHTS))
+		{
+			// P_GivePlayerRings does value clamping
+			players[consoleplayer].rings = 0;
+			P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
-
-		G_SetGameModified(multiplayer);
-	}
-}
-
-void Command_Setspheres_f(void)
-{
-	REQUIRE_INLEVEL;
-	REQUIRE_SINGLEPLAYER;
-	REQUIRE_NOULTIMATE;
-	REQUIRE_PANDORA;
-
-	if (COM_Argc() > 1)
-	{
-		// P_GivePlayerRings does value clamping
-		players[consoleplayer].spheres = 0;
-		P_GivePlayerSpheres(&players[consoleplayer], atoi(COM_Argv(1)));
+		}
+		else
+		{
+			players[consoleplayer].spheres = 0;
+			P_GivePlayerSpheres(&players[consoleplayer], atoi(COM_Argv(1)));
+			// no totalsphere addition to revert
+		}
 
 		G_SetGameModified(multiplayer);
 	}
@@ -918,7 +909,7 @@ void Command_Setlives_f(void)
 	{
 		SINT8 lives = atoi(COM_Argv(1));
 		if (lives == -1)
-			players[consoleplayer].lives = 0x7f; // infinity!
+			players[consoleplayer].lives = INFLIVES; // infinity!
 		else
 		{
 			// P_GivePlayerLives does value clamping
@@ -1189,11 +1180,52 @@ void OP_NightsObjectplace(player_t *player)
 	// This places a bumper!
 	if (cmd->buttons & BT_TOSSFLAG)
 	{
+		UINT16 vertangle = (UINT16)(player->anotherflyangle % 360);
+		UINT16 newflags, newz;
+
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)mobjinfo[MT_NIGHTSBUMPER].doomednum, false);
+		newz = min((mt->options >> ZSHIFT) - (mobjinfo[MT_NIGHTSBUMPER].height/4), 0);
+			// height offset: from P_TouchSpecialThing case MT_NIGHTSBUMPER
+
+		// clockwise
+		if (vertangle >= 75 && vertangle < 105) // up
+			newflags = 3;
+		else if (vertangle >= 105 && vertangle < 135) // 60 upward tilt
+			newflags = 2;
+		else if (vertangle >= 135 && vertangle < 165) // 30 upward tilt
+			newflags = 1;
+		//else if (vertangle >= 165 && vertangle < 195) // forward, see else case
+		//	newflags = 0;
+		else if (vertangle >= 195 && vertangle < 225) // 30 downward tilt
+			newflags = 11;
+		else if (vertangle >= 225 && vertangle < 255) // 60 downward tilt
+			newflags = 10;
+		else if (vertangle >= 255 && vertangle < 285) // down
+			newflags = 9;
+		else if (vertangle >= 285 && vertangle < 315) // 60 downward tilt backwards
+			newflags = 8;
+		else if (vertangle >= 315 && vertangle < 345) // 30 downward tilt backwards
+			newflags = 7;
+		else if (vertangle >= 345 || vertangle < 15) // backwards
+			newflags = 6;
+		else if (vertangle >= 15 && vertangle < 45) // 30 upward tilt backwards
+			newflags = 5;
+		else if (vertangle >= 45 && vertangle < 75) // 60 upward tilt backwards
+			newflags = 4;
+		else // forward
+			newflags = 0;
+
+		mt->options = (newz << ZSHIFT) | newflags;
+
+		// if NiGHTS is facing backwards, orient the Thing angle forwards so that the sprite angle
+		// displays correctly. Backwards movement via the Thing flags is unaffected.
+		if (vertangle < 90 || vertangle > 270)
+			mt->angle = (mt->angle + 180) % 360;
+
 		P_SpawnMapThing(mt);
 	}
 

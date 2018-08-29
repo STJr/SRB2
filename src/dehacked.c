@@ -1203,6 +1203,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 
+			else if (fastcmp(word, "MAXBONUSLIVES"))
+				mapheaderinfo[num-1]->maxbonuslives = (SINT8)i;
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))
@@ -7611,6 +7613,9 @@ struct {
 	{"WEP_EXPLODE",WEP_EXPLODE},
 	{"WEP_RAIL",WEP_RAIL},
 	{"NUM_WEAPONS",NUM_WEAPONS},
+
+	// Value for infinite lives
+	{"INFLIVES", INFLIVES},
 
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags

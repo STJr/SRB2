@@ -387,6 +387,8 @@ boolean P_TransferToNextMare(player_t *player)
 	CONS_Debug(DBG_NIGHTS, "Mare is %d\n", mare);
 
 	player->mare = mare;
+	player->marelap = 0;
+	player->marebonuslap = 0;
 
 	// scan the thinkers
 	// to find the closest axis point
@@ -574,6 +576,10 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->climbing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
+	player->marelap = 0;
+	player->marebonuslap = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
@@ -633,7 +639,7 @@ static void P_DeNightserizePlayer(player_t *player)
 // NiGHTS Time!
 void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
-	INT32 oldmare;
+	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot)
@@ -648,6 +654,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->speed = 0;
 	player->climbing = 0;
 	player->secondjump = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -662,7 +670,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
 	}
 
-	player->nightstime = player->startedtime = nighttime*TICRATE;
+	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
@@ -680,6 +688,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 
 	oldmare = player->mare;
+	oldmarelap = player->marelap;
+	oldmarebonuslap = player->marebonuslap;
 
 	if (!P_TransferToNextMare(player))
 	{
@@ -707,6 +717,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].texttimer = (3 * TICRATE) - 10;
 			players[i].textvar = 4; // Score and grades
 			players[i].lastmare = players[i].mare;
+			players[i].lastmarelap = players[i].marelap;
+			players[i].lastmarebonuslap = players[i].marebonuslap;
 			if (G_IsSpecialStage(gamemap))
 			{
 				players[i].finishedspheres = (INT16)total_spheres;
@@ -725,6 +737,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 				G_AddTempNightsRecords(players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
 
 			// transfer scores anyway
+			players[i].totalmarescore += players[i].marescore;
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
@@ -738,19 +751,24 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		// Spheres bonus
 		P_AddPlayerScore(player, (player->spheres) * 50);
 
-		player->lastmare = (UINT8)oldmare;
+		player->lastmare = oldmare;
+		player->lastmarelap = oldmarelap;
+		player->lastmarebonuslap = oldmarebonuslap;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
+		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
 			G_AddTempNightsRecords(player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
+		player->totalmarescore += player->marescore;
 		player->lastmarescore = player->marescore;
 		player->marescore = 0;
 		player->marebegunat = leveltime;
+		player->lapbegunat = leveltime;
 
 		player->spheres = player->rings = 0;
 	}
@@ -764,6 +782,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (timeinmap + 40 < (110 - 70))
 			player->texttimer = (UINT8)((110 - 70) - timeinmap);
 	}
+
+	// force NiGHTS to face forward or backward
+	if (player->mo->target)
+		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y) // player->angle_pos, won't be set on first instance
+			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
+				(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
+				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
@@ -927,7 +952,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
-	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != 0x7f)
+	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives() && player->lives != INFLIVES)
 	{
 		INT32 gainlives = 0;
 
@@ -986,7 +1011,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (player->lives == 0x7f || (gametype != GT_COOP && gametype != GT_COMPETITION))
+		if (player->lives == INFLIVES || (gametype != GT_COOP && gametype != GT_COMPETITION))
 		{
 			P_GivePlayerRings(player, 100*numlives);
 			return;
@@ -6174,7 +6199,6 @@ static void P_NiGHTSMovement(player_t *player)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
 		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 
-
 	if (player->mo->z < player->mo->floorz)
 		player->mo->z = player->mo->floorz;
 
@@ -8377,7 +8401,7 @@ boolean P_GetLives(player_t *player)
 	if (!(netgame || multiplayer)
 	|| (gametype != GT_COOP)
 	|| (cv_cooplives.value == 1)
-	|| (player->lives == 0x7f))
+	|| (player->lives == INFLIVES))
 		return true;
 
 	if ((cv_cooplives.value == 2 || cv_cooplives.value == 0) && player->lives > 0)
@@ -8404,7 +8428,7 @@ boolean P_GetLives(player_t *player)
 	{
 		if (cv_cooplives.value == 2 && (P_IsLocalPlayer(player) || P_IsLocalPlayer(&players[maxlivesplayer])))
 			S_StartSound(NULL, sfx_jshard); // placeholder
-		if (players[maxlivesplayer].lives != 0x7f)
+		if (players[maxlivesplayer].lives != INFLIVES)
 			players[maxlivesplayer].lives--;
 		player->lives++;
 		if (player->lives < 1)
@@ -9808,7 +9832,19 @@ void P_PlayerThink(player_t *player)
 		P_ResetScore(player);
 	}
 	else
+	{
+		if (player->bumpertime == TICRATE/2 && player->mo->hnext)
+		{
+			// Center player to NiGHTS bumper here because if you try to set player's position in
+			// P_TouchSpecialThing case MT_NIGHTSBUMPER, that position is fudged in the time
+			// between that routine in the previous tic
+			// and reaching here in the current tic
+			P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y
+				, player->mo->hnext->z + FixedMul(player->mo->hnext->height/4, player->mo->hnext->scale));
+			P_SetTarget(&player->mo->hnext, NULL);
+		}
 		P_MovePlayer(player);
+	}
 
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
@@ -9932,7 +9968,8 @@ void P_PlayerThink(player_t *player)
 			|| player->panim == PA_PAIN
 			|| !player->mo->health
 			|| player->climbing
-			|| player->pflags & (PF_SPINNING|PF_SLIDING))
+			|| player->pflags & (PF_SPINNING|PF_SLIDING)
+			|| player->bumpertime)
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
 			else if (currentlyonground || player->powers[pw_tailsfly])
 				player->pflags |= PF_APPLYAUTOBRAKE;
