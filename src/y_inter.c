@@ -1874,7 +1874,9 @@ static void Y_AwardCoopBonuses(void)
 				players[i].score = MAXSCORE;
 		}
 
-		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = min(
+			((!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0),
+			(mapheaderinfo[prevmap]->maxbonuslives < 0 ? INT32_MAX : mapheaderinfo[prevmap]->maxbonuslives));
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
@@ -1918,7 +1920,9 @@ static void Y_AwardSpecialStageBonus(void)
 			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
-		ptlives = (!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = min(
+			((!ultimatemode && !modeattacking && players[i].lives != 0x7f) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0),
+			(mapheaderinfo[prevmap]->maxbonuslives < 0 ? INT32_MAX : mapheaderinfo[prevmap]->maxbonuslives));
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
