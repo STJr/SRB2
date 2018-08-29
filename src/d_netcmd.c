@@ -811,6 +811,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
+	CV_RegisterVar(&cv_ophoopflags);
 	CV_RegisterVar(&cv_mapthingnum);
 //	CV_RegisterVar(&cv_grid);
 //	CV_RegisterVar(&cv_snapto);
@@ -822,7 +823,6 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("getallemeralds", Command_Getallemeralds_f);
 	COM_AddCommand("resetemeralds", Command_Resetemeralds_f);
 	COM_AddCommand("setrings", Command_Setrings_f);
-	COM_AddCommand("setspheres", Command_Setspheres_f);
 	COM_AddCommand("setlives", Command_Setlives_f);
 	COM_AddCommand("setcontinues", Command_Setcontinues_f);
 	COM_AddCommand("devmode", Command_Devmode_f);
