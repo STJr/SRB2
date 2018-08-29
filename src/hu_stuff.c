@@ -69,6 +69,7 @@ patch_t *nightsnum[10]; // 0-9
 // Level title and credits fonts
 patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
+patch_t *ttlnum[20]; // act numbers (0-19)
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
@@ -236,6 +237,13 @@ void HU_LoadGraphics(void)
 	// minus for negative tallnums
 	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
 	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
+
+	// cache act numbers for level titles
+	for (i = 0; i < 20; i++)
+	{
+		sprintf(buffer, "TTL%.2d", i);
+		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+	}
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
