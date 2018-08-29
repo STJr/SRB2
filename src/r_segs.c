@@ -1443,7 +1443,8 @@ static void R_RenderSegLoop (void)
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
 					if (ffloor[i].polyobj && top_w >= bottom_w) {
-						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
+						ffloor[i].plane->top[rw_x] = 0xFFFF;
+						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
 					} else
 #endif
 
@@ -1467,7 +1468,8 @@ static void R_RenderSegLoop (void)
 #ifdef POLYOBJECTS_PLANES
 					// Polyobject-specific hack to fix plane leaking -Red
 					if (ffloor[i].polyobj && top_w >= bottom_w) {
-						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
+						ffloor[i].plane->top[rw_x] = 0xFFFF;
+						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
 					} else
 #endif
 
@@ -2693,6 +2695,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (linedef->special == 41) { // HORIZON LINES
 		topstep = bottomstep = 0;
 		topfrac = bottomfrac = (centeryfrac>>4);
+		topfrac++; // Prevent 1px HOM
 	} else {
 		topstep = -FixedMul (rw_scalestep, worldtop);
 		topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);
