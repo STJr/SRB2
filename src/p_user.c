@@ -574,6 +574,8 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->climbing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
 
@@ -648,6 +650,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->speed = 0;
 	player->climbing = 0;
 	player->secondjump = 0;
+	player->flyangle = 0;
+	player->anotherflyangle = 0;
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -764,6 +768,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (timeinmap + 40 < 110)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
+
+	// force NiGHTS to face forward or backward
+	if (player->mo->target)
+		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y) // player->angle_pos, won't be set on first instance
+			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
+				(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
+				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
