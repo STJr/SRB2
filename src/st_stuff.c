@@ -1491,8 +1491,8 @@ static void ST_drawNiGHTSLink(void)
 	else
 		colornum = linkColor[mag][sel];
 
-	aflag |= ((stplyr->linktimer < 2*TICRATE/3)
-	? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
+	aflag |= ((stplyr->linktimer < nightslinktics/3)
+	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
 	: 0);
 
 	y = (160+11)<<FRACBITS;
