@@ -452,10 +452,7 @@ void SCR_ClosedCaptions(void)
 		else if ((modeattacking == ATTACKING_NIGHTS)
 		|| (!(maptol & TOL_NIGHTS)
 		&& ((cv_powerupdisplay.value == 2) // "Always"
-		|| (cv_powerupdisplay.value == 1 // "First-person only"
-			&& ((!splitscreen && !camera.chase)
-			|| (splitscreen && !camera2.chase)) // in 2p mode, move up only if 2p's powerup display is on
-			))))
+		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
 			basey -= 16;
 	}
 
