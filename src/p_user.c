@@ -6668,12 +6668,16 @@ static void P_NiGHTSMovement(player_t *player)
 		}
 		else if (player->drilltimer == 32)
 		{
+			// drill mash penalty
 			player->drilltimer = 31;
 			player->drillmeter -= TICRATE/2;
 			if (player->drillmeter <= 0)
 				player->drillmeter = TICRATE/10;
 		}
-		else if (--player->drilltimer <= 0)
+		else if (--player->drilltimer == 11)
+			// give that drill mash penalty back (after 0.6 seconds)
+			player->drillmeter += TICRATE/2;
+		else if (player->drilltimer <= 0)
 		{
 			player->drilltimer = 10;
 			S_StartSound(player->mo, sfx_drill2);
