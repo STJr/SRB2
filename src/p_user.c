@@ -9807,7 +9807,9 @@ void P_PlayerThink(player_t *player)
 			// Yay! The thing's in reach! Pull it in!
 			mo2->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 			mo2->flags2 |= MF2_NIGHTSPULL;
-			mo2->movefactor = 40*FRACUNIT; // initialize the NightsItemChase timer
+			// New NiGHTS attract speed dummied out because the older behavior
+			// is exploited as a mechanic. Uncomment to enable.
+			mo2->movefactor = 0; // 40*FRACUNIT; // initialize the NightsItemChase timer
 			P_SetTarget(&mo2->tracer, player->mo);
 		}
 	}

@@ -946,7 +946,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					// Yay! The thing's in reach! Pull it in!
 					mo2->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 					mo2->flags2 |= MF2_NIGHTSPULL;
-					mo2->movefactor = 32*FRACUNIT; // initialize the NightsItemChase timer
+					// New NiGHTS attract speed dummied out because the older behavior
+					// is exploited as a mechanic. Uncomment to enable.
+					mo2->movefactor = 0; // 32*FRACUNIT; // initialize the NightsItemChase timer
 					P_SetTarget(&mo2->tracer, toucher);
 				}
 			}
