@@ -81,7 +81,7 @@ static void Midiplayer_Onchange(void)
 {
 	boolean restart = false;
 
-	if (I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
+	if (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
 		return;
 
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
@@ -104,7 +104,7 @@ static void Midiplayer_Onchange(void)
 
 static void MidiSoundfontPath_Onchange(void)
 {
-	if (I_SongType() != MU_MID_EX && Mix_GetMidiPlayer() != MIDI_Fluidsynth)
+	if (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX && Mix_GetMidiPlayer() != MIDI_Fluidsynth)
 		return;
 
 	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
@@ -148,13 +148,13 @@ void I_StartupSound(void)
 	music = NULL;
 	music_volume = sfx_volume = 0;
 
-#if SDL_MIXER_VERSION_ATLEAST(1,2,11)
-	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
-#endif
 #if HAVE_MIXERX
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
+#if SDL_MIXER_VERSION_ATLEAST(1,2,11)
+	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
 
 	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048) < 0)
