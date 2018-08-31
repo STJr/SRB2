@@ -776,6 +776,11 @@ UINT32 I_GetSongLength(void)
 		return 0;
 	else
 	{
+#ifdef HAVE_MIXERX
+		double xlength = Mix_GetMusicTotalTime(music);
+		if (xlength >= 0)
+			return (UINT32)floor(xlength * 1000.);
+#endif
 		// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
 		// SDL mixer can't read music length itself.
 		length = (UINT32)(song_length*1000);
@@ -915,10 +920,17 @@ UINT32 I_GetSongPosition(void)
 	if (!music || I_SongType() == MU_MID)
 		return 0;
 	else
+	{
+#ifdef HAVE_MIXERX
+		double xposition = Mix_GetMusicPosition(music);
+		if (xposition >= 0)
+			return (UINT32)floor(xposition * 1000.);
+#endif
 		return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
 		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
 		// This is hardcoded in I_StartupSound. Other formats for factor:
 		// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4
+	}
 }
 
 /// ------------------------
