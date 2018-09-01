@@ -1728,7 +1728,7 @@ boolean S_FadeOutStopMusic(UINT32 ms)
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_Start(void)
+void S_StartEx(boolean reset)
 {
 	if (mapmusflags & MUSIC_RELOADRESET)
 	{
@@ -1738,7 +1738,7 @@ void S_Start(void)
 		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
-	if (cv_resetmusic.value)
+	if (cv_resetmusic.value || reset)
 		S_StopMusic();
 	S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
