@@ -1160,6 +1160,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				mapheaderinfo[num-1]->muspostbosstrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "MUSICPOSTBOSSPOS"))
 				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
+				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
