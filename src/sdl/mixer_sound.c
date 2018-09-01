@@ -99,7 +99,13 @@ static void Midiplayer_Onchange(void)
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
 
 	if (restart)
+	{
+		// HACK: Need to set cv_resetmusic to reload MIDI music
+		INT32 resetmusicval = cv_resetmusic.value;
+		cv_resetmusic.value = 1;
 		S_Start();
+		cv_resetmusic.value = resetmusicval;
+	}
 }
 
 static void MidiSoundfontPath_Onchange(void)
@@ -112,9 +118,15 @@ static void MidiSoundfontPath_Onchange(void)
 		// check if file exists; menu calls this method at every keystroke
 		SDL_RWops *rw = SDL_RWFromFile(cv_midisoundfontpath.string, "r");
 		if (rw != NULL) {
+			INT32 resetmusicval = cv_resetmusic.value;
+
 			SDL_RWclose(rw);
 			Mix_SetSoundFonts(cv_midisoundfontpath.string);
+
+			// HACK: Need to set cv_resetmusic to reload MIDI music
+			cv_resetmusic.value = 1;
 			S_Start();
+			cv_resetmusic.value = resetmusicval;
 		}
 	}
 }
