@@ -1608,7 +1608,7 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_Start(void)
+void S_StartEx(boolean reset)
 {
 	if (mapmusflags & MUSIC_RELOADRESET)
 	{
@@ -1617,7 +1617,7 @@ void S_Start(void)
 		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
 	}
 
-	if (cv_resetmusic.value)
+	if (cv_resetmusic.value || reset)
 		S_StopMusic();
 	S_ChangeMusic(mapmusname, mapmusflags, true);
 }

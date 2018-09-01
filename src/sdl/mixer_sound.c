@@ -99,7 +99,7 @@ static void Midiplayer_Onchange(void)
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
 
 	if (restart)
-		S_Start();
+		S_StartEx(true);
 }
 
 static void MidiSoundfontPath_Onchange(void)
@@ -114,7 +114,7 @@ static void MidiSoundfontPath_Onchange(void)
 		if (rw != NULL) {
 			SDL_RWclose(rw);
 			Mix_SetSoundFonts(cv_midisoundfontpath.string);
-			S_Start();
+			S_StartEx(true);
 		}
 	}
 }

@@ -114,7 +114,8 @@ void S_InitSfxChannels(INT32 sfxVolume);
 //
 void S_StopSounds(void);
 void S_ClearSfx(void);
-void S_Start(void);
+void S_StartEx(boolean reset);
+#define S_Start() S_StartEx(false)
 
 //
 // Basically a W_GetNumForName that adds "ds" at the beginning of the string. Returns a lumpnum.
