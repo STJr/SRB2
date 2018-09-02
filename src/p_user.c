@@ -631,6 +631,8 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	// Restore from drowning music
 	P_RestoreMusic(player);
+
+	P_RunDeNightserizeExecutors(player->mo);
 }
 
 //
@@ -789,6 +791,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
 				(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
 				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));
+
+	// Do this before setting CR_NIGHTSMODE so we can tell if player was non-NiGHTS
+	P_RunNightserizeExecutors(player->mo);
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
@@ -5952,6 +5957,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i;
 
+	player->capsule->extravalue2++; // tic counter
+
 	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
@@ -6013,6 +6020,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 	}
 
+	if (player->capsule->extravalue2 <= 0 && player->capsule->health > 0)
+		P_RunNightsCapsuleTouchExecutors(player->mo, true, player->spheres >= player->capsule->health); // run capsule entrance executors
+
 	// Time to blow it up!
 	if (player->mo->x == player->capsule->x
 		&& player->mo->y == player->capsule->y
@@ -6036,7 +6046,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = -1;
+				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6105,6 +6115,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, true); // run capsule exit executors, and we destroyed it
 			}
 		}
 		else
@@ -6113,7 +6124,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 3; // Get more rings!
 			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = -1;
+			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+			P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
 		}
 	}
 	else

@@ -1126,6 +1126,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				// Respawn rings and items
 				P_ReloadRings();
 			}
+
+			P_RunNightsLapExecutors(pl->mo);
 		}
 		droneobj->extravalue1 = pl->flyangle;
 		droneobj->extravalue2 = (INT32)leveltime + TICRATE;
