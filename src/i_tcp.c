@@ -686,14 +686,29 @@ static boolean SOCK_CanGet(void)
 #endif
 
 #ifndef NONET
-static void SOCK_Send(void)
+static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
 {
-	ssize_t c = ERRSOCKET;
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
 #ifdef HAVE_IPV6
 	socklen_t d6 = (socklen_t)sizeof(struct sockaddr_in6);
 #endif
 	socklen_t d, da = (socklen_t)sizeof(mysockaddr_t);
+
+	switch (sockaddr->any.sa_family)
+	{
+		case AF_INET:  d = d4; break;
+#ifdef HAVE_IPV6
+		case AF_INET6: d = d6; break;
+#endif
+		default:       d = da; break;
+	}
+
+	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
+}
+
+static void SOCK_Send(void)
+{
+	ssize_t c = ERRSOCKET;
 	size_t i, j;
 
 	if (!nodeconnected[doomcom->remotenode])
@@ -706,19 +721,7 @@ static void SOCK_Send(void)
 			for (j = 0; j < broadcastaddresses; j++)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
-				{
-					if (broadcastaddress[j].any.sa_family == AF_INET)
-						d = d4;
-#ifdef HAVE_IPV6
-					else if (broadcastaddress[j].any.sa_family == AF_INET6)
-						d = d6;
-#endif
-					else
-						d = da;
-
-					c = sendto(mysockets[i], (char *)&doomcom->data, doomcom->datalength, 0,
-						&broadcastaddress[j].any, d);
-				}
+					SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
 			}
 		}
 		return;
@@ -728,35 +731,13 @@ static void SOCK_Send(void)
 		for (i = 0; i < mysocketses; i++)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
-			{
-				if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET)
-					d = d4;
-#ifdef HAVE_IPV6
-				else if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET6)
-					d = d6;
-#endif
-				else
-					d = da;
-
-				sendto(mysockets[i], (char *)&doomcom->data, doomcom->datalength, 0,
-					&clientaddress[doomcom->remotenode].any, d);
-			}
+				SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
 		}
 		return;
 	}
 	else
 	{
-		if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET)
-			d = d4;
-#ifdef HAVE_IPV6
-		else if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET6)
-			d = d6;
-#endif
-		else
-			d = da;
-
-		c = sendto(nodesocket[doomcom->remotenode], (char *)&doomcom->data, doomcom->datalength, 0,
-			&clientaddress[doomcom->remotenode].any, d);
+		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
 	}
 
 	if (c == ERRSOCKET && errno != ECONNREFUSED && errno != EWOULDBLOCK)
