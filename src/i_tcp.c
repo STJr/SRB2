@@ -1059,6 +1059,9 @@ static boolean UDP_Socket(void)
 		clientaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_LOOPBACK); //GetLocalAddress(); // my own ip
 		s++;
 	}
+
+	s = 0;
+
 	// setup broadcast adress to BROADCASTADDR entry
 	gaie = I_getaddrinfo("255.255.255.255", "0", &hints, &ai);
 	if (gaie == 0)
