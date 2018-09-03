@@ -707,10 +707,10 @@ static void SOCK_Send(void)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 				{
-					if (broadcastaddress[i].any.sa_family == AF_INET)
+					if (broadcastaddress[j].any.sa_family == AF_INET)
 						d = d4;
 #ifdef HAVE_IPV6
-					else if (broadcastaddress[i].any.sa_family == AF_INET6)
+					else if (broadcastaddress[j].any.sa_family == AF_INET6)
 						d = d6;
 #endif
 					else
