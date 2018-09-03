@@ -1044,7 +1044,7 @@ static boolean UDP_Socket(void)
 	if (gaie == 0)
 	{
 		runp = ai;
-		while (runp != NULL)
+		while (runp != NULL && s < MAXNETNODES+1)
 		{
 			memcpy(&clientaddress[s], runp->ai_addr, runp->ai_addrlen);
 			s++;
@@ -1064,7 +1064,7 @@ static boolean UDP_Socket(void)
 	if (gaie == 0)
 	{
 		runp = ai;
-		while (runp != NULL)
+		while (runp != NULL && s < MAXNETNODES+1)
 		{
 			memcpy(&broadcastaddress[s], runp->ai_addr, runp->ai_addrlen);
 			s++;
@@ -1087,7 +1087,7 @@ static boolean UDP_Socket(void)
 		if (gaie == 0)
 		{
 			runp = ai;
-			while (runp != NULL)
+			while (runp != NULL && s < MAXNETNODES+1)
 			{
 				memcpy(&broadcastaddress[s], runp->ai_addr, runp->ai_addrlen);
 				s++;
