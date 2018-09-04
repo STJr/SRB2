@@ -1203,6 +1203,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 
+			else if (fastcmp(word, "MAXBONUSLIVES"))
+				mapheaderinfo[num-1]->maxbonuslives = (SINT8)i;
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))
@@ -2730,11 +2732,14 @@ static void readmaincfg(MYFILE *f)
 			{
 				extralifetics = (UINT16)get_number(word2);
 			}
+			else if (fastcmp(word, "NIGHTSLINKTICS"))
+			{
+				nightslinktics = (UINT16)get_number(word2);
+			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				gameovertics = get_number(word2);
 			}
-
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
 				introtoplay = (UINT8)get_number(word2);
@@ -7329,6 +7334,8 @@ struct {
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
 	{"VERSION",VERSION}, // Grab the game's version!
 	{"SUBVERSION",SUBVERSION}, // more precise version number
+	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
+	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
 	// Special linedef executor tag numbers!
 	{"LE_PINCHPHASE",LE_PINCHPHASE}, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
@@ -7622,6 +7629,9 @@ struct {
 	{"WEP_EXPLODE",WEP_EXPLODE},
 	{"WEP_RAIL",WEP_RAIL},
 	{"NUM_WEAPONS",NUM_WEAPONS},
+
+	// Value for infinite lives
+	{"INFLIVES", INFLIVES},
 
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
