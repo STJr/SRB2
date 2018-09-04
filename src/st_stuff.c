@@ -2468,14 +2468,16 @@ static void ST_overlayDrawer(void)
 static void ST_drawTutorial(void)
 {
 	INT32 charheight = 8;
-	INT32 y = BASEVIDHEIGHT - ((charheight * 4) + (charheight/2)*5);
-	INT32 i;
+	INT32 y = BASEVIDHEIGHT - ((charheight * 4) + (charheight/2)*4);
+	char *test;
+	//INT32 i;
 	// Nothing, ...yet
 	// Except this for now, just to check it works
 	//V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Tutorial placeholder");
 	V_DrawTutorialBack();
-	for (i = 0; i < 4; i++, y += 12)
-		V_DrawString(0, y, 0, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum");
+	//for (i = 0; i < 4; i++, y += 12)
+	test = V_WordWrap(4, BASEVIDWIDTH-4, 0, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum");
+	V_DrawString(4, y, V_SNAPTOBOTTOM, test);
 }
 
 void ST_Drawer(void)
