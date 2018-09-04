@@ -1815,6 +1815,8 @@ static void Command_Map_f(void)
 	else
 		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
 
+	tutorialmode = false; // warping takes us out of tutorial mode
+
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 }
 

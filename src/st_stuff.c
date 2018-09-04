@@ -2465,6 +2465,13 @@ static void ST_overlayDrawer(void)
 	ST_drawDebugInfo();
 }
 
+static void ST_drawTutorial(void)
+{
+	// Nothing, ...yet
+	// Except this for now, just to check it works
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Tutorial placeholder");
+}
+
 void ST_Drawer(void)
 {
 #ifdef SEENAMES
@@ -2538,4 +2545,8 @@ void ST_Drawer(void)
 			ST_overlayDrawer();
 		}
 	}
+
+	// Draw tutorial text over everything else
+	if (tutorialmode)
+		ST_drawTutorial();
 }

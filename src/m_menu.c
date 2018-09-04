@@ -6139,6 +6139,8 @@ static void M_StartTutorial(INT32 choice)
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
 
+	tutorialmode = true; // turn on tutorial mode
+
 	emeralds = 0;
 	M_ClearMenus(true);
 	gamecomplete = false;

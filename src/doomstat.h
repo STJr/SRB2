@@ -133,6 +133,7 @@ extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern INT16 tutorialmap; // map to load for tutorial
+extern boolean tutorialmode; // are we in a tutorial right now?
 
 extern boolean looptitle;
 

@@ -714,6 +714,9 @@ void D_StartTitle(void)
 	// reset modeattacking
 	modeattacking = ATTACKING_NONE;
 
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	tutorialmode = false;
+
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
 
