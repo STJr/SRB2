@@ -1586,6 +1586,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
+			UINT8 lap;
 			if (!playeringame[i] || players[i].spectator)
 				continue;
 
@@ -1599,7 +1600,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				playersarenights++;
 
-			UINT8 lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
+			lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
 
 			// get highest mare/lap of players
 			if (perglobal)

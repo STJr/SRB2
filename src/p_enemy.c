@@ -11378,7 +11378,7 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	INT8 dir;
+	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
