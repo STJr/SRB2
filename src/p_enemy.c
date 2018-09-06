@@ -10994,7 +10994,7 @@ void A_FlickyAim(mobj_t *actor)
 		if (actor->target && P_IsFlickyCenter(actor->target->type))
 			actor->angle = R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + P_RandomRange(112, 248) * ANG1;
 		else
-			actor->angle += P_RandomRange(112, 248)*ANG1; //P_RandomRange(160, 200) * ANG1;//ANGLE_180;
+			actor->angle += P_RandomRange(112, 248)*ANG1;
 		actor->threshold = 0;
 	}
 }
@@ -11048,8 +11048,6 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
 //
-// If MTF_EXTRA and MTF_OBJECTSPECIAL are flagged, Flicky will always fly at same Z height.
-//
 void A_FlickyFly(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
@@ -11069,8 +11067,6 @@ void A_FlickyFly(mobj_t *actor)
 //
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
-//
-// If MTF_EXTRA and MTF_OBJECTSPECIAL are flagged, Flicky will always fly at same Z height.
 //
 void A_FlickySoar(mobj_t *actor)
 {
