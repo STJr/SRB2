@@ -10877,12 +10877,7 @@ void A_FlickyCenter(mobj_t *actor)
 			actor->tracer->angle = P_RandomKey(180)*ANG2;
 		}
 		else //orbit
-		{
 			actor->tracer->fuse = FRACUNIT;
-			// Impose default home radius if flicky orbits around player
-			if (!actor->extravalue1)
-				actor->extravalue1 = 512 * FRACUNIT;
-		}
 
 		if (locvar1 == MT_FLICKY_08)
 			P_InternalFlickySetColor(actor->tracer, actor->extravalue2);
@@ -10897,6 +10892,10 @@ void A_FlickyCenter(mobj_t *actor)
 		fixed_t originz = actor->watertop;
 
 		actor->tracer->fuse = FRACUNIT;
+
+		// Impose default home radius if flicky orbits around player
+		if (!actor->extravalue1)
+			actor->extravalue1 = 512 * FRACUNIT;
 
 		P_LookForPlayers(actor, true, false, locvar2);
 
