@@ -807,7 +807,7 @@ static void ST_drawLivesArea(void)
 		// lives number
 		if (gametype == GT_RACE)
 		{
-			livescount = 0x7f;
+			livescount = INFLIVES;
 			notgreyedout = true;
 		}
 		else if ((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 3)
@@ -826,9 +826,9 @@ static void ST_drawLivesArea(void)
 				if (players[i].lives > 1)
 					notgreyedout = true;
 
-				if (players[i].lives == 0x7f)
+				if (players[i].lives == INFLIVES)
 				{
-					livescount = 0x7f;
+					livescount = INFLIVES;
 					break;
 				}
 				else if (livescount < 99)
@@ -837,11 +837,11 @@ static void ST_drawLivesArea(void)
 		}
 		else
 		{
-			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0x7f : stplyr->lives);
+			livescount = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 			notgreyedout = true;
 		}
 
-		if (livescount == 0x7f)
+		if (livescount == INFLIVES)
 			V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
 				'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
 		else
@@ -1205,6 +1205,10 @@ static void ST_drawPowerupHUD(void)
 	if (stplyr->spectator || stplyr->playerstate != PST_LIVE)
 		return;
 
+// -------
+// Shields
+// -------
+
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if (stplyr->powers[pw_shield] & SH_NOSTACK)
 	{
@@ -1247,6 +1251,10 @@ static void ST_drawPowerupHUD(void)
 
 	offs -= shieldoffs[q];
 
+// ---------
+// CTF flags
+// ---------
+
 	// YOU have a flag. Display a monitor-like icon for it.
 	if (stplyr->gotflag)
 	{
@@ -1264,11 +1272,20 @@ static void ST_drawPowerupHUD(void)
 
 	offs -= flagoffs[q];
 
+// --------------------
+// Timer-based powerups
+// --------------------
+
+#define DRAWTIMERICON(patch, timer) \
+	V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, patch); \
+	V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", timer/TICRATE));
+
+	// Invincibility, both from monitor and after being hit
 	invulntime = stplyr->powers[pw_flashing] ? stplyr->powers[pw_flashing] : stplyr->powers[pw_invulnerability];
+	// Note: pw_flashing always makes the icon flicker regardless of time, unlike pw_invulnerability
 	if (stplyr->powers[pw_invulnerability] > 3*TICRATE || (invulntime && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, invincibility);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", invulntime/TICRATE));
+		DRAWTIMERICON(invincibility, invulntime)
 	}
 
 	if (invulntime > 7)
@@ -1281,10 +1298,10 @@ static void ST_drawPowerupHUD(void)
 		offs -= a;
 	}
 
+	// Super Sneakers
 	if (stplyr->powers[pw_sneakers] > 3*TICRATE || (stplyr->powers[pw_sneakers] && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, sneakers);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_sneakers]/TICRATE));
+		DRAWTIMERICON(sneakers, stplyr->powers[pw_sneakers])
 	}
 
 	if (stplyr->powers[pw_sneakers] > 7)
@@ -1297,12 +1314,13 @@ static void ST_drawPowerupHUD(void)
 		offs -= a;
 	}
 
+	// Gravity Boots
 	if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
 	{
-		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, gravboots);
-		V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y + 8, V_PERPLAYER|hudinfo[HUD_POWERUPS].f, va("%d", stplyr->powers[pw_gravityboots]/TICRATE));
+		DRAWTIMERICON(gravboots, stplyr->powers[pw_gravityboots])
 	}
 
+#undef DRAWTIMERICON
 #undef ICONSEP
 }
 
@@ -1361,60 +1379,64 @@ static void ST_drawNightsRecords(void)
 	if (stplyr->texttimer < TICRATE/2)
 		aflag |= (9 - 9*stplyr->texttimer/(TICRATE/2)) << V_ALPHASHIFT;
 
-	// A "Bonus Time Start" by any other name...
-	if (stplyr->textvar == 1)
+	switch (stplyr->textvar)
 	{
-		V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
-		V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
-
-		if (stplyr->finishedtime)
+		case 1: // A "Bonus Time Start" by any other name...
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
-			V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+			V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
+			V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
+
+			if (stplyr->finishedtime)
+			{
+				V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
+				V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+			}
+			break;
 		}
-	}
-
-	// Get n [more] Spheres
-	else if (stplyr->textvar <= 3 && stplyr->textvar >= 2)
-	{
-		if (!stplyr->capsule)
-			return;
-
-		// Yes, this string is an abomination.
-		V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
-		                     va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
-		                        (stplyr->textvar == 3) ? M_GetText("MORE ") : "",
-		                        (G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
-		                        (stplyr->capsule->health > 1) ? "S" : ""));
-	}
-
-	// End Bonus
-	else if (stplyr->textvar == 4)
-	{
-		V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
-		V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
-		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
-
-		// If new record, say so!
-		if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+		case 2: // Get n Spheres
+		case 3: // Get n more Spheres
 		{
-			if (stplyr->texttimer & 16)
-				V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
-		}
+			if (!stplyr->capsule)
+				return;
 
-		if (P_HasGrades(gamemap, stplyr->lastmare + 1))
-		{
-			if (aflag)
-				V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
-				                       ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
-			else
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
-				                  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+			// Yes, this string is an abomination.
+			V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
+								 va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
+									(stplyr->textvar == 3) ? M_GetText("MORE ") : "",
+									(G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
+									(stplyr->capsule->health > 1) ? "S" : ""));
+			break;
 		}
+		case 4: // End Bonus
+		{
+			V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
+			V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
+			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+
+			// If new record, say so!
+			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+			{
+				if (stplyr->texttimer & 16)
+					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
+			}
+
+			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
+			{
+				if (aflag)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag,
+										   ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+				else
+					V_DrawScaledPatch(BASEVIDWIDTH/2 + 60, 160, 0,
+									  ngradeletters[P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare)]);
+			}
+			break;
+		}
+		default:
+			break;
 	}
 }
 
@@ -1450,19 +1472,59 @@ static skincolors_t linkColor[2][NUMLINKCOLORS] = {
 {SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
  SKINCOLOR_VIOLET, SKINCOLOR_RUBY, SKINCOLOR_FLAME, SKINCOLOR_SUNSET, SKINCOLOR_SANDY, SKINCOLOR_LIME}};
 
+static void ST_drawNiGHTSLink(void)
+{
+	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
+	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
+	skincolors_t colornum;
+	fixed_t x, y, scale;
+
+	if (sel != prevsel[q])
+	{
+		prevsel[q] = sel;
+		prevtime[q] = 2 + mag;
+	}
+
+	if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
+		colornum = SKINCOLOR_ICY;
+	else
+		colornum = linkColor[mag][sel];
+
+	aflag |= ((stplyr->linktimer < nightslinktics/3)
+	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
+	: 0);
+
+	y = (160+11)<<FRACBITS;
+	aflag |= V_SNAPTOBOTTOM;
+
+	x = (160+4)<<FRACBITS;
+
+	if (prevtime[q])
+	{
+		scale = ((32 + prevtime[q])<<FRACBITS)/32;
+		prevtime[q]--;
+	}
+	else
+		scale = FRACUNIT;
+
+	y -= (11*scale);
+
+	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+	V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
+		colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
+
+	// Show remaining link time left in debug
+	if (cv_debug & DBG_NIGHTSBASIC)
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
+}
+
+
 static void ST_drawNiGHTSHUD(void)
 {
 	INT32 origamount;
-	INT32 minlink = 1;
 	INT32 total_spherecount;
 	const boolean oldspecialstage = (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS));
-
-	// Cheap hack: don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
-	if (oldspecialstage || (stplyr->texttimer && stplyr->textvar == 4))
-		minlink = INT32_MAX;
-	// When debugging, show "0 Link".
-	else if (cv_debug & DBG_NIGHTSBASIC)
-		minlink = 0;
 
 	// Drill meter
 	if (
@@ -1508,55 +1570,15 @@ static void ST_drawNiGHTSHUD(void)
 	}*/
 
 	// Link drawing
-	if (
+	if (!oldspecialstage
+	// Don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
+	&& !(stplyr->texttimer && stplyr->textvar == 4)
 #ifdef HAVE_BLUA
-	LUA_HudEnabled(hud_nightslink) &&
+	&& LUA_HudEnabled(hud_nightslink)
 #endif
-	stplyr->linkcount > minlink)
+	&& ((cv_debug & DBG_NIGHTSBASIC) || stplyr->linkcount > 1)) // When debugging, show "0 Link".
 	{
-		static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
-		const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-		INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
-		skincolors_t colornum;
-		fixed_t x, y, scale;
-
-		if (sel != prevsel[q])
-		{
-			prevsel[q] = sel;
-			prevtime[q] = 2 + mag;
-		}
-
-		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
-			colornum = SKINCOLOR_ICY;
-		else
-			colornum = linkColor[mag][sel];
-
-		aflag |= ((stplyr->linktimer < 2*TICRATE/3)
-		? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
-		: 0);
-
-		y = (160+11)<<FRACBITS;
-		aflag |= V_SNAPTOBOTTOM;
-
-		x = (160+4)<<FRACBITS;
-
-		if (prevtime[q])
-		{
-			scale = ((32 + prevtime[q])<<FRACBITS)/32;
-			prevtime[q]--;
-		}
-		else
-			scale = FRACUNIT;
-
-		y -= (11*scale);
-
-		ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
-		V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
-			colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
-
-		// Show remaining link time left in debug
-		if (cv_debug & DBG_NIGHTSBASIC)
-			V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_SNAPTOBOTTOM, va("End in %d.%02d", stplyr->linktimer/TICRATE, G_TicsToCentiseconds(stplyr->linktimer)));
+		ST_drawNiGHTSLink();
 	}
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
@@ -2448,15 +2470,26 @@ void ST_Drawer(void)
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{
-		if (cv_seenames.value == 1)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF, player_names[seenplayer-players]);
-		else if (cv_seenames.value == 2)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-			va("%s%s", G_GametypeHasTeams() ? ((seenplayer->ctfteam == 1) ? "\x85" : "\x84") : "", player_names[seenplayer-players]));
-		else //if (cv_seenames.value == 3)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-			va("%s%s", !G_RingSlingerGametype() || (G_GametypeHasTeams() && players[consoleplayer].ctfteam == seenplayer->ctfteam)
-			 ? "\x83" : "\x85", player_names[seenplayer-players]));
+		INT32 c = 0;
+		switch (cv_seenames.value)
+		{
+			case 1: // Colorless
+				break;
+			case 2: // Team
+				if (G_GametypeHasTeams())
+					c = (seenplayer->ctfteam == 1) ? V_REDMAP : V_BLUEMAP;
+				break;
+			case 3: // Ally/Foe
+			default:
+				// Green = Ally, Red = Foe
+				if (G_GametypeHasTeams())
+					c = (players[consoleplayer].ctfteam == seenplayer->ctfteam) ? V_GREENMAP : V_REDMAP;
+				else // Everyone is an ally, or everyone is a foe!
+					c = (G_RingSlingerGametype()) ? V_REDMAP : V_GREENMAP;
+				break;
+		}
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|c, player_names[seenplayer-players]);
 	}
 #endif
 
