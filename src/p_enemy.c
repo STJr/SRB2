@@ -10799,8 +10799,8 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 	if (extrainfo == 0)
 		// until we can customize flicky colors by level header, just stick to SRB2's defaults
 		actor->color = flickycolors[P_RandomKey(2)]; //flickycolors[P_RandomKey(sizeof(flickycolors))];
-	else if (extrainfo-1 < 15) //sizeof(flickycolors))
-		actor->color = flickycolors[extrainfo-1];
+	else
+		actor->color = flickycolors[min(extrainfo-1, 14)]; // sizeof(flickycolors)-1
 }
 
 // Function: A_FlickyCenter
