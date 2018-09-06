@@ -7119,6 +7119,34 @@ void P_MobjThinker(mobj_t *mobj)
 					S_StartSound(flame, sfx_fire);
 				}
 				break;
+			case MT_FLICKY_01_CENTER:
+			case MT_FLICKY_02_CENTER:
+			case MT_FLICKY_03_CENTER:
+			case MT_FLICKY_04_CENTER:
+			case MT_FLICKY_05_CENTER:
+			case MT_FLICKY_06_CENTER:
+			case MT_FLICKY_07_CENTER:
+			case MT_FLICKY_08_CENTER:
+			case MT_FLICKY_09_CENTER:
+			case MT_FLICKY_10_CENTER:
+			case MT_FLICKY_11_CENTER:
+			case MT_FLICKY_12_CENTER:
+			case MT_FLICKY_13_CENTER:
+			case MT_FLICKY_14_CENTER:
+			case MT_FLICKY_15_CENTER:
+			case MT_FLICKY_16_CENTER:
+			case MT_SECRETFLICKY_01_CENTER:
+			case MT_SECRETFLICKY_02_CENTER:
+				if (mobj->tracer && (mobj->flags & MF_NOCLIPTHING)
+					&& (mobj->flags & MF_GRENADEBOUNCE))
+					// for now: only do this bounce routine if flicky is in-place. \todo allow in all movements
+				{
+					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
+						mobj->tracer->momz = 7*FRACUNIT;
+					else if ((mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z >= mobj->tracer->ceilingz - mobj->tracer->height)
+						mobj->tracer->momz = -7*FRACUNIT;
+				}
+				break;
 			case MT_SEED:
 				if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
 					mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
