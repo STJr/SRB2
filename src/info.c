@@ -13777,7 +13777,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_01_CENTER
-		570,             // doomednum
+		2200,             // doomednum
 		S_FLICKY_01_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13831,7 +13831,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_02_CENTER
-		571,             // doomednum
+		2201,             // doomednum
 		S_FLICKY_02_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13885,7 +13885,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_03_CENTER
-		572,             // doomednum
+		2202,             // doomednum
 		S_FLICKY_03_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13939,7 +13939,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_04_CENTER
-		573,             // doomednum
+		2203,             // doomednum
 		S_FLICKY_04_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -13993,7 +13993,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_05_CENTER
-		574,             // doomednum
+		2204,             // doomednum
 		S_FLICKY_05_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14047,7 +14047,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_06_CENTER
-		575,             // doomednum
+		2205,             // doomednum
 		S_FLICKY_06_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14101,7 +14101,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_07_CENTER
-		576,             // doomednum
+		2206,             // doomednum
 		S_FLICKY_07_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14155,7 +14155,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_08_CENTER
-		577,             // doomednum
+		2207,             // doomednum
 		S_FLICKY_08_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14209,7 +14209,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_09_CENTER
-		578,             // doomednum
+		2208,             // doomednum
 		S_FLICKY_09_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14263,7 +14263,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_10_CENTER
-		579,             // doomednum
+		2209,             // doomednum
 		S_FLICKY_10_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14317,7 +14317,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_11_CENTER
-		580,             // doomednum
+		2210,             // doomednum
 		S_FLICKY_11_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14371,7 +14371,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_12_CENTER
-		581,             // doomednum
+		2211,             // doomednum
 		S_FLICKY_12_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14425,7 +14425,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_13_CENTER
-		582,             // doomednum
+		2212,             // doomednum
 		S_FLICKY_13_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14479,7 +14479,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_14_CENTER
-		583,             // doomednum
+		2213,             // doomednum
 		S_FLICKY_14_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14533,7 +14533,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_15_CENTER
-		584,             // doomednum
+		2214,             // doomednum
 		S_FLICKY_15_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14587,7 +14587,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_FLICKY_16_CENTER
-		585,             // doomednum
+		2215,             // doomednum
 		S_FLICKY_16_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14641,7 +14641,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_SECRETFLICKY_01_CENTER
-		586,             // doomednum
+		2216,             // doomednum
 		S_SECRETFLICKY_01_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -14695,7 +14695,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_SECRETFLICKY_02_CENTER
-		587,             // doomednum
+		2217,             // doomednum
 		S_SECRETFLICKY_02_CENTER, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
