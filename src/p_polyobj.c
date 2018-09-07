@@ -2853,6 +2853,71 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	return 1;
 }
 
+void T_PolyObjFade(polyfade_t *th)
+{
+	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
+	size_t i;
+
+	if (!po)
+#ifdef RANGECHECK
+		I_Error("T_PolyObjFade: thinker has invalid id %d\n", th->polyObjNum);
+#else
+	{
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFade: thinker with invalid id %d removed.\n", th->polyObjNum);
+		P_RemoveThinkerDelayed(&th->thinker);
+		return;
+	}
+#endif
+
+	// check for displacement due to override and reattach when possible
+	if (po->thinker == NULL)
+		po->thinker = &th->thinker;
+
+	// \todo logic
+}
+
+INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
+{
+	polyobj_t *po;
+	polyobj_t *oldpo;
+	polyfade_t *th;
+	INT32 start;
+
+	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
+		return 0;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return 0;
+
+	// create a new thinker
+	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
+	PolyObj_AddThinker(&th->thinker);
+	po->thinker = &th->thinker;
+
+	// set fields
+	th->polyObjNum = pfdata->tag;
+
+	// \todo polyfade fields
+
+	oldpo = po;
+
+	// apply action to mirroring polyobjects as well
+	start = 0;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		pfdata->tag = po->id;
+		EV_DoPolyObjFade(pfdata);
+	}
+
+	// action was successful
+	return 1;
+}
+
 #endif // ifdef POLYOBJECTS
 
 // EOF
