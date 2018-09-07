@@ -609,9 +609,9 @@ static void P_DeNightserizePlayer(player_t *player)
 		stagefailed = true; // NIGHT OVER
 
 		// If you screwed up, kiss your score and ring bonus goodbye.
-		// But don't do this yet if not in special stage! Wait til we hit the ground.
-		player->marescore = 0;
-		player->rings = 0;
+		// But only do this in special stage (and instakill!) In regular stages, wait til we hit the ground.
+		player->marescore = player->spheres =\
+		 player->rings = 0;
 	}
 
 	// Check to see if the player should be killed.
@@ -625,7 +625,11 @@ static void P_DeNightserizePlayer(player_t *player)
 			continue;
 
 		if (mo2->flags2 & MF2_AMBUSH)
+		{
+			player->marescore = player->spheres =\
+			 player->rings = 0;
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+		}
 
 		break;
 	}
@@ -7083,8 +7087,8 @@ static void P_MovePlayer(player_t *player)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 
 				// Now deduct our mare score!
-				player->marescore = 0;
-				player->rings = 0;
+				player->marescore = player->spheres =\
+				 player->rings = 0;
 			}
 			player->powers[pw_carry] = CR_NONE;
 		}
