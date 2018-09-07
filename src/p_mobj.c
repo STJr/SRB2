@@ -9500,7 +9500,6 @@ void P_SpawnPlayer(INT32 playernum)
 			if (p == players) // this is totally the wrong place to do this aaargh.
 			{
 				mobj_t *idya = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_GOTEMERALD);
-				idya->health = 0; // for identification
 				P_SetTarget(&idya->target, mobj);
 				P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate);
 				P_SetTarget(&mobj->tracer, idya);
