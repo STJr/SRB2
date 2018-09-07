@@ -6102,9 +6102,11 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale)
 void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on your target
 {
 	fixed_t dist, ndist, speedmul;
+	angle_t vangle;
 	fixed_t tx = dest->x;
 	fixed_t ty = dest->y;
 	fixed_t tz = dest->z + (dest->height/2); // Aim for center
+	fixed_t xydist = P_AproxDistance(tx - source->x, ty - source->y);
 
 	if (!dest || dest->health <= 0 || !dest->player || !source->tracer)
 		return;
@@ -6113,19 +6115,40 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	source->angle = R_PointToAngle2(source->x, source->y, tx, ty);
 
 	// change slope
-	dist = P_AproxDistance(P_AproxDistance(tx - source->x, ty - source->y), tz - source->z);
+	dist = P_AproxDistance(xydist, tz - source->z);
 
 	if (dist < 1)
 		dist = 1;
 
-	if (nightsgrab)
-		speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
-	else
-		speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+	if (nightsgrab && source->movefactor)
+	{
+		source->movefactor += FRACUNIT/2;
 
-	source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
-	source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
-	source->momz = FixedMul(FixedDiv(tz - source->z, dist), speedmul);
+		if (dist < source->movefactor)
+		{
+			source->momx = source->momy = source->momz = 0;
+			P_TeleportMove(source, tx, ty, tz);
+		}
+		else
+		{
+			vangle = R_PointToAngle2(source->z, 0, tz, xydist);
+
+			source->momx = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINECOSINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momy = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINESINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momz = FixedMul(FINECOSINE(vangle >> ANGLETOFINESHIFT), source->movefactor);
+		}
+	}
+	else
+	{
+		if (nightsgrab)
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
+		else
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+
+		source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
+		source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
+		source->momz = FixedMul(FixedDiv(tz - source->z, dist), speedmul);
+	}
 
 	// Instead of just unsetting NOCLIP like an idiot, let's check the distance to our target.
 	ndist = P_AproxDistance(P_AproxDistance(tx - (source->x+source->momx),
@@ -6150,6 +6173,7 @@ static void P_NightsItemChase(mobj_t *thing)
 	{
 		P_SetTarget(&thing->tracer, NULL);
 		thing->flags2 &= ~MF2_NIGHTSPULL;
+		thing->movefactor = 0;
 		return;
 	}
 
@@ -7093,6 +7117,34 @@ void P_MobjThinker(mobj_t *mobj)
 						flame->momz = strength;
 					P_InstaThrust(flame, mobj->angle, FixedDiv(mobj->fuse*FRACUNIT,3*FRACUNIT));
 					S_StartSound(flame, sfx_fire);
+				}
+				break;
+			case MT_FLICKY_01_CENTER:
+			case MT_FLICKY_02_CENTER:
+			case MT_FLICKY_03_CENTER:
+			case MT_FLICKY_04_CENTER:
+			case MT_FLICKY_05_CENTER:
+			case MT_FLICKY_06_CENTER:
+			case MT_FLICKY_07_CENTER:
+			case MT_FLICKY_08_CENTER:
+			case MT_FLICKY_09_CENTER:
+			case MT_FLICKY_10_CENTER:
+			case MT_FLICKY_11_CENTER:
+			case MT_FLICKY_12_CENTER:
+			case MT_FLICKY_13_CENTER:
+			case MT_FLICKY_14_CENTER:
+			case MT_FLICKY_15_CENTER:
+			case MT_FLICKY_16_CENTER:
+			case MT_SECRETFLICKY_01_CENTER:
+			case MT_SECRETFLICKY_02_CENTER:
+				if (mobj->tracer && (mobj->flags & MF_NOCLIPTHING)
+					&& (mobj->flags & MF_GRENADEBOUNCE))
+					// for now: only do this bounce routine if flicky is in-place. \todo allow in all movements
+				{
+					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
+						mobj->tracer->momz = 7*FRACUNIT;
+					else if ((mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z >= mobj->tracer->ceilingz - mobj->tracer->height)
+						mobj->tracer->momz = -7*FRACUNIT;
 				}
 				break;
 			case MT_SEED:
