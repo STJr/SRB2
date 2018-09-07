@@ -178,7 +178,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 			return NULL; // would and/or did wrap, can't store.
 		break;
 	}
-	sound = Z_Malloc(newsamples<<2, PU_SOUND, NULL); // samples * frequency shift * bytes per sample * channels
+	sound = malloc(newsamples<<2); // samples * frequency shift * bytes per sample * channels
 
 	s = (SINT8 *)stream;
 	d = (INT16 *)sound;
@@ -306,7 +306,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 					gme_track_info(emu, &info, 0);
 
 					len = (info->play_length * 441 / 10) << 2;
-					mem = Z_Malloc(len, PU_SOUND, NULL);
+					mem = malloc(len);
 					gme_play(emu, len >> 1, mem);
 					gme_delete(emu);
 
@@ -378,7 +378,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		gme_track_info(emu, &info, 0);
 
 		len = (info->play_length * 441 / 10) << 2;
-		mem = Z_Malloc(len, PU_SOUND, NULL);
+		mem = malloc(len);
 		gme_play(emu, len >> 1, mem);
 		gme_delete(emu);
 

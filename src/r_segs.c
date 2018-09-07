@@ -2695,6 +2695,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (linedef->special == 41) { // HORIZON LINES
 		topstep = bottomstep = 0;
 		topfrac = bottomfrac = (centeryfrac>>4);
+		topfrac++; // Prevent 1px HOM
 	} else {
 		topstep = -FixedMul (rw_scalestep, worldtop);
 		topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);

@@ -1203,6 +1203,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 
+			else if (fastcmp(word, "MAXBONUSLIVES"))
+				mapheaderinfo[num-1]->maxbonuslives = (SINT8)i;
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))
@@ -2730,11 +2732,14 @@ static void readmaincfg(MYFILE *f)
 			{
 				extralifetics = (UINT16)get_number(word2);
 			}
+			else if (fastcmp(word, "NIGHTSLINKTICS"))
+			{
+				nightslinktics = (UINT16)get_number(word2);
+			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				gameovertics = get_number(word2);
 			}
-
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
 				introtoplay = (UINT8)get_number(word2);
@@ -4922,6 +4927,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
 	"S_SUSPICIOUSFACESTABBERSTATUE_BURST1",
 	"S_SUSPICIOUSFACESTABBERSTATUE_BURST2",
+	"S_BRAMBLES",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -5393,6 +5399,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_01_FLAP1",
 	"S_FLICKY_01_FLAP2",
 	"S_FLICKY_01_FLAP3",
+	"S_FLICKY_01_STAND",
+	"S_FLICKY_01_CENTER",
 
 	// Rabbit
 	"S_FLICKY_02_OUT",
@@ -5400,6 +5408,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_02_HOP",
 	"S_FLICKY_02_UP",
 	"S_FLICKY_02_DOWN",
+	"S_FLICKY_02_STAND",
+	"S_FLICKY_02_CENTER",
 
 	// Chicken
 	"S_FLICKY_03_OUT",
@@ -5408,6 +5418,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_03_UP",
 	"S_FLICKY_03_FLAP1",
 	"S_FLICKY_03_FLAP2",
+	"S_FLICKY_03_STAND",
+	"S_FLICKY_03_CENTER",
 
 	// Seal
 	"S_FLICKY_04_OUT",
@@ -5419,6 +5431,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_04_SWIM2",
 	"S_FLICKY_04_SWIM3",
 	"S_FLICKY_04_SWIM4",
+	"S_FLICKY_04_STAND",
+	"S_FLICKY_04_CENTER",
 
 	// Pig
 	"S_FLICKY_05_OUT",
@@ -5426,6 +5440,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_05_HOP",
 	"S_FLICKY_05_UP",
 	"S_FLICKY_05_DOWN",
+	"S_FLICKY_05_STAND",
+	"S_FLICKY_05_CENTER",
 
 	// Chipmunk
 	"S_FLICKY_06_OUT",
@@ -5433,6 +5449,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_06_HOP",
 	"S_FLICKY_06_UP",
 	"S_FLICKY_06_DOWN",
+	"S_FLICKY_06_STAND",
+	"S_FLICKY_06_CENTER",
 
 	// Penguin
 	"S_FLICKY_07_OUT",
@@ -5447,6 +5465,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_07_SWIM1",
 	"S_FLICKY_07_SWIM2",
 	"S_FLICKY_07_SWIM3",
+	"S_FLICKY_07_STAND",
+	"S_FLICKY_07_CENTER",
 
 	// Fish
 	"S_FLICKY_08_OUT",
@@ -5460,6 +5480,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_08_SWIM2",
 	"S_FLICKY_08_SWIM3",
 	"S_FLICKY_08_SWIM4",
+	"S_FLICKY_08_STAND",
+	"S_FLICKY_08_CENTER",
 
 	// Ram
 	"S_FLICKY_09_OUT",
@@ -5467,11 +5489,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_09_HOP",
 	"S_FLICKY_09_UP",
 	"S_FLICKY_09_DOWN",
+	"S_FLICKY_09_STAND",
+	"S_FLICKY_09_CENTER",
 
 	// Puffin
 	"S_FLICKY_10_OUT",
 	"S_FLICKY_10_FLAP1",
 	"S_FLICKY_10_FLAP2",
+	"S_FLICKY_10_STAND",
+	"S_FLICKY_10_CENTER",
 
 	// Cow
 	"S_FLICKY_11_OUT",
@@ -5479,6 +5505,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_11_RUN1",
 	"S_FLICKY_11_RUN2",
 	"S_FLICKY_11_RUN3",
+	"S_FLICKY_11_STAND",
+	"S_FLICKY_11_CENTER",
 
 	// Rat
 	"S_FLICKY_12_OUT",
@@ -5486,6 +5514,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_12_RUN1",
 	"S_FLICKY_12_RUN2",
 	"S_FLICKY_12_RUN3",
+	"S_FLICKY_12_STAND",
+	"S_FLICKY_12_CENTER",
 
 	// Bear
 	"S_FLICKY_13_OUT",
@@ -5493,12 +5523,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_13_HOP",
 	"S_FLICKY_13_UP",
 	"S_FLICKY_13_DOWN",
+	"S_FLICKY_13_STAND",
+	"S_FLICKY_13_CENTER",
 
 	// Dove
 	"S_FLICKY_14_OUT",
 	"S_FLICKY_14_FLAP1",
 	"S_FLICKY_14_FLAP2",
 	"S_FLICKY_14_FLAP3",
+	"S_FLICKY_14_STAND",
+	"S_FLICKY_14_CENTER",
 
 	// Cat
 	"S_FLICKY_15_OUT",
@@ -5506,12 +5540,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_15_HOP",
 	"S_FLICKY_15_UP",
 	"S_FLICKY_15_DOWN",
+	"S_FLICKY_15_STAND",
+	"S_FLICKY_15_CENTER",
 
 	// Canary
 	"S_FLICKY_16_OUT",
 	"S_FLICKY_16_FLAP1",
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
+	"S_FLICKY_16_STAND",
+	"S_FLICKY_16_CENTER",
 
 	// Spider
 	"S_SECRETFLICKY_01_OUT",
@@ -5519,12 +5557,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SECRETFLICKY_01_HOP",
 	"S_SECRETFLICKY_01_UP",
 	"S_SECRETFLICKY_01_DOWN",
+	"S_SECRETFLICKY_01_STAND",
+	"S_SECRETFLICKY_01_CENTER",
 
 	// Bat
 	"S_SECRETFLICKY_02_OUT",
 	"S_SECRETFLICKY_02_FLAP1",
 	"S_SECRETFLICKY_02_FLAP2",
 	"S_SECRETFLICKY_02_FLAP3",
+	"S_SECRETFLICKY_02_STAND",
+	"S_SECRETFLICKY_02_CENTER",
 
 	// Fan
 	"S_FAN",
@@ -6578,6 +6620,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CRAWLASTATUE", // Crawla statue
 	"MT_FACESTABBERSTATUE", // Facestabber statue
 	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
+	"MT_BRAMBLES", // Brambles
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
@@ -6722,23 +6765,41 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Flickies
 	"MT_FLICKY_01", // Bluebird
+	"MT_FLICKY_01_CENTER",
 	"MT_FLICKY_02", // Rabbit
+	"MT_FLICKY_02_CENTER",
 	"MT_FLICKY_03", // Chicken
+	"MT_FLICKY_03_CENTER",
 	"MT_FLICKY_04", // Seal
+	"MT_FLICKY_04_CENTER",
 	"MT_FLICKY_05", // Pig
+	"MT_FLICKY_05_CENTER",
 	"MT_FLICKY_06", // Chipmunk
+	"MT_FLICKY_06_CENTER",
 	"MT_FLICKY_07", // Penguin
+	"MT_FLICKY_07_CENTER",
 	"MT_FLICKY_08", // Fish
+	"MT_FLICKY_08_CENTER",
 	"MT_FLICKY_09", // Ram
+	"MT_FLICKY_09_CENTER",
 	"MT_FLICKY_10", // Puffin
+	"MT_FLICKY_10_CENTER",
 	"MT_FLICKY_11", // Cow
+	"MT_FLICKY_11_CENTER",
 	"MT_FLICKY_12", // Rat
+	"MT_FLICKY_12_CENTER",
 	"MT_FLICKY_13", // Bear
+	"MT_FLICKY_13_CENTER",
 	"MT_FLICKY_14", // Dove
+	"MT_FLICKY_14_CENTER",
 	"MT_FLICKY_15", // Cat
+	"MT_FLICKY_15_CENTER",
 	"MT_FLICKY_16", // Canary
+	"MT_FLICKY_16_CENTER",
 	"MT_SECRETFLICKY_01", // Spider
+	"MT_SECRETFLICKY_01_CENTER",
 	"MT_SECRETFLICKY_02", // Bat
+	"MT_SECRETFLICKY_02_CENTER",
 	"MT_SEED",
 
 	// Environmental Effects
@@ -7316,6 +7377,8 @@ struct {
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
 	{"VERSION",VERSION}, // Grab the game's version!
 	{"SUBVERSION",SUBVERSION}, // more precise version number
+	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
+	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
 	// Special linedef executor tag numbers!
 	{"LE_PINCHPHASE",LE_PINCHPHASE}, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
@@ -7609,6 +7672,9 @@ struct {
 	{"WEP_EXPLODE",WEP_EXPLODE},
 	{"WEP_RAIL",WEP_RAIL},
 	{"NUM_WEAPONS",NUM_WEAPONS},
+
+	// Value for infinite lives
+	{"INFLIVES", INFLIVES},
 
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
