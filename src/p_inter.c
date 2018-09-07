@@ -961,8 +961,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
-			if (toucher->tracer && toucher->tracer->state-states > S_ORBIDYA1)
-				return; // Don't have multiple ideya, unless it's the first one given
+			if (toucher->tracer)
+				return; // Don't have multiple ideya
 
 			if (player->mare != special->threshold) // wrong mare
 				return;
