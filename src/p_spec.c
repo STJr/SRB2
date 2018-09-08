@@ -7485,6 +7485,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 					rover->flags &= ~FF_QUICKSAND;
 				if (rover->spawnflags & FF_BUSTUP)
 					rover->flags &= ~FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags &= ~FF_MARIO;
 			}
 		}
 		else // continue fading out
@@ -7510,6 +7512,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 					rover->flags |= FF_QUICKSAND;
 				if (rover->spawnflags & FF_BUSTUP)
 					rover->flags |= FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags |= FF_MARIO;
 			}
 		}
 		else // continue fading in
@@ -7567,6 +7571,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 					rover->flags &= ~FF_QUICKSAND;
 				if (rover->spawnflags & FF_BUSTUP)
 					rover->flags &= ~FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags &= ~FF_MARIO;
 			}
 			else // keep collision during fade
 			{
@@ -7578,6 +7584,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 					rover->flags |= FF_QUICKSAND;
 				if (rover->spawnflags & FF_BUSTUP)
 					rover->flags |= FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags |= FF_MARIO;
 			}
 		}
 	}
