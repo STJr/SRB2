@@ -7460,6 +7460,9 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	INT32 alpha;
 	fade_t *fadingdata = (fade_t *)rover->fadingdata;
 
+	if (rover->master->special == 258) // Laser block
+		return false;
+
 	if (fadingdata)
 		alpha = fadingdata->alpha;
 	else
