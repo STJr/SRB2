@@ -2765,7 +2765,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 		// Match the Thing's old floorz to an FOF and check for FF_EXISTS
 		// If ~FF_EXISTS, don't set mobj Z.
-		if (!rover || (rover->flags & FF_EXISTS))
+		if (!rover || ((rover->flags & FF_EXISTS) && (rover->flags & FF_SOLID)))
 		{
 			if (thing->eflags & MFE_VERTICALFLIP)
 				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
