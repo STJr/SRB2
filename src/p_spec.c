@@ -7463,6 +7463,14 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 	if (rover->master->special == 258) // Laser block
 		return false;
 
+	// If fading an invisible FOF whose render flags we did not yet set,
+	// initialize its alpha to 1
+	if (dotranslucent &&
+		!(rover->spawnflags & FF_RENDERSIDES) &&
+		!(rover->spawnflags & FF_RENDERPLANES) &&
+		!(rover->flags & FF_RENDERALL))
+		rover->alpha = 1;
+
 	if (fadingdata)
 		alpha = fadingdata->alpha;
 	else
@@ -7678,6 +7686,15 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->rover = rover;
 	d->sectornum = (INT32)sectornum;
 	d->ffloornum = (INT32)ffloornum;
+
+	// If fading an invisible FOF whose render flags we did not yet set,
+	// initialize its alpha to 1
+	if (dotranslucent &&
+		!(rover->spawnflags & FF_RENDERSIDES) &&
+		!(rover->spawnflags & FF_RENDERPLANES) &&
+		!(rover->flags & FF_RENDERALL))
+		rover->alpha = 1;
+
 	d->alpha = rover->alpha;
 	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
 	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
