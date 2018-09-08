@@ -7541,13 +7541,23 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		{
 			if (alpha >= 256)
 			{
-				//rover->flags |= (FF_CUTLEVEL | FF_CUTEXTRA);
+				if (!(rover->flags & FF_CUTSOLIDS) &&
+					(rover->spawnflags & FF_CUTSOLIDS))
+				{
+					rover->flags |= FF_CUTSOLIDS;
+					rover->target->moved = true;
+				}
 				rover->flags &= ~FF_TRANSLUCENT;
 			}
 			else
 			{
 				rover->flags |= FF_TRANSLUCENT;
-				//rover->flags &= ~(FF_CUTLEVEL | FF_CUTEXTRA);
+				if ((rover->flags & FF_CUTSOLIDS) &&
+					(rover->spawnflags & FF_CUTSOLIDS))
+				{
+					rover->flags &= ~FF_CUTSOLIDS;
+					rover->target->moved = true;
+				}
 			}
 		}
 	}
@@ -7559,7 +7569,12 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
 		if (dotranslucent)
 		{
 			rover->flags |= FF_TRANSLUCENT;
-			//rover->flags &= ~(FF_CUTLEVEL | FF_CUTEXTRA);
+			if ((rover->flags & FF_CUTSOLIDS) &&
+				(rover->spawnflags & FF_CUTSOLIDS))
+			{
+				rover->flags &= ~FF_CUTSOLIDS;
+				rover->target->moved = true;
+			}
 		}
 
 		if (docollision)
