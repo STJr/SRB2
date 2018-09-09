@@ -2779,9 +2779,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 420: // Fade light levels in tagged sectors to new value
 			P_FadeLight(line->tag,
-				(line->flags & ML_BLOCKMONSTERS) ? max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 255), 0) : line->frontsector->lightlevel,
-				(line->flags & ML_BLOCKMONSTERS) ? max(sides[line->sidenum[0]].rowoffset>>FRACBITS, 0) : P_AproxDistance(line->dx, line->dy)>>FRACBITS,
-				(line->flags & ML_NOCLIMB),
+				(line->flags & ML_DONTPEGBOTTOM) ? max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 255), 0) : line->frontsector->lightlevel,
+				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].rowoffset>>FRACBITS, 0) : P_AproxDistance(line->dx, line->dy)>>FRACBITS,
+				(line->flags & ML_EFFECT5),
 				(line->flags & ML_TFERLINE));
 			break;
 
