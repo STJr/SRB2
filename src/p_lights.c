@@ -15,6 +15,7 @@
 #include "doomdef.h"
 #include "doomstat.h" // gametic
 #include "p_local.h"
+#include "r_main.h" // LIGHTSEGSHIFT
 #include "r_state.h"
 #include "z_zone.h"
 #include "m_random.h"
@@ -331,9 +332,10 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
   * \param speed     Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
   * \param ticbased  Use a specific duration for the fade, defined by speed
+  * \param exactlightlevel Do not snap to software values (for OpenGL)
   * \sa T_LightFade
   */
-void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased)
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased, boolean exactlightlevel)
 {
 	lightlevel_t *ll;
 
@@ -353,6 +355,8 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 
 	ll->sector = sector;
 	ll->destlevel = destvalue;
+	ll->exactlightlevel = exactlightlevel;
+	ll->lightlevel = sector->lightlevel;
 
 	if (ticbased)
 	{
@@ -370,12 +374,12 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	}
 }
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean exactlightlevel)
 {
 	INT32 i;
 	// search all sectors for ones with tag
 	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0 ;)
-		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased);
+		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased, exactlightlevel);
 }
 
 /** Fades the light level in a sector to a new value.
@@ -385,47 +389,66 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
   */
 void T_LightFade(lightlevel_t *ll)
 {
+	boolean stillfading = false;
+	INT16 lightlevel = ll->lightlevel;
+
 	if (ll->duration >= 0) // tic-based
 	{
+		stillfading = !(gametic - ll->firsttic >= ll->duration);
 		if (gametic - ll->firsttic >= ll->duration)
 		{
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
 			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		}
 		else if (!((gametic - ll->firsttic) % ll->interval))
 		{
 			if (ll->speed < 0)
-				ll->sector->lightlevel = max(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
+				lightlevel = max(lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
 			else
-				ll->sector->lightlevel = min(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
+				lightlevel = min(lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
 		}
-		return;
 	}
-
-	if (ll->sector->lightlevel < ll->destlevel)
+	else // x/tic speed-based
 	{
-		// increase the lightlevel
-		if (ll->sector->lightlevel + ll->speed >= ll->destlevel)
+		if (lightlevel < ll->destlevel)
 		{
-			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			// increase the lightlevel
+			if (lightlevel + ll->speed >= ll->destlevel)
+			{
+				// stop changing light level
+				lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
 
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+				P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+			}
+			else
+			{
+				stillfading = true;
+				lightlevel = (INT16)(lightlevel + (INT16)ll->speed); // move lightlevel
+			}
 		}
 		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel + (INT16)ll->speed); // move lightlevel
+		{
+			// decrease lightlevel
+			if (lightlevel - ll->speed <= ll->destlevel)
+			{
+				// stop changing light level
+				lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+
+				P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+			}
+			else
+			{
+				stillfading = true;
+				lightlevel = (INT16)(lightlevel - (INT16)ll->speed); // move lightlevel
+			}
+		}
 	}
+
+	// Snap light level to software values
+	if (!stillfading || ll->exactlightlevel)
+		ll->sector->lightlevel = lightlevel;
 	else
-	{
-		// decrease lightlevel
-		if (ll->sector->lightlevel - ll->speed <= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+		ll->sector->lightlevel = (lightlevel >> LIGHTSEGSHIFT) << LIGHTSEGSHIFT;
 
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel - (INT16)ll->speed); // move lightlevel
-	}
+	ll->lightlevel = lightlevel;
 }

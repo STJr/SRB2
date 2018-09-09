@@ -143,6 +143,10 @@ typedef struct
 	INT32 duration;    ///< If <0, do not use tic-based behavior. If 0, set instantly. If >0, fade lasts this duration.
 	UINT32 interval;   ///< Interval to deduct light level
 	tic_t firsttic;    ///< First gametic to count from
+
+	// Snap to software values
+	boolean exactlightlevel; ///< Use exact values for OpenGL
+	INT16 lightlevel;        ///< Internal counter for fading
 } lightlevel_t;
 
 #define GLOWSPEED 8
@@ -161,8 +165,8 @@ strobe_t * P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector
 void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length);
 
-void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased);
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased);
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased, boolean exactlightlevel);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean exactlightlevel);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum
