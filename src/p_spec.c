@@ -106,10 +106,10 @@ static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t o
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean docollision, boolean dolighting, boolean doghostfade, boolean exactalpha);
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
 	INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean docollision, boolean dolighting, boolean doghostfade, boolean exactalpha);
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3359,8 +3359,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
-						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
-						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
+						!(line->flags & ML_BOUNCY),         // do not handle collision
+						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				else
 				{
@@ -3370,8 +3370,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
-						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
-						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
+						!(line->flags & ML_BOUNCY),         // do not handle collision
+						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				}
 			}
@@ -7463,7 +7463,7 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 }
 
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
-	boolean doexists, boolean dotranslucent, boolean docollision, boolean dolighting, boolean doghostfade, boolean exactalpha)
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	boolean stillfading = false;
 	INT32 alpha;
@@ -7728,8 +7728,8 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
 	d->doexists = doexists;
 	d->dotranslucent = dotranslucent;
-	d->docollision = docollision;
 	d->dolighting = dolighting;
+	d->docollision = docollision;
 	d->doghostfade = doghostfade;
 	d->exactalpha = exactalpha;
 
@@ -7742,20 +7742,19 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
 		fixed_t alphapercent = FixedDiv(d->destvalue, rover->spawnalpha);
 		fixed_t adjustedlightdelta = FixedMul(lightdelta, alphapercent);
-		INT16 destlightvalue;
 
 		if (rover->target->lightlevel >= sectors[rover->secnum].spawn_lightlevel) // fading out, get lighter
-			destlightvalue = rover->target->lightlevel - adjustedlightdelta;
+			d->destlightlevel = rover->target->lightlevel - adjustedlightdelta;
 		else // fading in, get darker
-			destlightvalue = rover->target->lightlevel + adjustedlightdelta;
-
-		//CONS_Printf("%d| LightDelta %d> AlphaPct %d> AdjLiDel %d> DestLight %d\n", gametic, lightdelta, FixedMul(alphapercent, 100), adjustedlightdelta, destlightvalue);
+			d->destlightlevel = rover->target->lightlevel + adjustedlightdelta;
 
 		P_FadeLightBySector(&sectors[rover->secnum],
-			destlightvalue,
+			d->destlightlevel,
 			FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT,
 			true);
 	}
+	else
+		d->destlightlevel = -1;
 
 	P_AddThinker(&d->thinker);
 }
@@ -7767,8 +7766,14 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
   */
 void T_Fade(fade_t *d)
 {
-	if (d->rover && !P_FadeFakeFloor(d->rover, d->destvalue, d->speed, d->doexists, d->dotranslucent, d->docollision, d->dolighting, d->doghostfade, d->exactalpha))
+	if (d->rover && !P_FadeFakeFloor(d->rover, d->destvalue, d->speed, d->doexists, d->dotranslucent, d->dolighting, d->docollision, d->doghostfade, d->exactalpha))
+	{
+		// Finalize lighting, copypasta from P_AddFakeFloorFader
+		if (d->dolighting && !(d->rover->flags & FF_NOSHADE) && d->destlightlevel > -1)
+			sectors[d->rover->secnum].lightlevel = d->destlightlevel;
+
 		P_RemoveFakeFloorFader(d->rover);
+	}
 }
 
 /*

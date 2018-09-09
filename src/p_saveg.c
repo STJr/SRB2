@@ -1591,11 +1591,12 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->ffloornum);
 	WRITEINT32(save_p, ht->alpha);
 	WRITEINT16(save_p, ht->destvalue);
+	WRITEINT16(save_p, ht->destlightlevel);
 	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
-	WRITEUINT8(save_p, ht->docollision);
 	WRITEUINT8(save_p, ht->dolighting);
+	WRITEUINT8(save_p, ht->docollision);
 	WRITEUINT8(save_p, ht->doghostfade);
 	WRITEUINT8(save_p, ht->exactalpha);
 }
@@ -2599,11 +2600,12 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->ffloornum = READINT32(save_p);
 	ht->alpha = READINT32(save_p);
 	ht->destvalue = READINT16(save_p);
+	ht->destlightlevel = READINT16(save_p);
 	ht->speed = READINT16(save_p);
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
-	ht->docollision = READUINT8(save_p);
 	ht->dolighting = READUINT8(save_p);
+	ht->docollision = READUINT8(save_p);
 	ht->doghostfade = READUINT8(save_p);
 	ht->exactalpha = READUINT8(save_p);
 

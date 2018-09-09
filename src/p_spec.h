@@ -470,11 +470,12 @@ typedef struct
 	INT32 ffloornum;    ///< Number of ffloor of target sector
 	INT32 alpha;        ///< Internal alpha counter
 	INT16 destvalue;    ///< Transparency value to fade to
+	INT16 destlightlevel; ///< Light level to fade to
 	INT16 speed;        ///< Speed to fade by
 	boolean doexists;   ///< Handle FF_EXISTS
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
-	boolean docollision; ///< Handle interactive flags
 	boolean dolighting; ///< Handle shadows and light blocks
+	boolean docollision; ///< Handle interactive flags
 	boolean doghostfade; ///< No interactive flags during fading
 	boolean exactalpha; ///< Use exact alpha values (opengl)
 } fade_t;
