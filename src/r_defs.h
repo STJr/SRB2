@@ -385,6 +385,9 @@ typedef struct sector_s
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
 
+	// for fade thinker
+	INT16 spawn_lightlevel;
+
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
