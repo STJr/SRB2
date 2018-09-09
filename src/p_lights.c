@@ -25,7 +25,7 @@
   *
   * \param sector The sector to remove effects from.
   */
-static void P_RemoveLighting(sector_t *sector)
+void P_RemoveLighting(sector_t *sector)
 {
 	if (sector->lightingdata)
 	{

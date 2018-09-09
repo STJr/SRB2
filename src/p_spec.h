@@ -154,6 +154,8 @@ typedef struct
 #define FASTDARK 15
 #define SLOWDARK 35
 
+void P_RemoveLighting(sector_t *sector);
+
 void T_FireFlicker(fireflicker_t *flick);
 fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxsector, INT32 length);
 void T_LightningFlash(lightflash_t *flash);

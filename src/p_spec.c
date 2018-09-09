@@ -7453,6 +7453,12 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 					fadingdata->exactalpha);
 			rover->alpha = fadingdata->alpha;
 
+			if (fadingdata->dolighting)
+			{
+				P_RemoveLighting(&sectors[rover->secnum]);
+				&sectors[rover->secnum].lightlevel = rover->target->lightlevel; // \todo get fade light level destvalue
+			}
+
 			P_RemoveThinker(&fadingdata->thinker);
 		}
 
@@ -7728,6 +7734,13 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 
 	// find any existing thinkers and remove them, then replace with new data
 	P_ResetFakeFloorFader(rover, d, false);
+
+	// Set a separate thinker for shadow fading
+	if (dolighting && !(rover->flags & FF_NOSHADE))
+		P_FadeLightBySector(&sectors[rover->secnum],
+			rover->target->lightlevel, // (shadowlight - targetlight) * destvalue/256 // \todo get fade light level destvalue
+			FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT,
+			true, exactalpha);
 
 	P_AddThinker(&d->thinker);
 }
