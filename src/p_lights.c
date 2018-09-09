@@ -13,6 +13,7 @@
 ///        Fire flicker, light flash, strobe flash, lightning flash, glow, and fade.
 
 #include "doomdef.h"
+#include "doomstat.h" // gametic
 #include "p_local.h"
 #include "r_state.h"
 #include "z_zone.h"
@@ -329,12 +330,10 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
   * \param destvalue The final light value in these sectors.
   * \param speed     Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
-  * \todo Calculate speed better so that it is possible to specify
-  *       the time for completion of the fade, and all lights fade
-  *       in this time regardless of initial values.
+  * \param ticbased  Use a specific duration for the fade, defined by speed
   * \sa T_LightFade
   */
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
 {
 	INT32 i;
 	lightlevel_t *ll;
@@ -346,6 +345,13 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
 		sector = &sectors[i];
 
 		P_RemoveLighting(sector); // remove the old lighting effect first
+
+		if ((ticbased && !speed) || sector->lightlevel == destvalue) // set immediately
+		{
+			sector->lightlevel = destvalue;
+			continue;
+		}
+
 		ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
 		ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
 		sector->lightingdata = ll; // set it to the lightlevel_t
@@ -354,7 +360,21 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
 
 		ll->sector = sector;
 		ll->destlevel = destvalue;
-		ll->speed = speed;
+
+		if (ticbased)
+		{
+			ll->duration = abs(speed);
+			ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->duration))/FRACUNIT;
+			if (!ll->speed)
+				ll->speed = (destvalue < sector->lightlevel) ? -1 : 1;
+			ll->interval = max(FixedFloor(FixedDiv(ll->duration, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
+			ll->firsttic = gametic;
+		}
+		else
+		{
+			ll->duration = -1;
+			ll->speed = abs(speed);
+		}
 	}
 }
 
@@ -365,6 +385,23 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
   */
 void T_LightFade(lightlevel_t *ll)
 {
+	if (ll->duration >= 0) // tic-based
+	{
+		if (gametic - ll->firsttic >= ll->duration)
+		{
+			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+		}
+		else if (!((gametic - ll->firsttic) % ll->interval))
+		{
+			if (ll->speed < 0)
+				ll->sector->lightlevel = max(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
+			else
+				ll->sector->lightlevel = min(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
+		}
+		return;
+	}
+
 	if (ll->sector->lightlevel < ll->destlevel)
 	{
 		// increase the lightlevel

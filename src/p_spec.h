@@ -138,6 +138,11 @@ typedef struct
 	sector_t *sector;  ///< Sector where action is taking place.
 	INT32 destlevel;   ///< Light level we're fading to.
 	INT32 speed;       ///< Speed at which to change light level.
+
+	// Tic-based behavior
+	INT32 duration;    ///< If <0, do not use tic-based behavior. If 0, set instantly. If >0, fade lasts this duration.
+	UINT32 interval;   ///< Interval to deduct light level
+	tic_t firsttic;    ///< First gametic to count from
 } lightlevel_t;
 
 #define GLOWSPEED 8
@@ -156,7 +161,7 @@ strobe_t * P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector
 void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length);
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum
