@@ -719,6 +719,7 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
 		ss->bottommap = ss->midmap = ss->topmap = -1;
+		ss->spawn_bottommap = ss->spawn_midmap = ss->spawn_topmap = -1;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
 		ss->verticalflip = false;
@@ -1477,7 +1478,7 @@ static void P_LoadRawSideDefs2(void *data)
 				{
 					if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
 					{
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 					}
@@ -1507,7 +1508,7 @@ static void P_LoadRawSideDefs2(void *data)
 					{
 						char *col;
 
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
