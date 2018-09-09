@@ -1540,6 +1540,11 @@ static void SaveLightlevelThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEINT32(save_p, ht->destlevel);
 	WRITEINT32(save_p, ht->speed);
+	WRITEINT32(save_p, ht->duration);
+	WRITEUINT32(save_p, ht->interval);
+	WRITEUINT32(save_p, (UINT32)ht->firsttic);
+	WRITEUINT8(save_p, (UINT8)ht->exactlightlevel);
+	WRITEINT16(save_p, ht->lightlevel);
 }
 
 //
@@ -2540,6 +2545,11 @@ static inline void LoadLightlevelThinker(actionf_p1 thinker)
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->destlevel = READINT32(save_p);
 	ht->speed = READINT32(save_p);
+	ht->duration = READINT32(save_p);
+	ht->interval = READUINT32(save_p);
+	ht->firsttic = (tic_t)READUINT32(save_p);
+	ht->exactlightlevel = (boolean)READUINT8(save_p);
+	ht->lightlevel = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->lightingdata = ht;
 	P_AddThinker(&ht->thinker);
