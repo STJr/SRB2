@@ -323,59 +323,59 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
 	return g;
 }
 
-/** Fades all the lights in sectors with a particular tag to a new
+/** Fades all the lights in specified sector to a new
   * value.
   *
-  * \param tag       Tag to look for sectors by.
+  * \param sector    Target sector
   * \param destvalue The final light value in these sectors.
   * \param speed     Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
   * \param ticbased  Use a specific duration for the fade, defined by speed
   * \sa T_LightFade
   */
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased)
+{
+	lightlevel_t *ll;
+
+	P_RemoveLighting(sector); // remove the old lighting effect first
+
+	if ((ticbased && !speed) || sector->lightlevel == destvalue) // set immediately
+	{
+		sector->lightlevel = destvalue;
+		return;
+	}
+
+	ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
+	ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
+	sector->lightingdata = ll; // set it to the lightlevel_t
+
+	P_AddThinker(&ll->thinker); // add thinker
+
+	ll->sector = sector;
+	ll->destlevel = destvalue;
+
+	if (ticbased)
+	{
+		ll->duration = abs(speed);
+		ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->duration))/FRACUNIT;
+		if (!ll->speed)
+			ll->speed = (destvalue < sector->lightlevel) ? -1 : 1;
+		ll->interval = max(FixedFloor(FixedDiv(ll->duration, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
+		ll->firsttic = gametic;
+	}
+	else
+	{
+		ll->duration = -1;
+		ll->speed = abs(speed);
+	}
+}
+
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
 {
 	INT32 i;
-	lightlevel_t *ll;
-	sector_t *sector;
-
 	// search all sectors for ones with tag
 	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0 ;)
-	{
-		sector = &sectors[i];
-
-		P_RemoveLighting(sector); // remove the old lighting effect first
-
-		if ((ticbased && !speed) || sector->lightlevel == destvalue) // set immediately
-		{
-			sector->lightlevel = destvalue;
-			continue;
-		}
-
-		ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
-		ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
-		sector->lightingdata = ll; // set it to the lightlevel_t
-
-		P_AddThinker(&ll->thinker); // add thinker
-
-		ll->sector = sector;
-		ll->destlevel = destvalue;
-
-		if (ticbased)
-		{
-			ll->duration = abs(speed);
-			ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->duration))/FRACUNIT;
-			if (!ll->speed)
-				ll->speed = (destvalue < sector->lightlevel) ? -1 : 1;
-			ll->interval = max(FixedFloor(FixedDiv(ll->duration, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
-			ll->firsttic = gametic;
-		}
-		else
-		{
-			ll->duration = -1;
-			ll->speed = abs(speed);
-		}
-	}
+		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased);
 }
 
 /** Fades the light level in a sector to a new value.
