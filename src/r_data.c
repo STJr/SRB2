@@ -1038,8 +1038,8 @@ void R_ReInitColormaps(UINT16 num)
 
 static lumpnum_t foundcolormaps[MAXCOLORMAPS];
 
-static char colormapFixingArray[MAXCOLORMAPS][3][9];
-static size_t carrayindex;
+//static char colormapFixingArray[MAXCOLORMAPS][3][9];
+//static size_t carrayindex;
 
 //
 // R_ClearColormaps
@@ -1052,7 +1052,7 @@ void R_ClearColormaps(void)
 
 	num_extra_colormaps = 0;
 
-	carrayindex = 0;
+	//carrayindex = 0;
 
 	for (i = 0; i < MAXCOLORMAPS; i++)
 		foundcolormaps[i] = LUMPERROR;
@@ -1110,7 +1110,7 @@ static int RoundUp(double number);
 INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 {
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
-	double r, g, b, cbrightness, maskamt = 0, othermask = 0;
+	double maskamt = 0, othermask = 0;
 	int mask, fog = 0;
 	size_t mapnum = num_extra_colormaps;
 	size_t i;
@@ -1163,7 +1163,7 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 		fadedist = fadeend - fadestart;
 		fog = NUMFROMCHAR(p2[1]);
 	}
-#undef getnum
+#undef NUMFROMCHAR
 
 	if (p3[0] == '#')
 	{
@@ -1194,14 +1194,35 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 	if (num_extra_colormaps == MAXCOLORMAPS)
 		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
 
-	strncpy(colormapFixingArray[num_extra_colormaps][0], p1, 8);
-	strncpy(colormapFixingArray[num_extra_colormaps][1], p2, 8);
-	strncpy(colormapFixingArray[num_extra_colormaps][2], p3, 8);
+	//strncpy(colormapFixingArray[num_extra_colormaps][0], p1, 8);
+	//strncpy(colormapFixingArray[num_extra_colormaps][1], p2, 8);
+	//strncpy(colormapFixingArray[num_extra_colormaps][2], p3, 8);
 
 	num_extra_colormaps++;
 
+	foundcolormaps[mapnum] = LUMPERROR;
+
+	// aligned on 8 bit for asm code
+	extra_colormaps[mapnum].colormap = NULL;
+	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
+	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
+	extra_colormaps[mapnum].maskamt = maskamt;
+	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
+	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
+	extra_colormaps[mapnum].fog = fog;
+
+	// This code creates the colormap array used by software renderer
 	if (rendermode == render_soft)
 	{
+		double r, g, b, cbrightness;
+		int p;
+		char *colormap_p;
+
+		// Initialise the map and delta arrays
+		// map[i] stores an RGB color (as double) for index i,
+		//  which is then converted to SRB2's palette later
+		// deltas[i] stores a corresponding fade delta between the RGB color and the final fade color;
+		//  map[i]'s values are decremented by after each use
 		for (i = 0; i < 256; i++)
 		{
 			r = pLocalPalette[i].s.red;
@@ -1224,22 +1245,48 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 				map[i][2] = 255.0l;
 			deltas[i][2] = (map[i][2] - cdestb) / (double)fadedist;
 		}
+
+		// Now allocate memory for the actual colormap array itself!
+		colormap_p = Z_MallocAlign((256 * 34) + 10, PU_LEVEL, NULL, 8);
+		extra_colormaps[mapnum].colormap = (UINT8 *)colormap_p;
+
+		// Calculate the palette index for each palette index, for each light level
+		// (as well as the two unused colormap lines we inherited from Doom)
+		for (p = 0; p < 34; p++)
+		{
+			for (i = 0; i < 256; i++)
+			{
+				*colormap_p = NearestColor((UINT8)RoundUp(map[i][0]),
+					(UINT8)RoundUp(map[i][1]),
+					(UINT8)RoundUp(map[i][2]));
+				colormap_p++;
+
+				if ((UINT32)p < fadestart)
+					continue;
+#define ABS2(x) ((x) < 0 ? -(x) : (x))
+				if (ABS2(map[i][0] - cdestr) > ABS2(deltas[i][0]))
+					map[i][0] -= deltas[i][0];
+				else
+					map[i][0] = cdestr;
+
+				if (ABS2(map[i][1] - cdestg) > ABS2(deltas[i][1]))
+					map[i][1] -= deltas[i][1];
+				else
+					map[i][1] = cdestg;
+
+				if (ABS2(map[i][2] - cdestb) > ABS2(deltas[i][1]))
+					map[i][2] -= deltas[i][2];
+				else
+					map[i][2] = cdestb;
+#undef ABS2
+			}
+		}
 	}
-
-	foundcolormaps[mapnum] = LUMPERROR;
-
-	// aligned on 8 bit for asm code
-	extra_colormaps[mapnum].colormap = NULL;
-	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
-	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
-	extra_colormaps[mapnum].maskamt = maskamt;
-	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
-	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
-	extra_colormaps[mapnum].fog = fog;
 
 	return (INT32)mapnum;
 }
 
+/*
 void R_MakeColormaps(void)
 {
 	size_t i;
@@ -1310,7 +1357,7 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 		fadedist = fadeend - fadestart;
 		fog = NUMFROMCHAR(p2[1]);
 	}
-#undef getnum
+#undef NUMFROMCHAR
 
 	if (p3[0] == '#')
 	{
@@ -1419,6 +1466,7 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 
 	return;
 }
+*/
 
 // Thanks to quake2 source!
 // utils3/qdata/images.c
