@@ -7769,7 +7769,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	if (dolighting && !(rover->flags & FF_NOSHADE))
 	{
 		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
-		fixed_t alphapercent = FixedDiv(d->destvalue, rover->spawnalpha);
+		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
 		fixed_t adjustedlightdelta = FixedMul(lightdelta, alphapercent);
 
 		if (rover->target->lightlevel >= sectors[rover->secnum].spawn_lightlevel) // fading out, get lighter
