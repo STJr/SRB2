@@ -212,8 +212,13 @@ typedef struct polyfade_s
 	thinker_t thinker; // must be first
 
 	INT32 polyObjNum;
-
-	// \todo polyfade fields
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	UINT32 duration;
+	INT32 speed;
+	UINT32 interval;
+	tic_t firsttic;
 } polyfade_t;
 
 //
@@ -278,7 +283,13 @@ typedef struct polydisplacedata_s
 typedef struct polyfadedata_s
 {
 	INT32 polyObjNum;
-	// \todo polyfadedata fields
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	UINT32 duration;
+	INT32 speed;
+	UINT32 interval;
+	tic_t firsttic;
 } polyfadedata_t;
 
 //

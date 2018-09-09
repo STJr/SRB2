@@ -2855,8 +2855,8 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 
 void T_PolyObjFade(polyfade_t *th)
 {
+	boolean stillfading = false;
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
-	size_t i;
 
 	if (!po)
 #ifdef RANGECHECK
@@ -2873,7 +2873,67 @@ void T_PolyObjFade(polyfade_t *th)
 	if (po->thinker == NULL)
 		po->thinker = &th->thinker;
 
-	// \todo logic
+	stillfading = !(gametic - th->firsttic >= th->duration);
+
+	if (gametic - th->firsttic >= th->duration)
+	{
+		po->translucency = th->destvalue; // set to dest translucency
+
+		// remove thinker
+		if (po->thinker == &th->thinker)
+			po->thinker = NULL;
+		P_RemoveThinker(&th->thinker);
+	}
+	else if (!((gametic - th->firsttic) % th->interval))
+	{
+		if (th->speed <= 0)
+			po->translucency = max(po->translucency + th->speed, th->destvalue);
+		else
+			po->translucency = min(po->translucency + th->speed, th->destvalue);
+	}
+
+	if (!stillfading)
+	{
+		// set render flags
+		if (po->translucency >= NUMTRANSMAPS) // invisible
+			po->flags &= ~POF_RENDERALL;
+		else
+			po->flags |= POF_RENDERALL;
+
+		// set collision
+		if (th->docollision && th->speed)
+		{
+			if (th->speed > 0) // faded out
+			{
+				po->flags &= ~POF_SOLID;
+				po->flags |= POF_NOSPECIALS;
+			}
+			else
+			{
+				po->flags |= POF_SOLID;
+				po->flags &= ~POF_NOSPECIALS;
+			}
+		}
+	}
+	else
+	{
+		po->flags |= POF_RENDERALL;
+
+		// set collision
+		if (th->docollision && th->speed)
+		{
+			if (th->doghostfade)
+			{
+				po->flags &= ~POF_SOLID;
+				po->flags |= POF_NOSPECIALS;
+			}
+			else
+			{
+				po->flags |= POF_SOLID;
+				po->flags &= ~POF_NOSPECIALS;
+			}
+		}
+	}
 }
 
 INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
@@ -2883,15 +2943,19 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	polyfade_t *th;
 	INT32 start;
 
-	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
+	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjFade: bad polyobj %d\n", pfdata->polyObjNum);
 		return 0;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
 		return 0;
+
+	// already equal, nothing to do
+	if (po->translucency == pfdata->destvalue)
+		return 1;
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
@@ -2900,9 +2964,14 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = pfdata->tag;
-
-	// \todo polyfade fields
+	th->polyObjNum = pfdata->polyObjNum;
+	th->destvalue = pfdata->destvalue;
+	th->docollision = pfdata->docollision;
+	th->doghostfade = pfdata->doghostfade;
+	th->duration = pfdata->duration;
+	th->speed = pfdata->speed;
+	th->interval = pfdata->interval;
+	th->firsttic = pfdata->firsttic;
 
 	oldpo = po;
 
@@ -2910,7 +2979,7 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
 	{
-		pfdata->tag = po->id;
+		pfdata->polyObjNum = po->id;
 		EV_DoPolyObjFade(pfdata);
 	}
 

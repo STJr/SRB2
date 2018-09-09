@@ -1250,7 +1250,7 @@ static void PolyTranslucency(line_t *line)
 //
 // Makes a polyobject translucency fade and applies tangibility
 //
-static void PolyFade(line_t *line)
+static boolean PolyFade(line_t *line)
 {
 	INT32 polyObjNum = line->tag;
 	polyobj_t *po;
@@ -1258,18 +1258,30 @@ static void PolyFade(line_t *line)
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
 		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", polyObjNum);
-		return;
+		return 0;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
-		return;
+		return 0;
+
+	// already equal, nothing to do
+	if (po->translucency == max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0))
+		return 1;
 
 	polyfadedata_t pfd;
 
-	pfd.polyObjNum = line->tag;
+	pfd.polyObjNum = polyObjNum;
+	pfd.destvalue = max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0);
+	pfd.docollision = !(line->flags & ML_BOUNCY),         // do not handle collision flags
+	pfd.doghostfade = (line->flags & ML_EFFECT1),         // do ghost fade (no collision flags during fade)
 
-	// \todo polyfadedata fields
+	pfd.duration = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+	pfd.speed = FixedFloor(FixedDiv(pfd.destvalue - po->translucency, pfd.duration))/FRACUNIT;
+	if (!pfd.speed)
+		pfd.speed = (pfd.destvalue < po->translucency) ? -1 : 1;
+	pfd.interval = max(FixedFloor(FixedDiv(pfd.duration, abs(pfd.destvalue - po->translucency)))/FRACUNIT, 1);
+	pfd.firsttic = gametic;
 
 	return EV_DoPolyObjFade(&pfd);
 }
