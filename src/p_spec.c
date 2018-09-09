@@ -6760,7 +6760,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].extra_colormap = lines[i].frontsector->extra_colormap;
+					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = lines[i].frontsector->extra_colormap;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.

@@ -401,6 +401,9 @@ typedef struct sector_s
 	// flag angles sector spawned with (via linedef type 7)
 	angle_t spawn_flrpic_angle;
 	angle_t spawn_ceilpic_angle;
+
+	// colormap structure
+	extracolormap_t *spawn_extra_colormap;
 } sector_t;
 
 //
