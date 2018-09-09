@@ -7493,7 +7493,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, IN
 		alpha = rover->alpha;
 
 	// routines specific to fade in and fade out
-	if (alpha == destvalue)
+	if (!ticbased && alpha == destvalue)
 		return stillfading;
 	else if (alpha > destvalue) // fade out
 	{
