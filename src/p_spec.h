@@ -466,6 +466,7 @@ typedef struct
 	boolean doexists;   ///< Handle FF_EXISTS
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
 	boolean docollision; ///< Handle interactive flags
+	boolean dolighting; ///< Handle shadows and light blocks
 	boolean doghostfade; ///< No interactive flags during fading
 	boolean exactalpha; ///< Use exact alpha values (opengl)
 } fade_t;

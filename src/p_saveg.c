@@ -1592,6 +1592,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
 	WRITEUINT8(save_p, ht->docollision);
+	WRITEUINT8(save_p, ht->dolighting);
 	WRITEUINT8(save_p, ht->doghostfade);
 	WRITEUINT8(save_p, ht->exactalpha);
 }
@@ -2596,6 +2597,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
 	ht->docollision = READUINT8(save_p);
+	ht->dolighting = READUINT8(save_p);
 	ht->doghostfade = READUINT8(save_p);
 	ht->exactalpha = READUINT8(save_p);
 
