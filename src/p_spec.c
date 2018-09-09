@@ -7706,6 +7706,10 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	INT16 destvalue, INT16 speed,
 	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
+	// already equal, nothing to do
+	if (rover->alpha == max(1, min(256, destvalue)))
+		return;
+
 	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
