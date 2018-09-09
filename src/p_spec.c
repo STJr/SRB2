@@ -3358,8 +3358,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						destvalue, speed,
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
 						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				else
@@ -3369,8 +3369,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						destvalue, 0, // set alpha immediately
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_BOUNCY),         // do not handle interactive flags
 						(line->flags & ML_EFFECT1),         // do ghost fade (no interactive flags during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				}
@@ -7453,10 +7453,7 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 			rover->alpha = fadingdata->alpha;
 
 			if (fadingdata->dolighting)
-			{
 				P_RemoveLighting(&sectors[rover->secnum]);
-				&sectors[rover->secnum].lightlevel = rover->target->lightlevel; // \todo get fade light level destvalue
-			}
 
 			P_RemoveThinker(&fadingdata->thinker);
 		}
@@ -7697,6 +7694,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed,
   * \param speed        speed to fade by
   * \param doexists	    handle FF_EXISTS
   * \param dotranslucent handle FF_TRANSLUCENT
+  * \param dolighting  fade FOF light
   * \param docollision handle interactive flags
   * \param doghostfade  no interactive flags during fading
   * \param exactalpha   use exact alpha values (opengl)
@@ -7740,10 +7738,24 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 
 	// Set a separate thinker for shadow fading
 	if (dolighting && !(rover->flags & FF_NOSHADE))
+	{
+		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
+		fixed_t alphapercent = FixedDiv(d->destvalue, rover->spawnalpha);
+		fixed_t adjustedlightdelta = FixedMul(lightdelta, alphapercent);
+		INT16 destlightvalue;
+
+		if (rover->target->lightlevel >= sectors[rover->secnum].spawn_lightlevel) // fading out, get lighter
+			destlightvalue = rover->target->lightlevel - adjustedlightdelta;
+		else // fading in, get darker
+			destlightvalue = rover->target->lightlevel + adjustedlightdelta;
+
+		//CONS_Printf("%d| LightDelta %d> AlphaPct %d> AdjLiDel %d> DestLight %d\n", gametic, lightdelta, FixedMul(alphapercent, 100), adjustedlightdelta, destlightvalue);
+
 		P_FadeLightBySector(&sectors[rover->secnum],
-			rover->target->lightlevel, // (shadowlight - targetlight) * destvalue/256 // \todo get fade light level destvalue
+			destlightvalue,
 			FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT,
-			true, exactalpha);
+			true);
+	}
 
 	P_AddThinker(&d->thinker);
 }
