@@ -1471,37 +1471,34 @@ static void P_LoadRawSideDefs2(void *data)
 			case 606: //SoM: 4/4/2000: Just colormap transfer
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				if (rendermode == render_soft || rendermode == render_none)
-				{
-					if (
-						((rendermode == render_soft || rendermode == render_none) && (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#'))
+				if (
+					((rendermode == render_soft || rendermode == render_none) && (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#'))
 #ifdef HWRENDER
-						|| (msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-						|| (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
+					|| (msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
+					|| (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
 #endif
-					)
-					{
-						sec->extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
-							msd->bottomtexture);
-						sd->toptexture = sd->bottomtexture = 0;
-					}
-					else
-					{
-						if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-							sd->toptexture = 0;
-						else
-							sd->toptexture = num;
-						if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-							sd->midtexture = 0;
-						else
-							sd->midtexture = num;
-						if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-							sd->bottomtexture = 0;
-						else
-							sd->bottomtexture = num;
-					}
-					break;
+				)
+				{
+					sec->extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						msd->bottomtexture);
+					sd->toptexture = sd->bottomtexture = 0;
 				}
+				else
+				{
+					if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
+						sd->toptexture = 0;
+					else
+						sd->toptexture = num;
+					if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
+						sd->midtexture = 0;
+					else
+						sd->midtexture = num;
+					if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
+						sd->bottomtexture = 0;
+					else
+						sd->bottomtexture = num;
+				}
+				break;
 
 			case 413: // Change music
 			{
