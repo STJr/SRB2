@@ -1192,10 +1192,13 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, mobj->z); // Force this so 3dfloor problems don't arise.
 	WRITEFIXED(save_p, mobj->floorz);
 	WRITEFIXED(save_p, mobj->ceilingz);
-	WRITEUINT32(save_p, (UINT32)mobj->floor_sectornum);
-	WRITEUINT32(save_p, (UINT32)mobj->floor_rovernum);
-	WRITEUINT32(save_p, (UINT32)mobj->ceiling_sectornum);
-	WRITEUINT32(save_p, (UINT32)mobj->ceiling_rovernum);
+
+	// \todo netsync for floorrover
+
+	// WRITEUINT32(save_p, (UINT32)mobj->floor_sectornum);
+	// WRITEUINT32(save_p, (UINT32)mobj->floor_rovernum);
+	// WRITEUINT32(save_p, (UINT32)mobj->ceiling_sectornum);
+	// WRITEUINT32(save_p, (UINT32)mobj->ceiling_rovernum);
 
 	if (diff & MD_SPAWNPOINT)
 	{
@@ -1993,7 +1996,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	UINT16 diff2;
 	INT32 i;
 	fixed_t z, floorz, ceilingz;
-	size_t floor_sectornum, floor_rovernum, ceiling_sectornum, ceiling_rovernum;
+	//size_t floor_sectornum, floor_rovernum, ceiling_sectornum, ceiling_rovernum;
 
 	diff = READUINT32(save_p);
 	if (diff & MD_MORE)
@@ -2006,10 +2009,26 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	z = READFIXED(save_p); // Force this so 3dfloor problems don't arise.
 	floorz = READFIXED(save_p);
 	ceilingz = READFIXED(save_p);
-	floor_sectornum = (size_t)READUINT32(save_p);
-	floor_rovernum = (size_t)READUINT32(save_p);
-	ceiling_sectornum = (size_t)READUINT32(save_p);
-	ceiling_rovernum = (size_t)READUINT32(save_p);
+
+	// \todo netsync for floorrover
+#if 0
+	// Find FOF referenced by floorz
+	if (old_sectornum)
+	{
+		size_t rovernum = 0;
+		for (rover = sectors[old_sectornum].ffloors; rover; rover = rover->next)
+		{
+			if (rovernum == old_rovernum)
+				break;
+			rovernum++;
+		}
+	}
+#endif
+
+	// floor_sectornum = (size_t)READUINT32(save_p);
+	// floor_rovernum = (size_t)READUINT32(save_p);
+	// ceiling_sectornum = (size_t)READUINT32(save_p);
+	// ceiling_rovernum = (size_t)READUINT32(save_p);
 
 	if (diff & MD_SPAWNPOINT)
 	{
@@ -2035,10 +2054,13 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	mobj->z = z;
 	mobj->floorz = floorz;
 	mobj->ceilingz = ceilingz;
-	mobj->floor_sectornum = floor_sectornum;
-	mobj->floor_rovernum = floor_rovernum;
-	mobj->ceiling_sectornum = ceiling_sectornum;
-	mobj->ceiling_rovernum = ceiling_rovernum;
+
+	// \todo netsync for floorrover
+
+	// mobj->floor_sectornum = floor_sectornum;
+	// mobj->floor_rovernum = floor_rovernum;
+	// mobj->ceiling_sectornum = ceiling_sectornum;
+	// mobj->ceiling_rovernum = ceiling_rovernum;
 
 	if (diff & MD_TYPE)
 		mobj->type = READUINT32(save_p);
