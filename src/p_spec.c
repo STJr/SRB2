@@ -3363,7 +3363,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				P_RemoveFakeFloorFader(rover);
 				P_FadeFakeFloor(rover,
-					max(1, min(256, (line->flags & ML_EFFECT4) ? rover->alpha + destvalue : destvalue)),
+					max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
 					0,                                  // set alpha immediately
 					false, NULL, 0,                     // tic-based logic
 					false,                              // do not handle FF_EXISTS
@@ -3415,8 +3415,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					P_AddFakeFloorFader(rover, secnum, j,
 						destvalue,
 						speed,
-						(line->flags & ML_EFFECT5),         // tic-based logic
-						(line->flags & ML_EFFECT4),         // Relative destvalue
+						(line->flags & ML_EFFECT4),         // tic-based logic
+						(line->flags & ML_EFFECT3),         // Relative destvalue
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
@@ -3437,7 +3437,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					P_RemoveFakeFloorFader(rover);
 					P_FadeFakeFloor(rover,
-						max(1, min(256, (line->flags & ML_EFFECT4) ? rover->alpha + destvalue : destvalue)),
+						max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
 						0,                                  // set alpha immediately
 						false, NULL, 0,                     // tic-based logic
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
