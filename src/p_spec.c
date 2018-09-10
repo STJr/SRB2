@@ -3322,8 +3322,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 452: // Set FOF alpha
 		{
-			INT16 destvalue = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
-				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
+			INT16 destvalue = line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(P_AproxDistance(line->dx, line->dy)>>FRACBITS);
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
@@ -3378,9 +3378,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 453: // Fade FOF
 		{
-			INT16 destvalue = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
+			INT16 destvalue = line->sidenum[1] != 0xffff ?
 				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
-			INT16 speed = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
+			INT16 speed = line->sidenum[1] != 0xffff ?
 				(INT16)(sides[line->sidenum[1]].rowoffset>>FRACBITS) : (INT16)(abs(line->dy)>>FRACBITS);
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
