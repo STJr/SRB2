@@ -333,8 +333,6 @@ typedef struct sector_s
 	INT32 floorlightsec, ceilinglightsec;
 	INT32 crumblestate; // used for crumbling and bobbing
 
-	INT32 bottommap, midmap, topmap; // dynamic colormaps
-
 	// list of mobjs that are at least partially in the sector
 	// thinglist is a subset of touching_thinglist
 	struct msecnode_s *touching_thinglist;
