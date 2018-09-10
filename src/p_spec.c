@@ -3367,7 +3367,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					0,                                  // set alpha immediately
 					false, NULL, 0,                     // tic-based logic
 					false,                              // do not handle FF_EXISTS
-					true,                               // handle FF_TRANSLUCENT
+					!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
 					false,                              // do not handle lighting
 					false,                              // do not handle collision
 					false,                              // do not do ghost fade (no collision during fade)
