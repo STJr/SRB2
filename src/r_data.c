@@ -1591,7 +1591,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	for (exc = extra_colormaps; exc; exc = exc->next)
 	{
-		if (exc->lump)
+		if (exc->lump != LUMPERROR)
 			continue;
 		if (maskcolor == exc->maskcolor
 			&& fadecolor == exc->fadecolor
