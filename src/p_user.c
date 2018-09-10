@@ -5974,7 +5974,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momy = 0;
 	}
 
-	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 2*FRACUNIT)
+	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 3*FRACUNIT)
 	{
 		player->mo->z = player->capsule->z+(player->capsule->height/3);
 		player->mo->momz = 0;
