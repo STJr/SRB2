@@ -494,9 +494,7 @@ static void P_NetUnArchivePlayers(void)
 
 // diff3 flags
 #define SD_TAGLIST   0x01
-#define SD_BOTTOMMAP 0x02
-#define SD_MIDMAP    0x04
-#define SD_TOPMAP    0x08
+#define SD_MIDMAP    0x02
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -591,12 +589,8 @@ static void P_NetArchiveWorld(void)
 			diff2 |= SD_TAG;
 		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
 			diff3 |= SD_TAGLIST;
-		if (ss->bottommap != ss->spawn_bottommap)
-			diff3 |= SD_BOTTOMMAP;
 		if (ss->midmap != ss->spawn_midmap)
 			diff3 |= SD_MIDMAP;
-		if (ss->topmap != ss->spawn_topmap)
-			diff3 |= SD_TOPMAP;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -660,12 +654,8 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
-			if (diff3 & SD_BOTTOMMAP)
-				WRITEINT32(put, ss->bottommap);
 			if (diff3 & SD_MIDMAP)
 				WRITEINT32(put, ss->midmap);
-			if (diff3 & SD_TOPMAP)
-				WRITEINT32(put, ss->topmap);
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -860,12 +850,8 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].firsttag = READINT32(get);
 			sectors[i].nexttag = READINT32(get);
 		}
-		if (diff3 & SD_BOTTOMMAP)
-			sectors[i].bottommap = READINT32(get);
 		if (diff3 & SD_MIDMAP)
 			sectors[i].midmap = READINT32(get);
-		if (diff3 & SD_TOPMAP)
-			sectors[i].topmap = READINT32(get);
 
 		if (diff & SD_FFLOORS)
 		{
