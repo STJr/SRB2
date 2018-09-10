@@ -3320,7 +3320,63 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 
-		case 452: // Fade FOF
+		case 452: // Set FOF alpha
+		{
+			INT16 destvalue = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to operate
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				// If fading an invisible FOF whose render flags we did not yet set,
+				// initialize its alpha to 1
+				// for relative alpha calc
+				if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+					(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+					!(rover->spawnflags & FF_RENDERSIDES) &&
+					!(rover->spawnflags & FF_RENDERPLANES) &&
+					!(rover->flags & FF_RENDERALL))
+					rover->alpha = 1;
+
+				P_RemoveFakeFloorFader(rover);
+				P_FadeFakeFloor(rover,
+					max(1, min(256, (line->flags & ML_EFFECT4) ? rover->alpha + destvalue : destvalue)),
+					0,                                  // set alpha immediately
+					false, NULL, 0,                     // tic-based logic
+					false,                              // do not handle FF_EXISTS
+					true,                               // handle FF_TRANSLUCENT
+					false,                              // do not handle lighting
+					false,                              // do not handle collision
+					false,                              // do not do ghost fade (no collision during fade)
+					true);                               // use exact alpha values (for opengl)
+			}
+			break;
+		}
+
+		case 453: // Fade FOF
 		{
 			INT16 destvalue = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
 				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
@@ -3338,7 +3394,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (!sec->ffloors)
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Target sector #%d has no FOFs.\n", secnum);
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Target sector #%d has no FOFs.\n", secnum);
 					return;
 				}
 
@@ -3351,7 +3407,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (!rover)
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 					return;
 				}
 
@@ -3371,6 +3427,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					// If fading an invisible FOF whose render flags we did not yet set,
 					// initialize its alpha to 1
+					// for relative alpha calc
 					if (!(line->flags & ML_NOCLIMB) &&      // do translucent
 						(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
 						!(rover->spawnflags & FF_RENDERSIDES) &&
@@ -3394,7 +3451,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 
-		case 453: // Stop fading FOF
+		case 454: // Stop fading FOF
 		{
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
@@ -3407,7 +3464,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (!sec->ffloors)
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Target sector #%d has no FOFs.\n", secnum);
+					CONS_Debug(DBG_GAMELOGIC, "Line type 454 Executor: Target sector #%d has no FOFs.\n", secnum);
 					return;
 				}
 
@@ -3419,7 +3476,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (!rover)
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					CONS_Debug(DBG_GAMELOGIC, "Line type 454 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 					return;
 				}
 
