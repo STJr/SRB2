@@ -53,15 +53,25 @@ typedef UINT8 lighttable_t;
 typedef struct
 {
 	UINT16 maskcolor, fadecolor;
-	double maskamt;
+	double maskamt, othermask;
 	UINT16 fadestart, fadeend;
+	UINT32 fadedist;
 	INT32 fog;
+
+	// mask rgb for colormap table generation
+	double cmaskr, cmaskg, cmaskb;
+	double cdestr, cdestg, cdestb;
 
 	// rgba is used in hw mode for colored sector lighting
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
+
+	extracolormap_t *next;
+	extracolormap_t *prev;
 } extracolormap_t;
 
 //

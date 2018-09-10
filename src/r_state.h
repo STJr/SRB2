@@ -43,8 +43,7 @@ extern lighttable_t *colormaps;
 // Had to put a limit on colormaps :(
 #define MAXCOLORMAPS 60
 
-extern size_t num_extra_colormaps;
-extern extracolormap_t extra_colormaps[MAXCOLORMAPS];
+extern extracolormap_t *extra_colormaps;
 
 // for global animation
 extern INT32 *texturetranslation;

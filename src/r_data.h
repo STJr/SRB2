@@ -99,7 +99,8 @@ INT32 R_CheckTextureNumForName(const char *name);
 void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
 INT32 R_ColormapNumForName(char *name);
-INT32 R_CreateColormap(char *p1, char *p2, char *p3);
+lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
+extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
 const char *R_ColormapNameForNum(INT32 num);
 
 extern INT32 numtextures;
