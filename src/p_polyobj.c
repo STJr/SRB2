@@ -985,6 +985,8 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 		P_CheckPosition(mo, mo->x + momx, mo->y + momy);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 	}
 }
 

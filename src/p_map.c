@@ -102,6 +102,8 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 	return true;
 }
@@ -2485,6 +2487,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #ifdef ESLOPE
@@ -2492,6 +2495,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					else if (tmceilingslope && tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #endif
@@ -2499,6 +2503,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #ifdef ESLOPE
@@ -2506,6 +2511,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (tmfloorslope && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #endif
@@ -2577,6 +2583,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 #ifdef ESLOPE
 	if (!(thing->flags & MF_NOCLIPHEIGHT))
@@ -2657,6 +2665,8 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 	thing->x = x;
 	thing->y = y;
 

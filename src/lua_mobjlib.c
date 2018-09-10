@@ -396,6 +396,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -439,6 +441,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -451,6 +455,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
