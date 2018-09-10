@@ -492,7 +492,9 @@ static void GIF_framewrite(void)
 
 	// screen regions are handled in GIF_lzw
 	{
-		UINT16 delay = 3; // todo
+		int d1 = (int)((100.0/NEWTICRATE)*gif_frames);
+		int d2 = (int)((100.0/NEWTICRATE)*(gif_frames-1));
+		UINT16 delay = d1-d2;
 		INT32 startline;
 
 		WRITEMEM(p, gifframe_gchead, 4);
