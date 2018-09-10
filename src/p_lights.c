@@ -356,16 +356,16 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 
 	if (ticbased)
 	{
-		ll->duration = abs(speed);
-		ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->duration))/FRACUNIT;
+		ll->ticbased = ticbased;
+		ll->timer = abs(speed);
+		ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->timer))/FRACUNIT;
 		if (!ll->speed)
 			ll->speed = (destvalue < sector->lightlevel) ? -1 : 1;
-		ll->interval = max(FixedFloor(FixedDiv(ll->duration, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
-		ll->firsttic = gametic;
+		ll->interval = max(FixedFloor(FixedDiv(ll->timer, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
 	}
 	else
 	{
-		ll->duration = -1;
+		ll->timer = -1;
 		ll->speed = abs(speed);
 	}
 }
@@ -385,14 +385,14 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
   */
 void T_LightFade(lightlevel_t *ll)
 {
-	if (ll->duration >= 0) // tic-based
+	if (ll->ticbased)
 	{
-		if (gametic - ll->firsttic >= ll->duration)
+		if (--ll->timer <= 0)
 		{
 			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
 			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		}
-		else if (!((gametic - ll->firsttic) % ll->interval))
+		else if (!(ll->timer % ll->interval))
 		{
 			if (ll->speed < 0)
 				ll->sector->lightlevel = max(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
