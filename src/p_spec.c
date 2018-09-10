@@ -7481,6 +7481,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
 	// initialize its alpha to 1
 	if (dotranslucent &&
 		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+		!(rover->flags & FF_FOG) && // do not include fog
 		!(rover->spawnflags & FF_RENDERSIDES) &&
 		!(rover->spawnflags & FF_RENDERPLANES) &&
 		!(rover->flags & FF_RENDERALL))
@@ -7572,7 +7573,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
 				rover->target->moved = true;
 		}
 
-		if (dotranslucent)
+		if (dotranslucent && !(rover->flags & FF_FOG))
 		{
 			if (alpha >= 256)
 			{
@@ -7619,7 +7620,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
 			rover->flags |= FF_EXISTS;
 		}
 
-		if (dotranslucent)
+		if (dotranslucent && !(rover->flags & FF_FOG))
 		{
 			rover->flags |= FF_TRANSLUCENT;
 
@@ -7667,32 +7668,35 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
 		}
 	}
 
-	if (!stillfading || exactalpha)
-		rover->alpha = alpha;
-	else // clamp fadingdata->alpha to software's alpha levels
+	if (!(rover->flags & FF_FOG)) // don't set FOG alpha
 	{
-		if (alpha < 12)
-			rover->alpha = destvalue < 12 ? destvalue : 1; // Don't even draw it
-		else if (alpha < 38)
-			rover->alpha = destvalue >= 12 && destvalue < 38 ? destvalue : 25;
-		else if (alpha < 64)
-			rover->alpha = destvalue >=38 && destvalue < 64 ? destvalue : 51;
-		else if (alpha < 89)
-			rover->alpha = destvalue >= 64 && destvalue < 89 ? destvalue : 76;
-		else if (alpha < 115)
-			rover->alpha = destvalue >= 89 && destvalue < 115 ? destvalue : 102;
-		else if (alpha < 140)
-			rover->alpha = destvalue >= 115 && destvalue < 140 ? destvalue : 128;
-		else if (alpha < 166)
-			rover->alpha = destvalue >= 140 && destvalue < 166 ? destvalue : 154;
-		else if (alpha < 192)
-			rover->alpha = destvalue >= 166 && destvalue < 192 ? destvalue : 179;
-		else if (alpha < 217)
-			rover->alpha = destvalue >= 192 && destvalue < 217 ? destvalue : 204;
-		else if (alpha < 243)
-			rover->alpha = destvalue >= 217 && destvalue < 243 ? destvalue : 230;
-		else // Opaque
-			rover->alpha = destvalue >= 243 ? destvalue : 256;
+		if (!stillfading || exactalpha)
+			rover->alpha = alpha;
+		else // clamp fadingdata->alpha to software's alpha levels
+		{
+			if (alpha < 12)
+				rover->alpha = destvalue < 12 ? destvalue : 1; // Don't even draw it
+			else if (alpha < 38)
+				rover->alpha = destvalue >= 12 && destvalue < 38 ? destvalue : 25;
+			else if (alpha < 64)
+				rover->alpha = destvalue >=38 && destvalue < 64 ? destvalue : 51;
+			else if (alpha < 89)
+				rover->alpha = destvalue >= 64 && destvalue < 89 ? destvalue : 76;
+			else if (alpha < 115)
+				rover->alpha = destvalue >= 89 && destvalue < 115 ? destvalue : 102;
+			else if (alpha < 140)
+				rover->alpha = destvalue >= 115 && destvalue < 140 ? destvalue : 128;
+			else if (alpha < 166)
+				rover->alpha = destvalue >= 140 && destvalue < 166 ? destvalue : 154;
+			else if (alpha < 192)
+				rover->alpha = destvalue >= 166 && destvalue < 192 ? destvalue : 179;
+			else if (alpha < 217)
+				rover->alpha = destvalue >= 192 && destvalue < 217 ? destvalue : 204;
+			else if (alpha < 243)
+				rover->alpha = destvalue >= 217 && destvalue < 243 ? destvalue : 230;
+			else // Opaque
+				rover->alpha = destvalue >= 243 ? destvalue : 256;
+		}
 	}
 
 	if (fadingdata)
