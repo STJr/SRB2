@@ -472,9 +472,9 @@ typedef struct
 	INT16 destvalue;    ///< Transparency value to fade to
 	INT16 destlightlevel; ///< Light level to fade to
 	INT16 speed;        ///< Speed to fade by
-	INT32 duration;     ///< Duration for tic-based logic, > -1 means use tic-based
+	boolean ticbased;    ///< Tic-based logic toggle
+	INT32 timer;        ///< Timer for tic-based logic
 	UINT32 interval;    ///< Skip interval for tic-based logic
-	tic_t firsttic;     ///< First tic for tic-based logic
 	boolean doexists;   ///< Handle FF_EXISTS
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks
