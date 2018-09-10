@@ -108,7 +108,7 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, boolean ticbased, INT32 *timer, UINT32 interval,
 	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
-	INT16 destvalue, INT16 speed, boolean ticbased,
+	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
 	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
@@ -3357,6 +3357,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					P_AddFakeFloorFader(rover, secnum, j,
 						destvalue, speed,
 						(line->flags & ML_EFFECT5),         // tic-based logic
+						(line->flags & ML_EFFECT4),         // Relative destvalue
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
@@ -3365,10 +3366,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				else
 				{
+					// If fading an invisible FOF whose render flags we did not yet set,
+					// initialize its alpha to 1
+					if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+						(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+						!(rover->spawnflags & FF_RENDERSIDES) &&
+						!(rover->spawnflags & FF_RENDERPLANES) &&
+						!(rover->flags & FF_RENDERALL))
+						rover->alpha = 1;
+
 					P_RemoveFakeFloorFader(rover);
 					P_FadeFakeFloor(rover,
-						destvalue, 0, // set alpha immediately
-						false, NULL, 0,                           // tic-based logic
+						max(1, min(256, (line->flags & ML_EFFECT4) ? rover->alpha + destvalue : destvalue)),
+						0,                                  // set alpha immediately
+						false, NULL, 0,                     // tic-based logic
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
@@ -7710,6 +7721,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
   * \param destvalue    transparency value to fade to
   * \param speed        speed to fade by
   * \param ticbased     tic-based logic, speed = duration
+  * \param relative     Destvalue is relative to rover->alpha
   * \param doexists	    handle FF_EXISTS
   * \param dotranslucent handle FF_TRANSLUCENT
   * \param dolighting  fade FOF light
@@ -7718,20 +7730,9 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 destvalue, INT16 speed, bo
   * \param exactalpha   use exact alpha values (opengl)
   */
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
-	INT16 destvalue, INT16 speed, boolean ticbased,
+	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
 	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha)
 {
-	// already equal, nothing to do
-	if (rover->alpha == max(1, min(256, destvalue)))
-		return;
-
-	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
-
-	d->thinker.function.acp1 = (actionf_p1)T_Fade;
-	d->rover = rover;
-	d->sectornum = (UINT32)sectornum;
-	d->ffloornum = (UINT32)ffloornum;
-
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
 	if (dotranslucent &&
@@ -7741,8 +7742,19 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		!(rover->flags & FF_RENDERALL))
 		rover->alpha = 1;
 
+	// already equal, nothing to do
+	if (rover->alpha == max(1, min(256, relative ? rover->alpha + destvalue : destvalue)))
+		return;
+
+	fade_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
+
+	d->thinker.function.acp1 = (actionf_p1)T_Fade;
+	d->rover = rover;
+	d->sectornum = (UINT32)sectornum;
+	d->ffloornum = (UINT32)ffloornum;
+
 	d->alpha = rover->alpha;
-	d->destvalue = max(1, min(256, destvalue)); // ffloor->alpha is 1-256
+	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // ffloor->alpha is 1-256
 
 	if (ticbased)
 	{
