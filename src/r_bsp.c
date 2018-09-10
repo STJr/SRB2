@@ -1225,7 +1225,7 @@ void R_Prep3DFloors(sector_t *sector)
 	ffloor_t *rover;
 	ffloor_t *best;
 	fixed_t bestheight, maxheight;
-	INT32 count, i, mapnum;
+	INT32 count, i;
 	sector_t *sec;
 #ifdef ESLOPE
 	pslope_t *bestslope = NULL;

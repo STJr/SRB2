@@ -1323,7 +1323,7 @@ void R_ClearColormaps(void)
 	for (exc = extra_colormaps; exc; exc = exc_next)
 	{
 		exc_next = exc->next;
-		memset(exc, 0, sizeof(exc));
+		memset(exc, 0, sizeof(*exc));
 	}
 
 	extra_colormaps = NULL;
@@ -1354,14 +1354,14 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 	extra_colormap->next = 0;
 }
 
-INT32 R_ColormapNumForName(char *name)
+extracolormap_t *R_ColormapForName(char *name)
 {
 	lumpnum_t lump;
 	extracolormap_t *exc;
 
 	lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
 	if (lump == LUMPERROR)
-		I_Error("R_ColormapNumForName: Cannot find colormap lump %.8s\n", name);
+		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
 	for (exc = extra_colormaps; exc; exc = exc->next)
 		if (lump == exc->lump)
@@ -1402,15 +1402,10 @@ static int RoundUp(double number);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 {
-	// "Unpackage" our variables for ease of reading below
-	UINT32 maskcolor = (UINT32)extra_colormap->maskcolor,
-		fadecolor = (UINT32)extra_colormap->fadecolor,
-		fadestart = (UINT16)extra_colormap->fadestart,
-		fadeend = (UINT16)extra_colormap->fadeend,
+	UINT32 fadestart = (UINT16)extra_colormap->fadestart,
 		fadedist = extra_colormap->fadedist;
 
-	double maskamt = extra_colormap->maskamt,
-		othermask = extra_colormap->othermask,
+	double othermask = extra_colormap->othermask,
 		cmaskr = extra_colormap->cmaskr,
 		cmaskg = extra_colormap->cmaskg,
 		cmaskb = extra_colormap->cmaskb,
@@ -1418,12 +1413,8 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 		cdestg = extra_colormap->cdestg,
 		cdestb = extra_colormap->cdestb;
 
-	int fog = extra_colormap->fog;
-
-	INT32 rgba = extra_colormap->rgba,
-		fadergba = extra_colormap->fadergba;
-
-	lighttable_t *lighttable;
+	lighttable_t *lighttable = NULL;
+	size_t i;
 
 	// This code creates the colormap array used by software renderer
 	if (rendermode == render_soft)
@@ -1514,6 +1505,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	INT32 rgba, fadergba;
 
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
+#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
 	if (p1[0] == '#')
 	{
 		cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
@@ -1539,15 +1531,12 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 		cmaskg *= maskamt;
 		cmaskb *= maskamt;
 
-		// package up cmask vars for passing around
-		maskrgba =
-
 		// for opengl; generate on software too for netsync
 		rgba = (HEX2INT(p1[1]) << 4) + (HEX2INT(p1[2]) << 0) +
 			(HEX2INT(p1[3]) << 12) + (HEX2INT(p1[4]) << 8) +
 			(HEX2INT(p1[5]) << 20) + (HEX2INT(p1[6]) << 16);
 
-		if (p1[7] >= 'a' && p1[7] <= 'z' || p1[7] >= 'A' && p1[7] <= 'Z')
+		if ((p1[7] >= 'a' && p1[7] <= 'z') || (p1[7] >= 'A' && p1[7] <= 'Z'))
 			rgba += (ALPHA2INT(p1[7]) << 24);
 		else
 			rgba += (25 << 24);
@@ -1587,7 +1576,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 			(HEX2INT(p3[3]) << 12) + (HEX2INT(p3[4]) << 8) +
 			(HEX2INT(p3[5]) << 20) + (HEX2INT(p3[6]) << 16);
 
-		if (p3[7] >= 'a' && p3[7] <= 'z' || p3[7] >= 'A' && p3[7] <= 'Z')
+		if ((p3[7] >= 'a' && p3[7] <= 'z') || (p3[7] >= 'A' && p3[7] <= 'Z'))
 			fadergba += (ALPHA2INT(p3[7]) << 24);
 		else
 			fadergba += (25 << 24);
@@ -1597,6 +1586,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 		cdestr = cdestg = cdestb = fadecolor = 0;
 		fadergba = 0x19000000; // default alpha for fade, (25 << 24)
 	}
+#undef ALPHA2INT
 #undef HEX2INT
 
 	for (exc = extra_colormaps; exc; exc = exc->next)
@@ -1683,18 +1673,15 @@ static int RoundUp(double number)
 	return (int)number;
 }
 
-const char *R_ColormapNameForNum(INT32 num)
+const char *R_ColormapNameForColormap(extracolormap_t *extra_colormap)
 {
-	if (num == -1)
+	if (!extra_colormap)
 		return "NONE";
 
-	if (num < 0 || num > MAXCOLORMAPS)
-		I_Error("R_ColormapNameForNum: num %d is invalid!\n", num);
-
-	if (foundcolormaps[num] == LUMPERROR)
+	if (extra_colormap->lump == LUMPERROR)
 		return "INLEVEL";
 
-	return W_CheckNameForNum(foundcolormaps[num]);
+	return W_CheckNameForNum(extra_colormap->lump);
 }
 
 

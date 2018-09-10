@@ -50,7 +50,7 @@ typedef struct
 typedef UINT8 lighttable_t;
 
 // ExtraColormap type. Use for extra_colormaps from now on.
-typedef struct
+typedef struct extracolormap_s
 {
 	UINT16 maskcolor, fadecolor;
 	double maskamt, othermask;
@@ -70,8 +70,8 @@ typedef struct
 
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
 
-	extracolormap_t *next;
-	extracolormap_t *prev;
+	struct extracolormap_s *next;
+	struct extracolormap_s *prev;
 } extracolormap_t;
 
 //

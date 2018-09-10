@@ -118,8 +118,7 @@ lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
 // Hack to support extra boom colormaps.
-size_t num_extra_colormaps;
-extracolormap_t extra_colormaps[MAXCOLORMAPS];
+extracolormap_t *extra_colormaps;
 
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
