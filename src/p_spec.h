@@ -140,9 +140,9 @@ typedef struct
 	INT32 speed;       ///< Speed at which to change light level.
 
 	// Tic-based behavior
-	INT32 duration;    ///< If <0, do not use tic-based behavior. If 0, set instantly. If >0, fade lasts this duration.
+	boolean ticbased;  ///< Tic-based logic
+	INT32 timer;    ///< Tic-based timer
 	UINT32 interval;   ///< Interval to deduct light level
-	tic_t firsttic;    ///< First gametic to count from
 } lightlevel_t;
 
 #define GLOWSPEED 8
