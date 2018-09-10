@@ -1839,7 +1839,6 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 #define ceilingwasheight vars[5]
 	fixed_t thwompx, thwompy;
 	sector_t *actionsector;
-	ffloor_t *rover = NULL;
 	INT32 secnum;
 
 	// If you just crashed down, wait a second before coming back up.
@@ -1854,16 +1853,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
 
 	if (secnum > 0)
-	{
 		actionsector = &sectors[secnum];
-
-		// Look for thwomp FFloor
-		for (rover = actionsector->ffloors; rover; rover = rover->next)
-		{
-			if (rover->master == thwomp->sourceline)
-				break;
-		}
-	}
 	else
 		return; // Bad bad bad!
 
@@ -1952,13 +1942,10 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		{
 			mobj_t *mp = (void *)&actionsector->soundorg;
 
-			if (!rover || (rover->flags & FF_EXISTS))
-			{
-				if (thwomp->sourceline->flags & ML_EFFECT4)
-					S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
-				else
-					S_StartSound(mp, sfx_thwomp);
-			}
+			if (thwomp->sourceline->flags & ML_EFFECT4)
+				S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
+			else
+				S_StartSound(mp, sfx_thwomp);
 
 			thwomp->direction = 1; // start heading back up
 			thwomp->distance = TICRATE; // but only after a small delay
@@ -1972,21 +1959,18 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		thinker_t *th;
 		mobj_t *mo;
 
-		if (!rover || (rover->flags & FF_EXISTS))
+		// scan the thinkers to find players!
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		{
-			// scan the thinkers to find players!
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
-			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				continue;
 
-				mo = (mobj_t *)th;
-				if (mo->type == MT_PLAYER && mo->health && mo->z <= thwomp->sector->ceilingheight
-					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
-				{
-					thwomp->direction = -1;
-					break;
-				}
+			mo = (mobj_t *)th;
+			if (mo->type == MT_PLAYER && mo->health && mo->z <= thwomp->sector->ceilingheight
+				&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
+			{
+				thwomp->direction = -1;
+				break;
 			}
 		}
 
