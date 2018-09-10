@@ -2723,6 +2723,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
 	size_t oldfloor_sectornum = thing->floor_sectornum, oldfloor_rovernum = thing->floor_rovernum;
+	size_t oldceil_sectornum = thing->ceiling_sectornum, oldceil_rovernum = thing->ceiling_rovernum;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 	ffloor_t *rover = NULL;
 
@@ -2751,13 +2752,15 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
+		size_t old_sectornum = (thing->eflags & MFE_VERTICALFLIP) ? oldceil_sectornum : oldfloor_sectornum;
+		size_t old_rovernum = (thing->eflags & MFE_VERTICALFLIP) ? oldceil_rovernum : oldfloor_rovernum;
 		// Find FOF referenced by floorz
-		if (oldfloor_sectornum)
+		if (old_sectornum)
 		{
 			size_t rovernum = 0;
-			for (rover = sectors[oldfloor_sectornum].ffloors; rover; rover = rover->next)
+			for (rover = sectors[old_sectornum].ffloors; rover; rover = rover->next)
 			{
-				if (rovernum == oldfloor_rovernum)
+				if (rovernum == old_rovernum)
 					break;
 				rovernum++;
 			}
