@@ -3322,8 +3322,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 452: // Fade FOF
 		{
-			INT16 destvalue = (INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS);
-			INT16 speed = (INT16)(sides[line->sidenum[1]].rowoffset>>FRACBITS);
+			INT16 destvalue = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
+			INT16 speed = (line->flags & ML_DONTPEGBOTTOM) && line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].rowoffset>>FRACBITS) : (INT16)(abs(line->dy)>>FRACBITS);
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
@@ -3355,7 +3357,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (speed > 0)
 					P_AddFakeFloorFader(rover, secnum, j,
-						destvalue, speed,
+						destvalue,
+						speed,
 						(line->flags & ML_EFFECT5),         // tic-based logic
 						(line->flags & ML_EFFECT4),         // Relative destvalue
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
