@@ -215,10 +215,9 @@ typedef struct polyfade_s
 	INT32 destvalue;
 	boolean docollision;
 	boolean doghostfade;
-	UINT32 duration;
+	INT32 timer;
 	INT32 speed;
 	UINT32 interval;
-	tic_t firsttic;
 } polyfade_t;
 
 //
@@ -286,10 +285,9 @@ typedef struct polyfadedata_s
 	INT32 destvalue;
 	boolean docollision;
 	boolean doghostfade;
-	UINT32 duration;
+	INT32 timer;
 	INT32 speed;
 	UINT32 interval;
-	tic_t firsttic;
 } polyfadedata_t;
 
 //

@@ -1276,12 +1276,11 @@ static boolean PolyFade(line_t *line)
 	pfd.docollision = !(line->flags & ML_BOUNCY),         // do not handle collision flags
 	pfd.doghostfade = (line->flags & ML_EFFECT1),         // do ghost fade (no collision flags during fade)
 
-	pfd.duration = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
-	pfd.speed = FixedFloor(FixedDiv(pfd.destvalue - po->translucency, pfd.duration))/FRACUNIT;
+	pfd.timer = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+	pfd.speed = FixedFloor(FixedDiv(pfd.destvalue - po->translucency, pfd.timer))/FRACUNIT;
 	if (!pfd.speed)
 		pfd.speed = (pfd.destvalue < po->translucency) ? -1 : 1;
-	pfd.interval = max(FixedFloor(FixedDiv(pfd.duration, abs(pfd.destvalue - po->translucency)))/FRACUNIT, 1);
-	pfd.firsttic = gametic;
+	pfd.interval = max(FixedFloor(FixedDiv(pfd.timer, abs(pfd.destvalue - po->translucency)))/FRACUNIT, 1);
 
 	return EV_DoPolyObjFade(&pfd);
 }
