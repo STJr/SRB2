@@ -7729,8 +7729,8 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 
 	d->thinker.function.acp1 = (actionf_p1)T_Fade;
 	d->rover = rover;
-	d->sectornum = (INT32)sectornum;
-	d->ffloornum = (INT32)ffloornum;
+	d->sectornum = (UINT32)sectornum;
+	d->ffloornum = (UINT32)ffloornum;
 
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
