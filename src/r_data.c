@@ -1322,29 +1322,28 @@ void R_ReInitColormaps(UINT16 num)
 //
 void R_ClearColormaps(void)
 {
-	extracolormap_t *exc, *exc_next;
+	// Purged by PU_LEVEL, just overwrite the pointer
+	extra_colormaps = R_CreateDefaultColormap(true);
+}
 
-	for (exc = extra_colormaps; exc; exc = exc_next)
-	{
-		exc_next = exc->next;
-		memset(exc, 0, sizeof(*exc));
-	}
-
-	// make a default extra_colormap
-	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+//
+// R_CreateDefaultColormap()
+//
+extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
+{
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 	exc->fadestart = 0;
 	exc->fadeend = 31;
 	exc->fog = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
-	exc->colormap = R_CreateLightTable(exc);
+	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
 #ifdef EXTRACOLORMAPLUMPS
 	exc->lump = LUMPERROR;
 	exc->lumpname[0] = 0;
 #endif
 	exc->next = exc->prev = NULL;
-
-	extra_colormaps = exc;
+	return exc;
 }
 
 //
