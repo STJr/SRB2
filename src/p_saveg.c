@@ -886,7 +886,7 @@ static void P_NetUnArchiveWorld(void)
 			else
 			{
 #endif
-			exc = R_GetExistingColormapByValues(rgba, fadergba, fadestart, fadeend, fog);
+			exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
 
 			if (!exc)
 			{
