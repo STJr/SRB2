@@ -469,12 +469,12 @@ typedef struct
 	UINT32 sectornum;    ///< Number of ffloor target sector
 	UINT32 ffloornum;    ///< Number of ffloor of target sector
 	INT32 alpha;        ///< Internal alpha counter
+	INT16 sourcevalue;  ///< Transparency value to fade from
 	INT16 destvalue;    ///< Transparency value to fade to
 	INT16 destlightlevel; ///< Light level to fade to
 	INT16 speed;        ///< Speed to fade by
 	boolean ticbased;    ///< Tic-based logic toggle
 	INT32 timer;        ///< Timer for tic-based logic
-	UINT32 interval;    ///< Skip interval for tic-based logic
 	boolean doexists;   ///< Handle FF_EXISTS
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks

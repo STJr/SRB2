@@ -1590,12 +1590,12 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, ht->sectornum);
 	WRITEUINT32(save_p, ht->ffloornum);
 	WRITEINT32(save_p, ht->alpha);
+	WRITEINT16(save_p, ht->sourcevalue);
 	WRITEINT16(save_p, ht->destvalue);
 	WRITEINT16(save_p, ht->destlightlevel);
 	WRITEINT16(save_p, ht->speed);
 	WRITEUINT8(save_p, (UINT8)ht->ticbased);
 	WRITEINT32(save_p, ht->timer);
-	WRITEUINT32(save_p, ht->interval);
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
 	WRITEUINT8(save_p, ht->dolighting);
@@ -2602,12 +2602,12 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->sectornum = READUINT32(save_p);
 	ht->ffloornum = READUINT32(save_p);
 	ht->alpha = READINT32(save_p);
+	ht->sourcevalue = READINT16(save_p);
 	ht->destvalue = READINT16(save_p);
 	ht->destlightlevel = READINT16(save_p);
 	ht->speed = READINT16(save_p);
 	ht->ticbased = (boolean)READUINT8(save_p);
 	ht->timer = READINT32(save_p);
-	ht->interval = READUINT32(save_p);
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
 	ht->dolighting = READUINT8(save_p);
