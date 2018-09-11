@@ -1367,26 +1367,35 @@ extracolormap_t *R_GetDefaultColormap(void)
 }
 
 //
-// R_CheckDefaultColormap()
+// R_CopyColormap()
 //
-boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable)
 {
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
 	if (!extra_colormap)
-		return true;
-	else
-		return (
-			(!checkparams ? true :
-				(extra_colormap->fadestart == 0
-					&& extra_colormap->fadeend == 31
-					&& !extra_colormap->fog)
-				)
-			&& (!checkrgba ? true : extra_colormap->rgba == 0)
-			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+		extra_colormap = R_GetDefaultColormap();
+
+	*exc = *extra_colormap;
+	exc->next = exc->prev = NULL;
+
 #ifdef EXTRACOLORMAPLUMPS
-			&& extra_colormap->lump == LUMPERROR
-			&& extra_colormap->lumpname[0] == 0
+	strncpy(exc->lumpname, extra_colormap->lumpname, 9);
+
+	if (exc->lump != LUMPERROR && lighttable)
+	{
+		// aligned on 8 bit for asm code
+		exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+		W_ReadLump(lump, exc->colormap);
+	}
+	else
 #endif
-			);
+	if (lighttable)
+		exc->colormap = R_CreateLightTable(exc);
+	else
+		exc->colormap = NULL;
+
+	return exc;
 }
 
 //
@@ -1421,6 +1430,29 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 	extra_colormap->prev = exc;
 	extra_colormap->next = 0;
 #endif
+}
+
+//
+// R_CheckDefaultColormap()
+//
+boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	if (!extra_colormap)
+		return true;
+	else
+		return (
+			(!checkparams ? true :
+				(extra_colormap->fadestart == 0
+					&& extra_colormap->fadeend == 31
+					&& !extra_colormap->fog)
+				)
+			&& (!checkrgba ? true : extra_colormap->rgba == 0)
+			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+			&& extra_colormap->lump == LUMPERROR
+			&& extra_colormap->lumpname[0] == 0
+#endif
+			);
 }
 
 #ifdef EXTRACOLORMAPLUMPS

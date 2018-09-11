@@ -107,8 +107,9 @@ void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
 extracolormap_t *R_CreateDefaultColormap(boolean lighttable);
 extracolormap_t *R_GetDefaultColormap(void);
-boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable);
 void R_AddColormapToList(extracolormap_t *extra_colormap);
+boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
 #ifdef EXTRACOLORMAPLUMPS
