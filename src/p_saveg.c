@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "r_data.h"
 #include "r_things.h"
 #include "r_state.h"
 #include "w_wad.h"
@@ -494,7 +495,7 @@ static void P_NetUnArchivePlayers(void)
 
 // diff3 flags
 #define SD_TAGLIST   0x01
-#define SD_MIDMAP    0x02
+#define SD_COLORMAP  0x02
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -589,8 +590,8 @@ static void P_NetArchiveWorld(void)
 			diff2 |= SD_TAG;
 		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
 			diff3 |= SD_TAGLIST;
-		if (ss->midmap != ss->spawn_midmap)
-			diff3 |= SD_MIDMAP;
+		if (ss->extra_colormap != ss->spawn_extra_colormap)
+			diff3 |= SD_COLORMAP;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -654,8 +655,30 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
-			if (diff3 & SD_MIDMAP)
-				WRITEINT32(put, ss->midmap);
+
+			if (diff3 & SD_COLORMAP)
+			{
+				WRITEUINT8(put, ss->extra_colormap->fadestart);
+				WRITEUINT8(put, ss->extra_colormap->fadeend);
+				WRITEUINT8(put, ss->extra_colormap->fadedist);
+				WRITEUINT8(put, (UINT8)ss->extra_colormap->fog);
+
+				WRITEUINT8(put, ss->extra_colormap->cr);
+				WRITEUINT8(put, ss->extra_colormap->cg);
+				WRITEUINT8(put, ss->extra_colormap->cb);
+				WRITEUINT8(put, ss->extra_colormap->ca);
+				WRITEUINT8(put, ss->extra_colormap->cfr);
+				WRITEUINT8(put, ss->extra_colormap->cfg);
+				WRITEUINT8(put, ss->extra_colormap->cfb);
+				WRITEUINT8(put, ss->extra_colormap->cfa);
+
+				WRITEINT32(put, ss->extra_colormap->rgba);
+				WRITEINT32(put, ss->extra_colormap->fadergba);
+
+#ifdef EXTRACOLORMAPLUMPS
+				WRITESTRINGN(put, ss->extra_colormap->lumpname, 9);
+#endif
+			}
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -850,8 +873,87 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].firsttag = READINT32(get);
 			sectors[i].nexttag = READINT32(get);
 		}
-		if (diff3 & SD_MIDMAP)
-			sectors[i].midmap = READINT32(get);
+
+		if (diff3 & SD_COLORMAP)
+		{
+			extracolormap_t *exc;
+
+			UINT8 fadestart = READUINT8(get),
+				fadeend = READUINT8(get),
+				fadedist = READUINT8(get);
+
+			boolean fog = (boolean)READUINT8(get);
+
+			UINT8 cr = READUINT8(get),
+				cg = READUINT8(get),
+				cb = READUINT8(get),
+				ca = READUINT8(get),
+				cfr = READUINT8(get),
+				cfg = READUINT8(get),
+				cfb = READUINT8(get),
+				cfa = READUINT8(get);
+
+			INT32 rgba = READINT32(get),
+				fadergba = READINT32(get);
+
+#ifdef EXTRACOLORMAPLUMPS
+			char lumpname[9];
+			READSTRINGN(get, lumpname, 9);
+
+			if (lumpname[0])
+				sectors[i].extra_colormap = R_ColormapForName(lumpname);
+			else
+			{
+#endif
+
+			for (exc = extra_colormaps; exc; exc = exc->next)
+			{
+#ifdef EXTRACOLORMAPLUMPS
+				if (exc->lump != LUMPERROR)
+					continue;
+#endif
+				if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
+					&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
+					&& fadestart == exc->fadestart
+					&& fadeend == exc->fadeend
+					&& fog == exc->fog)
+					break;
+			}
+
+			if (!exc)
+			{
+				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+				exc->fadestart = fadestart;
+				exc->fadeend = fadeend;
+				exc->fadedist = fadedist;
+				exc->fog = fog;
+
+				exc->cr = cr;
+				exc->cg = cg;
+				exc->cb = cb;
+				exc->ca = ca;
+				exc->cfr = cfr;
+				exc->cfg = cfg;
+				exc->cfb = cfb;
+				exc->cfa = cfa;
+
+				exc->rgba = rgba;
+				exc->fadergba = fadergba;
+
+				exc->colormap = R_CreateLightTable(exc);
+
+				R_AddColormapToList(exc);
+
+				sectors[i].extra_colormap = exc;
+
+#ifdef EXTRACOLORMAPLUMPS
+				exc->lump = LUMPERROR;
+				exc->lumpname[0] = 0;
+			} // if (!exc) // if (!lumpname[0] || !R_ColormapForName(lumpname))
+#endif
+			}
+		}
 
 		if (diff & SD_FFLOORS)
 		{

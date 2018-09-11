@@ -52,15 +52,12 @@ typedef UINT8 lighttable_t;
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
-	UINT16 maskcolor, fadecolor;
-	double maskamt, othermask;
-	UINT16 fadestart, fadeend;
-	UINT32 fadedist;
-	INT32 fog;
+	UINT8 fadestart, fadeend;
+	UINT8 fadedist;
+	boolean fog;
 
-	// mask rgb for colormap table generation
-	double cmaskr, cmaskg, cmaskb;
-	double cdestr, cdestg, cdestb;
+	// rgba for colormap table generation
+	UINT8 cr, cg, cb, ca, cfr, cfg, cfb, cfa;
 
 	// rgba is used in hw mode for colored sector lighting
 	INT32 rgba; // similar to maskcolor in sw mode
@@ -68,7 +65,10 @@ typedef struct extracolormap_s
 
 	lighttable_t *colormap;
 
+#ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
+	char lumpname[9]; // for netsyncing
+#endif
 
 	struct extracolormap_s *next;
 	struct extracolormap_s *prev;

@@ -96,12 +96,19 @@ void R_ClearTextureNumCache(boolean btell);
 INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
 
+// Extra Colormap lumps (C_START/C_END) are not used anywhere
+// Uncomment to enable
+//#define EXTRACOLORMAPLUMPS
+
 void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
-extracolormap_t *R_ColormapForName(char *name);
+void R_AddColormapToList(extracolormap_t *extra_colormap);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
-const char *R_ColormapNameForNum(INT32 num);
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_ColormapForName(char *name);
+const char *R_NameForColormap(extracolormap_t *extra_colormap);
+#endif
 
 extern INT32 numtextures;
 
