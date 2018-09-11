@@ -1332,10 +1332,6 @@ void R_ClearColormaps(void)
 
 	// make a default extra_colormap
 	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
-	exc->cr = exc->cg = exc->cb = 0xff;
-	exc->ca = 0;
-	exc->cfr = exc->cfg = exc->cfb = 0;
-	exc->cfa = 18;
 	exc->fadestart = 0;
 	exc->fadeend = 31;
 	exc->fog = 0;
@@ -1411,10 +1407,6 @@ extracolormap_t *R_ColormapForName(char *name)
 
 	// We set all params of the colormap to normal because there
 	// is no real way to tell how GL should handle a colormap lump anyway..
-	exc->cr = exc->cg = exc->cb = 0xff;
-	exc->ca = 0;
-	exc->cfr = exc->cfg = exc->cfb = 0;
-	exc->cfa = 18;
 	exc->fadestart = 0;
 	exc->fadeend = 31;
 	exc->fog = 0;
@@ -1445,14 +1437,14 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
 	double maskamt = 0, othermask = 0;
 
-	UINT8 cr = extra_colormap->cr,
-		cg = extra_colormap->cg,
-		cb = extra_colormap->cb,
-		ca = extra_colormap->ca,
-		cfr = extra_colormap->cfr,
-		cfg = extra_colormap->cfg,
-		cfb = extra_colormap->cfb;
-//		cfa = extra_colormap->cfa; // unused in software
+	UINT8 cr = (extra_colormap->rgba) & 0xFF,
+		cg = (extra_colormap->rgba >> 8) & 0xFF,
+		cb = (extra_colormap->rgba >> 16) & 0xFF,
+		ca = (extra_colormap->rgba >> 24) & 0xFF,
+		cfr = (extra_colormap->fadergba) & 0xFF,
+		cfg = (extra_colormap->fadergba >> 8) & 0xFF,
+		cfb = (extra_colormap->fadergba >> 16) & 0xFF;
+//		cfa = (extra_colormap->fadergba >> 24) & 0xFF; // unused in software
 
 	UINT8 fadestart = extra_colormap->fadestart,
 		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
@@ -1594,22 +1586,13 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 		else if (p1[7] >= 'A' && p1[7] <= 'Z')
 			ca = (p1[7] - 'A');
 		else
-			ca = 24;
+			ca = 25;
 
-		// for opengl; generate on software too for netsync
-		rgba = (HEX2INT(p1[1]) << 4) + (HEX2INT(p1[2]) << 0) +
-			(HEX2INT(p1[3]) << 12) + (HEX2INT(p1[4]) << 8) +
-			(HEX2INT(p1[5]) << 20) + (HEX2INT(p1[6]) << 16);
-
-		if ((p1[7] >= 'a' && p1[7] <= 'z') || (p1[7] >= 'A' && p1[7] <= 'Z'))
-			rgba += (ALPHA2INT(p1[7]) << 24);
-		else
-			rgba += (25 << 24);
+		rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
 	}
 	else
 	{
-		cr = cg = cb = 0xff;
-		ca = 0;
+		cr = cg = cb = ca = 0;
 		rgba = 0;
 	}
 
@@ -1638,22 +1621,14 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 		else if (p1[7] >= 'A' && p1[7] <= 'Z')
 			cfa = (p1[7] - 'A');
 		else
-			cfa = 18;
+			cfa = 25;
 
-		// for opengl; generate on software too for netsync
-		fadergba = (HEX2INT(p3[1]) << 4) + (HEX2INT(p3[2]) << 0) +
-			(HEX2INT(p3[3]) << 12) + (HEX2INT(p3[4]) << 8) +
-			(HEX2INT(p3[5]) << 20) + (HEX2INT(p3[6]) << 16);
-
-		if ((p3[7] >= 'a' && p3[7] <= 'z') || (p3[7] >= 'A' && p3[7] <= 'Z'))
-			fadergba += (ALPHA2INT(p3[7]) << 24);
-		else
-			fadergba += (25 << 24);
+		fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
 	}
 	else
 	{
 		cfr = cfg = cfb = 0;
-		cfa = 18;
+		cfa = 25;
 		fadergba = 0x19000000; // default alpha for fade, (25 << 24)
 	}
 #undef ALPHA2INT
@@ -1668,8 +1643,8 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 			continue;
 		}
 #endif
-		if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
-			&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
+		if (rgba == exc->rgba
+			&& fadergba == exc->fadergba
 			&& fadestart == exc->fadestart
 			&& fadeend == exc->fadeend
 			&& fog == exc->fog)
@@ -1689,15 +1664,6 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
 	extra_colormap->fog = fog;
-
-	extra_colormap->cr = cr;
-	extra_colormap->cg = cg;
-	extra_colormap->cb = cb;
-	extra_colormap->ca = ca;
-	extra_colormap->cfr = cfr;
-	extra_colormap->cfg = cfg;
-	extra_colormap->cfb = cfb;
-	extra_colormap->cfa = cfa;
 
 	extra_colormap->rgba = rgba;
 	extra_colormap->fadergba = fadergba;
