@@ -1458,13 +1458,13 @@ boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean ch
 }
 
 //
-// R_GetExistingColormapByValues()
+// R_GetColormapFromListByValues()
 // NOTE: Returns NULL if no match is found
 //
 #ifdef EXTRACOLORMAPLUMPS
-extracolormap_t *R_GetExistingColormapByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
 #else
-extracolormap_t *R_GetExistingColormapByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
 #endif
 {
 	extracolormap_t *exc;
@@ -1492,12 +1492,12 @@ extracolormap_t *R_GetExistingColormapByValues(INT32 rgba, INT32 fadergba, UINT8
 	return NULL;
 }
 
-extracolormap_t *R_GetExistingColormap(extracolormap_t *extra_colormap)
+extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
 {
 #ifdef EXTRACOLORMAPLUMPS
-	return R_GetExistingColormapByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
 else
-	return R_GetExistingColormapByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
 #endif
 }
 
@@ -1511,7 +1511,7 @@ extracolormap_t *R_ColormapForName(char *name)
 	if (lump == LUMPERROR)
 		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
-	exc = R_GetExistingColormapByValues(0, 0x19000000, 0, 31, 0, lump);
+	exc = R_GetColormapFromListByValues(0, 0x19000000, 0, 31, 0, lump);
 	if (exc)
 		return exc;
 
@@ -1809,9 +1809,9 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
-	exc = R_GetExistingColormapByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
 #else
-	exc = R_GetExistingColormapByValues(rgba, fadergba, fadestart, fadeend, fog);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
 #endif
 	if (exc)
 		return exc;
