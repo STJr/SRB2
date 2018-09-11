@@ -1347,6 +1347,49 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 }
 
 //
+// R_GetDefaultColormap()
+//
+extracolormap_t *R_GetDefaultColormap(void)
+{
+#ifdef COLORMAPREVERSELIST
+	extracolormap_t *exc;
+#endif
+
+	if (!extra_colormaps)
+		return (extra_colormaps = R_CreateDefaultColormap(true));
+
+#ifdef COLORMAPREVERSELIST
+	for (exc = extra_colormaps; exc->next; exc = exc->next);
+	return exc;
+#else
+	return extra_colormaps;
+#endif
+}
+
+//
+// R_CheckDefaultColormap()
+//
+boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	if (!extra_colormap)
+		return true;
+	else
+		return (
+			(!checkparams ? true :
+				(extra_colormap->fadestart == 0
+					&& extra_colormap->fadeend == 31
+					&& !extra_colormap->fog)
+				)
+			&& (!checkrgba ? true : extra_colormap->rgba == 0)
+			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+			&& extra_colormap->lump == LUMPERROR
+			&& extra_colormap->lumpname[0] == 0
+#endif
+			);
+}
+
+//
 // R_AddColormapToList
 //
 // Sets prev/next chain for extra_colormaps var
@@ -1562,77 +1605,133 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 
 extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 {
-	boolean fog = false;
 	extracolormap_t *extra_colormap, *exc;
 
-	UINT8 cr, cg, cb, ca, cfr, cfg, cfb, cfa;
+	// default values
+	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
-
-	INT32 rgba, fadergba;
+	boolean fog = false;
+	INT32 rgba = 0, fadergba = 0x19000000;
 
 	size_t dbg_i = 0;
 
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 #define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
-	if (p1[0] == '#')
-	{
-		cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-		cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-		cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
 
-		if (p1[7] >= 'a' && p1[7] <= 'z')
-			ca = (p1[7] - 'a');
-		else if (p1[7] >= 'A' && p1[7] <= 'Z')
-			ca = (p1[7] - 'A');
+	// Get base colormap value
+	// First alpha-only, then full value
+	if (p1[0] >= 'a' && p1[0] <= 'z' && !p1[1])
+		ca = (p1[0] - 'a');
+	else if (p1[0] == '#' && p1[1] >= 'a' && p1[1] <= 'z' && !p1[2])
+		ca = (p1[1] - 'a');
+	else if (p1[0] >= 'A' && p1[0] <= 'Z' && !p1[1])
+		ca = (p1[0] - 'A');
+	else if (p1[0] == '#' && p1[1] >= 'A' && p1[1] <= 'Z' && !p1[2])
+		ca = (p1[1] - 'A');
+	else if (p1[0] == '#')
+	{
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p1[1] && p1[2])
+		{
+			cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
+			if (p1[3] && p1[4])
+			{
+				cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
+				if (p1[5] && p1[6])
+				{
+					cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
+
+					if (p1[7] >= 'a' && p1[7] <= 'z')
+						ca = (p1[7] - 'a');
+					else if (p1[7] >= 'A' && p1[7] <= 'Z')
+						ca = (p1[7] - 'A');
+					else
+						ca = 25;
+				}
+				else
+					ca = 25;
+			}
+			else
+				ca = 25;
+		}
 		else
 			ca = 25;
-
-		rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
-	}
-	else
-	{
-		cr = cg = cb = ca = 0;
-		rgba = 0;
 	}
 
 #define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
+
+	// Get parameters like fadestart, fadeend, and the fogflag
 	if (p2[0] == '#')
 	{
-		// Get parameters like fadestart, fadeend, and the fogflag
-		fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
-		fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
+		if (p2[1])
+		{
+			fog = (boolean)NUMFROMCHAR(p2[1]);
+			if (p2[2] && p2[3])
+			{
+				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
+				if (p2[4] && p2[5])
+					fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
+			}
+		}
+
 		if (fadestart > 30)
 			fadestart = 0;
 		if (fadeend > 31 || fadeend < 1)
 			fadeend = 31;
-		fog = (boolean)NUMFROMCHAR(p2[1]);
 	}
+
 #undef NUMFROMCHAR
 
-	if (p3[0] == '#')
+	// Get fade (dark) colormap value
+	// First alpha-only, then full value
+	if (p3[0] >= 'a' && p3[0] <= 'z' && !p3[1])
+		cfa = (p3[0] - 'a');
+	else if (p3[0] == '#' && p3[1] >= 'a' && p3[1] <= 'z' && !p3[2])
+		cfa = (p3[1] - 'a');
+	else if (p3[0] >= 'A' && p3[0] <= 'Z' && !p3[1])
+		cfa = (p3[0] - 'A');
+	else if (p3[0] == '#' && p3[1] >= 'A' && p3[1] <= 'Z' && !p3[2])
+		cfa = (p3[1] - 'A');
+	else if (p3[0] == '#')
 	{
-		cfr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
-		cfg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
-		cfb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p3[1] && p3[2])
+		{
+			cfr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
+			if (p3[3] && p3[4])
+			{
+				cfg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
+				if (p3[5] && p3[6])
+				{
+					cfb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
 
-		if (p1[7] >= 'a' && p1[7] <= 'z')
-			cfa = (p1[7] - 'a');
-		else if (p1[7] >= 'A' && p1[7] <= 'Z')
-			cfa = (p1[7] - 'A');
+					if (p3[7] >= 'a' && p3[7] <= 'z')
+						cfa = (p3[7] - 'a');
+					else if (p3[7] >= 'A' && p3[7] <= 'Z')
+						cfa = (p3[7] - 'A');
+					else
+						cfa = 25;
+				}
+				else
+					cfa = 25;
+			}
+			else
+				cfa = 25;
+		}
 		else
 			cfa = 25;
-
-		fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
-	}
-	else
-	{
-		cfr = cfg = cfb = 0;
-		cfa = 25;
-		fadergba = 0x19000000; // default alpha for fade, (25 << 24)
 	}
 #undef ALPHA2INT
 #undef HEX2INT
 
+	// Pack rgba values into combined var
+	// OpenGL also uses this instead of lighttables for rendering
+	rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
+	fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
+
+	// Look for existing colormaps
 	for (exc = extra_colormaps; exc; exc = exc->next)
 	{
 #ifdef EXTRACOLORMAPLUMPS
@@ -1672,6 +1771,9 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	extra_colormap->lumpname[0] = 0;
 #endif
 
+	// Having lighttables for alpha-only entries is kind of pointless,
+	// but if there happens to be a matching rgba entry that is NOT alpha-only (but has same rgb values),
+	// then it needs this lighttable because we share matching entries.
 	extra_colormap->colormap = R_CreateLightTable(extra_colormap);
 
 	R_AddColormapToList(extra_colormap);

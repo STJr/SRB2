@@ -1473,12 +1473,11 @@ static void P_LoadRawSideDefs2(void *data)
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				if (
-					((rendermode == render_soft || rendermode == render_none) && (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#'))
-#ifdef HWRENDER
-					|| (msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-					|| (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
-#endif
+				if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#'
+					|| (msd->toptexture[0] >= 'a' && msd->toptexture[0] <= 'z' && !msd->toptexture[1])
+					|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'Z' && !msd->toptexture[1])
+					|| (msd->bottomtexture[0] >= 'a' && msd->bottomtexture[0] <= 'z' && !msd->bottomtexture[1])
+					|| (msd->bottomtexture[0] >= 'A' && msd->bottomtexture[0] <= 'Z' && !msd->bottomtexture[1])
 				)
 				{
 					sec->extra_colormap = sec->spawn_extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
