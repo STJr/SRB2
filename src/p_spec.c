@@ -3256,7 +3256,43 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// This could even override existing colormaps I believe
 			// -- Monster Iestyn 14/06/18
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
-				sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+			{
+				if (line->flags & ML_NOCLIMB) // set alpha only
+				{
+					if (sectors[secnum].extra_colormap) // does nothing without an existing colormap
+					{
+						extracolormap_t *dest_colormap = R_CopyColormap(sectors[secnum].extra_colormap, false);
+						INT16 alpha;
+
+						// base rgba
+						alpha = (line->flags & ML_DONTPEGBOTTOM && line->sidenum[1] != 0xFFFF) ?
+							(sides[line->sidenum[1]].textureoffset >> FRACBITS)
+							: R_GetRgbaA(line->frontsector->extra_colormap->rgba);
+						if (line->flags & ML_EFFECT3) // relative calc
+							alpha = max(min(R_GetRgbaA(sectors[secnum].extra_colormap->rgba) + alpha, 25), 0);
+						dest_colormap->rgba = (dest_colormap->rgba & 0xFFFFFF) + (alpha << 24);
+
+						// fade rgba
+						alpha = (line->flags & ML_DONTPEGBOTTOM && line->sidenum[1] != 0xFFFF) ?
+							(sides[line->sidenum[1]].rowoffset >> FRACBITS)
+							: R_GetRgbaA(line->frontsector->extra_colormap->fadergba);
+						if (line->flags & ML_EFFECT3) // relative calc
+							alpha = max(min(R_GetRgbaA(sectors[secnum].extra_colormap->fadergba) + alpha, 25), 0);
+						dest_colormap->fadergba = (dest_colormap->fadergba & 0xFFFFFF) + (alpha << 24);
+
+						if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(dest_colormap)))
+						{
+							dest_colormap->colormap = R_CreateLightTable(dest_colormap);
+							R_AddColormapToList(dest_colormap);
+							sectors[secnum].extra_colormap = dest_colormap;
+						}
+						else
+							memset(dest_colormap, 0, sizeof(*dest_colormap));
+					}
+				}
+				else
+					sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+			}
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
