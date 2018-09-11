@@ -1359,7 +1359,9 @@ void R_ClearColormaps(void)
 //
 void R_AddColormapToList(extracolormap_t *extra_colormap)
 {
+#ifndef COLORMAPREVERSELIST
 	extracolormap_t *exc;
+#endif
 
 	if (!extra_colormaps)
 	{
@@ -1369,11 +1371,18 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 		return;
 	}
 
+#ifdef COLORMAPREVERSELIST
+	extra_colormaps->prev = extra_colormap;
+	extra_colormap->next = extra_colormaps;
+	extra_colormaps = extra_colormap;
+	extra_colormap->prev = 0;
+#else
 	for (exc = extra_colormaps; exc->next; exc = exc->next);
 
 	exc->next = extra_colormap;
 	extra_colormap->prev = exc;
 	extra_colormap->next = 0;
+#endif
 }
 
 #ifdef EXTRACOLORMAPLUMPS
