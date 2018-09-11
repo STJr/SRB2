@@ -55,10 +55,8 @@ typedef struct extracolormap_s
 	UINT8 fadestart, fadeend;
 	boolean fog;
 
-	// rgba for colormap table generation
-	UINT8 cr, cg, cb, ca, cfr, cfg, cfb, cfa;
-
-	// rgba is used in hw mode for colored sector lighting
+	// store rgba values in combined bitwise
+	// also used in OpenGL instead lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
