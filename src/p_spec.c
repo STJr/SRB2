@@ -3267,7 +3267,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						// base rgba
 						alpha = (line->flags & ML_DONTPEGBOTTOM && line->sidenum[1] != 0xFFFF) ?
 							(sides[line->sidenum[1]].textureoffset >> FRACBITS)
-							: R_GetRgbaA(line->frontsector->extra_colormap->rgba);
+							: line->frontsector->extra_colormap ?
+								R_GetRgbaA(line->frontsector->extra_colormap->rgba)
+								: 0;
 						if (line->flags & ML_EFFECT3) // relative calc
 							alpha = max(min(R_GetRgbaA(sectors[secnum].extra_colormap->rgba) + alpha, 25), 0);
 						dest_colormap->rgba = (dest_colormap->rgba & 0xFFFFFF) + (alpha << 24);
@@ -3275,7 +3277,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						// fade rgba
 						alpha = (line->flags & ML_DONTPEGBOTTOM && line->sidenum[1] != 0xFFFF) ?
 							(sides[line->sidenum[1]].rowoffset >> FRACBITS)
-							: R_GetRgbaA(line->frontsector->extra_colormap->fadergba);
+							: line->frontsector->extra_colormap ?
+								R_GetRgbaA(line->frontsector->extra_colormap->fadergba)
+								: 0;
 						if (line->flags & ML_EFFECT3) // relative calc
 							alpha = max(min(R_GetRgbaA(sectors[secnum].extra_colormap->fadergba) + alpha, 25), 0);
 						dest_colormap->fadergba = (dest_colormap->fadergba & 0xFFFFFF) + (alpha << 24);
