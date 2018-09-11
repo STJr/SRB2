@@ -72,9 +72,10 @@ static boolean is_looping;
 
 // fading
 static boolean is_fading;
+static UINT8 fading_source;
 static UINT8 fading_target;
-static UINT32 fading_steps;
-static INT16 fading_volume_step;
+static UINT32 fading_timer;
+static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
 
@@ -86,8 +87,8 @@ static INT32 current_track;
 static void var_cleanup(void)
 {
 	loop_point = song_length =\
-	 music_bytes = fading_target =\
-	 fading_steps = fading_volume_step = 0;
+	 music_bytes = fading_source = fading_target =\
+	 fading_timer = fading_duration = 0;
 
 	songpaused = is_looping =\
 	 is_fading = false;
@@ -530,16 +531,15 @@ static UINT32 music_fade(UINT32 interval, void *param)
 {
 	if (!is_fading ||
 		internal_volume == fading_target ||
-		fading_steps == 0 ||
-		fading_volume_step == 0)
+		fading_duration == 0)
 	{
 		I_StopFadingSong();
 		do_fading_callback();
 		return 0;
 	}
-	else if (
-		(internal_volume > fading_target && internal_volume + fading_volume_step <= fading_target) || // finish fade out
-		(internal_volume < fading_target && internal_volume + fading_volume_step >= fading_target)) // finish fade in
+	else if (songpaused) // don't decrement timer
+		return interval;
+	else if ((fading_timer -= 10) <= 0)
 	{
 		internal_volume = fading_target;
 		Mix_VolumeMusic(get_real_volume(music_volume));
@@ -549,7 +549,12 @@ static UINT32 music_fade(UINT32 interval, void *param)
 	}
 	else
 	{
-		internal_volume += fading_volume_step;
+		UINT8 delta = abs(fading_target - fading_source);
+		double factor = (double)(fading_duration - fading_timer) / (double)fading_duration;
+		if (fading_target < fading_source)
+			internal_volume = max(min(internal_volume, fading_source - (UINT8)round(delta * factor)), fading_target);
+		else if (fading_target > fading_source)
+			internal_volume = min(max(internal_volume, fading_source + (UINT8)round(delta * factor)), fading_target);
 		Mix_VolumeMusic(get_real_volume(music_volume));
 		return interval;
 	}
@@ -1252,13 +1257,12 @@ void I_StopFadingSong(void)
 	if (fading_id)
 		SDL_RemoveTimer(fading_id);
 	is_fading = false;
-	fading_target = fading_steps = fading_volume_step = fading_id = 0;
+	fading_source = fading_target = fading_timer = fading_duration = fading_id = 0;
 }
 
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
 {
-	UINT32 target_steps, ms_per_step;
-	INT16 target_volume_step, volume_delta;
+	INT16 volume_delta;
 
 	source_volume = min(source_volume, 100);
 	volume_delta = (INT16)(target_volume - source_volume);
@@ -1286,22 +1290,17 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 		(((ms / 10) * 10) + 10) // higher
 		: ((ms / 10) * 10); // lower
 
-	ms_per_step = max(10, ms / abs(volume_delta));
-		// 10ms is the usual minimum timer granularity, but platform-dependent
-	target_steps = ms/ms_per_step;
-	target_volume_step = volume_delta / (INT16)target_steps;
-
-	if (!target_steps || !target_volume_step)
+	if (!ms)
 		I_SetInternalMusicVolume(target_volume);
 	else if (source_volume != target_volume)
 	{
-		fading_id = SDL_AddTimer(ms_per_step, music_fade, NULL);
+		fading_id = SDL_AddTimer(10, music_fade, NULL);
 		if (fading_id)
 		{
 			is_fading = true;
+			fading_timer = fading_duration = ms;
+			fading_source = source_volume;
 			fading_target = target_volume;
-			fading_steps = target_steps;
-			fading_volume_step = target_volume_step;
 			fading_callback = callback;
 
 			if (internal_volume != source_volume)
