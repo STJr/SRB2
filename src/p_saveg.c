@@ -886,35 +886,13 @@ static void P_NetUnArchiveWorld(void)
 			else
 			{
 #endif
-
-			for (exc = extra_colormaps; exc; exc = exc->next)
-			{
-#ifdef EXTRACOLORMAPLUMPS
-				if (exc->lump != LUMPERROR)
-				{
-					//dbg_i++;
-					continue;
-				}
-#endif
-				if (rgba == exc->rgba
-					&& fadergba == exc->fadergba
-					&& fadestart == exc->fadestart
-					&& fadeend == exc->fadeend
-					&& fog == exc->fog)
-				{
-					// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-					// 	dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
-					//	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
-					break;
-				}
-				//dbg_i++;
-			}
+			exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
 
 			if (!exc)
 			{
-				// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-				// 	dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
-				//	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
+				// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				// 	(rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
+				// 	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
 
 				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
