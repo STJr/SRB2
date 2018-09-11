@@ -537,6 +537,8 @@ static UINT32 music_fade(UINT32 interval, void *param)
 		do_fading_callback();
 		return 0;
 	}
+	else if (songpaused) // don't decrement timer
+		return interval;
 	else if ((fading_timer -= 10) <= 0)
 	{
 		internal_volume = fading_target;
