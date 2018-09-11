@@ -1819,8 +1819,8 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Pack rgba values into combined var
 	// OpenGL also uses this instead of lighttables for rendering
-	rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
-	fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
+	rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
+	fadergba = R_PutRgbaRGBA(cfr, cfg, cfb, cfa);
 
 	// Did we just make a default colormap?
 #ifdef EXTRACOLORMAPLUMPS

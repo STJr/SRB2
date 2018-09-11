@@ -133,6 +133,13 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_GetRgbaG(rgba) ((rgba >> 8) & 0xFF)
 #define R_GetRgbaB(rgba) ((rgba >> 16) & 0xFF)
 #define R_GetRgbaA(rgba) ((rgba >> 24) & 0xFF)
+#define R_GetRgbaRGB(rgba) (rgba & 0xFFFFFF)
+#define R_PutRgbaR(r) (r)
+#define R_PutRgbaG(g) (g << 8)
+#define R_PutRgbaB(b) (b << 16)
+#define R_PutRgbaA(a) (a << 24)
+#define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
+#define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
 extern INT32 numtextures;
 
