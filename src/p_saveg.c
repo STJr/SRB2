@@ -655,8 +655,6 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
-			if (diff3 & SD_MIDMAP)
-				WRITEINT32(put, ss->midmap);
 
 			if (diff3 & SD_COLORMAP)
 			{
@@ -938,8 +936,8 @@ static void P_NetUnArchiveWorld(void)
 					&& fadeend == exc->fadeend
 					&& fog == exc->fog)
 				{
-					CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-						dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+					// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+					// 	dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
 					break;
 				}
 				dbg_i++;
@@ -947,8 +945,8 @@ static void P_NetUnArchiveWorld(void)
 
 			if (!exc)
 			{
-				CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-					dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+				// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				// 	dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
 
 				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
@@ -973,14 +971,16 @@ static void P_NetUnArchiveWorld(void)
 
 				R_AddColormapToList(exc);
 
-				sectors[i].extra_colormap = exc;
-
 #ifdef EXTRACOLORMAPLUMPS
 				exc->lump = LUMPERROR;
 				exc->lumpname[0] = 0;
-			} // if (!exc) // if (!lumpname[0] || !R_ColormapForName(lumpname))
 #endif
 			}
+
+			sectors[i].extra_colormap = exc;
+#ifdef EXTRACOLORMAPLUMPS
+			}
+#endif
 		}
 
 		if (diff & SD_FFLOORS)
