@@ -100,6 +100,9 @@ INT32 R_CheckTextureNumForName(const char *name);
 // Uncomment to enable
 //#define EXTRACOLORMAPLUMPS
 
+// Uncomment to make extra_colormaps order Newest -> Oldest
+//#define COLORMAPREVERSELIST
+
 void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
 void R_AddColormapToList(extracolormap_t *extra_colormap);
