@@ -1328,6 +1328,7 @@ void R_ClearColormaps(void)
 
 //
 // R_CreateDefaultColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
 //
 extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 {
@@ -1367,26 +1368,36 @@ extracolormap_t *R_GetDefaultColormap(void)
 }
 
 //
-// R_CheckDefaultColormap()
+// R_CopyColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
 //
-boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable)
 {
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
 	if (!extra_colormap)
-		return true;
-	else
-		return (
-			(!checkparams ? true :
-				(extra_colormap->fadestart == 0
-					&& extra_colormap->fadeend == 31
-					&& !extra_colormap->fog)
-				)
-			&& (!checkrgba ? true : extra_colormap->rgba == 0)
-			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+		extra_colormap = R_GetDefaultColormap();
+
+	*exc = *extra_colormap;
+	exc->next = exc->prev = NULL;
+
 #ifdef EXTRACOLORMAPLUMPS
-			&& extra_colormap->lump == LUMPERROR
-			&& extra_colormap->lumpname[0] == 0
+	strncpy(exc->lumpname, extra_colormap->lumpname, 9);
+
+	if (exc->lump != LUMPERROR && lighttable)
+	{
+		// aligned on 8 bit for asm code
+		exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+		W_ReadLump(lump, exc->colormap);
+	}
+	else
 #endif
-			);
+	if (lighttable)
+		exc->colormap = R_CreateLightTable(exc);
+	else
+		exc->colormap = NULL;
+
+	return exc;
 }
 
 //
@@ -1423,6 +1434,73 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 #endif
 }
 
+//
+// R_CheckDefaultColormap()
+//
+boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	if (!extra_colormap)
+		return true;
+	else
+		return (
+			(!checkparams ? true :
+				(extra_colormap->fadestart == 0
+					&& extra_colormap->fadeend == 31
+					&& !extra_colormap->fog)
+				)
+			&& (!checkrgba ? true : extra_colormap->rgba == 0)
+			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+			&& extra_colormap->lump == LUMPERROR
+			&& extra_colormap->lumpname[0] == 0
+#endif
+			);
+}
+
+//
+// R_GetExistingColormapByValues()
+// NOTE: Returns NULL if no match is found
+//
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_GetExistingColormapByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
+#else
+extracolormap_t *R_GetExistingColormapByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
+#endif
+{
+	extracolormap_t *exc;
+	size_t dbg_i = 0;
+
+	for (exc = extra_colormaps; exc; exc = exc->next)
+	{
+		if (rgba == exc->rgba
+			&& fadergba == exc->fadergba
+			&& fadestart == exc->fadestart
+			&& fadeend == exc->fadeend
+			&& fog == exc->fog
+#ifdef EXTRACOLORMAPLUMPS
+			&& (lump != LUMPERROR && lump == exc->lump)
+#endif
+		)
+		{
+			CONS_Debug(DBG_RENDER, "Found Colormap %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
+				(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
+			return exc;
+		}
+		dbg_i++;
+	}
+	return NULL;
+}
+
+extracolormap_t *R_GetExistingColormap(extracolormap_t *extra_colormap)
+{
+#ifdef EXTRACOLORMAPLUMPS
+	return R_GetExistingColormapByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+else
+	return R_GetExistingColormapByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+#endif
+}
+
 #ifdef EXTRACOLORMAPLUMPS
 extracolormap_t *R_ColormapForName(char *name)
 {
@@ -1433,9 +1511,9 @@ extracolormap_t *R_ColormapForName(char *name)
 	if (lump == LUMPERROR)
 		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
-	for (exc = extra_colormaps; exc; exc = exc->next)
-		if (lump == exc->lump)
-			return exc;
+	exc = R_GetExistingColormapByValues(0, 0x19000000, 0, 31, 0, lump);
+	if (exc)
+		return exc;
 
 	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
@@ -1613,8 +1691,6 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	boolean fog = false;
 	INT32 rgba = 0, fadergba = 0x19000000;
 
-	size_t dbg_i = 0;
-
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 #define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
 
@@ -1732,30 +1808,16 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
 
 	// Look for existing colormaps
-	for (exc = extra_colormaps; exc; exc = exc->next)
-	{
 #ifdef EXTRACOLORMAPLUMPS
-		if (exc->lump != LUMPERROR)
-		{
-			dbg_i++;
-			continue;
-		}
+	exc = R_GetExistingColormapByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+#else
+	exc = R_GetExistingColormapByValues(rgba, fadergba, fadestart, fadeend, fog);
 #endif
-		if (rgba == exc->rgba
-			&& fadergba == exc->fadergba
-			&& fadestart == exc->fadestart
-			&& fadeend == exc->fadeend
-			&& fog == exc->fog)
-		{
-			CONS_Debug(DBG_RENDER, "R_CreateColormap: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-				dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
-			return exc;
-		}
-		dbg_i++;
-	}
+	if (exc)
+		return exc;
 
-	CONS_Debug(DBG_RENDER, "R_CreateColormap: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-		dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+		cr, cg, cb, ca, cfr, cfg, cfb, cfa);
 
 	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
 
