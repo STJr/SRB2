@@ -352,19 +352,17 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	P_AddThinker(&ll->thinker); // add thinker
 
 	ll->sector = sector;
+	ll->sourcelevel = sector->lightlevel;
 	ll->destlevel = destvalue;
 
 	if (ticbased)
 	{
-		ll->ticbased = ticbased;
-		ll->timer = abs(speed);
-		ll->speed = FixedFloor(FixedDiv(destvalue - sector->lightlevel, ll->timer))/FRACUNIT;
-		if (!ll->speed)
-			ll->speed = (destvalue < sector->lightlevel) ? -1 : 1;
-		ll->interval = max(FixedFloor(FixedDiv(ll->timer, abs(destvalue - sector->lightlevel)))/FRACUNIT, 1);
+		ll->ticbased = true;
+		ll->timer = ll->speed = abs(speed); // use ll->speed for total duration
 	}
 	else
 	{
+		ll->ticbased = false;
 		ll->timer = -1;
 		ll->speed = abs(speed);
 	}
@@ -389,15 +387,17 @@ void T_LightFade(lightlevel_t *ll)
 	{
 		if (--ll->timer <= 0)
 		{
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
 			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		}
-		else if (!(ll->timer % ll->interval))
+		else
 		{
-			if (ll->speed < 0)
-				ll->sector->lightlevel = max(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
-			else
-				ll->sector->lightlevel = min(ll->sector->lightlevel + (INT16)ll->speed, (INT16)ll->destlevel);
+			INT16 delta = abs(ll->destlevel - ll->sourcelevel);
+			fixed_t factor = min(FixedDiv(ll->speed - ll->timer, ll->speed), 1*FRACUNIT);
+			if (ll->destlevel < ll->sourcelevel)
+				ll->sector->lightlevel = max(min(ll->sector->lightlevel, ll->sourcelevel - (INT16)FixedMul(delta, factor)), ll->destlevel);
+			else if (ll->destlevel > ll->sourcelevel)
+				ll->sector->lightlevel = min(max(ll->sector->lightlevel, ll->sourcelevel + (INT16)FixedMul(delta, factor)), ll->destlevel);
 		}
 		return;
 	}
@@ -408,12 +408,12 @@ void T_LightFade(lightlevel_t *ll)
 		if (ll->sector->lightlevel + ll->speed >= ll->destlevel)
 		{
 			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
 
 			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		}
 		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel + (INT16)ll->speed); // move lightlevel
+			ll->sector->lightlevel += ll->speed; // move lightlevel
 	}
 	else
 	{
@@ -421,11 +421,11 @@ void T_LightFade(lightlevel_t *ll)
 		if (ll->sector->lightlevel - ll->speed <= ll->destlevel)
 		{
 			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
+			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
 
 			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		}
 		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel - (INT16)ll->speed); // move lightlevel
+			ll->sector->lightlevel -= ll->speed; // move lightlevel
 	}
 }
