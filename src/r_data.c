@@ -1359,7 +1359,9 @@ void R_ClearColormaps(void)
 //
 void R_AddColormapToList(extracolormap_t *extra_colormap)
 {
+#ifndef COLORMAPREVERSELIST
 	extracolormap_t *exc;
+#endif
 
 	if (!extra_colormaps)
 	{
