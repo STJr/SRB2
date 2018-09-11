@@ -655,6 +655,8 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
+			if (diff3 & SD_MIDMAP)
+				WRITEINT32(put, ss->midmap);
 
 			if (diff3 & SD_COLORMAP)
 			{
