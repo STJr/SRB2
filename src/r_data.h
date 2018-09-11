@@ -109,19 +109,30 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable);
 extracolormap_t *R_GetDefaultColormap(void);
 extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable);
 void R_AddColormapToList(extracolormap_t *extra_colormap);
-boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
+
 #ifdef EXTRACOLORMAPLUMPS
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump);
 extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump);
 #else
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog);
 extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog);
 #endif
+boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
 extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap);
+
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
 #ifdef EXTRACOLORMAPLUMPS
 extracolormap_t *R_ColormapForName(char *name);
 const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #endif
+
+#define R_GetRgbaR(rgba) (rgba & 0xFF)
+#define R_GetRgbaG(rgba) ((rgba >> 8) & 0xFF)
+#define R_GetRgbaB(rgba) ((rgba >> 16) & 0xFF)
+#define R_GetRgbaA(rgba) ((rgba >> 24) & 0xFF)
 
 extern INT32 numtextures;
 

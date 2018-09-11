@@ -1438,7 +1438,6 @@ static inline void P_LoadSideDefs(lumpnum_t lumpnum)
 static void P_LoadRawSideDefs2(void *data)
 {
 	UINT16 i;
-	INT32 num;
 
 	for (i = 0; i < numsides; i++)
 	{
@@ -1473,32 +1472,9 @@ static void P_LoadRawSideDefs2(void *data)
 			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#'
-					|| (msd->toptexture[0] >= 'a' && msd->toptexture[0] <= 'z' && !msd->toptexture[1])
-					|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'Z' && !msd->toptexture[1])
-					|| (msd->bottomtexture[0] >= 'a' && msd->bottomtexture[0] <= 'z' && !msd->bottomtexture[1])
-					|| (msd->bottomtexture[0] >= 'A' && msd->bottomtexture[0] <= 'Z' && !msd->bottomtexture[1])
-				)
-				{
-					sec->extra_colormap = sec->spawn_extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
-						msd->bottomtexture);
-					sd->toptexture = sd->bottomtexture = 0;
-				}
-				else
-				{
-					if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-						sd->toptexture = 0;
-					else
-						sd->toptexture = num;
-					if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-						sd->midtexture = 0;
-					else
-						sd->midtexture = num;
-					if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-						sd->bottomtexture = 0;
-					else
-						sd->bottomtexture = num;
-				}
+				sec->extra_colormap = sec->spawn_extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
+					msd->bottomtexture);
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				break;
 
 			case 413: // Change music

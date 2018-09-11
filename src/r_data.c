@@ -1435,26 +1435,41 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 }
 
 //
-// R_CheckDefaultColormap()
+// R_CheckDefaultColormapByValues()
 //
-boolean R_CheckDefaultColormapValues(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+#ifdef EXTRACOLORMAPLUMPS
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
+#else
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
+#endif
+{
+	return (
+		(!checkparams ? true :
+			(fadestart == 0
+				&& fadeend == 31
+				&& !fog)
+			)
+		&& (!checkrgba ? true : rgba == 0)
+		&& (!checkfadergba ? true : fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+		&& lump == LUMPERROR
+		&& extra_colormap->lumpname[0] == 0
+#endif
+		);
+}
+
+boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
 {
 	if (!extra_colormap)
 		return true;
-	else
-		return (
-			(!checkparams ? true :
-				(extra_colormap->fadestart == 0
-					&& extra_colormap->fadeend == 31
-					&& !extra_colormap->fog)
-				)
-			&& (!checkrgba ? true : extra_colormap->rgba == 0)
-			&& (!checkfadergba ? true : extra_colormap->fadergba == 0x19000000)
+
 #ifdef EXTRACOLORMAPLUMPS
-			&& extra_colormap->lump == LUMPERROR
-			&& extra_colormap->lumpname[0] == 0
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+#else
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
 #endif
-			);
 }
 
 //
@@ -1557,14 +1572,14 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
 	double maskamt = 0, othermask = 0;
 
-	UINT8 cr = (extra_colormap->rgba) & 0xFF,
-		cg = (extra_colormap->rgba >> 8) & 0xFF,
-		cb = (extra_colormap->rgba >> 16) & 0xFF,
-		ca = (extra_colormap->rgba >> 24) & 0xFF,
-		cfr = (extra_colormap->fadergba) & 0xFF,
-		cfg = (extra_colormap->fadergba >> 8) & 0xFF,
-		cfb = (extra_colormap->fadergba >> 16) & 0xFF;
-//		cfa = (extra_colormap->fadergba >> 24) & 0xFF; // unused in software
+	UINT8 cr = R_GetRgbaR(extra_colormap->rgba),
+		cg = R_GetRgbaG(extra_colormap->rgba),
+		cb = R_GetRgbaB(extra_colormap->rgba),
+		ca = R_GetRgbaA(extra_colormap->rgba),
+		cfr = R_GetRgbaR(extra_colormap->fadergba),
+		cfg = R_GetRgbaG(extra_colormap->fadergba),
+		cfb = R_GetRgbaB(extra_colormap->fadergba);
+//		cfa = R_GetRgbaA(extra_colormap->fadergba); // unused in software
 
 	UINT8 fadestart = extra_colormap->fadestart,
 		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
@@ -1806,6 +1821,15 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// OpenGL also uses this instead of lighttables for rendering
 	rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
 	fadergba = cfr + (cfg << 8) + (cfb << 16) + (cfa << 24);
+
+	// Did we just make a default colormap?
+#ifdef EXTRACOLORMAPLUMPS
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
+		return NULL;
+#else
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
+		return NULL;
+#endif
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
