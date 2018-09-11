@@ -1330,7 +1330,25 @@ void R_ClearColormaps(void)
 		memset(exc, 0, sizeof(*exc));
 	}
 
-	extra_colormaps = NULL;
+	// make a default extra_colormap
+	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+	exc->cr = exc->cg = exc->cb = 0xff;
+	exc->ca = 0;
+	exc->cfr = exc->cfg = exc->cfb = 0;
+	exc->cfa = 18;
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->fog = 0;
+	exc->rgba = 0;
+	exc->fadergba = 0x19000000;
+	exc->colormap = R_CreateLightTable(exc);
+#ifdef EXTRACOLORMAPLUMPS
+	exc->lump = LUMPERROR;
+	exc->lumpname[0] = 0;
+#endif
+	exc->next = exc->prev = NULL;
+
+	extra_colormaps = exc;
 }
 
 //
@@ -1427,8 +1445,8 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 		cfb = extra_colormap->cfb;
 //		cfa = extra_colormap->cfa; // unused in software
 
-	UINT32 fadestart = (UINT16)extra_colormap->fadestart,
-		fadedist = extra_colormap->fadedist;
+	UINT8 fadestart = extra_colormap->fadestart,
+		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
 
 	lighttable_t *lighttable = NULL;
 	size_t i;
@@ -1548,7 +1566,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	extracolormap_t *extra_colormap, *exc;
 
 	UINT8 cr, cg, cb, ca, cfr, cfg, cfb, cfa;
-	UINT32 fadestart = 0, fadeend = 31, fadedist = 31;
+	UINT32 fadestart = 0, fadeend = 31;
 
 	INT32 rgba, fadergba;
 
@@ -1596,7 +1614,6 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 			fadestart = 0;
 		if (fadeend > 31 || fadeend < 1)
 			fadeend = 31;
-		fadedist = fadeend - fadestart;
 		fog = (boolean)NUMFROMCHAR(p2[1]);
 	}
 #undef NUMFROMCHAR
@@ -1662,7 +1679,6 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
-	extra_colormap->fadedist = fadedist;
 	extra_colormap->fog = fog;
 
 	extra_colormap->cr = cr;
