@@ -877,7 +877,7 @@ static void P_NetUnArchiveWorld(void)
 		if (diff3 & SD_COLORMAP)
 		{
 			extracolormap_t *exc;
-			size_t dbg_i = 0;
+			//size_t dbg_i = 0;
 
 			UINT8 fadestart = READUINT8(get),
 				fadeend = READUINT8(get),
@@ -926,7 +926,7 @@ static void P_NetUnArchiveWorld(void)
 #ifdef EXTRACOLORMAPLUMPS
 				if (exc->lump != LUMPERROR)
 				{
-					dbg_i++;
+					//dbg_i++;
 					continue;
 				}
 #endif
@@ -940,7 +940,7 @@ static void P_NetUnArchiveWorld(void)
 					// 	dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
 					break;
 				}
-				dbg_i++;
+				//dbg_i++;
 			}
 
 			if (!exc)
