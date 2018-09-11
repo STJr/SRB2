@@ -2939,7 +2939,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
 			P_CreateBlockMap(); // Graue 02-29-2004
-		R_MakeColormaps();
 		P_LoadLineDefs2();
 		P_GroupLines();
 		numdmstarts = numredctfstarts = numbluectfstarts = 0;
@@ -2976,7 +2975,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
 			P_CreateBlockMap(); // Graue 02-29-2004
-		R_MakeColormaps();
 		P_LoadLineDefs2();
 		P_GroupLines();
 		numdmstarts = numredctfstarts = numbluectfstarts = 0;
