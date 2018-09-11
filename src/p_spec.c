@@ -3250,6 +3250,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 447: // Change colormap of tagged sectors!
+			// Basically this special applies a colormap to the tagged sectors, just like 606 (the colormap linedef)
+			// Except it is activated by linedef executor, not level load
+			// This could even override existing colormaps I believe
+			// -- Monster Iestyn 14/06/18
+			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
+				sectors[secnum].midmap = line->frontsector->midmap;
+			break;
+
 		case 448: // Change skybox viewpoint/centerpoint
 			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
 			{
@@ -6760,7 +6769,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].midmap = lines[i].frontsector->midmap;
+					sectors[s].midmap = sectors[s].spawn_midmap = lines[i].frontsector->midmap;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
