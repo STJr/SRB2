@@ -1552,6 +1552,8 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	INT32 rgba, fadergba;
 
+	size_t dbg_i = 0;
+
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 #define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
 	if (p1[0] == '#')
@@ -1635,15 +1637,26 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 #ifdef EXTRACOLORMAPLUMPS
 		if (exc->lump != LUMPERROR)
+		{
+			dbg_i++;
 			continue;
+		}
 #endif
 		if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
 			&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
 			&& fadestart == exc->fadestart
 			&& fadeend == exc->fadeend
 			&& fog == exc->fog)
-			break;
+		{
+			CONS_Debug(DBG_RENDER, "R_CreateColormap: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+			return exc;
+		}
+		dbg_i++;
 	}
+
+	CONS_Debug(DBG_RENDER, "R_CreateColormap: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+		dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
 
 	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
 

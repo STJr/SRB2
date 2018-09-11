@@ -877,6 +877,7 @@ static void P_NetUnArchiveWorld(void)
 		if (diff3 & SD_COLORMAP)
 		{
 			extracolormap_t *exc;
+			size_t dbg_i = 0;
 
 			UINT8 fadestart = READUINT8(get),
 				fadeend = READUINT8(get),
@@ -920,8 +921,33 @@ static void P_NetUnArchiveWorld(void)
 					break;
 			}
 
+			for (exc = extra_colormaps; exc; exc = exc->next)
+			{
+#ifdef EXTRACOLORMAPLUMPS
+				if (exc->lump != LUMPERROR)
+				{
+					dbg_i++;
+					continue;
+				}
+#endif
+				if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
+					&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
+					&& fadestart == exc->fadestart
+					&& fadeend == exc->fadeend
+					&& fog == exc->fog)
+				{
+					CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+						dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+					break;
+				}
+				dbg_i++;
+			}
+
 			if (!exc)
 			{
+				CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+					dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+
 				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
 				exc->fadestart = fadestart;
