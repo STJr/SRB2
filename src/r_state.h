@@ -40,9 +40,6 @@ extern sprcache_t *spritecachedinfo;
 extern lighttable_t *colormaps;
 
 // Boom colormaps.
-// Had to put a limit on colormaps :(
-#define MAXCOLORMAPS 60
-
 extern extracolormap_t *extra_colormaps;
 
 // for global animation
