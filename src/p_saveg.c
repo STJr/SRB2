@@ -662,15 +662,6 @@ static void P_NetArchiveWorld(void)
 				WRITEUINT8(put, ss->extra_colormap->fadeend);
 				WRITEUINT8(put, (UINT8)ss->extra_colormap->fog);
 
-				WRITEUINT8(put, ss->extra_colormap->cr);
-				WRITEUINT8(put, ss->extra_colormap->cg);
-				WRITEUINT8(put, ss->extra_colormap->cb);
-				WRITEUINT8(put, ss->extra_colormap->ca);
-				WRITEUINT8(put, ss->extra_colormap->cfr);
-				WRITEUINT8(put, ss->extra_colormap->cfg);
-				WRITEUINT8(put, ss->extra_colormap->cfb);
-				WRITEUINT8(put, ss->extra_colormap->cfa);
-
 				WRITEINT32(put, ss->extra_colormap->rgba);
 				WRITEINT32(put, ss->extra_colormap->fadergba);
 
@@ -883,15 +874,6 @@ static void P_NetUnArchiveWorld(void)
 
 			boolean fog = (boolean)READUINT8(get);
 
-			UINT8 cr = READUINT8(get),
-				cg = READUINT8(get),
-				cb = READUINT8(get),
-				ca = READUINT8(get),
-				cfr = READUINT8(get),
-				cfg = READUINT8(get),
-				cfb = READUINT8(get),
-				cfa = READUINT8(get);
-
 			INT32 rgba = READINT32(get),
 				fadergba = READINT32(get);
 
@@ -909,33 +891,20 @@ static void P_NetUnArchiveWorld(void)
 			{
 #ifdef EXTRACOLORMAPLUMPS
 				if (exc->lump != LUMPERROR)
-					continue;
-#endif
-				if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
-					&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
-					&& fadestart == exc->fadestart
-					&& fadeend == exc->fadeend
-					&& fog == exc->fog)
-					break;
-			}
-
-			for (exc = extra_colormaps; exc; exc = exc->next)
-			{
-#ifdef EXTRACOLORMAPLUMPS
-				if (exc->lump != LUMPERROR)
 				{
 					//dbg_i++;
 					continue;
 				}
 #endif
-				if (cr == exc->cr && cg == exc->cg && cb == exc->cb && ca == exc->ca
-					&& cfr == exc->cfr && cfg == exc->cfg && cfb == exc->cfb && cfa == exc->cfa
+				if (rgba == exc->rgba
+					&& fadergba == exc->fadergba
 					&& fadestart == exc->fadestart
 					&& fadeend == exc->fadeend
 					&& fog == exc->fog)
 				{
 					// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Found map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-					// 	dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+					// 	dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
+					//	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
 					break;
 				}
 				//dbg_i++;
@@ -944,22 +913,14 @@ static void P_NetUnArchiveWorld(void)
 			if (!exc)
 			{
 				// CONS_Debug(DBG_RENDER, "P_NetUnArchiveWorld: Creating map %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-				// 	dbg_i, cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+				// 	dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
+				//	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
 
 				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
 				exc->fadestart = fadestart;
 				exc->fadeend = fadeend;
 				exc->fog = fog;
-
-				exc->cr = cr;
-				exc->cg = cg;
-				exc->cb = cb;
-				exc->ca = ca;
-				exc->cfr = cfr;
-				exc->cfg = cfg;
-				exc->cfb = cfb;
-				exc->cfa = cfa;
 
 				exc->rgba = rgba;
 				exc->fadergba = fadergba;
