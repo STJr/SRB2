@@ -1496,7 +1496,7 @@ extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
 {
 #ifdef EXTRACOLORMAPLUMPS
 	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
-else
+#else
 	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
 #endif
 }
