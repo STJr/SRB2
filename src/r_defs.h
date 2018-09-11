@@ -53,7 +53,6 @@ typedef UINT8 lighttable_t;
 typedef struct extracolormap_s
 {
 	UINT8 fadestart, fadeend;
-	UINT8 fadedist;
 	boolean fog;
 
 	// rgba for colormap table generation

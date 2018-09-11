@@ -660,7 +660,6 @@ static void P_NetArchiveWorld(void)
 			{
 				WRITEUINT8(put, ss->extra_colormap->fadestart);
 				WRITEUINT8(put, ss->extra_colormap->fadeend);
-				WRITEUINT8(put, ss->extra_colormap->fadedist);
 				WRITEUINT8(put, (UINT8)ss->extra_colormap->fog);
 
 				WRITEUINT8(put, ss->extra_colormap->cr);
@@ -880,8 +879,7 @@ static void P_NetUnArchiveWorld(void)
 			//size_t dbg_i = 0;
 
 			UINT8 fadestart = READUINT8(get),
-				fadeend = READUINT8(get),
-				fadedist = READUINT8(get);
+				fadeend = READUINT8(get);
 
 			boolean fog = (boolean)READUINT8(get);
 
@@ -952,7 +950,6 @@ static void P_NetUnArchiveWorld(void)
 
 				exc->fadestart = fadestart;
 				exc->fadeend = fadeend;
-				exc->fadedist = fadedist;
 				exc->fog = fog;
 
 				exc->cr = cr;
