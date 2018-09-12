@@ -3447,6 +3447,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 456: // Stop fade colormap
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 				P_ResetColormapFader(&sectors[secnum]);
+			break;
 
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
