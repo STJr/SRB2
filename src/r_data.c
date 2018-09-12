@@ -1867,6 +1867,92 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	return extra_colormap;
 }
 
+//
+// R_AddColormaps()
+// NOTE: The result colormap DOES get added to the extra_colormaps chain!
+//
+extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
+	boolean subR, boolean subG, boolean subB, boolean subA,
+	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
+	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
+	boolean lighttable)
+{
+	extracolormap_t *exc;
+
+	// exc_augend is added (or subtracted) onto by exc_addend
+	// In Rennaisance times, the first number was considered the augend, the second number the addend
+	// But since the commutative property was discovered, today they're both called addends!
+	// So let's be Olde English for a hot second.
+
+	exc_augend = R_CopyColormap(exc_augend, false);
+	if(!exc_addend)
+		exc_addend = R_GetDefaultColormap();
+
+	INT16 red, green, blue, alpha;
+
+	// base rgba
+	red = max(min(
+		R_GetRgbaR(exc_augend->rgba)
+			+ (subR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->rgba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->rgba)
+			+ (subG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->rgba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->rgba)
+			+ (subB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->rgba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	// fade rgba
+	red = max(min(
+		R_GetRgbaR(exc_augend->fadergba)
+			+ (subFadeR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->fadergba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->fadergba)
+			+ (subFadeG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->fadergba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->fadergba)
+			+ (subFadeB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->fadergba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25)
+		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
+	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->fadergba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	if (!(exc = R_GetColormapFromList(exc_augend)))
+	{
+		exc_augend->colormap = lighttable ? R_CreateLightTable(exc_augend) : NULL;
+		R_AddColormapToList(exc_augend);
+		return exc_augend;
+	}
+	else
+	{
+		Z_Free(exc_augend);
+		return exc;
+	}
+}
+
 // Thanks to quake2 source!
 // utils3/qdata/images.c
 static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
