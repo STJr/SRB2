@@ -3258,79 +3258,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 			{
 				if (line->flags & ML_EFFECT3) // relative calc
-				{
-					if (sectors[secnum].extra_colormap) // does nothing without an existing colormap
-					{
-						extracolormap_t *target_colormap = R_CopyColormap(sectors[secnum].extra_colormap, false);
-						extracolormap_t *source_colormap = line->frontsector->extra_colormap ? line->frontsector->extra_colormap
-							: R_GetDefaultColormap();
-
-						INT16 red, green, blue, alpha;
-
-						// base rgba
-						red = max(min(
-							R_GetRgbaR(target_colormap->rgba)
-								+ ((line->flags & ML_EFFECT1) ? -1 : 1) // subtract R
-								* R_GetRgbaR(source_colormap->rgba)
-							, 255), 0);
-
-						green = max(min(
-							R_GetRgbaG(target_colormap->rgba)
-								+ ((line->flags & ML_NOCLIMB) ? -1 : 1) // subtract G
-								* R_GetRgbaG(source_colormap->rgba)
-							, 255), 0);
-
-						blue = max(min(
-							R_GetRgbaB(target_colormap->rgba)
-								+ ((line->flags & ML_EFFECT2) ? -1 : 1) // subtract B
-								* R_GetRgbaB(source_colormap->rgba)
-							, 255), 0);
-
-						alpha = (line->flags & ML_DONTPEGBOTTOM) ? // front (or back!) X offset; needed to subtract A
-							(sides[line->sidenum[line->sidenum[1] != 0xFFFF ? 1 : 0]].textureoffset >> FRACBITS)
-							: R_GetRgbaA(source_colormap->rgba);
-						alpha = max(min(R_GetRgbaA(target_colormap->rgba) + alpha, 25), 0);
-
-						target_colormap->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
-
-						// fade rgba
-						red = max(min(
-							R_GetRgbaR(target_colormap->fadergba)
-								+ ((line->flags & ML_EFFECT1) ? -1 : 1) // subtract R
-								* R_GetRgbaR(source_colormap->fadergba)
-							, 255), 0);
-
-						green = max(min(
-							R_GetRgbaG(target_colormap->fadergba)
-								+ ((line->flags & ML_NOCLIMB) ? -1 : 1) // subtract G
-								* R_GetRgbaG(source_colormap->fadergba)
-							, 255), 0);
-
-						blue = max(min(
-							R_GetRgbaB(target_colormap->fadergba)
-								+ ((line->flags & ML_EFFECT2) ? -1 : 1) // subtract B
-								* R_GetRgbaB(source_colormap->fadergba)
-							, 255), 0);
-
-						alpha = (line->flags & ML_DONTPEGBOTTOM) ? // front (or back!) Y offset; needed to subtract A
-							(sides[line->sidenum[line->sidenum[1] != 0xFFFF ? 1 : 0]].rowoffset >> FRACBITS)
-							: R_GetRgbaA(source_colormap->fadergba);
-						if (alpha == 25)
-							alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
-						alpha = max(min(R_GetRgbaA(target_colormap->fadergba) + alpha, 25), 0);
-
-						target_colormap->fadergba = R_PutRgbaRGBA(red, green, blue, alpha);
-
-						if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(target_colormap)))
-						{
-							target_colormap->colormap = R_CreateLightTable(target_colormap);
-							R_AddColormapToList(target_colormap);
-							sectors[secnum].extra_colormap = target_colormap;
-						}
-						else
-							memset(target_colormap, 0, sizeof(*target_colormap));
-					}
-				}
+					sectors[secnum].extra_colormap = R_AddColormaps(
+						sectors[secnum].extra_colormap, line->frontsector->extra_colormap,
+						line->flags & ML_EFFECT1,  // subtract R
+						line->flags & ML_NOCLIMB,  // subtract G
+						line->flags & ML_EFFECT2,  // subtract B
+						false,                     // subtract A (no flag for this, just pass negative alpha)
+						line->flags & ML_EFFECT1,  // subtract FadeR
+						line->flags & ML_NOCLIMB,  // subtract FadeG
+						line->flags & ML_EFFECT2,  // subtract FadeB
+						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
+						line->flags & ML_DONTPEGBOTTOM,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
+						true);
 				else
 					sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
 			}
