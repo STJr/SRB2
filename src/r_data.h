@@ -120,6 +120,7 @@ boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba,
 extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog);
 #endif
 boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
+boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b);
 extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
