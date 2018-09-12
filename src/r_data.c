@@ -1896,7 +1896,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 //
 // R_AddColormaps()
-// NOTE: The result colormap DOES get added to the extra_colormaps chain!
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
 //
 extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
 	boolean subR, boolean subG, boolean subB, boolean subA,
@@ -1998,17 +1998,9 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	// put it together
 	///////////////////
 
-	if (!(exc = R_GetColormapFromList(exc_augend)))
-	{
-		exc_augend->colormap = lighttable ? R_CreateLightTable(exc_augend) : NULL;
-		R_AddColormapToList(exc_augend);
-		return exc_augend;
-	}
-	else
-	{
-		Z_Free(exc_augend);
-		return exc;
-	}
+	exc_augend->colormap = lighttable ? R_CreateLightTable(exc_augend) : NULL;
+	exc_augend->next = exc_augend->prev = NULL;
+	return exc_augend;
 }
 
 // Thanks to quake2 source!
