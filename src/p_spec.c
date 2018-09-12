@@ -7524,8 +7524,8 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 					&fadingdata->timer,
 					fadingdata->doexists,
 					fadingdata->dotranslucent,
-					fadingdata->docollision,
 					fadingdata->dolighting,
+					fadingdata->docollision,
 					fadingdata->doghostfade,
 					fadingdata->exactalpha);
 			rover->alpha = fadingdata->alpha;
