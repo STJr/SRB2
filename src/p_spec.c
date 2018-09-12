@@ -7533,12 +7533,12 @@ void T_FadeColormap(fadecolormap_t *d)
 (dest-src < 0) ? \
 	max(\
 		min(cur,\
-			src + (UINT8)FixedMul(dest-src, factor)),\
+			src + (INT16)FixedMul(dest-src, factor)),\
 		dest)\
 : (dest-src > 0) ? \
 	min(\
 		max(cur,\
-			src + (UINT8)FixedMul(dest-src, factor)),\
+			src + (INT16)FixedMul(dest-src, factor)),\
 		dest)\
 : \
 	dest\
