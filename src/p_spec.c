@@ -3256,7 +3256,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// This could even override existing colormaps I believe
 			// -- Monster Iestyn 14/06/18
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
-				sectors[secnum].midmap = line->frontsector->midmap;
+				sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
