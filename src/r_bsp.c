@@ -925,11 +925,11 @@ static void R_Subsector(size_t num)
 		light = R_GetPlaneLight(frontsector, floorcenterz, false);
 		if (frontsector->floorlightsec == -1)
 			floorlightlevel = *frontsector->lightlist[light].lightlevel;
-		floorcolormap = frontsector->lightlist[light].extra_colormap;
+		floorcolormap = *frontsector->lightlist[light].extra_colormap;
 		light = R_GetPlaneLight(frontsector, ceilingcenterz, false);
 		if (frontsector->ceilinglightsec == -1)
 			ceilinglightlevel = *frontsector->lightlist[light].lightlevel;
-		ceilingcolormap = frontsector->lightlist[light].extra_colormap;
+		ceilingcolormap = *frontsector->lightlist[light].extra_colormap;
 	}
 
 	sub->sector->extra_colormap = frontsector->extra_colormap;
@@ -1026,7 +1026,7 @@ static void R_Subsector(size_t num)
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
-					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
+					*rover->bottomyoffs, *rover->bottomangle, *frontsector->lightlist[light].extra_colormap, rover
 #ifdef POLYOBJECTS_PLANES
 					, NULL
 #endif
@@ -1072,7 +1072,7 @@ static void R_Subsector(size_t num)
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
-					frontsector->lightlist[light].extra_colormap, rover
+					*frontsector->lightlist[light].extra_colormap, rover
 #ifdef POLYOBJECTS_PLANES
 					, NULL
 #endif
@@ -1264,7 +1264,7 @@ void R_Prep3DFloors(sector_t *sector)
 #endif
 	sector->lightlist[0].lightlevel = &sector->lightlevel;
 	sector->lightlist[0].caster = NULL;
-	sector->lightlist[0].extra_colormap = sector->extra_colormap;
+	sector->lightlist[0].extra_colormap = &sector->extra_colormap;
 	sector->lightlist[0].flags = 0;
 
 	maxheight = INT32_MAX;
@@ -1339,12 +1339,12 @@ void R_Prep3DFloors(sector_t *sector)
 		else if (best->flags & FF_COLORMAPONLY)
 		{
 			sector->lightlist[i].lightlevel = sector->lightlist[i-1].lightlevel;
-			sector->lightlist[i].extra_colormap = sec->extra_colormap;
+			sector->lightlist[i].extra_colormap = &sec->extra_colormap;
 		}
 		else
 		{
 			sector->lightlist[i].lightlevel = best->toplightlevel;
-			sector->lightlist[i].extra_colormap = sec->extra_colormap;
+			sector->lightlist[i].extra_colormap = &sec->extra_colormap;
 		}
 
 		if (best->flags & FF_DOUBLESHADOW)

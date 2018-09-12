@@ -981,7 +981,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 			else
 				spritelights = scalelight[lightnum];
 
-			newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
+			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
 			if (!((newsprite->cut & SC_FULLBRIGHT)
 				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
@@ -1360,7 +1360,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = cut;
 	if (thing->subsector->sector->numlights)
-		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
+		vis->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
 	else
 		vis->extra_colormap = thing->subsector->sector->extra_colormap;
 
