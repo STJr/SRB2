@@ -3377,8 +3377,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				extracolormap_t *source_exc, *dest_exc, *exc;
 
-				exc = (line->flags & ML_TFERLINE) ? line->backsector->extra_colormap // TFERLINE: use back colormap instead of target sector
-					: sectors[secnum].extra_colormap;
+				if (line->flags & ML_TFERLINE) // use back colormap instead of target sector
+					sectors[secnum].extra_colormap = line->backsector->extra_colormap;
+
+				exc = sectors[secnum].extra_colormap;
 
 				if (!(line->flags & ML_BOUNCY) // BOUNCY: Do not override fade from default rgba
 					&& !R_CheckDefaultColormap(line->frontsector->extra_colormap, true, false, false)
