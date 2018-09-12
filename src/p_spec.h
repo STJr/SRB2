@@ -466,6 +466,7 @@ typedef struct
 {
 	thinker_t thinker;  ///< Thinker structure for effect.
 	ffloor_t *rover;    ///< Target ffloor
+	extracolormap_t *dest_exc; ///< Colormap to fade to
 	UINT32 sectornum;    ///< Number of ffloor target sector
 	UINT32 ffloornum;    ///< Number of ffloor of target sector
 	INT32 alpha;        ///< Internal alpha counter
@@ -478,6 +479,7 @@ typedef struct
 	boolean doexists;   ///< Handle FF_EXISTS
 	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks
+	boolean docolormap; ///< Handle colormaps
 	boolean docollision; ///< Handle interactive flags
 	boolean doghostfade; ///< No interactive flags during fading
 	boolean exactalpha; ///< Use exact alpha values (opengl)

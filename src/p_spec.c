@@ -106,10 +106,15 @@ static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t o
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destvalue, INT16 speed, boolean ticbased, INT32 *timer,
-	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
 	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
-	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha);
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha);
+static void P_ResetColormapFader(sector_t *sector);
+static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
+	INT32 duration);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3370,6 +3375,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					false,                              // do not handle FF_EXISTS
 					!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
 					false,                              // do not handle lighting
+					false,                              // do not handle colormap
 					false,                              // do not handle collision
 					false,                              // do not do ghost fade (no collision during fade)
 					true);                               // use exact alpha values (for opengl)
@@ -3421,6 +3427,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
 						!(line->flags & ML_BOUNCY),         // do not handle collision
 						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
@@ -3445,6 +3452,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
 						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
 						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
 						!(line->flags & ML_BOUNCY),         // do not handle collision
 						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
 						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
@@ -7525,6 +7533,7 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 					fadingdata->doexists,
 					fadingdata->dotranslucent,
 					fadingdata->dolighting,
+					fadingdata->docolormap,
 					fadingdata->docollision,
 					fadingdata->doghostfade,
 					fadingdata->exactalpha);
@@ -7532,6 +7541,9 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 
 			if (fadingdata->dolighting)
 				P_RemoveLighting(&sectors[rover->secnum]);
+
+			if (fadingdata->docolormap)
+				P_ResetColormapFader(&sectors[rover->secnum]);
 
 			P_RemoveThinker(&fadingdata->thinker);
 		}
@@ -7541,7 +7553,8 @@ static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finaliz
 }
 
 static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destvalue, INT16 speed, boolean ticbased, INT32 *timer,
-	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha)
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	boolean stillfading = false;
 	INT32 alpha;
@@ -7801,7 +7814,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
   */
 static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
 	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
-	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docollision, boolean doghostfade, boolean exactalpha)
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha)
 {
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
@@ -7841,6 +7855,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->doexists = doexists;
 	d->dotranslucent = dotranslucent;
 	d->dolighting = dolighting;
+	d->docolormap = docolormap;
 	d->docollision = docollision;
 	d->doghostfade = doghostfade;
 	d->exactalpha = exactalpha;
@@ -7869,6 +7884,54 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	else
 		d->destlightlevel = -1;
 
+	// Set a separate thinker for colormap fading
+	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap)
+	{
+		extracolormap_t *dest_exc,
+			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
+
+		INT32 colordelta = R_GetRgbaA(sectors[rover->secnum].spawn_extra_colormap->rgba); // alpha is from 0
+		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
+		fixed_t adjustedcolordelta = FixedMul(colordelta, alphapercent);
+		INT32 coloralpha;
+
+		coloralpha = adjustedcolordelta;
+
+		dest_exc = R_CopyColormap(sectors[rover->secnum].spawn_extra_colormap, false);
+		dest_exc->rgba = R_GetRgbaRGB(dest_exc->rgba) + R_PutRgbaA(coloralpha);
+
+		if (!(d->dest_exc = R_GetColormapFromList(dest_exc)))
+		{
+			dest_exc->colormap = R_CreateLightTable(dest_exc);
+			R_AddColormapToList(dest_exc);
+			d->dest_exc = dest_exc;
+		}
+		else
+			Z_Free(dest_exc);
+
+		// If fading from 0, set source_exc rgb same to dest_exc
+		if (!R_CheckDefaultColormap(d->dest_exc, true, false, false)
+			&& R_CheckDefaultColormap(source_exc, true, false, false))
+		{
+			extracolormap_t *exc = R_CopyColormap(source_exc, false);
+			exc->rgba = R_GetRgbaRGB(d->dest_exc->rgba) + R_PutRgbaA(R_GetRgbaA(source_exc->rgba));
+			exc->fadergba = R_GetRgbaRGB(d->dest_exc->rgba) + R_PutRgbaA(R_GetRgbaA(source_exc->fadergba));
+
+			if (!(source_exc = R_GetColormapFromList(exc)))
+			{
+				exc->colormap = R_CreateLightTable(exc);
+				R_AddColormapToList(exc);
+				source_exc = exc;
+			}
+			else
+				Z_Free(exc);
+		}
+
+		Add_ColormapFader(&sectors[rover->secnum], source_exc, d->dest_exc,
+			ticbased ? d->timer :
+				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT);
+	}
+
 	P_AddThinker(&d->thinker);
 }
 
@@ -7880,11 +7943,15 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 void T_Fade(fade_t *d)
 {
 	if (d->rover && !P_FadeFakeFloor(d->rover, d->sourcevalue, d->destvalue, d->speed, d->ticbased, &d->timer,
-		d->doexists, d->dotranslucent, d->dolighting, d->docollision, d->doghostfade, d->exactalpha))
+		d->doexists, d->dotranslucent, d->dolighting, d->docolormap, d->docollision, d->doghostfade, d->exactalpha))
 	{
 		// Finalize lighting, copypasta from P_AddFakeFloorFader
 		if (d->dolighting && !(d->rover->flags & FF_NOSHADE) && d->destlightlevel > -1)
 			sectors[d->rover->secnum].lightlevel = d->destlightlevel;
+
+		// Finalize colormap
+		if (d->docolormap && !(d->rover->flags & FF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
+			sectors[d->rover->secnum].extra_colormap = d->dest_exc;
 
 		P_RemoveFakeFloorFader(d->rover);
 	}

@@ -1587,6 +1587,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
+	SaveExtraColormap(save_p, ht->dest_exc);
 	WRITEUINT32(save_p, ht->sectornum);
 	WRITEUINT32(save_p, ht->ffloornum);
 	WRITEINT32(save_p, ht->alpha);
@@ -1599,6 +1600,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->doexists);
 	WRITEUINT8(save_p, ht->dotranslucent);
 	WRITEUINT8(save_p, ht->dolighting);
+	WRITEUINT8(save_p, ht->docolormap);
 	WRITEUINT8(save_p, ht->docollision);
 	WRITEUINT8(save_p, ht->doghostfade);
 	WRITEUINT8(save_p, ht->exactalpha);
@@ -2599,6 +2601,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 {
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
+	ht->dest_exc = LoadExtraColormap(save_p);
 	ht->sectornum = READUINT32(save_p);
 	ht->ffloornum = READUINT32(save_p);
 	ht->alpha = READINT32(save_p);
@@ -2611,6 +2614,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->doexists = READUINT8(save_p);
 	ht->dotranslucent = READUINT8(save_p);
 	ht->dolighting = READUINT8(save_p);
+	ht->docolormap = READUINT8(save_p);
 	ht->docollision = READUINT8(save_p);
 	ht->doghostfade = READUINT8(save_p);
 	ht->exactalpha = READUINT8(save_p);
