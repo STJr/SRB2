@@ -1472,6 +1472,33 @@ boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgb
 #endif
 }
 
+boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	// Treat NULL as default colormap
+	// We need this because what if one exc is a default colormap, and the other is NULL? They're really both equal.
+	if (!exc_a)
+		exc_a = R_GetDefaultColormap();
+	if (!exc_b)
+		exc_b = R_GetDefaultColormap();
+
+	if (exc_a == exc_b)
+		return true;
+
+	return (
+		(!checkparams ? true :
+			(exc_a->fadestart == exc_b->fadestart
+				&& exc_a->fadeend == exc_b->fadeend
+				&& exc_a->fog == exc_b->fog)
+			)
+		&& (!checkrgba ? true : exc_a->rgba == exc_b->rgba)
+		&& (!checkfadergba ? true : exc_a->fadergba == exc_b->fadergba)
+#ifdef EXTRACOLORMAPLUMPS
+		&& exc_a->lump == exc_b->lump
+		&& !strncmp(exc_a->lumpname, exc_b->lumpname, 9)
+#endif
+		);
+}
+
 //
 // R_GetColormapFromListByValues()
 // NOTE: Returns NULL if no match is found
