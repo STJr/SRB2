@@ -3287,7 +3287,25 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						Z_Free(exc);
 				}
 				else
-					sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+				{
+					if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
+					{
+						extracolormap_t *exc = R_CopyColormap(line->frontsector->extra_colormap, false);
+						exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
+						exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
+
+						if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
+						{
+							exc->colormap = R_CreateLightTable(exc);
+							R_AddColormapToList(exc);
+							sectors[secnum].extra_colormap = exc;
+						}
+						else
+							Z_Free(exc);
+					}
+					else
+						sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+				}
 			}
 			break;
 
