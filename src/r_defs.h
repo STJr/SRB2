@@ -194,7 +194,7 @@ typedef struct lightlist_s
 {
 	fixed_t height;
 	INT16 *lightlevel;
-	extracolormap_t *extra_colormap;
+	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
 #ifdef ESLOPE
