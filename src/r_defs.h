@@ -390,6 +390,7 @@ typedef struct sector_s
 
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
+	INT32 spawn_bottommap, spawn_midmap, spawn_topmap;
 
 	// offsets sector spawned with (via linedef type 7)
 	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;

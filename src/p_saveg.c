@@ -664,6 +664,7 @@ static void P_NetArchiveWorld(void)
 			diff2 |= SD_TAG;
 		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
 			diff3 |= SD_TAGLIST;
+
 		if (ss->extra_colormap != ss->spawn_extra_colormap)
 			diff3 |= SD_COLORMAP;
 
@@ -729,6 +730,8 @@ static void P_NetArchiveWorld(void)
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
+			if (diff3 & SD_MIDMAP)
+				WRITEINT32(put, ss->midmap);
 
 			if (diff3 & SD_COLORMAP)
 				SaveExtraColormap(put, ss->extra_colormap);
