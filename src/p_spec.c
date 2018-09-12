@@ -3396,9 +3396,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 					else
 						Z_Free(exc);
+
+					sectors[secnum].extra_colormap = source_exc;
 				}
 				else
-					source_exc = exc;
+					source_exc = exc ? exc : R_GetDefaultColormap();
 
 				if (line->flags & ML_EFFECT3) // relative calc
 				{
@@ -7509,6 +7511,16 @@ void T_FadeColormap(fadecolormap_t *d)
 		fixed_t factor = min(FixedDiv(d->duration - d->timer, d->duration), 1*FRACUNIT);
 		INT16 cr, cg, cb, ca, fadestart, fadeend, fog;
 		INT32 rgba, fadergba;
+
+		// NULL failsafes (or intentionally set to signify default)
+		if (!d->sector->extra_colormap)
+			d->sector->extra_colormap = R_GetDefaultColormap();
+
+		if (!d->source_exc)
+			d->source_exc = R_GetDefaultColormap();
+
+		if (!d->dest_exc)
+			d->dest_exc = R_GetDefaultColormap();
 
 		// For each var (rgba + fadergba + params = 11 vars), we apply
 		// percentage fading: currentval = sourceval + (delta * percent of duration elapsed)
