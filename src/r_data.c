@@ -1968,7 +1968,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 		, 255), 0);
 
 	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
-	if (alpha == 25)
+	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
 		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
 	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
 
@@ -1987,7 +1987,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	exc_augend->fadeend = max(min(
 		exc_augend->fadeend
 			+ (subFadeEnd ? -1 : 1) // subtract fadeend
-			* exc_addend->fadeend
+			* (exc_addend->fadeend == 31 && !exc_addend->fadestart ? 0 : exc_addend->fadeend)
+				// HACK: fadeend defaults to 31, so don't add anything in this case
 		, 31), 0);
 
 	if (!ignoreFog) // overwrite fog with new value
