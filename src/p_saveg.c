@@ -474,6 +474,70 @@ static void P_NetUnArchivePlayers(void)
 	}
 }
 
+static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
+{
+	WRITEUINT8(put, exc->fadestart);
+	WRITEUINT8(put, exc->fadeend);
+	WRITEUINT8(put, (UINT8)exc->fog);
+
+	WRITEINT32(put, exc->rgba);
+	WRITEINT32(put, exc->fadergba);
+
+#ifdef EXTRACOLORMAPLUMPS
+	WRITESTRINGN(put, exc->lumpname, 9);
+#endif
+}
+
+static extracolormap_t *LoadExtraColormap(UINT8 *get)
+{
+	extracolormap_t *exc;
+	//size_t dbg_i = 0;
+
+	UINT8 fadestart = READUINT8(get),
+		fadeend = READUINT8(get);
+
+	boolean fog = (boolean)READUINT8(get);
+
+	INT32 rgba = READINT32(get),
+		fadergba = READINT32(get);
+
+#ifdef EXTRACOLORMAPLUMPS
+	char lumpname[9];
+	READSTRINGN(get, lumpname, 9);
+
+	if (lumpname[0])
+		return R_ColormapForName(lumpname);
+#endif
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+
+	if (!exc)
+	{
+		// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+		// 	(rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
+		// 	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
+
+		exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+		exc->fadestart = fadestart;
+		exc->fadeend = fadeend;
+		exc->fog = fog;
+
+		exc->rgba = rgba;
+		exc->fadergba = fadergba;
+
+		exc->colormap = R_CreateLightTable(exc);
+
+		R_AddColormapToList(exc);
+
+#ifdef EXTRACOLORMAPLUMPS
+		exc->lump = LUMPERROR;
+		exc->lumpname[0] = 0;
+#endif
+	}
+
+	return exc;
+}
+
 #define SD_FLOORHT  0x01
 #define SD_CEILHT   0x02
 #define SD_FLOORPIC 0x04
@@ -657,18 +721,7 @@ static void P_NetArchiveWorld(void)
 			}
 
 			if (diff3 & SD_COLORMAP)
-			{
-				WRITEUINT8(put, ss->extra_colormap->fadestart);
-				WRITEUINT8(put, ss->extra_colormap->fadeend);
-				WRITEUINT8(put, (UINT8)ss->extra_colormap->fog);
-
-				WRITEINT32(put, ss->extra_colormap->rgba);
-				WRITEINT32(put, ss->extra_colormap->fadergba);
-
-#ifdef EXTRACOLORMAPLUMPS
-				WRITESTRINGN(put, ss->extra_colormap->lumpname, 9);
-#endif
-			}
+				SaveExtraColormap(put, ss->extra_colormap);
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -865,59 +918,7 @@ static void P_NetUnArchiveWorld(void)
 		}
 
 		if (diff3 & SD_COLORMAP)
-		{
-			extracolormap_t *exc;
-			//size_t dbg_i = 0;
-
-			UINT8 fadestart = READUINT8(get),
-				fadeend = READUINT8(get);
-
-			boolean fog = (boolean)READUINT8(get);
-
-			INT32 rgba = READINT32(get),
-				fadergba = READINT32(get);
-
-#ifdef EXTRACOLORMAPLUMPS
-			char lumpname[9];
-			READSTRINGN(get, lumpname, 9);
-
-			if (lumpname[0])
-				sectors[i].extra_colormap = R_ColormapForName(lumpname);
-			else
-			{
-#endif
-			exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
-
-			if (!exc)
-			{
-				// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-				// 	(rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
-				// 	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
-
-				exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
-
-				exc->fadestart = fadestart;
-				exc->fadeend = fadeend;
-				exc->fog = fog;
-
-				exc->rgba = rgba;
-				exc->fadergba = fadergba;
-
-				exc->colormap = R_CreateLightTable(exc);
-
-				R_AddColormapToList(exc);
-
-#ifdef EXTRACOLORMAPLUMPS
-				exc->lump = LUMPERROR;
-				exc->lumpname[0] = 0;
-#endif
-			}
-
-			sectors[i].extra_colormap = exc;
-#ifdef EXTRACOLORMAPLUMPS
-			}
-#endif
-		}
+			sectors[i].extra_colormap = LoadExtraColormap(get);
 
 		if (diff & SD_FFLOORS)
 		{
