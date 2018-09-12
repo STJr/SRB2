@@ -128,6 +128,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
 extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
 	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable);
 #ifdef EXTRACOLORMAPLUMPS
