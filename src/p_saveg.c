@@ -476,6 +476,9 @@ static void P_NetUnArchivePlayers(void)
 
 static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
 {
+	if (!exc) // Just give it default values, we done goofed. (or sector->extra_colormap was intentionally set to default (NULL))
+		exc = R_GetDefaultColormap();
+
 	WRITEUINT8(put, exc->fadestart);
 	WRITEUINT8(put, exc->fadeend);
 	WRITEUINT8(put, (UINT8)exc->fog);
@@ -490,7 +493,7 @@ static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
 
 static extracolormap_t *LoadExtraColormap(UINT8 *get)
 {
-	extracolormap_t *exc;
+	extracolormap_t *exc, *exc_exist;
 	//size_t dbg_i = 0;
 
 	UINT8 fadestart = READUINT8(get),
@@ -525,14 +528,21 @@ static extracolormap_t *LoadExtraColormap(UINT8 *get)
 		exc->rgba = rgba;
 		exc->fadergba = fadergba;
 
-		exc->colormap = R_CreateLightTable(exc);
-
-		R_AddColormapToList(exc);
-
 #ifdef EXTRACOLORMAPLUMPS
 		exc->lump = LUMPERROR;
 		exc->lumpname[0] = 0;
 #endif
+
+		if (!(exc_exist = R_GetColormapFromList(exc)))
+		{
+			exc->colormap = R_CreateLightTable(exc);
+			R_AddColormapToList(exc);
+		}
+		else
+		{
+			Z_Free(exc);
+			exc = R_CheckDefaultColormap(exc_exist, true, true, true) ? NULL : exc_exist;
+		}
 	}
 
 	return exc;
