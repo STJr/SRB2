@@ -1858,15 +1858,6 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 		return NULL;
 #endif
 
-	// Did we just make a default colormap?
-#ifdef EXTRACOLORMAPLUMPS
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
-		return NULL;
-#else
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
-		return NULL;
-#endif
-
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
 	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
