@@ -3268,6 +3268,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						line->flags & ML_NOCLIMB,  // subtract FadeG
 						line->flags & ML_EFFECT2,  // subtract FadeB
 						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
+						false,                     // subtract FadeStart (we ran out of flags)
+						false,                     // subtract FadeEnd (we ran out of flags)
+						false,                     // ignore Fog (we ran out of flags)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
