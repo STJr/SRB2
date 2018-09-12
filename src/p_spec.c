@@ -3260,7 +3260,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_EFFECT3) // relative calc
 				{
 					extracolormap_t *exc = R_AddColormaps(
-						sectors[secnum].extra_colormap, line->frontsector->extra_colormap,
+						(line->flags & ML_TFERLINE) ? line->backsector->extra_colormap : sectors[secnum].extra_colormap, // use back colormap instead of target sector
+						line->frontsector->extra_colormap,
 						line->flags & ML_EFFECT1,  // subtract R
 						line->flags & ML_NOCLIMB,  // subtract G
 						line->flags & ML_EFFECT2,  // subtract B
