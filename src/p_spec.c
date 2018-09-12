@@ -3258,7 +3258,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 			{
 				if (line->flags & ML_EFFECT3) // relative calc
-					sectors[secnum].extra_colormap = R_AddColormaps(
+				{
+					extracolormap_t *exc = R_AddColormaps(
 						sectors[secnum].extra_colormap, line->frontsector->extra_colormap,
 						line->flags & ML_EFFECT1,  // subtract R
 						line->flags & ML_NOCLIMB,  // subtract G
@@ -3274,7 +3275,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						line->flags & ML_DONTPEGBOTTOM,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
 						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
-						true);
+						false);
+
+					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
+					{
+						exc->colormap = R_CreateLightTable(exc);
+						R_AddColormapToList(exc);
+						sectors[secnum].extra_colormap = exc;
+					}
+					else
+						Z_Free(exc);
+				}
 				else
 					sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
 			}
