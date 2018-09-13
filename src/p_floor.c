@@ -1960,7 +1960,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 					continue;
 
 				mo = (mobj_t *)th;
-				if (mo->type == MT_PLAYER && mo->health && mo->z <= thwomp->sector->ceilingheight
+				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator 
+				    && mo->z <= thwomp->sector->ceilingheight
 					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
 				{
 					thwomp->direction = -1;
