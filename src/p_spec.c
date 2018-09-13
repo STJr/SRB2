@@ -2778,7 +2778,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 420: // Fade light levels in tagged sectors to new value
-			P_FadeLight(line->tag, line->frontsector->lightlevel, P_AproxDistance(line->dx, line->dy)>>FRACBITS);
+			P_FadeLight(line->tag,
+				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].textureoffset>>FRACBITS, 0) : line->frontsector->lightlevel,
+				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
+				// to be consistent with other light and fade specials
+				(line->flags & ML_DONTPEGBOTTOM) ?
+					((line->sidenum[1] != 0xFFFF && !(sides[line->sidenum[0]].rowoffset>>FRACBITS)) ?
+						max(min(sides[line->sidenum[1]].rowoffset>>FRACBITS, 255), 0)
+						: max(min(sides[line->sidenum[0]].rowoffset>>FRACBITS, 255), 0))
+					: abs(P_AproxDistance(line->dx, line->dy))>>FRACBITS),
+				(line->flags & ML_EFFECT4));
 			break;
 
 		case 421: // Stop lighting effect in tagged sectors

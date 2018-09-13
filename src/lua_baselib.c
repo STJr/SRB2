@@ -1809,9 +1809,10 @@ static int lib_pFadeLight(lua_State *L)
 	INT16 tag = (INT16)luaL_checkinteger(L, 1);
 	INT32 destvalue = (INT32)luaL_checkinteger(L, 2);
 	INT32 speed = (INT32)luaL_checkinteger(L, 3);
+	boolean ticbased = lua_optboolean(L, 4);
 	NOHUD
 	INLEVEL
-	P_FadeLight(tag, destvalue, speed);
+	P_FadeLight(tag, destvalue, speed, ticbased);
 	return 0;
 }
 
