@@ -1784,7 +1784,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 		if (p2[1])
 		{
-			fog = (boolean)NUMFROMCHAR(p2[1]);
+			fog = NUMFROMCHAR(p2[1]);
 			if (p2[2] && p2[3])
 			{
 				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
