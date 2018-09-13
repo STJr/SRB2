@@ -3379,17 +3379,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				extracolormap_t *source_exc, *dest_exc, *exc;
 
 				if (line->flags & ML_TFERLINE) // use back colormap instead of target sector
-					sectors[secnum].extra_colormap = line->backsector->extra_colormap;
+					sectors[secnum].extra_colormap = (line->sidenum[1] != 0xFFFF) ?
+						sides[line->sidenum[1]].colormap_data : NULL;
 
 				exc = sectors[secnum].extra_colormap;
 
 				if (!(line->flags & ML_BOUNCY) // BOUNCY: Do not override fade from default rgba
-					&& !R_CheckDefaultColormap(line->frontsector->extra_colormap, true, false, false)
+					&& !R_CheckDefaultColormap(sides[line->sidenum[0]].colormap_data, true, false, false)
 					&& R_CheckDefaultColormap(exc, true, false, false))
 				{
 					exc = R_CopyColormap(exc, false);
-					exc->rgba = R_GetRgbaRGB(line->frontsector->extra_colormap->rgba) + R_PutRgbaA(R_GetRgbaA(exc->rgba));
-					exc->fadergba = R_GetRgbaRGB(line->frontsector->extra_colormap->rgba) + R_PutRgbaA(R_GetRgbaA(exc->fadergba));
+					exc->rgba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->rgba));
+					exc->fadergba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->fadergba));
 
 					if (!(source_exc = R_GetColormapFromList(exc)))
 					{
@@ -3409,7 +3410,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					exc = R_AddColormaps(
 						source_exc,
-						line->frontsector->extra_colormap,
+						sides[line->sidenum[0]].colormap_data,
 						line->flags & ML_EFFECT1,  // subtract R
 						line->flags & ML_NOCLIMB,  // subtract G
 						line->flags & ML_EFFECT2,  // subtract B
@@ -3428,12 +3429,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
 				{
-					exc = R_CopyColormap(line->frontsector->extra_colormap, false);
+					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
 					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
 					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
 				}
 				else
-					exc = R_CopyColormap(line->frontsector->extra_colormap, false);
+					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
 
 				if (!(dest_exc = R_GetColormapFromList(exc)))
 				{
