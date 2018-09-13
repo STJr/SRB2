@@ -461,8 +461,9 @@ typedef struct
 	sector_t *sector;           ///< Sector where action is taking place.
 	extracolormap_t *source_exc;
 	extracolormap_t *dest_exc;
-	INT32 duration;             ///< Total duration for tic-based logic
-	INT32 timer;                ///< Timer for tic-based logic
+	boolean ticbased;           ///< Tic-based timing
+	INT32 duration;             ///< Total duration for tic-based logic (OR: speed increment)
+	INT32 timer;                ///< Timer for tic-based logic (OR: internal speed counter)
 } fadecolormap_t;
 
 void T_FadeColormap(fadecolormap_t *d);
