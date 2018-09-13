@@ -477,6 +477,8 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+
+	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
 //

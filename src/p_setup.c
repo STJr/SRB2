@@ -1470,7 +1470,7 @@ static void P_LoadRawSideDefs2(void *data)
 			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				sec->extra_colormap = sec->spawn_extra_colormap = R_CreateColormap(msd->toptexture, msd->midtexture,
+				sd->colormap_data = R_CreateColormap(msd->toptexture, msd->midtexture,
 					msd->bottomtexture);
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				break;
