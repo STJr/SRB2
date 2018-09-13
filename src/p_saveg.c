@@ -481,7 +481,7 @@ static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
 
 	WRITEUINT8(put, exc->fadestart);
 	WRITEUINT8(put, exc->fadeend);
-	WRITEUINT8(put, (UINT8)exc->fog);
+	WRITEUINT8(put, exc->fog);
 
 	WRITEINT32(put, exc->rgba);
 	WRITEINT32(put, exc->fadergba);
@@ -497,9 +497,8 @@ static extracolormap_t *LoadExtraColormap(UINT8 *get)
 	//size_t dbg_i = 0;
 
 	UINT8 fadestart = READUINT8(get),
-		fadeend = READUINT8(get);
-
-	boolean fog = (boolean)READUINT8(get);
+		fadeend = READUINT8(get),
+		fog = READUINT8(get);
 
 	INT32 rgba = READINT32(get),
 		fadergba = READINT32(get);

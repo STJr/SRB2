@@ -1439,10 +1439,10 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 //
 #ifdef EXTRACOLORMAPLUMPS
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
 #else
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
 #endif
 {
 	return (
@@ -1504,9 +1504,9 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 // NOTE: Returns NULL if no match is found
 //
 #ifdef EXTRACOLORMAPLUMPS
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog, lumpnum_t lump)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
 #else
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, boolean fog)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
 #endif
 {
 	extracolormap_t *exc;
@@ -1730,7 +1730,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// default values
 	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
-	boolean fog = false;
+	UINT8 fog = 0;
 	INT32 rgba = 0, fadergba = 0x19000000;
 
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
