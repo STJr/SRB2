@@ -1461,6 +1461,8 @@ static void P_LoadRawSideDefs2(void *data)
 
 		sd->sector = sec = &sectors[SHORT(msd->sector)];
 
+		sd->colormap_data = NULL;
+
 		// Colormaps!
 		switch (sd->special)
 		{
