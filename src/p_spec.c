@@ -3260,8 +3260,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_EFFECT3) // relative calc
 				{
 					extracolormap_t *exc = R_AddColormaps(
-						(line->flags & ML_TFERLINE) ? line->backsector->extra_colormap : sectors[secnum].extra_colormap, // use back colormap instead of target sector
-						line->frontsector->extra_colormap,
+						(line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF ?
+							sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap, // use back colormap instead of target sector
+						sides[line->sidenum[0]].colormap_data,
 						line->flags & ML_EFFECT1,  // subtract R
 						line->flags & ML_NOCLIMB,  // subtract G
 						line->flags & ML_EFFECT2,  // subtract B
@@ -3289,7 +3290,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
 				{
-					extracolormap_t *exc = R_CopyColormap(line->frontsector->extra_colormap, false);
+					extracolormap_t *exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
 					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
 					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
 
@@ -3303,7 +3304,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						Z_Free(exc);
 				}
 				else
-					sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+					sectors[secnum].extra_colormap = sides[line->sidenum[0]].colormap_data;
 			}
 			break;
 
@@ -6817,7 +6818,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = lines[i].frontsector->extra_colormap;
+					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
