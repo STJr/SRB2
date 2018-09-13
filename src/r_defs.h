@@ -53,7 +53,7 @@ typedef UINT8 lighttable_t;
 typedef struct extracolormap_s
 {
 	UINT8 fadestart, fadeend;
-	boolean fog;
+	UINT8 fog; // 1 = disable sprite fullbright, 2 = force planes fullbright, see public gitlab !268
 
 	// store rgba values in combined bitwise
 	// also used in OpenGL instead lighttables
