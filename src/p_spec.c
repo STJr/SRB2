@@ -1246,14 +1246,18 @@ static void PolyTranslucency(line_t *line)
 	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
 	if (line->flags & ML_EFFECT3) // relative calc
 		po->translucency = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
 			: (sides[line->sidenum[0]].textureoffset ?
 				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
 				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
 			NUMTRANSMAPS), 0);
 	else
 		po->translucency = (line->flags & ML_DONTPEGBOTTOM) ?
-			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
 			: (sides[line->sidenum[0]].textureoffset ?
 				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
 				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
@@ -1284,17 +1288,21 @@ static boolean PolyFade(line_t *line)
 	pfd.polyObjNum = polyObjNum;
 
 	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
-	// else, take it out of 1000 like type 491. If Front X Offset is specified, use that. Else, use floorheight.
-	if (line->flags & ML_EFFECT3)
+	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	if (line->flags & ML_EFFECT3) // relative calc
 		pfd.destvalue = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
-			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
 			: (sides[line->sidenum[0]].textureoffset ?
 				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
 				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
 			NUMTRANSMAPS), 0);
 	else
 		pfd.destvalue = (line->flags & ML_DONTPEGBOTTOM) ?
-			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
 			: (sides[line->sidenum[0]].textureoffset ?
 				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
 				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
