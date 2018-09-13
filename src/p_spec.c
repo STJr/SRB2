@@ -3446,7 +3446,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					Z_Free(exc);
 
 				Add_ColormapFader(&sectors[secnum], source_exc, dest_exc, (line->flags & ML_EFFECT4), // tic-based timing
-					(line->sidenum[1] != 0xFFFF ? abs(sides[line->sidenum[1]].rowoffset >> FRACBITS) : abs(P_AproxDistance(line->dx, line->dy) >> FRACBITS)));
+					((line->flags & ML_DONTPEGBOTTOM) || !sides[line->sidenum[0]].rowoffset) && line->sidenum[1] != 0xFFFF ?
+						abs(sides[line->sidenum[1]].rowoffset >> FRACBITS)
+						: abs(sides[line->sidenum[0]].rowoffset >> FRACBITS));
 			}
 			break;
 
