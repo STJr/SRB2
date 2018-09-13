@@ -7577,9 +7577,7 @@ void T_FadeColormap(fadecolormap_t *d)
 
 		fadestart = APPLYFADE(d->dest_exc->fadestart, d->source_exc->fadestart, d->sector->extra_colormap->fadestart);
 		fadeend = APPLYFADE(d->dest_exc->fadeend, d->source_exc->fadeend, d->sector->extra_colormap->fadeend);
-		// fog: essentially we're switching from source_exc->fog to dest_exc->fog with a delta
-		// of 1 or -1, and hoping the factor rounds appropriately in the timing.
-		fog = APPLYFADE(d->dest_exc->fog, d->source_exc->fog, d->sector->extra_colormap->fog);
+		fog = abs(factor) > FRACUNIT/2 ? d->dest_exc->fog : d->source_exc->fog; // set new fog flag halfway through fade
 
 #undef APPLYFADE
 
