@@ -2873,23 +2873,54 @@ void T_PolyObjFade(polyfade_t *th)
 	if (po->thinker == NULL)
 		po->thinker = &th->thinker;
 
-	stillfading = !(--(th->timer) <= 0);
-
-	if (th->timer <= 0)
+	if (th->ticbased)
 	{
-		po->translucency = th->destvalue; // set to dest translucency
+		stillfading = !(--(th->timer) <= 0);
 
-		// remove thinker
-		if (po->thinker == &th->thinker)
-			po->thinker = NULL;
-		P_RemoveThinker(&th->thinker);
-	}
-	else if (!(th->timer % th->interval))
-	{
-		if (th->speed <= 0)
-			po->translucency = max(po->translucency + th->speed, th->destvalue);
+		if (th->timer <= 0)
+		{
+			po->translucency = max(min(th->destvalue, NUMTRANSMAPS), 0);
+
+			// remove thinker
+			if (po->thinker == &th->thinker)
+				po->thinker = NULL;
+			P_RemoveThinker(&th->thinker);
+		}
 		else
-			po->translucency = min(po->translucency + th->speed, th->destvalue);
+		{
+			INT16 delta = abs(th->destvalue - th->sourcevalue);
+			fixed_t factor = min(FixedDiv(th->speed - th->timer, th->speed), 1*FRACUNIT);
+			if (th->destvalue < th->sourcevalue)
+				po->translucency = max(min(po->translucency, th->sourcevalue - (INT16)FixedMul(delta, factor)), th->destvalue);
+			else if (th->destvalue > th->sourcevalue)
+				po->translucency = min(max(po->translucency, th->sourcevalue + (INT16)FixedMul(delta, factor)), th->destvalue);
+		}
+	}
+	else
+	{
+		fixed_t timerdest = FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS-th->destvalue);
+
+		if (th->destvalue > th->sourcevalue) // fading out, destvalue is higher
+		{
+			// for timer, lower is transparent, higher is opaque
+			stillfading = (th->timer > timerdest);
+			th->timer = max(timerdest, th->timer - th->speed);
+		}
+		else if (th->destvalue < th->sourcevalue) // fading in, destvalue is lower
+		{	stillfading = (th->timer < timerdest);
+			th->timer = min(timerdest, th->timer + th->speed);
+		}
+
+		if (!stillfading)
+		{
+			po->translucency = max(min(th->destvalue, NUMTRANSMAPS), 0);
+			// remove thinker
+			if (po->thinker == &th->thinker)
+				po->thinker = NULL;
+			P_RemoveThinker(&th->thinker);
+		}
+		else
+			po->translucency = FixedDiv(256-th->timer, FixedDiv(256, NUMTRANSMAPS));
 	}
 
 	if (!stillfading)
@@ -2901,9 +2932,9 @@ void T_PolyObjFade(polyfade_t *th)
 			po->flags |= (po->spawnflags & POF_RENDERALL);
 
 		// set collision
-		if (th->docollision && th->speed)
+		if (th->docollision)
 		{
-			if (th->speed > 0) // faded out
+			if (th->destvalue > th->sourcevalue) // faded out
 			{
 				po->flags &= ~POF_SOLID;
 				po->flags |= POF_NOSPECIALS;
@@ -2918,10 +2949,14 @@ void T_PolyObjFade(polyfade_t *th)
 	}
 	else
 	{
+		if (po->translucency >= NUMTRANSMAPS)
+			// HACK: OpenGL renders fully opaque when >= NUMTRANSMAPS
+			po->translucency = NUMTRANSMAPS-1;
+
 		po->flags |= (po->spawnflags & POF_RENDERALL);
 
 		// set collision
-		if (th->docollision && th->speed)
+		if (th->docollision)
 		{
 			if (th->doghostfade)
 			{
@@ -2967,12 +3002,22 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 
 	// set fields
 	th->polyObjNum = pfdata->polyObjNum;
+	th->sourcevalue = po->translucency;
 	th->destvalue = pfdata->destvalue;
 	th->docollision = pfdata->docollision;
 	th->doghostfade = pfdata->doghostfade;
-	th->timer = pfdata->timer;
-	th->speed = pfdata->speed;
-	th->interval = pfdata->interval;
+
+	if (pfdata->ticbased)
+	{
+		th->ticbased = true;
+		th->timer = th->speed = abs(pfdata->speed); // use th->speed for total duration
+	}
+	else
+	{
+		th->ticbased = false;
+		th->timer = FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS - po->translucency); // use as internal counter
+		th->speed = pfdata->speed;
+	}
 
 	oldpo = po;
 

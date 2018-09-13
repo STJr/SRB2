@@ -1705,12 +1705,13 @@ static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
 	const polyfade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEINT32(save_p, ht->polyObjNum);
+	WRITEINT32(save_p, ht->sourcevalue);
 	WRITEINT32(save_p, ht->destvalue);
 	WRITEUINT8(save_p, (UINT8)ht->docollision);
 	WRITEUINT8(save_p, (UINT8)ht->doghostfade);
+	WRITEUINT8(save_p, (UINT8)ht->ticbased);
 	WRITEINT32(save_p, ht->timer);
 	WRITEINT32(save_p, ht->speed);
-	WRITEUINT32(save_p, ht->interval);
 }
 
 #endif
@@ -2719,12 +2720,13 @@ static void LoadPolyfadeThinker(actionf_p1 thinker)
 	polyfade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->polyObjNum = READINT32(save_p);
+	ht->sourcevalue = READINT32(save_p);
 	ht->destvalue = READINT32(save_p);
 	ht->docollision = (boolean)READUINT8(save_p);
 	ht->doghostfade = (boolean)READUINT8(save_p);
+	ht->ticbased = (boolean)READUINT8(save_p);
 	ht->timer = READINT32(save_p);
 	ht->speed = READINT32(save_p);
-	ht->interval = READUINT32(save_p);
 	P_AddThinker(&ht->thinker);
 }
 #endif

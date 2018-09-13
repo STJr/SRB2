@@ -1242,7 +1242,21 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	po->translucency = (line->frontsector->floorheight >> FRACBITS) / 100;
+	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
+	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	if (line->flags & ML_EFFECT3) // relative calc
+		po->translucency = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
+			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
+			NUMTRANSMAPS), 0);
+	else
+		po->translucency = (line->flags & ML_DONTPEGBOTTOM) ?
+			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
 }
 
 //
@@ -1265,22 +1279,39 @@ static boolean PolyFade(line_t *line)
 	if (po->isBad)
 		return 0;
 
-	// already equal, nothing to do
-	if (po->translucency == max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0))
-		return 1;
-
 	polyfadedata_t pfd;
 
 	pfd.polyObjNum = polyObjNum;
-	pfd.destvalue = max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0);
-	pfd.docollision = !(line->flags & ML_BOUNCY),         // do not handle collision flags
-	pfd.doghostfade = (line->flags & ML_EFFECT1),         // do ghost fade (no collision flags during fade)
 
-	pfd.timer = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
-	pfd.speed = FixedFloor(FixedDiv(pfd.destvalue - po->translucency, pfd.timer))/FRACUNIT;
-	if (!pfd.speed)
-		pfd.speed = (pfd.destvalue < po->translucency) ? -1 : 1;
-	pfd.interval = max(FixedFloor(FixedDiv(pfd.timer, abs(pfd.destvalue - po->translucency)))/FRACUNIT, 1);
+	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
+	// else, take it out of 1000 like type 491. If Front X Offset is specified, use that. Else, use floorheight.
+	if (line->flags & ML_EFFECT3)
+		pfd.destvalue = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
+			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
+			NUMTRANSMAPS), 0);
+	else
+		pfd.destvalue = (line->flags & ML_DONTPEGBOTTOM) ?
+			max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+
+	// already equal, nothing to do
+	if (po->translucency == pfd.destvalue)
+		return 1;
+
+	pfd.docollision = !(line->flags & ML_BOUNCY);         // do not handle collision flags
+	pfd.doghostfade = (line->flags & ML_EFFECT1);         // do ghost fade (no collision flags during fade)
+	pfd.ticbased = (line->flags & ML_EFFECT4);            // Speed = Tic Duration
+
+	// allow Back Y Offset to be consistent with other fade specials
+	pfd.speed = (line->sidenum[1] != 0xFFFF && !sides[line->sidenum[0]].rowoffset) ?
+		abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)
+		: abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+
 
 	return EV_DoPolyObjFade(&pfd);
 }
