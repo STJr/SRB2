@@ -3256,7 +3256,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// This could even override existing colormaps I believe
 			// -- Monster Iestyn 14/06/18
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
-				sectors[secnum].extra_colormap = line->frontsector->extra_colormap;
+				sectors[secnum].extra_colormap = sides[line->sidenum[0]].colormap_data;
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
@@ -6769,7 +6769,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = lines[i].frontsector->extra_colormap;
+					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
