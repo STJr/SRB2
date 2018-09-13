@@ -774,23 +774,25 @@ boolean I_SetSongPosition(UINT32 position)
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
+		// this is unstable, so fail silently
+		return true;
 		// this isn't required technically, but GME thread-locks for a second
 		// if you seek too high from the counter
-		length = I_GetSongLength();
-		if (length)
-			position = get_adjusted_position(position);
+		// length = I_GetSongLength();
+		// if (length)
+		// 	position = get_adjusted_position(position);
 
-		SDL_LockAudio();
-		gme_err_t gme_e = gme_seek(gme, position);
-		SDL_UnlockAudio();
+		// SDL_LockAudio();
+		// gme_err_t gme_e = gme_seek(gme, position);
+		// SDL_UnlockAudio();
 
-		if (gme_e != NULL)
-		{
-			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
-			return false;
-		}
-		else
-			return true;
+		// if (gme_e != NULL)
+		// {
+		// 	CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+		// 	return false;
+		// }
+		// else
+		// 	return true;
 	}
 	else
 #endif
