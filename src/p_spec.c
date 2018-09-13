@@ -1375,6 +1375,67 @@ void P_ChangeSectorTag(UINT32 sector, INT16 newtag)
 	}
 }
 
+//
+// P_RunNightserizeExecutors
+//
+void P_RunNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 323 || lines[i].special == 324)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunDeNightserizeExecutors
+//
+void P_RunDeNightserizeExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 325 || lines[i].special == 326)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunNightsLapExecutors
+//
+void P_RunNightsLapExecutors(mobj_t *actor)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 327 || lines[i].special == 328)
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
+//
+// P_RunNightsCapsuleTouchExecutors
+//
+void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean enoughspheres)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		if ((lines[i].special == 329 || lines[i].special == 330)
+			&& ((entering && (lines[i].flags & ML_TFERLINE))
+				|| (!entering && !(lines[i].flags & ML_TFERLINE)))
+			&& ((lines[i].flags & ML_DONTPEGTOP)
+				|| (enoughspheres && !(lines[i].flags & ML_BOUNCY))
+				|| (!enoughspheres && (lines[i].flags & ML_BOUNCY))))
+			P_RunTriggerLinedef(&lines[i], actor, NULL);
+	}
+}
+
 /** Hashes the sector tags across the sectors and linedefs.
   *
   * \sa P_FindSectorFromTag, P_ChangeSectorTag
@@ -1458,6 +1519,146 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 	P_AddThinker(&e->thinker);
 }
 
+/** Used by P_RunTriggerLinedef to check a NiGHTS trigger linedef's conditions
+  *
+  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
+  * \param actor Object initiating the action; should not be NULL.
+  * \sa P_RunTriggerLinedef
+  */
+static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
+{
+	INT16 specialtype = triggerline->special;
+	size_t i;
+
+	UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
+	UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
+
+	boolean ltemare = triggerline->flags & ML_NOCLIMB;
+	boolean gtemare = triggerline->flags & ML_BLOCKMONSTERS;
+	boolean ltelap = triggerline->flags & ML_EFFECT1;
+	boolean gtelap = triggerline->flags & ML_EFFECT2;
+
+	boolean lapfrombonustime = triggerline->flags & ML_EFFECT3;
+	boolean perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
+	boolean perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
+
+	boolean donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
+	boolean fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
+	boolean fromnights = triggerline->flags & ML_DONTPEGTOP; // nightserize: from nights // denightserize: >0 players are nights
+
+	UINT8 currentmare = UINT8_MAX;
+	UINT8 currentlap = UINT8_MAX;
+
+	// Do early returns for Nightserize
+	if (specialtype >= 323 && specialtype <= 324)
+	{
+		// run only when no mares are found
+		if (donomares && P_FindLowestMare() != UINT8_MAX)
+			return false;
+
+		// run only if there is a mare present
+		if (!donomares && P_FindLowestMare() == UINT8_MAX)
+			return false;
+
+		// run only if player is nightserizing from non-nights
+		if (fromnonights)
+		{
+			if (!actor->player)
+				return false;
+			else if (actor->player->powers[pw_carry] == CR_NIGHTSMODE)
+				return false;
+		}
+		// run only if player is nightserizing from nights
+		else if (fromnights)
+		{
+			if (!actor->player)
+				return false;
+			else if (actor->player->powers[pw_carry] != CR_NIGHTSMODE)
+				return false;
+		}
+	}
+
+	// Get current mare and lap (and check early return for DeNightserize)
+	if (perglobal || perglobalinverse
+		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights)))
+	{
+		UINT8 playersarenights = 0;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			UINT8 lap;
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+
+			// denightserize: run only if all players are not nights
+			if (specialtype >= 325 && specialtype <= 326 && fromnonights
+				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
+				return false;
+
+			// count number of nights players for denightserize return
+			if (specialtype >= 325 && specialtype <= 326 && fromnights
+				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
+				playersarenights++;
+
+			lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
+
+			// get highest mare/lap of players
+			if (perglobal)
+			{
+				if (players[i].mare > currentmare || currentmare == UINT8_MAX)
+				{
+					currentmare = players[i].mare;
+					currentlap = UINT8_MAX;
+				}
+				if (players[i].mare == currentmare
+					&& (lap > currentlap || currentlap == UINT8_MAX))
+					currentlap = lap;
+			}
+			// get lowest mare/lap of players
+			else if (perglobalinverse)
+			{
+				if (players[i].mare < currentmare || currentmare == UINT8_MAX)
+				{
+					currentmare = players[i].mare;
+					currentlap = UINT8_MAX;
+				}
+				if (players[i].mare == currentmare
+					&& (lap < currentlap || currentlap == UINT8_MAX))
+					currentlap = lap;
+			}
+		}
+
+		// denightserize: run only if >0 players are nights
+		if (specialtype >= 325 && specialtype <= 326 && fromnights
+			&& playersarenights < 1)
+			return false;
+	}
+	// get current mare/lap from triggering player
+	else if (!perglobal && !perglobalinverse)
+	{
+		if (!actor->player)
+			return false;
+		currentmare = actor->player->mare;
+		currentlap = lapfrombonustime ? actor->player->marebonuslap : actor->player->marelap;
+	}
+
+	if (lapfrombonustime && !currentlap)
+		return false; // special case: player->marebonuslap is 0 until passing through on bonus time. Don't trigger lines looking for inputlap 0.
+
+	// Compare current mare/lap to input mare/lap based on rules
+	if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
+		&& ((ltemare && currentmare > inputmare)
+		|| (gtemare && currentmare < inputmare)
+		|| (!ltemare && !gtemare && currentmare != inputmare)
+		|| (ltelap && currentlap > inputlap)
+		|| (gtelap && currentlap < inputlap)
+		|| (!ltelap && !gtelap && currentlap != inputlap))
+		)
+		return false;
+
+	return true;
+}
+
 /** Used by P_LinedefExecute to check a trigger linedef's conditions
   * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
   * Return false cancels P_LinedefExecute, this happens if a condition is not met.
@@ -1493,10 +1694,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				if (!playeringame[i] || players[i].spectator)
 					continue;
 
-				if (!players[i].mo || players[i].rings <= 0)
+				if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
 					continue;
 
-				rings += players[i].rings;
+				rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
 			}
 		}
 		else
@@ -1504,7 +1705,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player))
 				return false; // no player to count rings from here, sorry
 
-			rings = actor->player->rings;
+			rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB)
@@ -1668,6 +1869,18 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
+		case 323: // nightserize - each time
+		case 324: // nightserize - once
+		case 325: // denightserize - each time
+		case 326: // denightserize - once
+		case 327: // nights lap - each time
+		case 328: // nights lap - once
+		case 329: // nights egg capsule touch - each time
+		case 330: // nights egg capsule touch - once
+			if (!P_CheckNightsTriggerLine(triggerline, actor))
+				return false;
+			break;
+
 		default:
 			break;
 	}
@@ -1796,6 +2009,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
 	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
+	 || specialtype == 324 // Nightserize - Once
+	 || specialtype == 326 // DeNightserize - Once
+	 || specialtype == 328 // Nights lap - Once
+	 || specialtype == 330 // Nights Bonus Time - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -3033,6 +3250,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
 				}
 			}
+			break;
+
+		case 447: // Change colormap of tagged sectors!
+			// Basically this special applies a colormap to the tagged sectors, just like 606 (the colormap linedef)
+			// Except it is activated by linedef executor, not level load
+			// This could even override existing colormaps I believe
+			// -- Monster Iestyn 14/06/18
+			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
+				sectors[secnum].midmap = line->frontsector->midmap;
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
@@ -6421,6 +6647,17 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				}
 				break;
 
+			// NiGHTS trigger executors
+			case 323:
+			case 324:
+			case 325:
+			case 326:
+			case 327:
+			case 328:
+			case 329:
+			case 330:
+				break;
+
 			case 399: // Linedef execute on map load
 				// This is handled in P_RunLevelLoadExecutors.
 				break;
@@ -6534,7 +6771,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].midmap = lines[i].frontsector->midmap;
+					sectors[s].midmap = sectors[s].spawn_midmap = lines[i].frontsector->midmap;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
