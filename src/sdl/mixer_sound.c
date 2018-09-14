@@ -34,6 +34,12 @@
 	(SDL_MIXER_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
 #endif
 
+// thanks alam for making the buildbots happy!
+#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
+#define MUS_MP3_MAD MUS_MP3_MAD_UNUSED
+#define MUS_MODPLUG MUS_MODPLUG_UNUSED
+#endif
+
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
@@ -501,17 +507,9 @@ musictype_t I_SongType(void)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
 		return MU_MID;
-	else if (Mix_GetMusicType(music) == MUS_MOD
-#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
-		|| Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED
-#endif
-	)
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG)
 		return MU_MOD;
-	else if (Mix_GetMusicType(music) == MUS_MP3
-#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
-		|| Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED
-#endif
-	)
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD)
 		return MU_MP3;
 	else
 		return (musictype_t)Mix_GetMusicType(music);
