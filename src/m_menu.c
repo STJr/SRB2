@@ -9419,7 +9419,6 @@ static void M_ToggleSFX(INT32 choice)
 	if (sound_disabled)
 	{
 		sound_disabled = false;
-		I_StartupSound();
 		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;

@@ -4049,6 +4049,7 @@ static void Command_RestartAudio_f(void)
 		return;
 
 	S_StopMusic();
+	S_StopSounds();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_StartupSound();
