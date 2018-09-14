@@ -720,6 +720,7 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
 		ss->bottommap = ss->midmap = ss->topmap = -1;
+		ss->spawn_bottommap = ss->spawn_midmap = ss->spawn_topmap = -1;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
 		ss->verticalflip = false;
@@ -1471,13 +1472,14 @@ static void P_LoadRawSideDefs2(void *data)
 		{
 			case 63: // variable colormap via 242 linedef
 			case 606: //SoM: 4/4/2000: Just colormap transfer
+			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
 				if (rendermode == render_soft || rendermode == render_none)
 				{
 					if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
 					{
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 					}
@@ -1507,7 +1509,7 @@ static void P_LoadRawSideDefs2(void *data)
 					{
 						char *col;
 
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)

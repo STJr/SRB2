@@ -2791,8 +2791,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 420: // Fade light levels in tagged sectors to new value
 			P_FadeLight(line->tag,
-				(line->flags & ML_DONTPEGBOTTOM) ? max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 255), 0) : line->frontsector->lightlevel,
-				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].rowoffset>>FRACBITS, 0) : P_AproxDistance(line->dx, line->dy)>>FRACBITS,
+				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].textureoffset>>FRACBITS, 0) : line->frontsector->lightlevel,
+				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
+				// to be consistent with other light and fade specials
+				(line->flags & ML_DONTPEGBOTTOM) ?
+					((line->sidenum[1] != 0xFFFF && !(sides[line->sidenum[0]].rowoffset>>FRACBITS)) ?
+						max(min(sides[line->sidenum[1]].rowoffset>>FRACBITS, 255), 0)
+						: max(min(sides[line->sidenum[0]].rowoffset>>FRACBITS, 255), 0))
+					: abs(P_AproxDistance(line->dx, line->dy))>>FRACBITS,
 				(line->flags & ML_EFFECT4));
 			break;
 
@@ -3263,6 +3269,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
 				}
 			}
+			break;
+
+		case 447: // Change colormap of tagged sectors!
+			// Basically this special applies a colormap to the tagged sectors, just like 606 (the colormap linedef)
+			// Except it is activated by linedef executor, not level load
+			// This could even override existing colormaps I believe
+			// -- Monster Iestyn 14/06/18
+			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
+				sectors[secnum].midmap = line->frontsector->midmap;
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
@@ -6946,7 +6961,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					sectors[s].midmap = lines[i].frontsector->midmap;
+					sectors[s].midmap = sectors[s].spawn_midmap = lines[i].frontsector->midmap;
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
