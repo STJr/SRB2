@@ -501,9 +501,17 @@ musictype_t I_SongType(void)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
 		return MU_MID;
-	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MOD
+#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
+		|| Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED
+#endif
+	)
 		return MU_MOD;
-	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MP3
+#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
+		|| Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED
+#endif
+	)
 		return MU_MP3;
 	else
 		return (musictype_t)Mix_GetMusicType(music);
@@ -552,6 +560,14 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_LoadSong(char *data, size_t len)
 {
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	char *p = data;
+
 	if (music || gme)
 		I_UnloadSong();
 
@@ -660,13 +676,6 @@ boolean I_LoadSong(char *data, size_t len)
 	// Find the OGG loop point.
 	loop_point = 0.0f;
 
-	const char *key1 = "LOOP";
-	const char *key2 = "POINT=";
-	const char *key3 = "MS=";
-	const size_t key1len = strlen(key1);
-	const size_t key2len = strlen(key2);
-	const size_t key3len = strlen(key3);
-	char *p = data;
 	while ((UINT32)(p - data) < len)
 	{
 		if (strncmp(p++, key1, key1len))
