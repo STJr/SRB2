@@ -9420,7 +9420,6 @@ static void M_ToggleSFX(INT32 choice)
 	{
 		sound_disabled = false;
 		I_StartupSound();
-		if (sound_disabled) return;
 		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
@@ -9428,20 +9427,10 @@ static void M_ToggleSFX(INT32 choice)
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			S_StartSound(NULL, sfx_strpst);
-			OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
-			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
-			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
+		//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
