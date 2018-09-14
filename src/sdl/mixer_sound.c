@@ -82,7 +82,10 @@ void I_StartupSound(void)
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
-		CONS_Printf("SDL Audio already started\n");
+	{
+		CONS_Debug(DBG_DETAILED, "SDL Audio already started\n");
+		return;
+	}
 	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
