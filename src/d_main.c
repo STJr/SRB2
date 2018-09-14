@@ -121,20 +121,17 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
+// These variables are only true if
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
 #ifdef _XBOX
 boolean midi_disabled = true, sound_disabled = true;
 boolean digital_disabled = true;
 #else
-boolean midi_disabled = false, sound_disabled = false;
-boolean digital_disabled = false; // No fmod-based music
-#endif
-
-// These variables are only true if
-// whether the respective sound system is disabled
-// or they're init'ed, but the player just toggled them
 boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
+#endif
 
 boolean advancedemo;
 #ifdef DEBUGFILE
