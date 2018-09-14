@@ -1215,6 +1215,7 @@ const char *compat_special_music_slots[16] =
 #endif
 
 static char      music_name[7]; // up to 6-character name
+static void      *music_data;
 static UINT16    music_flags;
 static boolean   music_looping;
 
@@ -1333,6 +1334,7 @@ static boolean S_LoadMusic(const char *mname)
 	{
 		strncpy(music_name, mname, 7);
 		music_name[6] = 0;
+		music_data = mdata;
 		return true;
 	}
 	else
@@ -1343,6 +1345,10 @@ static void S_UnloadMusic(void)
 {
 	I_UnloadSong();
 	music_name[0] = 0;
+#ifndef HAVE_SDL //SDL uses RWOPS
+	Z_ChangeTag(music_data, PU_CACHE);
+#endif
+	music_data = NULL;
 	music_flags = 0;
 	music_looping = false;
 }
