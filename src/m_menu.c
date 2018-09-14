@@ -9473,7 +9473,6 @@ static void M_ToggleDigital(INT32 choice)
 	{
 		digital_disabled = false;
 		I_InitMusic();
-		if (digital_disabled) return;
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -9541,7 +9540,6 @@ static void M_ToggleMIDI(INT32 choice)
 	{
 		midi_disabled = false;
 		I_InitMusic();
-		if (midi_disabled) return;
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
