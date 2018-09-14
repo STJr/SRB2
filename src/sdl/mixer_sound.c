@@ -35,7 +35,7 @@
 #endif
 
 // thanks alam for making the buildbots happy!
-#if SDL_MIXER_VERSION_ATLEAST(2,0,3)
+#if SDL_MIXER_VERSION_ATLEAST(2,0,2)
 #define MUS_MP3_MAD MUS_MP3_MAD_UNUSED
 #define MUS_MODPLUG MUS_MODPLUG_UNUSED
 #endif
