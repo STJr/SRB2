@@ -6954,23 +6954,15 @@ static void M_ToggleSFX(void)
 	{
 		sound_disabled = false;
 		I_StartupSound();
-		if (sound_disabled) return;
 		S_InitSfxChannels(cv_soundvolume.value);
+		S_StartSound(NULL, sfx_strpst);
 		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -6980,7 +6972,6 @@ static void M_ToggleDigital(void)
 	{
 		digital_disabled = false;
 		I_InitMusic();
-		if (digital_disabled) return;
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -7020,7 +7011,6 @@ static void M_ToggleMIDI(void)
 	{
 		midi_disabled = false;
 		I_InitMusic();
-		if (midi_disabled) return;
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
