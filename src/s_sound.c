@@ -1344,11 +1344,13 @@ static boolean S_LoadMusic(const char *mname)
 static void S_UnloadMusic(void)
 {
 	I_UnloadSong();
-	music_name[0] = 0;
+
 #ifndef HAVE_SDL //SDL uses RWOPS
 	Z_ChangeTag(music_data, PU_CACHE);
 #endif
 	music_data = NULL;
+
+	music_name[0] = 0;
 	music_flags = 0;
 	music_looping = false;
 }
@@ -1413,13 +1415,7 @@ void S_StopMusic(void)
 
 	S_SpeedMusic(1.0f);
 	I_StopSong();
-	I_UnloadSong();
-
-#ifndef HAVE_SDL //SDL uses RWOPS
-	Z_ChangeTag(music_data, PU_CACHE);
-#endif
-
-	music_name[0] = 0;
+	S_UnloadMusic(); // for now, stopping also means you unload the song
 }
 
 //

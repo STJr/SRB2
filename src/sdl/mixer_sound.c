@@ -484,19 +484,7 @@ FUNCMATH void I_InitMusic(void)
 
 void I_ShutdownMusic(void)
 {
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
-	}
-#endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	I_UnloadSong();
 }
 
 /// ------------------------
@@ -565,10 +553,8 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_LoadSong(char *data, size_t len)
 {
-	I_Assert(!music);
-#ifdef HAVE_LIBGME
-	I_Assert(!gme);
-#endif
+	if (music || gme)
+		I_UnloadSong();
 
 #ifdef HAVE_LIBGME
 	if ((UINT8)data[0] == 0x1F
@@ -710,11 +696,20 @@ boolean I_LoadSong(char *data, size_t len)
 
 void I_UnloadSong(void)
 {
-	// \todo unhook looper
-	//var_cleanup();
-	//Mix_FreeMusic(music);
-	//music = NULL;
 	I_StopSong();
+
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (music)
+	{
+		Mix_FreeMusic(music);
+		music = NULL;
+	}
 }
 
 boolean I_PlaySong(boolean looping)
@@ -750,17 +745,14 @@ void I_StopSong(void)
 	if (gme)
 	{
 		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
 		current_track = -1;
-		return;
 	}
 #endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	if (music)
+	{
+		Mix_HookMusicFinished(NULL);
+		Mix_HaltMusic();
+	}
 }
 
 void I_PauseSong(void)
