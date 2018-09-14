@@ -950,6 +950,7 @@ typedef enum
 	tc_bouncecheese,
 	tc_startcrumble,
 	tc_marioblock,
+	tc_marioblockchecker,
 	tc_spikesector,
 	tc_floatsector,
 	tc_bridgethinker,
@@ -1772,6 +1773,11 @@ static void P_NetArchiveThinkers(void)
 		else if (th->function.acp1 == (actionf_p1)T_MarioBlock)
 		{
 			SaveSpecialLevelThinker(th, tc_marioblock);
+			continue;
+		}
+		else if (th->function.acp1 == (actionf_p1)T_MarioBlockChecker)
+		{
+			SaveSpecialLevelThinker(th, tc_marioblockchecker);
 			continue;
 		}
 		else if (th->function.acp1 == (actionf_p1)T_SpikeSector)
@@ -2728,6 +2734,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_marioblock:
 				LoadSpecialLevelThinker((actionf_p1)T_MarioBlock, 3);
+				break;
+
+			case tc_marioblockchecker:
+				LoadSpecialLevelThinker((actionf_p1)T_MarioBlockChecker, 0);
 				break;
 
 			case tc_spikesector:
