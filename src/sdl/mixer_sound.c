@@ -476,10 +476,6 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 FUNCMATH void I_InitMusic(void)
 {
-#ifdef HAVE_LIBGME
-	gme = NULL;
-	current_track = -1;
-#endif
 }
 
 void I_ShutdownMusic(void)
