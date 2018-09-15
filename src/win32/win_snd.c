@@ -475,11 +475,11 @@ musictype_t I_SongType(void)
 				return MU_WAV;
 			case FMOD_SOUND_TYPE_MOD:
 				return MU_MOD;
-			case FMOD_SOUND_TYPE_MID:
+			case FMOD_SOUND_TYPE_MIDI:
 				return MU_MID;
 			case FMOD_SOUND_TYPE_OGGVORBIS:
 				return MU_OGG;
-			case FMOD_SOUND_TYPE_MP3:
+			case FMOD_SOUND_TYPE_MPEG:
 				return MU_MP3;
 			case FMOD_SOUND_TYPE_FLAC:
 				return MU_FLAC;
@@ -547,20 +547,13 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_LoadSong(char *data, size_t len)
 {
-	char *data;
-	size_t len;
 	FMOD_CREATESOUNDEXINFO fmt;
-	lumpnum_t lumpnum = W_CheckNumForName(va("O_%s",musicname));
+	FMOD_RESULT e;
+	FMOD_TAG tag;
+	unsigned int loopstart, loopend;
 
-	if (lumpnum == LUMPERROR)
-	{
-		lumpnum = W_CheckNumForName(va("D_%s",musicname));
-		if (lumpnum == LUMPERROR)
-			return false;
-	}
-
-	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
-	len = W_LumpLength(lumpnum);
+	if (gme || music_stream)
+		I_UnloadSong();
 
 	memset(&fmt, 0, sizeof(FMOD_CREATESOUNDEXINFO));
 	fmt.cbsize = sizeof(FMOD_CREATESOUNDEXINFO);
@@ -595,8 +588,6 @@ boolean I_LoadSong(char *data, size_t len)
 					gme_equalizer_t gmeq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
 					Z_Free(inflatedData); // GME supposedly makes a copy for itself, so we don't need this lying around
 					Z_Free(data); // We don't need this, either.
-					gme_start_track(gme, 0);
-					current_track = 0;
 					gme_set_equalizer(gme,&gmeq);
 					fmt.format = FMOD_SOUND_FORMAT_PCM16;
 					fmt.defaultfrequency = 44100;
@@ -605,10 +596,7 @@ boolean I_LoadSong(char *data, size_t len)
 					fmt.decodebuffersize = (44100 * 2) / 35;
 					fmt.pcmreadcallback = GMEReadCallback;
 					fmt.userdata = gme;
-					FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER | (looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream));
-					FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
-					FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
-					FMR(FMOD_Channel_SetPriority(music_channel, 0));
+					FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER, &fmt, &music_stream));
 					return true;
 				}
 			}
@@ -675,26 +663,24 @@ boolean I_LoadSong(char *data, size_t len)
 		fmt.decodebuffersize = (44100 * 2) / 35;
 		fmt.pcmreadcallback = GMEReadCallback;
 		fmt.userdata = gme;
+		FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER, &fmt, &music_stream));
 		return true;
 	}
 #endif
 
 	fmt.length = len;
 
-	FMOD_RESULT e = FMOD_System_CreateStream(fsys, data, FMOD_OPENMEMORY_POINT|(looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream);
+	e = FMOD_System_CreateStream(fsys, data, FMOD_OPENMEMORY_POINT, &fmt, &music_stream);
 	if (e != FMOD_OK)
 	{
 		if (e == FMOD_ERR_FORMAT)
-			CONS_Alert(CONS_WARNING, "Failed to play music lump %s due to invalid format.\n", W_CheckNameForNum(lumpnum));
+			CONS_Alert(CONS_WARNING, "Failed to play music lump due to invalid format.\n");
 		else
 			FMR(e);
 		return false;
 	}
 
 	// Try to find a loop point in streaming music formats (ogg, mp3)
-	FMOD_RESULT e;
-	FMOD_TAG tag;
-	unsigned int loopstart, loopend;
 
 	// A proper LOOPPOINT is its own tag, stupid.
 	e = FMOD_Sound_GetTag(music_stream, "LOOPPOINT", 0, &tag);
@@ -707,13 +693,6 @@ boolean I_LoadSong(char *data, size_t len)
 			FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
 		return true;
 	}
-
-	// todo
-	// if(music type == MIDI)
-	// {
-	// 	FMR(FMOD_Sound_SetMode(music_stream, FMOD_LOOP_NORMAL));
-	// 	return true;
-	// }
 
 	// Use LOOPMS for time in miliseconds.
 	e = FMOD_Sound_GetTag(music_stream, "LOOPMS", 0, &tag);
@@ -758,10 +737,19 @@ boolean I_LoadSong(char *data, size_t len)
 
 void I_UnloadSong(void)
 {
-	UNREFERENCED_PARAMETER(handle);
+	I_StopSong();
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
 	if (music_stream)
+	{
 		FMR(FMOD_Sound_Release(music_stream));
-	music_stream = NULL;
+		music_stream = NULL;
+	}
 }
 
 boolean I_PlaySong(boolean looping)
@@ -771,7 +759,6 @@ boolean I_PlaySong(boolean looping)
 	{
 		gme_start_track(gme, 0);
 		current_track = 0;
-		FMR(FMOD_System_CreateStream(fsys, NULL, FMOD_OPENUSER | (looping ? FMOD_LOOP_NORMAL : 0), &fmt, &music_stream));
 		FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
 		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 		FMR(FMOD_Channel_SetPriority(music_channel, 0));
@@ -779,6 +766,7 @@ boolean I_PlaySong(boolean looping)
 	}
 #endif
 
+	FMR(FMOD_Sound_SetMode(music_stream, (looping ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF)));
 	FMR(FMOD_System_PlaySound(fsys, FMOD_CHANNEL_FREE, music_stream, false, &music_channel));
 	if (I_SongType() != MU_MID)
 		FMR(FMOD_Channel_SetVolume(music_channel, midi_volume / 31.0));
@@ -792,33 +780,25 @@ boolean I_PlaySong(boolean looping)
 
 void I_StopSong(void)
 {
-#ifdef HAVE_LIBGME
-	if (gme)
-		gme_delete(gme);
-	gme = NULL;
-#endif
-	current_track = -1;
-
-	I_UnloadSong();
+	if (music_channel)
+		FMR_MUSIC(FMOD_Channel_Stop(music_channel));
 }
 
 void I_PauseSong(void)
 {
-	UNREFERENCED_PARAMETER(handle);
-	if (music_stream)
+	if (music_channel)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, true));
 }
 
 void I_ResumeSong(void)
 {
-	UNREFERENCED_PARAMETER(handle);
-	if (music_stream)
+	if (music_channel)
 		FMR_MUSIC(FMOD_Channel_SetPaused(music_channel, false));
 }
 
 void I_SetMusicVolume(UINT8 volume)
 {
-	if (!music_stream)
+	if (!music_channel)
 		return;
 
 	// volume is 0 to 31.

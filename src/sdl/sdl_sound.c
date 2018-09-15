@@ -989,7 +989,7 @@ FUNCINLINE static ATTRINLINE void I_UpdateStream16M(Uint8 *stream, int len)
 	if (Snd_Mutex) SDL_UnlockMutex(Snd_Mutex);
 }
 
-#ifdef HAVE_LIBGME
+#if 0 //#ifdef HAVE_LIBGME
 static void I_UpdateSteamGME(Music_Emu *emu, INT16 *stream, int len, UINT8 looping)
 {
 	#define GME_BUFFER_LEN 44100*2048
@@ -1049,14 +1049,16 @@ static void SDLCALL I_UpdateStream(void *userdata, Uint8 *stream, int len)
 	else if (audio.channels == 2 && audio.format == AUDIO_S16SYS)
 	{
 		I_UpdateStream16S(stream, len);
-#ifdef HAVE_LIBGME
-		if (userdata)
-		{
-			srb2audio_t *sa_userdata = userdata;
-			if (!sa_userdata->gme_pause)
-				I_UpdateSteamGME(sa_userdata->gme_emu, (INT16 *)stream, len/4, sa_userdata->gme_loop);
-		}
-#endif
+
+		// Crashes! But no matter; this build doesn't play music anyway...
+// #ifdef HAVE_LIBGME
+// 		if (userdata)
+// 		{
+// 			srb2audio_t *sa_userdata = userdata;
+// 			if (!sa_userdata->gme_pause)
+// 				I_UpdateSteamGME(sa_userdata->gme_emu, (INT16 *)stream, len/4, sa_userdata->gme_loop);
+// 		}
+// #endif
 
 	}
 }
@@ -1313,40 +1315,11 @@ void I_StartupSound(void)
 // MUSIC API.
 //
 
-musictype_t I_SongType(void)
-{
-#ifdef HAVE_MIXER
-#ifdef HAVE_LIBGME
-	if (gme)
-		return MU_GME;
-	else
-#endif
-	if (!music)
-		return MU_NONE;
-	else if (Mix_GetMusicType(music) == MUS_MID)
-		return MU_MID;
-	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
-		return MU_MOD;
-	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
-		return MU_MP3;
-	else
-		return (musictype_t)Mix_GetMusicType(music);
-#else
-	return MU_NONE
-#endif
-}
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
-boolean I_SongPlaying(void)
-{
-	return music_started;
-}
-
-boolean I_SongPaused(void)
-{
-	return Mix_PausedMusic();
-}
-
-#ifdef HAVE_LIBGME
+#if 0 //#ifdef HAVE_LIBGME
 static void I_ShutdownGMEMusic(void)
 {
 	Snd_LockAudio();
@@ -1357,235 +1330,14 @@ static void I_ShutdownGMEMusic(void)
 }
 #endif
 
-#ifdef HAVE_MIXER
-static boolean LoadSong(void *data, size_t lumplength, size_t selectpos)
-{
-	FILE *midfile;
-	const char *tempname;
-#ifdef USE_RWOPS
-	if (canuseRW)
-	{
-		SDL_RWops *SDLRW;
-		void *olddata = Smidi[selectpos]; //quick shortcut to set
-
-		Z_Free(olddata); //free old memory
-		Smidi[selectpos] = NULL;
-
-		if (!data)
-			return olddata != NULL; //was there old data?
-
-		SDLRW = SDL_RWFromConstMem(data, (int)lumplength); //new RWops from Z_zone
-		if (!SDLRW) //ERROR while making RWops!
-		{
-			CONS_Printf(M_GetText("Couldn't load music lump: %s\n"), SDL_GetError());
-			Z_Free(data);
-			return false;
-		}
-
-		music[selectpos] = Mix_LoadMUS_RW(SDLRW); // new Mix_Chuck from RWops
-		if (music[selectpos])
-			Smidi[selectpos] = data; //all done
-		else //ERROR while making Mix_Chuck
-		{
-			CONS_Printf(M_GetText("Couldn't load music data: %s\n"), Mix_GetError());
-			Z_Free(data);
-			SDL_RWclose(SDLRW);
-			Smidi[selectpos] = NULL;
-		}
-		return true;
-	}
-#endif
-	tempname = va("%s/%s", MIDI_PATH, fmidi[selectpos]);
-
-	if (!data)
-	{
-		if (FIL_FileExists(tempname))
-			return unlink(tempname)+1;
-#ifdef MIDI_PATH2
-		else if (FIL_FileExists(tempname = va("%s/%s", MIDI_PATH2, fmidi[selectpos])))
-			return unlink(tempname)+1;
-#endif
-		else
-			return false;
-	}
-
-	midfile = fopen(tempname, "wb");
-
-#ifdef MIDI_PATH2
-	if (!midfile)
-	{
-		tempname = va("%s/%s", MIDI_PATH2, fmidi[selectpos]);
-		midfile = fopen(tempname, "wb");
-	}
-#endif
-
-	if (!midfile)
-	{
-		CONS_Printf(M_GetText("Couldn't open file %s to write music in\n"), tempname);
-		Z_Free(data);
-		return false;
-	}
-
-	if (fwrite(data, lumplength, 1, midfile) == 0)
-	{
-		CONS_Printf(M_GetText("Couldn't write music into file %s because %s\n"), tempname, strerror(ferror(midfile)));
-		Z_Free(data);
-		fclose(midfile);
-		return false;
-	}
-
-	fclose(midfile);
-
-	Z_Free(data);
-
-	music[selectpos] = Mix_LoadMUS(tempname);
-	if (!music[selectpos]) //ERROR while making Mix_Chuck
-	{
-		CONS_Printf(M_GetText("Couldn't load music file %s: %s\n"), tempname, Mix_GetError());
-		return false;
-	}
-	return true;
-}
-#endif
-
-/// ------------------------
-//  MUSIC SYSTEM
-/// ------------------------
-
 void I_InitMusic(void)
 {
-#ifdef HAVE_MIXER
-	char ad[100];
-	SDL_version MIXcompiled;
-	const SDL_version *MIXlinked;
-#ifdef MIXER_INIT
-	const int mixstart = MIX_INIT_OGG;
-	int mixflags;
-#endif
-#endif
-#ifdef HAVE_LIBGME
+#if 0 //#ifdef HAVE_LIBGME
 	I_AddExitFunc(I_ShutdownGMEMusic);
 #endif
-
-#ifdef HAVE_MIXER
-	MIX_VERSION(&MIXcompiled)
-	MIXlinked = Mix_Linked_Version();
-	I_OutputMsg("Compiled for SDL_mixer version: %d.%d.%d\n",
-	            MIXcompiled.major, MIXcompiled.minor, MIXcompiled.patch);
-#ifdef MIXER_POS
-	if (MIXlinked->major == 1 && MIXlinked->minor == 2 && MIXlinked->patch < 7)
-		canlooping = SDL_FALSE;
-#endif
-#ifdef USE_RWOPS
-	if (M_CheckParm("-noRW"))
-		canuseRW = SDL_FALSE;
-#endif
-	I_OutputMsg("Linked with SDL_mixer version: %d.%d.%d\n",
-	            MIXlinked->major, MIXlinked->minor, MIXlinked->patch);
-	if (audio.freq < 44100 && !M_CheckParm ("-freq")) //I want atleast 44Khz
-	{
-		audio.samples = (Uint16)(audio.samples*(INT32)(44100/audio.freq));
-		audio.freq = 44100; //Alam: to keep it around the same XX ms
-	}
-
-	if (sound_started
-#ifdef HW3SOUND
-		&& hws_mode == HWS_DEFAULT_MODE
-#endif
-		)
-	{
-		I_OutputMsg("Temp Shutdown of SDL Audio System");
-		SDL_CloseAudio();
-		I_OutputMsg(" Done\n");
-	}
-
-	CONS_Printf("%s", M_GetText("I_InitMusic:"));
-
-#ifdef MIXER_INIT
-	mixflags = Mix_Init(mixstart);
-	if ((mixstart & MIX_INIT_FLAC) != (mixflags & MIX_INIT_FLAC))
-	{
-		CONS_Printf("%s", M_GetText(" Unable to load FLAC support\n"));
-	}
-	if ((mixstart & MIX_INIT_MOD ) != (mixflags & MIX_INIT_MOD ))
-	{
-		CONS_Printf("%s", M_GetText(" Unable to load MOD support\n"));
-	}
-	if ((mixstart & MIX_INIT_MP3 ) != (mixflags & MIX_INIT_MP3 ))
-	{
-		CONS_Printf("%s", M_GetText(" Unable to load MP3 support\n"));
-	}
-	if ((mixstart & MIX_INIT_OGG ) != (mixflags & MIX_INIT_OGG ))
-	{
-		CONS_Printf("%s", M_GetText(" Unable to load OGG support\n"));
-	}
-#endif
-
-	if (Mix_OpenAudio(audio.freq, audio.format, audio.channels, audio.samples) < 0) //open_music(&audio)
-	{
-		CONS_Printf(M_GetText(" Unable to open music: %s\n"), Mix_GetError());
-		midi_disabled = digital_disabled = true;
-		if (sound_started
-#ifdef HW3SOUND
-			&& hws_mode == HWS_DEFAULT_MODE
-#endif
-			)
-		{
-			if (SDL_OpenAudio(&audio, NULL) < 0) //retry
-			{
-				CONS_Printf("%s", M_GetText(" couldn't open audio with desired format\n"));
-				sound_disabled = true;
-				sound_started = false;
-			}
-			else
-			{
-				CONS_Printf(M_GetText(" Starting with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
-			}
-		}
-		return;
-	}
-	else
-		CONS_Printf(M_GetText(" Starting up with audio driver : %s with SDL_Mixer\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
-
-	samplecount = audio.samples;
-	CV_SetValue(&cv_samplerate, audio.freq);
-	if (sound_started
-#ifdef HW3SOUND
-		&& hws_mode == HWS_DEFAULT_MODE
-#endif
-		)
-		I_OutputMsg(" Reconfigured SDL Audio System");
-	else I_OutputMsg(" Configured SDL_Mixer System");
-	I_OutputMsg(" with %d samples/slice at %ikhz(%dms buffer)\n", samplecount, audio.freq/1000, (INT32) ((audio.samples * 1000.0f) / audio.freq));
-	Mix_SetPostMix(audio.callback, audio.userdata);  // after mixing music, add sound effects
-	Mix_Resume(-1);
-	CONS_Printf("%s", M_GetText("Music initialized\n"));
-	musicStarted = SDL_TRUE;
-	Msc_Mutex = SDL_CreateMutex();
-#endif
 }
 
-void I_ShutdownMusic(void)
-{
-#ifdef HAVE_MIXER
-	if ((midi_disabled && digital_disabled) || !musicStarted)
-		return;
-
-	CONS_Printf("%s", M_GetText("I_ShutdownMusic: "));
-
-	I_UnloadSong();
-	I_StopSong();
-	Mix_CloseAudio();
-#ifdef MIX_INIT
-	Mix_Quit();
-#endif
-	CONS_Printf("%s", M_GetText("shut down\n"));
-	musicStarted = SDL_FALSE;
-	if (Msc_Mutex)
-		SDL_DestroyMutex(Msc_Mutex);
-	Msc_Mutex = NULL;
-#endif
-}
+void I_ShutdownMusic(void) { }
 
 /// ------------------------
 //  MUSIC PROPERTIES
@@ -1649,149 +1401,64 @@ UINT32 I_GetSongPosition(void)
 
 /// ------------------------
 //  MUSIC PLAYBACK
-//  \todo Merge Digital and MIDI
 /// ------------------------
+
+#if 0 //#ifdef HAVE_LIBGME
+static void I_StopGME(void)
+{
+	Snd_LockAudio();
+	gme_seek(localdata.gme_emu, 0);
+	Snd_UnlockAudio();
+}
+
+static void I_PauseGME(void)
+{
+	localdata.gme_pause = true;
+}
+
+static void I_ResumeGME(void)
+{
+	localdata.gme_pause = false;
+}
+#endif
 
 boolean I_LoadSong(char *data, size_t len)
 {
-#ifdef HAVE_MIXER
-	if (midi_disabled || !musicStarted)
-		return false;
-
-	if (!LoadSong(data, len, 0))
-		return false;
-
-	if (music[0])
-		return true;
-
-	CONS_Printf(M_GetText("Couldn't load MIDI: %s\n"), Mix_GetError());
-#else
-	(void)len;
-	(void)data;
-#endif
 	return false;
 }
 
-void I_UnloadSong(void)
-{
-#ifdef HAVE_MIXER
-
-	if (midi_disabled || !musicStarted)
-		return;
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[handle])
-		Mix_FreeMusic(music[handle]);
-	music[handle] = NULL;
-	LoadSong(NULL, 0, handle);
-#else
-	(void)handle;
-#endif
-}
+void I_UnloadSong(void) { }
 
 boolean I_PlaySong(boolean looping)
 {
-#ifdef HAVE_MIXER
-	if (!musicStarted || !music[handle])
-		return false;
-
-#ifdef MIXER_POS
-	if (canlooping)
-		Mix_HookMusicFinished(NULL);
-#endif
-
-	if (Mix_FadeInMusic(music[handle], looping ? -1 : 0, MIDIfade) == -1)
-		CONS_Printf(M_GetText("Couldn't play song because %s\n"), Mix_GetError());
-	else
-	{
-		Mix_VolumeMusic(musicvol);
-		return true;
-	}
-#else
 	(void)looping;
-#endif
 	return false;
 }
 
 void I_StopSong(void)
 {
+#if 0 //#ifdef HAVE_LIBGME
 	I_StopGME();
-#ifdef HAVE_MIXER
-	if (digital_disabled)
-		return;
-
-#ifdef MIXER_POS
-	if (canlooping)
-		Mix_HookMusicFinished(NULL);
-#endif
-
-	Mix_HaltMusic();
-	while (Mix_PlayingMusic())
-		;
-
-	if (music[1])
-		Mix_FreeMusic(music[1]);
-	music[1] = NULL;
-	LoadSong(NULL, 0, 1);
-}
-
-static void I_PauseGME(void)
-{
-#ifdef HAVE_LIBGME
-	localdata.gme_pause = true;
 #endif
 }
 
 void I_PauseSong(void)
 {
-	(void)handle;
+#if 0 //#ifdef HAVE_LIBGME
 	I_PauseGME();
-#ifdef HAVE_MIXER
-	if ((midi_disabled && digital_disabled) || !musicStarted)
-		return;
-
-	Mix_PauseMusic();
-	//I_StopSong(handle);
-#endif
-}
-
-static void I_ResumeGME(void)
-{
-#ifdef HAVE_LIBGME
-	localdata.gme_pause = false;
 #endif
 }
 
 void I_ResumeSong(void)
 {
-	(void)handle;
+#if 0
 	I_ResumeGME();
-#ifdef HAVE_MIXER
-	if ((midi_disabled && digital_disabled) || !musicStarted)
-		return;
-
-	Mix_VolumeMusic(musicvol);
-	Mix_ResumeMusic();
-	//I_PlaySong(handle, true);
 #endif
 }
 
 void I_SetMusicVolume(UINT8 volume)
 {
-#ifdef HAVE_MIXER
-	if ((midi_disabled && digital_disabled) || !musicStarted)
-		return;
-
-	if (Msc_Mutex) SDL_LockMutex(Msc_Mutex);
-	musicvol = volume * 2;
-	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
-	Mix_VolumeMusic(musicvol);
-#else
 	(void)volume;
-#endif
 }
 
 boolean I_SetSongTrack(int track)
@@ -1847,16 +1514,14 @@ boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 //        then move to Playback section
 /// ------------------------
 
-#ifdef HAVE_LIBGME
+#if 0 //#ifdef HAVE_LIBGME
 static void I_CleanupGME(void *userdata)
 {
 	Z_Free(userdata);
 }
-#endif
 
 static boolean I_StartGMESong(const char *musicname, boolean looping)
 {
-#ifdef HAVE_LIBGME
 	char filename[9];
 	void *data;
 	lumpnum_t lumpnum;
@@ -1902,199 +1567,7 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 	Snd_UnlockAudio();
 
 	return true;
-#else
-	(void)musicname;
-	(void)looping;
-#endif
-	return false;
-}
-
-boolean I_StartDigSong(const char *musicname, boolean looping)
-{
-#ifdef HAVE_MIXER
-	char filename[9];
-	void *data;
-	lumpnum_t lumpnum;
-	size_t lumplength;
-#endif
-
-	if(I_StartGMESong(musicname, looping))
-		return true;
-
-#ifdef HAVE_MIXER
-	if (digital_disabled)
-		return false;
-
-	snprintf(filename, sizeof filename, "o_%s", musicname);
-
-	lumpnum = W_CheckNumForName(filename);
-
-	I_StopSong();
-
-	if (lumpnum == LUMPERROR)
-	{
-		// Alam_GBC: like in win32/win_snd.c: Graue 02-29-2004: don't worry about missing music, there might still be a MIDI
-		//I_OutputMsg("Music lump %s not found!\n", filename);
-		return false; // No music found. Oh well!
-	}
-	else
-		lumplength = W_LumpLength(lumpnum);
-
-	data = W_CacheLumpNum(lumpnum, PU_MUSIC);
-
-	if (Msc_Mutex) SDL_LockMutex(Msc_Mutex);
-
-#ifdef MIXER_POS
-	if (canlooping && (loopingDig = looping) == SDL_TRUE && strcmp(data, "OggS")  == 0)
-		looping = false; // Only on looping Ogg files, will we will do our own looping
-
-	// Scan the Ogg Vorbis file for the COMMENT= field for a custom
-	// loop point
-	if (!looping && loopingDig)
-	{
-		size_t scan;
-		const char *dataum = data;
-		char looplength[64];
-		UINT32 loopstart = 0;
-		UINT8 newcount = 0;
-
-		Mix_HookMusicFinished(I_FinishMusic);
-
-		for (scan = 0; scan < lumplength; scan++)
-		{
-			if (*dataum++ == 'C'){
-			if (*dataum++ == 'O'){
-			if (*dataum++ == 'M'){
-			if (*dataum++ == 'M'){
-			if (*dataum++ == 'E'){
-			if (*dataum++ == 'N'){
-			if (*dataum++ == 'T'){
-			if (*dataum++ == '='){
-			if (*dataum++ == 'L'){
-			if (*dataum++ == 'O'){
-			if (*dataum++ == 'O'){
-			if (*dataum++ == 'P'){
-			if (*dataum++ == 'P'){
-			if (*dataum++ == 'O'){
-			if (*dataum++ == 'I'){
-			if (*dataum++ == 'N'){
-			if (*dataum++ == 'T'){
-			if (*dataum++ == '=')
-			{
-
-				while (*dataum != 1 && newcount != 63)
-					looplength[newcount++] = *dataum++;
-
-				looplength[newcount] = '\0';
-
-				loopstart = atoi(looplength);
-
-			}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-			else
-				dataum--;}
-		}
-
-		if (loopstart > 0)
-		{
-			loopstartDig = (double)((44.1l+loopstart) / 44100.0l); //8 PCM chucks off and PCM to secs
-//#ifdef PARANOIA
-			//I_OutputMsg("I_StartDigSong: setting looping point to %ul PCMs(%f seconds)\n", loopstart, loopstartDig);
-//#endif
-		}
-		else
-		{
-			looping = true; // loopingDig true, but couldn't find start loop point
-		}
-	}
-	else
-		loopstartDig = 0.0l;
-#else
-	if (looping && strcmp(data, "OggS")  == 0)
-		I_OutputMsg("I_StartDigSong: SRB2 was not compiled with looping music support(no Mix_FadeInMusicPos)\n");
-#endif
-
-	if (!LoadSong(data, lumplength, 1))
-	{
-		if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
-		return false;
-	}
-
-	// Note: LoadSong() frees the data. Let's make sure
-	// we don't try to use the data again.
-	data = NULL;
-
-	if (Mix_FadeInMusic(music[1], looping ? -1 : 0, Digfade) == -1)
-	{
-		if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
-		I_OutputMsg("I_StartDigSong: Couldn't play song %s because %s\n", musicname, Mix_GetError());
-		return false;
-	}
-	Mix_VolumeMusic(musicvol);
-
-	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
-	return true;
-#else
-	(void)looping;
-	(void)musicname;
-	return false;
-#endif
-}
-
-static void I_StopGME(void)
-{
-#ifdef HAVE_LIBGME
-	Snd_LockAudio();
-	gme_seek(localdata.gme_emu, 0);
-	Snd_UnlockAudio();
-#endif
-}
-
-#ifdef MIXER_POS
-static void SDLCALL I_FinishMusic(void)
-{
-	if (!music[1])
-		return;
-	else if (Msc_Mutex) SDL_LockMutex(Msc_Mutex);
-//		I_OutputMsg("I_FinishMusic: Loopping song to %g seconds\n", loopstartDig);
-
-	if (Mix_FadeInMusicPos(music[1], loopstartDig ? 0 : -1, Digfade, loopstartDig) == 0)
-		Mix_VolumeMusic(musicvol);
-	else
-		I_OutputMsg("I_FinishMusic: Couldn't loop song because %s\n", Mix_GetError());
-
-	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
 }
 #endif
+
 #endif //HAVE_SDL
