@@ -1905,6 +1905,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
+	INT16 red, green, blue, alpha;
+
 	// exc_augend is added (or subtracted) onto by exc_addend
 	// In Rennaisance times, the first number was considered the augend, the second number the addend
 	// But since the commutative property was discovered, today they're both called addends!
@@ -1913,8 +1915,6 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	exc_augend = R_CopyColormap(exc_augend, false);
 	if(!exc_addend)
 		exc_addend = R_GetDefaultColormap();
-
-	INT16 red, green, blue, alpha;
 
 	///////////////////
 	// base rgba
