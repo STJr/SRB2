@@ -355,17 +355,21 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	ll->sourcelevel = sector->lightlevel;
 	ll->destlevel = destvalue;
 
+	ll->fixedcurlevel = sector->lightlevel<<FRACBITS;
+
 	if (ticbased)
 	{
-		ll->ticbased = true;
-		ll->timer = ll->duration = abs(speed); // speed means duration
+		// Speed means duration.
+		ll->timer = abs(speed);
+		ll->fixedpertic = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS);
 	}
 	else
 	{
-		ll->ticbased = false;
-		ll->timer = abs(ll->destlevel - ll->sourcelevel);
-		ll->duration = abs(speed); // ll->duration is used as speed
+		// Speed means increment per tic (literally speed).
+		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
+		ll->fixedpertic = speed<<FRACBITS;
 	}
+	CONS_Printf("Light level %d - %d, speed aprox. %d, tics %d, revised new thinker\n", ll->sector->lightlevel, destvalue, ll->fixedpertic>>FRACBITS, ll->timer);
 }
 
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
@@ -383,20 +387,15 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
   */
 void T_LightFade(lightlevel_t *ll)
 {
-	if ((ll->ticbased && --ll->timer <= 0)
-		|| (!ll->ticbased && (ll->timer -= ll->duration) <= 0))
+	if (--ll->timer <= 0)
 	{
 		ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
 		P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+		CONS_Printf("End tic, final light value: %d\n", ll->sector->lightlevel);
+		return;
 	}
-	else
-	{
-		INT16 delta = abs(ll->destlevel - ll->sourcelevel);
-		INT32 duration = ll->ticbased ? ll->duration : delta; // speed-based: timer's initial value is equal to delta
-		fixed_t factor = min(FixedDiv(duration - ll->timer, duration), 1*FRACUNIT);
-		if (ll->destlevel < ll->sourcelevel)
-			ll->sector->lightlevel = max(min(ll->sector->lightlevel, ll->sourcelevel - (INT16)FixedMul(delta, factor)), ll->destlevel);
-		else if (ll->destlevel > ll->sourcelevel)
-			ll->sector->lightlevel = min(max(ll->sector->lightlevel, ll->sourcelevel + (INT16)FixedMul(delta, factor)), ll->destlevel);
-	}
+
+	ll->fixedcurlevel = ll->fixedcurlevel + ll->fixedpertic;
+	ll->sector->lightlevel = (ll->fixedcurlevel)>>FRACBITS;
+	CONS_Printf("Light %d\n", ll->sector->lightlevel);
 }
