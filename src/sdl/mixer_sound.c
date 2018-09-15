@@ -861,9 +861,21 @@ boolean I_LoadSong(char *data, size_t len)
 	const char *key1 = "LOOP";
 	const char *key2 = "POINT=";
 	const char *key3 = "MS=";
+	const char *key4 = "LENGTHMS=";
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
+	const size_t key4len = strlen(key4);
+
+	// for mp3 wide chars
+	const char *key1w = "L\0O\0O\0P\0";
+	const char *key2w = "P\0O\0I\0N\0T\0\0\0\xFF\xFE";
+	const char *key3w = "M\0S\0\0\0\xFF\xFE";
+	const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0\0\0\xFF\xFE";
+	const char *wterm = "\0\0";
+	char wval[10];
+
+	size_t wstart, wp;
 	char *p = data;
 
 	if (music
