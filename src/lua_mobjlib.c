@@ -40,6 +40,8 @@ enum mobj_e {
 	mobj_subsector,
 	mobj_floorz,
 	mobj_ceilingz,
+	mobj_floorrover,
+	mobj_ceilingrover,
 	mobj_radius,
 	mobj_height,
 	mobj_momx,
@@ -100,6 +102,8 @@ static const char *const mobj_opt[] = {
 	"subsector",
 	"floorz",
 	"ceilingz",
+	"floorrover",
+	"ceilingrover",
 	"radius",
 	"height",
 	"momx",
@@ -207,6 +211,12 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_ceilingz:
 		lua_pushfixed(L, mo->ceilingz);
+		break;
+	case mobj_floorrover:
+		LUA_PushUserdata(L, mo->floorrover, META_FFLOOR);
+		break;
+	case mobj_ceilingrover:
+		LUA_PushUserdata(L, mo->ceilingrover, META_FFLOOR);
 		break;
 	case mobj_radius:
 		lua_pushfixed(L, mo->radius);
@@ -432,6 +442,10 @@ static int mobj_set(lua_State *L)
 		return NOSETPOS;
 	case mobj_ceilingz:
 		return NOSETPOS;
+	case mobj_floorrover:
+		return NOSET;
+	case mobj_ceilingrover:
+		return NOSET;
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
