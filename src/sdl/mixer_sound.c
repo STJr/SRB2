@@ -566,7 +566,11 @@ boolean I_LoadSong(char *data, size_t len)
 	const size_t key3len = strlen(key3);
 	char *p = data;
 
-	if (music || gme)
+	if (music
+#ifdef HAVE_LIBGME
+		|| gme
+#endif
+	)
 		I_UnloadSong();
 
 #ifdef HAVE_LIBGME
