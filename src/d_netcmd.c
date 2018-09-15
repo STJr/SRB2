@@ -816,6 +816,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
+	CV_RegisterVar(&cv_ophoopflags);
 	CV_RegisterVar(&cv_mapthingnum);
 //	CV_RegisterVar(&cv_grid);
 //	CV_RegisterVar(&cv_snapto);
@@ -827,7 +828,6 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("getallemeralds", Command_Getallemeralds_f);
 	COM_AddCommand("resetemeralds", Command_Resetemeralds_f);
 	COM_AddCommand("setrings", Command_Setrings_f);
-	COM_AddCommand("setspheres", Command_Setspheres_f);
 	COM_AddCommand("setlives", Command_Setlives_f);
 	COM_AddCommand("setcontinues", Command_Setcontinues_f);
 	COM_AddCommand("devmode", Command_Devmode_f);
@@ -2771,6 +2771,12 @@ static void Command_Login_f(void)
 	UINT8 finalmd5[16];
 	const char *pw;
 
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
+
 	// If the server uses login, it will effectively just remove admin privileges
 	// from whoever has them. This is good.
 	if (COM_Argc() != 2)
@@ -2835,6 +2841,12 @@ static void Command_Verify_f(void)
 	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -3149,7 +3161,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (adminplayer == consoleplayer && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -4060,6 +4072,7 @@ static void Command_RestartAudio_f(void)
 		return;
 
 	S_StopMusic();
+	S_StopSounds();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_StartupSound();

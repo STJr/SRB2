@@ -5298,7 +5298,7 @@ static void M_PandorasBox(INT32 choice)
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].spheres, 0));
 	else
 		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
-	if (players[consoleplayer].lives == 0x7f)
+	if (players[consoleplayer].lives == INFLIVES)
 		CV_StealthSetValue(&cv_dummylives, -1);
 	else
 		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
@@ -6355,7 +6355,7 @@ skipsign:
 			y += 25;
 
 			tempx = x + 10;
-			if (savegameinfo[savetodraw].lives != 0x7f
+			if (savegameinfo[savetodraw].lives != INFLIVES
 			&& savegameinfo[savetodraw].lives > 9)
 				tempx -= 4;
 
@@ -6382,7 +6382,7 @@ skiplife:
 
 			V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
 			tempx += 16;
-			if (savegameinfo[savetodraw].lives == 0x7f)
+			if (savegameinfo[savetodraw].lives == INFLIVES)
 				V_DrawCharacter(tempx, y + 1, '\x16', false);
 			else
 				V_DrawString(tempx, y, 0, va("%d", savegameinfo[savetodraw].lives));
@@ -9440,8 +9440,6 @@ static void M_ToggleSFX(INT32 choice)
 	if (sound_disabled)
 	{
 		sound_disabled = false;
-		I_StartupSound();
-		if (sound_disabled) return;
 		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
@@ -9449,20 +9447,10 @@ static void M_ToggleSFX(INT32 choice)
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			S_StartSound(NULL, sfx_strpst);
-			OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
-			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
-			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
+		//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -9494,7 +9482,6 @@ static void M_ToggleDigital(INT32 choice)
 	{
 		digital_disabled = false;
 		I_InitMusic();
-		if (digital_disabled) return;
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -9562,7 +9549,6 @@ static void M_ToggleMIDI(INT32 choice)
 	{
 		midi_disabled = false;
 		I_InitMusic();
-		if (midi_disabled) return;
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else

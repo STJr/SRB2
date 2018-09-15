@@ -226,6 +226,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->unlockrequired = -1;
 	mapheaderinfo[num]->levelselect = 0;
 	mapheaderinfo[num]->bonustype = 0;
+	mapheaderinfo[num]->maxbonuslives = -1;
 	mapheaderinfo[num]->levelflags = 0;
 	mapheaderinfo[num]->menuflags = 0;
 #if 1 // equivalent to "FlickyList = DEMO"
@@ -719,6 +720,7 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
 		ss->bottommap = ss->midmap = ss->topmap = -1;
+		ss->spawn_bottommap = ss->spawn_midmap = ss->spawn_topmap = -1;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
 		ss->verticalflip = false;
@@ -1470,13 +1472,14 @@ static void P_LoadRawSideDefs2(void *data)
 		{
 			case 63: // variable colormap via 242 linedef
 			case 606: //SoM: 4/4/2000: Just colormap transfer
+			case 447: // Change colormap of tagged sectors! -- Monster Iestyn 14/06/18
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
 				if (rendermode == render_soft || rendermode == render_none)
 				{
 					if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
 					{
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 					}
@@ -1506,7 +1509,7 @@ static void P_LoadRawSideDefs2(void *data)
 					{
 						char *col;
 
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
+						sec->midmap = sec->spawn_midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
 							msd->bottomtexture);
 						sd->toptexture = sd->bottomtexture = 0;
 #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
@@ -2382,12 +2385,16 @@ static void P_LevelInitStuff(void)
 		 players[i].maxlink = players[i].startedtime =\
 		 players[i].finishedtime = players[i].finishedspheres =\
 		 players[i].finishedrings = players[i].lastmare =\
+		 players[i].lastmarelap = players[i].lastmarebonuslap =\
+		 players[i].totalmarelap = players[i].totalmarebonuslap =\
 		 players[i].marebegunat = players[i].textvar =\
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].realtime =\
-		 players[i].exiting = 0;
+		 players[i].mare = players[i].marelap =\
+		 players[i].marebonuslap = players[i].lapbegunat =\
+		 players[i].lapstartedtime = players[i].totalmarescore =\
+		 players[i].realtime = players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;
@@ -2933,7 +2940,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
 			P_CreateBlockMap(); // Graue 02-29-2004
-		R_MakeColormaps();
 		P_LoadLineDefs2();
 		P_GroupLines();
 		numdmstarts = numredctfstarts = numbluectfstarts = 0;
@@ -2970,7 +2976,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
 			P_CreateBlockMap(); // Graue 02-29-2004
-		R_MakeColormaps();
 		P_LoadLineDefs2();
 		P_GroupLines();
 		numdmstarts = numredctfstarts = numbluectfstarts = 0;

@@ -38,6 +38,12 @@
 	(SDL_MIXER_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
 #endif
 
+// thanks alam for making the buildbots happy!
+#if SDL_MIXER_VERSION_ATLEAST(2,0,2)
+#define MUS_MP3_MAD MUS_MP3_MAD_UNUSED
+#define MUS_MODPLUG MUS_MODPLUG_UNUSED
+#endif
+
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
@@ -162,7 +168,10 @@ void I_StartupSound(void)
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
-		CONS_Debug(DBG_BASIC, "SDL Audio already started\n");
+	{
+		CONS_Debug(DBG_DETAILED, "SDL Audio already started\n");
+		return;
+	}
 	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
@@ -647,30 +656,11 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 FUNCMATH void I_InitMusic(void)
 {
-#ifdef HAVE_LIBGME
-	gme = NULL;
-	current_track = -1;
-#endif
 }
 
 void I_ShutdownMusic(void)
 {
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
-	}
-#endif
-	if (!music)
-		return;
-	var_cleanup();
-	SDL_RemoveTimer(fading_id);
-	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	I_UnloadSong();
 }
 
 /// ------------------------
@@ -695,9 +685,9 @@ musictype_t I_SongType(void)
 #endif
 		return MU_MID;
 	}
-	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG)
 		return MU_MOD;
-	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD)
 		return MU_MP3;
 	else
 		return (musictype_t)Mix_GetMusicType(music);
@@ -845,23 +835,25 @@ boolean I_SetSongPosition(UINT32 position)
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
+		// this is unstable, so fail silently
+		return true;
 		// this isn't required technically, but GME thread-locks for a second
 		// if you seek too high from the counter
-		length = I_GetSongLength();
-		if (length)
-			position = get_adjusted_position(position);
+		// length = I_GetSongLength();
+		// if (length)
+		// 	position = get_adjusted_position(position);
 
-		SDL_LockAudio();
-		gme_err_t gme_e = gme_seek(gme, position);
-		SDL_UnlockAudio();
+		// SDL_LockAudio();
+		// gme_err_t gme_e = gme_seek(gme, position);
+		// SDL_UnlockAudio();
 
-		if (gme_e != NULL)
-		{
-			CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
-			return false;
-		}
-		else
-			return true;
+		// if (gme_e != NULL)
+		// {
+		// 	CONS_Alert(CONS_ERROR, "GME error: %s\n", gme_e);
+		// 	return false;
+		// }
+		// else
+		// 	return true;
 	}
 	else
 #endif
@@ -944,10 +936,32 @@ UINT32 I_GetSongPosition(void)
 
 boolean I_LoadSong(char *data, size_t len)
 {
-	I_Assert(!music);
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const char *key4 = "LENGTHMS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	const size_t key4len = strlen(key4);
+
+	// for mp3 wide chars
+	const char *key1w = "L\0O\0O\0P\0";
+	const char *key2w = "P\0O\0I\0N\0T\0\0\0\xFF\xFE";
+	const char *key3w = "M\0S\0\0\0\xFF\xFE";
+	const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0\0\0\xFF\xFE";
+	const char *wterm = "\0\0";
+	char wval[10];
+
+	size_t wstart, wp;
+	char *p = data;
+
+	if (music
 #ifdef HAVE_LIBGME
-	I_Assert(!gme);
+		|| gme
 #endif
+	)
+		I_UnloadSong();
 
 	var_cleanup();
 
@@ -1075,25 +1089,6 @@ boolean I_LoadSong(char *data, size_t len)
 	loop_point = 0.0f;
 	song_length = 0.0f;
 
-	const char *key1 = "LOOP";
-	const char *key2 = "POINT=";
-	const char *key3 = "MS=";
-	const char *key4 = "LENGTHMS=";
-	const size_t key1len = strlen(key1);
-	const size_t key2len = strlen(key2);
-	const size_t key3len = strlen(key3);
-	const size_t key4len = strlen(key4);
-
-	// for mp3 wide chars
-	const char *key1w = "L\0O\0O\0P\0";
-	const char *key2w = "P\0O\0I\0N\0T\0\0\0\xFF\xFE";
-	const char *key3w = "M\0S\0\0\0\xFF\xFE";
-	const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0\0\0\xFF\xFE";
-	const char *wterm = "\0\0";
-	char wval[10];
-
-	size_t wstart, wp;
-	char *p = data;
 	while ((UINT32)(p - data) < len)
 	{
 		if (!loop_point && !strncmp(p, key1, key1len))
@@ -1179,11 +1174,20 @@ boolean I_LoadSong(char *data, size_t len)
 
 void I_UnloadSong(void)
 {
-	// \todo unhook looper
-	//var_cleanup();
-	//Mix_FreeMusic(music);
-	//music = NULL;
 	I_StopSong();
+
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (music)
+	{
+		Mix_FreeMusic(music);
+		music = NULL;
+	}
 }
 
 boolean I_PlaySong(boolean looping)
@@ -1237,19 +1241,17 @@ void I_StopSong(void)
 	if (gme)
 	{
 		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
 		current_track = -1;
-		return;
 	}
 #endif
-	if (!music)
-		return;
-	var_cleanup();
-	Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	if (music)
+	{
+		var_cleanup();
+		I_StopFadingSong();
+		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
+		Mix_HookMusicFinished(NULL);
+		Mix_HaltMusic();
+	}
 }
 
 void I_PauseSong()
