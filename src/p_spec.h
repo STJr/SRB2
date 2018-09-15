@@ -138,11 +138,11 @@ typedef struct
 	sector_t *sector;  ///< Sector where action is taking place.
 	INT16 sourcelevel; ///< Light level we're fading from.
 	INT16 destlevel;   ///< Light level we're fading to.
-	INT16 speed;       ///< Speed at which to change light level. OR: Tic-based duration
 
 	// Tic-based behavior
 	boolean ticbased;  ///< Tic-based logic
-	INT32 timer;       ///< Tic-based timer
+	INT16 duration;    ///< If tic-based: duration of effect. If speed-based: amount to increment
+	INT32 timer;       ///< Internal timer
 } lightlevel_t;
 
 #define GLOWSPEED 8

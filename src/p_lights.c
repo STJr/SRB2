@@ -13,6 +13,7 @@
 ///        Fire flicker, light flash, strobe flash, lightning flash, glow, and fade.
 
 #include "doomdef.h"
+#include "doomstat.h"
 #include "p_local.h"
 #include "r_state.h"
 #include "z_zone.h"
@@ -327,7 +328,8 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
   *
   * \param sector    Target sector
   * \param destvalue The final light value in these sectors.
-  * \param speed     Speed of the fade; the change to the ligh
+  * \param speed     If tic-based: total duration of effect.
+  *                  If speed-based: Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
   * \param ticbased  Use a specific duration for the fade, defined by speed
   * \sa T_LightFade
@@ -357,13 +359,13 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	if (ticbased)
 	{
 		ll->ticbased = true;
-		ll->timer = ll->speed = abs(speed); // use ll->speed for total duration
+		ll->timer = ll->duration = abs(speed); // speed means duration
 	}
 	else
 	{
 		ll->ticbased = false;
-		ll->timer = -1;
-		ll->speed = abs(speed);
+		ll->timer = abs(ll->destlevel - ll->sourcelevel);
+		ll->duration = abs(speed); // ll->duration is used as speed
 	}
 }
 
@@ -382,49 +384,20 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
   */
 void T_LightFade(lightlevel_t *ll)
 {
-	if (ll->ticbased)
+	if ((ll->ticbased && --ll->timer <= 0)
+		|| (!ll->ticbased && (ll->timer -= ll->duration) <= 0))
 	{
-		if (--ll->timer <= 0)
-		{
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-		{
-			INT16 delta = abs(ll->destlevel - ll->sourcelevel);
-			fixed_t factor = min(FixedDiv(ll->speed - ll->timer, ll->speed), 1*FRACUNIT);
-			if (ll->destlevel < ll->sourcelevel)
-				ll->sector->lightlevel = max(min(ll->sector->lightlevel, ll->sourcelevel - (INT16)FixedMul(delta, factor)), ll->destlevel);
-			else if (ll->destlevel > ll->sourcelevel)
-				ll->sector->lightlevel = min(max(ll->sector->lightlevel, ll->sourcelevel + (INT16)FixedMul(delta, factor)), ll->destlevel);
-		}
-		return;
-	}
-
-	if (ll->sector->lightlevel < ll->destlevel)
-	{
-		// increase the lightlevel
-		if (ll->sector->lightlevel + ll->speed >= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel += ll->speed; // move lightlevel
+		ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
+		P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 	}
 	else
 	{
-		// decrease lightlevel
-		if (ll->sector->lightlevel - ll->speed <= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel -= ll->speed; // move lightlevel
+		INT16 delta = abs(ll->destlevel - ll->sourcelevel);
+		INT32 duration = ll->ticbased ? ll->duration : delta; // speed-based: timer's initial value is equal to delta
+		fixed_t factor = min(FixedDiv(duration - ll->timer, duration), 1*FRACUNIT);
+		if (ll->destlevel < ll->sourcelevel)
+			ll->sector->lightlevel = max(min(ll->sector->lightlevel, ll->sourcelevel - (INT16)FixedMul(delta, factor)), ll->destlevel);
+		else if (ll->destlevel > ll->sourcelevel)
+			ll->sector->lightlevel = min(max(ll->sector->lightlevel, ll->sourcelevel + (INT16)FixedMul(delta, factor)), ll->destlevel);
 	}
 }
