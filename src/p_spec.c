@@ -7484,6 +7484,8 @@ static void P_ResetColormapFader(sector_t *sector)
 static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
 	boolean ticbased, INT32 duration)
 {
+	fadecolormap_t *d;
+
 	P_ResetColormapFader(sector);
 
 	// nothing to do, set immediately
@@ -7493,7 +7495,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 		return;
 	}
 
-	fadecolormap_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
+	d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 	d->thinker.function.acp1 = (actionf_p1)T_FadeColormap;
 	d->sector = sector;
 	d->source_exc = source_exc;
