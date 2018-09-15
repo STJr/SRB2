@@ -38,6 +38,12 @@
 	(SDL_MIXER_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
 #endif
 
+// thanks alam for making the buildbots happy!
+#if SDL_MIXER_VERSION_ATLEAST(2,0,2)
+#define MUS_MP3_MAD MUS_MP3_MAD_UNUSED
+#define MUS_MODPLUG MUS_MODPLUG_UNUSED
+#endif
+
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
@@ -137,7 +143,10 @@ void I_StartupSound(void)
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
-		CONS_Printf("SDL Audio already started\n");
+	{
+		CONS_Debug(DBG_DETAILED, "SDL Audio already started\n");
+		return;
+	}
 	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
@@ -536,27 +545,11 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 FUNCMATH void I_InitMusic(void)
 {
-#ifdef HAVE_LIBGME
-	gme = NULL;
-	current_track = -1;
-#endif
 }
 
 void I_ShutdownMusic(void)
 {
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
-	}
-#endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	I_UnloadSong();
 }
 
 /// ------------------------
@@ -581,9 +574,9 @@ musictype_t I_SongType(void)
 #endif
 		return MU_MID;
 	}
-	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG)
 		return MU_MOD;
-	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD_UNUSED)
+	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD)
 		return MU_MP3;
 	else
 		return (musictype_t)Mix_GetMusicType(music);
@@ -632,10 +625,16 @@ boolean I_SetSongSpeed(float speed)
 
 boolean I_LoadSong(char *data, size_t len)
 {
-	I_Assert(!music);
-#ifdef HAVE_LIBGME
-	I_Assert(!gme);
-#endif
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	char *p = data;
+
+	if (music || gme)
+		I_UnloadSong();
 
 #ifdef HAVE_LIBGME
 	if ((UINT8)data[0] == 0x1F
@@ -750,13 +749,6 @@ boolean I_LoadSong(char *data, size_t len)
 	// Find the OGG loop point.
 	loop_point = 0.0f;
 
-	const char *key1 = "LOOP";
-	const char *key2 = "POINT=";
-	const char *key3 = "MS=";
-	const size_t key1len = strlen(key1);
-	const size_t key2len = strlen(key2);
-	const size_t key3len = strlen(key3);
-	char *p = data;
 	while ((UINT32)(p - data) < len)
 	{
 		if (strncmp(p++, key1, key1len))
@@ -785,11 +777,20 @@ boolean I_LoadSong(char *data, size_t len)
 
 void I_UnloadSong(void)
 {
-	// \todo unhook looper
-	//var_cleanup();
-	//Mix_FreeMusic(music);
-	//music = NULL;
 	I_StopSong();
+
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (music)
+	{
+		Mix_FreeMusic(music);
+		music = NULL;
+	}
 }
 
 boolean I_PlaySong(boolean looping)
@@ -826,17 +827,14 @@ void I_StopSong(void)
 	if (gme)
 	{
 		Mix_HookMusic(NULL, NULL);
-		gme_delete(gme);
-		gme = NULL;
 		current_track = -1;
-		return;
 	}
 #endif
-	if (!music)
-		return;
-	Mix_HookMusicFinished(NULL);
-	Mix_FreeMusic(music);
-	music = NULL;
+	if (music)
+	{
+		Mix_HookMusicFinished(NULL);
+		Mix_HaltMusic();
+	}
 }
 
 void I_PauseSong(void)
