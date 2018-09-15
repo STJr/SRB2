@@ -2621,6 +2621,7 @@ static inline void LoadDisappearThinker(actionf_p1 thinker)
 //
 static inline void LoadFadeThinker(actionf_p1 thinker)
 {
+	sector_t *ss;
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->dest_exc = LoadExtraColormap(save_p);
@@ -2641,7 +2642,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	ht->doghostfade = READUINT8(save_p);
 	ht->exactalpha = READUINT8(save_p);
 
-	sector_t *ss = LoadSector(ht->sectornum);
+	ss = LoadSector(ht->sectornum);
 	if (ss)
 	{
 		size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
