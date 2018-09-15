@@ -1510,7 +1510,7 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 #endif
 {
 	extracolormap_t *exc;
-	size_t dbg_i = 0;
+	UINT32 dbg_i = 0;
 
 	for (exc = extra_colormaps; exc; exc = exc->next)
 	{
@@ -1525,8 +1525,8 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 		)
 		{
 			CONS_Debug(DBG_RENDER, "Found Colormap %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-				dbg_i, (rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
-				(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
+				dbg_i, R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
+				R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
 			return exc;
 		}
 		dbg_i++;

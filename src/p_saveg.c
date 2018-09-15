@@ -494,7 +494,6 @@ static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
 static extracolormap_t *LoadExtraColormap(UINT8 *get)
 {
 	extracolormap_t *exc, *exc_exist;
-	//size_t dbg_i = 0;
 
 	UINT8 fadestart = READUINT8(get),
 		fadeend = READUINT8(get),
@@ -515,8 +514,8 @@ static extracolormap_t *LoadExtraColormap(UINT8 *get)
 	if (!exc)
 	{
 		// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-		// 	(rgba)&0xFF, (rgba>>8)&0xFF, (rgba>>16)&0xFF, (rgba>>24)&0xFF,
-		// 	(fadergba)&0xFF, (fadergba>>8)&0xFF, (fadergba>>16)&0xFF, (fadergba>>24)&0xFF);
+		// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
+		//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
 
 		exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 
