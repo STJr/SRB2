@@ -13,7 +13,6 @@
 ///        Fire flicker, light flash, strobe flash, lightning flash, glow, and fade.
 
 #include "doomdef.h"
-#include "doomstat.h"
 #include "p_local.h"
 #include "r_state.h"
 #include "z_zone.h"
