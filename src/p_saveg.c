@@ -1710,8 +1710,8 @@ static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, (UINT8)ht->docollision);
 	WRITEUINT8(save_p, (UINT8)ht->doghostfade);
 	WRITEUINT8(save_p, (UINT8)ht->ticbased);
+	WRITEINT32(save_p, ht->duration);
 	WRITEINT32(save_p, ht->timer);
-	WRITEINT32(save_p, ht->speed);
 }
 
 #endif
@@ -2725,8 +2725,8 @@ static void LoadPolyfadeThinker(actionf_p1 thinker)
 	ht->docollision = (boolean)READUINT8(save_p);
 	ht->doghostfade = (boolean)READUINT8(save_p);
 	ht->ticbased = (boolean)READUINT8(save_p);
+	ht->duration = READINT32(save_p);
 	ht->timer = READINT32(save_p);
-	ht->speed = READINT32(save_p);
 	P_AddThinker(&ht->thinker);
 }
 #endif
