@@ -369,7 +369,6 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
 		ll->fixedpertic = speed<<FRACBITS;
 	}
-	CONS_Printf("Light level %d - %d, speed aprox. %d, tics %d, revised new thinker\n", ll->sector->lightlevel, destvalue, ll->fixedpertic>>FRACBITS, ll->timer);
 }
 
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
@@ -391,11 +390,9 @@ void T_LightFade(lightlevel_t *ll)
 	{
 		ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
 		P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		CONS_Printf("End tic, final light value: %d\n", ll->sector->lightlevel);
 		return;
 	}
 
 	ll->fixedcurlevel = ll->fixedcurlevel + ll->fixedpertic;
 	ll->sector->lightlevel = (ll->fixedcurlevel)>>FRACBITS;
-	CONS_Printf("Light %d\n", ll->sector->lightlevel);
 }
