@@ -327,7 +327,8 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
   *
   * \param sector    Target sector
   * \param destvalue The final light value in these sectors.
-  * \param speed     Speed of the fade; the change to the ligh
+  * \param speed     If tic-based: total duration of effect.
+  *                  If speed-based: Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
   * \param ticbased  Use a specific duration for the fade, defined by speed
   * \sa T_LightFade
@@ -354,16 +355,19 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	ll->sourcelevel = sector->lightlevel;
 	ll->destlevel = destvalue;
 
+	ll->fixedcurlevel = sector->lightlevel<<FRACBITS;
+
 	if (ticbased)
 	{
-		ll->ticbased = true;
-		ll->timer = ll->speed = abs(speed); // use ll->speed for total duration
+		// Speed means duration.
+		ll->timer = abs(speed);
+		ll->fixedpertic = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS);
 	}
 	else
 	{
-		ll->ticbased = false;
-		ll->timer = -1;
-		ll->speed = abs(speed);
+		// Speed means increment per tic (literally speed).
+		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
+		ll->fixedpertic = speed<<FRACBITS;
 	}
 }
 
@@ -382,49 +386,13 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
   */
 void T_LightFade(lightlevel_t *ll)
 {
-	if (ll->ticbased)
+	if (--ll->timer <= 0)
 	{
-		if (--ll->timer <= 0)
-		{
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-		{
-			INT16 delta = abs(ll->destlevel - ll->sourcelevel);
-			fixed_t factor = min(FixedDiv(ll->speed - ll->timer, ll->speed), 1*FRACUNIT);
-			if (ll->destlevel < ll->sourcelevel)
-				ll->sector->lightlevel = max(min(ll->sector->lightlevel, ll->sourcelevel - (INT16)FixedMul(delta, factor)), ll->destlevel);
-			else if (ll->destlevel > ll->sourcelevel)
-				ll->sector->lightlevel = min(max(ll->sector->lightlevel, ll->sourcelevel + (INT16)FixedMul(delta, factor)), ll->destlevel);
-		}
+		ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
+		P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
 		return;
 	}
 
-	if (ll->sector->lightlevel < ll->destlevel)
-	{
-		// increase the lightlevel
-		if (ll->sector->lightlevel + ll->speed >= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel += ll->speed; // move lightlevel
-	}
-	else
-	{
-		// decrease lightlevel
-		if (ll->sector->lightlevel - ll->speed <= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
-
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel -= ll->speed; // move lightlevel
-	}
+	ll->fixedcurlevel = ll->fixedcurlevel + ll->fixedpertic;
+	ll->sector->lightlevel = (ll->fixedcurlevel)>>FRACBITS;
 }

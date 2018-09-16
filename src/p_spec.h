@@ -134,15 +134,15 @@ typedef struct
   */
 typedef struct
 {
-	thinker_t thinker; ///< Thinker in use for the effect.
-	sector_t *sector;  ///< Sector where action is taking place.
-	INT16 sourcelevel; ///< Light level we're fading from.
-	INT16 destlevel;   ///< Light level we're fading to.
-	INT16 speed;       ///< Speed at which to change light level. OR: Tic-based duration
+	thinker_t thinker;		///< Thinker in use for the effect.
+	sector_t *sector;		///< Sector where action is taking place.
+	INT16 sourcelevel;		///< Light level we're fading from.
+	INT16 destlevel;		///< Light level we're fading to.
 
-	// Tic-based behavior
-	boolean ticbased;  ///< Tic-based logic
-	INT32 timer;       ///< Tic-based timer
+	fixed_t fixedcurlevel;	///< Fixed point for current light level.
+	fixed_t fixedpertic;	///< Fixed point for increment per tic.
+	// The reason for those two above to be fixed point is to deal with decimal values that would otherwise get trimmed away.
+	INT32 timer;			///< Internal timer.
 } lightlevel_t;
 
 #define GLOWSPEED 8
