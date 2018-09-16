@@ -7945,7 +7945,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 				Z_Free(exc);
 		}
 
-		Add_ColormapFader(&sectors[rover->secnum], source_exc, d->dest_exc,
+		Add_ColormapFader(&sectors[rover->secnum], source_exc, d->dest_exc, true,
 			ticbased ? d->timer :
 				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT);
 	}
