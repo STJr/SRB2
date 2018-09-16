@@ -2,6 +2,7 @@
 /// \brief SDL Mixer interface for sound
 
 #include "../doomdef.h"
+#include "../doomstat.h" // menuactive
 
 #if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
@@ -92,14 +93,18 @@ static void Midiplayer_Onchange(void)
 
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 	{
-		Mix_SetMidiPlayer(cv_midiplayer.value);
-		restart = true;
+		if (Mix_SetMidiPlayer(cv_midiplayer.value)) // <> 0 means error
+			CONS_Alert(CONS_ERROR, "Midi player error: %s", Mix_GetError());
+		else
+			restart = true;
 	}
 
 	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
-		Mix_SetSoundFonts(cv_midisoundfontpath.string);
-		restart = true;
+		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
+			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+		else
+			restart = true;
 	}
 
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
@@ -110,25 +115,44 @@ static void Midiplayer_Onchange(void)
 
 static void MidiSoundfontPath_Onchange(void)
 {
-	if (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX && Mix_GetMidiPlayer() != MIDI_Fluidsynth)
+	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
 		return;
 
 	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
+		char *token;
+		char *source = strdup(cv_midisoundfontpath.string);
+		boolean proceed = true;
 		// check if file exists; menu calls this method at every keystroke
-		SDL_RWops *rw = SDL_RWFromFile(cv_midisoundfontpath.string, "r");
-		if (rw != NULL) {
-			SDL_RWclose(rw);
-			Mix_SetSoundFonts(cv_midisoundfontpath.string);
-			S_StartEx(true);
+
+		while ((token = strtok_r(source, ";", &source)))
+		{
+			SDL_RWops *rw = SDL_RWFromFile(token, "r");
+			if (rw != NULL)
+				SDL_RWclose(rw);
+			else
+			{
+				proceed = false;
+				break;
+			}
+		}
+
+		free(source);
+
+		if (proceed)
+		{
+			if (!Mix_SetSoundFonts(cv_midisoundfontpath.string))
+				CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+			else
+				S_StartEx(true);
 		}
 	}
 }
 
 static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
-consvar_t cv_midiplayer = {"midi_player", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midisoundfontpath = {"midi_soundfont_path", "sf2/soundfont.sf2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_miditimiditypath = {"midi_timidity_path", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midiplayer = {"midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midisoundfont", "sf2/8bit.sf2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midisoundbank", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 /// ------------------------
