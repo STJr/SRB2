@@ -134,10 +134,15 @@ typedef struct
   */
 typedef struct
 {
-	thinker_t thinker; ///< Thinker in use for the effect.
-	sector_t *sector;  ///< Sector where action is taking place.
-	INT32 destlevel;   ///< Light level we're fading to.
-	INT32 speed;       ///< Speed at which to change light level.
+	thinker_t thinker;		///< Thinker in use for the effect.
+	sector_t *sector;		///< Sector where action is taking place.
+	INT16 sourcelevel;		///< Light level we're fading from.
+	INT16 destlevel;		///< Light level we're fading to.
+
+	fixed_t fixedcurlevel;	///< Fixed point for current light level.
+	fixed_t fixedpertic;	///< Fixed point for increment per tic.
+	// The reason for those two above to be fixed point is to deal with decimal values that would otherwise get trimmed away.
+	INT32 timer;			///< Internal timer.
 } lightlevel_t;
 
 #define GLOWSPEED 8
@@ -156,7 +161,8 @@ strobe_t * P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector
 void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length);
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed);
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum
