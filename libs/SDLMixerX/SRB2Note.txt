@@ -1,0 +1,1 @@
+i686-w64-mingw32/bin/libfluidsynth-2.dll was grabbed from GZDoom v3.5.1, because this build does not have glib, gthread, or sndfile external dependencies.
