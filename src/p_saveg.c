@@ -1795,8 +1795,8 @@ static void SaveFadeColormapThinker(const thinker_t *th, const UINT8 type)
 	const fadecolormap_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
-	SaveExtraColormap(save_p, ht->source_exc);
-	SaveExtraColormap(save_p, ht->dest_exc);
+	WRITEUINT32(save_p, CheckAddNetColormapToList(ht->source_exc));
+	WRITEUINT32(save_p, CheckAddNetColormapToList(ht->dest_exc));
 	WRITEUINT8(save_p, (UINT8)ht->ticbased);
 	WRITEINT32(save_p, ht->duration);
 	WRITEINT32(save_p, ht->timer);
@@ -2795,8 +2795,8 @@ static inline void LoadFadeColormapThinker(actionf_p1 thinker)
 	fadecolormap_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
-	ht->source_exc = LoadExtraColormap(save_p);
-	ht->dest_exc = LoadExtraColormap(save_p);
+	ht->source_exc = GetNetColormapFromList(READUINT32(save_p));
+	ht->dest_exc = GetNetColormapFromList(READUINT32(save_p));
 	ht->ticbased = (boolean)READUINT8(save_p);
 	ht->duration = READINT32(save_p);
 	ht->timer = READINT32(save_p);
