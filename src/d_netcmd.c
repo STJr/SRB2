@@ -4051,7 +4051,7 @@ static void Command_Tunes_f(void)
 	mapmusflags = (track & MUSIC_TRACKMASK);
 	mapmusposition = position;
 
-	S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 
 	if (argc > 3)
 	{

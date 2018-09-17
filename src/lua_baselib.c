@@ -2242,7 +2242,7 @@ static int lib_sChangeMusic(lua_State *L)
 
 	if (!player || P_IsLocalPlayer(player))
 	{
-		S_ChangeMusicAdvanced(music_name, music_flags, looping, position, prefadems, fadeinms);
+		S_ChangeMusicEx(music_name, music_flags, looping, position, prefadems, fadeinms);
 		lua_pushboolean(L, true);
 	}
 	else

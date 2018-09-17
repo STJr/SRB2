@@ -1551,11 +1551,11 @@ static void S_ClearQueue(void)
 
 static void S_ChangeMusicToQueue(void)
 {
-	S_ChangeMusicAdvanced(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
+	S_ChangeMusicEx(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
 	S_ClearQueue();
 }
 
-void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	if (S_MusicDisabled())
 		return;
@@ -1741,5 +1741,5 @@ void S_Start(void)
 
 	if (cv_resetmusic.value)
 		S_StopMusic();
-	S_ChangeMusicAdvanced(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
