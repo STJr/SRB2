@@ -183,9 +183,9 @@ UINT32 S_GetMusicPosition(void);
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
 //       and the last bit we ignore (internal game flag for resetting music on reload)
-void S_ChangeMusicAdvanced(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
-#define S_ChangeMusicInternal(a,b) S_ChangeMusicAdvanced(a,0,b,0,0,0)
-#define S_ChangeMusic(a,b,c) S_ChangeMusicAdvanced(a,b,c,0,0,0)
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
+#define S_ChangeMusicInternal(a,b) S_ChangeMusicEx(a,0,b,0,0,0)
+#define S_ChangeMusic(a,b,c) S_ChangeMusicEx(a,b,c,0,0,0)
 
 // Stops the music.
 void S_StopMusic(void);
@@ -202,7 +202,7 @@ void S_SetInternalMusicVolume(INT32 volume);
 void S_StopFadingMusic(void);
 boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms);
 #define S_FadeMusic(a, b) S_FadeMusicFromVolume(a, -1, b)
-#define S_FadeInChangeMusic(a,b,c,d) S_ChangeMusicAdvanced(a,b,c,0,0,d)
+#define S_FadeInChangeMusic(a,b,c,d) S_ChangeMusicEx(a,b,c,0,0,d)
 boolean S_FadeOutStopMusic(UINT32 ms);
 
 //
