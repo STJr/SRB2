@@ -1609,7 +1609,7 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
-	SaveExtraColormap(save_p, ht->dest_exc);
+	WRITEUINT32(save_p, CheckAddNetColormapToList(ht->dest_exc));
 	WRITEUINT32(save_p, ht->sectornum);
 	WRITEUINT32(save_p, ht->ffloornum);
 	WRITEINT32(save_p, ht->alpha);
@@ -2624,7 +2624,7 @@ static inline void LoadFadeThinker(actionf_p1 thinker)
 	sector_t *ss;
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->dest_exc = LoadExtraColormap(save_p);
+	ht->dest_exc = GetNetColormapFromList(READUINT32(save_p));
 	ht->sectornum = READUINT32(save_p);
 	ht->ffloornum = READUINT32(save_p);
 	ht->alpha = READINT32(save_p);
