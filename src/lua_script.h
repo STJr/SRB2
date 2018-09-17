@@ -97,7 +97,4 @@ void COM_Lua_f(void);
 // uncomment if you want seg_t/node_t in Lua
 // #define HAVE_LUA_SEGS
 
-// uncomment for extended music features
-#define HAVE_LUA_MUSICPLUS
-
 #endif
