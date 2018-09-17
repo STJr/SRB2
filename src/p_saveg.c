@@ -682,6 +682,20 @@ static void P_NetUnArchiveColormaps(void)
 			exc_next = R_CreateDefaultColormap(false);
 	}
 
+	// if we still have a valid net_colormap after iterating up to num_net_colormaps,
+	// some sector had a colormap index higher than num_net_colormaps. We done goofed or $$$ was corrupted.
+	// In any case, add them to the colormap list too so that at least the sectors' colormap
+	// addresses are valid and accounted properly
+	if (exc_next)
+	{
+		existing_exc = R_GetDefaultColormap();
+		for (exc = exc_next; exc; exc = exc->next)
+		{
+			exc->colormap = existing_exc->colormap; // all our dummies are default values
+			R_AddColormapToList(exc);
+		}
+	}
+
 	// Don't need these anymore
 	num_net_colormaps = 0;
 	net_colormaps = NULL;
