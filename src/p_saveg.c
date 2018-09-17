@@ -537,7 +537,7 @@ static extracolormap_t *GetNetColormapFromList(UINT32 index)
 	// entries in net_colormaps. At this point, we don't know
 	// what the total colormap count is
 	if (index >= numsectors*3) // if every sector had a unique colormap change AND a fade thinker which has two colormap entries
-		I_Error("Colormap %d from server is too high for sectors %d", index, numsectors);
+		I_Error("Colormap %d from server is too high for sectors %d", index, (UINT32)numsectors);
 
 	// our index doesn't exist, so just make the entry
 	for (; i <= index; i++)
