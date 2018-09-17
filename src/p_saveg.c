@@ -606,8 +606,9 @@ static void P_NetUnArchiveColormaps(void)
 	// dummy colormaps. Now that we are loading the color data,
 	// set up the dummies.
 	extracolormap_t *exc, *existing_exc, *exc_next = NULL;
-	num_net_colormaps = READUINT32(save_p);
 	UINT32 i = 0;
+
+	num_net_colormaps = READUINT32(save_p);
 
 	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
 	{
@@ -739,15 +740,15 @@ static void P_NetArchiveWorld(void)
 	const side_t *si;
 	UINT8 *put;
 
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
-
 	// reload the map just to see difference
 	mapsector_t *ms;
 	mapsidedef_t *msd;
 	maplinedef_t *mld;
 	const sector_t *ss = sectors;
 	UINT8 diff, diff2, diff3;
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
