@@ -480,6 +480,7 @@ static void P_NetUnArchivePlayers(void)
 
 static extracolormap_t *net_colormaps = NULL;
 static UINT32 num_net_colormaps = 0;
+static UINT32 num_ffloors = 0; // for loading
 
 // Copypasta from r_data.c AddColormapToList
 // But also check for equality and return the matching index
@@ -536,7 +537,9 @@ static extracolormap_t *GetNetColormapFromList(UINT32 index)
 	// LET'S HOPE that index is a sane value, because we create up to [index]
 	// entries in net_colormaps. At this point, we don't know
 	// what the total colormap count is
-	if (index >= numsectors*3) // if every sector had a unique colormap change AND a fade thinker which has two colormap entries
+	if (index >= numsectors*3 + num_ffloors)
+		// if every sector had a unique colormap change AND a fade color thinker which has two colormap entries
+		// AND every ffloor had a fade FOF thinker with one colormap entry
 		I_Error("Colormap %d from server is too high for sectors %d", index, (UINT32)numsectors);
 
 	// our index doesn't exist, so just make the entry
@@ -564,6 +567,7 @@ static void ClearNetColormaps(void)
 		Z_Free(exc);
 	}
 	num_net_colormaps = 0;
+	num_ffloors = 0;
 	net_colormaps = NULL;
 }
 
@@ -597,6 +601,7 @@ static void P_NetArchiveColormaps(void)
 	}
 
 	num_net_colormaps = 0;
+	num_ffloors = 0;
 	net_colormaps = NULL;
 }
 
@@ -682,8 +687,23 @@ static void P_NetUnArchiveColormaps(void)
 			exc_next = R_CreateDefaultColormap(false);
 	}
 
+	// if we still have a valid net_colormap after iterating up to num_net_colormaps,
+	// some sector had a colormap index higher than num_net_colormaps. We done goofed or $$$ was corrupted.
+	// In any case, add them to the colormap list too so that at least the sectors' colormap
+	// addresses are valid and accounted properly
+	if (exc_next)
+	{
+		existing_exc = R_GetDefaultColormap();
+		for (exc = exc_next; exc; exc = exc->next)
+		{
+			exc->colormap = existing_exc->colormap; // all our dummies are default values
+			R_AddColormapToList(exc);
+		}
+	}
+
 	// Don't need these anymore
 	num_net_colormaps = 0;
+	num_ffloors = 0;
 	net_colormaps = NULL;
 }
 
@@ -1016,6 +1036,14 @@ static void P_NetUnArchiveWorld(void)
 
 	// initialize colormap vars because paranoia
 	ClearNetColormaps();
+
+	// count the level's ffloors so that colormap loading can have an upper limit
+	for (i = 0; i < numsectors; i++)
+	{
+		ffloor_t *rover;
+		for (rover = sectors[i].ffloors; rover; rover = rover->next)
+			num_ffloors++;
+	}
 
 	get = save_p;
 
