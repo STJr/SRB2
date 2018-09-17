@@ -1260,7 +1260,10 @@ static void SaveSpecialLevelThinker(const thinker_t *th, const UINT8 type)
 	size_t i;
 	WRITEUINT8(save_p, type);
 	for (i = 0; i < 16; i++)
+	{
 		WRITEFIXED(save_p, ht->vars[i]); //var[16]
+		WRITEFIXED(save_p, ht->var2s[i]); //var[16]
+	}
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 }
@@ -2163,7 +2166,10 @@ static void LoadSpecialLevelThinker(actionf_p1 thinker, UINT8 floorOrCeiling)
 	size_t i;
 	ht->thinker.function.acp1 = thinker;
 	for (i = 0; i < 16; i++)
+	{
 		ht->vars[i] = READFIXED(save_p); //var[16]
+		ht->var2s[i] = READFIXED(save_p); //var[16]
+	}
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->sector = LoadSector(READUINT32(save_p));
 
