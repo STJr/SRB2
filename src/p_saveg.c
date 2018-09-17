@@ -474,50 +474,180 @@ static void P_NetUnArchivePlayers(void)
 	}
 }
 
-static void SaveExtraColormap(UINT8 *put, extracolormap_t *exc)
+///
+/// Colormaps
+///
+
+static extracolormap_t *net_colormaps = NULL;
+static UINT32 num_net_colormaps = 0;
+
+// Copypasta from r_data.c AddColormapToList
+// But also check for equality and return the matching index
+static UINT32 CheckAddNetColormapToList(extracolormap_t *extra_colormap)
 {
-	if (!exc) // Just give it default values, we done goofed. (or sector->extra_colormap was intentionally set to default (NULL))
-		exc = R_GetDefaultColormap();
+	extracolormap_t *exc, *exc_prev;
+	UINT32 i = 0;
 
-	WRITEUINT8(put, exc->fadestart);
-	WRITEUINT8(put, exc->fadeend);
-	WRITEUINT8(put, exc->fog);
+	if (!net_colormaps)
+	{
+		net_colormaps = R_CopyColormap(extra_colormap, false);
+		net_colormaps->next = 0;
+		net_colormaps->prev = 0;
+		num_net_colormaps = i+1;
+		return i;
+	}
 
-	WRITEINT32(put, exc->rgba);
-	WRITEINT32(put, exc->fadergba);
+	for (exc = net_colormaps; exc; exc_prev = exc, exc = exc->next)
+	{
+		if (R_CheckEqualColormaps(exc, extra_colormap, true, true, true))
+			return i;
+		i++;
+	}
 
-#ifdef EXTRACOLORMAPLUMPS
-	WRITESTRINGN(put, exc->lumpname, 9);
-#endif
+	exc_prev->next = R_CopyColormap(extra_colormap, false);
+	extra_colormap->prev = exc_prev;
+	extra_colormap->next = 0;
+
+	num_net_colormaps = i+1;
+	return i;
 }
 
-static extracolormap_t *LoadExtraColormap(UINT8 *get)
+static extracolormap_t *GetNetColormapFromList(UINT32 index)
 {
-	extracolormap_t *exc, *exc_exist;
+	// For loading, we have to be tricky:
+	// We load the sectors BEFORE knowing the colormap values
+	// So if an index doesn't exist, fill our list with dummy colormaps
+	// until we get the index we want
+	// Then when we load the color data, we set up the dummy colormaps
 
-	UINT8 fadestart = READUINT8(get),
-		fadeend = READUINT8(get),
-		fog = READUINT8(get);
+	extracolormap_t *exc, *last_exc = NULL;
+	UINT32 i = 0;
 
-	INT32 rgba = READINT32(get),
-		fadergba = READINT32(get);
+	if (!net_colormaps) // initialize our list
+		net_colormaps = R_CreateDefaultColormap(false);
+
+	for (exc = net_colormaps; exc; last_exc = exc, exc = exc->next)
+	{
+		if (i++ == index)
+			return exc;
+	}
+
+
+	// LET'S HOPE that index is a sane value, because we create up to [index]
+	// entries in net_colormaps. At this point, we don't know
+	// what the total colormap count is
+	if (index >= numsectors*3) // if every sector had a unique colormap change AND a fade thinker which has two colormap entries
+		I_Error("Colormap %d from server is too high for sectors %d", index, numsectors);
+
+	// our index doesn't exist, so just make the entry
+	for (; i <= index; i++)
+	{
+		exc = R_CreateDefaultColormap(false);
+		if (last_exc)
+			last_exc->next = exc;
+		exc->prev = last_exc;
+		exc->next = NULL;
+		last_exc = exc;
+	}
+	return exc;
+}
+
+static void ClearNetColormaps(void)
+{
+	// We're actually Z_Freeing each entry here,
+	// so don't call this in P_NetUnArchiveColormaps (where entries will be used in-game)
+	extracolormap_t *exc, *exc_next;
+
+	for (exc = net_colormaps; exc; exc = exc_next)
+	{
+		exc_next = exc->next;
+		Z_Free(exc);
+	}
+	num_net_colormaps = 0;
+	net_colormaps = NULL;
+}
+
+static void P_NetArchiveColormaps(void)
+{
+	// We save and then we clean up our colormap mess
+	extracolormap_t *exc, *exc_next;
+	UINT32 i = 0;
+	WRITEUINT32(save_p, num_net_colormaps); // save for safety
+
+	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
+	{
+		// We must save num_net_colormaps worth of data
+		// So fill non-existent entries with default.
+		if (!exc)
+			exc = R_CreateDefaultColormap(false);
+
+		WRITEUINT8(save_p, exc->fadestart);
+		WRITEUINT8(save_p, exc->fadeend);
+		WRITEUINT8(save_p, exc->fog);
+
+		WRITEINT32(save_p, exc->rgba);
+		WRITEINT32(save_p, exc->fadergba);
 
 #ifdef EXTRACOLORMAPLUMPS
-	char lumpname[9];
-	READSTRINGN(get, lumpname, 9);
-
-	if (lumpname[0])
-		return R_ColormapForName(lumpname);
+		WRITESTRINGN(save_p, exc->lumpname, 9);
 #endif
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
 
-	if (!exc)
+		exc_next = exc->next;
+		Z_Free(exc); // don't need anymore
+	}
+
+	num_net_colormaps = 0;
+	net_colormaps = NULL;
+}
+
+static void P_NetUnArchiveColormaps(void)
+{
+	// When we reach this point, we already populated our list with
+	// dummy colormaps. Now that we are loading the color data,
+	// set up the dummies.
+	extracolormap_t *exc, *existing_exc, *exc_next = NULL;
+	num_net_colormaps = READUINT32(save_p);
+	UINT32 i = 0;
+
+	for (exc = net_colormaps; i < num_net_colormaps; i++, exc = exc_next)
 	{
-		// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-		// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
-		//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
+		UINT8 fadestart, fadeend, fog;
+		INT32 rgba, fadergba;
+#ifdef EXTRACOLORMAPLUMPS
+		char lumpname[9];
+#endif
 
-		exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+		fadestart = READUINT8(save_p);
+		fadeend = READUINT8(save_p);
+		fog = READUINT8(save_p);
+
+		rgba = READINT32(save_p);
+		fadergba = READINT32(save_p);
+
+#ifdef EXTRACOLORMAPLUMPS
+		READSTRINGN(save_p, lumpname, 9);
+
+		if (lumpname[0])
+		{
+			if (!exc)
+				// no point making a new entry since nothing points to it,
+				// but we needed to read the data so now continue
+				continue;
+
+			exc_next = exc->next; // this gets overwritten during our operations here, so get it now
+			existing_exc = R_ColormapForName(lumpname);
+			*exc = *existing_exc;
+			R_AddColormapToList(exc); // see HACK note below on why we're adding duplicates
+			continue;
+		}
+#endif
+
+		if (!exc)
+			// no point making a new entry since nothing points to it,
+			// but we needed to read the data so now continue
+			continue;
+
+		exc_next = exc->next; // this gets overwritten during our operations here, so get it now
 
 		exc->fadestart = fadestart;
 		exc->fadeend = fadeend;
@@ -531,20 +661,34 @@ static extracolormap_t *LoadExtraColormap(UINT8 *get)
 		exc->lumpname[0] = 0;
 #endif
 
-		if (!(exc_exist = R_GetColormapFromList(exc)))
-		{
-			exc->colormap = R_CreateLightTable(exc);
-			R_AddColormapToList(exc);
-		}
+		existing_exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+
+		if (existing_exc)
+			exc->colormap = existing_exc->colormap;
 		else
-		{
-			Z_Free(exc);
-			exc = R_CheckDefaultColormap(exc_exist, true, true, true) ? NULL : exc_exist;
-		}
+			// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+			// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
+			//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
+			exc->colormap = R_CreateLightTable(exc);
+
+		// HACK: If this dummy is a duplicate, we're going to add it
+		// to the extra_colormaps list anyway. I think this is faster
+		// than going through every loaded sector and correcting their
+		// colormap address to the pre-existing one, PER net_colormap entry
+		R_AddColormapToList(exc);
+
+		if (i < num_net_colormaps-1 && !exc_next)
+			exc_next = R_CreateDefaultColormap(false);
 	}
 
-	return exc;
+	// Don't need these anymore
+	num_net_colormaps = 0;
+	net_colormaps = NULL;
 }
+
+///
+/// World Archiving
+///
 
 #define SD_FLOORHT  0x01
 #define SD_CEILHT   0x02
@@ -594,6 +738,9 @@ static void P_NetArchiveWorld(void)
 	const line_t *li = lines;
 	const side_t *si;
 	UINT8 *put;
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
 
 	// reload the map just to see difference
 	mapsector_t *ms;
@@ -730,7 +877,8 @@ static void P_NetArchiveWorld(void)
 			}
 
 			if (diff3 & SD_COLORMAP)
-				SaveExtraColormap(put, ss->extra_colormap);
+				WRITEUINT32(put, CheckAddNetColormapToList(ss->extra_colormap));
+					// returns existing index if already added, or appends to net_colormaps and returns new index
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -865,6 +1013,9 @@ static void P_NetUnArchiveWorld(void)
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
 
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+
 	get = save_p;
 
 	for (;;)
@@ -927,7 +1078,7 @@ static void P_NetUnArchiveWorld(void)
 		}
 
 		if (diff3 & SD_COLORMAP)
-			sectors[i].extra_colormap = LoadExtraColormap(get);
+			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(get));
 
 		if (diff & SD_FFLOORS)
 		{
@@ -3536,6 +3687,7 @@ void P_SaveNetGame(void)
 #endif
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
+		P_NetArchiveColormaps();
 	}
 #ifdef HAVE_BLUA
 	LUA_Archive();
@@ -3578,6 +3730,7 @@ boolean P_LoadNetGame(void)
 #endif
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
+		P_NetUnArchiveColormaps();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
