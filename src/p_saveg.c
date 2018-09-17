@@ -198,15 +198,24 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].drilldelay);
 		WRITEUINT8(save_p, players[i].bonustime);
 		WRITEUINT8(save_p, players[i].mare);
+		WRITEUINT8(save_p, players[i].marelap);
+		WRITEUINT8(save_p, players[i].marebonuslap);
 
 		WRITEUINT32(save_p, players[i].marebegunat);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
+		WRITEUINT32(save_p, players[i].lapbegunat);
+		WRITEUINT32(save_p, players[i].lapstartedtime);
 		WRITEINT16(save_p, players[i].finishedspheres);
 		WRITEINT16(save_p, players[i].finishedrings);
 		WRITEUINT32(save_p, players[i].marescore);
 		WRITEUINT32(save_p, players[i].lastmarescore);
+		WRITEUINT32(save_p, players[i].totalmarescore);
 		WRITEUINT8(save_p, players[i].lastmare);
+		WRITEUINT8(save_p, players[i].lastmarelap);
+		WRITEUINT8(save_p, players[i].lastmarebonuslap);
+		WRITEUINT8(save_p, players[i].totalmarelap);
+		WRITEUINT8(save_p, players[i].totalmarebonuslap);
 		WRITEINT32(save_p, players[i].maxlink);
 		WRITEUINT8(save_p, players[i].texttimer);
 		WRITEUINT8(save_p, players[i].textvar);
@@ -387,15 +396,24 @@ static void P_NetUnArchivePlayers(void)
 		players[i].drilldelay = READUINT8(save_p);
 		players[i].bonustime = (boolean)READUINT8(save_p);
 		players[i].mare = READUINT8(save_p);
+		players[i].marelap = READUINT8(save_p);
+		players[i].marebonuslap = READUINT8(save_p);
 
 		players[i].marebegunat = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
+		players[i].lapbegunat = READUINT32(save_p);
+		players[i].lapstartedtime = READUINT32(save_p);
 		players[i].finishedspheres = READINT16(save_p);
 		players[i].finishedrings = READINT16(save_p);
 		players[i].marescore = READUINT32(save_p);
 		players[i].lastmarescore = READUINT32(save_p);
+		players[i].totalmarescore = READUINT32(save_p);
 		players[i].lastmare = READUINT8(save_p);
+		players[i].lastmarelap = READUINT8(save_p);
+		players[i].lastmarebonuslap = READUINT8(save_p);
+		players[i].totalmarelap = READUINT8(save_p);
+		players[i].totalmarebonuslap = READUINT8(save_p);
 		players[i].maxlink = READINT32(save_p);
 		players[i].texttimer = READUINT8(save_p);
 		players[i].textvar = READUINT8(save_p);
@@ -469,10 +487,14 @@ static void P_NetUnArchivePlayers(void)
 #define SD_FYOFFS    0x02
 #define SD_CXOFFS    0x04
 #define SD_CYOFFS    0x08
-#define SD_TAG       0x10
-#define SD_FLOORANG  0x20
-#define SD_CEILANG   0x40
-#define SD_TAGLIST   0x80
+#define SD_FLOORANG  0x10
+#define SD_CEILANG   0x20
+#define SD_TAG       0x40
+#define SD_DIFF3     0x80
+
+// diff3 flags
+#define SD_TAGLIST   0x01
+#define SD_MIDMAP    0x02
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -505,7 +527,7 @@ static void P_NetArchiveWorld(void)
 	mapsidedef_t *msd;
 	maplinedef_t *mld;
 	const sector_t *ss = sectors;
-	UINT8 diff, diff2;
+	UINT8 diff, diff2, diff3;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
@@ -532,7 +554,7 @@ static void P_NetArchiveWorld(void)
 
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
-		diff = diff2 = 0;
+		diff = diff2 = diff3 = 0;
 		if (ss->floorheight != SHORT(ms->floorheight)<<FRACBITS)
 			diff |= SD_FLOORHT;
 		if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
@@ -566,7 +588,9 @@ static void P_NetArchiveWorld(void)
 		if (ss->tag != SHORT(ms->tag))
 			diff2 |= SD_TAG;
 		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
-			diff2 |= SD_TAGLIST;
+			diff3 |= SD_TAGLIST;
+		if (ss->midmap != ss->spawn_midmap)
+			diff3 |= SD_MIDMAP;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -583,6 +607,9 @@ static void P_NetArchiveWorld(void)
 			}
 		}
 
+		if (diff3)
+			diff2 |= SD_DIFF3;
+
 		if (diff2)
 			diff |= SD_DIFF2;
 
@@ -594,6 +621,8 @@ static void P_NetArchiveWorld(void)
 			WRITEUINT8(put, diff);
 			if (diff & SD_DIFF2)
 				WRITEUINT8(put, diff2);
+			if (diff2 & SD_DIFF3)
+				WRITEUINT8(put, diff3);
 			if (diff & SD_FLOORHT)
 				WRITEFIXED(put, ss->floorheight);
 			if (diff & SD_CEILHT)
@@ -614,17 +643,19 @@ static void P_NetArchiveWorld(void)
 				WRITEFIXED(put, ss->ceiling_xoffs);
 			if (diff2 & SD_CYOFFS)
 				WRITEFIXED(put, ss->ceiling_yoffs);
-			if (diff2 & SD_TAG) // save only the tag
-				WRITEINT16(put, ss->tag);
 			if (diff2 & SD_FLOORANG)
 				WRITEANGLE(put, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(put, ss->ceilingpic_angle);
-			if (diff2 & SD_TAGLIST) // save both firsttag and nexttag
+			if (diff2 & SD_TAG) // save only the tag
+				WRITEINT16(put, ss->tag);
+			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
 			{ // either of these could be changed even if tag isn't
 				WRITEINT32(put, ss->firsttag);
 				WRITEINT32(put, ss->nexttag);
 			}
+			if (diff3 & SD_MIDMAP)
+				WRITEINT32(put, ss->midmap);
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -662,7 +693,7 @@ static void P_NetArchiveWorld(void)
 	// do lines
 	for (i = 0; i < numlines; i++, mld++, li++)
 	{
-		diff = diff2 = 0;
+		diff = diff2 = diff3 = 0;
 
 		if (li->special != SHORT(mld->special))
 			diff |= LD_SPECIAL;
@@ -754,7 +785,7 @@ static void P_NetUnArchiveWorld(void)
 	line_t *li;
 	side_t *si;
 	UINT8 *get;
-	UINT8 diff, diff2;
+	UINT8 diff, diff2, diff3;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
@@ -776,6 +807,10 @@ static void P_NetUnArchiveWorld(void)
 			diff2 = READUINT8(get);
 		else
 			diff2 = 0;
+		if (diff2 & SD_DIFF3)
+			diff3 = READUINT8(get);
+		else
+			diff3 = 0;
 
 		if (diff & SD_FLOORHT)
 			sectors[i].floorheight = READFIXED(get);
@@ -804,17 +839,19 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].ceiling_xoffs = READFIXED(get);
 		if (diff2 & SD_CYOFFS)
 			sectors[i].ceiling_yoffs = READFIXED(get);
-		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
-		if (diff2 & SD_TAGLIST)
-		{
-			sectors[i].firsttag = READINT32(get);
-			sectors[i].nexttag = READINT32(get);
-		}
 		if (diff2 & SD_FLOORANG)
 			sectors[i].floorpic_angle  = READANGLE(get);
 		if (diff2 & SD_CEILANG)
 			sectors[i].ceilingpic_angle = READANGLE(get);
+		if (diff2 & SD_TAG)
+			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
+		if (diff3 & SD_TAGLIST)
+		{
+			sectors[i].firsttag = READINT32(get);
+			sectors[i].nexttag = READINT32(get);
+		}
+		if (diff3 & SD_MIDMAP)
+			sectors[i].midmap = READINT32(get);
 
 		if (diff & SD_FFLOORS)
 		{
@@ -873,6 +910,9 @@ static void P_NetUnArchiveWorld(void)
 			diff2 = READUINT8(get);
 		else
 			diff2 = 0;
+
+		diff3 = 0;
+
 		if (diff & LD_FLAG)
 			li->flags = READINT16(get);
 		if (diff & LD_SPECIAL)
