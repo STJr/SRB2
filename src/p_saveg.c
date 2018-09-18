@@ -1250,11 +1250,13 @@ typedef enum
 	MD2_EXTVAL1     = 1<<5,
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
-#ifdef ESLOPE
 	MD2_HPREV       = 1<<8,
-	MD2_SLOPE       = 1<<9
+	MD2_FLOORROVER  = 1<<9,
+#ifdef ESLOPE
+	MD2_CEILINGROVER = 1<<10,
+	MD2_SLOPE        = 1<<11
 #else
-	MD2_HPREV       = 1<<8
+	MD2_CEILINGROVER = 1<<10
 #endif
 } mobj_diff2_t;
 
@@ -1451,6 +1453,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_HNEXT;
 	if (mobj->hprev)
 		diff2 |= MD2_HPREV;
+	if (mobj->floorrover)
+		diff2 |= MD2_FLOORROVER;
+	if (mobj->ceilingrover)
+		diff2 |= MD2_CEILINGROVER;
 #ifdef ESLOPE
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
@@ -1473,6 +1479,46 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, mobj->z); // Force this so 3dfloor problems don't arise.
 	WRITEFIXED(save_p, mobj->floorz);
 	WRITEFIXED(save_p, mobj->ceilingz);
+
+	if (diff2 & MD2_FLOORROVER)
+	{
+		ffloor_t *rover;
+		size_t i = 0;
+		UINT32 roverindex = 0;
+
+		for (rover = mobj->floorrover->target->ffloors; rover; rover = rover->next)
+		{
+			if (rover == mobj->floorrover)
+			{
+				roverindex = i;
+				break;
+			}
+			i++;
+		}
+
+		WRITEUINT32(save_p, (UINT32)(mobj->floorrover->target - sectors));
+		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+	}
+
+	if (diff2 & MD2_CEILINGROVER)
+	{
+		ffloor_t *rover;
+		size_t i = 0;
+		UINT32 roverindex = 0;
+
+		for (rover = mobj->ceilingrover->target->ffloors; rover; rover = rover->next)
+		{
+			if (rover == mobj->ceilingrover)
+			{
+				roverindex = i;
+				break;
+			}
+			i++;
+		}
+
+		WRITEUINT32(save_p, (UINT32)(mobj->ceilingrover->target - sectors));
+		WRITEUINT32(save_p, rover ? roverindex : i); // store max index to denote invalid ffloor ref
+	}
 
 	if (diff & MD_SPAWNPOINT)
 	{
@@ -2322,6 +2368,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	UINT16 diff2;
 	INT32 i;
 	fixed_t z, floorz, ceilingz;
+	ffloor_t *floorrover = NULL, *ceilingrover = NULL;
 
 	diff = READUINT32(save_p);
 	if (diff & MD_MORE)
@@ -2334,6 +2381,38 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	z = READFIXED(save_p); // Force this so 3dfloor problems don't arise.
 	floorz = READFIXED(save_p);
 	ceilingz = READFIXED(save_p);
+
+	if (diff2 & MD2_FLOORROVER)
+	{
+		size_t floor_sectornum = (size_t)READUINT32(save_p);
+		size_t floor_rovernum = (size_t)READUINT32(save_p);
+		ffloor_t *rover = NULL;
+		size_t rovernum = 0;
+
+		for (rover = sectors[floor_sectornum].ffloors; rover; rover = rover->next)
+		{
+			if (rovernum == floor_rovernum)
+				break;
+			rovernum++;
+		}
+		floorrover = rover;
+	}
+
+	if (diff2 & MD2_CEILINGROVER)
+	{
+		size_t ceiling_sectornum = (size_t)READUINT32(save_p);
+		size_t ceiling_rovernum = (size_t)READUINT32(save_p);
+		ffloor_t *rover = NULL;
+		size_t rovernum = 0;
+
+		for (rover = sectors[ceiling_sectornum].ffloors; rover; rover = rover->next)
+		{
+			if (rovernum == ceiling_rovernum)
+				break;
+			rovernum++;
+		}
+		ceilingrover = rover;
+	}
 
 	if (diff & MD_SPAWNPOINT)
 	{
@@ -2359,6 +2438,8 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	mobj->z = z;
 	mobj->floorz = floorz;
 	mobj->ceilingz = ceilingz;
+	mobj->floorrover = floorrover;
+	mobj->ceilingrover = ceilingrover;
 
 	if (diff & MD_TYPE)
 		mobj->type = READUINT32(save_p);
