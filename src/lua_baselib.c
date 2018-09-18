@@ -954,14 +954,9 @@ static int lib_pRestoreMusic(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (!player || P_IsLocalPlayer(player))
-	{
+	else if (P_IsLocalPlayer(player))
 		P_RestoreMusic(player);
-		lua_pushboolean(L, true);
-	}
-	else
-		lua_pushnil(L);
-	return 1;
+	return 0;
 }
 
 static int lib_pSpawnShieldOrb(lua_State *L)
@@ -2241,13 +2236,8 @@ static int lib_sChangeMusic(lua_State *L)
 	fadeinms = (UINT32)luaL_optinteger(L, 7, 0);
 
 	if (!player || P_IsLocalPlayer(player))
-	{
 		S_ChangeMusicEx(music_name, music_flags, looping, position, prefadems, fadeinms);
-		lua_pushboolean(L, true);
-	}
-	else
-		lua_pushnil(L);
-	return 1;
+	return 0;
 }
 
 static int lib_sSpeedMusic(lua_State *L)
@@ -2263,10 +2253,23 @@ static int lib_sSpeedMusic(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
-		lua_pushboolean(L, S_SpeedMusic(speed));
-	else
-		lua_pushnil(L);
-	return 1;
+		S_SpeedMusic(speed);
+	return 0;
+}
+
+static int lib_sStopMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		S_StopMusic();
+	return 0;
 }
 
 static int lib_sOriginPlaying(lua_State *L)
@@ -2646,6 +2649,7 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
+	{"S_StopMusic",lib_sStopMusic},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},

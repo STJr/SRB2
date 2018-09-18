@@ -38,7 +38,7 @@ extern INT32 msg_id;
 #include "p_local.h" // camera info
 #include "fastcmp.h"
 
-#ifdef HAVE_BLUA
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 #include "lua_hook.h" // MusicChange hook
 #endif
 

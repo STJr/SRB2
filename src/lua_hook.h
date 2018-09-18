@@ -48,7 +48,6 @@ enum hook {
 	hook_MobjMoveBlocked,
 	hook_MapThingSpawn,
 	hook_FollowMobj,
-	hook_MusicChange,
 
 	hook_MAX // last hook
 };
