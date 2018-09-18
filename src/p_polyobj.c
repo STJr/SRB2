@@ -985,6 +985,8 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 		P_CheckPosition(mo, mo->x + momx, mo->y + momy);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 	}
 }
 
@@ -2847,6 +2849,165 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	{
 		pfdata->tag = po->id;
 		EV_DoPolyObjFlag(pfdata);
+	}
+
+	// action was successful
+	return 1;
+}
+
+void T_PolyObjFade(polyfade_t *th)
+{
+	boolean stillfading = false;
+	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
+
+	if (!po)
+#ifdef RANGECHECK
+		I_Error("T_PolyObjFade: thinker has invalid id %d\n", th->polyObjNum);
+#else
+	{
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFade: thinker with invalid id %d removed.\n", th->polyObjNum);
+		P_RemoveThinkerDelayed(&th->thinker);
+		return;
+	}
+#endif
+
+	// check for displacement due to override and reattach when possible
+	if (po->thinker == NULL)
+		po->thinker = &th->thinker;
+
+	stillfading = th->ticbased ? !(--(th->timer) <= 0)
+		: !((th->timer -= th->duration) <= 0);
+
+	if (th->timer <= 0)
+	{
+		po->translucency = max(min(th->destvalue, NUMTRANSMAPS), 0);
+
+		// remove thinker
+		if (po->thinker == &th->thinker)
+			po->thinker = NULL;
+		P_RemoveThinker(&th->thinker);
+	}
+	else
+	{
+		INT16 delta = abs(th->destvalue - th->sourcevalue);
+		INT32 duration = th->ticbased ? th->duration
+			: abs(FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS - th->destvalue)
+				- FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS - th->sourcevalue)); // speed-based internal counter duration: delta in 256 scale
+		fixed_t factor = min(FixedDiv(duration - th->timer, duration), 1*FRACUNIT);
+		if (th->destvalue < th->sourcevalue)
+			po->translucency = max(min(po->translucency, th->sourcevalue - (INT16)FixedMul(delta, factor)), th->destvalue);
+		else if (th->destvalue > th->sourcevalue)
+			po->translucency = min(max(po->translucency, th->sourcevalue + (INT16)FixedMul(delta, factor)), th->destvalue);
+	}
+
+	if (!stillfading)
+	{
+		// set render flags
+		if (po->translucency >= NUMTRANSMAPS) // invisible
+			po->flags &= ~POF_RENDERALL;
+		else
+			po->flags |= (po->spawnflags & POF_RENDERALL);
+
+		// set collision
+		if (th->docollision)
+		{
+			if (th->destvalue > th->sourcevalue) // faded out
+			{
+				po->flags &= ~POF_SOLID;
+				po->flags |= POF_NOSPECIALS;
+			}
+			else
+			{
+				po->flags |= (po->spawnflags & POF_SOLID);
+				if (!(po->spawnflags & POF_NOSPECIALS))
+					po->flags &= ~POF_NOSPECIALS;
+			}
+		}
+	}
+	else
+	{
+		if (po->translucency >= NUMTRANSMAPS)
+			// HACK: OpenGL renders fully opaque when >= NUMTRANSMAPS
+			po->translucency = NUMTRANSMAPS-1;
+
+		po->flags |= (po->spawnflags & POF_RENDERALL);
+
+		// set collision
+		if (th->docollision)
+		{
+			if (th->doghostfade)
+			{
+				po->flags &= ~POF_SOLID;
+				po->flags |= POF_NOSPECIALS;
+			}
+			else
+			{
+				po->flags |= (po->spawnflags & POF_SOLID);
+				if (!(po->spawnflags & POF_NOSPECIALS))
+					po->flags &= ~POF_NOSPECIALS;
+			}
+		}
+	}
+}
+
+INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
+{
+	polyobj_t *po;
+	polyobj_t *oldpo;
+	polyfade_t *th;
+	INT32 start;
+
+	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjFade: bad polyobj %d\n", pfdata->polyObjNum);
+		return 0;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return 0;
+
+	// already equal, nothing to do
+	if (po->translucency == pfdata->destvalue)
+		return 1;
+
+	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+		P_RemoveThinker(po->thinker);
+
+	// create a new thinker
+	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
+	PolyObj_AddThinker(&th->thinker);
+	po->thinker = &th->thinker;
+
+	// set fields
+	th->polyObjNum = pfdata->polyObjNum;
+	th->sourcevalue = po->translucency;
+	th->destvalue = pfdata->destvalue;
+	th->docollision = pfdata->docollision;
+	th->doghostfade = pfdata->doghostfade;
+
+	if (pfdata->ticbased)
+	{
+		th->ticbased = true;
+		th->timer = th->duration = abs(pfdata->speed); // pfdata->speed is duration
+	}
+	else
+	{
+		th->ticbased = false;
+		th->timer = abs(FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS - th->destvalue)
+			- FixedMul(FixedDiv(256, NUMTRANSMAPS), NUMTRANSMAPS - th->sourcevalue)); // delta converted to 256 scale, use as internal counter
+		th->duration = abs(pfdata->speed); // use th->duration as speed decrement
+	}
+
+	oldpo = po;
+
+	// apply action to mirroring polyobjects as well
+	start = 0;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		pfdata->polyObjNum = po->id;
+		EV_DoPolyObjFade(pfdata);
 	}
 
 	// action was successful

@@ -282,6 +282,8 @@ typedef struct mobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius;
@@ -398,6 +400,8 @@ typedef struct precipmobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius; // Fixed at 2*FRACUNIT

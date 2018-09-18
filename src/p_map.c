@@ -52,6 +52,7 @@ fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
 mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+ffloor_t *tmfloorrover, *tmceilingrover;
 #ifdef ESLOPE
 pslope_t *tmfloorslope, *tmceilingslope;
 #endif
@@ -101,6 +102,8 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 	return true;
 }
@@ -1417,6 +1420,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z + thing->height > tmfloorz)
 				{
 					tmfloorz = thing->z + thing->height;
+					tmfloorrover = NULL;
 #ifdef ESLOPE
 					tmfloorslope = NULL;
 #endif
@@ -1437,6 +1441,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					return false;
 
 				tmfloorz = tmceilingz = topz; // block while in air
+				tmceilingrover = NULL;
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1445,6 +1450,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
+				tmceilingrover = NULL;
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1461,6 +1467,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z < tmceilingz)
 				{
 					tmceilingz = thing->z;
+					tmceilingrover = NULL;
 #ifdef ESLOPE
 					tmceilingslope = NULL;
 #endif
@@ -1481,6 +1488,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					return false;
 
 				tmfloorz = tmceilingz = topz; // block while in air
+				tmfloorrover = NULL;
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif
@@ -1489,6 +1497,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
+				tmfloorrover = NULL;
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif
@@ -1640,6 +1649,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+		tmceilingrover = NULL;
 #ifdef ESLOPE
 		tmceilingslope = opentopslope;
 #endif
@@ -1648,6 +1658,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+		tmfloorrover = NULL;
 #ifdef ESLOPE
 		tmfloorslope = openbottomslope;
 #endif
@@ -1729,6 +1740,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// will adjust them.
 	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->floorheight;
 	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
+	tmfloorrover = NULL;
+	tmceilingrover = NULL;
 #ifdef ESLOPE
 	tmfloorslope = newsubsec->sector->f_slope;
 	tmceilingslope = newsubsec->sector->c_slope;
@@ -1772,6 +1785,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 					{
 						if (tmfloorz < topheight - sinklevel) {
 							tmfloorz = topheight - sinklevel;
+							tmfloorrover = rover;
 #ifdef ESLOPE
 							tmfloorslope = *rover->t_slope;
 #endif
@@ -1781,6 +1795,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 					{
 						if (tmceilingz > bottomheight + sinklevel) {
 							tmceilingz = bottomheight + sinklevel;
+							tmceilingrover = rover;
 #ifdef ESLOPE
 							tmceilingslope = *rover->b_slope;
 #endif
@@ -1805,6 +1820,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				{
 					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
+						tmfloorrover = rover;
 #ifdef ESLOPE
 						tmfloorslope = NULL;
 #endif
@@ -1823,6 +1839,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				&& !(rover->flags & FF_REVERSEPLATFORM))
 			{
 				tmfloorz = tmdropoffz = topheight;
+				tmfloorrover = rover;
 #ifdef ESLOPE
 				tmfloorslope = *rover->t_slope;
 #endif
@@ -1832,6 +1849,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				&& !(thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE)))
 			{
 				tmceilingz = tmdrpoffceilz = bottomheight;
+				tmceilingrover = rover;
 #ifdef ESLOPE
 				tmceilingslope = *rover->b_slope;
 #endif
@@ -2328,6 +2346,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		mobj_t *oldthing = tmthing;
 		line_t *oldceilline = ceilingline;
 		line_t *oldblockline = blockingline;
+		ffloor_t *oldflrrover = tmfloorrover;
+		ffloor_t *oldceilrover = tmceilingrover;
 #ifdef ESLOPE
 		pslope_t *oldfslope = tmfloorslope;
 		pslope_t *oldcslope = tmceilingslope;
@@ -2344,6 +2364,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		P_SetTarget(&tmthing, oldthing);
 		ceilingline = oldceilline;
 		blockingline = oldblockline;
+		tmfloorrover = oldflrrover;
+		tmceilingrover = oldceilrover;
 #ifdef ESLOPE
 		tmfloorslope = oldfslope;
 		tmceilingslope = oldcslope;
@@ -2465,6 +2487,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #ifdef ESLOPE
@@ -2472,6 +2495,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					else if (tmceilingslope && tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #endif
@@ -2479,6 +2503,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #ifdef ESLOPE
@@ -2486,6 +2511,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (tmfloorslope && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #endif
@@ -2557,6 +2583,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 #ifdef ESLOPE
 	if (!(thing->flags & MF_NOCLIPHEIGHT))
@@ -2637,6 +2665,8 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 	thing->x = x;
 	thing->y = y;
 
@@ -2663,7 +2693,10 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 {
 	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
+	ffloor_t *oldfloorrover = thing->floorrover;
+	ffloor_t *oldceilingrover = thing->ceilingrover;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
+	ffloor_t *rover = NULL;
 
 	if (thing->flags & MF_NOCLIPHEIGHT)
 		return true;
@@ -2678,6 +2711,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 	// Ugly hack?!?! As long as just ceilingz is the lowest,
 	// you'll still get crushed, right?
@@ -2686,16 +2721,23 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
-		if (thing->eflags & MFE_VERTICALFLIP)
-			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
-		else
-			thing->pmomz = thing->floorz - thing->z;
-		thing->eflags |= MFE_APPLYPMOMZ;
+		rover = (thing->eflags & MFE_VERTICALFLIP) ? oldceilingrover : oldfloorrover;
 
-		if (thing->eflags & MFE_VERTICALFLIP)
-			thing->z = thing->ceilingz - thing->height;
-		else
-			thing->z = thing->floorz;
+		// Match the Thing's old floorz to an FOF and check for FF_EXISTS
+		// If ~FF_EXISTS, don't set mobj Z.
+		if (!rover || ((rover->flags & FF_EXISTS) && (rover->flags & FF_SOLID)))
+		{
+			if (thing->eflags & MFE_VERTICALFLIP)
+				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
+			else
+				thing->pmomz = thing->floorz - thing->z;
+			thing->eflags |= MFE_APPLYPMOMZ;
+
+			if (thing->eflags & MFE_VERTICALFLIP)
+				thing->z = thing->ceilingz - thing->height;
+			else
+				thing->z = thing->floorz;
+		}
 	}
 	else if (!tmfloorthing)
 	{
