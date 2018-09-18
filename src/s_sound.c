@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,6 +39,10 @@ extern INT32 msg_id;
 
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 #include "lua_hook.h" // MusicChange hook
+#endif
+
+#ifdef HAVE_OPENMPT
+#include "libopenmpt/libopenmpt.h"
 #endif
 
 #ifdef HW3SOUND
@@ -247,6 +251,10 @@ void S_RegisterSoundStuff(void)
 #endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
+
+#ifdef HAVE_OPENMPT
+	CV_RegisterVar(&cv_modfilter);
+#endif
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{

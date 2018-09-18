@@ -671,6 +671,9 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
+#ifdef HAVE_OPENMPT
+	CV_RegisterVar(&cv_modfilter);
+#endif
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_usegamma);
@@ -3931,7 +3934,7 @@ static void Command_Tunes_f(void)
 		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
 	if (argc > 2)
-		track = (UINT16)atoi(COM_Argv(2))-1;
+		track = (UINT16)atoi(COM_Argv(2));
 
 	if (tunenum)
 		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
