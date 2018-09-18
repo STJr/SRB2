@@ -1144,6 +1144,8 @@ boolean I_PlaySong(boolean looping)
 
 void I_StopSong(void)
 {
+	I_StopFadingSong();
+
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -1153,12 +1155,12 @@ void I_StopSong(void)
 #endif
 	if (music)
 	{
-		var_cleanup();
-		I_StopFadingSong();
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 		Mix_HookMusicFinished(NULL);
 		Mix_HaltMusic();
 	}
+
+	var_cleanup();
 }
 
 void I_PauseSong()
