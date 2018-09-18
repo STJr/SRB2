@@ -1229,6 +1229,10 @@ static boolean   queue_looping;
 static UINT32    queue_position;
 static UINT32    queue_fadeinms;
 
+static musicstack_t music_stack[NUMMUSICSTACKS];
+
+static tic_t     pause_starttic;
+
 /// ------------------------
 /// Music Status
 /// ------------------------
@@ -1325,6 +1329,254 @@ boolean S_SetMusicPosition(UINT32 position)
 UINT32 S_GetMusicPosition(void)
 {
 	return I_GetSongPosition();
+}
+
+/// ------------------------
+/// Music Stacking (Jingles)
+/// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
+/// ------------------------
+
+static const musicstack_t empty_music_stack_entry = {{0}};
+
+void S_SetStackAdjustmentStart(void)
+{
+	if (!pause_starttic)
+		pause_starttic = gametic;
+}
+
+void S_AdjustMusicStackTics(void)
+{
+	if (pause_starttic)
+	{
+		size_t i;
+		for (i = 0; i < NUMMUSICSTACKS-1; i++)
+		{
+			if (!music_stack[i].status)
+				break;
+			music_stack[i].tic += gametic - pause_starttic;
+		}
+		pause_starttic = 0;
+	}
+}
+
+static void S_ResetMusicStack()
+{
+	size_t i;
+	for (i = 0; i < NUMMUSICSTACKS; i++)
+		music_stack[i] = empty_music_stack_entry;
+}
+
+static void S_RemoveMusicStackEntry(size_t i)
+{
+	for (; i < NUMMUSICSTACKS-1; i++)
+	{
+		strncpy(music_stack[i].musname, music_stack[i+1].musname, 7);
+		music_stack[i].musname[6] = 0;
+		music_stack[i].musflags = music_stack[i+1].musflags;
+		music_stack[i].looping = music_stack[i+1].looping;
+		music_stack[i].position = music_stack[i+1].position;
+		music_stack[i].tic = music_stack[i+1].tic;
+		music_stack[i].status = music_stack[i+1].status;
+
+		if (!music_stack[i].status)
+			break;
+	}
+
+	// clear the last slot
+	music_stack[NUMMUSICSTACKS-1] = empty_music_stack_entry;
+}
+
+static void S_RemoveMusicStackEntryByStatus(UINT16 status)
+{
+	int i;
+
+	if (!status)
+		return;
+
+	for (i = 0; i < NUMMUSICSTACKS-1; i++)
+	{
+		if (music_stack[i].status == status)
+		{
+			S_RemoveMusicStackEntry(i);
+			i--; // try this position again
+		}
+		else if (!music_stack[i].status)
+			break;
+	}
+}
+
+static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status)
+{
+	size_t i;
+
+	// if the first entry is empty, force master onto it
+	if (!music_stack[0].status && status != JT_MASTER)
+		S_AddMusicStackEntry(mapmusname, mapmusflags, true, S_GetMusicPosition(), JT_MASTER);
+
+	// are all slots taken? forget the earliest one (save master) and move down the rest
+	if (music_stack[NUMMUSICSTACKS-1].status)
+		S_RemoveMusicStackEntry(1);
+
+	// look for an empty slot to park ourselves
+	for (i = 0; i < NUMMUSICSTACKS; i++)
+	{
+		// entry doesn't exist? park ourselves here!
+		if (!music_stack[i].status)
+		{
+			strncpy(music_stack[i].musname, mname, 7);
+			music_stack[i].musname[6] = 0;
+			music_stack[i].musflags = mflags;
+			music_stack[i].looping = looping;
+			music_stack[i].position = position;
+			music_stack[i].tic = gametic;
+			music_stack[i].status = status;
+			break;
+		}
+	}
+}
+
+static musicstack_t S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT16 startindex)
+{
+	size_t i;
+
+	// if the first entry is empty, force master onto it
+	// fixes a memory corruption bug
+	if (!music_stack[0].status && status != JT_MASTER)
+		S_AddMusicStackEntry(mapmusname, mapmusflags, true, S_GetMusicPosition(), JT_MASTER);
+
+	if (startindex < 0)
+		startindex = fromfirst ? 0 : NUMMUSICSTACKS-1;
+
+	if (fromfirst)
+	{
+		for (i = startindex; i < NUMMUSICSTACKS; i++)
+		{
+			if (!music_stack[i].status) // we're counting up, so this must mean we reached the end
+				break;
+			else if (!status || music_stack[i].status == status)
+			{
+				if (P_EvaluateMusicStatus(music_stack[i].status))
+				{
+					if (!S_MusicExists(music_stack[i].musname, !midi_disabled, !digital_disabled)) // paranoia
+						S_RemoveMusicStackEntry(i); // then continue
+					else
+						return music_stack[i];
+				}
+				else
+					S_RemoveMusicStackEntry(i); // then continue
+			}
+		}
+	}
+	else
+	{
+		for (i = startindex; i >= 0; i--)
+		{
+			if (!music_stack[i].status) // since we're counting down, we have to skip a few...
+				continue;
+			else if (!status || music_stack[i].status == status)
+			{
+				if (P_EvaluateMusicStatus(music_stack[i].status))
+				{
+					if (!S_MusicExists(music_stack[i].musname, !midi_disabled, !digital_disabled)) // paranoia
+						S_RemoveMusicStackEntry(i); // then continue
+					else
+						return music_stack[i];
+				}
+				else
+					S_RemoveMusicStackEntry(i); // then continue
+			}
+		}
+	}
+
+	return empty_music_stack_entry;
+}
+
+void S_RetainMusic(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status)
+{
+	size_t i;
+
+	if (!status) // we use this as a null indicator, don't push
+	{
+		CONS_Alert(CONS_ERROR, "Music stack entry must have a nonzero status.\n");
+		return;
+	}
+	else if (status == JT_MASTER) // enforce only one JT_MASTER
+	{
+		for (i = 0; i < NUMMUSICSTACKS; i++)
+		{
+			if (music_stack[i].status == JT_MASTER)
+			{
+				CONS_Alert(CONS_ERROR, "Music stack can only have one JT_MASTER entry.\n");
+				return;
+			}
+		}
+	}
+	else // remove any existing status
+		S_RemoveMusicStackEntryByStatus(status);
+
+	S_AddMusicStackEntry(mname, mflags, looping, position, status);
+}
+
+boolean S_RecallMusic(UINT16 status, boolean fromfirst)
+{
+	UINT32 newpos = 0;
+	boolean mapmuschanged = false;
+	musicstack_t entry;
+
+	if (status)
+		entry = S_GetMusicStackEntry(status, fromfirst, -1);
+	else
+		entry = S_GetMusicStackEntry(JT_NONE, false, -1);
+
+	if (!S_MusicExists(entry.musname, !midi_disabled, !digital_disabled))
+		return false; // bad bad bad!!
+
+	// no result, just grab mapmusname
+	if (!entry.musname[0] || ((status == JT_MASTER || !music_stack[0].status) && !entry.status))
+	{
+		strncpy(entry.musname, mapmusname, 7);
+		entry.musflags = mapmusflags;
+		entry.looping = true;
+		entry.position = mapmusposition;
+		entry.tic = gametic;
+		entry.status = JT_MASTER;
+	}
+
+	if (entry.status == JT_MASTER)
+	{
+		mapmuschanged = (boolean)strnicmp(entry.musname, mapmusname, 7);
+		S_ResetMusicStack();
+	}
+	else
+	{
+		if (!entry.status)
+			return false;
+	}
+
+	if (!mapmuschanged && strncmp(entry.musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	{
+		if (music_stack_fadeout)
+			S_ChangeMusicEx(entry.musname, entry.musflags, entry.looping, 0, music_stack_fadeout, 0);
+		else
+		{
+			S_ChangeMusicEx(entry.musname, entry.musflags, entry.looping, 0, 0, music_stack_fadein);
+			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
+				newpos = entry.position + (S_GetMusicLength() ? (UINT32)((float)(gametic - entry.tic)/(float)TICRATE*(float)MUSICRATE) : 0);
+
+			if (newpos > 0 && S_MusicPlaying())
+				S_SetMusicPosition(newpos);
+			else
+			{
+				S_StopFadingMusic();
+				S_SetInternalMusicVolume(100);
+			}
+		}
+		music_stack_noposition = false;
+		music_stack_fadeout = 0;
+		music_stack_fadein = JINGLEPOSTFADE;
+	}
+
+	return true;
 }
 
 /// ------------------------
@@ -1529,6 +1781,8 @@ void S_PauseAudio(void)
 #else
 	I_StopCD();
 #endif
+
+	S_SetStackAdjustmentStart();
 }
 
 void S_ResumeAudio(void)
@@ -1538,6 +1792,8 @@ void S_ResumeAudio(void)
 
 	// resume cd music
 	I_ResumeCD();
+
+	S_AdjustMusicStackTics();
 }
 
 void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
@@ -1623,4 +1879,9 @@ void S_Start(void)
 	if (cv_resetmusic.value)
 		S_StopMusic();
 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+
+	S_ResetMusicStack();
+	music_stack_noposition = false;
+	music_stack_fadeout = 0;
+	music_stack_fadein = JINGLEPOSTFADE;
 }
