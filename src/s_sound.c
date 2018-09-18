@@ -38,7 +38,7 @@ extern INT32 msg_id;
 #include "p_local.h" // camera info
 #include "fastcmp.h"
 
-#ifdef HAVE_BLUA
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 #include "lua_hook.h" // MusicChange hook
 #endif
 
@@ -1592,14 +1592,17 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		S_StopMusic();
 
 		if (!S_LoadMusic(newmusic))
+		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", newmusic);
 			return;
+		}
 
 		music_flags = mflags;
 		music_looping = looping;
 
 		if (!S_PlayMusic(looping, fadeinms))
 		{
-			CONS_Alert(CONS_ERROR, "Music cannot be played!\n");
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", newmusic);
 			return;
 		}
 
