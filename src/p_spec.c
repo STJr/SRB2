@@ -2886,7 +2886,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						max(min(sides[line->sidenum[1]].rowoffset>>FRACBITS, 255), 0)
 						: max(min(sides[line->sidenum[0]].rowoffset>>FRACBITS, 255), 0))
 					: abs(P_AproxDistance(line->dx, line->dy))>>FRACBITS,
-				(line->flags & ML_EFFECT4));
+				(line->flags & ML_EFFECT4),
+				(line->flags & ML_EFFECT5));
 			break;
 
 		case 421: // Stop lighting effect in tagged sectors
