@@ -3438,7 +3438,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					&& rover->fadingdata)
 					//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d", ((fade_t*)rover->fadingdata)->timer);
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d\n", ((fade_t*)rover->fadingdata)->timer);
 					continue;
 				}
 
