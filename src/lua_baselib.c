@@ -719,8 +719,14 @@ static int lib_pRestoreMusic(lua_State *L)
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_RestoreMusic(player);
-	return 0;
+	else if (P_IsLocalPlayer(player))
+	{
+		P_RestoreMusic(player);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
 }
 
 static int lib_pSpawnShieldOrb(lua_State *L)
@@ -1717,7 +1723,7 @@ static int lib_sChangeMusic(lua_State *L)
 {
 #ifdef MUSICSLOT_COMPATIBILITY
 	const char *music_name;
-	UINT32 music_num;
+	UINT32 music_num, position, prefadems, fadeinms;
 	char music_compat_name[7];
 
 	boolean looping;
@@ -1745,7 +1751,6 @@ static int lib_sChangeMusic(lua_State *L)
 		music_name = luaL_checkstring(L, 1);
 	}
 
-
 	looping = (boolean)lua_opttrueboolean(L, 2);
 
 #else
@@ -1770,9 +1775,18 @@ static int lib_sChangeMusic(lua_State *L)
 #endif
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
 
+	position = (UINT32)luaL_optinteger(L, 5, 0);
+	prefadems = (UINT32)luaL_optinteger(L, 6, 0);
+	fadeinms = (UINT32)luaL_optinteger(L, 7, 0);
+
 	if (!player || P_IsLocalPlayer(player))
-		S_ChangeMusic(music_name, music_flags, looping);
-	return 0;
+	{
+		S_ChangeMusicEx(music_name, music_flags, looping, position, prefadems, fadeinms);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
 }
 
 static int lib_sSpeedMusic(lua_State *L)
@@ -1790,23 +1804,8 @@ static int lib_sSpeedMusic(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		lua_pushboolean(L, S_SpeedMusic(speed));
 	else
-		lua_pushboolean(L, false);
+		lua_pushnil(L);
 	return 1;
-}
-
-static int lib_sStopMusic(lua_State *L)
-{
-	player_t *player = NULL;
-	NOHUD
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
-	{
-		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-		if (!player)
-			return LUA_ErrInvalid(L, "player_t");
-	}
-	if (!player || P_IsLocalPlayer(player))
-		S_StopMusic();
-	return 0;
 }
 
 static int lib_sOriginPlaying(lua_State *L)
@@ -2131,7 +2130,6 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
-	{"S_StopMusic",lib_sStopMusic},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},

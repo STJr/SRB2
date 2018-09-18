@@ -3885,11 +3885,12 @@ static void Command_Tunes_f(void)
 {
 	const char *tunearg;
 	UINT16 tunenum, track = 0;
+	UINT32 position = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf("tunes <name/num> [track] [speed] [position] / <-show> / <-default> / <-none>:\n");
 		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
 		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
 		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
@@ -3936,10 +3937,15 @@ static void Command_Tunes_f(void)
 		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
 	else
 		strncpy(mapmusname, tunearg, 7);
+
+	if (argc > 4)
+		position = (UINT32)atoi(COM_Argv(4));
+
 	mapmusname[6] = 0;
 	mapmusflags = (track & MUSIC_TRACKMASK);
+	mapmusposition = position;
 
-	S_ChangeMusic(mapmusname, mapmusflags, true);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 
 	if (argc > 3)
 	{

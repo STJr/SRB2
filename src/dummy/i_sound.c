@@ -95,6 +95,37 @@ boolean I_SetSongSpeed(float speed)
 }
 
 /// ------------------------
+//  MUSIC SEEKING
+/// ------------------------
+
+UINT32 I_GetSongLength(void)
+{
+	return 0;
+}
+
+boolean I_SetSongLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetSongLoopPoint(void)
+{
+	return 0;
+}
+
+boolean I_SetSongPosition(UINT32 position)
+{
+    (void)position;
+    return false;
+}
+
+UINT32 I_GetSongPosition(void)
+{
+    return 0;
+}
+
+/// ------------------------
 //  MUSIC PLAYBACK
 /// ------------------------
 
@@ -141,4 +172,45 @@ boolean I_SetSongTrack(int track)
 {
 	(void)track;
 	return false;
+}
+
+/// ------------------------
+//  MUSIC FADING
+/// ------------------------
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
+void I_StopFadingSong(void)
+{
+}
+
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
+{
+	(void)target_volume;
+	(void)source_volume;
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
+{
+	(void)target_volume;
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeOutStopSong(UINT32 ms)
+{
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
+{
+        (void)ms;
+        (void)looping;
+        return false;
 }

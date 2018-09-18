@@ -2428,6 +2428,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (!(line->flags & ML_BLOCKMONSTERS))
 					mapmusflags |= MUSIC_RELOADRESET;
 
+				mapmusposition = 0;
+
 				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.

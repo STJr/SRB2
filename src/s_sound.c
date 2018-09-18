@@ -37,6 +37,10 @@ extern INT32 msg_id;
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
 
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#include "lua_hook.h" // MusicChange hook
+#endif
+
 #ifdef HW3SOUND
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
@@ -1219,6 +1223,12 @@ static void      *music_data;
 static UINT16    music_flags;
 static boolean   music_looping;
 
+static char      queue_name[7];
+static UINT16    queue_flags;
+static boolean   queue_looping;
+static UINT32    queue_position;
+static UINT32    queue_fadeinms;
+
 /// ------------------------
 /// Music Status
 /// ------------------------
@@ -1253,6 +1263,11 @@ musictype_t S_MusicType(void)
 	return I_SongType();
 }
 
+const char *S_MusicName(void)
+{
+	return music_name;
+}
+
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
 {
 	if (!I_SongPlaying())
@@ -1281,6 +1296,35 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 boolean S_SpeedMusic(float speed)
 {
 	return I_SetSongSpeed(speed);
+}
+
+/// ------------------------
+/// Music Seeking
+/// ------------------------
+
+UINT32 S_GetMusicLength(void)
+{
+	return I_GetSongLength();
+}
+
+boolean S_SetMusicLoopPoint(UINT32 looppoint)
+{
+	return I_SetSongLoopPoint(looppoint);
+}
+
+UINT32 S_GetMusicLoopPoint(void)
+{
+	return I_GetSongLoopPoint();
+}
+
+boolean S_SetMusicPosition(UINT32 position)
+{
+	return I_SetSongPosition(position);
+}
+
+UINT32 S_GetMusicPosition(void)
+{
+	return I_GetSongPosition();
 }
 
 /// ------------------------
@@ -1355,12 +1399,13 @@ static void S_UnloadMusic(void)
 	music_looping = false;
 }
 
-static boolean S_PlayMusic(boolean looping)
+static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 {
 	if (S_MusicDisabled())
 		return false;
 
-	if (!I_PlaySong(looping))
+	if ((!fadeinms && !I_PlaySong(looping)) ||
+		(fadeinms && !I_FadeInPlaySong(fadeinms, looping)))
 	{
 		S_UnloadMusic();
 		return false;
@@ -1370,7 +1415,27 @@ static boolean S_PlayMusic(boolean looping)
 	return true;
 }
 
-void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
+static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 fadeinms)
+{
+	strncpy(queue_name, mmusic, 7);
+	queue_flags = mflags;
+	queue_looping = looping;
+	queue_position = position;
+	queue_fadeinms = fadeinms;
+}
+
+static void S_ClearQueue(void)
+{
+	queue_name[0] = queue_flags = queue_looping = queue_position = queue_fadeinms = 0;
+}
+
+static void S_ChangeMusicToQueue(void)
+{
+	S_ChangeMusicEx(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
+	S_ClearQueue();
+}
+
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 #if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
 	S_ClearSfx();
@@ -1379,33 +1444,62 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	if (S_MusicDisabled())
 		return;
 
-	// No Music (empty string)
-	if (mmusic[0] == 0)
-	{
-		S_StopMusic();
+	char newmusic[7];
+	strncpy(newmusic, mmusic, 7);
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+		return;
+#endif
+	newmusic[6] = 0;
+
+ 	// No Music (empty string)
+	if (newmusic[0] == 0)
+ 	{
+		if (prefadems)
+			I_FadeSong(0, prefadems, &S_StopMusic);
+		else
+			S_StopMusic();
 		return;
 	}
 
-	if (strnicmp(music_name, mmusic, 6))
+	if (prefadems && S_MusicPlaying()) // queue music change for after fade // allow even if the music is the same
 	{
-		S_StopMusic(); // shutdown old music
+		CONS_Debug(DBG_DETAILED, "Now fading out song %s\n", music_name);
+		S_QueueMusic(newmusic, mflags, looping, position, fadeinms);
+		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
+		return;
+	}
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+ 	{
+		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
-		if (!S_LoadMusic(mmusic))
+		S_StopMusic();
+
+		if (!S_LoadMusic(newmusic))
 		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", mmusic);
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", newmusic);
 			return;
 		}
 
 		music_flags = mflags;
 		music_looping = looping;
 
-		if (!S_PlayMusic(looping))
-		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", mmusic);
+		if (!S_PlayMusic(looping, fadeinms))
+ 		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", newmusic);
 			return;
 		}
+
+		if (position)
+			I_SetSongPosition(position);
+
+		I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 	}
-	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+	else if (fadeinms) // let fades happen with same music
+	{
+		I_SetSongPosition(position);
+		I_FadeSong(100, fadeinms, NULL);
+ 	}
 }
 
 void S_StopMusic(void)
@@ -1480,6 +1574,32 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	}
 }
 
+/// ------------------------
+/// Music Fading
+/// ------------------------
+
+void S_SetInternalMusicVolume(INT32 volume)
+{
+	I_SetInternalMusicVolume(min(max(volume, 0), 100));
+}
+
+void S_StopFadingMusic(void)
+{
+	I_StopFadingSong();
+}
+
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+{
+	if (source_volume < 0)
+		return I_FadeSong(target_volume, ms, NULL);
+	else
+		return I_FadeSongFromVolume(target_volume, source_volume, ms, false);
+}
+
+boolean S_FadeOutStopMusic(UINT32 ms)
+{
+	return I_FadeSong(0, ms, &S_StopMusic);
+}
 
 /// ------------------------
 /// Init & Others
@@ -1497,9 +1617,10 @@ void S_Start(void)
 		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
 		mapmusname[6] = 0;
 		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
 	if (cv_resetmusic.value)
 		S_StopMusic();
-	S_ChangeMusic(mapmusname, mapmusflags, true);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
