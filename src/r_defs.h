@@ -317,6 +317,7 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
+	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;

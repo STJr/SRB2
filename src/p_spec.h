@@ -487,6 +487,21 @@ typedef struct
 
 void T_Fade(fade_t *d);
 
+// Model for fading colormaps
+
+typedef struct
+{
+	thinker_t thinker;          ///< Thinker structure for effect.
+	sector_t *sector;           ///< Sector where action is taking place.
+	extracolormap_t *source_exc;
+	extracolormap_t *dest_exc;
+	boolean ticbased;           ///< Tic-based timing
+	INT32 duration;             ///< Total duration for tic-based logic (OR: speed increment)
+	INT32 timer;                ///< Timer for tic-based logic (OR: internal speed counter)
+} fadecolormap_t;
+
+void T_FadeColormap(fadecolormap_t *d);
+
 // Prototype functions for pushers
 void T_Pusher(pusher_t *p);
 mobj_t *P_GetPushThing(UINT32 s);

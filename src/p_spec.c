@@ -114,7 +114,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_ResetColormapFader(sector_t *sector);
 static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
-	INT32 duration);
+	boolean ticbased, INT32 duration);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
@@ -3365,6 +3365,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// -- Monster Iestyn 14/06/18
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 			{
+				P_ResetColormapFader(&sectors[secnum]);
+
 				if (line->flags & ML_EFFECT3) // relative calc
 				{
 					extracolormap_t *exc = R_AddColormaps(
@@ -3655,6 +3657,100 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 		}
+
+		case 455: // Fade colormap
+			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
+			{
+				extracolormap_t *source_exc, *dest_exc, *exc;
+				INT32 speed = (INT32)((line->flags & ML_DONTPEGBOTTOM) || !sides[line->sidenum[0]].rowoffset) && line->sidenum[1] != 0xFFFF ?
+					abs(sides[line->sidenum[1]].rowoffset >> FRACBITS)
+					: abs(sides[line->sidenum[0]].rowoffset >> FRACBITS);
+
+				// Prevent continuous execs from interfering on an existing fade
+				if (!(line->flags & ML_EFFECT5)
+					&& sectors[secnum].fadecolormapdata)
+					//&& ((fadecolormap_t*)sectors[secnum].fadecolormapdata)->timer > (ticbased ? 2 : speed*2))
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 455 Executor: Fade color thinker already exists, timer: %d\n", ((fadecolormap_t*)sectors[secnum].fadecolormapdata)->timer);
+					continue;
+				}
+
+				if (line->flags & ML_TFERLINE) // use back colormap instead of target sector
+					sectors[secnum].extra_colormap = (line->sidenum[1] != 0xFFFF) ?
+						sides[line->sidenum[1]].colormap_data : NULL;
+
+				exc = sectors[secnum].extra_colormap;
+
+				if (!(line->flags & ML_BOUNCY) // BOUNCY: Do not override fade from default rgba
+					&& !R_CheckDefaultColormap(sides[line->sidenum[0]].colormap_data, true, false, false)
+					&& R_CheckDefaultColormap(exc, true, false, false))
+				{
+					exc = R_CopyColormap(exc, false);
+					exc->rgba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->rgba));
+					//exc->fadergba = R_GetRgbaRGB(sides[line->sidenum[0]].colormap_data->rgba) + R_PutRgbaA(R_GetRgbaA(exc->fadergba));
+
+					if (!(source_exc = R_GetColormapFromList(exc)))
+					{
+						exc->colormap = R_CreateLightTable(exc);
+						R_AddColormapToList(exc);
+						source_exc = exc;
+					}
+					else
+						Z_Free(exc);
+
+					sectors[secnum].extra_colormap = source_exc;
+				}
+				else
+					source_exc = exc ? exc : R_GetDefaultColormap();
+
+				if (line->flags & ML_EFFECT3) // relative calc
+				{
+					exc = R_AddColormaps(
+						source_exc,
+						sides[line->sidenum[0]].colormap_data,
+						line->flags & ML_EFFECT1,  // subtract R
+						line->flags & ML_NOCLIMB,  // subtract G
+						line->flags & ML_EFFECT2,  // subtract B
+						false,                     // subtract A (no flag for this, just pass negative alpha)
+						line->flags & ML_EFFECT1,  // subtract FadeR
+						line->flags & ML_NOCLIMB,  // subtract FadeG
+						line->flags & ML_EFFECT2,  // subtract FadeB
+						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
+						false,                     // subtract FadeStart (we ran out of flags)
+						false,                     // subtract FadeEnd (we ran out of flags)
+						false,                     // ignore Fog (we ran out of flags)
+						line->flags & ML_DONTPEGBOTTOM,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
+						false);
+				}
+				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
+				{
+					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
+					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
+					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
+				}
+				else
+					exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
+
+				if (!(dest_exc = R_GetColormapFromList(exc)))
+				{
+					exc->colormap = R_CreateLightTable(exc);
+					R_AddColormapToList(exc);
+					dest_exc = exc;
+				}
+				else
+					Z_Free(exc);
+
+				Add_ColormapFader(&sectors[secnum], source_exc, dest_exc, (line->flags & ML_EFFECT4), // tic-based timing
+					speed);
+			}
+			break;
+
+		case 456: // Stop fade colormap
+			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
+				P_ResetColormapFader(&sectors[secnum]);
+			break;
 
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
@@ -8120,6 +8216,139 @@ void T_Fade(fade_t *d)
 			sectors[d->rover->secnum].extra_colormap = d->dest_exc;
 
 		P_RemoveFakeFloorFader(d->rover);
+	}
+}
+
+static void P_ResetColormapFader(sector_t *sector)
+{
+	if (sector->fadecolormapdata)
+	{
+		// The thinker is the first member in all the action structs,
+		// so just let the thinker get freed, and that will free the whole
+		// structure.
+		P_RemoveThinker(&((elevator_t *)sector->fadecolormapdata)->thinker);
+		sector->fadecolormapdata = NULL;
+	}
+}
+
+static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
+	boolean ticbased, INT32 duration)
+{
+	fadecolormap_t *d;
+
+	P_ResetColormapFader(sector);
+
+	// nothing to do, set immediately
+	if (!duration || R_CheckEqualColormaps(source_exc, dest_exc, true, true, true))
+	{
+		sector->extra_colormap = dest_exc;
+		return;
+	}
+
+	d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
+	d->thinker.function.acp1 = (actionf_p1)T_FadeColormap;
+	d->sector = sector;
+	d->source_exc = source_exc;
+	d->dest_exc = dest_exc;
+
+	if (ticbased)
+	{
+		d->ticbased = true;
+		d->duration = d->timer = duration;
+	}
+	else
+	{
+		d->ticbased = false;
+		d->timer = 256;
+		d->duration = duration; // use as speed
+	}
+
+	sector->fadecolormapdata = d;
+	P_AddThinker(&d->thinker); // add thinker
+}
+
+void T_FadeColormap(fadecolormap_t *d)
+{
+	if ((d->ticbased && --d->timer <= 0)
+		|| (!d->ticbased && (d->timer -= d->duration) <= 0)) // d->duration used as speed decrement
+	{
+		d->sector->extra_colormap = d->dest_exc;
+		P_ResetColormapFader(d->sector);
+	}
+	else
+	{
+		extracolormap_t *exc;
+		INT32 duration = d->ticbased ? d->duration : 256;
+		fixed_t factor = min(FixedDiv(duration - d->timer, duration), 1*FRACUNIT);
+		INT16 cr, cg, cb, ca, fadestart, fadeend, fog;
+		INT32 rgba, fadergba;
+
+		// NULL failsafes (or intentionally set to signify default)
+		if (!d->sector->extra_colormap)
+			d->sector->extra_colormap = R_GetDefaultColormap();
+
+		if (!d->source_exc)
+			d->source_exc = R_GetDefaultColormap();
+
+		if (!d->dest_exc)
+			d->dest_exc = R_GetDefaultColormap();
+
+		// For each var (rgba + fadergba + params = 11 vars), we apply
+		// percentage fading: currentval = sourceval + (delta * percent of duration elapsed)
+		// delta is negative when fading out (destval is lower)
+		// max/min are used to ensure progressive calcs don't go backwards and to cap values to dest.
+
+#define APPLYFADE(dest, src, cur) (\
+(dest-src < 0) ? \
+	max(\
+		min(cur,\
+			src + (INT16)FixedMul(dest-src, factor)),\
+		dest)\
+: (dest-src > 0) ? \
+	min(\
+		max(cur,\
+			src + (INT16)FixedMul(dest-src, factor)),\
+		dest)\
+: \
+	dest\
+)
+
+		cr = APPLYFADE(R_GetRgbaR(d->dest_exc->rgba), R_GetRgbaR(d->source_exc->rgba), R_GetRgbaR(d->sector->extra_colormap->rgba));
+		cg = APPLYFADE(R_GetRgbaG(d->dest_exc->rgba), R_GetRgbaG(d->source_exc->rgba), R_GetRgbaG(d->sector->extra_colormap->rgba));
+		cb = APPLYFADE(R_GetRgbaB(d->dest_exc->rgba), R_GetRgbaB(d->source_exc->rgba), R_GetRgbaB(d->sector->extra_colormap->rgba));
+		ca = APPLYFADE(R_GetRgbaA(d->dest_exc->rgba), R_GetRgbaA(d->source_exc->rgba), R_GetRgbaA(d->sector->extra_colormap->rgba));
+
+		rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
+
+		cr = APPLYFADE(R_GetRgbaR(d->dest_exc->fadergba), R_GetRgbaR(d->source_exc->fadergba), R_GetRgbaR(d->sector->extra_colormap->fadergba));
+		cg = APPLYFADE(R_GetRgbaG(d->dest_exc->fadergba), R_GetRgbaG(d->source_exc->fadergba), R_GetRgbaG(d->sector->extra_colormap->fadergba));
+		cb = APPLYFADE(R_GetRgbaB(d->dest_exc->fadergba), R_GetRgbaB(d->source_exc->fadergba), R_GetRgbaB(d->sector->extra_colormap->fadergba));
+		ca = APPLYFADE(R_GetRgbaA(d->dest_exc->fadergba), R_GetRgbaA(d->source_exc->fadergba), R_GetRgbaA(d->sector->extra_colormap->fadergba));
+
+		fadergba = R_PutRgbaRGBA(cr, cg, cb, ca);
+
+		fadestart = APPLYFADE(d->dest_exc->fadestart, d->source_exc->fadestart, d->sector->extra_colormap->fadestart);
+		fadeend = APPLYFADE(d->dest_exc->fadeend, d->source_exc->fadeend, d->sector->extra_colormap->fadeend);
+		fog = abs(factor) > FRACUNIT/2 ? d->dest_exc->fog : d->source_exc->fog; // set new fog flag halfway through fade
+
+#undef APPLYFADE
+
+		//////////////////
+		// setup new colormap
+		//////////////////
+
+		if (!(d->sector->extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog)))
+		{
+			exc = R_CreateDefaultColormap(false);
+			exc->fadestart = fadestart;
+			exc->fadeend = fadeend;
+			exc->fog = (boolean)fog;
+			exc->rgba = rgba;
+			exc->fadergba = fadergba;
+			exc->colormap = R_CreateLightTable(exc);
+			R_AddColormapToList(exc);
+			d->sector->extra_colormap = exc;
+		}
 	}
 }
 
