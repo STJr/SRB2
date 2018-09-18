@@ -1331,7 +1331,8 @@ static void P_LoadLineDefs2(void)
 		ld->backsector  = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
 
 		// Repeat count for midtexture
-		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff))
+		if ((ld->flags & ML_EFFECT5) && (ld->sidenum[1] != 0xffff)
+			&& !(ld->special >= 300 && ld->special < 500)) // exempt linedef exec specials
 		{
 			sides[ld->sidenum[0]].repeatcnt = (INT16)(((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) >> 12);
 			sides[ld->sidenum[0]].textureoffset = (((unsigned)sides[ld->sidenum[0]].textureoffset >> FRACBITS) & 2047) << FRACBITS;
