@@ -71,8 +71,6 @@ static UINT16 SAMPLERATE = 44100;
 
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
-static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
-consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE, interpolationfilter_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 /// ------------------------

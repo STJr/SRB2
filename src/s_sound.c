@@ -98,6 +98,11 @@ consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, 
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+#ifdef HAVE_OPENMPT
+static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
+consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE, interpolationfilter_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
 #define S_MAX_VOLUME 127
 
 // when to clip out sounds
