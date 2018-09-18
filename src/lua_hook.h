@@ -43,7 +43,6 @@ enum hook {
 	hook_PlayerMsg,
 	hook_HurtMsg,
 	hook_PlayerSpawn,
-	hook_MusicChange,
 
 	hook_MAX // last hook
 };
