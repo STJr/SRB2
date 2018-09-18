@@ -1507,14 +1507,17 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 		S_StopMusic(); // shutdown old music
 
 		if (!S_LoadMusic(mmusic))
+		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", mmusic);
 			return;
+		}
 
 		music_flags = mflags;
 		music_looping = looping;
 
 		if (!S_PlayMusic(looping))
 		{
-			CONS_Alert(CONS_ERROR, "Music cannot be played!\n");
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", mmusic);
 			return;
 		}
 	}
