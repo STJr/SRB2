@@ -3436,7 +3436,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// Prevent continuous execs from interfering on an existing fade
 				if (!(line->flags & ML_EFFECT5)
 					&& rover->fadingdata)
+					//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d", ((fade_t*)rover->fadingdata)->timer);
 					continue;
+				}
 
 				if (speed > 0)
 					P_AddFakeFloorFader(rover, secnum, j,
