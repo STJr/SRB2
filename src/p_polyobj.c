@@ -2969,6 +2969,9 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	if (po->translucency == pfdata->destvalue)
 		return 1;
 
+	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+		P_RemoveThinker(po->thinker);
+
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
