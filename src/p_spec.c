@@ -1276,13 +1276,22 @@ static boolean PolyFade(line_t *line)
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "PolyFade: bad polyobj %d\n", polyObjNum);
 		return 0;
 	}
 
 	// don't allow line actions to affect bad polyobjects
 	if (po->isBad)
 		return 0;
+
+	// Prevent continuous execs from interfering on an existing fade
+	if (!(line->flags & ML_EFFECT5)
+		&& po->thinker
+		&& po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+	{
+		CONS_Debug(DBG_POLYOBJ, "Line type 492 Executor: Fade PolyObject thinker already exists\n");
+		return 0;
+	}
 
 	pfd.polyObjNum = polyObjNum;
 
