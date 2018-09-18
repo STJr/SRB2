@@ -954,7 +954,7 @@ static int lib_pRestoreMusic(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	else if (P_IsLocalPlayer(player))
+	if (P_IsLocalPlayer(player))
 		P_RestoreMusic(player);
 	return 0;
 }
