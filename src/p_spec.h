@@ -162,7 +162,7 @@ void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length);
 
 void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased);
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum

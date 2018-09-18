@@ -371,12 +371,22 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	}
 }
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased)
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
 {
 	INT32 i;
 	// search all sectors for ones with tag
 	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0 ;)
+	{
+		if (!force && ticbased // always let speed fader execute
+			&& sectors[i].lightingdata
+			&& ((lightlevel_t*)sectors[i].lightingdata)->thinker.function.acp1 == (actionf_p1)T_LightFade)
+			// && ((lightlevel_t*)sectors[i].lightingdata)->timer > 2)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Line type 420 Executor: Fade light thinker already exists, timer: %d\n", ((lightlevel_t*)sectors[i].lightingdata)->timer);
+			continue;
+		}
 		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased);
+	}
 }
 
 /** Fades the light level in a sector to a new value.
