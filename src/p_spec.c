@@ -3352,7 +3352,56 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// This could even override existing colormaps I believe
 			// -- Monster Iestyn 14/06/18
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
-				sectors[secnum].extra_colormap = sides[line->sidenum[0]].colormap_data;
+			{
+				if (line->flags & ML_EFFECT3) // relative calc
+				{
+					extracolormap_t *exc = R_AddColormaps(
+						(line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF ?
+							sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap, // use back colormap instead of target sector
+						sides[line->sidenum[0]].colormap_data,
+						line->flags & ML_EFFECT1,  // subtract R
+						line->flags & ML_NOCLIMB,  // subtract G
+						line->flags & ML_EFFECT2,  // subtract B
+						false,                     // subtract A (no flag for this, just pass negative alpha)
+						line->flags & ML_EFFECT1,  // subtract FadeR
+						line->flags & ML_NOCLIMB,  // subtract FadeG
+						line->flags & ML_EFFECT2,  // subtract FadeB
+						false,                     // subtract FadeA (no flag for this, just pass negative alpha)
+						false,                     // subtract FadeStart (we ran out of flags)
+						false,                     // subtract FadeEnd (we ran out of flags)
+						false,                     // ignore Fog (we ran out of flags)
+						line->flags & ML_DONTPEGBOTTOM,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].textureoffset >> FRACBITS) : 0,
+						(line->flags & ML_DONTPEGBOTTOM) ? (sides[line->sidenum[0]].rowoffset >> FRACBITS) : 0,
+						false);
+
+					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
+					{
+						exc->colormap = R_CreateLightTable(exc);
+						R_AddColormapToList(exc);
+						sectors[secnum].extra_colormap = exc;
+					}
+					else
+						Z_Free(exc);
+				}
+				else if (line->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
+				{
+					extracolormap_t *exc = R_CopyColormap(sides[line->sidenum[0]].colormap_data, false);
+					exc->rgba = R_GetRgbaRGB(exc->rgba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].textureoffset >> FRACBITS, 25), 0));
+					exc->fadergba = R_GetRgbaRGB(exc->fadergba) + R_PutRgbaA(max(min(sides[line->sidenum[0]].rowoffset >> FRACBITS, 25), 0));
+
+					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
+					{
+						exc->colormap = R_CreateLightTable(exc);
+						R_AddColormapToList(exc);
+						sectors[secnum].extra_colormap = exc;
+					}
+					else
+						Z_Free(exc);
+				}
+				else
+					sectors[secnum].extra_colormap = sides[line->sidenum[0]].colormap_data;
+			}
 			break;
 
 		case 448: // Change skybox viewpoint/centerpoint
