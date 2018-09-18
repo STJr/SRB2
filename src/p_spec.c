@@ -3378,6 +3378,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				extracolormap_t *source_exc, *dest_exc, *exc;
 
+				// Prevent continuous execs from interfering on an existing fade
+				if (!(line->flags & ML_EFFECT5)
+					&& sectors[secnum].fadecolormapdata)
+					continue;
+
 				if (line->flags & ML_TFERLINE) // use back colormap instead of target sector
 					sectors[secnum].extra_colormap = (line->sidenum[1] != 0xFFFF) ?
 						sides[line->sidenum[1]].colormap_data : NULL;
