@@ -246,6 +246,9 @@ typedef struct
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
+	// Music stuff.
+	UINT32 musicinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
+
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
 	UINT8 numCustomOptions;     ///< Internal. For Lua custom value support.

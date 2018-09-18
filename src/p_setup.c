@@ -227,6 +227,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->menuflags = 0;
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
+	mapheaderinfo[num]->musicinterfadeout = 0;
 	// an even further impossibility, delfile custom opts support
 	mapheaderinfo[num]->customopts = NULL;
 	mapheaderinfo[num]->numCustomOptions = 0;
@@ -2189,7 +2190,7 @@ static void P_LevelInitStuff(void)
 			players[i].lives = cv_startinglives.value;
 		}
 
-		players[i].realtime = countdown = countdown2 = 0;
+		players[i].realtime = countdown = countdown2 = exitfadestarted = 0;
 
 		players[i].gotcontinue = false;
 

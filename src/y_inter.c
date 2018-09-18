@@ -696,7 +696,10 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+			if (mapheaderinfo[gamemap-1]->musicinterfadeout)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musicinterfadeout);
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -757,7 +760,10 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+			if (mapheaderinfo[gamemap-1]->musicinterfadeout)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musicinterfadeout);
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = 0;
 		}
 

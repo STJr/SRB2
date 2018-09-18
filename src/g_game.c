@@ -3541,7 +3541,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	{
 		// Clear a bunch of variables
 		tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
-		countdown = countdown2 = 0;
+		countdown = countdown2 = exitfadestarted = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
