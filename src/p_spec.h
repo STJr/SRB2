@@ -150,6 +150,8 @@ typedef struct
 #define FASTDARK 15
 #define SLOWDARK 35
 
+void P_RemoveLighting(sector_t *sector);
+
 void T_FireFlicker(fireflicker_t *flick);
 fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxsector, INT32 length);
 void T_LightningFlash(lightflash_t *flash);
@@ -458,6 +460,32 @@ typedef struct
 } disappear_t;
 
 void T_Disappear(disappear_t *d);
+
+// Model for fading FOFs
+typedef struct
+{
+	thinker_t thinker;  ///< Thinker structure for effect.
+	ffloor_t *rover;    ///< Target ffloor
+	extracolormap_t *dest_exc; ///< Colormap to fade to
+	UINT32 sectornum;    ///< Number of ffloor target sector
+	UINT32 ffloornum;    ///< Number of ffloor of target sector
+	INT32 alpha;        ///< Internal alpha counter
+	INT16 sourcevalue;  ///< Transparency value to fade from
+	INT16 destvalue;    ///< Transparency value to fade to
+	INT16 destlightlevel; ///< Light level to fade to
+	INT16 speed;        ///< Speed to fade by
+	boolean ticbased;    ///< Tic-based logic toggle
+	INT32 timer;        ///< Timer for tic-based logic
+	boolean doexists;   ///< Handle FF_EXISTS
+	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean dolighting; ///< Handle shadows and light blocks
+	boolean docolormap; ///< Handle colormaps
+	boolean docollision; ///< Handle interactive flags
+	boolean doghostfade; ///< No interactive flags during fading
+	boolean exactalpha; ///< Use exact alpha values (opengl)
+} fade_t;
+
+void T_Fade(fade_t *d);
 
 // Model for fading colormaps
 

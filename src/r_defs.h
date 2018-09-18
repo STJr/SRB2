@@ -184,6 +184,8 @@ typedef struct ffloor_s
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with
+
+	void *fadingdata; // fading FOF thinker
 } ffloor_t;
 
 
@@ -388,6 +390,9 @@ typedef struct sector_s
 	pslope_t *c_slope; // ceiling slope
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
+
+	// for fade thinker
+	INT16 spawn_lightlevel;
 
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
