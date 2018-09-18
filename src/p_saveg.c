@@ -1298,6 +1298,7 @@ typedef enum
 	tc_polyswingdoor,
 	tc_polyflag,
 	tc_polydisplace,
+	tc_polyfade,
 #endif
 	tc_end
 } specials_e;
@@ -1984,6 +1985,20 @@ static void SavePolydisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->oldHeights);
 }
 
+static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
+{
+	const polyfade_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEINT32(save_p, ht->polyObjNum);
+	WRITEINT32(save_p, ht->sourcevalue);
+	WRITEINT32(save_p, ht->destvalue);
+	WRITEUINT8(save_p, (UINT8)ht->docollision);
+	WRITEUINT8(save_p, (UINT8)ht->doghostfade);
+	WRITEUINT8(save_p, (UINT8)ht->ticbased);
+	WRITEINT32(save_p, ht->duration);
+	WRITEINT32(save_p, ht->timer);
+}
+
 #endif
 /*
 //
@@ -2206,6 +2221,11 @@ static void P_NetArchiveThinkers(void)
 		else if (th->function.acp1 == (actionf_p1)T_PolyObjDisplace)
 		{
 			SavePolydisplaceThinker(th, tc_polydisplace);
+			continue;
+		}
+		else if (th->function.acp1 == (actionf_p1)T_PolyObjFade)
+		{
+			SavePolyfadeThinker(th, tc_polyfade);
 			continue;
 		}
 #endif
@@ -2985,6 +3005,26 @@ static inline void LoadPolydisplaceThinker(actionf_p1 thinker)
 	ht->oldHeights = READFIXED(save_p);
 	P_AddThinker(&ht->thinker);
 }
+
+//
+// LoadPolyfadeThinker
+//
+// Loads a polyfadet_t thinker
+//
+static void LoadPolyfadeThinker(actionf_p1 thinker)
+{
+	polyfade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->polyObjNum = READINT32(save_p);
+	ht->sourcevalue = READINT32(save_p);
+	ht->destvalue = READINT32(save_p);
+	ht->docollision = (boolean)READUINT8(save_p);
+	ht->doghostfade = (boolean)READUINT8(save_p);
+	ht->ticbased = (boolean)READUINT8(save_p);
+	ht->duration = READINT32(save_p);
+	ht->timer = READINT32(save_p);
+	P_AddThinker(&ht->thinker);
+}
 #endif
 
 /*
@@ -3185,6 +3225,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_polydisplace:
 				LoadPolydisplaceThinker((actionf_p1)T_PolyObjDisplace);
+				break;
+
+			case tc_polyfade:
+				LoadPolyfadeThinker((actionf_p1)T_PolyObjFade);
 				break;
 #endif
 			case tc_scroll:

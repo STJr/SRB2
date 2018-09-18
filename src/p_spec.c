@@ -1218,7 +1218,7 @@ static void PolyVisible(line_t *line)
 		po->flags |= POF_SOLID;
 
 	po->flags &= ~POF_NOSPECIALS;
-	po->flags |= POF_RENDERALL;
+	po->flags |= (po->spawnflags & POF_RENDERALL);
 }
 
 //
@@ -1242,7 +1242,94 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	po->translucency = (line->frontsector->floorheight >> FRACBITS) / 100;
+	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
+	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	if (line->flags & ML_EFFECT3) // relative calc
+		po->translucency = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
+			NUMTRANSMAPS), 0);
+	else
+		po->translucency = (line->flags & ML_DONTPEGBOTTOM) ?
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+}
+
+//
+// PolyFade
+//
+// Makes a polyobject translucency fade and applies tangibility
+//
+static boolean PolyFade(line_t *line)
+{
+	INT32 polyObjNum = line->tag;
+	polyobj_t *po;
+	polyfadedata_t pfd;
+
+	if (!(po = Polyobj_GetForNum(polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "PolyFade: bad polyobj %d\n", polyObjNum);
+		return 0;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return 0;
+
+	// Prevent continuous execs from interfering on an existing fade
+	if (!(line->flags & ML_EFFECT5)
+		&& po->thinker
+		&& po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+	{
+		CONS_Debug(DBG_POLYOBJ, "Line type 492 Executor: Fade PolyObject thinker already exists\n");
+		return 0;
+	}
+
+	pfd.polyObjNum = polyObjNum;
+
+	// if DONTPEGBOTTOM, specify raw translucency value in Front X Offset
+	// else, take it out of 1000. If Front X Offset is specified, use that. Else, use floorheight.
+	if (line->flags & ML_EFFECT3) // relative calc
+		pfd.destvalue = max(min(po->translucency + ((line->flags & ML_DONTPEGBOTTOM) ?
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), -NUMTRANSMAPS))
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), -1000) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), -1000) / 100)),
+			NUMTRANSMAPS), 0);
+	else
+		pfd.destvalue = (line->flags & ML_DONTPEGBOTTOM) ?
+			(sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, NUMTRANSMAPS), 0)
+				: max(min(line->frontsector->floorheight>>FRACBITS, NUMTRANSMAPS), 0))
+			: (sides[line->sidenum[0]].textureoffset ?
+				max(min(sides[line->sidenum[0]].textureoffset>>FRACBITS, 1000), 0) / 100
+				: max(min(line->frontsector->floorheight>>FRACBITS, 1000), 0) / 100);
+
+	// already equal, nothing to do
+	if (po->translucency == pfd.destvalue)
+		return 1;
+
+	pfd.docollision = !(line->flags & ML_BOUNCY);         // do not handle collision flags
+	pfd.doghostfade = (line->flags & ML_EFFECT1);         // do ghost fade (no collision flags during fade)
+	pfd.ticbased = (line->flags & ML_EFFECT4);            // Speed = Tic Duration
+
+	// allow Back Y Offset to be consistent with other fade specials
+	pfd.speed = (line->sidenum[1] != 0xFFFF && !sides[line->sidenum[0]].rowoffset) ?
+		abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)
+		: abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+
+
+	return EV_DoPolyObjFade(&pfd);
 }
 
 //
@@ -3354,6 +3441,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		case 491:
 			PolyTranslucency(line);
+			break;
+		case 492:
+			PolyFade(line);
 			break;
 #endif
 
