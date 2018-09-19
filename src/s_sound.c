@@ -1699,6 +1699,8 @@ static void S_ChangeMusicToQueue(void)
 
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
+	char newmusic[7];
+
 #if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
 	S_ClearSfx();
 #endif
@@ -1706,7 +1708,6 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	if (S_MusicDisabled())
 		return;
 
-	char newmusic[7];
 	strncpy(newmusic, mmusic, 7);
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
