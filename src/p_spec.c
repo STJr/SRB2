@@ -3090,7 +3090,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
-				ffloor_t *rover, *foundrover; // FOF that we are going to crumble
+				ffloor_t *rover, *foundrover = NULL; // FOF that we are going to crumble
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3276,7 +3276,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
-				ffloor_t *rover, *foundrover; // FOF to vanish/un-vanish
+				ffloor_t *rover, *foundrover = NULL; // FOF to vanish/un-vanish
 				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3323,7 +3323,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
-				ffloor_t *rover, *foundrover; // FOF that we are going to make fall down
+				ffloor_t *rover, *foundrover = NULL; // FOF that we are going to make fall down
 				player_t *player = NULL; // player that caused FOF to fall
 				boolean respawn = true; // should the fallen FOF respawn?
 
@@ -3492,7 +3492,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover; // FOF that we are going to operate
+			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3554,7 +3554,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover; // FOF that we are going to operate
+			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
 			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3639,7 +3639,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover; // FOF that we are going to operate
+			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
