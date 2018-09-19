@@ -8792,7 +8792,7 @@ void P_PlayerThink(player_t *player)
 	// Same check as below, just at 1 second before
 	// so we can fade music
 	if (!exitfadestarted &&
-		player->exiting <= 1*TICRATE &&
+		player->exiting > 0 && player->exiting <= 1*TICRATE &&
 		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musicinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
 		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
