@@ -1336,7 +1336,17 @@ UINT32 S_GetMusicPosition(void)
 /// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
 /// ------------------------
 
+// make the buildbots happy, because this safely zeroes out a struct
+// https://stackoverflow.com/q/1538943
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+
 static const musicstack_t empty_music_stack_entry = {{0}};
+
+#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 
 void S_SetStackAdjustmentStart(void)
 {
@@ -1437,7 +1447,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 
 static musicstack_t S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT16 startindex)
 {
-	size_t i;
+	INT16 i;
 
 	// if the first entry is empty, force master onto it
 	// fixes a memory corruption bug
@@ -1469,7 +1479,7 @@ static musicstack_t S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT16
 	}
 	else
 	{
-		for (i = startindex; i >= 0; i--)
+		for (i = startindex; i >= 0; i--) // this line is why i is signed; otherwise, would wrap around to max value
 		{
 			if (!music_stack[i].status) // since we're counting down, we have to skip a few...
 				continue;
