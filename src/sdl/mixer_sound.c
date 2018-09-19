@@ -565,11 +565,11 @@ static UINT32 music_fade(UINT32 interval, void *param)
 	else
 	{
 		UINT8 delta = abs(fading_target - fading_source);
-		double factor = (double)(fading_duration - fading_timer) / (double)fading_duration;
+		fixed_t factor = FixedDiv(fading_duration - fading_timer, fading_duration);
 		if (fading_target < fading_source)
-			internal_volume = max(min(internal_volume, fading_source - (UINT8)round(delta * factor)), fading_target);
+			internal_volume = max(min(internal_volume, fading_source - FixedMul(delta, factor)), fading_target);
 		else if (fading_target > fading_source)
-			internal_volume = min(max(internal_volume, fading_source + (UINT8)round(delta * factor)), fading_target);
+			internal_volume = min(max(internal_volume, fading_source + FixedMul(delta, factor)), fading_target);
 		Mix_VolumeMusic(get_real_volume(music_volume));
 		return interval;
 	}
