@@ -885,6 +885,7 @@ boolean I_LoadSong(char *data, size_t len)
 	)
 		I_UnloadSong();
 
+	// always do this whether or not a music already exists
 	var_cleanup();
 
 #ifdef HAVE_LIBGME
