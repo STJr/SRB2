@@ -103,6 +103,15 @@ static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
+#define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
+static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destvalue, INT16 speed, boolean ticbased, INT32 *timer,
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha);
+static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha);
 static void P_ResetColormapFader(sector_t *sector);
 static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, extracolormap_t *dest_exc,
 	boolean ticbased, INT32 duration);
@@ -3472,6 +3481,186 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 
+		case 452: // Set FOF alpha
+		{
+			INT16 destvalue = line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(P_AproxDistance(line->dx, line->dy)>>FRACBITS);
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to operate
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				// If fading an invisible FOF whose render flags we did not yet set,
+				// initialize its alpha to 1
+				// for relative alpha calc
+				if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+					(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+					!(rover->spawnflags & FF_RENDERSIDES) &&
+					!(rover->spawnflags & FF_RENDERPLANES) &&
+					!(rover->flags & FF_RENDERALL))
+					rover->alpha = 1;
+
+				P_RemoveFakeFloorFader(rover);
+				P_FadeFakeFloor(rover,
+					rover->alpha,
+					max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
+					0,                                  // set alpha immediately
+					false, NULL,                        // tic-based logic
+					false,                              // do not handle FF_EXISTS
+					!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
+					false,                              // do not handle lighting
+					false,                              // do not handle colormap
+					false,                              // do not handle collision
+					false,                              // do not do ghost fade (no collision during fade)
+					true);                               // use exact alpha values (for opengl)
+			}
+			break;
+		}
+
+		case 453: // Fade FOF
+		{
+			INT16 destvalue = line->sidenum[1] != 0xffff ?
+				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
+			INT16 speed = line->sidenum[1] != 0xffff ?
+				(INT16)(abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)) : (INT16)(abs(line->dy)>>FRACBITS);
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to operate
+			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+					j++;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				// Prevent continuous execs from interfering on an existing fade
+				if (!(line->flags & ML_EFFECT5)
+					&& rover->fadingdata)
+					//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d\n", ((fade_t*)rover->fadingdata)->timer);
+					continue;
+				}
+
+				if (speed > 0)
+					P_AddFakeFloorFader(rover, secnum, j,
+						destvalue,
+						speed,
+						(line->flags & ML_EFFECT4),         // tic-based logic
+						(line->flags & ML_EFFECT3),         // Relative destvalue
+						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
+						!(line->flags & ML_BOUNCY),         // do not handle collision
+						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
+						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+				else
+				{
+					// If fading an invisible FOF whose render flags we did not yet set,
+					// initialize its alpha to 1
+					// for relative alpha calc
+					if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+						(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+						!(rover->spawnflags & FF_RENDERSIDES) &&
+						!(rover->spawnflags & FF_RENDERPLANES) &&
+						!(rover->flags & FF_RENDERALL))
+						rover->alpha = 1;
+
+					P_RemoveFakeFloorFader(rover);
+					P_FadeFakeFloor(rover,
+						rover->alpha,
+						max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
+						0,                                  // set alpha immediately
+						false, NULL,                        // tic-based logic
+						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
+						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+						!(line->flags & ML_EFFECT2),        // do not handle lighting
+						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
+						!(line->flags & ML_BOUNCY),         // do not handle collision
+						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
+						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+				}
+			}
+			break;
+		}
+
+		case 454: // Stop fading FOF
+		{
+			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			sector_t *sec; // Sector that the FOF is visible in
+			ffloor_t *rover; // FOF that we are going to operate
+
+			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+			{
+				sec = sectors + secnum;
+
+				if (!sec->ffloors)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 454 Executor: Target sector #%d has no FOFs.\n", secnum);
+					return;
+				}
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector->tag == foftag)
+						break;
+				}
+
+				if (!rover)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line type 454 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+					return;
+				}
+
+				P_ResetFakeFloorFader(rover, NULL,
+					!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
+			}
+			break;
+		}
+
 		case 455: // Fade colormap
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 			{
@@ -5414,7 +5603,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	ffloor->spawnflags = ffloor->flags = flags;
 	ffloor->master = master;
 	ffloor->norender = INFTICS;
-
+	ffloor->fadingdata = NULL;
 
 	// Scan the thinkers to check for special conditions applying to this FOF.
 	// If we have thinkers sorted by sector, just check the relevant ones;
@@ -7578,6 +7767,458 @@ void T_Disappear(disappear_t *d)
 			d->timer = d->appeartime;
 			d->exists = true;
 		}
+	}
+}
+
+/** Removes fadingdata from FOF control sector
+ *
+ * \param line	line to search for target faders
+ * \param data	pointer to set new fadingdata to. Can be NULL to erase.
+ */
+static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize)
+{
+	fade_t *fadingdata = (fade_t *)rover->fadingdata;
+	// find any existing thinkers and remove them, then replace with new data
+	if (fadingdata != data)
+	{
+		if (fadingdata)
+		{
+			if (finalize)
+				P_FadeFakeFloor(rover,
+					fadingdata->sourcevalue,
+					fadingdata->alpha >= fadingdata->destvalue ?
+						fadingdata->alpha - 1 : // trigger fade-out finish
+						fadingdata->alpha + 1, // trigger fade-in finish
+					0,
+					fadingdata->ticbased,
+					&fadingdata->timer,
+					fadingdata->doexists,
+					fadingdata->dotranslucent,
+					fadingdata->dolighting,
+					fadingdata->docolormap,
+					fadingdata->docollision,
+					fadingdata->doghostfade,
+					fadingdata->exactalpha);
+			rover->alpha = fadingdata->alpha;
+
+			if (fadingdata->dolighting)
+				P_RemoveLighting(&sectors[rover->secnum]);
+
+			if (fadingdata->docolormap)
+				P_ResetColormapFader(&sectors[rover->secnum]);
+
+			P_RemoveThinker(&fadingdata->thinker);
+		}
+
+		rover->fadingdata = data;
+	}
+}
+
+static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destvalue, INT16 speed, boolean ticbased, INT32 *timer,
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha)
+{
+	boolean stillfading = false;
+	INT32 alpha;
+	fade_t *fadingdata = (fade_t *)rover->fadingdata;
+	(void)docolormap; // *shrug* maybe we can use this in the future. For now, let's be consistent with our other function params
+
+	if (rover->master->special == 258) // Laser block
+		return false;
+
+	// If fading an invisible FOF whose render flags we did not yet set,
+	// initialize its alpha to 1
+	if (dotranslucent &&
+		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+		!(rover->flags & FF_FOG) && // do not include fog
+		!(rover->spawnflags & FF_RENDERSIDES) &&
+		!(rover->spawnflags & FF_RENDERPLANES) &&
+		!(rover->flags & FF_RENDERALL))
+		rover->alpha = 1;
+
+	if (fadingdata)
+		alpha = fadingdata->alpha;
+	else
+		alpha = rover->alpha;
+
+	// routines specific to fade in and fade out
+	if (!ticbased && alpha == destvalue)
+		return stillfading;
+	else if (alpha > destvalue) // fade out
+	{
+		// finish fading out
+		if (speed < 1 || (!ticbased && alpha - speed <= destvalue + speed) ||
+			(ticbased && (--(*timer) <= 0 || alpha <= destvalue)))
+		{
+			alpha = destvalue;
+
+			if (docollision)
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags &= ~FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags &= ~FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags &= ~FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags &= ~FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags &= ~FF_MARIO;
+			}
+		}
+		else // continue fading out
+		{
+			if (!ticbased)
+				alpha -= speed;
+			else
+			{
+				INT16 delta = abs(destvalue - sourcevalue);
+				fixed_t factor = min(FixedDiv(speed - (*timer), speed), 1*FRACUNIT);
+				alpha = max(min(alpha, sourcevalue - (INT16)FixedMul(delta, factor)), destvalue);
+			}
+			stillfading = true;
+		}
+	}
+	else // fade in
+	{
+		// finish fading in
+		if (speed < 1 || (!ticbased && alpha + speed >= destvalue - speed) ||
+			(ticbased && (--(*timer) <= 0 || alpha >= destvalue)))
+		{
+			alpha = destvalue;
+
+			if (docollision)
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags |= FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags |= FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags |= FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags |= FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags |= FF_MARIO;
+			}
+		}
+		else // continue fading in
+		{
+			if (!ticbased)
+				alpha += speed;
+			else
+			{
+				INT16 delta = abs(destvalue - sourcevalue);
+				fixed_t factor = min(FixedDiv(speed - (*timer), speed), 1*FRACUNIT);
+				alpha = min(max(alpha, sourcevalue + (INT16)FixedMul(delta, factor)), destvalue);
+			}
+			stillfading = true;
+		}
+	}
+
+	// routines common to both fade in and fade out
+	if (!stillfading)
+	{
+		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		{
+			if (alpha <= 1)
+				rover->flags &= ~FF_EXISTS;
+			else
+				rover->flags |= FF_EXISTS;
+
+			// Re-render lighting at end of fade
+			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+				rover->target->moved = true;
+		}
+
+		if (dotranslucent && !(rover->flags & FF_FOG))
+		{
+			if (alpha >= 256)
+			{
+				if (!(rover->flags & FF_CUTSOLIDS) &&
+					(rover->spawnflags & FF_CUTSOLIDS))
+				{
+					rover->flags |= FF_CUTSOLIDS;
+					rover->target->moved = true;
+				}
+
+				rover->flags &= ~FF_TRANSLUCENT;
+			}
+			else
+			{
+				rover->flags |= FF_TRANSLUCENT;
+
+				if ((rover->flags & FF_CUTSOLIDS) &&
+					(rover->spawnflags & FF_CUTSOLIDS))
+				{
+					rover->flags &= ~FF_CUTSOLIDS;
+					rover->target->moved = true;
+				}
+			}
+
+			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+				!(rover->spawnflags & FF_RENDERSIDES) &&
+				!(rover->spawnflags & FF_RENDERPLANES))
+			{
+				if (rover->alpha > 1)
+					rover->flags |= FF_RENDERALL;
+				else
+					rover->flags &= ~FF_RENDERALL;
+			}
+		}
+	}
+	else
+	{
+		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		{
+			// Re-render lighting if we haven't yet set FF_EXISTS (beginning of fade)
+			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+				rover->target->moved = true;
+
+			rover->flags |= FF_EXISTS;
+		}
+
+		if (dotranslucent && !(rover->flags & FF_FOG))
+		{
+			rover->flags |= FF_TRANSLUCENT;
+
+			if ((rover->flags & FF_CUTSOLIDS) &&
+				(rover->spawnflags & FF_CUTSOLIDS))
+			{
+				rover->flags &= ~FF_CUTSOLIDS;
+				rover->target->moved = true;
+			}
+
+			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+				!(rover->spawnflags & FF_RENDERSIDES) &&
+				!(rover->spawnflags & FF_RENDERPLANES))
+				rover->flags |= FF_RENDERALL;
+		}
+
+		if (docollision)
+		{
+			if (doghostfade) // remove collision flags during fade
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags &= ~FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags &= ~FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags &= ~FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags &= ~FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags &= ~FF_MARIO;
+			}
+			else // keep collision during fade
+			{
+				if (rover->spawnflags & FF_SOLID)
+					rover->flags |= FF_SOLID;
+				if (rover->spawnflags & FF_SWIMMABLE)
+					rover->flags |= FF_SWIMMABLE;
+				if (rover->spawnflags & FF_QUICKSAND)
+					rover->flags |= FF_QUICKSAND;
+				if (rover->spawnflags & FF_BUSTUP)
+					rover->flags |= FF_BUSTUP;
+				if (rover->spawnflags & FF_MARIO)
+					rover->flags |= FF_MARIO;
+			}
+		}
+	}
+
+	if (!(rover->flags & FF_FOG)) // don't set FOG alpha
+	{
+		if (!stillfading || exactalpha)
+			rover->alpha = alpha;
+		else // clamp fadingdata->alpha to software's alpha levels
+		{
+			if (alpha < 12)
+				rover->alpha = destvalue < 12 ? destvalue : 1; // Don't even draw it
+			else if (alpha < 38)
+				rover->alpha = destvalue >= 12 && destvalue < 38 ? destvalue : 25;
+			else if (alpha < 64)
+				rover->alpha = destvalue >=38 && destvalue < 64 ? destvalue : 51;
+			else if (alpha < 89)
+				rover->alpha = destvalue >= 64 && destvalue < 89 ? destvalue : 76;
+			else if (alpha < 115)
+				rover->alpha = destvalue >= 89 && destvalue < 115 ? destvalue : 102;
+			else if (alpha < 140)
+				rover->alpha = destvalue >= 115 && destvalue < 140 ? destvalue : 128;
+			else if (alpha < 166)
+				rover->alpha = destvalue >= 140 && destvalue < 166 ? destvalue : 154;
+			else if (alpha < 192)
+				rover->alpha = destvalue >= 166 && destvalue < 192 ? destvalue : 179;
+			else if (alpha < 217)
+				rover->alpha = destvalue >= 192 && destvalue < 217 ? destvalue : 204;
+			else if (alpha < 243)
+				rover->alpha = destvalue >= 217 && destvalue < 243 ? destvalue : 230;
+			else // Opaque
+				rover->alpha = destvalue >= 243 ? destvalue : 256;
+		}
+	}
+
+	if (fadingdata)
+		fadingdata->alpha = alpha;
+
+	return stillfading;
+}
+
+/** Adds fake floor fader thinker.
+  *
+  * \param destvalue    transparency value to fade to
+  * \param speed        speed to fade by
+  * \param ticbased     tic-based logic, speed = duration
+  * \param relative     Destvalue is relative to rover->alpha
+  * \param doexists	    handle FF_EXISTS
+  * \param dotranslucent handle FF_TRANSLUCENT
+  * \param dolighting  fade FOF light
+  * \param docollision handle interactive flags
+  * \param doghostfade  no interactive flags during fading
+  * \param exactalpha   use exact alpha values (opengl)
+  */
+static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloornum,
+	INT16 destvalue, INT16 speed, boolean ticbased, boolean relative,
+	boolean doexists, boolean dotranslucent, boolean dolighting, boolean docolormap,
+	boolean docollision, boolean doghostfade, boolean exactalpha)
+{
+	fade_t *d;
+
+	// If fading an invisible FOF whose render flags we did not yet set,
+	// initialize its alpha to 1
+	if (dotranslucent &&
+		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+		!(rover->spawnflags & FF_RENDERSIDES) &&
+		!(rover->spawnflags & FF_RENDERPLANES) &&
+		!(rover->flags & FF_RENDERALL))
+		rover->alpha = 1;
+
+	// already equal, nothing to do
+	if (rover->alpha == max(1, min(256, relative ? rover->alpha + destvalue : destvalue)))
+		return;
+
+	d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
+
+	d->thinker.function.acp1 = (actionf_p1)T_Fade;
+	d->rover = rover;
+	d->sectornum = (UINT32)sectornum;
+	d->ffloornum = (UINT32)ffloornum;
+
+	d->alpha = d->sourcevalue = rover->alpha;
+	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // ffloor->alpha is 1-256
+
+	if (ticbased)
+	{
+		d->ticbased = true;
+		d->timer = d->speed = abs(speed); // use d->speed as total duration
+	}
+	else
+	{
+		d->ticbased = false;
+		d->speed = max(1, speed); // minimum speed 1/tic // if speed < 1, alpha is set immediately in thinker
+		d->timer = -1;
+	}
+
+	d->doexists = doexists;
+	d->dotranslucent = dotranslucent;
+	d->dolighting = dolighting;
+	d->docolormap = docolormap;
+	d->docollision = docollision;
+	d->doghostfade = doghostfade;
+	d->exactalpha = exactalpha;
+
+	// find any existing thinkers and remove them, then replace with new data
+	P_ResetFakeFloorFader(rover, d, false);
+
+	// Set a separate thinker for shadow fading
+	if (dolighting && !(rover->flags & FF_NOSHADE))
+	{
+		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
+		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
+		fixed_t adjustedlightdelta = FixedMul(lightdelta, alphapercent);
+
+		if (rover->target->lightlevel >= sectors[rover->secnum].spawn_lightlevel) // fading out, get lighter
+			d->destlightlevel = rover->target->lightlevel - adjustedlightdelta;
+		else // fading in, get darker
+			d->destlightlevel = rover->target->lightlevel + adjustedlightdelta;
+
+		P_FadeLightBySector(&sectors[rover->secnum],
+			d->destlightlevel,
+			ticbased ? d->timer :
+				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT,
+			true);
+	}
+	else
+		d->destlightlevel = -1;
+
+	// Set a separate thinker for colormap fading
+	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap)
+	{
+		extracolormap_t *dest_exc,
+			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
+
+		INT32 colordelta = R_GetRgbaA(sectors[rover->secnum].spawn_extra_colormap->rgba); // alpha is from 0
+		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
+		fixed_t adjustedcolordelta = FixedMul(colordelta, alphapercent);
+		INT32 coloralpha;
+
+		coloralpha = adjustedcolordelta;
+
+		dest_exc = R_CopyColormap(sectors[rover->secnum].spawn_extra_colormap, false);
+		dest_exc->rgba = R_GetRgbaRGB(dest_exc->rgba) + R_PutRgbaA(coloralpha);
+
+		if (!(d->dest_exc = R_GetColormapFromList(dest_exc)))
+		{
+			dest_exc->colormap = R_CreateLightTable(dest_exc);
+			R_AddColormapToList(dest_exc);
+			d->dest_exc = dest_exc;
+		}
+		else
+			Z_Free(dest_exc);
+
+		// If fading from 0, set source_exc rgb same to dest_exc
+		if (!R_CheckDefaultColormap(d->dest_exc, true, false, false)
+			&& R_CheckDefaultColormap(source_exc, true, false, false))
+		{
+			extracolormap_t *exc = R_CopyColormap(source_exc, false);
+			exc->rgba = R_GetRgbaRGB(d->dest_exc->rgba) + R_PutRgbaA(R_GetRgbaA(source_exc->rgba));
+			exc->fadergba = R_GetRgbaRGB(d->dest_exc->rgba) + R_PutRgbaA(R_GetRgbaA(source_exc->fadergba));
+
+			if (!(source_exc = R_GetColormapFromList(exc)))
+			{
+				exc->colormap = R_CreateLightTable(exc);
+				R_AddColormapToList(exc);
+				source_exc = exc;
+			}
+			else
+				Z_Free(exc);
+		}
+
+		Add_ColormapFader(&sectors[rover->secnum], source_exc, d->dest_exc, true,
+			ticbased ? d->timer :
+				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT);
+	}
+
+	P_AddThinker(&d->thinker);
+}
+
+/** Makes a FOF fade
+  *
+  * \param d Fade thinker.
+  * \sa P_AddFakeFloorFader
+  */
+void T_Fade(fade_t *d)
+{
+	if (d->rover && !P_FadeFakeFloor(d->rover, d->sourcevalue, d->destvalue, d->speed, d->ticbased, &d->timer,
+		d->doexists, d->dotranslucent, d->dolighting, d->docolormap, d->docollision, d->doghostfade, d->exactalpha))
+	{
+		// Finalize lighting, copypasta from P_AddFakeFloorFader
+		if (d->dolighting && !(d->rover->flags & FF_NOSHADE) && d->destlightlevel > -1)
+			sectors[d->rover->secnum].lightlevel = d->destlightlevel;
+
+		// Finalize colormap
+		if (d->docolormap && !(d->rover->flags & FF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
+			sectors[d->rover->secnum].extra_colormap = d->dest_exc;
+
+		P_RemoveFakeFloorFader(d->rover);
 	}
 }
 
