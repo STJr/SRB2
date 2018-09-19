@@ -1751,6 +1751,26 @@ static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 }
 
 //
+// Y_SetNightsBonus
+//
+static void Y_SetNightsBonus(player_t *player, y_bonus_t *bstruct)
+{
+	strncpy(bstruct->patch, "YB_NIGHT", sizeof(bstruct->patch));
+	bstruct->display = true;
+	bstruct->points = player->totalmarescore;
+}
+
+//
+// Y_SetLapBonus
+//
+static void Y_SetLapBonus(player_t *player, y_bonus_t *bstruct)
+{
+	strncpy(bstruct->patch, "YB_LAP", sizeof(bstruct->patch));
+	bstruct->display = true;
+	bstruct->points = max(0, player->totalmarebonuslap * 1000);
+}
+
+//
 // Y_SetLinkBonus
 //
 static void Y_SetLinkBonus(player_t *player, y_bonus_t *bstruct)
@@ -1811,7 +1831,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
-bonus_f bonuses_list[4][4] = {
+bonus_f bonuses_list[6][4] = {
 	{
 		Y_SetNullBonus,
 		Y_SetNullBonus,
@@ -1835,6 +1855,18 @@ bonus_f bonuses_list[4][4] = {
 		Y_SetGuardBonus,
 		Y_SetRingBonus,
 		Y_SetPerfectBonus,
+	},
+	{
+		Y_SetNullBonus,
+		Y_SetNightsBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
+	},
+	{
+		Y_SetNullBonus,
+		Y_SetLinkBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
 	},
 };
 
@@ -1911,8 +1943,8 @@ static void Y_AwardSpecialStageBonus(void)
 
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
 			Y_SetNullBonus(&players[i], &localbonus);
-		else if (maptol & TOL_NIGHTS) // Link instead of Rings
-			Y_SetLinkBonus(&players[i], &localbonus);
+		else if (maptol & TOL_NIGHTS) // Mare score instead of Rings
+			Y_SetNightsBonus(&players[i], &localbonus);
 		else
 			Y_SetRingBonus(&players[i], &localbonus);
 		players[i].score += localbonus.points;

@@ -1291,6 +1291,7 @@ typedef enum
 	tc_noenemies,
 	tc_eachtime,
 	tc_disappear,
+	tc_fade,
 	tc_fadecolormap,
 	tc_planedisplace,
 #ifdef POLYOBJECTS
@@ -1908,6 +1909,34 @@ static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 }
 
 //
+// SaveFadeThinker
+//
+// Saves a fade_t thinker
+//
+static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
+{
+	const fade_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, CheckAddNetColormapToList(ht->dest_exc));
+	WRITEUINT32(save_p, ht->sectornum);
+	WRITEUINT32(save_p, ht->ffloornum);
+	WRITEINT32(save_p, ht->alpha);
+	WRITEINT16(save_p, ht->sourcevalue);
+	WRITEINT16(save_p, ht->destvalue);
+	WRITEINT16(save_p, ht->destlightlevel);
+	WRITEINT16(save_p, ht->speed);
+	WRITEUINT8(save_p, (UINT8)ht->ticbased);
+	WRITEINT32(save_p, ht->timer);
+	WRITEUINT8(save_p, ht->doexists);
+	WRITEUINT8(save_p, ht->dotranslucent);
+	WRITEUINT8(save_p, ht->dolighting);
+	WRITEUINT8(save_p, ht->docolormap);
+	WRITEUINT8(save_p, ht->docollision);
+	WRITEUINT8(save_p, ht->doghostfade);
+	WRITEUINT8(save_p, ht->exactalpha);
+}
+
+//
 // SaveFadeColormapThinker
 //
 // Saves a fadecolormap_t thinker
@@ -2245,12 +2274,16 @@ static void P_NetArchiveThinkers(void)
 			SaveDisappearThinker(th, tc_disappear);
 			continue;
 		}
+		else if (th->function.acp1 == (actionf_p1)T_Fade)
+		{
+			SaveFadeThinker(th, tc_fade);
+			continue;
+		}
 		else if (th->function.acp1 == (actionf_p1)T_FadeColormap)
 		{
 			SaveFadeColormapThinker(th, tc_fadecolormap);
 			continue;
 		}
-
 		else if (th->function.acp1 == (actionf_p1)T_PlaneDisplace)
 		{
 			SavePlaneDisplaceThinker(th, tc_planedisplace);
@@ -2973,6 +3006,52 @@ static inline void LoadDisappearThinker(actionf_p1 thinker)
 }
 
 //
+// LoadFadeThinker
+//
+// Loads a fade_t thinker
+//
+static inline void LoadFadeThinker(actionf_p1 thinker)
+{
+	sector_t *ss;
+	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->dest_exc = GetNetColormapFromList(READUINT32(save_p));
+	ht->sectornum = READUINT32(save_p);
+	ht->ffloornum = READUINT32(save_p);
+	ht->alpha = READINT32(save_p);
+	ht->sourcevalue = READINT16(save_p);
+	ht->destvalue = READINT16(save_p);
+	ht->destlightlevel = READINT16(save_p);
+	ht->speed = READINT16(save_p);
+	ht->ticbased = (boolean)READUINT8(save_p);
+	ht->timer = READINT32(save_p);
+	ht->doexists = READUINT8(save_p);
+	ht->dotranslucent = READUINT8(save_p);
+	ht->dolighting = READUINT8(save_p);
+	ht->docolormap = READUINT8(save_p);
+	ht->docollision = READUINT8(save_p);
+	ht->doghostfade = READUINT8(save_p);
+	ht->exactalpha = READUINT8(save_p);
+
+	ss = LoadSector(ht->sectornum);
+	if (ss)
+	{
+		size_t j = 0; // ss->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
+		ffloor_t *rover;
+		for (rover = ss->ffloors; rover; rover = rover->next)
+		{
+			if (j == ht->ffloornum)
+			{
+				ht->rover = rover;
+				rover->fadingdata = ht;
+				break;
+			}
+			j++;
+		}
+	}
+	P_AddThinker(&ht->thinker);
+}
+
 // LoadFadeColormapThinker
 //
 // Loads a fadecolormap_t from a save game
@@ -3317,6 +3396,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_disappear:
 				LoadDisappearThinker((actionf_p1)T_Disappear);
+				break;
+
+			case tc_fade:
+				LoadFadeThinker((actionf_p1)T_Fade);
 				break;
 
 			case tc_fadecolormap:

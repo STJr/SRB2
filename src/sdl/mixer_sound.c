@@ -604,6 +604,10 @@ static void do_fading_callback()
 
 static void count_music_bytes(int chan, void *stream, int len, void *udata)
 {
+	(void)chan;
+	(void)stream;
+	(void)udata;
+
 	if (!music || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return;
 	music_bytes += len;
@@ -623,6 +627,8 @@ static void music_loop(void)
 
 static UINT32 music_fade(UINT32 interval, void *param)
 {
+	(void)param;
+
 	if (!is_fading ||
 		internal_volume == fading_target ||
 		fading_duration == 0)
@@ -989,6 +995,7 @@ boolean I_LoadSong(char *data, size_t len)
 	)
 		I_UnloadSong();
 
+	// always do this whether or not a music already exists
 	var_cleanup();
 
 #ifdef HAVE_LIBGME

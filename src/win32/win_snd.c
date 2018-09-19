@@ -812,10 +812,10 @@ void I_SetMusicVolume(UINT8 volume)
 
 UINT32 I_GetSongLength()
 {
-	if (midimode)
+	if (I_SongType() == MU_MID)
 		return 0;
 	UINT32 length;
-	e = FMOD_Sound_GetLength(music_stream, length, FMOD_TIMEUNIT_MS);
+	FMR_MUSIC(FMOD_Sound_GetLength(music_stream, &length, FMOD_TIMEUNIT_MS));
 	return length;
 }
 
@@ -832,7 +832,7 @@ UINT32 I_GetSongLoopPoint(void)
 
 boolean I_SetSongPosition(UINT32 position)
 {
-	if(midimode)
+	if(I_SongType() == MU_MID)
 		// Dummy out; this works for some MIDI, but not others.
 		// SDL does not support this for any MIDI.
 		return false;
@@ -852,7 +852,7 @@ boolean I_SetSongPosition(UINT32 position)
 
 UINT32 I_GetSongPosition(void)
 {
-	if(midimode)
+	if(I_SongType() == MU_MID)
 		// Dummy out because unsupported, even though FMOD does this correctly.
 		return 0;
 	FMOD_RESULT e;
@@ -922,7 +922,7 @@ void I_StopFadingSong(void)
 {
 }
 
-boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
 {
 	(void)target_volume;
 	(void)source_volume;
@@ -930,7 +930,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	return false;
 }
 
-boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
 {
 	(void)target_volume;
 	(void)ms;
