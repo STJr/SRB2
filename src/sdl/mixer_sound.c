@@ -506,7 +506,7 @@ static UINT32 get_adjusted_position(UINT32 position)
 		return position;
 }
 
-static void do_fading_callback()
+static void do_fading_callback(void)
 {
 	if (fading_callback)
 		(*fading_callback)();
@@ -1170,7 +1170,7 @@ void I_StopSong(void)
 	var_cleanup();
 }
 
-void I_PauseSong()
+void I_PauseSong(void)
 {
 	if(I_SongType() == MU_MID) // really, SDL Mixer? why can't you pause MIDI???
 		return;
@@ -1182,7 +1182,7 @@ void I_PauseSong()
 	songpaused = true;
 }
 
-void I_ResumeSong()
+void I_ResumeSong(void)
 {
 	if (I_SongType() == MU_MID)
 		return;
