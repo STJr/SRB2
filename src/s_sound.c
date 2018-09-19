@@ -1336,17 +1336,7 @@ UINT32 S_GetMusicPosition(void)
 /// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
 /// ------------------------
 
-// make the buildbots happy, because this safely zeroes out a struct
-// https://stackoverflow.com/q/1538943
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-
-static const musicstack_t empty_music_stack_entry = {{0}};
-
-#pragma clang diagnostic pop
-#pragma GCC diagnostic pop
+static const musicstack_t empty_music_stack_entry = {"\0", 0, false, 0, 0, 0};
 
 void S_SetStackAdjustmentStart(void)
 {
