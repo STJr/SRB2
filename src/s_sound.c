@@ -1369,7 +1369,7 @@ void S_AdjustMusicStackTics(void)
 	}
 }
 
-static void S_ResetMusicStack()
+static void S_ResetMusicStack(void)
 {
 	size_t i;
 	for (i = 0; i < NUMMUSICSTACKS; i++)
@@ -1554,7 +1554,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 
 	if (entry.status == JT_MASTER)
 	{
-		mapmuschanged = (boolean)strnicmp(entry.musname, mapmusname, 7);
+		mapmuschanged = strnicmp(entry.musname, mapmusname, 7);
 		S_ResetMusicStack();
 	}
 	else
