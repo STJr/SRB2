@@ -806,7 +806,7 @@ UINT32 I_GetSongLength(void)
 #ifdef HAVE_MIXERX
 		double xlength = Mix_GetMusicTotalTime(music);
 		if (xlength >= 0)
-			return (UINT32)floor(xlength * 1000.);
+			return (UINT32)(xlength*1000);
 #endif
 		// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
 		// SDL mixer can't read music length itself.
@@ -953,7 +953,7 @@ UINT32 I_GetSongPosition(void)
 #ifdef HAVE_MIXERX
 		double xposition = Mix_GetMusicPosition(music);
 		if (xposition >= 0)
-			return (UINT32)floor(xposition * 1000.);
+			return (UINT32)(xposition*1000);
 #endif
 		return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
 		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
