@@ -869,7 +869,7 @@ boolean I_SetSongPosition(UINT32 position)
 	{
 		// This isn't 100% correct because we don't account for loop points because we can't get them.
 		// But if you seek past end of song, OpenMPT seeks to 0. So adjust the position anyway.
-		openmpt.module_set_position_seconds(mod, (double)get_adjusted_position(position)/1000.); // returns new position
+		openmpt.module_set_position_seconds(mod, (double)(get_adjusted_position(position)/1000.0L)); // returns new position
 		return true;
 	}
 	else
