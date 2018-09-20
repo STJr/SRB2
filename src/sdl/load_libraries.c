@@ -2,6 +2,14 @@
 /// Dynamic Library Loading
 ///
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4214 4244)
+#endif
+#include "SDL.h"
+#ifdef _MSC_VER
+#pragma warning(default : 4214 4244)
+#endif
+
 #include "load_libraries.h"
 
 ///
