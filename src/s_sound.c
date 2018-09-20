@@ -1557,10 +1557,11 @@ static void S_ChangeMusicToQueue(void)
 
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
+	char newmusic[7];
+
 	if (S_MusicDisabled())
 		return;
 
-	char newmusic[7];
 	strncpy(newmusic, mmusic, 7);
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
 	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
@@ -1715,7 +1716,7 @@ boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 m
 	if (source_volume < 0)
 		return I_FadeSong(target_volume, ms, NULL);
 	else
-		return I_FadeSongFromVolume(target_volume, source_volume, ms, false);
+		return I_FadeSongFromVolume(target_volume, source_volume, ms, NULL);
 }
 
 boolean S_FadeOutStopMusic(UINT32 ms)
