@@ -927,6 +927,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	(void)target_volume;
 	(void)source_volume;
 	(void)ms;
+	(void)callback;
 	return false;
 }
 
@@ -934,6 +935,7 @@ boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
 {
 	(void)target_volume;
 	(void)ms;
+	(void)callback;
 	return false;
 }
 
