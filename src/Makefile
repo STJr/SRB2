@@ -73,7 +73,8 @@
 #     Compile without BSD API, add 'NONET=1'
 #     Compile without IPX/SPX, add 'NOIPX=1'
 #     Compile Mingw/SDL with S_DS3S, add 'DS3D=1'
-#     Compile without libopenmpt, add 'NOOPENMPT=1'
+#     Compile without libopenmpt on Windows, add 'NOOPENMPT=1'
+#     Compile with libopenmpt on other platforms, add 'OPENMPT=1'
 #     Compile with S_FMOD3D, add 'FMOD=1' (WIP)
 #     Compile with S_OPENAL, add 'OPENAL=1' (WIP)
 #     To link with the whole SDL_Image lib to load Icons, add 'SDL_IMAGE=1' but it isn't not realy needed
@@ -186,8 +187,20 @@ HAVE_LIBGME=1
 endif
 endif
 
+ifdef MINGW
 ifndef NOOPENMPT
 HAVE_OPENMPT=1
+endif
+else
+ifdef MINGW64
+ifndef NOOPENMPT
+HAVE_OPENMPT=1
+endif
+else
+ifdef OPENMPT
+HAVE_OPENMPT=1
+endif
+endif
 endif
 
 ifdef SOLARIS
