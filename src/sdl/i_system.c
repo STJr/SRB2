@@ -124,6 +124,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include "macosx/mac_resources.h"
 #endif
 
+#ifndef errno
+#include <errno.h>
+#endif
+
 // Locations for searching the srb2.srb
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
@@ -2712,8 +2716,30 @@ const char *I_LocateWad(void)
 #ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
+#define MEMAVAILABLE "MemAvailable:"
 #define MEMFREE "MemFree:"
+#define CACHED "Cached:"
+#define BUFFERS "Buffers:"
+#define SHMEM "Shmem:"
 #endif
+
+/* Parse the contents of /proc/meminfo (in buf), return value of "name"
+ * (example: MemTotal) */
+static long get_entry(const char* name, const char* buf)
+{
+    char* hit = strstr(buf, name);
+    if (hit == NULL) {
+        return -1;
+    }
+
+    errno = 0;
+    long val = strtol(hit + strlen(name), NULL, 10);
+    if (errno != 0) {
+        CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
+        return -1;
+    }
+    return val;
+}
 
 // quick fix for compil
 UINT32 I_GetFreeMem(UINT32 *total)
@@ -2809,7 +2835,17 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if ((memTag = strstr(buf, MEMFREE)) == NULL)
+	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
+	{
+		Cached = get_entry(CACHED, buf);
+		MemFree = get_entry(MEMFREE, buf);
+		Buffers = get_entry(BUFFERS, buf);
+		Shmem = get_entry(SHMEM, buf);
+		MemAvailable = Cached + MemFree + Buffers - Shmem;
+		guessed = true;
+	}
+
+	if (MemAvailable == -1 && guessed)
 	{
 		// Error
 		if (total)
@@ -2817,8 +2853,15 @@ UINT32 I_GetFreeMem(UINT32 *total)
 		return 0;
 	}
 
-	memTag += sizeof (MEMFREE);
-	freeKBytes = atoi(memTag);
+	if (guessed)
+	{
+		freeKBytes = MemAvailable;
+	}
+	else
+	{
+		memTag += sizeof (MEMAVAILABLE);
+		freeKBytes = atoi(memTag);
+	}
 
 	if (total)
 		*total = totalKBytes << 10;
