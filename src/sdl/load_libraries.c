@@ -2,6 +2,8 @@
 /// Dynamic Library Loading
 ///
 
+#include "../doomdef.h"
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
 #endif
