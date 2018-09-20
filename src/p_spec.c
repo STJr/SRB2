@@ -3090,7 +3090,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
-				ffloor_t *rover, *foundrover = NULL; // FOF that we are going to crumble
+				ffloor_t *rover; // FOF that we are going to crumble
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3106,7 +3107,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (rover->master->frontsector->tag == foftag)
 						{
-							foundrover = rover; // for debug, "Can't find a FOF" message below
+							foundrover = true;
 
 							EV_CrumbleChain(sec, rover);
 						}
@@ -3276,7 +3277,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
-				ffloor_t *rover, *foundrover = NULL; // FOF to vanish/un-vanish
+				ffloor_t *rover; // FOF to vanish/un-vanish
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3293,7 +3295,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (rover->master->frontsector->tag == foftag)
 						{
-							foundrover = rover; // for debug, "Can't find a FOF" message below
+							foundrover = true;
 
 							oldflags = rover->flags;
 
@@ -3323,7 +3325,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
-				ffloor_t *rover, *foundrover = NULL; // FOF that we are going to make fall down
+				ffloor_t *rover; // FOF that we are going to make fall down
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				player_t *player = NULL; // player that caused FOF to fall
 				boolean respawn = true; // should the fallen FOF respawn?
 
@@ -3347,7 +3350,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (rover->master->frontsector->tag == foftag)
 						{
-							foundrover = rover; // for debug, "Can't find a FOF" message below
+							foundrover = true;
 
 							if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
 								respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
@@ -3492,7 +3495,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
+			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3508,7 +3512,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					if (rover->master->frontsector->tag == foftag)
 					{
-						foundrover = rover; // for debug, "Can't find a FOF" message below
+						foundrover = true;
 
 						// If fading an invisible FOF whose render flags we did not yet set,
 						// initialize its alpha to 1
@@ -3554,7 +3558,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
+			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3571,7 +3576,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					if (rover->master->frontsector->tag == foftag)
 					{
-						foundrover = rover; // for debug, "Can't find a FOF" message below
+						foundrover = true;
 
 						// Prevent continuous execs from interfering on an existing fade
 						if (!(line->flags & ML_EFFECT5)
@@ -3639,7 +3644,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
-			ffloor_t *rover, *foundrover = NULL; // FOF that we are going to operate
+			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3655,7 +3661,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					if (rover->master->frontsector->tag == foftag)
 					{
-						foundrover = rover; // for debug, "Can't find a FOF" message below
+						foundrover = true;
 
 						P_ResetFakeFloorFader(rover, NULL,
 							!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
