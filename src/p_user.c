@@ -2255,10 +2255,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	}
 
 	if (player->powers[pw_spacetime] > 1 && !P_InSpaceSector(player->mo))
-	{
 		player->powers[pw_spacetime] = 0;
-		P_RestoreMusic(player);
-	}
 
 	// Underwater audio cues
 	if (P_IsLocalPlayer(player) && !player->bot)
