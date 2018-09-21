@@ -2815,7 +2815,6 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	long Buffers;
 	long Shmem;
 	long MemAvailable = -1;
-	boolean guessed = false; // Stupid way to verify if the amount was guessed or not.
 
 	meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
 	n = read(meminfo_fd, buf, 1023);
@@ -2848,26 +2847,21 @@ UINT32 I_GetFreeMem(UINT32 *total)
 		Buffers = get_entry(BUFFERS, buf);
 		Shmem = get_entry(SHMEM, buf);
 		MemAvailable = Cached + MemFree + Buffers - Shmem;
-		guessed = true;
-	}
 
-	if (MemAvailable == -1 && guessed)
-	{
-		// Error
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-
-	if (guessed)
-	{
+		if (MemAvailable == -1)
+		{
+            // Error
+			if (total)
+				*total = 0L;
+			return 0;
+		}
 		freeKBytes = MemAvailable;
-	}
-	else
-	{
+    }
+    else
+    {
 		memTag += sizeof (MEMAVAILABLE);
 		freeKBytes = atoi(memTag);
-	}
+    }
 
 	if (total)
 		*total = totalKBytes << 10;
