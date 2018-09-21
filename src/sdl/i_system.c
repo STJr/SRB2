@@ -1,6 +1,6 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
-//
+- //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
 //
@@ -2095,7 +2095,6 @@ INT32 I_StartupSystem(void)
 	return 0;
 }
 
-
 //
 // I_Quit
 //
@@ -2721,25 +2720,26 @@ const char *I_LocateWad(void)
 #define CACHED "Cached:"
 #define BUFFERS "Buffers:"
 #define SHMEM "Shmem:"
-#endif
 
 /* Parse the contents of /proc/meminfo (in buf), return value of "name"
  * (example: MemTotal) */
 static long get_entry(const char* name, const char* buf)
 {
+    long val;
     char* hit = strstr(buf, name);
     if (hit == NULL) {
         return -1;
     }
 
     errno = 0;
-    long val = strtol(hit + strlen(name), NULL, 10);
+    val = strtol(hit + strlen(name), NULL, 10);
     if (errno != 0) {
         CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
         return -1;
     }
     return val;
 }
+#endif
 
 // quick fix for compil
 UINT32 I_GetFreeMem(UINT32 *total)
