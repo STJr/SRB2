@@ -1429,6 +1429,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Eaten by player!
 			if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+			{
 				player->powers[pw_underwater] = underwatertics + 1;
 				P_RestoreMusic(player);
 			}
