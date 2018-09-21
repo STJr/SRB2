@@ -9185,9 +9185,12 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL))
 	{
 		if (player->powers[pw_underwater] <= 12*TICRATE+1)
+		{
+			player->powers[pw_underwater] = 0;
 			P_RestoreMusic(player); //incase they were about to drown
-
-		player->powers[pw_underwater] = 0;
+		}
+		else
+			player->powers[pw_underwater] = 0;
 	}
 	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
 		player->powers[pw_underwater]--;

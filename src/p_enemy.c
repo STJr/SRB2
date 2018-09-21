@@ -3227,9 +3227,12 @@ void A_WaterShield(mobj_t *actor)
 	}
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+	{
+		player->powers[pw_underwater] = 0;
 		P_RestoreMusic(player);
-
-	player->powers[pw_underwater] = 0;
+	}
+	else
+		player->powers[pw_underwater] = 0;
 
 	if (player->powers[pw_spacetime] > 1)
 		player->powers[pw_spacetime] = 0;
