@@ -596,7 +596,7 @@ void searchfilemenu(char *tempname)
 
 	if (tempname)
 	{
-		dir_on[menudepthleft] = first;
+		dir_on[menudepthleft] = 0;
 		Z_Free(tempname);
 	}
 }
