@@ -66,6 +66,7 @@
 #     Compile without 3D sound support, add 'NOHS=1'
 #     Compile with GDBstubs, add 'RDB=1'
 #     Compile without PNG, add 'NOPNG=1'
+#     Compile without zlib, add 'NOZLIB=1'
 #
 # Addon for SDL:
 #     To Cross-Compile, add 'SDL_CONFIG=/usr/*/bin/sdl-config'
@@ -119,6 +120,7 @@ include Makefile.cfg
 
 ifdef DUMMY
 NOPNG=1
+NOZLIB=1
 NONET=1
 NOHW=1
 NOHS=1
@@ -199,6 +201,7 @@ endif
 
 ifdef NDS
 NOPNG=1
+NOZLIB=1
 NONET=1
 #NOHW=1
 NOHS=1
@@ -325,13 +328,6 @@ LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
 
-ZLIB_PKGCONFIG?=zlib
-ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
-ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
-
-LIBS+=$(ZLIB_LDFLAGS)
-CFLAGS+=$(ZLIB_CFLAGS)
-
 ifdef HAVE_LIBGME
 OPTS+=-DHAVE_LIBGME
 
@@ -341,6 +337,18 @@ LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
 
 LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
+endif
+
+ifndef NOZLIB
+OPTS+=-DHAVE_ZLIB
+ZLIB_PKGCONFIG?=zlib
+ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
+ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
+
+LIBS+=$(ZLIB_LDFLAGS)
+CFLAGS+=$(ZLIB_CFLAGS)
+else
+NOPNG=1
 endif
 
 ifdef STATIC

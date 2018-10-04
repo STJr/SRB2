@@ -38,9 +38,6 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
-
-#define HAVE_ZLIB
 
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
@@ -56,8 +53,11 @@
 #define _FILE_OFFSET_BITS 0
 #endif
 
-#include "zlib.h"
 #endif
+#endif
+
+#ifdef HAVE_ZLIB
+#include "zlib.h"
 #endif
 
 UINT8 sound_started = false;
@@ -361,7 +361,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return NULL; // No zlib support
 #endif
 	}
 	// Try to read it as a GME sound
@@ -621,7 +621,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return true;
 #endif
 	}
 	else if (!gme_open_data(data, len, &gme, 44100))
@@ -841,5 +842,3 @@ void I_UnRegisterSong(INT32 handle)
 	Mix_FreeMusic(music);
 	music = NULL;
 }
-
-#endif
