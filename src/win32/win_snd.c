@@ -17,9 +17,6 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
-
-#define HAVE_ZLIB
 
 #ifndef _MSC_VER
 #ifndef _WII
