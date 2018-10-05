@@ -52,8 +52,6 @@
 #ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 0
 #endif
-
-#endif
 #endif
 
 #ifdef HAVE_ZLIB
@@ -842,3 +840,5 @@ void I_UnRegisterSong(INT32 handle)
 	Mix_FreeMusic(music);
 	music = NULL;
 }
+
+#endif
