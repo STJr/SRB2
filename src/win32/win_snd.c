@@ -34,6 +34,7 @@
 #define _FILE_OFFSET_BITS 0
 #endif
 
+#ifdef HAVE_ZLIB
 #include "zlib.h"
 #endif
 #endif
