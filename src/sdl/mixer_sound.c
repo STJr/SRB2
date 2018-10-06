@@ -178,7 +178,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 			return NULL; // would and/or did wrap, can't store.
 		break;
 	}
-	sound = Z_Malloc(newsamples<<2, PU_SOUND, 0); // samples * frequency shift * bytes per sample * channels
+	sound = Z_Malloc(newsamples<<2, PU_SOUND, NULL); // samples * frequency shift * bytes per sample * channels
 
 	s = (SINT8 *)stream;
 	d = (INT16 *)sound;
