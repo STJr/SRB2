@@ -178,7 +178,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 			return NULL; // would and/or did wrap, can't store.
 		break;
 	}
-	sound = malloc(newsamples<<2); // samples * frequency shift * bytes per sample * channels
+	sound = Z_Malloc(newsamples<<2, PU_SOUND, 0); // samples * frequency shift * bytes per sample * channels
 
 	s = (SINT8 *)stream;
 	d = (INT16 *)sound;
@@ -401,7 +401,22 @@ void *I_GetSfx(sfxinfo_t *sfx)
 void I_FreeSfx(sfxinfo_t *sfx)
 {
 	if (sfx->data)
+	{
+		Mix_Chunk *chunk = (Mix_Chunk*)sfx->data;
+		UINT8 *abufdata = NULL;
+		if (chunk->allocated == 0)
+		{
+			// We allocated the data in this chunk, so get the abuf from mixer, then let it free the chunk, THEN we free the data
+			// I believe this should ensure the sound is not playing when we free it
+			abufdata = chunk->abuf;
+		}
 		Mix_FreeChunk(sfx->data);
+		if (abufdata)
+		{
+			// I'm going to assume we used Z_Malloc to allocate this data.
+			Z_Free(abufdata);
+		}
+	}
 	sfx->data = NULL;
 	sfx->lumpnum = LUMPERROR;
 }
