@@ -387,7 +387,15 @@ void *I_GetSfx(sfxinfo_t *sfx)
 #endif
 
 	// Try to load it as a WAVE or OGG using Mixer.
-	return Mix_LoadWAV_RW(SDL_RWFromMem(lump, sfx->length), 1);
+	SDL_RWops *rw = SDL_RWFromMem(lump, sfx->length);
+	if (rw != NULL)
+	{
+		Mix_Chunk *chunk = Mix_LoadWAV_RW(rw, 1);
+		SDL_RWclose(rw);
+		return chunk;
+	}
+
+	return NULL; // haven't been able to get anything
 }
 
 void I_FreeSfx(sfxinfo_t *sfx)
@@ -635,7 +643,12 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	}
 #endif
 
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
+	SDL_RWops *rw = SDL_RWFromMem(data, len);
+	if (rw != NULL)
+	{
+		music = Mix_LoadMUS_RW(rw, SDL_FALSE);
+		SDL_RWclose(rw);
+	}
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
@@ -798,7 +811,12 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 
 INT32 I_RegisterSong(void *data, size_t len)
 {
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
+	SDL_RWops *rw = SDL_RWFromMem(data, len);
+	if (rw != NULL)
+	{
+		music = Mix_LoadMUS_RW(rw, SDL_FALSE);
+		SDL_RWclose(rw);
+	}
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
