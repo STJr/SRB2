@@ -246,6 +246,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 {
 	void *lump;
 	Mix_Chunk *chunk;
+	SDL_RWops *rw;
 #ifdef HAVE_LIBGME
 	Music_Emu *emu;
 	gme_info_t *info;
@@ -387,10 +388,10 @@ void *I_GetSfx(sfxinfo_t *sfx)
 #endif
 
 	// Try to load it as a WAVE or OGG using Mixer.
-	SDL_RWops *rw = SDL_RWFromMem(lump, sfx->length);
+	rw = SDL_RWFromMem(lump, sfx->length);
 	if (rw != NULL)
 	{
-		Mix_Chunk *chunk = Mix_LoadWAV_RW(rw, 1);
+		chunk = Mix_LoadWAV_RW(rw, 1);
 		SDL_RWclose(rw);
 		return chunk;
 	}
@@ -547,6 +548,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	char *data;
 	size_t len;
 	lumpnum_t lumpnum = W_CheckNumForName(va("O_%s",musicname));
+	SDL_RWops *rw;
 
 	I_Assert(!music);
 #ifdef HAVE_LIBGME
@@ -658,7 +660,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	}
 #endif
 
-	SDL_RWops *rw = SDL_RWFromMem(data, len);
+	rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
 		music = Mix_LoadMUS_RW(rw, SDL_FALSE);
