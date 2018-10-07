@@ -39,6 +39,7 @@
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
 
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -53,10 +54,9 @@
 #define _FILE_OFFSET_BITS 0
 #endif
 
-#ifdef HAVE_ZLIB
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 UINT8 sound_started = false;
 
