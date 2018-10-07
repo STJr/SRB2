@@ -52,10 +52,10 @@
 #ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 0
 #endif
-#endif
 
 #ifdef HAVE_ZLIB
 #include "zlib.h"
+#endif
 #endif
 
 UINT8 sound_started = false;
