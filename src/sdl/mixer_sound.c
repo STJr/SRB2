@@ -392,7 +392,6 @@ void *I_GetSfx(sfxinfo_t *sfx)
 	if (rw != NULL)
 	{
 		chunk = Mix_LoadWAV_RW(rw, 1);
-		SDL_RWclose(rw);
 		return chunk;
 	}
 
@@ -663,8 +662,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
-		music = Mix_LoadMUS_RW(rw, SDL_FALSE);
-		SDL_RWclose(rw);
+		music = Mix_LoadMUS_RW(rw, 1);
 	}
 	if (!music)
 	{
@@ -831,8 +829,7 @@ INT32 I_RegisterSong(void *data, size_t len)
 	SDL_RWops *rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
-		music = Mix_LoadMUS_RW(rw, SDL_FALSE);
-		SDL_RWclose(rw);
+		music = Mix_LoadMUS_RW(rw, 1);
 	}
 	if (!music)
 	{
