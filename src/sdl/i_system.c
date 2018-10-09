@@ -1154,6 +1154,7 @@ static void I_ShutdownJoystick2(void)
 		D_PostEvent(&event);
 	}
 
+	joystick2_started = 0;
 	JoyReset(&JoyInfo2);
 	if (!joystick_started && !joystick2_started && SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{

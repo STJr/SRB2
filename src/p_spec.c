@@ -2039,8 +2039,7 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
-			if ((think->function.acp1 != (actionf_p1)P_SnowThinker)
-				&& (think->function.acp1 != (actionf_p1)P_RainThinker))
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
 
 			precipmobj = (precipmobj_t *)think;
@@ -2056,14 +2055,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
+				continue; // not a precipmobj thinker
+			precipmobj = (precipmobj_t *)think;
+
 			if (swap == PRECIP_RAIN) // Snow To Rain
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_SnowThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
-
 				precipmobj->flags = mobjinfo[MT_RAIN].flags;
 				st = &states[mobjinfo[MT_RAIN].spawnstate];
 				precipmobj->state = st;
@@ -2074,17 +2071,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 				precipmobj->precipflags &= ~PCF_INVISIBLE;
 
-				think->function.acp1 = (actionf_p1)P_RainThinker;
+				precipmobj->precipflags |= PCF_RAIN;
+				//think->function.acp1 = (actionf_p1)P_RainThinker;
 			}
 			else if (swap == PRECIP_SNOW) // Rain To Snow
 			{
 				INT32 z;
-
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
 				z = M_RandomByte();
@@ -2103,19 +2095,13 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj->frame = st->frame;
 				precipmobj->momz = mobjinfo[MT_SNOWFLAKE].speed;
 
-				precipmobj->precipflags &= ~PCF_INVISIBLE;
+				precipmobj->precipflags &= ~(PCF_INVISIBLE|PCF_RAIN);
 
-				think->function.acp1 = (actionf_p1)P_SnowThinker;
+				//think->function.acp1 = (actionf_p1)P_SnowThinker;
 			}
 			else if (swap == PRECIP_BLANK || swap == PRECIP_STORM_NORAIN) // Remove precip, but keep it around for reuse.
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_SnowThinker))
-					continue;
-
-				precipmobj = (precipmobj_t *)think;
-
-				think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
+				//think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
 
 				precipmobj->precipflags |= PCF_INVISIBLE;
 			}

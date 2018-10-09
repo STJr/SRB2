@@ -194,16 +194,21 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{	// shameless copy+paste of code from LUA_LoadLump
-				char *name = malloc(strlen(wadfiles[wadnum]->filename)+10);
+				size_t len = strlen(wadfiles[wadnum]->filename);
+				char *name = malloc(len+10);
+
 				strcpy(name, wadfiles[wadnum]->filename);
-				if (!fasticmp(&name[strlen(name) - 4], ".soc")) {
+				if (!fasticmp(&name[len - 4], ".soc")) {
 					// If it's not a .soc file, copy the lump name in too.
-					name[strlen(wadfiles[wadnum]->filename)] = '|';
-					M_Memcpy(name+strlen(wadfiles[wadnum]->filename)+1, lump_p->name, 8);
-					name[strlen(wadfiles[wadnum]->filename)+9] = '\0';
+					name[len] = '|';
+					M_Memcpy(name+len+1, lump_p->name, 8);
+					name[len+9] = '\0';
 				}
+
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
+
+				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
 			{
