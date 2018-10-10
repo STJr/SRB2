@@ -17,10 +17,8 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
 
-#define HAVE_ZLIB
-
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -36,8 +34,8 @@
 #endif
 
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 static FMOD_SYSTEM *fsys;
 static FMOD_SOUND *music_stream;

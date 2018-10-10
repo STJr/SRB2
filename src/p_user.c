@@ -8777,7 +8777,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
-	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	// We probably shouldn't move the camera if there is no player or player mobj somehow
+	if (!player || !player->mo)
+		return true;
+
+	mo = player->mo;
+
+	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
 	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD))
 	{
@@ -8798,7 +8804,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		else if (player == &players[secondarydisplayplayer])
 			focusangle = localangle2;
 		else
-			focusangle = player->mo->angle;
+			focusangle = mo->angle;
 		if (thiscam == &camera)
 			camrotate = cv_cam_rotate.value;
 		else if (thiscam == &camera2)
@@ -8810,16 +8816,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		return true;
 	}
 
-	if (!player || !player->mo)
-		return true;
-
-	mo = player->mo;
-
 	thiscam->radius = FixedMul(20*FRACUNIT, mo->scale);
 	thiscam->height = FixedMul(16*FRACUNIT, mo->scale);
-
-	if (!mo)
-		return true;
 
 	// Don't run while respawning from a starpost
 	// Inu 4/8/13 Why not?!
@@ -8828,7 +8826,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = 0;
 	}
 	else if (player == &players[consoleplayer])
@@ -8843,7 +8841,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = player->aiming;
 	}
 
@@ -8890,12 +8888,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			angle = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
 			angle += ANGLE_90;
 		}
-		else if (player->mo->target)
+		else if (mo->target)
 		{
-			if (player->mo->target->flags2 & MF2_AMBUSH)
-				angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+			if (mo->target->flags2 & MF2_AMBUSH)
+				angle = R_PointToAngle2(mo->target->x, mo->target->y, mo->x, mo->y);
 			else
-				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8984,7 +8982,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
 		// Camera doesn't ALWAYS need to move, only when running...
-		if (abs(player->mo->momx) > 10)
+		if (abs(mo->momx) > 10)
 		{
 			// Move the camera all smooth-like, not jerk it around...
 			if (mo->momx > 0)
@@ -9302,13 +9300,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			vy = thiscam->y;
 		}
 
-		if (P_AproxDistance(vx - player->mo->x, vy - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
-			player->mo->flags2 |= MF2_SHADOW;
+		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+			mo->flags2 |= MF2_SHADOW;
 		else
-			player->mo->flags2 &= ~MF2_SHADOW;
+			mo->flags2 &= ~MF2_SHADOW;
 	}
 	else
-		player->mo->flags2 &= ~MF2_SHADOW;
+		mo->flags2 &= ~MF2_SHADOW;
 
 /*	if (!resetcalled && (player->powers[pw_carry] == CR_NIGHTSMODE && player->exiting))
 	{
