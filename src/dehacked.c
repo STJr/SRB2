@@ -8869,17 +8869,17 @@ static int lib_getActionName(lua_State *L)
 	{
 		lua_settop(L, 1); // set top of stack to 1 (removing any extra args, which there shouldn't be)
 		// get the name for this action, if possible.
-		lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-		lua_pushnil(gL);
+		lua_getfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
+		lua_pushnil(L);
 		// Lua stack at this point:
 		//  1   ...       -2              -1
 		// arg  ...   LREG_ACTIONS        nil
-		while (lua_next(gL, -2))
+		while (lua_next(L, -2))
 		{
 			// Lua stack at this point:
 			//  1   ...       -3              -2           -1
 			// arg  ...   LREG_ACTIONS    "A_ACTION"    function
-			if (lua_rawequal(gL, -1, 1)) // is this the same as the arg?
+			if (lua_rawequal(L, -1, 1)) // is this the same as the arg?
 			{
 				// make sure the key (i.e. "A_ACTION") is a string first
 				// (note: we don't use lua_isstring because it also returns true for numbers)
@@ -8888,12 +8888,12 @@ static int lib_getActionName(lua_State *L)
 					lua_pushvalue(L, -2); // push "A_ACTION" string to top of stack
 					return 1;
 				}
-				lua_pop(gL, 2); // pop the name and function
+				lua_pop(L, 2); // pop the name and function
 				break; // probably should have succeeded but we didn't, so end the loop
 			}
-			lua_pop(gL, 1);
+			lua_pop(L, 1);
 		}
-		lua_pop(gL, 1); // pop LREG_ACTIONS
+		lua_pop(L, 1); // pop LREG_ACTIONS
 		return 0; // return nothing (don't error)
 	}
 
