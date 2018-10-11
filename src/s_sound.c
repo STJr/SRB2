@@ -36,6 +36,7 @@ extern INT32 msg_id;
 #include "d_main.h"
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
+#include "m_misc.h" // for tunes command
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -46,6 +47,8 @@ static INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, I
 
 CV_PossibleValue_t soundvolume_cons_t[] = {{0, "MIN"}, {31, "MAX"}, {0, NULL}};
 static void SetChannelsNum(void);
+static void Command_Tunes_f(void);
+static void Command_RestartAudio_f(void);
 
 // commands for music and sound servers
 #ifdef MUSSERV
@@ -89,6 +92,7 @@ consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, 
 #endif
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #define S_MAX_VOLUME 127
 
@@ -243,6 +247,11 @@ void S_RegisterSoundStuff(void)
 #endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
+	CV_RegisterVar(&cv_resetmusic);
+
+	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
@@ -1430,4 +1439,93 @@ void S_ResumeAudio(void)
 
 	// resume cd music
 	I_ResumeCD();
+}
+
+static void Command_Tunes_f(void)
+{
+	const char *tunearg;
+	UINT16 tunenum, track = 0;
+	const size_t argc = COM_Argc();
+
+	if (argc < 2) //tunes slot ...
+	{
+		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
+		return;
+	}
+
+	tunearg = COM_Argv(1);
+	tunenum = (UINT16)atoi(tunearg);
+	track = 0;
+
+	if (!strcasecmp(tunearg, "-show"))
+	{
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
+		return;
+	}
+	if (!strcasecmp(tunearg, "-none"))
+	{
+		S_StopMusic();
+		return;
+	}
+	else if (!strcasecmp(tunearg, "-default"))
+	{
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
+		return;
+	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
+
+	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
+
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
+	else
+		strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+
+	S_ChangeMusic(mapmusname, mapmusflags, true);
+
+	if (argc > 3)
+	{
+		float speed = (float)atof(COM_Argv(3));
+		if (speed > 0.0f)
+			S_SpeedMusic(speed);
+	}
+}
+
+static void Command_RestartAudio_f(void)
+{
+	if (dedicated)  // No point in doing anything if game is a dedicated server.
+		return;
+
+	S_StopMusic();
+	I_ShutdownMusic();
+	I_ShutdownSound();
+	I_StartupSound();
+	I_InitMusic();
+
+// These must be called or no sound and music until manually set.
+
+	I_SetSfxVolume(cv_soundvolume.value);
+	I_SetDigMusicVolume(cv_digmusicvolume.value);
+	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
+	if (Playing()) // Gotta make sure the player is in a level
+		P_RestoreMusic(&players[consoleplayer]);
+
 }
