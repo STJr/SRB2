@@ -1511,9 +1511,6 @@ static void Command_Tunes_f(void)
 
 static void Command_RestartAudio_f(void)
 {
-	if (dedicated)  // No point in doing anything if game is a dedicated server.
-		return;
-
 	S_StopMusic();
 	I_ShutdownMusic();
 	I_ShutdownSound();
@@ -1527,5 +1524,4 @@ static void Command_RestartAudio_f(void)
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
-
 }
