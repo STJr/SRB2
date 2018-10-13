@@ -262,6 +262,28 @@ static void wattcp_outch(char s)
 }
 #endif
 
+#ifdef USE_WINSOCK
+// stupid microsoft makes things complicated
+static inline char *get_WSAErrorStr(int e)
+{
+	char *buf = NULL;
+
+	FormatMessageA(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		(DWORD)e,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)&buf,
+		0, NULL);
+
+	return buf;
+}
+#undef strerror
+#define strerror get_WSAErrorStr
+#endif
+
 #ifdef USE_WINSOCK2
 #define inet_ntop inet_ntopA
 #define HAVE_NTOP
