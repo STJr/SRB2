@@ -590,8 +590,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						else
 							rlight->rcolormap = xwalllights[pindex];
 
-						rlight->height += rlight->heightstep;
 						height = rlight->height;
+						rlight->height += rlight->heightstep;
 
 						if (height <= windowtop)
 						{
@@ -827,26 +827,21 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[p];
 #ifdef ESLOPE
-			if (light->slope) {
-				leftheight = P_GetZAt(light->slope, ds->leftpos.x, ds->leftpos.y);
-				rightheight = P_GetZAt(light->slope, ds->rightpos.x, ds->rightpos.y);
-			} else
-				leftheight = rightheight = light->height;
 
-			if (*pfloor->b_slope) {
-				pfloorleft = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y);
-				pfloorright = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y);
-			} else
-				pfloorleft = pfloorright = *pfloor->bottomheight;
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, ds->leftpos.x, ds->leftpos.y); \
+		end2 = P_GetZAt(slope, ds->rightpos.x, ds->rightpos.y); \
+	} else \
+		end1 = end2 = normalheight;
+
+			SLOPEPARAMS(light->slope,     leftheight, rightheight, light->height)
+			SLOPEPARAMS(*pfloor->b_slope, pfloorleft, pfloorright, *pfloor->bottomheight)
 
 			if (leftheight < pfloorleft && rightheight < pfloorright)
 				continue;
 
-			if (*pfloor->t_slope) {
-				pfloorleft = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y);
-				pfloorright = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y);
-			} else
-				pfloorleft = pfloorright = *pfloor->topheight;
+			SLOPEPARAMS(*pfloor->t_slope, pfloorleft, pfloorright, *pfloor->topheight)
 
 			if (leftheight > pfloorleft && rightheight > pfloorright && i+1 < dc_numlights)
 			{
@@ -859,17 +854,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			leftheight -= viewz;
 			rightheight -= viewz;
 
-			overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
-			if (overflow_test < 0) overflow_test = -overflow_test;
-			if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
-			overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
-			if (overflow_test < 0) overflow_test = -overflow_test;
-			if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+#define OVERFLOWTEST(height, scale) \
+	overflow_test = (INT64)centeryfrac - (((INT64)height*scale)>>FRACBITS); \
+	if (overflow_test < 0) overflow_test = -overflow_test; \
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+
+			OVERFLOWTEST(leftheight, ds->scale1)
+			OVERFLOWTEST(rightheight, ds->scale2)
 
 			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
-			rlight->height -= rlight->heightstep;
 #else
 			if (light->height < *pfloor->bottomheight)
 				continue;
@@ -879,36 +874,28 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			lheight = light->height;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : light->height;
 			rlight->heightstep = -FixedMul (rw_scalestep, (lheight - viewz));
-			rlight->height = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->heightstep;
+			rlight->height = (centeryfrac) - FixedMul((lheight - viewz), spryscale);
 #endif
 			rlight->flags = light->flags;
 			if (light->flags & FF_CUTLEVEL)
 			{
 #ifdef ESLOPE
-				if (*light->caster->b_slope) {
-					leftheight = P_GetZAt(*light->caster->b_slope, ds->leftpos.x, ds->leftpos.y);
-					rightheight = P_GetZAt(*light->caster->b_slope, ds->rightpos.x, ds->rightpos.y);
-				} else
-					leftheight = rightheight = *light->caster->bottomheight;
+				SLOPEPARAMS(*light->caster->b_slope, leftheight, rightheight, *light->caster->bottomheight)
 
 				leftheight -= viewz;
 				rightheight -= viewz;
 
-				overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
-				if (overflow_test < 0) overflow_test = -overflow_test;
-				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
-				overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
-				if (overflow_test < 0) overflow_test = -overflow_test;
-				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+				OVERFLOWTEST(leftheight, ds->scale1)
+				OVERFLOWTEST(rightheight, ds->scale2)
+#undef OVERFLOWTEST
 
 				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
-				rlight->botheight -= rlight->botheightstep;
 #else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
 				rlight->botheightstep = -FixedMul (rw_scalestep, (lheight - viewz));
-				rlight->botheight = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->botheightstep;
+				rlight->botheight = (centeryfrac) - FixedMul((lheight - viewz), spryscale);
 #endif
 			}
 
@@ -1001,21 +988,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		fixed_t left_top, right_top, left_bottom, right_bottom;
 
-		if (*pfloor->t_slope)
-		{
-			left_top = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
-			right_top = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
-		}
-		else
-			left_top = right_top = *pfloor->topheight - viewz;
-
-		if (*pfloor->b_slope)
-		{
-			left_bottom = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
-			right_bottom = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
-		}
-		else
-			left_bottom = right_bottom = *pfloor->bottomheight - viewz;
+		SLOPEPARAMS(*pfloor->t_slope, left_top,    right_top,    *pfloor->topheight)
+		SLOPEPARAMS(*pfloor->b_slope, left_bottom, right_bottom, *pfloor->bottomheight)
+#undef SLOPEPARAMS
+		left_top -= viewz;
+		right_top -= viewz;
+		left_bottom -= viewz;
+		right_bottom -= viewz;
 
 		// using INT64 to avoid 32bit overflow
 		top_frac =    (INT64)centeryfrac - (((INT64)left_top     * ds->scale1) >> FRACBITS);
@@ -1145,13 +1124,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					else
 						solid = 0;
 
-					rlight->height += rlight->heightstep;
 					height = rlight->height;
+					rlight->height += rlight->heightstep;
 
 					if (solid)
 					{
-						rlight->botheight += rlight->botheightstep;
 						bheight = rlight->botheight - (FRACUNIT >> 1);
+						rlight->botheight += rlight->botheightstep;
 					}
 
 					if (height <= windowtop)
