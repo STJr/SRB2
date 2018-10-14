@@ -21,13 +21,14 @@ void I_ShutdownSound(void){}
 //  SFX I/O
 //
 
-INT32 I_StartSound(sfxenum_t id, INT32 vol, INT32 sep, INT32 pitch, INT32 priority)
+INT32 I_StartSound(sfxenum_t id, INT32 vol, INT32 sep, INT32 pitch, INT32 priority, INT32 channel)
 {
         (void)id;
         (void)vol;
         (void)sep;
         (void)pitch;
         (void)priority;
+        (void)channel;
         return -1;
 }
 

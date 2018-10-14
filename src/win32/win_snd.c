@@ -353,12 +353,13 @@ void I_FreeSfx(sfxinfo_t *sfx)
 	sfx->data = NULL;
 }
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	FMOD_SOUND *sound;
 	FMOD_CHANNEL *chan;
 	INT32 i;
 	float frequency;
+	(void)channel;
 
 	sound = (FMOD_SOUND *)S_sfx[id].data;
 	I_Assert(sound != NULL);
