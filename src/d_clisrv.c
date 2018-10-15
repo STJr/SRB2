@@ -1152,6 +1152,191 @@ static void CV_LoadPlayerNames(UINT8 **p)
 }
 
 #ifdef CLIENT_LOADINGSCREEN
+#define SNAKE_SPEED 4
+#define SNAKE_NUM_BLOCKS_X 24
+#define SNAKE_NUM_BLOCKS_Y 14
+#define SNAKE_BLOCK_SIZE 8
+#define SNAKE_MAP_WIDTH  (SNAKE_NUM_BLOCKS_X * SNAKE_BLOCK_SIZE)
+#define SNAKE_MAP_HEIGHT (SNAKE_NUM_BLOCKS_Y * SNAKE_BLOCK_SIZE)
+#define SNAKE_BORDER_SIZE 8
+#define SNAKE_LEFT_X ((BASEVIDWIDTH - SNAKE_MAP_WIDTH) / 2 - SNAKE_BORDER_SIZE)
+#define SNAKE_RIGHT_X (SNAKE_LEFT_X + SNAKE_MAP_WIDTH + SNAKE_BORDER_SIZE * 2 - 1)
+#define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 64)
+#define SNAKE_TOP_Y (SNAKE_BOTTOM_Y - SNAKE_MAP_HEIGHT - SNAKE_BORDER_SIZE * 2 + 1)
+
+typedef struct snake_s
+{
+	tic_t time;
+	tic_t nextupdate;
+	boolean gameover;
+
+	UINT8 snakedir;
+	UINT8 snakeprevdir;
+
+	UINT16 snakelength;
+	UINT8 snakex[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakey[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakecolor[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+
+	UINT8 applex;
+	UINT8 appley;
+	UINT8 applecolor;
+} snake_t;
+
+static snake_t *snake = NULL;
+
+static void CL_InitialiseSnake()
+{
+	if (!snake)
+		snake = malloc(sizeof(snake_t));
+
+	snake->time = 0;
+	snake->nextupdate = SNAKE_SPEED;
+	snake->gameover = false;
+
+	snake->snakedir = 0;
+	snake->snakeprevdir = snake->snakedir;
+
+	snake->snakelength = 1;
+	snake->snakex[0] = rand() % SNAKE_NUM_BLOCKS_X;
+	snake->snakey[0] = rand() % SNAKE_NUM_BLOCKS_Y;
+	snake->snakecolor[0] = rand() % 256;
+
+	snake->applex = rand() % SNAKE_NUM_BLOCKS_X;
+	snake->appley = rand() % SNAKE_NUM_BLOCKS_Y;
+	snake->applecolor = rand() % 256;
+}
+
+static void CL_HandleSnake(INT32 key)
+{
+	UINT8 x, y;
+	UINT16 i;
+
+	snake->time++;
+
+	// Update direction
+	switch (key)
+	{
+		case KEY_LEFTARROW:
+			if (snake->snakeprevdir != 2)
+				snake->snakedir = 1;
+			break;
+		case KEY_RIGHTARROW:
+			if (snake->snakeprevdir != 1)
+				snake->snakedir = 2;
+			break;
+		case KEY_UPARROW:
+			if (snake->snakeprevdir != 4)
+				snake->snakedir = 3;
+			break;
+		case KEY_DOWNARROW:
+			if (snake->snakeprevdir != 3)
+				snake->snakedir = 4;
+			break;
+	}
+
+	snake->nextupdate--;
+	if (snake->nextupdate)
+		return;
+	snake->nextupdate = SNAKE_SPEED;
+
+	snake->snakeprevdir = snake->snakedir;
+
+	if (snake->gameover)
+		return;
+
+	// Find new position
+	x = snake->snakex[0];
+	y = snake->snakey[0];
+	switch (snake->snakedir)
+	{
+		case 1:
+			x = x > 0 ? x - 1 : SNAKE_NUM_BLOCKS_X - 1;
+			break;
+		case 2:
+			x = x < SNAKE_NUM_BLOCKS_X - 1 ? x + 1 : 0;
+			break;
+		case 3:
+			y = y > 0 ? y - 1 : SNAKE_NUM_BLOCKS_Y - 1;
+			break;
+		case 4:
+			y = y < SNAKE_NUM_BLOCKS_Y - 1 ? y + 1 : 0;
+			break;
+	}
+
+	// Check collision with snake
+	for (i = 1; i < snake->snakelength - 1; i++)
+		if (x == snake->snakex[i] && y == snake->snakey[i])
+		{
+			snake->gameover = true;
+			S_StartSound(NULL, sfx_lose);
+			return;
+		}
+
+	// Check collision with apple
+	if (x == snake->applex && y == snake->appley)
+	{
+		snake->snakelength++;
+		snake->snakex[snake->snakelength - 1] = snake->snakex[snake->snakelength - 2];
+		snake->snakey[snake->snakelength - 1] = snake->snakey[snake->snakelength - 2];
+		snake->snakecolor[snake->snakelength - 1] = snake->applecolor;
+
+		snake->applex = rand() % SNAKE_NUM_BLOCKS_X;
+		snake->appley = rand() % SNAKE_NUM_BLOCKS_Y;
+		snake->applecolor = rand() % 256;
+
+		S_StartSound(NULL, sfx_s3k6b);
+	}
+
+	// Move
+	for (i = snake->snakelength - 1; i > 0; i--)
+	{
+		snake->snakex[i] = snake->snakex[i - 1];
+		snake->snakey[i] = snake->snakey[i - 1];
+	}
+	snake->snakex[0] = x;
+	snake->snakey[0] = y;
+}
+
+static void CL_DrawSnake(void)
+{
+	UINT16 i;
+
+	// Background
+	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_MAP_WIDTH, SNAKE_MAP_HEIGHT, 239);
+
+	// Borders
+	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Top
+	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_TOP_Y, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Right
+	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Bottom
+	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Left
+
+	// Apple
+	V_DrawFill(
+		SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->applex * SNAKE_BLOCK_SIZE,
+		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE,
+		SNAKE_BLOCK_SIZE,
+		SNAKE_BLOCK_SIZE,
+		snake->applecolor
+	);
+
+	// Snake
+	if (!snake->gameover || snake->time % 8 < 8 / 2) // Blink if game over
+		for (i = 0; i < snake->snakelength; i++)
+		{
+			V_DrawFill(
+				SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->snakex[i] * SNAKE_BLOCK_SIZE,
+				SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE,
+				SNAKE_BLOCK_SIZE,
+				SNAKE_BLOCK_SIZE,
+				snake->snakecolor[i]
+			);
+		}
+
+	// Length
+	V_DrawString(SNAKE_RIGHT_X + 4, SNAKE_TOP_Y, V_MONOSPACE, va("%u", snake->snakelength));
+}
+
 //
 // CL_DrawConnectionStatus
 //
@@ -1214,6 +1399,8 @@ static inline void CL_DrawConnectionStatus(void)
 			static char tempname[28];
 			fileneeded_t *file = &fileneeded[lastfilenum];
 			char *filename = file->filename;
+
+			CL_DrawSnake();
 
 			Net_GetNetStat();
 			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
@@ -1975,7 +2162,10 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 				}
 				// no problem if can't send packet, we will retry later
 				if (CL_SendRequestFile())
+				{
 					cl_mode = CL_DOWNLOADFILES;
+					CL_InitialiseSnake();
+				}
 			}
 		}
 		else
@@ -2039,6 +2229,12 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			if (waitmore)
 				break; // exit the case
 
+			if (snake)
+			{
+				free(snake);
+				snake = NULL;
+			}
+
 			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
 			/* FALLTHRU */
 
@@ -2093,11 +2289,20 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
+
+			if (snake)
+			{
+				free(snake);
+				snake = NULL;
+			}
+
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
 			return false;
 		}
+		else if (cl_mode == CL_DOWNLOADFILES && snake)
+			CL_HandleSnake(key);
 
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
