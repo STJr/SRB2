@@ -720,7 +720,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;
@@ -730,11 +729,6 @@ void D_StartTitle(void)
 	CON_ToggleOff();
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 }
@@ -1056,15 +1050,6 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
-	else
-	{
-		size_t z;
-		char junkpw[25];
-		for (z = 0; z < 24; z++)
-			junkpw[z] = (char)(rand() & 64)+32;
-		junkpw[24] = '\0';
-		D_SetPassword(junkpw);
-	}
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
@@ -1223,7 +1208,7 @@ void D_SRB2Main(void)
 	CONS_Printf("R_Init(): Init SRB2 refresh daemon.\n");
 	R_Init();
 
-	// setting up sound	
+	// setting up sound
 	if (dedicated)
 	{
 		nosound = true;

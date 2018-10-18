@@ -2182,27 +2182,34 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				}
 				else if (drawtextured)
 				{
-#ifdef ESLOPE // P.S. this is better-organized than the old version
-					fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
-					grTex = HWR_GetTexture(texnum);
+					fixed_t texturevpeg;
 
-					wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
-					wallVerts[2].t = (*rover->topheight - hS + offs) * grTex->scaleY;
-					wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
-					wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
-#else
-					grTex = HWR_GetTexture(texnum);
-
+					// Wow, how was this missing from OpenGL for so long?
+					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
+					// -- Monster Iestyn 26/06/18
 					if (newline)
 					{
-						wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset) * grTex->scaleY;
-						wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset)) * grTex->scaleY;
+						texturevpeg = sides[newline->sidenum[0]].rowoffset;
+						if (newline->flags & ML_DONTPEGBOTTOM)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
 					}
 					else
 					{
-						wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset) * grTex->scaleY;
-						wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset)) * grTex->scaleY;
+						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
+						if (gr_linedef->flags & ML_DONTPEGBOTTOM)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
 					}
+
+					grTex = HWR_GetTexture(texnum);
+
+#ifdef ESLOPE
+					wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+					wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
+					wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
+					wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+#else
+					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
 #endif
 
 					wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
@@ -2901,8 +2908,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngle(px1, py1) - dup_viewangle;
-	angle2 = R_PointToAngle(px2, py2) - dup_viewangle;
+	angle1 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px1>>1, py1>>1) - dup_viewangle;
+	angle2 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px2>>1, py2>>1) - dup_viewangle;
 
 	span = angle1 - angle2;
 
@@ -3257,7 +3264,6 @@ static void HWR_Subsector(size_t num)
 
 	if (num < numsubsectors)
 	{
-		sscount++;
 		// subsector
 		sub = &subsectors[num];
 		// sector
@@ -3941,7 +3947,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 		angle_t shadowdir;
 
 		// Set direction
-		if (splitscreen && stplyr != &players[displayplayer])
+		if (splitscreen && stplyr == &players[secondarydisplayplayer])
 			shadowdir = localangle2 + FixedAngle(cv_cam2_rotate.value);
 		else
 			shadowdir = localangle + FixedAngle(cv_cam_rotate.value);
@@ -4228,6 +4234,9 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
+	if (spr->mobj->frame & FF_FULLBRIGHT)
+		lightlevel = 255;
+
 #ifdef ESLOPE
 	for (i = 1; i < sector->numlights; i++)
 	{
@@ -4235,14 +4244,16 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 					: sector->lightlist[i].height;
 		if (h <= temp)
 		{
-			lightlevel = *list[i-1].lightlevel;
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *list[i-1].lightlevel;
 			colormap = list[i-1].extra_colormap;
 			break;
 		}
 	}
 #else
 	i = R_GetPlaneLight(sector, temp, false);
-	lightlevel = *list[i].lightlevel;
+	if (!(spr->mobj->frame & FF_FULLBRIGHT))
+		lightlevel = *list[i].lightlevel;
 	colormap = list[i].extra_colormap;
 #endif
 
@@ -4257,7 +4268,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		// even if we aren't changing colormap or lightlevel, we still need to continue drawing down the sprite
 		if (!(list[i].flags & FF_NOSHADE) && (list[i].flags & FF_CUTSPRITES))
 		{
-			lightlevel = *list[i].lightlevel;
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *list[i].lightlevel;
 			colormap = list[i].extra_colormap;
 		}
 
@@ -5127,8 +5139,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectSprite(thing);
 		}
 	}
 	else
@@ -5150,8 +5164,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 	else
@@ -5296,7 +5312,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	}
 
 	heightsec = thing->subsector->sector->heightsec;
-	phs = players[displayplayer].mo->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
 
 	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
 	{
@@ -5432,6 +5451,16 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	z2 = tr_y - x2 * rightsin;
 	x1 = tr_x + x1 * rightcos;
 	x2 = tr_x - x2 * rightcos;
+
+	// okay, we can't return now... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 
 	//
 	// store information in a vissprite

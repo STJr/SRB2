@@ -442,7 +442,6 @@ void F_StartIntro(void)
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	F_NewCutscene(introtext[0]);
 
@@ -975,7 +974,6 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
-	"Colette \"fickle\" Bordelon",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
@@ -1129,7 +1127,6 @@ void F_StartCredits(void)
 	}
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();  // Kept for cinematic effect.
 	CON_ClearHUD();
@@ -1276,7 +1273,6 @@ void F_StartGameEvaluation(void)
 		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ClearHUD();
 
@@ -1386,7 +1382,6 @@ void F_StartGameEnd(void)
 	G_SetGamestate(GS_GAMEEND);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -1589,7 +1584,6 @@ void F_StartContinue(void)
 	gameaction = ga_nothing;
 
 	keypressed = false;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -1758,7 +1752,6 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	G_SetGamestate(GS_CUTSCENE);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 

@@ -2503,11 +2503,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
@@ -2678,7 +2673,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_CreateBlockMap(); // Graue 02-29-2004
 	P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
 
-	R_MakeColormaps();
 	P_LoadLineDefs2();
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
@@ -3003,7 +2997,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
 	{
-		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else wadnum = (UINT16)(numwadfiles-1);

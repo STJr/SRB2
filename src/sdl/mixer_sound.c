@@ -38,10 +38,8 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
 
-#define HAVE_ZLIB
-
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -57,8 +55,8 @@
 #endif
 
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 UINT8 sound_started = false;
 
@@ -66,6 +64,7 @@ static boolean midimode;
 static Mix_Music *music;
 static UINT8 music_volume, midi_volume, sfx_volume;
 static float loop_point;
+static boolean songpaused;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -102,6 +101,7 @@ void I_StartupSound(void)
 	}
 
 	sound_started = true;
+	songpaused = false;
 	Mix_AllocateChannels(256);
 }
 
@@ -244,6 +244,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 {
 	void *lump;
 	Mix_Chunk *chunk;
+	SDL_RWops *rw;
 #ifdef HAVE_LIBGME
 	Music_Emu *emu;
 	gme_info_t *info;
@@ -304,7 +305,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 					gme_track_info(emu, &info, 0);
 
 					len = (info->play_length * 441 / 10) << 2;
-					mem = Z_Malloc(len, PU_SOUND, NULL);
+					mem = malloc(len);
 					gme_play(emu, len >> 1, mem);
 					gme_delete(emu);
 
@@ -359,7 +360,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return NULL; // No zlib support
 #endif
 	}
 	// Try to read it as a GME sound
@@ -376,7 +377,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		gme_track_info(emu, &info, 0);
 
 		len = (info->play_length * 441 / 10) << 2;
-		mem = Z_Malloc(len, PU_SOUND, NULL);
+		mem = malloc(len);
 		gme_play(emu, len >> 1, mem);
 		gme_delete(emu);
 
@@ -385,21 +386,43 @@ void *I_GetSfx(sfxinfo_t *sfx)
 #endif
 
 	// Try to load it as a WAVE or OGG using Mixer.
-	return Mix_LoadWAV_RW(SDL_RWFromMem(lump, sfx->length), 1);
+	rw = SDL_RWFromMem(lump, sfx->length);
+	if (rw != NULL)
+	{
+		chunk = Mix_LoadWAV_RW(rw, 1);
+		return chunk;
+	}
+
+	return NULL; // haven't been able to get anything
 }
 
 void I_FreeSfx(sfxinfo_t *sfx)
 {
 	if (sfx->data)
+	{
+		Mix_Chunk *chunk = (Mix_Chunk*)sfx->data;
+		UINT8 *abufdata = NULL;
+		if (chunk->allocated == 0)
+		{
+			// We allocated the data in this chunk, so get the abuf from mixer, then let it free the chunk, THEN we free the data
+			// I believe this should ensure the sound is not playing when we free it
+			abufdata = chunk->abuf;
+		}
 		Mix_FreeChunk(sfx->data);
+		if (abufdata)
+		{
+			// I'm going to assume we used Z_Malloc to allocate this data.
+			Z_Free(abufdata);
+		}
+	}
 	sfx->data = NULL;
 	sfx->lumpnum = LUMPERROR;
 }
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
-	INT32 handle = Mix_PlayChannel(-1, S_sfx[id].data, 0);
+	INT32 handle = Mix_PlayChannel(channel, S_sfx[id].data, 0);
 	Mix_Volume(handle, volume);
 	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch; // Mixer can't handle pitch
@@ -450,7 +473,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 	(void)udata;
 
 	// no gme? no music.
-	if (!gme || gme_track_ended(gme))
+	if (!gme || gme_track_ended(gme) || songpaused)
 		return;
 
 	// play gme into stream
@@ -458,7 +481,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * music_volume / 31;
+		*p = ((INT32)*p) * music_volume*2 / 42;
 }
 #endif
 
@@ -476,12 +499,14 @@ void I_PauseSong(INT32 handle)
 {
 	(void)handle;
 	Mix_PauseMusic();
+	songpaused = true;
 }
 
 void I_ResumeSong(INT32 handle)
 {
 	(void)handle;
 	Mix_ResumeMusic();
+	songpaused = false;
 }
 
 //
@@ -520,6 +545,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	char *data;
 	size_t len;
 	lumpnum_t lumpnum = W_CheckNumForName(va("O_%s",musicname));
+	SDL_RWops *rw;
 
 	I_Assert(!music);
 #ifdef HAVE_LIBGME
@@ -617,7 +643,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return true;
 #endif
 	}
 	else if (!gme_open_data(data, len, &gme, 44100))
@@ -631,7 +658,11 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	}
 #endif
 
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
+	rw = SDL_RWFromMem(data, len);
+	if (rw != NULL)
+	{
+		music = Mix_LoadMUS_RW(rw, 1);
+	}
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
@@ -794,7 +825,11 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 
 INT32 I_RegisterSong(void *data, size_t len)
 {
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
+	SDL_RWops *rw = SDL_RWFromMem(data, len);
+	if (rw != NULL)
+	{
+		music = Mix_LoadMUS_RW(rw, 1);
+	}
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());

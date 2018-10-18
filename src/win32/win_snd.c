@@ -17,15 +17,11 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
 
-#define HAVE_ZLIB
-
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 
@@ -38,8 +34,8 @@
 #endif
 
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 static FMOD_SYSTEM *fsys;
 static FMOD_SOUND *music_stream;
@@ -357,12 +353,13 @@ void I_FreeSfx(sfxinfo_t *sfx)
 	sfx->data = NULL;
 }
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	FMOD_SOUND *sound;
 	FMOD_CHANNEL *chan;
 	INT32 i;
 	float frequency;
+	(void)channel;
 
 	sound = (FMOD_SOUND *)S_sfx[id].data;
 	I_Assert(sound != NULL);
