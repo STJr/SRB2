@@ -1344,7 +1344,7 @@ static int slope_set(lua_State *L)
 	}
 	case slope_zangle: // zangle
 		slope->zangle = luaL_checkangle(L, 3);
-		slope->zdelta = FINETANGENT(slope->zangle);
+		slope->zdelta = FINETANGENT(slope->zangle>>ANGLETOFINESHIFT);
 		P_CalculateSlopeNormal(slope);
 		break;
 	case slope_xydirection: // xydirection
