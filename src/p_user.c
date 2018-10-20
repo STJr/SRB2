@@ -8648,8 +8648,6 @@ void P_DoPityCheck(player_t *player)
 // P_PlayerThink
 //
 
-boolean playerdeadview; // show match/chaos/tag/capture the flag rankings while in death view
-
 void P_PlayerThink(player_t *player)
 {
 	ticcmd_t *cmd;
@@ -8838,10 +8836,6 @@ void P_PlayerThink(player_t *player)
 	if (player->playerstate == PST_DEAD)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
-		// show the multiplayer rankings while dead
-		if (player == &players[displayplayer])
-			playerdeadview = true;
-
 		P_DeathThink(player);
 
 		return;
@@ -8861,9 +8855,6 @@ void P_PlayerThink(player_t *player)
 		// of course, this is just a cheap hack, meh...
 		player->lives = cv_startinglives.value;
 	}
-
-	if (player == &players[displayplayer])
-		playerdeadview = false;
 
 	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
 	{
