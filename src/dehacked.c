@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Load dehacked file and change tables and text
 
 #include "doomdef.h"
+#include "d_main.h" // for srb2home
 #include "g_game.h"
 #include "sounds.h"
 #include "info.h"
@@ -65,7 +66,9 @@ static mobjtype_t get_mobjtype(const char *word);
 static statenum_t get_state(const char *word);
 static spritenum_t get_sprite(const char *word);
 static sfxenum_t get_sfx(const char *word);
-static UINT16 get_mus(const char *word);
+#ifdef MUSICSLOT_COMPATIBILITY
+static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
+#endif
 static hudnum_t get_huditem(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
@@ -1164,19 +1167,31 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
 			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				if (fastcmp(word2, "NONE"))
+					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
+				else
+				{
+					deh_strlcpy(mapheaderinfo[num-1]->musname, word2,
+						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
+				}
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
 			{
-				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
-					i = M_MapNumber(word2[0], word2[1]);
-
-				if (i) // it's just a number
-					mapheaderinfo[num-1]->musicslot = (UINT16)i;
-				else // No? Okay, now we'll get technical.
-					mapheaderinfo[num-1]->musicslot = get_mus(word2); // accepts all of O_CHRSEL, mus_chrsel, or just plain ChrSel
+				i = get_mus(word2, true);
+				if (i && i <= 1035)
+					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
+				else if (i && i <= 1050)
+					strncpy(mapheaderinfo[num-1]->musname, compat_special_music_slots[i - 1036], 7);
+				else
+					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
+				mapheaderinfo[num-1]->musname[6] = 0;
 			}
-			else if (fastcmp(word, "MUSICSLOTTRACK"))
-				mapheaderinfo[num-1]->musicslottrack = ((UINT16)i - 1);
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -1443,10 +1458,30 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 				else
 					deh_warning("CutSceneScene %d: unknown word '%s'", num, word);
 			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
+				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
+				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musicslot), UNDO_NONE);
-				cutscenes[num]->scene[scenenum].musicslot = get_mus(word2); // accepts all of O_MAP01M, mus_map01m, or just plain MAP01M
+				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
+				i = get_mus(word2, true);
+				if (i && i <= 1035)
+					snprintf(cutscenes[num]->scene[scenenum].musswitch, 7, "%sM", G_BuildMapName(i));
+				else if (i && i <= 1050)
+					strncpy(cutscenes[num]->scene[scenenum].musswitch, compat_special_music_slots[i - 1036], 7);
+				else
+					cutscenes[num]->scene[scenenum].musswitch[0] = 0; // becomes empty string
+				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
+			}
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musswitchflags), UNDO_NONE);
+				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
@@ -1825,7 +1860,6 @@ static void readframe(MYFILE *f, INT32 num)
 	char *word1;
 	char *word2 = NULL;
 	char *tmp;
-	INT32 j;
 
 	do
 	{
@@ -1839,16 +1873,6 @@ static void readframe(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
-
-			for (j = 0; s[j] != '\n'; j++)
-			{
-				if (s[j] == '=')
-				{
-					j += 2;
-					j = atoi(&s[j]);
-					break;
-				}
-			}
 
 			word1 = strtok(s, " ");
 			if (word1)
@@ -3036,6 +3060,8 @@ static void readmaincfg(MYFILE *f)
 
 				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
+				// can't use sprintf since there is %u in savegamename
+				strcatbf(savegamename, srb2home, PATHSEP);
 
 				gamedataadded = true;
 			}
@@ -6195,9 +6221,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Collectible Items
 	"MT_RING",
 	"MT_FLINGRING", // Lost ring
-#ifdef BLUE_SPHERES
 	"MT_BLUEBALL",  // Blue sphere replacement for special stages
-#endif
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
 	"MT_EMMY", // emerald token for special stage
@@ -6650,6 +6674,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"EXPLOSION",	// Thrown ring has explosive properties
 	"SCATTER",		// Thrown ring has scatter properties
 	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
+	"PUSHED",		// Mobj was already pushed this tic
 	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
 	"CLASSICPUSH",	// Drops straight down when object has negative Z.
 	"STANDONME",	// While not pushable, stand on me anyway.
@@ -6678,18 +6703,20 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
-	"PUSHED", // Mobj was already pushed this tic
+	"\x01", // free: 1<<7 (name un-matchable)
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
 	NULL
 };
 
+#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
 	NULL,
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
+#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 	// Flip camera angle with gravity flip prefrence.
@@ -6762,6 +6789,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	NULL // stop loop here.
 };
 
+#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -6781,6 +6809,7 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
+#endif
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
@@ -6941,6 +6970,8 @@ struct {
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
+	{"VERSION",VERSION}, // Grab the game's version!
+	{"SUBVERSION",SUBVERSION}, // more precise version number
 
 	// Special linedef executor tag numbers!
 	{"LE_PINCHPHASE",LE_PINCHPHASE}, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
@@ -7237,36 +7268,36 @@ struct {
 	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
 
 	// Angles
-	{"ANG1",ANG1>>16},
-	{"ANG2",ANG2>>16},
-	{"ANG10",ANG10>>16},
-	{"ANG15",ANG15>>16},
-	{"ANG20",ANG20>>16},
-	{"ANG30",ANG30>>16},
-	{"ANG60",ANG60>>16},
-	{"ANG64h",ANG64h>>16},
-	{"ANG105",ANG105>>16},
-	{"ANG210",ANG210>>16},
-	{"ANG255",ANG255>>16},
-	{"ANG340",ANG340>>16},
-	{"ANG350",ANG350>>16},
-	{"ANGLE_11hh",ANGLE_11hh>>16},
-	{"ANGLE_22h",ANGLE_22h>>16},
-	{"ANGLE_45",ANGLE_45>>16},
-	{"ANGLE_67h",ANGLE_67h>>16},
-	{"ANGLE_90",ANGLE_90>>16},
-	{"ANGLE_112h",ANGLE_112h>>16},
-	{"ANGLE_135",ANGLE_135>>16},
-	{"ANGLE_157h",ANGLE_157h>>16},
-	{"ANGLE_180",ANGLE_180>>16},
-	{"ANGLE_202h",ANGLE_202h>>16},
-	{"ANGLE_225",ANGLE_225>>16},
-	{"ANGLE_247h",ANGLE_247h>>16},
-	{"ANGLE_270",ANGLE_270>>16},
-	{"ANGLE_292h",ANGLE_292h>>16},
-	{"ANGLE_315",ANGLE_315>>16},
-	{"ANGLE_337h",ANGLE_337h>>16},
-	{"ANGLE_MAX",ANGLE_MAX>>16},
+	{"ANG1",ANG1},
+	{"ANG2",ANG2},
+	{"ANG10",ANG10},
+	{"ANG15",ANG15},
+	{"ANG20",ANG20},
+	{"ANG30",ANG30},
+	{"ANG60",ANG60},
+	{"ANG64h",ANG64h},
+	{"ANG105",ANG105},
+	{"ANG210",ANG210},
+	{"ANG255",ANG255},
+	{"ANG340",ANG340},
+	{"ANG350",ANG350},
+	{"ANGLE_11hh",ANGLE_11hh},
+	{"ANGLE_22h",ANGLE_22h},
+	{"ANGLE_45",ANGLE_45},
+	{"ANGLE_67h",ANGLE_67h},
+	{"ANGLE_90",ANGLE_90},
+	{"ANGLE_112h",ANGLE_112h},
+	{"ANGLE_135",ANGLE_135},
+	{"ANGLE_157h",ANGLE_157h},
+	{"ANGLE_180",ANGLE_180},
+	{"ANGLE_202h",ANGLE_202h},
+	{"ANGLE_225",ANGLE_225},
+	{"ANGLE_247h",ANGLE_247h},
+	{"ANGLE_270",ANGLE_270},
+	{"ANGLE_292h",ANGLE_292h},
+	{"ANGLE_315",ANGLE_315},
+	{"ANGLE_337h",ANGLE_337h},
+	{"ANGLE_MAX",ANGLE_MAX},
 
 	// P_Chase directions (dirtype_t)
 	{"DI_NODIR",DI_NODIR},
@@ -7434,21 +7465,45 @@ static sfxenum_t get_sfx(const char *word)
 	return sfx_None;
 }
 
-static UINT16 get_mus(const char *word)
-{ // Returns the value of SFX_ enumerations
+#ifdef MUSICSLOT_COMPATIBILITY
+static UINT16 get_mus(const char *word, UINT8 dehacked_mode)
+{ // Returns the value of MUS_ enumerations
 	UINT16 i;
+	char lumptmp[4];
+
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
+	if (!word[2] && toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
+		return (UINT16)M_MapNumber(word[0], word[1]);
+
 	if (fastncmp("MUS_",word,4))
 		word += 4; // take off the MUS_
 	else if (fastncmp("O_",word,2) || fastncmp("D_",word,2))
 		word += 2; // take off the O_ or D_
-	for (i = 0; i < NUMMUSIC; i++)
-		if (S_music[i].name && fasticmp(word, S_music[i].name))
+
+	strncpy(lumptmp, word, 4);
+	lumptmp[3] = 0;
+	if (fasticmp("MAP",lumptmp))
+	{
+		word += 3;
+		if (toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
+			return (UINT16)M_MapNumber(word[0], word[1]);
+		else if ((i = atoi(word)))
 			return i;
-	deh_warning("Couldn't find music named 'MUS_%s'",word);
-	return mus_None;
+
+		word -= 3;
+		if (dehacked_mode)
+			deh_warning("Couldn't find music named 'MUS_%s'",word);
+		return 0;
+	}
+	for (i = 0; compat_special_music_slots[i][0]; ++i)
+		if (fasticmp(word, compat_special_music_slots[i]))
+			return i + 1036;
+	if (dehacked_mode)
+		deh_warning("Couldn't find music named 'MUS_%s'",word);
+	return 0;
 }
+#endif
 
 static hudnum_t get_huditem(const char *word)
 { // Returns the value of HUD_ enumerations
@@ -7648,11 +7703,13 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
+#ifdef MUSICSLOT_COMPATIBILITY
 	else if (fastncmp("MUS_",word,4) || fastncmp("O_",word,2)) {
-		r = get_mus(word);
+		r = get_mus(word, true);
 		free(word);
 		return r;
 	}
+#endif
 	else if (fastncmp("PW_",word,3)) {
 		r = get_power(word);
 		free(word);
@@ -7707,7 +7764,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void DEH_Check(void)
+void FUNCMATH DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
@@ -8022,33 +8079,29 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sfx '%s' could not be found.\n", word);
 		return 0;
 	}
+#ifdef MUSICSLOT_COMPATIBILITY
 	else if (!mathlib && fastncmp("mus_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fastcmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return 0;
+		if ((i = get_mus(p, false)) == 0)
+			return 0;
+		lua_pushinteger(L, i);
+		return 1;
 	}
 	else if (mathlib && fastncmp("MUS_",word,4)) { // SOCs are ALL CAPS!
 		p = word+4;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fasticmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return luaL_error(L, "music '%s' could not be found.\n", word);
+		if ((i = get_mus(p, false)) == 0)
+			return luaL_error(L, "music '%s' could not be found.\n", word);
+		lua_pushinteger(L, i);
+		return 1;
 	}
 	else if (mathlib && (fastncmp("O_",word,2) || fastncmp("D_",word,2))) {
 		p = word+2;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fasticmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return luaL_error(L, "music '%s' could not be found.\n", word);
+		if ((i = get_mus(p, false)) == 0)
+			return luaL_error(L, "music '%s' could not be found.\n", word);
+		lua_pushinteger(L, i);
+		return 1;
 	}
+#endif
 	else if (!mathlib && fastncmp("pw_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
@@ -8200,8 +8253,11 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"globallevelskynum")) {
 		lua_pushinteger(L, globallevelskynum);
 		return 1;
-	} else if (fastcmp(word,"mapmusic")) {
-		lua_pushinteger(L, mapmusic);
+	} else if (fastcmp(word,"mapmusname")) {
+		lua_pushstring(L, mapmusname);
+		return 1;
+	} else if (fastcmp(word,"mapmusflags")) {
+		lua_pushinteger(L, mapmusflags);
 		return 1;
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
@@ -8218,6 +8274,12 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"gravity")) {
 		lua_pushinteger(L, gravity);
+		return 1;
+	} else if (fastcmp(word,"VERSIONSTRING")) {
+		lua_pushstring(L, VERSIONSTRING);
+		return 1;
+	} else if (fastcmp(word, "token")) {
+		lua_pushinteger(L, token);
 		return 1;
 	}
 

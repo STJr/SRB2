@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,10 +54,8 @@ typedef struct
 
 #define lumpcache_t void *
 
-// Annoying cyclic dependency workaround: this inlcusion must come after
-// the definition of MAX_WADPATH.
 #ifdef HWRENDER
-#include "m_misc.h"
+#include "m_aatree.h"
 #endif
 
 typedef struct wadfile_s
@@ -84,6 +82,8 @@ extern wadfile_t *wadfiles[MAX_WADFILES];
 
 void W_Shutdown(void);
 
+// Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
+FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_LoadWadFile(const char *filename);
 #ifdef DELFILE

@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -94,7 +94,7 @@ static fixed_t paldiv;
   * \return	fademask_t for lump
   */
 static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
-	static char lumpname[9] = "FADEmmss";
+	static char lumpname[10] = "FADEmmss";
 	static fademask_t fm = {NULL,0,0,0,0,0};
 	lumpnum_t lumpnum;
 	UINT8 *lump, *mask;

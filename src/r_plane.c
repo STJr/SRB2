@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,6 +36,9 @@
 
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
+
+// good night sweet prince
+#define SHITPLANESPARENCY
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
 #define MAXVISPLANES 512
@@ -299,7 +302,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	}
 
 	length = FixedMul (distance,distscale[x1]);
-	angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
+	angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 	/// \note Wouldn't it be faster just to add viewx and viewy
 	// to the plane's x/yoffs anyway??
 
@@ -431,6 +434,9 @@ static visplane_t *new_visplane(unsigned hash)
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
 	ffloor_t *pfloor
+#ifdef POLYOBJECTS_PLANES
+			, polyobj_t *polyobj
+#endif
 #ifdef ESLOPE
 			, pslope_t *slope
 #endif
@@ -470,12 +476,15 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef POLYOBJECTS_PLANES
 		if (check->polyobj && pfloor)
 			continue;
+		if (polyobj != check->polyobj)
+			continue;
 #endif
 		if (height == check->height && picnum == check->picnum
 			&& lightlevel == check->lightlevel
 			&& xoff == check->xoffs && yoff == check->yoffs
 			&& planecolormap == check->extra_colormap
-			&& !pfloor && !check->ffloor && check->viewz == viewz
+			&& !pfloor && !check->ffloor
+			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
 #ifdef ESLOPE
 			&& check->slope == slope
@@ -497,11 +506,13 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->yoffs = yoff;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
+	check->viewx = viewx;
+	check->viewy = viewy;
 	check->viewz = viewz;
-	check->viewangle = viewangle + plangle;
+	check->viewangle = viewangle;
 	check->plangle = plangle;
 #ifdef POLYOBJECTS_PLANES
-	check->polyobj = NULL;
+	check->polyobj = polyobj;
 #endif
 #ifdef ESLOPE
 	check->slope = slope;
@@ -567,6 +578,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->yoffs = pl->yoffs;
 		new_pl->extra_colormap = pl->extra_colormap;
 		new_pl->ffloor = pl->ffloor;
+		new_pl->viewx = pl->viewx;
+		new_pl->viewy = pl->viewy;
 		new_pl->viewz = pl->viewz;
 		new_pl->viewangle = pl->viewangle;
 		new_pl->plangle = pl->plangle;
@@ -665,7 +678,6 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	angle_t skyviewangle = viewangle; // the flat angle itself can mess with viewangle, so do your own angle instead!
 	INT32 x;
 	INT32 angle;
 	INT32 i;
@@ -704,7 +716,7 @@ void R_DrawPlanes(void)
 
 					if (dc_yl <= dc_yh)
 					{
-						angle = (skyviewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 						dc_x = x;
 						dc_source =
 							R_GetColumn(skytexture,
@@ -715,7 +727,11 @@ void R_DrawPlanes(void)
 				continue;
 			}
 
-			if (pl->ffloor != NULL)
+			if (pl->ffloor != NULL
+#ifdef POLYOBJECTS_PLANES
+			|| pl->polyobj != NULL
+#endif
+			)
 				continue;
 
 			R_DrawSinglePlane(pl);
@@ -755,7 +771,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
-		if (pl->extra_colormap && pl->extra_colormap->fog)
+#ifdef SHITPLANESPARENCY
+		if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
+#else
+		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -809,7 +829,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
-			if (pl->extra_colormap && pl->extra_colormap->fog)
+#ifdef SHITPLANESPARENCY
+			if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
+#else
+			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
+#endif
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;
@@ -857,13 +881,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 #ifdef ESLOPE
 	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
 #endif
-	if (viewangle != pl->viewangle)
+	if (viewangle != pl->viewangle+pl->plangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
-		angle = (pl->viewangle-ANGLE_90)>>ANGLETOFINESHIFT;
+		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
 		basexscale = FixedDiv(FINECOSINE(angle),centerxfrac);
 		baseyscale = -FixedDiv(FINESINE(angle),centerxfrac);
-		viewangle = pl->viewangle;
+		viewangle = pl->viewangle+pl->plangle;
 	}
 
 	currentplane = pl;
@@ -951,14 +975,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
 		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
-		xoffs *= fudge;
-		yoffs /= fudge;
+		xoffs = (fixed_t)(xoffs*fudge);
+		yoffs = (fixed_t)(yoffs/fudge);
 
-		vx = FIXED_TO_FLOAT(viewx+xoffs);
-		vy = FIXED_TO_FLOAT(viewy-yoffs);
-		vz = FIXED_TO_FLOAT(viewz);
+		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
+		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
+		vz = FIXED_TO_FLOAT(pl->viewz);
 
-		temp = P_GetZAt(pl->slope, viewx, viewy);
+		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
 
 #define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
@@ -966,14 +990,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
 		// errors if the flat is rotated.
-		ang = ANG2RAD(ANGLE_270 - viewangle);
+		ang = ANG2RAD(ANGLE_270 - pl->viewangle);
 		p.x = vx * cos(ang) - vy * sin(ang);
 		p.z = vx * sin(ang) + vy * cos(ang);
 		temp = P_GetZAt(pl->slope, -xoffs, yoffs);
 		p.y = FIXED_TO_FLOAT(temp) - vz;
 
 		// m is the v direction vector in view space
-		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
+		ang = ANG2RAD(ANGLE_180 - (pl->viewangle + pl->plangle));
 		m.x = cos(ang);
 		m.z = sin(ang);
 
@@ -982,9 +1006,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 		n.z = -cos(ang);
 
 		ang = ANG2RAD(pl->plangle);
-		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)));
+		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
 		m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)));
+		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 		m.x /= fudge;
@@ -1039,6 +1063,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 	pl->bottom[pl->minx-1] = 0x0000;
 
 	stop = pl->maxx + 1;
+
+	if (viewx != pl->viewx || viewy != pl->viewy)
+	{
+		viewx = pl->viewx;
+		viewy = pl->viewy;
+	}
+	if (viewz != pl->viewz)
+		viewz = pl->viewz;
 
 	for (x = pl->minx; x <= stop; x++)
 	{

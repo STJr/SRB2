@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -79,7 +79,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 							P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
 						if (ceiling->texture > -1) // flat changing
 							ceiling->sector->ceilingpic = ceiling->texture;
-						// don't break
+						/* FALLTHRU */
 					case raiseToHighest:
 //					case raiseCeilingByLine:
 					case moveCeilingByFrontTexture:
@@ -182,6 +182,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 					// except generalized ones, reset speed, start back up
 					case crushAndRaise:
 						ceiling->speed = CEILSPEED;
+						/* FALLTHRU */
 					case fastCrushAndRaise:
 						ceiling->direction = 1;
 						break;
@@ -200,6 +201,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						if (ceiling->texture > -1) // flat changing
 							ceiling->sector->ceilingpic = ceiling->texture;
 						// don't break
+						/* FALLTHRU */
 
 					// in all other cases, just remove the active ceiling
 					case lowerAndCrush:
@@ -427,6 +429,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 			case crushAndRaise:
 				ceiling->crush = true;
 				ceiling->topheight = sec->ceilingheight;
+				/* FALLTHRU */
 			case lowerAndCrush:
 				ceiling->bottomheight = sec->floorheight;
 				ceiling->bottomheight += 4*FRACUNIT;

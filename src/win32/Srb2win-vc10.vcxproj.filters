@@ -1,0 +1,875 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="BLUA">
+      <UniqueIdentifier>{20cba664-c3ef-48f1-85dd-42aafd5345cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LUA">
+      <UniqueIdentifier>{d3817a65-82f5-4989-9217-e5a7f43380a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="B_Bots">
+      <UniqueIdentifier>{9c3ed4ae-dbed-4d00-a164-b8bb7fc1710c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Docs">
+      <UniqueIdentifier>{4b8a8fb6-7c84-48c2-85d1-0583e6b8cacd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="W_Wad">
+      <UniqueIdentifier>{1907eee5-0ebf-4325-a2fa-793f089ed2e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="S_Sounds">
+      <UniqueIdentifier>{b9e78a3f-3e2b-4f89-9817-b77c7a26d2aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="R_Rend">
+      <UniqueIdentifier>{3f336df5-a1d7-4610-9728-4525e42c0abc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="P_Play">
+      <UniqueIdentifier>{b5090aa0-6645-4091-aa1a-ffc3bf4dc422}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="M_Misc">
+      <UniqueIdentifier>{d59e82c9-68e5-44bf-827e-f7bb1676cd6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="I_Interface">
+      <UniqueIdentifier>{29e746a2-3d91-4b69-af6e-5e03895516b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hw_Hardware">
+      <UniqueIdentifier>{b295d364-61c3-4ebb-9b68-7d6c0bb891be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="H_Hud">
+      <UniqueIdentifier>{ba258ec5-13d7-4083-98bd-c2ee58700b66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="G_Game">
+      <UniqueIdentifier>{6163f1e5-da5d-4af2-b92c-753452f9e1d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="F_Frame">
+      <UniqueIdentifier>{077b0966-1151-4afa-a533-120a4c931322}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="D_Doom">
+      <UniqueIdentifier>{bded90bc-8019-42b1-ba19-32166743d3e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="A_Asm">
+      <UniqueIdentifier>{c0ddfdb5-7494-4cca-b2ad-cb048be9cbdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win32app">
+      <UniqueIdentifier>{d5157f99-43ef-49cc-ad76-658a1168fc0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="O_Other">
+      <UniqueIdentifier>{2cedf139-53a1-40ea-b4de-19e9f4505a1f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dx_error.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="fabdxlib.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_cd.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_dbg.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_dll.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_main.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_net.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_snd.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_sys.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="win_vid.c">
+      <Filter>Win32app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_bsp.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_cache.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_draw.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_light.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_main.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_md2.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_trick.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw3sound.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lapi.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lauxlib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lbaselib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lcode.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ldebug.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ldo.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ldump.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lfunc.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lgc.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\linit.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\llex.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lmem.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lobject.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lopcodes.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lparser.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lstate.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lstring.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lstrlib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ltable.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ltablib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\ltm.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lundump.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lvm.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\blua\lzio.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\d_clisrv.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\d_main.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\d_net.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\d_netcmd.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\d_netfil.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dehacked.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\g_game.c">
+      <Filter>G_Game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\g_input.c">
+      <Filter>G_Game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f_finale.c">
+      <Filter>F_Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f_wipe.c">
+      <Filter>F_Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\i_addrinfo.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\i_tcp.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_thinkerlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_baselib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_consolelib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_hooklib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_hudlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_infolib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_maplib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_mathlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_mobjlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_playerlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_script.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_skinlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_aatree.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_anigif.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_argv.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_bbox.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_cheat.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_cond.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_fixed.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_menu.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_misc.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_queue.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_random.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\md5.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\am_map.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\b_bot.c">
+      <Filter>B_Bots</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_ceilng.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_enemy.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_floor.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_inter.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_lights.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_map.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_maputl.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_mobj.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_polyobj.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_saveg.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_setup.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_sight.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_slopes.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_spec.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_telept.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_tick.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_user.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_bsp.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_data.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_draw.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_draw8.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_draw16.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_main.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_plane.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_segs.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_sky.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_splats.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_things.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\t_facon.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\t_fsin.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\t_ftan.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\t_tan2a.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tables.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sounds.c">
+      <Filter>S_Sounds</Filter>
+    </ClCompile>
+    <ClCompile Include="..\w_wad.c">
+      <Filter>W_Wad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lzf.c">
+      <Filter>W_Wad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\s_sound.c">
+      <Filter>S_Sounds</Filter>
+    </ClCompile>
+    <ClCompile Include="..\comptime.c">
+      <Filter>O_Other</Filter>
+    </ClCompile>
+    <ClCompile Include="..\command.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\console.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\filesrch.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hu_stuff.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\info.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\st_stuff.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\v_video.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\screen.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\y_inter.c">
+      <Filter>H_Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="..\z_zone.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="afxres.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="dx_error.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="fabdxlib.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="win_dbg.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="win_dll.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="win_main.h">
+      <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_data.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_defs.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_dll.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_drv.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_glide.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_glob.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_light.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_main.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_md2.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw3dsdrv.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw3sound.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hws_data.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lapi.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lauxlib.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lcode.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\ldebug.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\ldo.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lfunc.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lgc.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\llex.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\llimits.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lmem.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lobject.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lopcodes.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lparser.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lstate.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lstring.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\ltable.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\ltm.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lua.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\luaconf.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lualib.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lundump.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lvm.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\blua\lzio.h">
+      <Filter>BLUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_clisrv.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_event.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_main.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_net.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_netcmd.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_netfil.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_player.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_think.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_ticcmd.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dehacked.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\doomdata.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\doomdef.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\doomstat.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\doomtype.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\g_game.h">
+      <Filter>G_Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\g_input.h">
+      <Filter>G_Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\g_state.h">
+      <Filter>G_Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f_finale.h">
+      <Filter>F_Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_addrinfo.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_joy.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_net.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_sound.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_system.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_tcp.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_video.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lua_hook.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lua_hud.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lua_libs.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lua_script.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\md5.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_aatree.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_anigif.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_argv.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_bbox.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_cheat.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_cond.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_dllist.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_fixed.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_menu.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_misc.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_queue.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_random.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_swap.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\am_map.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\b_bot.h">
+      <Filter>B_Bots</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_local.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_maputl.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_mobj.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_polyobj.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_pspr.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_saveg.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_setup.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_slopes.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_spec.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_tick.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_bsp.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_data.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_defs.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_draw.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_local.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_main.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_plane.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_segs.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_sky.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_splats.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_state.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_things.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tables.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sounds.h">
+      <Filter>S_Sounds</Filter>
+    </ClInclude>
+    <ClInclude Include="..\w_wad.h">
+      <Filter>W_Wad</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lzf.h">
+      <Filter>W_Wad</Filter>
+    </ClInclude>
+    <ClInclude Include="..\byteptr.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\s_sound.h">
+      <Filter>S_Sounds</Filter>
+    </ClInclude>
+    <ClInclude Include="..\comptime.h">
+      <Filter>O_Other</Filter>
+    </ClInclude>
+    <ClInclude Include="..\keys.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\command.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\console.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\endian.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\filesrch.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hu_stuff.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\info.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p5prof.h">
+      <Filter>A_Asm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\st_stuff.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\v_video.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\screen.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\y_inter.h">
+      <Filter>H_Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="..\z_zone.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fastcmp.h">
+      <Filter>O_Other</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Srb2win.ico">
+      <Filter>Win32app</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Srb2win.rc">
+      <Filter>Win32app</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\asm_defs.inc">
+      <Filter>A_Asm</Filter>
+    </None>
+    <None Include="..\config.h.in">
+      <Filter>O_Other</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\tmap.nas">
+      <Filter>A_Asm</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\tmap_mmx.nas">
+      <Filter>A_Asm</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\tmap_vc.nas">
+      <Filter>A_Asm</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

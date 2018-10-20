@@ -1,0 +1,8 @@
+#All
+* -whitespace
+# Zlib
+/zlib/watcom/watcom_f.mak -crlf
+/zlib/watcom/watcom_l.mak -crlf
+#SDL2
+/SDL2/docs/README-porting.md conflict-marker-size=32
+# Other

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -60,13 +60,13 @@ fixed_t projectiony; // aspect ratio
 // just for profiling purposes
 size_t framecount;
 
-size_t sscount;
 size_t loopcount;
 
 fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
 boolean viewsky, skyVisible;
+boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 sector_t *viewsector;
 player_t *viewplayer;
 
@@ -91,7 +91,6 @@ typedef struct portal_pair
 	INT16 *ceilingclip;
 	INT16 *floorclip;
 	fixed_t *frontscale;
-	size_t seg;
 } portal_pair;
 portal_pair *portal_base, *portal_cap;
 line_t *portalclipline;
@@ -366,69 +365,6 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-/***************************************
-*** Zdoom C++ to Legacy C conversion ***
-****************************************/
-
-// Utility to find the Z height at an XY location in a sector (for slopes)
-fixed_t R_SecplaneZatPoint(secplane_t *secplane, fixed_t x, fixed_t y)
-{
-	return FixedMul(secplane->ic, -secplane->d - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Returns the value of z at (x,y) if d is equal to dist
-fixed_t R_SecplaneZatPointDist (secplane_t *secplane, fixed_t x, fixed_t y, fixed_t dist)
-{
-	return FixedMul(secplane->ic, -dist - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Flips the plane's vertical orientiation, so that if it pointed up,
-// it will point down, and vice versa.
-void R_SecplaneFlipVert(secplane_t *secplane)
-{
-	secplane->a = -secplane->a;
-	secplane->b = -secplane->b;
-	secplane->c = -secplane->c;
-	secplane->d = -secplane->d;
-	secplane->ic = -secplane->ic;
-}
-
-// Returns true if 2 planes are the same
-boolean R_ArePlanesSame(secplane_t *original, secplane_t *other)
-{
-	return original->a == other->a && original->b == other->b
-		&& original->c == other->c && original->d == other->d;
-}
-
-// Returns true if 2 planes are different
-boolean R_ArePlanesDifferent(secplane_t *original, secplane_t *other)
-{
-	return original->a != other->a || original->b != other->b
-		|| original->c != other->c || original->d != other->d;
-}
-
-// Moves a plane up/down by hdiff units
-void R_SecplaneChangeHeight(secplane_t *secplane, fixed_t hdiff)
-{
-	secplane->d = secplane->d - FixedMul(hdiff, secplane->c);
-}
-
-// Returns how much this plane's height would change if d were set to oldd
-fixed_t R_SecplaneHeightDiff(secplane_t *secplane, fixed_t oldd)
-{
-	return FixedMul(oldd - secplane->d, secplane->ic);
-}
-
-fixed_t R_SecplanePointToDist(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, y, secplane->b, z, secplane->c);
-}
-
-fixed_t R_SecplanePointToDist2(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, secplane->b, y, z, secplane->c);
-}
-
 //
 // R_ScaleFromGlobalAngle
 // Returns the texture mapping scale for the current line (horizontal span)
@@ -518,7 +454,9 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(centerxfrac,
 		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
 
+#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
+#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
@@ -553,9 +491,6 @@ static void R_InitTextureMapping(void)
 	// Take out the fencepost cases from viewangletox.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		t = FixedMul(FINETANGENT(i), focallength);
-		t = centerx - t;
-
 		if (viewangletox[i] == -1)
 			viewangletox[i] = 0;
 		else if (viewangletox[i] == viewwidth+1)
@@ -793,7 +728,8 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
 	for (i = 0; i < ret->numlines; i++)
-		if (R_PointOnSegSide(x, y, &segs[ret->firstline + i]))
+		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
 			return 0;
 
 	return ret;
@@ -917,9 +853,9 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += player->awayviewmobj->z / mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += player->awayviewmobj->z * -mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) * -mh->skybox_scalez;
 		}
 		else if (thiscam->chase)
 		{
@@ -964,22 +900,50 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += thiscam->z / mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += thiscam->z * -mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) * -mh->skybox_scalez;
 		}
 		else
 		{
 			if (skyboxmo[1])
 			{
+				fixed_t x = 0, y = 0;
 				if (mh->skybox_scalex > 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
 				else if (mh->skybox_scalex < 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
 				if (mh->skybox_scaley > 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
 				else if (mh->skybox_scaley < 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+				if (viewmobj->angle == 0)
+				{
+					viewx += x;
+					viewy += y;
+				}
+				else if (viewmobj->angle == ANGLE_90)
+				{
+					viewx -= y;
+					viewy += x;
+				}
+				else if (viewmobj->angle == ANGLE_180)
+				{
+					viewx -= x;
+					viewy -= y;
+				}
+				else if (viewmobj->angle == ANGLE_270)
+				{
+					viewx += y;
+					viewy -= x;
+				}
+				else
+				{
+					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+				}
 			}
 			if (mh->skybox_scalez > 0)
 				viewz += player->viewz / mh->skybox_scalez;
@@ -995,8 +959,6 @@ void R_SkyboxFrame(player_t *player)
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	sscount = 0;
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
@@ -1121,8 +1083,6 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	sscount = 0;
-
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
 
@@ -1230,7 +1190,7 @@ void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 	portal->start = x1;
 	portal->end = x2;
 
-	portal->seg = ds_p-drawsegs;
+	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
 
 	portal->viewx = viewx;
 	portal->viewy = viewy;
@@ -1267,10 +1227,16 @@ void R_RenderPlayerView(player_t *player)
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
 		if (cv_homremoval.value == 1)
-			V_DrawFill(0, 0, vid.width, vid.height, 31); // No HOM effect!
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // No HOM effect!
 		else //'development' HOM removal -- makes it blindingly obvious if HOM is spotted.
-			V_DrawFill(0, 0, vid.width, vid.height, 128+(timeinmap&15));
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 128+(timeinmap&15));
 	}
+
+	// load previous saved value of skyVisible for the player
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible = skyVisible2;
+	else
+		skyVisible = skyVisible1;
 
 	portalrender = 0;
 	portal_base = portal_cap = NULL;
@@ -1288,6 +1254,7 @@ void R_RenderPlayerView(player_t *player)
 #endif
 
 		R_RenderBSPNode((INT32)numnodes - 1);
+		R_ClipSprites();
 		R_DrawPlanes();
 #ifdef FLOORSPLATS
 		R_DrawVisibleFloorSplats();
@@ -1344,14 +1311,6 @@ void R_RenderPlayerView(player_t *player)
 
 		validcount++;
 
-		if (portal->seg)
-		{
-			// Push the portal's old drawseg out of the way so it isn't interfering with sprite clipping. -Red
-			drawseg_t *seg = drawsegs+portal->seg;
-			seg->scale1 = 0;
-			seg->scale2 = 0;
-		}
-
 		R_RenderBSPNode((INT32)numnodes - 1);
 		R_ClipSprites();
 		//R_DrawPlanes();
@@ -1360,6 +1319,9 @@ void R_RenderPlayerView(player_t *player)
 		// okay done. free it.
 		portalcullsector = NULL; // Just in case...
 		portal_base = portal->next;
+		Z_Free(portal->ceilingclip);
+		Z_Free(portal->floorclip);
+		Z_Free(portal->frontscale);
 		Z_Free(portal);
 	}
 	// END PORTAL RENDERING
@@ -1374,6 +1336,13 @@ void R_RenderPlayerView(player_t *player)
 
 	// Check for new console commands.
 	NetUpdate();
+
+	// save value to skyVisible1 or skyVisible2
+	// this is so that P1 can't affect whether P2 can see a skybox or not, or vice versa
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible2 = skyVisible;
+	else
+		skyVisible1 = skyVisible;
 }
 
 // =========================================================================
@@ -1388,6 +1357,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_allowmlook);
 	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_flipcam);
+	CV_RegisterVar(&cv_flipcam2);
 
 	// Enough for dedicated server
 	if (dedicated)
@@ -1438,10 +1408,12 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_voodoocompatibility);
 	CV_RegisterVar(&cv_grfogcolor);
 	CV_RegisterVar(&cv_grsoftwarefog);
+#ifdef ALAM_LIGHTING
 	CV_RegisterVar(&cv_grstaticlighting);
 	CV_RegisterVar(&cv_grdynamiclighting);
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
+#endif
 	CV_RegisterVar(&cv_grmd2);
 #endif
 

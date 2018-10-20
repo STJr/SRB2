@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,7 +33,9 @@
 */
 fixed_t FixedMul(fixed_t a, fixed_t b)
 {
-	return (fixed_t)((((INT64)a * b) ) / FRACUNIT);
+	// Need to cast to unsigned before shifting to avoid undefined behaviour
+	// for negative integers
+	return (fixed_t)(((UINT64)((INT64)a * b)) >> FRACBITS);
 }
 
 #endif //__USE_C_FIXEDMUL__

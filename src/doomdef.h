@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -60,6 +60,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -101,6 +102,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define _USE_MATH_DEFINES // fixes M_PI errors in r_plane.c for Visual Studio
 #include <math.h>
 
 #ifdef GETTEXT
@@ -148,12 +150,16 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 14  // more precise version number
-#define VERSIONSTRING "v2.1.14"
-#define VERSIONSTRINGW L"v2.1.14"
+#define SUBVERSION 20  // more precise version number
+#define VERSIONSTRING "v2.1.20"
+#define VERSIONSTRINGW L"v2.1.20"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
+
+// Does this version require an added patch file?
+// Comment or uncomment this as necessary.
+#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -199,7 +205,7 @@ extern FILE *logstream;
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 210
 
-// The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
+// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
 #define MODID 12
@@ -208,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 19
+#define MODVERSION 25
 
 // =========================================================================
 
@@ -388,6 +394,9 @@ extern INT32 cv_debug;
 // Misc stuff for later...
 // =======================
 
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
+
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
 
@@ -423,15 +432,14 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
 
-///	Max recursive portal renders
-///	\note	obsoleted by cv_maxportals
-//#define PORTAL_LIMIT 8
-
-///	Fun experimental slope stuff!
-//#define SLOPENESS
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
+
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.
@@ -448,10 +456,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
 
 ///	Improved way of dealing with ping values and a ping limit.
 #define NEWPING
@@ -489,5 +493,13 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
+
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+//#define SECTORSPECIALSAFTERTHINK
 
 #endif // __DOOMDEF__

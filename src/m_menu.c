@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -181,9 +181,6 @@ static INT32 vidm_previousmode;
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
-
-// what a headache.
-static boolean shiftdown = false;
 
 //
 // PROTOTYPES
@@ -705,7 +702,7 @@ static menuitem_t SP_TimeAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...",     &SP_ReplayDef,        110},
 	{IT_DISABLED,              NULL, "Ghosts...",     &SP_GhostDef,         120},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",         M_ChooseTimeAttack,   130},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",         M_ChooseTimeAttack,   130},
 };
 
 enum
@@ -797,7 +794,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,   108},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,        118},
 	{IT_DISABLED,              NULL, "Ghosts...",        &SP_NightsGhostDef,         128},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",            M_ChooseNightsAttack, 138},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",            M_ChooseNightsAttack, 138},
 };
 
 enum
@@ -2059,6 +2056,10 @@ static void M_PrevOpt(void)
 	} while (oldItemOn != itemOn && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE);
 }
 
+// lock out further input in a tic when important buttons are pressed
+// (in other words -- stop bullshit happening by mashing buttons in fades)
+static boolean noFurtherInput = false;
+
 //
 // M_Responder
 //
@@ -2076,9 +2077,10 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		return false;
 
-	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
+	if (noFurtherInput)
 	{
-		shiftdown = false;
+		// Ignore input after enter/escape/other buttons
+		// (but still allow shift keyup so caps doesn't get stuck)
 		return false;
 	}
 	else if (ev->type == ev_keydown)
@@ -2088,10 +2090,6 @@ boolean M_Responder(event_t *ev)
 		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 		switch (ch)
 		{
-			case KEY_LSHIFT:
-			case KEY_RSHIFT:
-				shiftdown = true;
-				break; //return false;
 			case KEY_MOUSE1:
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -2182,6 +2180,7 @@ boolean M_Responder(event_t *ev)
 	// F-Keys
 	if (!menuactive)
 	{
+		noFurtherInput = true;
 		switch (ch)
 		{
 			case KEY_F1: // Help key
@@ -2252,6 +2251,7 @@ boolean M_Responder(event_t *ev)
 					M_StartControlPanel();
 				return true;
 		}
+		noFurtherInput = false; // turns out we didn't care
 		return false;
 	}
 
@@ -2275,6 +2275,7 @@ boolean M_Responder(event_t *ev)
 				if (routine)
 					routine(ch);
 				M_StopMessage(0);
+				noFurtherInput = true;
 				return true;
 			}
 			return true;
@@ -2354,6 +2355,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ENTER:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (routine)
 			{
@@ -2387,6 +2389,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ESCAPE:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (currentMenu->prevMenu)
 			{
@@ -2443,34 +2446,44 @@ void M_Drawer(void)
 	if (currentMenu == &MessageDef)
 		menuactive = true;
 
-	if (!menuactive)
-		return;
-
-	// now that's more readable with a faded background (yeah like Quake...)
-	if (!WipeInAction)
-		V_DrawFadeScreen();
-
-	if (currentMenu->drawroutine)
-		currentMenu->drawroutine(); // call current menu Draw routine
-
-	// Draw version down in corner
-	// ... but only in the MAIN MENU.  I'm a picky bastard.
-	if (currentMenu == &MainDef)
+	if (menuactive)
 	{
-		if (customversionstring[0] != '\0')
+		// now that's more readable with a faded background (yeah like Quake...)
+		if (!WipeInAction)
+			V_DrawFadeScreen();
+
+		if (currentMenu->drawroutine)
+			currentMenu->drawroutine(); // call current menu Draw routine
+
+		// Draw version down in corner
+		// ... but only in the MAIN MENU.  I'm a picky bastard.
+		if (currentMenu == &MainDef)
 		{
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
-		}
-		else
-		{
+			if (customversionstring[0] != '\0')
+			{
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
+			}
+			else
+			{
 #ifdef DEVELOP // Development -- show revision / branch info
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
 #else // Regular build
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
 #endif
+			}
 		}
+	}
+
+	// focus lost notification goes on top of everything, even the former everything
+	if (window_notinfocus)
+	{
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
+		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
+		else
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
 	}
 }
 
@@ -2656,6 +2669,9 @@ void M_SetupNextMenu(menu_t *menudef)
 //
 void M_Ticker(void)
 {
+	// reset input trigger
+	noFurtherInput = false;
+
 	if (dedicated)
 		return;
 
@@ -3006,6 +3022,7 @@ static void M_DrawGenericMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3057,6 +3074,7 @@ static void M_DrawGenericMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -3069,6 +3087,7 @@ static void M_DrawGenericMenu(void)
 			case IT_TRANSTEXT:
 				if (currentMenu->menuitems[i].alphaKey)
 					y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
+				/* FALLTHRU */
 			case IT_TRANSTEXT2:
 				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
 				y += SMALLLINEHEIGHT;
@@ -3281,6 +3300,7 @@ static void M_DrawCenteredMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3331,6 +3351,7 @@ static void M_DrawCenteredMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawCenteredString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -3674,6 +3695,11 @@ static void M_DrawMessageMenu(void)
 
 	mlines = currentMenu->lastOn>>8;
 	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
+
+	// hack: draw RA background in RA menus
+	if (gamestate == GS_TIMEATTACK)
+		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
 	while (*(msg+start))
@@ -3828,6 +3854,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	// We allow switching to spectator even if team changing is not allowed
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -3835,6 +3862,11 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	if (!cv_allowteamchange.value)
+	{
+		M_StartMessage(M_GetText("The server is not allowing\nteam changes at this time.\nPress a key.\n"), NULL, MM_NOTHING);
+		return;
+	}
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
@@ -4282,9 +4314,9 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 	SP_MainMenu[sprecordattack].status =
-		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
-		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
 
 	M_SetupNextMenu(&SP_MainDef);
 }
@@ -4593,7 +4625,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		savegameinfo[slot].botskin = 0;
 
 	if (savegameinfo[slot].botskin)
-		snprintf(savegameinfo[slot].playername, 32, "%s & %s",
+		snprintf(savegameinfo[slot].playername, 36, "%s & %s",
 			skins[savegameinfo[slot].skinnum].realname,
 			skins[savegameinfo[slot].botskin-1].realname);
 	else
@@ -4751,7 +4783,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 	{
 		S_StopMusic();
-		S_ChangeMusic(mus_chrsel, true);
+		S_ChangeMusicInternal("chrsel", true);
 	}
 
 	SP_PlayerDef.prevMenu = currentMenu;
@@ -5202,7 +5234,7 @@ void M_DrawTimeAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5365,7 +5397,7 @@ static void M_TimeAttack(INT32 choice)
 	itemOn = tastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Drawing function for Nights Attack
@@ -5375,7 +5407,7 @@ void M_DrawNightsAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5498,7 +5530,7 @@ static void M_NightsAttack(INT32 choice)
 	itemOn = nastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -5732,7 +5764,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 	// Update replay availability.
 	CV_AddValue(&cv_nextmap, 1);
 	CV_AddValue(&cv_nextmap, -1);
@@ -6263,6 +6295,13 @@ static void M_DrawConnectIPMenu(void)
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
+
+	if (*setupm_ip == 0)
+	{
+		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
+		return;
+	}
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.
@@ -6504,7 +6543,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (choice < 32 || choice > 127 || itemOn != 0)
 				break;
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[l] =(char)choice;
@@ -6911,82 +6950,95 @@ static void M_ChangeControl(INT32 choice)
 // Toggles sound systems in-game.
 static void M_ToggleSFX(void)
 {
-	if (nosound)
+	if (sound_disabled)
 	{
-		nosound = false;
-		I_StartupSound();
-		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		sound_disabled = false;
+		S_InitSfxChannels(cv_soundvolume.value);
+		S_StartSound(NULL, sfx_strpst);
 		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
 static void M_ToggleDigital(void)
 {
-	if (nodigimusic)
+	if (digital_disabled)
 	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		digital_disabled = false;
+		I_InitMusic();
 		S_StopMusic();
-		S_ChangeMusic(mus_lclear, false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (digital_disabled)
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
 		{
-			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			if (midi_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
 static void M_ToggleMIDI(void)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusic(mus_lclear, false);
+		midi_disabled = false;
+		I_InitMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (music_disabled)
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
 		{
-			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			if (digital_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -7402,7 +7454,7 @@ static void M_HandleFogColor(INT32 choice)
 				l = strlen(temp);
 				for (i = 0; i < l; i++)
 					cv_grfogcolor.zstring[5 - i] = temp[l - i];
-					cv_grfogcolor.zstring[5] = (char)choice;
+				cv_grfogcolor.zstring[5] = (char)choice;
 			}
 			break;
 	}

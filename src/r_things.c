@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -280,7 +280,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		{
 			case 0xff:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
 			case 0:
@@ -293,7 +293,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
@@ -551,11 +551,6 @@ void R_ClearSprites(void)
 	visspritecount = clippedvissprites = 0;
 }
 
-static inline void R_ResetVisSpriteChunks(void)
-{
-	memset(visspritechunks, 0, sizeof(visspritechunks));
-}
-
 //
 // R_NewVisSprite
 //
@@ -749,9 +744,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
+	INT64 overflow_test;
 
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
@@ -839,10 +840,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 
 		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		if (vis->xiscale > 0)
+		/*if (vis->xiscale > 0)
 			frac = FixedDiv(frac, this_scale);
 		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;
+			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
 
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 		//dc_hires = 1;
@@ -890,11 +891,17 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #endif
 	fixed_t frac;
 	patch_t *patch;
+	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	if (vis->transmap)
 	{
@@ -969,7 +976,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
-		if (cutfrac > vid.height)
+		if (cutfrac > viewheight)
 			return;
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and
@@ -1016,9 +1023,9 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			else
 */
 			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
-				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
+				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
 			{
-				lindex = sprite->xscale>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -1244,15 +1251,6 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47 // 31 bits + 16 from the division by FRACUNIT
-	 || M_HighestBit(abs(gz  - viewz)) + M_HighestBit(abs(yscale)) > 47)
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
-	}
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
@@ -1306,7 +1304,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
-		vis->startfrac += vis->xiscale*(vis->x1-x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
@@ -1326,7 +1324,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
 
 	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
-		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
+		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
@@ -1334,7 +1332,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = xscale>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -1453,6 +1451,17 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 			return;
 	}
 
+	// okay, we can't return now except for vertical clipping... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
+
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	gzt = thing->z + spritecachedinfo[lump].topoffset;
 	gz = gzt - spritecachedinfo[lump].height;
@@ -1461,14 +1470,6 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
 			return;
-	}
-
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47) // 31 bits + 16 from the division by FRACUNIT
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectPrecipitationSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
 	}
 
 	// store information in a vissprite
@@ -1579,8 +1580,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectSprite(thing);
 		}
 	}
 	else
@@ -1601,8 +1604,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 	else
@@ -1650,7 +1655,8 @@ void R_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -1714,21 +1720,25 @@ static void R_CreateDrawNodes(void)
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
+#ifdef POLYOBJECTS_PLANES
+		// Check for a polyobject plane, but only if this is a front line
+		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+			plane = ds->curline->polyseg->visplane;
+			R_PlaneBounds(plane);
+
+			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+				;
+			else {
+				// Put it in!
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = plane;
+				entry->seg = ds;
+			}
+			ds->curline->polyseg->visplane = NULL;
+		}
+#endif
 		if (ds->maskedtexturecol)
 		{
-#ifdef POLYOBJECTS_PLANES
-			// Check for a polyobject plane, but only if this is a front line
-			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
-				// Put it in!
-
-				entry = R_CreateDrawNode(&nodehead);
-				entry->plane = ds->curline->polyseg->visplane;
-				entry->seg = ds;
-				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
-				ds->curline->polyseg->visplane = NULL;
-			}
-#endif
-
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1770,6 +1780,29 @@ static void R_CreateDrawNodes(void)
 			}
 		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	// find all the remaining polyobject planes and add them on the end of the list
+	// probably this is a terrible idea if we wanted them to be sorted properly
+	// but it works getting them in for now
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (!PolyObjects[i].visplane)
+			continue;
+		plane = PolyObjects[i].visplane;
+		R_PlaneBounds(plane);
+
+		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		{
+			PolyObjects[i].visplane = NULL;
+			continue;
+		}
+		entry = R_CreateDrawNode(&nodehead);
+		entry->plane = plane;
+		// note: no seg is set, for what should be obvious reasons
+		PolyObjects[i].visplane = NULL;
+	}
+#endif
 
 	if (visspritecount == 0)
 		return;
@@ -1827,13 +1860,16 @@ static void R_CreateDrawNodes(void)
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				for (i = x1; i <= x2; i++)
+				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
-						break;
+					for (i = x1; i <= x2; i++)
+					{
+						if (r2->seg->frontscale[i] > rover->scale)
+							break;
+					}
+					if (i > x2)
+						continue;
 				}
-				if (i > x2)
-					continue;
 
 				entry = R_CreateDrawNode(NULL);
 				(entry->prev = r2->prev)->next = entry;
@@ -2057,6 +2093,9 @@ void R_ClipSprites(void)
 				// does not cover sprite
 				continue;
 			}
+
+			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+				continue; // is a portal
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;

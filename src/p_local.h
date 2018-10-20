@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,7 +68,6 @@
 
 // both the head and tail of the thinker list
 extern thinker_t thinkercap;
-extern INT32 runcount;
 
 void P_InitThinkers(void);
 void P_AddThinker(thinker_t *thinker);
@@ -169,6 +168,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
+boolean P_AnalogMove(player_t *player);
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
 void P_FindEmerald(void);
@@ -250,7 +250,8 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype
 #endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
-boolean P_WeaponOrPanel(mobjtype_t type);
+fixed_t P_GetMobjGravity(mobj_t *mo);
+FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,6 +26,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "s_sound.h"
+#include "i_sound.h"
 #include "m_misc.h"
 #include "am_map.h"
 #include "byteptr.h"
@@ -82,6 +83,7 @@ static void AutoBalance_OnChange(void);
 static void TeamScramble_OnChange(void);
 
 static void NetTimeout_OnChange(void);
+static void JoinTimeout_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -127,6 +129,7 @@ static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
+static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -340,7 +343,9 @@ consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, 
 
 consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_nettimeout = {"nettimeout", "525", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
+consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #ifdef NEWPING
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -364,6 +369,35 @@ INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
+
+/// \warning Keep this up-to-date if you add/remove/rename net text commands
+const char *netxcmdnames[MAXNETXCMD - 1] =
+{
+	"NAMEANDCOLOR",
+	"WEAPONPREF",
+	"KICK",
+	"NETVAR",
+	"SAY",
+	"MAP",
+	"EXITLEVEL",
+	"ADDFILE",
+	"PAUSE",
+	"ADDPLAYER",
+	"TEAMCHANGE",
+	"CLEARSCORES",
+	"LOGIN",
+	"VERIFIED",
+	"RANDOMSEED",
+	"RUNSOC",
+	"REQADDFILE",
+	"DELFILE",
+	"SETMOTD",
+	"SUICIDE",
+#ifdef HAVE_BLUA
+	"LUACMD",
+	"LUAVAR"
+#endif
+};
 
 // =========================================================================
 //                           SERVER STARTUP
@@ -517,9 +551,12 @@ void D_RegisterServerCommands(void)
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
 	CV_RegisterVar(&cv_maxsend);
+	CV_RegisterVar(&cv_noticedownload);
+	CV_RegisterVar(&cv_downloadspeed);
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
+	CV_RegisterVar(&cv_jointimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
@@ -545,7 +582,6 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
-	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -597,11 +633,11 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_optimize);
 	CV_RegisterVar(&cv_gif_downscale);
 
+#ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);
+#endif
 
 	// register these so it is saved to config
-	if ((username = I_GetUserName()))
-		cv_playername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
@@ -633,6 +669,7 @@ void D_RegisterClientCommands(void)
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
 	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
@@ -808,7 +845,7 @@ static boolean IsNameGood(char *name, INT32 playernum)
 			else if (len == 1) // Agh!
 			{
 				// Last ditch effort...
-				sprintf(name, "%d", M_Random() & 7);
+				sprintf(name, "%d", M_RandomKey(10));
 				if (!IsNameGood (name, playernum))
 					return false;
 			}
@@ -974,7 +1011,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (!server && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1111,6 +1148,13 @@ static void SendNameAndColor(void)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
 			}
 		}
+		else
+		{
+			cv_skin.value = players[consoleplayer].skin;
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			// will always be same as current
+			SetPlayerSkin(consoleplayer, cv_skin.string);
+		}
 
 		return;
 	}
@@ -1227,6 +1271,13 @@ static void SendNameAndColor2(void)
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
 			}
+		}
+		else
+		{
+			cv_skin2.value = players[secondplaya].skin;
+			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
+			// will always be same as current
+			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
 		return;
 	}
@@ -1398,7 +1449,12 @@ static void Command_Playdemo_f(void)
 
 	CONS_Printf(M_GetText("Playing back demo '%s'.\n"), name);
 
-	G_DoPlayDemo(name);
+	// Internal if no extension, external if one exists
+	// If external, convert the file name to a path in SRB2's home directory
+	if (FIL_CheckExtension(name))
+		G_DoPlayDemo(va("%s"PATHSEP"%s", srb2home, name));
+	else
+		G_DoPlayDemo(name);
 }
 
 static void Command_Timedemo_f(void)
@@ -1518,8 +1574,13 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer) && SV_SpawnServer())
-			buf[0] &= ~(1<<1);
+		if (!(adminplayer == consoleplayer))
+		{
+			if (SV_SpawnServer())
+				buf[0] &= ~(1<<1);
+			if (!Playing()) // you failed to start a server somehow, so cancel the map change
+				return;
+		}
 
 		// Kick bot from special stages
 		if (botskin)
@@ -1571,7 +1632,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (!server && !(adminplayer == consoleplayer))
+	if (client && !(adminplayer == consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1854,10 +1915,10 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		if (paused)
 		{
 			if (!menuactive || netgame)
-				S_PauseSound();
+				S_PauseAudio();
 		}
 		else
-			S_ResumeSound();
+			S_ResumeAudio();
 	}
 }
 
@@ -1898,7 +1959,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	// You can't suicide someone else.  Nice try, there.
 	if (suicideplayer != playernum || (!G_PlatformGametype()))
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command recieved from %s\n"), player_names[playernum]);
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
 			XBOXSTATIC UINT8 buf[2];
@@ -2065,7 +2126,7 @@ static void Command_Teamchange_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2162,7 +2223,7 @@ static void Command_Teamchange2_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2397,7 +2458,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			error = true;
 			break;
 		}
-		//fall down
+		/* FALLTHRU */
 	case GT_TAG:
 		switch (NetPacket.packet.newteam)
 		{
@@ -2582,11 +2643,13 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 	memset(dest, 0, 16);
 #else
 	XBOXSTATIC char tmpbuf[256];
+	const size_t sl = strlen(salt);
 
-	if (len > 256-strlen(salt))
-		len = 256-strlen(salt);
+	if (len > 256-sl)
+		len = 256-sl;
 	memcpy(tmpbuf, buffer, len);
-	strcpy(&tmpbuf[len], salt);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
 	len += strlen(salt);
 	if (len < 256)
 		memset(&tmpbuf[len],0,256-len);
@@ -2598,10 +2661,12 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 #define BASESALT "basepasswordstorage"
 static UINT8 adminpassmd5[16];
+static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
+	adminpasswordset = true;
 }
 
 // Remote Administration
@@ -2611,7 +2676,7 @@ static void Command_Changepassword_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	if (!server) // cannot change remotely
+	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2636,6 +2701,12 @@ static void Command_Login_f(void)
 #else
 	XBOXSTATIC UINT8 finalmd5[16];
 	const char *pw;
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
 
 	// If the server uses login, it will effectively just remove admin privileges
 	// from whoever has them. This is good.
@@ -2670,8 +2741,14 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 	READMEM(*cp, sentmd5, 16);
 
-	if (!server)
+	if (client)
 		return;
+
+	if (!adminpasswordset)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
 
 	// Do the final pass to compare with the sent md5
 	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", playernum), &finalmd5);
@@ -2692,9 +2769,15 @@ static void Command_Verify_f(void)
 	char *temp;
 	INT32 playernum;
 
-	if (!server)
+	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -2776,7 +2859,7 @@ static void Command_MotD_f(void)
 			return;
 		}
 
-	if ((netgame || multiplayer) && !server)
+	if ((netgame || multiplayer) && client)
 		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
 	else
 	{
@@ -2914,6 +2997,7 @@ static void Command_Addfile(void)
 	XBOXSTATIC char buf[256];
 	char *buf_p = buf;
 	INT32 i;
+	int musiconly; // W_VerifyNMUSlumps isn't boolean
 
 	if (COM_Argc() != 2)
 	{
@@ -2928,7 +3012,9 @@ static void Command_Addfile(void)
 		if (!isprint(fn[i]) || fn[i] == ';')
 			return;
 
-	if (!W_VerifyNMUSlumps(fn))
+	musiconly = W_VerifyNMUSlumps(fn);
+
+	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
 		if (netgame && !(server || adminplayer == consoleplayer))
@@ -2940,7 +3026,7 @@ static void Command_Addfile(void)
 	}
 
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
-	if (!(netgame || multiplayer) || W_VerifyNMUSlumps(fn))
+	if (!(netgame || multiplayer) || musiconly)
 	{
 		P_AddWadFile(fn, NULL);
 		return;
@@ -2951,8 +3037,31 @@ static void Command_Addfile(void)
 		if (*p == '\\' || *p == '/' || *p == ':')
 			break;
 	++p;
+	// check total packet size and no of files currently loaded
+	{
+		size_t packetsize = 0;
+		serverinfo_pak *dummycheck = NULL;
+
+		// Shut the compiler up.
+		(void)dummycheck;
+
+		// See W_LoadWadFile in w_wad.c
+		for (i = 0; i < numwadfiles; i++)
+			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+
+		packetsize += nameonlylength(fn) + 22;
+
+		if ((numwadfiles >= MAX_WADFILES)
+		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			return;
+		}
+	}
+
 	WRITESTRINGN(buf_p,p,240);
 
+	// calculate and check md5
 	{
 		UINT8 md5sum[16];
 #ifdef NOMD5
@@ -2960,9 +3069,7 @@ static void Command_Addfile(void)
 #else
 		FILE *fhandle;
 
-		fhandle = fopen(fn, "rb");
-
-		if (fhandle)
+		if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
 		{
 			tic_t t = I_GetTime();
 			CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
@@ -2970,16 +3077,22 @@ static void Command_Addfile(void)
 			CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
 			fclose(fhandle);
 		}
-		else
-		{
-			CONS_Printf(M_GetText("File %s not found.\n"), fn);
+		else // file not found
 			return;
+
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				return;
+			}
 		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (adminplayer == consoleplayer && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -3027,13 +3140,19 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	filestatus_t ncs = FS_NOTFOUND;
 	UINT8 md5sum[16];
 	boolean kick = false;
+	boolean toomany = false;
 	INT32 i;
+	size_t packetsize = 0;
+	serverinfo_pak *dummycheck = NULL;
+
+	// Shut the compiler up.
+	(void)dummycheck;
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
 
 	// Only the server processes this message.
-	if (!server)
+	if (client)
 		return;
 
 	// Disallow non-printing characters and semicolons.
@@ -3053,13 +3172,25 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	ncs = findfile(filename,md5sum,true);
+	// See W_LoadWadFile in w_wad.c
+	for (i = 0; i < numwadfiles; i++)
+		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
 
-	if (ncs != FS_FOUND)
+	packetsize += nameonlylength(filename) + 22;
+
+	if ((numwadfiles >= MAX_WADFILES)
+	|| (packetsize > sizeof(dummycheck->fileneeded)))
+		toomany = true;
+	else
+		ncs = findfile(filename,md5sum,true);
+
+	if (ncs != FS_FOUND || toomany)
 	{
 		char message[256];
 
-		if (ncs == FS_NOTFOUND)
+		if (toomany)
+			sprintf(message, M_GetText("Too many files loaded to add %s\n"), filename);
+		else if (ncs == FS_NOTFOUND)
 			sprintf(message, M_GetText("The server doesn't have %s\n"), filename);
 		else if (ncs == FS_MD5SUMBAD)
 			sprintf(message, M_GetText("Checksum mismatch on %s\n"), filename);
@@ -3129,10 +3260,15 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND)
+	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
 	{
 		Command_ExitGame_f();
-		if (ncs == FS_NOTFOUND)
+		if (ncs == FS_FOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you have too many files added.\nRestart the game to clear loaded files\nand play on this server."), filename);
+			M_StartMessage(va("The server added a file \n(%s)\nbut you have too many files added.\nRestart the game to clear loaded files.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
+		}
+		else if (ncs == FS_NOTFOUND)
 		{
 			CONS_Printf(M_GetText("The server tried to add %s,\nbut you don't have this file.\nYou need to find it in order\nto play on this server."), filename);
 			M_StartMessage(va("The server added a file \n(%s)\nthat you do not have.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
@@ -3150,7 +3286,6 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	P_AddWadFile(filename, NULL);
 	G_SetGameModified(true);
 }
 
@@ -3298,6 +3433,11 @@ static void NumLaps_OnChange(void)
 static void NetTimeout_OnChange(void)
 {
 	connectiontimeout = (tic_t)cv_nettimeout.value;
+}
+
+static void JoinTimeout_OnChange(void)
+{
+	jointimeout = (tic_t)cv_jointimeout.value;
 }
 
 UINT32 timelimitintics = 0;
@@ -3583,7 +3723,7 @@ retryscramble:
 		for (i = 0; i < playercount; i++)
 		{
 			if (repick)
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 
 			// One team has the most players they can get, assign the rest to the other team.
 			if (red == maxcomposition || blue == maxcomposition)
@@ -3628,7 +3768,7 @@ retryscramble:
 		{
 			if (repick)
 			{
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
 			else
@@ -3761,53 +3901,89 @@ static void Command_Displayplayer_f(void)
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
-	UINT16 tune, track = 0;
+	UINT16 tunenum, track = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <slot #/map name/\"default\"> <speed> <track>:\n");
-		CONS_Printf(M_GetText("Play a music slot at a set speed (\"1\" being normal speed).\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n"));
-		CONS_Printf(M_GetText("The current tune is: %d\nThe current track is: %d\n"),
-			(mapmusic & MUSIC_SONGMASK), ((mapmusic & MUSIC_TRACKMASK) >> MUSIC_TRACKSHIFT));
+		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
 		return;
 	}
 
 	tunearg = COM_Argv(1);
-	tune = (UINT16)atoi(tunearg);
+	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
-	if (!strcasecmp(tunearg, "default"))
+	if (!strcasecmp(tunearg, "-show"))
 	{
-		tune = mapheaderinfo[gamemap-1]->musicslot;
-		track = mapheaderinfo[gamemap-1]->musicslottrack;
-	}
-	else if (toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
-	if (tune >= NUMMUSIC)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid slots are 1 to %d, or 0 to stop music\n"), NUMMUSIC - 1);
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
 		return;
 	}
-
-	if (argc > 3)
-		track = (UINT16)atoi(COM_Argv(3))-1;
-
-	mapmusic = tune | (track << MUSIC_TRACKSHIFT);
-
-	if (tune == mus_None)
+	if (!strcasecmp(tunearg, "-none"))
+	{
 		S_StopMusic();
-	else
-		S_ChangeMusic(mapmusic, true);
+		return;
+	}
+	else if (!strcasecmp(tunearg, "-default"))
+	{
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
+		return;
+	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
 	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
+
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
+	else
+		strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+
+	S_ChangeMusic(mapmusname, mapmusflags, true);
+
+	if (argc > 3)
 	{
-		float speed = (float)atof(COM_Argv(2));
+		float speed = (float)atof(COM_Argv(3));
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
+}
+
+static void Command_RestartAudio_f(void)
+{
+	if (dedicated)  // No point in doing anything if game is a dedicated server.
+		return;
+
+	S_StopMusic();
+	S_StopSounds();
+	I_ShutdownMusic();
+	I_ShutdownSound();
+	I_StartupSound();
+	I_InitMusic();
+
+// These must be called or no sound and music until manually set.
+
+	I_SetSfxVolume(cv_soundvolume.value);
+	S_SetMusicVolume(cv_digmusicvolume.value, cv_midimusicvolume.value);
+	if (Playing()) // Gotta make sure the player is in a level
+		P_RestoreMusic(&players[consoleplayer]);
 }
 
 /** Quits a game and returns to the title screen.
@@ -3926,7 +4102,7 @@ static void Command_Archivetest_f(void)
 	}
 
 	// assign mobjnum
-	i = 0;
+	i = 1;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			((mobj_t *)th)->mobjnum = i++;
@@ -4029,7 +4205,7 @@ static void Skin_OnChange(void)
 		return; // do whatever you want
 
 	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
@@ -4072,8 +4248,7 @@ static void Color_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

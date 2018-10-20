@@ -3470,6 +3470,18 @@ INT32 I_PutEnv(char *variable)
 	return putenv(variable);
 }
 
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+char *I_ClipboardPaste(void)
+{
+	return NULL;
+}
+
 typedef BOOL (WINAPI *MyFunc3) (DWORD);
 
 const CPUInfoFlags *I_CPUInfo(void)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3049,9 +3049,7 @@ typedef enum mobj_type
 	// Collectible Items
 	MT_RING,
 	MT_FLINGRING, // Lost ring
-#ifdef BLUE_SPHERES
 	MT_BLUEBALL,  // Blue sphere replacement for special stages
-#endif
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
 	MT_EMMY, // emerald token for special stage

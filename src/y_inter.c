@@ -1,13 +1,13 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2014 by Sonic Team Junior.
+// Copyright (C) 2004-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  y_inter.c
-/// \brief Intermission
+/// \brief Tally screens, or "Intermissions" as they were formally called in Doom
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -57,7 +57,7 @@ typedef union
 {
 	struct
 	{
-		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[21]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
@@ -77,10 +77,14 @@ typedef union
 
 	struct
 	{
-		char passed1[13]; // KNUCKLES GOT
-		char passed2[16]; // A CHAOS EMERALD
+		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
+		char passed3[15];             //                   CAN NOW BECOME
+		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
 		INT32 passedx1;
 		INT32 passedx2;
+		INT32 passedx3;
+		INT32 passedx4;
 
 		y_bonus_t bonus;
 		patch_t *bonuspatch;
@@ -155,6 +159,20 @@ static void Y_CalculateMatchWinners(void);
 static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
+// Stuff copy+pasted from st_stuff.c
+static INT32 SCX(INT32 x)
+{
+	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
+}
+static INT32 SCY(INT32 z)
+{
+	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
+}
+
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, p)
+
 //
 // Y_IntermissionDrawer
 //
@@ -200,28 +218,31 @@ void Y_IntermissionDrawer(void)
 		INT32 bonusy;
 
 		// draw score
-		V_DrawScaledPatch(hudinfo[HUD_SCORE].x, hudinfo[HUD_SCORE].y, V_SNAPTOLEFT, sboscore);
-		V_DrawTallNum(hudinfo[HUD_SCORENUM].x, hudinfo[HUD_SCORENUM].y, V_SNAPTOLEFT, data.coop.score);
+		ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+		ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
 
 		// draw time
-		V_DrawScaledPatch(hudinfo[HUD_TIME].x, hudinfo[HUD_TIME].y, V_SNAPTOLEFT, sbotime);
+		ST_DrawPatchFromHud(HUD_TIME, sbotime);
 		if (cv_timetic.value == 1)
-			V_DrawTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT, data.coop.tics);
+			ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
 		else
 		{
+			INT32 seconds, minutes, tictrn;
+
+			seconds = G_TicsToSeconds(data.coop.tics);
+			minutes = G_TicsToMinutes(data.coop.tics, true);
+			tictrn  = G_TicsToCentiseconds(data.coop.tics);
+
+			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
+			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
+			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
+
 			// we should show centiseconds on the intermission screen too, if the conditions are right.
 			if (modeattacking || cv_timetic.value == 2)
 			{
-				V_DrawPaddedTallNum(hudinfo[HUD_TICS].x, hudinfo[HUD_TICS].y, V_SNAPTOLEFT,
-					G_TicsToCentiseconds(data.coop.tics), 2);
-				V_DrawScaledPatch(hudinfo[HUD_TIMETICCOLON].x, hudinfo[HUD_TIMETICCOLON].y, V_SNAPTOLEFT, sboperiod);
+				ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
+				ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
 			}
-
-			V_DrawPaddedTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT,
-				G_TicsToSeconds(data.coop.tics), 2);
-			V_DrawScaledPatch(hudinfo[HUD_TIMECOLON].x, hudinfo[HUD_TIMECOLON].y, V_SNAPTOLEFT, sbocolon);
-			V_DrawTallNum(hudinfo[HUD_MINUTES].x, hudinfo[HUD_MINUTES].y, V_SNAPTOLEFT,
-				G_TicsToMinutes(data.coop.tics, false));
 		}
 
 		// draw the "got through act" lines and act number
@@ -250,19 +271,62 @@ void Y_IntermissionDrawer(void)
 	}
 	else if (intertype == int_spec)
 	{
-		// draw the header
-/*		if (endtic != -1 && ALL7EMERALDS(emeralds) && data.spec.nowsuper != NULL)
-			V_DrawScaledPatch(48, 32, 0, data.spec.nowsuper);
-		else
-			V_DrawScaledPatch(data.spec.headx, 26, 0, data.spec.cemerald); */
+		static tic_t animatetic = 0;
+		INT32 ttheight = 16;
+		INT32 xoffset1 = 0; // Line 1 x offset
+		INT32 xoffset2 = 0; // Line 2 x offset
+		INT32 xoffset3 = 0; // Line 3 x offset
+		UINT8 drawsection = 0;
 
-		if (data.spec.passed1[0] != '\0')
+		// draw the header
+		if (intertic <= TICRATE)
+			animatetic = 0;
+		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
+			animatetic = intertic;
+
+		if (animatetic)
 		{
-			V_DrawLevelTitle(data.spec.passedx1, 24, 0, data.spec.passed1);
-			V_DrawLevelTitle(data.spec.passedx2, 24+V_LevelNameHeight(data.spec.passed2)+2, 0, data.spec.passed2);
+			INT32 animatetimer = (intertic - animatetic);
+			if (animatetimer <= 8)
+			{
+				xoffset1 = -(animatetimer     * 40);
+				xoffset2 = -((animatetimer-2) * 40);
+				if (xoffset2 > 0) xoffset2 = 0;
+			}
+			else if (animatetimer <= 19)
+			{
+				drawsection = 1;
+				xoffset1 = (16-animatetimer) * 40;
+				xoffset2 = (18-animatetimer) * 40;
+				xoffset3 = (20-animatetimer) * 40;
+				if (xoffset1 < 0) xoffset1 = 0;
+				if (xoffset2 < 0) xoffset2 = 0;
+			}
+			else
+				drawsection = 1;
+		}
+
+		if (drawsection == 1)
+		{
+			ttheight = 16;
+			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
+			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
+			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
+			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
+		}
+		else if (data.spec.passed1[0] != '\0')
+		{
+			ttheight = 24;
+			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+			ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
+			V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
 		}
 		else
-			V_DrawLevelTitle(data.spec.passedx2, 24+(V_LevelNameHeight(data.spec.passed2)/2)+2, 0, data.spec.passed2);
+		{
+			ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
+			V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
+		}
 
 		// draw the emeralds
 		if (intertic & 1)
@@ -632,7 +696,7 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_lclear, false); // don't loop it
+			S_ChangeMusicInternal("lclear", false); // don't loop it
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -693,7 +757,7 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusic(mus_lclear, false); // don't loop it
+			S_ChangeMusicInternal("lclear", false); // don't loop it
 			tallydonetic = 0;
 		}
 
@@ -708,7 +772,7 @@ void Y_Ticker(void)
 		{
 			if (intertic > tallydonetic)
 			{
-				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally for sound
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 				S_StartSound(NULL, sfx_flgcap); // cha-ching!
 			}
 			return;
@@ -728,7 +792,7 @@ void Y_Ticker(void)
 			if (data.spec.continues & 0x80) // don't set endtic yet!
 				tallydonetic = intertic + (3*TICRATE)/2;
 			else // okay we're good.
-				endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
 
@@ -754,7 +818,7 @@ void Y_Ticker(void)
 	else if (intertype == int_match || intertype == int_ctf || intertype == int_teammatch) // match
 	{
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_racent, true); // loop it
+			S_ChangeMusicInternal("racent", true); // loop it
 
 		// If a player has left or joined, recalculate scores.
 		if (data.match.numplayers != D_NumPlayers())
@@ -763,7 +827,7 @@ void Y_Ticker(void)
 	else if (intertype == int_race || intertype == int_classicrace) // race
 	{
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_racent, true); // loop it
+			S_ChangeMusicInternal("racent", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}
@@ -918,7 +982,8 @@ void Y_StartIntermission(void)
 	}
 
 	// We couldn't display the intermission even if we wanted to.
-	if (dedicated) return;
+	// But we still need to give the players their score bonuses, dummy.
+	//if (dedicated) return;
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
@@ -939,6 +1004,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the coop intermission for now
 			intertype = int_coop;
+			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1052,6 +1118,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the special stage intermission for now
 			intertype = int_spec;
+			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
 			// Update visitation flags?
@@ -1098,6 +1165,10 @@ void Y_StartIntermission(void)
 				data.spec.nowsuper = NULL;
 			} */
 
+			// Super form stuff (normally blank)
+			data.spec.passed3[0] = '\0';
+			data.spec.passed4[0] = '\0';
+
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
 			{
@@ -1111,10 +1182,19 @@ void Y_StartIntermission(void)
 					skins[players[consoleplayer].skin].realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "GOT THEM ALL!");
+
+				if (skins[players[consoleplayer].skin].flags & SF_SUPER)
+				{
+					strcpy(data.spec.passed3, "CAN NOW BECOME");
+					snprintf(data.spec.passed4,
+						sizeof data.spec.passed4, "SUPER %s",
+						skins[players[consoleplayer].skin].realname);
+					data.spec.passed4[sizeof data.spec.passed4 - 1] = '\0';
+				}
 			}
 			else
 			{
-				if (strlen(skins[players[consoleplayer].skin].realname) <= 8)
+				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
 						sizeof data.spec.passed1, "%s GOT",
@@ -1127,6 +1207,8 @@ void Y_StartIntermission(void)
 			}
 			data.spec.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed1))/2;
 			data.spec.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed2))/2;
+			data.spec.passedx3 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed3))/2;
+			data.spec.passedx4 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed4))/2;
 			break;
 		}
 
@@ -1713,37 +1795,6 @@ void Y_EndIntermission(void)
 }
 
 //
-// Y_EndGame
-//
-// Why end the game?
-// Because Y_FollowIntermission and F_EndCutscene would
-// both do this exact same thing *in different ways* otherwise,
-// which made it so that you could only unlock Ultimate mode
-// if you had a cutscene after the final level and crap like that.
-// This function simplifies it so only one place has to be updated
-// when something new is added.
-void Y_EndGame(void)
-{
-	// Only do evaluation and credits in coop games.
-	if (gametype == GT_COOP)
-	{
-		if (nextmap == 1102-1) // end game with credits
-		{
-			F_StartCredits();
-			return;
-		}
-		if (nextmap == 1101-1) // end game with evaluation
-		{
-			F_StartGameEvaluation();
-			return;
-		}
-	}
-
-	// 1100 or competitive multiplayer, so go back to title screen.
-	D_StartTitle();
-}
-
-//
 // Y_FollowIntermission
 //
 static void Y_FollowIntermission(void)
@@ -1754,21 +1805,10 @@ static void Y_FollowIntermission(void)
 		return;
 	}
 
-	if (nextmap < 1100-1)
-	{
-		// normal level
-		G_AfterIntermission();
-		return;
-	}
-
-	// Start a custom cutscene if there is one.
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking)
-	{
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
-		return;
-	}
-
-	Y_EndGame();
+	// This handles whether to play a post-level cutscene, end the game,
+	// or simply go to the next level.
+	// No need to duplicate the code here!
+	G_AfterIntermission();
 }
 
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL

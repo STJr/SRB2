@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -312,6 +312,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -360,6 +361,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -1163,7 +1165,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 	node = spikes->sector->touching_thinglist; // things touching this sector
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (!thing->player)
@@ -1316,7 +1318,7 @@ void T_BridgeThinker(levelspecthink_t *bridge)
 			controlsec = &sectors[k];
 
 			// Is a player standing on me?
-			for (node = sector->touching_thinglist; node; node = node->m_snext)
+			for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 			{
 				thing = node->m_thing;
 
@@ -1739,7 +1741,7 @@ wegotit:
 static mobj_t *SearchMarioNode(msecnode_t *node)
 {
 	mobj_t *thing = NULL;
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		// Things which should NEVER be ejected from a MarioBlock, by type.
 		switch (node->m_thing->type)
@@ -1816,6 +1818,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 #define ceilingwasheight vars[5]
 	fixed_t thwompx, thwompy;
 	sector_t *actionsector;
+	ffloor_t *rover = NULL;
 	INT32 secnum;
 
 	// If you just crashed down, wait a second before coming back up.
@@ -1830,7 +1833,16 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
 
 	if (secnum > 0)
+	{
 		actionsector = &sectors[secnum];
+
+		// Look for thwomp FFloor
+		for (rover = actionsector->ffloors; rover; rover = rover->next)
+		{
+			if (rover->master == thwomp->sourceline)
+				break;
+		}
+	}
 	else
 		return; // Bad bad bad!
 
@@ -1919,10 +1931,13 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		{
 			mobj_t *mp = (void *)&actionsector->soundorg;
 
-			if (thwomp->sourceline->flags & ML_EFFECT4)
-				S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
-			else
-				S_StartSound(mp, sfx_thwomp);
+			if (!rover || (rover->flags & FF_EXISTS))
+			{
+				if (thwomp->sourceline->flags & ML_EFFECT4)
+					S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
+				else
+					S_StartSound(mp, sfx_thwomp);
+			}
 
 			thwomp->direction = 1; // start heading back up
 			thwomp->distance = TICRATE; // but only after a small delay
@@ -1936,18 +1951,22 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		thinker_t *th;
 		mobj_t *mo;
 
-		// scan the thinkers to find players!
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		if (!rover || (rover->flags & FF_EXISTS))
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo = (mobj_t *)th;
-			if (mo->type == MT_PLAYER && mo->health && mo->z <= thwomp->sector->ceilingheight
-				&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
+			// scan the thinkers to find players!
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			{
-				thwomp->direction = -1;
-				break;
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo = (mobj_t *)th;
+				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator 
+				    && mo->z <= thwomp->sector->ceilingheight
+					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
+				{
+					thwomp->direction = -1;
+					break;
+				}
 			}
 		}
 
@@ -1973,72 +1992,79 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 {
 	size_t i;
 	fixed_t upperbound, lowerbound;
-	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
-	INT32 secnum = -1;
+	INT32 s;
+	sector_t *checksector;
 	msecnode_t *node;
 	mobj_t *thing;
-	boolean FOFsector = false;
+	boolean exists = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	for (i = 0; i < nobaddies->sector->linecount; i++)
 	{
-		sec = &sectors[secnum];
-
-		FOFsector = false;
-
-		// Check the lines of this sector, to see if it is a FOF control sector.
-		for (i = 0; i < sec->linecount; i++)
+		if (nobaddies->sector->lines[i]->special == 223)
 		{
-			INT32 targetsecnum = -1;
 
-			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
-				continue;
+			upperbound = nobaddies->sector->ceilingheight;
+			lowerbound = nobaddies->sector->floorheight;
 
-			FOFsector = true;
-
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			for (s = -1; (s = P_FindSectorFromLineTag(nobaddies->sector->lines[i], s)) >= 0 ;)
 			{
-				targetsec = &sectors[targetsecnum];
+				checksector = &sectors[s];
 
-				upperbound = targetsec->ceilingheight;
-				lowerbound = targetsec->floorheight;
-				node = targetsec->touching_thinglist; // things touching this sector
+				node = checksector->touching_thinglist; // things touching this sector
 				while (node)
 				{
 					thing = node->m_thing;
 
 					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-						return;
+						&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+					{
+						exists = true;
+						goto foundenemy;
+					}
 
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 				}
 			}
 		}
-
-		if (!FOFsector)
-		{
-			upperbound = sec->ceilingheight;
-			lowerbound = sec->floorheight;
-			node = sec->touching_thinglist; // things touching this sector
-			while (node)
-			{
-				thing = node->m_thing;
-
-				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-					return;
-
-				node = node->m_snext;
-			}
-		}
 	}
+foundenemy:
+	if (exists)
+		return;
 
-	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
+	s = P_AproxDistance(nobaddies->sourceline->dx, nobaddies->sourceline->dy)>>FRACBITS;
 
-	// No enemies found, run the linedef exec and terminate this thinker
-	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
+	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", s);
+
+	// Otherwise, run the linedef exec and terminate this thinker
+	P_LinedefExecute((INT16)s, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
+}
+
+//
+// P_IsObjectOnRealGround
+//
+// Helper function for T_EachTimeThinker
+// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
+// I'll consider whether to make this a more globally accessible function or whatever in future
+// -- Monster Iestyn
+//
+static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+{
+	// Is the object in reverse gravity?
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		// Detect if the player is on the ceiling.
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
+			return true;
+	}
+	// Nope!
+	else
+	{
+		// Detect if the player is on the floor.
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
+			return true;
+	}
+	return false;
 }
 
 //
@@ -2093,6 +2119,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean inAndOut = false;
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
+	msecnode_t *node;
+	ffloor_t *rover;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2140,6 +2168,19 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			{
 				targetsec = &sectors[targetsecnum];
 
+				// Find the FOF corresponding to the control linedef
+				for (rover = targetsec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master == sec->lines[i])
+						break;
+				}
+
+				if (!rover) // This should be impossible, but don't complain if it is the case somehow
+					continue;
+
+				if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					continue;
+
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
 					if (!playeringame[j])
@@ -2154,7 +2195,23 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if ((netgame || multiplayer) && players[j].spectator)
 						continue;
 
-					if (players[j].mo->subsector->sector != targetsec)
+					if (players[j].mo->subsector->sector == targetsec)
+						;
+					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						boolean insector = false;
+						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == targetsec)
+							{
+								insector = true;
+								break;
+							}
+						}
+						if (!insector)
+							continue;
+					}
+					else
 						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
@@ -2204,10 +2261,30 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 				if ((netgame || multiplayer) && players[i].spectator)
 					continue;
 
-				if (players[i].mo->subsector->sector != sec)
+				if (players[i].mo->subsector->sector == sec)
+					;
+				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+				{
+					boolean insector = false;
+					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+					{
+						if (node->m_sector == sec)
+						{
+							insector = true;
+							break;
+						}
+					}
+					if (!insector)
+						continue;
+				}
+				else
 					continue;
 
-				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
+				if (!(players[i].mo->subsector->sector == sec
+					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
+					continue;
+
+				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
 					if (i & 1)
 						eachtime->var2s[i/2] |= 1;
@@ -2308,7 +2385,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 		sector = &sectors[i];
 
 		// Is a player standing on me?
-		for (node = sector->touching_thinglist; node; node = node->m_snext)
+		for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 		{
 			thing = node->m_thing;
 

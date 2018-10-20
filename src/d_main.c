@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -73,6 +73,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "keys.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -81,7 +82,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #endif
 
 #ifdef _XBOX
-#include "sdl/SRB2XBOX/xboxhelp.h"
+#include "sdl12/SRB2XBOX/xboxhelp.h"
 #endif
 
 #ifdef HWRENDER
@@ -120,20 +121,17 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-#ifdef _XBOX
-boolean nomidimusic = true, nosound = true;
-boolean nodigimusic = true;
-#else
-boolean nomidimusic = false, nosound = false;
-boolean nodigimusic = false; // No fmod-based music
-#endif
-
 // These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
+#ifdef _XBOX
+boolean midi_disabled = true, sound_disabled = true;
+boolean digital_disabled = true;
+#else
+boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
+#endif
 
 boolean advancedemo;
 #ifdef DEBUGFILE
@@ -176,6 +174,38 @@ void D_PostEvent(const event_t *ev)
 void D_PostEvent_end(void) {};
 #endif
 
+// modifier keys
+UINT8 shiftdown = 0; // 0x1 left, 0x2 right
+UINT8 ctrldown = 0; // 0x1 left, 0x2 right
+UINT8 altdown = 0; // 0x1 left, 0x2 right
+//
+// D_ModifierKeyResponder
+// Sets global shift/ctrl/alt variables, never actually eats events
+//
+static inline void D_ModifierKeyResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown |= 0x1; return;
+		case KEY_RSHIFT: shiftdown |= 0x2; return;
+		case KEY_LCTRL: ctrldown |= 0x1; return;
+		case KEY_RCTRL: ctrldown |= 0x2; return;
+		case KEY_LALT: altdown |= 0x1; return;
+		case KEY_RALT: altdown |= 0x2; return;
+		default: return;
+	}
+	else if (ev->type == ev_keyup) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown &= ~0x1; return;
+		case KEY_RSHIFT: shiftdown &= ~0x2; return;
+		case KEY_LCTRL: ctrldown &= ~0x1; return;
+		case KEY_RCTRL: ctrldown &= ~0x2; return;
+		case KEY_LALT: altdown &= ~0x1; return;
+		case KEY_RALT: altdown &= ~0x2; return;
+		default: return;
+	}
+}
+
 //
 // D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
@@ -187,6 +217,9 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
+
+		// Set global shift/ctrl/alt down variables
+		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -221,10 +254,7 @@ gamestate_t wipegamestate = GS_LEVEL;
 
 static void D_Display(void)
 {
-	static boolean menuactivestate = false;
-	static gamestate_t oldgamestate = -1;
-	boolean redrawsbar = false;
-
+	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
 
@@ -245,23 +275,15 @@ static void D_Display(void)
 	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
-		oldgamestate = -1; // force background redraw
-		redrawsbar = true;
+		forcerefresh = true; // force background redraw
 	}
-
-	// save the current screen if about to wipe
-	if (gamestate != wipegamestate)
-	{
-		wipe = true;
-		F_WipeStartScreen();
-	}
-	else
-		wipe = false;
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
 	I_UpdateNoBlit();
 
+	// save the current screen if about to wipe
+	wipe = (gamestate != wipegamestate);
 	if (wipe)
 	{
 		// set for all later
@@ -280,6 +302,7 @@ static void D_Display(void)
 			if (gamestate != GS_LEVEL // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
+				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
 				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
@@ -298,8 +321,6 @@ static void D_Display(void)
 			HU_Erase();
 			if (automapactive)
 				AM_Drawer();
-			if (wipe || menuactivestate || (rendermode != render_soft && rendermode != render_none) || vid.recalc)
-				redrawsbar = true;
 			break;
 
 		case GS_INTERMISSION:
@@ -357,11 +378,6 @@ static void D_Display(void)
 	// see if the border needs to be initially drawn
 	if (gamestate == GS_LEVEL)
 	{
-#if 0
-		if (oldgamestate != GS_LEVEL)
-			R_FillBackScreen(); // draw the pattern into the back screen
-#endif
-
 		// draw the view directly
 		if (!automapactive && !dedicated && cv_renderview.value)
 		{
@@ -417,17 +433,17 @@ static void D_Display(void)
 			lastdraw = false;
 		}
 
-		ST_Drawer(redrawsbar);
+		ST_Drawer();
 
 		HU_Drawer();
 	}
 
 	// change gamma if needed
-	if (gamestate != oldgamestate && gamestate != GS_LEVEL)
+	// (GS_LEVEL handles this already due to level-specific palettes)
+	if (forcerefresh && gamestate != GS_LEVEL)
 		V_SetPalette(0);
 
-	menuactivestate = menuactive;
-	oldgamestate = wipegamestate = gamestate;
+	wipegamestate = gamestate;
 
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
@@ -450,15 +466,22 @@ static void D_Display(void)
 		CON_Drawer();
 
 	M_Drawer(); // menu is drawn even on top of everything
+	// focus lost moved to M_Drawer
 
-	// focus lost notification goes on top of everything, even the former everything
-	if (window_notinfocus)
+	//
+	// wipe update
+	//
+	if (wipe)
 	{
-		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
-		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
-		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
+		// note: moved up here because NetUpdate does input changes
+		// and input during wipe tends to mess things up
+		wipedefindex += WIPEFINALSHIFT;
+
+		if (rendermode != render_none)
+		{
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+		}
 	}
 
 	NetUpdate(); // send out any new accumulation
@@ -493,18 +516,6 @@ static void D_Display(void)
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
-		return;
-	}
-
-	//
-	// wipe update
-	//
-	wipedefindex += WIPEFINALSHIFT;
-
-	if (rendermode != render_none)
-	{
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 	}
 }
 
@@ -513,7 +524,6 @@ static void D_Display(void)
 // =========================================================================
 
 tic_t rendergametic;
-boolean supdate;
 
 void D_SRB2Loop(void)
 {
@@ -604,7 +614,6 @@ void D_SRB2Loop(void)
 
 			// Update display, next frame, with current state.
 			D_Display();
-			supdate = false;
 
 			if (moviemode)
 				M_SaveFrame();
@@ -708,7 +717,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;
@@ -718,11 +726,6 @@ void D_StartTitle(void)
 	CON_ToggleOff();
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 }
@@ -841,8 +844,10 @@ static void IdentifyVersion(void)
 	// Add the weapons
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
+#ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+#endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1042,19 +1047,10 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
-	else
-	{
-		size_t z;
-		char junkpw[25];
-		for (z = 0; z < 24; z++)
-			junkpw[z] = (char)(rand() & 64)+32;
-		junkpw[24] = '\0';
-		D_SetPassword(junkpw);
-	}
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect")))
+	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1082,10 +1078,11 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-warp") && M_IsNextParm())
 	{
 		const char *word = M_GetNextParm();
-		if (fastncmp(word, "MAP", 3))
+		char ch; // use this with sscanf to catch non-digits with
+		if (fastncmp(word, "MAP", 3)) // MAPxx name
 			pstartmap = M_MapNumber(word[3], word[4]);
-		else
-			pstartmap = atoi(word);
+		else if (sscanf(word, "%d%c", &pstartmap, &ch) != 1) // a plain number
+			I_Error("Cannot warp to map %s (invalid map name)\n", word);
 		// Don't check if lump exists just yet because the wads haven't been loaded!
 		// Just do a basic range check here.
 		if (pstartmap < 1 || pstartmap > NUMMAPS)
@@ -1133,12 +1130,18 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
-	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
 
-	mainwads = 4; // there are 5 wads not to unload
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#endif //ifndef DEVELOP
+
+	mainwads = 4; // there are 4 wads not to unload
+#ifdef USE_PATCH_DTA
+	++mainwads; // patch.dta adds one more
+#endif
 
 	cht_Init();
 
@@ -1203,21 +1206,29 @@ void D_SRB2Main(void)
 	R_Init();
 
 	// setting up sound
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	if (dedicated)
+	{
+		sound_disabled = true;
+		midi_disabled = digital_disabled = true;
+	}
+	else
+	{
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
+	}
 	if (M_CheckParm("-nosound"))
-		nosound = true;
+		sound_disabled = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		nomidimusic = nodigimusic = true;
+		midi_disabled = digital_disabled = true;
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			nomidimusic = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
-			nodigimusic = true; // WARNING: DOS version initmusic in I_StartupSound
+			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
@@ -1302,7 +1313,7 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
-	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
+	if (autostart || netgame)
 	{
 		gameaction = ga_nothing;
 
@@ -1340,8 +1351,7 @@ void D_SRB2Main(void)
 			}
 		}
 
-		if (server && !M_CheckParm("+map") && !M_CheckParm("+connect")
-			&& !M_CheckParm("-connect"))
+		if (server && !M_CheckParm("+map"))
 		{
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)

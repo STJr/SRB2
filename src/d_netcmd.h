@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -81,7 +81,9 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
+#ifdef WALLSPLATS
 extern consvar_t cv_splats;
+#endif
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;
@@ -160,6 +162,8 @@ typedef enum
 	MAXNETXCMD
 } netxcmd_t;
 
+extern const char *netxcmdnames[MAXNETXCMD - 1];
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #endif
@@ -208,7 +212,6 @@ void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
-void ObjectPlace_OnChange(void);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 

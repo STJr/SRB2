@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,7 +56,9 @@ typedef off_t off64_t;
 #endif
 #endif
 
-#if defined (_WIN32)
+#if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3))
+#define PRIdS "u"
+#elif defined (_WIN32) 
 #define PRIdS "Iu"
 #elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
 #define PRIdS "u"
@@ -585,7 +587,7 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 
 		i += add * result;
 
-		if (add < 0 || add > 9999)
+		if (i < 0 || i > 9999)
 			return NULL;
 	}
 
@@ -644,13 +646,12 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_byte movie)
 {
 #ifdef PNG_TEXT_SUPPORTED
-#define SRB2PNGTXT 11 //PNG_KEYWORD_MAX_LENGTH(79) is the max
+#define SRB2PNGTXT 10 //PNG_KEYWORD_MAX_LENGTH(79) is the max
 	png_text png_infotext[SRB2PNGTXT];
 	char keytxt[SRB2PNGTXT][12] = {
-	"Title", "Author", "Description", "Playername", "Mapnum", "Mapname",
+	"Title", "Description", "Playername", "Mapnum", "Mapname",
 	"Location", "Interface", "Revision", "Build Date", "Build Time"};
 	char titletxt[] = "Sonic Robo Blast 2 " VERSIONSTRING;
-	png_charp authortxt = I_GetUserName();
 	png_charp playertxt =  cv_playername.zstring;
 	char desctxt[] = "SRB2 Screenshot";
 	char Movietxt[] = "SRB2 Movie";
@@ -700,19 +701,18 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 		png_infotext[i].key  = keytxt[i];
 
 	png_infotext[0].text = titletxt;
-	png_infotext[1].text = authortxt;
 	if (movie)
-		png_infotext[2].text = Movietxt;
+		png_infotext[1].text = Movietxt;
 	else
-		png_infotext[2].text = desctxt;
-	png_infotext[3].text = playertxt;
-	png_infotext[4].text = maptext;
-	png_infotext[5].text = lvlttltext;
-	png_infotext[6].text = locationtxt;
-	png_infotext[7].text = interfacetxt;
-	png_infotext[8].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
-	png_infotext[9].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
-	png_infotext[10].text = strncpy(cttime, comptime, sizeof(cttime)-1);
+		png_infotext[1].text = desctxt;
+	png_infotext[2].text = playertxt;
+	png_infotext[3].text = maptext;
+	png_infotext[4].text = lvlttltext;
+	png_infotext[5].text = locationtxt;
+	png_infotext[6].text = interfacetxt;
+	png_infotext[7].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
+	png_infotext[8].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
+	png_infotext[9].text = strncpy(cttime, comptime, sizeof(cttime)-1);
 
 	png_set_text(png_ptr, png_info_ptr, png_infotext, SRB2PNGTXT);
 #undef SRB2PNGTXT
@@ -1079,7 +1079,7 @@ void M_StartMovie(void)
 				moviemode = M_StartMovieGIF(pathname);
 				break;
 			}
-			// fall thru
+			/* FALLTHRU */
 		case MM_APNG:
 			moviemode = M_StartMovieAPNG(pathname);
 			break;
@@ -1675,6 +1675,7 @@ char *M_GetToken(const char *inputString)
 			|| stringToUse[startPos] == '\r'
 			|| stringToUse[startPos] == '\n'
 			|| stringToUse[startPos] == '\0'
+			|| stringToUse[startPos] == '"' // we're treating this as whitespace because SLADE likes adding it for no good reason
 			|| inComment != 0)
 			&& startPos < stringLength)
 	{
@@ -1742,6 +1743,7 @@ char *M_GetToken(const char *inputString)
 			&& stringToUse[endPos] != ','
 			&& stringToUse[endPos] != '{'
 			&& stringToUse[endPos] != '}'
+			&& stringToUse[endPos] != '"' // see above
 			&& inComment == 0)
 			&& endPos < stringLength)
 	{
@@ -1785,17 +1787,6 @@ UINT8 M_CountBits(UINT32 num, UINT8 size)
 		if (num & (1 << i))
 			++sum;
 	return sum;
-}
-
-
-/** Get the most significant bit in a number.
-  * (integer log2)
-  */
-UINT8 M_HighestBit(UINT32 num)
-{
-	UINT8 i = 0;
-	while (num >>= 1) ++i;
-	return i;
 }
 
 const char *GetRevisionString(void)
@@ -2333,159 +2324,4 @@ void M_SetupMemcpy(void)
 #if 0
 	M_Memcpy = cpu_cpy;
 #endif
-}
-
-
-// A partial implementation of AA trees,
-// according to the algorithms given on Wikipedia.
-// http://en.wikipedia.org/wiki/AA_tree
-
-
-
-typedef struct aatree_node_s
-{
-	INT32	level;
-	INT32	key;
-	void*	value;
-
-	struct aatree_node_s *left, *right;
-} aatree_node_t;
-
-struct aatree_s
-{
-	aatree_node_t	*root;
-	UINT32		flags;
-};
-
-aatree_t *M_AATreeAlloc(UINT32 flags)
-{
-	aatree_t *aatree = Z_Malloc(sizeof (aatree_t), PU_STATIC, NULL);
-	aatree->root = NULL;
-	aatree->flags = flags;
-	return aatree;
-}
-
-static void M_AATreeFree_Node(aatree_node_t *node)
-{
-	if (node->left) M_AATreeFree_Node(node->left);
-	if (node->right) M_AATreeFree_Node(node->right);
-	Z_Free(node);
-}
-
-void M_AATreeFree(aatree_t *aatree)
-{
-	if (aatree->root)
-		M_AATreeFree_Node(aatree->root);
-
-	Z_Free(aatree);
-}
-
-static aatree_node_t *M_AATreeSkew(aatree_node_t *node)
-{
-	if (node && node->left && node->left->level == node->level)
-	{
-		// Not allowed: horizontal left-link. Reverse the
-		// horizontal link and hook the orphan back in.
-		aatree_node_t *oldleft = node->left;
-		node->left = oldleft->right;
-		oldleft->right = node;
-
-		return oldleft;
-	}
-
-	// No change needed.
-	return node;
-}
-
-static aatree_node_t *M_AATreeSplit(aatree_node_t *node)
-{
-	if (node && node->right && node->right->right && node->level == node->right->right->level)
-	{
-		// Not allowed: two consecutive horizontal right-links.
-		// The middle one becomes the new root at this point,
-		// with suitable adjustments below.
-
-		aatree_node_t *oldright = node->right;
-		node->right = oldright->left;
-		oldright->left = node;
-		oldright->level++;
-
-		return oldright;
-	}
-
-	// No change needed.
-	return node;
-}
-
-static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, INT32 key, void* value)
-{
-	if (!node)
-	{
-		// Nothing here, so just add where we are
-
-		node = Z_Malloc(sizeof (aatree_node_t), PU_STATIC, NULL);
-		node->level = 1;
-		node->key = key;
-		if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-		else node->value = value;
-		node->left = node->right = NULL;
-	}
-	else
-	{
-		if (key < node->key)
-			node->left = M_AATreeSet_Node(node->left, flags, key, value);
-		else if (key > node->key)
-			node->right = M_AATreeSet_Node(node->right, flags, key, value);
-		else
-		{
-			if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-			else node->value = value;
-		}
-
-		node = M_AATreeSkew(node);
-		node = M_AATreeSplit(node);
-	}
-
-	return node;
-}
-
-void M_AATreeSet(aatree_t *aatree, INT32 key, void* value)
-{
-	aatree->root = M_AATreeSet_Node(aatree->root, aatree->flags, key, value);
-}
-
-// Caveat: we don't distinguish between nodes that don't exists
-// and nodes with value == NULL.
-static void *M_AATreeGet_Node(aatree_node_t *node, INT32 key)
-{
-	if (node)
-	{
-		if (node->key == key)
-			return node->value;
-		else if(node->key < key)
-			return M_AATreeGet_Node(node->right, key);
-		else
-			return M_AATreeGet_Node(node->left, key);
-	}
-
-	return NULL;
-}
-
-void *M_AATreeGet(aatree_t *aatree, INT32 key)
-{
-	return M_AATreeGet_Node(aatree->root, key);
-}
-
-
-static void M_AATreeIterate_Node(aatree_node_t *node, aatree_iter_t callback)
-{
-	if (node->left) M_AATreeIterate_Node(node->left, callback);
-	callback(node->key, node->value);
-	if (node->right) M_AATreeIterate_Node(node->right, callback);
-}
-
-void M_AATreeIterate(aatree_t *aatree, aatree_iter_t callback)
-{
-	if (aatree->root)
-		M_AATreeIterate_Node(aatree->root, callback);
 }

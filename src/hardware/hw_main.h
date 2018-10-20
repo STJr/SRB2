@@ -74,10 +74,12 @@ FUNCMATH UINT8 LightLevelToLum(INT32 l);
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
+#ifdef ALAM_LIGHTING
 extern consvar_t cv_grdynamiclighting;
 extern consvar_t cv_grstaticlighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
+#endif
 extern consvar_t cv_grfov;
 extern consvar_t cv_grmd2;
 extern consvar_t cv_grfog;

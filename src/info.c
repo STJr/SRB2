@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -4569,7 +4569,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-#ifdef BLUE_SPHERES
 	{           // MT_BLUEBALL
 		-1,             // doomednum
 		S_BLUEBALL,    // spawnstate
@@ -4596,7 +4595,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
-#endif
 
 	{           // MT_REDTEAMRING
 		308,            // doomednum

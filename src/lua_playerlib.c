@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -55,7 +55,7 @@ static int lib_getPlayer(lua_State *L)
 	{
 		lua_Integer i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXPLAYERS)
-			return luaL_error(L, "players[] index cannot exceed MAXPLAYERS");
+			return luaL_error(L, "players[] index %d out of range (0 - %d)", i, MAXPLAYERS-1);
 		if (!playeringame[i])
 			return 0;
 		if (!players[i].mo)
@@ -298,6 +298,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->lastlinehit);
 	else if (fastcmp(field,"losstime"))
 		lua_pushinteger(L, plr->losstime);
+	else if (fastcmp(field,"timeshit"))
+		lua_pushinteger(L, plr->timeshit);
 	else if (fastcmp(field,"onconveyor"))
 		lua_pushinteger(L, plr->onconveyor);
 	else if (fastcmp(field,"awayviewmobj"))
@@ -387,7 +389,12 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"flashpal"))
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
-		plr->skincolor = ((UINT8)luaL_checkinteger(L, 3)) % MAXSKINCOLORS;
+	{
+		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
+		if (newcolor >= MAXSKINCOLORS)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		plr->skincolor = newcolor;
+	}
 	else if (fastcmp(field,"score"))
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
@@ -553,6 +560,8 @@ static int player_set(lua_State *L)
 		plr->lastlinehit = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"losstime"))
 		plr->losstime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"timeshit"))
+		plr->timeshit = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"onconveyor"))
 		plr->onconveyor = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"awayviewmobj"))

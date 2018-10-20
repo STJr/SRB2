@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -59,7 +59,7 @@ extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 extern pslope_t *opentopslope, *openbottomslope;
 #endif
 
-void P_LineOpening(line_t *plinedef);
+void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 
 boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean(*func)(line_t *));
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *));
