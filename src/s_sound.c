@@ -529,7 +529,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
-		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
+		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 	}
 
 dontplay:
@@ -579,7 +579,7 @@ dontplay:
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
-	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
+	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 }
 
 void S_StartSound(const void *origin, sfxenum_t sfx_id)

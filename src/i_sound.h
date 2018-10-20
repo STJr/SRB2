@@ -79,7 +79,7 @@ void I_ShutdownSound(void);
 
 	\return	sfx handle
 */
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority);
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel);
 
 /**	\brief	Stops a sound channel.
 
