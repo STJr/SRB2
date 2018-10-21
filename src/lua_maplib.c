@@ -1374,6 +1374,8 @@ static int slope_set(lua_State *L)
 	}
 	case slope_xydirection: // xydirection
 		slope->xydirection = luaL_checkangle(L, 3);
+		slope->d.x = -FINECOSINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
+		slope->d.y = -FINESINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
