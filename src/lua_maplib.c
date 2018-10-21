@@ -16,7 +16,9 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "z_zone.h"
+#ifdef ESLOPE
 #include "p_slopes.h"
+#endif
 #include "r_main.h"
 
 #include "lua_script.h"
