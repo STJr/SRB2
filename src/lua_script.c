@@ -912,7 +912,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 #endif
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;
