@@ -458,7 +458,7 @@ consvar_t cv_ghost_guest     = {"ghost_guest",     "Show", CV_SAVE, ghost2_cons_
 static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t liveslimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t liveslimit_cons_t[] = {{-1, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
@@ -4938,6 +4938,7 @@ static void M_DrawAddons(void)
 {
 	INT32 x, y;
 	ssize_t i, max;
+	const char* topstr;
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
@@ -4949,9 +4950,16 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
-	? "\x85""Adding files mid-game may cause problems."
-	: LOCATIONSTRING));
+	if (Playing())
+		topstr = "\x85""Adding files mid-game may cause problems.";
+	else if (savemoddata)
+		topstr = "\x83""Add-on has its own data, saving enabled.";
+	else if (modifiedgame)
+		topstr = "\x87""Game is modified, saving is disabled.";
+	else
+		topstr = LOCATIONSTRING;
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, topstr);
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -5222,7 +5230,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_SOC:
 						case EXT_WAD:
 						case EXT_PK3:
-							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							addonsresponselimit = 5;
 							break;
 						default:
@@ -5265,8 +5273,14 @@ static void M_HandleAddons(INT32 choice)
 static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
-	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
-	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
+	if (maptol & TOL_NIGHTS)
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].spheres, 0));
+	else
+		CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
+	if (players[consoleplayer].lives == INFLIVES)
+		CV_StealthSetValue(&cv_dummylives, -1);
+	else
+		CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
 #ifndef DEVELOP
@@ -5280,7 +5294,12 @@ static void M_PandorasBox(INT32 choice)
 static boolean M_ExitPandorasBox(void)
 {
 	if (cv_dummyrings.value != max(players[consoleplayer].rings, 0))
-		COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	{
+		if (maptol & TOL_NIGHTS)
+			COM_ImmedExecute(va("setspheres %d", cv_dummyrings.value));
+		else
+			COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
+	}
 	if (cv_dummylives.value != players[consoleplayer].lives)
 		COM_ImmedExecute(va("setlives %d", cv_dummylives.value));
 	if (cv_dummycontinues.value != players[consoleplayer].continues)
@@ -6315,7 +6334,7 @@ skipsign:
 			y += 25;
 
 			tempx = x + 10;
-			if (savegameinfo[savetodraw].lives != 0x7f
+			if (savegameinfo[savetodraw].lives != INFLIVES
 			&& savegameinfo[savetodraw].lives > 9)
 				tempx -= 4;
 
@@ -6342,7 +6361,7 @@ skiplife:
 
 			V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
 			tempx += 16;
-			if (savegameinfo[savetodraw].lives == 0x7f)
+			if (savegameinfo[savetodraw].lives == INFLIVES)
 				V_DrawCharacter(tempx, y + 1, '\x16', false);
 			else
 				V_DrawString(tempx, y, 0, va("%d", savegameinfo[savetodraw].lives));
@@ -8829,7 +8848,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				break;
 			S_StartSound(NULL,sfx_menu1); // Tails
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				setupm_name[l] = (char)choice;
 				setupm_name[l+1] = 0;
@@ -9331,7 +9350,7 @@ static void M_SoundMenu(INT32 choice)
 {
 	(void)choice;
 
-	OP_SoundOptionsMenu[6].status = ((nosound || sound_disabled) ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
+	OP_SoundOptionsMenu[6].status = (sound_disabled ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
 	M_SetupNextMenu(&OP_SoundOptionsDef);
 }
 
@@ -9344,25 +9363,25 @@ void M_DrawSoundMenu(void)
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[0].alphaKey,
-		(nosound ? V_REDMAP : V_YELLOWMAP),
-		((nosound || sound_disabled) ? offstring : onstring));
+		(sound_disabled ? V_REDMAP : V_YELLOWMAP),
+		(sound_disabled ? offstring : onstring));
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[2].alphaKey,
-		(nodigimusic ? V_REDMAP : V_YELLOWMAP),
-		((nodigimusic || digital_disabled) ? offstring : onstring));
+		(digital_disabled ? V_REDMAP : V_YELLOWMAP),
+		(digital_disabled ? offstring : onstring));
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
 		currentMenu->y+currentMenu->menuitems[4].alphaKey,
-		(nomidimusic ? V_REDMAP : V_YELLOWMAP),
-		((nomidimusic || music_disabled) ? offstring : onstring));
+		(midi_disabled ? V_REDMAP : V_YELLOWMAP),
+		(midi_disabled ? offstring : onstring));
 
 	if (itemOn == 0)
-		lengthstring = ((nosound || sound_disabled) ? 3 : 2);
+		lengthstring = (sound_disabled ? 3 : 2);
 	else if (itemOn == 2)
-		lengthstring = ((nodigimusic || digital_disabled) ? 3 : 2);
+		lengthstring = (digital_disabled ? 3 : 2);
 	else if (itemOn == 4)
-		lengthstring = ((nomidimusic || music_disabled) ? 3 : 2);
+		lengthstring = (midi_disabled ? 3 : 2);
 	else
 		return;
 
@@ -9397,32 +9416,20 @@ static void M_ToggleSFX(INT32 choice)
 			break;
 	}
 
-	if (nosound)
+	if (sound_disabled)
 	{
-		nosound = false;
-		I_StartupSound();
-		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		sound_disabled = false;
+		S_InitSfxChannels(cv_soundvolume.value);
 		S_StartSound(NULL, sfx_strpst);
 		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
 		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			S_StartSound(NULL, sfx_strpst);
-			OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
-			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
-			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
+		//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -9450,12 +9457,10 @@ static void M_ToggleDigital(INT32 choice)
 			break;
 	}
 
-	if (nodigimusic)
+	if (digital_disabled)
 	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		digital_disabled = false;
+		I_InitMusic();
 		S_StopMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
@@ -9465,21 +9470,27 @@ static void M_ToggleDigital(INT32 choice)
 	}
 	else
 	{
-		if (digital_disabled)
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
 		{
-			digital_disabled = false;
-			if (Playing())
-				P_RestoreMusic(&players[consoleplayer]);
+			if (midi_disabled)
+				S_StopMusic();
 			else
-				S_ChangeMusicInternal("_clear", false);
-			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -9497,6 +9508,12 @@ static void M_ToggleMIDI(INT32 choice)
 			itemOn--;
 			return;
 
+		case KEY_LEFTARROW:
+		case KEY_RIGHTARROW:
+			if (S_MusicType() != MU_MID && S_MusicType() != MU_NONE)
+				S_StartSound(NULL, sfx_menu1);
+			break;
+
 		case KEY_ESCAPE:
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
@@ -9506,13 +9523,10 @@ static void M_ToggleMIDI(INT32 choice)
 		default:
 			break;
 	}
-
-	if (nomidimusic)
+	if (midi_disabled)
 	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		midi_disabled = false;
+		I_InitMusic();
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
@@ -9521,21 +9535,27 @@ static void M_ToggleMIDI(INT32 choice)
 	}
 	else
 	{
-		if (music_disabled)
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
 		{
-			music_disabled = false;
-			if (Playing())
-				P_RestoreMusic(&players[consoleplayer]);
+			if (digital_disabled)
+				S_StopMusic();
 			else
-				S_ChangeMusicInternal("_clear", false);
-			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 

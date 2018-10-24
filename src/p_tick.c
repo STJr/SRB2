@@ -56,12 +56,12 @@ void Command_Numthinkers_f(void)
 		CONS_Printf(M_GetText("numthinkers <#>: Count number of thinkers\n"));
 		CONS_Printf(
 			"\t1: P_MobjThinker\n"
-			"\t2: P_RainThinker\n"
-			"\t3: P_SnowThinker\n"
-			"\t4: P_NullPrecipThinker\n"
-			"\t5: T_Friction\n"
-			"\t6: T_Pusher\n"
-			"\t7: P_RemoveThinkerDelayed\n");
+			/*"\t2: P_RainThinker\n"
+			"\t3: P_SnowThinker\n"*/
+			"\t2: P_NullPrecipThinker\n"
+			"\t3: T_Friction\n"
+			"\t4: T_Pusher\n"
+			"\t5: P_RemoveThinkerDelayed\n");
 		return;
 	}
 
@@ -73,27 +73,27 @@ void Command_Numthinkers_f(void)
 			action = (actionf_p1)P_MobjThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_MobjThinker");
 			break;
-		case 2:
+		/*case 2:
 			action = (actionf_p1)P_RainThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RainThinker");
 			break;
 		case 3:
 			action = (actionf_p1)P_SnowThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_SnowThinker");
-			break;
-		case 4:
+			break;*/
+		case 2:
 			action = (actionf_p1)P_NullPrecipThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_NullPrecipThinker");
 			break;
-		case 5:
+		case 3:
 			action = (actionf_p1)T_Friction;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Friction");
 			break;
-		case 6:
+		case 4:
 			action = (actionf_p1)T_Pusher;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Pusher");
 			break;
-		case 7:
+		case 5:
 			action = (actionf_p1)P_RemoveThinkerDelayed;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RemoveThinkerDelayed");
 			break;
@@ -432,7 +432,7 @@ void P_DoTeamscrambling(void)
 
 static inline void P_DoSpecialStageStuff(void)
 {
-	boolean inwater = false;
+	boolean stillalive = false;
 	INT32 i;
 
 	// Can't drown in a special stage
@@ -444,68 +444,60 @@ static inline void P_DoSpecialStageStuff(void)
 		players[i].powers[pw_underwater] = players[i].powers[pw_spacetime] = 0;
 	}
 
-	if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
-		S_SpeedMusic(1.4f);
+	//if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+		//S_SpeedMusic(1.4f);
 
-	if (sstimer < 7 && sstimer > 0) // The special stage time is up!
+	if (sstimer && !objectplacing)
 	{
-		sstimer = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-			{
-				players[i].exiting = (14*TICRATE)/5 + 1;
-				players[i].pflags &= ~PF_GLIDING;
-			}
-
-			if (i == consoleplayer)
-				S_StartSound(NULL, sfx_lose);
-		}
-
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
-			S_SpeedMusic(1.0f);
-
-		stagefailed = true;
-	}
-
-	if (sstimer > 1) // As long as time isn't up...
-	{
-		UINT32 ssrings = 0;
+		UINT16 countspheres = 0;
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				ssrings += players[i].rings;
+				tic_t oldnightstime = players[i].nightstime;
+				countspheres += players[i].spheres;
 
 				// If in water, deplete timer 6x as fast.
-				if ((players[i].mo->eflags & MFE_TOUCHWATER)
-					|| (players[i].mo->eflags & MFE_UNDERWATER))
-					inwater = true;
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+					players[i].nightstime -= 5;
+				if (--players[i].nightstime > 6)
+				{
+					if (P_IsLocalPlayer(&players[i]) && oldnightstime > 10*TICRATE && players[i].nightstime <= 10*TICRATE)
+						S_ChangeMusicInternal("_drown", false);
+					stillalive = true;
+				}
+				else if (!players[i].exiting)
+				{
+					players[i].exiting = (14*TICRATE)/5 + 1;
+					players[i].pflags &= ~(PF_GLIDING|PF_BOUNCING);
+					players[i].nightstime = 0;
+					if (P_IsLocalPlayer(&players[i]))
+						S_StartSound(NULL, sfx_s3k66);
+				}
 			}
 
-		if (ssrings >= totalrings && totalrings > 0)
+		if (stillalive)
 		{
-			// Halt all the players
-			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i])
-				{
-					players[i].mo->momx = players[i].mo->momy = 0;
-					players[i].exiting = (14*TICRATE)/5 + 1;
-				}
+			if (countspheres >= ssspheres)
+			{
+				// Halt all the players
+				for (i = 0; i < MAXPLAYERS; i++)
+					if (playeringame[i])
+					{
+						players[i].mo->momx = players[i].mo->momy = 0;
+						players[i].exiting = (14*TICRATE)/5 + 1;
+					}
 
-			sstimer = 0;
-
-			P_GiveEmerald(true);
+				sstimer = 0;
+				P_GiveEmerald(true);
+				P_RestoreMusic(&players[consoleplayer]);
+			}
 		}
-
-		// Decrement the timer
-		if (!objectplacing)
+		else
 		{
-			if (inwater)
-				sstimer -= 6;
-			else
-				sstimer--;
+			sstimer = 0;
+			stagefailed = true;
 		}
 	}
 }
@@ -614,7 +606,7 @@ void P_Ticker(boolean run)
 	if (!demoplayback) // Don't increment if a demo is playing.
 		totalplaytime++;
 
-	if (!useNightsSS && G_IsSpecialStage(gamemap))
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();
 
 	if (runemeraldmanager)

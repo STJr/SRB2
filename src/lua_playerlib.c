@@ -130,6 +130,8 @@ static int player_get(lua_State *L)
 		lua_pushangle(L, plr->drawangle);
 	else if (fastcmp(field,"rings"))
 		lua_pushinteger(L, plr->rings);
+	else if (fastcmp(field,"spheres"))
+		lua_pushinteger(L, plr->spheres);
 	else if (fastcmp(field,"pity"))
 		lua_pushinteger(L, plr->pity);
 	else if (fastcmp(field,"currentweapon"))
@@ -288,20 +290,40 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, plr->capsule, META_MOBJ);
 	else if (fastcmp(field,"mare"))
 		lua_pushinteger(L, plr->mare);
+	else if (fastcmp(field,"marelap"))
+		lua_pushinteger(L, plr->marelap);
+	else if (fastcmp(field,"marebonuslap"))
+		lua_pushinteger(L, plr->marebonuslap);
 	else if (fastcmp(field,"marebegunat"))
 		lua_pushinteger(L, plr->marebegunat);
 	else if (fastcmp(field,"startedtime"))
 		lua_pushinteger(L, plr->startedtime);
 	else if (fastcmp(field,"finishedtime"))
 		lua_pushinteger(L, plr->finishedtime);
+	else if (fastcmp(field,"lapbegunat"))
+		lua_pushinteger(L, plr->lapbegunat);
+	else if (fastcmp(field,"lapstartedtime"))
+		lua_pushinteger(L, plr->lapstartedtime);
+	else if (fastcmp(field,"finishedspheres"))
+		lua_pushinteger(L, plr->finishedspheres);
 	else if (fastcmp(field,"finishedrings"))
 		lua_pushinteger(L, plr->finishedrings);
 	else if (fastcmp(field,"marescore"))
 		lua_pushinteger(L, plr->marescore);
 	else if (fastcmp(field,"lastmarescore"))
 		lua_pushinteger(L, plr->lastmarescore);
+	else if (fastcmp(field,"totalmarescore"))
+		lua_pushinteger(L, plr->totalmarescore);
 	else if (fastcmp(field,"lastmare"))
 		lua_pushinteger(L, plr->lastmare);
+	else if (fastcmp(field,"lastmarelap"))
+		lua_pushinteger(L, plr->lastmarelap);
+	else if (fastcmp(field,"lastmarebonuslap"))
+		lua_pushinteger(L, plr->lastmarebonuslap);
+	else if (fastcmp(field,"totalmarelap"))
+		lua_pushinteger(L, plr->totalmarelap);
+	else if (fastcmp(field,"totalmarebonuslap"))
+		lua_pushinteger(L, plr->totalmarebonuslap);
 	else if (fastcmp(field,"maxlink"))
 		lua_pushinteger(L, plr->maxlink);
 	else if (fastcmp(field,"texttimer"))
@@ -396,6 +418,8 @@ static int player_set(lua_State *L)
 		plr->drawangle = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"rings"))
 		plr->rings = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"spheres"))
+		plr->spheres = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
 		plr->pity = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"currentweapon"))
@@ -448,7 +472,7 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"followitem"))
 		plr->followitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"followmobj"))
-		plr->followmobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->followmobj, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))
@@ -564,20 +588,40 @@ static int player_set(lua_State *L)
 	}
 	else if (fastcmp(field,"mare"))
 		plr->mare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marelap"))
+		plr->marelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"marebonuslap"))
+		plr->marebonuslap = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"marebegunat"))
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"startedtime"))
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedtime"))
 		plr->finishedtime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapbegunat"))
+		plr->lapbegunat = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lapstartedtime"))
+		plr->lapstartedtime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"finishedspheres"))
+		plr->finishedspheres = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"finishedrings"))
 		plr->finishedrings = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"marescore"))
 		plr->marescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmarescore"))
 		plr->lastmarescore = (UINT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarescore"))
+		plr->totalmarescore = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lastmare"))
 		plr->lastmare = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lastmarelap"))
+		plr->lastmarelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"lastmarebonuslap"))
+		plr->lastmarebonuslap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarelap"))
+		plr->totalmarelap = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"totalmarebonuslap"))
+		plr->totalmarebonuslap = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"maxlink"))
 		plr->maxlink = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"texttimer"))

@@ -1356,11 +1356,12 @@ static int lib_pRadiusAttack(lua_State *L)
 	mobj_t *spot = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	fixed_t damagedist = luaL_checkfixed(L, 3);
+	UINT8 damagetype = luaL_optinteger(L, 4, 0);
 	NOHUD
 	INLEVEL
 	if (!spot || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_RadiusAttack(spot, source, damagedist);
+	P_RadiusAttack(spot, source, damagedist, damagetype);
 	return 0;
 }
 
@@ -1808,9 +1809,11 @@ static int lib_pFadeLight(lua_State *L)
 	INT16 tag = (INT16)luaL_checkinteger(L, 1);
 	INT32 destvalue = (INT32)luaL_checkinteger(L, 2);
 	INT32 speed = (INT32)luaL_checkinteger(L, 3);
+	boolean ticbased = lua_optboolean(L, 4);
+	boolean force = lua_optboolean(L, 5);
 	NOHUD
 	INLEVEL
-	P_FadeLight(tag, destvalue, speed);
+	P_FadeLight(tag, destvalue, speed, ticbased, force);
 	return 0;
 }
 

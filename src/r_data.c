@@ -1144,6 +1144,10 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 	Z_Free((void *)texturesText);
 }
 
+#ifdef EXTRACOLORMAPLUMPS
+static lumplist_t *colormaplumps = NULL; ///\todo free leak
+static size_t numcolormaplumps = 0;
+
 static inline lumpnum_t R_CheckNumForNameList(const char *name, lumplist_t *list, size_t listsize)
 {
 	size_t i;
@@ -1159,9 +1163,6 @@ static inline lumpnum_t R_CheckNumForNameList(const char *name, lumplist_t *list
 	}
 	return LUMPERROR;
 }
-
-static lumplist_t *colormaplumps = NULL; ///\todo free leak
-static size_t numcolormaplumps = 0;
 
 static void R_InitExtraColormaps(void)
 {
@@ -1195,6 +1196,7 @@ static void R_InitExtraColormaps(void)
 	}
 	CONS_Printf(M_GetText("Number of Extra Colormaps: %s\n"), sizeu1(numcolormaplumps));
 }
+#endif
 
 // Search for flat name through all
 lumpnum_t R_GetFlatNumForName(const char *name)
@@ -1291,7 +1293,9 @@ static void R_InitColormaps(void)
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
+#ifdef EXTRACOLORMAPLUMPS
 	R_InitExtraColormaps();
+#endif
 }
 
 void R_ReInitColormaps(UINT16 num)
@@ -1311,11 +1315,6 @@ void R_ReInitColormaps(UINT16 num)
 	R_ClearColormaps();
 }
 
-static lumpnum_t foundcolormaps[MAXCOLORMAPS];
-
-static char colormapFixingArray[MAXCOLORMAPS][3][9];
-static size_t carrayindex;
-
 //
 // R_ClearColormaps
 //
@@ -1323,51 +1322,264 @@ static size_t carrayindex;
 //
 void R_ClearColormaps(void)
 {
-	size_t i;
-
-	num_extra_colormaps = 0;
-
-	carrayindex = 0;
-
-	for (i = 0; i < MAXCOLORMAPS; i++)
-		foundcolormaps[i] = LUMPERROR;
-
-	memset(extra_colormaps, 0, sizeof (extra_colormaps));
+	// Purged by PU_LEVEL, just overwrite the pointer
+	extra_colormaps = R_CreateDefaultColormap(true);
 }
 
-INT32 R_ColormapNumForName(char *name)
+//
+// R_CreateDefaultColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 {
-	lumpnum_t lump, i;
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->fog = 0;
+	exc->rgba = 0;
+	exc->fadergba = 0x19000000;
+	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
+#ifdef EXTRACOLORMAPLUMPS
+	exc->lump = LUMPERROR;
+	exc->lumpname[0] = 0;
+#endif
+	exc->next = exc->prev = NULL;
+	return exc;
+}
 
-	if (num_extra_colormaps == MAXCOLORMAPS)
-		I_Error("R_ColormapNumForName: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
+//
+// R_GetDefaultColormap()
+//
+extracolormap_t *R_GetDefaultColormap(void)
+{
+#ifdef COLORMAPREVERSELIST
+	extracolormap_t *exc;
+#endif
+
+	if (!extra_colormaps)
+		return (extra_colormaps = R_CreateDefaultColormap(true));
+
+#ifdef COLORMAPREVERSELIST
+	for (exc = extra_colormaps; exc->next; exc = exc->next);
+	return exc;
+#else
+	return extra_colormaps;
+#endif
+}
+
+//
+// R_CopyColormap()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable)
+{
+	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+	if (!extra_colormap)
+		extra_colormap = R_GetDefaultColormap();
+
+	*exc = *extra_colormap;
+	exc->next = exc->prev = NULL;
+
+#ifdef EXTRACOLORMAPLUMPS
+	strncpy(exc->lumpname, extra_colormap->lumpname, 9);
+
+	if (exc->lump != LUMPERROR && lighttable)
+	{
+		// aligned on 8 bit for asm code
+		exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+		W_ReadLump(lump, exc->colormap);
+	}
+	else
+#endif
+	if (lighttable)
+		exc->colormap = R_CreateLightTable(exc);
+	else
+		exc->colormap = NULL;
+
+	return exc;
+}
+
+//
+// R_AddColormapToList
+//
+// Sets prev/next chain for extra_colormaps var
+// Copypasta from P_AddFFloorToList
+//
+void R_AddColormapToList(extracolormap_t *extra_colormap)
+{
+#ifndef COLORMAPREVERSELIST
+	extracolormap_t *exc;
+#endif
+
+	if (!extra_colormaps)
+	{
+		extra_colormaps = extra_colormap;
+		extra_colormap->next = 0;
+		extra_colormap->prev = 0;
+		return;
+	}
+
+#ifdef COLORMAPREVERSELIST
+	extra_colormaps->prev = extra_colormap;
+	extra_colormap->next = extra_colormaps;
+	extra_colormaps = extra_colormap;
+	extra_colormap->prev = 0;
+#else
+	for (exc = extra_colormaps; exc->next; exc = exc->next);
+
+	exc->next = extra_colormap;
+	extra_colormap->prev = exc;
+	extra_colormap->next = 0;
+#endif
+}
+
+//
+// R_CheckDefaultColormapByValues()
+//
+#ifdef EXTRACOLORMAPLUMPS
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+#else
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+#endif
+{
+	return (
+		(!checkparams ? true :
+			(fadestart == 0
+				&& fadeend == 31
+				&& !fog)
+			)
+		&& (!checkrgba ? true : rgba == 0)
+		&& (!checkfadergba ? true : fadergba == 0x19000000)
+#ifdef EXTRACOLORMAPLUMPS
+		&& lump == LUMPERROR
+		&& extra_colormap->lumpname[0] == 0
+#endif
+		);
+}
+
+boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	if (!extra_colormap)
+		return true;
+
+#ifdef EXTRACOLORMAPLUMPS
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+#else
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+#endif
+}
+
+boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, boolean checkrgba, boolean checkfadergba, boolean checkparams)
+{
+	// Treat NULL as default colormap
+	// We need this because what if one exc is a default colormap, and the other is NULL? They're really both equal.
+	if (!exc_a)
+		exc_a = R_GetDefaultColormap();
+	if (!exc_b)
+		exc_b = R_GetDefaultColormap();
+
+	if (exc_a == exc_b)
+		return true;
+
+	return (
+		(!checkparams ? true :
+			(exc_a->fadestart == exc_b->fadestart
+				&& exc_a->fadeend == exc_b->fadeend
+				&& exc_a->fog == exc_b->fog)
+			)
+		&& (!checkrgba ? true : exc_a->rgba == exc_b->rgba)
+		&& (!checkfadergba ? true : exc_a->fadergba == exc_b->fadergba)
+#ifdef EXTRACOLORMAPLUMPS
+		&& exc_a->lump == exc_b->lump
+		&& !strncmp(exc_a->lumpname, exc_b->lumpname, 9)
+#endif
+		);
+}
+
+//
+// R_GetColormapFromListByValues()
+// NOTE: Returns NULL if no match is found
+//
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+#else
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+#endif
+{
+	extracolormap_t *exc;
+	UINT32 dbg_i = 0;
+
+	for (exc = extra_colormaps; exc; exc = exc->next)
+	{
+		if (rgba == exc->rgba
+			&& fadergba == exc->fadergba
+			&& fadestart == exc->fadestart
+			&& fadeend == exc->fadeend
+			&& fog == exc->fog
+#ifdef EXTRACOLORMAPLUMPS
+			&& (lump != LUMPERROR && lump == exc->lump)
+#endif
+		)
+		{
+			CONS_Debug(DBG_RENDER, "Found Colormap %d: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+				dbg_i, R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
+				R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
+			return exc;
+		}
+		dbg_i++;
+	}
+	return NULL;
+}
+
+extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
+{
+#ifdef EXTRACOLORMAPLUMPS
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+#else
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+#endif
+}
+
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_ColormapForName(char *name)
+{
+	lumpnum_t lump;
+	extracolormap_t *exc;
 
 	lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
 	if (lump == LUMPERROR)
-		I_Error("R_ColormapNumForName: Cannot find colormap lump %.8s\n", name);
+		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
-	for (i = 0; i < num_extra_colormaps; i++)
-		if (lump == foundcolormaps[i])
-			return i;
+	exc = R_GetColormapFromListByValues(0, 0x19000000, 0, 31, 0, lump);
+	if (exc)
+		return exc;
 
-	foundcolormaps[num_extra_colormaps] = lump;
+	exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
+
+	exc->lump = lump;
+	strncpy(exc->lumpname, name, 9);
+	exc->lumpname[8] = 0;
 
 	// aligned on 8 bit for asm code
-	extra_colormaps[num_extra_colormaps].colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
-	W_ReadLump(lump, extra_colormaps[num_extra_colormaps].colormap);
+	exc->colormap = Z_MallocAlign(W_LumpLength(lump), PU_LEVEL, NULL, 16);
+	W_ReadLump(lump, exc->colormap);
 
 	// We set all params of the colormap to normal because there
 	// is no real way to tell how GL should handle a colormap lump anyway..
-	extra_colormaps[num_extra_colormaps].maskcolor = 0xffff;
-	extra_colormaps[num_extra_colormaps].fadecolor = 0x0;
-	extra_colormaps[num_extra_colormaps].maskamt = 0x0;
-	extra_colormaps[num_extra_colormaps].fadestart = 0;
-	extra_colormaps[num_extra_colormaps].fadeend = 33;
-	extra_colormaps[num_extra_colormaps].fog = 0;
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->fog = 0;
+	exc->rgba = 0;
+	exc->fadergba = 0x19000000;
 
-	num_extra_colormaps++;
-	return (INT32)num_extra_colormaps - 1;
+	R_AddColormapToList(exc);
+
+	return exc;
 }
+#endif
 
 //
 // R_CreateColormap
@@ -1382,244 +1594,71 @@ static double deltas[256][3], map[256][3];
 static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 static int RoundUp(double number);
 
-INT32 R_CreateColormap(char *p1, char *p2, char *p3)
+lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 {
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
-	double r, g, b, cbrightness, maskamt = 0, othermask = 0;
-	int mask, fog = 0;
-	size_t mapnum = num_extra_colormaps;
-	size_t i;
-	UINT32 cr, cg, cb, maskcolor, fadecolor;
-	UINT32 fadestart = 0, fadeend = 33, fadedist = 33;
-
-#define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-	if (p1[0] == '#')
-	{
-		cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-		cmaskr = cr;
-		cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-		cmaskg = cg;
-		cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
-		cmaskb = cb;
-		// Create a rough approximation of the color (a 16 bit color)
-		maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
-		if (p1[7] >= 'a' && p1[7] <= 'z')
-			mask = (p1[7] - 'a');
-		else if (p1[7] >= 'A' && p1[7] <= 'Z')
-			mask = (p1[7] - 'A');
-		else
-			mask = 24;
-
-		maskamt = (double)(mask/24.0l);
-
-		othermask = 1 - maskamt;
-		maskamt /= 0xff;
-		cmaskr *= maskamt;
-		cmaskg *= maskamt;
-		cmaskb *= maskamt;
-	}
-	else
-	{
-		cmaskr = cmaskg = cmaskb = 0xff;
-		maskamt = 0;
-		maskcolor = ((0xff) >> 3) + (((0xff) >> 2) << 5) + (((0xff) >> 3) << 11);
-	}
-
-#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
-	if (p2[0] == '#')
-	{
-		// Get parameters like fadestart, fadeend, and the fogflag
-		fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
-		fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
-		if (fadestart > 32)
-			fadestart = 0;
-		if (fadeend > 33 || fadeend < 1)
-			fadeend = 33;
-		fadedist = fadeend - fadestart;
-		fog = NUMFROMCHAR(p2[1]) ? 1 : 0;
-	}
-#undef getnum
-
-	if (p3[0] == '#')
-	{
-		cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
-		cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
-		cdestb = cb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
-		fadecolor = (((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11));
-	}
-	else
-		cdestr = cdestg = cdestb = fadecolor = 0;
-#undef HEX2INT
-
-	for (i = 0; i < num_extra_colormaps; i++)
-	{
-		if (foundcolormaps[i] != LUMPERROR)
-			continue;
-		if (maskcolor == extra_colormaps[i].maskcolor
-			&& fadecolor == extra_colormaps[i].fadecolor
-			&& (float)maskamt == (float)extra_colormaps[i].maskamt
-			&& fadestart == extra_colormaps[i].fadestart
-			&& fadeend == extra_colormaps[i].fadeend
-			&& fog == extra_colormaps[i].fog)
-		{
-			return (INT32)i;
-		}
-	}
-
-	if (num_extra_colormaps == MAXCOLORMAPS)
-		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
-
-	strncpy(colormapFixingArray[num_extra_colormaps][0], p1, 8);
-	strncpy(colormapFixingArray[num_extra_colormaps][1], p2, 8);
-	strncpy(colormapFixingArray[num_extra_colormaps][2], p3, 8);
-
-	num_extra_colormaps++;
-
-	if (rendermode == render_soft)
-	{
-		for (i = 0; i < 256; i++)
-		{
-			r = pMasterPalette[i].s.red;
-			g = pMasterPalette[i].s.green;
-			b = pMasterPalette[i].s.blue;
-			cbrightness = sqrt((r*r) + (g*g) + (b*b));
-
-			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
-			if (map[i][0] > 255.0l)
-				map[i][0] = 255.0l;
-			deltas[i][0] = (map[i][0] - cdestr) / (double)fadedist;
-
-			map[i][1] = (cbrightness * cmaskg) + (g * othermask);
-			if (map[i][1] > 255.0l)
-				map[i][1] = 255.0l;
-			deltas[i][1] = (map[i][1] - cdestg) / (double)fadedist;
-
-			map[i][2] = (cbrightness * cmaskb) + (b * othermask);
-			if (map[i][2] > 255.0l)
-				map[i][2] = 255.0l;
-			deltas[i][2] = (map[i][2] - cdestb) / (double)fadedist;
-		}
-	}
-
-	foundcolormaps[mapnum] = LUMPERROR;
-
-	// aligned on 8 bit for asm code
-	extra_colormaps[mapnum].colormap = NULL;
-	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
-	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
-	extra_colormaps[mapnum].maskamt = maskamt;
-	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
-	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
-	extra_colormaps[mapnum].fog = fog;
-
-	return (INT32)mapnum;
-}
-
-void R_MakeColormaps(void)
-{
-	size_t i;
-
-	carrayindex = num_extra_colormaps;
-	num_extra_colormaps = 0;
-
-	for (i = 0; i < carrayindex; i++)
-		R_CreateColormap2(colormapFixingArray[i][0], colormapFixingArray[i][1],
-			colormapFixingArray[i][2]);
-}
-
-void R_CreateColormap2(char *p1, char *p2, char *p3)
-{
-	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
-	double r, g, b, cbrightness;
 	double maskamt = 0, othermask = 0;
-	int mask, p, fog = 0;
-	size_t mapnum = num_extra_colormaps;
+
+	UINT8 cr = R_GetRgbaR(extra_colormap->rgba),
+		cg = R_GetRgbaG(extra_colormap->rgba),
+		cb = R_GetRgbaB(extra_colormap->rgba),
+		ca = R_GetRgbaA(extra_colormap->rgba),
+		cfr = R_GetRgbaR(extra_colormap->fadergba),
+		cfg = R_GetRgbaG(extra_colormap->fadergba),
+		cfb = R_GetRgbaB(extra_colormap->fadergba);
+//		cfa = R_GetRgbaA(extra_colormap->fadergba); // unused in software
+
+	UINT8 fadestart = extra_colormap->fadestart,
+		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
+
+	lighttable_t *lighttable = NULL;
 	size_t i;
-	char *colormap_p;
-	UINT32 cr, cg, cb, maskcolor, fadecolor;
-	UINT32 fadestart = 0, fadeend = 33, fadedist = 33;
 
-#define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-	if (p1[0] == '#')
-	{
-		cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-		cmaskr = cr;
-		cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-		cmaskg = cg;
-		cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
-		cmaskb = cb;
-		// Create a rough approximation of the color (a 16 bit color)
-		maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
-		if (p1[7] >= 'a' && p1[7] <= 'z')
-			mask = (p1[7] - 'a');
-		else if (p1[7] >= 'A' && p1[7] <= 'Z')
-			mask = (p1[7] - 'A');
-		else
-			mask = 24;
+	/////////////////////
+	// Calc the RGBA mask
+	/////////////////////
+	cmaskr = cr;
+	cmaskg = cg;
+	cmaskb = cb;
 
-		maskamt = (double)(mask/24.0l);
+	maskamt = (double)(ca/24.0l);
+	othermask = 1 - maskamt;
+	maskamt /= 0xff;
 
-		othermask = 1 - maskamt;
-		maskamt /= 0xff;
-		cmaskr *= maskamt;
-		cmaskg *= maskamt;
-		cmaskb *= maskamt;
-	}
-	else
-	{
-		cmaskr = cmaskg = cmaskb = 0xff;
-		maskamt = 0;
-		maskcolor = ((0xff) >> 3) + (((0xff) >> 2) << 5) + (((0xff) >> 3) << 11);
-	}
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
 
-#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
-	if (p2[0] == '#')
-	{
-		// Get parameters like fadestart, fadeend, and the fogflag
-		fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
-		fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
-		if (fadestart > 32)
-			fadestart = 0;
-		if (fadeend > 33 || fadeend < 1)
-			fadeend = 33;
-		fadedist = fadeend - fadestart;
-		fog = NUMFROMCHAR(p2[1]) ? 1 : 0;
-	}
-#undef getnum
+	/////////////////////
+	// Calc the RGBA fade mask
+	/////////////////////
+	cdestr = cfr;
+	cdestg = cfg;
+	cdestb = cfb;
 
-	if (p3[0] == '#')
-	{
-		cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
-		cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
-		cdestb = cb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
-		fadecolor = (((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11));
-	}
-	else
-		cdestr = cdestg = cdestb = fadecolor = 0;
-#undef HEX2INT
+	// fade alpha unused in software
+	// maskamt = (double)(cfa/24.0l);
+	// othermask = 1 - maskamt;
+	// maskamt /= 0xff;
 
-	for (i = 0; i < num_extra_colormaps; i++)
-	{
-		if (foundcolormaps[i] != LUMPERROR)
-			continue;
-		if (maskcolor == extra_colormaps[i].maskcolor
-			&& fadecolor == extra_colormaps[i].fadecolor
-			&& (float)maskamt == (float)extra_colormaps[i].maskamt
-			&& fadestart == extra_colormaps[i].fadestart
-			&& fadeend == extra_colormaps[i].fadeend
-			&& fog == extra_colormaps[i].fog)
-		{
-			return;
-		}
-	}
+	// cdestr *= maskamt;
+	// cdestg *= maskamt;
+	// cdestb *= maskamt;
 
-	if (num_extra_colormaps == MAXCOLORMAPS)
-		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
-
-	num_extra_colormaps++;
-
+	/////////////////////
+	// This code creates the colormap array used by software renderer
+	/////////////////////
 	if (rendermode == render_soft)
 	{
+		double r, g, b, cbrightness;
+		int p;
+		char *colormap_p;
+
+		// Initialise the map and delta arrays
+		// map[i] stores an RGB color (as double) for index i,
+		//  which is then converted to SRB2's palette later
+		// deltas[i] stores a corresponding fade delta between the RGB color and the final fade color;
+		//  map[i]'s values are decremented by after each use
 		for (i = 0; i < 256; i++)
 		{
 			r = pMasterPalette[i].s.red;
@@ -1642,25 +1681,14 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 				map[i][2] = 255.0l;
 			deltas[i][2] = (map[i][2] - cdestb) / (double)fadedist;
 		}
-	}
 
-	foundcolormaps[mapnum] = LUMPERROR;
-
-	// aligned on 8 bit for asm code
-	extra_colormaps[mapnum].colormap = NULL;
-	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
-	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
-	extra_colormaps[mapnum].maskamt = maskamt;
-	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
-	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
-	extra_colormaps[mapnum].fog = fog;
-
-#define ABS2(x) ((x) < 0 ? -(x) : (x))
-	if (rendermode == render_soft)
-	{
+		// Now allocate memory for the actual colormap array itself!
+		// aligned on 8 bit for asm code
 		colormap_p = Z_MallocAlign((256 * 34) + 10, PU_LEVEL, NULL, 8);
-		extra_colormaps[mapnum].colormap = (UINT8 *)colormap_p;
+		lighttable = (UINT8 *)colormap_p;
 
+		// Calculate the palette index for each palette index, for each light level
+		// (as well as the two unused colormap lines we inherited from Doom)
 		for (p = 0; p < 34; p++)
 		{
 			for (i = 0; i < 256; i++)
@@ -1672,7 +1700,7 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 
 				if ((UINT32)p < fadestart)
 					continue;
-
+#define ABS2(x) ((x) < 0 ? -(x) : (x))
 				if (ABS2(map[i][0] - cdestr) > ABS2(deltas[i][0]))
 					map[i][0] -= deltas[i][0];
 				else
@@ -1687,12 +1715,290 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 					map[i][2] -= deltas[i][2];
 				else
 					map[i][2] = cdestb;
+#undef ABS2
 			}
 		}
 	}
-#undef ABS2
 
-	return;
+	return lighttable;
+}
+
+extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
+{
+	extracolormap_t *extra_colormap, *exc;
+
+	// default values
+	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
+	UINT32 fadestart = 0, fadeend = 31;
+	UINT8 fog = 0;
+	INT32 rgba = 0, fadergba = 0x19000000;
+
+#define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
+#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
+
+	// Get base colormap value
+	// First alpha-only, then full value
+	if (p1[0] >= 'a' && p1[0] <= 'z' && !p1[1])
+		ca = (p1[0] - 'a');
+	else if (p1[0] == '#' && p1[1] >= 'a' && p1[1] <= 'z' && !p1[2])
+		ca = (p1[1] - 'a');
+	else if (p1[0] >= 'A' && p1[0] <= 'Z' && !p1[1])
+		ca = (p1[0] - 'A');
+	else if (p1[0] == '#' && p1[1] >= 'A' && p1[1] <= 'Z' && !p1[2])
+		ca = (p1[1] - 'A');
+	else if (p1[0] == '#')
+	{
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p1[1] && p1[2])
+		{
+			cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
+			if (p1[3] && p1[4])
+			{
+				cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
+				if (p1[5] && p1[6])
+				{
+					cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
+
+					if (p1[7] >= 'a' && p1[7] <= 'z')
+						ca = (p1[7] - 'a');
+					else if (p1[7] >= 'A' && p1[7] <= 'Z')
+						ca = (p1[7] - 'A');
+					else
+						ca = 25;
+				}
+				else
+					ca = 25;
+			}
+			else
+				ca = 25;
+		}
+		else
+			ca = 25;
+	}
+
+#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
+
+	// Get parameters like fadestart, fadeend, and the fogflag
+	if (p2[0] == '#')
+	{
+		if (p2[1])
+		{
+			fog = NUMFROMCHAR(p2[1]);
+			if (p2[2] && p2[3])
+			{
+				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
+				if (p2[4] && p2[5])
+					fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
+			}
+		}
+
+		if (fadestart > 30)
+			fadestart = 0;
+		if (fadeend > 31 || fadeend < 1)
+			fadeend = 31;
+	}
+
+#undef NUMFROMCHAR
+
+	// Get fade (dark) colormap value
+	// First alpha-only, then full value
+	if (p3[0] >= 'a' && p3[0] <= 'z' && !p3[1])
+		cfa = (p3[0] - 'a');
+	else if (p3[0] == '#' && p3[1] >= 'a' && p3[1] <= 'z' && !p3[2])
+		cfa = (p3[1] - 'a');
+	else if (p3[0] >= 'A' && p3[0] <= 'Z' && !p3[1])
+		cfa = (p3[0] - 'A');
+	else if (p3[0] == '#' && p3[1] >= 'A' && p3[1] <= 'Z' && !p3[2])
+		cfa = (p3[1] - 'A');
+	else if (p3[0] == '#')
+	{
+		// For each subsequent value, the value before it must exist
+		// If we don't get every value, then set alpha to max
+		if (p3[1] && p3[2])
+		{
+			cfr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
+			if (p3[3] && p3[4])
+			{
+				cfg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
+				if (p3[5] && p3[6])
+				{
+					cfb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
+
+					if (p3[7] >= 'a' && p3[7] <= 'z')
+						cfa = (p3[7] - 'a');
+					else if (p3[7] >= 'A' && p3[7] <= 'Z')
+						cfa = (p3[7] - 'A');
+					else
+						cfa = 25;
+				}
+				else
+					cfa = 25;
+			}
+			else
+				cfa = 25;
+		}
+		else
+			cfa = 25;
+	}
+#undef ALPHA2INT
+#undef HEX2INT
+
+	// Pack rgba values into combined var
+	// OpenGL also uses this instead of lighttables for rendering
+	rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
+	fadergba = R_PutRgbaRGBA(cfr, cfg, cfb, cfa);
+
+	// Did we just make a default colormap?
+#ifdef EXTRACOLORMAPLUMPS
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
+		return NULL;
+#else
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
+		return NULL;
+#endif
+
+	// Look for existing colormaps
+#ifdef EXTRACOLORMAPLUMPS
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+#else
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+#endif
+	if (exc)
+		return exc;
+
+	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
+		cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+
+	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
+
+	extra_colormap->fadestart = (UINT16)fadestart;
+	extra_colormap->fadeend = (UINT16)fadeend;
+	extra_colormap->fog = fog;
+
+	extra_colormap->rgba = rgba;
+	extra_colormap->fadergba = fadergba;
+
+#ifdef EXTRACOLORMAPLUMPS
+	extra_colormap->lump = LUMPERROR;
+	extra_colormap->lumpname[0] = 0;
+#endif
+
+	// Having lighttables for alpha-only entries is kind of pointless,
+	// but if there happens to be a matching rgba entry that is NOT alpha-only (but has same rgb values),
+	// then it needs this lighttable because we share matching entries.
+	extra_colormap->colormap = R_CreateLightTable(extra_colormap);
+
+	R_AddColormapToList(extra_colormap);
+
+	return extra_colormap;
+}
+
+//
+// R_AddColormaps()
+// NOTE: The result colormap is not added to the extra_colormaps chain. You must do that yourself!
+//
+extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
+	boolean subR, boolean subG, boolean subB, boolean subA,
+	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
+	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
+	boolean lighttable)
+{
+	INT16 red, green, blue, alpha;
+
+	// exc_augend is added (or subtracted) onto by exc_addend
+	// In Rennaisance times, the first number was considered the augend, the second number the addend
+	// But since the commutative property was discovered, today they're both called addends!
+	// So let's be Olde English for a hot second.
+
+	exc_augend = R_CopyColormap(exc_augend, false);
+	if(!exc_addend)
+		exc_addend = R_GetDefaultColormap();
+
+	///////////////////
+	// base rgba
+	///////////////////
+
+	red = max(min(
+		R_GetRgbaR(exc_augend->rgba)
+			+ (subR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->rgba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->rgba)
+			+ (subG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->rgba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->rgba)
+			+ (subB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->rgba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	///////////////////
+	// fade/dark rgba
+	///////////////////
+
+	red = max(min(
+		R_GetRgbaR(exc_augend->fadergba)
+			+ (subFadeR ? -1 : 1) // subtract R
+			* R_GetRgbaR(exc_addend->fadergba)
+		, 255), 0);
+
+	green = max(min(
+		R_GetRgbaG(exc_augend->fadergba)
+			+ (subFadeG ? -1 : 1) // subtract G
+			* R_GetRgbaG(exc_addend->fadergba)
+		, 255), 0);
+
+	blue = max(min(
+		R_GetRgbaB(exc_augend->fadergba)
+			+ (subFadeB ? -1 : 1) // subtract B
+			* R_GetRgbaB(exc_addend->fadergba)
+		, 255), 0);
+
+	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
+		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
+	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
+
+	exc_augend->fadergba = R_PutRgbaRGBA(red, green, blue, alpha);
+
+	///////////////////
+	// parameters
+	///////////////////
+
+	exc_augend->fadestart = max(min(
+		exc_augend->fadestart
+			+ (subFadeStart ? -1 : 1) // subtract fadestart
+			* exc_addend->fadestart
+		, 31), 0);
+
+	exc_augend->fadeend = max(min(
+		exc_augend->fadeend
+			+ (subFadeEnd ? -1 : 1) // subtract fadeend
+			* (exc_addend->fadeend == 31 && !exc_addend->fadestart ? 0 : exc_addend->fadeend)
+				// HACK: fadeend defaults to 31, so don't add anything in this case
+		, 31), 0);
+
+	if (!ignoreFog) // overwrite fog with new value
+		exc_augend->fog = exc_addend->fog;
+
+	///////////////////
+	// put it together
+	///////////////////
+
+	exc_augend->colormap = lighttable ? R_CreateLightTable(exc_augend) : NULL;
+	exc_augend->next = exc_augend->prev = NULL;
+	return exc_augend;
 }
 
 // Thanks to quake2 source!
@@ -1735,20 +2041,18 @@ static int RoundUp(double number)
 	return (int)number;
 }
 
-const char *R_ColormapNameForNum(INT32 num)
+#ifdef EXTRACOLORMAPLUMPS
+const char *R_NameForColormap(extracolormap_t *extra_colormap)
 {
-	if (num == -1)
+	if (!extra_colormap)
 		return "NONE";
 
-	if (num < 0 || num > MAXCOLORMAPS)
-		I_Error("R_ColormapNameForNum: num %d is invalid!\n", num);
-
-	if (foundcolormaps[num] == LUMPERROR)
+	if (extra_colormap->lump == LUMPERROR)
 		return "INLEVEL";
 
-	return W_CheckNameForNum(foundcolormaps[num]);
+	return extra_colormap->lumpname;
 }
-
+#endif
 
 //
 // build a table for quick conversion from 8bpp to 15bpp

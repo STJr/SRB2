@@ -90,10 +90,7 @@ extern boolean fromlevelselect;
 // Internal parameters for sound rendering.
 // ========================================
 
-extern boolean nomidimusic; // defined in d_main.c
-extern boolean nosound;
-extern boolean nodigimusic;
-extern boolean music_disabled;
+extern boolean midi_disabled;
 extern boolean sound_disabled;
 extern boolean digital_disabled;
 
@@ -126,15 +123,13 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 
 // Maps of special importance
 extern INT16 spstage_start;
-extern INT16 sstage_start;
-extern INT16 sstage_end;
+extern INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 extern INT16 titlemap;
 extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
-extern boolean useNightsSS;
 
 // CTF colors.
 extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
@@ -175,7 +170,7 @@ extern cutscene_t *cutscenes[128];
 extern INT16 nextmapoverride;
 extern boolean skipstats;
 
-extern UINT32 totalrings; //  Total # of rings in a level
+extern UINT32 ssspheres; //  Total # of spheres in a level
 
 // Fun extra stuff
 extern INT16 lastmap; // Last level you were at (returning from special stages).
@@ -246,6 +241,7 @@ typedef struct
 	SINT8 unlockrequired; ///< Is an unlockable required to play this level? -1 if no.
 	UINT8 levelselect;    ///< Is this map available in the level select? If so, which map list is it available in?
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
+	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
@@ -415,6 +411,7 @@ extern UINT16 tailsflytics;
 extern UINT16 underwatertics;
 extern UINT16 spacetimetics;
 extern UINT16 extralifetics;
+extern UINT16 nightslinktics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;

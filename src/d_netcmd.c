@@ -309,8 +309,8 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t timetic_cons_t[] = {{0, "Normal"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
-consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
+static CV_PossibleValue_t timetic_cons_t[] = {{0, "Classic"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
+consvar_t cv_timetic = {"timerres", "Classic", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-person only"}, {2, "Always"}, {0, NULL}};
 consvar_t cv_powerupdisplay = {"powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -811,6 +811,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
+	CV_RegisterVar(&cv_ophoopflags);
 	CV_RegisterVar(&cv_mapthingnum);
 //	CV_RegisterVar(&cv_grid);
 //	CV_RegisterVar(&cv_snapto);
@@ -2682,8 +2683,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	// Clear player score and rings if a spectator.
 	if (players[playernum].spectator)
 	{
-		players[playernum].score = 0;
-		players[playernum].rings = 0;
+		players[playernum].score = players[playernum].rings = 0;
 		if (players[playernum].mo)
 			players[playernum].mo->health = 1;
 	}
@@ -2725,10 +2725,12 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 #define BASESALT "basepasswordstorage"
 static UINT8 adminpassmd5[16];
+static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
+	adminpasswordset = true;
 }
 
 // Remote Administration
@@ -2763,6 +2765,12 @@ static void Command_Login_f(void)
 #else
 	UINT8 finalmd5[16];
 	const char *pw;
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
 
 	// If the server uses login, it will effectively just remove admin privileges
 	// from whoever has them. This is good.
@@ -2800,6 +2808,12 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 	if (client)
 		return;
 
+	if (!adminpasswordset)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
+
 	// Do the final pass to compare with the sent md5
 	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", playernum), &finalmd5);
 
@@ -2822,6 +2836,12 @@ static void Command_Verify_f(void)
 	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -3136,7 +3156,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (adminplayer == consoleplayer && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -3930,28 +3950,7 @@ static void Command_ExitLevel_f(void)
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else
-	{
-		if ((netgame || multiplayer)
-		&& ((mapheaderinfo[gamemap-1]->nextlevel <= 0)
-		|| (mapheaderinfo[gamemap-1]->nextlevel > NUMMAPS)
-		|| !(mapvisited[mapheaderinfo[gamemap-1]->nextlevel-1])))
-		{
-			UINT8 i;
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (playeringame[i] && players[i].exiting)
-					break;
-			}
-
-			if (i == MAXPLAYERS)
-			{
-				CONS_Printf(M_GetText("Someone must finish the level for you to use this.\n"));
-				return;
-			}
-		}
-
 		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
@@ -4062,19 +4061,18 @@ static void Command_RestartAudio_f(void)
 		return;
 
 	S_StopMusic();
+	S_StopSounds();
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	I_StartupSound();
 	I_InitMusic();
-	
+
 // These must be called or no sound and music until manually set.
 
 	I_SetSfxVolume(cv_soundvolume.value);
-	I_SetDigMusicVolume(cv_digmusicvolume.value);
-	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
+	S_SetMusicVolume(cv_digmusicvolume.value, cv_midimusicvolume.value);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
-	
 }
 
 /** Quits a game and returns to the title screen.

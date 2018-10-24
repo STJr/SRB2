@@ -194,11 +194,11 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
-	posStart = W_CheckNumForFolderStartPK3("SOCs/", wadnum, 0);
+	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
-		posStart++; // first "lump" will be "SOCs/" folder itself, so ignore it
+		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
+		posStart++; // first "lump" will be "SOC/" folder itself, so ignore it
 		for(; posStart < posEnd; posStart++)
 		{
 			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
@@ -234,10 +234,10 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{	// shameless copy+paste of code from LUA_LoadLump
-				size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
-				char *name = malloc(length + 1);
+				size_t len = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+				char *name = malloc(len+1);
 				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
-				name[length] = '\0';
+				name[len] = '\0';
 
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
