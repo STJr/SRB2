@@ -266,7 +266,7 @@ static void wattcp_outch(char s)
 // stupid microsoft makes things complicated
 static inline char *get_WSAErrorStr(int e)
 {
-	char buf[256]; // allow up to 255 bytes
+	static char buf[256]; // allow up to 255 bytes
 
 	buf[0] = '\0';
 
