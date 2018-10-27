@@ -266,17 +266,22 @@ static void wattcp_outch(char s)
 // stupid microsoft makes things complicated
 static inline char *get_WSAErrorStr(int e)
 {
-	char *buf = NULL;
+	char buf[256]; // allow up to 255 bytes
+
+	buf[0] = '\0';
 
 	FormatMessageA(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |
 		FORMAT_MESSAGE_FROM_SYSTEM |
 		FORMAT_MESSAGE_IGNORE_INSERTS,
 		NULL,
 		(DWORD)e,
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&buf,
-		0, NULL);
+		(LPTSTR)buf,
+		sizeof (buf),
+		NULL);
+
+	if (!buf[0]) // provide a fallback error message if no message is available for some reason
+		sprintf(buf, "Unknown error");
 
 	return buf;
 }
