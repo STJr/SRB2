@@ -264,7 +264,7 @@ static void wattcp_outch(char s)
 
 #ifdef USE_WINSOCK
 // stupid microsoft makes things complicated
-static inline char *get_WSAErrorStr(int e)
+static char *get_WSAErrorStr(int e)
 {
 	static char buf[256]; // allow up to 255 bytes
 
