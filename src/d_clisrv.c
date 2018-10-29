@@ -401,8 +401,7 @@ static void ExtraDataTicker(void)
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
 						CONS_Alert(CONS_WARNING, M_GetText("Got unknown net command [%s]=%d (max %d)\n"), sizeu1(curpos - bufferstart), *curpos, bufferstart[0]);
-						D_FreeTextcmd(gametic);
-						return;
+						break;
 					}
 				}
 			}
@@ -1569,8 +1568,6 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	playerdeadview = false;
-
 	if (P_LoadNetGame())
 	{
 		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
@@ -2244,7 +2241,7 @@ static void Command_connect(void)
 	// Assume we connect directly.
 	boolean viams = false;
 
-	if (COM_Argc() < 2)
+	if (COM_Argc() < 2 || *COM_Argv(1) == 0)
 	{
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"
@@ -3296,7 +3293,7 @@ void SV_StopServer(void)
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
 
-	for (i = 0; i < BACKUPTICS; i++)
+	for (i = firstticstosend; i < firstticstosend + BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
 	consoleplayer = 0;

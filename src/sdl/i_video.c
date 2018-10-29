@@ -39,6 +39,10 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
+#elif 1
+#define LOAD_XPM //I want XPM!
+#include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
+#define HAVE_IMAGE //I have SDL_Image, sortof
 #endif
 
 #ifdef HAVE_IMAGE
@@ -562,7 +566,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(0); //resume it
+			I_ResumeSong(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -574,7 +578,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		I_PauseSong(0);
+		I_PauseSong();
 
 		if (!disable_mouse)
 		{
@@ -657,6 +661,14 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 	event_t event;
 
 	SDL_memset(&event, 0, sizeof(event_t));
+
+	// Ignore the event if the mouse is not actually focused on the window.
+	// This can happen if you used the mouse to restore keyboard focus;
+	// this apparently makes a mouse button down event but not a mouse button up event,
+	// resulting in whatever key was pressed down getting "stuck" if we don't ignore it.
+	// -- Monster Iestyn (28/05/18)
+	if (SDL_GetMouseFocus() != window)
+		return;
 
 	/// \todo inputEvent.button.which
 	if (USE_MOUSEINPUT)
@@ -1442,6 +1454,7 @@ void I_StartupGraphics(void)
 #ifdef SHUFFLE
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 #endif
+		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);

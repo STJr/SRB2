@@ -3840,7 +3840,8 @@ void P_RecalcPrecipInSector(sector_t *sector)
 //
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
-	(void)mobj;
+	//(void)mobj;
+	mobj->precipflags &= ~PCF_THUNK;
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
@@ -3860,25 +3861,26 @@ void P_RainThinker(precipmobj_t *mobj)
 	{
 		// cycle through states,
 		// calling action functions at transitions
-		if (mobj->tics > 0 && --mobj->tics == 0)
-		{
-			// you can cycle through multiple states in a tic
-			if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-		}
+		if (mobj->tics <= 0)
+			return;
 
-		if (mobj->state == &states[S_RAINRETURN])
-		{
-			mobj->z = mobj->ceilingz;
-			P_SetPrecipMobjState(mobj, S_RAIN1);
-		}
+		if (--mobj->tics)
+			return;
+
+		if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
+			return;
+
+		if (mobj->state != &states[S_RAINRETURN])
+			return;
+
+		mobj->z = mobj->ceilingz;
+		P_SetPrecipMobjState(mobj, S_RAIN1);
+
 		return;
 	}
 
 	// adjust height
-	mobj->z += mobj->momz;
-
-	if (mobj->z <= mobj->floorz)
+	if ((mobj->z += mobj->momz) <= mobj->floorz)
 	{
 		// no splashes on sky or bottomless pits
 		if (mobj->precipflags & PCF_PIT)
@@ -7926,14 +7928,15 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	mo->precipflags |= PCF_RAIN;
+	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 
@@ -8228,7 +8231,7 @@ void P_PrecipitationEffects(void)
 	if (!playeringame[displayplayer] || !players[displayplayer].mo)
 		return;
 
-	if (nosound || sound_disabled)
+	if (sound_disabled)
 		return; // Sound off? D'aw, no fun.
 
 	if (players[displayplayer].mo->subsector->sector->ceilingpic == skyflatnum)

@@ -182,19 +182,21 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
-	name = malloc(strlen(wadfiles[wad]->filename)+10);
+	len = strlen(wadfiles[wad]->filename);
+	name = malloc(len+10);
 	strcpy(name, wadfiles[wad]->filename);
-	if (!fasticmp(&name[strlen(name) - 4], ".lua")) {
+	if (!fasticmp(&name[len - 4], ".lua")) {
 		// If it's not a .lua file, copy the lump name in too.
-		name[strlen(wadfiles[wad]->filename)] = '|';
-		M_Memcpy(name+strlen(wadfiles[wad]->filename)+1, wadfiles[wad]->lumpinfo[lump].name, 8);
-		name[strlen(wadfiles[wad]->filename)+9] = '\0';
+		name[len] = '|';
+		M_Memcpy(name+len+1, wadfiles[wad]->lumpinfo[lump].name, 8);
+		name[len+9] = '\0';
 	}
 
 	LUA_LoadFile(&f, name);
@@ -851,7 +853,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;

@@ -990,19 +990,41 @@ filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 	return FS_FOUND; // will never happen, but makes the compiler shut up
 }
 
+// Rewritten by Monster Iestyn to be less stupid
+// Note: if completepath is true, "filename" is modified, but only if FS_FOUND is going to be returned
+// (Don't worry about WinCE's version of filesearch, nobody cares about that OS anymore)
 filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean completepath)
 {
-	filestatus_t homecheck = filesearch(filename, srb2home, wantedmd5sum, false, 10);
-	if (homecheck == FS_FOUND)
-		return filesearch(filename, srb2home, wantedmd5sum, completepath, 10);
+	filestatus_t homecheck; // store result of last file search
+	boolean badmd5 = false; // store whether md5 was bad from either of the first two searches (if nothing was found in the third)
 
-	homecheck = filesearch(filename, srb2path, wantedmd5sum, false, 10);
-	if (homecheck == FS_FOUND)
-		return filesearch(filename, srb2path, wantedmd5sum, completepath, 10);
+	// first, check SRB2's "home" directory
+	homecheck = filesearch(filename, srb2home, wantedmd5sum, completepath, 10);
 
+	if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+		return FS_FOUND;
+	else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+		badmd5 = true;
+	// if not found at all, just move on without doing anything
+
+	// next, check SRB2's "path" directory
+	homecheck = filesearch(filename, srb2path, wantedmd5sum, completepath, 10);
+
+	if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+		return FS_FOUND;
+	else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+		badmd5 = true;
+	// if not found at all, just move on without doing anything
+
+	// finally check "." directory
 #ifdef _arch_dreamcast
-	return filesearch(filename, "/cd", wantedmd5sum, completepath, 10);
+	homecheck = filesearch(filename, "/cd", wantedmd5sum, completepath, 10);
 #else
-	return filesearch(filename, ".", wantedmd5sum, completepath, 10);
+	homecheck = filesearch(filename, ".", wantedmd5sum, completepath, 10);
 #endif
+
+	if (homecheck != FS_NOTFOUND) // if not found this time, fall back on the below return statement
+		return homecheck; // otherwise return the result we got
+
+	return (badmd5 ? FS_MD5SUMBAD : FS_NOTFOUND); // md5 sum bad or file not found
 }
