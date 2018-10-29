@@ -179,18 +179,29 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscale = FIXED_TO_FLOAT(pscale);
 
-	if (option & V_OFFSET)
+	// See my comments in v_video.c's V_DrawFixedPatch
+	// -- Monster Iestyn 29/10/18
 	{
-		cx -= (float)gpatch->leftoffset * dupx * fscale;
-		cy -= (float)gpatch->topoffset * dupy * fscale;
-	}
-	else
-	{
-		cy -= (float)gpatch->topoffset * fscale;
+		float offsetx = 0.0f, offsety = 0.0f;
+
+		// left offset
 		if (option & V_FLIP)
-			cx -= ((float)gpatch->width - (float)gpatch->leftoffset) * fscale;
+			offsetx = (float)(SHORT(gpatch->width) - SHORT(gpatch->leftoffset)) * fscale;
 		else
-			cx -= (float)gpatch->leftoffset * fscale;
+			offsetx = (float)SHORT(gpatch->leftoffset) * fscale;
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		offsety = (float)SHORT(patch->topoffset) * fscale;
+
+		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
+		{
+			offsetx *= dupx;
+			offsety *= dupy;
+		}
+
+		cx -= offsetx;
+		cy -= offsety;
 	}
 
 	if (option & V_SPLITSCREEN)
@@ -237,13 +248,13 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	if (pscale != FRACUNIT)
 	{
-		fwidth = (float)gpatch->width * fscale * dupx;
-		fheight = (float)gpatch->height * fscale * dupy;
+		fwidth = (float)SHORT(gpatch->width) * fscale * dupx;
+		fheight = (float)SHORT(gpatch->height) * fscale * dupy;
 	}
 	else
 	{
-		fwidth = (float)gpatch->width * dupx;
-		fheight = (float)gpatch->height * dupy;
+		fwidth = (float)SHORT(gpatch->width) * dupx;
+		fheight = (float)SHORT(gpatch->height) * dupy;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
