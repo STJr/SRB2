@@ -426,7 +426,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
 		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
 
-		if (scrn & V_OFFSET) // Multiply by dupx/dupy for crosshairs
+		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
 		{
 			offsetx = FixedMul(offsetx, dupx<<FRACBITS);
 			offsety = FixedMul(offsety, dupy<<FRACBITS);
