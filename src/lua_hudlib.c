@@ -614,7 +614,7 @@ static int lib_hudenabled(lua_State *L)
 {
 	enum hud option = luaL_checkoption(L, 1, NULL, hud_disable_options);
 	lua_settop(L, 2);
-	if (!gL || hud_enabled[option/8] & (1<<(option%8)))
+	if (hud_enabled[option/8] & (1<<(option%8)))
 		lua_pushboolean(L, true);
 	else
 		lua_pushboolean(L, false);
