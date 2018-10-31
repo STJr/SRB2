@@ -182,19 +182,21 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
-	name = malloc(strlen(wadfiles[wad]->filename)+10);
+	len = strlen(wadfiles[wad]->filename);
+	name = malloc(len+10);
 	strcpy(name, wadfiles[wad]->filename);
-	if (!fasticmp(&name[strlen(name) - 4], ".lua")) {
+	if (!fasticmp(&name[len - 4], ".lua")) {
 		// If it's not a .lua file, copy the lump name in too.
-		name[strlen(wadfiles[wad]->filename)] = '|';
-		M_Memcpy(name+strlen(wadfiles[wad]->filename)+1, wadfiles[wad]->lumpinfo[lump].name, 8);
-		name[strlen(wadfiles[wad]->filename)+9] = '\0';
+		name[len] = '|';
+		M_Memcpy(name+len+1, wadfiles[wad]->lumpinfo[lump].name, 8);
+		name[len+9] = '\0';
 	}
 
 	LUA_LoadFile(&f, name);
@@ -478,10 +480,10 @@ static const struct {
 	{NULL,          ARCH_NULL}
 };
 
-static UINT8 GetUserdataArchType(void)
+static UINT8 GetUserdataArchType(int index)
 {
 	UINT8 i;
-	lua_getmetatable(gL, -1);
+	lua_getmetatable(gL, index);
 
 	for (i = 0; meta2arch[i].meta; i++)
 	{
@@ -560,20 +562,20 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TUSERDATA:
-		switch (GetUserdataArchType())
+		switch (GetUserdataArchType(myindex))
 		{
 		case ARCH_MOBJINFO:
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:
@@ -715,8 +717,15 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 	for (i = 0; lua_next(gL, -2); i++)
 		lua_pop(gL, 1);
 
-	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	// skip anything that has an empty table and isn't a player.
+	if (i == 0)
+	{
+		if (fastcmp(ptype,"player")) // always include players even if they have no extra variables
+			WRITEUINT16(save_p, 0);
+		lua_pop(gL, 1);
 		return;
+	}
+
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
@@ -770,6 +779,7 @@ static void ArchiveTables(void)
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
 				lua_pop(gL, 1);
 			}
+
 			lua_pop(gL, 1);
 		}
 		lua_pop(gL, 1);
@@ -843,7 +853,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;

@@ -956,6 +956,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
 			return false; // "cancel" P_TryMove via blocking so you keep your current position
 	}
+	else if (tmthing->flags & MF_SPRING && (thing->player || thing->flags & MF_PUSHABLE))
+		; // Fix a few nasty spring-jumping bugs that happen sometimes.
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
 	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
@@ -985,18 +987,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z + tmthing->height > topz
-				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
+			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			if (thing->flags & MF_SPRING)
 				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			// block only when jumping not high enough,
+			// (dont climb max. 24units while already in air)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			else if (tmthing->player && tmthing->z + tmthing->height > topz
+				&& tmthing->z + tmthing->height < tmthing->ceilingz)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
 #ifdef ESLOPE
@@ -1022,17 +1030,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
+			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			if (thing->flags & MF_SPRING)
 				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			// block only when jumping not high enough,
+			// (dont climb max. 24units while already in air)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			else if (tmthing->player && tmthing->z < topz
+				&& tmthing->z > tmthing->floorz)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
 #ifdef ESLOPE
@@ -3984,6 +3999,11 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
 	sector_t *sec = R_PointInSubsector(x, y)->sector;
 	fixed_t floorz = sec->floorheight;
+
+#ifdef ESLOPE
+	if (sec->f_slope)
+		floorz = P_GetZAt(sec->f_slope, x, y);
+#endif
 
 	// Intercept the stupid 'fall through 3dfloors' bug Tails 03-17-2002
 	if (sec->ffloors)

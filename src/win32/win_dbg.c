@@ -20,7 +20,9 @@
 
 
 #include <tchar.h>
+#ifndef HAVE_SDL
 #include "win_main.h"
+#endif
 #include "../doomdef.h" //just for VERSION
 #include "win_dbg.h"
 #include "../m_argv.h" //print the parameter in the log

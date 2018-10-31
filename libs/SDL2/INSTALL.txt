@@ -1,4 +1,7 @@
 
+The 32-bit files are in i686-w64-mingw32
+The 64-bit files are in x86_64-w64-mingw32
+
 To install SDL for native development:
     make native
 

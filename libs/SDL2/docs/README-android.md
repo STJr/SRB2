@@ -1,16 +1,23 @@
 Android
 ================================================================================
 
-Requirements:
+Matt Styles wrote a tutorial on building SDL for Android with Visual Studio:
+http://trederia.blogspot.de/2017/03/building-sdl2-for-android-with-visual.html
 
-Android SDK (version 12 or later)
-http://developer.android.com/sdk/index.html
+The rest of this README covers the old style build process.
+
+================================================================================
+ Requirements
+================================================================================
+
+Android SDK (version 16 or later)
+https://developer.android.com/sdk/index.html
 
 Android NDK r7 or later
-http://developer.android.com/tools/sdk/ndk/index.html
+https://developer.android.com/tools/sdk/ndk/index.html
 
 Minimum API level supported by SDL: 10 (Android 2.3.3)
-Joystick support is available for API level >=12 devices.
+Joystick support is available for API level >= 12 devices.
 
 ================================================================================
  How the port works
@@ -67,13 +74,13 @@ For more complex projects, follow these instructions:
     
 1. Copy the android-project directory wherever you want to keep your projects
    and rename it to the name of your project.
-2. Move or symlink this SDL directory into the <project>/jni directory
-3. Edit <project>/jni/src/Android.mk to include your source files
+2. Move or symlink this SDL directory into the "<project>/jni" directory
+3. Edit "<project>/jni/src/Android.mk" to include your source files
 4. Run 'ndk-build' (a script provided by the NDK). This compiles the C source
 
 If you want to use the Eclipse IDE, skip to the Eclipse section below.
 
-5. Create <project>/local.properties and use that to point to the Android SDK directory, by writing a line with the following form:
+5. Create "<project>/local.properties" and use that to point to the Android SDK directory, by writing a line with the following form:
 
        sdk.dir=PATH_TO_ANDROID_SDK
 
@@ -121,15 +128,15 @@ This build uses the Android NDK module system.
 Instructions:
 1. Copy the android-project directory wherever you want to keep your projects
    and rename it to the name of your project.
-2. Rename <project>/jni/src/Android_static.mk to <project>/jni/src/Android.mk
+2. Rename "<project>/jni/src/Android_static.mk" to "<project>/jni/src/Android.mk"
    (overwrite the existing one)
-3. Edit <project>/jni/src/Android.mk to include your source files
+3. Edit "<project>/jni/src/Android.mk" to include your source files
 4. create and export an environment variable named NDK_MODULE_PATH that points
    to the parent directory of this SDL directory. e.g.:
 
        export NDK_MODULE_PATH="$PWD"/..
 
-5. Edit <project>/src/org/libsdl/app/SDLActivity.java and remove the call to
+5. Edit "<project>/src/org/libsdl/app/SDLActivity.java" and remove the call to
    System.loadLibrary("SDL2").
 6. Run 'ndk-build' (a script provided by the NDK). This compiles the C source
 
@@ -229,7 +236,7 @@ under iOS, if the OS can not restore your GL context it will just kill your app)
 ================================================================================
 
 For a quick tour on how Linux native threads interoperate with the Java VM, take
-a look here: http://developer.android.com/guide/practices/jni.html
+a look here: https://developer.android.com/guide/practices/jni.html
 
 If you want to use threads in your SDL app, it's strongly recommended that you
 do so by creating them using SDL functions. This way, the required attach/detach
@@ -265,7 +272,7 @@ The best place to start is with docs/OVERVIEW.TXT
 ================================================================================
 
 First make sure that you've installed Eclipse and the Android extensions as described here:
-	http://developer.android.com/tools/sdk/eclipse-adt.html
+	https://developer.android.com/tools/sdk/eclipse-adt.html
 
 Once you've copied the SDL android project and customized it, you can create an Eclipse project from it:
  * File -> New -> Other
@@ -281,7 +288,7 @@ Once you've copied the SDL android project and customized it, you can create an 
 ================================================================================
 
 There are some good tips and tricks for getting the most out of the
-emulator here: http://developer.android.com/tools/devices/emulator.html
+emulator here: https://developer.android.com/tools/devices/emulator.html
 
 Especially useful is the info on setting up OpenGL ES 2.0 emulation.
 
@@ -420,6 +427,19 @@ When you're done instrumenting with valgrind, you can disable the wrapper:
     adb shell setprop wrap.org.libsdl.app ""
 
 ================================================================================
+ Graphics debugging
+================================================================================
+
+If you are developing on a compatible Tegra-based tablet, NVidia provides
+Tegra Graphics Debugger at their website.  Because SDL2 dynamically loads EGL
+and GLES libraries, you must follow their instructions for installing the
+interposer library on a rooted device.  The non-rooted instructions are not
+compatible with applications that use SDL2 for video.
+
+The Tegra Graphics Debugger is available from NVidia here:
+https://developer.nvidia.com/tegra-graphics-debugger
+
+================================================================================
  Why is API level 10 the minimum required?
 ================================================================================
 
@@ -433,7 +453,7 @@ Support for native OpenGL ES and ES2 applications was introduced in the NDK for
 API level 4 and 8. EGL was made a stable API in the NDK for API level 9, which
 has since then been obsoleted, with the recommendation to developers to bump the
 required API level to 10.
-As of this writing, according to http://developer.android.com/about/dashboards/index.html
+As of this writing, according to https://developer.android.com/about/dashboards/index.html
 about 90% of the Android devices accessing Google Play support API level 10 or
 higher (March 2013).
 

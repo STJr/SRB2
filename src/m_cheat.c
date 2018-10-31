@@ -452,7 +452,7 @@ void Command_RTeleport_f(void)
 	else
 		inty = 0;
 
-	ss = R_PointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
+	ss = R_IsPointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
 	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));

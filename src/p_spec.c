@@ -221,8 +221,8 @@ static animdef_t harddefs[] =
 static animdef_t *animdefs = NULL;
 
 // A prototype; here instead of p_spec.h, so they're "private"
-void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i);
-void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i);
+void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
+void P_ParseAnimationDefintion(SINT8 istexture);
 
 /** Sets up texture and flat animations.
   *
@@ -232,24 +232,21 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i);
   * Issues an error if any animation cycles are invalid.
   *
   * \sa P_FindAnimatedFlat, P_SetupLevelFlatAnims
-  * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs)
+  * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs), JTE (had to rewrite it to handle multiple WADs _correctly_)
   */
 void P_InitPicAnims(void)
 {
 	// Init animation
-	INT32 i; // Position in the animdefs array
 	INT32 w; // WAD
-	UINT8 *wadAnimdefs; // not to be confused with animdefs, the combined total of every ANIMATED lump in every WAD, or ANIMDEFS, the ZDoom lump I intend to implement later
+	UINT8 *animatedLump;
 	UINT8 *currentPos;
+	size_t i;
+
+	I_Assert(animdefs == NULL);
 
 	if (W_CheckNumForName("ANIMATED") != LUMPERROR || W_CheckNumForName("ANIMDEFS") != LUMPERROR)
 	{
-		if (animdefs)
-		{
-			Z_Free(animdefs);
-			animdefs = NULL;
-		}
-		for (w = 0, i = 0, maxanims = 0; w < numwadfiles; w++)
+		for (w = numwadfiles-1, maxanims = 0; w >= 0; w--)
 		{
 			UINT16 animatedLumpNum;
 			UINT16 animdefsLumpNum;
@@ -258,20 +255,20 @@ void P_InitPicAnims(void)
 			animatedLumpNum = W_CheckNumForNamePwad("ANIMATED", w, 0);
 			if (animatedLumpNum != INT16_MAX)
 			{
-				wadAnimdefs = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
+				animatedLump = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
 
 				// Get the number of animations in the file
-				for (currentPos = wadAnimdefs; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
+				i = maxanims;
+				for (currentPos = animatedLump; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
 
 				// Resize animdefs (or if it hasn't been created, create it)
 				animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
 				// Sanity check it
-				if (!animdefs) {
+				if (!animdefs)
 					I_Error("Not enough free memory for ANIMATED data");
-				}
 
 				// Populate the new array
-				for (currentPos = wadAnimdefs; *currentPos != UINT8_MAX; i++, currentPos+=23)
+				for (currentPos = animatedLump; *currentPos != UINT8_MAX; i++, currentPos+=23)
 				{
 					M_Memcpy(&(animdefs[i].istexture), currentPos, 1); // istexture, 1 byte
 					M_Memcpy(animdefs[i].endname, (currentPos + 1), 9); // endname, 9 bytes
@@ -279,15 +276,13 @@ void P_InitPicAnims(void)
 					M_Memcpy(&(animdefs[i].speed), (currentPos + 19), 4); // speed, 4 bytes
 				}
 
-				Z_Free(wadAnimdefs);
+				Z_Free(animatedLump);
 			}
 
 			// Now find ANIMDEFS
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 			if (animdefsLumpNum != INT16_MAX)
-			{
-				P_ParseANIMDEFSLump(w, animdefsLumpNum, &i);
-			}
+				P_ParseANIMDEFSLump(w, animdefsLumpNum);
 		}
 		// Define the last one
 		animdefs[maxanims].istexture = -1;
@@ -347,16 +342,20 @@ void P_InitPicAnims(void)
 	lastanim->istexture = -1;
 	R_ClearTextureNumCache(false);
 
+	// Clear animdefs now that we're done with it.
+	// We'll only be using anims from now on.
 	if (animdefs != harddefs)
-		Z_ChangeTag(animdefs, PU_CACHE);
+		Z_Free(animdefs);
+	animdefs = NULL;
 }
 
-void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
+void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum)
 {
 	char *animdefsLump;
 	size_t animdefsLumpLength;
 	char *animdefsText;
 	char *animdefsToken;
+	char *p;
 
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
@@ -376,18 +375,19 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 	Z_Free(animdefsLump);
 
 	// Now, let's start parsing this thing
-	animdefsToken = M_GetToken(animdefsText);
+	p = animdefsText;
+	animdefsToken = M_GetToken(p);
 	while (animdefsToken != NULL)
 	{
 		if (stricmp(animdefsToken, "TEXTURE") == 0)
 		{
 			Z_Free(animdefsToken);
-			P_ParseAnimationDefintion(1, i);
+			P_ParseAnimationDefintion(1);
 		}
 		else if (stricmp(animdefsToken, "FLAT") == 0)
 		{
 			Z_Free(animdefsToken);
-			P_ParseAnimationDefintion(0, i);
+			P_ParseAnimationDefintion(0);
 		}
 		else if (stricmp(animdefsToken, "OSCILLATE") == 0)
 		{
@@ -398,23 +398,22 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 		{
 			I_Error("Error parsing ANIMDEFS lump: Expected \"TEXTURE\" or \"FLAT\", got \"%s\"",animdefsToken);
 		}
-		animdefsToken = M_GetToken(NULL);
+		// parse next line
+		while (*p != '\0' && *p != '\n') ++p;
+		if (*p == '\n') ++p;
+		animdefsToken = M_GetToken(p);
 	}
 	Z_Free(animdefsToken);
 	Z_Free((void *)animdefsText);
 }
 
-void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
+void P_ParseAnimationDefintion(SINT8 istexture)
 {
 	char *animdefsToken;
 	size_t animdefsTokenLength;
 	char *endPos;
 	INT32 animSpeed;
-
-	// Increase the size to make room for the new animation definition
-	maxanims++;
-	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-	animdefs[*i].istexture = istexture;
+	size_t i;
 
 	// Startname
 	animdefsToken = M_GetToken(NULL);
@@ -448,14 +447,39 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	{
 		I_Error("Error parsing ANIMDEFS lump: lump name \"%s\" exceeds 8 characters", animdefsToken);
 	}
-	strncpy(animdefs[*i].startname, animdefsToken, 9);
+
+	// Search for existing animdef
+	for (i = 0; i < maxanims; i++)
+		if (stricmp(animdefsToken, animdefs[i].startname) == 0)
+		{
+			//CONS_Alert(CONS_NOTICE, "Duplicate animation: %s\n", animdefsToken);
+
+			// If we weren't parsing in reverse order, we would `break` here and parse the new data into the existing slot we found.
+			// Instead, we're just going to skip parsing the rest of this line entirely.
+			Z_Free(animdefsToken);
+			return;
+		}
+
+	// Not found
+	if (i == maxanims)
+	{
+		// Increase the size to make room for the new animation definition
+		maxanims++;
+		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+		strncpy(animdefs[i].startname, animdefsToken, 9);
+	}
+
+	// animdefs[i].startname is now set to animdefsToken either way.
 	Z_Free(animdefsToken);
+
+	// set texture type
+	animdefs[i].istexture = istexture;
 
 	// "RANGE"
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"RANGE\" after \"%s\"'s startname should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"RANGE\" after \"%s\"'s startname should be", animdefs[i].startname);
 	}
 	if (stricmp(animdefsToken, "ALLOWDECALS") == 0)
 	{
@@ -470,7 +494,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	}
 	if (stricmp(animdefsToken, "RANGE") != 0)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Expected \"RANGE\" after \"%s\"'s startname, got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected \"RANGE\" after \"%s\"'s startname, got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
 	Z_Free(animdefsToken);
 
@@ -478,21 +502,21 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s end texture/flat name should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s end texture/flat name should be", animdefs[i].startname);
 	}
 	animdefsTokenLength = strlen(animdefsToken);
 	if (animdefsTokenLength>8)
 	{
 		I_Error("Error parsing ANIMDEFS lump: lump name \"%s\" exceeds 8 characters", animdefsToken);
 	}
-	strncpy(animdefs[*i].endname, animdefsToken, 9);
+	strncpy(animdefs[i].endname, animdefsToken, 9);
 	Z_Free(animdefsToken);
 
 	// "TICS"
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s \"TICS\" should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s \"TICS\" should be", animdefs[i].startname);
 	}
 	if (stricmp(animdefsToken, "RAND") == 0)
 	{
@@ -501,7 +525,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	}
 	if (stricmp(animdefsToken, "TICS") != 0)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Expected \"TICS\" in animation definition for \"%s\", got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected \"TICS\" in animation definition for \"%s\", got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
 	Z_Free(animdefsToken);
 
@@ -509,7 +533,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing TEXTURES lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[i].startname);
 	}
 	endPos = NULL;
 #ifndef AVOID_ERRNO
@@ -523,13 +547,10 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 #endif
 		|| animSpeed < 0) // Number is not positive
 	{
-		I_Error("Error parsing TEXTURES lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
-	animdefs[*i].speed = animSpeed;
+	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-
-	// Increment i before we go, so this doesn't cause issues later
-	(*i)++;
 }
 
 
@@ -1498,6 +1519,8 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
+		sectors[i].spawn_nexttag = sectors[i].nexttag;
+		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
@@ -1719,7 +1742,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 305: // continuous
 		case 306: // each time
 		case 307: // once
-			if (!(actor && actor->player && actor->player->charability != dist/10))
+			if (!(actor && actor->player && actor->player->charability == dist/10))
 				return false;
 			break;
 		case 309: // continuous
@@ -2016,8 +2039,7 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
-			if ((think->function.acp1 != (actionf_p1)P_SnowThinker)
-				&& (think->function.acp1 != (actionf_p1)P_RainThinker))
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
 
 			precipmobj = (precipmobj_t *)think;
@@ -2033,14 +2055,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
+				continue; // not a precipmobj thinker
+			precipmobj = (precipmobj_t *)think;
+
 			if (swap == PRECIP_RAIN) // Snow To Rain
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_SnowThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
-
 				precipmobj->flags = mobjinfo[MT_RAIN].flags;
 				st = &states[mobjinfo[MT_RAIN].spawnstate];
 				precipmobj->state = st;
@@ -2051,17 +2071,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 				precipmobj->precipflags &= ~PCF_INVISIBLE;
 
-				think->function.acp1 = (actionf_p1)P_RainThinker;
+				precipmobj->precipflags |= PCF_RAIN;
+				//think->function.acp1 = (actionf_p1)P_RainThinker;
 			}
 			else if (swap == PRECIP_SNOW) // Rain To Snow
 			{
 				INT32 z;
-
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
 				z = M_RandomByte();
@@ -2080,19 +2095,13 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj->frame = st->frame;
 				precipmobj->momz = mobjinfo[MT_SNOWFLAKE].speed;
 
-				precipmobj->precipflags &= ~PCF_INVISIBLE;
+				precipmobj->precipflags &= ~(PCF_INVISIBLE|PCF_RAIN);
 
-				think->function.acp1 = (actionf_p1)P_SnowThinker;
+				//think->function.acp1 = (actionf_p1)P_SnowThinker;
 			}
 			else if (swap == PRECIP_BLANK || swap == PRECIP_STORM_NORAIN) // Remove precip, but keep it around for reuse.
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_SnowThinker))
-					continue;
-
-				precipmobj = (precipmobj_t *)think;
-
-				think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
+				//think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
 
 				precipmobj->precipflags |= PCF_INVISIBLE;
 			}
@@ -2414,73 +2423,81 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 414: // Play SFX
 			{
-				fixed_t sfxnum;
+				INT32 sfxnum;
 
 				sfxnum = sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 
-				if (line->tag != 0 && line->flags & ML_EFFECT5)
+				if (sfxnum == sfx_None)
+					return; // Do nothing!
+				if (sfxnum < sfx_None || sfxnum >= NUMSFX)
 				{
-					sector_t *sec;
-
-					while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
+					return;
+				}
+				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
+				{
+					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
-						sec = &sectors[secnum];
-						S_StartSound(&sec->soundorg, sfxnum);
+						// Additionally play the sound from tagged sectors' soundorgs
+						sector_t *sec;
+
+						while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+						{
+							sec = &sectors[secnum];
+							S_StartSound(&sec->soundorg, sfxnum);
+						}
+					}
+					else if (mo) // A mobj must have triggered the executor
+					{
+						// Only trigger if mobj is touching the tag
+						ffloor_t *rover;
+						boolean foundit = false;
+
+						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						{
+							if (rover->master->frontsector->tag != line->tag)
+								continue;
+
+							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							foundit = true;
+						}
+
+						if (mo->subsector->sector->tag == line->tag)
+							foundit = true;
+
+						if (!foundit)
+							return;
 					}
 				}
-				else if (line->tag != 0 && mo)
+
+				if (line->flags & ML_NOCLIMB)
 				{
-					// Only trigger if mobj is touching the tag
-					ffloor_t *rover;
-					boolean foundit = false;
-
-					for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-					{
-						if (rover->master->frontsector->tag != line->tag)
-							continue;
-
-						if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						foundit = true;
-					}
-
-					if (mo->subsector->sector->tag == line->tag)
-						foundit = true;
-
-					if (!foundit)
-						return;
-				}
-
-				if (sfxnum < NUMSFX && sfxnum > sfx_None)
-				{
-					if (line->flags & ML_NOCLIMB)
-					{
-						// play the sound from nowhere, but only if display player triggered it
-						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
-							S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_EFFECT4)
-					{
-						// play the sound from nowhere
+					// play the sound from nowhere, but only if display player triggered it
+					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
 						S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_BLOCKMONSTERS)
-					{
-						// play the sound from calling sector's soundorg
-						if (callsec)
-							S_StartSound(&callsec->soundorg, sfxnum);
-						else if (mo)
-							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-					}
+				}
+				else if (line->flags & ML_EFFECT4)
+				{
+					// play the sound from nowhere
+					S_StartSound(NULL, sfxnum);
+				}
+				else if (line->flags & ML_BLOCKMONSTERS)
+				{
+					// play the sound from calling sector's soundorg
+					if (callsec)
+						S_StartSound(&callsec->soundorg, sfxnum);
 					else if (mo)
-					{
-						// play the sound from mobj that triggered it
-						S_StartSound(mo, sfxnum);
-					}
+						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+				}
+				else if (mo)
+				{
+					// play the sound from mobj that triggered it
+					S_StartSound(mo, sfxnum);
 				}
 			}
 			break;
@@ -3016,7 +3033,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 443: // Calls a named Lua function
 #ifdef HAVE_BLUA
-			LUAh_LinedefExecute(line, mo, callsec);
+			if (line->text)
+				LUAh_LinedefExecute(line, mo, callsec);
+			else
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(line-lines));
 #else
 			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
 #endif
@@ -3450,7 +3470,7 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 //
 // Is player standing on the sector's "ground"?
 //
-static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
+static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
 	if (mo->eflags & MFE_VERTICALFLIP)
 		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
@@ -3585,20 +3605,56 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				{
 					if (roversector)
 					{
-						if (players[i].mo->subsector->sector != roversector)
+						if (players[i].mo->subsector->sector == roversector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == roversector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
+
 						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
 							goto DoneSection2;
 					}
 					else
 					{
-						if (players[i].mo->subsector->sector != sector)
+						if (players[i].mo->subsector->sector == sector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == sector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
 
 						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
 							goto DoneSection2;
 					}
 				}
+			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -4343,6 +4399,7 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 {
 	sector_t *sector;
 	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
 
 	sector = mo->subsector->sector;
 	if (!sector->ffloors)
@@ -4350,8 +4407,6 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
 		if (!rover->master->frontsector->special)
 			continue;
 
@@ -4399,6 +4454,8 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 	return NULL;
 }
 
+#define TELEPORTED (player->mo->subsector->sector != originalsector)
+
 /** Checks if a player is standing on or is inside a 3D floor (e.g. water) and
   * applies any specials.
   *
@@ -4407,12 +4464,12 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
   */
 static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 {
+	sector_t *originalsector = player->mo->subsector->sector;
 	ffloor_t *rover;
+	fixed_t topheight, bottomheight;
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
 		if (!rover->master->frontsector->special)
 			continue;
 
@@ -4456,7 +4513,10 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
 			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		{
 			P_ProcessSpecialSector(player, rover->master->frontsector, sector);
+			if TELEPORTED return;
+		}
 	}
 
 	// Allow sector specials to be applied to polyobjects!
@@ -4467,7 +4527,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		boolean touching = false;
 		boolean inside = false;
 
-		while(po)
+		while (po)
 		{
 			if (po->flags & POF_NOSPECIALS)
 			{
@@ -4543,6 +4603,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			}
 
 			P_ProcessSpecialSector(player, polysec, sector);
+			if TELEPORTED return;
 
 			po = (polyobj_t *)(po->link.next);
 		}
@@ -4606,6 +4667,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 				// requires touching floor.
 				break;
 			}
+			/* FALLTHRU */
+
 		case 1: // Starpost activator
 		case 5: // Fan sector
 		case 6: // Super Sonic Transform
@@ -4647,39 +4710,42 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
   */
 void P_PlayerInSpecialSector(player_t *player)
 {
-	sector_t *sector;
+	sector_t *originalsector;
+	sector_t *loopsector;
 	msecnode_t *node;
 
 	if (!player->mo)
 		return;
 
-	// Do your ->subsector->sector first
-	sector = player->mo->subsector->sector;
-	P_PlayerOnSpecial3DFloor(player, sector);
-	// After P_PlayerOnSpecial3DFloor, recheck if the player is in that sector,
-	// because the player can be teleported in between these times.
-	if (sector == player->mo->subsector->sector)
-		P_RunSpecialSectorCheck(player, sector);
+	originalsector = player->mo->subsector->sector;
 
-	// Iterate through touching_sectorlist
+	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
+	if TELEPORTED return;
+
+	P_RunSpecialSectorCheck(player, originalsector);
+	if TELEPORTED return;
+
+	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
-		sector = node->m_sector;
+		loopsector = node->m_sector;
 
-		if (sector == player->mo->subsector->sector) // Don't duplicate
+		if (loopsector == originalsector) // Don't duplicate
 			continue;
 
 		// Check 3D floors...
-		P_PlayerOnSpecial3DFloor(player, sector);
+		P_PlayerOnSpecial3DFloor(player, loopsector);
+		if TELEPORTED return;
 
-		if (!(sector->flags & SF_TRIGGERSPECIAL_TOUCH))
-			return;
-		// After P_PlayerOnSpecial3DFloor, recheck if the player is in that sector,
-		// because the player can be teleported in between these times.
-		if (sector == player->mo->subsector->sector)
-			P_RunSpecialSectorCheck(player, sector);
+		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		P_RunSpecialSectorCheck(player, loopsector);
+		if TELEPORTED return;
 	}
 }
+
+#undef TELEPORTED
 
 /** Animate planes, scroll walls, etc. and keeps track of level timelimit and exits if time is up.
   *
@@ -5136,13 +5202,11 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	airbob->vars[2] = FRACUNIT;
 
 	if (noadjust)
-	{
 		airbob->vars[7] = airbob->sector->ceilingheight-16*FRACUNIT;
-		airbob->vars[6] = airbob->vars[7]
-			- (sec->ceilingheight - sec->floorheight);
-	}
 	else
 		airbob->vars[7] = airbob->sector->ceilingheight - P_AproxDistance(sourceline->dx, sourceline->dy);
+	airbob->vars[6] = airbob->vars[7]
+		- (sec->ceilingheight - sec->floorheight);
 
 	airbob->vars[3] = airbob->vars[2];
 
@@ -5320,6 +5384,10 @@ void T_LaserFlash(laserthink_t *flash)
 		if ((ffloor->master->flags & ML_EFFECT1)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
+
+		// Don't endlessly kill egg guard shields (or anything else for that matter)
+		if (thing->health <= 0)
+			continue;
 
 		top = P_GetSpecialTopZ(thing, sourcesec, sector);
 		bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
@@ -5681,6 +5749,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloor);
 				if (lines[i].special == 54)
 					break;
+				/* FALLTHRU */
+
 			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
 					EV_DoCeiling(&lines[i], bounceCeiling);
@@ -5692,7 +5762,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					EV_DoFloor(&lines[i], bounceFloorCrush);
 
 				if (lines[i].special == 57)
-						break; //only move the floor
+					break; //only move the floor
+				/* FALLTHRU */
 
 			case 58: // New super cool and awesome moving ceiling crush type
 				if (lines[i].backsector)
@@ -6798,6 +6869,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 533)
 					break;
+				/* FALLTHRU */
 
 			case 523:	// carry objects on ceiling
 				dx = FixedMul(dx, CARRYFACTOR);
@@ -6812,6 +6884,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				if (special != 530)
 					break;
+				/* FALLTHRU */
 
 			case 520:	// carry objects on floor
 				dx = FixedMul(dx, CARRYFACTOR);
@@ -7428,7 +7501,7 @@ void T_Pusher(pusher_t *p)
 			}
 			else
 			{
-				if (top < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
+				if (top < thing->z || bottom > (thing->z + (thing->height >> 1)))
 					continue;
 				if (thing->z + thing->height > top)
 					touching = true;

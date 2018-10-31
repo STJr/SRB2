@@ -210,17 +210,17 @@ void ST_doPaletteStuff(void)
 	else
 		palette = 0;
 
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		palette = 0; // No flashpals here in OpenGL
+#endif
+
 	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
 		st_palette = palette;
 
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_SetPaletteColor(0);
-		else
-#endif
 		if (rendermode != render_none)
 		{
 			V_SetPaletteLump(GetPalette()); // Reset the palette

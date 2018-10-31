@@ -1,3 +1,4 @@
+
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
@@ -65,6 +66,7 @@
 #     Compile without 3D sound support, add 'NOHS=1'
 #     Compile with GDBstubs, add 'RDB=1'
 #     Compile without PNG, add 'NOPNG=1'
+#     Compile without zlib, add 'NOZLIB=1'
 #
 # Addon for SDL:
 #     To Cross-Compile, add 'SDL_CONFIG=/usr/*/bin/sdl-config'
@@ -118,6 +120,7 @@ include Makefile.cfg
 
 ifdef DUMMY
 NOPNG=1
+NOZLIB=1
 NONET=1
 NOHW=1
 NOHS=1
@@ -179,6 +182,9 @@ endif
 
 ifdef LINUX
 UNIXCOMMON=1
+ifndef NOGME
+HAVE_LIBGME=1
+endif
 endif
 
 ifdef SOLARIS
@@ -195,6 +201,7 @@ endif
 
 ifdef NDS
 NOPNG=1
+NOZLIB=1
 NONET=1
 #NOHW=1
 NOHS=1
@@ -206,7 +213,13 @@ LIBS+=-lm
 endif
 
 ifdef SDL
-include sdl/Makefile.cfg
+#SDL 2.0
+ifndef SDL12
+	include sdl/Makefile.cfg
+#SDL 1.2
+else
+	include sdl12/Makefile.cfg
+endif #ifndef SDL12
 endif #ifdef SDL
 
 ifdef DISTCC
@@ -326,6 +339,18 @@ LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
 endif
 
+ifndef NOZLIB
+OPTS+=-DHAVE_ZLIB
+ZLIB_PKGCONFIG?=zlib
+ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
+ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
+
+LIBS+=$(ZLIB_LDFLAGS)
+CFLAGS+=$(ZLIB_CFLAGS)
+else
+NOPNG=1
+endif
+
 ifdef STATIC
 LIBS:=-static $(LIBS)
 endif
@@ -366,6 +391,14 @@ endif
 
 	OPTS:=-fno-exceptions $(OPTS)
 
+ifdef MOBJCONSISTANCY
+	OPTS+=-DMOBJCONSISTANCY
+endif
+
+ifdef PACKETDROP
+	OPTS+=-DPACKETDROP
+endif
+
 ifdef DEBUGMODE
 
 	# build with debugging information
@@ -375,7 +408,7 @@ ifdef GCC48
 else
 	CFLAGS+=-O0
 endif
-	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK -DPACKETDROP -DMOBJCONSISTANCY
 else
 
 
@@ -397,7 +430,8 @@ endif
 
 ifdef PROFILEMODE
 	# build with profiling information
-	CFLAGS:=-pg $(CFLAGS)
+	CFLAGS+=-pg
+	LDFLAGS+=-pg
 endif
 
 ifdef ZDEBUG
@@ -493,12 +527,10 @@ OBJS:=$(i_main_o) \
 # For reference, this is the command I use to build a srb2.pot file from the source code.
 # (The listed source files are the ones containing translated strings).
 # FILES=""; for file in `find ./ | grep "\.c" | grep -v svn`; do [ "`grep "M_GetText(" $file`" ] && FILES="$FILES $file"; done; xgettext -d srb2 -o locale/srb2.pot -kM_GetText -F --no-wrap $FILES
-ifndef NOGETTEXT
 ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
 endif
 
 ifdef DJGPPDOS

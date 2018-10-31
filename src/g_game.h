@@ -139,7 +139,7 @@ void G_GhostAddSpin(void);
 void G_GhostAddRev(void);
 void G_GhostAddColor(ghostcolor_t color);
 void G_GhostAddFlip(void);
-void G_GhostAddScale(UINT16 scale);
+void G_GhostAddScale(fixed_t scale);
 void G_GhostAddHit(mobj_t *victim);
 void G_WriteGhostTic(mobj_t *ghost);
 void G_ConsGhostTic(void);

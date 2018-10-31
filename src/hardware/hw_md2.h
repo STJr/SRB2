@@ -123,6 +123,7 @@ typedef struct
 	void        *blendgrpatch;
 	boolean     notfound;
 	INT32       skin;
+	boolean     error;
 } md2_t;
 
 extern md2_t md2_models[NUMSPRITES];

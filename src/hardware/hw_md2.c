@@ -33,6 +33,7 @@
 #include "hw_drv.h"
 #include "hw_light.h"
 #include "hw_md2.h"
+#include "../d_main.h"
 #include "../r_bsp.h"
 #include "../r_main.h"
 #include "../m_misc.h"
@@ -65,6 +66,10 @@
  #if PNG_LIBPNG_VER < 100207
  //#undef HAVE_PNG
  #endif
+#endif
+
+#ifndef errno
+#include "errno.h"
 #endif
 
 #define NUMVERTEXNORMALS 162
@@ -288,7 +293,8 @@ static md2_model_t *md2_readModel(const char *filename)
 	if (model == NULL)
 		return 0;
 
-	file = fopen(filename, "rb");
+	//Filename checking fixed ~Monster Iestyn and Golden
+	file = fopen(va("%s"PATHSEP"%s", srb2home, filename), "rb");
 	if (!file)
 	{
 		free(model);
@@ -308,6 +314,23 @@ static md2_model_t *md2_readModel(const char *filename)
 
 	model->header.numSkins = 1;
 
+#define MD2LIMITCHECK(field, max, msgname) \
+	if (field > max) \
+	{ \
+		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
+		md2_freeModel (model); \
+		return 0; \
+	}
+
+	// Uncomment if these are actually needed
+//	MD2LIMITCHECK(model->header.numSkins,     MD2_MAX_SKINS,     "skins")
+//	MD2LIMITCHECK(model->header.numTexCoords, MD2_MAX_TEXCOORDS, "texture coordinates")
+	MD2LIMITCHECK(model->header.numTriangles, MD2_MAX_TRIANGLES, "triangles")
+	MD2LIMITCHECK(model->header.numFrames,    MD2_MAX_FRAMES,    "frames")
+	MD2LIMITCHECK(model->header.numVertices,  MD2_MAX_VERTICES,  "vertices")
+
+#undef MD2LIMITCHECK
+
 	// read skins
 	fseek(file, model->header.offsetSkins, SEEK_SET);
 	if (model->header.numSkins > 0)
@@ -319,8 +342,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-		;
 	}
 
 	// read texture coordinates
@@ -334,8 +355,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-
 	}
 
 	// read triangles
@@ -464,7 +483,8 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 #endif
 #endif
 	png_FILE_p png_FILE;
-	char *pngfilename = va("md2/%s", filename);
+	//Filename checking fixed ~Monster Iestyn and Golden
+	char *pngfilename = va("%s"PATHSEP"md2"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pngfilename, ".png");
 	png_FILE = fopen(pngfilename, "rb");
@@ -592,7 +612,8 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 	size_t pw, ph, size, ptr = 0;
 	INT32 ch, rep;
 	FILE *file;
-	char *pcxfilename = va("md2/%s", filename);
+	//Filename checking fixed ~Monster Iestyn and Golden
+	char *pcxfilename = va("%s"PATHSEP"md2"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pcxfilename, ".pcx");
 	file = fopen(pcxfilename, "rb");
@@ -769,6 +790,7 @@ void HWR_InitMD2(void)
 		md2_playermodels[s].grpatch = NULL;
 		md2_playermodels[s].skin = -1;
 		md2_playermodels[s].notfound = true;
+		md2_playermodels[s].error = false;
 	}
 	for (i = 0; i < NUMSPRITES; i++)
 	{
@@ -777,14 +799,16 @@ void HWR_InitMD2(void)
 		md2_models[i].grpatch = NULL;
 		md2_models[i].skin = -1;
 		md2_models[i].notfound = true;
+		md2_models[i].error = false;
 	}
 
 	// read the md2.dat file
-	f = fopen("md2.dat", "rt");
+	//Filename checking fixed ~Monster Iestyn and Golden
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("%s", M_GetText("Error while loading md2.dat\n"));
+		CONS_Printf("%s %s\n", M_GetText("Error while loading md2.dat:"), strerror(errno));
 		nomd2s = true;
 		return;
 	}
@@ -846,7 +870,8 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 	CONS_Printf("AddPlayerMD2()...\n");
 
 	// read the md2.dat file
-	f = fopen("md2.dat", "rt");
+	//Filename checking fixed ~Monster Iestyn and Golden
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
 
 	if (!f)
 	{
@@ -891,7 +916,8 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 		return;
 
 	// Read the md2.dat file
-	f = fopen("md2.dat", "rt");
+	//Filename checking fixed ~Monster Iestyn and Golden
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
 
 	if (!f)
 	{
@@ -1237,8 +1263,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	{
 		GLPatch_t *gpatch;
 		INT32 *buff;
-		UINT32 durs = spr->mobj->state->tics;
-		UINT32 tics = spr->mobj->tics;
+		INT32 durs = spr->mobj->state->tics;
+		INT32 tics = spr->mobj->tics;
 		md2_frame_t *curr, *next = NULL;
 		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
 		spritedef_t *sprdef;
@@ -1269,6 +1295,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 			md2 = &md2_models[spr->mobj->sprite];
 
+		if (md2->error)
+			return; // we already failed loading this before :(
 		if (!md2->model)
 		{
 			//CONS_Debug(DBG_RENDER, "Loading MD2... (%s)", sprnames[spr->mobj->sprite]);
@@ -1282,6 +1310,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			else
 			{
 				//CONS_Debug(DBG_RENDER, " FAILED\n");
+				md2->error = true; // prevent endless fail
 				return;
 			}
 		}
@@ -1329,7 +1358,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 		buff = md2->model->glCommandBuffer;
 		curr = &md2->model->frames[frame];
-		if (cv_grmd2.value == 1)
+		if (cv_grmd2.value == 1 && tics <= durs)
 		{
 			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 			if (spr->mobj->frame & FF_ANIMATE)

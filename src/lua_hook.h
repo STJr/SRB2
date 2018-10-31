@@ -60,7 +60,7 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which);
 #define LUAh_MobjMoveCollide(thing1, thing2) LUAh_MobjCollideHook(thing1, thing2, hook_MobjMoveCollide) // Hook for PIT_CheckThing by (tmthing) mobj type
 boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher); // Hook for P_TouchSpecialThing by mobj type
 #define LUAh_MobjFuse(mo) LUAh_MobjHook(mo, hook_MobjFuse) // Hook for mobj->fuse == 0 by mobj type
-#define LUAh_MobjThinker(mo) LUAh_MobjHook(mo, hook_MobjThinker) // Hook for P_MobjThinker or P_SceneryThinker by mobj type
+boolean LUAh_MobjThinker(mobj_t *mo); // Hook for P_MobjThinker or P_SceneryThinker by mobj type
 #define LUAh_BossThinker(mo) LUAh_MobjHook(mo, hook_BossThinker) // Hook for P_GenericBossThinker by mobj type
 UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage); // Hook for P_DamageMobj by mobj type (Should mobj take damage?)
 boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage); // Hook for P_DamageMobj by mobj type (Mobj actually takes damage!)

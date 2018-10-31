@@ -2017,13 +2017,13 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
 			&& !(rover->flags & FF_REVERSEPLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
 			&& !(rover->flags & FF_PLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -2138,10 +2138,18 @@ boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
-		&& !(rover->master->flags & ML_BLOCKMONSTERS)
-		&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > *rover->topheight - FixedMul(16*FRACUNIT, mo->scale)))
-			return true;
+	{
+		fixed_t topheight =
+	#ifdef ESLOPE
+			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+	#endif
+			*rover->topheight;
+
+		if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+			&& !(rover->master->flags & ML_BLOCKMONSTERS)
+			&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale)))
+				return true;
+	}
 
 	return false;
 }
@@ -2363,7 +2371,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) // You're still on the ground; why are we here?
+		if (!(mo->flags & MF_MISSILE) && mo->standingslope) // You're still on the ground; why are we here?
 		{
 			mo->momz = 0;
 			return true;
@@ -3076,11 +3084,17 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
+	fixed_t topheight =
+#ifdef ESLOPE
+		*rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) :
+#endif
+		*rover->topheight;
+
 	if (!(player->pflags & PF_NIGHTSMODE) && !player->homing
-		&& (((player->charability == CA_SWIM) || player->powers[pw_super] || player->charflags & SF_RUNONWATER) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
+		&& (((player->charability == CA_SWIM) || player->powers[pw_super] || player->charflags & SF_RUNONWATER) && player->mo->ceilingz-topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
-		&& abs(player->mo->z - *rover->topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
+		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
 		return true;
 
 	return false;
@@ -3826,7 +3840,8 @@ void P_RecalcPrecipInSector(sector_t *sector)
 //
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
-	(void)mobj;
+	//(void)mobj;
+	mobj->precipflags &= ~PCF_THUNK;
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
@@ -3846,25 +3861,26 @@ void P_RainThinker(precipmobj_t *mobj)
 	{
 		// cycle through states,
 		// calling action functions at transitions
-		if (mobj->tics > 0 && --mobj->tics == 0)
-		{
-			// you can cycle through multiple states in a tic
-			if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-		}
+		if (mobj->tics <= 0)
+			return;
 
-		if (mobj->state == &states[S_RAINRETURN])
-		{
-			mobj->z = mobj->ceilingz;
-			P_SetPrecipMobjState(mobj, S_RAIN1);
-		}
+		if (--mobj->tics)
+			return;
+
+		if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
+			return;
+
+		if (mobj->state != &states[S_RAINRETURN])
+			return;
+
+		mobj->z = mobj->ceilingz;
+		P_SetPrecipMobjState(mobj, S_RAIN1);
+
 		return;
 	}
 
 	// adjust height
-	mobj->z += mobj->momz;
-
-	if (mobj->z <= mobj->floorz)
+	if ((mobj->z += mobj->momz) <= mobj->floorz)
 	{
 		// no splashes on sky or bottomless pits
 		if (mobj->precipflags & PCF_PIT)
@@ -4436,7 +4452,7 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = (mobj->spawnpoint->z+16)<<FRACBITS;
+	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 172*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 124*FRACUNIT, --s)
@@ -4450,7 +4466,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = (mobj->spawnpoint->z+16)<<FRACBITS;
+	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 112*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 132*FRACUNIT, --s)
@@ -4566,7 +4582,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			INT32 i, arm;
 			mobj_t *seg, *base = mobj;
 			// First frame init, spawn all the things.
-			mobj->spawnpoint->z = mobj->z>>FRACBITS;
+			mobj->watertop = mobj->z;
 			z = mobj->z + mobj->height/2 - mobjinfo[MT_EGGMOBILE4_MACE].height/2;
 			for (arm = 0; arm <3 ; arm++)
 			{
@@ -4622,7 +4638,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	case 3:
 	{
 		fixed_t z;
-		if (mobj->z < (mobj->spawnpoint->z+512)<<FRACBITS)
+		if (mobj->z < mobj->watertop+(512<<FRACBITS))
 			mobj->momz = 8*FRACUNIT;
 		else
 		{
@@ -4631,7 +4647,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 		}
 		mobj->movecount += 400<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
-		z = mobj->z - (mobj->spawnpoint->z<<FRACBITS) - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
+		z = mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
 		if (z < 0) // We haven't risen high enough to pull the spikeballs along yet
 			P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0); // So don't pull the spikeballs along yet.
 		else
@@ -4641,13 +4657,13 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	// Pinch phase!
 	case 4:
 	{
-		if (mobj->z < (mobj->spawnpoint->z+512+128*(mobj->info->damage-mobj->health))<<FRACBITS)
+		if (mobj->z < (mobj->watertop + ((512+128*(mobj->info->damage-mobj->health))<<FRACBITS)))
 			mobj->momz = 8*FRACUNIT;
 		else
 			mobj->momz = 0;
 		mobj->movecount += (800+800*(mobj->info->damage-mobj->health))<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
-		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - (mobj->spawnpoint->z<<FRACBITS) - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
+		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
 
 		if (!mobj->target || !mobj->target->health)
 			P_SupermanLook4Players(mobj);
@@ -6048,6 +6064,8 @@ void P_RunOverlays(void)
 		P_UnsetThingPosition(mo);
 		mo->x = destx;
 		mo->y = desty;
+		mo->radius = mo->target->radius;
+		mo->height = mo->target->height;
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
@@ -6646,6 +6664,18 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_FALLINGROCK:
+			// Despawn rocks here in case zmovement code can't do so (blame slopes)
+			if (!mobj->momx && !mobj->momy && !mobj->momz
+			&& ((mobj->eflags & MFE_VERTICALFLIP) ?
+				  mobj->z + mobj->height >= mobj->ceilingz
+				: mobj->z <= mobj->floorz))
+			{
+				P_RemoveMobj(mobj);
+				return;
+			}
+			P_MobjCheckWater(mobj);
+			break;
 		case MT_EMERALDSPAWN:
 			if (mobj->threshold)
 			{
@@ -7124,7 +7154,7 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z = mobj->ceilingz - mobj->height;
 			else
 				mobj->z = mobj->floorz;
-			// THERE IS NO BREAK HERE ON PURPOSE
+			/* FALLTHRU */
 		default:
 			// check mobj against possible water content, before movement code
 			P_MobjCheckWater(mobj);
@@ -7683,6 +7713,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 		if (mobj->type == MT_UNIDUS)
 			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
 	}
 	else
 		mobj->z = z;
@@ -7789,6 +7823,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
 			break;
@@ -7893,14 +7928,15 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	mo->precipflags |= PCF_RAIN;
+	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 
@@ -8166,6 +8202,7 @@ void P_PrecipitationEffects(void)
 	{
 		case PRECIP_RAIN: // no lightning or thunder whatsoever
 			sounds_thunder = false;
+			/* FALLTHRU */
 		case PRECIP_STORM_NOSTRIKES: // no lightning strikes specifically
 			effects_lightning = false;
 			break;
@@ -8194,7 +8231,7 @@ void P_PrecipitationEffects(void)
 	if (!playeringame[displayplayer] || !players[displayplayer].mo)
 		return;
 
-	if (nosound || sound_disabled)
+	if (sound_disabled)
 		return; // Sound off? D'aw, no fun.
 
 	if (players[displayplayer].mo->subsector->sector->ceilingpic == skyflatnum)
@@ -8297,6 +8334,16 @@ void P_RespawnSpecials(void)
 		for (i = 0; i < NUMMOBJTYPES; i++)
 			if (mthing->type == mobjinfo[i].doomednum)
 				break;
+
+		if (i == NUMMOBJTYPES) // prevent creation of objects with this type -- Monster Iestyn 17/12/17
+		{
+			// 3D Mode start Thing is unlikely to be added to the que,
+			// so don't bother checking for that specific type
+			CONS_Alert(CONS_WARNING, M_GetText("P_RespawnSpecials: Unknown thing type %d attempted to respawn at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
+			// pull it from the que
+			iquetail = (iquetail+1)&(ITEMQUESIZE-1);
+			return;
+		}
 
 		//CTF rings should continue to respawn as normal rings outside of CTF.
 		if (gametype != GT_CTF)

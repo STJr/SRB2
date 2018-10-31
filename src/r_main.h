@@ -61,18 +61,6 @@ angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 
-// ZDoom C++ to Legacy C conversion Tails 04-29-2002
-fixed_t R_SecplaneZatPoint(secplane_t *secplane, fixed_t x, fixed_t y);
-fixed_t R_SecplaneZatPointDist(secplane_t *secplane, fixed_t x, fixed_t y,
-	fixed_t dist);
-void R_SecplaneFlipVert(secplane_t *secplane);
-boolean R_ArePlanesSame(secplane_t *original,  secplane_t *other);
-boolean R_ArePlanesDifferent(secplane_t *original,  secplane_t *other);
-void R_SecplaneChangeHeight(secplane_t *secplane, fixed_t hdiff);
-fixed_t R_SecplaneHeightDiff(secplane_t *secplane, fixed_t oldd);
-fixed_t R_SecplanePointToDist(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z);
-fixed_t R_SecplanePointToDist2(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z);
-
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y);

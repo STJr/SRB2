@@ -726,7 +726,7 @@ void G_SetGameModified(boolean silent)
   */
 const char *G_BuildMapName(INT32 map)
 {
-	static char mapname[9] = "MAPXX"; // internal map name (wad resource name)
+	static char mapname[10] = "MAPXX"; // internal map name (wad resource name)
 
 	I_Assert(map > 0);
 	I_Assert(map <= NUMMAPS);
@@ -2288,6 +2288,9 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
+#ifdef HAVE_BLUA
+		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+#endif
 		return;
 	}
 
@@ -2888,7 +2891,7 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if (skipstats)
+	if (skipstats && !modeattacking) // Don't skip stats if we're in record attack
 		G_AfterIntermission();
 	else
 	{
@@ -3585,7 +3588,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		unlocktriggers = 0;
 
 		// clear itemfinder, just in case
-		CV_StealthSetValue(&cv_itemfinder, 0);
+		if (!dedicated) // except in dedicated servers, where it is not registered and can actually I_Error debug builds
+			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
 	// internal game map
@@ -3612,7 +3616,6 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
-	playerdeadview = false;
 	automapactive = false;
 	imcontinuing = false;
 
@@ -3872,7 +3875,7 @@ void G_GhostAddColor(ghostcolor_t color)
 	ghostext.color = (UINT8)color;
 }
 
-void G_GhostAddScale(UINT16 scale)
+void G_GhostAddScale(fixed_t scale)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
@@ -4358,6 +4361,7 @@ void G_GhostTicker(void)
 				p->next = g->next;
 			else
 				ghosts = g->next;
+			Z_Free(g);
 			continue;
 		}
 		p = g;
@@ -5310,29 +5314,28 @@ void G_AddGhost(char *defdemoname)
 	mthing = playerstarts[0];
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
-		fixed_t x,y,z;
-		sector_t *sector;
-		x = mthing->x << FRACBITS;
-		y = mthing->y << FRACBITS;
-		sector = R_PointInSubsector(x, y)->sector;
+		fixed_t z,f,c;
+		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		f = gh->mo->floorz;
+		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			z = c;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z < sector->floorheight)
-				z = sector->floorheight;
+			if (z < f)
+				z = f;
 		}
 		else
 		{
-			z = sector->floorheight;
+			z = f;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-				z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			if (z > c)
+				z = c;
 		}
-		gh->mo = P_SpawnMobj(x, y, z, MT_GHOST);
-		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		gh->mo->z = z;
 	}
 	gh->mo->state = states+S_PLAY_STND;
 	gh->mo->sprite = gh->mo->state->sprite;
@@ -5530,8 +5533,14 @@ boolean G_CheckDemoStatus(void)
 {
 	boolean saved;
 
-	if(ghosts) // ... ... ...
-		ghosts = NULL; // :)
+	while (ghosts)
+	{
+		demoghost *next = ghosts->next;
+		Z_Free(ghosts);
+		ghosts = next;
+	}
+	ghosts = NULL;
+
 
 	// DO NOT end metal sonic demos here
 

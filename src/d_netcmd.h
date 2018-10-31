@@ -162,6 +162,8 @@ typedef enum
 	MAXNETXCMD
 } netxcmd_t;
 
+extern const char *netxcmdnames[MAXNETXCMD - 1];
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #endif
@@ -210,7 +212,6 @@ void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
-void ObjectPlace_OnChange(void);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 

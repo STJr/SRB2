@@ -1,0 +1,8 @@
+#All folders
+SRB2.res
+depend.dep
+depend.ped
+*.o
+#VC9 folder only
+/VC9/Win32
+/VC9/x64

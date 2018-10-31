@@ -1721,6 +1721,18 @@ INT32 I_PutEnv(char *variable)
 	return putenv(variable);
 }
 
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+char *I_ClipboardPaste(void)
+{
+	return NULL;
+}
+
 const CPUInfoFlags *I_CPUInfo(void)
 {
 	static CPUInfoFlags DOS_CPUInfo;

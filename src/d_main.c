@@ -73,6 +73,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "keys.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -81,7 +82,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #endif
 
 #ifdef _XBOX
-#include "sdl/SRB2XBOX/xboxhelp.h"
+#include "sdl12/SRB2XBOX/xboxhelp.h"
 #endif
 
 #ifdef HWRENDER
@@ -120,20 +121,17 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-#ifdef _XBOX
-boolean nomidimusic = true, nosound = true;
-boolean nodigimusic = true;
-#else
-boolean nomidimusic = false, nosound = false;
-boolean nodigimusic = false; // No fmod-based music
-#endif
-
 // These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
+#ifdef _XBOX
+boolean midi_disabled = true, sound_disabled = true;
+boolean digital_disabled = true;
+#else
+boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
+#endif
 
 boolean advancedemo;
 #ifdef DEBUGFILE
@@ -176,6 +174,38 @@ void D_PostEvent(const event_t *ev)
 void D_PostEvent_end(void) {};
 #endif
 
+// modifier keys
+UINT8 shiftdown = 0; // 0x1 left, 0x2 right
+UINT8 ctrldown = 0; // 0x1 left, 0x2 right
+UINT8 altdown = 0; // 0x1 left, 0x2 right
+//
+// D_ModifierKeyResponder
+// Sets global shift/ctrl/alt variables, never actually eats events
+//
+static inline void D_ModifierKeyResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown |= 0x1; return;
+		case KEY_RSHIFT: shiftdown |= 0x2; return;
+		case KEY_LCTRL: ctrldown |= 0x1; return;
+		case KEY_RCTRL: ctrldown |= 0x2; return;
+		case KEY_LALT: altdown |= 0x1; return;
+		case KEY_RALT: altdown |= 0x2; return;
+		default: return;
+	}
+	else if (ev->type == ev_keyup) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown &= ~0x1; return;
+		case KEY_RSHIFT: shiftdown &= ~0x2; return;
+		case KEY_LCTRL: ctrldown &= ~0x1; return;
+		case KEY_RCTRL: ctrldown &= ~0x2; return;
+		case KEY_LALT: altdown &= ~0x1; return;
+		case KEY_RALT: altdown &= ~0x2; return;
+		default: return;
+	}
+}
+
 //
 // D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
@@ -187,6 +217,9 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
+
+		// Set global shift/ctrl/alt down variables
+		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -684,7 +717,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;
@@ -694,11 +726,6 @@ void D_StartTitle(void)
 	CON_ToggleOff();
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 }
@@ -1020,19 +1047,10 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
-	else
-	{
-		size_t z;
-		char junkpw[25];
-		for (z = 0; z < 24; z++)
-			junkpw[z] = (char)(rand() & 64)+32;
-		junkpw[24] = '\0';
-		D_SetPassword(junkpw);
-	}
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect")))
+	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1188,21 +1206,29 @@ void D_SRB2Main(void)
 	R_Init();
 
 	// setting up sound
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	if (dedicated)
+	{
+		sound_disabled = true;
+		midi_disabled = digital_disabled = true;
+	}
+	else
+	{
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
+	}
 	if (M_CheckParm("-nosound"))
-		nosound = true;
+		sound_disabled = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		nomidimusic = nodigimusic = true;
+		midi_disabled = digital_disabled = true;
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			nomidimusic = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
-			nodigimusic = true; // WARNING: DOS version initmusic in I_StartupSound
+			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
@@ -1287,7 +1313,7 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
-	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
+	if (autostart || netgame)
 	{
 		gameaction = ga_nothing;
 
@@ -1325,8 +1351,7 @@ void D_SRB2Main(void)
 			}
 		}
 
-		if (server && !M_CheckParm("+map") && !M_CheckParm("+connect")
-			&& !M_CheckParm("-connect"))
+		if (server && !M_CheckParm("+map"))
 		{
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)

@@ -574,6 +574,69 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 	return (INT32)i;
 }
 
+// help function for Lua and $$$.sav reading
+// same as P_AddLevelFlat, except this is not setup so we must realloc levelflats to fit in the new flat
+// no longer a static func in lua_maplib.c because p_saveg.c also needs it
+//
+INT32 P_AddLevelFlatRuntime(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  first scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	// that flat was already found in the level, return the id
+	if (i == numlevelflats)
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat = levelflats+i;
+
+		// store the name
+		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+		strupr(levelflat->name);
+
+		// store the flat lump number
+		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+
+#ifndef ZDEBUG
+		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+		numlevelflats++;
+	}
+
+	// level flat id
+	return (INT32)i;
+}
+
+// help function for $$$.sav checking
+// this simply returns the flat # for the name given
+//
+INT32 P_CheckLevelFlat(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	if (i == numlevelflats)
+		return 0; // ??? flat was not found, this should not happen!
+
+	// level flat id
+	return (INT32)i;
+}
+
 static void P_LoadSectors(lumpnum_t lumpnum)
 {
 	UINT8 *data;
@@ -614,6 +677,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
+		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
@@ -2439,11 +2503,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
@@ -2501,6 +2560,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
+		tic_t nowtime;
 
 		S_StartSound(NULL, sfx_s3kaf);
 
@@ -2510,9 +2570,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
+		nowtime = lastwipetic;
 		// Hold on white for extra effect.
-		while (I_GetTime() < endtime)
-			I_Sleep();
+		while (nowtime < endtime)
+		{
+			// wait loop
+			while (!((nowtime = I_GetTime()) - lastwipetic))
+				I_Sleep();
+			lastwipetic = nowtime;
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 
 		ranspecialwipe = 1;
 	}
@@ -2585,11 +2653,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
-	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
-
-	// now part of level loading since in future each level may have
-	// its own anim texture sequences, switches etc.
-	P_InitPicAnims();
+	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
@@ -2609,7 +2673,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_CreateBlockMap(); // Graue 02-29-2004
 	P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
 
-	R_MakeColormaps();
 	P_LoadLineDefs2();
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
@@ -2934,7 +2997,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
 	{
-		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else wadnum = (UINT16)(numwadfiles-1);
@@ -3000,6 +3063,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		R_LoadTextures(); // numtexture changes
 	else
 		R_FlushTextureCache(); // just reload it from file
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
 	ST_UnloadGraphics();

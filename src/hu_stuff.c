@@ -470,7 +470,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	boolean action = false;
 	char *ptr;
 
-	CONS_Debug(DBG_NETPLAY,"Recieved SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
+	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
 	target = READSINT8(*p);
 	flags = READUINT8(*p);
@@ -757,14 +757,7 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-	static boolean shiftdown = false;
 	UINT8 c;
-
-	if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
-	{
-		shiftdown = (ev->type == ev_keydown);
-		return chat_on;
-	}
 
 	if (ev->type != ev_keydown)
 		return false;
@@ -797,6 +790,14 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
+		// Ignore modifier keys
+		// Note that we do this here so users can still set
+		// their chat keys to one of these, if they so desire.
+		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
+		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
+		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
+			return true;
+
 		c = (UINT8)ev->data1;
 
 		// use console translations
@@ -1101,7 +1102,19 @@ void HU_Drawer(void)
 
 	// draw desynch text
 	if (hu_resynching)
-		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP, "Resynching...");
+	{
+		static UINT32 resynch_ticker = 0;
+		char resynch_text[14];
+		UINT32 i;
+
+		// Animate the dots
+		resynch_ticker++;
+		strcpy(resynch_text, "Resynching");
+		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
+			strcat(resynch_text, ".");
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
+	}
 }
 
 //======================================================================

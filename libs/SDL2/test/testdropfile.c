@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2016 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2017 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -77,9 +77,14 @@ main(int argc, char *argv[])
         while (SDL_PollEvent(&event)) {
             SDLTest_CommonEvent(state, &event, &done);
 
-            if (event.type == SDL_DROPFILE) {
+            if (event.type == SDL_DROPBEGIN) {
+                SDL_Log("Drop beginning on window %u", (unsigned int) event.drop.windowID);
+            } else if (event.type == SDL_DROPCOMPLETE) {
+                SDL_Log("Drop complete on window %u", (unsigned int) event.drop.windowID);
+            } else if ((event.type == SDL_DROPFILE) || (event.type == SDL_DROPTEXT)) {
+                const char *typestr = (event.type == SDL_DROPFILE) ? "File" : "Text";
                 char *dropped_filedir = event.drop.file;
-                SDL_Log("File dropped on window: %s", dropped_filedir);
+                SDL_Log("%s dropped on window %u: %s", typestr, (unsigned int) event.drop.windowID, dropped_filedir);
                 SDL_free(dropped_filedir);
             }
         }

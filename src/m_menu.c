@@ -182,9 +182,6 @@ static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
 
-// what a headache.
-static boolean shiftdown = false;
-
 //
 // PROTOTYPES
 //
@@ -2080,11 +2077,6 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		return false;
 
-	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
-	{
-		shiftdown = false;
-		return false;
-	}
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -2098,10 +2090,6 @@ boolean M_Responder(event_t *ev)
 		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 		switch (ch)
 		{
-			case KEY_LSHIFT:
-			case KEY_RSHIFT:
-				shiftdown = true;
-				break; //return false;
 			case KEY_MOUSE1:
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -3034,6 +3022,7 @@ static void M_DrawGenericMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3085,6 +3074,7 @@ static void M_DrawGenericMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -3097,6 +3087,7 @@ static void M_DrawGenericMenu(void)
 			case IT_TRANSTEXT:
 				if (currentMenu->menuitems[i].alphaKey)
 					y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
+				/* FALLTHRU */
 			case IT_TRANSTEXT2:
 				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
 				y += SMALLLINEHEIGHT;
@@ -3309,6 +3300,7 @@ static void M_DrawCenteredMenu(void)
 							W_CachePatchName(currentMenu->menuitems[i].patch, PU_CACHE));
 					}
 				}
+				/* FALLTHRU */
 			case IT_NOTHING:
 			case IT_DYBIGSPACE:
 				y += LINEHEIGHT;
@@ -3359,6 +3351,7 @@ static void M_DrawCenteredMenu(void)
 					break;
 			case IT_STRING2:
 				V_DrawCenteredString(x, y, 0, currentMenu->menuitems[i].text);
+				/* FALLTHRU */
 			case IT_DYLITLSPACE:
 				y += SMALLLINEHEIGHT;
 				break;
@@ -3861,6 +3854,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	// We allow switching to spectator even if team changing is not allowed
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -3868,6 +3862,11 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	if (!cv_allowteamchange.value)
+	{
+		M_StartMessage(M_GetText("The server is not allowing\nteam changes at this time.\nPress a key.\n"), NULL, MM_NOTHING);
+		return;
+	}
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
@@ -4626,7 +4625,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		savegameinfo[slot].botskin = 0;
 
 	if (savegameinfo[slot].botskin)
-		snprintf(savegameinfo[slot].playername, 32, "%s & %s",
+		snprintf(savegameinfo[slot].playername, 36, "%s & %s",
 			skins[savegameinfo[slot].skinnum].realname,
 			skins[savegameinfo[slot].botskin-1].realname);
 	else
@@ -6296,6 +6295,13 @@ static void M_DrawConnectIPMenu(void)
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
+
+	if (*setupm_ip == 0)
+	{
+		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
+		return;
+	}
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.
@@ -6537,7 +6543,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (choice < 32 || choice > 127 || itemOn != 0)
 				break;
 			l = strlen(setupm_name);
-			if (l < MAXPLAYERNAME-1)
+			if (l < MAXPLAYERNAME)
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[l] =(char)choice;
@@ -6944,82 +6950,95 @@ static void M_ChangeControl(INT32 choice)
 // Toggles sound systems in-game.
 static void M_ToggleSFX(void)
 {
-	if (nosound)
+	if (sound_disabled)
 	{
-		nosound = false;
-		I_StartupSound();
-		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		sound_disabled = false;
+		S_InitSfxChannels(cv_soundvolume.value);
+		S_StartSound(NULL, sfx_strpst);
 		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
+		sound_disabled = true;
+		S_StopSounds();
+		M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
 static void M_ToggleDigital(void)
 {
-	if (nodigimusic)
+	if (digital_disabled)
 	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+		digital_disabled = false;
+		I_InitMusic();
 		S_StopMusic();
-		S_ChangeMusicInternal("lclear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (digital_disabled)
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
 		{
-			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			if (midi_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 
 static void M_ToggleMIDI(void)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusicInternal("lclear", false);
+		midi_disabled = false;
+		I_InitMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
-		if (music_disabled)
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
 		{
-			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			if (digital_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
 		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
+		M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 	}
 }
 

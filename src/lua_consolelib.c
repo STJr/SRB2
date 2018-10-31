@@ -77,7 +77,9 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	lua_settop(gL, 0); // clear stack
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
 	{
@@ -391,12 +393,21 @@ static int lib_cvRegisterVar(lua_State *L)
 	// stack: cvar table, cvar userdata
 	lua_getfield(L, LUA_REGISTRYINDEX, "CV_Vars");
 	I_Assert(lua_istable(L, 3));
+
+	lua_getfield(L, 3, cvar->name);
+	if (lua_type(L, -1) != LUA_TNIL)
+		return luaL_error(L, M_GetText("Variable %s is already defined\n"), cvar->name);
+	lua_pop(L, 1);
+
 	lua_pushvalue(L, 2);
 	lua_setfield(L, 3, cvar->name);
 	lua_pop(L, 1);
 
 	// actually time to register it to the console now! Finally!
+	cvar->flags |= CV_MODIFIED;
 	CV_RegisterVar(cvar);
+	if (cvar->flags & CV_MODIFIED)
+		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
 
 	// return cvar userdata
 	return 1;
