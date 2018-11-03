@@ -261,7 +261,7 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 				val = source[frac>>FRACBITS];
 
 				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
 
 				dest += vid.width;
 
@@ -281,12 +281,12 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 			{
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
 				dest += vid.width;
 				frac += fracstep;
 			}
@@ -294,7 +294,7 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 			{
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
 			}
 		}
 	}

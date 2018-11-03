@@ -1196,8 +1196,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else if (fastcmp(word2, "NORMAL")) i =  0;
 				else if (fastcmp(word2, "BOSS"))   i =  1;
 				else if (fastcmp(word2, "ERZ3"))   i =  2;
+				else if (fastcmp(word2, "NIGHTS")) i =  3;
+				else if (fastcmp(word2, "NIGHTSLINK")) i = 4;
 
-				if (i >= -1 && i <= 2) // -1 for no bonus. Max is 2.
+				if (i >= -1 && i <= 4) // -1 for no bonus. Max is 4.
 					mapheaderinfo[num-1]->bonustype = (SINT8)i;
 				else
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
@@ -5412,6 +5414,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_01_FLAP1",
 	"S_FLICKY_01_FLAP2",
 	"S_FLICKY_01_FLAP3",
+	"S_FLICKY_01_STAND",
+	"S_FLICKY_01_CENTER",
 
 	// Rabbit
 	"S_FLICKY_02_OUT",
@@ -5419,6 +5423,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_02_HOP",
 	"S_FLICKY_02_UP",
 	"S_FLICKY_02_DOWN",
+	"S_FLICKY_02_STAND",
+	"S_FLICKY_02_CENTER",
 
 	// Chicken
 	"S_FLICKY_03_OUT",
@@ -5427,6 +5433,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_03_UP",
 	"S_FLICKY_03_FLAP1",
 	"S_FLICKY_03_FLAP2",
+	"S_FLICKY_03_STAND",
+	"S_FLICKY_03_CENTER",
 
 	// Seal
 	"S_FLICKY_04_OUT",
@@ -5438,6 +5446,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_04_SWIM2",
 	"S_FLICKY_04_SWIM3",
 	"S_FLICKY_04_SWIM4",
+	"S_FLICKY_04_STAND",
+	"S_FLICKY_04_CENTER",
 
 	// Pig
 	"S_FLICKY_05_OUT",
@@ -5445,6 +5455,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_05_HOP",
 	"S_FLICKY_05_UP",
 	"S_FLICKY_05_DOWN",
+	"S_FLICKY_05_STAND",
+	"S_FLICKY_05_CENTER",
 
 	// Chipmunk
 	"S_FLICKY_06_OUT",
@@ -5452,6 +5464,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_06_HOP",
 	"S_FLICKY_06_UP",
 	"S_FLICKY_06_DOWN",
+	"S_FLICKY_06_STAND",
+	"S_FLICKY_06_CENTER",
 
 	// Penguin
 	"S_FLICKY_07_OUT",
@@ -5466,6 +5480,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_07_SWIM1",
 	"S_FLICKY_07_SWIM2",
 	"S_FLICKY_07_SWIM3",
+	"S_FLICKY_07_STAND",
+	"S_FLICKY_07_CENTER",
 
 	// Fish
 	"S_FLICKY_08_OUT",
@@ -5479,6 +5495,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_08_SWIM2",
 	"S_FLICKY_08_SWIM3",
 	"S_FLICKY_08_SWIM4",
+	"S_FLICKY_08_STAND",
+	"S_FLICKY_08_CENTER",
 
 	// Ram
 	"S_FLICKY_09_OUT",
@@ -5486,11 +5504,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_09_HOP",
 	"S_FLICKY_09_UP",
 	"S_FLICKY_09_DOWN",
+	"S_FLICKY_09_STAND",
+	"S_FLICKY_09_CENTER",
 
 	// Puffin
 	"S_FLICKY_10_OUT",
 	"S_FLICKY_10_FLAP1",
 	"S_FLICKY_10_FLAP2",
+	"S_FLICKY_10_STAND",
+	"S_FLICKY_10_CENTER",
 
 	// Cow
 	"S_FLICKY_11_OUT",
@@ -5498,6 +5520,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_11_RUN1",
 	"S_FLICKY_11_RUN2",
 	"S_FLICKY_11_RUN3",
+	"S_FLICKY_11_STAND",
+	"S_FLICKY_11_CENTER",
 
 	// Rat
 	"S_FLICKY_12_OUT",
@@ -5505,6 +5529,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_12_RUN1",
 	"S_FLICKY_12_RUN2",
 	"S_FLICKY_12_RUN3",
+	"S_FLICKY_12_STAND",
+	"S_FLICKY_12_CENTER",
 
 	// Bear
 	"S_FLICKY_13_OUT",
@@ -5512,12 +5538,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_13_HOP",
 	"S_FLICKY_13_UP",
 	"S_FLICKY_13_DOWN",
+	"S_FLICKY_13_STAND",
+	"S_FLICKY_13_CENTER",
 
 	// Dove
 	"S_FLICKY_14_OUT",
 	"S_FLICKY_14_FLAP1",
 	"S_FLICKY_14_FLAP2",
 	"S_FLICKY_14_FLAP3",
+	"S_FLICKY_14_STAND",
+	"S_FLICKY_14_CENTER",
 
 	// Cat
 	"S_FLICKY_15_OUT",
@@ -5525,12 +5555,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_15_HOP",
 	"S_FLICKY_15_UP",
 	"S_FLICKY_15_DOWN",
+	"S_FLICKY_15_STAND",
+	"S_FLICKY_15_CENTER",
 
 	// Canary
 	"S_FLICKY_16_OUT",
 	"S_FLICKY_16_FLAP1",
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
+	"S_FLICKY_16_STAND",
+	"S_FLICKY_16_CENTER",
 
 	// Spider
 	"S_SECRETFLICKY_01_OUT",
@@ -5538,12 +5572,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SECRETFLICKY_01_HOP",
 	"S_SECRETFLICKY_01_UP",
 	"S_SECRETFLICKY_01_DOWN",
+	"S_SECRETFLICKY_01_STAND",
+	"S_SECRETFLICKY_01_CENTER",
 
 	// Bat
 	"S_SECRETFLICKY_02_OUT",
 	"S_SECRETFLICKY_02_FLAP1",
 	"S_SECRETFLICKY_02_FLAP2",
 	"S_SECRETFLICKY_02_FLAP3",
+	"S_SECRETFLICKY_02_STAND",
+	"S_SECRETFLICKY_02_CENTER",
 
 	// Fan
 	"S_FAN",
@@ -6742,23 +6780,41 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Flickies
 	"MT_FLICKY_01", // Bluebird
+	"MT_FLICKY_01_CENTER",
 	"MT_FLICKY_02", // Rabbit
+	"MT_FLICKY_02_CENTER",
 	"MT_FLICKY_03", // Chicken
+	"MT_FLICKY_03_CENTER",
 	"MT_FLICKY_04", // Seal
+	"MT_FLICKY_04_CENTER",
 	"MT_FLICKY_05", // Pig
+	"MT_FLICKY_05_CENTER",
 	"MT_FLICKY_06", // Chipmunk
+	"MT_FLICKY_06_CENTER",
 	"MT_FLICKY_07", // Penguin
+	"MT_FLICKY_07_CENTER",
 	"MT_FLICKY_08", // Fish
+	"MT_FLICKY_08_CENTER",
 	"MT_FLICKY_09", // Ram
+	"MT_FLICKY_09_CENTER",
 	"MT_FLICKY_10", // Puffin
+	"MT_FLICKY_10_CENTER",
 	"MT_FLICKY_11", // Cow
+	"MT_FLICKY_11_CENTER",
 	"MT_FLICKY_12", // Rat
+	"MT_FLICKY_12_CENTER",
 	"MT_FLICKY_13", // Bear
+	"MT_FLICKY_13_CENTER",
 	"MT_FLICKY_14", // Dove
+	"MT_FLICKY_14_CENTER",
 	"MT_FLICKY_15", // Cat
+	"MT_FLICKY_15_CENTER",
 	"MT_FLICKY_16", // Canary
+	"MT_FLICKY_16_CENTER",
 	"MT_SECRETFLICKY_01", // Spider
+	"MT_SECRETFLICKY_01_CENTER",
 	"MT_SECRETFLICKY_02", // Bat
+	"MT_SECRETFLICKY_02_CENTER",
 	"MT_SEED",
 
 	// Environmental Effects
@@ -8826,17 +8882,17 @@ static int lib_getActionName(lua_State *L)
 	{
 		lua_settop(L, 1); // set top of stack to 1 (removing any extra args, which there shouldn't be)
 		// get the name for this action, if possible.
-		lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-		lua_pushnil(gL);
+		lua_getfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
+		lua_pushnil(L);
 		// Lua stack at this point:
 		//  1   ...       -2              -1
 		// arg  ...   LREG_ACTIONS        nil
-		while (lua_next(gL, -2))
+		while (lua_next(L, -2))
 		{
 			// Lua stack at this point:
 			//  1   ...       -3              -2           -1
 			// arg  ...   LREG_ACTIONS    "A_ACTION"    function
-			if (lua_rawequal(gL, -1, 1)) // is this the same as the arg?
+			if (lua_rawequal(L, -1, 1)) // is this the same as the arg?
 			{
 				// make sure the key (i.e. "A_ACTION") is a string first
 				// (note: we don't use lua_isstring because it also returns true for numbers)
@@ -8845,12 +8901,12 @@ static int lib_getActionName(lua_State *L)
 					lua_pushvalue(L, -2); // push "A_ACTION" string to top of stack
 					return 1;
 				}
-				lua_pop(gL, 2); // pop the name and function
+				lua_pop(L, 2); // pop the name and function
 				break; // probably should have succeeded but we didn't, so end the loop
 			}
-			lua_pop(gL, 1);
+			lua_pop(L, 1);
 		}
-		lua_pop(gL, 1); // pop LREG_ACTIONS
+		lua_pop(L, 1); // pop LREG_ACTIONS
 		return 0; // return nothing (don't error)
 	}
 

@@ -4059,7 +4059,8 @@ void P_RecalcPrecipInSector(sector_t *sector)
 //
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
-	(void)mobj;
+	//(void)mobj;
+	mobj->precipflags &= ~PCF_THUNK;
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
@@ -4079,25 +4080,26 @@ void P_RainThinker(precipmobj_t *mobj)
 	{
 		// cycle through states,
 		// calling action functions at transitions
-		if (mobj->tics > 0 && --mobj->tics == 0)
-		{
-			// you can cycle through multiple states in a tic
-			if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-		}
+		if (mobj->tics <= 0)
+			return;
 
-		if (mobj->state == &states[S_RAINRETURN])
-		{
-			mobj->z = mobj->ceilingz;
-			P_SetPrecipMobjState(mobj, S_RAIN1);
-		}
+		if (--mobj->tics)
+			return;
+
+		if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
+			return;
+
+		if (mobj->state != &states[S_RAINRETURN])
+			return;
+
+		mobj->z = mobj->ceilingz;
+		P_SetPrecipMobjState(mobj, S_RAIN1);
+
 		return;
 	}
 
 	// adjust height
-	mobj->z += mobj->momz;
-
-	if (mobj->z <= mobj->floorz)
+	if ((mobj->z += mobj->momz) <= mobj->floorz)
 	{
 		// no splashes on sky or bottomless pits
 		if (mobj->precipflags & PCF_PIT)
@@ -7119,6 +7121,34 @@ void P_MobjThinker(mobj_t *mobj)
 					S_StartSound(flame, sfx_fire);
 				}
 				break;
+			case MT_FLICKY_01_CENTER:
+			case MT_FLICKY_02_CENTER:
+			case MT_FLICKY_03_CENTER:
+			case MT_FLICKY_04_CENTER:
+			case MT_FLICKY_05_CENTER:
+			case MT_FLICKY_06_CENTER:
+			case MT_FLICKY_07_CENTER:
+			case MT_FLICKY_08_CENTER:
+			case MT_FLICKY_09_CENTER:
+			case MT_FLICKY_10_CENTER:
+			case MT_FLICKY_11_CENTER:
+			case MT_FLICKY_12_CENTER:
+			case MT_FLICKY_13_CENTER:
+			case MT_FLICKY_14_CENTER:
+			case MT_FLICKY_15_CENTER:
+			case MT_FLICKY_16_CENTER:
+			case MT_SECRETFLICKY_01_CENTER:
+			case MT_SECRETFLICKY_02_CENTER:
+				if (mobj->tracer && (mobj->flags & MF_NOCLIPTHING)
+					&& (mobj->flags & MF_GRENADEBOUNCE))
+					// for now: only do this bounce routine if flicky is in-place. \todo allow in all movements
+				{
+					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
+						mobj->tracer->momz = 7*FRACUNIT;
+					else if ((mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z >= mobj->tracer->ceilingz - mobj->tracer->height)
+						mobj->tracer->momz = -7*FRACUNIT;
+				}
+				break;
 			case MT_SEED:
 				if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
 					mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
@@ -7999,6 +8029,8 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				mobj->floorz = tmfloorz;
 				mobj->ceilingz = tmceilingz;
+				mobj->floorrover = tmfloorrover;
+				mobj->ceilingrover = tmceilingrover;
 
 				if ((mobj->eflags & MFE_UNDERWATER) && mobj->health > 0)
 				{
@@ -8517,6 +8549,8 @@ void P_SceneryThinker(mobj_t *mobj)
 			return;
 		mobj->floorz = tmfloorz;
 		mobj->ceilingz = tmceilingz;
+		mobj->floorrover = tmfloorrover;
+		mobj->ceilingrover = tmceilingrover;
 	}
 	else
 	{
@@ -8598,6 +8632,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				mobj->subsector->sector->c_slope ? P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
 #endif
 				mobj->subsector->sector->ceilingheight;
+
+	mobj->floorrover = NULL;
+	mobj->ceilingrover = NULL;
 
 	// Tells MobjCheckWater that the water height was not set.
 	mobj->watertop = INT32_MAX;
@@ -8862,6 +8899,9 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 #endif
 				mobj->subsector->sector->ceilingheight;
 
+	mobj->floorrover = NULL;
+	mobj->ceilingrover = NULL;
+
 	mobj->z = z;
 	mobj->momz = mobjinfo[type].speed;
 
@@ -8883,14 +8923,15 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	mo->precipflags |= PCF_RAIN;
+	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 
@@ -9197,7 +9238,7 @@ void P_PrecipitationEffects(void)
 	if (!playeringame[displayplayer] || !players[displayplayer].mo)
 		return;
 
-	if (nosound || sound_disabled)
+	if (sound_disabled)
 		return; // Sound off? D'aw, no fun.
 
 	if (players[displayplayer].mo->subsector->sector->ceilingpic == skyflatnum)
