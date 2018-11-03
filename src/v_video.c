@@ -1481,10 +1481,11 @@ void V_DrawFadeConsBack(INT32 plines)
 }
 
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
-void V_DrawTutorialBack(void)
+void V_DrawTutorialBack(INT32 boxheight)
 {
-	INT32 charheight = 8*vid.dupy;
 	UINT8 *deststop, *buf;
+
+	boxheight *= vid.dupy;
 
 #ifdef HWRENDER
 	if (rendermode != render_soft) // no support for OpenGL yet
@@ -1494,7 +1495,7 @@ void V_DrawTutorialBack(void)
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
-	buf = deststop - vid.rowbytes * ((charheight * 4) + (charheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
 		*buf = consolebgmap[*buf];
 }

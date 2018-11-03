@@ -2465,6 +2465,49 @@ static void ST_overlayDrawer(void)
 	ST_drawDebugInfo();
 }
 
+static void ST_drawTutorial(INT32 promptnum, INT32 pagenum)
+{
+	lumpnum_t iconlump = W_CheckNumForName(textprompts[promptnum]->page[pagenum].iconname);
+	UINT8 pagelines = textprompts[promptnum]->page[pagenum].lines ? textprompts[promptnum]->page[pagenum].lines : 4;
+
+	// Vertical calculations
+	INT32 boxh = pagelines*2;
+	INT32 texth = textprompts[promptnum]->page[pagenum].name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
+	INT32 texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
+	INT32 namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
+
+	// Horizontal calculations
+	// Shift text to the right if we have a character icon on the left side
+	// Add 4 margin against icon
+	INT32 textx = iconlump != LUMPERROR && !textprompts[promptnum]->page[pagenum].rightside ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	INT32 textr = textprompts[promptnum]->page[pagenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+
+	// Data
+	patch_t *patch;
+	char *text;
+
+	// Draw background
+	V_DrawTutorialBack(boxh);
+
+	// Draw narrator icon
+	if (iconlump != LUMPERROR)
+	{
+		INT32 iconx = textprompts[promptnum]->page[pagenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4;
+		patch = W_CachePatchName(textprompts[promptnum]->page[pagenum].iconname, PU_CACHE);
+		V_DrawFixedPatch(iconx<<FRACBITS, namey<<FRACBITS, FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width), 0, patch, NULL);
+		W_UnlockCachedPatch(patch);
+	}
+
+	// Draw text
+	// \todo Char-by-char printing, see f_finale.c F_WriteText
+	text = V_WordWrap(textx, textr, 0, textprompts[promptnum]->page[pagenum].text);
+	V_DrawString(textx, texty, V_SNAPTOBOTTOM, text);
+
+	// Draw name
+	if (textprompts[promptnum]->page[pagenum].name[0])
+		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[promptnum]->page[pagenum].name);
+}
+
 void ST_Drawer(void)
 {
 #ifdef SEENAMES
@@ -2538,4 +2581,8 @@ void ST_Drawer(void)
 			ST_overlayDrawer();
 		}
 	}
+
+	// Draw tutorial text over everything else
+	//if (tutorialmode)
+		ST_drawTutorial(0, 0);
 }
