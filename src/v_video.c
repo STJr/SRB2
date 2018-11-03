@@ -1488,8 +1488,26 @@ void V_DrawTutorialBack(INT32 boxheight)
 	boxheight *= vid.dupy;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft) // no support for OpenGL yet
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor;
+		switch (cons_backcolor.value)
+		{
+			case 0:		hwcolor = 0xffffff00;	break; // White
+			case 1:		hwcolor = 0x80808000;	break; // Gray
+			case 2:		hwcolor = 0x40201000;	break; // Brown
+			case 3:		hwcolor = 0xff000000;	break; // Red
+			case 4:		hwcolor = 0xff800000;	break; // Orange
+			case 5:		hwcolor = 0x80800000;	break; // Yellow
+			case 6:		hwcolor = 0x00800000;	break; // Green
+			case 7:		hwcolor = 0x0000ff00;	break; // Blue
+			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
+		}
+		HWR_DrawTutorialBack(hwcolor, boxheight);
 		return;
+	}
 #endif
 
 	// heavily simplified -- we don't need to know x or y position,
