@@ -1035,7 +1035,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1616,7 +1619,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2118,7 +2124,10 @@ static void reademblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2258,7 +2267,10 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2342,7 +2354,10 @@ static void readunlockable(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2629,7 +2644,10 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2874,7 +2892,10 @@ static void readmaincfg(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -3113,7 +3134,10 @@ static void readwipes(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
