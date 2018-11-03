@@ -17,6 +17,7 @@
 
 #include "doomtype.h"
 #include "d_event.h"
+#include "p_mobj.h"
 
 //
 // FINALE

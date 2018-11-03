@@ -1655,18 +1655,18 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			else if (fastcmp(word, "BACKCOLOR"))
 			{
 				UINT8 backcolor;
-				if      (usi == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
-				else if (usi == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY")) backcolor = 1;
-				else if (usi == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
-				else if (usi == 3 || fastcmp(word2, "RED")) backcolor = 3;
-				else if (usi == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
-				else if (usi == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
-				else if (usi == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
-				else if (usi == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
-				else if (usi == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
-				else if (usi == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
-				else if (usi == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
-				else if (usi < 0) backcolor = UINT8_MAX; // CONS_BACKCOLOR user-configured
+				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
+				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY")) backcolor = 1;
+				else if (i == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
+				else if (i == 3 || fastcmp(word2, "RED")) backcolor = 3;
+				else if (i == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
+				else if (i == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
+				else if (i == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
+				else if (i == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
+				else if (i == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
+				else if (i == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
+				else if (i == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
+				else if (i < 0) backcolor = UINT8_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 11; // default green
 				textprompts[num]->page[pagenum].backcolor = backcolor;
 			}
@@ -1685,7 +1685,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].verticalalign = align;
 			}
 			else if (fastcmp(word, "TEXTSPEED"))
-				textprompts[num]->page[pagenum].textspeed = min(max(0, usi), 15);
+				textprompts[num]->page[pagenum].textspeed = min(max(0, i), 15);
 			else if (fastcmp(word, "TEXTSFX"))
 				textprompts[num]->page[pagenum].textsfx = get_number(word2);
 			else if (fastcmp(word, "METAPAGE"))

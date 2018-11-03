@@ -2113,30 +2113,35 @@ void F_TextPromptDrawer(void)
 	// reuse:
 	// cutnum -> promptnum
 	// scenenum -> pagenum
-
-	if (!promptactive)
-		return;
-
-	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
-	UINT8 pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
-	boolean rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
-
-	// Vertical calculations
-	INT32 boxh = pagelines*2;
-	INT32 texth = textprompts[cutnum]->page[scenenum].name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
-	INT32 texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
-	INT32 namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
-	INT32 chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
-
-	// Horizontal calculations
-	// Shift text to the right if we have a character icon on the left side
-	// Add 4 margin against icon
-	INT32 textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
-	INT32 textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+	lumpnum_t iconlump;
+	UINT8 pagelines;
+	boolean rightside;
+	INT32 boxh, texth, texty, namey, chevrony;
+	INT32 textx, textr;
 
 	// Data
 	patch_t *patch;
 	char *text;
+
+	if (!promptactive)
+		return;
+
+	iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
+	pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
+	rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
+
+	// Vertical calculations
+	boxh = pagelines*2;
+	texth = textprompts[cutnum]->page[scenenum].name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
+	texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
+	namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
+	chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
+
+	// Horizontal calculations
+	// Shift text to the right if we have a character icon on the left side
+	// Add 4 margin against icon
+	textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
 
 	// Draw background
 	V_DrawTutorialBack(boxh);
