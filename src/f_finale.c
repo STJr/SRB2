@@ -48,6 +48,7 @@ static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
+static INT16 skullAnimCounter; // Chevron animation
 static INT32 roidtics; // Asteroid spinning
 
 static INT32 deplete;
@@ -77,6 +78,8 @@ static patch_t *ttspop6;
 static patch_t *ttspop7;
 
 static void F_SkyScroll(INT32 scrollspeed);
+
+static boolean promptactive = false;
 
 //
 // CUTSCENE TEXT WRITING
@@ -2014,4 +2017,93 @@ boolean F_CutsceneResponder(event_t *event)
 		return F_IntroResponder(event);
 
 	return false;
+}
+
+void F_EndTextPrompt(void)
+{
+	promptactive = false;
+}
+
+void F_StartTextPrompt(INT32 promptnum, INT32 pagenum)
+{
+	// We share vars, so no starting text prompts over cutscenes or title screens!
+	keypressed = false;
+	finalecount = 0;
+	timetonext = 0;
+	animtimer = 0;
+	stoptimer = 0;
+	skullAnimCounter = 0;
+
+	cutnum = promptnum;
+	scenenum = pagenum;
+	promptactive = true;
+}
+
+void F_TextPromptDrawer(void)
+{
+	// reuse:
+	// cutnum -> promptnum
+	// scenenum -> pagenum
+
+	if (!promptactive)
+		return;
+
+	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
+	UINT8 pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
+
+	// Vertical calculations
+	INT32 boxh = pagelines*2;
+	INT32 texth = textprompts[cutnum]->page[scenenum].name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
+	INT32 texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
+	INT32 namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
+	INT32 chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
+
+	// Horizontal calculations
+	// Shift text to the right if we have a character icon on the left side
+	// Add 4 margin against icon
+	INT32 textx = iconlump != LUMPERROR && !textprompts[cutnum]->page[scenenum].rightside ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	INT32 textr = textprompts[cutnum]->page[scenenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+
+	// Data
+	patch_t *patch;
+	char *text;
+
+	// Draw background
+	V_DrawTutorialBack(boxh);
+
+	// Draw narrator icon
+	if (iconlump != LUMPERROR)
+	{
+		INT32 iconx = textprompts[cutnum]->page[scenenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4;
+		patch = W_CachePatchName(textprompts[cutnum]->page[scenenum].iconname, PU_CACHE);
+		V_DrawFixedPatch(iconx<<FRACBITS, namey<<FRACBITS, FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width), V_SNAPTOBOTTOM, patch, NULL);
+		W_UnlockCachedPatch(patch);
+	}
+
+	// Draw text
+	// \todo Char-by-char printing, see f_finale.c F_WriteText
+	text = V_WordWrap(textx, textr, 0, textprompts[cutnum]->page[scenenum].text);
+	V_DrawString(textx, texty, V_SNAPTOBOTTOM, text);
+
+	// Draw name
+	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
+	if (textprompts[cutnum]->page[scenenum].name[0])
+		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[cutnum]->page[scenenum].name);
+
+	// Draw chevron
+	V_DrawString(textr-8, chevrony + (skullAnimCounter/5), V_YELLOWMAP, "\x1B"); // down arrow
+}
+
+void F_TextPromptTicker(void)
+{
+	if (!promptactive)
+		return;
+
+	// advance animation
+	finalecount++;
+	cutscene_boostspeed = 0;
+
+	// for the chevron
+	if (--skullAnimCounter <= 0)
+		skullAnimCounter = 8;
 }

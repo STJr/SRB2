@@ -1934,6 +1934,7 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker();
+			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 			break;
