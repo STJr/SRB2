@@ -146,7 +146,7 @@ char *myfgets(char *buf, size_t bufsize, MYFILE *f)
 	return buf;
 }
 
-static char *myhashfgets(char *buf, size_t bufsize, MYFILE *f)
+static char *myhashfgets(char *buf, size_t bufsize, MYFILE *f, boolean trim)
 {
 	size_t i = 0;
 	if (myfeof(f))
@@ -165,11 +165,34 @@ static char *myhashfgets(char *buf, size_t bufsize, MYFILE *f)
 		if (c == '\n') // Ensure debug line is right...
 			dbg_line++;
 		if (c == '#')
+		{
+			if (i > 0)
+				i--; // don't include the hash in our string
 			break;
+		}
 	}
-	i++;
-	buf[i] = '\0';
 
+	// HACK: BS code to make sure i doesn't wrap past 0
+	// and put the terminator char AFTER the first non-whitespace char
+	// OR at position 0 if the first char is whitespace OR a hash
+	if (trim) // trailing whitespace only
+	{
+		if (i > 0)
+			i--; // current char may be '#', so skip that
+		while (i < bufsize && i > 0 && !myfeof(f))
+		{
+			char c = buf[i];
+			if (i > 0)
+				i--;
+			if ((c != '\r' && c != '\n' && c != ' ') || i == 0)
+				break;
+		}
+		if (buf[i] != '\r' && buf[i] != '\n' && buf[i] != ' ' && buf[i] != '#')
+			i++; // put the null character after the first non-whitespace char
+	}
+
+	buf[i] = '\0';
+	CONS_Printf("%s", buf);
 	return buf;
 }
 
@@ -352,7 +375,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (playertext)
 				{
 					strcpy(description[num].notes, playertext);
-					strcat(description[num].notes, myhashfgets(playertext, sizeof (description[num].notes), f));
+					strcat(description[num].notes, myhashfgets(playertext, sizeof (description[num].notes), f, false));
 				}
 				else
 					strcpy(description[num].notes, "");
@@ -1368,7 +1391,7 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 
 				strcat(buffer,
 					myhashfgets(scenetext, bufferlen
-					- strlen(buffer) - 1, f));
+					- strlen(buffer) - 1, f, false));
 
 				// A cutscene overwriting another one...
 				Z_Free(cutscenes[num]->scene[scenenum].text);
@@ -1603,7 +1626,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 
 				strcat(buffer,
 					myhashfgets(pagetext, bufferlen
-					- strlen(buffer) - 1, f));
+					- strlen(buffer) - 1, f, true));
 
 				// A text prompt overwriting another one...
 				Z_Free(textprompts[num]->page[pagenum].text);
@@ -1628,7 +1651,16 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 
 
 			if (fastcmp(word, "NAME"))
-				strncpy(textprompts[num]->page[pagenum].name, word2, 32);
+			{
+				// HACK: Add yellow control char now
+				// so the drawing function doesn't call it repeatedly
+				char name[32];
+				name[0] = '\x82'; // color yellow
+				name[1] = 0;
+				strncat(name, word2, 31);
+				name[31] = 0;
+				strncpy(textprompts[num]->page[pagenum].name, name, 32);
+			}
 			else if (fastcmp(word, "ICON"))
 				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
 			else if (fastcmp(word, "ICONALIGN"))
