@@ -2494,7 +2494,7 @@ static void ST_drawTutorial(INT32 promptnum, INT32 pagenum)
 	{
 		INT32 iconx = textprompts[promptnum]->page[pagenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4;
 		patch = W_CachePatchName(textprompts[promptnum]->page[pagenum].iconname, PU_CACHE);
-		V_DrawFixedPatch(iconx<<FRACBITS, namey<<FRACBITS, FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width), 0, patch, NULL);
+		V_DrawFixedPatch(iconx<<FRACBITS, namey<<FRACBITS, FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width), V_SNAPTOBOTTOM, patch, NULL);
 		W_UnlockCachedPatch(patch);
 	}
 
