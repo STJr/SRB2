@@ -2072,11 +2072,15 @@ void F_EndTextPrompt(void)
 
 	// \todo net safety, maybe loop all player thinkers?
 	if (promptpostexectag)
+	{
+		P_MapStart();
 		P_LinedefExecute(promptpostexectag, promptmo, NULL);
+		P_MapEnd();
+	}
 
-	// \todo reset blocked controls and frozen realtime?
+	// \todo reset frozen realtime?
 
-	P_SetTarget(&promptmo, NULL); // \todo tmthing crash upon teleporting? see test map
+	P_SetTarget(&promptmo, NULL);
 
 	// \todo if !promptactive, block player jumping if BT_JUMP is set
 	// so player does not immediately jump upon prompt close
@@ -2093,7 +2097,7 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	skullAnimCounter = 0;
 
 	// Set up state
-	P_SetTarget(&promptmo, mo); //promptmo = mo;
+	P_SetTarget(&promptmo, mo);
 	promptpostexectag = postexectag;
 	promptblockcontrols = blockcontrols;
 	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
