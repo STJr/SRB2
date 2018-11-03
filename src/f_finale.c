@@ -79,7 +79,13 @@ static patch_t *ttspop7;
 
 static void F_SkyScroll(INT32 scrollspeed);
 
+//
+// PROMPT STATE
+//
 static boolean promptactive = false;
+static mobj_t *promptmo;
+static INT16 promptpostexectag;
+static boolean promptblockcontrols;
 
 //
 // CUTSCENE TEXT WRITING
@@ -2063,9 +2069,20 @@ static void F_AdvanceToNextPage(void)
 void F_EndTextPrompt(void)
 {
 	promptactive = false;
+
+	// \todo net safety, maybe loop all player thinkers?
+	if (promptpostexectag)
+		P_LinedefExecute(promptpostexectag, promptmo, NULL);
+
+	// \todo reset blocked controls and frozen realtime?
+
+	P_SetTarget(&promptmo, NULL); // \todo tmthing crash upon teleporting? see test map
+
+	// \todo if !promptactive, block player jumping if BT_JUMP is set
+	// so player does not immediately jump upon prompt close
 }
 
-void F_StartTextPrompt(INT32 promptnum, INT32 pagenum)
+void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
 	// We share vars, so no starting text prompts over cutscenes or title screens!
 	keypressed = false;
@@ -2075,6 +2092,13 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum)
 	stoptimer = 0;
 	skullAnimCounter = 0;
 
+	// Set up state
+	P_SetTarget(&promptmo, mo); //promptmo = mo;
+	promptpostexectag = postexectag;
+	promptblockcontrols = blockcontrols;
+	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
+
+	// Initialize current prompt and scene
 	cutnum = (textprompts[promptnum]) ? promptnum : INT32_MAX;
 	scenenum = (pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
 	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
@@ -2157,7 +2181,8 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[cutnum]->page[scenenum].name);
 
 	// Draw chevron
-	V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
+	if (promptblockcontrols) // \todo if !CloseTimer
+		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
 void F_TextPromptTicker(void)
@@ -2176,25 +2201,35 @@ void F_TextPromptTicker(void)
 		skullAnimCounter = 8;
 
 	// button handling
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (promptblockcontrols)
 	{
-		if (netgame && i != serverplayer && i != adminplayer)
-			continue;
+		// \todo loop through all players that have a text prompt
+		if (promptmo && promptmo->player)
+			promptmo->player->powers[pw_nocontrol] = 1;
 
-		if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (keypressed)
-				return;
+			if (netgame && i != serverplayer && i != adminplayer)
+				continue;
 
-			cutscene_boostspeed = 1;
-			if (timetonext)
-				timetonext = 2;
-			F_AdvanceToNextPage();
-			keypressed = true; // prevent repeat events
+			if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+			{
+				if (keypressed)
+					return;
+
+				cutscene_boostspeed = 1;
+				if (timetonext)
+					timetonext = 2;
+				F_AdvanceToNextPage();
+				keypressed = true; // prevent repeat events
+
+				if (promptactive)
+					S_StartSound(NULL, sfx_menu1);
+			}
+			else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
+				keypressed = false;
+
+			break;
 		}
-		else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
-			keypressed = false;
-
-		break;
 	}
 }

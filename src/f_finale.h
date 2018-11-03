@@ -51,7 +51,7 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 void F_CutsceneDrawer(void);
 void F_EndCutScene(void);
 
-void F_StartTextPrompt(INT32 promptnum, INT32 pagenum);
+void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime);
 void F_TextPromptDrawer(void);
 void F_EndTextPrompt(void);
 
