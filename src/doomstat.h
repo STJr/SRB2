@@ -166,6 +166,28 @@ typedef struct
 
 extern cutscene_t *cutscenes[128];
 
+typedef struct
+{
+	char name[32]; // narrator name
+	char iconname[8]; // narrator icon lump
+	boolean rightside; // narrator side, false = left, true = right
+	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
+	UINT8 backcolor; // see CON_SetupBackColormap: 0-10, 11 for default, UINT8_MAX for user-defined (CONS_BACKCOLOR)
+	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
+	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
+	UINT8 textspeed; // text speed 0-15, makes it slower. See f_finale.c F_WriteText
+	sfxenum_t textsfx; // sfx_ id for printing text
+	char *text;
+} textpage_t;
+
+typedef struct
+{
+	textpage_t page[128]; // 128 pages per prompt.
+	INT32 numpages; // Number of pages in this prompt
+} textprompt_t;
+
+extern textprompt_t *textprompts[256];
+
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
 extern boolean skipstats;

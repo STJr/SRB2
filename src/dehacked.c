@@ -1545,6 +1545,218 @@ static void readcutscene(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
+{
+	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2;
+	INT32 i;
+	UINT16 usi;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			if (fastcmp(word, "PAGETEXT"))
+			{
+				char *pagetext = NULL;
+				char *buffer;
+				const int bufferlen = 4096;
+
+				for (i = 0; i < MAXLINELEN; i++)
+				{
+					if (s[i] == '=')
+					{
+						pagetext = &s[i+2];
+						break;
+					}
+				}
+
+				if (!pagetext)
+				{
+					Z_Free(textprompts[num]->page[pagenum].text);
+					textprompts[num]->page[pagenum].text = NULL;
+					continue;
+				}
+
+				for (i = 0; i < MAXLINELEN; i++)
+				{
+					if (s[i] == '\0')
+					{
+						s[i] = '\n';
+						s[i+1] = '\0';
+						break;
+					}
+				}
+
+				buffer = Z_Malloc(4096, PU_STATIC, NULL);
+				strcpy(buffer, pagetext);
+
+				strcat(buffer,
+					myhashfgets(pagetext, bufferlen
+					- strlen(buffer) - 1, f));
+
+				// A text prompt overwriting another one...
+				Z_Free(textprompts[num]->page[pagenum].text);
+
+				textprompts[num]->page[pagenum].text = Z_StrDup(buffer);
+
+				Z_Free(buffer);
+
+				continue;
+			}
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+				strupr(word2);
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			i = atoi(word2);
+			usi = (UINT16)i;
+
+
+			if (fastcmp(word, "NAME"))
+				strncpy(textprompts[num]->page[pagenum].name, word2, 32);
+			else if (fastcmp(word, "ICON"))
+				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
+			else if (fastcmp(word, "ICONALIGN"))
+				textprompts[num]->page[pagenum].rightside = (i || word2[0] == 'R');
+			else if (fastcmp(word, "LINES"))
+				textprompts[num]->page[pagenum].lines = usi;
+			else if (fastcmp(word, "BACKCOLOR"))
+			{
+				UINT8 backcolor;
+				if      (usi == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
+				else if (usi == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY")) backcolor = 1;
+				else if (usi == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
+				else if (usi == 3 || fastcmp(word2, "RED")) backcolor = 3;
+				else if (usi == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
+				else if (usi == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
+				else if (usi == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
+				else if (usi == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
+				else if (usi == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
+				else if (usi == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
+				else if (usi == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
+				else if (usi < 0) backcolor = UINT8_MAX; // CONS_BACKCOLOR user-configured
+				else backcolor = 11; // default green
+				textprompts[num]->page[pagenum].backcolor = backcolor;
+			}
+			else if (fastcmp(word, "ALIGN"))
+			{
+				UINT8 align = 0; // left
+				if (usi == 1 || word2[0] == 'R') align = 1;
+				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
+				textprompts[num]->page[pagenum].align = align;
+			}
+			else if (fastcmp(word, "VERTICALALIGN"))
+			{
+				UINT8 align = 0; // top
+				if (usi == 1 || word2[0] == 'B') align = 1;
+				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
+				textprompts[num]->page[pagenum].verticalalign = align;
+			}
+			else if (fastcmp(word, "TEXTSPEED"))
+				textprompts[num]->page[pagenum].textspeed = min(max(0, usi), 15);
+			else if (fastcmp(word, "TEXTSFX"))
+				textprompts[num]->page[pagenum].textsfx = get_number(word2);
+			else if (fastcmp(word, "METAPAGE"))
+			{
+				if (usi <= textprompts[num]->numpages)
+				{
+					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[usi].name, 32);
+					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[usi].iconname, 8);
+					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[usi].rightside;
+					textprompts[num]->page[pagenum].lines = textprompts[num]->page[usi].lines;
+					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[usi].backcolor;
+					textprompts[num]->page[pagenum].align = textprompts[num]->page[usi].align;
+					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[usi].verticalalign;
+					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[usi].textspeed;
+					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[usi].textsfx;
+				}
+			}
+			else
+				deh_warning("PromptPage %d: unknown word '%s'", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readtextprompt(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2;
+	char *tmp;
+	INT32 value;
+
+	// Allocate memory for this prompt if we don't yet have any
+	if (!textprompts[num])
+		textprompts[num] = Z_Calloc(sizeof (textprompt_t), PU_STATIC, NULL);
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " ");
+			if (word2)
+				value = atoi(word2);
+			else
+			{
+				deh_warning("No value for token %s", word);
+				continue;
+			}
+
+			if (fastcmp(word, "NUMPAGES"))
+			{
+				textprompts[num]->numpages = value;
+			}
+			else if (fastcmp(word, "PAGE"))
+			{
+				if (1 <= value && value <= 128)
+				{
+					textprompts[num]->page[value - 1].backcolor = UINT8_MAX; // non-zero default
+					readtextpromptpage(f, num, value - 1);
+				}
+				else
+					deh_warning("Page number %d out of range (1 - 128)", value);
+
+			}
+			else
+				deh_warning("Prompt %d: unknown word '%s', Page <num> expected.", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
 static void readhuditem(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -3211,6 +3423,16 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 					else
 					{
 						deh_warning("Cutscene number %d out of range (1 - 128)", i);
+						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "PROMPT"))
+				{
+					if (i > 0 && i < 257)
+						readtextprompt(f, i - 1);
+					else
+					{
+						deh_warning("Prompt number %d out of range (1 - 256)", i);
 						ignorelines(f);
 					}
 				}
