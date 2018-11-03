@@ -35,6 +35,7 @@
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
+#include "f_finale.h" // control text prompt
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -3456,26 +3457,33 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 449: // Control Text Prompt
-#if 0
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				INT32 promptnum = abs(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT32 pagenum = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
+				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
+
+				boolean closetextprompt = (line->flags & ML_EFFECT2);
+
+				if (closetextprompt)
+					F_EndTextPrompt();
+				else
+					F_StartTextPrompt(promptnum, pagenum);
+#if 0
+
 				INT32 postexectag = (line->sidenum[1] != 0xFFFF) ? abs(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
 				INT32 closedelay = (line->sidenum[1] != 0xFFFF) ? abs(sides[line->sidenum[1]].rowoffset>>FRACBITS) : 0;
 
 				boolean blockcontrols = !(line->flags & ML_BLOCKMONSTERS);
-				boolean closetextprompt = (line->flags & ML_EFFECT2);
 				boolean runpostexec = (line->flags & ML_EFFECT1);
 				boolean freezethinkers = (line->flags & ML_TFERLINE);
 
 				// if (closetextprompt && !promptnum)
-				// 	P_CloseTextPromptEx(closedelay, runpostexec ? postexectag : 0, mo);
+				// 	F_EndTextPrompt(closedelay, runpostexec ? postexectag : 0, mo);
 				// else
-				// 	P_ControlTextPromptEx(promptnum, pagenum, closetextprompt ? closedelay : 0, runpostexec ? postexectag : 0, mo, blockcontrols, freezethinkers);
-			}
+				// 	F_StartTextPrompt(promptnum, pagenum, closetextprompt ? closedelay : 0, runpostexec ? postexectag : 0, mo, blockcontrols, freezethinkers);
 #endif
+			}
 			break;
 
 		case 450: // Execute Linedef Executor - for recursion
