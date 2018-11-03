@@ -2019,6 +2019,47 @@ boolean F_CutsceneResponder(event_t *event)
 	return false;
 }
 
+// ==================
+//  TEXT PROMPTS
+// ==================
+
+static void F_AdvanceToNextPage(void)
+{
+	UINT8 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt,
+		nextpage = textprompts[cutnum]->page[scenenum].nextpage,
+		oldcutnum = cutnum;
+
+	// determine next prompt
+	if (nextprompt)
+	{
+		if (textprompts[nextprompt-1])
+			cutnum = nextprompt-1;
+		else
+			cutnum = INT32_MAX;
+	}
+
+	// determine next page
+	if (nextpage)
+	{
+		scenenum = nextpage-1;
+		if (scenenum > textprompts[cutnum]->numpages-1)
+			scenenum = INT32_MAX;
+	}
+	else
+	{
+		if (cutnum != oldcutnum)
+			scenenum = 0;
+		else if (scenenum < textprompts[cutnum]->numpages-1)
+			scenenum++;
+		else
+			scenenum = INT32_MAX;
+	}
+
+	// close the prompt if either num is invalid
+	if (cutnum == INT32_MAX || scenenum == INT32_MAX)
+		F_EndTextPrompt();
+}
+
 void F_EndTextPrompt(void)
 {
 	promptactive = false;
@@ -2034,9 +2075,9 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum)
 	stoptimer = 0;
 	skullAnimCounter = 0;
 
-	cutnum = promptnum;
-	scenenum = pagenum;
-	promptactive = true;
+	cutnum = (textprompts[promptnum]) ? promptnum : INT32_MAX;
+	scenenum = (pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
+	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
 }
 
 void F_TextPromptDrawer(void)
@@ -2050,6 +2091,7 @@ void F_TextPromptDrawer(void)
 
 	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
 	UINT8 pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
+	boolean rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
 
 	// Vertical calculations
 	INT32 boxh = pagelines*2;
@@ -2061,8 +2103,8 @@ void F_TextPromptDrawer(void)
 	// Horizontal calculations
 	// Shift text to the right if we have a character icon on the left side
 	// Add 4 margin against icon
-	INT32 textx = iconlump != LUMPERROR && !textprompts[cutnum]->page[scenenum].rightside ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
-	INT32 textr = textprompts[cutnum]->page[scenenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+	INT32 textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	INT32 textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
 
 	// Data
 	patch_t *patch;
@@ -2074,9 +2116,33 @@ void F_TextPromptDrawer(void)
 	// Draw narrator icon
 	if (iconlump != LUMPERROR)
 	{
-		INT32 iconx = textprompts[cutnum]->page[scenenum].rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4;
+		INT32 iconx, icony, scale, scaledsize;
 		patch = W_CachePatchName(textprompts[cutnum]->page[scenenum].iconname, PU_CACHE);
-		V_DrawFixedPatch(iconx<<FRACBITS, namey<<FRACBITS, FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width), V_SNAPTOBOTTOM, patch, NULL);
+
+		// scale and center
+		if (patch->width > patch->height)
+		{
+			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
+			scaledsize = FixedMul(patch->height, scale);
+			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+			icony = ((namey-4) << FRACBITS) + FixedDiv(BASEVIDHEIGHT - namey + 4 - scaledsize, 2); // account for 4 margin
+		}
+		else if (patch->height > patch->width)
+		{
+			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->height);
+			scaledsize = FixedMul(patch->width, scale);
+			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+			icony = namey << FRACBITS;
+			iconx += FixedDiv(FixedMul(patch->height, scale) - scaledsize, 2);
+		}
+		else
+		{
+			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
+			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+			icony = namey << FRACBITS;
+		}
+
+		V_DrawFixedPatch(iconx, icony, scale, V_SNAPTOBOTTOM, patch, NULL);
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -2091,11 +2157,13 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[cutnum]->page[scenenum].name);
 
 	// Draw chevron
-	V_DrawString(textr-8, chevrony + (skullAnimCounter/5), V_YELLOWMAP, "\x1B"); // down arrow
+	V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
 void F_TextPromptTicker(void)
 {
+	INT32 i;
+
 	if (!promptactive)
 		return;
 
@@ -2106,4 +2174,27 @@ void F_TextPromptTicker(void)
 	// for the chevron
 	if (--skullAnimCounter <= 0)
 		skullAnimCounter = 8;
+
+	// button handling
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (netgame && i != serverplayer && i != adminplayer)
+			continue;
+
+		if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+		{
+			if (keypressed)
+				return;
+
+			cutscene_boostspeed = 1;
+			if (timetonext)
+				timetonext = 2;
+			F_AdvanceToNextPage();
+			keypressed = true; // prevent repeat events
+		}
+		else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
+			keypressed = false;
+
+		break;
+	}
 }

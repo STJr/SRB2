@@ -1690,19 +1690,24 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].textsfx = get_number(word2);
 			else if (fastcmp(word, "METAPAGE"))
 			{
-				if (usi <= textprompts[num]->numpages)
+				if (usi && usi <= textprompts[num]->numpages)
 				{
-					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[usi].name, 32);
-					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[usi].iconname, 8);
-					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[usi].rightside;
-					textprompts[num]->page[pagenum].lines = textprompts[num]->page[usi].lines;
-					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[usi].backcolor;
-					textprompts[num]->page[pagenum].align = textprompts[num]->page[usi].align;
-					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[usi].verticalalign;
-					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[usi].textspeed;
-					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[usi].textsfx;
+					UINT8 metapagenum = usi - 1;
+					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[metapagenum].name, 32);
+					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[metapagenum].iconname, 8);
+					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[metapagenum].rightside;
+					textprompts[num]->page[pagenum].lines = textprompts[num]->page[metapagenum].lines;
+					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[metapagenum].backcolor;
+					textprompts[num]->page[pagenum].align = textprompts[num]->page[metapagenum].align;
+					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[metapagenum].verticalalign;
+					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[metapagenum].textspeed;
+					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[metapagenum].textsfx;
 				}
 			}
+			else if (fastcmp(word, "NEXTPROMPT"))
+				textprompts[num]->page[pagenum].nextprompt = usi;
+			else if (fastcmp(word, "NEXTPAGE"))
+				textprompts[num]->page[pagenum].nextpage = usi;
 			else
 				deh_warning("PromptPage %d: unknown word '%s'", num, word);
 		}
