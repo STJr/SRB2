@@ -3456,27 +3456,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 449: // Control Text Prompt
-			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
-			{
-				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
-				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
-				INT32 postexectag = line->tag;
-
-				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
-				boolean runpostexec = (line->flags & ML_EFFECT1);
-				boolean blockcontrols = !(line->flags & ML_EFFECT2);
-				boolean freezerealtime = !(line->flags & ML_EFFECT3);
-				//boolean freezethinkers = (line->flags & ML_EFFECT4);
-
-				if (closetextprompt)
-					F_EndTextPrompt();
-				else
-					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
-			}
-			break;
-
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
 			break;
@@ -3777,6 +3756,27 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 456: // Stop fade colormap
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 				P_ResetColormapFader(&sectors[secnum]);
+			break;
+
+		case 459: // Control Text Prompt
+			// console player only unless NOCLIMB is set
+			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
+			{
+				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
+				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
+				INT32 postexectag = abs((line->sidenum[1] != 0xFFFF) ? sides[line->sidenum[1]].textureoffset>>FRACBITS : line->tag);
+
+				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
+				boolean runpostexec = (line->flags & ML_EFFECT1);
+				boolean blockcontrols = !(line->flags & ML_EFFECT2);
+				boolean freezerealtime = !(line->flags & ML_EFFECT3);
+				//boolean freezethinkers = (line->flags & ML_EFFECT4);
+
+				if (closetextprompt)
+					F_EndTextPrompt();
+				else
+					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
+			}
 			break;
 
 #ifdef POLYOBJECTS
