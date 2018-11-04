@@ -7459,7 +7459,7 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->cvmem--;
 				else
 				{
-					P_LinedefExecute(mobj->extravalue2, mobj, NULL);
+					INT32 exectag = mobj->extravalue2; // remember this before we erase the values
 
 					if (mobj->lastlook)
 						mobj->cvmem = mobj->cusval; // reset timer for next failure
@@ -7469,6 +7469,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->eflags &= ~MFE_TRACERANGLE;
 						mobj->lastlook = mobj->extravalue1 = mobj->extravalue2 = mobj->cvmem = mobj->cusval = 0;
 					}
+
+					P_LinedefExecute(exectag, mobj, NULL);
 				}
 			}
 			else
