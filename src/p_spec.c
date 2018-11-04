@@ -3784,7 +3784,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 458: // Stop tracking mobj angle to point
-			if (mo)
+			if (mo && (mo->eflags & MFE_TRACERANGLE))
 			{
 				mo->eflags &= ~MFE_TRACERANGLE;
 				P_SetTarget(&mo->tracer, NULL);
