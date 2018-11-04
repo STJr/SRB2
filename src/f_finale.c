@@ -86,6 +86,7 @@ static boolean promptactive = false;
 static mobj_t *promptmo;
 static INT16 promptpostexectag;
 static boolean promptblockcontrols;
+static char *promptpagetext = NULL;
 
 //
 // CUTSCENE TEXT WRITING
@@ -2029,6 +2030,52 @@ boolean F_CutsceneResponder(event_t *event)
 //  TEXT PROMPTS
 // ==================
 
+static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *boxh, INT32 *texth, INT32 *texty, INT32 *namey, INT32 *chevrony, INT32 *textx, INT32 *textr)
+{
+	// reuse:
+	// cutnum -> promptnum
+	// scenenum -> pagenum
+	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
+
+	*pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
+	*rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
+
+	// Vertical calculations
+	*boxh = *pagelines*2;
+	*texth = textprompts[cutnum]->page[scenenum].name[0] ? (*pagelines-1)*2 : *pagelines*2; // name takes up first line if it exists
+	*texty = BASEVIDHEIGHT - ((*texth * 4) + (*texth/2)*4);
+	*namey = BASEVIDHEIGHT - ((*boxh * 4) + (*boxh/2)*4);
+	*chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
+
+	// Horizontal calculations
+	// Shift text to the right if we have a character icon on the left side
+	// Add 4 margin against icon
+	*textx = (iconlump != LUMPERROR && !*rightside) ? ((*boxh * 4) + (*boxh/2)*4) + 4 : 4;
+	*textr = *rightside ? BASEVIDWIDTH - (((*boxh * 4) + (*boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+}
+
+static void F_PreparePageText(char *pagetext)
+{
+	UINT8 pagelines;
+	boolean rightside;
+	INT32 boxh, texth, texty, namey, chevrony;
+	INT32 textx, textr;
+
+	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
+
+	if (promptpagetext)
+		Z_Free(promptpagetext);
+	promptpagetext = V_WordWrap(textx, textr, 0, pagetext);
+
+	F_NewCutscene(promptpagetext);
+	cutscene_textspeed = TICRATE/4; // \todo configurable speed by SOC
+	cutscene_textcount = 0; // no delay in beginning
+	cutscene_boostspeed = 0; // don't print 8 characters to start
+
+	// \todo update control hot strings on re-config
+	// and somehow don't reset cutscene text counters
+}
+
 static void F_AdvanceToNextPage(void)
 {
 	UINT8 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt,
@@ -2064,11 +2111,19 @@ static void F_AdvanceToNextPage(void)
 	// close the prompt if either num is invalid
 	if (cutnum == INT32_MAX || scenenum == INT32_MAX)
 		F_EndTextPrompt();
+	else
+	{
+		timetonext = 1; // on page-mode, delay before boosting // \todo timed mode set by SOC, enable different behavior for a legitimate timer
+		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
+	}
 }
 
 void F_EndTextPrompt(void)
 {
 	promptactive = false;
+
+	if (promptmo && promptmo->player && promptblockcontrols)
+		promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this
 
 	// \todo net safety, maybe loop all player thinkers?
 	if (promptpostexectag)
@@ -2106,6 +2161,12 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	cutnum = (textprompts[promptnum]) ? promptnum : INT32_MAX;
 	scenenum = (pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
 	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
+
+	if (promptactive)
+	{
+		timetonext = 1; // on page-mode, delay before boosting // \todo timed mode set by SOC, enable different behavior for a legitimate timer
+		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
+	}
 }
 
 void F_TextPromptDrawer(void)
@@ -2121,27 +2182,12 @@ void F_TextPromptDrawer(void)
 
 	// Data
 	patch_t *patch;
-	char *text;
 
 	if (!promptactive)
 		return;
 
 	iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
-	pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
-	rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
-
-	// Vertical calculations
-	boxh = pagelines*2;
-	texth = textprompts[cutnum]->page[scenenum].name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
-	texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
-	namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
-	chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
-
-	// Horizontal calculations
-	// Shift text to the right if we have a character icon on the left side
-	// Add 4 margin against icon
-	textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
-	textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
 
 	// Draw background
 	V_DrawTutorialBack(boxh);
@@ -2181,8 +2227,7 @@ void F_TextPromptDrawer(void)
 
 	// Draw text
 	// \todo Char-by-char printing, see f_finale.c F_WriteText
-	text = V_WordWrap(textx, textr, 0, textprompts[cutnum]->page[scenenum].text);
-	V_DrawString(textx, texty, V_SNAPTOBOTTOM, text);
+	V_DrawString(textx, texty, V_SNAPTOBOTTOM, cutscene_disptext);
 
 	// Draw name
 	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
@@ -2190,7 +2235,7 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[cutnum]->page[scenenum].name);
 
 	// Draw chevron
-	if (promptblockcontrols) // \todo if !CloseTimer
+	if (promptblockcontrols && !timetonext) // \todo if !CloseTimer
 		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
@@ -2223,17 +2268,21 @@ void F_TextPromptTicker(void)
 
 			if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
 			{
+				if (timetonext > 1)
+					timetonext--;
+				else if (cutscene_baseptr) // don't set boost if we just reset the string
+					cutscene_boostspeed = 1; // only after a slight delay
+
 				if (keypressed)
-					return;
+					break;
 
-				cutscene_boostspeed = 1;
-				if (timetonext)
-					timetonext = 2;
-				F_AdvanceToNextPage();
+				if (!timetonext) // is 0 when finished generating text
+				{
+					F_AdvanceToNextPage();
+					if (promptactive)
+						S_StartSound(NULL, sfx_menu1);
+				}
 				keypressed = true; // prevent repeat events
-
-				if (promptactive)
-					S_StartSound(NULL, sfx_menu1);
 			}
 			else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
 				keypressed = false;
@@ -2241,4 +2290,8 @@ void F_TextPromptTicker(void)
 			break;
 		}
 	}
+
+	// generate letter-by-letter text
+	if (!F_WriteText())
+		timetonext = 0;
 }
