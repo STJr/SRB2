@@ -175,10 +175,11 @@ typedef struct
 	UINT8 backcolor; // see CON_SetupBackColormap: 0-10, 11 for default, UINT8_MAX for user-defined (CONS_BACKCOLOR)
 	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
 	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
-	UINT8 textspeed; // text speed 0-15, makes it slower. See f_finale.c F_WriteText
+	UINT8 textspeed; // text speed, delay in tics between characters.
 	sfxenum_t textsfx; // sfx_ id for printing text
 	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
 } textpage_t;
 

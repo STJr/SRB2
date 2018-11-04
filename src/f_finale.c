@@ -2068,7 +2068,7 @@ static void F_PreparePageText(char *pagetext)
 	promptpagetext = V_WordWrap(textx, textr, 0, pagetext);
 
 	F_NewCutscene(promptpagetext);
-	cutscene_textspeed = TICRATE/4; // \todo configurable speed by SOC
+	cutscene_textspeed = textprompts[cutnum]->page[scenenum].textspeed ? textprompts[cutnum]->page[scenenum].textspeed : TICRATE/5;
 	cutscene_textcount = 0; // no delay in beginning
 	cutscene_boostspeed = 0; // don't print 8 characters to start
 
@@ -2113,17 +2113,22 @@ static void F_AdvanceToNextPage(void)
 		F_EndTextPrompt();
 	else
 	{
-		timetonext = 1; // on page-mode, delay before boosting // \todo timed mode set by SOC, enable different behavior for a legitimate timer
+		// on page mode, number of tics before allowing boost
+		// on timer mode, number of tics until page advances
+		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 	}
 }
 
 void F_EndTextPrompt(void)
 {
-	promptactive = false;
+	if (promptactive) {
+		if (promptmo && promptmo->player && promptblockcontrols)
+			promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this)
+		// \todo reset frozen realtime?
+	}
 
-	if (promptmo && promptmo->player && promptblockcontrols)
-		promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this
+	promptactive = false;
 
 	// \todo net safety, maybe loop all player thinkers?
 	if (promptpostexectag)
@@ -2132,13 +2137,6 @@ void F_EndTextPrompt(void)
 		P_LinedefExecute(promptpostexectag, promptmo, NULL);
 		P_MapEnd();
 	}
-
-	// \todo reset frozen realtime?
-
-	P_SetTarget(&promptmo, NULL);
-
-	// \todo if !promptactive, block player jumping if BT_JUMP is set
-	// so player does not immediately jump upon prompt close
 }
 
 void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
@@ -2152,21 +2150,25 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	skullAnimCounter = 0;
 
 	// Set up state
-	P_SetTarget(&promptmo, mo);
+	promptmo = mo;
 	promptpostexectag = postexectag;
 	promptblockcontrols = blockcontrols;
 	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
 
 	// Initialize current prompt and scene
 	cutnum = (textprompts[promptnum]) ? promptnum : INT32_MAX;
-	scenenum = (pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
+	scenenum = (cutnum != INT32_MAX && pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
 	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
 
 	if (promptactive)
 	{
-		timetonext = 1; // on page-mode, delay before boosting // \todo timed mode set by SOC, enable different behavior for a legitimate timer
+		// on page mode, number of tics before allowing boost
+		// on timer mode, number of tics until page advances
+		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 	}
+	else
+		F_EndTextPrompt(); // run the post-effects immediately
 }
 
 void F_TextPromptDrawer(void)
@@ -2255,43 +2257,68 @@ void F_TextPromptTicker(void)
 		skullAnimCounter = 8;
 
 	// button handling
-	if (promptblockcontrols)
+	if (textprompts[cutnum]->page[scenenum].timetonext)
 	{
-		// \todo loop through all players that have a text prompt
-		if (promptmo && promptmo->player)
-			promptmo->player->powers[pw_nocontrol] = 1;
-
-		for (i = 0; i < MAXPLAYERS; i++)
+		if (promptblockcontrols) // same procedure as below, just without the button handling
 		{
-			if (netgame && i != serverplayer && i != adminplayer)
-				continue;
-
-			if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (timetonext > 1)
-					timetonext--;
-				else if (cutscene_baseptr) // don't set boost if we just reset the string
-					cutscene_boostspeed = 1; // only after a slight delay
+				if (netgame && i != serverplayer && i != adminplayer)
+					continue;
 
-				if (keypressed)
-					break;
-
-				if (!timetonext) // is 0 when finished generating text
-				{
-					F_AdvanceToNextPage();
-					if (promptactive)
-						S_StartSound(NULL, sfx_menu1);
-				}
-				keypressed = true; // prevent repeat events
+				players[i].powers[pw_nocontrol] = 1;
+				break;
 			}
-			else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
-				keypressed = false;
-
-			break;
 		}
+
+		if (timetonext >= 1)
+			timetonext--;
+
+		if (!timetonext)
+			F_AdvanceToNextPage();
+
+		F_WriteText();
+	}
+	else
+	{
+		if (promptblockcontrols)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (netgame && i != serverplayer && i != adminplayer)
+					continue;
+
+				players[i].powers[pw_nocontrol] = 1;
+
+				if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+				{
+					if (timetonext > 1)
+						timetonext--;
+					else if (cutscene_baseptr) // don't set boost if we just reset the string
+						cutscene_boostspeed = 1; // only after a slight delay
+
+					if (keypressed)
+						break;
+
+					if (!timetonext) // is 0 when finished generating text
+					{
+						F_AdvanceToNextPage();
+						if (promptactive)
+							S_StartSound(NULL, sfx_menu1);
+					}
+					keypressed = true; // prevent repeat events
+				}
+				else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
+					keypressed = false;
+
+				break;
+			}
+		}
+
+		// generate letter-by-letter text
+		if (!F_WriteText())
+			timetonext = !promptblockcontrols; // never show the chevron if we can't toggle pages
 	}
 
-	// generate letter-by-letter text
-	if (!F_WriteText())
-		timetonext = 0;
+
 }

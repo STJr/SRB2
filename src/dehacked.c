@@ -1685,7 +1685,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].verticalalign = align;
 			}
 			else if (fastcmp(word, "TEXTSPEED"))
-				textprompts[num]->page[pagenum].textspeed = min(max(0, i), 15);
+				textprompts[num]->page[pagenum].textspeed = get_number(word2);
 			else if (fastcmp(word, "TEXTSFX"))
 				textprompts[num]->page[pagenum].textsfx = get_number(word2);
 			else if (fastcmp(word, "METAPAGE"))
@@ -1708,6 +1708,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))
 				textprompts[num]->page[pagenum].nextpage = usi;
+			else if (fastcmp(word, "TIMETONEXT"))
+				textprompts[num]->page[pagenum].timetonext = get_number(word2);
 			else
 				deh_warning("PromptPage %d: unknown word '%s'", num, word);
 		}
