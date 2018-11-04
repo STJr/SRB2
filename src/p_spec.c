@@ -3462,7 +3462,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
 				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
-				INT32 postexectag = (line->sidenum[1] != 0xFFFF) ? abs(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
+				INT32 postexectag = line->tag;
 
 				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
 				boolean runpostexec = (line->flags & ML_EFFECT1);
