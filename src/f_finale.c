@@ -2223,18 +2223,21 @@ void F_TextPromptDrawer(void)
 			icony = namey << FRACBITS;
 		}
 
-		V_DrawFixedPatch(iconx, icony, scale, V_SNAPTOBOTTOM, patch, NULL);
+		if (textprompts[cutnum]->page[scenenum].iconflip)
+			iconx += FixedMul(patch->width, scale) << FRACBITS;
+
+		V_DrawFixedPatch(iconx, icony, scale, (V_SNAPTOBOTTOM|(textprompts[cutnum]->page[scenenum].iconflip ? V_FLIP : 0)), patch, NULL);
 		W_UnlockCachedPatch(patch);
 	}
 
 	// Draw text
 	// \todo Char-by-char printing, see f_finale.c F_WriteText
-	V_DrawString(textx, texty, V_SNAPTOBOTTOM, cutscene_disptext);
+	V_DrawString(textx, texty, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), cutscene_disptext);
 
 	// Draw name
 	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
 	if (textprompts[cutnum]->page[scenenum].name[0])
-		V_DrawString(textx, namey, V_SNAPTOBOTTOM, textprompts[cutnum]->page[scenenum].name);
+		V_DrawString(textx, namey, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), textprompts[cutnum]->page[scenenum].name);
 
 	// Draw chevron
 	if (promptblockcontrols && !timetonext) // \todo if !CloseTimer

@@ -1650,6 +1650,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
 			else if (fastcmp(word, "ICONALIGN"))
 				textprompts[num]->page[pagenum].rightside = (i || word2[0] == 'R');
+			else if (fastcmp(word, "ICONFLIP"))
+				textprompts[num]->page[pagenum].iconflip = (i || word2[0] == 'T' || word2[0] == 'Y');
 			else if (fastcmp(word, "LINES"))
 				textprompts[num]->page[pagenum].lines = usi;
 			else if (fastcmp(word, "BACKCOLOR"))
@@ -1696,6 +1698,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[metapagenum].name, 32);
 					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[metapagenum].iconname, 8);
 					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[metapagenum].rightside;
+					textprompts[num]->page[pagenum].iconflip = textprompts[num]->page[metapagenum].iconflip;
 					textprompts[num]->page[pagenum].lines = textprompts[num]->page[metapagenum].lines;
 					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[metapagenum].backcolor;
 					textprompts[num]->page[pagenum].align = textprompts[num]->page[metapagenum].align;

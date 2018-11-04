@@ -171,6 +171,7 @@ typedef struct
 	char name[32]; // narrator name
 	char iconname[8]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
+	boolean iconflip; // narrator flip icon horizontally
 	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
 	UINT8 backcolor; // see CON_SetupBackColormap: 0-10, 11 for default, UINT8_MAX for user-defined (CONS_BACKCOLOR)
 	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
