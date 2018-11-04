@@ -239,6 +239,9 @@ typedef enum
 	MFE_SPRUNG            = 1<<8,
 	// Platform movement
 	MFE_APPLYPMOMZ        = 1<<9,
+	// Compute and trigger on mobj angle relative to tracer
+	// See Linedef Exec 457 (Track mobj angle to point)
+	MFE_TRACERANGLE       = 1<<10,
 	// free: to and including 1<<15
 } mobjeflag_t;
 

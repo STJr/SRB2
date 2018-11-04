@@ -3757,6 +3757,41 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				P_ResetColormapFader(&sectors[secnum]);
 			break;
 
+		case 457: // Track mobj angle to point
+			if (mo)
+			{
+				INT32 failureangle = min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360) * ANG1;
+				INT32 failuredelay = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT32 failureexectag = line->sidenum[1] != 0xffff ?
+					(INT32)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
+				boolean persist = (line->flags & ML_EFFECT2);
+				mobj_t *anchormo;
+
+				if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
+					return;
+
+				anchormo = P_GetObjectTypeInSectorNum(MT_ANGLEMAN, secnum);
+				if (!anchormo)
+					return;
+
+				mo->eflags |= MFE_TRACERANGLE;
+				P_SetTarget(&mo->tracer, anchormo);
+				mo->lastlook = persist; // don't disable behavior after first failure
+				mo->extravalue1 = failureangle; // angle to exceed for failure state
+				mo->extravalue2 = failureexectag; // exec tag for failure state (angle is not within range)
+				mo->cusval = mo->cvmem = failuredelay; // cusval = tics to allow failure before line trigger; cvmem = decrement timer
+			}
+			break;
+
+		case 458: // Stop tracking mobj angle to point
+			if (mo)
+			{
+				mo->eflags &= ~MFE_TRACERANGLE;
+				P_SetTarget(&mo->tracer, NULL);
+				mo->lastlook = mo->cvmem = mo->cusval = mo->extravalue1 = mo->extravalue2 = 0;
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
