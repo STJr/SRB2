@@ -2248,7 +2248,7 @@ void F_TextPromptTicker(void)
 {
 	INT32 i;
 
-	if (!promptactive)
+	if (!promptactive || paused || P_AutoPause())
 		return;
 
 	// advance animation
