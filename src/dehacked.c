@@ -1637,6 +1637,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 
 			if (fastcmp(word, "NAME"))
 			{
+				INT32 i;
+
 				// HACK: Add yellow control char now
 				// so the drawing function doesn't call it repeatedly
 				char name[32];
@@ -1644,6 +1646,14 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				name[1] = 0;
 				strncat(name, word2, 31);
 				name[31] = 0;
+
+				// Replace _ with ' '
+				for (i = 0; i < 32 && name[i]; i++)
+				{
+					if (name[i] == '_')
+						name[i] = ' ';
+				}
+
 				strncpy(textprompts[num]->page[pagenum].name, name, 32);
 			}
 			else if (fastcmp(word, "ICON"))
