@@ -3773,7 +3773,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				//boolean freezethinkers = (line->flags & ML_EFFECT4);
 
 				if (closetextprompt)
-					F_EndTextPrompt();
+					F_EndTextPrompt(false, false);
 				else
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 			}

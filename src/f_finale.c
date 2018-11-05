@@ -2110,7 +2110,7 @@ static void F_AdvanceToNextPage(void)
 
 	// close the prompt if either num is invalid
 	if (cutnum == INT32_MAX || scenenum == INT32_MAX)
-		F_EndTextPrompt();
+		F_EndTextPrompt(false, false);
 	else
 	{
 		// on page mode, number of tics before allowing boost
@@ -2120,18 +2120,19 @@ static void F_AdvanceToNextPage(void)
 	}
 }
 
-void F_EndTextPrompt(void)
+void F_EndTextPrompt(boolean forceexec, boolean noexec)
 {
-	if (promptactive) {
+	boolean promptwasactive = promptactive;
+	promptactive = false;
+
+	if (promptwasactive) {
 		if (promptmo && promptmo->player && promptblockcontrols)
 			promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this)
 		// \todo reset frozen realtime?
 	}
 
-	promptactive = false;
-
 	// \todo net safety, maybe loop all player thinkers?
-	if (promptpostexectag)
+	if ((promptwasactive || forceexec) && !noexec && promptpostexectag)
 	{
 		P_MapStart();
 		P_LinedefExecute(promptpostexectag, promptmo, NULL);
@@ -2168,7 +2169,7 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 	}
 	else
-		F_EndTextPrompt(); // run the post-effects immediately
+		F_EndTextPrompt(true, false); // run the post-effects immediately
 }
 
 void F_TextPromptDrawer(void)

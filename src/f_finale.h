@@ -54,7 +54,7 @@ void F_EndCutScene(void);
 
 void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime);
 void F_TextPromptDrawer(void);
-void F_EndTextPrompt(void);
+void F_EndTextPrompt(boolean forceexec, boolean noexec);
 
 void F_StartGameEnd(void);
 void F_StartIntro(void);

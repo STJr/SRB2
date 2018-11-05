@@ -2753,6 +2753,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		I_UpdateNoVsync();
 	}
 
+	// Close text prompt before freeing the old level
+	F_EndTextPrompt(false, true);
+
 #ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
 #endif
