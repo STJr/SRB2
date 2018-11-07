@@ -84,7 +84,7 @@ void HU_Init(void);
 void HU_LoadGraphics(void);
 
 // reset heads up when consoleplayer respawns.
-FUNCMATH void HU_Start(void);
+void HU_Start(void);
 
 boolean HU_Responder(event_t *ev);
 
