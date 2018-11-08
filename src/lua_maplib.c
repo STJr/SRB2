@@ -46,7 +46,6 @@ enum sector_e {
 	sector_ffloors,
 	sector_fslope,
 	sector_cslope,
-	sector_hasslope
 #else
 	sector_ffloors
 #endif
@@ -69,7 +68,6 @@ static const char *const sector_opt[] = {
 #ifdef ESLOPE
 	"f_slope",
 	"c_slope",
-	"hasslope",
 #endif
 	NULL};
 
@@ -471,9 +469,6 @@ static int sector_get(lua_State *L)
 	case sector_cslope: // c_slope
 		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
 		return 1;
-	case sector_hasslope: // hasslope
-		lua_pushboolean(L, sector->hasslope);
-		return 1;
 #endif
 	}
 	return 0;
@@ -500,7 +495,6 @@ static int sector_set(lua_State *L)
 #ifdef ESLOPE
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
-	case sector_hasslope: // hasslope
 #endif
 	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
