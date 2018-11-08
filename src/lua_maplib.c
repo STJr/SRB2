@@ -45,7 +45,7 @@ enum sector_e {
 #ifdef ESLOPE
 	sector_ffloors,
 	sector_fslope,
-	sector_cslope,
+	sector_cslope
 #else
 	sector_ffloors
 #endif
