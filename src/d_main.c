@@ -761,10 +761,6 @@ static inline void D_CleanFile(void)
 	}
 }
 
-#ifndef _MAX_PATH
-#define _MAX_PATH MAX_WADPATH
-#endif
-
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
