@@ -1053,7 +1053,7 @@ void I_SetPalette(RGBA_t *palette)
 }
 
 // return number of fullscreen + X11 modes
-FUNCMATH INT32 VID_NumModes(void)
+INT32 VID_NumModes(void)
 {
 	if (USE_FULLSCREEN && numVidModes != -1)
 		return numVidModes - firstEntry;
@@ -1061,7 +1061,7 @@ FUNCMATH INT32 VID_NumModes(void)
 		return MAXWINMODES;
 }
 
-FUNCMATH const char *VID_GetModeName(INT32 modeNum)
+const char *VID_GetModeName(INT32 modeNum)
 {
 #if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
@@ -1091,7 +1091,7 @@ FUNCMATH const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-FUNCMATH INT32 VID_GetModeForSize(INT32 w, INT32 h)
+INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	int i;
 	for (i = 0; i < MAXWINMODES; i++)

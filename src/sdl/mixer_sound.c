@@ -135,7 +135,7 @@ void I_ShutdownSound(void)
 #endif
 }
 
-FUNCMATH void I_UpdateSound(void)
+void I_UpdateSound(void)
 {
 }
 
@@ -504,7 +504,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 /// Music System
 /// ------------------------
 
-FUNCMATH void I_InitMusic(void)
+void I_InitMusic(void)
 {
 }
 
