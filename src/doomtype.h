@@ -98,6 +98,8 @@ typedef long ssize_t;
 #define NOIPX
 #endif
 
+/* Strings and some misc platform specific stuff */
+
 #if defined (_MSC_VER) || defined (__OS2__)
 	// Microsoft VisualC++
 #ifdef _MSC_VER
@@ -179,6 +181,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 // not the number of bytes in the buffer.
 #define STRBUFCPY(dst,src) strlcpy(dst, src, sizeof dst)
 
+/* Boolean type definition */
+
 // \note __BYTEBOOL__ used to be set above if "macintosh" was defined,
 // if macintosh's version of boolean type isn't needed anymore, then isn't this macro pointless now?
 #ifndef __BYTEBOOL__
@@ -241,39 +245,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define UINT64_MAX 0xffffffffffffffffULL /* 18446744073709551615ULL */
 #endif
 
-union FColorRGBA
-{
-	UINT32 rgba;
-	struct
-	{
-		UINT8 red;
-		UINT8 green;
-		UINT8 blue;
-		UINT8 alpha;
-	} s;
-} ATTRPACK;
-typedef union FColorRGBA RGBA_t;
-
-typedef enum
-{
-	postimg_none,
-	postimg_water,
-	postimg_motion,
-	postimg_flip,
-	postimg_heat
-} postimg_t;
-
-typedef UINT32 lumpnum_t; // 16 : 16 unsigned long (wad num: lump num)
-#define LUMPERROR UINT32_MAX
-
-typedef UINT32 tic_t;
-#define INFTICS UINT32_MAX
-
-#ifdef _BIG_ENDIAN
-#define UINT2RGBA(a) a
-#else
-#define UINT2RGBA(a) (UINT32)((a&0xff)<<24)|((a&0xff00)<<8)|((a&0xff0000)>>8)|(((UINT32)a&0xff000000)>>24)
-#endif
+/* Compiler-specific attributes and other macros */
 
 #ifdef __GNUC__ // __attribute__ ((X))
 	#define FUNCNORETURN __attribute__ ((noreturn))
@@ -391,4 +363,43 @@ typedef UINT32 tic_t;
 #ifndef FILESTAMP
 #define FILESTAMP
 #endif
+
+/* Miscellaneous types that don't fit anywhere else (Can this be changed?) */
+
+union FColorRGBA
+{
+	UINT32 rgba;
+	struct
+	{
+		UINT8 red;
+		UINT8 green;
+		UINT8 blue;
+		UINT8 alpha;
+	} s;
+} ATTRPACK;
+typedef union FColorRGBA RGBA_t;
+
+typedef enum
+{
+	postimg_none,
+	postimg_water,
+	postimg_motion,
+	postimg_flip,
+	postimg_heat
+} postimg_t;
+
+typedef UINT32 lumpnum_t; // 16 : 16 unsigned long (wad num: lump num)
+#define LUMPERROR UINT32_MAX
+
+typedef UINT32 tic_t;
+#define INFTICS UINT32_MAX
+
+#include "endian.h" // This is needed to make sure the below macro acts correctly in big endian builds
+
+#ifdef SRB2_BIG_ENDIAN
+#define UINT2RGBA(a) a
+#else
+#define UINT2RGBA(a) (UINT32)((a&0xff)<<24)|((a&0xff00)<<8)|((a&0xff0000)>>8)|(((UINT32)a&0xff000000)>>24)
+#endif
+
 #endif //__DOOMTYPE__
