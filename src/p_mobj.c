@@ -9197,9 +9197,6 @@ ML_NOCLIMB : Direction not controllable
 		// the bumper in 30 degree increments.
 		mobj->threshold = (mthing->options & 15) % 12; // It loops over, etc
 		P_SetMobjState(mobj, mobj->info->spawnstate+mobj->threshold);
-
-		// you can shut up now, OBJECTFLIP.  And all of the other options, for that matter.
-		mthing->options &= ~0xF;
 		break;
 	case MT_EGGCAPSULE:
 		if (mthing->angle <= 0)
@@ -9385,6 +9382,14 @@ ML_NOCLIMB : Direction not controllable
 			if (i == MT_PULL)
 				P_SetMobjState(mobj, S_GRAVWELLRED);
 		}
+	}
+
+	// ignore MTF_ flags and return early
+	if (i == MT_NIGHTSBUMPER)
+	{
+		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
+		mthing->mobj = mobj;
+		return;
 	}
 
 	mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
