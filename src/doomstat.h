@@ -169,7 +169,11 @@ typedef struct
 
 extern cutscene_t *cutscenes[128];
 
-#define MAX_PROMPTS 256
+// Reserve prompt space for tutorials
+#define TUTORIAL_PROMPT 201 // one-based
+#define TUTORIAL_AREAS 6
+#define TUTORIAL_AREA_PROMPTS 5
+#define MAX_PROMPTS (TUTORIAL_PROMPT+TUTORIAL_AREAS*TUTORIAL_AREA_PROMPTS*3) // 3 control modes
 #define MAX_PAGES 128
 
 typedef struct

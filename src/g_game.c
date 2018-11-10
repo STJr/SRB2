@@ -141,7 +141,7 @@ tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
 
 cutscene_t *cutscenes[128];
-textprompt_t *textprompts[256];
+textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 boolean skipstats;

@@ -2236,6 +2236,7 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
 	INT32 promptnum, pagenum;
+	INT32 tutorialpromptnum = (tutorialmode) ? TUTORIAL_PROMPT-1 : 0;
 	char realtag[33];
 
 	if (!tag || !tag[0])
@@ -2248,7 +2249,7 @@ void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, bool
 	if (tutorialmode)
 		strncat(realtag, "FPS", 33);
 
-	for (promptnum = 0; promptnum < MAX_PROMPTS; promptnum++)
+	for (promptnum = 0 + tutorialpromptnum; promptnum < MAX_PROMPTS; promptnum++)
 	{
 		if (!textprompts[promptnum])
 			continue;
