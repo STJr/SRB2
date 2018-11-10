@@ -129,6 +129,9 @@ extern INT16 titlemap;
 extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
+extern INT16 tutorialmap; // map to load for tutorial
+extern boolean tutorialmode; // are we in a tutorial right now?
+
 extern boolean looptitle;
 
 // CTF colors.
@@ -171,6 +174,7 @@ extern cutscene_t *cutscenes[128];
 
 typedef struct
 {
+	char tag[25]; // page tag (24 chars due to texture concatenating)
 	char name[32]; // narrator name
 	char iconname[8]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right

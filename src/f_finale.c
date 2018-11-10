@@ -2233,6 +2233,36 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		F_EndTextPrompt(true, false); // run the post-effects immediately
 }
 
+void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
+{
+	INT32 promptnum, pagenum;
+	char realtag[25];
+
+	strncpy(realtag, tag, 25);
+	realtag[24] = 0;
+
+	// \todo hardcoded tutorial mode behavior: concat control mode (fps, platform, custom) to end of input tag
+	if (tutorialmode)
+		strncat(realtag, "FPS", 25);
+
+	for (promptnum = 0; promptnum < MAX_PROMPTS; promptnum++)
+	{
+		if (!textprompts[promptnum])
+			continue;
+
+		for (pagenum = 0; pagenum < textprompts[promptnum]->numpages && pagenum < MAX_PAGES; pagenum++)
+		{
+			if (!strncmp(realtag, textprompts[promptnum]->page[pagenum].tag, 25))
+			{
+				F_StartTextPrompt(promptnum, pagenum, mo, postexectag, blockcontrols, freezerealtime);
+				return;
+			}
+		}
+	}
+
+	CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s\n", realtag);
+}
+
 void F_TextPromptDrawer(void)
 {
 	// reuse:

@@ -1727,6 +1727,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
 				}
 			}
+			else if (fastcmp(word, "TAG"))
+				strncpy(textprompts[num]->page[pagenum].tag, word2, 25);
 			else if (fastcmp(word, "NEXTPROMPT"))
 				textprompts[num]->page[pagenum].nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))

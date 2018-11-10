@@ -3771,9 +3771,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				boolean blockcontrols = !(line->flags & ML_EFFECT2);
 				boolean freezerealtime = !(line->flags & ML_EFFECT3);
 				//boolean freezethinkers = (line->flags & ML_EFFECT4);
+				boolean callbynamedtag = (line->flags & ML_TFERLINE);
 
 				if (closetextprompt)
 					F_EndTextPrompt(false, false);
+				else if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
+					F_StartTextPromptByNamedTag(sides[line->sidenum[0]].text, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				else
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 			}
