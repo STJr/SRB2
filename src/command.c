@@ -63,6 +63,7 @@ CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
 #define COM_BUF_SIZE 8192 // command buffer size
+#define MAX_ALIAS_RECURSION 100 // max recursion allowed for aliases
 
 static INT32 com_wait; // one command per frame (for cmd sequences)
 
@@ -485,6 +486,7 @@ static void COM_ExecuteString(char *ptext)
 {
 	xcommand_t *cmd;
 	cmdalias_t *a;
+	static INT32 recursion = 0; // detects recursion and stops it if it goes too far
 
 	COM_TokenizeString(ptext);
 
@@ -497,6 +499,7 @@ static void COM_ExecuteString(char *ptext)
 	{
 		if (!stricmp(com_argv[0], cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
+			recursion = 0;
 			cmd->function();
 			return;
 		}
@@ -507,10 +510,19 @@ static void COM_ExecuteString(char *ptext)
 	{
 		if (!stricmp(com_argv[0], a->name))
 		{
+			if (recursion > MAX_ALIAS_RECURSION)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Alias recursion cycle detected!\n"));
+				recursion = 0;
+				return;
+			}
+			recursion++;
 			COM_BufInsertText(a->value);
 			return;
 		}
 	}
+
+	recursion = 0;
 
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
