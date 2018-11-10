@@ -88,6 +88,8 @@ static mobj_t *promptmo;
 static INT16 promptpostexectag;
 static boolean promptblockcontrols;
 static char *promptpagetext = NULL;
+static INT32 callpromptnum = INT32_MAX;
+static INT32 callpagenum = INT32_MAX;
 
 //
 // CUTSCENE TEXT WRITING
@@ -2194,6 +2196,7 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 {
 	boolean promptwasactive = promptactive;
 	promptactive = false;
+	callpromptnum = callpagenum = INT32_MAX;
 
 	if (promptwasactive)
 	{
@@ -2218,6 +2221,11 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 
 void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
+	// if splitscreen and we already have a prompt active, ignore.
+	// \todo Proper per-player splitscreen support (individual prompts)
+	if (promptactive && splitscreen && promptnum == callpromptnum && pagenum == callpagenum)
+		return;
+
 	// We share vars, so no starting text prompts over cutscenes or title screens!
 	keypressed = false;
 	finalecount = 0;
@@ -2233,6 +2241,8 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
 
 	// Initialize current prompt and scene
+	callpromptnum = promptnum;
+	callpagenum = pagenum;
 	cutnum = (promptnum < MAX_PROMPTS && textprompts[promptnum]) ? promptnum : INT32_MAX;
 	scenenum = (cutnum != INT32_MAX && pagenum < MAX_PAGES && pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
 	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
@@ -2404,9 +2414,18 @@ void F_TextPromptTicker(void)
 			{
 				if (netgame && i != serverplayer && i != adminplayer)
 					continue;
+				else if (splitscreen) {
+					// Both players' controls are locked,
+					// But only consoleplayer can advance the prompt.
+					// \todo Proper per-player splitscreen support (individual prompts)
+					if (i == consoleplayer || i == secondarydisplayplayer)
+						players[i].powers[pw_nocontrol] = 1;
+				}
+				else if (i == consoleplayer)
+					players[i].powers[pw_nocontrol] = 1;
 
-				players[i].powers[pw_nocontrol] = 1;
-				break;
+				if (!splitscreen)
+					break;
 			}
 		}
 
@@ -2426,8 +2445,23 @@ void F_TextPromptTicker(void)
 			{
 				if (netgame && i != serverplayer && i != adminplayer)
 					continue;
-
-				players[i].powers[pw_nocontrol] = 1;
+				else if (splitscreen) {
+					// Both players' controls are locked,
+					// But only consoleplayer can advance the prompt.
+					if (i == consoleplayer)
+						players[i].powers[pw_nocontrol] = 1;
+					else if (i == secondarydisplayplayer)
+					{
+						players[i].powers[pw_nocontrol] = 1;
+						continue;
+					}
+					else
+						continue;
+				}
+				else if (i == consoleplayer)
+					players[i].powers[pw_nocontrol] = 1;
+				else
+					continue;
 
 				if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
 				{
@@ -2437,7 +2471,12 @@ void F_TextPromptTicker(void)
 						cutscene_boostspeed = 1; // only after a slight delay
 
 					if (keypressed)
-						break;
+					{
+						if (!splitscreen)
+							break;
+						else
+							continue;
+					}
 
 					if (!timetonext) // is 0 when finished generating text
 					{
@@ -2450,7 +2489,8 @@ void F_TextPromptTicker(void)
 				else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
 					keypressed = false;
 
-				break;
+				if (!splitscreen)
+					break;
 			}
 		}
 
