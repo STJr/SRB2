@@ -103,8 +103,6 @@ extern consvar_t cv_startinglives;
 // for F_finale.c
 extern consvar_t cv_rollingdemos;
 
-extern consvar_t cv_resetmusic;
-
 extern consvar_t cv_ringslinger, cv_soundtest;
 
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
@@ -203,5 +201,3 @@ void D_SetPassword(const char *pw);
 UINT8 CanChangeSkin(INT32 playernum);
 
 #endif
-
-

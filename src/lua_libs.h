@@ -42,6 +42,11 @@ extern lua_State *gL;
 #define META_SEG "SEG_T*"
 #define META_NODE "NODE_T*"
 #endif
+#ifdef ESLOPE
+#define META_SLOPE "PSLOPE_T*"
+#define META_VECTOR2 "VECTOR2_T"
+#define META_VECTOR3 "VECTOR3_T"
+#endif
 #define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_CVAR "CONSVAR_T*"

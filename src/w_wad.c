@@ -389,6 +389,8 @@ UINT16 W_InitFile(const char *filename)
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 	}
@@ -634,6 +636,8 @@ UINT16 W_InitFile(const char *filename)
 		if (fread(&header, 1, sizeof header, handle) < sizeof header)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Can't read wad header from %s because %s\n"), filename, strerror(ferror(handle)));
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 
@@ -644,6 +648,8 @@ UINT16 W_InitFile(const char *filename)
 			&& memcmp(header.identification, "SDLL", 4) != 0)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s does not have a valid WAD header\n"), filename);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 
@@ -658,6 +664,8 @@ UINT16 W_InitFile(const char *filename)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Wadfile directory in %s is corrupted (%s)\n"), filename, strerror(ferror(handle)));
 			free(fileinfov);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 

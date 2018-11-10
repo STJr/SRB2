@@ -58,7 +58,7 @@ typedef off_t off64_t;
 
 #if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3))
 #define PRIdS "u"
-#elif defined (_WIN32) 
+#elif defined (_WIN32)
 #define PRIdS "Iu"
 #elif defined (DJGPP)
 #define PRIdS "u"
@@ -475,7 +475,8 @@ void M_FirstLoadConfig(void)
 	}
 
 	// load default control
-	G_Controldefault();
+	G_DefineDefaultControls();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps]);
 
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
@@ -539,7 +540,7 @@ void M_SaveConfig(const char *filename)
 	// FIXME: save key aliases if ever implemented..
 
 	CV_SaveVariables(f);
-	if (!dedicated) G_SaveKeySetting(f);
+	if (!dedicated) G_SaveKeySetting(f, gamecontrol, gamecontrolbis);
 
 	fclose(f);
 }

@@ -99,6 +99,14 @@ typedef enum
 	num_gamecontrols
 } gamecontrols_e;
 
+typedef enum
+{
+	gcs_custom,
+	gcs_fps,
+	//gcs_platform,
+	num_gamecontrolschemes
+} gamecontrolschemes_e;
+
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
@@ -116,6 +124,7 @@ extern UINT8 gamekeydown[NUMINPUTS];
 // two key codes (or virtual key) per game control
 extern INT32 gamecontrol[num_gamecontrols][2];
 extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
@@ -133,8 +142,10 @@ INT32 G_KeyStringtoNum(const char *keystr);
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
-void G_Controldefault(void);
-void G_SaveKeySetting(FILE *f);
+void G_DefineDefaultControls(void);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], boolean movementonly);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2]);
+void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 void G_CheckDoubleUsage(INT32 keynum);
 
 #endif

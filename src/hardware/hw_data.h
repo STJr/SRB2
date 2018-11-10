@@ -26,10 +26,6 @@
 #include <windows.h>
 #endif
 
-#if defined (VID_X11) && !defined (HAVE_SDL)
-#include <GL/glx.h>
-#endif
-
 #include "../doomdef.h"
 //THIS MUST DISAPPEAR!!!
 #include "hw_glide.h"
