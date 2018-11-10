@@ -2125,7 +2125,8 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 	boolean promptwasactive = promptactive;
 	promptactive = false;
 
-	if (promptwasactive) {
+	if (promptwasactive)
+	{
 		if (promptmo && promptmo->player && promptblockcontrols)
 			promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this)
 		// \todo reset frozen realtime?
@@ -2134,9 +2135,14 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 	// \todo net safety, maybe loop all player thinkers?
 	if ((promptwasactive || forceexec) && !noexec && promptpostexectag)
 	{
-		P_MapStart();
-		P_LinedefExecute(promptpostexectag, promptmo, NULL);
-		P_MapEnd();
+		if (tmthing) // edge case where starting an invalid prompt immediately on level load will make P_MapStart fail
+			P_LinedefExecute(promptpostexectag, promptmo, NULL);
+		else
+		{
+			P_MapStart();
+			P_LinedefExecute(promptpostexectag, promptmo, NULL);
+			P_MapEnd();
+		}
 	}
 }
 
@@ -2326,6 +2332,4 @@ void F_TextPromptTicker(void)
 			!F_WriteText())
 			timetonext = !promptblockcontrols; // never show the chevron if we can't toggle pages
 	}
-
-
 }
