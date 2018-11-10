@@ -2031,14 +2031,6 @@ boolean F_CutsceneResponder(event_t *event)
 //  TEXT PROMPTS
 // ==================
 
-INT32 F_GetPromptHideHud()
-{
-	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages)
-		return 0;
-	else
-		return textprompts[cutnum]->page[scenenum]->hidehud;
-}
-
 static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *boxh, INT32 *texth, INT32 *texty, INT32 *namey, INT32 *chevrony, INT32 *textx, INT32 *textr)
 {
 	// reuse:
@@ -2061,6 +2053,60 @@ static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *b
 	// Add 4 margin against icon
 	*textx = (iconlump != LUMPERROR && !*rightside) ? ((*boxh * 4) + (*boxh/2)*4) + 4 : 4;
 	*textr = *rightside ? BASEVIDWIDTH - (((*boxh * 4) + (*boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+}
+
+static fixed_t F_GetPromptHideHudBound(void)
+{
+	UINT8 pagelines;
+	boolean rightside;
+	INT32 boxh, texth, texty, namey, chevrony;
+	INT32 textx, textr;
+
+	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages ||
+		!textprompts[cutnum]->page[scenenum].hidehud ||
+		(splitscreen && textprompts[cutnum]->page[scenenum].hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
+		return 0;
+	else if (textprompts[cutnum]->page[scenenum].hidehud == 2) // hide all
+		return BASEVIDHEIGHT;
+
+	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
+
+	// calc boxheight (see V_DrawPromptBack)
+	boxh *= vid.dupy;
+	boxh = (boxh * 4) + (boxh/2)*5; // 4 lines of space plus gaps between and some leeway
+
+	// return a coordinate to check
+	// if negative: don't show hud elements below this coordinate (visually)
+	// if positive: don't show hud elements above this coordinate (visually)
+	return 0 - boxh; // \todo: if prompt at top of screen (someday), make this return positive
+}
+
+boolean F_GetPromptHideHudAll(void)
+{
+	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages ||
+		!textprompts[cutnum]->page[scenenum].hidehud ||
+		(splitscreen && textprompts[cutnum]->page[scenenum].hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
+		return false;
+	else if (textprompts[cutnum]->page[scenenum].hidehud == 2) // hide all
+		return true;
+	else
+		return false;
+}
+
+boolean F_GetPromptHideHud(fixed_t y)
+{
+	INT32 ybound;
+	boolean fromtop;
+	fixed_t ytest;
+
+	if (!promptactive)
+		return false;
+
+	ybound = F_GetPromptHideHudBound();
+	fromtop = (ybound >= 0);
+	ytest = (fromtop ? ybound : BASEVIDHEIGHT + ybound);
+
+	return (fromtop ? y < ytest : y >= ytest); // true means hide
 }
 
 static void F_PreparePageText(char *pagetext)
