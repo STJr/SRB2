@@ -324,7 +324,7 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	if (pscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
 		fwidth = (float)SHORT(gpatch->width) * fscalew * dupx;
-		fheight = (float)SHORT(gpatch->height) * fscalew * dupy;
+		fheight = (float)SHORT(gpatch->height) * fscaleh * dupy;
 	}
 	else
 	{
