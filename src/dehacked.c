@@ -1666,9 +1666,10 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].lines = usi;
 			else if (fastcmp(word, "BACKCOLOR"))
 			{
-				UINT8 backcolor;
+				INT32 backcolor;
 				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
-				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY")) backcolor = 1;
+				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY") ||
+					fastcmp(word2, "BLACK")) backcolor = 1;
 				else if (i == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
 				else if (i == 3 || fastcmp(word2, "RED")) backcolor = 3;
 				else if (i == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
@@ -1678,8 +1679,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				else if (i == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
 				else if (i == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
 				else if (i == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
-				else if (i < 0) backcolor = UINT8_MAX; // CONS_BACKCOLOR user-configured
-				else backcolor = 11; // default green
+				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
+				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
 			}
 			else if (fastcmp(word, "ALIGN"))

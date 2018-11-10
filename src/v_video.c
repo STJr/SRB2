@@ -1497,7 +1497,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		switch (color)
 		{
 			case 0:		hwcolor = 0xffffff00;	break; // White
-			case 1:		hwcolor = 0x80808000;	break; // Gray
+			case 1:		hwcolor = 0x00000000;	break; // Gray // Note this is different from V_DrawFadeConsBack
 			case 2:		hwcolor = 0x40201000;	break; // Brown
 			case 3:		hwcolor = 0xff000000;	break; // Red
 			case 4:		hwcolor = 0xff800000;	break; // Orange

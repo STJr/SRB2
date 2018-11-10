@@ -726,7 +726,7 @@ void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight)
 	v[2].tow = v[3].tow = 0.0f;
 
 	Surf.FlatColor.rgba = UINT2RGBA(color);
-	Surf.FlatColor.s.alpha = 0x80;
+	Surf.FlatColor.s.alpha = (color == 0 ? 0xC0 : 0x80); // make black darker, like software
 
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
 }
