@@ -611,42 +611,66 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	return 0;
 }
 
-void G_Controldefault(void)
+void G_Controldefault(INT32 scheme, boolean setcommon)
 {
-	gamecontrol[gc_forward    ][0] = 'w';
-	gamecontrol[gc_backward   ][0] = 's';
-	gamecontrol[gc_strafeleft ][0] = 'a';
-	gamecontrol[gc_straferight][0] = 'd';
-	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
-	gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
-	gamecontrol[gc_weaponnext ][0] = 'e';
-	gamecontrol[gc_weaponprev ][0] = 'q';
-	gamecontrol[gc_wepslot1   ][0] = '1';
-	gamecontrol[gc_wepslot2   ][0] = '2';
-	gamecontrol[gc_wepslot3   ][0] = '3';
-	gamecontrol[gc_wepslot4   ][0] = '4';
-	gamecontrol[gc_wepslot5   ][0] = '5';
-	gamecontrol[gc_wepslot6   ][0] = '6';
-	gamecontrol[gc_wepslot7   ][0] = '7';
-	gamecontrol[gc_wepslot8   ][0] = '8';
-	gamecontrol[gc_wepslot9   ][0] = '9';
-	gamecontrol[gc_wepslot10  ][0] = '0';
-	gamecontrol[gc_fire       ][0] = KEY_RCTRL;
-	gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
-	gamecontrol[gc_firenormal ][0] = 'c';
-	gamecontrol[gc_tossflag   ][0] = '\'';
-	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
-	gamecontrol[gc_camtoggle  ][0] = 'v';
-	gamecontrol[gc_camreset   ][0] = 'r';
-	gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
-	gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;
-	gamecontrol[gc_centerview ][0] = KEY_END;
-	gamecontrol[gc_talkkey    ][0] = 't';
-	gamecontrol[gc_teamkey    ][0] = 'y';
-	gamecontrol[gc_scores     ][0] = KEY_TAB;
-	gamecontrol[gc_jump       ][0] = KEY_SPACE;
-	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
-	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
+	if (scheme == CONTROL_DEFAULT_PLATFORM)
+	{
+		gamecontrol[gc_forward    ][0] = KEY_UPARROW;
+		gamecontrol[gc_backward   ][0] = KEY_DOWNARROW;
+		gamecontrol[gc_strafeleft ][0] = 'a';
+		gamecontrol[gc_straferight][0] = 'd';
+		gamecontrol[gc_lookup     ][0] = KEY_PGUP;
+		gamecontrol[gc_lookdown   ][0] = KEY_PGDN;
+		gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
+		gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
+		gamecontrol[gc_centerview ][0] = KEY_END;
+		gamecontrol[gc_jump       ][0] = KEY_SPACE;
+		gamecontrol[gc_use        ][0] = KEY_LSHIFT;
+		gamecontrol[gc_fire       ][0] = 's';
+		gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
+		gamecontrol[gc_firenormal ][0] = 'w';
+	}
+	else // if (scheme == CONTROL_DEFAULT_FPS)
+	{
+		gamecontrol[gc_forward    ][0] = 'w';
+		gamecontrol[gc_backward   ][0] = 's';
+		gamecontrol[gc_strafeleft ][0] = 'a';
+		gamecontrol[gc_straferight][0] = 'd';
+		gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
+		gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;
+		gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
+		gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
+		gamecontrol[gc_centerview ][0] = KEY_END;
+		gamecontrol[gc_jump       ][0] = KEY_SPACE;
+		gamecontrol[gc_use        ][0] = KEY_LSHIFT;
+		gamecontrol[gc_fire       ][0] = KEY_RCTRL;
+		gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
+		gamecontrol[gc_firenormal ][0] = 'c';
+	}
+
+	if (setcommon)
+	{
+		gamecontrol[gc_weaponnext ][0] = 'e';
+		gamecontrol[gc_weaponprev ][0] = 'q';
+		gamecontrol[gc_wepslot1   ][0] = '1';
+		gamecontrol[gc_wepslot2   ][0] = '2';
+		gamecontrol[gc_wepslot3   ][0] = '3';
+		gamecontrol[gc_wepslot4   ][0] = '4';
+		gamecontrol[gc_wepslot5   ][0] = '5';
+		gamecontrol[gc_wepslot6   ][0] = '6';
+		gamecontrol[gc_wepslot7   ][0] = '7';
+		gamecontrol[gc_wepslot8   ][0] = '8';
+		gamecontrol[gc_wepslot9   ][0] = '9';
+		gamecontrol[gc_wepslot10  ][0] = '0';
+		gamecontrol[gc_tossflag   ][0] = '\'';
+		gamecontrol[gc_camtoggle  ][0] = 'v';
+		gamecontrol[gc_camreset   ][0] = 'r';
+		gamecontrol[gc_talkkey    ][0] = 't';
+		gamecontrol[gc_teamkey    ][0] = 'y';
+		gamecontrol[gc_scores     ][0] = KEY_TAB;
+		gamecontrol[gc_console    ][0] = KEY_CONSOLE;
+		gamecontrol[gc_pause      ][0] = KEY_PAUSE;
+	}
 }
 
 void G_SaveKeySetting(FILE *f)

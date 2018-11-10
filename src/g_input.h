@@ -27,6 +27,10 @@
 #define JOYHATS      4  // 4 hats
 #define JOYAXISSET   4  // 4 Sets of 2 axises
 
+#define CONTROL_DEFAULT_FPS 0
+#define CONTROL_DEFAULT_PLATFORM 1
+#define CONTROL_DEFAULT_CUSTOM 2
+
 //
 // mouse and joystick buttons are handled as 'virtual' keys
 //
@@ -133,7 +137,7 @@ INT32 G_KeyStringtoNum(const char *keystr);
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
-void G_Controldefault(void);
+void G_Controldefault(INT32 scheme);
 void G_SaveKeySetting(FILE *f);
 void G_CheckDoubleUsage(INT32 keynum);
 
