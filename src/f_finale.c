@@ -2236,14 +2236,17 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
 	INT32 promptnum, pagenum;
-	char realtag[25];
+	char realtag[33];
 
-	strncpy(realtag, tag, 25);
-	realtag[24] = 0;
+	if (!tag || !tag[0])
+		return;
+
+	strncpy(realtag, tag, 33);
+	realtag[32] = 0;
 
 	// \todo hardcoded tutorial mode behavior: concat control mode (fps, platform, custom) to end of input tag
 	if (tutorialmode)
-		strncat(realtag, "FPS", 25);
+		strncat(realtag, "FPS", 33);
 
 	for (promptnum = 0; promptnum < MAX_PROMPTS; promptnum++)
 	{

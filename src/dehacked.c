@@ -1641,11 +1641,11 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 
 				// HACK: Add yellow control char now
 				// so the drawing function doesn't call it repeatedly
-				char name[32];
+				char name[34];
 				name[0] = '\x82'; // color yellow
 				name[1] = 0;
-				strncat(name, word2, 31);
-				name[31] = 0;
+				strncat(name, word2, 33);
+				name[33] = 0;
 
 				// Replace _ with ' '
 				for (i = 0; i < 32 && name[i]; i++)
@@ -1728,7 +1728,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				}
 			}
 			else if (fastcmp(word, "TAG"))
-				strncpy(textprompts[num]->page[pagenum].tag, word2, 25);
+				strncpy(textprompts[num]->page[pagenum].tag, word2, 33);
 			else if (fastcmp(word, "NEXTPROMPT"))
 				textprompts[num]->page[pagenum].nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))

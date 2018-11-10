@@ -174,8 +174,8 @@ extern cutscene_t *cutscenes[128];
 
 typedef struct
 {
-	char tag[25]; // page tag (24 chars due to texture concatenating)
-	char name[32]; // narrator name
+	char tag[33]; // page tag
+	char name[34]; // narrator name, extra char for color
 	char iconname[8]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
