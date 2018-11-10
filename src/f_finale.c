@@ -2065,7 +2065,7 @@ static void F_PreparePageText(char *pagetext)
 
 	if (promptpagetext)
 		Z_Free(promptpagetext);
-	promptpagetext = (pagetext && pagetext[0]) ? V_WordWrap(textx, textr, 0, pagetext) : "";
+	promptpagetext = (pagetext && pagetext[0]) ? V_WordWrap(textx, textr, 0, pagetext) : Z_StrDup("");
 
 	F_NewCutscene(promptpagetext);
 	cutscene_textspeed = textprompts[cutnum]->page[scenenum].textspeed ? textprompts[cutnum]->page[scenenum].textspeed : TICRATE/5;
