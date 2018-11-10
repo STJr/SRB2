@@ -176,7 +176,7 @@ typedef struct
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
 	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
-	UINT8 backcolor; // see CON_SetupBackColormap: 0-10, 11 for default, UINT8_MAX for user-defined (CONS_BACKCOLOR)
+	INT32 backcolor; // see CON_SetupBackColormap: 0-11, INT32_MAX for user-defined (CONS_BACKCOLOR)
 	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
 	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
 	UINT8 textspeed; // text speed, delay in tics between characters.

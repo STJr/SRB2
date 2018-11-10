@@ -1481,17 +1481,20 @@ void V_DrawFadeConsBack(INT32 plines)
 }
 
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
-void V_DrawTutorialBack(INT32 boxheight)
+void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
 	UINT8 *deststop, *buf;
 
 	boxheight *= vid.dupy;
 
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
+
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
 		UINT32 hwcolor;
-		switch (cons_backcolor.value)
+		switch (color)
 		{
 			case 0:		hwcolor = 0xffffff00;	break; // White
 			case 1:		hwcolor = 0x80808000;	break; // Gray
@@ -1510,12 +1513,14 @@ void V_DrawTutorialBack(INT32 boxheight)
 	}
 #endif
 
+	CON_SetupBackColormapEx(color, true);
+
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
 	deststop = screens[0] + vid.rowbytes * vid.height;
 	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
 	for (; buf < deststop; ++buf)
-		*buf = consolebgmap[*buf];
+		*buf = promptbgmap[*buf];
 }
 
 // Gets string colormap, used for 0x80 color codes

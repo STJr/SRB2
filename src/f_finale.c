@@ -2199,7 +2199,7 @@ void F_TextPromptDrawer(void)
 	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
 
 	// Draw background
-	V_DrawTutorialBack(boxh);
+	V_DrawPromptBack(boxh, textprompts[cutnum]->page[scenenum].backcolor);
 
 	// Draw narrator icon
 	if (iconlump != LUMPERROR)

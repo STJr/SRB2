@@ -158,7 +158,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 void V_DrawFadeScreen(UINT16 color, UINT8 strength);
 
 void V_DrawFadeConsBack(INT32 plines);
-void V_DrawTutorialBack(INT32 boxheight);
+void V_DrawPromptBack(INT32 boxheight, INT32 color);
 
 // draw a single character
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);

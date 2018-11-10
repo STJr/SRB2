@@ -1779,7 +1779,7 @@ static void readtextprompt(MYFILE *f, INT32 num)
 			{
 				if (1 <= value && value <= MAX_PAGES)
 				{
-					textprompts[num]->page[value - 1].backcolor = UINT8_MAX; // non-zero default
+					textprompts[num]->page[value - 1].backcolor = 1; // default to gray
 					readtextpromptpage(f, num, value - 1);
 				}
 				else
