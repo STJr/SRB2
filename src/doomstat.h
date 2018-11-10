@@ -176,14 +176,20 @@ extern cutscene_t *cutscenes[128];
 #define MAX_PROMPTS (TUTORIAL_PROMPT+TUTORIAL_AREAS*TUTORIAL_AREA_PROMPTS*3) // 3 control modes
 #define MAX_PAGES 128
 
+#define PROMPT_PIC_PERSIST 0
+#define PROMPT_PIC_LOOP 1
+#define PROMPT_PIC_DESTROY 2
+#define MAX_PROMPT_PICS 8
 typedef struct
 {
 	UINT8 numpics;
-	char picname[8][8];
-	UINT8 pichires[8];
-	UINT16 xcoord[8]; // gfx
-	UINT16 ycoord[8]; // gfx
-	UINT16 picduration[8];
+	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
+	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
+	char picname[MAX_PROMPT_PICS][8];
+	UINT8 pichires[MAX_PROMPT_PICS];
+	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 picduration[MAX_PROMPT_PICS];
 
 	char   musswitch[7];
 	UINT16 musswitchflags;

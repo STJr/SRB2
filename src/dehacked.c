@@ -1640,10 +1640,19 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			{
 				textprompts[num]->page[pagenum].numpics = (UINT8)i;
 			}
+			else if (fastcmp(word, "PICMODE"))
+			{
+				UINT8 picmode = 0; // PROMPT_PIC_PERSIST
+				if (usi == 1 || word2[0] == 'L') picmode = PROMPT_PIC_LOOP;
+				else if (usi == 2 || word2[0] == 'D' || word2[0] == 'H') picmode = PROMPT_PIC_DESTROY;
+				textprompts[num]->page[pagenum].picmode = picmode;
+			}
+			else if (fastcmp(word, "PICTOLOOP"))
+				textprompts[num]->page[pagenum].pictoloop = (UINT8)i;
 			else if (fastncmp(word, "PIC", 3))
 			{
 				picid = (UINT8)atoi(word + 3);
-				if (picid > 8 || picid == 0)
+				if (picid > MAX_PROMPT_PICS || picid == 0)
 				{
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
 					continue;
@@ -1802,9 +1811,12 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					UINT8 metapagenum = usi - 1;
 					UINT8 picid;
 
-					for (picid = 0; picid < 8; picid++)
+					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
+					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
+					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
+
+					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
 					{
-						textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
 						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
 						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
 						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];

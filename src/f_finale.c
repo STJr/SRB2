@@ -1819,7 +1819,7 @@ boolean F_ContinueResponder(event_t *event)
 //  CUSTOM CUTSCENES
 // ==================
 static INT32 scenenum, cutnum;
-static INT32 picxpos, picypos, picnum, pictime;
+static INT32 picxpos, picypos, picnum, pictime, picmode, numpics, pictoloop;
 static INT32 textxpos, textypos;
 static boolean dofadenow = false, cutsceneover = false;
 static boolean runningprecutscene = false, precutresetplayer = false;
@@ -2173,6 +2173,16 @@ static void F_AdvanceToNextPage(void)
 		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 
+		// gfx
+		picnum = 0;
+		numpics = textprompts[cutnum]->page[scenenum].numpics;
+		picmode = textprompts[cutnum]->page[scenenum].picmode;
+		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop - 1;
+		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
+		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
+		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
+
+		// music change
 		if (textprompts[cutnum]->page[scenenum].musswitch[0])
 			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
 				textprompts[cutnum]->page[scenenum].musswitchflags,
@@ -2234,6 +2244,16 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 
+		// gfx
+		picnum = 0;
+		numpics = textprompts[cutnum]->page[scenenum].numpics;
+		picmode = textprompts[cutnum]->page[scenenum].picmode;
+		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop - 1;
+		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
+		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
+		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
+
+		// music change
 		if (textprompts[cutnum]->page[scenenum].musswitch[0])
 			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
 				textprompts[cutnum]->page[scenenum].musswitchflags,
@@ -2297,6 +2317,17 @@ void F_TextPromptDrawer(void)
 	iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
 	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
 
+	// Draw gfx first
+	if (picnum >= 0 && picnum < numpics && textprompts[cutnum]->page[scenenum].picname[picnum][0] != '\0')
+	{
+		if (textprompts[cutnum]->page[scenenum].pichires[picnum])
+			V_DrawSmallScaledPatch(picxpos, picypos, 0,
+				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_CACHE));
+		else
+			V_DrawScaledPatch(picxpos,picypos, 0,
+				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_CACHE));
+	}
+
 	// Draw background
 	V_DrawPromptBack(boxh, textprompts[cutnum]->page[scenenum].backcolor);
 
@@ -2337,7 +2368,6 @@ void F_TextPromptDrawer(void)
 	}
 
 	// Draw text
-	// \todo Char-by-char printing, see f_finale.c F_WriteText
 	V_DrawString(textx, texty, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), cutscene_disptext);
 
 	// Draw name
@@ -2346,7 +2376,7 @@ void F_TextPromptDrawer(void)
 		V_DrawString(textx, namey, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), textprompts[cutnum]->page[scenenum].name);
 
 	// Draw chevron
-	if (promptblockcontrols && !timetonext) // \todo if !CloseTimer
+	if (promptblockcontrols && !timetonext)
 		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
@@ -2430,5 +2460,33 @@ void F_TextPromptTicker(void)
 			!textprompts[cutnum]->page[scenenum].text[0] ||
 			!F_WriteText())
 			timetonext = !promptblockcontrols; // never show the chevron if we can't toggle pages
+	}
+
+	// gfx
+	if (picnum >= 0 && picnum < numpics)
+	{
+		if (animtimer <= 0)
+		{
+			boolean persistanimtimer = false;
+
+			if (picnum < numpics-1 && textprompts[cutnum]->page[scenenum].picname[picnum+1][0] != '\0')
+				picnum++;
+			else if (picmode == PROMPT_PIC_LOOP)
+				picnum = pictoloop;
+			else if (picmode == PROMPT_PIC_DESTROY)
+				picnum = -1;
+			else // if (picmode == PROMPT_PIC_PERSIST)
+				persistanimtimer = true;
+
+			if (!persistanimtimer && picnum >= 0)
+			{
+				picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
+				picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
+				pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
+				animtimer = pictime;
+			}
+		}
+		else
+			animtimer--;
 	}
 }
