@@ -2177,7 +2177,7 @@ static void F_AdvanceToNextPage(void)
 		picnum = 0;
 		numpics = textprompts[cutnum]->page[scenenum].numpics;
 		picmode = textprompts[cutnum]->page[scenenum].picmode;
-		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop - 1;
+		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;
 		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
 		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
 		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
@@ -2248,7 +2248,7 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		picnum = 0;
 		numpics = textprompts[cutnum]->page[scenenum].numpics;
 		picmode = textprompts[cutnum]->page[scenenum].picmode;
-		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop - 1;
+		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;
 		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
 		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
 		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
