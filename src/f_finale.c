@@ -90,6 +90,7 @@ static boolean promptblockcontrols;
 static char *promptpagetext = NULL;
 static INT32 callpromptnum = INT32_MAX;
 static INT32 callpagenum = INT32_MAX;
+static INT32 callplayer = INT32_MAX;
 
 //
 // CUTSCENE TEXT WRITING
@@ -2196,7 +2197,7 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 {
 	boolean promptwasactive = promptactive;
 	promptactive = false;
-	callpromptnum = callpagenum = INT32_MAX;
+	callpromptnum = callpagenum = callplayer = INT32_MAX;
 
 	if (promptwasactive)
 	{
@@ -2221,6 +2222,8 @@ void F_EndTextPrompt(boolean forceexec, boolean noexec)
 
 void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
+	INT32 i;
+
 	// if splitscreen and we already have a prompt active, ignore.
 	// \todo Proper per-player splitscreen support (individual prompts)
 	if (promptactive && splitscreen && promptnum == callpromptnum && pagenum == callpagenum)
@@ -2268,6 +2271,19 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
 				textprompts[cutnum]->page[scenenum].musswitchflags,
 				textprompts[cutnum]->page[scenenum].musicloop);
+
+		// get the calling player
+		if (promptblockcontrols && mo && mo->player)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (players[i].mo == mo)
+				{
+					callplayer = i;
+					break;
+				}
+			}
+		}
 	}
 	else
 		F_EndTextPrompt(true, false); // run the post-effects immediately
@@ -2447,13 +2463,18 @@ void F_TextPromptTicker(void)
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,
-					// But only consoleplayer can advance the prompt.
-					if (i == consoleplayer)
-						players[i].powers[pw_nocontrol] = 1;
-					else if (i == secondarydisplayplayer)
+					// But only the triggering player can advance the prompt.
+					if (i == consoleplayer || i == secondarydisplayplayer)
 					{
 						players[i].powers[pw_nocontrol] = 1;
-						continue;
+
+						if (callplayer == consoleplayer || callplayer == secondarydisplayplayer)
+						{
+							if (i != callplayer)
+								continue;
+						}
+						else if (i != consoleplayer)
+							continue;
 					}
 					else
 						continue;
