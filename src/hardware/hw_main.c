@@ -323,9 +323,6 @@ static angle_t gr_xtoviewangle[MAXVIDWIDTH+1];
 // test change fov when looking up/down but bsp projection messup :(
 //#define NOCRAPPYMLOOK
 
-/// \note crappy
-#define drawtextured true
-
 // base values set at SetViewSize
 static float gr_basecentery;
 
@@ -856,11 +853,11 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 
 	M_ClearBox(segbbox);
 	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x),
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y));
 	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x),
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y));
 
 	splat = (wallsplat_t *)gr_curline->linedef->splats;
 	for (; splat; splat = splat->next)
@@ -1367,10 +1364,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	gr_sidedef = gr_curline->sidedef;
 	gr_linedef = gr_curline->linedef;
 
-	vs.x = ((polyvertex_t *)gr_curline->v1)->x;
-	vs.y = ((polyvertex_t *)gr_curline->v1)->y;
-	ve.x = ((polyvertex_t *)gr_curline->v2)->x;
-	ve.y = ((polyvertex_t *)gr_curline->v2)->y;
+	vs.x = ((polyvertex_t *)gr_curline->pv1)->x;
+	vs.y = ((polyvertex_t *)gr_curline->pv1)->y;
+	ve.x = ((polyvertex_t *)gr_curline->pv2)->x;
+	ve.y = ((polyvertex_t *)gr_curline->pv2)->y;
 
 #ifdef ESLOPE
 	v1x = FLOAT_TO_FIXED(vs.x);
@@ -1378,44 +1375,21 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	v2x = FLOAT_TO_FIXED(ve.x);
 	v2y = FLOAT_TO_FIXED(ve.y);
 #endif
-
-	if (gr_frontsector->heightsec != -1)
-	{
 #ifdef ESLOPE
-		worldtop = worldtopslope = sectors[gr_frontsector->heightsec].ceilingheight;
-		worldbottom = worldbottomslope = sectors[gr_frontsector->heightsec].floorheight;
-#else
-		worldtop = sectors[gr_frontsector->heightsec].ceilingheight;
-		worldbottom = sectors[gr_frontsector->heightsec].floorheight;
-#endif
-	}
-	else
-	{
-#ifdef ESLOPE
-		if (gr_frontsector->c_slope)
-		{
-			worldtop      = P_GetZAt(gr_frontsector->c_slope, v1x, v1y);
-			worldtopslope = P_GetZAt(gr_frontsector->c_slope, v2x, v2y);
-		}
-		else
-		{
-			worldtop = worldtopslope = gr_frontsector->ceilingheight;
-		}
 
-		if (gr_frontsector->f_slope)
-		{
-			worldbottom      = P_GetZAt(gr_frontsector->f_slope, v1x, v1y);
-			worldbottomslope = P_GetZAt(gr_frontsector->f_slope, v2x, v2y);
-		}
-		else
-		{
-			worldbottom = worldbottomslope = gr_frontsector->floorheight;
-		}
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, v1x, v1y); \
+		end2 = P_GetZAt(slope, v2x, v2y); \
+	} else \
+		end1 = end2 = normalheight;
+
+	SLOPEPARAMS(gr_frontsector->c_slope, worldtop,    worldtopslope,    gr_frontsector->ceilingheight)
+	SLOPEPARAMS(gr_frontsector->f_slope, worldbottom, worldbottomslope, gr_frontsector->floorheight)
 #else
-		worldtop    = gr_frontsector->ceilingheight;
-		worldbottom = gr_frontsector->floorheight;
+	worldtop    = gr_frontsector->ceilingheight;
+	worldbottom = gr_frontsector->floorheight;
 #endif
-	}
 
 	// remember vertices ordering
 	//  3--2
@@ -1430,7 +1404,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	wallVerts[2].z = wallVerts[1].z = ve.y;
 	wallVerts[0].w = wallVerts[1].w = wallVerts[2].w = wallVerts[3].w = 1.0f;
 
-	if (drawtextured)
 	{
 		// x offset the texture
 		fixed_t texturehpeg = gr_sidedef->textureoffset + gr_curline->offset;
@@ -1459,43 +1432,15 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	{
 		INT32 gr_toptexture, gr_bottomtexture;
 		// two sided line
-		if (gr_backsector->heightsec != -1)
-		{
-#ifdef ESLOPE
-			worldhigh = worldhighslope = sectors[gr_backsector->heightsec].ceilingheight;
-			worldlow = worldlowslope = sectors[gr_backsector->heightsec].floorheight;
-#else
-			worldhigh = sectors[gr_backsector->heightsec].ceilingheight;
-			worldlow = sectors[gr_backsector->heightsec].floorheight;
-#endif
-		}
-		else
-		{
-#ifdef ESLOPE
-			if (gr_backsector->c_slope)
-			{
-				worldhigh      = P_GetZAt(gr_backsector->c_slope, v1x, v1y);
-				worldhighslope = P_GetZAt(gr_backsector->c_slope, v2x, v2y);
-			}
-			else
-			{
-				worldhigh = worldhighslope = gr_backsector->ceilingheight;
-			}
 
-			if (gr_backsector->f_slope)
-			{
-				worldlow      = P_GetZAt(gr_backsector->f_slope, v1x, v1y);
-				worldlowslope = P_GetZAt(gr_backsector->f_slope, v2x, v2y);
-			}
-			else
-			{
-				worldlow = worldlowslope = gr_backsector->floorheight;
-			}
+#ifdef ESLOPE
+		SLOPEPARAMS(gr_backsector->c_slope, worldhigh, worldhighslope, gr_backsector->ceilingheight)
+		SLOPEPARAMS(gr_backsector->f_slope, worldlow,  worldlowslope,  gr_backsector->floorheight)
+#undef SLOPEPARAMS
 #else
-			worldhigh = gr_backsector->ceilingheight;
-			worldlow  = gr_backsector->floorheight;
+		worldhigh = gr_backsector->ceilingheight;
+		worldlow  = gr_backsector->floorheight;
 #endif
-		}
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
@@ -1519,7 +1464,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
             worldhigh < worldtop
             ) && gr_toptexture)
 		{
-			if (drawtextured)
 			{
 				fixed_t texturevpegtop; // top
 
@@ -1600,7 +1544,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
             worldlow > worldbottom) && gr_bottomtexture) //only if VISIBLE!!!
 		{
-			if (drawtextured)
 			{
 				fixed_t texturevpegbottom = 0; // bottom
 
@@ -1792,7 +1735,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			h = min(highcut, polytop);
 			l = max(polybottom, lowcut);
 
-			if (drawtextured)
 			{
 				// PEGGING
 #ifdef ESLOPE
@@ -1848,7 +1790,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				h = min(highcut, polytop);
 				l = max(polybottom, lowcut);
 
-				if (drawtextured)
 				{
 					// PEGGING
 					if (!!(gr_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gr_linedef->flags & ML_EFFECT3))
@@ -2039,7 +1980,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
-			if (drawtextured)
 			{
 				fixed_t     texturevpeg;
 				// PEGGING
@@ -2180,7 +2120,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].s = wallVerts[3].s = 0;
 					wallVerts[2].s = wallVerts[1].s = 0;
 				}
-				else if (drawtextured)
+				else
 				{
 					fixed_t texturevpeg;
 
@@ -2316,7 +2256,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].s = wallVerts[3].s = 0;
 					wallVerts[2].s = wallVerts[1].s = 0;
 				}
-				else if (drawtextured)
+				else
 				{
 					grTex = HWR_GetTexture(texnum);
 
@@ -2456,7 +2396,7 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			highfrac = HWR_ClipViewSegment(start->first+1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			highfrac = HWR_ClipViewSegment(start->first+1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(0, highfrac);
 		}
 		// Now adjust the clip size.
@@ -2480,8 +2420,8 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
-			highfrac = HWR_ClipViewSegment((next+1)->first+1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
+			highfrac = HWR_ClipViewSegment((next+1)->first+1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, highfrac);
 		}
 		next++;
@@ -2515,7 +2455,7 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, 1);
 		}
 	}
@@ -2578,8 +2518,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		else
 		{
 			highfrac = HWR_ClipViewSegment(min(start->first + 1,
-				start->last), (polyvertex_t *)gr_curline->v1,
-				(polyvertex_t *)gr_curline->v2);
+				start->last), (polyvertex_t *)gr_curline->pv1,
+				(polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(0, highfrac);
 		}
 	}
@@ -2598,8 +2538,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(max(start->last-1,start->first), (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
-			highfrac = HWR_ClipViewSegment(min((start+1)->first+1,(start+1)->last), (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(max(start->last-1,start->first), (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
+			highfrac = HWR_ClipViewSegment(min((start+1)->first+1,(start+1)->last), (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, highfrac);
 		}
 		start++;
@@ -2629,8 +2569,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		else
 		{
 			lowfrac = HWR_ClipViewSegment(max(start->last - 1,
-				start->first), (polyvertex_t *)gr_curline->v1,
-				(polyvertex_t *)gr_curline->v2);
+				start->first), (polyvertex_t *)gr_curline->pv1,
+				(polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, 1);
 		}
 	}
@@ -2685,16 +2625,21 @@ static void HWR_AddLine(seg_t * line)
 	// SoM: Backsector needs to be run through R_FakeFlat
 	static sector_t tempsec;
 
+	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
 	gr_curline = line;
 
+	v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x);
+	v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y);
+	v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
+	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
+
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
-	angle2 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
+	angle1 = R_PointToAngle(v1x, v1y);
+	angle2 = R_PointToAngle(v2x, v2y);
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -2736,8 +2681,8 @@ static void HWR_AddLine(seg_t * line)
 		float fx1,fx2,fy1,fy2;
 		//BP: test with a better projection than viewangletox[R_PointToAngle(angle)]
 		// do not enable this at release 4 mul and 2 div
-		fx1 = ((polyvertex_t *)(line->v1))->x-gr_viewx;
-		fy1 = ((polyvertex_t *)(line->v1))->y-gr_viewy;
+		fx1 = ((polyvertex_t *)(line->pv1))->x-gr_viewx;
+		fy1 = ((polyvertex_t *)(line->pv1))->y-gr_viewy;
 		fy2 = (fx1 * gr_viewcos + fy1 * gr_viewsin);
 		if (fy2 < 0)
 			// the point is back
@@ -2745,8 +2690,8 @@ static void HWR_AddLine(seg_t * line)
 		else
 			fx1 = gr_windowcenterx + (fx1 * gr_viewsin - fy1 * gr_viewcos) * gr_centerx / fy2;
 
-		fx2 = ((polyvertex_t *)(line->v2))->x-gr_viewx;
-		fy2 = ((polyvertex_t *)(line->v2))->y-gr_viewy;
+		fx2 = ((polyvertex_t *)(line->pv2))->x-gr_viewx;
+		fy2 = ((polyvertex_t *)(line->pv2))->y-gr_viewy;
 		fy1 = (fx2 * gr_viewcos + fy2 * gr_viewsin);
 		if (fy1 < 0)
 			// the point is back
@@ -2785,14 +2730,9 @@ static void HWR_AddLine(seg_t * line)
 #ifdef ESLOPE
 	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
 	{
-		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
 		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
-		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x);
-		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y);
-		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x);
-		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y);
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
 		if (slope) { \
 			end1 = P_GetZAt(slope, v1x, v1y); \
@@ -2813,6 +2753,13 @@ static void HWR_AddLine(seg_t * line)
 			goto clipsolid;
 		}
 
+		// Check for automap fix.
+		if (backc1 <= backf1 && backc2 <= backf2
+		&& ((backc1 >= frontc1 && backc2 >= frontc2) || gr_curline->sidedef->toptexture)
+		&& ((backf1 <= frontf1 && backf2 >= frontf2) || gr_curline->sidedef->bottomtexture)
+		&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum))
+			goto clipsolid;
+
 		// Window.
 		if (backc1 != frontc1 || backc2 != frontc2
 			|| backf1 != frontf1 || backf2 != frontf2)
@@ -2826,6 +2773,13 @@ static void HWR_AddLine(seg_t * line)
 		// Closed door.
 		if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
 			gr_backsector->floorheight >= gr_frontsector->ceilingheight)
+			goto clipsolid;
+
+		// Check for automap fix.
+		if (gr_backsector->ceilingheight <= gr_backsector->floorheight
+		&& ((gr_backsector->ceilingheight >= gr_frontsector->ceilingheight) || gr_curline->sidedef->toptexture)
+		&& ((gr_backsector->floorheight <= gr_backsector->floorheight) || gr_curline->sidedef->bottomtexture)
+		&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum))
 			goto clipsolid;
 
 		// Window.
@@ -2849,8 +2803,21 @@ static void HWR_AddLine(seg_t * line)
 		&& gr_backsector->c_slope == gr_frontsector->c_slope
 #endif
 	    && gr_backsector->lightlevel == gr_frontsector->lightlevel
-		&& gr_curline->sidedef->midtexture == 0
-		&& !gr_backsector->ffloors && !gr_frontsector->ffloors)
+		&& !gr_curline->sidedef->midtexture
+		// Check offsets too!
+		&& gr_backsector->floor_xoffs == gr_frontsector->floor_xoffs
+		&& gr_backsector->floor_yoffs == gr_frontsector->floor_yoffs
+		&& gr_backsector->floorpic_angle == gr_frontsector->floorpic_angle
+		&& gr_backsector->ceiling_xoffs == gr_frontsector->ceiling_xoffs
+		&& gr_backsector->ceiling_yoffs == gr_frontsector->ceiling_yoffs
+		&& gr_backsector->ceilingpic_angle == gr_frontsector->ceilingpic_angle
+		// Consider altered lighting.
+		&& gr_backsector->floorlightsec == gr_frontsector->floorlightsec
+		&& gr_backsector->ceilinglightsec == gr_frontsector->ceilinglightsec
+		// Consider colormaps
+		&& gr_backsector->extra_colormap == gr_frontsector->extra_colormap
+		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+		|| gr_frontsector->tag == gr_backsector->tag))
 		// SoM: For 3D sides... Boris, would you like to take a
 		// crack at rendering 3D sides? You would need to add the
 		// above check and add code to HWR_StoreWallRange...
@@ -2987,8 +2954,8 @@ static inline void HWR_AddPolyObjectSegs(void)
 			pv2->x = FIXED_TO_FLOAT(gr_fakeline->v2->x);
 			pv2->y = FIXED_TO_FLOAT(gr_fakeline->v2->y);
 
-			gr_fakeline->v1 = (vertex_t *)pv1;
-			gr_fakeline->v2 = (vertex_t *)pv2;
+			gr_fakeline->pv1 = pv1;
+			gr_fakeline->pv2 = pv2;
 
 			HWR_AddLine(gr_fakeline);
 		}
