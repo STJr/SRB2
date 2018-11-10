@@ -2172,6 +2172,11 @@ static void F_AdvanceToNextPage(void)
 		// on timer mode, number of tics until page advances
 		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
+
+		if (textprompts[cutnum]->page[scenenum].musswitch[0])
+			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
+				textprompts[cutnum]->page[scenenum].musswitchflags,
+				textprompts[cutnum]->page[scenenum].musicloop);
 	}
 }
 
@@ -2228,6 +2233,11 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		// on timer mode, number of tics until page advances
 		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
+
+		if (textprompts[cutnum]->page[scenenum].musswitch[0])
+			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
+				textprompts[cutnum]->page[scenenum].musswitchflags,
+				textprompts[cutnum]->page[scenenum].musicloop);
 	}
 	else
 		F_EndTextPrompt(true, false); // run the post-effects immediately
