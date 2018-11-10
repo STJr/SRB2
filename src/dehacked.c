@@ -1701,6 +1701,14 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].textspeed = get_number(word2);
 			else if (fastcmp(word, "TEXTSFX"))
 				textprompts[num]->page[pagenum].textsfx = get_number(word2);
+			else if (fastcmp(word, "HIDEHUD"))
+			{
+				UINT8 hidehud = 0;
+				if (usi == 0 || (word2[0] == 'F' && (word2[1] == 'A' || !word2[1])) || word2[0] == 'N') hidehud = 1; // false
+				else if (usi == 1 || word2[0] == 'T' || word2[0] == 'Y') hidehud = 1; // true (hide appropriate HUD elements)
+				else if (usi == 2 || word2[0] == 'A' || (word2[0] == 'F' && word2[1] == 'O')) hidehud = 2; // force (hide all HUD elements)
+				textprompts[num]->page[pagenum].hidehud = hidehud;
+			}
 			else if (fastcmp(word, "METAPAGE"))
 			{
 				if (usi && usi <= textprompts[num]->numpages)
@@ -1716,6 +1724,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[metapagenum].verticalalign;
 					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[metapagenum].textspeed;
 					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[metapagenum].textsfx;
+					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
 				}
 			}
 			else if (fastcmp(word, "NEXTPROMPT"))
@@ -1781,6 +1790,7 @@ static void readtextprompt(MYFILE *f, INT32 num)
 				if (1 <= value && value <= MAX_PAGES)
 				{
 					textprompts[num]->page[value - 1].backcolor = 1; // default to gray
+					textprompts[num]->page[value - 1].hidehud = 1; // hide appropriate HUD elements
 					readtextpromptpage(f, num, value - 1);
 				}
 				else

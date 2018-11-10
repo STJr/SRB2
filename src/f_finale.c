@@ -33,6 +33,7 @@
 #include "m_cond.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "st_stuff.h" // hud hiding
 
 #ifdef HAVE_BLUA
 #include "lua_hud.h"
@@ -2029,6 +2030,14 @@ boolean F_CutsceneResponder(event_t *event)
 // ==================
 //  TEXT PROMPTS
 // ==================
+
+INT32 F_GetPromptHideHud()
+{
+	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages)
+		return 0;
+	else
+		return textprompts[cutnum]->page[scenenum]->hidehud;
+}
 
 static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *boxh, INT32 *texth, INT32 *texty, INT32 *namey, INT32 *chevrony, INT32 *textx, INT32 *textr)
 {

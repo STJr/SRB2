@@ -175,6 +175,7 @@ typedef struct
 	char iconname[8]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
+	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all
 	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
 	INT32 backcolor; // see CON_SetupBackColormap: 0-11, INT32_MAX for user-defined (CONS_BACKCOLOR)
 	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
