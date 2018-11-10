@@ -732,7 +732,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
-	{IT_STRING,                                 NULL, "Tutorial",      M_StartTutorial,            84},
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,            84},
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 92},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,              100},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            108},
@@ -6107,6 +6107,8 @@ static void M_CustomLevelSelect(INT32 choice)
 static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
+	SP_MainMenu[sptutorial].status =
+		tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 	SP_MainMenu[sprecordattack].status =
 		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
