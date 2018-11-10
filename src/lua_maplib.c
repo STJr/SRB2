@@ -1789,6 +1789,10 @@ static int ffloor_set(lua_State *L)
 }
 
 #ifdef ESLOPE
+//////////////
+// pslope_t //
+//////////////
+
 static int slope_get(lua_State *L)
 {
 	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
@@ -1924,6 +1928,10 @@ static int slope_set(lua_State *L)
 	}
 	return 0;
 }
+
+///////////////
+// vector*_t //
+///////////////
 
 static int vector2_get(lua_State *L)
 {
