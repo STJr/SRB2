@@ -114,10 +114,10 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
-	v[0].x = v[3].x = (x*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-gpatch->topoffset*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
+	v[0].x = v[3].x = (x*sdupx-SHORT(gpatch->leftoffset)*pdupx)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdupx+(SHORT(gpatch->width)-SHORT(gpatch->leftoffset))*pdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdupy-SHORT(gpatch->topoffset)*pdupy)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdupy+(SHORT(gpatch->height)-SHORT(gpatch->topoffset))*pdupy)/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
@@ -183,18 +183,29 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
 
-	if (option & V_OFFSET)
+	// See my comments in v_video.c's V_DrawFixedPatch
+	// -- Monster Iestyn 29/10/18
 	{
-		cx -= (float)gpatch->leftoffset * dupx * fscalew;
-		cy -= (float)gpatch->topoffset * dupy * fscaleh;
-	}
-	else
-	{
-		cy -= (float)gpatch->topoffset * fscaleh;
+		float offsetx = 0.0f, offsety = 0.0f;
+
+		// left offset
 		if (option & V_FLIP)
-			cx -= ((float)gpatch->width - (float)gpatch->leftoffset) * fscalew;
+			offsetx = (float)(SHORT(gpatch->width) - SHORT(gpatch->leftoffset)) * fscalew;
 		else
-			cx -= (float)gpatch->leftoffset * fscalew;
+			offsetx = (float)SHORT(gpatch->leftoffset) * fscalew;
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		offsety = (float)SHORT(gpatch->topoffset) * fscaleh;
+
+		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
+		{
+			offsetx *= dupx;
+			offsety *= dupy;
+		}
+
+		cx -= offsetx;
+		cy -= offsety;
 	}
 
 	if (splitscreen && (option & V_PERPLAYER))
@@ -312,13 +323,13 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	if (pscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth = (float)gpatch->width * fscalew * dupx;
-		fheight = (float)gpatch->height * fscaleh * dupy;
+		fwidth = (float)SHORT(gpatch->width) * fscalew * dupx;
+		fheight = (float)SHORT(gpatch->height) * fscalew * dupy;
 	}
 	else
 	{
-		fwidth = (float)gpatch->width * dupx;
-		fheight = (float)gpatch->height * dupy;
+		fwidth = (float)SHORT(gpatch->width) * dupx;
+		fheight = (float)SHORT(gpatch->height) * dupy;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
@@ -418,8 +429,8 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	// fuck it, no GL support for croppedpatch v_perplayer right now. it's not like it's accessible to Lua or anything, and we only use it for menus...
 
-	cy -= (float)gpatch->topoffset * fscale;
-	cx -= (float)gpatch->leftoffset * fscale;
+	cy -= (float)SHORT(gpatch->topoffset) * fscale;
+	cx -= (float)SHORT(gpatch->leftoffset) * fscale;
 
 	if (!(option & V_NOSCALESTART))
 	{
@@ -461,11 +472,11 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	fwidth = w;
 	fheight = h;
 
-	if (fwidth > gpatch->width)
-		fwidth = gpatch->width;
+	if (fwidth > SHORT(gpatch->width))
+		fwidth = SHORT(gpatch->width);
 
-	if (fheight > gpatch->height)
-		fheight = gpatch->height;
+	if (fheight > SHORT(gpatch->height))
+		fheight = SHORT(gpatch->height);
 
 	if (pscale != FRACUNIT)
 	{
@@ -495,17 +506,17 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].sow = v[3].sow     = ((sx  )/(float)gpatch->width )*gpatch->max_s;
-	if (sx + w > gpatch->width)
+	v[0].sow = v[3].sow     = ((sx  )/(float)SHORT(gpatch->width) )*gpatch->max_s;
+	if (sx + w > SHORT(gpatch->width))
 		v[2].sow = v[1].sow = gpatch->max_s;
 	else
-		v[2].sow = v[1].sow = ((sx+w)/(float)gpatch->width )*gpatch->max_s;
+		v[2].sow = v[1].sow = ((sx+w)/(float)SHORT(gpatch->width) )*gpatch->max_s;
 
-	v[0].tow = v[1].tow     = ((sy  )/(float)gpatch->height)*gpatch->max_t;
-	if (sy + h > gpatch->height)
+	v[0].tow = v[1].tow     = ((sy  )/(float)SHORT(gpatch->height))*gpatch->max_t;
+	if (sy + h > SHORT(gpatch->height))
 		v[2].tow = v[3].tow = gpatch->max_t;
 	else
-		v[2].tow = v[3].tow = ((sy+h)/(float)gpatch->height)*gpatch->max_t;
+		v[2].tow = v[3].tow = ((sy+h)/(float)SHORT(gpatch->height))*gpatch->max_t;
 
 	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
 

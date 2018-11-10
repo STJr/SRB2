@@ -59,6 +59,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"MobjMoveBlocked",
 	"MapThingSpawn",
 	"FollowMobj",
+	"PlayerQuit",
 	NULL
 };
 
@@ -1190,6 +1191,28 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 
 	lua_settop(gL, 0);
 	return hooked;
+}
+
+void LUAh_PlayerQuit(player_t *plr, int reason)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_PlayerQuit/8] & (1<<(hook_PlayerQuit%8))))
+		return;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_PlayerQuit)
+		{
+		    if (lua_gettop(gL) == 0)
+		    {
+		        LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
+		        lua_pushinteger(gL, reason); // Reason for quitting
+		    }
+			LUA_Call(gL, 2);
+		}
+
+	lua_settop(gL, 0);
 }
 
 #endif
