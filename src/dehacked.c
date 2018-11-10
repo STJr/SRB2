@@ -1773,17 +1773,17 @@ static void readtextprompt(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "NUMPAGES"))
 			{
-				textprompts[num]->numpages = value;
+				textprompts[num]->numpages = min(max(value, 0), MAX_PAGES);
 			}
 			else if (fastcmp(word, "PAGE"))
 			{
-				if (1 <= value && value <= 128)
+				if (1 <= value && value <= MAX_PAGES)
 				{
 					textprompts[num]->page[value - 1].backcolor = UINT8_MAX; // non-zero default
 					readtextpromptpage(f, num, value - 1);
 				}
 				else
-					deh_warning("Page number %d out of range (1 - 128)", value);
+					deh_warning("Page number %d out of range (1 - %d)", value, MAX_PAGES);
 
 			}
 			else

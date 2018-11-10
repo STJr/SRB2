@@ -2065,7 +2065,7 @@ static void F_PreparePageText(char *pagetext)
 
 	if (promptpagetext)
 		Z_Free(promptpagetext);
-	promptpagetext = V_WordWrap(textx, textr, 0, pagetext);
+	promptpagetext = (pagetext && pagetext[0]) ? V_WordWrap(textx, textr, 0, pagetext) : "";
 
 	F_NewCutscene(promptpagetext);
 	cutscene_textspeed = textprompts[cutnum]->page[scenenum].textspeed ? textprompts[cutnum]->page[scenenum].textspeed : TICRATE/5;
@@ -2085,7 +2085,7 @@ static void F_AdvanceToNextPage(void)
 	// determine next prompt
 	if (nextprompt)
 	{
-		if (textprompts[nextprompt-1])
+		if (nextprompt <= MAX_PROMPTS && textprompts[nextprompt-1])
 			cutnum = nextprompt-1;
 		else
 			cutnum = INT32_MAX;
@@ -2095,14 +2095,14 @@ static void F_AdvanceToNextPage(void)
 	if (nextpage)
 	{
 		scenenum = nextpage-1;
-		if (scenenum > textprompts[cutnum]->numpages-1)
+		if (scenenum >= MAX_PAGES || scenenum > textprompts[cutnum]->numpages-1)
 			scenenum = INT32_MAX;
 	}
 	else
 	{
 		if (cutnum != oldcutnum)
 			scenenum = 0;
-		else if (scenenum < textprompts[cutnum]->numpages-1)
+		else if (scenenum + 1 < MAX_PAGES && scenenum < textprompts[cutnum]->numpages-1)
 			scenenum++;
 		else
 			scenenum = INT32_MAX;
@@ -2157,8 +2157,8 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
 
 	// Initialize current prompt and scene
-	cutnum = (textprompts[promptnum]) ? promptnum : INT32_MAX;
-	scenenum = (cutnum != INT32_MAX && pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
+	cutnum = (promptnum < MAX_PROMPTS && textprompts[promptnum]) ? promptnum : INT32_MAX;
+	scenenum = (cutnum != INT32_MAX && pagenum < MAX_PAGES && pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
 	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
 
 	if (promptactive)
@@ -2320,7 +2320,10 @@ void F_TextPromptTicker(void)
 		}
 
 		// generate letter-by-letter text
-		if (!F_WriteText())
+		if (scenenum >= MAX_PAGES ||
+			!textprompts[cutnum]->page[scenenum].text ||
+			!textprompts[cutnum]->page[scenenum].text[0] ||
+			!F_WriteText())
 			timetonext = !promptblockcontrols; // never show the chevron if we can't toggle pages
 	}
 

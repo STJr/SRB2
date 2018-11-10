@@ -166,6 +166,9 @@ typedef struct
 
 extern cutscene_t *cutscenes[128];
 
+#define MAX_PROMPTS 256
+#define MAX_PAGES 128
+
 typedef struct
 {
 	char name[32]; // narrator name
@@ -186,11 +189,11 @@ typedef struct
 
 typedef struct
 {
-	textpage_t page[128]; // 128 pages per prompt.
+	textpage_t page[MAX_PAGES];
 	INT32 numpages; // Number of pages in this prompt
 } textprompt_t;
 
-extern textprompt_t *textprompts[256];
+extern textprompt_t *textprompts[MAX_PROMPTS];
 
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
