@@ -451,6 +451,7 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
+		li->pv1 = li->pv2 = NULL;
 #endif
 
 		li->angle = (SHORT(ml->angle))<<FRACBITS;
