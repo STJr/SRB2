@@ -1557,6 +1557,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 	char *word2;
 	INT32 i;
 	UINT16 usi;
+	UINT8 picid;
 
 	do
 	{
@@ -1634,8 +1635,72 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			i = atoi(word2);
 			usi = (UINT16)i;
 
+			// copypasta from readcutscenescene
+			if (fastcmp(word, "NUMBEROFPICS"))
+			{
+				textprompts[num]->page[pagenum].numpics = (UINT8)i;
+			}
+			else if (fastncmp(word, "PIC", 3))
+			{
+				picid = (UINT8)atoi(word + 3);
+				if (picid > 8 || picid == 0)
+				{
+					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
+					continue;
+				}
+				--picid;
 
-			if (fastcmp(word, "NAME"))
+				if (fastcmp(word+4, "NAME"))
+				{
+					strncpy(textprompts[num]->page[pagenum].picname[picid], word2, 8);
+				}
+				else if (fastcmp(word+4, "HIRES"))
+				{
+					textprompts[num]->page[pagenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				}
+				else if (fastcmp(word+4, "DURATION"))
+				{
+					textprompts[num]->page[pagenum].picduration[picid] = usi;
+				}
+				else if (fastcmp(word+4, "XCOORD"))
+				{
+					textprompts[num]->page[pagenum].xcoord[picid] = usi;
+				}
+				else if (fastcmp(word+4, "YCOORD"))
+				{
+					textprompts[num]->page[pagenum].ycoord[picid] = usi;
+				}
+				else
+					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
+			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				strncpy(textprompts[num]->page[pagenum].musswitch, word2, 7);
+				textprompts[num]->page[pagenum].musswitch[6] = 0;
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
+			else if (fastcmp(word, "MUSICSLOT"))
+			{
+				i = get_mus(word2, true);
+				if (i && i <= 1035)
+					snprintf(textprompts[num]->page[pagenum].musswitch, 7, "%sM", G_BuildMapName(i));
+				else if (i && i <= 1050)
+					strncpy(textprompts[num]->page[pagenum].musswitch, compat_special_music_slots[i - 1036], 7);
+				else
+					textprompts[num]->page[pagenum].musswitch[0] = 0; // becomes empty string
+				textprompts[num]->page[pagenum].musswitch[6] = 0;
+			}
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				textprompts[num]->page[pagenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
+			}
+			else if (fastcmp(word, "MUSICLOOP"))
+			{
+				textprompts[num]->page[pagenum].musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+			}
+			// end copypasta from readcutscenescene
+			else if (fastcmp(word, "NAME"))
 			{
 				INT32 i;
 
@@ -1714,6 +1779,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				if (usi && usi <= textprompts[num]->numpages)
 				{
 					UINT8 metapagenum = usi - 1;
+
 					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[metapagenum].name, 32);
 					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[metapagenum].iconname, 8);
 					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[metapagenum].rightside;
@@ -1725,6 +1791,26 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[metapagenum].textspeed;
 					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[metapagenum].textsfx;
 					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
+
+					// music: don't copy, else each page change may reset the music
+				}
+			}
+			if (fastcmp(word, "PICSMETAPAGE"))
+			{
+				if (usi && usi <= textprompts[num]->numpages)
+				{
+					UINT8 metapagenum = usi - 1;
+					UINT8 picid;
+
+					for (picid = 0; picid < 8; picid++)
+					{
+						textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
+						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
+						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
+						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];
+						textprompts[num]->page[pagenum].xcoord[picid] = textprompts[num]->page[metapagenum].xcoord[picid];
+						textprompts[num]->page[pagenum].ycoord[picid] = textprompts[num]->page[metapagenum].ycoord[picid];
+					}
 				}
 			}
 			else if (fastcmp(word, "TAG"))

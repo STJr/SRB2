@@ -178,6 +178,17 @@ extern cutscene_t *cutscenes[128];
 
 typedef struct
 {
+	UINT8 numpics;
+	char picname[8][8];
+	UINT8 pichires[8];
+	UINT16 xcoord[8]; // gfx
+	UINT16 ycoord[8]; // gfx
+	UINT16 picduration[8];
+
+	char   musswitch[7];
+	UINT16 musswitchflags;
+	UINT8 musicloop;
+
 	char tag[33]; // page tag
 	char name[34]; // narrator name, extra char for color
 	char iconname[8]; // narrator icon lump
