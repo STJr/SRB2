@@ -441,6 +441,9 @@ static CV_PossibleValue_t serversort_cons_t[] = {
 };
 consvar_t cv_serversort = {"serversort", "Ping", CV_HIDEN | CV_CALL, serversort_cons_t, M_SortServerList, 0, NULL, NULL, 0, 0, NULL};
 
+// first time memory
+consvar_t cv_postfirsttime = {"postfirsttime", "No", CV_HIDEN | CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 // autorecord demos for time attack
 static consvar_t cv_autorecord = {"autorecord", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -6141,6 +6144,8 @@ static void M_StartTutorial(INT32 choice)
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
 
+	CV_SetValue(&cv_postfirsttime, 1);
+
 	tutorialmode = true; // turn on tutorial mode
 
 	emeralds = 0;
@@ -6757,12 +6762,32 @@ static void M_HandleLoadSave(INT32 choice)
 	}
 }
 
+static void M_TutorialResponse(INT32 ch)
+{
+	CV_SetValue(&cv_postfirsttime, 1);
+	if (ch != 'y' && ch != KEY_ENTER)
+	{
+		return;
+		// copypasta from M_LoadGame
+		M_ReadSaveStrings();
+		M_SetupNextMenu(&SP_LoadDef);
+	}
+	else
+		M_StartTutorial(0);
+}
+
 //
 // Selected from SRB2 menu
 //
 static void M_LoadGame(INT32 choice)
 {
 	(void)choice;
+
+	if (tutorialmap && !cv_postfirsttime.value)
+	{
+		M_StartMessage("Do you want to play a brief Tutorial?\n(Press 'Y' to go, or 'N' to skip)", M_TutorialResponse, MM_YESNO);
+		return;
+	}
 
 	M_ReadSaveStrings();
 	M_SetupNextMenu(&SP_LoadDef);
