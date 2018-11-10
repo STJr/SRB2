@@ -40,8 +40,8 @@ void D_SRB2Main(void);
 
 // Called by IO functions when input is detected.
 void D_PostEvent(const event_t *ev);
-#ifndef DOXYGEN
-FUNCMATH void D_PostEvent_end(void);    // delimiter for locking memory
+#if defined (PC_DOS) && !defined (DOXYGEN)
+void D_PostEvent_end(void);    // delimiter for locking memory
 #endif
 
 void D_ProcessEvents(void);

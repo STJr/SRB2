@@ -1401,6 +1401,7 @@ void F_StartGameEnd(void)
 //
 void F_GameEndDrawer(void)
 {
+	// this function does nothing
 }
 
 //
