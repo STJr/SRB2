@@ -475,7 +475,8 @@ void M_FirstLoadConfig(void)
 	}
 
 	// load default control
-	G_Controldefault(CONTROL_DEFAULT_FPS, true);
+	G_DefineDefaultControls();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps]);
 
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
@@ -539,7 +540,7 @@ void M_SaveConfig(const char *filename)
 	// FIXME: save key aliases if ever implemented..
 
 	CV_SaveVariables(f);
-	if (!dedicated) G_SaveKeySetting(f);
+	if (!dedicated) G_SaveKeySetting(f, gamecontrol, gamecontrolbis);
 
 	fclose(f);
 }
