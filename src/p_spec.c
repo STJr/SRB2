@@ -3760,13 +3760,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 459: // Control Text Prompt
 			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
+			if (mo && mo->player && P_IsLocalPlayer(mo->player) && (!bot || bot != mo))
 			{
 				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
 				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
 				INT32 postexectag = abs((line->sidenum[1] != 0xFFFF) ? sides[line->sidenum[1]].textureoffset>>FRACBITS : line->tag);
 
 				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
+				//boolean allplayers = (line->flags & ML_NOCLIMB);
 				boolean runpostexec = (line->flags & ML_EFFECT1);
 				boolean blockcontrols = !(line->flags & ML_EFFECT2);
 				boolean freezerealtime = !(line->flags & ML_EFFECT3);

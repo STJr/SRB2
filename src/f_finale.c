@@ -2229,6 +2229,13 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 	if (promptactive && splitscreen && promptnum == callpromptnum && pagenum == callpagenum)
 		return;
 
+	// \todo proper netgame support
+	if (netgame)
+	{
+		F_EndTextPrompt(true, false); // run the post-effects immediately
+		return;
+	}
+
 	// We share vars, so no starting text prompts over cutscenes or title screens!
 	keypressed = false;
 	finalecount = 0;
