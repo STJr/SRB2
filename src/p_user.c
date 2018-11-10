@@ -8848,7 +8848,18 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (P_CameraThinker(player, thiscam, resetcalled))
 		return true;
 
-	if (thiscam == &camera)
+	if (tutorialmode)
+	{
+		// force defaults because we have a camera look section
+		// \todo would be nice to use cv_cam_*.defaultvalue directly, but string parsing
+		// is not separated from cv setting (see command.c Setvalue, CV_SetCVar)
+		camspeed = 0.3;
+		camstill = false;
+		camrotate = 0;
+		camdist = 160;
+		camheight = 25;
+	}
+	else if (thiscam == &camera)
 	{
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
