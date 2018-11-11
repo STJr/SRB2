@@ -1649,6 +1649,27 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			}
 			else if (fastcmp(word, "PICTOLOOP"))
 				textprompts[num]->page[pagenum].pictoloop = (UINT8)i;
+			else if (fastcmp(word, "PICSMETAPAGE"))
+			{
+				if (usi && usi <= textprompts[num]->numpages)
+				{
+					UINT8 metapagenum = usi - 1;
+					UINT8 picid;
+
+					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
+					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
+					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
+
+					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
+					{
+						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
+						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
+						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];
+						textprompts[num]->page[pagenum].xcoord[picid] = textprompts[num]->page[metapagenum].xcoord[picid];
+						textprompts[num]->page[pagenum].ycoord[picid] = textprompts[num]->page[metapagenum].ycoord[picid];
+					}
+				}
+			}
 			else if (fastncmp(word, "PIC", 3))
 			{
 				picid = (UINT8)atoi(word + 3);
@@ -1802,27 +1823,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
 
 					// music: don't copy, else each page change may reset the music
-				}
-			}
-			else if (fastcmp(word, "PICSMETAPAGE"))
-			{
-				if (usi && usi <= textprompts[num]->numpages)
-				{
-					UINT8 metapagenum = usi - 1;
-					UINT8 picid;
-
-					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
-					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
-					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
-
-					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
-					{
-						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
-						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
-						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];
-						textprompts[num]->page[pagenum].xcoord[picid] = textprompts[num]->page[metapagenum].xcoord[picid];
-						textprompts[num]->page[pagenum].ycoord[picid] = textprompts[num]->page[metapagenum].ycoord[picid];
-					}
 				}
 			}
 			else if (fastcmp(word, "TAG"))
