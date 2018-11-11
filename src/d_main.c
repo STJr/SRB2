@@ -71,6 +71,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "g_input.h" // tutorial mode control scheming
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -667,6 +668,7 @@ void D_AdvanceDemo(void)
 void D_StartTitle(void)
 {
 	INT32 i;
+	boolean tutorialpostprompt = false;
 
 	S_StopMusic();
 
@@ -712,6 +714,13 @@ void D_StartTitle(void)
 	modeattacking = ATTACKING_NONE;
 
 	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode)
+	{
+		// check if retained controls are custom
+		tutorialpostprompt = (G_GetControlScheme(gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial) == gcs_custom
+			&& G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) != gcs_custom);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
+	}
 	tutorialmode = false;
 
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
@@ -736,6 +745,10 @@ void D_StartTitle(void)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	if (tutorialpostprompt)
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.",
+			M_TutorialSaveControlResponse, MM_YESNO);
 }
 
 //

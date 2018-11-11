@@ -6137,12 +6137,45 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	M_SetupNextMenu(&SP_LevelSelectDef);
 }
 
+void M_TutorialSaveControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+		S_StartSound(NULL, sfx_itemup);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+}
+
+static void M_TutorialControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+		//S_StartSound(NULL, sfx_itemup);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+
+	if (ch != KEY_ESCAPE)
+		M_StartTutorial(INT32_MAX);
+}
+
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
 static void M_StartTutorial(INT32 choice)
 {
-	(void)choice;
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
+
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) == gcs_custom)
+	{
+		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
+		return;
+	}
+	else if (choice != INT32_MAX)
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
 
 	CV_SetValue(&cv_postfirsttime, 1);
 
@@ -6762,7 +6795,7 @@ static void M_HandleLoadSave(INT32 choice)
 	}
 }
 
-static void M_TutorialResponse(INT32 ch)
+static void M_FirstTimeResponse(INT32 ch)
 {
 	CV_SetValue(&cv_postfirsttime, 1);
 	if (ch != 'y' && ch != KEY_ENTER)
@@ -6785,7 +6818,7 @@ static void M_LoadGame(INT32 choice)
 
 	if (tutorialmap && !cv_postfirsttime.value)
 	{
-		M_StartMessage("Do you want to play a brief Tutorial?\n(Press 'Y' to go, or 'N' to skip)", M_TutorialResponse, MM_YESNO);
+		M_StartMessage("Do you want to play a brief Tutorial?\n(Press 'Y' to go, or 'N' to skip)", M_FirstTimeResponse, MM_YESNO);
 		return;
 	}
 

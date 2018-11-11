@@ -26,6 +26,7 @@
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+extern consvar_t cv_resetmusic;
 
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;
