@@ -1778,7 +1778,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			else if (fastcmp(word, "HIDEHUD"))
 			{
 				UINT8 hidehud = 0;
-				if (usi == 0 || (word2[0] == 'F' && (word2[1] == 'A' || !word2[1])) || word2[0] == 'N') hidehud = 1; // false
+				if ((word2[0] == 'F' && (word2[1] == 'A' || !word2[1])) || word2[0] == 'N') hidehud = 0; // false
 				else if (usi == 1 || word2[0] == 'T' || word2[0] == 'Y') hidehud = 1; // true (hide appropriate HUD elements)
 				else if (usi == 2 || word2[0] == 'A' || (word2[0] == 'F' && word2[1] == 'O')) hidehud = 2; // force (hide all HUD elements)
 				textprompts[num]->page[pagenum].hidehud = hidehud;
@@ -1804,7 +1804,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					// music: don't copy, else each page change may reset the music
 				}
 			}
-			if (fastcmp(word, "PICSMETAPAGE"))
+			else if (fastcmp(word, "PICSMETAPAGE"))
 			{
 				if (usi && usi <= textprompts[num]->numpages)
 				{
