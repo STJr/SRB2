@@ -47,6 +47,14 @@ INT32 gamecontrol[num_gamecontrols][2];
 INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
 INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
 
+// lists of GC codes for selective operation
+INT32 gcmovement[num_gcmovement] = {
+	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
+	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
+	gc_jump, gc_use
+	// , gc_fire, gc_firenormal
+};
+
 typedef struct
 {
 	UINT8 time;
@@ -673,25 +681,21 @@ void G_DefineDefaultControls(void)
 	}
 }
 
-INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], boolean movementonly)
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen)
 {
 	INT32 i, j, gc;
 	boolean skipscheme;
 
-	gamecontrols_e movement[] = {
-		gc_forward, gc_backward, gc_strafeleft, gc_straferight,
-		gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
-		gc_jump, gc_use
-		// , gc_fire, gc_firenormal
-	};
-
 	for (i = 1; i < num_gamecontrolschemes; i++) // skip gcs_custom (0)
 	{
 		skipscheme = false;
-		for (j = 0; j < (movementonly ? sizeof(movement) : num_gamecontrols); j++)
+		for (j = 0; j < (gclist && gclen ? gclen : num_gamecontrols); j++)
 		{
-			gc = (movementonly) ? movement[j] : j;
-			if (fromcontrols[gc][0] != gamecontroldefault[i][gc][0] && fromcontrols[gc][1] != gamecontroldefault[i][gc][1])
+			gc = (gclist && gclen) ? gclist[j] : j;
+			if (((fromcontrols[gc][0] && gamecontroldefault[i][gc][0]) ? fromcontrols[gc][0] != gamecontroldefault[i][gc][0] : true) &&
+				((fromcontrols[gc][0] && gamecontroldefault[i][gc][1]) ? fromcontrols[gc][0] != gamecontroldefault[i][gc][1] : true) &&
+				((fromcontrols[gc][1] && gamecontroldefault[i][gc][0]) ? fromcontrols[gc][1] != gamecontroldefault[i][gc][0] : true) &&
+				((fromcontrols[gc][1] && gamecontroldefault[i][gc][1]) ? fromcontrols[gc][1] != gamecontroldefault[i][gc][1] : true))
 			{
 				skipscheme = true;
 				break;
@@ -704,13 +708,15 @@ INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], boolean movementonly)
 	return gcs_custom;
 }
 
-void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2])
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen)
 {
-	INT32 i;
-	for (i = 0; i < num_gamecontrols; i++)
+	INT32 i, gc;
+
+	for (i = 0; i < (gclist && gclen ? gclen : num_gamecontrols); i++)
 	{
-		setupcontrols[i][0] = fromcontrols[i][0];
-		setupcontrols[i][1] = fromcontrols[i][1];
+		gc = (gclist && gclen) ? gclist[i] : i;
+		setupcontrols[gc][0] = fromcontrols[gc][0];
+		setupcontrols[gc][1] = fromcontrols[gc][1];
 	}
 }
 
