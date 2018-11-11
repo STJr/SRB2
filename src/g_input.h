@@ -128,13 +128,15 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
-#define num_gclist_tutorial 8 // 13
+#define num_gclist_tutorial 13
+#define num_gclist_tutorial_check 6
 #define num_gclist_movement 4
 #define num_gclist_camera 2
 #define num_gclist_jump 1
 #define num_gclist_use 1
 
 extern const INT32 gclist_tutorial[num_gclist_tutorial];
+extern const INT32 gclist_tutorial_check[num_gclist_tutorial_check];
 extern const INT32 gclist_movement[num_gclist_movement];
 extern const INT32 gclist_camera[num_gclist_camera];
 extern const INT32 gclist_jump[num_gclist_jump];
