@@ -1808,6 +1808,8 @@ static void Command_Map_f(void)
 	else
 		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
 
+	if (tutorialmode)
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcmovement, num_gcmovement); // using gcs_custom as temp storage
 	tutorialmode = false; // warping takes us out of tutorial mode
 
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);

@@ -6134,12 +6134,40 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	M_SetupNextMenu(&SP_LevelSelectDef);
 }
 
+void M_TutorialSaveControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gcmovement, num_gcmovement);
+		S_StartSound(NULL, sfx_strpst);
+	}
+	else
+		S_StartSound(NULL, sfx_wdjump);
+}
+
+static void M_TutorialControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gcmovement, num_gcmovement);
+	}
+	M_StartTutorial(INT32_MAX);
+}
+
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
 static void M_StartTutorial(INT32 choice)
 {
-	(void)choice;
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
+
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gcmovement, num_gcmovement) == gcs_custom)
+	{
+		M_StartMessage("Do you want to try the \202recommended \202controls\x80?\n\nWe will set them just for this tutorial.\n\n(Press 'Y' to confirm,\nor any key to keep \nyour current controls.)\n",M_TutorialControlResponse,MM_YESNO);
+		return;
+	}
+	else if (choice != INT32_MAX)
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
 
 	tutorialmode = true; // turn on tutorial mode
 
