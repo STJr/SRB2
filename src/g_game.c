@@ -127,6 +127,9 @@ INT16 titlemap = 0;
 boolean hidetitlepics = false;
 INT16 bootmap; //bootmap for loading a map on startup
 
+INT16 tutorialmap = 0; // map to load for tutorial
+boolean tutorialmode = false; // are we in a tutorial right now?
+
 boolean looptitle = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;

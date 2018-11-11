@@ -128,8 +128,17 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
-#define num_gcmovement 11 // 13
-extern INT32 gcmovement[num_gcmovement];
+#define num_gclist_tutorial 8 // 13
+#define num_gclist_movement 4
+#define num_gclist_camera 4
+#define num_gclist_jump 1
+#define num_gclist_use 1
+
+extern const INT32 gclist_tutorial[num_gclist_tutorial];
+extern const INT32 gclist_movement[num_gclist_movement];
+extern const INT32 gclist_camera[num_gclist_camera];
+extern const INT32 gclist_jump[num_gclist_jump];
+extern const INT32 gclist_use[num_gclist_use];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not
@@ -146,8 +155,8 @@ void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
 void G_DefineDefaultControls(void);
-INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen);
-void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 void G_CheckDoubleUsage(INT32 keynum);
 
