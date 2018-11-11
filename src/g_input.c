@@ -50,7 +50,8 @@ INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // defaul
 // lists of GC codes for selective operation
 const INT32 gclist_tutorial[num_gclist_tutorial] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
-	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright//, gc_centerview,
+	gc_turnleft, gc_turnright
+	//gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
 	//gc_jump, gc_use,
 	//gc_fire, gc_firenormal
 };
@@ -60,7 +61,8 @@ const INT32 gclist_movement[num_gclist_movement] = {
 };
 
 const INT32 gclist_camera[num_gclist_camera] = {
-	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright
+	gc_turnleft, gc_turnright
+	//gc_lookup, gc_lookdown, gc_turnleft, gc_turnright
 };
 
 const INT32 gclist_jump[num_gclist_jump] = { gc_jump };
