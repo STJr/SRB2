@@ -6138,7 +6138,7 @@ void M_TutorialSaveControlResponse(INT32 ch)
 {
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gcmovement, num_gcmovement);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
 		S_StartSound(NULL, sfx_strpst);
 	}
 	else
@@ -6150,7 +6150,7 @@ static void M_TutorialControlResponse(INT32 ch)
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
 		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gcmovement, num_gcmovement);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
 	}
 	M_StartTutorial(INT32_MAX);
 }
@@ -6161,7 +6161,7 @@ static void M_StartTutorial(INT32 choice)
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
 
-	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gcmovement, num_gcmovement) == gcs_custom)
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) == gcs_custom)
 	{
 		M_StartMessage("Do you want to try the \202recommended \202controls\x80?\n\nWe will set them just for this tutorial.\n\n(Press 'Y' to confirm,\nor any key to keep \nyour current controls.)\n",M_TutorialControlResponse,MM_YESNO);
 		return;

@@ -717,9 +717,9 @@ void D_StartTitle(void)
 	if (tutorialmode)
 	{
 		// check if retained controls are custom
-		tutorialpostprompt = (G_GetControlScheme(gamecontroldefault[gcs_custom], gcmovement, num_gcmovement) == gcs_custom
-			&& G_GetControlScheme(gamecontrol, gcmovement, num_gcmovement) != gcs_custom);
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcmovement, num_gcmovement); // using gcs_custom as temp storage
+		tutorialpostprompt = (G_GetControlScheme(gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial) == gcs_custom
+			&& G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) != gcs_custom);
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
 	}
 	tutorialmode = false;
 

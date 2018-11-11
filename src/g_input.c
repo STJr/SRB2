@@ -48,12 +48,24 @@ INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
 INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
 
 // lists of GC codes for selective operation
-INT32 gcmovement[num_gcmovement] = {
+const INT32 gclist_tutorial[num_gclist_tutorial] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
-	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
-	gc_jump, gc_use
-	// , gc_fire, gc_firenormal
+	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright//, gc_centerview,
+	//gc_jump, gc_use,
+	//gc_fire, gc_firenormal
 };
+
+const INT32 gclist_movement[num_gclist_movement] = {
+	gc_forward, gc_backward, gc_strafeleft, gc_straferight
+};
+
+const INT32 gclist_camera[num_gclist_camera] = {
+	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright
+};
+
+const INT32 gclist_jump[num_gclist_jump] = { gc_jump };
+
+const INT32 gclist_use[num_gclist_use] = { gc_use };
 
 typedef struct
 {
@@ -681,7 +693,7 @@ void G_DefineDefaultControls(void)
 	}
 }
 
-INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen)
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen)
 {
 	INT32 i, j, gc;
 	boolean skipscheme;
@@ -708,7 +720,7 @@ INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen)
 	return gcs_custom;
 }
 
-void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen)
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen)
 {
 	INT32 i, gc;
 
