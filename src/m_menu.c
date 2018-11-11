@@ -6139,10 +6139,10 @@ void M_TutorialSaveControlResponse(INT32 ch)
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
 		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
-		S_StartSound(NULL, sfx_strpst);
+		S_StartSound(NULL, sfx_itemup);
 	}
 	else
-		S_StartSound(NULL, sfx_wdjump);
+		S_StartSound(NULL, sfx_menu1);
 }
 
 static void M_TutorialControlResponse(INT32 ch)
@@ -6151,8 +6151,13 @@ static void M_TutorialControlResponse(INT32 ch)
 	{
 		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
 		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+		//S_StartSound(NULL, sfx_itemup);
 	}
-	M_StartTutorial(INT32_MAX);
+	else
+		S_StartSound(NULL, sfx_menu1);
+
+	if (ch != KEY_ESCAPE)
+		M_StartTutorial(INT32_MAX);
 }
 
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
@@ -6163,7 +6168,7 @@ static void M_StartTutorial(INT32 choice)
 
 	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) == gcs_custom)
 	{
-		M_StartMessage("Do you want to try the \202recommended \202controls\x80?\n\nWe will set them just for this tutorial.\n\n(Press 'Y' to confirm,\nor any key to keep \nyour current controls.)\n",M_TutorialControlResponse,MM_YESNO);
+		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
 		return;
 	}
 	else if (choice != INT32_MAX)

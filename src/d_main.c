@@ -747,7 +747,7 @@ void D_StartTitle(void)
 		V_SetPaletteLump("PLAYPAL");
 
 	if (tutorialpostprompt)
-		M_StartMessage("Do you want to save the recommended controls?\n\n(Press 'Y' to confirm, \nor any key to keep \nyour current controls.)",
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.",
 			M_TutorialSaveControlResponse, MM_YESNO);
 }
 
