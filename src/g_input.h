@@ -128,6 +128,9 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
+#define num_gcmovement 11 // 13
+extern INT32 gcmovement[num_gcmovement];
+
 // peace to my little coder fingers!
 // check a gamecontrol being active or not
 
@@ -143,8 +146,8 @@ void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
 void G_DefineDefaultControls(void);
-INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], boolean movementonly);
-void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2]);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], INT32 gclist[], INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 void G_CheckDoubleUsage(INT32 keynum);
 
