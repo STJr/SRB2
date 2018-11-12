@@ -103,7 +103,7 @@ typedef enum
 {
 	gcs_custom,
 	gcs_fps,
-	//gcs_platform,
+	gcs_platform,
 	num_gamecontrolschemes
 } gamecontrolschemes_e;
 
