@@ -6139,10 +6139,10 @@ void M_TutorialSaveControlResponse(INT32 ch)
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
 		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
-		CV_Set(&cv_usemouse, cv_usemouse->defaultvalue);
-		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook->defaultvalue);
-		CV_Set(&cv_mousemove, cv_mousemove->defaultvalue);
-		CV_Set(&cv_analog, cv_analog->defaultvalue);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
 		S_StartSound(NULL, sfx_itemup);
 	}
 	else
@@ -6163,10 +6163,10 @@ static void M_TutorialControlResponse(INT32 ch)
 			tutorialanalog = cv_analog.value;
 
 			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
-			CV_Set(&cv_usemouse, cv_usemouse->defaultvalue);
-			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook->defaultvalue);
-			CV_Set(&cv_mousemove, cv_mousemove->defaultvalue);
-			CV_Set(&cv_analog, cv_analog->defaultvalue);
+			CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+			CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+			CV_Set(&cv_analog, cv_analog.defaultvalue);
 
 			//S_StartSound(NULL, sfx_itemup);
 		}
