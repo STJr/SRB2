@@ -11686,130 +11686,149 @@ void P_PlayerAfterThink(player_t *player)
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
 		P_SetTarget(&player->mo->tracer, NULL);
 	else */
-	if (player->powers[pw_carry] == CR_PLAYER && player->mo->tracer)
+	if (player->mo->tracer)
 	{
-		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
-
-		if (player->mo->tracer->player && !(player->mo->tracer->player->pflags & PF_CANCARRY))
-			player->powers[pw_carry] = CR_NONE;
-
-		if (player->mo->eflags & MFE_VERTICALFLIP)
+		switch (player->powers[pw_carry])
 		{
-			if ((player->mo->tracer->z + player->mo->tracer->height + player->mo->height + FixedMul(FRACUNIT, player->mo->scale)) <= player->mo->tracer->ceilingz
-				&& (player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
-				player->mo->z = player->mo->tracer->z + player->mo->tracer->height + FixedMul(FRACUNIT, player->mo->scale);
-			else
-				player->powers[pw_carry] = CR_NONE;
-		}
-		else
-		{
-			if ((player->mo->tracer->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale)) >= player->mo->tracer->floorz
-				&& !(player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
-				player->mo->z = player->mo->tracer->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
-			else
-				player->powers[pw_carry] = CR_NONE;
-		}
-
-		if (player->mo->tracer->health <= 0)
-			player->powers[pw_carry] = CR_NONE;
-		else
-		{
-			P_TryMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, true);
-			player->mo->momx = player->mo->tracer->momx;
-			player->mo->momy = player->mo->tracer->momy;
-			player->mo->momz = player->mo->tracer->momz;
-		}
-
-		if (gametype == GT_COOP)
-		{
-			player->mo->angle = player->mo->tracer->angle;
-
-			if (!demoplayback || P_AnalogMove(player))
+			case CR_PLAYER: // being carried by a flying character (such as Tails)
 			{
-				if (player == &players[consoleplayer])
-					localangle = player->mo->angle;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
-			}
-		}
+				mobj_t *tails = player->mo->tracer;
+				player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
-		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
-			player->powers[pw_carry] = CR_NONE;
+				if (tails->player && !(tails->player->pflags & PF_CANCARRY))
+					player->powers[pw_carry] = CR_NONE;
 
-		if (player->powers[pw_carry] != CR_NONE)
-		{
-			if (player->mo->state-states != S_PLAY_RIDE)
-				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-		}
-		else
-			P_SetTarget(&player->mo->tracer, NULL);
-
-		if (player-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
-	}
-	else if (player->powers[pw_carry] == CR_GENERIC && player->mo->tracer)
-	{
-		// tracer is what you're hanging onto
-		P_UnsetThingPosition(player->mo);
-		player->mo->x = player->mo->tracer->x;
-		player->mo->y = player->mo->tracer->y;
-		if (player->mo->eflags & MFE_VERTICALFLIP)
-			player->mo->z = player->mo->tracer->z + player->mo->tracer->height - FixedDiv(player->mo->height, 3*FRACUNIT);
-		else
-			player->mo->z = player->mo->tracer->z - FixedDiv(player->mo->height, 3*FRACUNIT/2);
-		player->mo->momx = player->mo->momy = player->mo->momz = 0;
-		P_SetThingPosition(player->mo);
-		if (player->mo->state-states != S_PLAY_RIDE)
-			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-
-		// Controllable missile
-		if (player->mo->tracer->type == MT_BLACKEGGMAN_MISSILE)
-		{
-			if (cmd->forwardmove > 0)
-				player->mo->tracer->momz += FixedMul(FRACUNIT/4, player->mo->tracer->scale);
-			else if (cmd->forwardmove < 0)
-				player->mo->tracer->momz -= FixedMul(FRACUNIT/4, player->mo->tracer->scale);
-
-			player->mo->tracer->angle = player->mo->angle;
-			P_InstaThrust(player->mo->tracer, player->mo->tracer->angle, FixedMul(player->mo->tracer->info->speed, player->mo->tracer->scale));
-
-			if (player->mo->z <= player->mo->floorz
-				|| player->mo->tracer->health <= 0)
-			{
-				player->powers[pw_carry] = CR_NONE;
-				P_SetTarget(&player->mo->tracer, NULL);
-			}
-		}
-	}
-	else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer && player->mo->tracer->tracer)
-	{
-		player->mo->height = P_GetPlayerSpinHeight(player);
-		// tracer is what you're hanging onto....
-		player->mo->momx = (player->mo->tracer->x - player->mo->x)*2;
-		player->mo->momy = (player->mo->tracer->y - player->mo->y)*2;
-		player->mo->momz = (player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2) - player->mo->z)*2;
-		P_TeleportMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2));
-		if (!player->powers[pw_flashing]) // handle getting hurt
-		{
-			player->pflags |= PF_JUMPED;
-			player->pflags &= ~PF_NOJUMPDAMAGE;
-			player->secondjump = 0;
-			player->pflags &= ~PF_THOKKED;
-
-			if ((player->mo->tracer->tracer->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
-			&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
-			{
-				player->mo->tracer->tracer->angle += cmd->sidemove<<ANGLETOFINESHIFT;
-				player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
-
-				if (!demoplayback || P_AnalogMove(player))
+				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
-					if (player == &players[consoleplayer])
-						localangle = player->mo->angle; // Adjust the local control angle.
-					else if (player == &players[secondarydisplayplayer])
-						localangle2 = player->mo->angle;
+					if ((tails->z + tails->height + player->mo->height + FixedMul(FRACUNIT, player->mo->scale)) <= tails->ceilingz
+						&& (tails->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
+						player->mo->z = tails->z + tails->height + FixedMul(FRACUNIT, player->mo->scale);
+					else
+						player->powers[pw_carry] = CR_NONE;
 				}
+				else
+				{
+					if ((tails->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale)) >= tails->floorz
+						&& !(tails->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
+						player->mo->z = tails->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
+					else
+						player->powers[pw_carry] = CR_NONE;
+				}
+
+				if (tails->health <= 0)
+					player->powers[pw_carry] = CR_NONE;
+				else
+				{
+					P_TryMove(player->mo, tails->x, tails->y, true);
+					player->mo->momx = tails->momx;
+					player->mo->momy = tails->momy;
+					player->mo->momz = tails->momz;
+				}
+
+				if (gametype == GT_COOP)
+				{
+					player->mo->angle = tails->angle;
+
+					if (!demoplayback || P_AnalogMove(player))
+					{
+						if (player == &players[consoleplayer])
+							localangle = player->mo->angle;
+						else if (player == &players[secondarydisplayplayer])
+							localangle2 = player->mo->angle;
+					}
+				}
+
+				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
+					player->powers[pw_carry] = CR_NONE;
+
+				if (player->powers[pw_carry] != CR_NONE)
+				{
+					if (player->mo->state-states != S_PLAY_RIDE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+				}
+				else
+					P_SetTarget(&player->mo->tracer, NULL);
+
+				if (player-players == consoleplayer && botingame)
+					CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
+				break;
 			}
+			case CR_GENERIC: // being carried by some generic item
+			{
+				mobj_t *item = player->mo->tracer;
+				// tracer is what you're hanging onto
+				P_UnsetThingPosition(player->mo);
+				player->mo->x = item->x;
+				player->mo->y = item->y;
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+					player->mo->z = item->z + item->height - FixedDiv(player->mo->height, 3*FRACUNIT);
+				else
+					player->mo->z = item->z - FixedDiv(player->mo->height, 3*FRACUNIT/2);
+				player->mo->momx = player->mo->momy = player->mo->momz = 0;
+				P_SetThingPosition(player->mo);
+				if (player->mo->state-states != S_PLAY_RIDE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+
+				// Controllable missile
+				if (item->type == MT_BLACKEGGMAN_MISSILE)
+				{
+					if (cmd->forwardmove > 0)
+						item->momz += FixedMul(FRACUNIT/4, item->scale);
+					else if (cmd->forwardmove < 0)
+						item->momz -= FixedMul(FRACUNIT/4, item->scale);
+
+					item->angle = player->mo->angle;
+					P_InstaThrust(item, item->angle, FixedMul(item->info->speed, item->scale));
+
+					if (player->mo->z <= player->mo->floorz || item->health <= 0)
+					{
+						player->powers[pw_carry] = CR_NONE;
+						P_SetTarget(&player->mo->tracer, NULL);
+					}
+				}
+				break;
+			}
+			case CR_MACESPIN: // being carried by a spinning chain
+			{
+				mobj_t *chain;
+				mobj_t *macecenter;
+				if (!player->mo->tracer->tracer) // can't spin around a point if... there is no point in doing so
+					break;
+				chain = player->mo->tracer;
+				macecenter = player->mo->tracer->tracer;
+
+				player->mo->height = P_GetPlayerSpinHeight(player);
+				// tracer is what you're hanging onto....
+				player->mo->momx = (chain->x - player->mo->x)*2;
+				player->mo->momy = (chain->y - player->mo->y)*2;
+				player->mo->momz = (chain->z - (player->mo->height-chain->height/2) - player->mo->z)*2;
+				P_TeleportMove(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
+				if (!player->powers[pw_flashing]) // handle getting hurt
+				{
+					player->pflags |= PF_JUMPED;
+					player->pflags &= ~PF_NOJUMPDAMAGE;
+					player->secondjump = 0;
+					player->pflags &= ~PF_THOKKED;
+
+					if ((macecenter->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
+					&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
+					{
+						macecenter->angle += cmd->sidemove<<ANGLETOFINESHIFT;
+						player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
+
+						if (!demoplayback || P_AnalogMove(player))
+						{
+							if (player == &players[consoleplayer])
+								localangle = player->mo->angle; // Adjust the local control angle.
+							else if (player == &players[secondarydisplayplayer])
+								localangle2 = player->mo->angle;
+						}
+					}
+				}
+				break;
+			}
+			default:
+				break;
 		}
 	}
 
