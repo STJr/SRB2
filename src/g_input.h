@@ -99,6 +99,14 @@ typedef enum
 	num_gamecontrols
 } gamecontrols_e;
 
+typedef enum
+{
+	gcs_custom,
+	gcs_fps,
+	gcs_platform,
+	num_gamecontrolschemes
+} gamecontrolschemes_e;
+
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
@@ -116,8 +124,23 @@ extern UINT8 gamekeydown[NUMINPUTS];
 // two key codes (or virtual key) per game control
 extern INT32 gamecontrol[num_gamecontrols][2];
 extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
+
+#define num_gclist_tutorial 13
+#define num_gclist_tutorial_check 6
+#define num_gclist_movement 4
+#define num_gclist_camera 2
+#define num_gclist_jump 1
+#define num_gclist_use 1
+
+extern const INT32 gclist_tutorial[num_gclist_tutorial];
+extern const INT32 gclist_tutorial_check[num_gclist_tutorial_check];
+extern const INT32 gclist_movement[num_gclist_movement];
+extern const INT32 gclist_camera[num_gclist_camera];
+extern const INT32 gclist_jump[num_gclist_jump];
+extern const INT32 gclist_use[num_gclist_use];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not
@@ -133,8 +156,10 @@ INT32 G_KeyStringtoNum(const char *keystr);
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
-void G_Controldefault(void);
-void G_SaveKeySetting(FILE *f);
+void G_DefineDefaultControls(void);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 void G_CheckDoubleUsage(INT32 keynum);
 
 #endif

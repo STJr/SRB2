@@ -131,6 +131,11 @@ extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern INT16 tutorialmap; // map to load for tutorial
 extern boolean tutorialmode; // are we in a tutorial right now?
+extern INT32 tutorialgcs; // which control scheme is loaded?
+extern INT32 tutorialusemouse; // store cv_usemouse user value
+extern INT32 tutorialfreelook; // store cv_alwaysfreelook user value
+extern INT32 tutorialmousemove; // store cv_mousemove user value
+extern INT32 tutorialanalog; // store cv_analog user value
 
 extern boolean looptitle;
 
