@@ -1814,6 +1814,7 @@ static void Command_Map_f(void)
 		CV_SetValue(&cv_usemouse, tutorialusemouse);
 		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
 		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 

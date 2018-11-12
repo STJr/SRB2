@@ -133,6 +133,7 @@ INT32 tutorialgcs = gcs_custom; // which control scheme is loaded?
 INT32 tutorialusemouse = 0; // store cv_usemouse user value
 INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
 INT32 tutorialmousemove = 0; // store cv_mousemove user value
+INT32 tutorialanalog = 0; // store cv_analog user value
 
 boolean looptitle = false;
 
