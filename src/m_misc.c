@@ -542,7 +542,7 @@ void M_SaveConfig(const char *filename)
 	CV_SaveVariables(f);
 	if (!dedicated)
 	{
-		if (tutorialmode)
+		if (tutorialmode && tutorialgcs)
 			G_SaveKeySetting(f, gamecontroldefault[gcs_custom], gamecontrolbis); // using gcs_custom as temp storage
 		else
 			G_SaveKeySetting(f, gamecontrol, gamecontrolbis);

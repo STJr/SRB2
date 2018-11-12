@@ -129,6 +129,7 @@ INT16 bootmap; //bootmap for loading a map on startup
 
 INT16 tutorialmap = 0; // map to load for tutorial
 boolean tutorialmode = false; // are we in a tutorial right now?
+boolean tutorialgcs = gcs_custom; // which control scheme is loaded?
 
 boolean looptitle = false;
 
