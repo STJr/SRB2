@@ -668,7 +668,6 @@ void D_AdvanceDemo(void)
 void D_StartTitle(void)
 {
 	INT32 i;
-	boolean tutorialpostprompt = false;
 
 	S_StopMusic();
 
@@ -713,16 +712,6 @@ void D_StartTitle(void)
 	// reset modeattacking
 	modeattacking = ATTACKING_NONE;
 
-	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
-	if (tutorialmode)
-	{
-		// check if retained controls are custom
-		tutorialpostprompt = (G_GetControlScheme(gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial) == gcs_custom
-			&& G_GetControlScheme(gamecontrol, gclist_tutorial, num_gclist_tutorial) != gcs_custom);
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
-	}
-	tutorialmode = false;
-
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
 
@@ -746,9 +735,14 @@ void D_StartTitle(void)
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
-	if (tutorialpostprompt)
-		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.",
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode && tutorialgcs)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls",
 			M_TutorialSaveControlResponse, MM_YESNO);
+	}
+	tutorialmode = false;
 }
 
 //

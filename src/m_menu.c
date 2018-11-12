@@ -6138,7 +6138,7 @@ void M_TutorialSaveControlResponse(INT32 ch)
 {
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
 		S_StartSound(NULL, sfx_itemup);
 	}
 	else
@@ -6149,14 +6149,18 @@ static void M_TutorialControlResponse(INT32 ch)
 {
 	if (ch != KEY_ESCAPE)
 	{
-		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0); // using gcs_custom as temp storage for old controls
 		if (ch == 'y' || ch == KEY_ENTER)
 		{
-			G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+			tutorialgcs = gcs_fps;
+			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
 			//S_StartSound(NULL, sfx_itemup);
 		}
 		else
+		{
+			tutorialgcs = gcs_custom;
 			S_StartSound(NULL, sfx_menu1);
+		}
 
 		M_StartTutorial(INT32_MAX);
 	}
@@ -6172,11 +6176,11 @@ static void M_StartTutorial(INT32 choice)
 
 	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gclist_tutorial_check, num_gclist_tutorial_check) == gcs_custom)
 	{
-		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm, \nor any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
+		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
 		return;
 	}
 	else if (choice != INT32_MAX)
-		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
+		tutorialgcs = gcs_custom;
 
 	tutorialmode = true; // turn on tutorial mode
 
@@ -9267,9 +9271,17 @@ static void M_DrawControl(void)
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	M_CentreText(30,
-		 (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
-		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
+	if (tutorialmode && tutorialgcs)
+	{
+		if ((gametic / TICRATE) % 2)
+			M_CentreText(30, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+		else
+			M_CentreText(30, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+	}
+	else
+		M_CentreText(30,
+		    (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
+		                                     "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
 	if (i)
 		V_DrawString(currentMenu->x - 16, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
@@ -9403,6 +9415,9 @@ static void M_ChangecontrolResponse(event_t *ev)
 static void M_ChangeControl(INT32 choice)
 {
 	static char tmp[55];
+
+	if (tutorialmode && tutorialgcs) // don't allow control changes if temp control override is active
+		return;
 
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
