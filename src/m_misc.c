@@ -539,10 +539,24 @@ void M_SaveConfig(const char *filename)
 
 	// FIXME: save key aliases if ever implemented..
 
-	CV_SaveVariables(f);
+	if (tutorialmode && tutorialgcs)
+	{
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		CV_SaveVariables(f);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
+	}
+	else
+		CV_SaveVariables(f);
+
 	if (!dedicated)
 	{
-		if (tutorialmode)
+		if (tutorialmode && tutorialgcs)
 			G_SaveKeySetting(f, gamecontroldefault[gcs_custom], gamecontrolbis); // using gcs_custom as temp storage
 		else
 			G_SaveKeySetting(f, gamecontrol, gamecontrolbis);

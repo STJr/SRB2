@@ -1809,8 +1809,14 @@ static void Command_Map_f(void)
 	else
 		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
 
-	if (tutorialmode)
+	if (tutorialmode && tutorialgcs)
+	{
 		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);

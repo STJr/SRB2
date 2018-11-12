@@ -659,20 +659,20 @@ void G_DefineDefaultControls(void)
 	gamecontroldefault[gcs_fps][gc_firenormal ][0] = 'c';
 
 	// Platform game controls (arrow keys)
-	// gamecontroldefault[gcs_platform][gc_forward    ][0] = KEY_UPARROW;
-	// gamecontroldefault[gcs_platform][gc_backward   ][0] = KEY_DOWNARROW;
-	// gamecontroldefault[gcs_platform][gc_strafeleft ][0] = 'a';
-	// gamecontroldefault[gcs_platform][gc_straferight][0] = 'd';
-	// gamecontroldefault[gcs_platform][gc_lookup     ][0] = KEY_PGUP;
-	// gamecontroldefault[gcs_platform][gc_lookdown   ][0] = KEY_PGDN;
-	// gamecontroldefault[gcs_platform][gc_turnleft   ][0] = KEY_LEFTARROW;
-	// gamecontroldefault[gcs_platform][gc_turnright  ][0] = KEY_RIGHTARROW;
-	// gamecontroldefault[gcs_platform][gc_centerview ][0] = KEY_END;
-	// gamecontroldefault[gcs_platform][gc_jump       ][0] = KEY_SPACE;
-	// gamecontroldefault[gcs_platform][gc_use        ][0] = KEY_LSHIFT;
-	// gamecontroldefault[gcs_platform][gc_fire       ][0] = 's';
-	// gamecontroldefault[gcs_platform][gc_fire       ][1] = KEY_MOUSE1+0;
-	// gamecontroldefault[gcs_platform][gc_firenormal ][0] = 'w';
+	gamecontroldefault[gcs_platform][gc_forward    ][0] = KEY_UPARROW;
+	gamecontroldefault[gcs_platform][gc_backward   ][0] = KEY_DOWNARROW;
+	gamecontroldefault[gcs_platform][gc_strafeleft ][0] = 'a';
+	gamecontroldefault[gcs_platform][gc_straferight][0] = 'd';
+	gamecontroldefault[gcs_platform][gc_lookup     ][0] = KEY_PGUP;
+	gamecontroldefault[gcs_platform][gc_lookdown   ][0] = KEY_PGDN;
+	gamecontroldefault[gcs_platform][gc_turnleft   ][0] = KEY_LEFTARROW;
+	gamecontroldefault[gcs_platform][gc_turnright  ][0] = KEY_RIGHTARROW;
+	gamecontroldefault[gcs_platform][gc_centerview ][0] = KEY_END;
+	gamecontroldefault[gcs_platform][gc_jump       ][0] = KEY_SPACE;
+	gamecontroldefault[gcs_platform][gc_use        ][0] = KEY_LSHIFT;
+	gamecontroldefault[gcs_platform][gc_fire       ][0] = 's';
+	gamecontroldefault[gcs_platform][gc_fire       ][1] = KEY_MOUSE1+0;
+	gamecontroldefault[gcs_platform][gc_firenormal ][0] = 'w';
 
 	for (i = 1; i < num_gamecontrolschemes; i++) // skip gcs_custom (0)
 	{
