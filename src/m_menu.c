@@ -6147,17 +6147,21 @@ void M_TutorialSaveControlResponse(INT32 ch)
 
 static void M_TutorialControlResponse(INT32 ch)
 {
-	if (ch == 'y' || ch == KEY_ENTER)
+	if (ch != KEY_ESCAPE)
 	{
 		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0);
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
-		//S_StartSound(NULL, sfx_itemup);
+		if (ch == 'y' || ch == KEY_ENTER)
+		{
+			G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], gclist_tutorial, num_gclist_tutorial);
+			//S_StartSound(NULL, sfx_itemup);
+		}
+		else
+			S_StartSound(NULL, sfx_menu1);
+
+		M_StartTutorial(INT32_MAX);
 	}
 	else
 		S_StartSound(NULL, sfx_menu1);
-
-	if (ch != KEY_ESCAPE)
-		M_StartTutorial(INT32_MAX);
 }
 
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
