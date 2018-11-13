@@ -2306,36 +2306,25 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 		return false;
 
 	if (!strncmp(tag, "TAM", 3)) // Movement
-		gcs = G_GetControlScheme(gamecontrol, gclist_movement, num_gclist_movement);
+		gcs = G_GetControlScheme(gamecontrol, gcl_movement, num_gcl_movement);
 	else if (!strncmp(tag, "TAC", 3)) // Camera
 	{
-		gcs = G_GetControlScheme(gamecontrol, gclist_camera, num_gclist_camera);
+		gcs = G_GetControlScheme(gamecontrol, gcl_camera, num_gcl_camera);
 		if (gcs == gcs_fps && !cv_usemouse.value)
 			gcs = gcs_platform; // Platform (arrow) scheme is stand-in for no mouse
 	}
 	else if (!strncmp(tag, "TAD", 3)) // Movement and Camera
-		gcs = G_GetControlScheme(gamecontrol, gclist_tutorial_check, num_gclist_tutorial_check); // mobement + camera
+		gcs = G_GetControlScheme(gamecontrol, gcl_movement_camera, num_gcl_movement_camera);
 	else if (!strncmp(tag, "TAJ", 3)) // Jump
-		gcs = G_GetControlScheme(gamecontrol, gclist_jump, num_gclist_jump);
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAS", 3)) // Spin
-		gcs = G_GetControlScheme(gamecontrol, gclist_use, num_gclist_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_use, num_gcl_use);
 	else if (!strncmp(tag, "TAA", 3)) // Char ability
-		gcs = G_GetControlScheme(gamecontrol, gclist_jump, num_gclist_jump);
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAW", 3)) // Shield ability
-	{
-		const INT32 gclist[2] = {
-			gc_jump, gc_use
-		};
-		gcs = G_GetControlScheme(gamecontrol, gclist, 2);
-	}
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump_use, num_gcl_jump_use);
 	else
-	{
-		const INT32 gclist[8] = {
-			gc_forward, gc_backward, gc_strafeleft, gc_straferight,
-			gc_turnleft, gc_turnright, gc_jump, gc_use
-		};
-		gcs = G_GetControlScheme(gamecontrol, gclist, 8);
-	}
+		gcs = G_GetControlScheme(gamecontrol, gcl_tutorial_used, num_gcl_tutorial_used);
 
 	switch (gcs)
 	{
