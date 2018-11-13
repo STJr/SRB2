@@ -2369,9 +2369,9 @@ void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 
 	strncpy(suffixedtag, tag, 33);
 	suffixedtag[32] = 0;
-	tutorialmode = true;
+
 	if (tutorialmode)
-		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33); tutorialmode = false;
+		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33);
 
 	for (*promptnum = 0 + tutorialpromptnum; *promptnum < MAX_PROMPTS; (*promptnum)++)
 	{
