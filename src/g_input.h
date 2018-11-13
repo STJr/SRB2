@@ -128,19 +128,25 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
-#define num_gclist_tutorial 13
-#define num_gclist_tutorial_check 6
-#define num_gclist_movement 4
-#define num_gclist_camera 2
-#define num_gclist_jump 1
-#define num_gclist_use 1
+#define num_gcl_tutorial_check 6
+#define num_gcl_tutorial_used 8
+#define num_gcl_tutorial_full 13
+#define num_gcl_movement 4
+#define num_gcl_camera 2
+#define num_gcl_movement_camera 6
+#define num_gcl_jump 1
+#define num_gcl_use 1
+#define num_gcl_jump_use 2
 
-extern const INT32 gclist_tutorial[num_gclist_tutorial];
-extern const INT32 gclist_tutorial_check[num_gclist_tutorial_check];
-extern const INT32 gclist_movement[num_gclist_movement];
-extern const INT32 gclist_camera[num_gclist_camera];
-extern const INT32 gclist_jump[num_gclist_jump];
-extern const INT32 gclist_use[num_gclist_use];
+extern const INT32 gcl_tutorial_check[num_gcl_tutorial_check];
+extern const INT32 gcl_tutorial_used[num_gcl_tutorial_used];
+extern const INT32 gcl_tutorial_full[num_gcl_tutorial_full];
+extern const INT32 gcl_movement[num_gcl_movement];
+extern const INT32 gcl_camera[num_gcl_camera];
+extern const INT32 gcl_movement_camera[num_gcl_movement_camera];
+extern const INT32 gcl_jump[num_gcl_jump];
+extern const INT32 gcl_use[num_gcl_use];
+extern const INT32 gcl_jump_use[num_gcl_jump_use];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not

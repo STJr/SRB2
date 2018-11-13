@@ -48,30 +48,44 @@ INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
 INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
 
 // lists of GC codes for selective operation
-const INT32 gclist_tutorial[num_gclist_tutorial] = {
+const INT32 gcl_tutorial_check[num_gcl_tutorial_check] = {
+	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
+	gc_turnleft, gc_turnright
+};
+
+const INT32 gcl_tutorial_used[num_gcl_tutorial_used] = {
+	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
+	gc_turnleft, gc_turnright,
+	gc_jump, gc_use
+};
+
+const INT32 gcl_tutorial_full[num_gcl_tutorial_full] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
 	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
 	gc_jump, gc_use,
 	gc_fire, gc_firenormal
 };
 
-const INT32 gclist_tutorial_check[num_gclist_tutorial_check] = {
+const INT32 gcl_movement[num_gcl_movement] = {
+	gc_forward, gc_backward, gc_strafeleft, gc_straferight
+};
+
+const INT32 gcl_camera[num_gcl_camera] = {
+	gc_turnleft, gc_turnright
+};
+
+const INT32 gcl_movement_camera[num_gcl_movement_camera] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
 	gc_turnleft, gc_turnright
 };
 
-const INT32 gclist_movement[num_gclist_movement] = {
-	gc_forward, gc_backward, gc_strafeleft, gc_straferight
+const INT32 gcl_jump[num_gcl_jump] = { gc_jump };
+
+const INT32 gcl_use[num_gcl_use] = { gc_use };
+
+const INT32 gcl_jump_use[num_gcl_jump_use] = {
+	gc_jump, gc_use
 };
-
-const INT32 gclist_camera[num_gclist_camera] = {
-	gc_turnleft, gc_turnright
-	//gc_lookup, gc_lookdown, gc_turnleft, gc_turnright
-};
-
-const INT32 gclist_jump[num_gclist_jump] = { gc_jump };
-
-const INT32 gclist_use[num_gclist_use] = { gc_use };
 
 typedef struct
 {
