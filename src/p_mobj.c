@@ -3729,14 +3729,15 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
-	else if (player->awayviewtics)
+	else if (player->awayviewtics && player->awayviewmobj != NULL)	// Camera must obviously exist
 	{
 		camera_t dummycam;
 		dummycam.subsector = player->awayviewmobj->subsector;
 		dummycam.x = player->awayviewmobj->x;
 		dummycam.y = player->awayviewmobj->y;
 		dummycam.z = player->awayviewmobj->z;
-		dummycam.height = 40*FRACUNIT; // alt view height is 20*FRACUNIT
+		//dummycam.height = 40*FRACUNIT; // alt view height is 20*FRACUNIT
+		dummycam.height = 0;			 // Why? Remote viewpoint cameras have no height.
 		// Are we in water?
 		if (P_CameraCheckWater(&dummycam))
 			postimg = postimg_water;
