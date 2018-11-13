@@ -1660,7 +1660,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				if (usi && usi <= textprompts[num]->numpages)
 				{
 					UINT8 metapagenum = usi - 1;
-					UINT8 picid;
 
 					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
 					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
@@ -1739,7 +1738,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
 			{
-				INT32 i;
+				INT32 j;
 
 				// HACK: Add yellow control char now
 				// so the drawing function doesn't call it repeatedly
@@ -1750,10 +1749,10 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				name[33] = 0;
 
 				// Replace _ with ' '
-				for (i = 0; i < 32 && name[i]; i++)
+				for (j = 0; j < 32 && name[j]; j++)
 				{
-					if (name[i] == '_')
-						name[i] = ' ';
+					if (name[j] == '_')
+						name[j] = ' ';
 				}
 
 				strncpy(textprompts[num]->page[pagenum].name, name, 32);
