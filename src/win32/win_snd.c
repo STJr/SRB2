@@ -492,15 +492,15 @@ musictype_t I_SongType(void)
 
 boolean I_SongPlaying(void)
 {
-	return (boolean)music_stream;
+	return (music_stream != NULL);
 }
 
 boolean I_SongPaused(void)
 {
-	boolean fmpaused = false;
+	FMOD_BOOL fmpaused = false;
 	if (music_stream)
 		FMOD_Channel_GetPaused(music_channel, &fmpaused);
-	return fmpaused;
+	return (boolean)fmpaused;
 }
 
 /// ------------------------
