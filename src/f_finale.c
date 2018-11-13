@@ -2315,7 +2315,10 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 		gcs = G_GetControlScheme(gamecontrol, gcl_movement, num_gcl_movement);
 	else if (!strncmp(tag, "TAC", 3)) // Camera
 	{
-		gcs = G_GetControlScheme(gamecontrol, gcl_camera, num_gcl_camera);
+		// Check for gcl_movement so we can differentiate between FPS and Platform schemes.
+		gcs = G_GetControlScheme(gamecontrol, gcl_movement, num_gcl_movement);
+		if (gcs == gcs_custom) // try again, maybe we'll get a match
+			gcs = G_GetControlScheme(gamecontrol, gcl_camera, num_gcl_camera);
 		if (gcs == gcs_fps && !cv_usemouse.value)
 			gcs = gcs_platform; // Platform (arrow) scheme is stand-in for no mouse
 	}
