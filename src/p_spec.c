@@ -3776,10 +3776,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (closetextprompt)
 					F_EndTextPrompt(false, false);
-				else if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
-					F_StartTextPromptByNamedTag(sides[line->sidenum[0]].text, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				else
+				{
+					if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
+						F_GetPromptPageByNamedTag(sides[line->sidenum[0]].text, &promptnum, &pagenum);
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
+				}
 			}
 			break;
 

@@ -211,6 +211,7 @@ typedef struct
 	sfxenum_t textsfx; // sfx_ id for printing text
 	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
 } textpage_t;

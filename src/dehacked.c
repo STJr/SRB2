@@ -1838,6 +1838,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				textprompts[num]->page[pagenum].nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))
 				textprompts[num]->page[pagenum].nextpage = usi;
+			else if (fastcmp(word, "NEXTTAG"))
+				strncpy(textprompts[num]->page[pagenum].nexttag, word2, 33);
 			else if (fastcmp(word, "TIMETONEXT"))
 				textprompts[num]->page[pagenum].timetonext = get_number(word2);
 			else

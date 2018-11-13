@@ -2137,25 +2137,31 @@ static void F_PreparePageText(char *pagetext)
 
 static void F_AdvanceToNextPage(void)
 {
-	INT32 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt,
-		nextpage = textprompts[cutnum]->page[scenenum].nextpage,
+	INT32 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt ? textprompts[cutnum]->page[scenenum].nextprompt - 1 : INT32_MAX,
+		nextpage = textprompts[cutnum]->page[scenenum].nextpage ? textprompts[cutnum]->page[scenenum].nextpage - 1 : INT32_MAX,
 		oldcutnum = cutnum;
 
+	if (textprompts[cutnum]->page[scenenum].nexttag[0])
+		F_GetPromptPageByNamedTag(textprompts[cutnum]->page[scenenum].nexttag, &nextprompt, &nextpage);
+
 	// determine next prompt
-	if (nextprompt)
+	if (nextprompt != INT32_MAX)
 	{
-		if (nextprompt <= MAX_PROMPTS && textprompts[nextprompt-1])
-			cutnum = nextprompt-1;
+		if (nextprompt <= MAX_PROMPTS && textprompts[nextprompt])
+			cutnum = nextprompt;
 		else
 			cutnum = INT32_MAX;
 	}
 
 	// determine next page
-	if (nextpage)
+	if (nextpage != INT32_MAX)
 	{
-		scenenum = nextpage-1;
-		if (scenenum >= MAX_PAGES || scenenum > textprompts[cutnum]->numpages-1)
-			scenenum = INT32_MAX;
+		if (nextprompt != INT32_MAX)
+		{
+			scenenum = nextpage;
+			if (scenenum >= MAX_PAGES || scenenum > textprompts[cutnum]->numpages-1)
+				scenenum = INT32_MAX;
+		}
 	}
 	else
 	{
@@ -2345,41 +2351,43 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 	return suffixed;
 }
 
-void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
+void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum)
 {
-	INT32 promptnum, pagenum, nosuffixpromptnum = INT32_MAX, nosuffixpagenum = INT32_MAX;
+	INT32 nosuffixpromptnum = INT32_MAX, nosuffixpagenum = INT32_MAX;
 	INT32 tutorialpromptnum = (tutorialmode) ? TUTORIAL_PROMPT-1 : 0;
 	boolean suffixed = false, found = false;
 	char suffixedtag[33];
+
+	*promptnum = *pagenum = INT32_MAX;
 
 	if (!tag || !tag[0])
 		return;
 
 	strncpy(suffixedtag, tag, 33);
 	suffixedtag[32] = 0;
-
+	tutorialmode = true;
 	if (tutorialmode)
-		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33);
+		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33); tutorialmode = false;
 
-	for (promptnum = 0 + tutorialpromptnum; promptnum < MAX_PROMPTS; promptnum++)
+	for (*promptnum = 0 + tutorialpromptnum; *promptnum < MAX_PROMPTS; (*promptnum)++)
 	{
-		if (!textprompts[promptnum])
+		if (!textprompts[*promptnum])
 			continue;
 
-		for (pagenum = 0; pagenum < textprompts[promptnum]->numpages && pagenum < MAX_PAGES; pagenum++)
+		for (*pagenum = 0; *pagenum < textprompts[*promptnum]->numpages && *pagenum < MAX_PAGES; (*pagenum)++)
 		{
-			if (suffixed && fastcmp(suffixedtag, textprompts[promptnum]->page[pagenum].tag))
+			if (suffixed && fastcmp(suffixedtag, textprompts[*promptnum]->page[*pagenum].tag))
 			{
 				// this goes first because fastcmp ends early if first string is shorter
 				found = true;
 				break;
 			}
-			else if (nosuffixpromptnum == INT32_MAX && nosuffixpagenum == INT32_MAX && fastcmp(tag, textprompts[promptnum]->page[pagenum].tag))
+			else if (nosuffixpromptnum == INT32_MAX && nosuffixpagenum == INT32_MAX && fastcmp(tag, textprompts[*promptnum]->page[*pagenum].tag))
 			{
 				if (suffixed)
 				{
-					nosuffixpromptnum = promptnum;
-					nosuffixpagenum = pagenum;
+					nosuffixpromptnum = *promptnum;
+					nosuffixpagenum = *pagenum;
 					// continue searching for the suffixed tag
 				}
 				else
@@ -2397,13 +2405,11 @@ void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, bool
 	if (suffixed && !found && nosuffixpromptnum != INT32_MAX && nosuffixpagenum != INT32_MAX)
 	{
 		found = true;
-		promptnum = nosuffixpromptnum;
-		pagenum = nosuffixpagenum;
+		*promptnum = nosuffixpromptnum;
+		*pagenum = nosuffixpagenum;
 	}
 
-	if (found)
-		F_StartTextPrompt(promptnum, pagenum, mo, postexectag, blockcontrols, freezerealtime);
-	else
+	if (!found)
 		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
 }
 
