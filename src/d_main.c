@@ -71,6 +71,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "g_input.h" // tutorial mode control scheming
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -733,6 +734,19 @@ void D_StartTitle(void)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode && tutorialgcs)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcl_tutorial_full, num_gcl_tutorial_full); // using gcs_custom as temp storage
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls",
+			M_TutorialSaveControlResponse, MM_YESNO);
+	}
+	tutorialmode = false;
 }
 
 //

@@ -273,6 +273,7 @@ menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 
 // Single Player
+static void M_StartTutorial(INT32 choice);
 static void M_LoadGame(INT32 choice);
 static void M_TimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttack(INT32 choice);
@@ -439,6 +440,9 @@ static CV_PossibleValue_t serversort_cons_t[] = {
 	{0,NULL}
 };
 consvar_t cv_serversort = {"serversort", "Ping", CV_HIDEN | CV_CALL, serversort_cons_t, M_SortServerList, 0, NULL, NULL, 0, 0, NULL};
+
+// first time memory
+consvar_t cv_tutorialprompt = {"tutorialprompt", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // autorecord demos for time attack
 static consvar_t cv_autorecord = {"autorecord", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -731,6 +735,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,            84},
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 92},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,              100},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            108},
@@ -739,6 +744,7 @@ static menuitem_t SP_MainMenu[] =
 
 enum
 {
+	sptutorial,
 	sploadgame,
 	sprecordattack,
 	spnightsmode,
@@ -1554,7 +1560,18 @@ menu_t SR_EmblemHintDef =
 };
 
 // Single Player
-menu_t SP_MainDef = CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+menu_t SP_MainDef = //CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+{
+	NULL,
+	sizeof(SP_MainMenu)/sizeof(menuitem_t),
+	&MainDef,
+	SP_MainMenu,
+	M_DrawCenteredMenu,
+	BASEVIDWIDTH/2, 72,
+	1, // start at "Start Game" on first entry
+	NULL
+};
+
 menu_t SP_LoadDef =
 {
 	"M_PICKG",
@@ -6093,6 +6110,8 @@ static void M_CustomLevelSelect(INT32 choice)
 static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
+	SP_MainMenu[sptutorial].status =
+		tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 	SP_MainMenu[sprecordattack].status =
 		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
@@ -6116,6 +6135,80 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	}
 
 	M_SetupNextMenu(&SP_LevelSelectDef);
+}
+
+void M_TutorialSaveControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
+		S_StartSound(NULL, sfx_itemup);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+}
+
+static void M_TutorialControlResponse(INT32 ch)
+{
+	if (ch != KEY_ESCAPE)
+	{
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0); // using gcs_custom as temp storage for old controls
+		if (ch == 'y' || ch == KEY_ENTER)
+		{
+			tutorialgcs = gcs_fps;
+			tutorialusemouse = cv_usemouse.value;
+			tutorialfreelook = cv_alwaysfreelook.value;
+			tutorialmousemove = cv_mousemove.value;
+			tutorialanalog = cv_analog.value;
+
+			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
+			CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+			CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+			CV_Set(&cv_analog, cv_analog.defaultvalue);
+
+			//S_StartSound(NULL, sfx_itemup);
+		}
+		else
+		{
+			tutorialgcs = gcs_custom;
+			S_StartSound(NULL, sfx_menu1);
+		}
+		M_StartTutorial(INT32_MAX);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+
+	MessageDef.prevMenu = &SP_MainDef; // if FirstPrompt -> ControlsPrompt -> ESC, we would go to the main menu unless we force this
+}
+
+// Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
+static void M_StartTutorial(INT32 choice)
+{
+	if (!tutorialmap)
+		return; // no map to go to, don't bother
+
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gcl_tutorial_check, num_gcl_tutorial_check) != gcs_fps)
+	{
+		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
+		return;
+	}
+	else if (choice != INT32_MAX)
+		tutorialgcs = gcs_custom;
+
+	CV_SetValue(&cv_tutorialprompt, 0); // first-time prompt
+
+	tutorialmode = true; // turn on tutorial mode
+
+	emeralds = 0;
+	M_ClearMenus(true);
+	gamecomplete = false;
+	cursaveslot = 0;
+	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
 // ==============
@@ -6725,12 +6818,39 @@ static void M_HandleLoadSave(INT32 choice)
 	}
 }
 
+static void M_FirstTimeResponse(INT32 ch)
+{
+	S_StartSound(NULL, sfx_menu1);
+
+	if (ch == KEY_ESCAPE)
+		return;
+
+	if (ch != 'y' && ch != KEY_ENTER)
+	{
+		CV_SetValue(&cv_tutorialprompt, 0);
+		M_ReadSaveStrings();
+		MessageDef.prevMenu = &SP_LoadDef; // calls M_SetupNextMenu
+	}
+	else
+	{
+		M_StartTutorial(0);
+		MessageDef.prevMenu = &MessageDef; // otherwise, the controls prompt won't fire
+	}
+}
+
 //
 // Selected from SRB2 menu
 //
 static void M_LoadGame(INT32 choice)
 {
 	(void)choice;
+
+	if (tutorialmap && cv_tutorialprompt.value)
+	{
+		M_StartMessage("Do you want to \x82play a brief Tutorial\x80?\n\nWe highly recommend this because \nthe controls are slightly different \nfrom other games.\n\nPress 'Y' or 'Enter' to go\nPress 'N' or any key to skip\n",
+			M_FirstTimeResponse, MM_YESNO);
+		return;
+	}
 
 	M_ReadSaveStrings();
 	M_SetupNextMenu(&SP_LoadDef);
@@ -9198,9 +9318,17 @@ static void M_DrawControl(void)
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	M_CentreText(30,
-		 (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
-		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
+	if (tutorialmode && tutorialgcs)
+	{
+		if ((gametic / TICRATE) % 2)
+			M_CentreText(30, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+		else
+			M_CentreText(30, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+	}
+	else
+		M_CentreText(30,
+		    (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
+		                                     "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
 	if (i)
 		V_DrawString(currentMenu->x - 16, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
@@ -9334,6 +9462,9 @@ static void M_ChangecontrolResponse(event_t *ev)
 static void M_ChangeControl(INT32 choice)
 {
 	static char tmp[55];
+
+	if (tutorialmode && tutorialgcs) // don't allow control changes if temp control override is active
+		return;
 
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
