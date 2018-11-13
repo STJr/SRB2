@@ -6141,7 +6141,7 @@ void M_TutorialSaveControlResponse(INT32 ch)
 {
 	if (ch == 'y' || ch == KEY_ENTER)
 	{
-		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
+		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
 		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
 		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
 		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
@@ -6165,7 +6165,7 @@ static void M_TutorialControlResponse(INT32 ch)
 			tutorialmousemove = cv_mousemove.value;
 			tutorialanalog = cv_analog.value;
 
-			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gclist_tutorial, num_gclist_tutorial);
+			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
 			CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
 			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
 			CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
@@ -6192,7 +6192,7 @@ static void M_StartTutorial(INT32 choice)
 	if (!tutorialmap)
 		return; // no map to go to, don't bother
 
-	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gclist_tutorial_check, num_gclist_tutorial_check) == gcs_custom)
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gcl_tutorial_check, num_gcl_tutorial_check) == gcs_custom)
 	{
 		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
 		return;

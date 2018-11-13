@@ -1811,7 +1811,7 @@ static void Command_Map_f(void)
 
 	if (tutorialmode && tutorialgcs)
 	{
-		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gclist_tutorial, num_gclist_tutorial); // using gcs_custom as temp storage
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcl_tutorial_full, num_gcl_tutorial_full); // using gcs_custom as temp storage
 		CV_SetValue(&cv_usemouse, tutorialusemouse);
 		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
 		CV_SetValue(&cv_mousemove, tutorialmousemove);
