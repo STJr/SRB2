@@ -425,6 +425,7 @@ static void D_Display(void)
 		if (gamestate == GS_LEVEL)
 		{
 			ST_Drawer();
+			F_TextPromptDrawer();
 			HU_Drawer();
 		}
 		else

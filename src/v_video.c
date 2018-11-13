@@ -1489,6 +1489,49 @@ void V_DrawFadeConsBack(INT32 plines)
 		*buf = consolebgmap[*buf];
 }
 
+// Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
+void V_DrawPromptBack(INT32 boxheight, INT32 color)
+{
+	UINT8 *deststop, *buf;
+
+	boxheight *= vid.dupy;
+
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor;
+		switch (color)
+		{
+			case 0:		hwcolor = 0xffffff00;	break; // White
+			case 1:		hwcolor = 0x00000000;	break; // Gray // Note this is different from V_DrawFadeConsBack
+			case 2:		hwcolor = 0x40201000;	break; // Brown
+			case 3:		hwcolor = 0xff000000;	break; // Red
+			case 4:		hwcolor = 0xff800000;	break; // Orange
+			case 5:		hwcolor = 0x80800000;	break; // Yellow
+			case 6:		hwcolor = 0x00800000;	break; // Green
+			case 7:		hwcolor = 0x0000ff00;	break; // Blue
+			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
+		}
+		HWR_DrawTutorialBack(hwcolor, boxheight);
+		return;
+	}
+#endif
+
+	CON_SetupBackColormapEx(color, true);
+
+	// heavily simplified -- we don't need to know x or y position,
+	// just the start and stop positions
+	deststop = screens[0] + vid.rowbytes * vid.height;
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	for (; buf < deststop; ++buf)
+		*buf = promptbgmap[*buf];
+}
+
 // Gets string colormap, used for 0x80 color codes
 //
 static const UINT8 *V_GetStringColormap(INT32 colorflags)

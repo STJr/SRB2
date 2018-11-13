@@ -716,6 +716,32 @@ void HWR_DrawConsoleBack(UINT32 color, INT32 height)
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
 }
 
+// Very similar to HWR_DrawConsoleBack, except we draw from the middle(-ish) of the screen to the bottom.
+void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight)
+{
+	FOutVector  v[4];
+	FSurfaceInfo Surf;
+	INT32 height = (boxheight * 4) + (boxheight/2)*5; // 4 lines of space plus gaps between and some leeway
+
+	// setup some neat-o translucency effect
+
+	v[0].x = v[3].x = -1.0f;
+	v[2].x = v[1].x =  1.0f;
+	v[0].y = v[1].y =  -1.0f;
+	v[2].y = v[3].y =  -1.0f+((height<<1)/(float)vid.height);
+	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+
+	v[0].sow = v[3].sow = 0.0f;
+	v[2].sow = v[1].sow = 1.0f;
+	v[0].tow = v[1].tow = 1.0f;
+	v[2].tow = v[3].tow = 0.0f;
+
+	Surf.FlatColor.rgba = UINT2RGBA(color);
+	Surf.FlatColor.s.alpha = (color == 0 ? 0xC0 : 0x80); // make black darker, like software
+
+	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
+}
+
 
 // ==========================================================================
 //                                                             R_DRAW.C STUFF

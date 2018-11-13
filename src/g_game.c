@@ -146,6 +146,7 @@ tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
 
 cutscene_t *cutscenes[128];
+textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 boolean skipstats;
@@ -1941,6 +1942,7 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker();
+			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 			break;
