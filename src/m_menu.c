@@ -442,7 +442,7 @@ static CV_PossibleValue_t serversort_cons_t[] = {
 consvar_t cv_serversort = {"serversort", "Ping", CV_HIDEN | CV_CALL, serversort_cons_t, M_SortServerList, 0, NULL, NULL, 0, 0, NULL};
 
 // first time memory
-consvar_t cv_postfirsttime = {"postfirsttime", "No", CV_HIDEN | CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_tutorialprompt = {"tutorialprompt", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // autorecord demos for time attack
 static consvar_t cv_autorecord = {"autorecord", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -6178,11 +6178,12 @@ static void M_TutorialControlResponse(INT32 ch)
 			tutorialgcs = gcs_custom;
 			S_StartSound(NULL, sfx_menu1);
 		}
-
 		M_StartTutorial(INT32_MAX);
 	}
 	else
 		S_StartSound(NULL, sfx_menu1);
+
+	MessageDef.prevMenu = &SP_MainDef; // if FirstPrompt -> ControlsPrompt -> ESC, we would go to the main menu unless we force this
 }
 
 // Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
@@ -6199,7 +6200,7 @@ static void M_StartTutorial(INT32 choice)
 	else if (choice != INT32_MAX)
 		tutorialgcs = gcs_custom;
 
-	CV_SetValue(&cv_postfirsttime, 1);
+	CV_SetValue(&cv_tutorialprompt, 0); // first-time prompt
 
 	tutorialmode = true; // turn on tutorial mode
 
@@ -6819,16 +6820,22 @@ static void M_HandleLoadSave(INT32 choice)
 
 static void M_FirstTimeResponse(INT32 ch)
 {
-	CV_SetValue(&cv_postfirsttime, 1);
+	S_StartSound(NULL, sfx_menu1);
+
+	if (ch == KEY_ESCAPE)
+		return;
+
 	if (ch != 'y' && ch != KEY_ENTER)
 	{
-		return;
-		// copypasta from M_LoadGame
+		CV_SetValue(&cv_tutorialprompt, 0);
 		M_ReadSaveStrings();
-		M_SetupNextMenu(&SP_LoadDef);
+		MessageDef.prevMenu = &SP_LoadDef; // calls M_SetupNextMenu
 	}
 	else
+	{
 		M_StartTutorial(0);
+		MessageDef.prevMenu = &MessageDef; // otherwise, the controls prompt won't fire
+	}
 }
 
 //
@@ -6838,9 +6845,10 @@ static void M_LoadGame(INT32 choice)
 {
 	(void)choice;
 
-	if (tutorialmap && !cv_postfirsttime.value)
+	if (tutorialmap && cv_tutorialprompt.value)
 	{
-		M_StartMessage("Do you want to play a brief Tutorial?\n(Press 'Y' to go, or 'N' to skip)", M_FirstTimeResponse, MM_YESNO);
+		M_StartMessage("Do you want to \x82play a brief Tutorial\x80?\n\nWe highly recommend this because \nthe controls are slightly different \nfrom other games.\n\nPress 'Y' or 'Enter' to go\nPress 'N' or any key to skip\n",
+			M_FirstTimeResponse, MM_YESNO);
 		return;
 	}
 

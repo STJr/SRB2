@@ -712,7 +712,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_crosshair2);
 	CV_RegisterVar(&cv_alwaysfreelook);
 	CV_RegisterVar(&cv_alwaysfreelook2);
-	CV_RegisterVar(&cv_postfirsttime);
+	CV_RegisterVar(&cv_tutorialprompt);
 
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
