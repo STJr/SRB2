@@ -3256,6 +3256,19 @@ static void readmaincfg(MYFILE *f)
 				startchar = (INT16)value;
 				char_on = -1;
 			}
+			else if (fastcmp(word, "TUTORIALMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				tutorialmap = (INT16)value;
+			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
 		}
@@ -7336,6 +7349,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PULL",
 	"MT_GHOST",
 	"MT_OVERLAY",
+	"MT_ANGLEMAN",
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
 	"MT_POLYSPAWNCRUSH",
@@ -8681,7 +8695,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void FUNCMATH DEH_Check(void)
+void DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);

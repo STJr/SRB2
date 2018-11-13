@@ -7436,6 +7436,48 @@ void P_MobjThinker(mobj_t *mobj)
 		if ((mobj->flags & MF_ENEMY) && (mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1))
 			mobj->flags2 &= ~MF2_FRET;
 
+		// Angle-to-tracer to trigger a linedef exec
+		// See Linedef Exec 457 (Track mobj angle to point)
+		if ((mobj->eflags & MFE_TRACERANGLE) && mobj->tracer && mobj->extravalue2)
+		{
+			// mobj->lastlook - Don't disable behavior after first failure
+			// mobj->extravalue1 - Angle tolerance
+			// mobj->extravalue2 - Exec tag upon failure
+			// mobj->cvval - Allowable failure delay
+			// mobj->cvmem - Failure timer
+
+			angle_t ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
+
+			// \todo account for distance between mobj and tracer
+			// Because closer mobjs can be facing beyond the angle tolerance
+			// yet tracer is still in the camera view
+
+			// failure state: mobj is not facing tracer
+			// Reasaonable defaults: ANGLE_67h, ANGLE_292h
+			if (ang >= (UINT32)mobj->extravalue1 && ang <= ANGLE_MAX - (UINT32)mobj->extravalue1)
+			{
+				if (mobj->cvmem)
+					mobj->cvmem--;
+				else
+				{
+					INT32 exectag = mobj->extravalue2; // remember this before we erase the values
+
+					if (mobj->lastlook)
+						mobj->cvmem = mobj->cusval; // reset timer for next failure
+					else
+					{
+						// disable after first failure
+						mobj->eflags &= ~MFE_TRACERANGLE;
+						mobj->lastlook = mobj->extravalue1 = mobj->extravalue2 = mobj->cvmem = mobj->cusval = 0;
+					}
+
+					P_LinedefExecute(exectag, mobj, NULL);
+				}
+			}
+			else
+				mobj->cvmem = mobj->cusval; // reset failure timer
+		}
+
 		switch (mobj->type)
 		{
 			case MT_WALLSPIKEBASE:
@@ -10893,6 +10935,16 @@ ML_EFFECT4 : Don't clip inside the ground
 	{
 		mobj->eflags |= MFE_VERTICALFLIP;
 		mobj->flags2 |= MF2_OBJECTFLIP;
+	}
+
+	// Extra functionality
+	if (mthing->options & MTF_EXTRA)
+	{
+		if (mobj->flags & MF_MONITOR && (mthing->angle & 16384))
+		{
+			// Store line exec tag to run upon popping
+			mobj->lastlook = (mthing->angle & 16383);
+		}
 	}
 
 	// Final set of not being able to draw nightsitems.

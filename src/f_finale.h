@@ -37,7 +37,7 @@ void F_TitleDemoTicker(void);
 void F_TextPromptTicker(void);
 
 // Called by main loop.
-FUNCMATH void F_GameEndDrawer(void);
+void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 

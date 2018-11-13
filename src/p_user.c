@@ -8785,7 +8785,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
-	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD))
+	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
 		if (player->spectator) // force cam off for spectators
 			return true;
@@ -8848,7 +8848,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (P_CameraThinker(player, thiscam, resetcalled))
 		return true;
 
-	if (thiscam == &camera)
+	if (tutorialmode)
+	{
+		// force defaults because we have a camera look section
+		camspeed = (INT32)(atof(cv_cam_speed.defaultvalue) * FRACUNIT);
+		camstill = (!stricmp(cv_cam_still.defaultvalue, "off")) ? false : true;
+		camrotate = atoi(cv_cam_rotate.defaultvalue);
+		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+	}
+	else if (thiscam == &camera)
 	{
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
