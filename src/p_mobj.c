@@ -7453,7 +7453,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 			// failure state: mobj is not facing tracer
 			// Reasaonable defaults: ANGLE_67h, ANGLE_292h
-			if (ang >= mobj->extravalue1 && ang <= ANGLE_MAX - mobj->extravalue1)
+			if (ang >= (UINT32)mobj->extravalue1 && ang <= ANGLE_MAX - (UINT32)mobj->extravalue1)
 			{
 				if (mobj->cvmem)
 					mobj->cvmem--;
