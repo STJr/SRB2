@@ -2156,7 +2156,7 @@ static void F_AdvanceToNextPage(void)
 	// determine next page
 	if (nextpage != INT32_MAX)
 	{
-		if (nextprompt != INT32_MAX)
+		if (cutnum != INT32_MAX)
 		{
 			scenenum = nextpage;
 			if (scenenum >= MAX_PAGES || scenenum > textprompts[cutnum]->numpages-1)
