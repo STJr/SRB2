@@ -131,6 +131,14 @@ extern INT16 titlemap;
 extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
+extern INT16 tutorialmap; // map to load for tutorial
+extern boolean tutorialmode; // are we in a tutorial right now?
+extern INT32 tutorialgcs; // which control scheme is loaded?
+extern INT32 tutorialusemouse; // store cv_usemouse user value
+extern INT32 tutorialfreelook; // store cv_alwaysfreelook user value
+extern INT32 tutorialmousemove; // store cv_mousemove user value
+extern INT32 tutorialanalog; // store cv_analog user value
+
 extern boolean looptitle;
 
 // CTF colors.
@@ -168,6 +176,60 @@ typedef struct
 } cutscene_t;
 
 extern cutscene_t *cutscenes[128];
+
+// Reserve prompt space for tutorials
+#define TUTORIAL_PROMPT 201 // one-based
+#define TUTORIAL_AREAS 6
+#define TUTORIAL_AREA_PROMPTS 5
+#define MAX_PROMPTS (TUTORIAL_PROMPT+TUTORIAL_AREAS*TUTORIAL_AREA_PROMPTS*3) // 3 control modes
+#define MAX_PAGES 128
+
+#define PROMPT_PIC_PERSIST 0
+#define PROMPT_PIC_LOOP 1
+#define PROMPT_PIC_DESTROY 2
+#define MAX_PROMPT_PICS 8
+typedef struct
+{
+	UINT8 numpics;
+	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
+	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
+	UINT8 pictostart; // initial pic number to show
+	char picname[MAX_PROMPT_PICS][8];
+	UINT8 pichires[MAX_PROMPT_PICS];
+	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
+	UINT16 picduration[MAX_PROMPT_PICS];
+
+	char   musswitch[7];
+	UINT16 musswitchflags;
+	UINT8 musicloop;
+
+	char tag[33]; // page tag
+	char name[34]; // narrator name, extra char for color
+	char iconname[8]; // narrator icon lump
+	boolean rightside; // narrator side, false = left, true = right
+	boolean iconflip; // narrator flip icon horizontally
+	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all
+	UINT8 lines; // # of lines to show. If name is specified, name takes one of the lines. If 0, defaults to 4.
+	INT32 backcolor; // see CON_SetupBackColormap: 0-11, INT32_MAX for user-defined (CONS_BACKCOLOR)
+	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
+	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
+	UINT8 textspeed; // text speed, delay in tics between characters.
+	sfxenum_t textsfx; // sfx_ id for printing text
+	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
+	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
+	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
+	char *text;
+} textpage_t;
+
+typedef struct
+{
+	textpage_t page[MAX_PAGES];
+	INT32 numpages; // Number of pages in this prompt
+} textprompt_t;
+
+extern textprompt_t *textprompts[MAX_PROMPTS];
 
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;

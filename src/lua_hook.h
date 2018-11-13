@@ -48,6 +48,7 @@ enum hook {
 	hook_MobjMoveBlocked,
 	hook_MapThingSpawn,
 	hook_FollowMobj,
+	hook_PlayerQuit,
 
 	hook_MAX // last hook
 };
@@ -87,5 +88,6 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 #define LUAh_MobjMoveBlocked(mo) LUAh_MobjHook(mo, hook_MobjMoveBlocked) // Hook for P_XYMovement (when movement is blocked)
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mo); // Hook for P_PlayerAfterThink Smiles mobj-following
+void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 
 #endif

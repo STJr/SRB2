@@ -35,6 +35,7 @@
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
+#include "f_finale.h" // control text prompt
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -2226,8 +2227,7 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
-			if ((think->function.acp1 != (actionf_p1)P_SnowThinker)
-				&& (think->function.acp1 != (actionf_p1)P_RainThinker))
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
 
 			precipmobj = (precipmobj_t *)think;
@@ -2243,14 +2243,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thinkercap.next; think != &thinkercap; think = think->next)
 		{
+			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
+				continue; // not a precipmobj thinker
+			precipmobj = (precipmobj_t *)think;
+
 			if (swap == PRECIP_RAIN) // Snow To Rain
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_SnowThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
-
 				precipmobj->flags = mobjinfo[MT_RAIN].flags;
 				st = &states[mobjinfo[MT_RAIN].spawnstate];
 				precipmobj->state = st;
@@ -2261,17 +2259,12 @@ void P_SwitchWeather(INT32 weathernum)
 
 				precipmobj->precipflags &= ~PCF_INVISIBLE;
 
-				think->function.acp1 = (actionf_p1)P_RainThinker;
+				precipmobj->precipflags |= PCF_RAIN;
+				//think->function.acp1 = (actionf_p1)P_RainThinker;
 			}
 			else if (swap == PRECIP_SNOW) // Rain To Snow
 			{
 				INT32 z;
-
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_NullPrecipThinker))
-					continue; // not a precipmobj thinker
-
-				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
 				z = M_RandomByte();
@@ -2290,19 +2283,13 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj->frame = st->frame;
 				precipmobj->momz = mobjinfo[MT_SNOWFLAKE].speed;
 
-				precipmobj->precipflags &= ~PCF_INVISIBLE;
+				precipmobj->precipflags &= ~(PCF_INVISIBLE|PCF_RAIN);
 
-				think->function.acp1 = (actionf_p1)P_SnowThinker;
+				//think->function.acp1 = (actionf_p1)P_SnowThinker;
 			}
 			else if (swap == PRECIP_BLANK || swap == PRECIP_STORM_NORAIN) // Remove precip, but keep it around for reuse.
 			{
-				if (!(think->function.acp1 == (actionf_p1)P_RainThinker
-					|| think->function.acp1 == (actionf_p1)P_SnowThinker))
-					continue;
-
-				precipmobj = (precipmobj_t *)think;
-
-				think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
+				//think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
 
 				precipmobj->precipflags |= PCF_INVISIBLE;
 			}
@@ -3093,6 +3080,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
 				ffloor_t *rover; // FOF that we are going to crumble
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3107,16 +3095,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
 						if (rover->master->frontsector->tag == foftag)
-							break;
+						{
+							foundrover = true;
+
+							EV_CrumbleChain(sec, rover);
+						}
 					}
 
-					if (!rover)
+					if (!foundrover)
 					{
 						CONS_Debug(DBG_GAMELOGIC, "Line type 436 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 						return;
 					}
-
-					EV_CrumbleChain(sec, rover);
 				}
 			}
 			break;
@@ -3277,6 +3267,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3292,26 +3283,28 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
 						if (rover->master->frontsector->tag == foftag)
-							break;
+						{
+							foundrover = true;
+
+							oldflags = rover->flags;
+
+							// Abracadabra!
+							if (line->flags & ML_NOCLIMB)
+								rover->flags |= FF_EXISTS;
+							else
+								rover->flags &= ~FF_EXISTS;
+
+							// if flags changed, reset sector's light list
+							if (rover->flags != oldflags)
+								sec->moved = true;
+						}
 					}
 
-					if (!rover)
+					if (!foundrover)
 					{
 						CONS_Debug(DBG_GAMELOGIC, "Line type 445 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 						return;
 					}
-
-					oldflags = rover->flags;
-
-					// Abracadabra!
-					if (line->flags & ML_NOCLIMB)
-						rover->flags |= FF_EXISTS;
-					else
-						rover->flags &= ~FF_EXISTS;
-
-					// if flags changed, reset sector's light list
-					if (rover->flags != oldflags)
-						sec->moved = true;
 				}
 			}
 			break;
@@ -3322,6 +3315,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible in
 				ffloor_t *rover; // FOF that we are going to make fall down
+				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				player_t *player = NULL; // player that caused FOF to fall
 				boolean respawn = true; // should the fallen FOF respawn?
 
@@ -3344,19 +3338,21 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					for (rover = sec->ffloors; rover; rover = rover->next)
 					{
 						if (rover->master->frontsector->tag == foftag)
-							break;
+						{
+							foundrover = true;
+
+							if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
+								respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
+
+							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
+						}
 					}
 
-					if (!rover)
+					if (!foundrover)
 					{
 						CONS_Debug(DBG_GAMELOGIC, "Line type 446 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 						return;
 					}
-
-					if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
-						respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
-
-					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
 				}
 			}
 			break;
@@ -3489,6 +3485,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3503,38 +3500,40 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
 					if (rover->master->frontsector->tag == foftag)
-						break;
+					{
+						foundrover = true;
+
+						// If fading an invisible FOF whose render flags we did not yet set,
+						// initialize its alpha to 1
+						// for relative alpha calc
+						if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+							(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+							!(rover->spawnflags & FF_RENDERSIDES) &&
+							!(rover->spawnflags & FF_RENDERPLANES) &&
+							!(rover->flags & FF_RENDERALL))
+							rover->alpha = 1;
+
+						P_RemoveFakeFloorFader(rover);
+						P_FadeFakeFloor(rover,
+							rover->alpha,
+							max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
+							0,                                  // set alpha immediately
+							false, NULL,                        // tic-based logic
+							false,                              // do not handle FF_EXISTS
+							!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
+							false,                              // do not handle lighting
+							false,                              // do not handle colormap
+							false,                              // do not handle collision
+							false,                              // do not do ghost fade (no collision during fade)
+							true);                               // use exact alpha values (for opengl)
+					}
 				}
 
-				if (!rover)
+				if (!foundrover)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Line type 452 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 					return;
 				}
-
-				// If fading an invisible FOF whose render flags we did not yet set,
-				// initialize its alpha to 1
-				// for relative alpha calc
-				if (!(line->flags & ML_NOCLIMB) &&      // do translucent
-					(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-					!(rover->spawnflags & FF_RENDERSIDES) &&
-					!(rover->spawnflags & FF_RENDERPLANES) &&
-					!(rover->flags & FF_RENDERALL))
-					rover->alpha = 1;
-
-				P_RemoveFakeFloorFader(rover);
-				P_FadeFakeFloor(rover,
-					rover->alpha,
-					max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
-					0,                                  // set alpha immediately
-					false, NULL,                        // tic-based logic
-					false,                              // do not handle FF_EXISTS
-					!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
-					false,                              // do not handle lighting
-					false,                              // do not handle colormap
-					false,                              // do not handle collision
-					false,                              // do not do ghost fade (no collision during fade)
-					true);                               // use exact alpha values (for opengl)
 			}
 			break;
 		}
@@ -3549,6 +3548,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 			size_t j = 0; // sec->ffloors is saved as ffloor #0, ss->ffloors->next is #1, etc
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
@@ -3564,63 +3564,65 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
 					if (rover->master->frontsector->tag == foftag)
-						break;
+					{
+						foundrover = true;
+
+						// Prevent continuous execs from interfering on an existing fade
+						if (!(line->flags & ML_EFFECT5)
+							&& rover->fadingdata)
+							//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
+						{
+							CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d\n", ((fade_t*)rover->fadingdata)->timer);
+							continue;
+						}
+
+						if (speed > 0)
+							P_AddFakeFloorFader(rover, secnum, j,
+								destvalue,
+								speed,
+								(line->flags & ML_EFFECT4),         // tic-based logic
+								(line->flags & ML_EFFECT3),         // Relative destvalue
+								!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
+								!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+								!(line->flags & ML_EFFECT2),        // do not handle lighting
+								!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
+								!(line->flags & ML_BOUNCY),         // do not handle collision
+								(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
+								(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+						else
+						{
+							// If fading an invisible FOF whose render flags we did not yet set,
+							// initialize its alpha to 1
+							// for relative alpha calc
+							if (!(line->flags & ML_NOCLIMB) &&      // do translucent
+								(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
+								!(rover->spawnflags & FF_RENDERSIDES) &&
+								!(rover->spawnflags & FF_RENDERPLANES) &&
+								!(rover->flags & FF_RENDERALL))
+								rover->alpha = 1;
+
+							P_RemoveFakeFloorFader(rover);
+							P_FadeFakeFloor(rover,
+								rover->alpha,
+								max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
+								0,                                  // set alpha immediately
+								false, NULL,                        // tic-based logic
+								!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
+								!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
+								!(line->flags & ML_EFFECT2),        // do not handle lighting
+								!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
+								!(line->flags & ML_BOUNCY),         // do not handle collision
+								(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
+								(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+						}
+					}
 					j++;
 				}
 
-				if (!rover)
+				if (!foundrover)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 					return;
-				}
-
-				// Prevent continuous execs from interfering on an existing fade
-				if (!(line->flags & ML_EFFECT5)
-					&& rover->fadingdata)
-					//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 453 Executor: Fade FOF thinker already exists, timer: %d\n", ((fade_t*)rover->fadingdata)->timer);
-					continue;
-				}
-
-				if (speed > 0)
-					P_AddFakeFloorFader(rover, secnum, j,
-						destvalue,
-						speed,
-						(line->flags & ML_EFFECT4),         // tic-based logic
-						(line->flags & ML_EFFECT3),         // Relative destvalue
-						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
-						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						!(line->flags & ML_EFFECT2),        // do not handle lighting
-						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
-						!(line->flags & ML_BOUNCY),         // do not handle collision
-						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
-						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
-				else
-				{
-					// If fading an invisible FOF whose render flags we did not yet set,
-					// initialize its alpha to 1
-					// for relative alpha calc
-					if (!(line->flags & ML_NOCLIMB) &&      // do translucent
-						(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-						!(rover->spawnflags & FF_RENDERSIDES) &&
-						!(rover->spawnflags & FF_RENDERPLANES) &&
-						!(rover->flags & FF_RENDERALL))
-						rover->alpha = 1;
-
-					P_RemoveFakeFloorFader(rover);
-					P_FadeFakeFloor(rover,
-						rover->alpha,
-						max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
-						0,                                  // set alpha immediately
-						false, NULL,                        // tic-based logic
-						!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
-						!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-						!(line->flags & ML_EFFECT2),        // do not handle lighting
-						!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
-						!(line->flags & ML_BOUNCY),         // do not handle collision
-						(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
-						(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
 				}
 			}
 			break;
@@ -3632,6 +3634,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
+			boolean foundrover = false; // for debug, "Can't find a FOF" message
 
 			for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 			{
@@ -3646,17 +3649,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				for (rover = sec->ffloors; rover; rover = rover->next)
 				{
 					if (rover->master->frontsector->tag == foftag)
-						break;
+					{
+						foundrover = true;
+
+						P_ResetFakeFloorFader(rover, NULL,
+							!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
+					}
 				}
 
-				if (!rover)
+				if (!foundrover)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Line type 454 Executor: Can't find a FOF control sector with tag %d\n", foftag);
 					return;
 				}
-
-				P_ResetFakeFloorFader(rover, NULL,
-					!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
 			}
 			break;
 		}
@@ -3753,6 +3758,68 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 456: // Stop fade colormap
 			for (secnum = -1; (secnum = P_FindSectorFromLineTag(line, secnum)) >= 0 ;)
 				P_ResetColormapFader(&sectors[secnum]);
+			break;
+
+		case 457: // Track mobj angle to point
+			if (mo)
+			{
+				INT32 failureangle = min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360) * ANG1;
+				INT32 failuredelay = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT32 failureexectag = line->sidenum[1] != 0xffff ?
+					(INT32)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
+				boolean persist = (line->flags & ML_EFFECT2);
+				mobj_t *anchormo;
+
+				if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
+					return;
+
+				anchormo = P_GetObjectTypeInSectorNum(MT_ANGLEMAN, secnum);
+				if (!anchormo)
+					return;
+
+				mo->eflags |= MFE_TRACERANGLE;
+				P_SetTarget(&mo->tracer, anchormo);
+				mo->lastlook = persist; // don't disable behavior after first failure
+				mo->extravalue1 = failureangle; // angle to exceed for failure state
+				mo->extravalue2 = failureexectag; // exec tag for failure state (angle is not within range)
+				mo->cusval = mo->cvmem = failuredelay; // cusval = tics to allow failure before line trigger; cvmem = decrement timer
+			}
+			break;
+
+		case 458: // Stop tracking mobj angle to point
+			if (mo && (mo->eflags & MFE_TRACERANGLE))
+			{
+				mo->eflags &= ~MFE_TRACERANGLE;
+				P_SetTarget(&mo->tracer, NULL);
+				mo->lastlook = mo->cvmem = mo->cusval = mo->extravalue1 = mo->extravalue2 = 0;
+			}
+			break;
+
+		case 459: // Control Text Prompt
+			// console player only unless NOCLIMB is set
+			if (mo && mo->player && P_IsLocalPlayer(mo->player) && (!bot || bot != mo))
+			{
+				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
+				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
+				INT32 postexectag = abs((line->sidenum[1] != 0xFFFF) ? sides[line->sidenum[1]].textureoffset>>FRACBITS : line->tag);
+
+				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
+				//boolean allplayers = (line->flags & ML_NOCLIMB);
+				boolean runpostexec = (line->flags & ML_EFFECT1);
+				boolean blockcontrols = !(line->flags & ML_EFFECT2);
+				boolean freezerealtime = !(line->flags & ML_EFFECT3);
+				//boolean freezethinkers = (line->flags & ML_EFFECT4);
+				boolean callbynamedtag = (line->flags & ML_TFERLINE);
+
+				if (closetextprompt)
+					F_EndTextPrompt(false, false);
+				else
+				{
+					if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
+						F_GetPromptPageByNamedTag(sides[line->sidenum[0]].text, &promptnum, &pagenum);
+					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
+				}
+			}
 			break;
 
 #ifdef POLYOBJECTS

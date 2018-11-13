@@ -22,6 +22,9 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
+#ifdef ESLOPE
+#include "p_slopes.h" // for P_SlopeById
+#endif
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -193,25 +196,27 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
-
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
+	len = strlen(wadfiles[wad]->filename); // length of file name
+
 	if (wadfiles[wad]->type == RET_LUA)
 	{
-		name = malloc(strlen(wadfiles[wad]->filename)+1);
+		name = malloc(len+1);
 		strcpy(name, wadfiles[wad]->filename);
 	}
 	else // If it's not a .lua file, copy the lump name in too.
 	{
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
-		size_t length = strlen(wadfiles[wad]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
-		name = malloc(length + 1);
+		len += 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+		name = malloc(len+1);
 		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->name2);
-		name[length] = '\0';
+		name[len] = '\0';
 	}
 
 	LUA_LoadFile(&f, name); // actually load file!
@@ -496,6 +501,9 @@ enum
 	ARCH_NODE,
 #endif
 	ARCH_FFLOOR,
+#ifdef ESLOPE
+	ARCH_SLOPE,
+#endif
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -520,6 +528,9 @@ static const struct {
 	{META_NODE,     ARCH_NODE},
 #endif
 	{META_FFLOOR,	ARCH_FFLOOR},
+#ifdef ESLOPE
+	{META_SLOPE,    ARCH_SLOPE},
+#endif
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -774,6 +785,19 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+#ifdef ESLOPE
+		case ARCH_SLOPE:
+		{
+			pslope_t *slope = *((pslope_t **)lua_touserdata(gL, myindex));
+			if (!slope)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_SLOPE);
+				WRITEUINT16(save_p, slope->id);
+			}
+			break;
+		}
+#endif
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -995,8 +1019,13 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 			LUA_PushUserdata(gL, rover, META_FFLOOR);
 		break;
 	}
+#ifdef ESLOPE
+	case ARCH_SLOPE:
+		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
+		break;
+#endif
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;

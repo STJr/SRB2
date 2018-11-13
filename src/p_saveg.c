@@ -2121,8 +2121,7 @@ static void P_NetArchiveThinkers(void)
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (!(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed
-		 || th->function.acp1 == (actionf_p1)P_RainThinker
-		 || th->function.acp1 == (actionf_p1)P_SnowThinker))
+		 || th->function.acp1 == (actionf_p1)P_NullPrecipThinker))
 			numsaved++;
 
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
@@ -2131,8 +2130,7 @@ static void P_NetArchiveThinkers(void)
 			continue;
 		}
 #ifdef PARANOIA
-		else if (th->function.acp1 == (actionf_p1)P_RainThinker
-			|| th->function.acp1 == (actionf_p1)P_SnowThinker);
+		else if (th->function.acp1 == (actionf_p1)P_NullPrecipThinker);
 #endif
 		else if (th->function.acp1 == (actionf_p1)T_MoveCeiling)
 		{

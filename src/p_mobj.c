@@ -3729,14 +3729,15 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
-	else if (player->awayviewtics)
+	else if (player->awayviewtics && player->awayviewmobj != NULL)	// Camera must obviously exist
 	{
 		camera_t dummycam;
 		dummycam.subsector = player->awayviewmobj->subsector;
 		dummycam.x = player->awayviewmobj->x;
 		dummycam.y = player->awayviewmobj->y;
 		dummycam.z = player->awayviewmobj->z;
-		dummycam.height = 40*FRACUNIT; // alt view height is 20*FRACUNIT
+		//dummycam.height = 40*FRACUNIT; // alt view height is 20*FRACUNIT
+		dummycam.height = 0;			 // Why? Remote viewpoint cameras have no height.
 		// Are we in water?
 		if (P_CameraCheckWater(&dummycam))
 			postimg = postimg_water;
@@ -4059,7 +4060,8 @@ void P_RecalcPrecipInSector(sector_t *sector)
 //
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
-	(void)mobj;
+	//(void)mobj;
+	mobj->precipflags &= ~PCF_THUNK;
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
@@ -4079,25 +4081,26 @@ void P_RainThinker(precipmobj_t *mobj)
 	{
 		// cycle through states,
 		// calling action functions at transitions
-		if (mobj->tics > 0 && --mobj->tics == 0)
-		{
-			// you can cycle through multiple states in a tic
-			if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-		}
+		if (mobj->tics <= 0)
+			return;
 
-		if (mobj->state == &states[S_RAINRETURN])
-		{
-			mobj->z = mobj->ceilingz;
-			P_SetPrecipMobjState(mobj, S_RAIN1);
-		}
+		if (--mobj->tics)
+			return;
+
+		if (!P_SetPrecipMobjState(mobj, mobj->state->nextstate))
+			return;
+
+		if (mobj->state != &states[S_RAINRETURN])
+			return;
+
+		mobj->z = mobj->ceilingz;
+		P_SetPrecipMobjState(mobj, S_RAIN1);
+
 		return;
 	}
 
 	// adjust height
-	mobj->z += mobj->momz;
-
-	if (mobj->z <= mobj->floorz)
+	if ((mobj->z += mobj->momz) <= mobj->floorz)
 	{
 		// no splashes on sky or bottomless pits
 		if (mobj->precipflags & PCF_PIT)
@@ -7433,6 +7436,48 @@ void P_MobjThinker(mobj_t *mobj)
 		if ((mobj->flags & MF_ENEMY) && (mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1))
 			mobj->flags2 &= ~MF2_FRET;
 
+		// Angle-to-tracer to trigger a linedef exec
+		// See Linedef Exec 457 (Track mobj angle to point)
+		if ((mobj->eflags & MFE_TRACERANGLE) && mobj->tracer && mobj->extravalue2)
+		{
+			// mobj->lastlook - Don't disable behavior after first failure
+			// mobj->extravalue1 - Angle tolerance
+			// mobj->extravalue2 - Exec tag upon failure
+			// mobj->cvval - Allowable failure delay
+			// mobj->cvmem - Failure timer
+
+			angle_t ang = mobj->angle - R_PointToAngle2(mobj->x, mobj->y, mobj->tracer->x, mobj->tracer->y);
+
+			// \todo account for distance between mobj and tracer
+			// Because closer mobjs can be facing beyond the angle tolerance
+			// yet tracer is still in the camera view
+
+			// failure state: mobj is not facing tracer
+			// Reasaonable defaults: ANGLE_67h, ANGLE_292h
+			if (ang >= (UINT32)mobj->extravalue1 && ang <= ANGLE_MAX - (UINT32)mobj->extravalue1)
+			{
+				if (mobj->cvmem)
+					mobj->cvmem--;
+				else
+				{
+					INT32 exectag = mobj->extravalue2; // remember this before we erase the values
+
+					if (mobj->lastlook)
+						mobj->cvmem = mobj->cusval; // reset timer for next failure
+					else
+					{
+						// disable after first failure
+						mobj->eflags &= ~MFE_TRACERANGLE;
+						mobj->lastlook = mobj->extravalue1 = mobj->extravalue2 = mobj->cvmem = mobj->cusval = 0;
+					}
+
+					P_LinedefExecute(exectag, mobj, NULL);
+				}
+			}
+			else
+				mobj->cvmem = mobj->cusval; // reset failure timer
+		}
+
 		switch (mobj->type)
 		{
 			case MT_WALLSPIKEBASE:
@@ -8921,14 +8966,15 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	mo->precipflags |= PCF_RAIN;
+	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 
@@ -10889,6 +10935,16 @@ ML_EFFECT4 : Don't clip inside the ground
 	{
 		mobj->eflags |= MFE_VERTICALFLIP;
 		mobj->flags2 |= MF2_OBJECTFLIP;
+	}
+
+	// Extra functionality
+	if (mthing->options & MTF_EXTRA)
+	{
+		if (mobj->flags & MF_MONITOR && (mthing->angle & 16384))
+		{
+			// Store line exec tag to run upon popping
+			mobj->lastlook = (mthing->angle & 16383);
+		}
 	}
 
 	// Final set of not being able to draw nightsitems.
