@@ -34,6 +34,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "st_stuff.h" // hud hiding
+#include "fastcmp.h"
 
 #ifdef HAVE_BLUA
 #include "lua_hud.h"
@@ -2296,21 +2297,80 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		F_EndTextPrompt(true, false); // run the post-effects immediately
 }
 
+static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
+{
+	INT32 gcs = gcs_custom;
+	boolean suffixed = true;
+
+	if (!tag || !tag[0] || !tutorialmode)
+		return false;
+
+	if (!strncmp(tag, "TAM", 3)) // Movement
+		gcs = G_GetControlScheme(gamecontrol, gclist_movement, num_gclist_movement);
+	else if (!strncmp(tag, "TAC", 3)) // Camera
+	{
+		gcs = G_GetControlScheme(gamecontrol, gclist_camera, num_gclist_camera);
+		if (gcs == gcs_fps && !cv_usemouse.value)
+			gcs = gcs_platform; // Platform (arrow) scheme is stand-in for no mouse
+	}
+	else if (!strncmp(tag, "TAD", 3)) // Movement and Camera
+		gcs = G_GetControlScheme(gamecontrol, gclist_tutorial_check, num_gclist_tutorial_check); // mobement + camera
+	else if (!strncmp(tag, "TAJ", 3)) // Jump
+		gcs = G_GetControlScheme(gamecontrol, gclist_jump, num_gclist_jump);
+	else if (!strncmp(tag, "TAS", 3)) // Spin
+		gcs = G_GetControlScheme(gamecontrol, gclist_use, num_gclist_use);
+	else if (!strncmp(tag, "TAA", 3)) // Char ability
+		gcs = G_GetControlScheme(gamecontrol, gclist_jump, num_gclist_jump);
+	else if (!strncmp(tag, "TAW", 3)) // Shield ability
+	{
+		const INT32 gclist[2] = {
+			gc_jump, gc_use
+		};
+		gcs = G_GetControlScheme(gamecontrol, gclist, 2);
+	}
+	else
+	{
+		const INT32 gclist[8] = {
+			gc_forward, gc_backward, gc_strafeleft, gc_straferight,
+			gc_turnleft, gc_turnright, gc_jump, gc_use
+		};
+		gcs = G_GetControlScheme(gamecontrol, gclist, 8);
+	}
+
+	switch (gcs)
+	{
+		case gcs_fps:
+			// strncat(tag, "FPS", length);
+			suffixed = false;
+			break;
+
+		case gcs_platform:
+			strncat(tag, "PLATFORM", length);
+			break;
+
+		default:
+			strncat(tag, "CUSTOM", length);
+			break;
+	}
+
+	return suffixed;
+}
+
 void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
 {
-	INT32 promptnum, pagenum;
+	INT32 promptnum, pagenum, nosuffixpromptnum = INT32_MAX, nosuffixpagenum = INT32_MAX;
 	INT32 tutorialpromptnum = (tutorialmode) ? TUTORIAL_PROMPT-1 : 0;
-	char realtag[33];
+	boolean suffixed = false, found = false;
+	char suffixedtag[33];
 
 	if (!tag || !tag[0])
 		return;
 
-	strncpy(realtag, tag, 33);
-	realtag[32] = 0;
+	strncpy(suffixedtag, tag, 33);
+	suffixedtag[32] = 0;
 
-	// \todo hardcoded tutorial mode behavior: concat control mode (fps, platform, custom) to end of input tag
 	if (tutorialmode)
-		strncat(realtag, "FPS", 33);
+		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33);
 
 	for (promptnum = 0 + tutorialpromptnum; promptnum < MAX_PROMPTS; promptnum++)
 	{
@@ -2319,15 +2379,43 @@ void F_StartTextPromptByNamedTag(char *tag, mobj_t *mo, UINT16 postexectag, bool
 
 		for (pagenum = 0; pagenum < textprompts[promptnum]->numpages && pagenum < MAX_PAGES; pagenum++)
 		{
-			if (!strncmp(realtag, textprompts[promptnum]->page[pagenum].tag, 25))
+			if (suffixed && fastcmp(suffixedtag, textprompts[promptnum]->page[pagenum].tag))
 			{
-				F_StartTextPrompt(promptnum, pagenum, mo, postexectag, blockcontrols, freezerealtime);
-				return;
+				// this goes first because fastcmp ends early if first string is shorter
+				found = true;
+				break;
+			}
+			else if (nosuffixpromptnum == INT32_MAX && nosuffixpagenum == INT32_MAX && fastcmp(tag, textprompts[promptnum]->page[pagenum].tag))
+			{
+				if (suffixed)
+				{
+					nosuffixpromptnum = promptnum;
+					nosuffixpagenum = pagenum;
+					// continue searching for the suffixed tag
+				}
+				else
+				{
+					found = true;
+					break;
+				}
 			}
 		}
+
+		if (found)
+			break;
 	}
 
-	CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s\n", realtag);
+	if (suffixed && !found && nosuffixpromptnum != INT32_MAX && nosuffixpagenum != INT32_MAX)
+	{
+		found = true;
+		promptnum = nosuffixpromptnum;
+		pagenum = nosuffixpagenum;
+	}
+
+	if (found)
+		F_StartTextPrompt(promptnum, pagenum, mo, postexectag, blockcontrols, freezerealtime);
+	else
+		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
 }
 
 void F_TextPromptDrawer(void)
