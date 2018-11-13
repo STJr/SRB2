@@ -10895,6 +10895,16 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->flags2 |= MF2_OBJECTFLIP;
 	}
 
+	// Extra functionality
+	if (mthing->options & MTF_EXTRA)
+	{
+		if (mobj->flags & MF_MONITOR && (mthing->angle & 16384))
+		{
+			// Store line exec tag to run upon popping
+			mobj->lastlook = (mthing->angle & 16383);
+		}
+	}
+
 	// Final set of not being able to draw nightsitems.
 	if (mobj->flags & MF_NIGHTSITEM)
 		mobj->flags2 |= MF2_DONTDRAW;
