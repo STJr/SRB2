@@ -532,7 +532,6 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = 0;
-	boolean flip = false;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup;
 	INT32 dupx, dupy;
@@ -610,22 +609,32 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	colfrac = FixedDiv(FRACUNIT, fdup);
 	rowfrac = FixedDiv(FRACUNIT, fdup);
 
-	if (scrn & V_OFFSET) // Crosshair shit
+	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
+	// For now let's just at least give V_OFFSET the ability to support V_FLIP
+	// I'll probably make a better fix for 2.2 where I don't have to worry about breaking existing support for stuff
+	// -- Monster Iestyn 29/10/18
 	{
-		y -= FixedMul((SHORT(patch->topoffset)*dupy)<<FRACBITS,  pscale);
-		x -= FixedMul((SHORT(patch->leftoffset)*dupx)<<FRACBITS, pscale);
-	}
-	else
-	{
-		y -= FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+		fixed_t offsetx = 0, offsety = 0;
 
+		// left offset
 		if (scrn & V_FLIP)
-		{
-			flip = true;
-			x -= FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale) + 1;
-		}
+			offsetx = FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale) + 1;
 		else
-			x -= FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
+			offsetx = FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+
+		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
+		{
+			offsetx = FixedMul(offsetx, dupx<<FRACBITS);
+			offsety = FixedMul(offsety, dupy<<FRACBITS);
+		}
+
+		// Subtract the offsets from x/y positions
+		x -= offsetx;
+		y -= offsety;
 	}
 
 	if (splitscreen && (scrn & V_PERPLAYER))
@@ -774,7 +783,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	for (col = 0; (col>>FRACBITS) < SHORT(patch->width); col += colfrac, ++offx, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
-		if (flip) // offx is measured from right edge instead of left
+		if (scrn & V_FLIP) // offx is measured from right edge instead of left
 		{
 			if (x+pwidth-offx < 0) // don't draw off the left of the screen (WRAP PREVENTION)
 				break;
@@ -798,7 +807,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			if (flip)
+			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
 			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
 
@@ -1045,7 +1054,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skins[skinnum].flags & SF_HIRES)
+	if (skinnum < 0 || skinnum >= numskins || (skins[skinnum].flags & SF_HIRES))
 		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
 	else
 	{
@@ -1478,6 +1487,49 @@ void V_DrawFadeConsBack(INT32 plines)
 	deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
 	for (buf = screens[0]; buf < deststop; ++buf)
 		*buf = consolebgmap[*buf];
+}
+
+// Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
+void V_DrawPromptBack(INT32 boxheight, INT32 color)
+{
+	UINT8 *deststop, *buf;
+
+	boxheight *= vid.dupy;
+
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor;
+		switch (color)
+		{
+			case 0:		hwcolor = 0xffffff00;	break; // White
+			case 1:		hwcolor = 0x00000000;	break; // Gray // Note this is different from V_DrawFadeConsBack
+			case 2:		hwcolor = 0x40201000;	break; // Brown
+			case 3:		hwcolor = 0xff000000;	break; // Red
+			case 4:		hwcolor = 0xff800000;	break; // Orange
+			case 5:		hwcolor = 0x80800000;	break; // Yellow
+			case 6:		hwcolor = 0x00800000;	break; // Green
+			case 7:		hwcolor = 0x0000ff00;	break; // Blue
+			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
+		}
+		HWR_DrawTutorialBack(hwcolor, boxheight);
+		return;
+	}
+#endif
+
+	CON_SetupBackColormapEx(color, true);
+
+	// heavily simplified -- we don't need to know x or y position,
+	// just the start and stop positions
+	deststop = screens[0] + vid.rowbytes * vid.height;
+	buf = deststop - vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5); // 4 lines of space plus gaps between and some leeway
+	for (; buf < deststop; ++buf)
+		*buf = promptbgmap[*buf];
 }
 
 // Gets string colormap, used for 0x80 color codes

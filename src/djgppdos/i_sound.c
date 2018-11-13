@@ -156,9 +156,11 @@ INT32 I_StartSound ( sfxenum_t     id,
                    INT32         vol,
                    INT32         sep,
                    INT32         pitch,
-                   INT32         priority )
+                   INT32         priority,
+				   INT32         channel)
 {
 	int voice;
+	(void)channel;
 
 	if (sound_disabled)
 	return 0;
@@ -548,6 +550,7 @@ void I_ResumeSong (INT32 handle)
 	songpaused = false;
 }
 
+
 void I_SetMusicVolume(INT32 volume)
 {
 	if (midi_disabled)
@@ -562,18 +565,6 @@ boolean I_SetSongTrack(INT32 track)
 	(void)track;
 	return false;
 }
-
-// Is the song playing?
-#if 0
-int I_QrySongPlaying(int handle)
-{
-	if (midi_disabled)
-		return 0;
-
-	//return islooping || musicdies > gametic;
-	return (midi_pos==-1);
-}
-#endif
 
 /// ------------------------
 // MUSIC FADING
@@ -614,4 +605,14 @@ boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
         (void)ms;
         (void)looping;
         return false;
+// Is the song playing?
+#if 0
+int I_QrySongPlaying(int handle)
+{
+	if (midi_disabled)
+		return 0;
+
+	//return islooping || musicdies > gametic;
+	return (midi_pos==-1);
 }
+#endif

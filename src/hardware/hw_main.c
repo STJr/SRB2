@@ -2116,6 +2116,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					fixed_t texturevpeg;
+					boolean attachtobottom = false;
+#ifdef ESLOPE
+					boolean slopeskew = false; // skew FOF walls with slopes?
+#endif
 
 					// Wow, how was this missing from OpenGL for so long?
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
@@ -2123,24 +2127,50 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					if (newline)
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
-						if (newline->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
+#endif
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
-						if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(gr_linedef->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
+#endif
 					}
 
 					grTex = HWR_GetTexture(texnum);
 
 #ifdef ESLOPE
-					wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
-					wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
-					wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
-					wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					if (!slopeskew) // no skewing
+					{
+						if (attachtobottom)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					}
+					else
+					{
+						if (!attachtobottom) // skew by top
+						{
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (h - l + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (hS - lS + texturevpeg) * grTex->scaleY;
+						}
+						else // skew by bottom
+						{
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - (h - l) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - (hS - lS) * grTex->scaleY;
+						}
+					}
 #else
+					if (attachtobottom)
+						texturevpeg -= *rover->topheight - *rover->bottomheight;
 					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
 					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
 #endif
@@ -5270,8 +5300,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectSprite(thing);
 		}
 	}
 	else
@@ -5293,8 +5325,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 	else
@@ -5623,6 +5657,16 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	z2 = tr_y - x2 * rightsin;
 	x1 = tr_x + x1 * rightcos;
 	x2 = tr_x - x2 * rightcos;
+
+	// okay, we can't return now... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 
 	//
 	// store information in a vissprite

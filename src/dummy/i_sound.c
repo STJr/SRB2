@@ -23,13 +23,14 @@ void I_UpdateSound(void){};
 //  SFX I/O
 //
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	(void)id;
 	(void)vol;
 	(void)sep;
 	(void)pitch;
 	(void)priority;
+	(void)channel;
 	return -1;
 }
 
@@ -144,13 +145,13 @@ void I_UnloadSong(void)
 boolean I_PlaySong(boolean looping)
 {
 	(void)handle;
-	(void)looping;
-	return false;
 }
 
 void I_StopSong(void)
 {
 	(void)handle;
+	(void)looping;
+	return false;
 }
 
 void I_PauseSong(void)
@@ -180,7 +181,7 @@ boolean I_SetSongTrack(int track)
 
 void I_SetInternalMusicVolume(UINT8 volume)
 {
-	(void)volume;
+	(void)handle;
 }
 
 void I_StopFadingSong(void)
