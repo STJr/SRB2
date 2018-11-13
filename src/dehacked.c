@@ -1653,6 +1653,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			}
 			else if (fastcmp(word, "PICTOLOOP"))
 				textprompts[num]->page[pagenum].pictoloop = (UINT8)i;
+			else if (fastcmp(word, "PICTOSTART"))
+				textprompts[num]->page[pagenum].pictostart = (UINT8)i;
 			else if (fastcmp(word, "PICSMETAPAGE"))
 			{
 				if (usi && usi <= textprompts[num]->numpages)
@@ -1663,6 +1665,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
 					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
 					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
+					textprompts[num]->page[pagenum].pictostart = textprompts[num]->page[metapagenum].pictostart;
 
 					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
 					{
@@ -3601,11 +3604,11 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "PROMPT"))
 				{
-					if (i > 0 && i < 257)
+					if (i > 0 && i < MAX_PROMPTS)
 						readtextprompt(f, i - 1);
 					else
 					{
-						deh_warning("Prompt number %d out of range (1 - 256)", i);
+						deh_warning("Prompt number %d out of range (1 - %d)", i, MAX_PROMPTS);
 						ignorelines(f);
 					}
 				}
@@ -8281,7 +8284,7 @@ struct {
 
 	{"V_CHARCOLORSHIFT",V_CHARCOLORSHIFT},
 	{"V_ALPHASHIFT",V_ALPHASHIFT},
-	
+
 	//Kick Reasons
 	{"KR_KICK",KR_KICK},
 	{"KR_PINGLIMIT",KR_PINGLIMIT},

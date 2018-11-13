@@ -2137,7 +2137,7 @@ static void F_PreparePageText(char *pagetext)
 
 static void F_AdvanceToNextPage(void)
 {
-	UINT8 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt,
+	INT32 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt,
 		nextpage = textprompts[cutnum]->page[scenenum].nextpage,
 		oldcutnum = cutnum;
 
@@ -2178,7 +2178,7 @@ static void F_AdvanceToNextPage(void)
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 
 		// gfx
-		picnum = 0;
+		picnum = textprompts[cutnum]->page[scenenum].pictostart;
 		numpics = textprompts[cutnum]->page[scenenum].numpics;
 		picmode = textprompts[cutnum]->page[scenenum].picmode;
 		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;
@@ -2266,7 +2266,7 @@ void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postex
 		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
 
 		// gfx
-		picnum = 0;
+		picnum = textprompts[cutnum]->page[scenenum].pictostart;
 		numpics = textprompts[cutnum]->page[scenenum].numpics;
 		picmode = textprompts[cutnum]->page[scenenum].picmode;
 		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;

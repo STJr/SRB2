@@ -186,6 +186,7 @@ typedef struct
 	UINT8 numpics;
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
+	UINT8 pictostart; // initial pic number to show
 	char picname[MAX_PROMPT_PICS][8];
 	UINT8 pichires[MAX_PROMPT_PICS];
 	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
