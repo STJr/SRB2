@@ -2393,7 +2393,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 			}
 		}
 	}
-	
+
 #ifdef HAVE_BLUA
 	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
 #endif
