@@ -551,7 +551,12 @@ boolean I_LoadSong(char *data, size_t len)
 	FMOD_TAG tag;
 	unsigned int loopstart, loopend;
 
-	if (gme || music_stream)
+	if (
+#ifdef HAVE_LIBGME
+		gme ||
+#endif
+		music_stream
+	)
 		I_UnloadSong();
 
 	memset(&fmt, 0, sizeof(FMOD_CREATESOUNDEXINFO));
