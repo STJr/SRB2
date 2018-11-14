@@ -1363,9 +1363,9 @@ void SendWeaponPref(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[consoleplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog.value)
 		buf[0] |= 2;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
@@ -1375,9 +1375,9 @@ void SendWeaponPref2(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog2.value)
 		buf[0] |= 2;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
