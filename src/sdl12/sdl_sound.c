@@ -236,7 +236,7 @@ static void Snd_UnlockAudio(void) //Alam: Unlock audio data and reinstall audio 
 #endif
 }
 
-FUNCMATH static inline Uint16 Snd_LowerRate(Uint16 sr)
+static inline Uint16 Snd_LowerRate(Uint16 sr)
 {
 	if (sr <= audio.freq) // already lowered rate?
 		return sr; // good then

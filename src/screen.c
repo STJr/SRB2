@@ -49,6 +49,7 @@ void (*splatfunc)(void); // span drawer w/ transparency
 void (*basespanfunc)(void); // default span func for color mode
 void (*transtransfunc)(void); // translucent translated column drawer
 void (*twosmultipatchfunc)(void); // for cols with transparent pixels
+void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND translucency
 
 // ------------------
 // global video state
@@ -70,11 +71,7 @@ consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NUL
 #endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#ifdef DIRECTFULLSCREEN
-static FUNCMATH void SCR_ChangeFullscreen (void);
-#else
 static void SCR_ChangeFullscreen (void);
-#endif
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
@@ -127,6 +124,7 @@ void SCR_SetMode(void)
 		fuzzcolfunc = R_DrawTranslucentColumn_8;
 		walldrawerfunc = R_DrawWallColumn_8;
 		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
+		twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
 #ifdef RUSEASM
 		if (R_ASM)
 		{

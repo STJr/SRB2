@@ -7769,7 +7769,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void FUNCMATH DEH_Check(void)
+void DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
