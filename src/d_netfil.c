@@ -94,7 +94,7 @@ static filetran_t transfer[MAXNETNODES];
 // Receiver structure
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
-char downloaddir[256] = "DOWNLOAD";
+char downloaddir[512] = "DOWNLOAD";
 
 #ifdef CLIENT_LOADINGSCREEN
 // for cl loading screen
