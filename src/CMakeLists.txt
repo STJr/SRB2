@@ -228,8 +228,10 @@ set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 
 ### use internal libraries?
-set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
+if (WIN32) ###set on Windows only
+	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
 	"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME).")
+endif()
 
 if(${SRB2_CONFIG_HAVE_BLUA})
 	add_definitions(-DHAVE_BLUA)
