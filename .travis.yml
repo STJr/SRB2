@@ -73,6 +73,21 @@ matrix:
           env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-8
+          compiler: gcc-8
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
+          #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
+        - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux
