@@ -2808,7 +2808,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
 				CONS_Printf(M_GetText("left the game\n"));
-				kickreason = KR_LEAVE;
+			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
 			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
