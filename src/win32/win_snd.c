@@ -457,6 +457,8 @@ void I_ShutdownMusic(void)
 
 musictype_t I_SongType(void)
 {
+	FMOD_SOUND_TYPE type;
+
 #ifdef HAVE_LIBGME
 	if (gme)
 		return MU_GME;
@@ -465,7 +467,6 @@ musictype_t I_SongType(void)
 	if (!music_stream)
 		return MU_NONE;
 
-	FMOD_SOUND_TYPE type;
 	if (FMOD_Sound_GetFormat(music_stream, &type, NULL, NULL, NULL) == FMOD_OK)
 	{
 		switch(type)
@@ -551,7 +552,12 @@ boolean I_LoadSong(char *data, size_t len)
 	FMOD_TAG tag;
 	unsigned int loopstart, loopend;
 
-	if (gme || music_stream)
+	if (
+#ifdef HAVE_LIBGME
+		gme ||
+#endif
+		music_stream
+	)
 		I_UnloadSong();
 
 	memset(&fmt, 0, sizeof(FMOD_CREATESOUNDEXINFO));
