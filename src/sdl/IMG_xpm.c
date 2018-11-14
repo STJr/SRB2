@@ -44,14 +44,11 @@
 
 #if 0
 #include "SDL_image.h"
-
-extern SDLCALL int SDLCALL IMG_isXPM(SDL_RWops *src);
-extern SDLCALL SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src);
-extern SDLCALL SDL_Surface * SDLCALL IMG_ReadXPMFromArray(const char **xpm);
 #else
-extern int IMG_isXPM(SDL_RWops *src);
-extern SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src);
-extern SDL_Surface *IMG_ReadXPMFromArray(const char **xpm);
+// SDLCALL terms removed from original SDL_image declarations
+int IMG_isXPM(SDL_RWops *src);
+SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src);
+SDL_Surface *IMG_ReadXPMFromArray(const char **xpm);
 #define IMG_SetError    SDL_SetError
 #define IMG_GetError    SDL_GetError
 #endif
