@@ -178,7 +178,6 @@ endif #ifdef MINGW
 
 ifdef MINGW64
 MINGW=1
-NONX86=1
 include win32/Makefile.cfg
 endif #ifdef MINGW64
 
