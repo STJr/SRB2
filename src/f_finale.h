@@ -69,7 +69,8 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
-extern INT32 titlescrollspeed;
+extern INT32 titlescrollxspeed;
+extern INT32 titlescrollyspeed;
 
 typedef enum
 {

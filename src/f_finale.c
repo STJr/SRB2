@@ -43,7 +43,8 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollspeed = 80;
+INT32 titlescrollxspeed = 80;
+INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 
 static INT32 timetonext; // Delay between screen changes
@@ -1545,7 +1546,7 @@ void F_TitleScreenDrawer(void)
 
 	// Draw that sky!
 	if (!titlemapinaction)
-		F_SkyScroll(titlescrollspeed);
+		F_SkyScroll(titlescrollxspeed);
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1648,7 +1649,7 @@ void F_TitleScreenTicker(boolean run)
 		else
 		{
 			// Default behavior: Do a lil' camera spin if a title map is loaded;
-			camera.angle += titlescrollspeed*ANG1/64;
+			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
 
