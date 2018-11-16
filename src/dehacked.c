@@ -1969,7 +1969,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
 				|| fastcmp(word, "SCROLLSPEED") || fastcmp(word, "SCROLLXSPEED"))
 			{
-				menumeta[num].titlescrollspeed = get_number(word2);
+				menumeta[num].titlescrollxspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLYSPEED") || fastcmp(word, "SCROLLYSPEED"))
@@ -3282,7 +3282,7 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
 			{
-				titlescrollspeed = get_number(word2);
+				titlescrollxspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLYSPEED"))

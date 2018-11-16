@@ -43,14 +43,15 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollspeed = 80;
+INT32 titlescrollxspeed = 80;
+INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 
 static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
-static INT16 skullAnimCounter; // Chevron animation
+static tic_t skullAnimCounter; // Prompts: Chevron animation; Title screen: Y animation timing
 static INT32 roidtics; // Asteroid spinning
 
 static INT32 deplete;
@@ -79,7 +80,7 @@ static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
 
-static void F_SkyScroll(INT32 scrollspeed);
+static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
 
 //
 // PROMPT STATE
@@ -184,7 +185,7 @@ static void F_NewCutscene(const char *basetext)
 //
 // F_DrawPatchCol
 //
-static void F_DrawPatchCol(INT32 x, patch_t *patch, INT32 col)
+static void F_DrawPatchCol(INT32 x, INT32 yoffs, patch_t *patch, INT32 col)
 {
 	const column_t *column;
 	const UINT8 *source;
@@ -235,39 +236,55 @@ static void F_DrawPatchCol(INT32 x, patch_t *patch, INT32 col)
 //
 // F_SkyScroll
 //
-static void F_SkyScroll(INT32 scrollspeed)
+static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
 {
 	INT32 scrolled, x, mx, fakedwidth;
+	INT32 yscrolled, y, my, fakedheight;
 	patch_t *pat;
-	INT16 patwidth;
+	INT16 patwidth, patheight;
+
+	if (!patchname || !patchname[0])
+	{
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		return;
+	}
 
 	pat = W_CachePatchName("TITLESKY", PU_CACHE);
 
 	patwidth = SHORT(pat->width);
-	animtimer = ((finalecount*scrollspeed)/16 + patwidth) % patwidth;
+	animtimer = ((finalecount*scrollxspeed)/16 + patwidth) % patwidth;
+
+	patheight = SHORT(pat->height);
+	skullAnimCounter = ((finalecount*scrollyspeed)/16 + patheight) % patheight;
 
 	fakedwidth = vid.width / vid.dupx;
+	fakedheight = vid.height / vid.dupy;
 
 	if (rendermode == render_soft)
 	{ // if only hardware rendering could be this elegant and complete
 		scrolled = (patwidth - animtimer) - 1;
+		yscrolled = (patheight - skullAnimCounter) - 1;
 		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
-			F_DrawPatchCol(x, pat, mx);
+		{
+			for (y = 0, my = yscrolled; y < fakedheight; y++, my = (my+1)%patheight)
+			F_DrawPatchCol(x, y, pat, mx);
+		}
 	}
 #ifdef HWRENDER
 	else if (rendermode != render_none)
 	{ // if only software rendering could be this simple and retarded
 		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-		INT32 y, pw = patwidth * dupz, ph = SHORT(pat->height) * dupz;
+		INT32 pw = patwidth * dupz, ph = patheight * dupz;
 		scrolled = animtimer * dupz;
+		yscrolled = skullAnimCounter * dupz;
 		for (x = 0; x < vid.width; x += pw)
 		{
 			for (y = 0; y < vid.height; y += ph)
 			{
 				if (scrolled > 0)
-					V_DrawScaledPatch(scrolled - pw, y, V_NOSCALESTART, pat);
+					V_DrawScaledPatch(scrolled - pw, yscrolled - ph, V_NOSCALESTART, pat);
 
-				V_DrawScaledPatch(x + scrolled, y, V_NOSCALESTART, pat);
+				V_DrawScaledPatch(x + scrolled, y + yscrolled, V_NOSCALESTART, pat);
 			}
 		}
 	}
@@ -474,7 +491,7 @@ void F_StartIntro(void)
 	F_NewCutscene(introtext[0]);
 
 	intro_scenenum = 0;
-	finalecount = animtimer = stoptimer = 0;
+	finalecount = animtimer = skullAnimCounter = stoptimer = 0;
 	roidtics = BASEVIDWIDTH - 64;
 	timetonext = introscenetime[intro_scenenum];
 }
@@ -706,7 +723,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			F_SkyScroll(80*4);
+			F_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
 				stoptimer = finalecount;
@@ -1449,7 +1466,10 @@ void F_GameEndTicker(void)
 // ==============
 void F_StartTitleScreen(void)
 {
-	S_ChangeMusicInternal("_title", looptitle);
+	if (menumeta[MN_MAIN].musname[0])
+		S_ChangeMusic(menumeta[MN_MAIN].musname, menumeta[MN_MAIN].mustrack, menumeta[MN_MAIN].muslooping);
+	else
+		S_ChangeMusicInternal("_title", looptitle);
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 		finalecount = 0;
@@ -1515,7 +1535,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	animtimer = 0;
+	animtimer = skullAnimCounter = 0;
 
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
@@ -1545,7 +1565,7 @@ void F_TitleScreenDrawer(void)
 
 	// Draw that sky!
 	if (!titlemapinaction)
-		F_SkyScroll(titlescrollspeed);
+		F_SkyScroll(titlescrollxspeed, titlescrollyspeed, "TITLESKY");
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1648,7 +1668,7 @@ void F_TitleScreenTicker(boolean run)
 		else
 		{
 			// Default behavior: Do a lil' camera spin if a title map is loaded;
-			camera.angle += titlescrollspeed*ANG1/64;
+			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
 
