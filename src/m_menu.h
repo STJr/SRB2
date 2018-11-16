@@ -113,7 +113,7 @@ typedef enum
 	// MM_HELP,
 
 	MM_SPECIAL,
-	NUM_MM,
+	NUMMENUTYPES,
 } menutype_t; // up to 63; MM_SPECIAL = 53
 
 

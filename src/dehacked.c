@@ -7751,6 +7751,96 @@ static const char *const HUDITEMS_LIST[] = {
 	"LAP"
 };
 
+static const char *const MENUTYPES_LIST[] = {
+	"NONE",
+
+	"MAIN",
+
+	// Single Player
+	"SP_MAIN",
+
+	"SP_LOAD",
+	"SP_PLAYER",
+
+	"SP_LEVELSELECT",
+	"SP_LEVELSTATS",
+
+	"SP_TIMEATTACK",
+	"SP_TIMEATTACK_LEVELSELECT",
+	"SP_GUESTREPLAY",
+	"SP_REPLAY",
+	"SP_GHOST",
+
+	"SP_NIGHTSATTACK",
+	"SP_NIGHTS_LEVELSELECT",
+	"SP_NIGHTS_GUESTREPLAY",
+	"SP_NIGHTS_REPLAY",
+	"SP_NIGHTS_GHOST",
+
+	// Multiplayer
+	"MP_MAIN",
+	"MP_SPLITSCREEN", // SplitServer
+	"MP_SERVER",
+	"MP_CONNECT",
+	"MP_ROOM",
+	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+
+	// Options
+	"OP_MAIN",
+
+	"OP_P1CONTROLS",
+	"OP_CHANGECONTROLS", // OP_ChangeControlsDef shared with P2
+	"OP_P1MOUSE",
+	"OP_P1JOYSTICK",
+	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+
+	"OP_P2CONTROLS",
+	"OP_P2MOUSE",
+	"OP_P2JOYSTICK",
+
+	"OP_VIDEO",
+	"OP_VIDEOMODE",
+	"OP_COLOR",
+	"OP_OPENGL",
+	"OP_OPENGL_LIGHTING",
+	"OP_OPENGL_FOG",
+	"OP_OPENGL_COLOR",
+
+	"OP_SOUND",
+
+	"OP_SERVER",
+	"OP_MONITORTOGGLE",
+
+	"OP_DATA",
+	"OP_ADDONS",
+	"OP_SCREENSHOTS",
+	"OP_ERASEDATA",
+
+	// Secrets
+	"SR_MAIN",
+	"SR_PANDORA",
+	"SR_LEVELSELECT",
+	"SR_UNLOCKCHECKLIST",
+	"SR_EMBLEMHINT",
+
+	// Addons (Part of MISC, but let's make it our own)
+	"AD_MAIN",
+
+	// MISC
+	// "MESSAGE",
+	// "SPAUSE",
+
+	// "MPAUSE",
+	// "SCRAMBLETEAM",
+	// "CHANGETEAM",
+	// "CHANGELEVEL",
+
+	// "MAPAUSE",
+	// "HELP",
+
+	"SPECIAL"
+};
+
 struct {
 	const char *n;
 	// has to be able to hold both fixed_t and angle_t, so drastic measure!!
@@ -8450,6 +8540,20 @@ static hudnum_t get_huditem(const char *word)
 	return HUD_LIVES;
 }
 
+static menutype_t get_menutype(const char *word)
+{ // Returns the value of MM_ enumerations
+	menutype_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("MM_",word,3))
+		word += 3; // take off the MM_
+	for (i = 0; i < NUMMENUTYPES; i++)
+		if (fastcmp(word, MENUTYPES_LIST[i]))
+			return i;
+	deh_warning("Couldn't find menutype named 'MM_%s'",word);
+	return MM_NONE;
+}
+
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word)
 { // Returns the vlaue of pw_ enumerations
@@ -9112,6 +9216,16 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("MM_",word,3)) {
+		p = word+3;
+		for (i = 0; i < NUMMENUTYPES; i++)
+			if (fastcmp(p, MENUTYPES_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (!mathlib && fastncmp("A_",word,2)) {
