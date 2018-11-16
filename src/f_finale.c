@@ -80,7 +80,7 @@ static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
 
-static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
 
 //
 // PROMPT STATE
@@ -183,110 +183,57 @@ static void F_NewCutscene(const char *basetext)
 }
 
 //
-// F_DrawPatchCol
-//
-static void F_DrawPatchCol(INT32 x, INT32 yoffs, patch_t *patch, INT32 col)
-{
-	const column_t *column;
-	const UINT8 *source;
-	UINT8 *desttop, *dest = NULL;
-	const UINT8 *deststop, *destbottom;
-	size_t count;
-
-	desttop = screens[0] + x*vid.dupx;
-	deststop = screens[0] + vid.rowbytes * vid.height;
-	destbottom = desttop + vid.height*vid.width;
-
-	do {
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
-
-		// step through the posts in a column
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)column + 3;
-			dest = desttop + topdelta*vid.width;
-			count = column->length;
-
-			while (count--)
-			{
-				INT32 dupycount = vid.dupy;
-
-				while (dupycount-- && dest < destbottom)
-				{
-					INT32 dupxcount = vid.dupx;
-					while (dupxcount-- && dest <= deststop)
-						*dest++ = *source;
-
-					dest += (vid.width - vid.dupx);
-				}
-				source++;
-			}
-			column = (const column_t *)((const UINT8 *)column + column->length + 4);
-		}
-
-		desttop += SHORT(patch->height)*vid.dupy*vid.width;
-	} while(dest < destbottom);
-}
-
-//
 // F_SkyScroll
 //
-static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
 {
-	INT32 scrolled, x, mx, fakedwidth;
-	INT32 yscrolled, y, my, fakedheight;
-	patch_t *pat;
+	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
+	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
+	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	INT16 patwidth, patheight;
+	INT32 pw, ph; // scaled by dupz
+	patch_t *pat;
+	INT32 i, j;
+
+	if (rendermode == render_none)
+		return;
 
 	if (!patchname || !patchname[0])
 	{
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		V_DrawFill(0, 0, vid.width, vid.height, 31);
 		return;
 	}
 
-	pat = W_CachePatchName("TITLESKY", PU_CACHE);
+	pat = W_CachePatchName(patchname, PU_CACHE);
 
 	patwidth = SHORT(pat->width);
-	animtimer = ((finalecount*scrollxspeed)/16 + patwidth) % patwidth;
-
 	patheight = SHORT(pat->height);
-	skullAnimCounter = ((finalecount*scrollyspeed)/16 + patheight) % patheight;
+	pw = patwidth * dupz;
+	ph = patheight * dupz;
 
-	if (rendermode == render_soft && !scrollyspeed)
-	{ // if only hardware rendering could be this elegant and complete
-		// keep the old behavior for non-vertical scrolling because *shrug*
-		fakedwidth = vid.width / vid.dupx;
-		fakedheight = vid.height / vid.dupy;
-		scrolled = (patwidth - animtimer) - 1;
-		yscrolled = (patheight - skullAnimCounter) - 1;
-		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
-		{
-			for (y = 0, my = yscrolled; y < fakedheight; y++, my = (my+1)%patheight)
-			F_DrawPatchCol(x, y, pat, mx);
-		}
-	}
-	else if (rendermode != render_none)
-	{ // if only software rendering could be this simple and retarded
-		// but this does work! because post scrolling goes over my head :upside_down:
-		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-		INT32 pw = patwidth * dupz, ph = patheight * dupz;
-		scrolled = animtimer * dupz;
-		yscrolled = skullAnimCounter * dupz;
-		CONS_Printf("XScroll %d> YScroll %d\n", scrolled, yscrolled);
-		for (x = 0; x < vid.width; x += pw)
-		{
-			for (y = 0; y < vid.height; y += ph)
-			{
-				if (scrolled > 0)
-					V_DrawScaledPatch(scrolled - pw, yscrolled - ph/2, V_NOSCALESTART, pat);
+	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
+	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
 
-				V_DrawScaledPatch(x + scrolled, yscrolled - ph/2, V_NOSCALESTART, pat);
-			}
+	animtimer = ((finalecount*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
+	skullAnimCounter = ((finalecount*scrollyspeed)/16 + patheight*yneg) % (patheight);
+
+	// coordinate offsets
+	xscrolled = animtimer * dupz;
+	yscrolled = skullAnimCounter * dupz;
+
+	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
+		i < tilex;
+		x += pw, i++)
+	{
+		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
+			j < tiley;
+			y += ph, j++)
+		{
+			V_DrawScaledPatch(
+				(xispos) ? xscrolled - x : x + xscrolled,
+				(yispos) ? yscrolled - y : y + yscrolled,
+				V_NOSCALESTART, pat);
 		}
 	}
 
@@ -1564,8 +1511,7 @@ void F_TitleScreenDrawer(void)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	if (!titlemapinaction)
-		F_SkyScroll(titlescrollxspeed, titlescrollyspeed, "TITLESKY");
+	M_DrawScrollingBackground("TITLESKY");
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))

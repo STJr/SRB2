@@ -141,6 +141,8 @@ typedef struct
 
 extern menumeta_t menumeta[NUMMENUTYPES];
 
+void M_DrawScrollingBackground(char *defaultname);
+
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.
 // Even when the menu is not displayed,

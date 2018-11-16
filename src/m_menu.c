@@ -2202,7 +2202,7 @@ menumeta_t menumeta[NUMMENUTYPES];
 // return false - continue
 typedef boolean (*menutree_iterator)(UINT32, INT32, INT32 *, void **);
 
-static INT32 M_IterateMenuTree(menutree_iterator itfunc, void **input)
+static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 {
 	INT32 i, retval = 0;
 	UINT32 bitmask, menutype;
@@ -2218,7 +2218,7 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void **input)
 	return retval;
 }
 
-static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void **input)
+static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
 {
 	INT32 i, retval = 0;
 	UINT32 bitmask, menutype;
@@ -2272,6 +2272,20 @@ static boolean MIT_DrawBackground(UINT32 menutype, INT32 level, INT32 *retval, v
 	return false;
 }
 
+static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	char *defaultname = (char*)*input;
+
+	if (menumeta[menutype].bgname[0])
+	{
+		F_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
+		return true;
+	}
+	else if (!level && defaultname && defaultname[0])
+		F_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
+	return false;
+}
+
 // ====================================
 // TREE RETRIEVAL
 // ====================================
@@ -2298,6 +2312,11 @@ static UINT8 M_GetYoungestChildLevel() // aka the active menu
 static void M_DrawBackground(char *defaultname)
 {
 	M_IterateMenuTree(MIT_DrawBackground, defaultname);
+}
+
+void M_DrawScrollingBackground(char *defaultname)
+{
+	M_IterateMenuTree(MIT_DrawScrollingBackground, defaultname);
 }
 
 // =========================================================================

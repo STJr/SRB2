@@ -40,6 +40,7 @@ void F_TextPromptTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);

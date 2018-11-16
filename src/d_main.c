@@ -732,6 +732,8 @@ void D_StartTitle(void)
 	F_StartTitleScreen();
 	CON_ToggleOff();
 
+	currentMenu = &MainDef; // reset the current menu ID
+
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
