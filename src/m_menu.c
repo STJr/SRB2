@@ -294,7 +294,7 @@ static void M_ToggleMIDI(void);
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
 menu_t OP_GameOptionsDef, OP_ServerOptionsDef;
-menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
+menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef, OP_CoopOptionsDef, OP_CompetitionOptionsDef, OP_RaceOptionsDef, OP_MatchOptionsDef, OP_TagOptionsDef, OP_CTFOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
@@ -1348,26 +1348,45 @@ static menuitem_t OP_NetgameOptionsMenu[] =
 
 static menuitem_t OP_GametypeOptionsMenu[] =
 {
-	{IT_HEADER,           NULL, "CO-OP",                 NULL,                  2},
+	{IT_STRING | IT_SUBMENU, NULL, "Co-op Options",       &OP_CoopOptionsDef,        10},
+	{IT_STRING | IT_SUBMENU, NULL, "Competition Options", &OP_CompetitionOptionsDef, 20},
+	{IT_STRING | IT_SUBMENU, NULL, "Race Options",        &OP_RaceOptionsDef,        30},
+	{IT_STRING | IT_SUBMENU, NULL, "Match Options",       &OP_MatchOptionsDef,       40},
+	{IT_STRING | IT_SUBMENU, NULL, "Tag Options",         &OP_TagOptionsDef,         50},
+	{IT_STRING | IT_SUBMENU, NULL, "CTF Options",         &OP_CTFOptionsDef,         60},
+};
+
+static menuitem_t OP_CoopOptionsMenu[] =
+{
 	{IT_STRING | IT_CVAR, NULL, "Players for exit",      &cv_playersforexit,   10},
 	{IT_STRING | IT_CVAR, NULL, "Starting Lives",        &cv_startinglives,    18},
+};
 
-	{IT_HEADER,           NULL, "COMPETITION",           NULL,                 34},
-	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_competitionboxes, 42},
-	{IT_STRING | IT_CVAR, NULL, "Countdown Time",        &cv_countdowntime,    50},
+static menuitem_t OP_CompetitionOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_competitionboxes, 10},
+	{IT_STRING | IT_CVAR, NULL, "Countdown Time",        &cv_countdowntime,    18},
+};
 
-	{IT_HEADER,           NULL, "RACE",                  NULL,                 66},
-	{IT_STRING | IT_CVAR, NULL, "Number of Laps",        &cv_numlaps,          74},
-	{IT_STRING | IT_CVAR, NULL, "Use Map Lap Counts",    &cv_usemapnumlaps,    82},
+static menuitem_t OP_RaceOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Number of Laps",        &cv_numlaps,          10},
+	{IT_STRING | IT_CVAR, NULL, "Use Map Lap Counts",    &cv_usemapnumlaps,    18},
+};
 
-	{IT_HEADER,           NULL, "MATCH",                 NULL,                 98},
-	{IT_STRING | IT_CVAR, NULL, "Scoring Type",          &cv_match_scoring,   106},
+static menuitem_t OP_MatchOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Scoring Type",          &cv_match_scoring,    10},
+};
 
-	{IT_HEADER,           NULL, "TAG",                   NULL,                122},
-	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,        130},
+static menuitem_t OP_TagOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,         10},
+};
 
-	{IT_HEADER,           NULL, "CTF",                   NULL,                146},
-	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,        154},
+static menuitem_t OP_CTFOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,         10},
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
@@ -1697,6 +1716,12 @@ menu_t OP_ServerOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, 
 
 menu_t OP_NetgameOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_NetgameOptionsMenu, &OP_ServerOptionsDef, 30, 30);
 menu_t OP_GametypeOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_GametypeOptionsMenu, &OP_ServerOptionsDef, 30, 30);
+menu_t OP_CoopOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_CoopOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
+menu_t OP_CompetitionOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_CompetitionOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
+menu_t OP_RaceOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_RaceOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
+menu_t OP_MatchOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_MatchOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
+menu_t OP_TagOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_TagOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
+menu_t OP_CTFOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_CTFOptionsMenu, &OP_GametypeOptionsDef, 30, 30);
 menu_t OP_MonitorToggleDef =
 {
 	"M_SERVER",
