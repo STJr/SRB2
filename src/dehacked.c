@@ -8541,17 +8541,17 @@ static hudnum_t get_huditem(const char *word)
 }
 
 static menutype_t get_menutype(const char *word)
-{ // Returns the value of MM_ enumerations
+{ // Returns the value of MN_ enumerations
 	menutype_t i;
 	if (*word >= '0' && *word <= '9')
 		return atoi(word);
-	if (fastncmp("MM_",word,3))
-		word += 3; // take off the MM_
+	if (fastncmp("MN_",word,3))
+		word += 3; // take off the MN_
 	for (i = 0; i < NUMMENUTYPES; i++)
 		if (fastcmp(word, MENUTYPES_LIST[i]))
 			return i;
-	deh_warning("Couldn't find menutype named 'MM_%s'",word);
-	return MM_NONE;
+	deh_warning("Couldn't find menutype named 'MN_%s'",word);
+	return MN_NONE;
 }
 
 #ifndef HAVE_BLUA
@@ -9218,7 +9218,7 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("MM_",word,3)) {
+	else if (fastncmp("MN_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMMENUTYPES; i++)
 			if (fastcmp(p, MENUTYPES_LIST[i])) {
