@@ -116,6 +116,20 @@ typedef enum
 	NUMMENUTYPES,
 } menutype_t; // up to 63; MN_SPECIAL = 53
 
+// Menu parameters
+typedef struct
+{
+	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
+	boolean hidetitlepics; // hide title gfx per menu; inherits global setting
+	INT32 titlescrollspeed; // background gfx scroll per menu; inherits global setting
+	INT32 titlescrollyspeed; // y scroll
+
+	boolean exitparents; // run exit line exec on parent menus when entering a child menu
+	INT32 entertag; // line exec to run on menu enter, if titlemap
+	INT32 exittag; // line exec to run on menu exit, if titlemap
+} menumeta_t;
+
+extern menumeta_t menumeta[NUMMENUTYPES];
 
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.

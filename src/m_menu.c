@@ -153,6 +153,9 @@ description_t description[32] =
 	{false, "???", "", "", 0, 0},
 	{false, "???", "", "", 0, 0}
 };
+
+menumeta_t menumeta[NUMMENUTYPES];
+
 INT16 char_on = -1, startchar = 1;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;

@@ -72,6 +72,7 @@ static sfxenum_t get_sfx(const char *word);
 static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 #endif
 static hudnum_t get_huditem(const char *word);
+static menutype_t get_menutype(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
 #endif
@@ -1913,6 +1914,230 @@ static void readtextprompt(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static void readmenu(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word = s;
+	char *word2;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
+			else if (!strncmp(word, "MENU", 4))
+			{
+				// HACK: readtitlescreen fails to read the next menu because it skips this line
+				// which already has the next menu's type
+				// so just loop ourselves here
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					word2 = (tmp += 1);
+					strupr(word2);
+					num = get_number(word2);
+					if (num >= 0 && num < NUMMENUTYPES)
+						continue;
+					else
+					{
+						// zero-based, but start at 1
+						deh_warning("Menu number %d out of range (1 - %d)", num, NUMMENUTYPES-1);
+						break;
+					}
+				}
+				else
+					break;
+
+				continue;
+			}
+			strupr(word);
+
+			// Now get the part after
+			word2 = (tmp += 2);
+			strupr(word2);
+
+			value = atoi(word2); // used for numerical settings
+
+			//CONS_Printf("Menu %d> %s | %s\n", num, word, word2);
+
+			if (fastcmp(word, "BACKGROUNDNAME"))
+			{
+				strncpy(menumeta[num].bgname, word2, 8);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			{
+				menumeta[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
+				|| fastcmp(word, "SCROLLSPEED") || fastcmp(word, "SCROLLXSPEED"))
+			{
+				menumeta[num].titlescrollspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLYSPEED") || fastcmp(word, "SCROLLYSPEED"))
+			{
+				menumeta[num].titlescrollyspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "EXITPARENTS"))
+			{
+				menumeta[num].exitparents = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "ENTERTAG"))
+			{
+				menumeta[num].entertag = value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "EXITTAG"))
+			{
+				menumeta[num].exittag = value;
+				titlechanged = true;
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readtitlescreen(MYFILE *f)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word = s;
+	char *word2;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+			{
+				tmp = strchr(s, ' ');
+				if (tmp)
+					*(tmp) = '\0';
+				else
+					break;
+			}
+			strupr(word);
+
+			// Now get the part after
+			word2 = (*tmp == '=') ? (tmp += 2) : (tmp += 1);
+			strupr(word2);
+
+			value = atoi(word2); // used for numerical settings
+
+			//CONS_Printf("Title> %s | %s\n", word, word2);
+
+			// NOTE: If you change these TITLE or DEMO parameters,
+			// also change them in `readmaincfg`
+			if (fastcmp(word, "LOOPTITLE"))
+			{
+				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				titlemap = (INT16)value;
+				titlechanged = true;
+			}
+			// HIDETITLEPICS and TITLESCROLLSPEED are also in `readmenu`, per menu
+			if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
+			{
+				titlescrollspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NUMDEMOS"))
+			{
+				numDemos = (UINT8)get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "DEMODELAYTIME"))
+			{
+				demoDelayTime = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "DEMOIDLETIME"))
+			{
+				demoIdleTime = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "MENU"))
+			{
+				value = get_number(word2);
+				if (value >= 0 && value < NUMMENUTYPES)
+					readmenu(f, value);
+				else
+					// zero-based, but start at 1
+					deh_warning("Menu number %d out of range (1 - %d)", value, NUMMENUTYPES-1);
+
+				// HACK: Menu line seeking is broken; it feeds us the next line
+				// AFTER the menu block ends
+				// So in the next loop here, we're SKIPPING this next line
+				// We loop through MENU blocks in readmenu already,
+				// so just end iterating here.
+				break;
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
 static void readhuditem(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -3136,6 +3361,8 @@ static void readmaincfg(MYFILE *f)
 					introtoplay = 128;
 				introchanged = true;
 			}
+			// NOTE: If you change these TITLE or DEMO parameters,
+			// also change them in `readtitlescreen`
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
@@ -3160,7 +3387,7 @@ static void readmaincfg(MYFILE *f)
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "TITLESCROLLSPEED"))
+			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
 			{
 				titlescrollspeed = get_number(word2);
 				titlechanged = true;
@@ -3507,6 +3734,11 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 			else if (fastcmp(word, "MAINCFG"))
 			{
 				readmaincfg(f);
+				continue;
+			}
+			else if (fastcmp(word, "TITLESCREEN"))
+			{
+				readtitlescreen(f);
 				continue;
 			}
 			else if (fastcmp(word, "WIPES"))
@@ -8747,6 +8979,11 @@ static fixed_t find_const(const char **rword)
 #endif
 	else if (fastncmp("PW_",word,3)) {
 		r = get_power(word);
+		free(word);
+		return r;
+	}
+	else if (fastncmp("MN_",word,4)) {
+		r = get_menutype(word);
 		free(word);
 		return r;
 	}
