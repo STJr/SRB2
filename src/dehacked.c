@@ -1977,6 +1977,41 @@ static void readmenu(MYFILE *f, INT32 num)
 				menumeta[num].titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				strncpy(menumeta[num].musname, word2, 7);
+				menumeta[num].musname[6] = 0;
+				titlechanged = true;
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
+			else if (fastcmp(word, "MUSICSLOT"))
+			{
+				value = get_mus(word2, true);
+				if (value && value <= 1035)
+					snprintf(menumeta[num].musname, 7, "%sM", G_BuildMapName(value));
+				else if (value && value <= 1050)
+					strncpy(menumeta[num].musname, compat_special_music_slots[value - 1036], 7);
+				else
+					menumeta[num].musname[0] = 0; // becomes empty string
+				menumeta[num].musname[6] = 0;
+				titlechanged = true;
+			}
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				menumeta[num].mustrack = ((UINT16)value - 1);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "MUSICLOOP"))
+			{
+				menumeta[num].muslooping = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "FADESCREEN"))
+			{
+				menumeta[num].fadescreen = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
 			else if (fastcmp(word, "EXITPARENTS"))
 			{
 				menumeta[num].exitparents = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
@@ -3248,6 +3283,11 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
 			{
 				titlescrollspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLYSPEED"))
+			{
+				titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
