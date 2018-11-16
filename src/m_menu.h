@@ -26,97 +26,95 @@
 // Menu IDs sectioned by numeric places to signify hierarchy
 typedef enum
 {
-	MM_MAIN = 1,
+	MM_NONE,
+
+	MM_MAIN,
 
 	// Single Player
-	MM_SP_MAIN = 1<<1,
+	MM_SP_MAIN,
 
-	MM_SP_LOAD = 1<<2,
-	MM_SP_PLAYER = 1<<3,
+	MM_SP_LOAD,
+	MM_SP_PLAYER,
 
-	MM_SP_LEVELSELECT = 1<<4,
-	MM_SP_LEVELSTATS = 1<<5,
+	MM_SP_LEVELSELECT,
+	MM_SP_LEVELSTATS,
 
-	MM_SP_TIMEATTACK = 1<<6,
-	MM_SP_TIMEATTACK_LEVELSELECT = 1<<7,
-	MM_SP_GUESTREPLAY = 1<<8,
-	MM_SP_REPLAY = 1<<9,
-	MM_SP_GHOST = 1<<10,
+	MM_SP_TIMEATTACK,
+	MM_SP_TIMEATTACK_LEVELSELECT,
+	MM_SP_GUESTREPLAY,
+	MM_SP_REPLAY,
+	MM_SP_GHOST,
 
-	MM_SP_NIGHTSATTACK = 1<<11,
-	MM_SP_NIGHTSATTACK_LEVELSELECT = 1<<12,
-	MM_SP_NIGHTS_GUESTREPLAY = 1<<13,
-	MM_SP_NIGHTS_REPLAY = 1<<14,
-	MM_SP_NIGHTS_GHOST = 1<<15,
+	MM_SP_NIGHTSATTACK,
+	MM_SP_NIGHTS_LEVELSELECT,
+	MM_SP_NIGHTS_GUESTREPLAY,
+	MM_SP_NIGHTS_REPLAY,
+	MM_SP_NIGHTS_GHOST,
 
 	// Multiplayer
-	MM_MP_MAIN = 1<<16,
-	MM_MP_SPLITSCREEN = 1<<17, // SplitServer
-	MM_MP_SERVER = 1<<18,
-	MM_MP_CONNECT = 1<<19,
-	MM_MP_ROOM = 1<<20,
-	MM_MP_PLAYERSETUP = 1<<21, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MM_MP_MAIN,
+	MM_MP_SPLITSCREEN, // SplitServer
+	MM_MP_SERVER,
+	MM_MP_CONNECT,
+	MM_MP_ROOM,
+	MM_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+
+	// Options
+	MM_OP_MAIN,
+
+	MM_OP_P1CONTROLS,
+	MM_OP_CHANGECONTROLS, // OP_ChangeControlsDef shared with P2
+	MM_OP_P1MOUSE,
+	MM_OP_P1JOYSTICK,
+	MM_OP_JOYSTICKSET, // OP_JoystickSetDef shared with P2
+
+	MM_OP_P2CONTROLS,
+	MM_OP_P2MOUSE,
+	MM_OP_P2JOYSTICK,
+
+	MM_OP_VIDEO,
+	MM_OP_VIDEOMODE,
+	MM_OP_COLOR,
+	MM_OP_OPENGL,
+	MM_OP_OPENGL_LIGHTING,
+	MM_OP_OPENGL_FOG,
+	MM_OP_OPENGL_COLOR,
+
+	MM_OP_SOUND,
+
+	MM_OP_SERVER,
+	MM_OP_MONITORTOGGLE,
+
+	MM_OP_DATA,
+	MM_OP_ADDONS,
+	MM_OP_SCREENSHOTS,
+	MM_OP_ERASEDATA,
 
 	// Secrets
-	MM_SR_MAIN = 1<<22,
-	MM_SR_PANDORA = 1<<23,
-	MM_SR_LEVELSELECT = 1<<24,
-	MM_SR_UNLOCKCHECKLIST = 1<<25,
-	MM_SR_EMBLEMHINT = 1<<26,
+	MM_SR_MAIN,
+	MM_SR_PANDORA,
+	MM_SR_LEVELSELECT,
+	MM_SR_UNLOCKCHECKLIST,
+	MM_SR_EMBLEMHINT,
 
 	// Addons (Part of MISC, but let's make it our own)
-	MM_AD_MAIN = 1<<27,
-
-	MM_ALL = 1<<28,
+	MM_AD_MAIN,
 
 	// MISC
-	// MM_MESSAGE = 20000,
-	// MM_SPAUSE = 30000,
+	// MM_MESSAGE,
+	// MM_SPAUSE,
 
-	// MM_MPAUSE = 40000,
-	// MM_SCRAMBLETEAM = 41000,
-	// MM_CHANGETEAM = 42000,
-	// MM_CHANGELEVEL = 43000,
+	// MM_MPAUSE,
+	// MM_SCRAMBLETEAM,
+	// MM_CHANGETEAM,
+	// MM_CHANGELEVEL,
 
-	// MM_MAPAUSE = 50000,
-	// MM_HELP = 60000
-} menutype_t; // up to 1<<31
+	// MM_MAPAUSE,
+	// MM_HELP,
 
-typedef enum
-{
-	// Options
-	MM2_OP_MAIN = 1,
-
-	MM2_OP_P1CONTROLS = 1<<1,
-	MM2_OP_CHANGECONTROLS = 1<<2, // OP_ChangeControlsDef shared with P2
-	MM2_OP_P1MOUSE = 1<<3,
-	MM2_OP_P1JOYSTICK = 1<<4,
-	MM2_OP_JOYSTICKSET = 1<<5, // OP_JoystickSetDef shared with P2
-
-	MM2_OP_P2CONTROLS = 1<<6,
-	MM2_OP_P2MOUSE = 1<<7,
-	MM2_OP_P2JOYSTICK = 1<<8,
-
-	MM2_OP_VIDEO = 1<<9,
-	MM2_OP_VIDEOMODE = 1<<10,
-	MM2_OP_COLOR = 1<<11,
-	MM2_OP_OPENGL = 1<<12,
-	MM2_OP_OPENGL_LIGHTING = 1<<13,
-	MM2_OP_OPENGL_FOG = 1<<14,
-	MM2_OP_OPENGL_COLOR = 1<<15,
-
-	MM2_OP_SOUND = 1<<16,
-
-	MM2_OP_SERVER = 1<<17,
-	MM2_OP_MONITORTOGGLE = 1<<18,
-
-	MM2_OP_DATA = 1<<19,
-	MM2_OP_ADDONS = 1<<20,
-	MM2_OP_SCREENSHOTS = 1<<21,
-	MM2_OP_ERASEDATA = 1<<22,
-
-	MM2_ALL = 1<<23
-} menutype2_t; // up to 1<<31
+	MM_SPECIAL,
+	NUM_MM,
+} menutype_t; // up to 63; MM_SPECIAL = 53
 
 
 // Called by main loop,
@@ -250,8 +248,7 @@ typedef struct menuitem_s
 
 typedef struct menu_s
 {
-	UINT32         menutype;           // Flags to encode ID and hierarchy
-	UINT32         menutype2;          // More flags to encode ID and hierarchy
+	UINT32         menuid;             // ID to encode menu type and hierarchy
 	const char    *menutitlepic;
 	INT16          numitems;           // # of menu items
 	struct menu_s *prevMenu;           // previous menu
@@ -356,10 +353,9 @@ void Screenshot_option_Onchange(void);
 void Addons_option_Onchange(void);
 
 // These defines make it a little easier to make menus
-#define DEFAULTMENUSTYLE(flags, flags2, header, source, prev, x, y)\
+#define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
 {\
-	flags,\
-	flags2,\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -370,10 +366,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define DEFAULTSCROLLMENUSTYLE(flags, flags2, header, source, prev, x, y)\
+#define DEFAULTSCROLLMENUSTYLE(id, header, source, prev, x, y)\
 {\
-	flags,\
-	flags2,\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -386,8 +381,7 @@ void Addons_option_Onchange(void);
 
 #define PAUSEMENUSTYLE(source, x, y)\
 {\
-	0,\
-	0,\
+	MM_SPECIAL,\
 	NULL,\
 	sizeof(source)/sizeof(menuitem_t),\
 	NULL,\
@@ -398,10 +392,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CENTERMENUSTYLE(flags, flags2, header, source, prev, y)\
+#define CENTERMENUSTYLE(id, header, source, prev, y)\
 {\
-	flags,\
-	flags2,\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -412,10 +405,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define MAPPLATTERMENUSTYLE(flags, flags2, header, source)\
+#define MAPPLATTERMENUSTYLE(id, header, source)\
 {\
-	flags,\
-	flags2,\
+	id,\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
 	&MainDef,\
@@ -426,10 +418,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CONTROLMENUSTYLE(flags, flags2, source, prev)\
+#define CONTROLMENUSTYLE(id, source, prev)\
 {\
-	flags,\
-	flags2,\
+	id,\
 	"M_CONTRO",\
 	sizeof (source)/sizeof (menuitem_t),\
 	prev,\
@@ -442,8 +433,7 @@ void Addons_option_Onchange(void);
 
 #define IMAGEDEF(source)\
 {\
-	0,\
-	0,\
+	MM_SPECIAL,\
 	NULL,\
 	sizeof (source)/sizeof (menuitem_t),\
 	NULL,\
