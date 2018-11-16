@@ -257,11 +257,11 @@ static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
 	patheight = SHORT(pat->height);
 	skullAnimCounter = ((finalecount*scrollyspeed)/16 + patheight) % patheight;
 
-	fakedwidth = vid.width / vid.dupx;
-	fakedheight = vid.height / vid.dupy;
-
-	if (rendermode == render_soft)
+	if (rendermode == render_soft && !scrollyspeed)
 	{ // if only hardware rendering could be this elegant and complete
+		// keep the old behavior for non-vertical scrolling because *shrug*
+		fakedwidth = vid.width / vid.dupx;
+		fakedheight = vid.height / vid.dupy;
 		scrolled = (patwidth - animtimer) - 1;
 		yscrolled = (patheight - skullAnimCounter) - 1;
 		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
@@ -270,25 +270,25 @@ static void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
 			F_DrawPatchCol(x, y, pat, mx);
 		}
 	}
-#ifdef HWRENDER
 	else if (rendermode != render_none)
 	{ // if only software rendering could be this simple and retarded
+		// but this does work! because post scrolling goes over my head :upside_down:
 		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 		INT32 pw = patwidth * dupz, ph = patheight * dupz;
 		scrolled = animtimer * dupz;
 		yscrolled = skullAnimCounter * dupz;
+		CONS_Printf("XScroll %d> YScroll %d\n", scrolled, yscrolled);
 		for (x = 0; x < vid.width; x += pw)
 		{
 			for (y = 0; y < vid.height; y += ph)
 			{
 				if (scrolled > 0)
-					V_DrawScaledPatch(scrolled - pw, yscrolled - ph, V_NOSCALESTART, pat);
+					V_DrawScaledPatch(scrolled - pw, yscrolled - ph/2, V_NOSCALESTART, pat);
 
-				V_DrawScaledPatch(x + scrolled, y + yscrolled, V_NOSCALESTART, pat);
+				V_DrawScaledPatch(x + scrolled, yscrolled - ph/2, V_NOSCALESTART, pat);
 			}
 		}
 	}
-#endif
 
 	W_UnlockCachedPatch(pat);
 }
