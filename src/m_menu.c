@@ -1473,10 +1473,12 @@ static menuitem_t OP_MonitorToggleMenu[] =
 // ==========================================================================
 
 // Main Menu and related
-menu_t MainDef = CENTERMENUSTYLE(NULL, MainMenu, NULL, 72);
+menu_t MainDef = CENTERMENUSTYLE(MM_MAIN, 0, NULL, MainMenu, NULL, 72);
 
 menu_t MISC_AddonsDef =
 {
+	MM_AD_MAIN,
+	0,
 	NULL,
 	sizeof (MISC_AddonsMenu)/sizeof (menuitem_t),
 	&MainDef,
@@ -1492,12 +1494,14 @@ menu_t SPauseDef = PAUSEMENUSTYLE(SPauseMenu, 40, 72);
 menu_t MPauseDef = PAUSEMENUSTYLE(MPauseMenu, 40, 72);
 
 // Misc Main Menu
-menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
-menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
+menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(0, 0, NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
+menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(0, 0, NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
 
 // MP Gametype and map change menu
 menu_t MISC_ChangeLevelDef =
 {
+	0,
+	0,
 	NULL,
 	sizeof (MISC_ChangeLevelMenu)/sizeof (menuitem_t),
 	&MainDef,  // Doesn't matter.
@@ -1513,6 +1517,8 @@ menu_t MISC_HelpDef = IMAGEDEF(MISC_HelpMenu);
 // Sky Room
 menu_t SR_PandoraDef =
 {
+	MM_SR_MAIN|MM_SR_PANDORA,
+	0,
 	"M_PANDRA",
 	sizeof (SR_PandorasBox)/sizeof (menuitem_t),
 	&SPauseDef,
@@ -1524,6 +1530,8 @@ menu_t SR_PandoraDef =
 };
 menu_t SR_MainDef =
 {
+	MM_SR_MAIN,
+	0,
 	"M_SECRET",
 	sizeof (SR_MainMenu)/sizeof (menuitem_t),
 	&MainDef,
@@ -1534,10 +1542,12 @@ menu_t SR_MainDef =
 	NULL
 };
 
-menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SR_LevelSelectMenu);
+menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(MM_SR_MAIN|MM_SR_LEVELSELECT, 0, NULL, SR_LevelSelectMenu);
 
 menu_t SR_UnlockChecklistDef =
 {
+	MM_SR_MAIN|MM_SR_UNLOCKCHECKLIST,
+	0,
 	"M_SECRET",
 	1,
 	&SR_MainDef,
@@ -1549,6 +1559,8 @@ menu_t SR_UnlockChecklistDef =
 };
 menu_t SR_EmblemHintDef =
 {
+	MM_SR_MAIN|MM_SR_EMBLEMHINT,
+	0,
 	NULL,
 	sizeof (SR_EmblemHintMenu)/sizeof (menuitem_t),
 	&SPauseDef,
@@ -1562,6 +1574,8 @@ menu_t SR_EmblemHintDef =
 // Single Player
 menu_t SP_MainDef = //CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
 {
+	MM_SP_MAIN,
+	0,
 	NULL,
 	sizeof(SP_MainMenu)/sizeof(menuitem_t),
 	&MainDef,
@@ -1574,6 +1588,8 @@ menu_t SP_MainDef = //CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
 
 menu_t SP_LoadDef =
 {
+	MM_SP_MAIN|MM_SP_LOAD,
+	0,
 	"M_PICKG",
 	1,
 	&SP_MainDef,
@@ -1584,10 +1600,12 @@ menu_t SP_LoadDef =
 	NULL
 };
 
-menu_t SP_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SP_LevelSelectMenu);
+menu_t SP_LevelSelectDef = MAPPLATTERMENUSTYLE(MM_SP_MAIN|MM_SP_LOAD|MM_SP_LEVELSELECT, 0, NULL, SP_LevelSelectMenu);
 
 menu_t SP_LevelStatsDef =
 {
+	MM_SP_MAIN|MM_SP_LEVELSTATS,
+	0,
 	"M_STATS",
 	1,
 	&SP_MainDef,
@@ -1598,10 +1616,12 @@ menu_t SP_LevelStatsDef =
 	NULL
 };
 
-menu_t SP_TimeAttackLevelSelectDef = MAPPLATTERMENUSTYLE("M_ATTACK", SP_TimeAttackLevelSelectMenu);
+menu_t SP_TimeAttackLevelSelectDef = MAPPLATTERMENUSTYLE(MM_SP_MAIN|MM_SP_TIMEATTACK|MM_SP_TIMEATTACK_LEVELSELECT, 0, "M_ATTACK", SP_TimeAttackLevelSelectMenu);
 
 static menu_t SP_TimeAttackDef =
 {
+	MM_SP_MAIN|MM_SP_TIMEATTACK,
+	0,
 	"M_ATTACK",
 	sizeof (SP_TimeAttackMenu)/sizeof (menuitem_t),
 	&MainDef,  // Doesn't matter.
@@ -1613,6 +1633,8 @@ static menu_t SP_TimeAttackDef =
 };
 static menu_t SP_ReplayDef =
 {
+	MM_SP_MAIN|MM_SP_TIMEATTACK|MM_SP_REPLAY,
+	0,
 	"M_ATTACK",
 	sizeof(SP_ReplayMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
@@ -1624,6 +1646,8 @@ static menu_t SP_ReplayDef =
 };
 static menu_t SP_GuestReplayDef =
 {
+	MM_SP_MAIN|MM_SP_TIMEATTACK|MM_SP_GUESTREPLAY,
+	0,
 	"M_ATTACK",
 	sizeof(SP_GuestReplayMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
@@ -1635,6 +1659,8 @@ static menu_t SP_GuestReplayDef =
 };
 static menu_t SP_GhostDef =
 {
+	MM_SP_MAIN|MM_SP_TIMEATTACK|MM_SP_GHOST,
+	0,
 	"M_ATTACK",
 	sizeof(SP_GhostMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
@@ -1645,10 +1671,12 @@ static menu_t SP_GhostDef =
 	NULL
 };
 
-menu_t SP_NightsAttackLevelSelectDef = MAPPLATTERMENUSTYLE("M_NIGHTS", SP_NightsAttackLevelSelectMenu);
+menu_t SP_NightsAttackLevelSelectDef = MAPPLATTERMENUSTYLE(MM_SP_MAIN|MM_SP_NIGHTSATTACK|MM_SP_NIGHTSATTACK_LEVELSELECT, 0, "M_NIGHTS", SP_NightsAttackLevelSelectMenu);
 
 static menu_t SP_NightsAttackDef =
 {
+	MM_SP_MAIN|MM_SP_NIGHTSATTACK,
+	0,
 	"M_NIGHTS",
 	sizeof (SP_NightsAttackMenu)/sizeof (menuitem_t),
 	&MainDef,  // Doesn't matter.
@@ -1660,6 +1688,8 @@ static menu_t SP_NightsAttackDef =
 };
 static menu_t SP_NightsReplayDef =
 {
+	MM_SP_MAIN|MM_SP_NIGHTSATTACK|MM_SP_NIGHTS_REPLAY,
+	0,
 	"M_NIGHTS",
 	sizeof(SP_NightsReplayMenu)/sizeof(menuitem_t),
 	&SP_NightsAttackDef,
@@ -1671,6 +1701,8 @@ static menu_t SP_NightsReplayDef =
 };
 static menu_t SP_NightsGuestReplayDef =
 {
+	MM_SP_MAIN|MM_SP_NIGHTSATTACK|MM_SP_NIGHTS_GUESTREPLAY,
+	0,
 	"M_NIGHTS",
 	sizeof(SP_NightsGuestReplayMenu)/sizeof(menuitem_t),
 	&SP_NightsAttackDef,
@@ -1682,6 +1714,8 @@ static menu_t SP_NightsGuestReplayDef =
 };
 static menu_t SP_NightsGhostDef =
 {
+	MM_SP_MAIN|MM_SP_NIGHTSATTACK|MM_SP_NIGHTS_GHOST,
+	0,
 	"M_NIGHTS",
 	sizeof(SP_NightsGhostMenu)/sizeof(menuitem_t),
 	&SP_NightsAttackDef,
@@ -1695,6 +1729,8 @@ static menu_t SP_NightsGhostDef =
 
 menu_t SP_PlayerDef =
 {
+	MM_SP_MAIN|MM_SP_LOAD|MM_SP_PLAYER,
+	0,
 	"M_PICKP",
 	sizeof (SP_PlayerMenu)/sizeof (menuitem_t),
 	&SP_MainDef,
@@ -1709,6 +1745,8 @@ menu_t SP_PlayerDef =
 
 menu_t MP_SplitServerDef =
 {
+	MM_MP_MAIN|MM_MP_SPLITSCREEN,
+	0,
 	"M_MULTI",
 	sizeof (MP_SplitServerMenu)/sizeof (menuitem_t),
 #ifndef NONET
@@ -1727,6 +1765,8 @@ menu_t MP_SplitServerDef =
 
 menu_t MP_MainDef =
 {
+	MM_MP_MAIN,
+	0,
 	"M_MULTI",
 	sizeof (MP_MainMenu)/sizeof (menuitem_t),
 	&MainDef,
@@ -1739,6 +1779,8 @@ menu_t MP_MainDef =
 
 menu_t MP_ServerDef =
 {
+	MM_MP_MAIN|MM_MP_SERVER,
+	0,
 	"M_MULTI",
 	sizeof (MP_ServerMenu)/sizeof (menuitem_t),
 	&MP_MainDef,
@@ -1751,6 +1793,8 @@ menu_t MP_ServerDef =
 
 menu_t MP_ConnectDef =
 {
+	MM_MP_MAIN|MM_MP_CONNECT,
+	0,
 	"M_MULTI",
 	sizeof (MP_ConnectMenu)/sizeof (menuitem_t),
 	&MP_MainDef,
@@ -1763,6 +1807,8 @@ menu_t MP_ConnectDef =
 
 menu_t MP_RoomDef =
 {
+	MM_MP_MAIN|MM_MP_ROOM,
+	0,
 	"M_MULTI",
 	sizeof (MP_RoomMenu)/sizeof (menuitem_t),
 	&MP_ConnectDef,
@@ -1776,6 +1822,8 @@ menu_t MP_RoomDef =
 
 menu_t MP_PlayerSetupDef =
 {
+	MM_MP_MAIN|MM_MP_PLAYERSETUP,
+	0,
 	"M_SPLAYR",
 	sizeof (MP_PlayerSetupMenu)/sizeof (menuitem_t),
 	&MainDef, // doesn't matter
@@ -1787,16 +1835,18 @@ menu_t MP_PlayerSetupDef =
 };
 
 // Options
-menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 50, 30);
-menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(OP_ChangeControlsMenu, &OP_MainDef);
-menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
-menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
-menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
-menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 35, 30);
-menu_t OP_Joystick1Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 50, 30);
-menu_t OP_Joystick2Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 50, 30);
+menu_t OP_MainDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN, "M_OPTTTL", OP_MainMenu, &MainDef, 50, 30);
+menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_CHANGECONTROLS, OP_ChangeControlsMenu, &OP_MainDef);
+menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P1CONTROLS, "M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P2CONTROLS, "M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P1CONTROLS|MM2_OP_P1MOUSE, "M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P2CONTROLS|MM2_OP_P2MOUSE, "M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+menu_t OP_Joystick1Def = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P1CONTROLS|MM2_OP_P1JOYSTICK, "M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 50, 30);
+menu_t OP_Joystick2Def = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_P2CONTROLS|MM2_OP_P2JOYSTICK, "M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 50, 30);
 menu_t OP_JoystickSetDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_JOYSTICKSET,
 	"M_CONTRO",
 	sizeof (OP_JoystickSetMenu)/sizeof (menuitem_t),
 	&OP_Joystick1Def,
@@ -1809,6 +1859,8 @@ menu_t OP_JoystickSetDef =
 
 menu_t OP_VideoOptionsDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_VIDEO,
 	"M_VIDEO",
 	sizeof (OP_VideoOptionsMenu)/sizeof (menuitem_t),
 	&OP_MainDef,
@@ -1820,6 +1872,8 @@ menu_t OP_VideoOptionsDef =
 };
 menu_t OP_VideoModeDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_VIDEOMODE,
 	"M_VIDEO",
 	1,
 	&OP_VideoOptionsDef,
@@ -1831,6 +1885,8 @@ menu_t OP_VideoModeDef =
 };
 menu_t OP_ColorOptionsDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_COLOR,
 	"M_VIDEO",
 	sizeof (OP_ColorOptionsMenu)/sizeof (menuitem_t),
 	&OP_VideoOptionsDef,
@@ -1842,6 +1898,8 @@ menu_t OP_ColorOptionsDef =
 };
 menu_t OP_SoundOptionsDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_SOUND,
 	"M_SOUND",
 	sizeof (OP_SoundOptionsMenu)/sizeof (menuitem_t),
 	&OP_MainDef,
@@ -1852,10 +1910,12 @@ menu_t OP_SoundOptionsDef =
 	NULL
 };
 
-menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
+menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_SERVER, "M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_MonitorToggleDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_SERVER|MM2_OP_MONITORTOGGLE,
 	"M_SERVER",
 	sizeof (OP_MonitorToggleMenu)/sizeof (menuitem_t),
 	&OP_ServerOptionsDef,
@@ -1867,12 +1927,14 @@ menu_t OP_MonitorToggleDef =
 };
 
 #ifdef HWRENDER
-menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);
+menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_OPENGL, "M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);
 #ifdef ALAM_LIGHTING
-menu_t OP_OpenGLLightingDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLLightingMenu, &OP_OpenGLOptionsDef, 60, 40);
+menu_t OP_OpenGLLightingDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_OPENGL|MM2_OP_OPENGL_LIGHTING, "M_VIDEO", OP_OpenGLLightingMenu, &OP_OpenGLOptionsDef, 60, 40);
 #endif
 menu_t OP_OpenGLFogDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_OPENGL|MM2_OP_OPENGL_FOG,
 	"M_VIDEO",
 	sizeof (OP_OpenGLFogMenu)/sizeof (menuitem_t),
 	&OP_OpenGLOptionsDef,
@@ -1884,6 +1946,8 @@ menu_t OP_OpenGLFogDef =
 };
 menu_t OP_OpenGLColorDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_VIDEO|MM2_OP_OPENGL|MM2_OP_OPENGL_COLOR,
 	"M_VIDEO",
 	sizeof (OP_OpenGLColorMenu)/sizeof (menuitem_t),
 	&OP_OpenGLOptionsDef,
@@ -1894,10 +1958,12 @@ menu_t OP_OpenGLColorDef =
 	NULL
 };
 #endif
-menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_DATA, "M_DATA", OP_DataOptionsMenu, &OP_MainDef, 60, 30);
 
 menu_t OP_ScreenshotOptionsDef =
 {
+	0,
+	MM2_OP_MAIN|MM2_OP_DATA|MM2_OP_SCREENSHOTS,
 	"M_DATA",
 	sizeof (OP_ScreenshotOptionsMenu)/sizeof (menuitem_t),
 	&OP_DataOptionsDef,
@@ -1908,9 +1974,9 @@ menu_t OP_ScreenshotOptionsDef =
 	NULL
 };
 
-menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_DataOptionsDef, 30, 30);
+menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_DATA|MM2_OP_ADDONS, "M_ADDONS", OP_AddonsOptionsMenu, &OP_DataOptionsDef, 30, 30);
 
-menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
+menu_t OP_EraseDataDef = DEFAULTMENUSTYLE(0, MM2_OP_MAIN|MM2_OP_DATA|MM2_OP_ERASEDATA, "M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 
 // ==========================================================================
 // CVAR ONCHANGE EVENTS GO HERE
@@ -4516,6 +4582,8 @@ static menuitem_t MessageMenu[] =
 
 menu_t MessageDef =
 {
+	0,
+	0,
 	NULL,               // title
 	1,                  // # of menu items
 	NULL,               // previous menu       (TO HACK)

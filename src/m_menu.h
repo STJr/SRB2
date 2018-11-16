@@ -250,6 +250,8 @@ typedef struct menuitem_s
 
 typedef struct menu_s
 {
+	UINT32         menutype;           // Flags to encode ID and hierarchy
+	UINT32         menutype2;          // More flags to encode ID and hierarchy
 	const char    *menutitlepic;
 	INT16          numitems;           // # of menu items
 	struct menu_s *prevMenu;           // previous menu
@@ -354,8 +356,10 @@ void Screenshot_option_Onchange(void);
 void Addons_option_Onchange(void);
 
 // These defines make it a little easier to make menus
-#define DEFAULTMENUSTYLE(header, source, prev, x, y)\
+#define DEFAULTMENUSTYLE(flags, flags2, header, source, prev, x, y)\
 {\
+	flags,\
+	flags2,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -366,8 +370,10 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define DEFAULTSCROLLMENUSTYLE(header, source, prev, x, y)\
+#define DEFAULTSCROLLMENUSTYLE(flags, flags2, header, source, prev, x, y)\
 {\
+	flags,\
+	flags2,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -380,6 +386,8 @@ void Addons_option_Onchange(void);
 
 #define PAUSEMENUSTYLE(source, x, y)\
 {\
+	0,\
+	0,\
 	NULL,\
 	sizeof(source)/sizeof(menuitem_t),\
 	NULL,\
@@ -390,8 +398,10 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CENTERMENUSTYLE(header, source, prev, y)\
+#define CENTERMENUSTYLE(flags, flags2, header, source, prev, y)\
 {\
+	flags,\
+	flags2,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -402,8 +412,10 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define MAPPLATTERMENUSTYLE(header, source)\
+#define MAPPLATTERMENUSTYLE(flags, flags2, header, source)\
 {\
+	flags,\
+	flags2,\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
 	&MainDef,\
@@ -414,8 +426,10 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CONTROLMENUSTYLE(source, prev)\
+#define CONTROLMENUSTYLE(flags, flags2, source, prev)\
 {\
+	flags,\
+	flags2,\
 	"M_CONTRO",\
 	sizeof (source)/sizeof (menuitem_t),\
 	prev,\
@@ -428,6 +442,8 @@ void Addons_option_Onchange(void);
 
 #define IMAGEDEF(source)\
 {\
+	0,\
+	0,\
 	NULL,\
 	sizeof (source)/sizeof (menuitem_t),\
 	NULL,\
