@@ -23,6 +23,11 @@
 // MENUS
 //
 
+// If menu hierarchies go deeper, change this up to 5.
+// Zero-based, inclusive.
+#define NUMMENULEVELS 3
+#define MENUBITS 6
+
 // Menu IDs sectioned by numeric places to signify hierarchy
 typedef enum
 {
@@ -121,9 +126,14 @@ typedef struct
 {
 	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
 	boolean hidetitlepics; // hide title gfx per menu; inherits global setting
-	INT32 titlescrollspeed; // background gfx scroll per menu; inherits global setting
+	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
 	INT32 titlescrollyspeed; // y scroll
 
+	char musname[7]; ///< Music track to play. "" for no music.
+	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
+	boolean muslooping; ///< Loop the music
+
+	boolean fadescreen;  // darken background when displaying this menu
 	boolean exitparents; // run exit line exec on parent menus when entering a child menu
 	INT32 entertag; // line exec to run on menu enter, if titlemap
 	INT32 exittag; // line exec to run on menu exit, if titlemap

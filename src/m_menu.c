@@ -154,8 +154,6 @@ description_t description[32] =
 	{false, "???", "", "", 0, 0}
 };
 
-menumeta_t menumeta[NUMMENUTYPES];
-
 INT16 char_on = -1, startchar = 1;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
@@ -2188,6 +2186,119 @@ void Addons_option_Onchange(void)
 
 // current menudef
 menu_t *currentMenu = &MainDef;
+
+// =========================================================================
+// MENU METADATA LOGIC (BACKGROUNDS)
+// =========================================================================
+
+menumeta_t menumeta[NUMMENUTYPES];
+
+// UINT32 menutype - current menutype_t
+// INT32 level - current level up the tree, higher means younger
+// INT32 *retval - Return value
+// void *input - Pointer to input of any type
+//
+// return true - stop iterating
+// return false - continue
+typedef boolean (*menutree_iterator)(UINT32, INT32, INT32 *, void **);
+
+static INT32 M_IterateMenuTree(menutree_iterator itfunc, void **input)
+{
+	INT32 i, retval = 0;
+	UINT32 bitmask, menutype;
+
+	for (i = NUMMENULEVELS; i >= 0; i--)
+	{
+		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+		menutype = (currentMenu->menuid & bitmask) >> (MENUBITS*i);
+		if (itfunc(menutype, i, &retval, &input))
+			break;
+	}
+
+	return retval;
+}
+
+static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void **input)
+{
+	INT32 i, retval = 0;
+	UINT32 bitmask, menutype;
+
+	for (i = 0; i <= NUMMENULEVELS; i++)
+	{
+		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+		menutype = (currentMenu->menuid & bitmask) >> (MENUBITS*i);
+		if (itfunc(menutype, i, &retval, &input))
+			break;
+	}
+
+	return retval;
+}
+
+// ====================================
+// ITERATORS
+// ====================================
+
+static boolean MIT_GetEdgeMenu(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	if (menutype)
+	{
+		*retval = menutype;
+		return true;
+	}
+	return false;
+}
+
+static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	if (menutype)
+	{
+		*retval = level;
+		return true;
+	}
+	return false;
+}
+
+static boolean MIT_DrawBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	char *defaultname = (char*)*input;
+
+	if (menumeta[menutype].bgname[0])
+	{
+		V_DrawPatchFill(W_CachePatchName(menumeta[menutype].bgname, PU_CACHE));
+		return true;
+	}
+	else if (!level && defaultname && defaultname[0])
+		V_DrawPatchFill(W_CachePatchName(defaultname, PU_CACHE));
+	return false;
+}
+
+// ====================================
+// TREE RETRIEVAL
+// ====================================
+
+static UINT8 M_GetYoungestChildMenu() // aka the active menu
+{
+	return M_IterateMenuTree(MIT_GetEdgeMenu, NULL);
+}
+
+static UINT8 M_GetOldestParentMenu()
+{
+	return M_IterateMenuTreeFromTop(MIT_GetEdgeMenu, NULL);
+}
+
+static UINT8 M_GetYoungestChildLevel() // aka the active menu
+{
+	return M_IterateMenuTree(MIT_GetEdgeLevel, NULL);
+}
+
+// ====================================
+// EFFECTS
+// ====================================
+
+static void M_DrawBackground(char *defaultname)
+{
+	M_IterateMenuTree(MIT_DrawBackground, defaultname);
+}
 
 // =========================================================================
 // BASIC MENU HANDLING
@@ -4516,7 +4627,7 @@ static void M_DrawLevelPlatterMenu(void)
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
 	if (gamestate == GS_TIMEATTACK)
-		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+		M_DrawBackground("SRB2BACK");
 
 	// finds row at top of the screen
 	while (y > -8)
@@ -4718,7 +4829,7 @@ static void M_DrawMessageMenu(void)
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
-		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+		M_DrawBackground("SRB2BACK");
 
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
@@ -7112,7 +7223,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	//V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+	//M_DrawBackground("SRB2BACK");
 
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
@@ -7502,7 +7613,7 @@ void M_DrawTimeAttackMenu(void)
 
 	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+	M_DrawBackground("SRB2BACK");
 
 	M_DrawMenuTitle();
 
@@ -7691,7 +7802,7 @@ void M_DrawNightsAttackMenu(void)
 
 	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+	M_DrawBackground("SRB2BACK");
 
 	M_DrawMenuTitle();
 
