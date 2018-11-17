@@ -1963,6 +1963,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
 			{
+				// true by default, except MM_MAIN
 				menumeta[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
@@ -2004,12 +2005,14 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
+				// true by default except MM_MAIN
 				menumeta[num].muslooping = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "FADESCREEN"))
+			else if (fastcmp(word, "FADESTRENGTH"))
 			{
-				menumeta[num].fadescreen = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				// one-based, <= 0 means use default value. 1-32
+				menumeta[num].fadestrength = value-1;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "EXITPARENTS"))

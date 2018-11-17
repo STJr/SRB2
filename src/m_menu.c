@@ -2192,6 +2192,16 @@ menu_t *currentMenu = &MainDef;
 // =========================================================================
 
 menumeta_t menumeta[NUMMENUTYPES];
+static tic_t xscrolltimer;
+static tic_t yscrolltimer;
+static INT32 menuanimtimer;
+
+typedef struct
+{
+	char musname[7];
+	UINT16 mustrack;
+	boolean muslooping;
+} menumetamusic_t;
 
 // UINT32 menutype - current menutype_t
 // INT32 level - current level up the tree, higher means younger
@@ -2258,31 +2268,58 @@ static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, voi
 	return false;
 }
 
-static boolean MIT_DrawBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input)
-{
-	char *defaultname = (char*)*input;
-
-	if (menumeta[menutype].bgname[0])
-	{
-		V_DrawPatchFill(W_CachePatchName(menumeta[menutype].bgname, PU_CACHE));
-		return true;
-	}
-	else if (!level && defaultname && defaultname[0])
-		V_DrawPatchFill(W_CachePatchName(defaultname, PU_CACHE));
-	return false;
-}
-
 static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input)
 {
 	char *defaultname = (char*)*input;
 
 	if (menumeta[menutype].bgname[0])
 	{
-		F_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
+		M_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
 		return true;
 	}
 	else if (!level && defaultname && defaultname[0])
-		F_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
+		M_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
+	return false;
+}
+
+static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	menumetamusic_t *defaultmusic = (menumetamusic_t*)*input;
+
+	if (menumeta[menutype].musname[0])
+	{
+		S_ChangeMusic(menumeta[menutype].musname, menumeta[menutype].mustrack, menumeta[menutype].muslooping);
+		return true;
+	}
+	else if (!level && defaultmusic && defaultmusic->musname[0])
+		S_ChangeMusic(defaultmusic->musname, defaultmusic->mustrack, defaultmusic->muslooping);
+	return false;
+}
+
+static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	UINT8 defaultvalue = *(UINT8*)*input;
+	if (menumeta[menutype].fadestrength >= 0)
+	{
+		if (menumeta[menutype].fadestrength % 32)
+			V_DrawFadeScreen(0xFF00, menumeta[menutype].fadestrength % 32);
+		return true;
+	}
+	else if (!level && (defaultvalue % 32))
+		V_DrawFadeScreen(0xFF00, defaultvalue % 32);
+	return false;
+}
+
+static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+{
+	(void)input;
+	if (menumeta[menutype].hidetitlepics >= 0)
+	{
+		*retval = menumeta[menutype].hidetitlepics;
+		return true;
+	}
+	else if (!level)
+		*retval = -1;
 	return false;
 }
 
@@ -2309,14 +2346,35 @@ static UINT8 M_GetYoungestChildLevel() // aka the active menu
 // EFFECTS
 // ====================================
 
-static void M_DrawBackground(char *defaultname)
-{
-	M_IterateMenuTree(MIT_DrawBackground, defaultname);
-}
-
 void M_DrawScrollingBackground(char *defaultname)
 {
 	M_IterateMenuTree(MIT_DrawScrollingBackground, defaultname);
+}
+
+static void M_ChangeMusic(char *defaultmusname, boolean defaultmuslooping)
+{
+	menumetamusic_t defaultmusic;
+
+	if (!defaultmusname)
+		defaultmusname = "";
+
+	strncpy(defaultmusic.musname, defaultmusname, 7);
+	defaultmusic.musname[6] = 0;
+	defaultmusic.mustrack = 0;
+	defaultmusic.muslooping = defaultmuslooping;
+
+	M_IterateMenuTree(MIT_ChangeMusic, &defaultmusic);
+}
+
+static void M_DrawFadeScreen(UINT8 defaultvalue)
+{
+	M_IterateMenuTree(MIT_FadeScreen, &defaultvalue);
+}
+
+boolean M_GetHideTitlePics(void)
+{
+	INT32 retval = M_IterateMenuTree(MIT_GetHideTitlePics, NULL);
+	return (retval >= 0 ? retval : hidetitlepics);
 }
 
 // =========================================================================
@@ -2807,7 +2865,7 @@ void M_Drawer(void)
 	{
 		// now that's more readable with a faded background (yeah like Quake...)
 		if (!WipeInAction)
-			V_DrawFadeScreen(0xFF00, 16);
+			M_DrawFadeScreen(16);
 
 		if (currentMenu->drawroutine)
 			currentMenu->drawroutine(); // call current menu Draw routine
@@ -3106,6 +3164,103 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
+}
+
+// ==========================================================================
+// COMMON MENU DRAW ROUTINES
+// ==========================================================================
+
+void MN_InitInfoTables(void)
+{
+	INT32 i;
+
+	// Called in d_main before SOC can get to the tables
+	// Set menumeta defaults
+	for (i = 0; i < NUMMENUTYPES; i++)
+	{
+		if (i != MN_MAIN)
+		{
+			menumeta[i].muslooping = true;
+		}
+		// so-called "undefined"
+		menumeta[i].fadestrength = -1;
+		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
+	}
+}
+
+void MN_Start(void)
+{
+	menuanimtimer = 0;
+}
+
+void MN_Ticker(boolean run)
+{
+	if (run)
+		menuanimtimer++;
+}
+
+//
+// M_SkyScroll
+//
+void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
+{
+	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
+	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
+	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	INT16 patwidth, patheight;
+	INT32 pw, ph; // scaled by dupz
+	patch_t *pat;
+	INT32 i, j;
+
+	if (rendermode == render_none)
+		return;
+
+	if (!patchname || !patchname[0])
+	{
+		V_DrawFill(0, 0, vid.width, vid.height, 31);
+		return;
+	}
+
+	if (!scrollxspeed && !scrollyspeed)
+	{
+		V_DrawPatchFill(W_CachePatchName(patchname, PU_CACHE));
+		return;
+	}
+
+	pat = W_CachePatchName(patchname, PU_CACHE);
+
+	patwidth = SHORT(pat->width);
+	patheight = SHORT(pat->height);
+	pw = patwidth * dupz;
+	ph = patheight * dupz;
+
+	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
+	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
+
+	xscrolltimer = ((menuanimtimer*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
+	yscrolltimer = ((menuanimtimer*scrollyspeed)/16 + patheight*yneg) % (patheight);
+
+	// coordinate offsets
+	xscrolled = xscrolltimer * dupz;
+	yscrolled = yscrolltimer * dupz;
+
+	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
+		i < tilex;
+		x += pw, i++)
+	{
+		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
+			j < tiley;
+			y += ph, j++)
+		{
+			V_DrawScaledPatch(
+				(xispos) ? xscrolled - x : x + xscrolled,
+				(yispos) ? yscrolled - y : y + yscrolled,
+				V_NOSCALESTART, pat);
+		}
+	}
+
+	W_UnlockCachedPatch(pat);
 }
 
 // ==========================================================================
@@ -4646,7 +4801,10 @@ static void M_DrawLevelPlatterMenu(void)
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
 	if (gamestate == GS_TIMEATTACK)
-		M_DrawBackground("SRB2BACK");
+	{
+		M_DrawScrollingBackground("SRB2BACK");
+		M_DrawFadeScreen(0);
+	}
 
 	// finds row at top of the screen
 	while (y > -8)
@@ -4848,7 +5006,7 @@ static void M_DrawMessageMenu(void)
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
-		M_DrawBackground("SRB2BACK");
+		M_DrawScrollingBackground("SRB2BACK");
 
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
@@ -7142,12 +7300,8 @@ static void M_SetupChoosePlayer(INT32 choice)
 		return;
 	}
 
-
 	if (Playing() == false)
-	{
-		S_StopMusic();
-		S_ChangeMusicInternal("_chsel", true);
-	}
+		M_ChangeMusic("_chsel", true);
 
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
@@ -7242,7 +7396,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	//M_DrawBackground("SRB2BACK");
+	//M_DrawScrollingBackground("SRB2BACK");
 
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
@@ -7629,10 +7783,13 @@ void M_DrawTimeAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
+	menutype_t menutype = M_GetYoungestChildMenu();
 
-	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	M_DrawBackground("SRB2BACK");
+	M_DrawScrollingBackground("SRB2BACK");
+
+	M_DrawFadeScreen(0);
 
 	M_DrawMenuTitle();
 
@@ -7808,7 +7965,7 @@ static void M_TimeAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusicInternal("_inter", true);
+	M_ChangeMusic("_inter", true);
 
 	itemOn = tastart; // "Start" is selected.
 }
@@ -7819,9 +7976,11 @@ void M_DrawNightsAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 
-	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	M_DrawBackground("SRB2BACK");
+	M_DrawScrollingBackground("SRB2BACK");
+
+	M_DrawFadeScreen(0);
 
 	M_DrawMenuTitle();
 
@@ -7985,7 +8144,7 @@ static void M_NightsAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusicInternal("_inter", true);
+	M_ChangeMusic("_inter", true);
 
 	itemOn = nastart; // "Start" is selected.
 }
@@ -8219,7 +8378,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	S_ChangeMusicInternal("_inter", true);
+	M_ChangeMusic("_inter", true);
 	Nextmap_OnChange();
 }
 

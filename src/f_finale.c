@@ -80,8 +80,6 @@ static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
 
-void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
-
 //
 // PROMPT STATE
 //
@@ -180,64 +178,6 @@ static void F_NewCutscene(const char *basetext)
 	cutscene_writeptr = cutscene_baseptr = 0;
 	cutscene_textspeed = 9;
 	cutscene_textcount = TICRATE/2;
-}
-
-//
-// F_SkyScroll
-//
-void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
-{
-	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
-	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
-	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	INT16 patwidth, patheight;
-	INT32 pw, ph; // scaled by dupz
-	patch_t *pat;
-	INT32 i, j;
-
-	if (rendermode == render_none)
-		return;
-
-	if (!patchname || !patchname[0])
-	{
-		V_DrawFill(0, 0, vid.width, vid.height, 31);
-		return;
-	}
-
-	pat = W_CachePatchName(patchname, PU_CACHE);
-
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
-	pw = patwidth * dupz;
-	ph = patheight * dupz;
-
-	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
-	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
-
-	animtimer = ((finalecount*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
-	skullAnimCounter = ((finalecount*scrollyspeed)/16 + patheight*yneg) % (patheight);
-
-	// coordinate offsets
-	xscrolled = animtimer * dupz;
-	yscrolled = skullAnimCounter * dupz;
-
-	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
-		i < tilex;
-		x += pw, i++)
-	{
-		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
-			j < tiley;
-			y += ph, j++)
-		{
-			V_DrawScaledPatch(
-				(xispos) ? xscrolled - x : x + xscrolled,
-				(yispos) ? yscrolled - y : y + yscrolled,
-				V_NOSCALESTART, pat);
-		}
-	}
-
-	W_UnlockCachedPatch(pat);
 }
 
 // =============
@@ -670,7 +610,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			F_SkyScroll(80*4, 0, "TITLESKY");
+			M_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
 				stoptimer = finalecount;
@@ -1413,6 +1353,8 @@ void F_GameEndTicker(void)
 // ==============
 void F_StartTitleScreen(void)
 {
+	MN_Start();
+
 	if (menumeta[MN_MAIN].musname[0])
 		S_ChangeMusic(menumeta[MN_MAIN].musname, menumeta[MN_MAIN].mustrack, menumeta[MN_MAIN].muslooping);
 	else
@@ -1507,6 +1449,8 @@ void F_StartTitleScreen(void)
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
+	boolean hidepics;
+
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
@@ -1518,7 +1462,8 @@ void F_TitleScreenDrawer(void)
 		return;
 
 	// rei|miru: use title pics?
-	if (hidetitlepics)
+	hidepics = M_GetHideTitlePics();
+	if (hidepics)
 #ifdef HAVE_BLUA
 		goto luahook;
 #else

@@ -125,7 +125,7 @@ typedef enum
 typedef struct
 {
 	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
-	boolean hidetitlepics; // hide title gfx per menu; inherits global setting
+	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
 	INT32 titlescrollyspeed; // y scroll
 
@@ -133,7 +133,7 @@ typedef struct
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	boolean muslooping; ///< Loop the music
 
-	boolean fadescreen;  // darken background when displaying this menu
+	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
 	boolean exitparents; // run exit line exec on parent menus when entering a child menu
 	INT32 entertag; // line exec to run on menu enter, if titlemap
 	INT32 exittag; // line exec to run on menu exit, if titlemap
@@ -142,6 +142,12 @@ typedef struct
 extern menumeta_t menumeta[NUMMENUTYPES];
 
 void M_DrawScrollingBackground(char *defaultname);
+void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
+boolean M_GetHideTitlePics(void);
+void MN_Ticker(boolean run);
+void MN_Start(void);
+void MN_InitInfoTables(void);
+
 
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.

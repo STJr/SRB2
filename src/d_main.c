@@ -1096,6 +1096,9 @@ void D_SRB2Main(void)
 	// adapt tables to SRB2's needs, including extra slots for dehacked file support
 	P_PatchInfoTables();
 
+	// initiate menu metadata before SOCcing them
+	MN_InitInfoTables();
+
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
