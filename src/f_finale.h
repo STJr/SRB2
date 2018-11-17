@@ -84,12 +84,17 @@ extern UINT8 titlemapinaction;
 //
 // WIPE
 //
+// HACK for menu fading while titlemapinaction; skips the level check
+#define FORCEWIPE -2
+
 extern boolean WipeInAction;
 extern INT32 lastwipetic;
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+tic_t F_GetWipeLength(UINT8 wipetype);
+boolean F_WipeExists(UINT8 wipetype);
 
 enum
 {

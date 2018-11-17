@@ -1809,9 +1809,9 @@ menu_t MP_RoomDef =
 menu_t MP_PlayerSetupDef =
 {
 #ifdef NONET
-	MN_MP_MAIN + (MN_MP_SPLITSCREEN << 6) + (MN_MP_PLAYERSETUP << 12),
-#else
 	MN_MP_MAIN + (MN_MP_PLAYERSETUP << 6),
+#else
+	MN_MP_MAIN + (MN_MP_SPLITSCREEN << 6) + (MN_MP_PLAYERSETUP << 12),
 #endif
 	"M_SPLAYR",
 	sizeof (MP_PlayerSetupMenu)/sizeof (menuitem_t),
@@ -1850,7 +1850,7 @@ menu_t OP_Joystick2Def = DEFAULTMENUSTYLE(
 	"M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 50, 30);
 menu_t OP_JoystickSetDef =
 {
-	MN_OP_MAIN + (MN_OP_JOYSTICKSET << 12),  // second level (<<6) set on runtime
+	MN_OP_MAIN + (MN_OP_JOYSTICKSET << MENUBITS*3),  // second (<<6) and third level (<<12) set on runtime
 	"M_CONTRO",
 	sizeof (OP_JoystickSetMenu)/sizeof (menuitem_t),
 	&OP_Joystick1Def,
@@ -2196,12 +2196,48 @@ static tic_t xscrolltimer;
 static tic_t yscrolltimer;
 static INT32 menuanimtimer;
 
+// menu IDs are equal to current/prevMenu in most cases, except MM_SPECIAL when we don't want to operate on Message, Pause, etc.
+static UINT32 prevMenuId = 0;
+static UINT32 activeMenuId = 0;
+
 typedef struct
 {
 	char musname[7];
 	UINT16 mustrack;
 	boolean muslooping;
 } menumetamusic_t;
+
+void MN_InitInfoTables(void)
+{
+	INT32 i;
+
+	// Called in d_main before SOC can get to the tables
+	// Set menumeta defaults
+	for (i = 0; i < NUMMENUTYPES; i++)
+	{
+		if (i != MN_MAIN)
+		{
+			menumeta[i].muslooping = true;
+		}
+		if (i == MN_SP_TIMEATTACK || i == MN_SP_NIGHTSATTACK)
+			strncpy(menumeta[i].musname, "_inter", 7);
+		if (i == MN_SP_PLAYER)
+			strncpy(menumeta[i].musname, "_chsel", 7);
+
+		// so-called "undefined"
+		menumeta[i].fadestrength = -1;
+		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
+		menumeta[i].enterwipe = -1;
+		menumeta[i].exitwipe = -1;
+		// default true
+		menumeta[i].enterbubble = true;
+		menumeta[i].exitbubble = true;
+	}
+}
+
+// ====================================
+// TREE ITERATION
+// ====================================
 
 // UINT32 menutype - current menutype_t
 // INT32 level - current level up the tree, higher means younger
@@ -2210,7 +2246,7 @@ typedef struct
 //
 // return true - stop iterating
 // return false - continue
-typedef boolean (*menutree_iterator)(UINT32, INT32, INT32 *, void **);
+typedef boolean (*menutree_iterator)(UINT32, INT32, INT32 *, void **, boolean fromoldest);
 
 static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 {
@@ -2220,8 +2256,8 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 	for (i = NUMMENULEVELS; i >= 0; i--)
 	{
 		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
-		menutype = (currentMenu->menuid & bitmask) >> (MENUBITS*i);
-		if (itfunc(menutype, i, &retval, &input))
+		menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
+		if (itfunc(menutype, i, &retval, &input, false))
 			break;
 	}
 
@@ -2236,8 +2272,8 @@ static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
 	for (i = 0; i <= NUMMENULEVELS; i++)
 	{
 		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
-		menutype = (currentMenu->menuid & bitmask) >> (MENUBITS*i);
-		if (itfunc(menutype, i, &retval, &input))
+		menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
+		if (itfunc(menutype, i, &retval, &input, true))
 			break;
 	}
 
@@ -2248,17 +2284,32 @@ static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
 // ITERATORS
 // ====================================
 
-static boolean MIT_GetEdgeMenu(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+static boolean MIT_GetMenuAtLevel(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
+	INT32 *inputptr = (INT32*)*input;
+	INT32 targetlevel = *inputptr;
 	if (menutype)
 	{
-		*retval = menutype;
-		return true;
+		// \todo offset targetlevel by failed initial attempts
+		if (level == targetlevel || targetlevel < 0)
+		{
+			*retval = menutype;
+			return true;
+		}
+	}
+	else if (targetlevel >= 0)
+	{
+		// offset targetlevel by failed attempts; this should only happen in beginning of iteration
+		if (fromoldest)
+			(*inputptr)++;
+		else
+			(*inputptr)--; // iterating backwards, so count from highest
 	}
 	return false;
 }
 
-static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+#if 0
+static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	if (menutype)
 	{
@@ -2267,22 +2318,36 @@ static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, voi
 	}
 	return false;
 }
+#endif
 
-static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+static boolean MIT_HasMenuType(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+{
+	menutype_t inputtype = *(menutype_t*)*input;
+	if (menutype == inputtype)
+	{
+		*retval = true;
+		return true;
+	}
+	return false;
+}
+
+static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	char *defaultname = (char*)*input;
 
-	if (menumeta[menutype].bgname[0])
+	if (menumeta[menutype].bgname[0] && menumeta[menutype].bgname[0] != CHAR_MAX)
 	{
 		M_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
 		return true;
 	}
-	else if (!level && defaultname && defaultname[0])
+	else if (menumeta[menutype].bgname[0] == CHAR_MAX && titlemapinaction) // hide the background
+		return true;
+	else if (!level && defaultname && defaultname[0] && !titlemapinaction) // hide the background by default in titlemap
 		M_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
 	return false;
 }
 
-static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	menumetamusic_t *defaultmusic = (menumetamusic_t*)*input;
 
@@ -2291,12 +2356,19 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 		S_ChangeMusic(menumeta[menutype].musname, menumeta[menutype].mustrack, menumeta[menutype].muslooping);
 		return true;
 	}
+	else if (menumeta[menutype].musstop)
+	{
+		S_StopMusic();
+		return true;
+	}
+	else if (menumeta[menutype].musignore)
+		return true;
 	else if (!level && defaultmusic && defaultmusic->musname[0])
 		S_ChangeMusic(defaultmusic->musname, defaultmusic->mustrack, defaultmusic->muslooping);
 	return false;
 }
 
-static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	UINT8 defaultvalue = *(UINT8*)*input;
 	if (menumeta[menutype].fadestrength >= 0)
@@ -2310,7 +2382,7 @@ static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void 
 	return false;
 }
 
-static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input)
+static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	(void)input;
 	if (menumeta[menutype].hidetitlepics >= 0)
@@ -2327,19 +2399,43 @@ static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval,
 // TREE RETRIEVAL
 // ====================================
 
+#if 0
+// level is nth level relative to top or bottom from tree
+static menutype_t M_GetMenuAtLevel(INT32 level, boolean fromoldest)
+{
+	if (fromoldest)
+		return M_IterateMenuTreeFromTop(MIT_GetMenuAtLevel, &level);
+	else
+	{
+		if (level >= 0)
+			level = NUMMENULEVELS - level; // iterating backwards, so count from highest value
+		return M_IterateMenuTree(MIT_GetMenuAtLevel, &level);
+	}
+}
+#endif
+
 static UINT8 M_GetYoungestChildMenu() // aka the active menu
 {
-	return M_IterateMenuTree(MIT_GetEdgeMenu, NULL);
+	INT32 targetlevel = -1;
+	return M_IterateMenuTree(MIT_GetMenuAtLevel, &targetlevel);
 }
 
+#if 0
 static UINT8 M_GetOldestParentMenu()
 {
-	return M_IterateMenuTreeFromTop(MIT_GetEdgeMenu, NULL);
+	INT32 targetlevel = -1;
+	return M_IterateMenuTreeFromTop(MIT_GetMenuAtLevel, &targetlevel);
 }
 
 static UINT8 M_GetYoungestChildLevel() // aka the active menu
 {
 	return M_IterateMenuTree(MIT_GetEdgeLevel, NULL);
+}
+#endif
+
+static boolean M_HasMenuType(menutype_t needletype)
+{
+	return M_IterateMenuTreeFromTop(MIT_HasMenuType, &needletype);
 }
 
 // ====================================
@@ -2377,6 +2473,162 @@ boolean M_GetHideTitlePics(void)
 	return (retval >= 0 ? retval : hidetitlepics);
 }
 
+// ====================================
+// MENU STATE
+// ====================================
+
+static INT32 exitlevel, enterlevel, anceslevel;
+static INT16 exittype, entertype;
+static INT16 exitwipe, enterwipe;
+static boolean exitbubble, enterbubble;
+static INT16 exittag, entertag;
+
+static void M_HandleMenuMetaState(menu_t *newMenu)
+{
+	INT32 i;
+	UINT32 bitmask;
+	SINT8 prevtype, activetype, menutype;
+
+	if (M_HasMenuType(MN_SPECIAL))
+		return;
+
+	if (currentMenu && newMenu && currentMenu->menuid == newMenu->menuid) // same menu?
+		return;
+
+	exittype = entertype = exitlevel = enterlevel = anceslevel = exitwipe = enterwipe = -1;
+	exitbubble = enterbubble = true;
+
+	prevMenuId = currentMenu ? currentMenu->menuid : 0;
+	activeMenuId = newMenu ? newMenu->menuid : 0;
+
+	// don't do the below during the in-game menus
+	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
+		return;
+
+	// Loop through both menu IDs in parallel and look for type changes
+	// The youngest child in activeMenuId is the entered menu
+	// The youngest child in prevMenuId is the exited menu
+
+	// 0. Get the type and level of each menu, and level of common ancestor
+	// 1. Get the wipes for both, then run the exit wipe
+	// 2. Change music (so that execs can change it again later)
+	// 3. Run each exit exec on the prevMenuId up to the common ancestor (UNLESS NoBubbleExecs)
+	// 4. Run each entrance exec on the activeMenuId down from the common ancestor (UNLESS NoBubbleExecs)
+	// 5. Run the entrance wipe
+
+	// Get the parameters for each menu
+	for (i = NUMMENULEVELS; i >= 0; i--)
+	{
+		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+		prevtype = (prevMenuId & bitmask) >> (MENUBITS*i);
+		activetype = (activeMenuId & bitmask) >> (MENUBITS*i);
+
+		if (prevtype && (exittype < 0))
+		{
+			exittype = prevtype;
+			exitlevel = i;
+			exitwipe = menumeta[exittype].exitwipe;
+			exitbubble = menumeta[exittype].exitbubble;
+			exittag = menumeta[exittype].exittag;
+		}
+
+		if (activetype && (entertype < 0))
+		{
+			entertype = activetype;
+			enterlevel = i;
+			enterwipe = menumeta[entertype].enterwipe;
+			enterbubble = menumeta[entertype].enterbubble;
+			entertag = menumeta[entertype].entertag;
+		}
+
+		if (prevtype && activetype && prevtype == activetype && anceslevel < 0)
+		{
+			anceslevel = i;
+			break;
+		}
+	}
+
+	// Change the music
+	M_ChangeMusic("_title", false);
+
+	// Run the linedef execs
+	if (titlemapinaction)
+	{
+		// Run the exit tags
+		if (enterlevel <= exitlevel) // equals is an edge case
+		{
+			if (exitbubble)
+			{
+				for (i = exitlevel; i > anceslevel; i--) // don't run the common ancestor's exit tag
+				{
+					bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+					menutype = (prevMenuId & bitmask) >> (MENUBITS*i);
+					if (menumeta[menutype].exittag)
+						P_LinedefExecute(menumeta[menutype].exittag, players[displayplayer].mo, NULL);
+				}
+			}
+			else if (exittag)
+				P_LinedefExecute(exittag, players[displayplayer].mo, NULL);
+		}
+
+		// Run the enter tags
+		if (enterlevel >= exitlevel) // equals is an edge case
+		{
+			if (enterbubble)
+			{
+				for (i = anceslevel+1; i <= enterlevel; i++) // don't run the common ancestor's enter tag
+				{
+					bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+					menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
+					if (menumeta[menutype].entertag)
+						P_LinedefExecute(menumeta[menutype].entertag, players[displayplayer].mo, NULL);
+				}
+			}
+			else if (entertag)
+				P_LinedefExecute(entertag, players[displayplayer].mo, NULL);
+		}
+	}
+
+
+	// Set the wipes for next frame
+	if (
+		(exitwipe >= 0 && enterlevel <= exitlevel) ||
+		(enterwipe >= 0 && enterlevel >= exitlevel)
+	)
+	{
+		if (gamestate == GS_TIMEATTACK)
+			wipetypepre = (exitwipe && enterlevel <= exitlevel) ? exitwipe : -1; // force default
+		else
+			// HACK: INT16_MAX signals to not wipe
+			// because 0 is a valid index and -1 means default
+			wipetypepre = (exitwipe && enterlevel <= exitlevel) ? exitwipe : INT16_MAX;
+		wipetypepost = (enterwipe && enterlevel >= exitlevel) ? enterwipe : INT16_MAX;
+		wipegamestate = FORCEWIPE;
+		// D_Display runs the next step of processing
+	}
+	else
+		M_ApplyMenuMetaState(); // run the next step now
+}
+
+void M_ApplyMenuMetaState(void)
+{
+#if 0
+	INT32 i;
+	UINT32 bitmask, menutype;
+
+	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
+		return;
+
+	// 3. Run each exit exec on the prevMenuId up to the common ancestor (UNLESS NoBubbleExecs)
+	// 4. Run each entrance exec on the activeMenuId down from the common ancestor (UNLESS NoBubbleExecs)
+
+	// \todo placeholder -- do we want any logic to happen between wipes?
+	// do we want to split linedef execs between pre-wipe and tween-wipe?
+
+	// D_Display runs the enter wipe, if applicable
+#endif
+}
+
 // =========================================================================
 // BASIC MENU HANDLING
 // =========================================================================
@@ -2402,6 +2654,7 @@ static void M_GoBack(INT32 choice)
 			Z_Free(levelselect.rows);
 			levelselect.rows = NULL;
 			menuactive = false;
+			wipetypepre = menumeta[M_GetYoungestChildMenu(currentMenu->menuid)].exitwipe;
 			D_StartTitle();
 		}
 		else
@@ -3062,6 +3315,9 @@ void M_SetupNextMenu(menu_t *menudef)
 		if (currentMenu != menudef && !currentMenu->quitroutine())
 			return; // we can't quit this menu (also used to set parameter from the menu)
 	}
+
+	M_HandleMenuMetaState(menudef);
+
 	currentMenu = menudef;
 	itemOn = currentMenu->lastOn;
 
@@ -3170,27 +3426,11 @@ void M_Init(void)
 // COMMON MENU DRAW ROUTINES
 // ==========================================================================
 
-void MN_InitInfoTables(void)
-{
-	INT32 i;
-
-	// Called in d_main before SOC can get to the tables
-	// Set menumeta defaults
-	for (i = 0; i < NUMMENUTYPES; i++)
-	{
-		if (i != MN_MAIN)
-		{
-			menumeta[i].muslooping = true;
-		}
-		// so-called "undefined"
-		menumeta[i].fadestrength = -1;
-		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
-	}
-}
-
 void MN_Start(void)
 {
 	menuanimtimer = 0;
+	prevMenuId = 0;
+	activeMenuId = MainDef.menuid;
 }
 
 void MN_Ticker(boolean run)
@@ -5006,7 +5246,10 @@ static void M_DrawMessageMenu(void)
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
+	{
 		M_DrawScrollingBackground("SRB2BACK");
+		M_DrawFadeScreen(0);
+	}
 
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
@@ -7397,6 +7640,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 	//M_DrawScrollingBackground("SRB2BACK");
+	//M_DrawFadeScreen(0);
 
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
@@ -7783,7 +8027,6 @@ void M_DrawTimeAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
-	menutype_t menutype = M_GetYoungestChildMenu();
 
 	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
@@ -7958,14 +8201,12 @@ static void M_TimeAttack(INT32 choice)
 
 	M_PatchSkinNameTable();
 
+	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	M_SetupNextMenu(&SP_TimeAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
 		Nextmap_OnChange();
-
-	G_SetGamestate(GS_TIMEATTACK);
-	M_ChangeMusic("_inter", true);
 
 	itemOn = tastart; // "Start" is selected.
 }
@@ -8137,14 +8378,12 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
+	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	M_SetupNextMenu(&SP_NightsAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
 		Nextmap_OnChange();
-
-	G_SetGamestate(GS_TIMEATTACK);
-	M_ChangeMusic("_inter", true);
 
 	itemOn = nastart; // "Start" is selected.
 }
@@ -8370,15 +8609,17 @@ static void M_ModeAttackEndGame(INT32 choice)
 	default:
 	case ATTACKING_RECORD:
 		currentMenu = &SP_TimeAttackDef;
+		wipetypepost = menumeta[MN_SP_TIMEATTACK].enterwipe;
 		break;
 	case ATTACKING_NIGHTS:
 		currentMenu = &SP_NightsAttackDef;
+		wipetypepost = menumeta[MN_SP_NIGHTSATTACK].enterwipe;
 		break;
 	}
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	M_ChangeMusic("_inter", true);
+	M_ChangeMusic("_title", true);
 	Nextmap_OnChange();
 }
 
@@ -9556,6 +9797,10 @@ static void M_Setup1PJoystickMenu(INT32 choice)
 {
 	setupcontrols_secondaryplayer = false;
 	OP_JoystickSetDef.prevMenu = &OP_Joystick1Def;
+	OP_JoystickSetDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS);
+	OP_JoystickSetDef.menuid &= ~(((1 << MENUBITS) - 1) << (MENUBITS*2));
+	OP_JoystickSetDef.menuid |= MN_OP_P1CONTROLS << MENUBITS;
+	OP_JoystickSetDef.menuid |= MN_OP_P1JOYSTICK << (MENUBITS*2);
 	M_SetupJoystickMenu(choice);
 }
 
@@ -9563,6 +9808,10 @@ static void M_Setup2PJoystickMenu(INT32 choice)
 {
 	setupcontrols_secondaryplayer = true;
 	OP_JoystickSetDef.prevMenu = &OP_Joystick2Def;
+	OP_JoystickSetDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS);
+	OP_JoystickSetDef.menuid &= ~(((1 << MENUBITS) - 1) << (MENUBITS*2));
+	OP_JoystickSetDef.menuid |= MN_OP_P2CONTROLS << MENUBITS;
+	OP_JoystickSetDef.menuid |= MN_OP_P2JOYSTICK << (MENUBITS*2);
 	M_SetupJoystickMenu(choice);
 }
 
@@ -9600,6 +9849,8 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	OP_ChangeControlsMenu[23+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
+	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove first level (<< 6)
+	OP_ChangeControlsDef.menuid |= MN_OP_P1CONTROLS << MENUBITS; // combine first level (<< 6)
 	M_SetupNextMenu(&OP_ChangeControlsDef);
 }
 
@@ -9625,6 +9876,8 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	OP_ChangeControlsMenu[23+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
+	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove first level (<< 6)
+	OP_ChangeControlsDef.menuid |= MN_OP_P2CONTROLS << MENUBITS; // combine first level (<< 6)
 	M_SetupNextMenu(&OP_ChangeControlsDef);
 }
 

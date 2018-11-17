@@ -1353,15 +1353,16 @@ void F_GameEndTicker(void)
 // ==============
 void F_StartTitleScreen(void)
 {
-	MN_Start();
-
 	if (menumeta[MN_MAIN].musname[0])
 		S_ChangeMusic(menumeta[MN_MAIN].musname, menumeta[MN_MAIN].mustrack, menumeta[MN_MAIN].muslooping);
 	else
 		S_ChangeMusicInternal("_title", looptitle);
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
+	{
 		finalecount = 0;
+		wipetypepost = menumeta[MN_MAIN].enterwipe;
+	}
 	else
 		wipegamestate = GS_TITLESCREEN;
 
@@ -1410,6 +1411,10 @@ void F_StartTitleScreen(void)
 
 		camera.chase = true;
 		camera.height = 0;
+
+		// Run enter linedef exec for MN_MAIN, since this is where we start
+		if (menumeta[MN_MAIN].entertag)
+			P_LinedefExecute(menumeta[MN_MAIN].entertag, players[displayplayer].mo, NULL);
 
 		wipegamestate = prevwipegamestate;
 	}

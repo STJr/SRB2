@@ -2737,7 +2737,13 @@ boolean P_SetupLevel(boolean skipprecip)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_level_toblack], false);
+		// for titlemap: run a specific wipe if specified
+		// needed for exiting time attack
+		if (wipetypepre != INT16_MAX)
+			F_RunWipe(
+				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+				false);
+		wipetypepre = -1;
 	}
 
 	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."

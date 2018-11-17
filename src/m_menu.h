@@ -132,11 +132,16 @@ typedef struct
 	char musname[7]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	boolean muslooping; ///< Loop the music
+	boolean musstop; ///< Don't play any music
+	boolean musignore; ///< Let the current music keep playing
 
 	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
-	boolean exitparents; // run exit line exec on parent menus when entering a child menu
+	boolean enterbubble; // run all entrance line execs after common ancestor and up to child. If false, only run the child's exec
+	boolean exitbubble; // run all exit line execs from child and up to before common ancestor. If false, only run the child's exec
 	INT32 entertag; // line exec to run on menu enter, if titlemap
 	INT32 exittag; // line exec to run on menu exit, if titlemap
+	INT16 enterwipe; // wipe type to run on menu enter, -1 means default
+	INT16 exitwipe; // wipe type to run on menu exit, -1 means default
 } menumeta_t;
 
 extern menumeta_t menumeta[NUMMENUTYPES];
@@ -147,6 +152,7 @@ boolean M_GetHideTitlePics(void);
 void MN_Ticker(boolean run);
 void MN_Start(void);
 void MN_InitInfoTables(void);
+void M_ApplyMenuMetaState(void);
 
 
 // Called by main loop,

@@ -1954,11 +1954,17 @@ static void readmenu(MYFILE *f, INT32 num)
 
 			value = atoi(word2); // used for numerical settings
 
-			CONS_Printf("Menu %d> %s | %s\n", num, word, word2);
-
 			if (fastcmp(word, "BACKGROUNDNAME"))
 			{
 				strncpy(menumeta[num].bgname, word2, 8);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDEBACKGROUND"))
+			{
+				// HACK: Use CHAR_MAX to signal that we want to hide the background
+				// Only effective during titlemap
+				menumeta[num].bgname[0] = CHAR_MAX;
+				menumeta[num].bgname[1] = 0;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
@@ -2006,7 +2012,17 @@ static void readmenu(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
 				// true by default except MM_MAIN
-				menumeta[num].muslooping = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+				menumeta[num].muslooping = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NOMUSIC"))
+			{
+				menumeta[num].musstop = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "IGNOREMUSIC"))
+			{
+				menumeta[num].musignore = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "FADESTRENGTH"))
@@ -2015,9 +2031,14 @@ static void readmenu(MYFILE *f, INT32 num)
 				menumeta[num].fadestrength = value-1;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "EXITPARENTS"))
+			else if (fastcmp(word, "NOENTERBUBBLE"))
 			{
-				menumeta[num].exitparents = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				menumeta[num].enterbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NOEXITBUBBLE"))
+			{
+				menumeta[num].exitbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "ENTERTAG"))
@@ -2028,6 +2049,16 @@ static void readmenu(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "EXITTAG"))
 			{
 				menumeta[num].exittag = value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "ENTERWIPE"))
+			{
+				menumeta[num].enterwipe = value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "EXITWIPE"))
+			{
+				menumeta[num].exitwipe = value;
 				titlechanged = true;
 			}
 		}

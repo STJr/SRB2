@@ -233,6 +233,9 @@ void D_ProcessEvents(void)
 // wipegamestate can be set to -1 to force a wipe on the next draw
 // added comment : there is a wipe eatch change of the gamestate
 gamestate_t wipegamestate = GS_LEVEL;
+// -1: Default; 0-n: Wipe index; INT16_MAX: do not wipe
+INT16 wipetypepre = -1;
+INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
@@ -266,7 +269,7 @@ static void D_Display(void)
 
 	// save the current screen if about to wipe
 	wipe = (gamestate != wipegamestate);
-	if (wipe)
+	if (wipe && wipetypepre != INT16_MAX)
 	{
 		// set for all later
 		wipedefindex = gamestate; // wipe_xxx_toblack
@@ -278,21 +281,29 @@ static void D_Display(void)
 				wipedefindex = wipe_multinter_toblack;
 		}
 
+		if (wipetypepre < 0 || !F_WipeExists(wipetypepre))
+			wipetypepre = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
-			 && wipedefs[wipedefindex] != UINT8_MAX)
+			if ((wipegamestate == FORCEWIPE ||
+			        !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))) // fades to black on its own timing, always
+			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
-				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
 
 			F_WipeStartScreen();
 		}
+
+		wipetypepre = -1;
 	}
+	else
+		wipetypepre = -1;
 
 	// do buffered drawing
 	switch (gamestate)
@@ -358,6 +369,10 @@ static void D_Display(void)
 		case GS_NULL:
 			break;
 	}
+
+	// Run menu state updates and linedef execs in titlemap
+	if (wipe && (gamestate == GS_TITLESCREEN || gamestate == GS_TIMEATTACK))
+		M_ApplyMenuMetaState();
 
 	// clean up border stuff
 	// see if the border needs to be initially drawn
@@ -465,18 +480,25 @@ static void D_Display(void)
 	//
 	// wipe update
 	//
-	if (wipe)
+	if (wipe && wipetypepost != INT16_MAX)
 	{
 		// note: moved up here because NetUpdate does input changes
 		// and input during wipe tends to mess things up
 		wipedefindex += WIPEFINALSHIFT;
 
+		if (wipetypepost < 0 || !F_WipeExists(wipetypepost))
+			wipetypepost = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
-			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
+
+		wipetypepost = -1;
 	}
+	else
+		wipetypepost = -1;
 
 	NetUpdate(); // send out any new accumulation
 
@@ -729,6 +751,7 @@ void D_StartTitle(void)
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
+	MN_Start();
 	F_StartTitleScreen();
 	CON_ToggleOff();
 
@@ -1378,6 +1401,7 @@ void D_SRB2Main(void)
 	{
 		CON_ToggleOff();
 		CON_ClearHUD();
+		MN_Start();
 		F_StartTitleScreen();
 	}
 	else
