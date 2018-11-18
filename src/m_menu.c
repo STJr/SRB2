@@ -2675,6 +2675,14 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : INT16_MAX;
 		wipetypepost = ((enterwipe && enterlevel >= exitlevel) || anceslevel < 0) ? enterwipe : INT16_MAX;
 		wipegamestate = FORCEWIPE;
+
+		// If just one of the above is a force not-wipe,
+		// mirror the other wipe.
+		if (wipetypepre != INT16_MAX && wipetypepost == INT16_MAX)
+			wipetypepost = wipetypepre;
+		else if (wipetypepost != INT16_MAX && wipetypepre == INT16_MAX)
+			wipetypepre = wipetypepost;
+
 		// D_Display runs the next step of processing
 	}
 	else
