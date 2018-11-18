@@ -2566,6 +2566,44 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 		}
 	}
 
+	// if no common ancestor (top menu), force a wipe. Look for a specified wipe first.
+	if (anceslevel < 0 && exitwipe < 0)
+	{
+		for (i = NUMMENULEVELS; i >= 0; i--)
+		{
+			bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+			prevtype = (prevMenuId & bitmask) >> (MENUBITS*i);
+
+			if (menumeta[prevtype].exitwipe >= 0)
+			{
+				exitwipe = menumeta[prevtype].exitwipe;
+				break;
+			}
+		}
+
+		if (exitwipe < 0)
+			exitwipe = menumeta[MN_MAIN].exitwipe;
+	}
+
+	// do the same for enter wipe
+	if (anceslevel < 0 && enterwipe < 0)
+	{
+		for (i = NUMMENULEVELS; i >= 0; i--)
+		{
+			bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+			activetype = (activeMenuId & bitmask) >> (MENUBITS*i);
+
+			if (menumeta[activetype].enterwipe >= 0)
+			{
+				exitwipe = menumeta[activetype].enterwipe;
+				break;
+			}
+		}
+
+		if (enterwipe < 0)
+			enterwipe = menumeta[MN_MAIN].enterwipe;
+	}
+
 	// Change the music
 	M_ChangeMusic("_title", false);
 
@@ -2611,16 +2649,17 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	// Set the wipes for next frame
 	if (
 		(exitwipe >= 0 && enterlevel <= exitlevel) ||
-		(enterwipe >= 0 && enterlevel >= exitlevel)
+		(enterwipe >= 0 && enterlevel >= exitlevel) ||
+		anceslevel < 0
 	)
 	{
 		if (gamestate == GS_TIMEATTACK)
-			wipetypepre = (exitwipe && enterlevel <= exitlevel) ? exitwipe : -1; // force default
+			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : -1; // force default
 		else
 			// HACK: INT16_MAX signals to not wipe
 			// because 0 is a valid index and -1 means default
-			wipetypepre = (exitwipe && enterlevel <= exitlevel) ? exitwipe : INT16_MAX;
-		wipetypepost = (enterwipe && enterlevel >= exitlevel) ? enterwipe : INT16_MAX;
+			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : INT16_MAX;
+		wipetypepost = ((enterwipe && enterlevel >= exitlevel) || anceslevel < 0) ? enterwipe : INT16_MAX;
 		wipegamestate = FORCEWIPE;
 		// D_Display runs the next step of processing
 	}
