@@ -146,8 +146,8 @@ typedef struct
 
 extern menumeta_t menumeta[NUMMENUTYPES];
 
-void M_DrawScrollingBackground(char *defaultname);
-void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname);
+void M_DrawScrollingBackground(const char *defaultname);
+void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
 boolean M_GetHideTitlePics(void);
 void MN_Ticker(boolean run);
 void MN_Start(void);

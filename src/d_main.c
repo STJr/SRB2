@@ -287,7 +287,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if ((wipegamestate == FORCEWIPE ||
+			if ((wipegamestate == (gamestate_t)FORCEWIPE ||
 			        !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))) // fades to black on its own timing, always
 			 && wipetypepre != UINT8_MAX)
 			{

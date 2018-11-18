@@ -2338,6 +2338,9 @@ static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *
 {
 	char *defaultname = (char*)*input;
 
+	(void)retval;
+	(void)fromoldest;
+
 	if (menumeta[menutype].bgname[0] && menumeta[menutype].bgname[0] != CHAR_MAX)
 	{
 		M_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
@@ -2359,6 +2362,9 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 {
 	menumetamusic_t *defaultmusic = (menumetamusic_t*)*input;
 
+	(void)retval;
+	(void)fromoldest;
+
 	if (menumeta[menutype].musname[0])
 	{
 		S_ChangeMusic(menumeta[menutype].musname, menumeta[menutype].mustrack, menumeta[menutype].muslooping);
@@ -2379,6 +2385,10 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	UINT8 defaultvalue = *(UINT8*)*input;
+
+	(void)retval;
+	(void)fromoldest;
+
 	if (menumeta[menutype].fadestrength >= 0)
 	{
 		if (menumeta[menutype].fadestrength % 32)
@@ -2393,6 +2403,8 @@ static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void 
 static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	(void)input;
+	(void)fromoldest;
+
 	if (menumeta[menutype].hidetitlepics >= 0)
 	{
 		*retval = menumeta[menutype].hidetitlepics;
@@ -2450,12 +2462,14 @@ static boolean M_HasMenuType(menutype_t needletype)
 // EFFECTS
 // ====================================
 
-void M_DrawScrollingBackground(char *defaultname)
+void M_DrawScrollingBackground(const char *defaultname)
 {
-	M_IterateMenuTree(MIT_DrawScrollingBackground, defaultname);
+	char name[8];
+	strncpy(name, defaultname, 8);
+	M_IterateMenuTree(MIT_DrawScrollingBackground, &name);
 }
 
-static void M_ChangeMusic(char *defaultmusname, boolean defaultmuslooping)
+static void M_ChangeMusic(const char *defaultmusname, boolean defaultmuslooping)
 {
 	menumetamusic_t defaultmusic;
 
@@ -3499,7 +3513,7 @@ void MN_Ticker(boolean run)
 //
 // M_SkyScroll
 //
-void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, char *patchname)
+void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 {
 	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
 	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
