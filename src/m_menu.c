@@ -2264,6 +2264,7 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 	return retval;
 }
 
+#if 0
 static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
 {
 	INT32 i, retval = 0;
@@ -2279,6 +2280,7 @@ static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
 
 	return retval;
 }
+#endif
 
 // ====================================
 // ITERATORS
@@ -2318,7 +2320,7 @@ static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, voi
 	}
 	return false;
 }
-#endif
+
 
 static boolean MIT_HasMenuType(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
@@ -2330,6 +2332,7 @@ static boolean MIT_HasMenuType(UINT32 menutype, INT32 level, INT32 *retval, void
 	}
 	return false;
 }
+#endif
 
 static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
@@ -2436,12 +2439,12 @@ static UINT8 M_GetYoungestChildLevel() // aka the active menu
 {
 	return M_IterateMenuTree(MIT_GetEdgeLevel, NULL);
 }
-#endif
 
 static boolean M_HasMenuType(menutype_t needletype)
 {
 	return M_IterateMenuTreeFromTop(MIT_HasMenuType, &needletype);
 }
+#endif
 
 // ====================================
 // EFFECTS
@@ -2494,8 +2497,18 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	UINT32 bitmask;
 	SINT8 prevtype, activetype, menutype;
 
-	if (M_HasMenuType(MN_SPECIAL))
+	if (!newMenu)
 		return;
+
+	// Look for MN_SPECIAL here, because our iterators can't look at new menu IDs
+	for (i = 0; i <= NUMMENULEVELS; i++)
+	{
+		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
+		menutype = (newMenu->menuid & bitmask) >> (MENUBITS*i);
+		prevtype = (currentMenu->menuid & bitmask) >> (MENUBITS*i);
+		if (menutype == MN_SPECIAL || prevtype == MN_SPECIAL)
+			return;
+	}
 
 	if (currentMenu && newMenu && currentMenu->menuid == newMenu->menuid) // same menu?
 		return;
