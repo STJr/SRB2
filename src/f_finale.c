@@ -51,7 +51,7 @@ static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
-static tic_t skullAnimCounter; // Prompts: Chevron animation; Title screen: Y animation timing
+static INT16 skullAnimCounter; // Prompts: Chevron animation; Title screen: Y animation timing
 static INT32 roidtics; // Asteroid spinning
 
 static INT32 deplete;
