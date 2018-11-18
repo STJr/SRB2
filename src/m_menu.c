@@ -2342,8 +2342,13 @@ static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *
 	}
 	else if (menumeta[menutype].bgname[0] == CHAR_MAX && titlemapinaction) // hide the background
 		return true;
-	else if (!level && defaultname && defaultname[0] && !titlemapinaction) // hide the background by default in titlemap
-		M_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
+	else if (!level)
+	{
+		if (defaultname && defaultname[0] && !titlemapinaction) // hide the background by default in titlemap
+			M_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
+		else if (currentMenu == &SP_PlayerDef) // black bg
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+	}
 	return false;
 }
 
@@ -7638,9 +7643,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	UINT8 prev, next;
 
 	// Black BG
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	//M_DrawScrollingBackground("SRB2BACK");
-	//M_DrawFadeScreen(0);
+	//V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+	M_DrawScrollingBackground("SRB2BACK");
+	M_DrawFadeScreen(0);
 
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
