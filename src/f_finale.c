@@ -1374,6 +1374,7 @@ void F_StartTitleScreen(void)
 
 		gamestate_t prevwipegamestate = wipegamestate;
 		titlemapinaction = TITLEMAP_LOADING;
+		titlemapcameraref = NULL;
 		gamemap = titlemap;
 
 		if (!mapheaderinfo[gamemap-1])
