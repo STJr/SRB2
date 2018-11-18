@@ -1351,6 +1351,8 @@ void F_GameEndTicker(void)
 // ==============
 //  TITLE SCREEN
 // ==============
+mobj_t *titlemapcameraref = NULL;
+
 void F_StartTitleScreen(void)
 {
 	if (menumeta[MN_MAIN].musname[0])
@@ -1535,22 +1537,28 @@ void F_TitleScreenTicker(boolean run)
 		mobj_t *mo2;
 		mobj_t *cameraref = NULL;
 
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		// If there's a Line 422 Switch Cut-Away view, don't force us.
+		if (!titlemapcameraref || titlemapcameraref->type != MT_ALTVIEWMAN)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-				continue;
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+					continue;
 
-			mo2 = (mobj_t *)th;
+				mo2 = (mobj_t *)th;
 
-			 if (!mo2)
-				continue;
+				if (!mo2)
+					continue;
 
-			if (mo2->type != MT_ALTVIEWMAN)
-				continue;
+				if (mo2->type != MT_ALTVIEWMAN)
+					continue;
 
-			cameraref = mo2;
-			break;
+				cameraref = titlemapcameraref = mo2;
+				break;
+			}
 		}
+		else
+			cameraref = titlemapcameraref;
 
 		if (cameraref)
 		{
