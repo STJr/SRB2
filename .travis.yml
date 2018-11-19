@@ -227,6 +227,7 @@ matrix:
       - compiler: clang-3.9
       - compiler: clang-4.0
       - compiler: clang-5.0
+      - compiler: gcc-8
 
 cache:
   apt: true
