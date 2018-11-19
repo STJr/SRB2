@@ -557,9 +557,21 @@ const char *GetMODVersion(void)
 	msg.room = MODID; // Might as well use it for something.
 	sprintf(msg.buffer,"%d",MODVERSION);
 	if (MS_Write(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Could not send to the Master Server\n"));
+		M_StartMessage(M_GetText("Could not send to the Master Server\n"), NULL, MM_NOTHING);
+		CloseConnection();
 		return NULL;
+	}
 
-	MS_Read(&msg);
+	if (MS_Read(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("No reply from the Master Server\n"));
+		M_StartMessage(M_GetText("No reply from the Master Server\n"), NULL, MM_NOTHING);
+		CloseConnection();
+		return NULL;
+	}
+
 	CloseConnection();
 
 	if(strcmp(msg.buffer,"NULL") != 0)
@@ -587,9 +599,19 @@ void GetMODVersion_Console(void)
 	msg.room = MODID; // Might as well use it for something.
 	sprintf(msg.buffer,"%d",MODVERSION);
 	if (MS_Write(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Could not send to the Master Server\n"));
+		CloseConnection();
 		return;
+	}
 
-	MS_Read(&msg);
+	if (MS_Read(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("No reply from the Master Server\n"));
+		CloseConnection();
+		return;
+	}
+
 	CloseConnection();
 
 	if(strcmp(msg.buffer,"NULL") != 0)
