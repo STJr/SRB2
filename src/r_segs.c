@@ -1182,10 +1182,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				pindex = MAXLIGHTSCALE - 1;
 
 			dc_colormap = walllights[pindex];
-			if (frontsector->extra_colormap)
-				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+
 			if (pfloor->flags & FF_FOG && pfloor->master->frontsector->extra_colormap)
 				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+			else if (frontsector->extra_colormap)
+				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 			// draw the texture
 			colfunc_2s (col);
