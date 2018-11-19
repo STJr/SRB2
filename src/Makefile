@@ -176,6 +176,11 @@ ifdef MINGW
 include win32/Makefile.cfg
 endif #ifdef MINGW
 
+ifdef MINGW64
+MINGW=1
+include win32/Makefile.cfg
+endif #ifdef MINGW64
+
 ifdef UNIX
 UNIXCOMMON=1
 endif
@@ -710,7 +715,6 @@ $(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
 	-$(MKDIR) $(BIN)
 	@echo Linking S_OpenAL.so...
 	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lopenal
-
 endif
 
 else
