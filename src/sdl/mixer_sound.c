@@ -216,7 +216,7 @@ void I_StartupSound(void)
 	music = NULL;
 	music_volume = sfx_volume = 0;
 
-#if HAVE_MIXERX
+#ifdef HAVE_MIXERX
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
