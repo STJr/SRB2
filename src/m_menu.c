@@ -2230,6 +2230,8 @@ void MN_InitInfoTables(void)
 		menumeta[i].enterwipe = -1;
 		menumeta[i].exitwipe = -1;
 		menumeta[i].bgcolor = -1;
+		menumeta[i].titlescrollxspeed = INT32_MAX;
+		menumeta[i].titlescrollyspeed = INT32_MAX;
 		// default true
 		menumeta[i].enterbubble = true;
 		menumeta[i].exitbubble = true;
@@ -2359,8 +2361,8 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	else if (menumeta[menutype].bgname[0] && (!menumeta[menutype].bghide || !titlemapinaction))
 	{
 		strncpy(curbgname, menumeta[menutype].bgname, 8);
-		curbgxspeed = menumeta[menutype].titlescrollxspeed;
-		curbgyspeed = menumeta[menutype].titlescrollyspeed;
+		curbgxspeed = menumeta[menutype].titlescrollxspeed != INT32_MAX ? menumeta[menutype].titlescrollxspeed : titlescrollxspeed;
+		curbgyspeed = menumeta[menutype].titlescrollyspeed != INT32_MAX ? menumeta[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
 	}
 	else if (menumeta[menutype].bghide && titlemapinaction) // hide the background

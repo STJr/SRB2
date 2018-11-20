@@ -1127,7 +1127,7 @@ static inline void CL_DrawConnectionStatus(void)
 
 	// Draw background fade
 	if (!menuactive) // menu already draws its own fade
-		V_DrawFadeScreen(0xFF00, curfadevalue);
+		V_DrawFadeScreen(0xFF00, 16); // force default
 
 	// Draw the bottom box.
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
