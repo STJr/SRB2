@@ -1551,41 +1551,21 @@ static void Analog2_OnChange(void)
 
 static void DirectionChar_OnChange(void)
 {
-	if (cv_directionchar.value)
-		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref();
 }
 
 static void DirectionChar2_OnChange(void)
 {
-	if (cv_directionchar2.value)
-		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref2();
 }
 
 static void AutoBrake_OnChange(void)
 {
-	if (cv_autobrake.value)
-		players[consoleplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref();
 }
 
 static void AutoBrake2_OnChange(void)
 {
-	if (cv_autobrake2.value)
-		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref2();
 }
 
