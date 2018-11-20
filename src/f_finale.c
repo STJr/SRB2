@@ -1463,14 +1463,17 @@ void F_TitleScreenDrawer(void)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	M_DrawScrollingBackground("TITLESKY");
+	if (curbgcolor >= 0)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+	else if (!curbghide || !titlemapinaction)
+		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
 	// rei|miru: use title pics?
-	hidepics = M_GetHideTitlePics();
+	hidepics = curhidepics;
 	if (hidepics)
 #ifdef HAVE_BLUA
 		goto luahook;

@@ -2200,6 +2200,15 @@ static INT32 menuanimtimer;
 static UINT32 prevMenuId = 0;
 static UINT32 activeMenuId = 0;
 
+// menu presentation state
+char curbgname[8];
+SINT8 curfadevalue;
+boolean curhidepics;
+INT32 curbgcolor;
+INT32 curbgxspeed;
+INT32 curbgyspeed;
+boolean curbghide;
+
 typedef struct
 {
 	char musname[7];
@@ -2215,23 +2224,24 @@ void MN_InitInfoTables(void)
 	// Set menumeta defaults
 	for (i = 0; i < NUMMENUTYPES; i++)
 	{
+		// so-called "undefined"
+		menumeta[i].fadestrength = -1;
+		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
+		menumeta[i].enterwipe = -1;
+		menumeta[i].exitwipe = -1;
+		menumeta[i].bgcolor = -1;
+		// default true
+		menumeta[i].enterbubble = true;
+		menumeta[i].exitbubble = true;
+
 		if (i != MN_MAIN)
 		{
 			menumeta[i].muslooping = true;
 		}
 		if (i == MN_SP_TIMEATTACK || i == MN_SP_NIGHTSATTACK)
 			strncpy(menumeta[i].musname, "_inter", 7);
-		if (i == MN_SP_PLAYER)
+		else if (i == MN_SP_PLAYER)
 			strncpy(menumeta[i].musname, "_chsel", 7);
-
-		// so-called "undefined"
-		menumeta[i].fadestrength = -1;
-		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
-		menumeta[i].enterwipe = -1;
-		menumeta[i].exitwipe = -1;
-		// default true
-		menumeta[i].enterbubble = true;
-		menumeta[i].exitbubble = true;
 	}
 }
 
@@ -2334,26 +2344,42 @@ static boolean MIT_HasMenuType(UINT32 menutype, INT32 level, INT32 *retval, void
 }
 #endif
 
-static boolean MIT_DrawScrollingBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	char *defaultname = (char*)*input;
 
 	(void)retval;
 	(void)fromoldest;
 
-	if (menumeta[menutype].bgname[0] && menumeta[menutype].bgname[0] != CHAR_MAX)
+	if (menumeta[menutype].bgcolor >= 0)
 	{
-		M_SkyScroll(menumeta[menutype].titlescrollxspeed, menumeta[menutype].titlescrollyspeed, menumeta[menutype].bgname);
+		curbgcolor = menumeta[menutype].bgcolor;
 		return true;
 	}
-	else if (menumeta[menutype].bgname[0] == CHAR_MAX && titlemapinaction) // hide the background
+	else if (menumeta[menutype].bgname[0] && (!menumeta[menutype].bghide || !titlemapinaction))
+	{
+		strncpy(curbgname, menumeta[menutype].bgname, 8);
+		curbgxspeed = menumeta[menutype].titlescrollxspeed;
+		curbgyspeed = menumeta[menutype].titlescrollyspeed;
 		return true;
+	}
+	else if (menumeta[menutype].bghide && titlemapinaction) // hide the background
+	{
+		curbghide = true;
+		return true;
+	}
 	else if (!level)
 	{
-		if (defaultname && defaultname[0] && !titlemapinaction) // hide the background by default in titlemap
-			M_SkyScroll(titlescrollxspeed, titlescrollyspeed, defaultname);
-		else if (currentMenu == &SP_PlayerDef) // black bg
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		if (M_GetYoungestChildMenu() == MN_SP_PLAYER || !defaultname || !defaultname[0])
+			curbgcolor = 31;
+		else if (titlemapinaction) // hide the background by default in titlemap
+			curbghide = true;
+		else
+		{
+			strncpy(curbgname, defaultname, 8);
+			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
+		}
 	}
 	return false;
 }
@@ -2382,7 +2408,7 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 	return false;
 }
 
-static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	UINT8 defaultvalue = *(UINT8*)*input;
 
@@ -2391,27 +2417,27 @@ static boolean MIT_FadeScreen(UINT32 menutype, INT32 level, INT32 *retval, void 
 
 	if (menumeta[menutype].fadestrength >= 0)
 	{
-		if (menumeta[menutype].fadestrength % 32)
-			V_DrawFadeScreen(0xFF00, menumeta[menutype].fadestrength % 32);
+		curfadevalue = (menumeta[menutype].fadestrength % 32);
 		return true;
 	}
-	else if (!level && (defaultvalue % 32))
-		V_DrawFadeScreen(0xFF00, defaultvalue % 32);
+	else if (!level)
+		curfadevalue = (gamestate == GS_TIMEATTACK) ? 0 : (defaultvalue % 32);
 	return false;
 }
 
-static boolean MIT_GetHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	(void)input;
+	(void)retval;
 	(void)fromoldest;
 
 	if (menumeta[menutype].hidetitlepics >= 0)
 	{
-		*retval = menumeta[menutype].hidetitlepics;
+		curhidepics = menumeta[menutype].hidetitlepics;
 		return true;
 	}
 	else if (!level)
-		*retval = -1;
+		curhidepics = hidetitlepics;
 	return false;
 }
 
@@ -2434,7 +2460,7 @@ static menutype_t M_GetMenuAtLevel(INT32 level, boolean fromoldest)
 }
 #endif
 
-static UINT8 M_GetYoungestChildMenu() // aka the active menu
+UINT8 M_GetYoungestChildMenu(void) // aka the active menu
 {
 	INT32 targetlevel = -1;
 	return M_IterateMenuTree(MIT_GetMenuAtLevel, &targetlevel);
@@ -2462,13 +2488,6 @@ static boolean M_HasMenuType(menutype_t needletype)
 // EFFECTS
 // ====================================
 
-void M_DrawScrollingBackground(const char *defaultname)
-{
-	char name[8];
-	strncpy(name, defaultname, 8);
-	M_IterateMenuTree(MIT_DrawScrollingBackground, &name);
-}
-
 static void M_ChangeMusic(const char *defaultmusname, boolean defaultmuslooping)
 {
 	menumetamusic_t defaultmusic;
@@ -2484,15 +2503,21 @@ static void M_ChangeMusic(const char *defaultmusname, boolean defaultmuslooping)
 	M_IterateMenuTree(MIT_ChangeMusic, &defaultmusic);
 }
 
-static void M_DrawFadeScreen(UINT8 defaultvalue)
+static void M_SetCurBackground(const char *defaultname)
 {
-	M_IterateMenuTree(MIT_FadeScreen, &defaultvalue);
+	char name[8];
+	strncpy(name, defaultname, 8);
+	M_IterateMenuTree(MIT_SetCurBackground, &name);
 }
 
-boolean M_GetHideTitlePics(void)
+static void M_SetCurFadeValue(UINT8 defaultvalue)
 {
-	INT32 retval = M_IterateMenuTree(MIT_GetHideTitlePics, NULL);
-	return (retval >= 0 ? retval : hidetitlepics);
+	M_IterateMenuTree(MIT_SetCurFadeValue, &defaultvalue);
+}
+
+static void M_SetCurHideTitlePics(void)
+{
+	M_IterateMenuTree(MIT_SetCurHideTitlePics, NULL);
 }
 
 // ====================================
@@ -2533,9 +2558,23 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	prevMenuId = currentMenu ? currentMenu->menuid : 0;
 	activeMenuId = newMenu ? newMenu->menuid : 0;
 
+	// Set defaults for presentation values
+	strncpy(curbgname, "TITLESKY", 8);
+	curfadevalue = 16;
+	curhidepics = hidetitlepics;
+	curbgcolor = -1;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
+	curbghide = false;
+
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
 		return;
+
+	// Find current presentation values
+	M_SetCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetCurFadeValue(16);
+	M_SetCurHideTitlePics();
 
 	// Loop through both menu IDs in parallel and look for type changes
 	// The youngest child in activeMenuId is the entered menu
@@ -2581,7 +2620,8 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	}
 
 	// if no common ancestor (top menu), force a wipe. Look for a specified wipe first.
-	if (anceslevel < 0 && exitwipe < 0)
+	// Don't force a wipe if you're actually going to/from the main menu
+	if (anceslevel < 0 && exitwipe < 0 && newMenu != &MainDef && currentMenu != &MainDef)
 	{
 		for (i = NUMMENULEVELS; i >= 0; i--)
 		{
@@ -2600,7 +2640,7 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	}
 
 	// do the same for enter wipe
-	if (anceslevel < 0 && enterwipe < 0)
+	if (anceslevel < 0 && enterwipe < 0 && newMenu != &MainDef && currentMenu != &MainDef)
 	{
 		for (i = NUMMENULEVELS; i >= 0; i--)
 		{
@@ -2664,7 +2704,7 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 	if (
 		(exitwipe >= 0 && enterlevel <= exitlevel) ||
 		(enterwipe >= 0 && enterlevel >= exitlevel) ||
-		anceslevel < 0
+		(anceslevel < 0 && newMenu != &MainDef && currentMenu != &MainDef)
 	)
 	{
 		if (gamestate == GS_TIMEATTACK)
@@ -2733,7 +2773,7 @@ static void M_GoBack(INT32 choice)
 			Z_Free(levelselect.rows);
 			levelselect.rows = NULL;
 			menuactive = false;
-			wipetypepre = menumeta[M_GetYoungestChildMenu(currentMenu->menuid)].exitwipe;
+			wipetypepre = menumeta[M_GetYoungestChildMenu()].exitwipe;
 			D_StartTitle();
 		}
 		else
@@ -3196,8 +3236,8 @@ void M_Drawer(void)
 	if (menuactive)
 	{
 		// now that's more readable with a faded background (yeah like Quake...)
-		if (!WipeInAction)
-			M_DrawFadeScreen(16);
+		if (!WipeInAction && (curfadevalue || (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)))
+			V_DrawFadeScreen(0xFF00, (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK) ? 16 : curfadevalue);
 
 		if (currentMenu->drawroutine)
 			currentMenu->drawroutine(); // call current menu Draw routine
@@ -3510,6 +3550,20 @@ void MN_Start(void)
 	menuanimtimer = 0;
 	prevMenuId = 0;
 	activeMenuId = MainDef.menuid;
+
+	// Set defaults for presentation values
+	strncpy(curbgname, "TITLESKY", 8);
+	curfadevalue = 16;
+	curhidepics = hidetitlepics;
+	curbgcolor = -1;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
+	curbghide = false;
+
+	// Find current presentation values
+	M_SetCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetCurFadeValue(16);
+	M_SetCurHideTitlePics();
 }
 
 void MN_Ticker(boolean run)
@@ -5121,8 +5175,12 @@ static void M_DrawLevelPlatterMenu(void)
 
 	if (gamestate == GS_TIMEATTACK)
 	{
-		M_DrawScrollingBackground("SRB2BACK");
-		M_DrawFadeScreen(0);
+		if (curbgcolor >= 0)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+		else if (!curbghide || !titlemapinaction)
+			M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		if (curfadevalue)
+			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
 	// finds row at top of the screen
@@ -5326,8 +5384,12 @@ static void M_DrawMessageMenu(void)
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
 	{
-		M_DrawScrollingBackground("SRB2BACK");
-		M_DrawFadeScreen(0);
+		if (curbgcolor >= 0)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+		else if (!curbghide || !titlemapinaction)
+			M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		if (curfadevalue)
+			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
@@ -7717,9 +7779,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	UINT8 prev, next;
 
 	// Black BG
-	//V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	M_DrawScrollingBackground("SRB2BACK");
-	M_DrawFadeScreen(0);
+	if (curbgcolor >= 0)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+	else if (!curbghide || !titlemapinaction)
+		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+	if (curfadevalue)
+		V_DrawFadeScreen(0xFF00, curfadevalue);
 
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
@@ -8109,9 +8174,12 @@ void M_DrawTimeAttackMenu(void)
 
 	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	M_DrawScrollingBackground("SRB2BACK");
-
-	M_DrawFadeScreen(0);
+	if (curbgcolor >= 0)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+	else if (!curbghide || !titlemapinaction)
+		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+	if (curfadevalue)
+		V_DrawFadeScreen(0xFF00, curfadevalue);
 
 	M_DrawMenuTitle();
 
@@ -8298,9 +8366,12 @@ void M_DrawNightsAttackMenu(void)
 
 	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
-	M_DrawScrollingBackground("SRB2BACK");
-
-	M_DrawFadeScreen(0);
+	if (curbgcolor >= 0)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+	else if (!curbghide || !titlemapinaction)
+		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+	if (curfadevalue)
+		V_DrawFadeScreen(0xFF00, curfadevalue);
 
 	M_DrawMenuTitle();
 

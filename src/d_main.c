@@ -309,7 +309,7 @@ static void D_Display(void)
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			if (!titlemapinaction) {
+			if (!titlemapinaction || !curbghide) {
 				F_TitleScreenDrawer();
 				break;
 			}
@@ -376,7 +376,7 @@ static void D_Display(void)
 
 	// clean up border stuff
 	// see if the border needs to be initially drawn
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide))
 	{
 		// draw the view directly
 
@@ -1121,6 +1121,10 @@ void D_SRB2Main(void)
 
 	// initiate menu metadata before SOCcing them
 	MN_InitInfoTables();
+
+	// init title screen display params
+	if (M_CheckParm("-connect"))
+		MN_Start();
 
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems

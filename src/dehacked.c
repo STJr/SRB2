@@ -1961,10 +1961,12 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "HIDEBACKGROUND"))
 			{
-				// HACK: Use CHAR_MAX to signal that we want to hide the background
-				// Only effective during titlemap
-				menumeta[num].bgname[0] = CHAR_MAX;
-				menumeta[num].bgname[1] = 0;
+				menumeta[num].bghide = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "BACKGROUNDCOLOR"))
+			{
+				menumeta[num].bgcolor = value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))

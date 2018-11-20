@@ -128,6 +128,8 @@ typedef struct
 	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
 	INT32 titlescrollyspeed; // y scroll
+	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
+	boolean bghide; // for titlemaps, hide the background.
 
 	char musname[7]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
@@ -145,15 +147,22 @@ typedef struct
 } menumeta_t;
 
 extern menumeta_t menumeta[NUMMENUTYPES];
+extern char curbgname[8];
+extern SINT8 curfadevalue;
+extern boolean curhidepics;
+extern INT32 curbgcolor;
+extern INT32 curbgxspeed;
+extern INT32 curbgyspeed;
+extern boolean curbghide;
 
-void M_DrawScrollingBackground(const char *defaultname);
+#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
+
 void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
-boolean M_GetHideTitlePics(void);
 void MN_Ticker(boolean run);
 void MN_Start(void);
 void MN_InitInfoTables(void);
 void M_ApplyMenuMetaState(void);
-
+UINT8 M_GetYoungestChildMenu(void);
 
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.
