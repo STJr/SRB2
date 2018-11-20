@@ -2595,6 +2595,43 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_SetupCamera(void)
+{
+	if (players[displayplayer].mo && (server || addedtogame))
+	{
+		camera.x = players[displayplayer].mo->x;
+		camera.y = players[displayplayer].mo->y;
+		camera.z = players[displayplayer].mo->z;
+		camera.angle = players[displayplayer].mo->angle;
+		camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+	}
+	else
+	{
+		mapthing_t *thing;
+
+		switch (gametype)
+		{
+		case GT_MATCH:
+		case GT_TAG:
+			thing = deathmatchstarts[0];
+			break;
+
+		default:
+			thing = playerstarts[0];
+			break;
+		}
+
+		if (thing)
+		{
+			camera.x = thing->x;
+			camera.y = thing->y;
+			camera.z = thing->z;
+			camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
+			camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+		}
+	}
+}
+
 static boolean CanSaveLevel(INT32 mapnum)
 {
 	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
@@ -3044,37 +3081,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (players[displayplayer].mo && (server || addedtogame))
-		{
-			camera.x = players[displayplayer].mo->x;
-			camera.y = players[displayplayer].mo->y;
-			camera.z = players[displayplayer].mo->z;
-			camera.angle = players[displayplayer].mo->angle;
-		}
-		else
-		{
-			mapthing_t *thing;
-
-			switch (gametype)
-			{
-			case GT_MATCH:
-			case GT_TAG:
-				thing = deathmatchstarts[0];
-				break;
-
-			default:
-				thing = playerstarts[0];
-				break;
-			}
-
-			if (thing)
-			{
-				camera.x = thing->x;
-				camera.y = thing->y;
-				camera.z = thing->z;
-				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
-			}
-		}
+		P_SetupCamera();
 
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_height.changed)

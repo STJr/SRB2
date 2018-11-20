@@ -3769,7 +3769,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 457: // Track mobj angle to point
 			if (mo)
 			{
-				INT32 failureangle = min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360) * ANG1;
+				INT32 failureangle = FixedAngle((min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360))*FRACUNIT);
 				INT32 failuredelay = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				INT32 failureexectag = line->sidenum[1] != 0xffff ?
 					(INT32)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;

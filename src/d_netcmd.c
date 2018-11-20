@@ -1439,13 +1439,13 @@ void SendWeaponPref(void)
 	UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[consoleplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog.value)
 		buf[0] |= 2;
-	if (players[consoleplayer].pflags & PF_DIRECTIONCHAR)
+	if (cv_directionchar.value)
 		buf[0] |= 4;
-	if (players[consoleplayer].pflags & PF_AUTOBRAKE)
+	if (cv_autobrake.value)
 		buf[0] |= 8;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
@@ -1455,13 +1455,13 @@ void SendWeaponPref2(void)
 	UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog2.value)
 		buf[0] |= 2;
-	if (players[secondarydisplayplayer].pflags & PF_DIRECTIONCHAR)
+	if (cv_directionchar2.value)
 		buf[0] |= 4;
-	if (players[secondarydisplayplayer].pflags & PF_AUTOBRAKE)
+	if (cv_autobrake2.value)
 		buf[0] |= 8;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
