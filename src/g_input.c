@@ -709,7 +709,7 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][gc_teamkey    ][0] = 'y';
 		gamecontroldefault[i][gc_scores     ][0] = KEY_TAB;
 		gamecontroldefault[i][gc_console    ][0] = KEY_CONSOLE;
-		gamecontroldefault[i][gc_pause      ][0] = KEY_PAUSE;
+		gamecontroldefault[i][gc_pause      ][0] = 'p';
 	}
 }
 
