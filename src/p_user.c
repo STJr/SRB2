@@ -5960,11 +5960,10 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 //
 static void P_DoNiGHTSCapsule(player_t *player)
 {
-	INT32 i;
+	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic, startingspheres;
+	INT32 tictimer = ++player->capsule->extravalue2;
 
-	player->capsule->extravalue2++; // tic counter
-
-	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
+	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->capsule->x;
@@ -5972,7 +5971,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momx = 0;
 	}
 
-	if (abs(player->mo->y-player->capsule->y) <= 2*FRACUNIT)
+	if (abs(player->mo->y-player->capsule->y) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->y = player->capsule->y;
@@ -5980,26 +5979,26 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momy = 0;
 	}
 
-	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 2*FRACUNIT)
+	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 3*FRACUNIT)
 	{
 		player->mo->z = player->capsule->z+(player->capsule->height/3);
 		player->mo->momz = 0;
 	}
 
 	if (player->mo->x > player->capsule->x)
-		player->mo->momx = -2*FRACUNIT;
+		player->mo->momx = -3*FRACUNIT;
 	else if (player->mo->x < player->capsule->x)
-		player->mo->momx = 2*FRACUNIT;
+		player->mo->momx = 3*FRACUNIT;
 
 	if (player->mo->y > player->capsule->y)
-		player->mo->momy = -2*FRACUNIT;
+		player->mo->momy = -3*FRACUNIT;
 	else if (player->mo->y < player->capsule->y)
-		player->mo->momy = 2*FRACUNIT;
+		player->mo->momy = 3*FRACUNIT;
 
 	if (player->mo->z > player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = -2*FRACUNIT;
+		player->mo->momz = -3*FRACUNIT;
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = 2*FRACUNIT;
+		player->mo->momz = 3*FRACUNIT;
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
@@ -6013,6 +6012,13 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			S_StartSound(player->mo, sfx_spin);
 			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_ATTACK);
 		}
+	}
+	else
+	{
+		if (!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING))
+			player->pflags |= PF_JUMPED;
+		if (player->panim != PA_ROLL)
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
 	if (G_IsSpecialStage(gamemap))
@@ -6033,25 +6039,82 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		&& player->mo->y == player->capsule->y
 		&& player->mo->z == player->capsule->z+(player->capsule->height/3))
 	{
-		if (player->spheres > 0)
+		if (player->capsule->lastlook < 0)
 		{
-			player->spheres--;
-			player->capsule->health--;
-			player->capsule->extravalue1++;
+			// Stretch the sphere deduction across the capsule time!
+			// 1. Force the remaining capsule time to `popduration`
+			// 2. Given `popduration` and `spherecount`, at what tic interval do we deduct spheres? `deductinterval`
+			// 3. And on each deduction, how many spheres do we deduct? `deductquantity`
+			// 4. Store the expected capsule health upon completion: `sphereresult`
+			spherecount = min(player->spheres, player->capsule->health);
+			totalduration = min(40 + spherecount, 60);
 
-			// Spawn a 'pop' for every 5 rings you deposit
-			if (!(player->capsule->extravalue1 % 5))
+			popduration = player->capsule->extravalue1 = max(totalduration - tictimer, 1);
+			deductinterval = player->capsule->cvmem = max(FixedFloor(FixedDiv(popduration, spherecount))/FRACUNIT, 1);
+			deductquantity = player->capsule->cusval = max(FixedRound(FixedDiv(spherecount, popduration))/FRACUNIT, 1);
+			sphereresult = player->capsule->movecount = player->capsule->health - spherecount;
+			firstpoptic = player->capsule->lastlook = tictimer;
+		}
+		else
+		{
+			popduration = player->capsule->extravalue1;
+			deductinterval = player->capsule->cvmem;
+			deductquantity = player->capsule->cusval;
+			sphereresult = player->capsule->movecount;
+			firstpoptic = player->capsule->lastlook;
+		}
+
+		if (tictimer - firstpoptic < popduration)
+		{
+			if (!((tictimer - firstpoptic) % deductinterval))
+			{
+				// Did you somehow get more spheres during destruct?
+				if (player->capsule->health <= sphereresult && player->spheres > 0 && player->capsule->health > 0)
+					sphereresult = max(sphereresult - player->spheres, 0);
+
+				if (player->capsule->health > sphereresult && player->spheres > 0)
+				{
+					player->spheres -= deductquantity;
+					player->capsule->health -= deductquantity;
+				}
+
+				if (player->spheres < 0)
+					player->spheres = 0;
+
+				if (player->capsule->health < sphereresult)
+					player->capsule->health = sphereresult;
+			}
+
+			// Spawn a 'pop' for every 5 tics
+			if (!((tictimer - firstpoptic) % 5))
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
 				MT_BOSSEXPLODE),sfx_cybdth);
+		}
+		else
+		{
+			if (player->spheres != 0 && player->capsule->health > 0)
+			{
+				if (player->spheres < player->capsule->health)
+				{
+					player->capsule->health -= player->spheres;
+					player->spheres = 0;
+				}
+				else
+				{
+					startingspheres = player->spheres - player->capsule->health;
+					player->capsule->health = 0;
+					player->spheres = startingspheres;
+				}
+			}
 
 			if (player->capsule->health <= 0)
 			{
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+				tictimer = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6085,7 +6148,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						UINT8 em = P_GetNextEmerald();
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						mobj_t *emmo = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
-						emmo->health = em; // for identification
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 						P_SetTarget(&player->mo->tracer, emmo);
@@ -6112,17 +6174,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					}*/
 					mobj_t *idya = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
 					idya->extravalue2 = player->mare/5;
-					idya->health = player->mare + 1; // for identification
 					P_SetTarget(&idya->target, player->mo);
 					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
-
-					if (player->mo->tracer)
-					{
-						P_SetTarget(&idya->hnext, player->mo->tracer);
-						idya->extravalue1 = (angle_t)(player->mo->tracer->extravalue1 - 72*ANG1);
-						if (idya->extravalue1 > player->mo->tracer->extravalue1)
-							idya->extravalue1 -= (72*ANG1)/idya->extravalue1;
-					}
 					P_SetTarget(&player->mo->tracer, idya);
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
@@ -6132,19 +6185,23 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				P_SwitchSpheresBonusMode(true);
 				P_RunNightsCapsuleTouchExecutors(player->mo, false, true); // run capsule exit executors, and we destroyed it
 			}
-		}
-		else
-		{
-			S_StartScreamSound(player->mo, sfx_lose);
-			player->texttimer = 4*TICRATE;
-			player->textvar = 3; // Get more rings!
-			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
-			P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
+			else
+			{
+				S_StartScreamSound(player->mo, sfx_lose);
+				player->texttimer = 4*TICRATE;
+				player->textvar = 3; // Get more rings!
+				player->capsule->reactiontime = 0;
+				player->capsule->extravalue1 = player->capsule->cvmem =\
+				 player->capsule->cusval = player->capsule->movecount =\
+				 player->capsule->lastlook = player->capsule->extravalue2 = -1;
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
+			}
 		}
 	}
-	else
-		player->capsule->extravalue1 = -1;
+	else if (player->capsule->lastlook > -1)
+		// We somehow moved out of the capsule (OBJECTPLACE?)
+		// So recalculate all the timings
+		player->capsule->lastlook = player->capsule->extravalue2 = -1;
 }
 
 //
@@ -8965,7 +9022,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
-	else if (player->powers[pw_carry] == CR_NIGHTSMODE)
+	else if (player->powers[pw_carry] == CR_NIGHTSMODE
+		|| ((maptol & TOL_NIGHTS) && player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1]))
 		dist = 320<<FRACBITS;
 	else
 	{

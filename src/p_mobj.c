@@ -8855,8 +8855,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			nummaprings = -1; // no perfect bonus, rings are free
 			break;
 		case MT_EGGCAPSULE:
-			mobj->extravalue1 = -1; // sphere timer for how long a player has been at the capsule
-			mobj->extravalue2 = -1; // tic timer for how long a player has been at the capsule
+			mobj->reactiontime = 0;
+			mobj->extravalue1 = mobj->cvmem =\
+			 mobj->cusval = mobj->movecount =\
+			 mobj->lastlook = mobj->extravalue2 = -1;
 			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
@@ -9554,7 +9556,6 @@ void P_SpawnPlayer(INT32 playernum)
 			if (p == players) // this is totally the wrong place to do this aaargh.
 			{
 				mobj_t *idya = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_GOTEMERALD);
-				idya->health = 0; // for identification
 				P_SetTarget(&idya->target, mobj);
 				P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate);
 				P_SetTarget(&mobj->tracer, idya);
