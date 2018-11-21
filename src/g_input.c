@@ -1189,7 +1189,7 @@ void G_Controldefault(void)
 	gamecontrol[gc_scores     ][0] = KEY_TAB;
 	gamecontrol[gc_jump       ][0] = KEY_SPACE;
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
-	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
+	gamecontrol[gc_pause      ][0] = 'p';
 #ifdef WMINPUT
 	gamecontrol[gc_forward    ][0] = KEY_JOY1+02; //UP
 	gamecontrol[gc_backward   ][0] = KEY_JOY1+03; //DOWN

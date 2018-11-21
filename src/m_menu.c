@@ -6856,6 +6856,7 @@ static void M_DrawControl(void)
 }
 
 static INT32 controltochange;
+static char controltochangetext[55];
 
 static void M_ChangecontrolResponse(event_t *ev)
 {
@@ -6863,8 +6864,8 @@ static void M_ChangecontrolResponse(event_t *ev)
 	INT32        found;
 	INT32        ch = ev->data1;
 
-	// ESCAPE cancels
-	if (ch != KEY_ESCAPE)
+	// ESCAPE cancels; dummy out PAUSE
+	if (ch != KEY_ESCAPE && ch != KEY_PAUSE)
 	{
 
 		switch (ev->type)
@@ -6923,8 +6924,28 @@ static void M_ChangecontrolResponse(event_t *ev)
 			G_CheckDoubleUsage(ch);
 			setupcontrols[control][found] = ch;
 		}
-
+		S_StartSound(NULL, sfx_strpst);
 	}
+	else if (ch == KEY_PAUSE)
+	{
+		static char tmp[155];
+		menu_t *prev = currentMenu->prevMenu;
+
+		if (controltochange == gc_pause)
+			sprintf(tmp, M_GetText("The \x82Pause Key \x80is enabled, but \nyou may select another key. \n\nHit another key for\n%s\nESC for Cancel"),
+				controltochangetext);
+		else
+			sprintf(tmp, M_GetText("The \x82Pause Key \x80is enabled, but \nit is not configurable. \n\nHit another key for\n%s\nESC for Cancel"),
+				controltochangetext);
+
+		M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
+		currentMenu->prevMenu = prev;
+
+		S_StartSound(NULL, sfx_s3k42);
+		return;
+	}
+	else
+		S_StartSound(NULL, sfx_skid);
 
 	M_StopMessage(0);
 }
@@ -6936,6 +6957,7 @@ static void M_ChangeControl(INT32 choice)
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
 		currentMenu->menuitems[choice].text);
+	strncpy(controltochangetext, currentMenu->menuitems[choice].text, 55);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
 }
