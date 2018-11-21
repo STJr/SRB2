@@ -486,7 +486,7 @@ static UINT32 num_ffloors = 0; // for loading
 // But also check for equality and return the matching index
 static UINT32 CheckAddNetColormapToList(extracolormap_t *extra_colormap)
 {
-	extracolormap_t *exc, *exc_prev;
+	extracolormap_t *exc, *exc_prev = NULL;
 	UINT32 i = 0;
 
 	if (!net_colormaps)

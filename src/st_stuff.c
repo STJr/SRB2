@@ -1509,7 +1509,7 @@ static void ST_drawNiGHTSLink(void)
 	else
 		colornum = linkColor[mag][sel];
 
-	aflag |= ((stplyr->linktimer < nightslinktics/3)
+	aflag |= ((stplyr->linktimer < (UINT32)nightslinktics/3)
 	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
 	: 0);
 
@@ -1613,11 +1613,12 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-		ST_DrawTopLeftOverlayPatch(24, 16, (
 #ifdef MANIASPHERES
-			(stplyr->bonustime && (leveltime & 4)) ? nssbon :
+		ST_DrawTopLeftOverlayPatch(24, 16, (
+			(stplyr->bonustime && (leveltime & 4)) ? nssbon : nsshud));
+#else
+		ST_DrawTopLeftOverlayPatch(24, 16, (nsshud));
 #endif
-			nsshud));
 	else
 		ST_DrawTopLeftOverlayPatch(24, 16, *(((stplyr->bonustime) ? nbon : nhud)+((leveltime/2)%12)));
 
