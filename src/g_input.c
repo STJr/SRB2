@@ -1327,6 +1327,8 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		return;
 	}
 	keynum = G_KeyStringtoNum(COM_Argv(2));
+	if (keynum == KEY_PAUSE) // fail silently; pause is hardcoded
+		return;
 	G_CheckDoubleUsage(keynum);
 	gc[numctrl][0] = keynum;
 
