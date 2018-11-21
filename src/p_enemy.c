@@ -243,6 +243,7 @@ void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
 void A_FlickySpawn(mobj_t *actor);
+void A_FlickyCenter(mobj_t *actor);
 void A_FlickyAim(mobj_t *actor);
 void A_FlickyFly(mobj_t *actor);
 void A_FlickySoar(mobj_t *actor);
@@ -3323,6 +3324,11 @@ void A_MonitorPop(mobj_t *actor)
 			newmobj->sprite = SPR_TV1P;
 		}
 	}
+
+	// Run a linedef executor immediately upon popping
+	// You may want to delay your effects by 18 tics to sync with the reward giving
+	if (actor->spawnpoint && actor->lastlook)
+		P_LinedefExecute(actor->lastlook, actor->target, NULL);
 }
 
 // Function: A_GoldMonitorPop
@@ -3406,6 +3412,11 @@ void A_GoldMonitorPop(mobj_t *actor)
 			newmobj->sprite = SPR_TV1P;
 		}
 	}
+
+	// Run a linedef executor immediately upon popping
+	// You may want to delay your effects by 18 tics to sync with the reward giving
+	if (actor->spawnpoint && actor->lastlook)
+		P_LinedefExecute(actor->lastlook, actor->target, NULL);
 }
 
 // Function: A_GoldMonitorRestore
@@ -10774,6 +10785,145 @@ void A_FlickySpawn(mobj_t *actor)
 	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
 }
 
+// Internal Flicky color setting
+void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
+{
+	UINT8 flickycolors[] = {
+		SKINCOLOR_RED,
+		SKINCOLOR_CYAN,
+		SKINCOLOR_BLUE,
+		SKINCOLOR_VAPOR,
+		SKINCOLOR_PURPLE,
+		SKINCOLOR_BUBBLEGUM,
+		SKINCOLOR_NEON,
+		SKINCOLOR_BLACK,
+		SKINCOLOR_BEIGE,
+		SKINCOLOR_LAVENDER,
+		SKINCOLOR_RUBY,
+		SKINCOLOR_SALMON,
+		SKINCOLOR_SUNSET,
+		SKINCOLOR_ORANGE,
+		SKINCOLOR_YELLOW,
+	};
+
+	if (extrainfo == 0)
+		// until we can customize flicky colors by level header, just stick to SRB2's defaults
+		actor->color = flickycolors[P_RandomKey(2)]; //flickycolors[P_RandomKey(sizeof(flickycolors))];
+	else
+		actor->color = flickycolors[min(extrainfo-1, 14)]; // sizeof(flickycolors)-1
+}
+
+// Function: A_FlickyCenter
+//
+// Description: Place flickies in-level.
+//
+// var1:
+//        Lower 16 bits = if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+//        Bits 17-20 = Flicky color, up to 15. Applies to fish.
+//        Bit 21 = Flag MF_SLIDEME (see below)
+//        Bit 22 = Flag MF_GRENADEBOUNCE (see below)
+//        Bit 23 = Flag MF_NOCLIPTHING (see below)
+//
+//        If actor is placed from a spawnpoint (map Thing), the Thing's properties take precedence.
+//
+// var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
+//
+// If MTF_EXTRA (MF_SLIDEME): is flagged, Flickies move aimlessly. Else, orbit around the target.
+// If MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE): Flickies stand in-place without gravity (unless they hop, then gravity is applied.)
+// If MTF_AMBUSH (MF_NOCLIPTHING): is flagged, Flickies hop.
+//
+void A_FlickyCenter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	UINT16 flickytype = (locvar1 & 0xFFFF);
+	UINT8 flickycolor = ((locvar1 >> 16) & 0xFF);
+	UINT8 flickyflags = ((locvar1 >> 20) & 0xF);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCenter", actor))
+		return;
+#endif
+
+	if (!actor->tracer)
+	{
+		mobj_t *flicky = P_InternalFlickySpawn(actor, locvar1, 1, false);
+		P_SetTarget(&flicky->target, actor);
+		P_SetTarget(&actor->tracer, flicky);
+
+		if (actor->spawnpoint)
+		{
+			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
+			actor->flags |= (
+				((actor->spawnpoint->options & MTF_EXTRA) ? MF_SLIDEME : 0)
+				| ((actor->spawnpoint->options & MTF_OBJECTSPECIAL) ? MF_GRENADEBOUNCE : 0)
+				| ((actor->spawnpoint->options & MTF_AMBUSH) ? MF_NOCLIPTHING : 0)
+			);
+			actor->extravalue1 = actor->spawnpoint->angle ? abs(actor->spawnpoint->angle) * FRACUNIT
+				: locvar2 ? abs(locvar2) : 384 * FRACUNIT;
+			actor->extravalue2 = actor->spawnpoint->extrainfo;
+			actor->friction = actor->spawnpoint->x*FRACUNIT;
+			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
+			actor->watertop = actor->spawnpoint->z*FRACUNIT;
+		}
+		else
+		{
+			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
+			actor->flags |= (
+				((flickyflags & 1) ? MF_SLIDEME : 0)
+				| ((flickyflags & 2) ? MF_GRENADEBOUNCE : 0)
+				| ((flickyflags & 4) ? MF_NOCLIPTHING : 0)
+			);
+			actor->extravalue1 = abs(locvar2);
+			actor->extravalue2 = flickycolor;
+			actor->friction = actor->x;
+			actor->movefactor = actor->y;
+			actor->watertop = actor->z;
+			locvar1 = flickytype;
+		}
+
+		if (actor->flags & MF_GRENADEBOUNCE) // in-place
+			actor->tracer->fuse = 0;
+		else if (actor->flags & MF_SLIDEME) // aimless
+		{
+			actor->tracer->fuse = 0; // less than 2*TICRATE means move aimlessly.
+			actor->tracer->angle = P_RandomKey(180)*ANG2;
+		}
+		else //orbit
+			actor->tracer->fuse = FRACUNIT;
+
+		if (locvar1 == MT_FLICKY_08)
+			P_InternalFlickySetColor(actor->tracer, actor->extravalue2);
+
+		actor->extravalue2 = 0;
+	}
+
+	if (!(actor->flags & MF_SLIDEME) && !(actor->flags & MF_GRENADEBOUNCE))
+	{
+		fixed_t originx = actor->friction;
+		fixed_t originy = actor->movefactor;
+		fixed_t originz = actor->watertop;
+
+		actor->tracer->fuse = FRACUNIT;
+
+		// Impose default home radius if flicky orbits around player
+		if (!actor->extravalue1)
+			actor->extravalue1 = locvar2 ? abs(locvar2) : 384 * FRACUNIT;
+
+		P_LookForPlayers(actor, true, false, actor->extravalue1);
+
+		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
+		{
+			actor->extravalue2 = 1;
+		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
+		}
+		else if(actor->extravalue2)
+		{
+			actor->extravalue2 = 0;
+			P_TeleportMove(actor, originx, originy, originz);
+		}
+	}
+}
+
 // Internal Flicky bubbling function.
 void P_InternalFlickyBubble(mobj_t *actor)
 {
@@ -10816,7 +10966,10 @@ void A_FlickyAim(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->momx == actor->momy && actor->momy == 0)
+	if ((actor->momx == actor->momy && actor->momy == 0)
+		|| (actor->target && P_IsFlickyCenter(actor->target->type)
+			&& actor->target->extravalue1 && (actor->target->flags & MF_SLIDEME)
+			&& P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) >= actor->target->extravalue1))
 		flickyhitwall = true;
 
 	P_InternalFlickyBubble(actor);
@@ -10848,7 +11001,10 @@ void A_FlickyAim(mobj_t *actor)
 	}
 	else if (flickyhitwall)
 	{
-		actor->angle += ANGLE_180;
+		if (actor->target && P_IsFlickyCenter(actor->target->type))
+			actor->angle = R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + P_RandomRange(112, 248) * ANG1;
+		else
+			actor->angle += P_RandomRange(112, 248)*ANG1;
 		actor->threshold = 0;
 	}
 }
@@ -10884,7 +11040,13 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	if (actor->target && abs(chasez - actor->z) > targetdist)
 		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
 
-	vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
+	if (actor->target
+		&& P_IsFlickyCenter(actor->target->type)
+		&& (actor->target->flags & MF_SLIDEME))
+		vertangle = 0;
+	else
+		vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
+
 	P_InstaThrust(actor, actor->angle, FixedMul(FINECOSINE(vertangle), flyspeed));
 	actor->momz = FixedMul(FINESINE(vertangle), flyspeed);
 }
@@ -11036,7 +11198,19 @@ void A_FlickyCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyCheck", actor))
 		return;
 #endif
-	if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
+	if (actor->target
+		&& P_IsFlickyCenter(actor->target->type)
+		&& (actor->target->flags & MF_GRENADEBOUNCE))
+	{
+		if (!(actor->target->flags & MF_NOCLIPTHING)) // no hopping
+		{
+			actor->momz = 0;
+			actor->flags |= MF_NOGRAVITY;
+		}
+		actor->flags |= MF_NOCLIP | MF_NOBLOCKMAP | MF_SCENERY;
+		P_SetMobjState(actor, mobjinfo[actor->type].seestate);
+	}
+	else if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
 		P_SetMobjState(actor, locvar2);
 	else if (locvar1 && ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
 	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
@@ -11061,7 +11235,19 @@ void A_FlickyHeightCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyHeightCheck", actor))
 		return;
 #endif
-	if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
+	if (actor->target
+		&& P_IsFlickyCenter(actor->target->type)
+		&& (actor->target->flags & MF_GRENADEBOUNCE))
+	{
+		if (!(actor->target->flags & MF_NOCLIPTHING)) // no hopping
+		{
+			actor->momz = 0;
+			actor->flags |= MF_NOGRAVITY;
+		}
+		actor->flags |= MF_NOCLIP | MF_NOBLOCKMAP | MF_SCENERY;
+		P_SetMobjState(actor, mobjinfo[actor->type].seestate);
+	}
+	else if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
 	&& ((P_MobjFlip(actor)*((actor->z + actor->height/2) - (actor->target->z + actor->target->height/2)) < locvar2)
 	|| (actor->z - actor->height < actor->floorz) || (actor->z + 2*actor->height > actor->ceilingz)))
 		P_SetMobjState(actor, locvar1);
@@ -11378,7 +11564,7 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	INT8 dir;
+	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
@@ -11636,4 +11822,4 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
-}
+}

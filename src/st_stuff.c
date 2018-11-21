@@ -603,6 +603,9 @@ static void ST_drawDebugInfo(void)
 
 static void ST_drawScore(void)
 {
+	if (F_GetPromptHideHud(hudinfo[HUD_SCORE].y))
+		return;
+
 	// SCORE:
 	ST_DrawPatchFromHud(HUD_SCORE, sboscore, V_HUDTRANS);
 	if (objectplacing)
@@ -712,6 +715,9 @@ static void ST_drawTime(void)
 		tictrn  = G_TicsToCentiseconds(tics);
 	}
 
+	if (F_GetPromptHideHud(hudinfo[HUD_TIME].y))
+		return;
+
 	// TIME:
 	ST_DrawPatchFromHud(HUD_TIME, ((downwards && (tics < 30*TICRATE) && (leveltime/5 & 1)) ? sboredtime : sbotime), V_HUDTRANS);
 
@@ -738,6 +744,9 @@ static inline void ST_drawRings(void)
 {
 	INT32 ringnum;
 
+	if (F_GetPromptHideHud(hudinfo[HUD_RINGS].y))
+		return;
+
 	ST_DrawPatchFromHud(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
 	ringnum = ((objectplacing) ? op_currentdoomednum : max(stplyr->rings, 0));
@@ -755,6 +764,9 @@ static void ST_drawLivesArea(void)
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
+
+	if (F_GetPromptHideHud(hudinfo[HUD_LIVES].y))
+		return;
 
 	// face background
 	V_DrawSmallScaledPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
@@ -926,6 +938,9 @@ static void ST_drawInput(void)
 
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y -= 16;
+
+	if (F_GetPromptHideHud(y))
+		return;
 
 	// O backing
 	V_DrawFill(x, y-1, 16, 16, hudinfo[HUD_LIVES].f|20);
@@ -1202,6 +1217,9 @@ static void ST_drawPowerupHUD(void)
 	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0};
 #define ICONSEP (16+4) // matches weapon rings HUD
 
+	if (F_GetPromptHideHud(hudinfo[HUD_POWERUPS].y))
+		return;
+
 	if (stplyr->spectator || stplyr->playerstate != PST_LIVE)
 		return;
 
@@ -1364,7 +1382,7 @@ static void ST_drawFirstPersonHUD(void)
 	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
-	if (p)
+	if (p && !F_GetPromptHideHud(60 - SHORT(p->topoffset)))
 		V_DrawScaledPatch((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
 			V_PERPLAYER|V_PERPLAYER|V_TRANSLUCENT, p);
 }
@@ -1491,8 +1509,8 @@ static void ST_drawNiGHTSLink(void)
 	else
 		colornum = linkColor[mag][sel];
 
-	aflag |= ((stplyr->linktimer < 2*TICRATE/3)
-	? (9 - 9*stplyr->linktimer/(2*TICRATE/3)) << V_ALPHASHIFT
+	aflag |= ((stplyr->linktimer < nightslinktics/3)
+	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
 	: 0);
 
 	y = (160+11)<<FRACBITS;
@@ -1908,6 +1926,9 @@ static void ST_drawMatchHUD(void)
 	const INT32 y = 176; // HUD_LIVES
 	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 
+	if (F_GetPromptHideHud(y))
+		return;
+
 	if (!G_RingSlingerGametype())
 		return;
 
@@ -1953,6 +1974,9 @@ static void ST_drawTextHUD(void)
 	V_DrawThinString(16, y, V_PERPLAYER|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, str);\
 	y -= 8;\
 }
+
+	if (F_GetPromptHideHud(y))
+		return;
 
 	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
 	{
@@ -2087,6 +2111,9 @@ static void ST_drawTeamHUD(void)
 	patch_t *p;
 #define SEP 20
 
+	if (F_GetPromptHideHud(0)) // y base is 0
+		return;
+
 	if (gametype == GT_CTF)
 		p = bflagico;
 	else
@@ -2200,7 +2227,8 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 		interval = 0;
 	}
 
-	V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, hudinfo[HUD_HUNTPICS].y, hudinfo[HUD_HUNTPICS].f|V_PERPLAYER|V_HUDTRANS, patches[i]);
+	if (!F_GetPromptHideHud(hudinfo[HUD_HUNTPICS].y))
+		V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, hudinfo[HUD_HUNTPICS].y, hudinfo[HUD_HUNTPICS].f|V_PERPLAYER|V_HUDTRANS, patches[i]);
 	return interval;
 }
 
@@ -2298,7 +2326,8 @@ static void ST_overlayDrawer(void)
 	//hu_showscores = auto hide score/time/rings when tab rankings are shown
 	if (!(hu_showscores && (netgame || multiplayer)))
 	{
-		if (maptol & TOL_NIGHTS || G_IsSpecialStage(gamemap))
+		if ((maptol & TOL_NIGHTS || G_IsSpecialStage(gamemap)) &&
+			!F_GetPromptHideHudAll())
 			ST_drawNiGHTSHUD();
 		else
 		{

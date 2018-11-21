@@ -32,6 +32,7 @@
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_clisrv.h"
 
 #include "m_cond.h"
 
@@ -165,9 +166,14 @@ static char *myhashfgets(char *buf, size_t bufsize, MYFILE *f)
 		if (c == '\n') // Ensure debug line is right...
 			dbg_line++;
 		if (c == '#')
+		{
+			if (i > 0) // don't let i wrap past 0
+				i--; // don't include hash char in string
 			break;
+		}
 	}
-	i++;
+	if (buf[i] != '#') // don't include hash char in string
+		i++;
 	buf[i] = '\0';
 
 	return buf;
@@ -914,7 +920,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1196,8 +1205,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else if (fastcmp(word2, "NORMAL")) i =  0;
 				else if (fastcmp(word2, "BOSS"))   i =  1;
 				else if (fastcmp(word2, "ERZ3"))   i =  2;
+				else if (fastcmp(word2, "NIGHTS")) i =  3;
+				else if (fastcmp(word2, "NIGHTSLINK")) i = 4;
 
-				if (i >= -1 && i <= 2) // -1 for no bonus. Max is 2.
+				if (i >= -1 && i <= 4) // -1 for no bonus. Max is 4.
 					mapheaderinfo[num-1]->bonustype = (SINT8)i;
 				else
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
@@ -1543,6 +1554,365 @@ static void readcutscene(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
+{
+	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2;
+	INT32 i;
+	UINT16 usi;
+	UINT8 picid;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			if (fastcmp(word, "PAGETEXT"))
+			{
+				char *pagetext = NULL;
+				char *buffer;
+				const int bufferlen = 4096;
+
+				for (i = 0; i < MAXLINELEN; i++)
+				{
+					if (s[i] == '=')
+					{
+						pagetext = &s[i+2];
+						break;
+					}
+				}
+
+				if (!pagetext)
+				{
+					Z_Free(textprompts[num]->page[pagenum].text);
+					textprompts[num]->page[pagenum].text = NULL;
+					continue;
+				}
+
+				for (i = 0; i < MAXLINELEN; i++)
+				{
+					if (s[i] == '\0')
+					{
+						s[i] = '\n';
+						s[i+1] = '\0';
+						break;
+					}
+				}
+
+				buffer = Z_Malloc(4096, PU_STATIC, NULL);
+				strcpy(buffer, pagetext);
+
+				// \todo trim trailing whitespace before the #
+				// and also support # at the end of a PAGETEXT with no line break
+
+				strcat(buffer,
+					myhashfgets(pagetext, bufferlen
+					- strlen(buffer) - 1, f));
+
+				// A text prompt overwriting another one...
+				Z_Free(textprompts[num]->page[pagenum].text);
+
+				textprompts[num]->page[pagenum].text = Z_StrDup(buffer);
+
+				Z_Free(buffer);
+
+				continue;
+			}
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+				strupr(word2);
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			i = atoi(word2);
+			usi = (UINT16)i;
+
+			// copypasta from readcutscenescene
+			if (fastcmp(word, "NUMBEROFPICS"))
+			{
+				textprompts[num]->page[pagenum].numpics = (UINT8)i;
+			}
+			else if (fastcmp(word, "PICMODE"))
+			{
+				UINT8 picmode = 0; // PROMPT_PIC_PERSIST
+				if (usi == 1 || word2[0] == 'L') picmode = PROMPT_PIC_LOOP;
+				else if (usi == 2 || word2[0] == 'D' || word2[0] == 'H') picmode = PROMPT_PIC_DESTROY;
+				textprompts[num]->page[pagenum].picmode = picmode;
+			}
+			else if (fastcmp(word, "PICTOLOOP"))
+				textprompts[num]->page[pagenum].pictoloop = (UINT8)i;
+			else if (fastcmp(word, "PICTOSTART"))
+				textprompts[num]->page[pagenum].pictostart = (UINT8)i;
+			else if (fastcmp(word, "PICSMETAPAGE"))
+			{
+				if (usi && usi <= textprompts[num]->numpages)
+				{
+					UINT8 metapagenum = usi - 1;
+
+					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
+					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
+					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
+					textprompts[num]->page[pagenum].pictostart = textprompts[num]->page[metapagenum].pictostart;
+
+					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
+					{
+						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
+						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
+						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];
+						textprompts[num]->page[pagenum].xcoord[picid] = textprompts[num]->page[metapagenum].xcoord[picid];
+						textprompts[num]->page[pagenum].ycoord[picid] = textprompts[num]->page[metapagenum].ycoord[picid];
+					}
+				}
+			}
+			else if (fastncmp(word, "PIC", 3))
+			{
+				picid = (UINT8)atoi(word + 3);
+				if (picid > MAX_PROMPT_PICS || picid == 0)
+				{
+					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
+					continue;
+				}
+				--picid;
+
+				if (fastcmp(word+4, "NAME"))
+				{
+					strncpy(textprompts[num]->page[pagenum].picname[picid], word2, 8);
+				}
+				else if (fastcmp(word+4, "HIRES"))
+				{
+					textprompts[num]->page[pagenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				}
+				else if (fastcmp(word+4, "DURATION"))
+				{
+					textprompts[num]->page[pagenum].picduration[picid] = usi;
+				}
+				else if (fastcmp(word+4, "XCOORD"))
+				{
+					textprompts[num]->page[pagenum].xcoord[picid] = usi;
+				}
+				else if (fastcmp(word+4, "YCOORD"))
+				{
+					textprompts[num]->page[pagenum].ycoord[picid] = usi;
+				}
+				else
+					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
+			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				strncpy(textprompts[num]->page[pagenum].musswitch, word2, 7);
+				textprompts[num]->page[pagenum].musswitch[6] = 0;
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
+			else if (fastcmp(word, "MUSICSLOT"))
+			{
+				i = get_mus(word2, true);
+				if (i && i <= 1035)
+					snprintf(textprompts[num]->page[pagenum].musswitch, 7, "%sM", G_BuildMapName(i));
+				else if (i && i <= 1050)
+					strncpy(textprompts[num]->page[pagenum].musswitch, compat_special_music_slots[i - 1036], 7);
+				else
+					textprompts[num]->page[pagenum].musswitch[0] = 0; // becomes empty string
+				textprompts[num]->page[pagenum].musswitch[6] = 0;
+			}
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				textprompts[num]->page[pagenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
+			}
+			else if (fastcmp(word, "MUSICLOOP"))
+			{
+				textprompts[num]->page[pagenum].musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+			}
+			// end copypasta from readcutscenescene
+			else if (fastcmp(word, "NAME"))
+			{
+				INT32 j;
+
+				// HACK: Add yellow control char now
+				// so the drawing function doesn't call it repeatedly
+				char name[34];
+				name[0] = '\x82'; // color yellow
+				name[1] = 0;
+				strncat(name, word2, 33);
+				name[33] = 0;
+
+				// Replace _ with ' '
+				for (j = 0; j < 32 && name[j]; j++)
+				{
+					if (name[j] == '_')
+						name[j] = ' ';
+				}
+
+				strncpy(textprompts[num]->page[pagenum].name, name, 32);
+			}
+			else if (fastcmp(word, "ICON"))
+				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
+			else if (fastcmp(word, "ICONALIGN"))
+				textprompts[num]->page[pagenum].rightside = (i || word2[0] == 'R');
+			else if (fastcmp(word, "ICONFLIP"))
+				textprompts[num]->page[pagenum].iconflip = (i || word2[0] == 'T' || word2[0] == 'Y');
+			else if (fastcmp(word, "LINES"))
+				textprompts[num]->page[pagenum].lines = usi;
+			else if (fastcmp(word, "BACKCOLOR"))
+			{
+				INT32 backcolor;
+				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
+				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY") ||
+					fastcmp(word2, "BLACK")) backcolor = 1;
+				else if (i == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
+				else if (i == 3 || fastcmp(word2, "RED")) backcolor = 3;
+				else if (i == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
+				else if (i == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
+				else if (i == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
+				else if (i == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
+				else if (i == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
+				else if (i == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
+				else if (i == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
+				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
+				else backcolor = 1; // default gray
+				textprompts[num]->page[pagenum].backcolor = backcolor;
+			}
+			else if (fastcmp(word, "ALIGN"))
+			{
+				UINT8 align = 0; // left
+				if (usi == 1 || word2[0] == 'R') align = 1;
+				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
+				textprompts[num]->page[pagenum].align = align;
+			}
+			else if (fastcmp(word, "VERTICALALIGN"))
+			{
+				UINT8 align = 0; // top
+				if (usi == 1 || word2[0] == 'B') align = 1;
+				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
+				textprompts[num]->page[pagenum].verticalalign = align;
+			}
+			else if (fastcmp(word, "TEXTSPEED"))
+				textprompts[num]->page[pagenum].textspeed = get_number(word2);
+			else if (fastcmp(word, "TEXTSFX"))
+				textprompts[num]->page[pagenum].textsfx = get_number(word2);
+			else if (fastcmp(word, "HIDEHUD"))
+			{
+				UINT8 hidehud = 0;
+				if ((word2[0] == 'F' && (word2[1] == 'A' || !word2[1])) || word2[0] == 'N') hidehud = 0; // false
+				else if (usi == 1 || word2[0] == 'T' || word2[0] == 'Y') hidehud = 1; // true (hide appropriate HUD elements)
+				else if (usi == 2 || word2[0] == 'A' || (word2[0] == 'F' && word2[1] == 'O')) hidehud = 2; // force (hide all HUD elements)
+				textprompts[num]->page[pagenum].hidehud = hidehud;
+			}
+			else if (fastcmp(word, "METAPAGE"))
+			{
+				if (usi && usi <= textprompts[num]->numpages)
+				{
+					UINT8 metapagenum = usi - 1;
+
+					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[metapagenum].name, 32);
+					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[metapagenum].iconname, 8);
+					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[metapagenum].rightside;
+					textprompts[num]->page[pagenum].iconflip = textprompts[num]->page[metapagenum].iconflip;
+					textprompts[num]->page[pagenum].lines = textprompts[num]->page[metapagenum].lines;
+					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[metapagenum].backcolor;
+					textprompts[num]->page[pagenum].align = textprompts[num]->page[metapagenum].align;
+					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[metapagenum].verticalalign;
+					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[metapagenum].textspeed;
+					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[metapagenum].textsfx;
+					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
+
+					// music: don't copy, else each page change may reset the music
+				}
+			}
+			else if (fastcmp(word, "TAG"))
+				strncpy(textprompts[num]->page[pagenum].tag, word2, 33);
+			else if (fastcmp(word, "NEXTPROMPT"))
+				textprompts[num]->page[pagenum].nextprompt = usi;
+			else if (fastcmp(word, "NEXTPAGE"))
+				textprompts[num]->page[pagenum].nextpage = usi;
+			else if (fastcmp(word, "NEXTTAG"))
+				strncpy(textprompts[num]->page[pagenum].nexttag, word2, 33);
+			else if (fastcmp(word, "TIMETONEXT"))
+				textprompts[num]->page[pagenum].timetonext = get_number(word2);
+			else
+				deh_warning("PromptPage %d: unknown word '%s'", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readtextprompt(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2;
+	char *tmp;
+	INT32 value;
+
+	// Allocate memory for this prompt if we don't yet have any
+	if (!textprompts[num])
+		textprompts[num] = Z_Calloc(sizeof (textprompt_t), PU_STATIC, NULL);
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " ");
+			if (word2)
+				value = atoi(word2);
+			else
+			{
+				deh_warning("No value for token %s", word);
+				continue;
+			}
+
+			if (fastcmp(word, "NUMPAGES"))
+			{
+				textprompts[num]->numpages = min(max(value, 0), MAX_PAGES);
+			}
+			else if (fastcmp(word, "PAGE"))
+			{
+				if (1 <= value && value <= MAX_PAGES)
+				{
+					textprompts[num]->page[value - 1].backcolor = 1; // default to gray
+					textprompts[num]->page[value - 1].hidehud = 1; // hide appropriate HUD elements
+					readtextpromptpage(f, num, value - 1);
+				}
+				else
+					deh_warning("Page number %d out of range (1 - %d)", value, MAX_PAGES);
+
+			}
+			else
+				deh_warning("Prompt %d: unknown word '%s', Page <num> expected.", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
 static void readhuditem(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1571,7 +1941,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2077,7 +2450,10 @@ static void reademblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2212,7 +2588,10 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2287,7 +2666,10 @@ static void readunlockable(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2574,7 +2956,10 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2635,7 +3020,10 @@ static void readmaincfg(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2732,11 +3120,14 @@ static void readmaincfg(MYFILE *f)
 			{
 				extralifetics = (UINT16)get_number(word2);
 			}
+			else if (fastcmp(word, "NIGHTSLINKTICS"))
+			{
+				nightslinktics = (UINT16)get_number(word2);
+			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				gameovertics = get_number(word2);
 			}
-
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
 				introtoplay = (UINT8)get_number(word2);
@@ -2828,7 +3219,7 @@ static void readmaincfg(MYFILE *f)
 				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
-				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
+				strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
@@ -2864,6 +3255,19 @@ static void readmaincfg(MYFILE *f)
 			{
 				startchar = (INT16)value;
 				char_on = -1;
+			}
+			else if (fastcmp(word, "TUTORIALMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				tutorialmap = (INT16)value;
 			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
@@ -2903,7 +3307,10 @@ static void readwipes(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -3206,6 +3613,16 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 					else
 					{
 						deh_warning("Cutscene number %d out of range (1 - 128)", i);
+						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "PROMPT"))
+				{
+					if (i > 0 && i < MAX_PROMPTS)
+						readtextprompt(f, i - 1);
+					else
+					{
+						deh_warning("Prompt number %d out of range (1 - %d)", i, MAX_PROMPTS);
 						ignorelines(f);
 					}
 				}
@@ -5396,6 +5813,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_01_FLAP1",
 	"S_FLICKY_01_FLAP2",
 	"S_FLICKY_01_FLAP3",
+	"S_FLICKY_01_STAND",
+	"S_FLICKY_01_CENTER",
 
 	// Rabbit
 	"S_FLICKY_02_OUT",
@@ -5403,6 +5822,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_02_HOP",
 	"S_FLICKY_02_UP",
 	"S_FLICKY_02_DOWN",
+	"S_FLICKY_02_STAND",
+	"S_FLICKY_02_CENTER",
 
 	// Chicken
 	"S_FLICKY_03_OUT",
@@ -5411,6 +5832,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_03_UP",
 	"S_FLICKY_03_FLAP1",
 	"S_FLICKY_03_FLAP2",
+	"S_FLICKY_03_STAND",
+	"S_FLICKY_03_CENTER",
 
 	// Seal
 	"S_FLICKY_04_OUT",
@@ -5422,6 +5845,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_04_SWIM2",
 	"S_FLICKY_04_SWIM3",
 	"S_FLICKY_04_SWIM4",
+	"S_FLICKY_04_STAND",
+	"S_FLICKY_04_CENTER",
 
 	// Pig
 	"S_FLICKY_05_OUT",
@@ -5429,6 +5854,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_05_HOP",
 	"S_FLICKY_05_UP",
 	"S_FLICKY_05_DOWN",
+	"S_FLICKY_05_STAND",
+	"S_FLICKY_05_CENTER",
 
 	// Chipmunk
 	"S_FLICKY_06_OUT",
@@ -5436,6 +5863,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_06_HOP",
 	"S_FLICKY_06_UP",
 	"S_FLICKY_06_DOWN",
+	"S_FLICKY_06_STAND",
+	"S_FLICKY_06_CENTER",
 
 	// Penguin
 	"S_FLICKY_07_OUT",
@@ -5450,6 +5879,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_07_SWIM1",
 	"S_FLICKY_07_SWIM2",
 	"S_FLICKY_07_SWIM3",
+	"S_FLICKY_07_STAND",
+	"S_FLICKY_07_CENTER",
 
 	// Fish
 	"S_FLICKY_08_OUT",
@@ -5463,6 +5894,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_08_SWIM2",
 	"S_FLICKY_08_SWIM3",
 	"S_FLICKY_08_SWIM4",
+	"S_FLICKY_08_STAND",
+	"S_FLICKY_08_CENTER",
 
 	// Ram
 	"S_FLICKY_09_OUT",
@@ -5470,11 +5903,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_09_HOP",
 	"S_FLICKY_09_UP",
 	"S_FLICKY_09_DOWN",
+	"S_FLICKY_09_STAND",
+	"S_FLICKY_09_CENTER",
 
 	// Puffin
 	"S_FLICKY_10_OUT",
 	"S_FLICKY_10_FLAP1",
 	"S_FLICKY_10_FLAP2",
+	"S_FLICKY_10_STAND",
+	"S_FLICKY_10_CENTER",
 
 	// Cow
 	"S_FLICKY_11_OUT",
@@ -5482,6 +5919,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_11_RUN1",
 	"S_FLICKY_11_RUN2",
 	"S_FLICKY_11_RUN3",
+	"S_FLICKY_11_STAND",
+	"S_FLICKY_11_CENTER",
 
 	// Rat
 	"S_FLICKY_12_OUT",
@@ -5489,6 +5928,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_12_RUN1",
 	"S_FLICKY_12_RUN2",
 	"S_FLICKY_12_RUN3",
+	"S_FLICKY_12_STAND",
+	"S_FLICKY_12_CENTER",
 
 	// Bear
 	"S_FLICKY_13_OUT",
@@ -5496,12 +5937,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_13_HOP",
 	"S_FLICKY_13_UP",
 	"S_FLICKY_13_DOWN",
+	"S_FLICKY_13_STAND",
+	"S_FLICKY_13_CENTER",
 
 	// Dove
 	"S_FLICKY_14_OUT",
 	"S_FLICKY_14_FLAP1",
 	"S_FLICKY_14_FLAP2",
 	"S_FLICKY_14_FLAP3",
+	"S_FLICKY_14_STAND",
+	"S_FLICKY_14_CENTER",
 
 	// Cat
 	"S_FLICKY_15_OUT",
@@ -5509,12 +5954,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLICKY_15_HOP",
 	"S_FLICKY_15_UP",
 	"S_FLICKY_15_DOWN",
+	"S_FLICKY_15_STAND",
+	"S_FLICKY_15_CENTER",
 
 	// Canary
 	"S_FLICKY_16_OUT",
 	"S_FLICKY_16_FLAP1",
 	"S_FLICKY_16_FLAP2",
 	"S_FLICKY_16_FLAP3",
+	"S_FLICKY_16_STAND",
+	"S_FLICKY_16_CENTER",
 
 	// Spider
 	"S_SECRETFLICKY_01_OUT",
@@ -5522,12 +5971,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SECRETFLICKY_01_HOP",
 	"S_SECRETFLICKY_01_UP",
 	"S_SECRETFLICKY_01_DOWN",
+	"S_SECRETFLICKY_01_STAND",
+	"S_SECRETFLICKY_01_CENTER",
 
 	// Bat
 	"S_SECRETFLICKY_02_OUT",
 	"S_SECRETFLICKY_02_FLAP1",
 	"S_SECRETFLICKY_02_FLAP2",
 	"S_SECRETFLICKY_02_FLAP3",
+	"S_SECRETFLICKY_02_STAND",
+	"S_SECRETFLICKY_02_CENTER",
 
 	// Fan
 	"S_FAN",
@@ -6726,23 +7179,41 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Flickies
 	"MT_FLICKY_01", // Bluebird
+	"MT_FLICKY_01_CENTER",
 	"MT_FLICKY_02", // Rabbit
+	"MT_FLICKY_02_CENTER",
 	"MT_FLICKY_03", // Chicken
+	"MT_FLICKY_03_CENTER",
 	"MT_FLICKY_04", // Seal
+	"MT_FLICKY_04_CENTER",
 	"MT_FLICKY_05", // Pig
+	"MT_FLICKY_05_CENTER",
 	"MT_FLICKY_06", // Chipmunk
+	"MT_FLICKY_06_CENTER",
 	"MT_FLICKY_07", // Penguin
+	"MT_FLICKY_07_CENTER",
 	"MT_FLICKY_08", // Fish
+	"MT_FLICKY_08_CENTER",
 	"MT_FLICKY_09", // Ram
+	"MT_FLICKY_09_CENTER",
 	"MT_FLICKY_10", // Puffin
+	"MT_FLICKY_10_CENTER",
 	"MT_FLICKY_11", // Cow
+	"MT_FLICKY_11_CENTER",
 	"MT_FLICKY_12", // Rat
+	"MT_FLICKY_12_CENTER",
 	"MT_FLICKY_13", // Bear
+	"MT_FLICKY_13_CENTER",
 	"MT_FLICKY_14", // Dove
+	"MT_FLICKY_14_CENTER",
 	"MT_FLICKY_15", // Cat
+	"MT_FLICKY_15_CENTER",
 	"MT_FLICKY_16", // Canary
+	"MT_FLICKY_16_CENTER",
 	"MT_SECRETFLICKY_01", // Spider
+	"MT_SECRETFLICKY_01_CENTER",
 	"MT_SECRETFLICKY_02", // Bat
+	"MT_SECRETFLICKY_02_CENTER",
 	"MT_SEED",
 
 	// Environmental Effects
@@ -6878,6 +7349,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PULL",
 	"MT_GHOST",
 	"MT_OVERLAY",
+	"MT_ANGLEMAN",
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
 	"MT_POLYSPAWNCRUSH",
@@ -7688,6 +8160,13 @@ struct {
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
 #endif
+#ifdef ESLOPE
+	// Slope flags
+	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
+	{"SL_NODYNAMIC",SL_NODYNAMIC},      // Slope will never need to move during the level, so don't fuss with recalculating it
+	{"SL_ANCHORVERTEX",SL_ANCHORVERTEX},// Slope is using a Slope Vertex Thing to anchor its position
+	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
+#endif
 
 	// Angles
 	{"ANG1",ANG1},
@@ -7820,6 +8299,14 @@ struct {
 
 	{"V_CHARCOLORSHIFT",V_CHARCOLORSHIFT},
 	{"V_ALPHASHIFT",V_ALPHASHIFT},
+
+	//Kick Reasons
+	{"KR_KICK",KR_KICK},
+	{"KR_PINGLIMIT",KR_PINGLIMIT},
+	{"KR_SYNCH",KR_SYNCH},
+	{"KR_TIMEOUT",KR_TIMEOUT},
+	{"KR_BAN",KR_BAN},
+	{"KR_LEAVE",KR_LEAVE},
 #endif
 
 	{NULL,0}
@@ -8208,7 +8695,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void FUNCMATH DEH_Check(void)
+void DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
@@ -8684,6 +9171,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
 		return 1;
+	} else if (fastcmp(word,"ultimatemode")) {
+		lua_pushboolean(L, ultimatemode != 0);
+		return 1;
 	} else if (fastcmp(word,"mariomode")) {
 		lua_pushboolean(L, mariomode != 0);
 		return 1;
@@ -8810,17 +9300,17 @@ static int lib_getActionName(lua_State *L)
 	{
 		lua_settop(L, 1); // set top of stack to 1 (removing any extra args, which there shouldn't be)
 		// get the name for this action, if possible.
-		lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-		lua_pushnil(gL);
+		lua_getfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
+		lua_pushnil(L);
 		// Lua stack at this point:
 		//  1   ...       -2              -1
 		// arg  ...   LREG_ACTIONS        nil
-		while (lua_next(gL, -2))
+		while (lua_next(L, -2))
 		{
 			// Lua stack at this point:
 			//  1   ...       -3              -2           -1
 			// arg  ...   LREG_ACTIONS    "A_ACTION"    function
-			if (lua_rawequal(gL, -1, 1)) // is this the same as the arg?
+			if (lua_rawequal(L, -1, 1)) // is this the same as the arg?
 			{
 				// make sure the key (i.e. "A_ACTION") is a string first
 				// (note: we don't use lua_isstring because it also returns true for numbers)
@@ -8829,12 +9319,12 @@ static int lib_getActionName(lua_State *L)
 					lua_pushvalue(L, -2); // push "A_ACTION" string to top of stack
 					return 1;
 				}
-				lua_pop(gL, 2); // pop the name and function
+				lua_pop(L, 2); // pop the name and function
 				break; // probably should have succeeded but we didn't, so end the loop
 			}
-			lua_pop(gL, 1);
+			lua_pop(L, 1);
 		}
-		lua_pop(gL, 1); // pop LREG_ACTIONS
+		lua_pop(L, 1); // pop LREG_ACTIONS
 		return 0; // return nothing (don't error)
 	}
 

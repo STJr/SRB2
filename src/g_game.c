@@ -127,6 +127,14 @@ INT16 titlemap = 0;
 boolean hidetitlepics = false;
 INT16 bootmap; //bootmap for loading a map on startup
 
+INT16 tutorialmap = 0; // map to load for tutorial
+boolean tutorialmode = false; // are we in a tutorial right now?
+INT32 tutorialgcs = gcs_custom; // which control scheme is loaded?
+INT32 tutorialusemouse = 0; // store cv_usemouse user value
+INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
+INT32 tutorialmousemove = 0; // store cv_mousemove user value
+INT32 tutorialanalog = 0; // store cv_analog user value
+
 boolean looptitle = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;
@@ -138,6 +146,7 @@ tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
 
 cutscene_t *cutscenes[128];
+textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 boolean skipstats;
@@ -201,6 +210,7 @@ UINT16 tailsflytics = 8*TICRATE;
 UINT16 underwatertics = 30*TICRATE;
 UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
+UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
@@ -1523,11 +1533,6 @@ static void Analog_OnChange(void)
 		return;
 	}
 
-	if (cv_analog.value)
-		players[consoleplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[consoleplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref();
 }
 
@@ -1543,51 +1548,26 @@ static void Analog2_OnChange(void)
 		return;
 	}
 
-	if (cv_analog2.value)
-		players[secondarydisplayplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref2();
 }
 
 static void DirectionChar_OnChange(void)
 {
-	if (cv_directionchar.value)
-		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref();
 }
 
 static void DirectionChar2_OnChange(void)
 {
-	if (cv_directionchar2.value)
-		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref2();
 }
 
 static void AutoBrake_OnChange(void)
 {
-	if (cv_autobrake.value)
-		players[consoleplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref();
 }
 
 static void AutoBrake2_OnChange(void)
 {
-	if (cv_autobrake2.value)
-		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref2();
 }
 
@@ -1956,6 +1936,7 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker();
+			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 			break;

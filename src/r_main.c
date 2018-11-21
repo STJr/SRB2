@@ -118,8 +118,7 @@ lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
 // Hack to support extra boom colormaps.
-size_t num_extra_colormaps;
-extracolormap_t extra_colormaps[MAXCOLORMAPS];
+extracolormap_t *extra_colormaps = NULL;
 
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
@@ -220,21 +219,11 @@ static void ChaseCam2_OnChange(void)
 
 static void FlipCam_OnChange(void)
 {
-	if (cv_flipcam.value)
-		players[consoleplayer].pflags |= PF_FLIPCAM;
-	else
-		players[consoleplayer].pflags &= ~PF_FLIPCAM;
-
 	SendWeaponPref();
 }
 
 static void FlipCam2_OnChange(void)
 {
-	if (cv_flipcam2.value)
-		players[secondarydisplayplayer].pflags |= PF_FLIPCAM;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_FLIPCAM;
-
 	SendWeaponPref2();
 }
 
@@ -914,7 +903,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 		chasecam = (cv_chasecam.value != 0);
 	}
 
-	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN)
+	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
@@ -1146,9 +1135,9 @@ void R_RenderPlayerView(player_t *player)
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
 		if (cv_homremoval.value == 1)
-			V_DrawFill(0, 0, vid.width, vid.height, 31); // No HOM effect!
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // No HOM effect!
 		else //'development' HOM removal -- makes it blindingly obvious if HOM is spotted.
-			V_DrawFill(0, 0, vid.width, vid.height, 32+(timeinmap&15));
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
 	// load previous saved value of skyVisible for the player

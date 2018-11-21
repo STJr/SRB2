@@ -471,7 +471,7 @@ void I_PlayCD(UINT8 nTrack, UINT8 bLooping)
 	//faB: stop MIDI music, MIDI music will restart if volume is upped later
 	cv_digmusicvolume.value = 0;
 	cv_midimusicvolume.value = 0;
-	I_StopSong (0);
+	I_StopSong();
 
 	//faB: I don't use the notify message, I'm trying to minimize the delay
 	mciPlay.dwCallback = (DWORD)((size_t)hWndMain);

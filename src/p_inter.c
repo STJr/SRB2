@@ -182,14 +182,14 @@ void P_DoNightsScore(player_t *player)
 			{
 				if (++players[i].linkcount > players[i].maxlink)
 					players[i].maxlink = players[i].linkcount;
-				players[i].linktimer = 2*TICRATE;
+				players[i].linktimer = nightslinktics;
 			}
 	}
 	else // Individual link counts
 	{
 		if (++player->linkcount > player->maxlink)
 			player->maxlink = player->linkcount;
-		player->linktimer = 2*TICRATE;
+		player->linktimer = nightslinktics;
 	}
 
 	if (player->linkcount < 10)
@@ -946,6 +946,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					// Yay! The thing's in reach! Pull it in!
 					mo2->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 					mo2->flags2 |= MF2_NIGHTSPULL;
+					// New NiGHTS attract speed dummied out because the older behavior
+					// is exploited as a mechanic. Uncomment to enable.
+					mo2->movefactor = 0; // 32*FRACUNIT; // initialize the NightsItemChase timer
 					P_SetTarget(&mo2->tracer, toucher);
 				}
 			}
@@ -1159,7 +1162,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (!G_IsSpecialStage(gamemap))
 			{
 				player->powers[pw_nights_linkfreeze] = (UINT16)special->info->speed;
-				player->linktimer = 2*TICRATE;
+				player->linktimer = nightslinktics;
 			}
 			else
 			{
@@ -1167,7 +1170,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						players[i].powers[pw_nights_linkfreeze] += (UINT16)special->info->speed;
-						players[i].linktimer = 2*TICRATE;
+						players[i].linktimer = nightslinktics;
 					}
 				if (special->info->deathsound != sfx_None)
 					S_StartSound(NULL, special->info->deathsound);
@@ -2120,7 +2123,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT; // Don't drop Tails 03-08-2000
 
 	if (target->flags2 & MF2_NIGHTSPULL)
+	{
 		P_SetTarget(&target->tracer, NULL);
+		target->movefactor = 0; // reset NightsItemChase timer
+	}
 
 	// dead target is no more shootable
 	target->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SPECIAL);
@@ -2179,7 +2185,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					// to make people want to actually dash towards/paraloop enemies
 					if (++source->player->linkcount > source->player->maxlink)
 						source->player->maxlink = source->player->linkcount;
-					source->player->linktimer = 2*TICRATE;
+					source->player->linktimer = nightslinktics;
 				}
 			}
 			else
@@ -3307,12 +3313,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		}
 		else if (player->powers[pw_carry] == CR_NIGHTSFALL)
 		{
-			if (player->spheres > 0)
-			{
-				damage = player->spheres;
-				P_RingDamage(player, inflictor, source, damage, damagetype, true);
-				damage = 0;
-			}
+			// always damage so we can recoil upon losing points
+			damage = player->spheres;
+			P_RingDamage(player, inflictor, source, damage, damagetype, true);
+			damage = 0;
 		}
 		else if (player->rings > 0) // No shield but have rings.
 		{

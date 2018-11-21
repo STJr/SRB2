@@ -14,6 +14,9 @@
 #ifdef HAVE_BLUA
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
+#ifdef ESLOPE
+#include "p_slopes.h" // P_GetZAt
+#endif
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_things.h"
@@ -1809,9 +1812,11 @@ static int lib_pFadeLight(lua_State *L)
 	INT16 tag = (INT16)luaL_checkinteger(L, 1);
 	INT32 destvalue = (INT32)luaL_checkinteger(L, 2);
 	INT32 speed = (INT32)luaL_checkinteger(L, 3);
+	boolean ticbased = lua_optboolean(L, 4);
+	boolean force = lua_optboolean(L, 5);
 	NOHUD
 	INLEVEL
-	P_FadeLight(tag, destvalue, speed);
+	P_FadeLight(tag, destvalue, speed, ticbased, force);
 	return 0;
 }
 
@@ -2005,6 +2010,24 @@ static int lib_evStartCrumble(lua_State *L)
 	lua_pushboolean(L, EV_StartCrumble(sec, rover, floating, player, origalpha, crumblereturn) != 0);
 	return 0;
 }
+
+#ifdef ESLOPE
+// P_SLOPES
+////////////
+
+static int lib_pGetZAt(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	if (!slope)
+		return LUA_ErrInvalid(L, "pslope_t");
+
+	lua_pushfixed(L, P_GetZAt(slope, x, y));
+	return 1;
+}
+#endif
 
 // R_DEFS
 ////////////
@@ -2628,6 +2651,11 @@ static luaL_Reg lib[] = {
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
 	{"EV_StartCrumble",lib_evStartCrumble},
+
+#ifdef ESLOPE
+	// p_slopes
+	{"P_GetZAt",lib_pGetZAt},
+#endif
 
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},

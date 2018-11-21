@@ -1063,7 +1063,7 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 //
 // HWR_SplitWall
 //
-static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, UINT32 cutflag, ffloor_t *pfloor)
+static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, INT32 cutflag, ffloor_t *pfloor)
 {
 	/* SoM: split up and light walls according to the
 	 lightlist. This may also include leaving out parts
@@ -1126,7 +1126,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 			else
 			{
 				lightnum = *list[i].lightlevel;
-				colormap = list[i].extra_colormap;
+				colormap = *list[i].extra_colormap;
 			}
 		}
 
@@ -2116,6 +2116,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					fixed_t texturevpeg;
+					boolean attachtobottom = false;
+#ifdef ESLOPE
+					boolean slopeskew = false; // skew FOF walls with slopes?
+#endif
 
 					// Wow, how was this missing from OpenGL for so long?
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
@@ -2123,24 +2127,50 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					if (newline)
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
-						if (newline->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
+#endif
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
-						if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(gr_linedef->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
+#endif
 					}
 
 					grTex = HWR_GetTexture(texnum);
 
 #ifdef ESLOPE
-					wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
-					wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
-					wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
-					wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					if (!slopeskew) // no skewing
+					{
+						if (attachtobottom)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					}
+					else
+					{
+						if (!attachtobottom) // skew by top
+						{
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (h - l + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (hS - lS + texturevpeg) * grTex->scaleY;
+						}
+						else // skew by bottom
+						{
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - (h - l) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - (hS - lS) * grTex->scaleY;
+						}
+					}
 #else
+					if (attachtobottom)
+						texturevpeg -= *rover->topheight - *rover->bottomheight;
 					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
 					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
 #endif
@@ -3486,12 +3516,12 @@ static void HWR_Subsector(size_t num)
 		light = R_GetPlaneLight(gr_frontsector, locFloorHeight, false);
 		if (gr_frontsector->floorlightsec == -1)
 			floorlightlevel = *gr_frontsector->lightlist[light].lightlevel;
-		floorcolormap = gr_frontsector->lightlist[light].extra_colormap;
+		floorcolormap = *gr_frontsector->lightlist[light].extra_colormap;
 
 		light = R_GetPlaneLight(gr_frontsector, locCeilingHeight, false);
 		if (gr_frontsector->ceilinglightsec == -1)
 			ceilinglightlevel = *gr_frontsector->lightlist[light].lightlevel;
-		ceilingcolormap = gr_frontsector->lightlist[light].extra_colormap;
+		ceilingcolormap = *gr_frontsector->lightlist[light].extra_colormap;
 	}
 
 	sub->sector->extra_colormap = gr_frontsector->extra_colormap;
@@ -3617,7 +3647,7 @@ static void HWR_Subsector(size_t num)
 					                       *rover->bottomheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
 					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
-					                       false, gr_frontsector->lightlist[light].extra_colormap);
+					                       false, *gr_frontsector->lightlist[light].extra_colormap);
 #endif
 				}
 				else
@@ -3625,7 +3655,7 @@ static void HWR_Subsector(size_t num)
 					HWR_GetFlat(levelflats[*rover->bottompic].lumpnum);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					HWR_RenderPlane(NULL, &extrasubsectors[num], false, *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->bottompic].lumpnum,
-					                rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
+					                rover->master->frontsector, 255, false, *gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 
@@ -3680,7 +3710,7 @@ static void HWR_Subsector(size_t num)
 					                        *rover->topheight,
 					                        *gr_frontsector->lightlist[light].lightlevel,
 					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
-					                        false, gr_frontsector->lightlist[light].extra_colormap);
+					                        false, *gr_frontsector->lightlist[light].extra_colormap);
 #endif
 
 				}
@@ -3689,7 +3719,7 @@ static void HWR_Subsector(size_t num)
 					HWR_GetFlat(levelflats[*rover->toppic].lumpnum);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					HWR_RenderPlane(NULL, &extrasubsectors[num], true, *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->toppic].lumpnum,
-					                  rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
+					                  rover->master->frontsector, 255, false, *gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 		}
@@ -4200,8 +4230,8 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
 
-			if (sector->lightlist[light].extra_colormap)
-				colormap = sector->lightlist[light].extra_colormap;
+			if (*sector->lightlist[light].extra_colormap)
+				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else
 		{
@@ -4362,7 +4392,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 
 	// Start with the lightlevel and colormap from the top of the sprite
 	lightlevel = *list[sector->numlights - 1].lightlevel;
-	colormap = list[sector->numlights - 1].extra_colormap;
+	colormap = *list[sector->numlights - 1].extra_colormap;
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
@@ -4378,7 +4408,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *list[i-1].lightlevel;
-			colormap = list[i-1].extra_colormap;
+			colormap = *list[i-1].extra_colormap;
 			break;
 		}
 	}
@@ -4386,7 +4416,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	i = R_GetPlaneLight(sector, temp, false);
 	if (!(spr->mobj->frame & FF_FULLBRIGHT))
 		lightlevel = *list[i].lightlevel;
-	colormap = list[i].extra_colormap;
+	colormap = *list[i].extra_colormap;
 #endif
 
 	for (i = 0; i < sector->numlights; i++)
@@ -4402,7 +4432,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *list[i].lightlevel;
-			colormap = list[i].extra_colormap;
+			colormap = *list[i].extra_colormap;
 		}
 
 #ifdef ESLOPE
@@ -4734,8 +4764,8 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
 
-			if (sector->lightlist[light].extra_colormap)
-				colormap = sector->lightlist[light].extra_colormap;
+			if (*sector->lightlist[light].extra_colormap)
+				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else
 		{
@@ -5270,8 +5300,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectSprite(thing);
 		}
 	}
 	else
@@ -5293,8 +5325,10 @@ static void HWR_AddSprites(sector_t *sec)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				HWR_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			HWR_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 	else
@@ -5623,6 +5657,16 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	z2 = tr_y - x2 * rightsin;
 	x1 = tr_x + x1 * rightcos;
 	x2 = tr_x - x2 * rightcos;
+
+	// okay, we can't return now... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 
 	//
 	// store information in a vissprite

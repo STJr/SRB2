@@ -232,18 +232,20 @@ UINT8 *yellowmap, *magentamap, *lgreenmap, *bluemap, *graymap, *redmap, *orangem
 
 // Console BG color
 UINT8 *consolebgmap = NULL;
+UINT8 *promptbgmap = NULL;
+static UINT8 promptbgcolor = UINT8_MAX;
 
-void CON_SetupBackColormap(void)
+void CON_SetupBackColormapEx(INT32 color, boolean prompt)
 {
 	UINT16 i, palsum;
 	UINT8 j, palindex, shift;
 	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
 
-	if (!consolebgmap)
-		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
 
 	shift = 6; // 12 colors -- shift of 7 means 6 colors
-	switch (cons_backcolor.value)
+	switch (color)
 	{
 		case 0:		palindex = 15; 	break; // White
 		case 1:		palindex = 31;	break; // Gray
@@ -257,20 +259,42 @@ void CON_SetupBackColormap(void)
 		case 9:		palindex = 187;	break; // Magenta
 		case 10:	palindex = 139;	break; // Aqua
 		// Default green
-		default:	palindex = 175; break;
-}
+		default:	palindex = 175; color = 11; break;
+	}
+
+	if (prompt)
+	{
+		if (!promptbgmap)
+			promptbgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+
+		if (color == promptbgcolor)
+			return;
+		else
+			promptbgcolor = color;
+	}
+	else if (!consolebgmap)
+		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 
 	// setup background colormap
 	for (i = 0, j = 0; i < 768; i += 3, j++)
 	{
 		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> shift;
-		consolebgmap[j] = (UINT8)(palindex - palsum);
+		if (prompt)
+			promptbgmap[j] = (UINT8)(palindex - palsum);
+		else
+			consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
+}
+
+void CON_SetupBackColormap(void)
+{
+	CON_SetupBackColormapEx(cons_backcolor.value, false);
+	CON_SetupBackColormapEx(1, true); // default to gray
 }
 
 static void CONS_backcolor_Change(void)
 {
-	CON_SetupBackColormap();
+	CON_SetupBackColormapEx(cons_backcolor.value, false);
 }
 
 static void CON_SetupColormaps(void)

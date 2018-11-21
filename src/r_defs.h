@@ -50,18 +50,25 @@ typedef struct
 typedef UINT8 lighttable_t;
 
 // ExtraColormap type. Use for extra_colormaps from now on.
-typedef struct
+typedef struct extracolormap_s
 {
-	UINT16 maskcolor, fadecolor;
-	double maskamt;
-	UINT16 fadestart, fadeend;
-	INT32 fog;
+	UINT8 fadestart, fadeend;
+	UINT8 fog; // categorical value, not boolean
 
-	// rgba is used in hw mode for colored sector lighting
+	// store rgba values in combined bitwise
+	// also used in OpenGL instead lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef EXTRACOLORMAPLUMPS
+	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
+	char lumpname[9]; // for netsyncing
+#endif
+
+	struct extracolormap_s *next;
+	struct extracolormap_s *prev;
 } extracolormap_t;
 
 //
@@ -177,6 +184,8 @@ typedef struct ffloor_s
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with
+
+	void *fadingdata; // fading FOF thinker
 } ffloor_t;
 
 
@@ -187,7 +196,7 @@ typedef struct lightlist_s
 {
 	fixed_t height;
 	INT16 *lightlevel;
-	extracolormap_t *extra_colormap;
+	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
 #ifdef ESLOPE
@@ -308,6 +317,7 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
+	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;
@@ -322,8 +332,6 @@ typedef struct sector_s
 
 	INT32 floorlightsec, ceilinglightsec;
 	INT32 crumblestate; // used for crumbling and bobbing
-
-	INT32 bottommap, midmap, topmap; // dynamic colormaps
 
 	// list of mobjs that are at least partially in the sector
 	// thinglist is a subset of touching_thinglist
@@ -383,6 +391,9 @@ typedef struct sector_s
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
 
+	// for fade thinker
+	INT16 spawn_lightlevel;
+
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
@@ -393,6 +404,9 @@ typedef struct sector_s
 	// flag angles sector spawned with (via linedef type 7)
 	angle_t spawn_flrpic_angle;
 	angle_t spawn_ceilpic_angle;
+
+	// colormap structure
+	extracolormap_t *spawn_extra_colormap;
 } sector_t;
 
 //
@@ -468,6 +482,8 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+
+	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
 //

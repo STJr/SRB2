@@ -40,6 +40,8 @@ enum mobj_e {
 	mobj_subsector,
 	mobj_floorz,
 	mobj_ceilingz,
+	mobj_floorrover,
+	mobj_ceilingrover,
 	mobj_radius,
 	mobj_height,
 	mobj_momx,
@@ -81,7 +83,12 @@ enum mobj_e {
 	mobj_extravalue1,
 	mobj_extravalue2,
 	mobj_cusval,
+#ifdef ESLOPE
+	mobj_cvmem,
+	mobj_standingslope
+#else
 	mobj_cvmem
+#endif
 };
 
 static const char *const mobj_opt[] = {
@@ -100,6 +107,8 @@ static const char *const mobj_opt[] = {
 	"subsector",
 	"floorz",
 	"ceilingz",
+	"floorrover",
+	"ceilingrover",
 	"radius",
 	"height",
 	"momx",
@@ -142,6 +151,9 @@ static const char *const mobj_opt[] = {
 	"extravalue2",
 	"cusval",
 	"cvmem",
+#ifdef ESLOPE
+	"standingslope",
+#endif
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
@@ -207,6 +219,12 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_ceilingz:
 		lua_pushfixed(L, mo->ceilingz);
+		break;
+	case mobj_floorrover:
+		LUA_PushUserdata(L, mo->floorrover, META_FFLOOR);
+		break;
+	case mobj_ceilingrover:
+		LUA_PushUserdata(L, mo->ceilingrover, META_FFLOOR);
 		break;
 	case mobj_radius:
 		lua_pushfixed(L, mo->radius);
@@ -348,6 +366,11 @@ static int mobj_get(lua_State *L)
 	case mobj_cvmem:
 		lua_pushinteger(L, mo->cvmem);
 		break;
+#ifdef ESLOPE
+	case mobj_standingslope:
+		LUA_PushUserdata(L, mo->standingslope, META_SLOPE);
+		break;
+#endif
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -396,6 +419,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -430,6 +455,10 @@ static int mobj_set(lua_State *L)
 		return NOSETPOS;
 	case mobj_ceilingz:
 		return NOSETPOS;
+	case mobj_floorrover:
+		return NOSET;
+	case mobj_ceilingrover:
+		return NOSET;
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
@@ -439,6 +468,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -451,6 +482,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -655,6 +688,10 @@ static int mobj_set(lua_State *L)
 	case mobj_cvmem:
 		mo->cvmem = luaL_checkinteger(L, 3);
 		break;
+#ifdef ESLOPE
+	case mobj_standingslope:
+		return NOSET;
+#endif
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));

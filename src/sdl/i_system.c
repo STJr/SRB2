@@ -1,8 +1,11 @@
 // Emacs style mode select   -*- C++ -*-
+//
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2018 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -122,6 +125,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 #ifdef __APPLE__
 #include "macosx/mac_resources.h"
+#endif
+
+#ifndef errno
+#include <errno.h>
 #endif
 
 // Locations for searching the srb2.pk3
@@ -1149,6 +1156,7 @@ static void I_ShutdownJoystick2(void)
 		D_PostEvent(&event);
 	}
 
+	joystick2_started = 0;
 	JoyReset(&JoyInfo2);
 	if (!joystick_started && !joystick2_started && SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
@@ -1678,7 +1686,7 @@ static void I_ShutdownMouse2(void)
 	EscapeCommFunction(mouse2filehandle, CLRRTS);
 
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT |
-	          PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	CloseHandle(mouse2filehandle);
 
@@ -1871,11 +1879,11 @@ void I_StartupMouse2(void)
 	{
 		// COM file handle
 		mouse2filehandle = CreateFileA(cv_mouse2port.string, GENERIC_READ | GENERIC_WRITE,
-		                               0,                     // exclusive access
-		                               NULL,                  // no security attrs
-		                               OPEN_EXISTING,
-		                               FILE_ATTRIBUTE_NORMAL,
-		                               NULL);
+									   0,                     // exclusive access
+									   NULL,                  // no security attrs
+									   OPEN_EXISTING,
+									   FILE_ATTRIBUTE_NORMAL,
+									   NULL);
 		if (mouse2filehandle == INVALID_HANDLE_VALUE)
 		{
 			INT32 e = GetLastError();
@@ -1895,7 +1903,7 @@ void I_StartupMouse2(void)
 
 	// purge buffers
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT
-	          | PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	// setup port to 1200 7N1
 	dcb.DCBlength = sizeof (DCB);
@@ -1921,14 +1929,14 @@ void I_StartupMouse2(void)
 //
 // I_Tactile
 //
-FUNCMATH void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
+void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
 	(void)FFEffect;
 }
 
-FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
+void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
@@ -1939,7 +1947,7 @@ FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 */
 static ticcmd_t emptycmd;
 
-FUNCMATH ticcmd_t *I_BaseTiccmd(void)
+ticcmd_t *I_BaseTiccmd(void)
 {
 	return &emptycmd;
 }
@@ -1948,7 +1956,7 @@ FUNCMATH ticcmd_t *I_BaseTiccmd(void)
 */
 static ticcmd_t emptycmd2;
 
-FUNCMATH ticcmd_t *I_BaseTiccmd2(void)
+ticcmd_t *I_BaseTiccmd2(void)
 {
 	return &emptycmd2;
 }
@@ -2024,7 +2032,7 @@ static void I_ShutdownTimer(void)
 tic_t I_GetTime (void)
 {
 	static Uint32 basetime = 0;
-	       Uint32 ticks = SDL_GetTicks();
+		   Uint32 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
@@ -2042,7 +2050,7 @@ tic_t I_GetTime (void)
 //
 //I_StartupTimer
 //
-FUNCMATH void I_StartupTimer(void)
+void I_StartupTimer(void)
 {
 #ifdef _WIN32
 	// for win2k time bug
@@ -2089,7 +2097,6 @@ INT32 I_StartupSystem(void)
 #endif
 	return 0;
 }
-
 
 //
 // I_Quit
@@ -2142,11 +2149,11 @@ void I_WaitVBL(INT32 count)
 	SDL_Delay(count);
 }
 
-FUNCMATH void I_BeginRead(void)
+void I_BeginRead(void)
 {
 }
 
-FUNCMATH void I_EndRead(void)
+void I_EndRead(void)
 {
 }
 
@@ -2369,7 +2376,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	{
 		DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters, TotalNumberOfClusters;
 		GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
-		                 &NumberOfFreeClusters, &TotalNumberOfClusters);
+						 &NumberOfFreeClusters, &TotalNumberOfClusters);
 		*freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
 	}
 #else // Dummy for platform independent; 1GB should be enough
@@ -2576,22 +2583,22 @@ static const char *locateWad(void)
 
 #ifdef CMAKECONFIG
 #ifndef NDEBUG
-    I_OutputMsg(","CMAKE_ASSETS_DIR);
-    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	I_OutputMsg(","CMAKE_ASSETS_DIR);
+	strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 #endif
 
 #ifdef __APPLE__
-    OSX_GetResourcesPath(returnWadPath);
-    I_OutputMsg(",%s", returnWadPath);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	OSX_GetResourcesPath(returnWadPath);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 
 	// examine default dirs
@@ -2696,7 +2703,30 @@ const char *I_LocateWad(void)
 #ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
+#define MEMAVAILABLE "MemAvailable:"
 #define MEMFREE "MemFree:"
+#define CACHED "Cached:"
+#define BUFFERS "Buffers:"
+#define SHMEM "Shmem:"
+
+/* Parse the contents of /proc/meminfo (in buf), return value of "name"
+ * (example: MemTotal) */
+static long get_entry(const char* name, const char* buf)
+{
+	long val;
+	char* hit = strstr(buf, name);
+	if (hit == NULL) {
+		return -1;
+	}
+
+	errno = 0;
+	val = strtol(hit + strlen(name), NULL, 10);
+	if (errno != 0) {
+		CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
+		return -1;
+	}
+	return val;
+}
 #endif
 
 // quick fix for compil
@@ -2758,6 +2788,11 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	UINT32 totalKBytes;
 	INT32 n;
 	INT32 meminfo_fd = -1;
+	long Cached;
+	long MemFree;
+	long Buffers;
+	long Shmem;
+	long MemAvailable = -1;
 
 	meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
 	n = read(meminfo_fd, buf, 1023);
@@ -2783,16 +2818,28 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if ((memTag = strstr(buf, MEMFREE)) == NULL)
+	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
 	{
-		// Error
-		if (total)
-			*total = 0L;
-		return 0;
-	}
+		Cached = get_entry(CACHED, buf);
+		MemFree = get_entry(MEMFREE, buf);
+		Buffers = get_entry(BUFFERS, buf);
+		Shmem = get_entry(SHMEM, buf);
+		MemAvailable = Cached + MemFree + Buffers - Shmem;
 
-	memTag += sizeof (MEMFREE);
-	freeKBytes = atoi(memTag);
+		if (MemAvailable == -1)
+		{
+			// Error
+			if (total)
+				*total = 0L;
+			return 0;
+		}
+		freeKBytes = MemAvailable;
+	}
+	else
+	{
+		memTag += sizeof (MEMAVAILABLE);
+		freeKBytes = atoi(memTag);
+	}
 
 	if (total)
 		*total = totalKBytes << 10;
@@ -2869,5 +2916,5 @@ const CPUInfoFlags *I_CPUInfo(void)
 }
 
 // note CPUAFFINITY code used to reside here
-FUNCMATH void I_RegisterSysCommands(void) {}
+void I_RegisterSysCommands(void) {}
 #endif

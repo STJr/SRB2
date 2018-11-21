@@ -71,6 +71,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "g_input.h" // tutorial mode control scheming
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -112,13 +113,10 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-boolean nomidimusic = false, nosound = false;
-boolean nodigimusic = false; // No fmod-based music
-
 // These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
+boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
 
@@ -154,7 +152,7 @@ void D_PostEvent(const event_t *ev)
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
 // just for lock this function
-#ifndef DOXYGEN
+#if defined (PC_DOS) && !defined (DOXYGEN)
 void D_PostEvent_end(void) {};
 #endif
 
@@ -434,6 +432,7 @@ static void D_Display(void)
 			if (gamestate == GS_LEVEL)
 			{
 				ST_Drawer();
+				F_TextPromptDrawer();
 				HU_Drawer();
 			}
 			else
@@ -748,6 +747,19 @@ void D_StartTitle(void)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode && tutorialgcs)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcl_tutorial_full, num_gcl_tutorial_full); // using gcs_custom as temp storage
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls",
+			M_TutorialSaveControlResponse, MM_YESNO);
+	}
+	tutorialmode = false;
 }
 
 //
@@ -780,10 +792,6 @@ static inline void D_CleanFile(void)
 		startupwadfiles[pnumwadfiles] = NULL;
 	}
 }
-
-#ifndef _MAX_PATH
-#define _MAX_PATH MAX_WADPATH
-#endif
 
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
@@ -1204,27 +1212,27 @@ void D_SRB2Main(void)
 	// setting up sound
 	if (dedicated)
 	{
-		nosound = true;
-		nomidimusic = nodigimusic = true;
+		sound_disabled = true;
+		midi_disabled = digital_disabled = true;
 	}
 	else
 	{
-		CONS_Printf("S_Init(): Setting up sound.\n");
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
 	}
 	if (M_CheckParm("-nosound"))
-		nosound = true;
+		sound_disabled = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		nomidimusic = nodigimusic = true;
+		midi_disabled = digital_disabled = true;
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			nomidimusic = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
-			nodigimusic = true; // WARNING: DOS version initmusic in I_StartupSound
+			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();

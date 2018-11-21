@@ -66,6 +66,10 @@ void P_SwitchWeather(INT32 weathernum);
 boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
+void P_RunNightserizeExecutors(mobj_t *actor);
+void P_RunDeNightserizeExecutors(mobj_t *actor);
+void P_RunNightsLapExecutors(mobj_t *actor);
+void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean enoughspheres);
 
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 
@@ -130,16 +134,23 @@ typedef struct
   */
 typedef struct
 {
-	thinker_t thinker; ///< Thinker in use for the effect.
-	sector_t *sector;  ///< Sector where action is taking place.
-	INT32 destlevel;   ///< Light level we're fading to.
-	INT32 speed;       ///< Speed at which to change light level.
+	thinker_t thinker;		///< Thinker in use for the effect.
+	sector_t *sector;		///< Sector where action is taking place.
+	INT16 sourcelevel;		///< Light level we're fading from.
+	INT16 destlevel;		///< Light level we're fading to.
+
+	fixed_t fixedcurlevel;	///< Fixed point for current light level.
+	fixed_t fixedpertic;	///< Fixed point for increment per tic.
+	// The reason for those two above to be fixed point is to deal with decimal values that would otherwise get trimmed away.
+	INT32 timer;			///< Internal timer.
 } lightlevel_t;
 
 #define GLOWSPEED 8
 #define STROBEBRIGHT 5
 #define FASTDARK 15
 #define SLOWDARK 35
+
+void P_RemoveLighting(sector_t *sector);
 
 void T_FireFlicker(fireflicker_t *flick);
 fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxsector, INT32 length);
@@ -152,7 +163,8 @@ strobe_t * P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector
 void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length);
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed);
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum
@@ -448,6 +460,47 @@ typedef struct
 } disappear_t;
 
 void T_Disappear(disappear_t *d);
+
+// Model for fading FOFs
+typedef struct
+{
+	thinker_t thinker;  ///< Thinker structure for effect.
+	ffloor_t *rover;    ///< Target ffloor
+	extracolormap_t *dest_exc; ///< Colormap to fade to
+	UINT32 sectornum;    ///< Number of ffloor target sector
+	UINT32 ffloornum;    ///< Number of ffloor of target sector
+	INT32 alpha;        ///< Internal alpha counter
+	INT16 sourcevalue;  ///< Transparency value to fade from
+	INT16 destvalue;    ///< Transparency value to fade to
+	INT16 destlightlevel; ///< Light level to fade to
+	INT16 speed;        ///< Speed to fade by
+	boolean ticbased;    ///< Tic-based logic toggle
+	INT32 timer;        ///< Timer for tic-based logic
+	boolean doexists;   ///< Handle FF_EXISTS
+	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean dolighting; ///< Handle shadows and light blocks
+	boolean docolormap; ///< Handle colormaps
+	boolean docollision; ///< Handle interactive flags
+	boolean doghostfade; ///< No interactive flags during fading
+	boolean exactalpha; ///< Use exact alpha values (opengl)
+} fade_t;
+
+void T_Fade(fade_t *d);
+
+// Model for fading colormaps
+
+typedef struct
+{
+	thinker_t thinker;          ///< Thinker structure for effect.
+	sector_t *sector;           ///< Sector where action is taking place.
+	extracolormap_t *source_exc;
+	extracolormap_t *dest_exc;
+	boolean ticbased;           ///< Tic-based timing
+	INT32 duration;             ///< Total duration for tic-based logic (OR: speed increment)
+	INT32 timer;                ///< Timer for tic-based logic (OR: internal speed counter)
+} fadecolormap_t;
+
+void T_FadeColormap(fadecolormap_t *d);
 
 // Prototype functions for pushers
 void T_Pusher(pusher_t *p);

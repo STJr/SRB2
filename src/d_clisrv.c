@@ -2353,7 +2353,7 @@ void CL_ClearPlayer(INT32 playernum)
 //
 // Removes a player from the current game
 //
-static void CL_RemovePlayer(INT32 playernum)
+static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 {
 	// Sanity check: exceptional cases (i.e. c-fails) can cause multiple
 	// kick commands to be issued for the same player.
@@ -2407,6 +2407,10 @@ static void CL_RemovePlayer(INT32 playernum)
 			}
 		}
 	}
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+#endif
 
 	// Reset player data
 	CL_ClearPlayer(playernum);
@@ -2683,6 +2687,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	INT32 pnum, msg;
 	char buf[3 + MAX_REASONLENGTH];
 	char *reason = buf;
+	kickreason_t kickreason = KR_KICK;
 
 	pnum = READUINT8(*p);
 	msg = READUINT8(*p);
@@ -2765,14 +2770,17 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			CONS_Printf(M_GetText("has been kicked (Go away)\n"));
+			kickreason = KR_KICK;
 			break;
 #ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
 			CONS_Printf(M_GetText("left the game (Broke ping limit)\n"));
+			kickreason = KR_PINGLIMIT;
 			break;
 #endif
 		case KICK_MSG_CON_FAIL:
 			CONS_Printf(M_GetText("left the game (Synch failure)\n"));
+			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
 			{
@@ -2809,21 +2817,26 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			break;
 		case KICK_MSG_TIMEOUT:
 			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
+			kickreason = KR_TIMEOUT;
 			break;
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
 				CONS_Printf(M_GetText("left the game\n"));
+			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
 			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
+			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
 			CONS_Printf(M_GetText("has been kicked (%s)\n"), reason);
+			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_CUSTOM_BAN:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
 			CONS_Printf(M_GetText("has been banned (%s)\n"), reason);
+			kickreason = KR_BAN;
 			break;
 	}
 
@@ -2851,7 +2864,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("You have been kicked by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 	else
-		CL_RemovePlayer(pnum);
+		CL_RemovePlayer(pnum, kickreason);
 }
 
 consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
@@ -3108,16 +3121,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			displayplayer = newplayernum;
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
-			// Apply player flags as soon as possible!
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
-			if (cv_flipcam.value)
-				players[newplayernum].pflags |= PF_FLIPCAM;
-			if (cv_analog.value)
-				players[newplayernum].pflags |= PF_ANALOGMODE;
-			if (cv_directionchar.value)
-				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
-			if (cv_autobrake.value)
-				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		else
 		{
@@ -3125,16 +3128,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			DEBFILE("spawning my brother\n");
 			if (botingame)
 				players[newplayernum].bot = 1;
-			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
-			if (cv_flipcam2.value)
-				players[newplayernum].pflags |= PF_FLIPCAM;
-			if (cv_analog2.value)
-				players[newplayernum].pflags |= PF_ANALOGMODE;
-			if (cv_directionchar2.value)
-				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
-			if (cv_autobrake2.value)
-				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		D_SendPlayerConfig();
 		addedtogame = true;

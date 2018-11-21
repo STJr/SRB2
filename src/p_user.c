@@ -596,10 +596,6 @@ static void P_DeNightserizePlayer(player_t *player)
 	else if (player == &players[secondarydisplayplayer])
 		localaiming2 = 0;
 
-	// If you screwed up, kiss your score and ring bonus goodbye.
-	player->marescore = 0;
-	player->rings = 0;
-
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 
 	// If in a special stage, add some preliminary exit time.
@@ -611,6 +607,11 @@ static void P_DeNightserizePlayer(player_t *player)
 				players[i].nightstime = 1; // force everyone else to fall too.
 		player->exiting = 3*TICRATE;
 		stagefailed = true; // NIGHT OVER
+
+		// If you screwed up, kiss your score and ring bonus goodbye.
+		// But only do this in special stage (and instakill!) In regular stages, wait til we hit the ground.
+		player->marescore = player->spheres =\
+		 player->rings = 0;
 	}
 
 	// Check to see if the player should be killed.
@@ -624,13 +625,19 @@ static void P_DeNightserizePlayer(player_t *player)
 			continue;
 
 		if (mo2->flags2 & MF2_AMBUSH)
+		{
+			player->marescore = player->spheres =\
+			 player->rings = 0;
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+		}
 
 		break;
 	}
 
 	// Restore from drowning music
 	P_RestoreMusic(player);
+
+	P_RunDeNightserizeExecutors(player->mo);
 }
 
 //
@@ -789,6 +796,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
 				(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
 				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));
+
+	// Do this before setting CR_NIGHTSMODE so we can tell if player was non-NiGHTS
+	P_RunNightserizeExecutors(player->mo);
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
@@ -5952,6 +5962,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i;
 
+	player->capsule->extravalue2++; // tic counter
+
 	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
@@ -6013,6 +6025,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			}
 	}
 
+	if (player->capsule->extravalue2 <= 0 && player->capsule->health > 0)
+		P_RunNightsCapsuleTouchExecutors(player->mo, true, player->spheres >= player->capsule->health); // run capsule entrance executors
+
 	// Time to blow it up!
 	if (player->mo->x == player->capsule->x
 		&& player->mo->y == player->capsule->y
@@ -6036,7 +6051,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = -1;
+				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6105,6 +6120,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetTarget(&players[i].capsule, NULL); // Remove capsule from everyone now that it is dead!
 				S_StartScreamSound(player->mo, sfx_ngdone);
 				P_SwitchSpheresBonusMode(true);
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, true); // run capsule exit executors, and we destroyed it
 			}
 		}
 		else
@@ -6113,7 +6129,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 3; // Get more rings!
 			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = -1;
+			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+			P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
 		}
 	}
 	else
@@ -6666,7 +6683,18 @@ static void P_NiGHTSMovement(player_t *player)
 			S_StartSound(player->mo, sfx_drill1);
 			player->drilltimer = 32;
 		}
-		else if (--player->drilltimer <= 0)
+		else if (player->drilltimer == 32)
+		{
+			// drill mash penalty
+			player->drilltimer = 31;
+			player->drillmeter -= TICRATE/2;
+			if (player->drillmeter <= 0)
+				player->drillmeter = TICRATE/10;
+		}
+		else if (--player->drilltimer == 11)
+			// give that drill mash penalty back (after 0.6 seconds)
+			player->drillmeter += TICRATE/2;
+		else if (player->drilltimer <= 0)
 		{
 			player->drilltimer = 10;
 			S_StartSound(player->mo, sfx_drill2);
@@ -7054,8 +7082,14 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->spheres > 0)
+			else {
+				// Damage whether or not we have spheres, as player should recoil upon losing points
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
+
+				// Now deduct our mare score!
+				player->marescore = player->spheres =\
+				 player->rings = 0;
+			}
 			player->powers[pw_carry] = CR_NONE;
 		}
 	}
@@ -8743,9 +8777,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
-	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	// We probably shouldn't move the camera if there is no player or player mobj somehow
+	if (!player || !player->mo)
+		return true;
 
-	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD))
+	mo = player->mo;
+
+	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+
+	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
 		if (player->spectator) // force cam off for spectators
 			return true;
@@ -8764,7 +8804,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		else if (player == &players[secondarydisplayplayer])
 			focusangle = localangle2;
 		else
-			focusangle = player->mo->angle;
+			focusangle = mo->angle;
 		if (thiscam == &camera)
 			camrotate = cv_cam_rotate.value;
 		else if (thiscam == &camera2)
@@ -8776,16 +8816,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		return true;
 	}
 
-	if (!player || !player->mo)
-		return true;
-
-	mo = player->mo;
-
 	thiscam->radius = FixedMul(20*FRACUNIT, mo->scale);
 	thiscam->height = FixedMul(16*FRACUNIT, mo->scale);
-
-	if (!mo)
-		return true;
 
 	// Don't run while respawning from a starpost
 	// Inu 4/8/13 Why not?!
@@ -8794,7 +8826,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = 0;
 	}
 	else if (player == &players[consoleplayer])
@@ -8809,14 +8841,23 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = player->aiming;
 	}
 
 	if (P_CameraThinker(player, thiscam, resetcalled))
 		return true;
 
-	if (thiscam == &camera)
+	if (tutorialmode)
+	{
+		// force defaults because we have a camera look section
+		camspeed = (INT32)(atof(cv_cam_speed.defaultvalue) * FRACUNIT);
+		camstill = (!stricmp(cv_cam_still.defaultvalue, "off")) ? false : true;
+		camrotate = atoi(cv_cam_rotate.defaultvalue);
+		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+	}
+	else if (thiscam == &camera)
 	{
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
@@ -8856,12 +8897,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			angle = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
 			angle += ANGLE_90;
 		}
-		else if (player->mo->target)
+		else if (mo->target)
 		{
-			if (player->mo->target->flags2 & MF2_AMBUSH)
-				angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+			if (mo->target->flags2 & MF2_AMBUSH)
+				angle = R_PointToAngle2(mo->target->x, mo->target->y, mo->x, mo->y);
 			else
-				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8950,7 +8991,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
 		// Camera doesn't ALWAYS need to move, only when running...
-		if (abs(player->mo->momx) > 10)
+		if (abs(mo->momx) > 10)
 		{
 			// Move the camera all smooth-like, not jerk it around...
 			if (mo->momx > 0)
@@ -9257,24 +9298,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// Make player translucent if camera is too close (only in single player).
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
-		fixed_t vx = 0, vy = 0;
-		if (player->awayviewtics) {
+		fixed_t vx = thiscam->x, vy = thiscam->y;
+		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
 		}
-		else
-		{
-			vx = thiscam->x;
-			vy = thiscam->y;
-		}
 
-		if (P_AproxDistance(vx - player->mo->x, vy - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
-			player->mo->flags2 |= MF2_SHADOW;
+		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+			mo->flags2 |= MF2_SHADOW;
 		else
-			player->mo->flags2 &= ~MF2_SHADOW;
+			mo->flags2 &= ~MF2_SHADOW;
 	}
 	else
-		player->mo->flags2 &= ~MF2_SHADOW;
+		mo->flags2 &= ~MF2_SHADOW;
 
 /*	if (!resetcalled && (player->powers[pw_carry] == CR_NIGHTSMODE && player->exiting))
 	{
@@ -9589,8 +9626,9 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
+	//if (player->awayviewtics)
+	//	player->awayviewtics--;
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -9787,12 +9825,18 @@ void P_PlayerThink(player_t *player)
 				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 
+			if (mo2->flags2 & MF2_NIGHTSPULL)
+				continue;
+
 			if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > FixedMul(128*FRACUNIT, player->mo->scale))
 				continue;
 
 			// Yay! The thing's in reach! Pull it in!
 			mo2->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
 			mo2->flags2 |= MF2_NIGHTSPULL;
+			// New NiGHTS attract speed dummied out because the older behavior
+			// is exploited as a mechanic. Uncomment to enable.
+			mo2->movefactor = 0; // 40*FRACUNIT; // initialize the NightsItemChase timer
 			P_SetTarget(&mo2->tracer, player->mo);
 		}
 	}
@@ -10556,6 +10600,9 @@ void P_PlayerAfterThink(player_t *player)
 				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
+
+	if (player->awayviewtics)
+		player->awayviewtics--;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)
