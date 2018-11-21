@@ -1123,7 +1123,7 @@ static void ST_drawInput(void)
 		V_DrawThinString(x, y, hudinfo[HUD_LIVES].f|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
-static void ST_drawLevelTitle(void)
+void ST_drawLevelTitle(tic_t titletime)
 {
 	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
 	char *subttl = mapheaderinfo[gamemap-1]->subttl;
@@ -1131,7 +1131,7 @@ static void ST_drawLevelTitle(void)
 	INT32 lvlttly, zoney, lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
 
-	if (!(timeinmap > 2 && timeinmap-3 < 110))
+	if (!(titletime > 2 && titletime-3 < 110))
 		return;
 
 	lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
@@ -1151,22 +1151,22 @@ static void ST_drawLevelTitle(void)
 #define MIDZONEY 105
 #define MIDDIFF 4
 
-	if (timeinmap < 10)
+	if (titletime < 10)
 	{
-		fixed_t z = ((timeinmap - 3)<<FRACBITS)/7;
+		fixed_t z = ((titletime - 3)<<FRACBITS)/7;
 		INT32 ttlh = V_LevelNameHeight(lvlttl);
 		zoney = (200<<FRACBITS) - ((200 - (MIDZONEY + MIDDIFF))*z);
 		lvlttly = ((MIDTTLY + ttlh - MIDDIFF)*z) - (ttlh<<FRACBITS);
 	}
-	else if (timeinmap < 105)
+	else if (titletime < 105)
 	{
-		fixed_t z = (((timeinmap - 10)*MIDDIFF)<<(FRACBITS+1))/95;
+		fixed_t z = (((titletime - 10)*MIDDIFF)<<(FRACBITS+1))/95;
 		zoney = ((MIDZONEY + MIDDIFF)<<FRACBITS) - z;
 		lvlttly = ((MIDTTLY - MIDDIFF)<<FRACBITS) + z;
 	}
 	else
 	{
-		fixed_t z = ((timeinmap - 105)<<FRACBITS)/7;
+		fixed_t z = ((titletime - 105)<<FRACBITS)/7;
 		INT32 zoneh = V_LevelNameHeight(M_GetText("ZONE"));
 		zoney = (MIDZONEY + zoneh - MIDDIFF)*(FRACUNIT - z) - (zoneh<<FRACBITS);
 		lvlttly = ((MIDTTLY + MIDDIFF)<<FRACBITS) + ((200 - (MIDTTLY + MIDDIFF))*z);
@@ -1177,8 +1177,8 @@ static void ST_drawLevelTitle(void)
 #undef MIDDIFF
 #else
 	// There's no consistent algorithm that can accurately define the old positions
-	// so I just ended up resorting to a single switct statement to define them
-	switch (timeinmap-3)
+	// so I just ended up resorting to a single switch statement to define them
+	switch (titletime-3)
 	{
 		case 0:   zoney = 200; lvlttly =   0; break;
 		case 1:   zoney = 188; lvlttly =  12; break;
@@ -2461,12 +2461,14 @@ static void ST_overlayDrawer(void)
 			{
 				ST_drawFirstPersonHUD();
 				if (cv_powerupdisplay.value)
-					ST_drawPowerupHUD();
+					ST_drawPowerupHUD();  // same as it ever was...
 			}
 			else if (cv_powerupdisplay.value == 2)
-				ST_drawPowerupHUD();
+				ST_drawPowerupHUD();  // same as it ever was...
 		}
 	}
+	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2)
+		ST_drawPowerupHUD(); // same as it ever was...
 
 #ifdef HAVE_BLUA
 	if (!(netgame || multiplayer) || !hu_showscores)
@@ -2479,7 +2481,7 @@ static void ST_overlayDrawer(void)
 	&& LUA_HudEnabled(hud_stagetitle)
 #endif
 	)
-		ST_drawLevelTitle();
+		ST_drawLevelTitle(timeinmap+70);
 
 	if (!hu_showscores && (netgame || multiplayer)
 #ifdef HAVE_BLUA
@@ -2488,7 +2490,7 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawTextHUD();
 
-	if (modeattacking)
+	if (modeattacking && !(demoplayback && hu_showscores))
 		ST_drawInput();
 
 	ST_drawDebugInfo();

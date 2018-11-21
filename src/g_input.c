@@ -709,7 +709,7 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][gc_teamkey    ][0] = 'y';
 		gamecontroldefault[i][gc_scores     ][0] = KEY_TAB;
 		gamecontroldefault[i][gc_console    ][0] = KEY_CONSOLE;
-		gamecontroldefault[i][gc_pause      ][0] = KEY_PAUSE;
+		gamecontroldefault[i][gc_pause      ][0] = 'p';
 	}
 }
 
@@ -814,6 +814,8 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		return;
 	}
 	keynum = G_KeyStringtoNum(COM_Argv(2));
+	if (keynum == KEY_PAUSE) // fail silently; pause is hardcoded
+		return;
 	G_CheckDoubleUsage(keynum);
 	gc[numctrl][0] = keynum;
 

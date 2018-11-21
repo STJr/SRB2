@@ -29,6 +29,7 @@
 #include "g_input.h"
 #include "console.h"
 #include "m_random.h"
+#include "m_misc.h" // moviemode functionality
 #include "y_inter.h"
 #include "m_cond.h"
 #include "p_local.h"
@@ -331,7 +332,7 @@ void F_StartIntro(void)
 	introtext[2] = M_GetText(
 	"As it was about to drain the rings\n"
 	"away from the planet, Sonic burst into\n"
-	"the Satellite and for what he thought\n"
+	"the control room and for what he thought\n"
 	"would be the last time,\xB4 defeated\n"
 	"Dr. Eggman.\n#");
 
@@ -341,11 +342,11 @@ void F_StartIntro(void)
 	"return,\xB8 bringing an all new threat.\n#");
 
 	introtext[4] = M_GetText(
-	"\xA8""About once every year, a strange asteroid\n"
+	"\xA8""About every five years, a strange asteroid\n"
 	"hovers around the planet.\xBF It suddenly\n"
 	"appears from nowhere, circles around, and\n"
 	"\xB6- just as mysteriously as it arrives -\xB6\n"
-	"vanishes after about one week.\xBF\n"
+	"vanishes after only one week.\xBF\n"
 	"No one knows why it appears, or how.\n#");
 
 	introtext[5] = M_GetText(
@@ -398,7 +399,7 @@ void F_StartIntro(void)
 	"\xA5\"6...\xD2""5...\xD2""4...\"\xA8\xD2\n"
 	"Sonic knew he was getting closer to the\n"
 	"zone, and pushed himself harder.\xB4 Finally,\n"
-	"the mountain appeared in the horizon.\xD2\xD2\n"
+	"the mountain appeared on the horizon.\xD2\xD2\n"
 	"\xA5\"3...\xD2""2...\xD2""1...\xD2""Zero.\"\n#");
 
 	introtext[11] = M_GetText(
@@ -831,18 +832,27 @@ void F_IntroDrawer(void)
 
 			// Stay on black for a bit. =)
 			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				tic_t nowtime, quittime, lasttime;
+				nowtime = lasttime = I_GetTime();
+				quittime = nowtime + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+				while (quittime > nowtime)
 				{
+					while (!((nowtime = I_GetTime()) - lasttime))
+						I_Sleep();
+					lasttime = nowtime;
+
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
 					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+
+					if (moviemode) // make sure we save frames for the white hold too
+						M_SaveFrame();
 				}
 			}
 
 			D_StartTitle();
+			wipegamestate = GS_INTRO;
 			return;
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);
@@ -1547,7 +1557,7 @@ void F_TitleScreenDrawer(void)
 	if (!titlemapinaction)
 		F_SkyScroll(titlescrollspeed);
 
-	// Don't draw outside of the title screewn, or if the patch isn't there.
+	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
@@ -1891,6 +1901,9 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 		return;
 
 	G_SetGamestate(GS_CUTSCENE);
+
+	if (wipegamestate == GS_CUTSCENE)
+		wipegamestate = -1;
 
 	gameaction = ga_nothing;
 	paused = false;
