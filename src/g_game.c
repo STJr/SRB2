@@ -1653,6 +1653,7 @@ void G_DoLoadLevel(boolean resetplayer)
 }
 
 INT32 pausedelay = 0;
+boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
 //
@@ -1805,6 +1806,7 @@ boolean G_Responder(event_t *ev)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
+					pausebreakkey = (ev->data1 == KEY_PAUSE);
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
