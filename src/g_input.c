@@ -1154,10 +1154,8 @@ void G_Controldefault(void)
 #else
 void G_Controldefault(void)
 {
-	gamecontrol[gc_forward    ][0] = KEY_UPARROW;
-	gamecontrol[gc_forward    ][1] = 'w';
-	gamecontrol[gc_backward   ][0] = KEY_DOWNARROW;
-	gamecontrol[gc_backward   ][1] = 's';
+	gamecontrol[gc_forward    ][0] = 'w';
+	gamecontrol[gc_backward   ][0] = 's';
 	gamecontrol[gc_strafeleft ][0] = 'a';
 	gamecontrol[gc_straferight][0] = 'd';
 	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
@@ -1178,19 +1176,18 @@ void G_Controldefault(void)
 	gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
 	gamecontrol[gc_firenormal ][0] = 'c';
 	gamecontrol[gc_tossflag   ][0] = '\'';
-	gamecontrol[gc_use        ][0] = 'x';
+	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
 	gamecontrol[gc_camtoggle  ][0] = 'v';
 	gamecontrol[gc_camleft    ][0] = '[';
 	gamecontrol[gc_camright   ][0] = ']';
 	gamecontrol[gc_camreset   ][0] = 'r';
-	gamecontrol[gc_lookup     ][0] = KEY_PGUP;
-	gamecontrol[gc_lookdown   ][0] = KEY_PGDN;
+	gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
+	gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;
 	gamecontrol[gc_centerview ][0] = KEY_END;
 	gamecontrol[gc_talkkey    ][0] = 't';
 	gamecontrol[gc_teamkey    ][0] = 'y';
 	gamecontrol[gc_scores     ][0] = KEY_TAB;
-	gamecontrol[gc_jump       ][0] = 'z';
-	gamecontrol[gc_jump       ][1] = KEY_MOUSE1+1;
+	gamecontrol[gc_jump       ][0] = KEY_SPACE;
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
 #ifdef WMINPUT
