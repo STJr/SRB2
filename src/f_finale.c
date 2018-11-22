@@ -979,6 +979,7 @@ static const char *credits[] = {
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
+	"Vivian \"toaster\" Grannell",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
@@ -986,6 +987,7 @@ static const char *credits[] = {
 	"Ehab \"Wolfy\" Saeed",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
 	"\1Assistance",
@@ -993,7 +995,6 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Matthew \"Shuffle\" Marsalko",
@@ -1001,7 +1002,12 @@ static const char *credits[] = {
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"\"Steel Titanium\"",
 	"Ben \"Cue\" Woodford",
+	// Git contributors with 5+ approved merges, at least a few of substantive quality, may be named
+	// Everyone else is acknowledged here
+	"STJr Git Contributors",
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1048,13 +1054,13 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Erik \"Torgo\" Nielsen",
 	"\"Kaito Sinclaire\"",
-	"Wessel \"Spherallic\" Smit",
+	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"Digiku\" Zafra",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
