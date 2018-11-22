@@ -4006,8 +4006,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
-	if (maptol & TOL_NIGHTS)
-		factor = player->jumpfactor; // all skins jump the same
+	//if (maptol & TOL_NIGHTS)
+	//	factor = player->jumpfactor; // all skins jump the same. if you nerf jumping abilities, you may want this.
 
 	P_SetObjectMomZ(player->mo, FixedMul(factor, player->mo->momz), false); // Custom height
 
