@@ -2300,7 +2300,7 @@ static void P_LevelInitStuff(void)
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].marelap =\
+		 players[i].oldscale = players[i].mare = players[i].marelap =\
 		 players[i].marebonuslap = players[i].lapbegunat =\
 		 players[i].lapstartedtime = players[i].totalmarescore =\
 		 players[i].realtime = players[i].exiting = 0;
@@ -2318,7 +2318,7 @@ static void P_LevelInitStuff(void)
 		// unset ALL the pointers. P_SetTarget isn't needed here because if this
 		// function is being called we're just going to clobber the data anyways
 		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
+		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
 	}
 }
 

@@ -793,26 +793,33 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_SwitchSpheresBonusMode(false);
 				if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 					P_SetTarget(&special->tracer, toucher);
+				P_SetTarget(&player->drone, special); // Mark the player as 'center into the drone'
 				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
 					if (toucher->tracer) // Move the ideya over to the drone!
 					{
-						mobj_t *hnext = special->hnext;
-						P_SetTarget(&special->hnext, toucher->tracer);
-						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
-						P_SetTarget(&special->hnext->target, special);
+						mobj_t *orbittarget = special->target ? special->target : special;
+						mobj_t *hnext = orbittarget->hnext;
+
+						P_SetTarget(&orbittarget->hnext, toucher->tracer);
+						if (!orbittarget->hnext->hnext)
+							P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						else
+							P_SetTarget(&orbittarget->hnext->hnext->target, orbittarget);
+						P_SetTarget(&orbittarget->hnext->target, orbittarget);
 						P_SetTarget(&toucher->tracer, NULL);
+
 						if (hnext)
 						{
-							special->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
-							if (special->hnext->extravalue1 > hnext->extravalue1)
-								special->hnext->extravalue1 -= (72*ANG1)/special->hnext->extravalue1;
+							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
+							if (orbittarget->hnext->extravalue1 > hnext->extravalue1)
+								orbittarget->hnext->extravalue1 -= (72*ANG1)/orbittarget->hnext->extravalue1;
 						}
 					}
 					if (player->exiting) // ...then move it back?
 					{
-						mobj_t *hnext = special;
+						mobj_t *hnext = special->target ? special->target : special; // goalpost
 						while ((hnext = hnext->hnext))
 							P_SetTarget(&hnext->target, toucher);
 					}
@@ -961,8 +968,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
-			if (toucher->tracer)
-				return; // Don't have multiple ideya
+			if (toucher->tracer && toucher->tracer->health > 0)
+				return; // Don't have multiple ideya, unless it's the first one given (health = 0)
 
 			if (player->mare != special->threshold) // wrong mare
 				return;

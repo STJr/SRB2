@@ -634,6 +634,10 @@ static void P_DeNightserizePlayer(player_t *player)
 		break;
 	}
 
+	if (player->mo->scale != player->oldscale)
+		player->mo->destscale = player->oldscale;
+	player->oldscale = 0;
+
 	// Restore from drowning music
 	P_RestoreMusic(player);
 
@@ -653,7 +657,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
+	{
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
+		player->oldscale = player->mo->scale;
+	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
@@ -789,6 +796,9 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (timeinmap + 40 < (110 - 70))
 			player->texttimer = (UINT8)((110 - 70) - timeinmap);
 	}
+
+	if (player->drone && player->drone->scale != player->mo->scale)
+		player->mo->destscale = player->drone->scale;
 
 	// force NiGHTS to face forward or backward
 	if (player->mo->target)
@@ -6148,6 +6158,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						UINT8 em = P_GetNextEmerald();
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						mobj_t *emmo = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
+						emmo->health = em; // for identification
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 						P_SetTarget(&player->mo->tracer, emmo);
@@ -6174,8 +6185,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					}*/
 					mobj_t *idya = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
 					idya->extravalue2 = player->mare/5;
+					idya->health = player->mare + 1; // for identification
 					P_SetTarget(&idya->target, player->mo);
 					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
+
+					if (player->mo->tracer)
+					{
+						P_SetTarget(&idya->hnext, player->mo->tracer);
+						idya->extravalue1 = (angle_t)(player->mo->tracer->extravalue1 - 72*ANG1);
+						if (idya->extravalue1 > player->mo->tracer->extravalue1)
+							idya->extravalue1 -= (72*ANG1)/idya->extravalue1;
+					}
 					P_SetTarget(&player->mo->tracer, idya);
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
@@ -6202,6 +6222,51 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		// We somehow moved out of the capsule (OBJECTPLACE?)
 		// So recalculate all the timings
 		player->capsule->lastlook = player->capsule->extravalue2 = -1;
+}
+
+//
+// P_MoveNiGHTSToDrone
+//
+// Pull NiGHTS to the drone during Nightserizing
+//
+static void P_MoveNiGHTSToDrone(player_t *player)
+{
+	if (!player->drone)
+		return;
+
+	boolean flip = player->drone->flags2 & MF2_OBJECTFLIP;
+	boolean topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	boolean middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
+	boolean bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	fixed_t droneboxmandiff = max(player->drone->height - player->mo->height, 0);
+	fixed_t zofs;
+
+	if (!flip)
+	{
+		if (topaligned)
+			zofs = droneboxmandiff;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = 0;
+	}
+	else
+	{
+		if (topaligned)
+			zofs = 0;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = droneboxmandiff - FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = droneboxmandiff;
+	}
+
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
+	P_SetTarget(&player->drone, NULL);
 }
 
 //
@@ -7123,6 +7188,13 @@ static void P_MovePlayer(player_t *player)
 		else if (player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1])
 		{
 			P_DoNiGHTSCapsule(player);
+			return;
+		}
+
+		// Suck player into their drone
+		if (player->drone)
+		{
+			P_MoveNiGHTSToDrone(player);
 			return;
 		}
 
