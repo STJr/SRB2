@@ -7979,7 +7979,7 @@ void P_MobjThinker(mobj_t *mobj)
 					    || goalpost->movefactor != mobj->z
 						|| goalpost->friction != mobj->height
 						|| flipchanged
-						|| goalpost->threshold != (mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
+						|| goalpost->threshold != (INT32)(mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE)))
 					{
 						goalpost->destscale = sparkle->destscale = droneman->destscale = mobj->destscale;
 
