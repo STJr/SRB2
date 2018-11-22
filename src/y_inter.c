@@ -1440,6 +1440,7 @@ static void Y_CalculateCompetitionWinners(void)
 	UINT32 maxrings[MAXPLAYERS];
 	UINT32 monitors[MAXPLAYERS];
 	UINT32 scores[MAXPLAYERS];
+	char tempname[9];
 
 	memset(data.competition.points, 0, sizeof (data.competition.points));
 	memset(points, 0, sizeof (points));
@@ -1531,8 +1532,9 @@ static void Y_CalculateCompetitionWinners(void)
 		data.competition.monitors[data.competition.numplayers] = monitors[winner];
 		data.competition.scores[data.competition.numplayers] = scores[winner];
 
-		snprintf(data.competition.name[data.competition.numplayers], 9, "%s", player_names[winner]);
-		data.competition.name[data.competition.numplayers][8] = '\0';
+		strncpy(tempname, player_names[winner], 8);
+		tempname[8] = '\0';
+		strncpy(data.competition.name[data.competition.numplayers], tempname, 9);
 
 		data.competition.color[data.competition.numplayers] = &players[winner].skincolor;
 		data.competition.character[data.competition.numplayers] = &players[winner].skin;
@@ -1904,4 +1906,5 @@ static void Y_UnloadData(void)
 			//are not handled
 			break;
 	}
+
 }
