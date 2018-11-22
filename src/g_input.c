@@ -814,13 +814,31 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		return;
 	}
 	keynum = G_KeyStringtoNum(COM_Argv(2));
+
 	if (keynum == KEY_PAUSE) // fail silently; pause is hardcoded
-		return;
+	{
+		if (na == 4)
+		{
+			na--;
+			keynum = G_KeyStringtoNum(COM_Argv(3));
+			if (keynum == KEY_PAUSE)
+				return;
+		}
+		else
+			return;
+	}
+
 	G_CheckDoubleUsage(keynum);
 	gc[numctrl][0] = keynum;
 
 	if (na == 4)
-		gc[numctrl][1] = G_KeyStringtoNum(COM_Argv(3));
+	{
+		keynum = G_KeyStringtoNum(COM_Argv(3));
+		if (keynum != KEY_PAUSE)
+			gc[numctrl][1] = keynum;
+		else
+			gc[numctrl][1] = 0;
+	}
 	else
 		gc[numctrl][1] = 0;
 }
