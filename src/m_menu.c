@@ -1117,13 +1117,14 @@ static menuitem_t OP_MouseOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse",        &cv_usemouse,         10},
 
 
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook,   30},
-	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse,      50},
+	{IT_STRING | IT_CVAR, NULL, "First-Person MouseLook", &cv_alwaysfreelook,   30},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person MouseLook", &cv_chasefreelook,   40},
+	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse,      60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens,        60},
+	                      NULL, "Mouse X Speed",    &cv_mousesens,        70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens,        70},
+	                      NULL, "Mouse Y Speed",    &cv_mouseysens,        80},
 };
 
 static menuitem_t OP_Mouse2OptionsMenu[] =
@@ -1131,13 +1132,14 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse 2",      &cv_usemouse2,        10},
 	{IT_STRING | IT_CVAR, NULL, "Second Mouse Serial Port",
 	                                                &cv_mouse2port,       20},
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook2,  30},
-	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse2,     50},
+	{IT_STRING | IT_CVAR, NULL, "First-Person MouseLook", &cv_alwaysfreelook2,  30},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person MouseLook", &cv_chasefreelook2,  40},
+	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse2,     60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens2,       60},
+	                      NULL, "Mouse X Speed",    &cv_mousesens2,       70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      70},
+	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      80},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
