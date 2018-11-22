@@ -55,8 +55,8 @@ extern INT16 rw_maximums[NUM_WEAPONS];
 
 // used in game menu
 extern consvar_t cv_crosshair, cv_crosshair2;
-extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_mousemove;
-extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_mousemove2;
+extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
+extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
 extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_fireaxis,cv_firenaxis;
