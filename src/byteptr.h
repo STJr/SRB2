@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,9 @@
 #define DEALIGNED
 #endif
 
-#ifndef _BIG_ENDIAN
+#include "endian.h"
+
+#ifndef SRB2_BIG_ENDIAN
 //
 // Little-endian machines
 //
@@ -75,7 +77,7 @@
 #define READANGLE(p)        *((angle_t *)p)++
 #endif
 
-#else //_BIG_ENDIAN
+#else //SRB2_BIG_ENDIAN
 //
 // definitions for big-endian machines with alignment constraints.
 //
@@ -144,7 +146,7 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 #define READCHAR(p)         ({    char *p_tmp = (   char *)p;    char b =        *p_tmp; p_tmp++; p = (void *)p_tmp; b; })
 #define READFIXED(p)        ({ fixed_t *p_tmp = (fixed_t *)p; fixed_t b =   readlong(p); p_tmp++; p = (void *)p_tmp; b; })
 #define READANGLE(p)        ({ angle_t *p_tmp = (angle_t *)p; angle_t b =  readulong(p); p_tmp++; p = (void *)p_tmp; b; })
-#endif //_BIG_ENDIAN
+#endif //SRB2_BIG_ENDIAN
 
 #undef DEALIGNED
 

@@ -26,10 +26,6 @@
 #include <windows.h>
 #endif
 
-#if defined (VID_X11) && !defined (HAVE_SDL)
-#include <GL/glx.h>
-#endif
-
 #include "../doomdef.h"
 //THIS MUST DISAPPEAR!!!
 #include "hw_glide.h"
@@ -64,7 +60,7 @@ typedef struct GLMipmap_s GLMipmap_t;
 //
 struct GLTexture_s
 {
-	GLMipmap_t mipmap;
+	GLMipmap_t  mipmap;
 	float       scaleX;             //used for scaling textures on walls
 	float       scaleY;
 };
@@ -88,7 +84,7 @@ struct GLPatch_s
 	UINT16              wadnum;      // the software patch lump num for when the hardware patch
 	UINT16              lumpnum;     // was flushed, and we need to re-create it
 	GLMipmap_t          mipmap;
-} ATTRPACK;
+};
 typedef struct GLPatch_s GLPatch_t;
 
 #endif //_HWR_DATA_

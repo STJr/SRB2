@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,8 +69,10 @@ static void G_DoStartContinue(void);
 static void G_DoContinued(void);
 static void G_DoWorldDone(void);
 
+char   mapmusname[7]; // Music name
+UINT16 mapmusflags; // Track and reset bit
+
 INT16 gamemap = 1;
-UINT32 mapmusic; // music, track, and reset bit
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
@@ -293,9 +295,6 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #endif
 #if JOYAXISSET > 2
 {5, "RTrigger"}, {6, "LTrigger"}, {-5, "RTrigger-"}, {-6, "LTrigger-"},
-#endif
-#if JOYAXISSET > 3
-{7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
 #endif
 #if JOYAXISSET > 3
 {7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
@@ -712,6 +711,10 @@ void G_SetGameModified(boolean silent)
 
 	if (!silent)
 		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to record statistics.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
 }
 
 /** Builds an original game map name from a map number.
@@ -723,7 +726,7 @@ void G_SetGameModified(boolean silent)
   */
 const char *G_BuildMapName(INT32 map)
 {
-	static char mapname[9] = "MAPXX"; // internal map name (wad resource name)
+	static char mapname[10] = "MAPXX"; // internal map name (wad resource name)
 
 	I_Assert(map > 0);
 	I_Assert(map <= NUMMAPS);
@@ -1010,10 +1013,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	}
 	if (cv_analog.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| player->climbing
+		|| (!demoplayback && (player->climbing
 		|| (player->pflags & PF_NIGHTSMODE)
 		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1185,8 +1188,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value || player->climbing
-		|| (player->pflags & PF_SLIDING)) // Analog for mouse
+	if (cv_analog.value ||
+		(!demoplayback && (player->climbing
+		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
@@ -1571,11 +1575,6 @@ static void Analog_OnChange(void)
 		return;
 	}
 
-	if (cv_analog.value)
-		players[consoleplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[consoleplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref();
 }
 
@@ -1595,11 +1594,6 @@ static void Analog2_OnChange(void)
 		CV_SetValue(&cv_analog2, 0);
 		return;
 	}
-
-	if (cv_analog2.value)
-		players[secondarydisplayplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_ANALOGMODE;
 
 	SendWeaponPref2();
 }
@@ -2180,18 +2174,18 @@ void G_PlayerReborn(INT32 player)
 	p->health = 1; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
-	if ((netgame || multiplayer) && !p->spectator
-	&& gametype != GT_RACE)
+	if ((netgame || multiplayer) && !p->spectator)
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	if (p-players == consoleplayer)
 	{
-		if (mapmusic & MUSIC_RELOADRESET) // TODO: Might not need this here
+		if (mapmusflags & MUSIC_RELOADRESET)
 		{
-			mapmusic = mapheaderinfo[gamemap-1]->musicslot
-				| (mapheaderinfo[gamemap-1]->musicslottrack << MUSIC_TRACKSHIFT);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK;
 		}
-		S_ChangeMusic(mapmusic, true);
+		S_ChangeMusic(mapmusname, mapmusflags, true);
 	}
 
 	if (gametype == GT_COOP)
@@ -2284,6 +2278,9 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
+#ifdef HAVE_BLUA
+		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+#endif
 		return;
 	}
 
@@ -2332,6 +2329,11 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		}
 	}
 	P_MovePlayerToSpawn(playernum, spawnpoint);
+
+#ifdef HAVE_BLUA
+	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+#endif
+
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -2345,7 +2347,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 		return NULL;
 	}
 
-	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_Random() & 1)) || players[playernum].ctfteam == 1) //red
+	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
 	{
 		if (!numredctfstarts)
 		{
@@ -2875,10 +2877,11 @@ static void G_DoCompleted(void)
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist
-	if(!mapheaderinfo[nextmap])
+	// (That is, if it's a real map)
+	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if (skipstats)
+	if (skipstats && !modeattacking) // Don't skip stats if we're in record attack
 		G_AfterIntermission();
 	else
 	{
@@ -3525,7 +3528,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (paused)
 	{
 		paused = false;
-		S_ResumeSound();
+		S_ResumeAudio();
 	}
 
 	if (netgame || multiplayer) // Nice try, haxor.
@@ -3575,7 +3578,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		unlocktriggers = 0;
 
 		// clear itemfinder, just in case
-		CV_StealthSetValue(&cv_itemfinder, 0);
+		if (!dedicated) // except in dedicated servers, where it is not registered and can actually I_Error debug builds
+			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
 	// internal game map
@@ -3599,10 +3603,9 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 	// Don't carry over custom music change to another map.
-	mapmusic |= MUSIC_RELOADRESET;
+	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
-	playerdeadview = false;
 	automapactive = false;
 	imcontinuing = false;
 
@@ -3862,7 +3865,7 @@ void G_GhostAddColor(ghostcolor_t color)
 	ghostext.color = (UINT8)color;
 }
 
-void G_GhostAddScale(UINT16 scale)
+void G_GhostAddScale(fixed_t scale)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
@@ -4330,20 +4333,8 @@ void G_GhostTicker(void)
 		switch(g->color)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
-			// Yousa yellow now!
-			g->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
-			if (g->mo->skin)
-				switch (((skin_t*)g->mo->skin)-skins)
-				{
-				case 1: // Golden orange supertails.
-					g->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
-					break;
-				case 2: // Pink superknux.
-					g->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
-					break;
-				default:
-					break;
-				}
+			g->mo->color = SKINCOLOR_SUPER1;
+			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
@@ -4360,6 +4351,7 @@ void G_GhostTicker(void)
 				p->next = g->next;
 			else
 				ghosts = g->next;
+			Z_Free(g);
 			continue;
 		}
 		p = g;
@@ -5312,29 +5304,28 @@ void G_AddGhost(char *defdemoname)
 	mthing = playerstarts[0];
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
-		fixed_t x,y,z;
-		sector_t *sector;
-		x = mthing->x << FRACBITS;
-		y = mthing->y << FRACBITS;
-		sector = R_PointInSubsector(x, y)->sector;
+		fixed_t z,f,c;
+		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		f = gh->mo->floorz;
+		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			z = c;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z < sector->floorheight)
-				z = sector->floorheight;
+			if (z < f)
+				z = f;
 		}
 		else
 		{
-			z = sector->floorheight;
+			z = f;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-				z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			if (z > c)
+				z = c;
 		}
-		gh->mo = P_SpawnMobj(x, y, z, MT_GHOST);
-		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		gh->mo->z = z;
 	}
 	gh->mo->state = states+S_PLAY_STND;
 	gh->mo->sprite = gh->mo->state->sprite;
@@ -5494,7 +5485,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void)
 		UINT8 i;
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		for (i = 0; i < 16; i++, p++)
-			*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
 #else
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
@@ -5532,8 +5523,14 @@ boolean G_CheckDemoStatus(void)
 {
 	boolean saved;
 
-	if(ghosts) // ... ... ...
-		ghosts = NULL; // :)
+	while (ghosts)
+	{
+		demoghost *next = ghosts->next;
+		Z_Free(ghosts);
+		ghosts = next;
+	}
+	ghosts = NULL;
+
 
 	// DO NOT end metal sonic demos here
 
@@ -5576,16 +5573,16 @@ boolean G_CheckDemoStatus(void)
 		UINT8 i;
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		for (i = 0; i < 16; i++, p++)
-			*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
 #else
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
 #endif
-		saved = FIL_WriteFile(demoname, demobuffer, demo_p - demobuffer); // finally output the file.
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 		free(demobuffer);
 		demorecording = false;
 
-		if (!modeattacking == ATTACKING_RECORD)
+		if (modeattacking != ATTACKING_RECORD)
 		{
 			if (saved)
 				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);

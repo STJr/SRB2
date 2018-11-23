@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -136,6 +136,7 @@ extern void (*basespanfunc)(void);
 extern void (*splatfunc)(void);
 extern void (*transtransfunc)(void);
 extern void (*twosmultipatchfunc)(void);
+extern void (*twosmultipatchtransfunc)(void);
 
 // -----
 // CPUID
@@ -175,9 +176,7 @@ void SCR_SetDefaultMode (void);
 
 void SCR_Startup (void);
 
-void SCR_ChangeFullscreen (void);
-
-boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
+FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);

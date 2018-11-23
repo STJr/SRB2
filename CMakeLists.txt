@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 project(SRB2
-	VERSION 2.1.14
+	VERSION 2.1.20
 	LANGUAGES C)
+
+if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
+	message(FATAL_ERROR "In-source builds will bring you a world of pain. Please make a separate directory to invoke CMake from.")
+endif()
 
 # Set up CMAKE path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -19,13 +23,13 @@ endfunction()
 # Macro to add OSX framework
 macro(add_framework fwname appname)
 	find_library(FRAMEWORK_${fwname}
-    	NAMES ${fwname}
-    	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
-    		${CMAKE_OSX_SYSROOT}/Library
-    		/System/Library
-    		/Library
-    	PATH_SUFFIXES Frameworks
-    	NO_DEFAULT_PATH)
+	NAMES ${fwname}
+	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+		${CMAKE_OSX_SYSROOT}/Library
+		/System/Library
+		/Library
+	ATH_SUFFIXES Frameworks
+	NO_DEFAULT_PATH)
     if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
         MESSAGE(ERROR ": Framework ${fwname} not found")
     else()
@@ -44,7 +48,7 @@ macro(copy_files_to_build_dir target dlllist_var)
 			add_custom_command(TARGET ${target} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different
 				${dlllist_item}
-				${CMAKE_CURRENT_BINARY_DIR}/\$\(Configuration\)/${dllname}
+				$<TARGET_FILE_DIR:${target}>/${dllname}
 			)
 		endforeach()
 	endif()
@@ -56,10 +60,6 @@ if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 	set(SRB2_SYSTEM_BITS 64)
 else()
 	set(SRB2_SYSTEM_BITS 32)
-endif()
-
-if(MSVC)
-	message(WARNING "!! MSVC BUILDS OF SRB2 CANNOT PLAY MULTIPLAYER !! You're more than welcome to try and fix this!")
 endif()
 
 # OS macros
@@ -80,10 +80,10 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	add_definitions(-DMACOSX)
-	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
-		set(CLANG ON)
-	endif()
 endif()
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Set EXE names so the assets CMakeLists can refer to its target
 set(SRB2_SDL2_EXE_NAME srb2)
@@ -98,7 +98,10 @@ add_subdirectory(assets)
 ## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
-git_describe(SRB2_COMP_REVISION "${CMAKE_CURRENT_SOURCE_DIR}")
+git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
+git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
+set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
+set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####

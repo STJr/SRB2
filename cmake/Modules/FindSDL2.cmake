@@ -1,6 +1,6 @@
 # Find SDL2
 # Once done, this will define
-# 
+#
 #  SDL2_FOUND - system has SDL2
 #  SDL2_INCLUDE_DIRS - SDL2 include directories
 #  SDL2_LIBRARIES - link libraries
@@ -26,7 +26,6 @@ find_library(SDL2_LIBRARY
 		"/usr/lib"
 		"/usr/local/lib"
 )
-
 
 # set include dir variables
 set(SDL2_PROCESS_INCLUDES SDL2_INCLUDE_DIR)

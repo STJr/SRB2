@@ -36,9 +36,7 @@ typedef struct
 {
 	float x;
 	float y;
-//#ifdef SLOPENESS
 	float z;
-//#endif
 } polyvertex_t;
 
 #ifdef _MSC_VER
@@ -70,6 +68,7 @@ typedef struct gr_vissprite_s
 	struct gr_vissprite_s *prev;
 	struct gr_vissprite_s *next;
 	float x1, x2;
+	float z1, z2;
 	float tz, ty;
 	lumpnum_t patchlumpnum;
 	boolean flip;
@@ -79,6 +78,7 @@ typedef struct gr_vissprite_s
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
+	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } gr_vissprite_t;
 
 // --------

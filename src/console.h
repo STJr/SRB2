@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,11 +40,10 @@ extern consvar_t cons_backcolor;
 
 extern UINT8 *yellowmap, *purplemap, *lgreenmap, *bluemap, *graymap, *redmap, *orangemap;
 
-// Console bg colors:
-extern UINT8 *cwhitemap, *corangemap, *cbluemap, *cgreenmap, *cgraymap,
-	*credmap;
+// Console bg color (auto updated to match)
+extern UINT8 *consolebgmap;
 
-void CON_ReSetupBackColormap(UINT16 num);
+void CON_SetupBackColormap(void);
 void CON_ClearHUD(void); // clear heads up messages
 
 void CON_Ticker(void);

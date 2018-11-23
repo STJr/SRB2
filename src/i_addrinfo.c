@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,7 +49,7 @@
 
 #ifndef I_getaddrinfo
 
-#ifndef _MSC_VER
+#if !defined (_MSC_VER) || (_MSC_VER >= 1800) // MSVC 2013 and forward
 #include <stdbool.h>
 #else
 typedef char bool;
@@ -105,7 +105,7 @@ static void WS_addrinfosetup(void)
 		return; // already have the functions
 	// why not hold it into ipv6dll? becase we already link with ws2_32, silly!
 	if (WS_getfunctions(GetModuleHandleA("ws2_32.dll")) == NULL)
-		ipv6dll = WS_getfunctions(LoadLibrary("wship6.dll"));
+		ipv6dll = WS_getfunctions(LoadLibraryA("wship6.dll"));
 }
 
 void WS_addrinfocleanup(void)

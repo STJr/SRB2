@@ -23,14 +23,13 @@
 
 extern HWND hWndMain;
 
-extern int appActive;
+extern INT appActive;
 
 VOID I_GetSysMouseEvents(INT mouse_state);
 extern UINT MSHWheelMessage;
 
 extern BOOL nodinput;
 BOOL LoadDirectInput(VOID);
-extern BOOL win9x;
 
 //faB: midi channel Volume set is delayed by the MIDI stream callback thread, see win_snd.c
 #define WM_MSTREAM_UPDATEVOLUME (WM_USER + 101)

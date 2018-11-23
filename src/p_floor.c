@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -312,6 +312,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -360,6 +361,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				case moveFloorByFrontSector:
 					if (movefloor->texture < -1) // chained linedef executing
 						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+					/* FALLTHRU */
 				case instantMoveFloorByFrontSector:
 					if (movefloor->texture > -1) // flat changing
 						movefloor->sector->floorpic = movefloor->texture;
@@ -1163,7 +1165,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 	node = spikes->sector->touching_thinglist; // things touching this sector
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (!thing->player)
@@ -1174,12 +1176,15 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (affectsec == spikes->sector) // Applied to an actual sector
 		{
+			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, affectsec);
+			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, affectsec);
+
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
 				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
 					continue;
 
-				if (thing->z == affectsec->floorheight)
+				if (thing->z == affectfloor)
 					dothepain = true;
 			}
 
@@ -1188,18 +1193,20 @@ void T_SpikeSector(levelspecthink_t *spikes)
 				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
 					continue;
 
-				if (thing->z + thing->height == affectsec->ceilingheight)
+				if (thing->z + thing->height == affectceil)
 					dothepain = true;
 			}
 		}
 		else
 		{
+			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, spikes->sector);
+			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, spikes->sector);
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
 				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
 					continue;
 
-				if (thing->z == affectsec->ceilingheight)
+				if (thing->z == affectceil)
 					dothepain = true;
 			}
 
@@ -1208,7 +1215,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
 					continue;
 
-				if (thing->z + thing->height == affectsec->floorheight)
+				if (thing->z + thing->height == affectfloor)
 					dothepain = true;
 			}
 		}
@@ -1311,7 +1318,7 @@ void T_BridgeThinker(levelspecthink_t *bridge)
 			controlsec = &sectors[k];
 
 			// Is a player standing on me?
-			for (node = sector->touching_thinglist; node; node = node->m_snext)
+			for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 			{
 				thing = node->m_thing;
 
@@ -1734,7 +1741,7 @@ wegotit:
 static mobj_t *SearchMarioNode(msecnode_t *node)
 {
 	mobj_t *thing = NULL;
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		// Things which should NEVER be ejected from a MarioBlock, by type.
 		switch (node->m_thing->type)
@@ -1998,7 +2005,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 						goto foundenemy;
 					}
 
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 				}
 			}
 		}
@@ -2014,6 +2021,33 @@ foundenemy:
 	// Otherwise, run the linedef exec and terminate this thinker
 	P_LinedefExecute((INT16)s, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
+}
+
+//
+// P_IsObjectOnRealGround
+//
+// Helper function for T_EachTimeThinker
+// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
+// I'll consider whether to make this a more globally accessible function or whatever in future
+// -- Monster Iestyn
+//
+static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+{
+	// Is the object in reverse gravity?
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		// Detect if the player is on the ceiling.
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
+			return true;
+	}
+	// Nope!
+	else
+	{
+		// Detect if the player is on the floor.
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
+			return true;
+	}
+	return false;
 }
 
 //
@@ -2067,6 +2101,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean FOFsector = false;
 	boolean inAndOut = false;
 	boolean floortouch = false;
+	fixed_t bottomheight, topheight;
+	msecnode_t *node;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2128,13 +2164,32 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if ((netgame || multiplayer) && players[j].spectator)
 						continue;
 
-					if (players[j].mo->subsector->sector != targetsec)
+					if (players[j].mo->subsector->sector == targetsec)
+						;
+					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						boolean insector = false;
+						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == targetsec)
+							{
+								insector = true;
+								break;
+							}
+						}
+						if (!insector)
+							continue;
+					}
+					else
 						continue;
 
-					if (players[j].mo->z > sec->ceilingheight)
+					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
+					bottomheight = P_GetSpecialBottomZ(players[j].mo, sec, targetsec);
+
+					if (players[j].mo->z > topheight)
 						continue;
 
-					if (players[j].mo->z + players[j].mo->height < sec->floorheight)
+					if (players[j].mo->z + players[j].mo->height < bottomheight)
 						continue;
 
 					if (floortouch == true && P_IsObjectOnGroundIn(players[j].mo, targetsec))
@@ -2175,10 +2230,30 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 				if ((netgame || multiplayer) && players[i].spectator)
 					continue;
 
-				if (players[i].mo->subsector->sector != sec)
+				if (players[i].mo->subsector->sector == sec)
+					;
+				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+				{
+					boolean insector = false;
+					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+					{
+						if (node->m_sector == sec)
+						{
+							insector = true;
+							break;
+						}
+					}
+					if (!insector)
+						continue;
+				}
+				else
 					continue;
 
-				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
+				if (!(players[i].mo->subsector->sector == sec
+					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
+					continue;
+
+				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
 					if (i & 1)
 						eachtime->var2s[i/2] |= 1;
@@ -2217,7 +2292,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	if ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
 	{
 		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 		{
@@ -2250,6 +2325,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
+
+		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
@@ -2277,7 +2354,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 		sector = &sectors[i];
 
 		// Is a player standing on me?
-		for (node = sector->touching_thinglist; node; node = node->m_snext)
+		for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 		{
 			thing = node->m_thing;
 
@@ -2292,7 +2369,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 			if (raise->vars[1] && !(thing->player->pflags & PF_STARTDASH))
 				continue;
 
-			if (!(thing->z == raise->sector->ceilingheight))
+			if (!(thing->z == P_GetSpecialTopZ(thing, raise->sector, sector)))
 				continue;
 
 			playeronme = true;

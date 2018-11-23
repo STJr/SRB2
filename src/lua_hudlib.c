@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014      by John "JTE" Muniz.
-// Copyright (C) 2014      by Sonic Team Junior.
+// Copyright (C) 2014-2016 by John "JTE" Muniz.
+// Copyright (C) 2014-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,7 +16,9 @@
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
+#include "i_video.h" // rendermode
 #include "p_local.h" // camera_t
+#include "screen.h" // screen width/height
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -41,6 +43,9 @@ static const char *const hud_disable_options[] = {
 	"time",
 	"rings",
 	"lives",
+
+	"weaponrings",
+	"powerstones",
 
 	"nightslink",
 	"nightsdrill",
@@ -126,8 +131,6 @@ static const char *const widtht_opt[] = {
 enum cameraf {
 	camera_chase = 0,
 	camera_aiming,
-	camera_viewheight,
-	camera_startangle,
 	camera_x,
 	camera_y,
 	camera_z,
@@ -137,7 +140,6 @@ enum cameraf {
 	camera_ceilingz,
 	camera_radius,
 	camera_height,
-	camera_relativex,
 	camera_momx,
 	camera_momy,
 	camera_momz
@@ -147,8 +149,6 @@ enum cameraf {
 static const char *const camera_opt[] = {
 	"chase",
 	"aiming",
-	"viewheight",
-	"startangle",
 	"x",
 	"y",
 	"z",
@@ -158,7 +158,6 @@ static const char *const camera_opt[] = {
 	"ceilingz",
 	"radius",
 	"height",
-	"relativex",
 	"momx",
 	"momy",
 	"momz",
@@ -170,6 +169,8 @@ static int lib_getHudInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMHUDITEMS)
+		return luaL_error(L, "hudinfo[] index %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
@@ -279,12 +280,6 @@ static int camera_get(lua_State *L)
 	case camera_aiming:
 		lua_pushinteger(L, cam->aiming);
 		break;
-	case camera_viewheight:
-		lua_pushinteger(L, cam->viewheight);
-		break;
-	case camera_startangle:
-		lua_pushinteger(L, cam->startangle);
-		break;
 	case camera_x:
 		lua_pushinteger(L, cam->x);
 		break;
@@ -311,9 +306,6 @@ static int camera_get(lua_State *L)
 		break;
 	case camera_height:
 		lua_pushinteger(L, cam->height);
-		break;
-	case camera_relativex:
-		lua_pushinteger(L, cam->relativex);
 		break;
 	case camera_momx:
 		lua_pushinteger(L, cam->momx);
@@ -377,6 +369,8 @@ static int libd_drawScaled(lua_State *L)
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
 	scale = luaL_checkinteger(L, 3);
+	if (scale < 0)
+		return luaL_error(L, "negative scale");
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))
@@ -408,7 +402,7 @@ static int libd_drawPaddedNum(lua_State *L)
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	num = abs(luaL_checkinteger(L, 3));
+	num = labs(luaL_checkinteger(L, 3));
 	digits = luaL_optinteger(L, 4, 2);
 	flags = luaL_optinteger(L, 5, 0);
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
@@ -501,14 +495,14 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolors_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
-	//HUDSAFE
+	HUDONLY
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
 		if (skinnum < TC_ALLWHITE || skinnum >= MAXSKINS)
-			return luaL_error(L, "argument #1 is out of range");
+			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_ALLWHITE, MAXSKINS-1);
 	}
 	else // skin name
 	{
@@ -525,6 +519,47 @@ static int libd_getColormap(lua_State *L)
 	return 1;
 }
 
+static int libd_width(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.width); // push screen width
+	return 1;
+}
+
+static int libd_height(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.height); // push screen height
+	return 1;
+}
+
+static int libd_dupx(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_dupy(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_renderer(lua_State *L)
+{
+	HUDONLY
+	switch (rendermode) {
+		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
+		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
+		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
+	}
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
@@ -536,6 +571,11 @@ static luaL_Reg lib_draw[] = {
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},
 	{"getColormap", libd_getColormap},
+	{"width", libd_width},
+	{"height", libd_height},
+	{"dupx", libd_dupx},
+	{"dupy", libd_dupy},
+	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
 
@@ -689,8 +729,6 @@ void LUAh_GameHUD(player_t *stplayr)
 		LUA_Call(gL, 3);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 
@@ -716,8 +754,6 @@ void LUAh_ScoresHUD(void)
 		LUA_Call(gL, 1);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 

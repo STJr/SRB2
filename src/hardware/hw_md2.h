@@ -23,6 +23,11 @@
 
 #include "hw_glob.h"
 
+// magic number "IDP2" or 844121161
+#define MD2_IDENT                       (INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I')
+// model version
+#define MD2_VERSION                     8
+
 #define MD2_MAX_TRIANGLES               8192
 #define MD2_MAX_VERTICES                4096
 #define MD2_MAX_TEXCOORDS               4096
@@ -120,8 +125,10 @@ typedef struct
 	float       offset;
 	md2_model_t *model;
 	void        *grpatch;
+	void        *blendgrpatch;
 	boolean     notfound;
 	INT32       skin;
+	boolean     error;
 } md2_t;
 
 extern md2_t md2_models[NUMSPRITES];

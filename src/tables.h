@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -82,7 +82,7 @@ typedef UINT32 angle_t;
 extern angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
-unsigned SlopeDiv(unsigned num, unsigned den);
+FUNCMATH unsigned SlopeDiv(unsigned num, unsigned den);
 
 // 360 - angle_t(ANGLE_45) = ANGLE_315
 FUNCMATH FUNCINLINE static ATTRINLINE angle_t InvAngle(angle_t a)
@@ -96,9 +96,6 @@ FUNCMATH angle_t FixedAngle(fixed_t fa);
 // and with a factor, with +factor for (fa/factor) and -factor for (fa*factor)
 FUNCMATH angle_t FixedAngleC(fixed_t fa, fixed_t factor);
 
-
-#ifdef NEED_FIXED_VECTOR
-
 /// The FixedAcos function
 FUNCMATH angle_t FixedAcos(fixed_t x);
 
@@ -111,8 +108,6 @@ boolean FV3_IntersectedPolygon(const vector3_t *vPoly, const vector3_t *vLine, c
 void FV3_Rotate(vector3_t *rotVec, const vector3_t *axisVec, const angle_t angle);
 /// Fixed Point Matrix functions
 void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
-
-#endif // defined NEED_FIXED_VECTOR
 
 // The table values in tables.c are calculated with this many fractional bits.
 #define FINE_FRACBITS 16

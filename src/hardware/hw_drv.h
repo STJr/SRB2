@@ -32,19 +32,12 @@
 //                                                       STANDARD DLL EXPORTS
 // ==========================================================================
 
-#ifdef HAVE_SDL
-#undef VID_X11
-#endif
-
 EXPORT boolean HWRAPI(Init) (I_Error_t ErrorFunction);
 #ifndef HAVE_SDL
 EXPORT void HWRAPI(Shutdown) (void);
 #endif
 #ifdef _WINDOWS
 EXPORT void HWRAPI(GetModeList) (vmode_t **pvidmodes, INT32 *numvidmodes);
-#endif
-#ifdef VID_X11
-EXPORT Window HWRAPI(HookXwin) (Display *, INT32, INT32, boolean);
 #endif
 #if defined (PURESDL) || defined (macintosh)
 EXPORT void HWRAPI(SetPalette) (INT32 *, RGBA_t *gamma);
@@ -66,19 +59,16 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
 
 //Hurdler: added for new development
 EXPORT void HWRAPI(DrawMD2) (INT32 *gl_cmd_buffer, md2_frame_t *frame, FTransform *pos, float scale);
-EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color);
+EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color);
 EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
 EXPORT INT32 HWRAPI(GetRenderVersion) (void);
 
-#ifdef VID_X11 // ifdef to be removed as soon as windoze supports that as well
-// metzgermeister: added for Voodoo detection
-EXPORT char *HWRAPI(GetRenderer) (void);
-#endif
 #ifdef SHUFFLE
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 #endif
+EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
 EXPORT void HWRAPI(DoScreenWipe) (float alpha);
@@ -114,16 +104,13 @@ struct hwdriver_s
 #ifdef _WINDOWS
 	GetModeList         pfnGetModeList;
 #endif
-#ifdef VID_X11
-	HookXwin            pfnHookXwin;
-	GetRenderer         pfnGetRenderer;
-#endif
 #ifndef HAVE_SDL
 	Shutdown            pfnShutdown;
 #endif
 #ifdef SHUFFLE
 	PostImgRedraw       pfnPostImgRedraw;
 #endif
+	FlushScreenTextures pfnFlushScreenTextures;
 	StartScreenWipe     pfnStartScreenWipe;
 	EndScreenWipe       pfnEndScreenWipe;
 	DoScreenWipe        pfnDoScreenWipe;

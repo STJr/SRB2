@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Sonic Robo Blast 2
+Comment=A free 3D Sonic the Hedgehog fan-game built using a modified ver. of the Doom Legacy source port
+Encoding=UTF-8
+Exec=srb2
+Icon=/usr/share/pixmaps/srb2.png
+Terminal=false
+Type=Application
+StartupNotify=false
+Categories=Application;Game;

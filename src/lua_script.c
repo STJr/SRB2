@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -182,19 +182,21 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
-	name = malloc(strlen(wadfiles[wad]->filename)+10);
+	len = strlen(wadfiles[wad]->filename);
+	name = malloc(len+10);
 	strcpy(name, wadfiles[wad]->filename);
-	if (!fasticmp(&name[strlen(name) - 4], ".lua")) {
+	if (!fasticmp(&name[len - 4], ".lua")) {
 		// If it's not a .lua file, copy the lump name in too.
-		name[strlen(wadfiles[wad]->filename)] = '|';
-		M_Memcpy(name+strlen(wadfiles[wad]->filename)+1, wadfiles[wad]->lumpinfo[lump].name, 8);
-		name[strlen(wadfiles[wad]->filename)+9] = '\0';
+		name[len] = '|';
+		M_Memcpy(name+len+1, wadfiles[wad]->lumpinfo[lump].name, 8);
+		name[len+9] = '\0';
 	}
 
 	LUA_LoadFile(&f, name);
@@ -442,7 +444,6 @@ enum
 	ARCH_NULL=0,
 	ARCH_BOOLEAN,
 	ARCH_SIGNED,
-	ARCH_UNSIGNED,
 	ARCH_STRING,
 	ARCH_TABLE,
 
@@ -479,10 +480,10 @@ static const struct {
 	{NULL,          ARCH_NULL}
 };
 
-static UINT8 GetUserdataArchType(void)
+static UINT8 GetUserdataArchType(int index)
 {
 	UINT8 i;
-	lua_getmetatable(gL, -1);
+	lua_getmetatable(gL, index);
 
 	for (i = 0; meta2arch[i].meta; i++)
 	{
@@ -522,13 +523,8 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 	case LUA_TNUMBER:
 	{
 		lua_Integer number = lua_tointeger(gL, myindex);
-		if (number < 0) {
-			WRITEUINT8(save_p, ARCH_SIGNED);
-			WRITEFIXED(save_p, number);
-		} else {
-			WRITEUINT8(save_p, ARCH_UNSIGNED);
-			WRITEANGLE(save_p, number);
-		}
+        WRITEUINT8(save_p, ARCH_SIGNED);
+        WRITEFIXED(save_p, number);
 		break;
 	}
 	case LUA_TSTRING:
@@ -566,20 +562,20 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TUSERDATA:
-		switch (GetUserdataArchType())
+		switch (GetUserdataArchType(myindex))
 		{
 		case ARCH_MOBJINFO:
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:
@@ -721,8 +717,15 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 	for (i = 0; lua_next(gL, -2); i++)
 		lua_pop(gL, 1);
 
-	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	// skip anything that has an empty table and isn't a player.
+	if (i == 0)
+	{
+		if (fastcmp(ptype,"player")) // always include players even if they have no extra variables
+			WRITEUINT16(save_p, 0);
+		lua_pop(gL, 1);
 		return;
+	}
+
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
@@ -743,7 +746,7 @@ static int NetArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		ArchiveValue(TABLESINDEX, i);
 	return n;
 }
@@ -776,6 +779,7 @@ static void ArchiveTables(void)
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
 				lua_pop(gL, 1);
 			}
+
 			lua_pop(gL, 1);
 		}
 		lua_pop(gL, 1);
@@ -796,9 +800,6 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_SIGNED:
 		lua_pushinteger(gL, READFIXED(save_p));
-		break;
-	case ARCH_UNSIGNED:
-		lua_pushinteger(gL, READANGLE(save_p));
 		break;
 	case ARCH_STRING:
 	{
@@ -852,7 +853,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;
@@ -893,7 +894,7 @@ static int NetUnArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		UnArchiveValue(TABLESINDEX);
 	return n;
 }
@@ -924,28 +925,12 @@ static void UnArchiveTables(void)
 	}
 }
 
-static void NetArchiveHook(lua_CFunction archFunc)
+void LUA_Step(void)
 {
-	int TABLESINDEX;
-
 	if (!gL)
 		return;
-
-	TABLESINDEX = lua_gettop(gL);
-	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, hook_NetVars);
-	lua_remove(gL, -2);
-	I_Assert(lua_istable(gL, -1));
-
-	lua_pushvalue(gL, TABLESINDEX);
-	lua_pushcclosure(gL, archFunc, 1);
-	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // function
-		LUA_Call(gL, 1);
-	}
-	lua_pop(gL, 2);
+	lua_settop(gL, 0);
+	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 void LUA_Archive(void)
@@ -973,7 +958,7 @@ void LUA_Archive(void)
 		}
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
-	NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
+	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
 	ArchiveTables();
 
 	if (gL)
@@ -1004,7 +989,7 @@ void LUA_UnArchive(void)
 				UnArchiveExtVars(th); // apply variables
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
-	NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
+	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
 	UnArchiveTables();
 
 	if (gL)

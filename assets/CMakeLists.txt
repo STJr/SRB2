@@ -26,7 +26,7 @@ endforeach()
 # Installation
 
 if(CLANG)
-	get_target_property(outname ${SRB2_SDL2_EXE_NAME} OUTPUT_NAME)
+	get_target_property(outname SRB2SDL2 OUTPUT_NAME)
 	install(FILES ${SRB2_ASSET_ALL}
 		DESTINATION "${outname}.app/Contents/Resources"
 	)

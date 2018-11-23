@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,6 +155,12 @@ typedef struct ffloor_s
 	fixed_t *bottomyoffs;
 	angle_t *bottomangle;
 
+#ifdef ESLOPE
+	// Pointers to pointers. Yup.
+	struct pslope_s **t_slope;
+	struct pslope_s **b_slope;
+#endif
+
 	size_t secnum;
 	ffloortype_e flags;
 	struct line_s *master;
@@ -184,6 +190,9 @@ typedef struct lightlist_s
 	extracolormap_t *extra_colormap;
 	INT32 flags;
 	ffloor_t *caster;
+#ifdef ESLOPE
+	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
+#endif
 } lightlist_t;
 
 
@@ -194,6 +203,7 @@ typedef struct r_lightlist_s
 	fixed_t heightstep;
 	fixed_t botheight;
 	fixed_t botheightstep;
+	fixed_t startheight; // for repeating midtextures
 	INT16 lightlevel;
 	extracolormap_t *extra_colormap;
 	lighttable_t *rcolormap;
@@ -215,14 +225,51 @@ typedef struct linechain_s
 
 
 
-// ZDoom C++ to Legacy C conversion Tails 04-29-2002 (for slopes)
-typedef struct secplane_t
-{
-	// the plane is defined as a*x + b*y + c*z + d = 0
-	// ic is 1/c, for faster Z calculations
+// Slopes
+#ifdef ESLOPE
+typedef enum {
+	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
+	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
+	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
+	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+} slopeflags_t;
 
-	fixed_t a, b, c, d, ic;
-} secplane_t;
+typedef struct pslope_s
+{
+	UINT16 id; // The number of the slope, mostly used for netgame syncing purposes
+
+	// --- Information used in clipping/projection ---
+	// Origin vector for the plane
+	vector3_t o;
+
+	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
+	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
+	vector2_t d;
+
+	// The rate at which z changes based on distance from the origin plane.
+	fixed_t zdelta;
+
+	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
+	vector3_t normal;
+
+	// For comparing when a slope should be rendered
+	fixed_t lowz;
+	fixed_t highz;
+
+	// This values only check and must be updated if the slope itself is modified
+	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
+	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
+
+	struct line_s *sourceline; // The line that generated the slope
+	fixed_t extent; // Distance value used for recalculating zdelta
+	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
+
+	UINT8 flags; // Slope options
+	mapthing_t **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
+
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
+} pslope_t;
+#endif
 
 typedef enum
 {
@@ -314,14 +361,6 @@ typedef struct sector_s
 	double lineoutLength;
 #endif // ----- end special tricks -----
 
-	// ZDoom C++ to Legacy C conversion (for slopes)
-	// store floor and ceiling planes instead of heights
-	//secplane_t floorplane, ceilingplane;
-#ifdef SLOPENESS
-	//fixed_t floortexz, ceilingtexz; // [RH] used for wall texture mapping
-	angle_t floorangle;
-#endif
-
 	// This points to the master's floorheight, so it can be changed in realtime!
 	fixed_t *gravity; // per-sector gravity
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
@@ -337,7 +376,15 @@ typedef struct sector_s
 	precipmobj_t *preciplist;
 	struct mprecipsecnode_s *touching_preciplist;
 
+#ifdef ESLOPE
+	// Eternity engine slope
+	pslope_t *f_slope; // floor slope
+	pslope_t *c_slope; // ceiling slope
+	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
+#endif
+
 	// these are saved for netgames, so do not let Lua touch these!
+	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
 	// offsets sector spawned with (via linedef type 7)
 	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
@@ -446,10 +493,10 @@ typedef struct subsector_s
 // Sector list node showing all sectors an object appears in.
 //
 // There are two threads that flow through these nodes. The first thread
-// starts at touching_thinglist in a sector_t and flows through the m_snext
+// starts at touching_thinglist in a sector_t and flows through the m_thinglist_next
 // links to find all mobjs that are entirely or partially in the sector.
 // The second thread starts at touching_sectorlist in an mobj_t and flows
-// through the m_tnext links to find all sectors a thing touches. This is
+// through the m_sectorlist_next links to find all sectors a thing touches. This is
 // useful when applying friction or push effects to sectors. These effects
 // can be done as thinkers that act upon all objects touching their sectors.
 // As an mobj moves through the world, these nodes are created and
@@ -461,10 +508,10 @@ typedef struct msecnode_s
 {
 	sector_t *m_sector; // a sector containing this object
 	struct mobj_s *m_thing;  // this object
-	struct msecnode_s *m_tprev;  // prev msecnode_t for this thing
-	struct msecnode_s *m_tnext;  // next msecnode_t for this thing
-	struct msecnode_s *m_sprev;  // prev msecnode_t for this sector
-	struct msecnode_s *m_snext;  // next msecnode_t for this sector
+	struct msecnode_s *m_sectorlist_prev;  // prev msecnode_t for this thing
+	struct msecnode_s *m_sectorlist_next;  // next msecnode_t for this thing
+	struct msecnode_s *m_thinglist_prev;  // prev msecnode_t for this sector
+	struct msecnode_s *m_thinglist_next;  // next msecnode_t for this sector
 	boolean visited; // used in search algorithms
 } msecnode_t;
 
@@ -472,10 +519,10 @@ typedef struct mprecipsecnode_s
 {
 	sector_t *m_sector; // a sector containing this object
 	struct precipmobj_s *m_thing;  // this object
-	struct mprecipsecnode_s *m_tprev;  // prev msecnode_t for this thing
-	struct mprecipsecnode_s *m_tnext;  // next msecnode_t for this thing
-	struct mprecipsecnode_s *m_sprev;  // prev msecnode_t for this sector
-	struct mprecipsecnode_s *m_snext;  // next msecnode_t for this sector
+	struct mprecipsecnode_s *m_sectorlist_prev;  // prev msecnode_t for this thing
+	struct mprecipsecnode_s *m_sectorlist_next;  // next msecnode_t for this thing
+	struct mprecipsecnode_s *m_thinglist_prev;  // prev msecnode_t for this sector
+	struct mprecipsecnode_s *m_thinglist_next;  // next msecnode_t for this sector
 	boolean visited; // used in search algorithms
 } mprecipsecnode_t;
 
@@ -527,6 +574,9 @@ typedef struct seg_s
 	sector_t *backsector;
 
 #ifdef HWRENDER
+	// new pointers so that AdjustSegs doesn't mess with v1/v2
+	void *pv1; // polyvertex_t
+	void *pv2; // polyvertex_t
 	float flength; // length of the seg, used by hardware renderer
 
 	lightmap_t *lightmaps; // for static lightmap
@@ -612,6 +662,14 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+
+	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
+
+#ifdef ESLOPE
+	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
+
+	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
+#endif
 } drawseg_t;
 
 typedef enum

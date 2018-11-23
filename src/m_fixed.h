@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,9 +20,10 @@
 #include <stdlib.h>
 #endif
 
-#ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
-#endif
+// Was this just for the #define USEASM?
+//#ifdef _WIN32_WCE
+//#include "sdl12/SRB2CE/cehelp.h"
+//#endif
 
 /*!
   \brief bits of the fraction
@@ -45,41 +46,6 @@ typedef INT32 fixed_t;
 #define FIXED_TO_FLOAT(x) (((float)(x)) / ((float)FRACUNIT))
 #define FLOAT_TO_FIXED(f) (fixed_t)((f) * ((float)FRACUNIT))
 
-
-/**	\brief	The TMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-	\param	e	a parameter of type fixed_t
-	\param	f	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t TMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d, fixed_t e, fixed_t f) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d) \
-		+ ((INT64)e * (INT64)f)) >> 16); \
-}
-
-/**	\brief	The DMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d)) >> 16); \
-}
 
 #if defined (__WATCOMC__) && FRACBITS == 16
 	#pragma aux FixedMul =  \
@@ -109,7 +75,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DMulScale16(fixed_t a, fixed_t b, 
 			:"=a" (ret)            // eax is always the result and the first operand (%0,%1)
 			:"0" (a), "r" (b)      // and %2 is what we use imull on with what in %1
 			, "I" (FRACBITS)       // %3 holds FRACBITS (normally 16)
-			:"%cc", "%edx"         // edx and condition codes clobbered
+			:"cc", "%edx"         // edx and condition codes clobbered
 		);
 		return ret;
 	}
@@ -283,9 +249,16 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedFloor(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x != INT32_MIN)
-		return x-f; // return largest integral value not greater than argument
+	{ // return rounded down to nearest whole number
+		if (x > 0)
+			return x-f;
+		else
+			return x-(FRACUNIT-f);
+	}
 	return INT32_MIN;
 }
 
@@ -301,7 +274,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedTrunc(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
 	if (x != INT32_MIN)
 	{ // return rounded to nearest whole number, towards zero
 		if (x > 0)
@@ -324,11 +297,18 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedCeil(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))
-		return x+(FRACUNIT-f); // return smallest integral value not less than argument
+	{ // return rounded up to nearest whole number
+		if (x > 0)
+			return x+(FRACUNIT-f);
+		else
+			return x+f;
+	}
 	return INT32_MAX;
 }
 
@@ -344,7 +324,9 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))
@@ -356,8 +338,6 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	}
 	return INT32_MAX;
 }
-
-#ifdef NEED_FIXED_VECTOR
 
 typedef struct
 {
@@ -436,7 +416,5 @@ void FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *
 void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
 void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
-
-#endif // defined NEED_FIXED_VECTOR
 
 #endif //m_fixed.h

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,12 +56,12 @@ void Command_Numthinkers_f(void)
 		CONS_Printf(M_GetText("numthinkers <#>: Count number of thinkers\n"));
 		CONS_Printf(
 			"\t1: P_MobjThinker\n"
-			"\t2: P_RainThinker\n"
-			"\t3: P_SnowThinker\n"
-			"\t4: P_NullPrecipThinker\n"
-			"\t5: T_Friction\n"
-			"\t6: T_Pusher\n"
-			"\t7: P_RemoveThinkerDelayed\n");
+			/*"\t2: P_RainThinker\n"
+			"\t3: P_SnowThinker\n"*/
+			"\t2: P_NullPrecipThinker\n"
+			"\t3: T_Friction\n"
+			"\t4: T_Pusher\n"
+			"\t5: P_RemoveThinkerDelayed\n");
 		return;
 	}
 
@@ -73,27 +73,27 @@ void Command_Numthinkers_f(void)
 			action = (actionf_p1)P_MobjThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_MobjThinker");
 			break;
-		case 2:
+		/*case 2:
 			action = (actionf_p1)P_RainThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RainThinker");
 			break;
 		case 3:
 			action = (actionf_p1)P_SnowThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_SnowThinker");
-			break;
-		case 4:
+			break;*/
+		case 2:
 			action = (actionf_p1)P_NullPrecipThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_NullPrecipThinker");
 			break;
-		case 5:
+		case 3:
 			action = (actionf_p1)T_Friction;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Friction");
 			break;
-		case 6:
+		case 4:
 			action = (actionf_p1)T_Pusher;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Pusher");
 			break;
-		case 7:
+		case 5:
 			action = (actionf_p1)P_RemoveThinkerDelayed;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RemoveThinkerDelayed");
 			break;
@@ -363,7 +363,7 @@ static void P_DoAutobalanceTeams(void)
 	{
 		if (totalred > totalblue)
 		{
-			i = M_Random() % red;
+			i = M_RandomKey(red);
 			NetPacket.packet.newteam = 2;
 			NetPacket.packet.playernum = redarray[i];
 			NetPacket.packet.verification = true;
@@ -375,7 +375,7 @@ static void P_DoAutobalanceTeams(void)
 
 		if (totalblue > totalred)
 		{
-			i = M_Random() % blue;
+			i = M_RandomKey(blue);
 			NetPacket.packet.newteam = 1;
 			NetPacket.packet.playernum = bluearray[i];
 			NetPacket.packet.verification = true;
@@ -631,6 +631,7 @@ void P_Ticker(boolean run)
 
 	// Run shield positioning
 	P_RunShields();
+	P_RunOverlays();
 
 	P_UpdateSpecials();
 	P_RespawnSpecials();
@@ -742,6 +743,7 @@ void P_PreTicker(INT32 frames)
 
 		// Run shield positioning
 		P_RunShields();
+		P_RunOverlays();
 
 		P_UpdateSpecials();
 		P_RespawnSpecials();

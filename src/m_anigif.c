@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 2013      by "Treeki" / "Ninjifox".
-// Copyright (C) 2013-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 2013      by "Ninji".
+// Copyright (C) 2013-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -492,7 +492,9 @@ static void GIF_framewrite(void)
 
 	// screen regions are handled in GIF_lzw
 	{
-		UINT16 delay = 3; // todo
+		int d1 = (int)((100.0/NEWTICRATE)*(gif_frames+1));
+		int d2 = (int)((100.0/NEWTICRATE)*(gif_frames));
+		UINT16 delay = d1-d2;
 		INT32 startline;
 
 		WRITEMEM(p, gifframe_gchead, 4);

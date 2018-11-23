@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <string.h>
 #include "doomdef.h"
+
+#if !defined (__APPLE__)
 
 // Like the OpenBSD version, but it doesn't check for src not being a valid
 // C string.
@@ -46,3 +48,5 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
 	dst[0] = '\0';
 	return strlcat(dst, src, siz);
 }
+
+#endif
