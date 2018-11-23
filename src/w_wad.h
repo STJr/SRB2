@@ -90,7 +90,7 @@ typedef enum restype
 typedef struct wadfile_s
 {
 	char *filename;
-	enum restype type;
+	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 #ifdef HWRENDER

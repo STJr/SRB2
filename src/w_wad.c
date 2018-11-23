@@ -177,18 +177,28 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posStart++;
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+		posStart++;
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posStart++;
 		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
+		posStart++;
 		for(; posStart < posEnd; posStart++)
+		{
+			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
+			size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+			char *name = malloc(length + 1);
+			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+			name[length] = '\0';
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 			DEH_LoadDehackedLumpPwad(wadnum, posStart);
+			free(name);
+		}
+
 	}
 }
 
@@ -212,20 +222,13 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{	// shameless copy+paste of code from LUA_LoadLump
-				size_t len = strlen(wadfiles[wadnum]->filename);
-				char *name = malloc(len+10);
-
-				strcpy(name, wadfiles[wadnum]->filename);
-				if (!fasticmp(&name[len - 4], ".soc")) {
-					// If it's not a .soc file, copy the lump name in too.
-					name[len] = '|';
-					M_Memcpy(name+len+1, lump_p->name, 8);
-					name[len+9] = '\0';
-				}
+				size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+				char *name = malloc(length + 1);
+				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+				name[length] = '\0';
 
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
-
 				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
@@ -314,7 +317,7 @@ UINT16 W_InitFile(const char *filename)
 	FILE *handle;
 	lumpinfo_t *lumpinfo;
 	wadfile_t *wadfile;
-	enum restype type;
+	restype_t type;
 	UINT16 numlumps;
 	size_t i;
 	INT32 compressed = 0;
