@@ -451,6 +451,7 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
+		li->pv1 = li->pv2 = NULL;
 #endif
 
 		li->angle = (SHORT(ml->angle))<<FRACBITS;
@@ -2476,6 +2477,43 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_SetupCamera(void)
+{
+	if (players[displayplayer].mo && (server || addedtogame))
+	{
+		camera.x = players[displayplayer].mo->x;
+		camera.y = players[displayplayer].mo->y;
+		camera.z = players[displayplayer].mo->z;
+		camera.angle = players[displayplayer].mo->angle;
+		camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+	}
+	else
+	{
+		mapthing_t *thing;
+
+		switch (gametype)
+		{
+		case GT_MATCH:
+		case GT_TAG:
+			thing = deathmatchstarts[0];
+			break;
+
+		default:
+			thing = playerstarts[0];
+			break;
+		}
+
+		if (thing)
+		{
+			camera.x = thing->x;
+			camera.y = thing->y;
+			camera.z = thing->z;
+			camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
+			camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+		}
+	}
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2673,7 +2711,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_CreateBlockMap(); // Graue 02-29-2004
 	P_LoadSideDefs2(lastloadedmaplumpnum + ML_SIDEDEFS);
 
-	R_MakeColormaps();
 	P_LoadLineDefs2();
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
@@ -2814,37 +2851,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (players[displayplayer].mo && (server || addedtogame))
-		{
-			camera.x = players[displayplayer].mo->x;
-			camera.y = players[displayplayer].mo->y;
-			camera.z = players[displayplayer].mo->z;
-			camera.angle = players[displayplayer].mo->angle;
-		}
-		else
-		{
-			mapthing_t *thing;
-
-			switch (gametype)
-			{
-			case GT_MATCH:
-			case GT_TAG:
-				thing = deathmatchstarts[0];
-				break;
-
-			default:
-				thing = playerstarts[0];
-				break;
-			}
-
-			if (thing)
-			{
-				camera.x = thing->x;
-				camera.y = thing->y;
-				camera.z = thing->z;
-				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
-			}
-		}
+		P_SetupCamera();
 
 		if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);

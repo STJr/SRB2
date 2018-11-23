@@ -108,7 +108,4 @@ extern angle_t rw_normalangle;
 // angle to line origin
 extern angle_t rw_angle1;
 
-// Segs count?
-extern size_t sscount;
-
 #endif

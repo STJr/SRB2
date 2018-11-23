@@ -1,3 +1,4 @@
+
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
@@ -65,6 +66,7 @@
 #     Compile without 3D sound support, add 'NOHS=1'
 #     Compile with GDBstubs, add 'RDB=1'
 #     Compile without PNG, add 'NOPNG=1'
+#     Compile without zlib, add 'NOZLIB=1'
 #
 # Addon for SDL:
 #     To Cross-Compile, add 'SDL_CONFIG=/usr/*/bin/sdl-config'
@@ -118,6 +120,7 @@ include Makefile.cfg
 
 ifdef DUMMY
 NOPNG=1
+NOZLIB=1
 NONET=1
 NOHW=1
 NOHS=1
@@ -173,6 +176,11 @@ ifdef MINGW
 include win32/Makefile.cfg
 endif #ifdef MINGW
 
+ifdef MINGW64
+MINGW=1
+include win32/Makefile.cfg
+endif #ifdef MINGW64
+
 ifdef UNIX
 UNIXCOMMON=1
 endif
@@ -198,6 +206,7 @@ endif
 
 ifdef NDS
 NOPNG=1
+NOZLIB=1
 NONET=1
 #NOHW=1
 NOHS=1
@@ -265,7 +274,7 @@ ifndef DC
 endif
 	OPTS+=-DHWRENDER
 	OBJS+=$(OBJDIR)/hw_bsp.o $(OBJDIR)/hw_draw.o $(OBJDIR)/hw_light.o \
-		 $(OBJDIR)/hw_main.o $(OBJDIR)/hw_md2.o $(OBJDIR)/hw_cache.o $(OBJDIR)/hw_trick.o
+		 $(OBJDIR)/hw_main.o $(OBJDIR)/hw_clip.o $(OBJDIR)/hw_md2.o $(OBJDIR)/hw_cache.o $(OBJDIR)/hw_trick.o
 endif
 
 ifdef NOHS
@@ -324,13 +333,6 @@ LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
 
-ZLIB_PKGCONFIG?=zlib
-ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
-ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
-
-LIBS+=$(ZLIB_LDFLAGS)
-CFLAGS+=$(ZLIB_CFLAGS)
-
 ifdef HAVE_LIBGME
 OPTS+=-DHAVE_LIBGME
 
@@ -340,6 +342,18 @@ LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
 
 LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
+endif
+
+ifndef NOZLIB
+OPTS+=-DHAVE_ZLIB
+ZLIB_PKGCONFIG?=zlib
+ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
+ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
+
+LIBS+=$(ZLIB_LDFLAGS)
+CFLAGS+=$(ZLIB_CFLAGS)
+else
+NOPNG=1
 endif
 
 ifdef STATIC
@@ -421,7 +435,8 @@ endif
 
 ifdef PROFILEMODE
 	# build with profiling information
-	CFLAGS:=-pg $(CFLAGS)
+	CFLAGS+=-pg
+	LDFLAGS+=-pg
 endif
 
 ifdef ZDEBUG
@@ -700,7 +715,6 @@ $(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
 	-$(MKDIR) $(BIN)
 	@echo Linking S_OpenAL.so...
 	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lopenal
-
 endif
 
 else
@@ -709,7 +723,7 @@ ifdef MINGW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h am_map.h \
+ hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
  d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
@@ -717,7 +731,7 @@ else
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h am_map.h \
+ hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
  d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -I/usr/X11R6/include -c $< -o $@
@@ -870,7 +884,7 @@ ifndef NOHW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h am_map.h \
+ hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
  d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
@@ -878,7 +892,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
 $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h am_map.h \
+ hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
  d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
@@ -886,7 +900,7 @@ $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
 $(OBJDIR)/r_minigl.o: hardware/r_minigl/r_minigl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
  command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h am_map.h \
+ hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h am_map.h \
  d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
