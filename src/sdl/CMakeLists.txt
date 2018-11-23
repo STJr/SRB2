@@ -274,17 +274,49 @@ if(${SDL2_FOUND})
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		set(win_extra_dll_list "")
 		macro(getwinlib dllname defaultname)
-			find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}")
-			list(APPEND win_extra_dll_list ${SRB2_SDL2_DLL_${dllname}})
+			if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+				if (${CMAKE_GENERATOR} STREQUAL "MinGW Makefiles")
+					if(${SRB2_SYSTEM_BITS} EQUAL 64)
+						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
+							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
+						)
+					else()
+						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
+							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
+						)
+					endif()
+				else()
+					if(${SRB2_SYSTEM_BITS} EQUAL 64)
+						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
+							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
+						)
+					else()
+						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
+							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
+						)
+					endif()
+				endif()
+
+				list(APPEND win_extra_dll_list ${SRB2_SDL2_DLL_${dllname}})
+			else()
+				find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}")
+				list(APPEND win_extra_dll_list ${SRB2_SDL2_DLL_${dllname}})
+	endif()
 		endmacro()
 		getwinlib(SDL2 "SDL2.dll")
 		if(${SRB2_CONFIG_SDL2_USEMIXER})
 			getwinlib(SDL2_mixer "SDL2_mixer.dll")
-			getwinlib(libmikmod-2 "libmikmod-2.dll")
 			getwinlib(libogg_0 "libogg-0.dll")
 			getwinlib(libvorbis_0 "libvorbis-0.dll")
 			getwinlib(libvorbisfile_3 "libvorbisfile-3.dll")
-			getwinlib(smpeg2 "smpeg2.dll")
 		endif()
 		if(${SRB2_CONFIG_HAVE_GME})
 			getwinlib(libgme "libgme.dll")
