@@ -2323,7 +2323,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
-	strncpy(skin->charsel, "CHRSONIC", 8);
+	strncpy(skin->charsel, "CHRSONIC", 9);
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
 
@@ -2384,9 +2384,9 @@ void R_InitSkins(void)
 	strcpy(skin->realname,   "Sonic");
 	strcpy(skin->hudname,    "SONIC");
 
-	strncpy(skin->charsel,   "CHRSONIC", 8);
-	strncpy(skin->face,      "LIVSONIC", 8);
-	strncpy(skin->superface, "LIVSUPER", 8);
+	strncpy(skin->charsel,   "CHRSONIC", 9);
+	strncpy(skin->face,      "LIVSONIC", 9);
+	strncpy(skin->superface, "LIVSUPER", 9);
 	skin->prefcolor = SKINCOLOR_BLUE;
 
 	skin->ability =   CA_THOK;
