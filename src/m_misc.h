@@ -19,6 +19,7 @@
 #include "tables.h"
 
 #include "d_event.h" // Screenshot responder
+#include "command.h"
 
 typedef enum {
 	MM_OFF = 0,
@@ -27,6 +28,12 @@ typedef enum {
 	MM_SCREENSHOT
 } moviemode_t;
 extern moviemode_t moviemode;
+
+extern consvar_t cv_screenshot_option, cv_screenshot_folder;
+extern consvar_t cv_moviemode;
+extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
+extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
+extern consvar_t cv_apng_delay;
 
 void M_StartMovie(void);
 void M_SaveFrame(void);

@@ -252,6 +252,10 @@ typedef enum {
 	PCF_FOF = 4,
 	// Above MOVING FOF (this means we need to keep floorz up to date...)
 	PCF_MOVINGFOF = 8,
+	// Is rain.
+	PCF_RAIN = 16,
+	// Ran the thinker this tic.
+	PCF_THUNK = 32,
 } precipflag_t;
 // Map Object definition.
 typedef struct mobj_s
@@ -441,7 +445,7 @@ boolean P_SupermanLook4Players(mobj_t *actor);
 void P_DestroyRobots(void);
 void P_SnowThinker(precipmobj_t *mobj);
 void P_RainThinker(precipmobj_t *mobj);
-FUNCMATH void P_NullPrecipThinker(precipmobj_t *mobj);
+void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
 void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);

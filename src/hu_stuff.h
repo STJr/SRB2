@@ -78,16 +78,13 @@ extern boolean chat_on;
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;
 
-// P_DeathThink sets this true to show scores while dead, in multiplayer
-extern boolean playerdeadview;
-
 // init heads up data at game startup.
 void HU_Init(void);
 
 void HU_LoadGraphics(void);
 
 // reset heads up when consoleplayer respawns.
-FUNCMATH void HU_Start(void);
+void HU_Start(void);
 
 boolean HU_Responder(event_t *ev);
 

@@ -49,7 +49,9 @@ doomcom_t *doomcom = NULL;
 /// \brief network packet data, points inside doomcom
 doomdata_t *netbuffer = NULL;
 
+#ifdef DEBUGFILE
 FILE *debugfile = NULL; // put some net info in a file during the game
+#endif
 
 #define MAXREBOUND 8
 static doomdata_t reboundstore[MAXREBOUND];

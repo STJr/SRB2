@@ -68,53 +68,25 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - gcc-4.9
-          compiler: gcc-4.9
-          #gcc-4.9 (Ubuntu 4.9.3-8ubuntu2~14.04) 4.9.3
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - gcc-5
-          compiler: gcc-5
-          #gcc-5 (Ubuntu 5.3.0-3ubuntu1~14.04) 5.3.0 20151204
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - gcc-6
-          compiler: gcc-6
-          env: WFLAGS="-Wno-tautological-compare"
-          #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
               - gcc-7
           compiler: gcc-7
           env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-8
+          compiler: gcc-8
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
+          #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
@@ -255,6 +227,7 @@ matrix:
       - compiler: clang-3.9
       - compiler: clang-4.0
       - compiler: clang-5.0
+      - compiler: gcc-8
 
 cache:
   apt: true

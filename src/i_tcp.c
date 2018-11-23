@@ -262,6 +262,33 @@ static void wattcp_outch(char s)
 }
 #endif
 
+#ifdef USE_WINSOCK
+// stupid microsoft makes things complicated
+static char *get_WSAErrorStr(int e)
+{
+	static char buf[256]; // allow up to 255 bytes
+
+	buf[0] = '\0';
+
+	FormatMessageA(
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		(DWORD)e,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)buf,
+		sizeof (buf),
+		NULL);
+
+	if (!buf[0]) // provide a fallback error message if no message is available for some reason
+		sprintf(buf, "Unknown error");
+
+	return buf;
+}
+#undef strerror
+#define strerror get_WSAErrorStr
+#endif
+
 #ifdef USE_WINSOCK2
 #define inet_ntop inet_ntopA
 #define HAVE_NTOP
@@ -759,9 +786,13 @@ static void SOCK_Send(void)
 			&clientaddress[doomcom->remotenode].any, d);
 	}
 
-	if (c == ERRSOCKET && errno != ECONNREFUSED && errno != EWOULDBLOCK)
-		I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
-			SOCK_GetNodeAddress(doomcom->remotenode), errno, strerror(errno));
+	if (c == ERRSOCKET)
+	{
+		int e = errno; // save error code so it can't be modified later
+		if (e != ECONNREFUSED && e != EWOULDBLOCK)
+			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
+				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
+	}
 }
 #endif
 

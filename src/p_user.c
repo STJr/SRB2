@@ -8365,15 +8365,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// Make player translucent if camera is too close (only in single player).
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
-		fixed_t vx = 0, vy = 0;
-		if (player->awayviewtics) {
+		fixed_t vx = thiscam->x, vy = thiscam->y;
+		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
-		}
-		else
-		{
-			vx = thiscam->x;
-			vy = thiscam->y;
 		}
 
 		if (P_AproxDistance(vx - player->mo->x, vy - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
@@ -8648,8 +8644,6 @@ void P_DoPityCheck(player_t *player)
 // P_PlayerThink
 //
 
-boolean playerdeadview; // show match/chaos/tag/capture the flag rankings while in death view
-
 void P_PlayerThink(player_t *player)
 {
 	ticcmd_t *cmd;
@@ -8712,8 +8706,9 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
+	//if (player->awayviewtics)
+	//	player->awayviewtics--;
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -8838,10 +8833,6 @@ void P_PlayerThink(player_t *player)
 	if (player->playerstate == PST_DEAD)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
-		// show the multiplayer rankings while dead
-		if (player == &players[displayplayer])
-			playerdeadview = true;
-
 		P_DeathThink(player);
 
 		return;
@@ -8861,9 +8852,6 @@ void P_PlayerThink(player_t *player)
 		// of course, this is just a cheap hack, meh...
 		player->lives = cv_startinglives.value;
 	}
-
-	if (player == &players[displayplayer])
-		playerdeadview = false;
 
 	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
 	{
@@ -9497,6 +9485,9 @@ void P_PlayerAfterThink(player_t *player)
 				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
+
+	if (player->awayviewtics)
+		player->awayviewtics--;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

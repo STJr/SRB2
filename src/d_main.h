@@ -34,14 +34,14 @@ void D_SRB2Loop(void) FUNCNORETURN;
 // D_SRB2Main()
 // Not a globally visible function, just included for source reference,
 // calls all startup code, parses command line options.
-// If not overrided by user input, calls N_AdvanceDemo.
+// If not overrided by user input, calls D_AdvanceDemo.
 //
 void D_SRB2Main(void);
 
 // Called by IO functions when input is detected.
 void D_PostEvent(const event_t *ev);
-#ifndef DOXYGEN
-FUNCMATH void D_PostEvent_end(void);    // delimiter for locking memory
+#if defined (PC_DOS) && !defined (DOXYGEN)
+void D_PostEvent_end(void);    // delimiter for locking memory
 #endif
 
 void D_ProcessEvents(void);
@@ -51,9 +51,6 @@ const char *D_Home(void);
 //
 // BASE LEVEL
 //
-void D_PageTicker(void);
-// pagename is lumpname of a 320x200 patch to fill the screen
-void D_PageDrawer(const char *pagename);
 void D_AdvanceDemo(void);
 void D_StartTitle(void);
 

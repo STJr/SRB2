@@ -85,10 +85,7 @@ extern boolean fromlevelselect;
 // Internal parameters for sound rendering.
 // ========================================
 
-extern boolean nomidimusic; // defined in d_main.c
-extern boolean nosound;
-extern boolean nodigimusic;
-extern boolean music_disabled;
+extern boolean midi_disabled;
 extern boolean sound_disabled;
 extern boolean digital_disabled;
 
@@ -445,19 +442,17 @@ extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
 
 #if defined (macintosh)
 #define DEBFILE(msg) I_OutputMsg(msg)
-extern FILE *debugfile;
 #else
 #define DEBUGFILE
 #ifdef DEBUGFILE
 #define DEBFILE(msg) { if (debugfile) { fputs(msg, debugfile); fflush(debugfile); } }
-extern FILE *debugfile;
 #else
 #define DEBFILE(msg) {}
-extern FILE *debugfile;
 #endif
 #endif
 
 #ifdef DEBUGFILE
+extern FILE *debugfile;
 extern INT32 debugload;
 #endif
 

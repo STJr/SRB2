@@ -1,8 +1,10 @@
 // Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2018 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,6 +41,10 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
+#elif 1
+#define LOAD_XPM //I want XPM!
+#include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
+#define HAVE_IMAGE //I have SDL_Image, sortof
 #endif
 
 #ifdef HAVE_IMAGE
@@ -562,7 +568,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(0); //resume it
+			I_ResumeSong(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -574,7 +580,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		I_PauseSong(0);
+		I_PauseSong();
 
 		if (!disable_mouse)
 		{
@@ -1049,7 +1055,7 @@ void I_SetPalette(RGBA_t *palette)
 }
 
 // return number of fullscreen + X11 modes
-FUNCMATH INT32 VID_NumModes(void)
+INT32 VID_NumModes(void)
 {
 	if (USE_FULLSCREEN && numVidModes != -1)
 		return numVidModes - firstEntry;
@@ -1057,7 +1063,7 @@ FUNCMATH INT32 VID_NumModes(void)
 		return MAXWINMODES;
 }
 
-FUNCMATH const char *VID_GetModeName(INT32 modeNum)
+const char *VID_GetModeName(INT32 modeNum)
 {
 #if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
@@ -1087,7 +1093,7 @@ FUNCMATH const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-FUNCMATH INT32 VID_GetModeForSize(INT32 w, INT32 h)
+INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	int i;
 	for (i = 0; i < MAXWINMODES; i++)
