@@ -170,6 +170,7 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 		LUA_ClearState();
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
+
 	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
@@ -182,21 +183,24 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
-	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
-	len = strlen(wadfiles[wad]->filename);
-	name = malloc(len+10);
-	strcpy(name, wadfiles[wad]->filename);
-	if (!fasticmp(&name[len - 4], ".lua")) {
-		// If it's not a .lua file, copy the lump name in too.
-		name[len] = '|';
-		M_Memcpy(name+len+1, wadfiles[wad]->lumpinfo[lump].name, 8);
-		name[len+9] = '\0';
+	if (wadfiles[wad]->type == RET_LUA)
+	{
+		name = malloc(strlen(wadfiles[wad]->filename)+1);
+		strcpy(name, wadfiles[wad]->filename);
+	}
+	else // If it's not a .lua file, copy the lump name in too.
+	{
+		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
+		size_t length = strlen(wadfiles[wad]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+		name = malloc(length + 1);
+		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->name2);
+		name[length] = '\0';
 	}
 
 	LUA_LoadFile(&f, name);
