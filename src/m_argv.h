@@ -19,6 +19,7 @@
 //
 extern INT32 myargc;
 extern char **myargv;
+extern boolean myargmalloc;
 
 // Returns the position of the given parameter in the arg list (0 if not found).
 INT32 M_CheckParm(const char *check);
