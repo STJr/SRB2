@@ -25,6 +25,10 @@ INT32 myargc;
 */
 char **myargv;
 
+/** \brief did we alloc myargv ourselves?
+*/
+boolean myargmalloc = false;
+
 /**	\brief founded the parm
 */
 static INT32 found;
@@ -176,6 +180,7 @@ void M_FindResponseFile(void)
 				free(file);
 				I_Error("Not enough memory to read response file");
 			}
+			myargmalloc = true; // mark as having been allocated by us
 			memset(myargv, 0, sizeof (char *) * MAXARGVS);
 			myargv[0] = firstargv;
 

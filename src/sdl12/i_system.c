@@ -2301,7 +2301,8 @@ void I_Quit(void)
 		printf("\r");
 		ShowEndTxt();
 	}
-	free(myargv); // Deallocate allocated memory
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
 #ifdef GP2X

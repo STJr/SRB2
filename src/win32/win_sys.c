@@ -771,7 +771,8 @@ void I_Quit(void)
 		ShowEndTxt(co);
 	}
 	fflush(stderr);
-	free(myargv); // Deallocate allocated memory
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 	W_Shutdown();
 	exit(0);
 }
