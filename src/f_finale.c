@@ -1152,6 +1152,9 @@ void F_CreditDrawer(void)
 	for (i = 0; credits_pics[i].patch; i++)
 		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
 
+	// Dim the background
+	V_DrawFadeScreen();
+
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
 	{
