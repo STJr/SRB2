@@ -753,8 +753,6 @@ else if (!stricmp(&filename[strlen(filename) - 4], ".pk3"))
 	}
 
 	W_InvalidateLumpnumCache();
-
-	CONS_Printf("Ended function.\n");
 	return wadfile->numlumps;
 }
 
@@ -1101,32 +1099,6 @@ boolean W_IsLumpWad(lumpnum_t lumpnum)
 	}
 
 	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
-}
-
-/** Reads bytes from the head of a lump, without doing decompression.
-  *
-  * \param wad Wad number to read from.
-  * \param lump Lump number to read from, within wad.
-  * \param dest Buffer in memory to serve as destination.
-  * \param size Number of bytes to read.
-  * \param offest Number of bytes to offset.
-  * \return Number of bytes read (should equal size).
-  * \sa W_ReadLumpHeader
-  */
-static size_t W_RawReadLumpHeader(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
-{
-	size_t bytesread;
-	lumpinfo_t *l;
-	FILE *handle;
-
-	l = wadfiles[wad]->lumpinfo + lump;
-
-	handle = wadfiles[wad]->handle;
-
-	fseek(handle, (long)(l->position + offset), SEEK_SET);
-	bytesread = fread(dest, 1, size, handle);
-
-	return bytesread;
 }
 
 /* report a zlib or i/o error */

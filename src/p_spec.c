@@ -279,10 +279,16 @@ void P_InitPicAnims(void)
 				Z_Free(animatedLump);
 			}
 
-			// Now find ANIMDEFS
-			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
-			if (animdefsLumpNum != INT16_MAX)
-				P_ParseANIMDEFSLump(w, animdefsLumpNum);
+			for (w = numwadfiles-1; w >= 0; w--)
+			{
+				// Find ANIMDEFS lump in the WAD
+				animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+				while (animdefsLumpNum != INT16_MAX)
+				{
+					P_ParseANIMDEFSLump(w, animdefsLumpNum);
+					animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
+				}
+			}
 		}
 		// Define the last one
 		animdefs[maxanims].istexture = -1;
