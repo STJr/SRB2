@@ -101,8 +101,6 @@ static void CON_RecalcSize(void);
 
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
-static void CON_DrawBackpic(patch_t *pic, INT32 startx, INT32 destwidth);
-//static void CON_DrawBackpic2(pic_t *pic, INT32 startx, INT32 destwidth);
 
 //======================================================================
 //                   CONSOLE VARS AND COMMANDS
@@ -1233,24 +1231,15 @@ void CONS_Printf(const char *fmt, ...)
 	if (con_startup)
 	{
 #if (defined (_WINDOWS)) || (defined (__OS2__) && !defined (HAVE_SDL))
-		static lumpnum_t con_backpic_lumpnum = UINT32_MAX;
-		patch_t *con_backpic;
+		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_CACHE);
 
-		if (con_backpic_lumpnum == UINT32_MAX)
-			con_backpic_lumpnum = W_GetNumForName("CONSBACK");
+		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
+		V_DrawScaledPatch(0, 0, 0, con_backpic);
 
-		// We load the raw lump, even in hardware mode
-		con_backpic = (patch_t*)W_CacheLumpNum(con_backpic_lumpnum, PU_CACHE);
-
-		// show startup screen and message using only 'software' graphics
-		// (rendermode may be hardware accelerated, but the video mode is not set yet)
-		CON_DrawBackpic(con_backpic, 0, vid.width); // put console background
-		I_LoadingScreen(txt);
-
-		Z_Unlock(con_backpic);
+		W_UnlockCachedPatch(con_backpic);
+		I_LoadingScreen(txt);				// Win32/OS2 only
 #else
-		// here we display the console background and console text
-		// (no hardware accelerated support for these versions)
+		// here we display the console text
 		CON_Drawer();
 		I_FinishUpdate(); // page flip or blit buffer
 #endif
@@ -1474,64 +1463,6 @@ static void CON_DrawHudlines(void)
 	con_clearlines = y; // this is handled by HU_Erase();
 }
 
-// Scale a pic_t at 'startx' pos, to 'destwidth' columns.
-//   startx, destwidth is resolution dependent
-// Used to draw console borders, console background.
-// The pic must be sized BASEVIDHEIGHT height.
-static void CON_DrawBackpic(patch_t *pic, INT32 startx, INT32 destwidth)
-{
-	(void)startx;
-	(void)destwidth;
-	V_DrawScaledPatch(0, 0, 0, pic);
-}
-
-#if 0
-static inline void CON_DrawBackpic2(pic_t *pic, INT32 startx, INT32 destwidth)
-{
-	INT32 x, y;
-	INT32 v;
-	UINT8 *src, *dest;
-	const UINT8 *deststop;
-	INT32 frac, fracstep;
-
-	dest = screens[0]+startx;
-	deststop = screens[0] + vid.rowbytes * vid.height;
-
-	for (y = 0; y < con_curlines; y++, dest += vid.width)
-	{
-		// scale the picture to the resolution
-		v = SHORT(pic->height) - ((con_curlines - y) * (BASEVIDHEIGHT-1) / vid.height) - 1;
-
-		src = pic->data + v*SHORT(pic->width);
-
-		// in case of the console backpic, simplify
-		if (SHORT(pic->width) == destwidth)
-			M_Memcpy(dest, src, destwidth);
-		else
-		{
-			// scale pic to screen width
-			frac = 0;
-			fracstep = (SHORT(pic->width)<<16)/destwidth;
-			for (x = 0; x < destwidth; x += 4)
-			{
-				if (dest+x > deststop) break;
-				dest[x] = src[frac>>FRACBITS];
-				frac += fracstep;
-				if (dest+x+1 > deststop) break;
-				dest[x+1] = src[frac>>FRACBITS];
-				frac += fracstep;
-				if (dest+x+2 > deststop) break;
-				dest[x+2] = src[frac>>FRACBITS];
-				frac += fracstep;
-				if (dest+x+3 > deststop) break;
-				dest[x+3] = src[frac>>FRACBITS];
-				frac += fracstep;
-			}
-		}
-	}
-}
-#endif
-
 // draw the console background, text, and prompt if enough place
 //
 static void CON_DrawConsole(void)
@@ -1554,18 +1485,10 @@ static void CON_DrawConsole(void)
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
 	{
-		static lumpnum_t con_backpic_lumpnum = UINT32_MAX;
-		patch_t *con_backpic;
+		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_CACHE);
 
-		if (con_backpic_lumpnum == UINT32_MAX)
-			con_backpic_lumpnum = W_GetNumForName("CONSBACK");
-
-		con_backpic = (patch_t*)W_CachePatchNum(con_backpic_lumpnum, PU_CACHE);
-
-		if (rendermode != render_soft)
-			V_DrawScaledPatch(0, 0, 0, con_backpic);
-		else if (rendermode != render_none)
-			CON_DrawBackpic(con_backpic, 0, vid.width); // picture as background
+		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
+		V_DrawScaledPatch(0, 0, 0, con_backpic);
 
 		W_UnlockCachedPatch(con_backpic);
 	}
