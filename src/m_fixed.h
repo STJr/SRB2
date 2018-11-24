@@ -75,7 +75,7 @@ typedef INT32 fixed_t;
 			:"=a" (ret)            // eax is always the result and the first operand (%0,%1)
 			:"0" (a), "r" (b)      // and %2 is what we use imull on with what in %1
 			, "I" (FRACBITS)       // %3 holds FRACBITS (normally 16)
-			:"%cc", "%edx"         // edx and condition codes clobbered
+			:"cc", "%edx"         // edx and condition codes clobbered
 		);
 		return ret;
 	}
