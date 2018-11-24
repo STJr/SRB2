@@ -327,21 +327,28 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	UINT16 start, end;
 	char wadname[MAX_WADPATH];
 
-	// find the sprites section in this pwad
-	// we need at least the S_END
-	// (not really, but for speedup)
+	switch (wadfiles[wadnum]->type)
+	{
+	case RET_WAD:
+		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
+		if (start == INT16_MAX)
+			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+		if (start == INT16_MAX)
+			start = 0; //let say S_START is lump 0
+		else
+			start++;   // just after S_START
+		end = W_CheckNumForNamePwad("S_END",wadnum,start);
+		if (end == INT16_MAX)
+			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
+		break;
+	case RET_PK3:
+		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
+		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
+		break;
+	default:
+		return;
+	}
 
-	start = W_CheckNumForNamePwad("S_START", wadnum, 0);
-	if (start == INT16_MAX)
-		start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-	if (start == INT16_MAX)
-		start = 0; //let say S_START is lump 0
-	else
-		start++;   // just after S_START
-
-	end = W_CheckNumForNamePwad("S_END",wadnum,start);
-	if (end == INT16_MAX)
-		end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 	if (end == INT16_MAX)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);

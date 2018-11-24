@@ -444,7 +444,7 @@ void CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename, NULL);
+			P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 		}
@@ -463,7 +463,7 @@ void CL_LoadServerFiles(void)
 					fileneeded[i].filename);
 
 			// Okay, NOW we know it's safe. Whew.
-			P_AddWadFile(fileneeded[i].filename, NULL);
+			P_AddWadFile(fileneeded[i].filename);
 			if (fileneeded[i].important)
 				G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
