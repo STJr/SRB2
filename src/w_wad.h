@@ -60,7 +60,6 @@ typedef struct
 	char name[9]; // filelump_t name[]
 	char *name2; // Used by PK3s. Dynamically allocated name.
 	size_t size; // real (uncompressed) size
-	INT32 compressed; // i
 	compmethod compression; // lump compression method
 } lumpinfo_t;
 
@@ -84,8 +83,10 @@ typedef enum restype
 	RET_WAD,
 	RET_SOC,
 	RET_LUA,
-	RET_PK3
+	RET_PK3,
+	RET_UNKNOWN,
 } restype_t;
+
 
 typedef struct wadfile_s
 {
