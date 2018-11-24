@@ -864,8 +864,8 @@ void I_GetEvent(void)
 		//SDL_memset(&event, 0, sizeof(event_t));
 		event.type = ev_mouse;
 		event.data1 = 0;
-		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
-		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
+		event.data2 = (INT32)lround(mousemovex * ((float)realwidth / (float)wwidth));
+		event.data3 = (INT32)lround(mousemovey * ((float)realheight / (float)wheight));
 		D_PostEvent(&event);
 	}
 
