@@ -365,7 +365,7 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 	if (fread(&header, 1, sizeof header, handle) < sizeof header)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Can't read wad header because %s\n"), strerror(ferror(handle)));
-		return 0;
+		return NULL;
 	}
 
 	if (memcmp(header.identification, "ZWAD", 4) == 0)
@@ -375,7 +375,7 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 		&& memcmp(header.identification, "SDLL", 4) != 0)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Invalid WAD header\n"));
-		return 0;
+		return NULL;
 	}
 
 	header.numlumps = LONG(header.numlumps);
@@ -389,7 +389,7 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Corrupt wadfile directory (%s)\n"), strerror(ferror(handle)));
 		free(fileinfov);
-		return 0;
+		return NULL;
 	}
 
 	numlumps = header.numlumps;
@@ -534,7 +534,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	if (!ResFindSignature(handle, pat_end, max(0, ftell(handle) - (22 + 65536))))
 	{
 		CONS_Alert(CONS_ERROR, "Missing central directory\n");
-		return 0;
+		return NULL;
 	}
 
 	fseek(handle, -4, SEEK_CUR);
@@ -557,7 +557,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
 			free(zentry);
-			return 0;
+			return NULL;
 		}
 
 		lump_p->position = zentry->offset + zentry->namelen + zentry->xtralen + sizeof(zlentry_t);
@@ -620,7 +620,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 UINT16 W_InitFile(const char *filename)
 {
 	FILE *handle;
-	lumpinfo_t *lumpinfo;
+	lumpinfo_t *lumpinfo = NULL;
 	wadfile_t *wadfile;
 	restype_t type;
 	UINT16 numlumps = 0;
@@ -705,7 +705,7 @@ UINT16 W_InitFile(const char *filename)
 		CONS_Alert(CONS_ERROR, "Unsupported file format\n");
 	}
 
-	if (lumpinfo == 0)
+	if (lumpinfo == NULL)
 	{
 		fclose(handle);
 		return INT16_MAX;
