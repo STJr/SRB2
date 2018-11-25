@@ -980,6 +980,7 @@ static const char *credits[] = {
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
 	"Vivian \"toaster\" Grannell",
+	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
