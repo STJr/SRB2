@@ -47,7 +47,9 @@ typedef struct
 typedef enum
 {
 	CM_NOCOMPRESSION,
+#ifdef HAVE_ZLIB
 	CM_DEFLATE,
+#endif
 	CM_LZF,
 	CM_UNSUPPORTED
 } compmethod;

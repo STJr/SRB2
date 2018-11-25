@@ -540,7 +540,11 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	}
 
 	fseek(handle, -4, SEEK_CUR);
-	fread(&zend, 1, sizeof zend, handle);
+	if (fread(&zend, 1, sizeof zend, handle) < sizeof zend)
+	{
+		CONS_Alert(CONS_ERROR, "Corrupt central directory (%s)\n", strerror(ferror(handle)));
+		return NULL;
+	}
 	numlumps = zend.entries;
 
 	lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -553,7 +557,13 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		char* trimname;
 		char* dotpos;
 
-		fread(zentry, 1, sizeof(zentry_t), handle);
+		if (fread(zentry, 1, sizeof(zentry_t), handle) < sizeof(zentry_t))
+		{
+			CONS_Alert(CONS_ERROR, "Failed to read central directory (%s)\n", strerror(ferror(handle)));
+			Z_Free(lumpinfo);
+			free(zentry);
+			return NULL;
+		}
 		if (memcmp(zentry->signature, pat_central, 4))
 		{
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
@@ -567,7 +577,14 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		lump_p->size = zentry->size;
 
 		fullname = malloc(zentry->namelen + 1);
-		fgets(fullname, zentry->namelen + 1, handle);
+		if (fgets(fullname, zentry->namelen + 1, handle) != fullname)
+		{
+			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", strerror(ferror(handle)));
+			Z_Free(lumpinfo);
+			free(zentry);
+			free(fullname);
+			return NULL;
+		}
 
 		// Strip away file address and extension for the 8char name.
 		if ((trimname = strrchr(fullname, '/')) != 0)
@@ -591,9 +608,11 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		case 0:
 			lump_p->compression = CM_NOCOMPRESSION;
 			break;
+#ifdef HAVE_ZLIB
 		case 8:
 			lump_p->compression = CM_DEFLATE;
 			break;
+#endif
 		case 14:
 			lump_p->compression = CM_LZF;
 			break;
@@ -1114,6 +1133,7 @@ boolean W_IsLumpWad(lumpnum_t lumpnum)
 	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
 }
 
+#ifdef HAVE_ZLIB
 /* report a zlib or i/o error */
 void zerr(int ret)
 {
@@ -1138,6 +1158,7 @@ void zerr(int ret)
         CONS_Printf("zlib version mismatch!\n");
     }
 }
+#endif
 
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
@@ -1218,6 +1239,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(decData);
 			return size;
 		}
+#ifdef HAVE_ZLIB
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{
 			z_const Bytef *rawData; // The lump's raw data.
@@ -1271,6 +1293,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 
 			return size;
 		}
+#endif
 	default:
 		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
