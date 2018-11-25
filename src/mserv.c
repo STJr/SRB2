@@ -206,7 +206,7 @@ static void ServerName_OnChange(void);
 
 #define DEF_PORT "28900"
 consvar_t cv_masterserver = {"masterserver", "ms.srb2.org:"DEF_PORT, CV_SAVE, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 INT16 ms_RoomId = -1;
 
@@ -978,8 +978,8 @@ void MasterClient_Ticker(void)
 
 static void ServerName_OnChange(void)
 {
-	UnregisterServer();
-	RegisterServer();
+	if (con_state == MSCS_REGISTERED)
+		AddToMasterServer(false);
 }
 
 static void MasterServer_OnChange(void)
