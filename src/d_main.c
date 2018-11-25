@@ -370,10 +370,6 @@ static void D_Display(void)
 			break;
 	}
 
-	// Run menu state updates and linedef execs in titlemap
-	if (wipe && (gamestate == GS_TITLESCREEN || gamestate == GS_TIMEATTACK))
-		M_ApplyMenuPresState();
-
 	// clean up border stuff
 	// see if the border needs to be initially drawn
 	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide))

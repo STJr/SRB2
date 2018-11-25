@@ -150,7 +150,6 @@ extern UINT32 prevMenuId;
 extern UINT32 activeMenuId;
 
 void M_InitMenuPresTables(void);
-void M_ApplyMenuPresState(void);
 UINT8 M_GetYoungestChildMenu(void);
 void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping);
 void M_SetMenuCurBackground(const char *defaultname);
