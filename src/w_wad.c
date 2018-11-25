@@ -79,13 +79,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #define O_BINARY 0
 #endif
 
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
-
-#if defined(_MSC_VER)
-#pragma pack()
-#endif
 
 typedef struct
 {
@@ -466,6 +459,9 @@ static boolean ResFindSignature (FILE* handle, char endPat[], UINT32 startpos)
 	return false;
 }
 
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
 typedef struct zend_s
 {
 	char signature[4];
@@ -513,6 +509,9 @@ typedef struct zlentry_s
 	UINT16 namelen;
 	UINT16 xtralen;
 } ATTRPACK zlentry_t;
+#if defined(_MSC_VER)
+#pragma pack()
+#endif
 
 /** Create a lumpinfo_t array for a PKZip file.
  */
