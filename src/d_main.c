@@ -931,9 +931,9 @@ void D_SRB2Main(void)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
 	"Copyright (C) 1998-2018 by Sonic Team Junior\n\n"
-    "This program comes with ABSOLUTELY NO WARRANTY.\n\n"
-    "This is free software, and you are welcome to redistribute it\n"
-    "and/or modify it under the terms of the GNU General Public License\n"
+	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
+	"This is free software, and you are welcome to redistribute it\n"
+	"and/or modify it under the terms of the GNU General Public License\n"
 	"as published by the Free Software Foundation; either version 2 of\n"
 	"the License, or (at your option) any later version.\n"
 	"See the 'LICENSE.txt' file for details.\n\n"
