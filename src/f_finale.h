@@ -40,6 +40,7 @@ void F_TextPromptTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -79,8 +80,22 @@ typedef enum
 	TITLEMAP_RUNNING
 } titlemap_enum;
 
+// Current menu parameters
+
 extern UINT8 titlemapinaction;
 extern mobj_t *titlemapcameraref;
+extern char curbgname[8];
+extern SINT8 curfadevalue;
+extern boolean curhidepics;
+extern INT32 curbgcolor;
+extern INT32 curbgxspeed;
+extern INT32 curbgyspeed;
+extern boolean curbghide;
+
+#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
+
+void F_InitMenuPresValues(void);
+void F_MenuPresTicker(boolean run);
 
 //
 // WIPE

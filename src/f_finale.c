@@ -51,7 +51,7 @@ static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
-static INT16 skullAnimCounter; // Prompts: Chevron animation; Title screen: Y animation timing
+static INT16 skullAnimCounter; // Prompts: Chevron animation
 static INT32 roidtics; // Asteroid spinning
 
 static INT32 deplete;
@@ -60,6 +60,20 @@ static tic_t stoptimer;
 static boolean keypressed = false;
 
 // (no longer) De-Demo'd Title Screen
+static tic_t xscrolltimer;
+static tic_t yscrolltimer;
+static INT32 menuanimtimer; // Title screen: background animation timing
+mobj_t *titlemapcameraref = NULL;
+
+// menu presentation state
+char curbgname[8];
+SINT8 curfadevalue;
+boolean curhidepics;
+INT32 curbgcolor;
+INT32 curbgxspeed;
+INT32 curbgyspeed;
+boolean curbghide;
+
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
 static UINT32 demoIdleLeft;
@@ -610,7 +624,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			M_SkyScroll(80*4, 0, "TITLESKY");
+			F_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
 				stoptimer = finalecount;
@@ -1351,19 +1365,103 @@ void F_GameEndTicker(void)
 // ==============
 //  TITLE SCREEN
 // ==============
-mobj_t *titlemapcameraref = NULL;
+
+void F_InitMenuPresValues(void)
+{
+	menuanimtimer = 0;
+	prevMenuId = 0;
+	activeMenuId = MainDef.menuid;
+
+	// Set defaults for presentation values
+	strncpy(curbgname, "TITLESKY", 8);
+	curfadevalue = 16;
+	curhidepics = hidetitlepics;
+	curbgcolor = -1;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
+	curbghide = false;
+
+	// Find current presentation values
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurFadeValue(16);
+	M_SetMenuCurHideTitlePics();
+}
+
+//
+// F_SkyScroll
+//
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
+{
+	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
+	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
+	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	INT16 patwidth, patheight;
+	INT32 pw, ph; // scaled by dupz
+	patch_t *pat;
+	INT32 i, j;
+
+	if (rendermode == render_none)
+		return;
+
+	if (!patchname || !patchname[0])
+	{
+		V_DrawFill(0, 0, vid.width, vid.height, 31);
+		return;
+	}
+
+	if (!scrollxspeed && !scrollyspeed)
+	{
+		V_DrawPatchFill(W_CachePatchName(patchname, PU_CACHE));
+		return;
+	}
+
+	pat = W_CachePatchName(patchname, PU_CACHE);
+
+	patwidth = SHORT(pat->width);
+	patheight = SHORT(pat->height);
+	pw = patwidth * dupz;
+	ph = patheight * dupz;
+
+	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
+	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
+
+	xscrolltimer = ((menuanimtimer*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
+	yscrolltimer = ((menuanimtimer*scrollyspeed)/16 + patheight*yneg) % (patheight);
+
+	// coordinate offsets
+	xscrolled = xscrolltimer * dupz;
+	yscrolled = yscrolltimer * dupz;
+
+	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
+		i < tilex;
+		x += pw, i++)
+	{
+		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
+			j < tiley;
+			y += ph, j++)
+		{
+			V_DrawScaledPatch(
+				(xispos) ? xscrolled - x : x + xscrolled,
+				(yispos) ? yscrolled - y : y + yscrolled,
+				V_NOSCALESTART, pat);
+		}
+	}
+
+	W_UnlockCachedPatch(pat);
+}
 
 void F_StartTitleScreen(void)
 {
-	if (menumeta[MN_MAIN].musname[0])
-		S_ChangeMusic(menumeta[MN_MAIN].musname, menumeta[MN_MAIN].mustrack, menumeta[MN_MAIN].muslooping);
+	if (menupres[MN_MAIN].musname[0])
+		S_ChangeMusic(menupres[MN_MAIN].musname, menupres[MN_MAIN].mustrack, menupres[MN_MAIN].muslooping);
 	else
 		S_ChangeMusicInternal("_title", looptitle);
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 	{
 		finalecount = 0;
-		wipetypepost = menumeta[MN_MAIN].enterwipe;
+		wipetypepost = menupres[MN_MAIN].enterwipe;
 	}
 	else
 		wipegamestate = GS_TITLESCREEN;
@@ -1416,8 +1514,8 @@ void F_StartTitleScreen(void)
 		camera.height = 0;
 
 		// Run enter linedef exec for MN_MAIN, since this is where we start
-		if (menumeta[MN_MAIN].entertag)
-			P_LinedefExecute(menumeta[MN_MAIN].entertag, players[displayplayer].mo, NULL);
+		if (menupres[MN_MAIN].entertag)
+			P_LinedefExecute(menupres[MN_MAIN].entertag, players[displayplayer].mo, NULL);
 
 		wipegamestate = prevwipegamestate;
 	}
@@ -1466,7 +1564,7 @@ void F_TitleScreenDrawer(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
-		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1522,6 +1620,14 @@ void F_TitleScreenDrawer(void)
 luahook:
 	LUAh_TitleHUD();
 #endif
+}
+
+// separate animation timer for backgrounds, since we also count
+// during GS_TIMEATTACK
+void F_MenuPresTicker(boolean run)
+{
+	if (run)
+		menuanimtimer++;
 }
 
 // (no longer) De-Demo'd Title Screen

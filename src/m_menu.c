@@ -2188,62 +2188,43 @@ void Addons_option_Onchange(void)
 menu_t *currentMenu = &MainDef;
 
 // =========================================================================
-// MENU METADATA LOGIC (BACKGROUNDS)
+// MENU PRESENTATION PARAMETER HANDLING (BACKGROUNDS)
 // =========================================================================
 
-menumeta_t menumeta[NUMMENUTYPES];
-static tic_t xscrolltimer;
-static tic_t yscrolltimer;
-static INT32 menuanimtimer;
+// menu IDs are equal to current/prevMenu in most cases, except MN_SPECIAL when we don't want to operate on Message, Pause, etc.
+UINT32 prevMenuId = 0;
+UINT32 activeMenuId = 0;
 
-// menu IDs are equal to current/prevMenu in most cases, except MM_SPECIAL when we don't want to operate on Message, Pause, etc.
-static UINT32 prevMenuId = 0;
-static UINT32 activeMenuId = 0;
+menupres_t menupres[NUMMENUTYPES];
 
-// menu presentation state
-char curbgname[8];
-SINT8 curfadevalue;
-boolean curhidepics;
-INT32 curbgcolor;
-INT32 curbgxspeed;
-INT32 curbgyspeed;
-boolean curbghide;
-
-typedef struct
-{
-	char musname[7];
-	UINT16 mustrack;
-	boolean muslooping;
-} menumetamusic_t;
-
-void MN_InitInfoTables(void)
+void M_InitMenuPresTables(void)
 {
 	INT32 i;
 
 	// Called in d_main before SOC can get to the tables
-	// Set menumeta defaults
+	// Set menupres defaults
 	for (i = 0; i < NUMMENUTYPES; i++)
 	{
 		// so-called "undefined"
-		menumeta[i].fadestrength = -1;
-		menumeta[i].hidetitlepics = -1; // inherits global hidetitlepics
-		menumeta[i].enterwipe = -1;
-		menumeta[i].exitwipe = -1;
-		menumeta[i].bgcolor = -1;
-		menumeta[i].titlescrollxspeed = INT32_MAX;
-		menumeta[i].titlescrollyspeed = INT32_MAX;
+		menupres[i].fadestrength = -1;
+		menupres[i].hidetitlepics = -1; // inherits global hidetitlepics
+		menupres[i].enterwipe = -1;
+		menupres[i].exitwipe = -1;
+		menupres[i].bgcolor = -1;
+		menupres[i].titlescrollxspeed = INT32_MAX;
+		menupres[i].titlescrollyspeed = INT32_MAX;
 		// default true
-		menumeta[i].enterbubble = true;
-		menumeta[i].exitbubble = true;
+		menupres[i].enterbubble = true;
+		menupres[i].exitbubble = true;
 
 		if (i != MN_MAIN)
 		{
-			menumeta[i].muslooping = true;
+			menupres[i].muslooping = true;
 		}
 		if (i == MN_SP_TIMEATTACK || i == MN_SP_NIGHTSATTACK)
-			strncpy(menumeta[i].musname, "_inter", 7);
+			strncpy(menupres[i].musname, "_inter", 7);
 		else if (i == MN_SP_PLAYER)
-			strncpy(menumeta[i].musname, "_chsel", 7);
+			strncpy(menupres[i].musname, "_chsel", 7);
 	}
 }
 
@@ -2259,6 +2240,15 @@ void MN_InitInfoTables(void)
 // return true - stop iterating
 // return false - continue
 typedef boolean (*menutree_iterator)(UINT32, INT32, INT32 *, void **, boolean fromoldest);
+
+// HACK: Used in the ChangeMusic iterator because we only allow
+// a single input. Maybe someday use this struct program-wide.
+typedef struct
+{
+	char musname[7];
+	UINT16 mustrack;
+	boolean muslooping;
+} menupresmusic_t;
 
 static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 {
@@ -2304,7 +2294,6 @@ static boolean MIT_GetMenuAtLevel(UINT32 menutype, INT32 level, INT32 *retval, v
 	INT32 targetlevel = *inputptr;
 	if (menutype)
 	{
-		// \todo offset targetlevel by failed initial attempts
 		if (level == targetlevel || targetlevel < 0)
 		{
 			*retval = menutype;
@@ -2353,19 +2342,19 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	(void)retval;
 	(void)fromoldest;
 
-	if (menumeta[menutype].bgcolor >= 0)
+	if (menupres[menutype].bgcolor >= 0)
 	{
-		curbgcolor = menumeta[menutype].bgcolor;
+		curbgcolor = menupres[menutype].bgcolor;
 		return true;
 	}
-	else if (menumeta[menutype].bgname[0] && (!menumeta[menutype].bghide || !titlemapinaction))
+	else if (menupres[menutype].bgname[0] && (!menupres[menutype].bghide || !titlemapinaction))
 	{
-		strncpy(curbgname, menumeta[menutype].bgname, 8);
-		curbgxspeed = menumeta[menutype].titlescrollxspeed != INT32_MAX ? menumeta[menutype].titlescrollxspeed : titlescrollxspeed;
-		curbgyspeed = menumeta[menutype].titlescrollyspeed != INT32_MAX ? menumeta[menutype].titlescrollyspeed : titlescrollyspeed;
+		strncpy(curbgname, menupres[menutype].bgname, 8);
+		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
+		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
 	}
-	else if (menumeta[menutype].bghide && titlemapinaction) // hide the background
+	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
 	{
 		curbghide = true;
 		return true;
@@ -2388,22 +2377,22 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 
 static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
-	menumetamusic_t *defaultmusic = (menumetamusic_t*)*input;
+	menupresmusic_t *defaultmusic = (menupresmusic_t*)*input;
 
 	(void)retval;
 	(void)fromoldest;
 
-	if (menumeta[menutype].musname[0])
+	if (menupres[menutype].musname[0])
 	{
-		S_ChangeMusic(menumeta[menutype].musname, menumeta[menutype].mustrack, menumeta[menutype].muslooping);
+		S_ChangeMusic(menupres[menutype].musname, menupres[menutype].mustrack, menupres[menutype].muslooping);
 		return true;
 	}
-	else if (menumeta[menutype].musstop)
+	else if (menupres[menutype].musstop)
 	{
 		S_StopMusic();
 		return true;
 	}
-	else if (menumeta[menutype].musignore)
+	else if (menupres[menutype].musignore)
 		return true;
 	else if (!level && defaultmusic && defaultmusic->musname[0])
 		S_ChangeMusic(defaultmusic->musname, defaultmusic->mustrack, defaultmusic->muslooping);
@@ -2417,9 +2406,9 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	(void)retval;
 	(void)fromoldest;
 
-	if (menumeta[menutype].fadestrength >= 0)
+	if (menupres[menutype].fadestrength >= 0)
 	{
-		curfadevalue = (menumeta[menutype].fadestrength % 32);
+		curfadevalue = (menupres[menutype].fadestrength % 32);
 		return true;
 	}
 	else if (!level)
@@ -2433,9 +2422,9 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 	(void)retval;
 	(void)fromoldest;
 
-	if (menumeta[menutype].hidetitlepics >= 0)
+	if (menupres[menutype].hidetitlepics >= 0)
 	{
-		curhidepics = menumeta[menutype].hidetitlepics;
+		curhidepics = menupres[menutype].hidetitlepics;
 		return true;
 	}
 	else if (!level)
@@ -2490,9 +2479,9 @@ static boolean M_HasMenuType(menutype_t needletype)
 // EFFECTS
 // ====================================
 
-static void M_ChangeMusic(const char *defaultmusname, boolean defaultmuslooping)
+void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping)
 {
-	menumetamusic_t defaultmusic;
+	menupresmusic_t defaultmusic;
 
 	if (!defaultmusname)
 		defaultmusname = "";
@@ -2505,19 +2494,19 @@ static void M_ChangeMusic(const char *defaultmusname, boolean defaultmuslooping)
 	M_IterateMenuTree(MIT_ChangeMusic, &defaultmusic);
 }
 
-static void M_SetCurBackground(const char *defaultname)
+void M_SetMenuCurBackground(const char *defaultname)
 {
 	char name[8];
 	strncpy(name, defaultname, 8);
 	M_IterateMenuTree(MIT_SetCurBackground, &name);
 }
 
-static void M_SetCurFadeValue(UINT8 defaultvalue)
+void M_SetMenuCurFadeValue(UINT8 defaultvalue)
 {
 	M_IterateMenuTree(MIT_SetCurFadeValue, &defaultvalue);
 }
 
-static void M_SetCurHideTitlePics(void)
+void M_SetMenuCurHideTitlePics(void)
 {
 	M_IterateMenuTree(MIT_SetCurHideTitlePics, NULL);
 }
@@ -2532,7 +2521,7 @@ static INT16 exitwipe, enterwipe;
 static boolean exitbubble, enterbubble;
 static INT16 exittag, entertag;
 
-static void M_HandleMenuMetaState(menu_t *newMenu)
+static void M_HandleMenuPresState(menu_t *newMenu)
 {
 	INT32 i;
 	UINT32 bitmask;
@@ -2574,9 +2563,9 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 		return;
 
 	// Find current presentation values
-	M_SetCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
-	M_SetCurFadeValue(16);
-	M_SetCurHideTitlePics();
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurFadeValue(16);
+	M_SetMenuCurHideTitlePics();
 
 	// Loop through both menu IDs in parallel and look for type changes
 	// The youngest child in activeMenuId is the entered menu
@@ -2600,18 +2589,18 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 		{
 			exittype = prevtype;
 			exitlevel = i;
-			exitwipe = menumeta[exittype].exitwipe;
-			exitbubble = menumeta[exittype].exitbubble;
-			exittag = menumeta[exittype].exittag;
+			exitwipe = menupres[exittype].exitwipe;
+			exitbubble = menupres[exittype].exitbubble;
+			exittag = menupres[exittype].exittag;
 		}
 
 		if (activetype && (entertype < 0))
 		{
 			entertype = activetype;
 			enterlevel = i;
-			enterwipe = menumeta[entertype].enterwipe;
-			enterbubble = menumeta[entertype].enterbubble;
-			entertag = menumeta[entertype].entertag;
+			enterwipe = menupres[entertype].enterwipe;
+			enterbubble = menupres[entertype].enterbubble;
+			entertag = menupres[entertype].entertag;
 		}
 
 		if (prevtype && activetype && prevtype == activetype && anceslevel < 0)
@@ -2630,15 +2619,15 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 			bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 			prevtype = (prevMenuId & bitmask) >> (MENUBITS*i);
 
-			if (menumeta[prevtype].exitwipe >= 0)
+			if (menupres[prevtype].exitwipe >= 0)
 			{
-				exitwipe = menumeta[prevtype].exitwipe;
+				exitwipe = menupres[prevtype].exitwipe;
 				break;
 			}
 		}
 
 		if (exitwipe < 0)
-			exitwipe = menumeta[MN_MAIN].exitwipe;
+			exitwipe = menupres[MN_MAIN].exitwipe;
 	}
 
 	// do the same for enter wipe
@@ -2649,19 +2638,19 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 			bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 			activetype = (activeMenuId & bitmask) >> (MENUBITS*i);
 
-			if (menumeta[activetype].enterwipe >= 0)
+			if (menupres[activetype].enterwipe >= 0)
 			{
-				exitwipe = menumeta[activetype].enterwipe;
+				exitwipe = menupres[activetype].enterwipe;
 				break;
 			}
 		}
 
 		if (enterwipe < 0)
-			enterwipe = menumeta[MN_MAIN].enterwipe;
+			enterwipe = menupres[MN_MAIN].enterwipe;
 	}
 
 	// Change the music
-	M_ChangeMusic("_title", false);
+	M_ChangeMenuMusic("_title", false);
 
 	// Run the linedef execs
 	if (titlemapinaction)
@@ -2675,8 +2664,8 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 				{
 					bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 					menutype = (prevMenuId & bitmask) >> (MENUBITS*i);
-					if (menumeta[menutype].exittag)
-						P_LinedefExecute(menumeta[menutype].exittag, players[displayplayer].mo, NULL);
+					if (menupres[menutype].exittag)
+						P_LinedefExecute(menupres[menutype].exittag, players[displayplayer].mo, NULL);
 				}
 			}
 			else if (exittag)
@@ -2692,8 +2681,8 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 				{
 					bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 					menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
-					if (menumeta[menutype].entertag)
-						P_LinedefExecute(menumeta[menutype].entertag, players[displayplayer].mo, NULL);
+					if (menupres[menutype].entertag)
+						P_LinedefExecute(menupres[menutype].entertag, players[displayplayer].mo, NULL);
 				}
 			}
 			else if (entertag)
@@ -2728,10 +2717,10 @@ static void M_HandleMenuMetaState(menu_t *newMenu)
 		// D_Display runs the next step of processing
 	}
 	else
-		M_ApplyMenuMetaState(); // run the next step now
+		M_ApplyMenuPresState(); // run the next step now
 }
 
-void M_ApplyMenuMetaState(void)
+void M_ApplyMenuPresState(void)
 {
 #if 0
 	INT32 i;
@@ -2775,7 +2764,7 @@ static void M_GoBack(INT32 choice)
 			Z_Free(levelselect.rows);
 			levelselect.rows = NULL;
 			menuactive = false;
-			wipetypepre = menumeta[M_GetYoungestChildMenu()].exitwipe;
+			wipetypepre = menupres[M_GetYoungestChildMenu()].exitwipe;
 			D_StartTitle();
 		}
 		else
@@ -3437,7 +3426,7 @@ void M_SetupNextMenu(menu_t *menudef)
 			return; // we can't quit this menu (also used to set parameter from the menu)
 	}
 
-	M_HandleMenuMetaState(menudef);
+	M_HandleMenuPresState(menudef);
 
 	currentMenu = menudef;
 	itemOn = currentMenu->lastOn;
@@ -3541,101 +3530,6 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
-}
-
-// ==========================================================================
-// COMMON MENU DRAW ROUTINES
-// ==========================================================================
-
-void MN_Start(void)
-{
-	menuanimtimer = 0;
-	prevMenuId = 0;
-	activeMenuId = MainDef.menuid;
-
-	// Set defaults for presentation values
-	strncpy(curbgname, "TITLESKY", 8);
-	curfadevalue = 16;
-	curhidepics = hidetitlepics;
-	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
-	curbghide = false;
-
-	// Find current presentation values
-	M_SetCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
-	M_SetCurFadeValue(16);
-	M_SetCurHideTitlePics();
-}
-
-void MN_Ticker(boolean run)
-{
-	if (run)
-		menuanimtimer++;
-}
-
-//
-// M_SkyScroll
-//
-void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
-{
-	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
-	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
-	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	INT16 patwidth, patheight;
-	INT32 pw, ph; // scaled by dupz
-	patch_t *pat;
-	INT32 i, j;
-
-	if (rendermode == render_none)
-		return;
-
-	if (!patchname || !patchname[0])
-	{
-		V_DrawFill(0, 0, vid.width, vid.height, 31);
-		return;
-	}
-
-	if (!scrollxspeed && !scrollyspeed)
-	{
-		V_DrawPatchFill(W_CachePatchName(patchname, PU_CACHE));
-		return;
-	}
-
-	pat = W_CachePatchName(patchname, PU_CACHE);
-
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
-	pw = patwidth * dupz;
-	ph = patheight * dupz;
-
-	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
-	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
-
-	xscrolltimer = ((menuanimtimer*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
-	yscrolltimer = ((menuanimtimer*scrollyspeed)/16 + patheight*yneg) % (patheight);
-
-	// coordinate offsets
-	xscrolled = xscrolltimer * dupz;
-	yscrolled = yscrolltimer * dupz;
-
-	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
-		i < tilex;
-		x += pw, i++)
-	{
-		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
-			j < tiley;
-			y += ph, j++)
-		{
-			V_DrawScaledPatch(
-				(xispos) ? xscrolled - x : x + xscrolled,
-				(yispos) ? yscrolled - y : y + yscrolled,
-				V_NOSCALESTART, pat);
-		}
-	}
-
-	W_UnlockCachedPatch(pat);
 }
 
 // ==========================================================================
@@ -5180,7 +5074,7 @@ static void M_DrawLevelPlatterMenu(void)
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
-			M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
@@ -5389,7 +5283,7 @@ static void M_DrawMessageMenu(void)
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
-			M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
@@ -7687,7 +7581,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	}
 
 	if (Playing() == false)
-		M_ChangeMusic("_chsel", true);
+		M_ChangeMenuMusic("_chsel", true);
 
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
@@ -7784,7 +7678,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction)
-		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
@@ -8174,12 +8068,12 @@ void M_DrawTimeAttackMenu(void)
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
 
-	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction)
-		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
@@ -8366,12 +8260,12 @@ void M_DrawNightsAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 
-	M_ChangeMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction)
-		M_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
@@ -8761,17 +8655,17 @@ static void M_ModeAttackEndGame(INT32 choice)
 	default:
 	case ATTACKING_RECORD:
 		currentMenu = &SP_TimeAttackDef;
-		wipetypepost = menumeta[MN_SP_TIMEATTACK].enterwipe;
+		wipetypepost = menupres[MN_SP_TIMEATTACK].enterwipe;
 		break;
 	case ATTACKING_NIGHTS:
 		currentMenu = &SP_NightsAttackDef;
-		wipetypepost = menumeta[MN_SP_NIGHTSATTACK].enterwipe;
+		wipetypepost = menupres[MN_SP_NIGHTSATTACK].enterwipe;
 		break;
 	}
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	M_ChangeMusic("_title", true);
+	M_ChangeMenuMusic("_title", true);
 	Nextmap_OnChange();
 }
 

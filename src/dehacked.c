@@ -1956,40 +1956,40 @@ static void readmenu(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "BACKGROUNDNAME"))
 			{
-				strncpy(menumeta[num].bgname, word2, 8);
+				strncpy(menupres[num].bgname, word2, 8);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDEBACKGROUND"))
 			{
-				menumeta[num].bghide = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].bghide = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "BACKGROUNDCOLOR"))
 			{
-				menumeta[num].bgcolor = value;
+				menupres[num].bgcolor = value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
 			{
 				// true by default, except MM_MAIN
-				menumeta[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
 				|| fastcmp(word, "SCROLLSPEED") || fastcmp(word, "SCROLLXSPEED"))
 			{
-				menumeta[num].titlescrollxspeed = get_number(word2);
+				menupres[num].titlescrollxspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLYSPEED") || fastcmp(word, "SCROLLYSPEED"))
 			{
-				menumeta[num].titlescrollyspeed = get_number(word2);
+				menupres[num].titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
-				strncpy(menumeta[num].musname, word2, 7);
-				menumeta[num].musname[6] = 0;
+				strncpy(menupres[num].musname, word2, 7);
+				menupres[num].musname[6] = 0;
 				titlechanged = true;
 			}
 #ifdef MUSICSLOT_COMPATIBILITY
@@ -1997,70 +1997,70 @@ static void readmenu(MYFILE *f, INT32 num)
 			{
 				value = get_mus(word2, true);
 				if (value && value <= 1035)
-					snprintf(menumeta[num].musname, 7, "%sM", G_BuildMapName(value));
+					snprintf(menupres[num].musname, 7, "%sM", G_BuildMapName(value));
 				else if (value && value <= 1050)
-					strncpy(menumeta[num].musname, compat_special_music_slots[value - 1036], 7);
+					strncpy(menupres[num].musname, compat_special_music_slots[value - 1036], 7);
 				else
-					menumeta[num].musname[0] = 0; // becomes empty string
-				menumeta[num].musname[6] = 0;
+					menupres[num].musname[0] = 0; // becomes empty string
+				menupres[num].musname[6] = 0;
 				titlechanged = true;
 			}
 #endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
-				menumeta[num].mustrack = ((UINT16)value - 1);
+				menupres[num].mustrack = ((UINT16)value - 1);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
 				// true by default except MM_MAIN
-				menumeta[num].muslooping = (value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].muslooping = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "NOMUSIC"))
 			{
-				menumeta[num].musstop = (value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].musstop = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "IGNOREMUSIC"))
 			{
-				menumeta[num].musignore = (value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].musignore = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "FADESTRENGTH"))
 			{
 				// one-based, <= 0 means use default value. 1-32
-				menumeta[num].fadestrength = value-1;
+				menupres[num].fadestrength = value-1;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "NOENTERBUBBLE"))
 			{
-				menumeta[num].enterbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].enterbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "NOEXITBUBBLE"))
 			{
-				menumeta[num].exitbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
+				menupres[num].exitbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "ENTERTAG"))
 			{
-				menumeta[num].entertag = value;
+				menupres[num].entertag = value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "EXITTAG"))
 			{
-				menumeta[num].exittag = value;
+				menupres[num].exittag = value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "ENTERWIPE"))
 			{
-				menumeta[num].enterwipe = value;
+				menupres[num].enterwipe = value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "EXITWIPE"))
 			{
-				menumeta[num].exitwipe = value;
+				menupres[num].exitwipe = value;
 				titlechanged = true;
 			}
 		}

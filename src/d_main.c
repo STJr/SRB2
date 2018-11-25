@@ -372,7 +372,7 @@ static void D_Display(void)
 
 	// Run menu state updates and linedef execs in titlemap
 	if (wipe && (gamestate == GS_TITLESCREEN || gamestate == GS_TIMEATTACK))
-		M_ApplyMenuMetaState();
+		M_ApplyMenuPresState();
 
 	// clean up border stuff
 	// see if the border needs to be initially drawn
@@ -751,7 +751,7 @@ void D_StartTitle(void)
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
-	MN_Start();
+	F_InitMenuPresValues();
 	F_StartTitleScreen();
 	CON_ToggleOff();
 
@@ -1120,11 +1120,11 @@ void D_SRB2Main(void)
 	P_PatchInfoTables();
 
 	// initiate menu metadata before SOCcing them
-	MN_InitInfoTables();
+	M_InitMenuPresTables();
 
 	// init title screen display params
 	if (M_CheckParm("-connect"))
-		MN_Start();
+		F_InitMenuPresValues();
 
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
@@ -1405,7 +1405,7 @@ void D_SRB2Main(void)
 	{
 		CON_ToggleOff();
 		CON_ClearHUD();
-		MN_Start();
+		F_InitMenuPresValues();
 		F_StartTitleScreen();
 	}
 	else

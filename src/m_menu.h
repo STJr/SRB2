@@ -121,7 +121,6 @@ typedef enum
 	NUMMENUTYPES,
 } menutype_t; // up to 63; MN_SPECIAL = 53
 
-// Menu parameters
 typedef struct
 {
 	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
@@ -144,25 +143,19 @@ typedef struct
 	INT32 exittag; // line exec to run on menu exit, if titlemap
 	INT16 enterwipe; // wipe type to run on menu enter, -1 means default
 	INT16 exitwipe; // wipe type to run on menu exit, -1 means default
-} menumeta_t;
+} menupres_t;
 
-extern menumeta_t menumeta[NUMMENUTYPES];
-extern char curbgname[8];
-extern SINT8 curfadevalue;
-extern boolean curhidepics;
-extern INT32 curbgcolor;
-extern INT32 curbgxspeed;
-extern INT32 curbgyspeed;
-extern boolean curbghide;
+extern menupres_t menupres[NUMMENUTYPES];
+extern UINT32 prevMenuId;
+extern UINT32 activeMenuId;
 
-#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
-
-void M_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
-void MN_Ticker(boolean run);
-void MN_Start(void);
-void MN_InitInfoTables(void);
-void M_ApplyMenuMetaState(void);
+void M_InitMenuPresTables(void);
+void M_ApplyMenuPresState(void);
 UINT8 M_GetYoungestChildMenu(void);
+void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping);
+void M_SetMenuCurBackground(const char *defaultname);
+void M_SetMenuCurFadeValue(UINT8 defaultvalue);
+void M_SetMenuCurHideTitlePics(void);
 
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.
