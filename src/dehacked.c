@@ -1966,7 +1966,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "BACKGROUNDCOLOR"))
 			{
-				menupres[num].bgcolor = value;
+				menupres[num].bgcolor = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
@@ -2030,7 +2030,7 @@ static void readmenu(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "FADESTRENGTH"))
 			{
 				// one-based, <= 0 means use default value. 1-32
-				menupres[num].fadestrength = value-1;
+				menupres[num].fadestrength = get_number(word2)-1;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "NOENTERBUBBLE"))
@@ -2045,22 +2045,22 @@ static void readmenu(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "ENTERTAG"))
 			{
-				menupres[num].entertag = value;
+				menupres[num].entertag = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "EXITTAG"))
 			{
-				menupres[num].exittag = value;
+				menupres[num].exittag = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "ENTERWIPE"))
 			{
-				menupres[num].enterwipe = value;
+				menupres[num].enterwipe = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "EXITWIPE"))
 			{
-				menupres[num].exitwipe = value;
+				menupres[num].exitwipe = get_number(word2);
 				titlechanged = true;
 			}
 		}
