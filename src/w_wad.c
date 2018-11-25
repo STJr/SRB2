@@ -26,7 +26,6 @@
 #include "lzf.h"
 #endif
 
-#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -42,7 +41,6 @@
 #endif
 
 #include "zlib.h"
-#endif // HAVE_ZLIB
 
 #include "doomdef.h"
 #include "doomstat.h"
