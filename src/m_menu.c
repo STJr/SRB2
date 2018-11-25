@@ -2266,24 +2266,6 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 	return retval;
 }
 
-#if 0
-static INT32 M_IterateMenuTreeFromTop(menutree_iterator itfunc, void *input)
-{
-	INT32 i, retval = 0;
-	UINT32 bitmask, menutype;
-
-	for (i = 0; i <= NUMMENULEVELS; i++)
-	{
-		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
-		menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
-		if (itfunc(menutype, i, &retval, &input, true))
-			break;
-	}
-
-	return retval;
-}
-#endif
-
 // ====================================
 // ITERATORS
 // ====================================
@@ -2310,30 +2292,6 @@ static boolean MIT_GetMenuAtLevel(UINT32 menutype, INT32 level, INT32 *retval, v
 	}
 	return false;
 }
-
-#if 0
-static boolean MIT_GetEdgeLevel(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
-{
-	if (menutype)
-	{
-		*retval = level;
-		return true;
-	}
-	return false;
-}
-
-
-static boolean MIT_HasMenuType(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
-{
-	menutype_t inputtype = *(menutype_t*)*input;
-	if (menutype == inputtype)
-	{
-		*retval = true;
-		return true;
-	}
-	return false;
-}
-#endif
 
 static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
@@ -2436,44 +2394,11 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 // TREE RETRIEVAL
 // ====================================
 
-#if 0
-// level is nth level relative to top or bottom from tree
-static menutype_t M_GetMenuAtLevel(INT32 level, boolean fromoldest)
-{
-	if (fromoldest)
-		return M_IterateMenuTreeFromTop(MIT_GetMenuAtLevel, &level);
-	else
-	{
-		if (level >= 0)
-			level = NUMMENULEVELS - level; // iterating backwards, so count from highest value
-		return M_IterateMenuTree(MIT_GetMenuAtLevel, &level);
-	}
-}
-#endif
-
 UINT8 M_GetYoungestChildMenu(void) // aka the active menu
 {
 	INT32 targetlevel = -1;
 	return M_IterateMenuTree(MIT_GetMenuAtLevel, &targetlevel);
 }
-
-#if 0
-static UINT8 M_GetOldestParentMenu()
-{
-	INT32 targetlevel = -1;
-	return M_IterateMenuTreeFromTop(MIT_GetMenuAtLevel, &targetlevel);
-}
-
-static UINT8 M_GetYoungestChildLevel() // aka the active menu
-{
-	return M_IterateMenuTree(MIT_GetEdgeLevel, NULL);
-}
-
-static boolean M_HasMenuType(menutype_t needletype)
-{
-	return M_IterateMenuTreeFromTop(MIT_HasMenuType, &needletype);
-}
-#endif
 
 // ====================================
 // EFFECTS
@@ -2716,27 +2641,6 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 
 		// D_Display runs the next step of processing
 	}
-	else
-		M_ApplyMenuPresState(); // run the next step now
-}
-
-void M_ApplyMenuPresState(void)
-{
-#if 0
-	INT32 i;
-	UINT32 bitmask, menutype;
-
-	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
-		return;
-
-	// 3. Run each exit exec on the prevMenuId up to the common ancestor (UNLESS NoBubbleExecs)
-	// 4. Run each entrance exec on the activeMenuId down from the common ancestor (UNLESS NoBubbleExecs)
-
-	// \todo placeholder -- do we want any logic to happen between wipes?
-	// do we want to split linedef execs between pre-wipe and tween-wipe?
-
-	// D_Display runs the enter wipe, if applicable
-#endif
 }
 
 // =========================================================================
