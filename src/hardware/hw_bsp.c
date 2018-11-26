@@ -633,6 +633,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 			HWR_SubsecPoly(bspnum&(~NF_SUBSECTOR), poly);
 			//Hurdler: implement a loading status
 
+#ifdef HWR_LOADING_SCREEN
 			if (ls_count-- <= 0)
 			{
 				char s[16];
@@ -657,6 +658,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 
 				I_UpdateNoVsync();
 			}
+#endif
 		}
 		M_ClearBox(bbox);
 		poly = extrasubsectors[bspnum&~NF_SUBSECTOR].planepoly;
