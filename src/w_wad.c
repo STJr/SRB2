@@ -1296,6 +1296,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	default:
 		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
+	return -1;
 }
 
 size_t W_ReadLumpHeader(lumpnum_t lumpnum, void *dest, size_t size, size_t offset)
