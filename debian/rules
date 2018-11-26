@@ -57,7 +57,7 @@ SECTION = Games/Action
 EXENAME = srb2
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= usr/games
+PKGDIR	= usr/games/SRB2
 DBGDIR	= usr/lib/debug/$(PKGDIR)
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
@@ -71,7 +71,7 @@ MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
 export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
 BINDIR :=  $(DIR)/bin/Linux/Release
 LDFLAGS += "-Wl,-rpath=/usr/lib/$(CROSS_COMPILE_HOST)"
-# FIXME libgme-dev on debian doesn't use pkg-config yet, so put in the linker flag ourselves
+# FIXME some libgme-dev packages don't use pkg-config yet, so include the linker flag ourselves
 MAKEARGS += LIBGME_LDFLAGS=-lgme
 
 build:
