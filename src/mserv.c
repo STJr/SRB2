@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -206,7 +206,7 @@ static void ServerName_OnChange(void);
 
 #define DEF_PORT "28900"
 consvar_t cv_masterserver = {"masterserver", "ms.srb2.org:"DEF_PORT, CV_SAVE, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 INT16 ms_RoomId = -1;
 
@@ -978,8 +978,8 @@ void MasterClient_Ticker(void)
 
 static void ServerName_OnChange(void)
 {
-	UnregisterServer();
-	RegisterServer();
+	if (con_state == MSCS_REGISTERED)
+		AddToMasterServer(false);
 }
 
 static void MasterServer_OnChange(void)
