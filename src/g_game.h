@@ -53,6 +53,8 @@ extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
+extern INT32 pausedelay;
+extern boolean pausebreakkey;
 
 // used in game menu
 extern consvar_t cv_tutorialprompt;
