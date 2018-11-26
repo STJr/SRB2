@@ -2729,7 +2729,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	wipegamestate = -2;
+	wipegamestate = FORCEWIPEOFF;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.

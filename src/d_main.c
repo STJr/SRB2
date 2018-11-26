@@ -288,7 +288,7 @@ static void D_Display(void)
 		{
 			// Fade to black first
 			if ((wipegamestate == (gamestate_t)FORCEWIPE ||
-			        (wipegamestate != (gamestate_t)-2
+			        (wipegamestate != (gamestate_t)FORCEWIPEOFF
 						&& !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
 					) // fades to black on its own timing, always
 			 && wipetypepre != UINT8_MAX)
@@ -374,7 +374,7 @@ static void D_Display(void)
 
 	// STUPID race condition...
 	if (wipegamestate == GS_INTRO && gamestate == GS_TITLESCREEN)
-		wipegamestate = -2;
+		wipegamestate = FORCEWIPEOFF;
 	else
 	{
 		wipegamestate = gamestate;

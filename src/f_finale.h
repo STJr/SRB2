@@ -102,6 +102,7 @@ void F_MenuPresTicker(boolean run);
 //
 // HACK for menu fading while titlemapinaction; skips the level check
 #define FORCEWIPE -3
+#define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
 extern INT32 lastwipetic;
