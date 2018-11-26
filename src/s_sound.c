@@ -1613,6 +1613,9 @@ static void Command_RestartAudio_f(void)
 
 void GameSounds_OnChange(void)
 {
+	if (M_CheckParm("-nosound"))
+		return;
+
 	if (sound_disabled)
 	{
 		sound_disabled = false;
@@ -1628,6 +1631,11 @@ void GameSounds_OnChange(void)
 
 void GameDigiMusic_OnChange(void)
 {
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nodigmusic"))
+		return;
+
 	if (digital_disabled)
 	{
 		digital_disabled = false;
@@ -1665,6 +1673,11 @@ void GameDigiMusic_OnChange(void)
 
 void GameMIDIMusic_OnChange(void)
 {
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nomidimusic"))
+		return;
+
 	if (midi_disabled)
 	{
 		midi_disabled = false;

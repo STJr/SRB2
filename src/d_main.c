@@ -1235,7 +1235,7 @@ void D_SRB2Main(void)
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
 			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
