@@ -7,9 +7,11 @@ Maintainer: Callum Dickinson <gcfreak_ag20@hotmail.com>
 Build-Depends: debhelper (>= 7.0.50~),
  libsdl2-dev,
  libsdl2-mixer-dev,
- libpng12-dev (>= 1.2.7),
- libglu1-dev | libglu-dev,
- libosmesa6-dev | libgl-dev,
+ libpng-dev (>= 1.2.7),
+ zlib1g-dev,
+ libgme-dev,
+ #libglu1-dev | libglu-dev,
+ #libosmesa6-dev | libgl-dev,
  nasm [i386]
 Standards-Version: 3.8.4
 Homepage: http://www.srb2.org
