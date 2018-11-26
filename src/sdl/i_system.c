@@ -2076,11 +2076,8 @@ void I_StartupTimer(void)
 
 void I_Sleep(void)
 {
-	if (dedicated)
-		SDL_Delay(15);
-	else
-		if (cv_sleep.value != -1)
-			SDL_Delay(cv_sleep.value);
+	if (cv_sleep.value != -1)
+		SDL_Delay(cv_sleep.value);
 }
 
 INT32 I_StartupSystem(void)
