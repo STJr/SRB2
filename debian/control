@@ -10,8 +10,8 @@ Build-Depends: debhelper (>= 7.0.50~),
  libpng-dev (>= 1.2.7),
  zlib1g-dev,
  libgme-dev,
-#libglu1-dev | libglu-dev,
-#libosmesa6-dev | libgl-dev,
+ libglu1-dev | libglu-dev,
+ libosmesa6-dev | libgl-dev,
  nasm [i386]
 Standards-Version: 3.8.4
 Homepage: http://www.srb2.org

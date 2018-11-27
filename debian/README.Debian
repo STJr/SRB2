@@ -34,7 +34,7 @@ Use these steps to prepare building a source package for Launchpad:
     2. git reset --hard; git clean -fd; git clean -fx;
        * Resets your repo folder to a committed state and removes untracked files
        * If you built srb2-data in the assets/ folder, MAKE SURE THAT FOLDER DOES NOT HAVE ASSETS,
-         OR THEY WILL BE INCLUDED IN THE MAIN SOURCE PACKAGE!
+         OR THEY MAY BE INCLUDED IN THE MAIN SOURCE PACKAGE!
 
 Building the source package takes just one step:
 
