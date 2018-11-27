@@ -1,8 +1,8 @@
-srb2 (2.1.21~3) trusty; urgency=high
+srb2 (2.1.21~9) trusty; urgency=high
 
-  * Pre-release for SRB2 v2.1.21
+  * SRB2 v2.1.21 release
 
- -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 26 Nov 2018 09:03:00 -0500
+ -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 27 Nov 2018 16:45:00 -0500
 
 
 srb2 (2.0.6-5) maverick; urgency=high
