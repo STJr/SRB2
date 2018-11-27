@@ -26,22 +26,6 @@
 #include "lzf.h"
 #endif
 
-#ifndef _MSC_VER
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-#endif
-
-#ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE
-#endif
-
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
-#endif
-
-#include "zlib.h"
-
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
@@ -77,6 +61,24 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef HAVE_ZLIB
+#ifndef _MSC_VER
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#include "zlib.h"
 #endif
 
 

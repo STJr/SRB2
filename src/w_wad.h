@@ -154,7 +154,9 @@ size_t W_LumpLength(lumpnum_t lumpnum);
 
 boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
 
+#ifdef HAVE_ZLIB
 void zerr(int ret); // zlib error checking
+#endif
 
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset);
 size_t W_ReadLumpHeader(lumpnum_t lump, void *dest, size_t size, size_t offest); // read all or a part of a lump
