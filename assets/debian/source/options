@@ -1,1 +1,2 @@
 tar-ignore = "tmp/*"
+no-pre-clean

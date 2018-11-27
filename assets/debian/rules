@@ -53,14 +53,11 @@ build:
 			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
 		fi; \
 		if [ -f $(RESOURCEDIR)/$$file ]; then \
-			if test "$$file" = "srb2.wad"; then \
-				$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/srb2.srb; \
-			else \
-				$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
-			fi; \
+			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
 			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
-		else \
-			echo $(DIR)/$$file not found and could not be downloaded!; \
+		fi; \
+		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/$$file ]; then \
+			echo $(DIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
 			return 1; \
 		fi; \
 	done
