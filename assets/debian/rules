@@ -49,7 +49,7 @@ build:
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		if [ ! -f $(RESOURCEDIR)/$$file ] && [ ! -f $(RESOURCEDIR)/debian/tmp/$(DATADIR)/$$file ]; then \
+		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
 			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
 		fi; \
 		if [ -f $(RESOURCEDIR)/$$file ]; then \
@@ -58,15 +58,9 @@ build:
 			else \
 				$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
 			fi; \
-		fi; \
-		if [ -f $(RESOURCEDIR)/debian/tmp/$(DATADIR)/$$file ]; then \
-			if test "$$file" = "srb2.wad"; then \
-				echo $(RESOURCEDIR)/debian/tmp/$(DATADIR)/srb2.srb >> $(DIR)/debian/source/include-binaries; \
-			else \
-				echo $(RESOURCEDIR)/debian/tmp/$(DATADIR)/$$file >> $(DIR)/debian/source/include-binaries; \
-			fi; \
+			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
 		else \
-			echo $(RESOURCEDIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
+			echo $(DIR)/$$file not found and could not be downloaded!; \
 			return 1; \
 		fi; \
 	done
