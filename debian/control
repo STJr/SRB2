@@ -7,7 +7,7 @@ Maintainer: Sonic Team Junior <stjr@srb2.org>
 Build-Depends: debhelper (>= 7.0.50~),
  libsdl2-dev,
  libsdl2-mixer-dev,
- libpng-dev (>= 1.2.7),
+ libpng12-dev (>= 1.2.7) | libpng-dev (>= 1.2.7),
  zlib1g-dev,
  libgme-dev,
  libglu1-dev | libglu-dev,
