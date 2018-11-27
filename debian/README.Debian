@@ -22,6 +22,9 @@ Next, you will have to add that key fingerprint to your Launchpad account. Go to
 profile and click the yellow Edit button next to "OpenPGP keys". Once you add the key, you can
 upload signed source packages and publish them onto your PPA.
 
+IF YOU UPLOAD A PACKAGE and Launchpad does NOT send you a confirmation or rejection email, that
+means your key is not set up correctly with your Launchpad account.
+
 Use these steps to prepare building a source package for Launchpad:
 
    -2. cd [srb2repo]
