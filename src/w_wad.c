@@ -1243,8 +1243,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 #ifdef HAVE_ZLIB
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{
-			void *rawData; // The lump's raw data.
-			Bytef *decData; // Lump's decompressed real data.
+			UINT8 *rawData; // The lump's raw data.
+			UINT8 *decData; // Lump's decompressed real data.
 
 			int zErr; // Helper var.
 			z_stream strm;
