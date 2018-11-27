@@ -1,0 +1,8 @@
+tar-ignore = "assets/*.srb"
+tar-ignore = "assets/*.pk3"
+tar-ignore = "assets/*.dta"
+tar-ignore = "assets/*.wad"
+tar-ignore = "assets/debian/srb2-data/*"
+tar-ignore = "assets/debian/tmp/*"
+tar-ignore = "*.obj"
+tar-ignore = "*.dep"
