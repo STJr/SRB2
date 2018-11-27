@@ -38,15 +38,8 @@ Use these steps to prepare building a source package for Launchpad:
 
 Building the source package is a two-step process:
 
-    1. debuild -T pre-source (this downloads the asset files from srb2.org if necessary)
-    2. debuild -S -nc
-        * Builds the source package for Launchpad, including the asset files
-        * -nc keeps dpkg from cleaning the assets/ folder, which would remove the files that must
-          be packaged.
-    3. rm ./NOCLEAN
-        * This is a HACK file to prevent Launchpad from cleaning the asset files before building.
-          A copy of this file is in the source package, so we don't need it anymore and
-          we can delete it. If it stays in the assets/ folder, the next clean will be skipped.
+    1. debuild -T build (this downloads the asset files from srb2.org if necessary)
+    2. debuild -S (builds the source package for Launchpad, including the asset files)
 
 Then follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
 to your PPA and have Launchpad build your binary deb packages.

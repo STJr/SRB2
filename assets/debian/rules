@@ -62,13 +62,6 @@ build:
 		fi; \
 	done
 
-pre-source: build
-	# HACK HACK HACK: Force Launchpad to not clean by creating this
-	# file and storing it in the source package.
-	# We do this so the asset files are not deleted before build
-	# In Launchpad, we can't download the assets from srb2.org because DNS does not work
-	> $(RESOURCEDIR)/NOCLEAN
-
 binary-indep:
 	# Generate install folder file
 	echo $(DATADIR) > $(DIR)/debian/$(PACKAGE).install
@@ -107,22 +100,18 @@ binary: binary-indep
 	dh_builddeb
 
 clean:
-	if [ ! -f $(RESOURCEDIR)/NOCLEAN ]; then \
-		$(RM) $(RESOURCEDIR)/*.wad; \
-		$(RM) $(RESOURCEDIR)/*.dta; \
-		$(RM) $(RESOURCEDIR)/*.plr; \
-		$(RM) $(RESOURCEDIR)/*.wpn; \
-		$(RM) $(RESOURCEDIR)/*.srb; \
-		$(RM) $(RESOURCEDIR)/*.dll; \
-		$(RM) $(RESOURCEDIR)/*.txt; \
-		$(RM) $(DIR)/debian/tmp/*; \
-		$(RM) $(DIR)/debian/$(PACKAGE).install; \
-		$(RM) $(DIR)/debian/files; \
-		$(RM) $(DIR)/debian/source/include-binaries; \
-	else
-		echo Clean was ignored because of $(RESOURCEDIR)/NOCLEAN file. Run clean again if you need to!; \
-		echo Deleting $(RESOURCEDIR)/NOCLEAN...; \
-		$(RM) $(RESOURCEDIR)/NOCLEAN; \
-	fi
+	$(RM) $(DIR)/debian/tmp/*; \
+	$(RM) $(DIR)/debian/$(PACKAGE).install; \
+	$(RM) $(DIR)/debian/files; \
+
+clean-all: clean
+	$(RM) $(RESOURCEDIR)/*.wad; \
+	$(RM) $(RESOURCEDIR)/*.dta; \
+	$(RM) $(RESOURCEDIR)/*.plr; \
+	$(RM) $(RESOURCEDIR)/*.wpn; \
+	$(RM) $(RESOURCEDIR)/*.srb; \
+	$(RM) $(RESOURCEDIR)/*.dll; \
+	$(RM) $(RESOURCEDIR)/*.txt; \
+	$(RM) $(DIR)/debian/source/include-binaries; \
 
 .PHONY: all clean binary binary-arch binary-indep build
