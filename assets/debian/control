@@ -4,7 +4,8 @@ Source: srb2-data
 Section: games
 Priority: extra
 Maintainer: Sonic Team Junior <stjr@srb2.org>
-Build-Depends: debhelper (>= 7.0.50~)
+Build-Depends: debhelper (>= 7.0.50~),
+ wget
 Standards-Version: 3.8.4
 Homepage: http://www.srb2.org
 
