@@ -9,3 +9,32 @@ instructions and pass the -k<keyid> command to debuild. Make sure you export the
 and give them to your users to install with apt-key add. Thanks!
 
  -- Callum Dickinson <gcfreak_ag20@hotmail.com>  Fri, 26 Nov 2010 18:25:31 +1300
+
+
+Building for Launchpad PPA
+
+First, follow the above instructions to generate a GnuPG key with your identity. You will need
+to publish the fingerprint of that key to Ubuntu's key server.
+
+    https://help.ubuntu.com/community/GnuPrivacyGuardHowto#Uploading_the_key_to_Ubuntu_keyserver
+
+Next, you will have to add that key fingerprint to your Launchpad account. Go to your Launchpad
+profile and click the yellow Edit button next to "OpenPGP keys". Once you add the key, you can
+upload signed source packages and publish them onto your PPA.
+
+Use these steps to prepare building a source package for Launchpad:
+
+   -2. cd [srb2repo]
+   -1. git reset --hard; git clean -fd; git clean -fx;
+       * Resets your repo folder to a committed state and removes untracked files
+       * If you built srb2-data in the assets/ folder, MAKE SURE THAT FOLDER DOES NOT HAVE ASSETS,
+         OR THEY WILL BE INCLUDED IN THE MAIN SOURCE PACKAGE! (for some reason)
+
+Building the source package takes just one step:
+
+    1. debuild -S (builds the source package for Launchpad)
+
+Then follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
+to your PPA and have Launchpad build your binary deb packages.
+
+ -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 26 Nov 2018 21:13:00 -0500

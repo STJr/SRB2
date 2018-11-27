@@ -45,16 +45,21 @@ WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
 build:
 	$(MKDIR) $(DIR)/debian/tmp/$(DATADIR)
+	> $(DIR)/debian/source/include-binaries
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
-		if test "$$file" = "srb2.wad"; then \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/srb2.srb; \
-		else \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
+		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
+			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
 		fi; \
-		echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		if [ -f $(RESOURCEDIR)/$$file ]; then \
+			if test "$$file" = "srb2.wad"; then \
+				$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/srb2.srb; \
+			else \
+				$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
+			fi; \
+			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		fi; \
 	done
 
 binary-indep:
