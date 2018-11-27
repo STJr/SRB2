@@ -1097,7 +1097,7 @@ static void P_LoadThings(void)
 		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
 		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
 		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
+		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
 

@@ -9995,7 +9995,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	 || mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum
 	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum
 	 || (mthing->type >= 600 && mthing->type <= 609) // circles and diagonals
-	 || mthing->type == 1705 || mthing->type == 1713 || mthing->type == 1800) // hoops
+	 || mthing->type == 1705 || mthing->type == 1713) // hoops
 	{
 		// Don't spawn hoops, wings, or rings yet!
 		return;
