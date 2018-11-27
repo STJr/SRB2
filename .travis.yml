@@ -70,6 +70,7 @@ matrix:
               - p7zip-full
               - gcc-7
           compiler: gcc-7
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3"
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
           addons:
@@ -84,6 +85,7 @@ matrix:
               - p7zip-full
               - gcc-8
           compiler: gcc-8
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3 -Wno-error=format-overflow"
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
           compiler: clang
