@@ -109,8 +109,8 @@ binary-arch:
 	echo $(DESKTOP_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(PIXMAPS_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(DBGDIR) > $(DIR)/debian/$(DBGPKG).install
-
-binary: binary-arch
+# Launchpad only calls binary-arch, so just move everything up
+#binary: binary-arch
 	# Generate .desktop specifications
 	echo "`echo '$(MENUFILE1)\\'`" > $(DIR)/debian/menu
 	echo " `echo '$(MENUFILE2)'`" >> $(DIR)/debian/menu
@@ -142,6 +142,8 @@ binary: binary-arch
 	dh_md5sums
 	dh_builddeb
 
+binary: binary-arch
+
 clean:
 	$(MAKE) -C $(DIR)/src $(MAKEARGS) clean cleandep
 	$(RM) $(BINDIR)/*
@@ -154,4 +156,4 @@ clean:
 	$(RM) $(DIR)/debian/files
 	$(RM) $(DIR)/debian/source/include-binaries
 
-.PHONY: all clean binary binary-arch binary-indep build
+.PHONY: all clean binary binary-indep build
