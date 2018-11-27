@@ -25,10 +25,10 @@ static CV_PossibleValue_t mousesens_cons_t[] = {{1, "MIN"}, {MAXMOUSESENSITIVITY
 static CV_PossibleValue_t onecontrolperkey_cons_t[] = {{1, "One"}, {2, "Several"}, {0, NULL}};
 
 // mouse values are used once
-consvar_t cv_mousesens = {"mousesens", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mousesens2 = {"mousesens2", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mouseysens = {"mouseysens", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mouseysens2 = {"mouseysens2", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousesens = {"mousesens", "20", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousesens2 = {"mousesens2", "20", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouseysens = {"mouseysens", "20", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouseysens2 = {"mouseysens2", "20", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_controlperkey = {"controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 INT32 mousex, mousey;
@@ -1154,10 +1154,8 @@ void G_Controldefault(void)
 #else
 void G_Controldefault(void)
 {
-	gamecontrol[gc_forward    ][0] = KEY_UPARROW;
-	gamecontrol[gc_forward    ][1] = 'w';
-	gamecontrol[gc_backward   ][0] = KEY_DOWNARROW;
-	gamecontrol[gc_backward   ][1] = 's';
+	gamecontrol[gc_forward    ][0] = 'w';
+	gamecontrol[gc_backward   ][0] = 's';
 	gamecontrol[gc_strafeleft ][0] = 'a';
 	gamecontrol[gc_straferight][0] = 'd';
 	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
@@ -1178,21 +1176,20 @@ void G_Controldefault(void)
 	gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
 	gamecontrol[gc_firenormal ][0] = 'c';
 	gamecontrol[gc_tossflag   ][0] = '\'';
-	gamecontrol[gc_use        ][0] = 'x';
+	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
 	gamecontrol[gc_camtoggle  ][0] = 'v';
 	gamecontrol[gc_camleft    ][0] = '[';
 	gamecontrol[gc_camright   ][0] = ']';
 	gamecontrol[gc_camreset   ][0] = 'r';
-	gamecontrol[gc_lookup     ][0] = KEY_PGUP;
-	gamecontrol[gc_lookdown   ][0] = KEY_PGDN;
+	gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
+	gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;
 	gamecontrol[gc_centerview ][0] = KEY_END;
 	gamecontrol[gc_talkkey    ][0] = 't';
 	gamecontrol[gc_teamkey    ][0] = 'y';
 	gamecontrol[gc_scores     ][0] = KEY_TAB;
-	gamecontrol[gc_jump       ][0] = 'z';
-	gamecontrol[gc_jump       ][1] = KEY_MOUSE1+1;
+	gamecontrol[gc_jump       ][0] = KEY_SPACE;
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
-	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
+	gamecontrol[gc_pause      ][0] = 'p';
 #ifdef WMINPUT
 	gamecontrol[gc_forward    ][0] = KEY_JOY1+02; //UP
 	gamecontrol[gc_backward   ][0] = KEY_JOY1+03; //DOWN
@@ -1330,11 +1327,31 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		return;
 	}
 	keynum = G_KeyStringtoNum(COM_Argv(2));
+
+	if (keynum == KEY_PAUSE) // fail silently; pause is hardcoded
+	{
+		if (na == 4)
+		{
+			na--;
+			keynum = G_KeyStringtoNum(COM_Argv(3));
+			if (keynum == KEY_PAUSE)
+				return;
+		}
+		else
+			return;
+	}
+
 	G_CheckDoubleUsage(keynum);
 	gc[numctrl][0] = keynum;
 
 	if (na == 4)
-		gc[numctrl][1] = G_KeyStringtoNum(COM_Argv(3));
+	{
+		keynum = G_KeyStringtoNum(COM_Argv(3));
+		if (keynum != KEY_PAUSE)
+			gc[numctrl][1] = keynum;
+		else
+			gc[numctrl][1] = 0;
+	}
 	else
 		gc[numctrl][1] = 0;
 }
