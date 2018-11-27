@@ -186,27 +186,30 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
+	len = strlen(wadfiles[wad]->filename); // length of file name
+
 	if (wadfiles[wad]->type == RET_LUA)
 	{
-		name = malloc(strlen(wadfiles[wad]->filename)+1);
+		name = malloc(len+1);
 		strcpy(name, wadfiles[wad]->filename);
 	}
 	else // If it's not a .lua file, copy the lump name in too.
 	{
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
-		size_t length = strlen(wadfiles[wad]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
-		name = malloc(length + 1);
+		len += 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+		name = malloc(len+1);
 		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->name2);
-		name[length] = '\0';
+		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name);
+	LUA_LoadFile(&f, name); // actually load file!
 
 	free(name);
 	Z_Free(f.data);
