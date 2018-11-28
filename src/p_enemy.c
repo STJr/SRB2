@@ -10954,7 +10954,10 @@ void A_FlickyAim(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->momx == actor->momy && actor->momy == 0)
+	if ((actor->momx == actor->momy && actor->momy == 0)
+		|| (actor->target && P_IsFlickyCenter(actor->target->type)
+			&& actor->target->extravalue1 && (actor->target->flags & MF_SLIDEME)
+			&& P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) >= actor->target->extravalue1))
 		flickyhitwall = true;
 
 	P_InternalFlickyBubble(actor);
@@ -10986,7 +10989,10 @@ void A_FlickyAim(mobj_t *actor)
 	}
 	else if (flickyhitwall)
 	{
-		actor->angle += ANGLE_180;
+		if (actor->target && P_IsFlickyCenter(actor->target->type))
+			actor->angle = R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + P_RandomRange(112, 248) * ANG1;
+		else
+			actor->angle += P_RandomRange(112, 248)*ANG1; //P_RandomRange(160, 200) * ANG1;//ANGLE_180;
 		actor->threshold = 0;
 	}
 }
