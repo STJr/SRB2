@@ -1032,15 +1032,6 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
-	else
-	{
-		size_t z;
-		char junkpw[25];
-		for (z = 0; z < 24; z++)
-			junkpw[z] = (char)(rand() & 64)+32;
-		junkpw[24] = '\0';
-		D_SetPassword(junkpw);
-	}
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
