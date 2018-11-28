@@ -3779,6 +3779,7 @@ typedef enum mobj_type
 	MT_RING,
 	MT_FLINGRING, // Lost ring
 	MT_BLUESPHERE,  // Blue sphere for special stages
+	MT_FLINGBLUESPHERE, // Lost blue sphere
 	MT_BOMBSPHERE,
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
@@ -4261,6 +4262,7 @@ typedef enum mobj_type
 	MT_HOOPCENTER, // Center of a hoop
 	MT_NIGHTSCORE,
 	MT_NIGHTSCHIP, // NiGHTS Chip
+	MT_FLINGNIGHTSCHIP, // Lost NiGHTS Chip
 	MT_NIGHTSSTAR, // NiGHTS Star
 	MT_NIGHTSSUPERLOOP,
 	MT_NIGHTSDRILLREFILL,

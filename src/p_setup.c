@@ -885,7 +885,8 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 
 		mo = (mobj_t *)th;
 
-		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP)
+		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
+			&& mo->type != MT_FLINGBLUESPHERE && mo->type != MT_FLINGNIGHTSCHIP)
 			continue;
 
 		if (!mo->health)
@@ -2379,12 +2380,13 @@ static void P_LevelInitStuff(void)
 		 players[i].marescore = players[i].lastmarescore =\
 		 players[i].maxlink = players[i].startedtime =\
 		 players[i].finishedtime = players[i].finishedspheres =\
-		 players[i].lastmare = players[i].marebegunat =\
-		 players[i].textvar = players[i].texttimer =\
-		 players[i].linkcount = players[i].linktimer =\
-		 players[i].flyangle = players[i].anotherflyangle =\
-		 players[i].nightstime = players[i].mare =\
-		 players[i].realtime = players[i].exiting = 0;
+		 players[i].finishedrings = players[i].lastmare =\
+		 players[i].marebegunat = players[i].textvar =\
+		 players[i].texttimer = players[i].linkcount =\
+		 players[i].linktimer = players[i].flyangle =\
+		 players[i].anotherflyangle = players[i].nightstime =\
+		 players[i].mare = players[i].realtime =\
+		 players[i].exiting = 0;
 
 		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;
@@ -2439,7 +2441,17 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
+	{ // HACK: Open wad file rather quickly so we can use the things lump
+		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
+		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
+		fileinfo += ML_THINGS; // we only need the THINGS lump
+		P_PrepareRawThings(wadData + fileinfo->filepos, fileinfo->size);
+		Z_Free(wadData); // we're done with this now
+	}
+	else // phew it's just a WAD
+		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+
 	P_LoadThings();
 
 
