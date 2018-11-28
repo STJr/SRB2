@@ -11040,7 +11040,17 @@ void A_FlickyCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyCheck", actor))
 		return;
 #endif
-	if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
+	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))
+	{
+		if (actor->spawnpoint->options & MTF_OBJECTSPECIAL)
+		{
+			actor->momz = 0;
+			actor->flags |= MF_NOGRAVITY;
+		}
+		actor->flags |= MF_NOCLIP | MF_NOBLOCKMAP | MF_SCENERY;
+		P_SetMobjState(actor, mobjinfo[actor->type].seestate);
+	}
+	else if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
 		P_SetMobjState(actor, locvar2);
 	else if (locvar1 && ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
 	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
@@ -11065,7 +11075,17 @@ void A_FlickyHeightCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyHeightCheck", actor))
 		return;
 #endif
-	if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
+	if (actor->spawnpoint && (actor->spawnpoint->options & MTF_AMBUSH))
+	{
+		if (actor->spawnpoint->options & MTF_OBJECTSPECIAL)
+		{
+			actor->momz = 0;
+			actor->flags |= MF_NOGRAVITY;
+		}
+		actor->flags |= MF_NOCLIP | MF_NOBLOCKMAP | MF_SCENERY;
+		P_SetMobjState(actor, mobjinfo[actor->type].seestate);
+	}
+	else if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
 	&& ((P_MobjFlip(actor)*((actor->z + actor->height/2) - (actor->target->z + actor->target->height/2)) < locvar2)
 	|| (actor->z - actor->height < actor->floorz) || (actor->z + 2*actor->height > actor->ceilingz)))
 		P_SetMobjState(actor, locvar1);
