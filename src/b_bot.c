@@ -275,8 +275,7 @@ void B_RespawnBot(INT32 playernum)
 	player->accelstart = sonic->player->accelstart;
 	player->thrustfactor = sonic->player->thrustfactor;
 	player->normalspeed = sonic->player->normalspeed;
-	player->pflags |= PF_AUTOBRAKE;
-	player->pflags &= ~PF_DIRECTIONCHAR;
+	player->pflags |= PF_AUTOBRAKE|(sonic->player->pflags & PF_DIRECTIONCHAR);
 
 	P_TeleportMove(tails, x, y, z);
 	if (player->charability == CA_FLY)

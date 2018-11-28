@@ -3025,7 +3025,7 @@ static void G_DoCompleted(void)
 		token--;
 
 		for (i = 0; i < 7; i++)
-			if (!(emeralds & i))
+			if (!(emeralds & (1<<i)))
 			{
 				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
 				break;
@@ -3204,7 +3204,7 @@ void G_LoadGameSettings(void)
 	// defaults
 	spstage_start = 1;
 	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 57; // 7 special stages in vanilla SRB2
+	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
 
 	// initialize free sfx slots for skin sounds
@@ -3811,7 +3811,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		unlocktriggers = 0;
 
 		// clear itemfinder, just in case
-		CV_StealthSetValue(&cv_itemfinder, 0);
+		if (!dedicated) // except in dedicated servers, where it is not registered and can actually I_Error debug builds
+			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
 	// internal game map

@@ -842,9 +842,10 @@ void P_ReloadRings(void)
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
 		// Notice an omission? We handle hoops differently.
-		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
-		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
-		 || (mt->type >= 600 && mt->type <= 609)) // circles
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609)) // circles and diagonals
 		{
 			mt->mobj = NULL;
 
@@ -852,7 +853,12 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt, true);
+			P_SpawnHoopsAndRings(mt,
+#ifdef MANIASPHERES
+				true);
+#else
+				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
+#endif
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -865,6 +871,11 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 {
 	mobj_t *mo;
 	thinker_t *th;
+
+#ifndef MANIASPHERES
+	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
+		return;
+#endif
 
 	// scan the thinkers to find spheres to switch
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -1075,9 +1086,11 @@ static void P_LoadThings(void)
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
-		if (mt->type == 300 || mt->type == 308 || mt->type == 309
-		 || mt->type == 1706 || (mt->type >= 600 && mt->type <= 609)
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800)
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
+		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
+		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
 		{
 			mt->mobj = NULL;
 
@@ -2347,6 +2360,8 @@ static void P_LevelInitStuff(void)
 		}
 	}
 
+	countdown = countdown2 = 0;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
@@ -2355,42 +2370,36 @@ static void P_LevelInitStuff(void)
 			players[i].lives = cv_startinglives.value;
 		}
 
-		players[i].realtime = countdown = countdown2 = 0;
+		// obliteration station...
+		players[i].rings = players[i].spheres =\
+		 players[i].xtralife = players[i].deadtimer =\
+		 players[i].numboxes = players[i].totalring =\
+		 players[i].laps = players[i].aiming =\
+		 players[i].losstime = players[i].timeshit =\
+		 players[i].marescore = players[i].lastmarescore =\
+		 players[i].maxlink = players[i].startedtime =\
+		 players[i].finishedtime = players[i].finishedspheres =\
+		 players[i].lastmare = players[i].marebegunat =\
+		 players[i].textvar = players[i].texttimer =\
+		 players[i].linkcount = players[i].linktimer =\
+		 players[i].flyangle = players[i].anotherflyangle =\
+		 players[i].nightstime = players[i].mare =\
+		 players[i].realtime = players[i].exiting = 0;
 
+		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
 		players[i].gotcontinue = false;
 
-		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-		players[i].rings = 0;
-		players[i].spheres = 0;
-		players[i].aiming = 0;
-		players[i].pflags &= ~PF_GAMETYPEOVER;
-
-		players[i].losstime = 0;
-		players[i].timeshit = 0;
-
-		players[i].marescore = players[i].lastmarescore = players[i].maxlink = 0;
-		players[i].startedtime = players[i].finishedtime = players[i].finishedspheres = 0;
-		players[i].lastmare = players[i].marebegunat = 0;
-
-		// Don't show anything
-		players[i].textvar = players[i].texttimer = 0;
-
-		players[i].linkcount = players[i].linktimer = 0;
-		players[i].flyangle = players[i].anotherflyangle = 0;
-		players[i].nightstime = players[i].mare = 0;
-		P_SetTarget(&players[i].capsule, NULL);
+		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		players[i].exiting = 0;
 		P_ResetPlayer(&players[i]);
+		// hit these too
+		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
 
-		players[i].mo = NULL;
-
-		// we must unset axis details too
-		players[i].axis1 = players[i].axis2 = NULL;
-
-		// and this stupid flag as a result
-		players[i].pflags &= ~PF_TRANSFERTOCLOSEST;
+		// unset ALL the pointers. P_SetTarget isn't needed here because if this
+		// function is being called we're just going to clobber the data anyways
+		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
+		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
 	}
 }
 
@@ -2703,11 +2712,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
@@ -2765,6 +2769,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
+		tic_t nowtime;
 
 		S_StartSound(NULL, sfx_s3kaf);
 
@@ -2774,9 +2779,17 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
+		nowtime = lastwipetic;
 		// Hold on white for extra effect.
-		while (I_GetTime() < endtime)
-			I_Sleep();
+		while (nowtime < endtime)
+		{
+			// wait loop
+			while (!((nowtime = I_GetTime()) - lastwipetic))
+				I_Sleep();
+			lastwipetic = nowtime;
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 
 		ranspecialwipe = 1;
 	}
@@ -3364,7 +3377,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
+		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else

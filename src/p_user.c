@@ -1048,8 +1048,6 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	player->pflags |= PF_NOJUMPDAMAGE; // just to avoid recurling but still allow thok
-
 	if (giverings)
 		player->rings = 50;
 
@@ -1805,6 +1803,9 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
 			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != SPACESPECIAL)
 				continue;
 #ifdef ESLOPE
@@ -2165,6 +2166,12 @@ static void P_CheckBouncySectors(player_t *player)
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
+				if (!(rover->flags & FF_EXISTS))
+					continue; // FOFs should not be bouncy if they don't even "exist"
+
+				if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 15)
+					continue; // this sector type is required for FOFs to be bouncy
+
 				topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 				bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
@@ -2178,7 +2185,6 @@ static void P_CheckBouncySectors(player_t *player)
 						&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
 					top = false;
 
-				if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
 				{
 					fixed_t linedist;
 

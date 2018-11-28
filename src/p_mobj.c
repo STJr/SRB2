@@ -7540,12 +7540,20 @@ void P_MobjThinker(mobj_t *mobj)
 				{
 					if (!mobj->target || P_MobjWasRemoved(mobj->target))
 					{
+						if (mobj->tracer && !P_MobjWasRemoved(mobj->tracer))
+							P_RemoveMobj(mobj->tracer);
 						P_RemoveMobj(mobj);
 						return;
 					}
 					mobj->z = mobj->target->z + mobj->target->momz;
 					if (!(mobj->eflags & MFE_VERTICALFLIP))
 						mobj->z += mobj->target->height;
+				}
+				if (mobj->tracer && !P_MobjWasRemoved(mobj->tracer))
+				{
+					mobj->tracer->z = mobj->z + P_MobjFlip(mobj)*20*mobj->scale;
+					if (mobj->eflags & MFE_VERTICALFLIP)
+						mobj->tracer->z += mobj->height;
 				}
 				break;
 			case MT_WAVINGFLAG:
@@ -8692,29 +8700,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				}
 			}
 			break;
-		case MT_CANDLE:
-		case MT_CANDLEPRICKET:
-			{
-				// Fake corona!!
-				mobj_t *corona = P_SpawnMobjFromMobj(mobj, 0, 0, ((mobj->type == MT_CANDLE) ? 40 : 176)<<FRACBITS, MT_PARTICLE);
-				//P_SetTarget(&corona->tracer, mobj);
-				//corona->flags2 |= MF2_LINKDRAW; -- crash??????? can't debug right now...
-				corona->sprite = SPR_FLAM;
-				corona->frame = (FF_FULLBRIGHT|FF_TRANS90|12);
-				corona->tics = -1;
-				if (mobj->type == MT_CANDLE)
-					P_SetScale(corona, (corona->destscale = mobj->scale*3));
-			}
-			break;
-		case MT_JACKO1:
-		case MT_JACKO2:
-		case MT_JACKO3:
-			{
-				mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
-				P_SetTarget(&overlay->target, mobj);
-				P_SetMobjState(overlay, mobj->info->raisestate);
-			}
-			break;
 		case MT_EGGMOBILE2:
 			// Special condition for the 2nd boss.
 			mobj->watertop = mobj->info->speed;
@@ -8753,6 +8738,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_NIGHTSDRONE:
 			if (G_IsSpecialStage(gamemap))
 				mobj->flags2 |= MF2_DONTDRAW;
+			nummaprings = -1; // no perfect bonus, rings are free
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
@@ -8765,7 +8751,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_RING:
 		case MT_COIN:
-			nummaprings++;
+		case MT_NIGHTSSTAR:
+			if (nummaprings >= 0)
+				nummaprings++;
 		default:
 			break;
 	}
@@ -8899,6 +8887,7 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->spawnpoint &&
 		(mobj->type == MT_RING
 		|| mobj->type == MT_COIN
+		|| mobj->type == MT_NIGHTSSTAR
 		|| mobj->type == MT_REDTEAMRING
 		|| mobj->type == MT_BLUETEAMRING
 		|| P_WeaponOrPanel(mobj->type))
@@ -9302,7 +9291,7 @@ void P_RespawnSpecials(void)
 #endif
 			ss->sector->ceilingheight) - (mthing->options >> ZSHIFT) * FRACUNIT;
 			if (mthing->options & MTF_AMBUSH
-			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || P_WeaponOrPanel(i)))
+			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || i == MT_NIGHTSSTAR || P_WeaponOrPanel(i)))
 				z -= 24*FRACUNIT;
 			z -= mobjinfo[i].height; // Don't forget the height!
 		}
@@ -9314,7 +9303,7 @@ void P_RespawnSpecials(void)
 #endif
 			ss->sector->floorheight) + (mthing->options >> ZSHIFT) * FRACUNIT;
 			if (mthing->options & MTF_AMBUSH
-			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || P_WeaponOrPanel(i)))
+			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || i == MT_NIGHTSSTAR || P_WeaponOrPanel(i)))
 				z += 24*FRACUNIT;
 		}
 
@@ -9713,19 +9702,21 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	else if (mthing->type == 750) // Slope vertex point (formerly chaos spawn)
 		return;
 
-	else if (mthing->type == 300 // Ring
-		|| mthing->type == 308 || mthing->type == 309 // Team Rings
-		|| mthing->type == 1706 // Nights Wing
-		|| (mthing->type >= 600 && mthing->type <= 609) // Placement patterns
-		|| mthing->type == 1705 || mthing->type == 1713 // NiGHTS Hoops
-		|| mthing->type == 1800) // Mario Coin
+	else if (mthing->type == mobjinfo[MT_RING].doomednum || mthing->type == mobjinfo[MT_COIN].doomednum
+	 || mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum
+	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum
+	 || (mthing->type >= 600 && mthing->type <= 609) // circles and diagonals
+	 || mthing->type == 1705 || mthing->type == 1713 || mthing->type == 1800) // hoops
 	{
 		// Don't spawn hoops, wings, or rings yet!
 		return;
 	}
 
 	// check for players specially
-	if (mthing->type > 0 && mthing->type <= 32)
+#if MAXPLAYERS > 32
+You should think about modifying the deathmatch starts to take full advantage of this!
+#endif
+	if (mthing->type > 0 && mthing->type <= MAXPLAYERS)
 	{
 		// save spots for respawning in network games
 		if (!metalrecording)
@@ -9841,9 +9832,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	if (gametype != GT_CTF) // CTF specific things
 	{
-		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
-			i = MT_RING;
-		else if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
+		if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
 			i = MT_RING_BOX;
 		else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 			return; // No flags in non-CTF modes!
@@ -9881,11 +9870,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	{
 		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
 		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
-		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX)
-			return; // No shields in Ultimate mode
-
-		if (i == MT_RING_BOX && !G_IsSpecialStage(gamemap))
-			return; // No rings in Ultimate mode (except special stages)
+		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX
+		 || i == MT_RING_BOX)
+			return; // No rings or shields in Ultimate mode
 
 		// Don't include the gold repeating boxes here please.
 		// They're likely facets of the level's design and therefore required to progress.
@@ -9910,7 +9897,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_BOMBSPHERE || i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
+	else if (i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -10038,6 +10025,54 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_BALLOON:
 		if (mthing->angle > 0)
 			mobj->color = ((mthing->angle-1) % (MAXSKINCOLORS-1))+1;
+		break;
+#define makesoftwarecorona(mo, h) \
+			corona = P_SpawnMobjFromMobj(mo, 0, 0, h<<FRACBITS, MT_PARTICLE);\
+			corona->sprite = SPR_FLAM;\
+			corona->frame = (FF_FULLBRIGHT|FF_TRANS90|12);\
+			corona->tics = -1
+	case MT_FLAME:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj_t *corona;
+			makesoftwarecorona(mobj, 20);
+			P_SetScale(corona, (corona->destscale = mobj->scale*3));
+			P_SetTarget(&mobj->tracer, corona);
+		}
+		break;
+	case MT_FLAMEHOLDER:
+		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
+		{
+			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+			P_SetTarget(&flame->target, mobj);
+			flame->flags2 |= MF2_BOSSNOTRAP;
+			if (mthing->options & MTF_EXTRA)
+			{
+				mobj_t *corona;
+				makesoftwarecorona(flame, 20);
+				P_SetScale(corona, (corona->destscale = flame->scale*3));
+				P_SetTarget(&flame->tracer, corona);
+			}
+		}
+		break;
+	case MT_CANDLE:
+	case MT_CANDLEPRICKET:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj_t *corona;
+			makesoftwarecorona(mobj, ((mobj->type == MT_CANDLE) ? 42 : 176));
+		}
+		break;
+#undef makesoftwarecorona
+	case MT_JACKO1:
+	case MT_JACKO2:
+	case MT_JACKO3:
+		if (!(mthing->options & MTF_EXTRA)) // take the torch out of the crafting recipe
+		{
+			mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&overlay->target, mobj);
+			P_SetMobjState(overlay, mobj->info->raisestate);
+		}
 		break;
 	case MT_WATERDRIP:
 		if (mthing->angle)
@@ -10524,14 +10559,6 @@ ML_EFFECT4 : Don't clip inside the ground
 #undef doleaf
 		}
 		break;
-	case MT_FLAMEHOLDER:
-		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
-		{
-			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
-			P_SetTarget(&flame->target, mobj);
-			flame->flags2 |= MF2_BOSSNOTRAP;
-		}
-		break;
 	case MT_SMASHINGSPIKEBALL:
 		if (mthing->angle > 0)
 			mobj->tics += mthing->angle;
@@ -10664,7 +10691,7 @@ ML_EFFECT4 : Don't clip inside the ground
 	}
 
 	//count 10 ring boxes into the number of rings equation too.
-	if (i == MT_RING_BOX)
+	if (i == MT_RING_BOX && nummaprings >= 0)
 		nummaprings += 10;
 
 	if (i == MT_BIGTUMBLEWEED || i == MT_LITTLETUMBLEWEED)
@@ -10807,6 +10834,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 	sector_t *sec;
 	TVector v, *res;
 	angle_t closestangle, fa;
+	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
 
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
@@ -11079,79 +11107,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 
 		return;
 	}
-	// All manners of rings and coins
-	else if (mthing->type == mobjinfo[MT_RING].doomednum || mthing->type == mobjinfo[MT_COIN].doomednum ||
-	         mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum ||
-			 mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-	{
-
-		// Which ringthing to use
-		if (mthing->type == mobjinfo[MT_COIN].doomednum)
-			ringthing = MT_COIN;
-		else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
-			ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
-		else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
-			ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
-		else if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
-			ringthing = MT_BLUESPHERE;
-
-		if (ringthing != MT_BLUESPHERE && ultimatemode)
-			return; // No rings in Ultimate!
-
-		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
-			ringthing = ((ringthing == MT_BLUESPHERE) ? MT_NIGHTSCHIP : MT_NIGHTSSTAR);
-
-		// Set proper height
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
-		else
-		{
-			z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
-
-		if (mthing->options & MTF_AMBUSH) // Special flag for rings
-		{
-			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 24*FRACUNIT;
-			else
-				z += 24*FRACUNIT;
-		}
-
-		mthing->z = (INT16)(z>>FRACBITS);
-
-		mobj = P_SpawnMobj(x, y, z, ringthing);
-		mobj->spawnpoint = mthing;
-
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->eflags |= MFE_VERTICALFLIP;
-			mobj->flags2 |= MF2_OBJECTFLIP;
-		}
-
-		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-		mthing->mobj = mobj;
-		if (mthing->options & MTF_AMBUSH)
-			mobj->flags2 |= MF2_AMBUSH;
-
-		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
-			P_SetMobjState(mobj, mobj->info->raisestate);
-		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
-			P_SetMobjState(mobj, mobj->info->seestate);
-	}
 	// ***
 	// Special placement patterns
 	// ***
@@ -11166,7 +11121,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (ultimatemode)
 			return; // No rings in Ultimate!
 
-		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
+		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
 		for (r = 1; r <= 5; r++)
@@ -11218,7 +11173,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (ultimatemode)
 			return; // No rings in Ultimate!
 
-		if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
+		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
@@ -11288,32 +11243,41 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 
+		switch (mthing->type)
+		{
+			case 604:
+			case 605:
+				if (ultimatemode)
+					return; // No rings in Ultimate!
+				if (nightsreplace)
+					ringthing = MT_NIGHTSSTAR;
+				break;
+			case 608:
+			case 609:
+				/*ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE; -- i == 0 is bluesphere
+				break;*/
+			case 606:
+			case 607:
+				ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+				break;
+			default:
+				break;
+		}
+
 		// Create the hoop!
 		for (i = 0; i < numitems; i++)
 		{
-			switch (mthing->type)
+			if (mthing->type == 608 || mthing->type == 609)
 			{
-				case 604:
-				case 605:
-					ringthing = MT_BLUESPHERE;
-					break;
-				case 608:
-				case 609:
-					ringthing = (i & 1) ? MT_RING : MT_BLUESPHERE;
-					break;
-				case 606:
-				case 607:
-					ringthing = MT_RING;
-					break;
-				default:
-					break;
+				if (i & 1)
+				{
+					if (ultimatemode)
+						continue; // No rings in Ultimate!
+					ringthing = (nightsreplace) ? MT_NIGHTSSTAR : MT_RING;
+				}
+				else
+					ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
 			}
-
-			if (ringthing != MT_BLUESPHERE && ultimatemode)
-				continue; // No rings in Ultimate!
-
-			if ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap))
-				ringthing = ((ringthing == MT_BLUESPHERE) ? MT_NIGHTSCHIP : MT_NIGHTSSTAR);
 
 			fa = i*FINEANGLES/numitems;
 			v[0] = FixedMul(FINECOSINE(fa),size);
@@ -11346,7 +11310,81 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
 				P_SetMobjState(mobj, mobj->info->seestate);
 		}
-		return;
+	}
+	// All manners of rings and coins
+	else
+	{
+
+		// Which ringthing to use
+		if (mthing->type == mobjinfo[MT_BLUESPHERE].doomednum)
+			ringthing = (nightsreplace) ? MT_NIGHTSCHIP : MT_BLUESPHERE;
+		else if (mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum)
+			ringthing = MT_BOMBSPHERE;
+		else
+		{
+			if (ultimatemode)
+				return; // No rings in Ultimate!
+
+			if (nightsreplace)
+				ringthing = MT_NIGHTSSTAR;
+			else if (mthing->type == mobjinfo[MT_COIN].doomednum)
+				ringthing = MT_COIN;
+			else if (mthing->type == mobjinfo[MT_REDTEAMRING].doomednum) // No team rings in non-CTF
+				ringthing = (gametype == GT_CTF) ? MT_REDTEAMRING : MT_RING;
+			else if (mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum) // Ditto
+				ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
+		}
+
+		// Set proper height
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+			sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+		else
+		{
+			z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
+		if (mthing->options & MTF_AMBUSH) // Special flag for rings
+		{
+			if (mthing->options & MTF_OBJECTFLIP)
+				z -= 24*FRACUNIT;
+			else
+				z += 24*FRACUNIT;
+		}
+
+		mthing->z = (INT16)(z>>FRACBITS);
+
+		mobj = P_SpawnMobj(x, y, z, ringthing);
+		mobj->spawnpoint = mthing;
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->eflags |= MFE_VERTICALFLIP;
+			mobj->flags2 |= MF2_OBJECTFLIP;
+		}
+
+		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
+		mthing->mobj = mobj;
+		if (mthing->options & MTF_AMBUSH)
+			mobj->flags2 |= MF2_AMBUSH;
+
+		if (bonustime && (ringthing == MT_BLUESPHERE || ringthing == MT_NIGHTSCHIP))
+			P_SetMobjState(mobj, mobj->info->raisestate);
+		else if ((maptol & TOL_XMAS) && (ringthing == MT_NIGHTSSTAR))
+			P_SetMobjState(mobj, mobj->info->seestate);
 	}
 }
 

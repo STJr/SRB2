@@ -2256,7 +2256,7 @@ static void Command_connect(void)
 	// Assume we connect directly.
 	boolean viams = false;
 
-	if (COM_Argc() < 2)
+	if (COM_Argc() < 2 || *COM_Argv(1) == 0)
 	{
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"

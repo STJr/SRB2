@@ -4391,12 +4391,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Gravity Wells for special stages
 	"S_GRAVWELLGREEN",
-	"S_GRAVWELLGREEN2",
-	"S_GRAVWELLGREEN3",
-
 	"S_GRAVWELLRED",
-	"S_GRAVWELLRED2",
-	"S_GRAVWELLRED3",
 
 	// Individual Team Rings
 	"S_TEAMRING",
@@ -4700,6 +4695,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_THUNDERCOIN_ICON1",
 	"S_THUNDERCOIN_ICON2",
+
+	// ---
 
 	"S_ROCKET",
 
@@ -6079,7 +6076,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SHLEEPBOUNCE1",
 	"S_SHLEEPBOUNCE2",
 	"S_SHLEEPBOUNCE3",
-
 
 	// Secret badniks and hazards, shhhh
 	"S_PENGUINATOR_LOOK",

@@ -204,17 +204,17 @@ void ST_doPaletteStuff(void)
 	else
 		palette = 0;
 
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		palette = 0; // No flashpals here in OpenGL
+#endif
+
 	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
 		st_palette = palette;
 
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_SetPaletteColor(0);
-		else
-#endif
 		if (rendermode != render_none)
 		{
 			V_SetPaletteLump(GetPalette()); // Reset the palette
@@ -1577,11 +1577,13 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-		ST_DrawTopLeftOverlayPatch(24, 16, ((stplyr->bonustime && (leveltime & 4)) ? nssbon : nsshud));
-	else if (stplyr->bonustime)
-		ST_DrawTopLeftOverlayPatch(24, 16, nbon[(leveltime/2)%12]);
+		ST_DrawTopLeftOverlayPatch(24, 16, (
+#ifdef MANIASPHERES
+			(stplyr->bonustime && (leveltime & 4)) ? nssbon :
+#endif
+			nsshud));
 	else
-		ST_DrawTopLeftOverlayPatch(24, 16, nhud[(leveltime/2)%12]);
+		ST_DrawTopLeftOverlayPatch(24, 16, *(((stplyr->bonustime) ? nbon : nhud)+((leveltime/2)%12)));
 
 	if (G_IsSpecialStage(gamemap))
 	{

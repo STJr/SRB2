@@ -5298,9 +5298,6 @@ void A_RotateSpikeBall(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->type == MT_SPIKEBALL) // don't remove this, these spikeballs share the same states as the rotating spikeballs
-		return;
-
 	if (!((!locvar1 && (actor->target)) || (locvar1 && (actor->tracer))))// This should NEVER happen.
 	{
 		CONS_Debug(DBG_GAMELOGIC, "A_RotateSpikeBall: Spikeball has no target\n");
