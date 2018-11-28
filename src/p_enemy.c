@@ -10819,6 +10819,7 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 // var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
 //
 // If MTF_EXTRA (MF_SLIDEME) is flagged, Flickies move independently of a target. Else, move around the target.
+// If MTF_EXTRA (MF_SLIDEME) and MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) are both flagged, Flying flickies sink from gravity. By default, they stay at constant Z height.
 // If MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) and NOT MTF_EXTRA (MF_SLIDEME) are flagged, Angle sign determines direction of circular movement.
 // If MTF_AMBUSH (MF_NOCLIPTHING) is flagged, Flickies hop in-place.
 // If MTF_AMBUSH (MF_NOCLIPTHING) and MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) is flagged, Flickies stand in-place without gravity.
@@ -11036,8 +11037,8 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
-		&& (actor->target->flags & MF_GRENADEBOUNCE)
-		&& (actor->target->flags & MF_SLIDEME))
+		&& !((actor->target->flags & MF_GRENADEBOUNCE)
+			&& (actor->target->flags & MF_SLIDEME)))
 		vertangle = 0;
 	else
 		vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
