@@ -808,7 +808,7 @@ void P_ReloadRings(void)
 	mapthing_t *hoopsToRespawn[4096];
 	mapthing_t *mt = mapthings;
 
-	// scan the thinkers to find rings/wings/hoops to unset
+	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -826,7 +826,8 @@ void P_ReloadRings(void)
 			}
 			continue;
 		}
-		if (!(mo->type == MT_RING || mo->type == MT_NIGHTSWING || mo->type == MT_COIN || mo->type == MT_BLUEBALL))
+		if (!(mo->type == MT_RING || mo->type == MT_COIN || mo->type == MT_BLUESPHERE
+			|| mo->type == MT_NIGHTSCHIP || mo->type == MT_NIGHTSSTAR))
 			continue;
 
 		// Don't auto-disintegrate things being pulled to us
@@ -840,9 +841,9 @@ void P_ReloadRings(void)
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
 		// Notice an omission? We handle hoops differently.
-		if (mt->type == 300 || mt->type == 308 || mt->type == 309
-		 || mt->type == 1706 || (mt->type >= 600 && mt->type <= 609)
-		 || mt->type == 1800)
+		if (mt->type == mobjinfo[MT_RING].doomednum || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
+		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_COIN].doomednum
+		 || (mt->type >= 600 && mt->type <= 609)) // circles
 		{
 			mt->mobj = NULL;
 
@@ -850,12 +851,35 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings (mt);
+			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
 	{
-		P_SpawnHoopsAndRings(hoopsToRespawn[i]);
+		P_SpawnHoopsAndRings(hoopsToRespawn[i], false);
+	}
+}
+
+void P_SwitchSpheresBonusMode(boolean bonustime)
+{
+	mobj_t *mo;
+	thinker_t *th;
+
+	// scan the thinkers to find spheres to switch
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mo = (mobj_t *)th;
+
+		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP)
+			continue;
+
+		if (!mo->health)
+			continue;
+
+		P_SetMobjState(mo, ((bonustime) ? mo->info->raisestate : mo->info->spawnstate));
 	}
 }
 
@@ -1025,20 +1049,22 @@ static void P_LoadThings(void)
 		}
 
 		//decrement spawn values to the actual number because zero is valid.
-		if (emer1)
-			P_SpawnMobj(huntemeralds[emer1 - 1]->x<<FRACBITS,
-				huntemeralds[emer1 - 1]->y<<FRACBITS,
-				huntemeralds[emer1 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer1--)
+			P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
+				huntemeralds[emer1]->y<<FRACBITS,
+				huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
 
-		if (emer2)
-			P_SpawnMobj(huntemeralds[emer2 - 1]->x<<FRACBITS,
-				huntemeralds[emer2 - 1]->y<<FRACBITS,
-				huntemeralds[emer2 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer2--)
+			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
+				huntemeralds[emer2]->y<<FRACBITS,
+				huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+1);
 
-		if (emer3)
-			P_SpawnMobj(huntemeralds[emer3 - 1]->x<<FRACBITS,
-				huntemeralds[emer3 - 1]->y<<FRACBITS,
-				huntemeralds[emer3 - 1]->z<<FRACBITS, MT_EMERHUNT);
+		if (emer3--)
+			P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
+				huntemeralds[emer3]->y<<FRACBITS,
+				huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+2);
 	}
 
 	if (metalrecording) // Metal Sonic gets no rings to distract him.
@@ -1058,7 +1084,7 @@ static void P_LoadThings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings (mt);
+			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
 }
@@ -2298,7 +2324,7 @@ static void P_LevelInitStuff(void)
 	// circuit, race and competition stuff
 	circuitmap = false;
 	numstarposts = 0;
-	totalrings = timeinmap = 0;
+	ssspheres = timeinmap = 0;
 
 	// special stage
 	stagefailed = false;
@@ -2334,6 +2360,7 @@ static void P_LevelInitStuff(void)
 
 		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
 		players[i].rings = 0;
+		players[i].spheres = 0;
 		players[i].aiming = 0;
 		players[i].pflags &= ~PF_GAMETYPEOVER;
 
@@ -2341,7 +2368,7 @@ static void P_LevelInitStuff(void)
 		players[i].timeshit = 0;
 
 		players[i].marescore = players[i].lastmarescore = players[i].maxlink = 0;
-		players[i].startedtime = players[i].finishedtime = players[i].finishedrings = 0;
+		players[i].startedtime = players[i].finishedtime = players[i].finishedspheres = 0;
 		players[i].lastmare = players[i].marebegunat = 0;
 
 		// Don't show anything

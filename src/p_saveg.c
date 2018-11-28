@@ -116,7 +116,8 @@ static void P_NetArchivePlayers(void)
 		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
-		WRITEINT32(save_p, players[i].rings);
+		WRITEINT16(save_p, players[i].rings);
+		WRITEINT16(save_p, players[i].spheres);
 
 		WRITESINT8(save_p, players[i].pity);
 		WRITEINT32(save_p, players[i].currentweapon);
@@ -201,7 +202,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, players[i].marebegunat);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
-		WRITEINT16(save_p, players[i].finishedrings);
+		WRITEINT16(save_p, players[i].finishedspheres);
 		WRITEUINT32(save_p, players[i].marescore);
 		WRITEUINT32(save_p, players[i].lastmarescore);
 		WRITEUINT8(save_p, players[i].lastmare);
@@ -303,7 +304,8 @@ static void P_NetUnArchivePlayers(void)
 		players[i].drawangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
-		players[i].rings = READINT32(save_p);
+		players[i].rings = READINT16(save_p);
+		players[i].spheres = READINT16(save_p);
 
 		players[i].pity = READSINT8(save_p);
 		players[i].currentweapon = READINT32(save_p);
@@ -388,7 +390,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].marebegunat = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
-		players[i].finishedrings = READINT16(save_p);
+		players[i].finishedspheres = READINT16(save_p);
 		players[i].marescore = READUINT32(save_p);
 		players[i].lastmarescore = READUINT32(save_p);
 		players[i].lastmare = READUINT8(save_p);
@@ -1986,7 +1988,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 
 		if (mapthings[spawnpointnum].type == 1705 || mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
 		{
-			P_SpawnHoopsAndRings(&mapthings[spawnpointnum]);
+			P_SpawnHoopsAndRings(&mapthings[spawnpointnum], false);
 			return;
 		}
 
@@ -3261,7 +3263,7 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT32(save_p, tokenlist);
 
 	WRITEUINT32(save_p, leveltime);
-	WRITEUINT32(save_p, totalrings);
+	WRITEUINT32(save_p, ssspheres);
 	WRITEINT16(save_p, lastmap);
 
 	WRITEUINT16(save_p, emeralds);
@@ -3338,7 +3340,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	// get the time
 	leveltime = READUINT32(save_p);
-	totalrings = READUINT32(save_p);
+	ssspheres = READUINT32(save_p);
 	lastmap = READINT16(save_p);
 
 	emeralds = READUINT16(save_p);

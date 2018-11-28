@@ -134,7 +134,6 @@ extern boolean hidetitlepics;
 extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
-extern boolean useNightsSS;
 
 // CTF colors.
 extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
@@ -175,7 +174,7 @@ extern cutscene_t *cutscenes[128];
 extern INT16 nextmapoverride;
 extern boolean skipstats;
 
-extern UINT32 totalrings; //  Total # of rings in a level
+extern UINT32 ssspheres; //  Total # of spheres in a level
 
 // Fun extra stuff
 extern INT16 lastmap; // Last level you were at (returning from special stages).

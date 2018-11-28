@@ -2673,10 +2673,6 @@ static void readmaincfg(MYFILE *f)
 				sstage_start = (INT16)value;
 				sstage_end = (INT16)(sstage_start+6); // 7 special stages total
 			}
-			else if (fastcmp(word, "USENIGHTSSS"))
-			{
-				useNightsSS = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
-			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
 				skincolor_redteam = (UINT8)get_number(word2);
@@ -3799,6 +3795,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Egg Shield for Egg Guard
 	"S_EGGSHIELD",
+	"S_EGGSHIELDBREAK",
 
 	// Green Snapper
 	"S_GSNAPPER_STND",
@@ -4367,8 +4364,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RING",
 
 	// Blue Sphere for special stages
-	"S_BLUEBALL",
-	"S_BLUEBALLSPARK",
+	"S_BLUESPHERE",
+	"S_BLUESPHEREBONUS",
+	"S_BLUESPHERESPARK",
+
+	// NiGHTS Chip
+	"S_NIGHTSCHIP",
+	"S_NIGHTSCHIPBONUS",
+
+	// NiGHTS Star
+	"S_NIGHTSSTAR",
+	"S_NIGHTSSTARXMAS",
 
 	// Gravity Wells for special stages
 	"S_GRAVWELLGREEN",
@@ -4426,8 +4432,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CEMG6",
 	"S_CEMG7",
 
-	// Emeralds (for hunt)
-	"S_EMER1",
+	// Emerald hunt shards
+	"S_SHRD1",
+	"S_SHRD2",
+	"S_SHRD3",
 
 	// Bubble Source
 	"S_BUBBLES1",
@@ -4709,7 +4717,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Arrow
 	"S_ARROW",
-	"S_TEMPSHI",
 	"S_ARROWBONK",
 
 	// Trapgoyle Demon fire
@@ -4739,6 +4746,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POLYGONTREE",
 	"S_BUSHTREE",
 	"S_BUSHREDTREE",
+	"S_SPRINGTREE",
 
 	// THZ flowers
 	"S_THZFLOWERA", // THZ1 Steam flower
@@ -6007,9 +6015,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTSCORE90_2",
 	"S_NIGHTSCORE100_2",
 
-	"S_NIGHTSWING",
-	"S_NIGHTSWING_XMAS",
-
 	// NiGHTS Paraloop Powerups
 	"S_NIGHTSSUPERLOOP",
 	"S_NIGHTSDRILLREFILL",
@@ -6027,14 +6032,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ORBITEM6",
 	"S_ORBITEM7",
 	"S_ORBITEM8",
-	"S_ORBITEM9",
-	"S_ORBITEM10",
-	"S_ORBITEM11",
-	"S_ORBITEM12",
-	"S_ORBITEM13",
-	"S_ORBITEM14",
-	"S_ORBITEM15",
-	"S_ORBITEM16",
+	"S_ORBIDYA1",
+	"S_ORBIDYA2",
+	"S_ORBIDYA3",
+	"S_ORBIDYA4",
+	"S_ORBIDYA5",
 
 	// "Flicky" helper
 	"S_NIGHTOPIANHELPER1",
@@ -6046,6 +6048,26 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTOPIANHELPER7",
 	"S_NIGHTOPIANHELPER8",
 	"S_NIGHTOPIANHELPER9",
+
+	// Nightopian
+	"S_PIAN0",
+	"S_PIAN1",
+	"S_PIAN2",
+	"S_PIAN3",
+	"S_PIAN4",
+	"S_PIAN5",
+	"S_PIAN6",
+	"S_PIANSING",
+
+	// Shleep
+	"S_SHLEEP1",
+	"S_SHLEEP2",
+	"S_SHLEEP3",
+	"S_SHLEEP4",
+	"S_SHLEEPBOUNCE1",
+	"S_SHLEEPBOUNCE2",
+	"S_SHLEEPBOUNCE3",
+
 
 	// Secret badniks and hazards, shhhh
 	"S_HIVEELEMENTAL_LOOK",
@@ -6322,7 +6344,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Collectible Items
 	"MT_RING",
 	"MT_FLINGRING", // Lost ring
-	"MT_BLUEBALL",  // Blue sphere replacement for special stages
+	"MT_BLUESPHERE",  // Blue sphere replacement for special stages
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
 	"MT_TOKEN", // Special Stage Token
@@ -6466,6 +6488,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_POLYGONTREE",
 	"MT_BUSHTREE",
 	"MT_BUSHREDTREE",
+	"MT_SPRINGTREE",
 
 	// Techno Hill Scenery
 	"MT_THZFLOWER1",
@@ -6778,7 +6801,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HOOPCOLLIDE", // Collision detection for NiGHTS hoops
 	"MT_HOOPCENTER", // Center of a hoop
 	"MT_NIGHTSCORE",
-	"MT_NIGHTSWING",
+	"MT_NIGHTSCHIP", // NiGHTS Chip
+	"MT_NIGHTSSTAR", // NiGHTS Star
 	"MT_NIGHTSSUPERLOOP",
 	"MT_NIGHTSDRILLREFILL",
 	"MT_NIGHTSHELPER",
@@ -6786,6 +6810,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSLINKFREEZE",
 	"MT_EGGCAPSULE",
 	"MT_NIGHTOPIANHELPER", // the actual helper object that orbits you
+	"MT_PIAN", // decorative singing friend
+	"MT_SHLEEP", // almost-decorative sleeping enemy
 
 	// Secret badniks and hazards, shhhh
 	"MT_HIVEELEMENTAL",

@@ -2673,7 +2673,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		if (player->followmobj)
 		{
 			P_RemoveMobj(player->followmobj);
-			player->followmobj = NULL;
+			P_SetTarget(&player->followmobj, NULL);
 		}
 
 		if (player->mo)

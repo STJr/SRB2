@@ -116,7 +116,7 @@ INT32 secondarydisplayplayer; // for splitscreen
 
 tic_t gametic;
 tic_t levelstarttic; // gametic at level start
-UINT32 totalrings; // for intermission
+UINT32 ssspheres; // old special stage
 INT16 lastmap; // last level you were at (returning from special stages)
 tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 
@@ -129,7 +129,6 @@ boolean hidetitlepics = false;
 INT16 bootmap; //bootmap for loading a map on startup
 
 boolean looptitle = false;
-boolean useNightsSS = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;
 UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
@@ -2201,7 +2200,7 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->rings = 0; // 0 rings
+	p->rings = p->spheres = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
@@ -3209,7 +3208,6 @@ void G_LoadGameSettings(void)
 	spstage_start = 1;
 	sstage_start = 50;
 	sstage_end = 57; // 8 special stages in vanilla SRB2
-	useNightsSS = false; //true;
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();

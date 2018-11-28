@@ -112,6 +112,8 @@ static patch_t *yelstat;
 static patch_t *nbracket;
 static patch_t *nhud[12];
 static patch_t *nsshud;
+static patch_t *nbon[12];
+static patch_t *nssbon;
 static patch_t *narrow[9];
 static patch_t *nredar[8]; // Red arrow
 static patch_t *drillbar;
@@ -309,8 +311,12 @@ void ST_LoadGraphics(void)
 	yelstat = W_CachePatchName("YELSTAT", PU_HUDGFX);
 	nbracket = W_CachePatchName("NBRACKET", PU_HUDGFX);
 	for (i = 0; i < 12; ++i)
+	{
 		nhud[i] = W_CachePatchName(va("NHUD%d", i+1), PU_HUDGFX);
+		nbon[i] = W_CachePatchName(va("NBON%d", i+1), PU_HUDGFX);
+	}
 	nsshud = W_CachePatchName("NSSHUD", PU_HUDGFX);
+	nssbon = W_CachePatchName("NSSBON", PU_HUDGFX);
 	minicaps = W_CachePatchName("MINICAPS", PU_HUDGFX);
 
 	for (i = 0; i < 8; ++i)
@@ -735,18 +741,7 @@ static inline void ST_drawRings(void)
 
 	ST_DrawPatchFromHud(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
-	if (objectplacing)
-		ringnum = op_currentdoomednum;
-	else if (!useNightsSS && G_IsSpecialStage(gamemap))
-	{
-		INT32 i;
-		ringnum = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].rings > 0)
-				ringnum += players[i].rings;
-	}
-	else
-		ringnum = max(stplyr->rings, 0);
+	ringnum = ((objectplacing) ? op_currentdoomednum : max(stplyr->rings, 0));
 
 	if (cv_timetic.value == 2) // Yes, even in modeattacking
 		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, V_PERPLAYER|((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
@@ -1394,17 +1389,17 @@ static void ST_drawNightsRecords(void)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
 		                     va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
 		                        (stplyr->textvar == 3) ? M_GetText("MORE ") : "",
-		                        (G_IsSpecialStage(gamemap)) ? "SPHERE" : "RING",
+		                        (G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
 		                        (stplyr->capsule->health > 1) ? "S" : ""));
 	}
 
 	// End Bonus
 	else if (stplyr->textvar == 4)
 	{
-		V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "RINGS:");
+		V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
 		V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings));
-		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedrings * 50));
+		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
+		V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
 		ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 		// If new record, say so!
@@ -1462,15 +1457,15 @@ static void ST_drawNiGHTSHUD(void)
 {
 	INT32 origamount;
 	INT32 minlink = 1;
-	INT32 total_ringcount;
-
-	// When debugging, show "0 Link".
-	if (cv_debug & DBG_NIGHTSBASIC)
-		minlink = 0;
+	INT32 total_spherecount;
+	const boolean oldspecialstage = (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS));
 
 	// Cheap hack: don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
-	if (stplyr->texttimer && stplyr->textvar == 4)
+	if (oldspecialstage || (stplyr->texttimer && stplyr->textvar == 4))
 		minlink = INT32_MAX;
+	// When debugging, show "0 Link".
+	else if (cv_debug & DBG_NIGHTSBASIC)
+		minlink = 0;
 
 	// Drill meter
 	if (
@@ -1576,25 +1571,35 @@ static void ST_drawNiGHTSHUD(void)
 
 	// Begin drawing brackets/chip display
 #ifdef HAVE_BLUA
-	if (LUA_HudEnabled(hud_nightsrings))
+	if (LUA_HudEnabled(hud_nightsspheres))
 	{
 #endif
 	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-		ST_DrawTopLeftOverlayPatch(24, 16, nsshud);
+		ST_DrawTopLeftOverlayPatch(24, 16, ((stplyr->bonustime && (leveltime & 4)) ? nssbon : nsshud));
+	else if (stplyr->bonustime)
+		ST_DrawTopLeftOverlayPatch(24, 16, nbon[(leveltime/2)%12]);
 	else
 		ST_DrawTopLeftOverlayPatch(24, 16, nhud[(leveltime/2)%12]);
 
 	if (G_IsSpecialStage(gamemap))
 	{
 		INT32 i;
-		total_ringcount = 0;
+		total_spherecount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].rings)
-				total_ringcount += players[i].rings;
+			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].spheres)
+				total_spherecount += players[i].spheres;
 	}
 	else
-		total_ringcount = stplyr->rings;
+		total_spherecount = stplyr->spheres;
+
+	/*if (oldspecialstage)
+	{
+		if (total_spherecount < ssspheres)
+			total_spherecount = ssspheres - total_spherecount;
+		else
+			total_spherecount = 0;
+	}*/
 
 	if (stplyr->capsule)
 	{
@@ -1650,28 +1655,48 @@ static void ST_drawNiGHTSHUD(void)
 			amount = (origamount - stplyr->capsule->health);
 			amount = (amount * length)/origamount;
 
-			for (cfill = 0; cfill < amount && cfill < 88; ++cfill)
+			for (cfill = 0; cfill < amount && cfill < length; ++cfill)
 				V_DrawScaledPatch(15 + cfill + 1, 8 + 35, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulefill);
 		}
 
-		if (total_ringcount >= stplyr->capsule->health)
-			ST_DrawTopLeftOverlayPatch(40, 8 + 5, nredar[leveltime%8]);
+		if (total_spherecount >= stplyr->capsule->health)
+			ST_DrawTopLeftOverlayPatch(40, 8 + 5, nredar[leveltime&7]);
 		else
-			ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[(leveltime/2)%8]);
+			ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[(leveltime/2)&7]);
+	}
+	else if (oldspecialstage && total_spherecount < ssspheres)
+	{
+		INT32 cfill, amount;
+		const INT32 length = 88;
+		UINT8 em = P_GetNextEmerald();
+		ST_DrawTopLeftOverlayPatch(72, 8, nbracket);
+
+		if (em <= 7)
+			ST_DrawTopLeftOverlayPatch(80, 8 + 8, emeraldpics[0][em]);
+
+		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[(leveltime/2)&7]);
+
+		// Lil' white box!
+		V_DrawScaledPatch(15, 8 + 34, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulebar);
+
+		amount = (total_spherecount * length)/ssspheres;
+
+		for (cfill = 0; cfill < amount && cfill < length; ++cfill)
+			V_DrawScaledPatch(15 + cfill + 1, 8 + 35, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, capsulefill);
 	}
 	else
 		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[8]);
 
-	if (total_ringcount >= 100)
-		V_DrawTallNum((total_ringcount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
+	if (total_spherecount >= 100)
+		V_DrawTallNum((total_spherecount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_spherecount);
 	else
-		V_DrawTallNum(68, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_ringcount);
+		V_DrawTallNum(68, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_spherecount);
 #ifdef HAVE_BLUA
 	}
 #endif
 
 	// Score
-	if (!stplyr->exiting
+	if (!stplyr->exiting && !oldspecialstage
 #ifdef HAVE_BLUA
 	&& LUA_HudEnabled(hud_nightsscore)
 #endif
@@ -1714,6 +1739,7 @@ static void ST_drawNiGHTSHUD(void)
 	{
 		INT32 realnightstime = stplyr->nightstime/TICRATE;
 		INT32 numbersize;
+		UINT8 col = ((realnightstime < 10) ? SKINCOLOR_RED : SKINCOLOR_SUPERGOLD4);
 
 		if (G_IsSpecialStage(gamemap))
 		{
@@ -1744,46 +1770,66 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum,
-			((realnightstime < 10) ? SKINCOLOR_RED : SKINCOLOR_SUPERGOLD4));
+		if ((oldspecialstage && leveltime & 2)
+			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)))
+			col = SKINCOLOR_ORANGE;
+
+		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);
 
 		// Show exact time in debug
 		if (cv_debug & DBG_NIGHTSBASIC)
 			V_DrawString(160 + numbersize + 8, 24, V_SNAPTOTOP|((realnightstime < 10) ? V_REDMAP : V_YELLOWMAP), va("%02d", G_TicsToCentiseconds(stplyr->nightstime)));
 	}
 
-	// Show pickup durations
-	if (cv_debug & DBG_NIGHTSBASIC)
+	if (oldspecialstage)
 	{
-		UINT16 pwr;
-
-		if (stplyr->powers[pw_nights_superloop])
+		if (leveltime < 5*TICRATE)
 		{
-			pwr = stplyr->powers[pw_nights_superloop];
-			V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_CACHE));
-			V_DrawThinString(106, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
-		}
-
-		if (stplyr->powers[pw_nights_helper])
-		{
-			pwr = stplyr->powers[pw_nights_helper];
-			V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_CACHE));
-			V_DrawThinString(146, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
-		}
-
-		if (stplyr->powers[pw_nights_linkfreeze])
-		{
-			pwr = stplyr->powers[pw_nights_linkfreeze];
-			V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_CACHE));
-			V_DrawThinString(186, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			INT32 aflag = V_PERPLAYER;
+			tic_t drawtime = (5*TICRATE) - leveltime;
+			if (drawtime < TICRATE/2)
+				aflag |= (9 - 9*drawtime/(TICRATE/2)) << V_ALPHASHIFT;
+			// This one, not quite as much so.
+			V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
+		                     va(M_GetText("\x80GET\x82 %d\x80 SPHERE%s!"), ssspheres,
+		                        (ssspheres > 1) ? "S" : ""));
 		}
 	}
+	else
+	{
+		// Show pickup durations
+		if (cv_debug & DBG_NIGHTSBASIC)
+		{
+			UINT16 pwr;
 
-	// Records/extra text
+			if (stplyr->powers[pw_nights_superloop])
+			{
+				pwr = stplyr->powers[pw_nights_superloop];
+				V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_CACHE));
+				V_DrawThinString(106, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			}
+
+			if (stplyr->powers[pw_nights_helper])
+			{
+				pwr = stplyr->powers[pw_nights_helper];
+				V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_CACHE));
+				V_DrawThinString(146, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			}
+
+			if (stplyr->powers[pw_nights_linkfreeze])
+			{
+				pwr = stplyr->powers[pw_nights_linkfreeze];
+				V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_CACHE));
+				V_DrawThinString(186, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
+			}
+		}
+
+		// Records/extra text
 #ifdef HAVE_BLUA
-	if (LUA_HudEnabled(hud_nightsrecords))
+		if (LUA_HudEnabled(hud_nightsrecords))
 #endif
-	ST_drawNightsRecords();
+		ST_drawNightsRecords();
+	}
 }
 
 static inline void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
@@ -1952,7 +1998,7 @@ static void ST_drawTextHUD(void)
 	}
 	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
 	{
-		if (G_IsSpecialStage(gamemap) && useNightsSS)
+		if (G_IsSpecialStage(gamemap) && (maptol & TOL_NIGHTS))
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
 		else if (gametype == GT_COOP)
 		{
@@ -2070,22 +2116,22 @@ num:
 #undef SEP
 }
 
-static void ST_drawSpecialStageHUD(void)
+/*static void ST_drawSpecialStageHUD(void)
 {
-	if (totalrings > 0)
+	if (ssspheres > 0)
 	{
 		if (hudinfo[HUD_SS_TOTALRINGS].x)
-			ST_DrawNumFromHud(HUD_SS_TOTALRINGS, totalrings, V_HUDTRANS);
+			ST_DrawNumFromHud(HUD_SS_TOTALRINGS, ssspheres, V_HUDTRANS);
 		else if (cv_timetic.value == 2)
-			V_DrawTallNum(hudinfo[HUD_RINGSNUMTICS].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUMTICS].f|V_PERPLAYER|V_HUDTRANS, totalrings);
+			V_DrawTallNum(hudinfo[HUD_RINGSNUMTICS].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUMTICS].f|V_PERPLAYER|V_HUDTRANS, ssspheres);
 		else
-			V_DrawTallNum(hudinfo[HUD_RINGSNUM].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUM].f|V_PERPLAYER|V_HUDTRANS, totalrings);
+			V_DrawTallNum(hudinfo[HUD_RINGSNUM].x, hudinfo[HUD_SS_TOTALRINGS].y, hudinfo[HUD_RINGSNUM].f|V_PERPLAYER|V_HUDTRANS, ssspheres);
 	}
 
-	if (leveltime < 5*TICRATE && totalrings > 0)
+	if (leveltime < 5*TICRATE && ssspheres > 0)
 	{
 		ST_DrawPatchFromHud(HUD_GETRINGS, getall, V_HUDTRANS);
-		ST_DrawNumFromHud(HUD_GETRINGSNUM, totalrings, V_HUDTRANS);
+		ST_DrawNumFromHud(HUD_GETRINGSNUM, ssspheres, V_HUDTRANS);
 	}
 
 	if (sstimer)
@@ -2095,7 +2141,7 @@ static void ST_drawSpecialStageHUD(void)
 	}
 	else
 		ST_DrawPatchFromHud(HUD_TIMEUP, timeup, V_HUDTRANS);
-}
+}*/
 
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
@@ -2231,7 +2277,7 @@ static void ST_overlayDrawer(void)
 	//hu_showscores = auto hide score/time/rings when tab rankings are shown
 	if (!(hu_showscores && (netgame || multiplayer)))
 	{
-		if (maptol & TOL_NIGHTS)
+		if (maptol & TOL_NIGHTS || G_IsSpecialStage(gamemap))
 			ST_drawNiGHTSHUD();
 		else
 		{
@@ -2340,10 +2386,6 @@ static void ST_overlayDrawer(void)
 		if (gametype == GT_RACE || gametype == GT_COMPETITION)
 			ST_drawRaceHUD();
 
-		// Special Stage HUD
-		if (!useNightsSS && G_IsSpecialStage(gamemap) && stplyr == &players[displayplayer])
-			ST_drawSpecialStageHUD();
-
 		// Emerald Hunt Indicators
 		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER))
 			ST_doItemFinderIconsAndSound();
@@ -2362,15 +2404,18 @@ static void ST_overlayDrawer(void)
 		}
 
 		// This is where we draw all the fun cheese if you have the chasecam off!
-		if ((stplyr == &players[displayplayer] && !camera.chase)
-		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
+		if (!(maptol & TOL_NIGHTS))
 		{
-			ST_drawFirstPersonHUD();
-			if (cv_powerupdisplay.value)
+			if ((stplyr == &players[displayplayer] && !camera.chase)
+			|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
+			{
+				ST_drawFirstPersonHUD();
+				if (cv_powerupdisplay.value)
+					ST_drawPowerupHUD();
+			}
+			else if (cv_powerupdisplay.value == 2)
 				ST_drawPowerupHUD();
 		}
-		else if (cv_powerupdisplay.value == 2)
-			ST_drawPowerupHUD();
 	}
 
 #ifdef HAVE_BLUA

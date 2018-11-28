@@ -446,10 +446,11 @@ void SCR_ClosedCaptions(void)
 	{
 		if (splitscreen)
 			basey -= 8;
-		else if (((maptol & TOL_NIGHTS) && (modeattacking == ATTACKING_NIGHTS))
-		|| (cv_powerupdisplay.value == 2)
+		else if ((modeattacking == ATTACKING_NIGHTS)
+		|| (!(maptol & TOL_NIGHTS)
+		&& ((cv_powerupdisplay.value == 2)
 		|| (cv_powerupdisplay.value == 1 && ((stplyr == &players[displayplayer] && !camera.chase)
-		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))
+		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))))
 			basey -= 16;
 	}
 

@@ -314,7 +314,7 @@ typedef struct mobj_s
 	mobjtype_t type;
 	const mobjinfo_t *info; // &mobjinfo[mobj->type]
 
-	INT32 health; // for player this is rings + 1
+	INT32 health; // for player this is rings + 1 -- no it isn't, not any more!!
 
 	// Movement direction, movement generation (zig-zagging).
 	angle_t movedir; // dirtype_t 0-7; also used by Deton for up/down angle
@@ -435,7 +435,7 @@ void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
 void P_SpawnMapThing(mapthing_t *mthing);
-void P_SpawnHoopsAndRings(mapthing_t *mthing);
+void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);

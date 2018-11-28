@@ -229,10 +229,12 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TOKE
 	&lspr[REDBALL_L],   // SPR_RFLG
 	&lspr[BLUEBALL_L],  // SPR_BFLG
-	&lspr[NOLIGHT],     // SPR_NWNG
+	&lspr[NOLIGHT],     // SPR_SPHR
+	&lspr[NOLIGHT],     // SPR_NCHP
+	&lspr[NOLIGHT],     // SPR_NSTR
 	&lspr[NOLIGHT],     // SPR_EMBM
 	&lspr[NOLIGHT],     // SPR_CEMG
-	&lspr[NOLIGHT],     // SPR_EMER
+	&lspr[NOLIGHT],     // SPR_SHRD
 
 	// Interactive Objects
 	&lspr[NOLIGHT],     // SPR_BBLS
@@ -298,6 +300,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TRE3
 	&lspr[NOLIGHT],     // SPR_TRE4
 	&lspr[NOLIGHT],     // SPR_TRE5
+	&lspr[NOLIGHT],     // SPR_TRE6
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
@@ -498,6 +501,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
+	&lspr[INVINCIBLE_L], // SPR_IDYA
+	&lspr[NOLIGHT],     // SPR_NTPN
+	&lspr[NOLIGHT],     // SPR_SHLP
 
 	// Secret badniks and hazards, shhhh
 	&lspr[NOLIGHT],     // SPR_HIVE
@@ -537,9 +543,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIN
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
-
-	// Blue Spheres
-	&lspr[NOLIGHT],     // SPR_BBAL
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG

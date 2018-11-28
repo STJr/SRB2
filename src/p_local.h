@@ -146,6 +146,7 @@ void P_SpawnShieldOrb(player_t *player);
 void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
+void P_GivePlayerSpheres(player_t *player, INT32 num_spheres);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
