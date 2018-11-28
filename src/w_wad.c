@@ -340,6 +340,16 @@ UINT16 W_InitFile(const char *filename)
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
 
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	if (dirmenu)
+	{
+		refreshdirname = Z_StrDup(filename);
+		nameonly(refreshdirname);
+	}
+	else
+		refreshdirname = NULL;
+
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
 	// check if limit of active wadfiles
@@ -360,9 +370,7 @@ UINT16 W_InitFile(const char *filename)
 	// see PutFileNeeded in d_netfil.c
 	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize = packetsizetally;
-
-		packetsize += nameonlylength(filename) + 22;
+		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
 		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 		{
@@ -389,6 +397,8 @@ UINT16 W_InitFile(const char *filename)
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 	}
@@ -634,6 +644,8 @@ UINT16 W_InitFile(const char *filename)
 		if (fread(&header, 1, sizeof header, handle) < sizeof header)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Can't read wad header from %s because %s\n"), filename, strerror(ferror(handle)));
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 
@@ -644,6 +656,8 @@ UINT16 W_InitFile(const char *filename)
 			&& memcmp(header.identification, "SDLL", 4) != 0)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s does not have a valid WAD header\n"), filename);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 
@@ -658,6 +672,8 @@ UINT16 W_InitFile(const char *filename)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Wadfile directory in %s is corrupted (%s)\n"), filename, strerror(ferror(handle)));
 			free(fileinfov);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 

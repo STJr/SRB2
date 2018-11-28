@@ -273,6 +273,7 @@ menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 
 // Single Player
+static void M_StartTutorial(INT32 choice);
 static void M_LoadGame(INT32 choice);
 static void M_TimeAttackLevelSelect(INT32 choice);
 static void M_TimeAttack(INT32 choice);
@@ -282,7 +283,6 @@ static void M_Statistics(INT32 choice);
 static void M_ReplayTimeAttack(INT32 choice);
 static void M_ChooseTimeAttack(INT32 choice);
 static void M_ChooseNightsAttack(INT32 choice);
-static void M_ModeAttackRetry(INT32 choice);
 static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_HandleChoosePlayerMenu(INT32 choice);
@@ -342,7 +342,6 @@ static void M_EraseData(INT32 choice);
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+6];
-static UINT8 addonsresponselimit = 0;
 
 #define numaddonsshown 4
 
@@ -439,6 +438,9 @@ static CV_PossibleValue_t serversort_cons_t[] = {
 	{0,NULL}
 };
 consvar_t cv_serversort = {"serversort", "Ping", CV_HIDEN | CV_CALL, serversort_cons_t, M_SortServerList, 0, NULL, NULL, 0, 0, NULL};
+
+// first time memory
+consvar_t cv_tutorialprompt = {"tutorialprompt", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // autorecord demos for time attack
 static consvar_t cv_autorecord = {"autorecord", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -731,6 +733,7 @@ static menuitem_t SR_EmblemHintMenu[] =
 // Single Player Main
 static menuitem_t SP_MainMenu[] =
 {
+	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,            84},
 	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 92},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,              100},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,            108},
@@ -739,6 +742,7 @@ static menuitem_t SP_MainMenu[] =
 
 enum
 {
+	sptutorial,
 	sploadgame,
 	sprecordattack,
 	spnightsmode,
@@ -1071,10 +1075,10 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, gc_use     },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Camera Up",        M_ChangeControl, gc_lookup      },
-	{IT_CALL | IT_STRING2, NULL, "Camera Down",      M_ChangeControl, gc_lookdown    },
-	{IT_CALL | IT_STRING2, NULL, "Camera Left",      M_ChangeControl, gc_turnleft    },
-	{IT_CALL | IT_STRING2, NULL, "Camera Right",     M_ChangeControl, gc_turnright   },
+	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, gc_lookup      },
+	{IT_CALL | IT_STRING2, NULL, "Look Down",      M_ChangeControl, gc_lookdown    },
+	{IT_CALL | IT_STRING2, NULL, "Look Left",      M_ChangeControl, gc_turnleft    },
+	{IT_CALL | IT_STRING2, NULL, "Look Right",     M_ChangeControl, gc_turnright   },
 	{IT_CALL | IT_STRING2, NULL, "Center View",      M_ChangeControl, gc_centerview  },
 	{IT_CALL | IT_STRING2, NULL, "Toggle Mouselook", M_ChangeControl, gc_mouseaiming },
 	{IT_CALL | IT_STRING2, NULL, "Toggle Third-Person", M_ChangeControl, gc_camtoggle},
@@ -1083,7 +1087,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Game Status",
     M_ChangeControl, gc_scores      },
-	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause       },
+	{IT_CALL | IT_STRING2, NULL, "Pause / Run Retry", M_ChangeControl, gc_pause       },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
 	{IT_HEADER, NULL, "Multiplayer", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
@@ -1554,7 +1558,18 @@ menu_t SR_EmblemHintDef =
 };
 
 // Single Player
-menu_t SP_MainDef = CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+menu_t SP_MainDef = //CENTERMENUSTYLE(NULL, SP_MainMenu, &MainDef, 72);
+{
+	NULL,
+	sizeof(SP_MainMenu)/sizeof(menuitem_t),
+	&MainDef,
+	SP_MainMenu,
+	M_DrawCenteredMenu,
+	BASEVIDWIDTH/2, 72,
+	1, // start at "Start Game" on first entry
+	NULL
+};
+
 menu_t SP_LoadDef =
 {
 	"M_PICKG",
@@ -2111,15 +2126,19 @@ static void M_GoBack(INT32 choice)
 		if (!Playing() && netgame && multiplayer)
 		{
 			MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
-			netgame = false;
-			multiplayer = false;
+			netgame = multiplayer = false;
 		}
 
 		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
-			Z_Free(levelselect.rows);
-			levelselect.rows = NULL;
+
+			if (levelselect.rows)
+			{
+				Z_Free(levelselect.rows);
+				levelselect.rows = NULL;
+			}
+
 			menuactive = false;
 			D_StartTitle();
 		}
@@ -4760,22 +4779,24 @@ static void M_Addons(INT32 choice)
 
 	(void)choice;
 
-	/*if (cv_addons_option.value == 0)
-		pathname = srb2home; usehome ? srb2home : srb2path;
+#if 1
+	if (cv_addons_option.value == 0)
+		pathname = usehome ? srb2home : srb2path;
 	else if (cv_addons_option.value == 1)
 		pathname = srb2home;
 	else if (cv_addons_option.value == 2)
 		pathname = srb2path;
-	else*/
+	else
+#endif
 	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
 		pathname = cv_addons_folder.string;
 
 	strlcpy(menupath, pathname, 1024);
 	menupathindex[(menudepthleft = menudepth-1)] = strlen(menupath) + 1;
 
-	if (menupath[menupathindex[menudepthleft]-2] != '/')
+	if (menupath[menupathindex[menudepthleft]-2] != PATHSEP[0])
 	{
-		menupath[menupathindex[menudepthleft]-1] = '/';
+		menupath[menupathindex[menudepthleft]-1] = PATHSEP[0];
 		menupath[menupathindex[menudepthleft]] = 0;
 	}
 	else
@@ -4869,11 +4890,7 @@ static char *M_AddonsHeaderPath(void)
 	UINT32 len;
 	static char header[1024];
 
-	if (menupath[0] == '.')
-		strlcpy(header, va("SRB2 folder%s", menupath+1), 1024);
-	else
-		strcpy(header, menupath);
-
+	strlcpy(header, va("%s folder%s", cv_addons_option.string, menupath+menupathindex[menudepth-1]-1), 1024);
 	len = strlen(header);
 	if (len > 34)
 	{
@@ -4890,6 +4907,15 @@ static char *M_AddonsHeaderPath(void)
 		M_SetupNextMenu(MISC_AddonsDef.prevMenu);\
 		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING)
 
+#define CLEARNAME Z_Free(refreshdirname);\
+					refreshdirname = NULL
+
+static void M_AddonsClearName(INT32 choice)
+{
+	CLEARNAME;
+	M_StopMessage(choice);
+}
+
 // returns whether to do message draw
 static boolean M_AddonsRefresh(void)
 {
@@ -4901,34 +4927,34 @@ static boolean M_AddonsRefresh(void)
 
 	if (refreshdirmenu & REFRESHDIR_ADDFILE)
 	{
-		addonsresponselimit = 0;
+		char *message = NULL;
 
 		if (refreshdirmenu & REFRESHDIR_NOTLOADED)
 		{
-			char *message = NULL;
 			S_StartSound(NULL, sfx_lose);
 			if (refreshdirmenu & REFRESHDIR_MAX)
-				message = va("\x82%s\x80\nMaximum number of add-ons reached.\nThis file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
+				message = va("\x82%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", refreshdirname);
 			else
-				message = va("\x82%s\x80\nThe file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
-			M_StartMessage(message,NULL,MM_NOTHING);
-			return true;
+				message = va("\x82%s\x80\nA file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", refreshdirname);
 		}
-
-		if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
+		else if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
 		{
 			S_StartSound(NULL, sfx_skid);
-			M_StartMessage(va("\x82%s\x80\nThe file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings")),NULL,MM_NOTHING);
+			message = va("\x82%s\x80\nA file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", refreshdirname, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings"));
+		}
+
+		if (message)
+		{
+			M_StartMessage(message,M_AddonsClearName,MM_EVENTHANDLER);
 			return true;
 		}
 
 		S_StartSound(NULL, sfx_strpst);
+		CLEARNAME;
 	}
 
 	return false;
 }
-
-#define offs 1
 
 #ifdef FIXUPO0
 #pragma GCC optimize ("0")
@@ -4947,9 +4973,6 @@ static void M_DrawAddons(void)
 		return;
 	}
 
-	if (addonsresponselimit)
-		addonsresponselimit--;
-
 	if (Playing())
 		topstr = "\x85""Adding files mid-game may cause problems.";
 	else if (savemoddata)
@@ -4959,7 +4982,7 @@ static void M_DrawAddons(void)
 	else
 		topstr = LOCATIONSTRING;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, topstr);
+	V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, topstr);
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -4979,7 +5002,7 @@ static void M_DrawAddons(void)
 
 	// DRAW MENU
 	x = currentMenu->x;
-	y = currentMenu->y + offs;
+	y = currentMenu->y + 1;
 
 	//M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true, true); -- wanted different width
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), V_YELLOWMAP|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
@@ -4987,7 +5010,7 @@ static void M_DrawAddons(void)
 	V_DrawFill(x-21 + (MAXSTRINGLENGTH*8+6 - 1), (y - 16) + (lsheadingheight - 3), 1, 1, 26);
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 26);
 
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1 + offs) - (y - 1), 159);
+	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1), 159);
 
 	// get bottom...
 	max = dir_on[menudepthleft] + numaddonsshown + 1;
@@ -5043,7 +5066,7 @@ static void M_DrawAddons(void)
 	if (max != (ssize_t)sizedirmenu)
 		V_DrawString(19, y-12 + (skullAnimCounter/5), V_YELLOWMAP, "\x1B");
 
-	y = BASEVIDHEIGHT - currentMenu->y + offs;
+	y = BASEVIDHEIGHT - currentMenu->y + 1;
 
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
 	if (menusearch[0])
@@ -5057,20 +5080,16 @@ static void M_DrawAddons(void)
 	x -= (21 + 5 + 16);
 	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
 
-#define CANSAVE (!modifiedgame || savemoddata)
 	x = BASEVIDWIDTH - x - 16;
-	V_DrawSmallScaledPatch(x, y + 4, (CANSAVE ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
+	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
 
 	if (modifiedgame)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
-#undef CANSAVE
 }
 
 #ifdef FIXUPO0
 #pragma GCC reset_options
 #endif
-
-#undef offs
 
 static void M_AddonExec(INT32 ch)
 {
@@ -5123,16 +5142,17 @@ static void M_HandleAddons(INT32 choice)
 {
 	boolean exitmenu = false; // exit to previous menu
 
-	if (addonsresponselimit)
-		return;
-
 	if (M_ChangeStringAddons(choice))
 	{
-		if (!preparefilemenu(true))
+		char *tempname = NULL;
+		if (dirmenu && dirmenu[dir_on[menudepthleft]])
+			tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
+		searchfilemenu(tempname);
+		/*if (!preparefilemenu(true))
 		{
 			UNEXIST;
 			return;
-		}
+		}*/
 	}
 
 	switch (choice)
@@ -5231,7 +5251,6 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_WAD:
 						case EXT_PK3:
 							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
-							addonsresponselimit = 5;
 							break;
 						default:
 							S_StartSound(NULL, sfx_lose);
@@ -5251,14 +5270,7 @@ static void M_HandleAddons(INT32 choice)
 	}
 	if (exitmenu)
 	{
-		for (; sizedirmenu > 0; sizedirmenu--)
-		{
-			Z_Free(dirmenu[sizedirmenu-1]);
-			dirmenu[sizedirmenu-1] = NULL;
-		}
-
-		Z_Free(dirmenu);
-		dirmenu = NULL;
+		closefilemenu(true);
 
 		// secrets disabled by addfile...
 		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -6093,6 +6105,8 @@ static void M_CustomLevelSelect(INT32 choice)
 static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
+	SP_MainMenu[sptutorial].status =
+		tutorialmap ? IT_CALL|IT_STRING : IT_NOTHING|IT_DISABLED;
 	SP_MainMenu[sprecordattack].status =
 		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
@@ -6116,6 +6130,80 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	}
 
 	M_SetupNextMenu(&SP_LevelSelectDef);
+}
+
+void M_TutorialSaveControlResponse(INT32 ch)
+{
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
+		S_StartSound(NULL, sfx_itemup);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+}
+
+static void M_TutorialControlResponse(INT32 ch)
+{
+	if (ch != KEY_ESCAPE)
+	{
+		G_CopyControls(gamecontroldefault[gcs_custom], gamecontrol, NULL, 0); // using gcs_custom as temp storage for old controls
+		if (ch == 'y' || ch == KEY_ENTER)
+		{
+			tutorialgcs = gcs_fps;
+			tutorialusemouse = cv_usemouse.value;
+			tutorialfreelook = cv_alwaysfreelook.value;
+			tutorialmousemove = cv_mousemove.value;
+			tutorialanalog = cv_analog.value;
+
+			G_CopyControls(gamecontrol, gamecontroldefault[tutorialgcs], gcl_tutorial_full, num_gcl_tutorial_full);
+			CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+			CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+			CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+			CV_Set(&cv_analog, cv_analog.defaultvalue);
+
+			//S_StartSound(NULL, sfx_itemup);
+		}
+		else
+		{
+			tutorialgcs = gcs_custom;
+			S_StartSound(NULL, sfx_menu1);
+		}
+		M_StartTutorial(INT32_MAX);
+	}
+	else
+		S_StartSound(NULL, sfx_menu1);
+
+	MessageDef.prevMenu = &SP_MainDef; // if FirstPrompt -> ControlsPrompt -> ESC, we would go to the main menu unless we force this
+}
+
+// Starts up the tutorial immediately (tbh I wasn't sure where else to put this)
+static void M_StartTutorial(INT32 choice)
+{
+	if (!tutorialmap)
+		return; // no map to go to, don't bother
+
+	if (choice != INT32_MAX && G_GetControlScheme(gamecontrol, gcl_tutorial_check, num_gcl_tutorial_check) != gcs_fps)
+	{
+		M_StartMessage("Do you want to try the \202recommended \202movement controls\x80?\n\nWe will set them just for this tutorial.\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls.\n",M_TutorialControlResponse,MM_YESNO);
+		return;
+	}
+	else if (choice != INT32_MAX)
+		tutorialgcs = gcs_custom;
+
+	CV_SetValue(&cv_tutorialprompt, 0); // first-time prompt
+
+	tutorialmode = true; // turn on tutorial mode
+
+	emeralds = 0;
+	M_ClearMenus(true);
+	gamecomplete = false;
+	cursaveslot = 0;
+	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
 // ==============
@@ -6725,12 +6813,39 @@ static void M_HandleLoadSave(INT32 choice)
 	}
 }
 
+static void M_FirstTimeResponse(INT32 ch)
+{
+	S_StartSound(NULL, sfx_menu1);
+
+	if (ch == KEY_ESCAPE)
+		return;
+
+	if (ch != 'y' && ch != KEY_ENTER)
+	{
+		CV_SetValue(&cv_tutorialprompt, 0);
+		M_ReadSaveStrings();
+		MessageDef.prevMenu = &SP_LoadDef; // calls M_SetupNextMenu
+	}
+	else
+	{
+		M_StartTutorial(0);
+		MessageDef.prevMenu = &MessageDef; // otherwise, the controls prompt won't fire
+	}
+}
+
 //
 // Selected from SRB2 menu
 //
 static void M_LoadGame(INT32 choice)
 {
 	(void)choice;
+
+	if (tutorialmap && cv_tutorialprompt.value)
+	{
+		M_StartMessage("Do you want to \x82play a brief Tutorial\x80?\n\nWe highly recommend this because \nthe controls are slightly different \nfrom other games.\n\nPress 'Y' or 'Enter' to go\nPress 'N' or any key to skip\n",
+			M_FirstTimeResponse, MM_YESNO);
+		return;
+	}
 
 	M_ReadSaveStrings();
 	M_SetupNextMenu(&SP_LoadDef);
@@ -7860,9 +7975,10 @@ static void M_SetGuestReplay(INT32 choice)
 		which(0);
 }
 
-static void M_ModeAttackRetry(INT32 choice)
+void M_ModeAttackRetry(INT32 choice)
 {
 	(void)choice;
+	// todo -- maybe seperate this out and G_SetRetryFlag() here instead? is just calling this from the menu 100% safe?
 	G_CheckDemoStatus(); // Cancel recording
 	if (modeattacking == ATTACKING_RECORD)
 		M_ChooseTimeAttack(0);
@@ -9198,9 +9314,17 @@ static void M_DrawControl(void)
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	M_CentreText(30,
-		 (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
-		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
+	if (tutorialmode && tutorialgcs)
+	{
+		if ((gametic / TICRATE) % 2)
+			M_CentreText(30, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+		else
+			M_CentreText(30, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+	}
+	else
+		M_CentreText(30,
+		    (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
+		                                     "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
 	if (i)
 		V_DrawString(currentMenu->x - 16, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
@@ -9256,6 +9380,7 @@ static void M_DrawControl(void)
 #undef controlbuffer
 
 static INT32 controltochange;
+static char controltochangetext[55];
 
 static void M_ChangecontrolResponse(event_t *ev)
 {
@@ -9263,8 +9388,8 @@ static void M_ChangecontrolResponse(event_t *ev)
 	INT32        found;
 	INT32        ch = ev->data1;
 
-	// ESCAPE cancels
-	if (ch != KEY_ESCAPE)
+	// ESCAPE cancels; dummy out PAUSE
+	if (ch != KEY_ESCAPE && ch != KEY_PAUSE)
 	{
 
 		switch (ev->type)
@@ -9325,6 +9450,24 @@ static void M_ChangecontrolResponse(event_t *ev)
 		}
 		S_StartSound(NULL, sfx_strpst);
 	}
+	else if (ch == KEY_PAUSE)
+	{
+		static char tmp[155];
+		menu_t *prev = currentMenu->prevMenu;
+
+		if (controltochange == gc_pause)
+			sprintf(tmp, M_GetText("The \x82Pause Key \x80is enabled, but \nit cannot be used to retry runs \nduring Record Attack. \n\nHit another key for\n%s\nESC for Cancel"),
+				controltochangetext);
+		else
+			sprintf(tmp, M_GetText("The \x82Pause Key \x80is enabled, but \nit is not configurable. \n\nHit another key for\n%s\nESC for Cancel"),
+				controltochangetext);
+
+		M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
+		currentMenu->prevMenu = prev;
+
+		S_StartSound(NULL, sfx_s3k42);
+		return;
+	}
 	else
 		S_StartSound(NULL, sfx_skid);
 
@@ -9335,9 +9478,13 @@ static void M_ChangeControl(INT32 choice)
 {
 	static char tmp[55];
 
+	if (tutorialmode && tutorialgcs) // don't allow control changes if temp control override is active
+		return;
+
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
 		currentMenu->menuitems[choice].text);
+	strncpy(controltochangetext, currentMenu->menuitems[choice].text, 55);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
 }

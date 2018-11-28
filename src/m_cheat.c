@@ -571,7 +571,7 @@ void Command_Teleport_f(void)
 		}
 		else // scan the thinkers to find starposts...
 		{
-			mobj_t *mo2;
+			mobj_t *mo2 = NULL;
 			thinker_t *th;
 
 			INT32 starpostmax = 0;

@@ -40,6 +40,7 @@ extern char **dirmenu;
 extern size_t sizedirmenu;
 extern size_t dir_on[menudepth];
 extern UINT8 refreshdirmenu;
+extern char *refreshdirname;
 
 extern size_t packetsizetally;
 extern size_t mainwadstally;
@@ -87,6 +88,8 @@ typedef enum
 	REFRESHDIR_MAX = 32
 } refreshdir_enum;
 
+void closefilemenu(boolean validsize);
+void searchfilemenu(char *tempname);
 boolean preparefilemenu(boolean samedepth);
 
 #endif // __FILESRCH_H__

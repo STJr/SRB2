@@ -56,8 +56,11 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-// wipes
-#include "f_finale.h"
+#ifdef HAVE_BLUA
+#include "lua_hud.h" // level title
+#endif
+
+#include "f_finale.h" // wipes
 
 #include "md5.h" // map MD5
 
@@ -100,6 +103,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 boolean levelloading;
+UINT8 levelfadecol;
 
 // BLOCKMAP
 // Created from axis aligned bounding box
@@ -1093,7 +1097,7 @@ static void P_LoadThings(void)
 		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
 		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
 		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
+		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
 
@@ -1541,6 +1545,7 @@ static void P_LoadRawSideDefs2(void *data)
 			}
 
 			case 443: // Calls a named Lua function
+			case 459: // Control text prompt (named tag)
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -2295,7 +2300,7 @@ static void P_LevelInitStuff(void)
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].marelap =\
+		 players[i].oldscale = players[i].mare = players[i].marelap =\
 		 players[i].marebonuslap = players[i].lapbegunat =\
 		 players[i].lapstartedtime = players[i].totalmarescore =\
 		 players[i].realtime = players[i].exiting = 0;
@@ -2313,7 +2318,7 @@ static void P_LevelInitStuff(void)
 		// unset ALL the pointers. P_SetTarget isn't needed here because if this
 		// function is being called we're just going to clobber the data anyways
 		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
+		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
 	}
 }
 
@@ -2594,6 +2599,43 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_SetupCamera(void)
+{
+	if (players[displayplayer].mo && (server || addedtogame))
+	{
+		camera.x = players[displayplayer].mo->x;
+		camera.y = players[displayplayer].mo->y;
+		camera.z = players[displayplayer].mo->z;
+		camera.angle = players[displayplayer].mo->angle;
+		camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+	}
+	else
+	{
+		mapthing_t *thing;
+
+		switch (gametype)
+		{
+		case GT_MATCH:
+		case GT_TAG:
+			thing = deathmatchstarts[0];
+			break;
+
+		default:
+			thing = playerstarts[0];
+			break;
+		}
+
+		if (thing)
+		{
+			camera.x = thing->x;
+			camera.y = thing->y;
+			camera.z = thing->z;
+			camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
+			camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+		}
+	}
+}
+
 static boolean CanSaveLevel(INT32 mapnum)
 {
 	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
@@ -2633,7 +2675,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
-
 
 	// Reset the palette
 	if (rendermode != render_none)
@@ -2687,9 +2728,14 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Cancel all d_main.c fadeouts (keep fade in though).
+	wipegamestate = -2;
+
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	if (modeattacking && !demoplayback && (pausedelay == INT32_MIN))
+		ranspecialwipe = 2;
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
@@ -2722,36 +2768,48 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_StopSounds();
 	S_ClearSfx();
 
-	// As oddly named as this is, this handles music only.
-	// We should be fine starting it here.
-	/// ... as long as this isn't a titlemap transition, that is
 	if (!titlemapinaction)
+	{
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
 		S_Start();
 
-	// Let's fade to black here
-	// But only if we didn't do the special stage wipe
-	if (rendermode != render_none && !ranspecialwipe)
-	{
-		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		// Let's fade to black here
+		// But only if we didn't do the special stage wipe
+		if (rendermode != render_none && !ranspecialwipe)
+		{
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_level_toblack], false);
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipe_level_toblack], false);
+		}
+
+		if (ranspecialwipe == 2)
+		{
+			pausedelay = -3; // preticker plus one
+			S_StartSound(NULL, sfx_s3k73);
+		}
+
+		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+		if (rendermode != render_none)
+		{
+			// Don't include these in the fade!
+			char tx[64];
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			snprintf(tx, 63, "%s%s%s",
+				mapheaderinfo[gamemap-1]->lvlttl,
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+			I_UpdateNoVsync();
+		}
 	}
 
-	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
-	if (!titlemapinaction && rendermode != render_none)
-	{
-		// Don't include these in the fade!
-		char tx[64];
-		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-		snprintf(tx, 63, "%s%s%s",
-			mapheaderinfo[gamemap-1]->lvlttl,
-			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-		I_UpdateNoVsync();
-	}
+	levelfadecol = (ranspecialwipe) ? 0 : 31;
+
+	// Close text prompt before freeing the old level
+	F_EndTextPrompt(false, true);
 
 #ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
@@ -3034,37 +3092,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (players[displayplayer].mo && (server || addedtogame))
-		{
-			camera.x = players[displayplayer].mo->x;
-			camera.y = players[displayplayer].mo->y;
-			camera.z = players[displayplayer].mo->z;
-			camera.angle = players[displayplayer].mo->angle;
-		}
-		else
-		{
-			mapthing_t *thing;
-
-			switch (gametype)
-			{
-			case GT_MATCH:
-			case GT_TAG:
-				thing = deathmatchstarts[0];
-				break;
-
-			default:
-				thing = playerstarts[0];
-				break;
-			}
-
-			if (thing)
-			{
-				camera.x = thing->x;
-				camera.y = thing->y;
-				camera.z = thing->z;
-				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
-			}
-		}
+		P_SetupCamera();
 
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_height.changed)
@@ -3127,8 +3155,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
-	if (rendermode != render_none)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
+	if (rendermode != render_none && !titlemapinaction)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3176,6 +3204,45 @@ boolean P_SetupLevel(boolean skipprecip)
 #ifdef HAVE_BLUA
 		LUAh_MapLoad();
 #endif
+	}
+
+	// Stage title!
+	if (rendermode != render_none
+		&& (!titlemapinaction)
+		&& ranspecialwipe != 2
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
+#ifdef HAVE_BLUA
+		&& LUA_HudEnabled(hud_stagetitle)
+#endif
+	)
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (10*NEWTICRATERATIO);
+		tic_t nowtime = starttime;
+		tic_t lasttime = starttime;
+		while (nowtime < endtime)
+		{
+			// draw loop
+			while (!((nowtime = I_GetTime()) - lasttime))
+				I_Sleep();
+			lasttime = nowtime;
+
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+			stplyr = &players[consoleplayer];
+			ST_drawLevelTitle(nowtime - starttime);
+			if (splitscreen)
+			{
+				stplyr = &players[secondarydisplayplayer];
+				ST_drawLevelTitle(nowtime - starttime);
+			}
+
+			I_OsPolling();
+			I_UpdateNoBlit();
+			I_FinishUpdate(); // page flip or blit buffer
+
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 	}
 
 	return true;

@@ -814,6 +814,15 @@ static int libd_RandomChance(lua_State *L)
 	return 1;
 }
 
+// 30/10/18 Lat': Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
+// Could as well be thrown in global vars for ease of access but I guess it makes sense for it to be a HUD fn
+static int libd_getlocaltransflag(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, (10-cv_translucenthud.value)*V_10TRANS);	// A bit weird that it's called "translucenthud" yet 10 is fully opaque :V
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	// cache
 	{"patchExists", libd_patchExists},
@@ -844,6 +853,7 @@ static luaL_Reg lib_draw[] = {
 	{"dupx", libd_dupx},
 	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
+	{"localTransFlag", libd_getlocaltransflag},
 	{NULL, NULL}
 };
 
@@ -866,6 +876,19 @@ static int lib_huddisable(lua_State *L)
 	hud_enabled[option/8] &= ~(1<<(option%8));
 	return 0;
 }
+
+// 30/10/18: Lat': How come this wasn't here before?
+static int lib_hudenabled(lua_State *L)
+{
+	enum hud option = luaL_checkoption(L, 1, NULL, hud_disable_options);
+	if (hud_enabled[option/8] & (1<<(option%8)))
+		lua_pushboolean(L, true);
+	else
+		lua_pushboolean(L, false);
+
+	return 1;
+}
+
 
 // add a HUD element for rendering
 static int lib_hudadd(lua_State *L)
@@ -894,6 +917,7 @@ static int lib_hudadd(lua_State *L)
 static luaL_Reg lib_hud[] = {
 	{"enable", lib_hudenable},
 	{"disable", lib_huddisable},
+	{"enabled", lib_hudenabled},
 	{"add", lib_hudadd},
 	{NULL, NULL}
 };

@@ -446,7 +446,7 @@ extern INT32 cv_debug;
 
 #define DBG_BASIC       0x0001
 #define DBG_DETAILED    0x0002
-#define DBG_RANDOMIZER  0x0004
+#define DBG_PLAYER      0x0004
 #define DBG_RENDER      0x0008
 #define DBG_NIGHTSBASIC 0x0010
 #define DBG_NIGHTS      0x0020
@@ -456,6 +456,7 @@ extern INT32 cv_debug;
 #define DBG_MEMORY      0x0200
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
+#define DBG_RANDOMIZER  0x1000
 
 // =======================
 // Misc stuff for later...
@@ -570,5 +571,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 #define SECTORSPECIALSAFTERTHINK
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
 
 #endif // __DOOMDEF__

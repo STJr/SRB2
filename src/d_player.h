@@ -455,6 +455,8 @@ typedef struct player_s
 	UINT8 drilldelay;
 	boolean bonustime; // Capsule destroyed, now it's bonus time!
 	mobj_t *capsule; // Go inside the capsule
+	mobj_t *drone; // Move center to the drone
+	fixed_t oldscale; // Pre-Nightserize scale
 	UINT8 mare; // Current mare
 	UINT8 marelap; // Current mare lap
 	UINT8 marebonuslap; // Current mare lap starting from bonus time

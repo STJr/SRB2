@@ -634,6 +634,10 @@ static void P_DeNightserizePlayer(player_t *player)
 		break;
 	}
 
+	if (player->mo->scale != player->oldscale)
+		player->mo->destscale = player->oldscale;
+	player->oldscale = 0;
+
 	// Restore from drowning music
 	P_RestoreMusic(player);
 
@@ -653,7 +657,10 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
+	{
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
+		player->oldscale = player->mo->scale;
+	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
@@ -786,9 +793,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 		// Don't show before title card
 		// Not consistency safe, but this only affects drawing
-		if (timeinmap + 40 < 110)
-			player->texttimer = (UINT8)(110 - timeinmap);
+		if (timeinmap + 40 < (110 - 70))
+			player->texttimer = (UINT8)((110 - 70) - timeinmap);
 	}
+
+	if (player->drone && player->drone->scale != player->mo->scale)
+		player->mo->destscale = player->drone->scale;
 
 	// force NiGHTS to face forward or backward
 	if (player->mo->target)
@@ -3955,7 +3965,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			}
 		}
 		else if (maptol & TOL_NIGHTS)
-			player->mo->momz = 24*FRACUNIT;
+			player->mo->momz = 18*FRACUNIT;
 		else if (player->powers[pw_super])
 		{
 			player->mo->momz = 13*FRACUNIT;
@@ -3995,6 +4005,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
+
+	//if (maptol & TOL_NIGHTS)
+	//	factor = player->jumpfactor; // all skins jump the same. if you nerf jumping abilities, you may want this.
 
 	P_SetObjectMomZ(player->mo, FixedMul(factor, player->mo->momz), false); // Custom height
 
@@ -5960,11 +5973,10 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 //
 static void P_DoNiGHTSCapsule(player_t *player)
 {
-	INT32 i;
+	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic, startingspheres;
+	INT32 tictimer = ++player->capsule->extravalue2;
 
-	player->capsule->extravalue2++; // tic counter
-
-	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
+	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->capsule->x;
@@ -5972,7 +5984,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momx = 0;
 	}
 
-	if (abs(player->mo->y-player->capsule->y) <= 2*FRACUNIT)
+	if (abs(player->mo->y-player->capsule->y) <= 3*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->y = player->capsule->y;
@@ -5980,26 +5992,26 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momy = 0;
 	}
 
-	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 2*FRACUNIT)
+	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 3*FRACUNIT)
 	{
 		player->mo->z = player->capsule->z+(player->capsule->height/3);
 		player->mo->momz = 0;
 	}
 
 	if (player->mo->x > player->capsule->x)
-		player->mo->momx = -2*FRACUNIT;
+		player->mo->momx = -3*FRACUNIT;
 	else if (player->mo->x < player->capsule->x)
-		player->mo->momx = 2*FRACUNIT;
+		player->mo->momx = 3*FRACUNIT;
 
 	if (player->mo->y > player->capsule->y)
-		player->mo->momy = -2*FRACUNIT;
+		player->mo->momy = -3*FRACUNIT;
 	else if (player->mo->y < player->capsule->y)
-		player->mo->momy = 2*FRACUNIT;
+		player->mo->momy = 3*FRACUNIT;
 
 	if (player->mo->z > player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = -2*FRACUNIT;
+		player->mo->momz = -3*FRACUNIT;
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = 2*FRACUNIT;
+		player->mo->momz = 3*FRACUNIT;
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
@@ -6013,6 +6025,13 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			S_StartSound(player->mo, sfx_spin);
 			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_ATTACK);
 		}
+	}
+	else
+	{
+		if (!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING))
+			player->pflags |= PF_JUMPED;
+		if (player->panim != PA_ROLL)
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
 	if (G_IsSpecialStage(gamemap))
@@ -6033,25 +6052,82 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		&& player->mo->y == player->capsule->y
 		&& player->mo->z == player->capsule->z+(player->capsule->height/3))
 	{
-		if (player->spheres > 0)
+		if (player->capsule->lastlook < 0)
 		{
-			player->spheres--;
-			player->capsule->health--;
-			player->capsule->extravalue1++;
+			// Stretch the sphere deduction across the capsule time!
+			// 1. Force the remaining capsule time to `popduration`
+			// 2. Given `popduration` and `spherecount`, at what tic interval do we deduct spheres? `deductinterval`
+			// 3. And on each deduction, how many spheres do we deduct? `deductquantity`
+			// 4. Store the expected capsule health upon completion: `sphereresult`
+			spherecount = min(player->spheres, player->capsule->health);
+			totalduration = min(40 + spherecount, 60);
 
-			// Spawn a 'pop' for every 5 rings you deposit
-			if (!(player->capsule->extravalue1 % 5))
+			popduration = player->capsule->extravalue1 = max(totalduration - tictimer, 1);
+			deductinterval = player->capsule->cvmem = max(FixedFloor(FixedDiv(popduration, spherecount))/FRACUNIT, 1);
+			deductquantity = player->capsule->cusval = max(FixedRound(FixedDiv(spherecount, popduration))/FRACUNIT, 1);
+			sphereresult = player->capsule->movecount = player->capsule->health - spherecount;
+			firstpoptic = player->capsule->lastlook = tictimer;
+		}
+		else
+		{
+			popduration = player->capsule->extravalue1;
+			deductinterval = player->capsule->cvmem;
+			deductquantity = player->capsule->cusval;
+			sphereresult = player->capsule->movecount;
+			firstpoptic = player->capsule->lastlook;
+		}
+
+		if (tictimer - firstpoptic < popduration)
+		{
+			if (!((tictimer - firstpoptic) % deductinterval))
+			{
+				// Did you somehow get more spheres during destruct?
+				if (player->capsule->health <= sphereresult && player->spheres > 0 && player->capsule->health > 0)
+					sphereresult = max(sphereresult - player->spheres, 0);
+
+				if (player->capsule->health > sphereresult && player->spheres > 0)
+				{
+					player->spheres -= deductquantity;
+					player->capsule->health -= deductquantity;
+				}
+
+				if (player->spheres < 0)
+					player->spheres = 0;
+
+				if (player->capsule->health < sphereresult)
+					player->capsule->health = sphereresult;
+			}
+
+			// Spawn a 'pop' for every 5 tics
+			if (!((tictimer - firstpoptic) % 5))
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
 				MT_BOSSEXPLODE),sfx_cybdth);
+		}
+		else
+		{
+			if (player->spheres != 0 && player->capsule->health > 0)
+			{
+				if (player->spheres < player->capsule->health)
+				{
+					player->capsule->health -= player->spheres;
+					player->spheres = 0;
+				}
+				else
+				{
+					startingspheres = player->spheres - player->capsule->health;
+					player->capsule->health = 0;
+					player->spheres = startingspheres;
+				}
+			}
 
 			if (player->capsule->health <= 0)
 			{
 				player->capsule->flags &= ~MF_NOGRAVITY;
 				player->capsule->momz = 5*FRACUNIT;
 				player->capsule->reactiontime = 0;
-				player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
+				tictimer = -1;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && !player->exiting && players[i].mare == player->mare)
@@ -6085,6 +6161,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						UINT8 em = P_GetNextEmerald();
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						mobj_t *emmo = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
+						emmo->health = em; // for identification
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 						P_SetTarget(&player->mo->tracer, emmo);
@@ -6111,8 +6188,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					}*/
 					mobj_t *idya = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->height, MT_GOTEMERALD);
 					idya->extravalue2 = player->mare/5;
+					idya->health = player->mare + 1; // for identification
 					P_SetTarget(&idya->target, player->mo);
 					P_SetMobjState(idya, mobjinfo[MT_GOTEMERALD].missilestate + ((player->mare + 1) % 5));
+
+					if (player->mo->tracer)
+					{
+						P_SetTarget(&idya->hnext, player->mo->tracer);
+						idya->extravalue1 = (angle_t)(player->mo->tracer->extravalue1 - 72*ANG1);
+						if (idya->extravalue1 > player->mo->tracer->extravalue1)
+							idya->extravalue1 -= (72*ANG1)/idya->extravalue1;
+					}
 					P_SetTarget(&player->mo->tracer, idya);
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
@@ -6122,19 +6208,68 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				P_SwitchSpheresBonusMode(true);
 				P_RunNightsCapsuleTouchExecutors(player->mo, false, true); // run capsule exit executors, and we destroyed it
 			}
-		}
-		else
-		{
-			S_StartScreamSound(player->mo, sfx_lose);
-			player->texttimer = 4*TICRATE;
-			player->textvar = 3; // Get more rings!
-			player->capsule->reactiontime = 0;
-			player->capsule->extravalue1 = player->capsule->extravalue2 = -1;
-			P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
+			else
+			{
+				S_StartScreamSound(player->mo, sfx_lose);
+				player->texttimer = 4*TICRATE;
+				player->textvar = 3; // Get more rings!
+				player->capsule->reactiontime = 0;
+				player->capsule->extravalue1 = player->capsule->cvmem =\
+				 player->capsule->cusval = player->capsule->movecount =\
+				 player->capsule->lastlook = player->capsule->extravalue2 = -1;
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
+			}
 		}
 	}
+	else if (player->capsule->lastlook > -1)
+		// We somehow moved out of the capsule (OBJECTPLACE?)
+		// So recalculate all the timings
+		player->capsule->lastlook = player->capsule->extravalue2 = -1;
+}
+
+//
+// P_MoveNiGHTSToDrone
+//
+// Pull NiGHTS to the drone during Nightserizing
+//
+static void P_MoveNiGHTSToDrone(player_t *player)
+{
+	if (!player->drone)
+		return;
+
+	boolean flip = player->drone->flags2 & MF2_OBJECTFLIP;
+	boolean topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	boolean middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
+	boolean bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	fixed_t droneboxmandiff = max(player->drone->height - player->mo->height, 0);
+	fixed_t zofs;
+
+	if (!flip)
+	{
+		if (topaligned)
+			zofs = droneboxmandiff;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = 0;
+	}
 	else
-		player->capsule->extravalue1 = -1;
+	{
+		if (topaligned)
+			zofs = 0;
+		else if (middlealigned)
+			zofs = droneboxmandiff / 2;
+		else if (bottomoffsetted)
+			zofs = droneboxmandiff - FixedMul(24*FRACUNIT, player->drone->scale);
+		else
+			zofs = droneboxmandiff;
+	}
+
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
+	P_SetTarget(&player->drone, NULL);
 }
 
 //
@@ -7056,6 +7191,13 @@ static void P_MovePlayer(player_t *player)
 		else if (player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1])
 		{
 			P_DoNiGHTSCapsule(player);
+			return;
+		}
+
+		// Suck player into their drone
+		if (player->drone)
+		{
+			P_MoveNiGHTSToDrone(player);
 			return;
 		}
 
@@ -8785,7 +8927,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
-	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD))
+	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
 		if (player->spectator) // force cam off for spectators
 			return true;
@@ -8848,7 +8990,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (P_CameraThinker(player, thiscam, resetcalled))
 		return true;
 
-	if (thiscam == &camera)
+	if (tutorialmode)
+	{
+		// force defaults because we have a camera look section
+		camspeed = (INT32)(atof(cv_cam_speed.defaultvalue) * FRACUNIT);
+		camstill = (!stricmp(cv_cam_still.defaultvalue, "off")) ? false : true;
+		camrotate = atoi(cv_cam_rotate.defaultvalue);
+		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
+		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
+	}
+	else if (thiscam == &camera)
 	{
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
@@ -8946,7 +9097,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
-	else if (player->powers[pw_carry] == CR_NIGHTSMODE)
+	else if (player->powers[pw_carry] == CR_NIGHTSMODE
+		|| ((maptol & TOL_NIGHTS) && player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1]))
 		dist = 320<<FRACBITS;
 	else
 	{
@@ -9289,15 +9441,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// Make player translucent if camera is too close (only in single player).
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
-		fixed_t vx = 0, vy = 0;
-		if (player->awayviewtics) {
+		fixed_t vx = thiscam->x, vy = thiscam->y;
+		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
-		}
-		else
-		{
-			vx = thiscam->x;
-			vy = thiscam->y;
 		}
 
 		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
@@ -9621,8 +9769,9 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
+	//if (player->awayviewtics)
+	//	player->awayviewtics--;
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -10594,6 +10743,9 @@ void P_PlayerAfterThink(player_t *player)
 				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
+
+	if (player->awayviewtics)
+		player->awayviewtics--;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

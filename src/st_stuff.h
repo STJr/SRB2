@@ -24,7 +24,7 @@
 //
 
 // Called by main loop.
-FUNCMATH void ST_Ticker(void);
+void ST_Ticker(void);
 
 // Called by main loop.
 void ST_Drawer(void);
@@ -46,6 +46,9 @@ void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
+
+// level title draw
+void ST_drawLevelTitle(tic_t titletime);
 
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);

@@ -71,6 +71,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "g_input.h" // tutorial mode control scheming
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -151,7 +152,7 @@ void D_PostEvent(const event_t *ev)
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
 // just for lock this function
-#ifndef DOXYGEN
+#if defined (PC_DOS) && !defined (DOXYGEN)
 void D_PostEvent_end(void) {};
 #endif
 
@@ -280,7 +281,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
+			if ((wipegamestate != (gamestate_t)-2) // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
 				F_WipeStartScreen();
@@ -358,88 +359,96 @@ static void D_Display(void)
 			break;
 	}
 
-	// clean up border stuff
-	// see if the border needs to be initially drawn
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+	// STUPID race condition...
+	if (wipegamestate == GS_INTRO && gamestate == GS_TITLESCREEN)
+		wipegamestate = -2;
+	else
 	{
-		// draw the view directly
+		wipegamestate = gamestate;
 
-		if (!automapactive && !dedicated && cv_renderview.value)
+		// clean up border stuff
+		// see if the border needs to be initially drawn
+		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
 		{
-			if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-			{
-				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-				objectsdrawn = 0;
-#ifdef HWRENDER
-				if (rendermode != render_soft)
-					HWR_RenderPlayerView(0, &players[displayplayer]);
-				else
-#endif
-				if (rendermode != render_none)
-					R_RenderPlayerView(&players[displayplayer]);
-			}
+			// draw the view directly
 
-			// render the second screen
-			if (splitscreen && players[secondarydisplayplayer].mo)
+			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-#ifdef HWRENDER
-				if (rendermode != render_soft)
-					HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-				else
-#endif
-				if (rendermode != render_none)
+				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
-					viewwindowy = vid.height / 2;
-					M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					objectsdrawn = 0;
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(0, &players[displayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+						R_RenderPlayerView(&players[displayplayer]);
+				}
 
-					R_RenderPlayerView(&players[secondarydisplayplayer]);
+				// render the second screen
+				if (splitscreen && players[secondarydisplayplayer].mo)
+				{
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+					{
+						viewwindowy = vid.height / 2;
+						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
-					viewwindowy = 0;
-					M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+						R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+						viewwindowy = 0;
+						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+					}
+				}
+
+				// Image postprocessing effect
+				if (rendermode == render_soft)
+				{
+					if (postimgtype)
+						V_DoPostProcessor(0, postimgtype, postimgparam);
+					if (postimgtype2)
+						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
 			}
 
-			// Image postprocessing effect
-			if (rendermode == render_soft)
+			if (lastdraw)
 			{
-				if (postimgtype)
-					V_DoPostProcessor(0, postimgtype, postimgparam);
-				if (postimgtype2)
-					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+				if (rendermode == render_soft)
+				{
+					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+					usebuffer = true;
+				}
+				lastdraw = false;
 			}
-		}
 
-		if (lastdraw)
-		{
-			if (rendermode == render_soft)
+			if (gamestate == GS_LEVEL)
 			{
-				VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-				usebuffer = true;
+				ST_Drawer();
+				F_TextPromptDrawer();
+				HU_Drawer();
 			}
-			lastdraw = false;
+			else
+				F_TitleScreenDrawer();
 		}
-
-		if (gamestate == GS_LEVEL)
-		{
-			ST_Drawer();
-			HU_Drawer();
-		}
-		else
-			F_TitleScreenDrawer();
 	}
 
 	// change gamma if needed
 	// (GS_LEVEL handles this already due to level-specific palettes)
-	if (forcerefresh && gamestate != GS_LEVEL)
+	if (forcerefresh && !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
 		V_SetPalette(0);
-
-	wipegamestate = gamestate;
 
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
 	{
+#if 0
 		INT32 py;
 		patch_t *patch;
 		if (automapactive)
@@ -448,6 +457,11 @@ static void D_Display(void)
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_CACHE);
 		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+#else
+		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
+		V_DrawCenteredString(BASEVIDWIDTH/2, y - (4), V_YELLOWMAP, "Game Paused");
+#endif
 	}
 
 	// vid size change is now finished if it was on...
@@ -733,6 +747,19 @@ void D_StartTitle(void)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode && tutorialgcs)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcl_tutorial_full, num_gcl_tutorial_full); // using gcs_custom as temp storage
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls",
+			M_TutorialSaveControlResponse, MM_YESNO);
+	}
+	tutorialmode = false;
 }
 
 //
@@ -765,10 +792,6 @@ static inline void D_CleanFile(void)
 		startupwadfiles[pnumwadfiles] = NULL;
 	}
 }
-
-#ifndef _MAX_PATH
-#define _MAX_PATH MAX_WADPATH
-#endif
 
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.

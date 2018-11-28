@@ -17,6 +17,7 @@
 
 #include "doomtype.h"
 #include "d_event.h"
+#include "p_mobj.h"
 
 //
 // FINALE
@@ -33,9 +34,10 @@ void F_IntroTicker(void);
 void F_TitleScreenTicker(boolean run);
 void F_CutsceneTicker(void);
 void F_TitleDemoTicker(void);
+void F_TextPromptTicker(void);
 
 // Called by main loop.
-FUNCMATH void F_GameEndDrawer(void);
+void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 
@@ -49,6 +51,13 @@ void F_CreditDrawer(void);
 void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer);
 void F_CutsceneDrawer(void);
 void F_EndCutScene(void);
+
+void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime);
+void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
+void F_TextPromptDrawer(void);
+void F_EndTextPrompt(boolean forceexec, boolean noexec);
+boolean F_GetPromptHideHudAll(void);
+boolean F_GetPromptHideHud(fixed_t y);
 
 void F_StartGameEnd(void);
 void F_StartIntro(void);
