@@ -16823,7 +16823,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_lntsit,       // activesound
-		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_RUNSPAWNFUNC|MF_NOGRAVITY, // flags
+		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

@@ -1667,7 +1667,7 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[(leveltime/2)&7]);
 	}
-	else if (oldspecialstage && total_spherecount < ssspheres)
+	else if (oldspecialstage && total_spherecount < (INT32)ssspheres)
 	{
 		INT32 cfill, amount;
 		const INT32 length = 88;

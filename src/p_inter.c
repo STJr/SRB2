@@ -2663,6 +2663,8 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 	player_t *player = target->player;
 	tic_t oldnightstime = player->nightstime;
 
+	(void)source; // unused
+
 	if (!player->powers[pw_flashing])
 	{
 		angle_t fa;

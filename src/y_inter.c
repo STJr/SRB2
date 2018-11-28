@@ -329,7 +329,7 @@ void Y_IntermissionDrawer(void)
 		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
 			animatetic = intertic + TICRATE;
 
-		if (animatetic && intertic >= animatetic)
+		if (animatetic && (tic_t)intertic >= animatetic)
 		{
 			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);

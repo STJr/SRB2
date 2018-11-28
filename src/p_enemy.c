@@ -1594,7 +1594,7 @@ void A_CheckBuddy(mobj_t *actor)
 
 // Helper function for the Robo Hood.
 // Don't ask me how it works. Nev3r made it with dark majyks.
-void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixed_t speed)
+static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixed_t speed)
 {
 	fixed_t dh;
 
