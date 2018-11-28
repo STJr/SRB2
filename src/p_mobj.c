@@ -7354,6 +7354,20 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				P_MobjCheckWater(mobj);
 				break;
+			case MT_ARROW:
+				if (!(mobj->extravalue1) && (mobj->momz < 0))
+				{
+					mobj->extravalue1 = 1;
+					S_StartSound(mobj, mobj->info->activesound);
+				}
+				if (leveltime & 1)
+				{
+					mobj_t *dust = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_PARTICLE);
+					dust->tics = 18;
+					dust->scalespeed = 4096;
+					dust->destscale = FRACUNIT/32;
+				}
+				break;
 			case MT_EMERALDSPAWN:
 				if (mobj->threshold)
 				{

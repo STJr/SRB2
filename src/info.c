@@ -981,12 +981,13 @@ state_t states[NUMSTATES] =
 	{SPR_PNTY, 1,  1, {A_CheckBuddy}, 0, 0, S_POINTYBALL1}, // S_POINTYBALL1
 
 	// Robo-Hood
-	{SPR_ARCH, 0, 14,       {A_Look}, (512<<16),   0, S_ROBOHOOD_LOOK},  // S_ROBOHOOD_LOOK
-	{SPR_ARCH, 2,  1,  {A_HoodThink},         0,   0, S_ROBOHOOD_STND},  // S_ROBOHOOD_STND
-	{SPR_ARCH, 0, 35,   {A_FireShot},  MT_ARROW, -24, S_ROBOHOOD_STND},  // S_ROBOHOOD_SHOOT
-	{SPR_ARCH, 1,  1,   {A_BunnyHop},         8,   5, S_ROBOHOOD_JUMP2}, // S_ROBOHOOD_JUMP
-	{SPR_ARCH, 1,  1,  {A_HoodThink},         0,   0, S_ROBOHOOD_JUMP2}, // S_ROBOHOOD_JUMP2
-	{SPR_ARCH, 0,  1,  {A_HoodThink},         0,   0, S_ROBOHOOD_FALL},  // S_ROBOHOOD_FALL
+	{SPR_ARCH, 0,       4,            {A_Look}, 2048<<FRACBITS,   0, S_ROBOHOOD_LOOK},  // S_ROBOHOOD_LOOK
+	{SPR_ARCH, 0,       1,       {A_HoodThink},              0,   0, S_ROBOHOOD_STAND}, // S_ROBOHOOD_STAND
+	{SPR_ARCH, 2, TICRATE, {A_PlayActiveSound},              0,   0, S_ROBOHOOD_FIRE2}, // S_ROBOHOOD_FIRE1
+	{SPR_ARCH, 2,      20,        {A_HoodFire},       MT_ARROW,   0, S_ROBOHOOD_STAND}, // S_ROBOHOOD_FIRE2
+	{SPR_ARCH, 1,       1,      {A_FaceTarget},              0,   0, S_ROBOHOOD_JUMP2}, // S_ROBOHOOD_JUMP1
+	{SPR_ARCH, 1,       1,        {A_BunnyHop},              4, -10, S_ROBOHOOD_JUMP3}, // S_ROBOHOOD_JUMP2
+	{SPR_ARCH, 1,       1,        {A_HoodFall},              0,   0, S_ROBOHOOD_JUMP3}, // S_ROBOHOOD_JUMP3
 
 	// Castlebot Facestabber
 	{SPR_CBFS, 0,  1,        {A_Chase},  0, 0, S_FACESTABBER_STND2},   // S_FACESTABBER_STND1
@@ -2941,8 +2942,8 @@ state_t states[NUMSTATES] =
 	{SPR_SEED, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 2, 2, S_NULL}, // S_SEED
 
 	// Particle sprite
-	{SPR_PRTL, FF_FULLBRIGHT|FF_TRANS70, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_PARTICLE
-	{SPR_NULL,     0,          3, {A_ParticleSpawn}, 0, 0, S_PARTICLEGEN}, // S_PARTICLEGEN
+	{SPR_PRTL, 0, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_PARTICLE
+	{SPR_NULL, 0, 3, {A_ParticleSpawn}, 0, 0, S_PARTICLEGEN}, // S_PARTICLEGEN
 
 	{SPR_SCOR, 0, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRA  - 100
 	{SPR_SCOR, 1, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRB  - 200
@@ -4219,27 +4220,27 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		117,              // doomednum
 		S_ROBOHOOD_LOOK,  // spawnstate
 		1,                // spawnhealth
-		S_ROBOHOOD_STND,  // seestate
+		S_ROBOHOOD_STAND, // seestate
 		sfx_None,         // seesound
 		TICRATE,          // reactiontime
 		sfx_None,         // attacksound
-		S_ROBOHOOD_JUMP,  // painstate
+		S_NULL,           // painstate
 		0,                // painchance
 		sfx_None,         // painsound
-		S_NULL,           // meleestate
-		S_ROBOHOOD_SHOOT, // missilestate
+		S_ROBOHOOD_JUMP3, // meleestate
+		S_ROBOHOOD_FIRE1, // missilestate
 		S_XPLD_FLICKY,    // deathstate
-		S_ROBOHOOD_JUMP2, // xdeathstate
+		S_NULL,           // xdeathstate
 		sfx_pop,          // deathsound
-		0,                // speed
+		3,                // speed
 		24*FRACUNIT,      // radius
 		32*FRACUNIT,      // height
 		0,                // display offset
 		100,              // mass
 		0,                // damage
-		sfx_None,         // activesound
+		sfx_s3k4a,        // activesound
 		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
-		S_ROBOHOOD_FALL   // raisestate
+		S_ROBOHOOD_JUMP1  // raisestate
 	},
 
 	{           // MT_FACESTABBER
@@ -8616,7 +8617,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ARROW,        // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_None,       // seesound
+		sfx_s3ka0,      // seesound
 		32,             // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -8626,15 +8627,15 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_ARROWDOWN,    // xdeathstate
-		sfx_None,       // deathsound
+		sfx_s3k52,      // deathsound
 		16*FRACUNIT,    // speed
 		4*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
 		0,              // mass
 		1,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		sfx_s3k51,      // activesound
+		MF_NOBLOCKMAP|MF_MISSILE, // flags
 		S_ARROWUP       // raisestate
 	},
 
