@@ -105,7 +105,7 @@ void A_CheckBuddy();
 void A_HoodFire();
 void A_HoodThink();
 void A_HoodFall();
-void A_ArrowCheck();
+void A_ArrowBonks();
 void A_SnailerThink();
 void A_SharpChase();
 void A_SharpSpin();
@@ -2061,8 +2061,8 @@ typedef enum state
 
 	// Arrow
 	S_ARROW,
-	S_ARROWUP,
-	S_ARROWDOWN,
+	S_TEMPSHI,
+	S_ARROWBONK,
 
 	// Trapgoyle Demon fire
 	S_DEMONFIRE1,

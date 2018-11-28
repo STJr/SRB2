@@ -66,7 +66,7 @@ void A_CheckBuddy(mobj_t *actor);
 void A_HoodFire(mobj_t *actor);
 void A_HoodThink(mobj_t *actor);
 void A_HoodFall(mobj_t *actor);
-void A_ArrowCheck(mobj_t *actor);
+void A_ArrowBonks(mobj_t *actor);
 void A_SnailerThink(mobj_t *actor);
 void A_SharpChase(mobj_t *actor);
 void A_SharpSpin(mobj_t *actor);
@@ -1741,48 +1741,29 @@ void A_HoodFall(mobj_t *actor)
 	P_SetMobjState(actor, actor->info->seestate);
 }
 
-// Function: A_ArrowCheck
+// Function: A_ArrowBonks
 //
-// Description: Checks arrow direction and adjusts sprite accordingly
+// Description: Arrow momentum setting on collision
 //
 // var1 = unused
 // var2 = unused
 //
-void A_ArrowCheck(mobj_t *actor)
+void A_ArrowBonks(mobj_t *actor)
 {
-	fixed_t x,y,z;
-	angle_t angle;
-	fixed_t dist;
-
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ArrowCheck", actor))
+	if (LUA_CallAction("A_ArrowBonks", actor))
 		return;
 #endif
 
-	// Movement vector
-	x = actor->momx;
-	y = actor->momy;
-	z = actor->momz;
+	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)
+		|| (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
+		actor->angle += ANGLE_180;
 
-	// Calculate the angle of movement.
-	/*
-	       Z
-	     / |
-	   /   |
-	 /     |
-	0------dist(X,Y)
-	*/
+	P_SetObjectMomZ(actor, 8*actor->scale, false);
+	P_InstaThrust(actor, actor->angle, -6*actor->scale);
 
-	dist = P_AproxDistance(x, y);
-
-	angle = R_PointToAngle2(0, 0, dist, z);
-
-	if (angle > ANG20 && angle <= ANGLE_180)
-		P_SetMobjStateNF(actor, actor->info->raisestate);
-	else if (angle < ANG340 && angle > ANGLE_180)
-		P_SetMobjStateNF(actor, actor->info->xdeathstate);
-	else
-		P_SetMobjStateNF(actor, actor->info->spawnstate);
+	actor->flags = (actor->flags|MF_NOCLIPHEIGHT) & ~MF_NOGRAVITY;
+	actor->z += P_MobjFlip(actor);
 }
 
 // Function: A_SnailerThink
@@ -10966,14 +10947,13 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 //
 void A_FlickyFly(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyFly", actor))
 		return;
 #endif
-	P_InternalFlickyFly(actor, var1, var2,
+	P_InternalFlickyFly(actor, locvar1, locvar2,
 	FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
 	);
 }
@@ -10987,14 +10967,13 @@ void A_FlickyFly(mobj_t *actor)
 //
 void A_FlickySoar(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickySoar", actor))
 		return;
 #endif
-	P_InternalFlickyFly(actor, var1, var2,
+	P_InternalFlickyFly(actor, locvar1, locvar2,
 	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
 	);
 
@@ -11059,14 +11038,13 @@ void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angl
 //
 void A_FlickyHop(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyHop instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyHop", actor))
 		return;
 #endif
-	P_InternalFlickyHop(actor, var1, var2, actor->angle);
+	P_InternalFlickyHop(actor, locvar1, locvar2, actor->angle);
 }
 
 // Function: A_FlickyFlounder
@@ -11149,13 +11127,14 @@ void A_FlickyHeightCheck(mobj_t *actor)
 //
 void A_FlickyFlutter(mobj_t *actor)
 {
-	// We're not setting up locvars here - it passes var1 and var2 through to A_FlickyCheck instead.
-	//INT32 locvar1 = var1;
-	//INT32 locvar2 = var2;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyFlutter", actor))
 		return;
 #endif
+	var1 = locvar1;
+	var2 = locvar2;
 	A_FlickyCheck(actor);
 
 	var1 = ANG30;

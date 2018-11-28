@@ -7238,6 +7238,9 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			}
 			break;
+		case MT_EGGSHIELD:
+			mobj->flags2 ^= MF2_DONTDRAW;
+			break;
 		case MT_EGGTRAP: // Egg Capsule animal release
 			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7)
 				&& (mobj->fuse & 3))
@@ -7355,18 +7358,42 @@ void P_MobjThinker(mobj_t *mobj)
 				P_MobjCheckWater(mobj);
 				break;
 			case MT_ARROW:
-				if (!(mobj->extravalue1) && (mobj->momz < 0))
+				if (mobj->flags & MF_MISSILE)
 				{
-					mobj->extravalue1 = 1;
-					S_StartSound(mobj, mobj->info->activesound);
+					// Calculate the angle of movement.
+					/*
+						   momz
+						 / |
+					   /   |
+					 /     |
+					0------dist(momx,momy)
+					*/
+
+					fixed_t dist = P_AproxDistance(mobj->momx, mobj->momy);
+					angle_t angle = R_PointToAngle2(0, 0, dist, mobj->momz);
+
+					if (angle > ANG20 && angle <= ANGLE_180)
+						mobj->frame = 2;
+					else if (angle < ANG340 && angle > ANGLE_180)
+						mobj->frame = 0;
+					else
+						mobj->frame = 1;
+
+					if (!(mobj->extravalue1) && (mobj->momz < 0))
+					{
+						mobj->extravalue1 = 1;
+						S_StartSound(mobj, mobj->info->activesound);
+					}
+					if (leveltime & 1)
+					{
+						mobj_t *dust = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_PARTICLE);
+						dust->tics = 18;
+						dust->scalespeed = 4096;
+						dust->destscale = FRACUNIT/32;
+					}
 				}
-				if (leveltime & 1)
-				{
-					mobj_t *dust = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_PARTICLE);
-					dust->tics = 18;
-					dust->scalespeed = 4096;
-					dust->destscale = FRACUNIT/32;
-				}
+				else
+					mobj->flags2 ^= MF2_DONTDRAW;
 				break;
 			case MT_EMERALDSPAWN:
 				if (mobj->threshold)
