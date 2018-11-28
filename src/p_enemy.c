@@ -10845,7 +10845,7 @@ void A_FlickyCenter(mobj_t *actor)
 				| ((actor->spawnpoint->options & MTF_OBJECTSPECIAL) ? MF_GRENADEBOUNCE : 0)
 				| ((actor->spawnpoint->options & MTF_AMBUSH) ? MF_NOCLIPTHING : 0)
 			);
-			actor->extravalue1 = actor->spawnpoint->angle;
+			actor->extravalue1 = abs(actor->spawnpoint->angle) * FRACUNIT;
 			actor->extravalue2 = actor->spawnpoint->extrainfo;
 			actor->friction = actor->spawnpoint->x*FRACUNIT;
 			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
@@ -10859,7 +10859,7 @@ void A_FlickyCenter(mobj_t *actor)
 				| ((flickyflags & 2) ? MF_GRENADEBOUNCE : 0)
 				| ((flickyflags & 4) ? MF_NOCLIPTHING : 0)
 			);
-			actor->extravalue1 = 0; // move sign from var1 bit 24, distance from var2
+			actor->extravalue1 = locvar2; // don't abs() yet, for movedir
 			actor->extravalue2 = flickycolor;
 			actor->friction = actor->x;
 			actor->movefactor = actor->y;
@@ -10895,6 +10895,10 @@ void A_FlickyCenter(mobj_t *actor)
 			P_InternalFlickySetColor(actor->tracer, actor->extravalue2);
 
 		actor->extravalue2 = 0;
+
+		// Now abs() extravalue1 (home radius)
+		if (!actor->spawnpoint)
+			actor->extravalue1 = abs(actor->extravalue1);
 	}
 
 	if (!(actor->flags & MF_SLIDEME) && !(actor->flags & MF_NOCLIPTHING))
@@ -10905,12 +10909,9 @@ void A_FlickyCenter(mobj_t *actor)
 
 		actor->tracer->fuse = FRACUNIT;
 
-		if (actor->extravalue1)
-			locvar2 = abs(actor->extravalue1)*FRACUNIT;
-
 		P_LookForPlayers(actor, true, false, locvar2);
 
-		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < locvar2)
+		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
 		{
 			actor->extravalue2 = 1;
 		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
