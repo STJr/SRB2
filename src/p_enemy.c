@@ -10900,6 +10900,10 @@ void A_FlickyCenter(mobj_t *actor)
 		// Now abs() extravalue1 (home radius)
 		if (!actor->spawnpoint)
 			actor->extravalue1 = abs(actor->extravalue1);
+
+		// Impose default home radius if flicky orbits around player
+		if (!(actor->flags & MF_SLIDEME) && !actor->extravalue1)
+			actor->extravalue1 = 512 * FRACUNIT;
 	}
 
 	if (!(actor->flags & MF_SLIDEME) && !(actor->flags & MF_NOCLIPTHING))
