@@ -1188,8 +1188,6 @@ void A_FaceStabRev(mobj_t *actor)
 		return;
 	}
 
-	if (actor->hnext)
-		P_SetTarget(&actor->hnext, NULL);
 	actor->extravalue1 = 0;
 
 	if (!actor->reactiontime)
@@ -1344,13 +1342,14 @@ void A_FaceStabMiss(mobj_t *actor)
 //
 // Description: For suspicious statues only...
 //
-// var1 = unused
+// var1 = object to create
 // var2 = effective nextstate for created object
 //
 void A_StatueBurst(mobj_t *actor)
 {
-	//INT32 locvar1 = var1;
+	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	mobjtype_t chunktype = (mobjtype_t)actor->info->raisestate;
 	mobj_t *new;
 
 #ifdef HAVE_BLUA
@@ -1358,15 +1357,42 @@ void A_StatueBurst(mobj_t *actor)
 		return;
 #endif
 
-	if (!(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, (mobjtype_t)actor->info->raisestate)))
+	if (!locvar1 || !(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1)))
 		return;
 
 	new->angle = actor->angle;
 	new->target = actor->target;
 	if (locvar2)
 		P_SetMobjState(new, (statenum_t)locvar2);
+	S_StartSound(new, new->info->attacksound);
 	S_StopSound(actor);
 	S_StartSound(actor, sfx_s3k96);
+
+	{
+		fixed_t a, b;
+		fixed_t c = (actor->height>>2) - FixedMul(actor->scale, mobjinfo[chunktype].height>>1);
+		fixed_t v = 4<<FRACBITS;
+		const fixed_t r = (actor->radius>>1);
+		mobj_t *spawned;
+		UINT8 i;
+		for (i = 0; i < 8; i++)
+		{
+			a = ((i & 1) ? r : (-r));
+			b = ((i & 2) ? r : (-r));
+			if (i == 4)
+			{
+				c += (actor->height>>1);
+				v = 8<<FRACBITS;
+			}
+
+			spawned = P_SpawnMobjFromMobj(actor, a, b, c, chunktype);
+
+			P_InstaThrust(spawned, R_PointToAngle2(0, 0, a, b), 8<<FRACBITS);
+			P_SetObjectMomZ(spawned, v, false);
+
+			spawned->fuse = 3*TICRATE;
+		}
+	}
 }
 
 // Function: A_JetJawRoam
