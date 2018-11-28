@@ -294,6 +294,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FWR4
 	&lspr[NOLIGHT],     // SPR_BUS1
 	&lspr[NOLIGHT],     // SPR_BUS2
+	&lspr[NOLIGHT],     // SPR_BUS3
 	// Trees (both GFZ and misc)
 	&lspr[NOLIGHT],     // SPR_TRE1
 	&lspr[NOLIGHT],     // SPR_TRE2
@@ -357,6 +358,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS3
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
+	&lspr[NOLIGHT],     // SPR_FHZI
 
 	// Halloween Scenery
 	&lspr[RINGLIGHT_L], // SPR_PUMK
@@ -368,7 +370,13 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BSZ1
 	&lspr[NOLIGHT],     // SPR_BSZ2
 	&lspr[NOLIGHT],     // SPR_BSZ3
-	&lspr[NOLIGHT],     // SPR_BSZ4
+	//&lspr[NOLIGHT],     -- SPR_BSZ4
+	&lspr[NOLIGHT],     // SPR_BST1
+	&lspr[NOLIGHT],     // SPR_BST2
+	&lspr[NOLIGHT],     // SPR_BST3
+	&lspr[NOLIGHT],     // SPR_BST4
+	&lspr[NOLIGHT],     // SPR_BST5
+	&lspr[NOLIGHT],     // SPR_BST6
 	&lspr[NOLIGHT],     // SPR_BSZ5
 	&lspr[NOLIGHT],     // SPR_BSZ6
 	&lspr[NOLIGHT],     // SPR_BSZ7
@@ -506,6 +514,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SHLP
 
 	// Secret badniks and hazards, shhhh
+	&lspr[NOLIGHT],     // SPR_PENG
+	&lspr[NOLIGHT],     // SPR_POPH,
 	&lspr[NOLIGHT],     // SPR_HIVE
 	&lspr[NOLIGHT],     // SPR_BUMB,
 	&lspr[NOLIGHT],     // SPR_BBUZ

@@ -5346,7 +5346,7 @@ void A_RotateSpikeBall(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->type == MT_SPECIALSPIKEBALL) // don't remove this, these spikeballs share the same states as the rotating spikeballs
+	if (actor->type == MT_SPIKEBALL) // don't remove this, these spikeballs share the same states as the rotating spikeballs
 		return;
 
 	if (!((!locvar1 && (actor->target)) || (locvar1 && (actor->tracer))))// This should NEVER happen.
@@ -11323,21 +11323,20 @@ void A_LightBeamReset(mobj_t *actor)
 		return;
 #endif
 
-	P_SetScale(actor, FRACUNIT + P_SignedRandom()*FRACUNIT/256);
-	actor->destscale = actor->scale;
+	actor->destscale = FRACUNIT + P_SignedRandom()*FRACUNIT/256;
+	P_SetScale(actor, actor->destscale);
 
 	if (!actor->spawnpoint)
 		return; // this can't work properly welp
 
-	actor->momx = P_SignedRandom()*FINECOSINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/128;
-	actor->momy = P_SignedRandom()*FINESINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/128;
-	actor->momz = P_SignedRandom()*FRACUNIT/128;
+	actor->momx = -(P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
+	actor->momy = (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
+	actor->momz = (P_SignedRandom()*FRACUNIT)/128;
 
-	P_UnsetThingPosition(actor);
-	actor->x = actor->spawnpoint->x*FRACUNIT + P_SignedRandom()*FINECOSINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/2;
-	actor->y = actor->spawnpoint->y*FRACUNIT + P_SignedRandom()*FINESINE((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT)/2;
-	actor->z = actor->spawnpoint->z*FRACUNIT + P_SignedRandom()*FRACUNIT/2;
-	P_SetThingPosition(actor);
+	P_TeleportMove(actor,
+		actor->spawnpoint->x*FRACUNIT - (P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
+		actor->spawnpoint->y*FRACUNIT + (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
+		actor->spawnpoint->z*FRACUNIT + (P_SignedRandom()*FRACUNIT)/2);
 }
 
 // Function: A_MineExplode

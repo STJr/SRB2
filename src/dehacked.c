@@ -3853,13 +3853,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_UNIDUS_BALL",
 
 	// Boss Explosion
-	"S_BPLD1",
-	"S_BPLD2",
-	"S_BPLD3",
-	"S_BPLD4",
-	"S_BPLD5",
-	"S_BPLD6",
-	"S_BPLD7",
+	"S_BOSSEXPLODE",
 
 	// S3&K Boss Explosion
 	"S_SONIC3KBOSSEXPLOSION1",
@@ -4368,6 +4362,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BLUESPHEREBONUS",
 	"S_BLUESPHERESPARK",
 
+	// Bomb Sphere
+	"S_BOMBSPHERE1",
+	"S_BOMBSPHERE2",
+	"S_BOMBSPHERE3",
+	"S_BOMBSPHERE4",
+
 	// NiGHTS Chip
 	"S_NIGHTSCHIP",
 	"S_NIGHTSCHIPBONUS",
@@ -4720,18 +4720,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROWBONK",
 
 	// Trapgoyle Demon fire
-	"S_DEMONFIRE1",
-	"S_DEMONFIRE2",
-	"S_DEMONFIRE3",
-	"S_DEMONFIRE4",
-	"S_DEMONFIRE5",
-	"S_DEMONFIRE6",
+	"S_DEMONFIRE",
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
 	"S_GFZFLOWERC",
 
+	"S_BLUEBERRYBUSH",
 	"S_BERRYBUSH",
 	"S_BUSH",
 
@@ -5016,8 +5012,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
 	// Xmas GFZ bushes
+	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
 	"S_XMASBUSH",
+	// FHZ
+	"S_FHZICE1",
+	"S_FHZICE2",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -6070,6 +6070,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 
 	// Secret badniks and hazards, shhhh
+	"S_PENGUINATOR_LOOK",
+	"S_PENGUINATOR_WADDLE1",
+	"S_PENGUINATOR_WADDLE2",
+	"S_PENGUINATOR_WADDLE3",
+	"S_PENGUINATOR_WADDLE4",
+	"S_PENGUINATOR_SLIDE1",
+	"S_PENGUINATOR_SLIDE2",
+	"S_PENGUINATOR_SLIDE3",
+	"S_PENGUINATOR_SLIDE4",
+	"S_PENGUINATOR_SLIDE5",
+
+	"S_POPHAT_LOOK",
+	"S_POPHAT_SHOOT1",
+	"S_POPHAT_SHOOT2",
+	"S_POPHAT_SHOOT3",
+
 	"S_HIVEELEMENTAL_LOOK",
 	"S_HIVEELEMENTAL_PREPARE1",
 	"S_HIVEELEMENTAL_PREPARE2",
@@ -6344,7 +6360,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Collectible Items
 	"MT_RING",
 	"MT_FLINGRING", // Lost ring
-	"MT_BLUESPHERE",  // Blue sphere replacement for special stages
+	"MT_BLUESPHERE",  // Blue sphere for special stages
+	"MT_BOMBSPHERE",
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
 	"MT_TOKEN", // Special Stage Token
@@ -6382,7 +6399,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BUBBLES", // Bubble source
 	"MT_SIGN", // Level end sign
 	"MT_SPIKEBALL", // Spike Ball
-	"MT_SPECIALSPIKEBALL",
 	"MT_SPINFIRE",
 	"MT_SPIKE",
 	"MT_WALLSPIKE",
@@ -6475,8 +6491,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZFLOWER1",
 	"MT_GFZFLOWER2",
 	"MT_GFZFLOWER3",
+
+	"MT_BLUEBERRYBUSH",
 	"MT_BERRYBUSH",
 	"MT_BUSH",
+
 	// Trees (both GFZ and misc)
 	"MT_GFZTREE",
 	"MT_GFZBERRYTREE",
@@ -6601,8 +6620,12 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
 	// Xmas GFZ bushes
+	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
 	"MT_XMASBUSH",
+	// FHZ
+	"MT_FHZICE1",
+	"MT_FHZICE2",
 
 	// Halloween Scenery
 	// Pumpkins
@@ -6814,6 +6837,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SHLEEP", // almost-decorative sleeping enemy
 
 	// Secret badniks and hazards, shhhh
+	"MT_PENGUINATOR",
+	"MT_POPHAT",
+	"MT_POPSHOT",
+
 	"MT_HIVEELEMENTAL",
 	"MT_BUMBLEBORE",
 

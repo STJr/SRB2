@@ -474,7 +474,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FLINGRING:
 		case MT_COIN:
 		case MT_FLINGCOIN:
-			if (!(P_CanPickupItem(player, false)))
+		case MT_NIGHTSSTAR:
+			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
 				return;
 
 			special->momx = special->momy = special->momz = 0;
@@ -484,39 +485,31 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoNightsScore(player);
 			break;
 		case MT_BLUESPHERE:
-			if (!(P_CanPickupItem(player, false)))
-				return;
-
-			special->momx = special->momy = special->momz = 0;
-			P_GivePlayerSpheres(player, 1);
-
-			special->destscale = ((player->powers[pw_carry] == CR_NIGHTSMODE) ? 4 : 2)*special->scale;
-			if (states[special->info->deathstate].tics > 0)
-				special->scalespeed = FixedDiv(FixedDiv(special->destscale, special->scale), states[special->info->deathstate].tics<<FRACBITS);
-			else
-				special->scalespeed = 4*FRACUNIT/5;
-
-			if (maptol & TOL_NIGHTS)
-				P_DoNightsScore(player);
-			break;
 		case MT_NIGHTSCHIP:
-			if (!(P_CanPickupItem(player, false)))
+			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
 				return;
 
 			special->momx = special->momy = special->momz = 0;
 			P_GivePlayerSpheres(player, 1);
 
+			if (special->type == MT_BLUESPHERE)
+			{
+				special->destscale = ((player->powers[pw_carry] == CR_NIGHTSMODE) ? 4 : 2)*special->scale;
+				if (states[special->info->deathstate].tics > 0)
+					special->scalespeed = FixedDiv(FixedDiv(special->destscale, special->scale), states[special->info->deathstate].tics<<FRACBITS);
+				else
+					special->scalespeed = 4*FRACUNIT/5;
+			}
+
 			if (maptol & TOL_NIGHTS)
 				P_DoNightsScore(player);
 			break;
-		case MT_NIGHTSSTAR:
-			if (!(P_CanPickupItem(player, false)))
+		case MT_BOMBSPHERE:
+			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
 				return;
 
 			special->momx = special->momy = special->momz = 0;
-
-			if (maptol & TOL_NIGHTS)
-				P_DoNightsScore(player);
+			P_DamageMobj(toucher, special, special, 1, 0);
 			break;
 		case MT_AUTOPICKUP:
 		case MT_BOUNCEPICKUP:
@@ -755,6 +748,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_NIGHTSDRONE:
 			{
 				boolean spec = G_IsSpecialStage(gamemap);
+				boolean cangiveemmy = false;
 				if (player->bot)
 					return;
 				if (player->exiting)
@@ -776,7 +770,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 									return;
 							// Well no one has an emerald, so exit anyway!
 						}
-						P_GiveEmerald(false);
+						cangiveemmy = true;
 						// Don't play Ideya sound in special stage mode
 					}
 					else
@@ -815,7 +809,21 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						while ((hnext = hnext->hnext))
 							P_SetTarget(&hnext->target, toucher);
 					}
+					return;
 				}
+
+				if (!cangiveemmy)
+					return;
+
+				if (player->exiting)
+					P_GiveEmerald(false);
+				else if (player->mo->tracer && player->mare)
+				{
+					P_KillMobj(toucher->tracer, NULL, NULL, 0); // No emerald for you just yet!
+					S_StartSound(NULL, sfx_ghosty);
+					special->flags2 |= MF2_DONTDRAW;
+				}
+
 				return;
 			}
 		case MT_NIGHTSLOOPHELPER:
@@ -922,9 +930,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						}
 					}
 
-					if (!(mo2->type == MT_RING || mo2->type == MT_COIN || mo2->type == MT_BLUESPHERE
+					if (!(mo2->type == MT_RING || mo2->type == MT_COIN
+						|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
-					   || ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
+						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -941,6 +950,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// make sure everything is as it should be, THEN take rings from players in special stages
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
+
+			if (toucher->tracer)
+				return; // Don't have multiple ideya
 
 			if (player->mare != special->threshold) // wrong mare
 				return;
