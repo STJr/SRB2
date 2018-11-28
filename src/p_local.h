@@ -326,6 +326,7 @@ void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angl
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
+extern ffloor_t *tmfloorrover, *tmceilingrover;
 extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;

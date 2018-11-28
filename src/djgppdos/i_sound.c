@@ -134,19 +134,10 @@ FUNCINLINE static ATTRINLINE int Volset(int vol)
 
 void I_SetSfxVolume(INT32 volume)
 {
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	set_volume (Volset(volume),-1);
-}
-
-void I_SetMIDIMusicVolume(INT32 volume)
-{
-	if (nomidimusic)
-		return;
-
-	// Now set volume on output device.
-	set_volume (-1, Volset(volume));
 }
 
 //
@@ -165,11 +156,13 @@ INT32 I_StartSound ( sfxenum_t     id,
                    INT32         vol,
                    INT32         sep,
                    INT32         pitch,
-                   INT32         priority )
+                   INT32         priority,
+				   INT32         channel)
 {
 	int voice;
+	(void)channel;
 
-	if (nosound)
+	if (sound_disabled)
 	return 0;
 
 	// UNUSED
@@ -190,7 +183,7 @@ void I_StopSound (INT32 handle)
 	//  an setting the channel to zero.
 	int voice=handle & (VIRTUAL_VOICES-1);
 
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	if (voice_check(voice)==S_sfx[handle>>VOICESSHIFT].data)
@@ -199,7 +192,7 @@ void I_StopSound (INT32 handle)
 
 INT32 I_SoundIsPlaying(INT32 handle)
 {
-	if (nosound)
+	if (sound_disabled)
 		return FALSE;
 
 	if (voice_check(handle & (VIRTUAL_VOICES-1))==S_sfx[handle>>VOICESSHIFT].data)
@@ -229,7 +222,7 @@ void I_UpdateSoundParams( INT32 handle,
 	int voice=handle & (VIRTUAL_VOICES-1);
 	int numsfx=handle>>VOICESSHIFT;
 
-	if (nosound)
+	if (sound_disabled)
 		return;
 
 	if (voice_check(voice)==S_sfx[numsfx].data)
@@ -270,17 +263,17 @@ void I_StartupSound(void)
 	char   err[255];
 #endif
 
-	if (nosound)
+	if (sound_disabled)
 		sfxcard=DIGI_NONE;
 	else
 		sfxcard=DIGI_AUTODETECT;
 
-	if (nomidimusic)
+	if (midi_disabled)
 		midicard=MIDI_NONE;
 	else
 		midicard=MIDI_AUTODETECT; //DetectMusicCard();
 
-	nodigimusic=true; //Alam: No OGG/MP3/IT/MOD support
+	digital_disabled=true; //Alam: No OGG/MP3/IT/MOD support
 
 	// Secure and configure sound device first.
 	CONS_Printf("I_StartupSound: ");
@@ -293,8 +286,8 @@ void I_StartupSound(void)
 	{
 		sprintf (err,"Sound init error : %s\n",allegro_error);
 		CONS_Error (err);
-		nosound=true;
-		nomidimusic=true;
+		sound_disabled=true;
+		midi_disabled=true;
 	}
 	else
 	{
@@ -321,7 +314,11 @@ static MIDI* currsong;   //im assuming only 1 song will be played at once
 static int      islooping=0;
 static int      musicdies=-1;
 UINT8           music_started=0;
+boolean         songpaused=false;
 
+/// ------------------------
+//  MUSIC SYSTEM
+/// ------------------------
 
 /* load_midi_mem:
  *  Loads a standard MIDI file from memory, returning a pointer to
@@ -389,116 +386,66 @@ static MIDI *load_midi_mem(char *mempointer,int *e)
 	return midi;
 }
 
-void I_InitMIDIMusic(void)
+void I_InitMusic(void)
 {
-	if (nomidimusic)
+	if (midi_disabled)
 		return;
 
 	I_AddExitFunc(I_ShutdownMusic);
 	music_started = true;
-}
-
-void I_ShutdownMIDIMusic(void)
-{
-	if ( !music_started )
-		return;
-
-	I_StopSong(1);
-
-	music_started=false;
-}
-
-void I_InitDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_ShutdownDigMusic(void)
-{
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
-}
-
-void I_InitMusic(void)
-{
-	if (!nodigimusic)
-		I_InitDigMusic();
-	if (!nomidimusic)
-		I_InitMIDIMusic();
+	songpaused = false;
 }
 
 void I_ShutdownMusic(void)
 {
-	I_ShutdownMIDIMusic();
-	I_ShutdownDigMusic();
+	if ( !music_started )
+		return;
+
+	I_StopSong();
+
+	music_started=false;
 }
 
-boolean I_PlaySong(INT32 handle, INT32 looping)
-{
-	handle = 0;
-	if (nomidimusic)
-		return false;
+/// ------------------------
+//  MUSIC PROPERTIES
+/// ------------------------
 
-	islooping = looping;
-	musicdies = gametic + NEWTICRATE*30;
-	if (play_midi(currsong,looping)==0)
-		return true;
+musictype_t I_SongType(void)
+{
+	if (currsong)
+		return MU_MID;
+	else
+		return MU_NONE;
+}
+
+boolean I_SongPlaying()
+{
+	return (boolean)currsong;
+}
+
+boolean I_SongPaused()
+{
+	return songpaused;
+}
+
+/// ------------------------
+//  MUSIC EFFECTS
+/// ------------------------
+
+boolean I_SetSongSpeed(float speed)
+{
+	(void)speed;
 	return false;
 }
 
-void I_PauseSong (INT32 handle)
-{
-	handle = 0;
-	if (nomidimusic)
-		return;
+/// ------------------------
+//  MUSIC PLAYBACK
+/// ------------------------
 
-	midi_pause();
-}
-
-void I_ResumeSong (INT32 handle)
-{
-	handle = 0;
-	if (nomidimusic)
-		return;
-
-	midi_resume();
-}
-
-void I_StopSong(INT32 handle)
-{
-	handle = 0;
-	if (nomidimusic)
-		return;
-
-	islooping = 0;
-	musicdies = 0;
-	stop_midi();
-}
-
-// Is the song playing?
-#if 0
-int I_QrySongPlaying(int handle)
-{
-	if (nomidimusic)
-		return 0;
-
-	//return islooping || musicdies > gametic;
-	return (midi_pos==-1);
-}
-#endif
-
-void I_UnRegisterSong(INT32 handle)
-{
-	handle = 0;
-	if (nomidimusic)
-		return;
-
-	//destroy_midi(currsong);
-}
-
-INT32 I_RegisterSong(void *data, size_t len)
+boolean I_LoadSong(char *data, size_t len)
 {
 	int e = len; //Alam: For error
-	if (nomidimusic)
+	if (midi_disabled)
 		return 0;
 
 	if (memcmp(data,"MThd",4)==0) // support mid file in WAD !!!
@@ -520,32 +467,81 @@ INT32 I_RegisterSong(void *data, size_t len)
 	return 1;
 }
 
-/// \todo Add OGG/MP3 support for dos
-boolean I_StartDigSong(const char *musicname, INT32 looping)
+void I_UnloadSong(void)
 {
-	musicname = NULL;
-	looping = 0;
-	//CONS_Printf("I_StartDigSong: Not yet supported under DOS.\n");
+	handle = 0;
+	if (midi_disabled)
+		return;
+
+	//destroy_midi(currsong);
+}
+
+boolean I_PlaySong(boolean looping)
+{
+	handle = 0;
+	if (midi_disabled)
+		return false;
+
+	islooping = looping;
+	musicdies = gametic + NEWTICRATE*30;
+	if (play_midi(currsong,looping)==0)
+		return true;
 	return false;
 }
 
-void I_StopDigSong(void)
+void I_StopSong(void)
 {
-//	CONS_Printf("I_StopDigSong: Not yet supported under DOS.\n");
+	handle = 0;
+	if (midi_disabled)
+		return;
+
+	islooping = 0;
+	musicdies = 0;
+	stop_midi();
+	songpaused = false;
 }
 
-void I_SetDigMusicVolume(INT32 volume)
+void I_PauseSong (INT32 handle)
 {
-	volume = 0;
-	if (nodigimusic)
+	handle = 0;
+	if (midi_disabled)
+		return;
+	midi_pause();
+	songpaused = true;
+}
+
+void I_ResumeSong (INT32 handle)
+{
+	handle = 0;
+	if (midi_disabled)
+		return;
+	midi_resume();
+	songpaused = false;
+}
+
+void I_SetMusicVolume(INT32 volume)
+{
+	if (midi_disabled)
 		return;
 
 	// Now set volume on output device.
-//	CONS_Printf("Digital music not yet supported under DOS.\n");
+	set_volume (-1, Volset(volume));
 }
 
-boolean I_SetSongSpeed(float speed)
+boolean I_SetSongTrack(INT32 track)
 {
-	(void)speed;
+	(void)track;
 	return false;
 }
+
+// Is the song playing?
+#if 0
+int I_QrySongPlaying(int handle)
+{
+	if (midi_disabled)
+		return 0;
+
+	//return islooping || musicdies > gametic;
+	return (midi_pos==-1);
+}
+#endif

@@ -90,10 +90,7 @@ extern boolean fromlevelselect;
 // Internal parameters for sound rendering.
 // ========================================
 
-extern boolean nomidimusic; // defined in d_main.c
-extern boolean nosound;
-extern boolean nodigimusic;
-extern boolean music_disabled;
+extern boolean midi_disabled;
 extern boolean sound_disabled;
 extern boolean digital_disabled;
 

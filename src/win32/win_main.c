@@ -110,9 +110,9 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
 			// pause music when alt-tab
 			if (appActive  && !paused)
-				I_ResumeSong(0);
+				I_ResumeSong();
 			else if (!paused)
-				I_PauseSong(0);
+				I_PauseSong();
 			{
 				HANDLE ci = GetStdHandle(STD_INPUT_HANDLE);
 				DWORD mode;
