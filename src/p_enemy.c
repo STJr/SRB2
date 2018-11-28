@@ -10847,7 +10847,8 @@ void A_FlickyCenter(mobj_t *actor)
 				| ((actor->spawnpoint->options & MTF_OBJECTSPECIAL) ? MF_GRENADEBOUNCE : 0)
 				| ((actor->spawnpoint->options & MTF_AMBUSH) ? MF_NOCLIPTHING : 0)
 			);
-			actor->extravalue1 = abs(actor->spawnpoint->angle) * FRACUNIT;
+			actor->extravalue1 = actor->spawnpoint->angle ? abs(actor->spawnpoint->angle) * FRACUNIT
+				: locvar2 ? abs(locvar2) : 448 * FRACUNIT;
 			actor->extravalue2 = actor->spawnpoint->extrainfo;
 			actor->friction = actor->spawnpoint->x*FRACUNIT;
 			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
@@ -10895,9 +10896,9 @@ void A_FlickyCenter(mobj_t *actor)
 
 		// Impose default home radius if flicky orbits around player
 		if (!actor->extravalue1)
-			actor->extravalue1 = 512 * FRACUNIT;
+			actor->extravalue1 = locvar2 ? abs(locvar2) : 448 * FRACUNIT;
 
-		P_LookForPlayers(actor, true, false, locvar2);
+		P_LookForPlayers(actor, true, false, actor->extravalue1);
 
 		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
 		{
