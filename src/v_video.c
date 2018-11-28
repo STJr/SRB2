@@ -622,7 +622,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		if (scrn & V_FLIP)
 		{
 			flip = true;
-			x -= FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale);
+			x -= FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale) + 1;
 		}
 		else
 			x -= FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
@@ -1236,7 +1236,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
 		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
-			memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
+			memset(screens[0], (c&255), vid.width * vid.height * vid.bpp);
 			return;
 		}
 
@@ -1299,7 +1299,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	c &= 255;
 
 	for (;(--h >= 0) && dest < deststop; dest += vid.width)
-		memset(dest, (UINT8)(c&255), w * vid.bpp);
+		memset(dest, c, w * vid.bpp);
 }
 
 //
@@ -1642,6 +1642,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		dupx = dupy = 1;
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
 	}
 
 	switch (option & V_SPACINGMASK)
@@ -1701,7 +1702,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = SHORT(hu_font[c]->width) * dupx;
 
-		if (cx+left > scrwidth)
+		if (cx > scrwidth)
 			break;
 		if (cx+left + w < 0) //left boundary check
 		{
@@ -1754,6 +1755,7 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		dupx = dupy = 1;
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
 	}
 
 	charflags = (option & V_CHARCOLORMASK);
@@ -1813,7 +1815,8 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		}
 		else
 			w = SHORT(hu_font[c]->width) * dupx / 2;
-		if (cx+left > scrwidth)
+
+		if (cx > scrwidth)
 			break;
 		if (cx+left + w < 0) //left boundary check
 		{
@@ -1860,6 +1863,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		dupx = dupy = 1;
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
 	}
 
 	charflags = (option & V_CHARCOLORMASK);
@@ -1917,7 +1921,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = (SHORT(tny_font[c]->width) * dupx);
 
-		if (cx+left > scrwidth)
+		if (cx > scrwidth)
 			break;
 		if (cx+left + w < 0) //left boundary check
 		{
@@ -1960,6 +1964,7 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		dupx = dupy = 1;
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
 	}
 
 	switch (option & V_SPACINGMASK)
@@ -2014,9 +2019,9 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		else
 			w = SHORT(hu_font[c]->width) * dupx;
 
-		if ((cx>>FRACBITS)+left > scrwidth)
+		if ((cx>>FRACBITS) > scrwidth)
 			break;
-		if (cx+left + w < 0) //left boundary check
+		if ((cx>>FRACBITS)+left + w < 0) //left boundary check
 		{
 			cx += w<<FRACBITS;
 			continue;
@@ -2074,6 +2079,16 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 	} while (--digits);
 }
 
+// Draw an act number for a level title
+// Todo: actually draw two-digit numbers as two act num patches
+void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, INT32 num)
+{
+	if (num < 0 || num > 19)
+		return; // not supported
+
+	V_DrawScaledPatch(x, y, flags, ttlnum[num]);
+}
+
 // Write a string using the credit font
 // NOTE: the text is centered for screens larger than the base width
 //
@@ -2116,7 +2131,7 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 		}
 
 		w = SHORT(cred_font[c]->width) * dupx;
-		if ((cx>>FRACBITS) + w > scrwidth)
+		if ((cx>>FRACBITS) > scrwidth)
 			break;
 
 		V_DrawSciencePatch(cx, cy, option, cred_font[c], FRACUNIT);
@@ -2168,6 +2183,7 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		dupx = dupy = 1;
 		scrwidth = vid.width/vid.dupx;
 		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
 	}
 
 	for (;;ch++)
@@ -2197,10 +2213,9 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 
 		w = SHORT(lt_font[c]->width) * dupx;
 
-		if (cx+left > scrwidth)
+		if (cx > scrwidth)
 			break;
-		//left boundary check
-		if (cx+left + w < 0)
+		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -2252,6 +2267,16 @@ INT32 V_LevelNameHeight(const char *string)
 	}
 
 	return w;
+}
+
+// For ST_drawLevelTitle
+// Returns the width of the act num patch
+INT32 V_LevelActNumWidth(INT32 num)
+{
+	if (num < 0 || num > 19)
+		return 0; // not a valid number
+
+	return SHORT(ttlnum[num]->width);
 }
 
 //

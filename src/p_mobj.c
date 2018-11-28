@@ -6102,9 +6102,11 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale)
 void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on your target
 {
 	fixed_t dist, ndist, speedmul;
+	angle_t vangle;
 	fixed_t tx = dest->x;
 	fixed_t ty = dest->y;
 	fixed_t tz = dest->z + (dest->height/2); // Aim for center
+	fixed_t xydist = P_AproxDistance(tx - source->x, ty - source->y);
 
 	if (!dest || dest->health <= 0 || !dest->player || !source->tracer)
 		return;
@@ -6113,19 +6115,40 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	source->angle = R_PointToAngle2(source->x, source->y, tx, ty);
 
 	// change slope
-	dist = P_AproxDistance(P_AproxDistance(tx - source->x, ty - source->y), tz - source->z);
+	dist = P_AproxDistance(xydist, tz - source->z);
 
 	if (dist < 1)
 		dist = 1;
 
-	if (nightsgrab)
-		speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
-	else
-		speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+	if (nightsgrab && source->movefactor)
+	{
+		source->movefactor += FRACUNIT/2;
 
-	source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
-	source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
-	source->momz = FixedMul(FixedDiv(tz - source->z, dist), speedmul);
+		if (dist < source->movefactor)
+		{
+			source->momx = source->momy = source->momz = 0;
+			P_TeleportMove(source, tx, ty, tz);
+		}
+		else
+		{
+			vangle = R_PointToAngle2(source->z, 0, tz, xydist);
+
+			source->momx = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINECOSINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momy = FixedMul(FINESINE(vangle >> ANGLETOFINESHIFT), FixedMul(FINESINE(source->angle >> ANGLETOFINESHIFT), source->movefactor));
+			source->momz = FixedMul(FINECOSINE(vangle >> ANGLETOFINESHIFT), source->movefactor);
+		}
+	}
+	else
+	{
+		if (nightsgrab)
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
+		else
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+
+		source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
+		source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
+		source->momz = FixedMul(FixedDiv(tz - source->z, dist), speedmul);
+	}
 
 	// Instead of just unsetting NOCLIP like an idiot, let's check the distance to our target.
 	ndist = P_AproxDistance(P_AproxDistance(tx - (source->x+source->momx),
@@ -6150,6 +6173,7 @@ static void P_NightsItemChase(mobj_t *thing)
 	{
 		P_SetTarget(&thing->tracer, NULL);
 		thing->flags2 &= ~MF2_NIGHTSPULL;
+		thing->movefactor = 0;
 		return;
 	}
 
@@ -7113,9 +7137,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FLICKY_16_CENTER:
 			case MT_SECRETFLICKY_01_CENTER:
 			case MT_SECRETFLICKY_02_CENTER:
-				if (mobj->tracer
-					&& (mobj->flags & MF_NOCLIPTHING)
-					&& !(mobj->flags & MF_GRENADEBOUNCE))
+				if (mobj->tracer && (mobj->flags & MF_NOCLIPTHING))
 				{
 					if (!(mobj->tracer->flags2 & MF2_OBJECTFLIP) && mobj->tracer->z <= mobj->tracer->floorz)
 						mobj->tracer->momz = 7*FRACUNIT;
@@ -8779,7 +8801,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			nummaprings = -1; // no perfect bonus, rings are free
 			break;
 		case MT_EGGCAPSULE:
-			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			mobj->extravalue1 = -1; // sphere timer for how long a player has been at the capsule
+			mobj->extravalue2 = -1; // tic timer for how long a player has been at the capsule
 			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;

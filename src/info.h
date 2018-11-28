@@ -451,6 +451,7 @@ typedef enum sprite
 	SPR_CFLG, // Waving flag/segment
 	SPR_CSTA, // Crawla statue
 	SPR_CBBS, // Facestabber statue
+	SPR_CABR, // Brambles
 
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
@@ -2276,6 +2277,7 @@ typedef enum state
 	S_SUSPICIOUSFACESTABBERSTATUE_WAIT,
 	S_SUSPICIOUSFACESTABBERSTATUE_BURST1,
 	S_SUSPICIOUSFACESTABBERSTATUE_BURST2,
+	S_BRAMBLES,
 
 	// Big Tumbleweed
 	S_BIGTUMBLEWEED,
@@ -3988,6 +3990,7 @@ typedef enum mobj_type
 	MT_CRAWLASTATUE, // Crawla statue
 	MT_FACESTABBERSTATUE, // Facestabber statue
 	MT_SUSPICIOUSFACESTABBERSTATUE, // :eggthinking:
+	MT_BRAMBLES, // Brambles
 
 	// Arid Canyon Scenery
 	MT_BIGTUMBLEWEED,

@@ -10812,17 +10812,14 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 //        Bit 21 = Flag MF_SLIDEME (see below)
 //        Bit 22 = Flag MF_GRENADEBOUNCE (see below)
 //        Bit 23 = Flag MF_NOCLIPTHING (see below)
-//        Bit 24 = Flicky movedir, 0 or 1
 //
 //        If actor is placed from a spawnpoint (map Thing), the Thing's properties take precedence.
 //
 // var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
 //
-// If MTF_EXTRA (MF_SLIDEME) is flagged, Flickies move independently of a target. Else, move around the target.
-// If MTF_EXTRA (MF_SLIDEME) and MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) are both flagged, Flying flickies sink from gravity. By default, they stay at constant Z height.
-// If MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) and NOT MTF_EXTRA (MF_SLIDEME) are flagged, Angle sign determines direction of circular movement.
-// If MTF_AMBUSH (MF_NOCLIPTHING) is flagged, Flickies hop in-place.
-// If MTF_AMBUSH (MF_NOCLIPTHING) and MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE) is flagged, Flickies stand in-place without gravity.
+// If MTF_EXTRA (MF_SLIDEME): is flagged, Flickies move aimlessly. Else, orbit around the target.
+// If MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE): Flickies stand in-place without gravity (unless they hop, then gravity is applied.)
+// If MTF_AMBUSH (MF_NOCLIPTHING): is flagged, Flickies hop.
 //
 void A_FlickyCenter(mobj_t *actor)
 {
@@ -10838,6 +10835,10 @@ void A_FlickyCenter(mobj_t *actor)
 
 	if (!actor->tracer)
 	{
+		mobj_t *flicky = P_InternalFlickySpawn(actor, locvar1, 1, false);
+		P_SetTarget(&flicky->target, actor);
+		P_SetTarget(&actor->tracer, flicky);
+
 		if (actor->spawnpoint)
 		{
 			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
@@ -10860,7 +10861,7 @@ void A_FlickyCenter(mobj_t *actor)
 				| ((flickyflags & 2) ? MF_GRENADEBOUNCE : 0)
 				| ((flickyflags & 4) ? MF_NOCLIPTHING : 0)
 			);
-			actor->extravalue1 = locvar2; // don't abs() yet, for movedir
+			actor->extravalue1 = abs(locvar2);
 			actor->extravalue2 = flickycolor;
 			actor->friction = actor->x;
 			actor->movefactor = actor->y;
@@ -10868,45 +10869,28 @@ void A_FlickyCenter(mobj_t *actor)
 			locvar1 = flickytype;
 		}
 
-		if (actor->flags & MF_SLIDEME)
+		if (actor->flags & MF_GRENADEBOUNCE) // in-place
+			actor->tracer->fuse = 0;
+		else if (actor->flags & MF_SLIDEME) // aimless
 		{
-			actor->tracer = P_InternalFlickySpawn(actor, locvar1, 1, false);
-			P_SetTarget(&actor->tracer->target, actor);
-			actor->tracer->fuse = 0; // < 2*TICRATE means move aimlessly.
-
-			if (!(actor->flags & MF_NOCLIPTHING))
-				actor->tracer->angle = P_RandomKey(180)*ANG2;
+			actor->tracer->fuse = 0; // less than 2*TICRATE means move aimlessly.
+			actor->tracer->angle = P_RandomKey(180)*ANG2;
 		}
-		else
+		else //orbit
 		{
-			actor->tracer = P_InternalFlickySpawn(actor, locvar1, 1, false);
-			P_SetTarget(&actor->tracer->target, actor);
 			actor->tracer->fuse = FRACUNIT;
-
-			if ((actor->flags & MF_GRENADEBOUNCE) && !(actor->flags & MF_SLIDEME))
-			{
-				if (!actor->spawnpoint)
-					actor->tracer->movedir = (flickyflags & 8) ? 1 : -1;
-				else
-					actor->tracer->movedir = actor->extravalue1 >= 0 ? 1 : -1;
-			}
+			// Impose default home radius if flicky orbits around player
+			if (!actor->extravalue1)
+				actor->extravalue1 = 512 * FRACUNIT;
 		}
 
 		if (locvar1 == MT_FLICKY_08)
 			P_InternalFlickySetColor(actor->tracer, actor->extravalue2);
 
 		actor->extravalue2 = 0;
-
-		// Now abs() extravalue1 (home radius)
-		if (!actor->spawnpoint)
-			actor->extravalue1 = abs(actor->extravalue1);
-
-		// Impose default home radius if flicky orbits around player
-		if (!(actor->flags & MF_SLIDEME) && !actor->extravalue1)
-			actor->extravalue1 = 512 * FRACUNIT;
 	}
 
-	if (!(actor->flags & MF_SLIDEME) && !(actor->flags & MF_NOCLIPTHING))
+	if (!(actor->flags & MF_SLIDEME) && !(actor->flags & MF_GRENADEBOUNCE))
 	{
 		fixed_t originx = actor->friction;
 		fixed_t originy = actor->movefactor;
@@ -11041,8 +11025,7 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
-		&& !((actor->target->flags & MF_GRENADEBOUNCE)
-			&& (actor->target->flags & MF_SLIDEME)))
+		&& (actor->target->flags & MF_SLIDEME))
 		vertangle = 0;
 	else
 		vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
@@ -11204,9 +11187,9 @@ void A_FlickyCheck(mobj_t *actor)
 #endif
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
-		&& (actor->target->flags & MF_NOCLIPTHING))
+		&& (actor->target->flags & MF_GRENADEBOUNCE))
 	{
-		if (actor->target->flags & MF_GRENADEBOUNCE)
+		if (!(actor->target->flags & MF_NOCLIPTHING)) // no hopping
 		{
 			actor->momz = 0;
 			actor->flags |= MF_NOGRAVITY;
@@ -11241,9 +11224,9 @@ void A_FlickyHeightCheck(mobj_t *actor)
 #endif
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
-		&& (actor->target->flags & MF_NOCLIPTHING))
+		&& (actor->target->flags & MF_GRENADEBOUNCE))
 	{
-		if (actor->target->flags & MF_GRENADEBOUNCE)
+		if (!(actor->target->flags & MF_NOCLIPTHING)) // no hopping
 		{
 			actor->momz = 0;
 			actor->flags |= MF_NOGRAVITY;
@@ -11568,7 +11551,7 @@ void A_ConnectToGround(mobj_t *actor)
 	mobj_t *work;
 	fixed_t workz;
 	fixed_t workh;
-	INT8 dir;
+	SINT8 dir;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
