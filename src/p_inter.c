@@ -104,8 +104,13 @@ void P_ClearStarPost(INT32 postnum)
 
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_STARPOST && mo2->health <= postnum)
-			P_SetMobjState(mo2, mo2->info->seestate);
+		if (mo2->type != MT_STARPOST)
+			return;
+
+		if (mo2->health > postnum)
+			return;
+
+		P_SetMobjState(mo2, mo2->info->seestate);
 	}
 	return;
 }
@@ -1364,7 +1369,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			P_ClearStarPost(special->health);
 
-			// Find all starposts in the level with this value.
+			// Find all starposts in the level with this value - INCLUDING this one!
+			if (!(netgame && circuitmap && player != &players[consoleplayer]))
 			{
 				thinker_t *th;
 				mobj_t *mo2;
@@ -1376,21 +1382,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					mo2 = (mobj_t *)th;
 
-					if (mo2 == special)
+					if (mo2->type != MT_STARPOST)
+						continue;
+					if (mo2->health != special->health)
 						continue;
 
-					if (mo2->type == MT_STARPOST && mo2->health == special->health)
-					{
-						if (!(netgame && circuitmap && player != &players[consoleplayer]))
-							P_SetMobjState(mo2, mo2->info->painstate);
-					}
+					P_SetMobjState(mo2, mo2->info->painstate);
 				}
 			}
 
 			S_StartSound(toucher, special->info->painsound);
-
-			if (!(netgame && circuitmap && player != &players[consoleplayer]))
-				P_SetMobjState(special, special->info->painstate);
 			return;
 
 		case MT_FAKEMOBILE:

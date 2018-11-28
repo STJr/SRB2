@@ -57,7 +57,6 @@ void A_ExtraLife(); // Extra Life
 void A_GiveShield(); // Obtained Shield
 void A_GravityBox();
 void A_ScoreRise(); // Rise the score logo
-void A_ParticleSpawn();
 void A_AttractChase(); // Ring Chase
 void A_DropMine(); // Drop Mine from Skim or Jetty-Syn Bomber
 void A_FishJump(); // Fish Jump
@@ -3066,7 +3065,6 @@ typedef enum state
 	S_SEED,
 
 	S_PARTICLE,
-	S_PARTICLEGEN,
 
 	// Score Logos
 	S_SCRA, // 100

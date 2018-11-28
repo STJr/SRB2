@@ -2404,6 +2404,7 @@ boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 static boolean P_ZMovement(mobj_t *mo)
 {
 	fixed_t dist, delta;
+	boolean onground;
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -2421,13 +2422,14 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+	onground = P_IsObjectOnGround(mo);
 
 #ifdef ESLOPE
 	if (mo->standingslope)
 	{
 		if (mo->flags & MF_NOCLIPHEIGHT)
 			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
+		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
 #endif
@@ -2571,15 +2573,9 @@ static boolean P_ZMovement(mobj_t *mo)
 			break;
 	}
 
-	if (P_CheckDeathPitCollide(mo))
+	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_PUSHABLE)
-		{
-			// Remove other pushable items from death pits.
-			P_RemoveMobj(mo);
-			return false;
-		}
-		else if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
+		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
 		{
 			// Kill enemies and bosses that fall into death pits.
 			if (mo->health)
@@ -2587,6 +2583,11 @@ static boolean P_ZMovement(mobj_t *mo)
 				P_KillMobj(mo, NULL, NULL, 0);
 				return false;
 			}
+		}
+		else
+		{
+			P_RemoveMobj(mo);
+			return false;
 		}
 	}
 
@@ -2870,6 +2871,8 @@ static boolean P_ZMovement(mobj_t *mo)
 
 static void P_PlayerZMovement(mobj_t *mo)
 {
+	boolean onground;
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
@@ -2903,6 +2906,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	mo->z += mo->momz;
+	onground = P_IsObjectOnGround(mo);
 
 	// Have player fall through floor?
 	if (mo->player->playerstate == PST_DEAD
@@ -2914,13 +2918,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 	{
 		if (mo->flags & MF_NOCLIPHEIGHT)
 			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
+		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
 #endif
 
 	// clip movement
-	if (P_IsObjectOnGround(mo) && !(mo->flags & MF_NOCLIPHEIGHT))
+	if (onground && !(mo->flags & MF_NOCLIPHEIGHT))
 	{
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = mo->ceilingz - mo->height;
@@ -3222,19 +3226,14 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 				P_RemoveMobj(mo);
 				return false;
 			}
-
 		default:
 			break;
 	}
 
-	// Fix for any silly pushables like the egg statues that are also scenery for some reason -- Monster Iestyn
 	if (P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_PUSHABLE)
-		{
-			P_RemoveMobj(mo);
-			return false;
-		}
+		P_RemoveMobj(mo);
+		return false;
 	}
 
 	// clip movement
@@ -7117,6 +7116,59 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 				break;
+			case MT_PARTICLEGEN:
+				if (!mobj->lastlook)
+					return;
+
+				if (!mobj->threshold)
+					return;
+
+				if (--mobj->fuse <= 0)
+				{
+					INT32 i = 0;
+					mobj_t *spawn;
+					fixed_t bottomheight, topheight;
+					INT32 type = mobj->threshold, line = mobj->cvmem;
+
+					mobj->fuse = (tic_t)mobj->reactiontime;
+
+					bottomheight = lines[line].frontsector->floorheight;
+					topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+
+					if (mobj->waterbottom != bottomheight || mobj->watertop != topheight)
+					{
+						if (mobj->movefactor && (topheight > bottomheight))
+							mobj->health = (tic_t)(FixedDiv((topheight - bottomheight), abs(mobj->movefactor)) >> FRACBITS);
+						else
+							mobj->health = 0;
+
+						mobj->z = ((mobj->flags2 & MF2_OBJECTFLIP) ? topheight : bottomheight);
+					}
+
+					if (!mobj->health)
+						return;
+
+					for (i = 0; i < mobj->lastlook; i++)
+					{
+						spawn = P_SpawnMobj(
+							mobj->x + FixedMul(FixedMul(mobj->friction, mobj->scale), FINECOSINE(mobj->angle>>ANGLETOFINESHIFT)),
+							mobj->y + FixedMul(FixedMul(mobj->friction, mobj->scale), FINESINE(mobj->angle>>ANGLETOFINESHIFT)),
+							mobj->z,
+							(mobjtype_t)mobj->threshold);
+						P_SetScale(spawn, mobj->scale);
+						spawn->momz = FixedMul(mobj->movefactor, spawn->scale);
+						spawn->destscale = spawn->scale/100;
+						spawn->scalespeed = spawn->scale/mobj->health;
+						spawn->tics = (tic_t)mobj->health;
+						spawn->flags2 |= (mobj->flags2 & MF2_OBJECTFLIP);
+						spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+
+						mobj->angle += mobj->movedir;
+					}
+
+					mobj->angle += (angle_t)mobj->movecount;
+				}
+				break;
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -7482,6 +7534,19 @@ void P_MobjThinker(mobj_t *mobj)
 				P_UnsetThingPosition(mobj);
 				mobj->z += FINESINE(mobj->extravalue1*(FINEMASK+1)/360);
 				P_SetThingPosition(mobj);
+				break;
+			case MT_FLAME:
+				if (mobj->flags2 & MF2_BOSSNOTRAP)
+				{
+					if (!mobj->target || P_MobjWasRemoved(mobj->target))
+					{
+						P_RemoveMobj(mobj);
+						return;
+					}
+					mobj->z = mobj->target->z + mobj->target->momz;
+					if (!(mobj->eflags & MFE_VERTICALFLIP))
+						mobj->z += mobj->target->height;
+				}
 				break;
 			case MT_WAVINGFLAG:
 				{
@@ -10309,8 +10374,8 @@ ML_EFFECT4 : Don't clip inside the ground
 	}
 	case MT_PARTICLEGEN:
 	{
-		fixed_t radius, speed, bottomheight, topheight;
-		INT32 type, numdivisions, time, anglespeed, ticcount;
+		fixed_t radius, speed;
+		INT32 type, numdivisions, anglespeed, ticcount;
 		angle_t angledivision;
 		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
@@ -10329,13 +10394,9 @@ ML_EFFECT4 : Don't clip inside the ground
 		else
 			type = (INT32)MT_PARTICLE;
 
-		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
-		bottomheight = lines[line].frontsector->floorheight;
-		topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
-
 		if (!lines[line].backsector
 		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
-			ticcount = states[S_PARTICLEGEN].tics;
+			ticcount = 3;
 
 		numdivisions = (mthing->options >> ZSHIFT);
 
@@ -10353,18 +10414,9 @@ ML_EFFECT4 : Don't clip inside the ground
 			angledivision = 0;
 		}
 
-		if ((speed) && (topheight > bottomheight))
-			time = (INT32)(FixedDiv((topheight - bottomheight), speed) >> FRACBITS);
-		else
-			time = 1; // There's no reasonable way to set it, so just show the object for one tic and move on.
-
+		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
 		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			mobj->z = topheight;
 			speed *= -1;
-		}
-		else
-			mobj->z = bottomheight;
 
 		CONS_Debug(DBG_GAMELOGIC, "Particle Generator (mapthing #%s):\n"
 				"Radius is %d\n"
@@ -10372,20 +10424,20 @@ ML_EFFECT4 : Don't clip inside the ground
 				"Anglespeed is %d\n"
 				"Numdivisions is %d\n"
 				"Angledivision is %d\n"
-				"Time is %d\n"
 				"Type is %d\n"
 				"Tic seperation is %d\n",
-				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, time, type, ticcount);
+				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, type, ticcount);
 
 		mobj->angle = 0;
 		mobj->movefactor = speed;
 		mobj->lastlook = numdivisions;
 		mobj->movedir = angledivision*ANG1;
 		mobj->movecount = anglespeed*ANG1;
-		mobj->health = time;
 		mobj->friction = radius;
 		mobj->threshold = type;
 		mobj->reactiontime = ticcount;
+		mobj->cvmem = line;
+		mobj->watertop = mobj->waterbottom = 0;
 
 		break;
 	}
@@ -10474,7 +10526,11 @@ ML_EFFECT4 : Don't clip inside the ground
 		break;
 	case MT_FLAMEHOLDER:
 		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
-			P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+		{
+			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
+			P_SetTarget(&flame->target, mobj);
+			flame->flags2 |= MF2_BOSSNOTRAP;
+		}
 		break;
 	case MT_SMASHINGSPIKEBALL:
 		if (mthing->angle > 0)
