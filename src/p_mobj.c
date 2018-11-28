@@ -9953,7 +9953,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		fixed_t mlength, mmaxlength, mlengthset, mspeed, mphase, myaw, mpitch, mminlength, mnumspokes, mpinch, mroll, mnumnospokes, mwidth, mwidthset, mmin, msound, radiusfactor, widthfactor;
 		angle_t mspokeangle;
 		mobjtype_t chainlink, macetype, firsttype, linktype;
-		boolean mdosound, mdocenter, mchainlike;
+		boolean mdosound, mdocenter, mchainlike = false;
 		mobj_t *spawnee = NULL, *hprev = mobj;
 		mobjflag_t mflagsapply;
 		mobjflag2_t mflags2apply;
