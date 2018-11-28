@@ -843,7 +843,7 @@ static void IdentifyVersion(void)
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1125,11 +1125,11 @@ void D_SRB2Main(void)
 #ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
-	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
+	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.dta
+	W_VerifyFileMD5(3, ASSET_HASH_PATCH_PK3); // patch.pk3
 #endif
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
@@ -1138,7 +1138,7 @@ void D_SRB2Main(void)
 
 	mainwads = 3; // there are 3 wads not to unload
 #ifdef USE_PATCH_DTA
-	++mainwads; // patch.dta adds one more
+	++mainwads; // patch.pk3 adds one more
 #endif
 #ifdef DEVELOP
 	++mainwads; // music_new, too

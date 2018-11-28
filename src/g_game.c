@@ -121,8 +121,7 @@ INT16 lastmap; // last level you were at (returning from special stages)
 tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 
 INT16 spstage_start;
-INT16 sstage_start;
-INT16 sstage_end;
+INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 INT16 titlemap = 0;
 boolean hidetitlepics = false;
@@ -2795,7 +2794,11 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 //
 boolean G_IsSpecialStage(INT32 mapnum)
 {
-	if (gametype == GT_COOP && modeattacking != ATTACKING_RECORD && mapnum >= sstage_start && mapnum <= sstage_end)
+	if (gametype != GT_COOP || modeattacking == ATTACKING_RECORD)
+		return false;
+	if (mapnum >= sstage_start && mapnum <= sstage_end)
+		return true;
+	if (mapnum >= smpstage_start && mapnum <= smpstage_end)
 		return true;
 
 	return false;
@@ -3018,23 +3021,17 @@ static void G_DoCompleted(void)
 
 	if ((gottoken = (gametype == GT_COOP && token)))
 	{
+		INT16 i;
 		token--;
 
-		if (!(emeralds & EMERALD1))
-			nextmap = (INT16)(sstage_start - 1); // Special Stage 1
-		else if (!(emeralds & EMERALD2))
-			nextmap = (INT16)(sstage_start); // Special Stage 2
-		else if (!(emeralds & EMERALD3))
-			nextmap = (INT16)(sstage_start + 1); // Special Stage 3
-		else if (!(emeralds & EMERALD4))
-			nextmap = (INT16)(sstage_start + 2); // Special Stage 4
-		else if (!(emeralds & EMERALD5))
-			nextmap = (INT16)(sstage_start + 3); // Special Stage 5
-		else if (!(emeralds & EMERALD6))
-			nextmap = (INT16)(sstage_start + 4); // Special Stage 6
-		else if (!(emeralds & EMERALD7))
-			nextmap = (INT16)(sstage_start + 5); // Special Stage 7
-		else
+		for (i = 0; i < 7; i++)
+			if (!(emeralds & i))
+			{
+				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+				break;
+			}
+
+		if (i == 7)
 			gottoken = false;
 	}
 
@@ -3206,8 +3203,9 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = 50;
-	sstage_end = 57; // 8 special stages in vanilla SRB2
+	sstage_start = smpstage_start = 50;
+	sstage_end = smpstage_end = 57; // 7 special stages in vanilla SRB2
+	sstage_end++; // plus one weirdo
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();

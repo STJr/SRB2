@@ -2670,7 +2670,21 @@ static void readmaincfg(MYFILE *f)
 					value = get_number(word2);
 
 				sstage_start = (INT16)value;
-				sstage_end = (INT16)(sstage_start+6); // 7 special stages total
+				sstage_end = (INT16)(sstage_start+7); // 7 special stages total plus one weirdo
+			}
+			else if (fastcmp(word, "SMPSTAGE_START"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				smpstage_start = (INT16)value;
+				smpstage_end = (INT16)(smpstage_start+6); // 7 special stages total
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{

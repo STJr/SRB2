@@ -126,8 +126,7 @@ extern INT32 secondarydisplayplayer; // for splitscreen
 
 // Maps of special importance
 extern INT16 spstage_start;
-extern INT16 sstage_start;
-extern INT16 sstage_end;
+extern INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 extern INT16 titlemap;
 extern boolean hidetitlepics;

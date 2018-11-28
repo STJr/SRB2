@@ -899,9 +899,15 @@ void Command_Setlives_f(void)
 
 	if (COM_Argc() > 1)
 	{
-		// P_GivePlayerLives does value clamping
-		players[consoleplayer].lives = 0;
-		P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
+		SINT8 lives = atoi(COM_Argv(1));
+		if (lives == -1)
+			players[consoleplayer].lives = 0x7f; // infinity!
+		else
+		{
+			// P_GivePlayerLives does value clamping
+			players[consoleplayer].lives = 0;
+			P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
+		}
 
 		G_SetGameModified(multiplayer);
 	}

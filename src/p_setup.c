@@ -3378,7 +3378,7 @@ boolean P_AddWadFile(const char *wadfilename)
 		for (i = 0; i < numlumps; i++, lumpinfo++)
 		{
 //			lumpinfo = FindFolder("Lua/",      &luaPos, &luaNum, lumpinfo, &numlumps, &i);
-//			lumpinfo = FindFolder("SOCs/",     &socPos, &socNum, lumpinfo, &numlumps, &i);
+//			lumpinfo = FindFolder("SOC/",      &socPos, &socNum, lumpinfo, &numlumps, &i);
 			lumpinfo = FindFolder("Sounds/",   &sfxPos, &sfxNum, lumpinfo, &numlumps, &i);
 			lumpinfo = FindFolder("Music/",    &musPos, &musNum, lumpinfo, &numlumps, &i);
 //			lumpinfo = FindFolder("Sprites/",  &sprPos, &sprNum, lumpinfo, &numlumps, &i);

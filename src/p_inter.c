@@ -2391,6 +2391,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					P_RemoveMobj(chain);
 					chain = chainnext;
 				}
+				S_StopSound(target->tracer);
 				P_KillMobj(target->tracer, inflictor, source, damagetype);
 			}
 			break;

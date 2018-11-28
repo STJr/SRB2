@@ -194,11 +194,11 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
-	posStart = W_CheckNumForFolderStartPK3("SOCs/", wadnum, 0);
+	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
-		posStart++; // first "lump" will be "SOCs/" folder itself, so ignore it
+		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
+		posStart++; // first "lump" will be "SOC/" folder itself, so ignore it
 		for(; posStart < posEnd; posStart++)
 		{
 			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
