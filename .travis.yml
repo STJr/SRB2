@@ -294,7 +294,7 @@ before_script:
   - for f in $ASSET_FILES_REQUIRED; do
       wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
       if [ ! -f "$HOME/srb2_cache/$f" ]; then
-        echo "ERROR: Could not download \"$ASSET_BASE_PATH/$f\"";
+        echo "Could not download \"$ASSET_BASE_PATH/$f\"";
         return 1;
       fi;
       cp "$HOME/srb2_cache/$f" "assets/$f";
