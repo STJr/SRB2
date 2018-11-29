@@ -42,11 +42,16 @@ ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
 ${ASSET_FILES_OPTIONAL:=music.dta}
 
 # Validate Deployer state
-if [[ "$DEPLOYER_ENABLED" == "1" ]]; then
-	if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
-		if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
-			if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
-				if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
+    # Search for the trigger word
+    if [[ "$DEPLOYER_TRIGGER" == "" ]] || [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER]"* ]] \
+    || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]"* ]] \
+    || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
+        # Is the job enabled for deployment?
+        if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
+            # Whitelist by OS names and branches
+            if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
+                if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
                     # Base Deployer is eligible for becoming active
                     # Now check for sub-modules
                     if [[ "$_DEPLOYER_FTP_ENABLED" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
@@ -66,10 +71,10 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]]; then
 
                     # If any sub-modules are active, then so is the main module
                     if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
-					    __DEPLOYER_ACTIVE=1;
+                        __DEPLOYER_ACTIVE=1;
                     fi;
-				fi;
-			fi;
-		fi;
-	fi;
+                fi;
+            fi;
+        fi;
+    fi;
 fi;
