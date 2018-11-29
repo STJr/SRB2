@@ -263,10 +263,12 @@ before_install:
   # Also check if we should now terminate
   - if [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
       if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$_DEPLOYER_JOB_ENABLED" != "1" ]]; then
-        return 1;
+        exit;
       fi;
     fi
 
+
+install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
       brew install sdl2 sdl2_mixer game-music-emu zlib p7zip;
