@@ -19,13 +19,15 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 		if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 			# Make an OSX package; superuser is required for library bundling
 			sudo make -k package;
-		else if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-			# Make a Debian package
-			# TODO support other packages like RPM
-			debuild;
 		else
-			# Some day, when Windows is supported, we'll just make a standard package
-			make -k package;
+			if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+				# Make a Debian package
+				# TODO support other packages like RPM
+				debuild;
+			else
+				# Some day, when Windows is supported, we'll just make a standard package
+				make -k package;
+			fi;
 		fi;
 	fi;
 fi;
