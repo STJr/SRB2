@@ -321,13 +321,20 @@ before_script:
 
   - cd "$OLDPWD"
 
+  # Prepare CMake asset lists
+  - SRB2_ASSET_REQUIRED=$(echo ${ASSET_FILES_REQUIRED// /\;})
+  - SRB2_ASSET_OPTIONAL=$(echo ${ASSET_FILES_OPTIONAL// /\;})
+  - SRB2_ASSET_DOCS=$(echo ${ASSET_FILES_DOCS// /\;})
+
   # Prepare CMake
   - mkdir build
   - cd build
   - mkdir package
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package \
+      -DSRB2_ASSET_REQUIRED="${SRB2_ASSET_REQUIRED}" -DSRB2_ASSET_OPTIONAL="${SRB2_ASSET_OPTIONAL}" \
+      -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
 
 
 script:
