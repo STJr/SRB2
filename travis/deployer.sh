@@ -23,14 +23,14 @@
 #
 # DO NOT set __DEPLOYER_ACTIVE, because that would bypass these validity checks.
 
-if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
-	if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1"]]; then
-		if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
-			if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
-				if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then \
+	if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1"]]; then \
+		if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then \
+			if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then \
+				if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then \
 					__DEPLOYER_ACTIVE=1;
-				fi;
-			fi;
-		fi;
-	fi;
+				fi; \
+			fi; \
+		fi; \
+	fi; \
 fi;
