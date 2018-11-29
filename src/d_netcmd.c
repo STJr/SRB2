@@ -128,7 +128,6 @@ FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void);
 static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
-static void Command_Tunes_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -320,8 +319,6 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
-consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-
 static CV_PossibleValue_t pointlimit_cons_t[] = {{0, "MIN"}, {999999990, "MAX"}, {0, NULL}};
 consvar_t cv_pointlimit = {"pointlimit", "0", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
 	PointLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -585,7 +582,6 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
-	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -642,8 +638,6 @@ void D_RegisterClientCommands(void)
 #endif
 
 	// register these so it is saved to config
-	if ((username = I_GetUserName()))
-		cv_playername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
@@ -674,8 +668,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ghost_guest);
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
-	COM_AddCommand("tunes", Command_Tunes_f);
-	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_usegamma);
@@ -1374,9 +1366,9 @@ void SendWeaponPref(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[consoleplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog.value)
 		buf[0] |= 2;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
@@ -1386,9 +1378,9 @@ void SendWeaponPref2(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog2.value)
 		buf[0] |= 2;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
@@ -3984,74 +3976,6 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 static void Command_Displayplayer_f(void)
 {
 	CONS_Printf(M_GetText("Displayplayer is %d\n"), displayplayer);
-}
-
-static void Command_Tunes_f(void)
-{
-	const char *tunearg;
-	UINT16 tunenum, track = 0;
-	const size_t argc = COM_Argc();
-
-	if (argc < 2) //tunes slot ...
-	{
-		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
-		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
-		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
-		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
-		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
-		return;
-	}
-
-	tunearg = COM_Argv(1);
-	tunenum = (UINT16)atoi(tunearg);
-	track = 0;
-
-	if (!strcasecmp(tunearg, "-show"))
-	{
-		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
-			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
-		return;
-	}
-	if (!strcasecmp(tunearg, "-none"))
-	{
-		S_StopMusic();
-		return;
-	}
-	else if (!strcasecmp(tunearg, "-default"))
-	{
-		tunearg = mapheaderinfo[gamemap-1]->musname;
-		track = mapheaderinfo[gamemap-1]->mustrack;
-	}
-	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
-	if (tunenum && tunenum >= 1036)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
-		return;
-	}
-	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
-		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
-
-	if (argc > 2)
-		track = (UINT16)atoi(COM_Argv(2))-1;
-
-	if (tunenum)
-		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
-	else
-		strncpy(mapmusname, tunearg, 7);
-	mapmusname[6] = 0;
-	mapmusflags = (track & MUSIC_TRACKMASK);
-
-	S_ChangeMusic(mapmusname, mapmusflags, true);
-
-	if (argc > 3)
-	{
-		float speed = (float)atof(COM_Argv(3));
-		if (speed > 0.0f)
-			S_SpeedMusic(speed);
-	}
 }
 
 /** Quits a game and returns to the title screen.
