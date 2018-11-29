@@ -218,6 +218,8 @@ matrix:
 #          #Apple LLVM version 7.0.2 (clang-700.1.81)
         - os: osx
           osx_image: xcode7.3
+          env:
+          - _DEPLOYER_JOB_ENABLED=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
