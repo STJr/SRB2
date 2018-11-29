@@ -102,6 +102,9 @@ fi;
 
 if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
     echo "Deployer is active in another job";
+    if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]]; then
+        echo "Terminating this job due to non-deployment";
+    fi;
 fi;
 
 if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" != "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
