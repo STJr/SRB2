@@ -49,6 +49,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
         # Whitelist by branch name
         if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+            echo "Setting global";
             # Set this so we only early-terminate builds when we are specifically deploying
             # Trigger string and branch are encompassing conditions; the rest are job-specific
             __DEPLOYER_ACTIVE_GLOBALLY=1;
@@ -84,6 +85,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
     else
         if [[ "$DEPLOYER_TRIGGER" != "" ]]; then
             if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+                echo "Setting Global in alternate";
                 # Assume that some job received the trigger, so mark this for early termination
                 __DEPLOYER_ACTIVE_GLOBALLY=1;
             fi;
