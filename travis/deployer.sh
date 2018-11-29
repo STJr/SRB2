@@ -94,3 +94,7 @@ fi;
 if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
     echo "Deployer is active in another job";
 fi;
+
+if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" != "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
+    echo "Deployer is not active";
+fi;
