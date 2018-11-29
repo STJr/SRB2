@@ -1,3 +1,8 @@
+# Travis-CI Config
+#
+# You may use the Deployer to upload packages and builds to external servers.
+# See travis/deployer.sh for environment variables to configure.
+
 language: c
 sudo: required
 dist: trusty
