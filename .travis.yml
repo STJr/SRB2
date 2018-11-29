@@ -287,7 +287,7 @@ before_script:
   # Get asset files (required for MD5)
   - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
       wget --verbose --server-response -c "$ASSET_ARCHIVE_PATH" -O "$HOME/srb2_cache/assets.7z";
-      7z x "$HOME/srb2_cache/assets.7z" -o"$HOME/srb2_cache";
+      7z x "$HOME/srb2_cache/assets.7z" -o"$HOME/srb2_cache"-aos;
       for f in $ASSET_FILES_REQUIRED; do
         cp "$HOME/srb2_cache/$f" "assets/$f";
       done;
