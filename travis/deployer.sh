@@ -83,7 +83,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
             fi;
         fi;
     else
-        if [[ "$DEPLOYER_TRIGGER" != "" ]]; then
+        if [[ "$DEPLOYER_TRIGGER" != "" ]] && [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER"* ]]; then
             if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
                 echo "Setting Global in alternate";
                 # Assume that some job received the trigger, so mark this for early termination
