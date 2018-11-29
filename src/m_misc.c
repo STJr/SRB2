@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,7 +58,7 @@ typedef off_t off64_t;
 
 #if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3))
 #define PRIdS "u"
-#elif defined (_WIN32) 
+#elif defined (_WIN32)
 #define PRIdS "Iu"
 #elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
 #define PRIdS "u"
@@ -646,11 +646,11 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_byte movie)
 {
 #ifdef PNG_TEXT_SUPPORTED
-#define SRB2PNGTXT 10 //PNG_KEYWORD_MAX_LENGTH(79) is the max
+#define SRB2PNGTXT 11 //PNG_KEYWORD_MAX_LENGTH(79) is the max
 	png_text png_infotext[SRB2PNGTXT];
 	char keytxt[SRB2PNGTXT][12] = {
 	"Title", "Description", "Playername", "Mapnum", "Mapname",
-	"Location", "Interface", "Revision", "Build Date", "Build Time"};
+	"Location", "Interface", "Render Mode", "Revision", "Build Date", "Build Time"};
 	char titletxt[] = "Sonic Robo Blast 2 " VERSIONSTRING;
 	png_charp playertxt =  cv_playername.zstring;
 	char desctxt[] = "SRB2 Screenshot";
@@ -666,12 +666,26 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 #else
 	 "Unknown";
 #endif
+	char rendermodetxt[9];
 	char maptext[8];
 	char lvlttltext[48];
 	char locationtxt[40];
 	char ctrevision[40];
 	char ctdate[40];
 	char cttime[40];
+
+	switch (rendermode)
+	{
+		case render_soft:
+			strcpy(rendermodetxt, "Software");
+			break;
+		case render_opengl:
+			strcpy(rendermodetxt, "OpenGL");
+			break;
+		default: // Just in case
+			strcpy(rendermodetxt, "None");
+			break;
+	}
 
 	if (gamestate == GS_LEVEL)
 		snprintf(maptext, 8, "%s", G_BuildMapName(gamemap));
@@ -710,9 +724,10 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	png_infotext[4].text = lvlttltext;
 	png_infotext[5].text = locationtxt;
 	png_infotext[6].text = interfacetxt;
-	png_infotext[7].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
-	png_infotext[8].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
-	png_infotext[9].text = strncpy(cttime, comptime, sizeof(cttime)-1);
+	png_infotext[7].text = rendermodetxt;
+	png_infotext[8].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
+	png_infotext[9].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
+	png_infotext[10].text = strncpy(cttime, comptime, sizeof(cttime)-1);
 
 	png_set_text(png_ptr, png_info_ptr, png_infotext, SRB2PNGTXT);
 #undef SRB2PNGTXT

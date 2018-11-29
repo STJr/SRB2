@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -287,9 +287,6 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
-static void M_ToggleSFX(void);
-static void M_ToggleDigital(void);
-static void M_ToggleMIDI(void);
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -1227,9 +1224,9 @@ static menuitem_t OP_SoundOptionsMenu[] =
                               NULL, "CD Volume"    , &cd_volume,          40},
 #endif
 
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle SFX"   , M_ToggleSFX,        50},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle Digital Music", M_ToggleDigital,     60},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle MIDI Music", M_ToggleMIDI,        70},
+	{IT_STRING | IT_CVAR,  NULL,  "SFX"   , &cv_gamesounds,        50},
+	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic,     60},
+	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic,        70},
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -6048,7 +6045,7 @@ void M_SortServerList(void)
 
 #ifndef NONET
 #ifdef UPDATE_ALERT
-static int M_CheckMODVersion(void)
+static boolean M_CheckMODVersion(void)
 {
 	char updatestring[500];
 	const char *updatecheck = GetMODVersion();
@@ -6941,92 +6938,6 @@ static void M_ChangeControl(INT32 choice)
 		currentMenu->menuitems[choice].text);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
-}
-
-// =====
-// SOUND
-// =====
-
-// Toggles sound systems in-game.
-static void M_ToggleSFX(void)
-{
-	if (nosound)
-	{
-		nosound = false;
-		I_StartupSound();
-		if (nosound) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-	}
-	else
-	{
-		if (sound_disabled)
-		{
-			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			sound_disabled = true;
-			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
-		}
-	}
-}
-
-static void M_ToggleDigital(void)
-{
-	if (nodigimusic)
-	{
-		nodigimusic = false;
-		I_InitDigMusic();
-		if (nodigimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_StopMusic();
-		S_ChangeMusicInternal("lclear", false);
-		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
-	}
-	else
-	{
-		if (digital_disabled)
-		{
-			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			digital_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
-		}
-	}
-}
-
-static void M_ToggleMIDI(void)
-{
-	if (nomidimusic)
-	{
-		nomidimusic = false;
-		I_InitMIDIMusic();
-		if (nomidimusic) return;
-		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusicInternal("lclear", false);
-		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
-	}
-	else
-	{
-		if (music_disabled)
-		{
-			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
-		}
-		else
-		{
-			music_disabled = true;
-			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
-		}
-	}
 }
 
 // ===============

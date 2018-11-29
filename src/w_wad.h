@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -48,7 +48,7 @@ typedef struct
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
-#define MAX_WADPATH 128
+#define MAX_WADPATH 512
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1661,8 +1661,7 @@ static void P_NetArchiveThinkers(void)
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (!(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed
-		 || th->function.acp1 == (actionf_p1)P_RainThinker
-		 || th->function.acp1 == (actionf_p1)P_SnowThinker))
+		 || th->function.acp1 == (actionf_p1)P_NullPrecipThinker))
 			numsaved++;
 
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
@@ -1671,8 +1670,7 @@ static void P_NetArchiveThinkers(void)
 			continue;
 		}
 #ifdef PARANOIA
-		else if (th->function.acp1 == (actionf_p1)P_RainThinker
-			|| th->function.acp1 == (actionf_p1)P_SnowThinker);
+		else if (th->function.acp1 == (actionf_p1)P_NullPrecipThinker);
 #endif
 		else if (th->function.acp1 == (actionf_p1)T_MoveCeiling)
 		{
