@@ -24,10 +24,12 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 
 	if [[ "$TRAVIS_JOB_NAME" != "" ]]; then
 		JOBNAME=$TRAVIS_JOB_NAME;
-	else if [[ "$_DEPLOYER_JOB_NAME" != "" ]]; then
-		JOBNAME=$_DEPLOYER_JOB_NAME;
 	else
-		JOBNAME=$TRAVIS_OS_NAME;
+		if [[ "$_DEPLOYER_JOB_NAME" != "" ]]; then
+			JOBNAME=$_DEPLOYER_JOB_NAME;
+		else
+			JOBNAME=$TRAVIS_OS_NAME;
+		fi;
 	fi;
 
 	# Generate commit.txt file
