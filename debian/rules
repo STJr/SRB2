@@ -57,20 +57,31 @@ SECTION = Games/Action
 EXENAME = srb2
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= usr/games
+PKGDIR	= usr/games/SRB2
 DBGDIR	= usr/lib/debug/$(PKGDIR)
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
 PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
 OS	= LINUX=1
 NONX86	= $(shell test "`echo $(CROSS_COMPILE_HOST) | grep 'i[3-6]86'`" || echo "NONX86=1")
-MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) SDL_PKGCONFIG=sdl2 PNG_PKGCONFIG=libpng NOOBJDUMP=1
+MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) NOOBJDUMP=1 # SDL_PKGCONFIG=sdl2 PNG_PKGCONFIG=libpng
 MENUFILE1 = ?package($(PACKAGE)):needs="X11" section="$(SECTION)"
 MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
-# FIXME pkg-config dir hacks
-export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
 BINDIR :=  $(DIR)/bin/Linux/Release
+
+# FIXME pkg-config dir hacks
+# Launchpad doesn't need this; it actually makes i386 builds fail due to cross-compile
+# export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
 LDFLAGS += "-Wl,-rpath=/usr/lib/$(CROSS_COMPILE_HOST)"
+
+# Some libgme-dev packages don't use pkg-config yet, so include the linker flag ourselves
+PKG_CONFIG?=pkg-config
+LIBGME_PKGCONFIG?=libgme
+LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
+
+ifeq ($(LIBGME_LDFLAGS),)
+MAKEARGS += LIBGME_LDFLAGS=-lgme
+endif
 
 build:
 	$(MKDIR) $(BINDIR)/debug
@@ -100,8 +111,8 @@ binary-arch:
 	echo $(DESKTOP_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(PIXMAPS_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(DBGDIR) > $(DIR)/debian/$(DBGPKG).install
-
-binary: binary-arch
+# Launchpad only calls binary-arch, so just move everything up
+#binary: binary-arch
 	# Generate .desktop specifications
 	echo "`echo '$(MENUFILE1)\\'`" > $(DIR)/debian/menu
 	echo " `echo '$(MENUFILE2)'`" >> $(DIR)/debian/menu
@@ -133,6 +144,8 @@ binary: binary-arch
 	dh_md5sums
 	dh_builddeb
 
+binary: binary-arch
+
 clean:
 	$(MAKE) -C $(DIR)/src $(MAKEARGS) clean cleandep
 	$(RM) $(BINDIR)/*
@@ -145,4 +158,4 @@ clean:
 	$(RM) $(DIR)/debian/files
 	$(RM) $(DIR)/debian/source/include-binaries
 
-.PHONY: all clean binary binary-arch binary-indep build
+.PHONY: all clean binary binary-indep build

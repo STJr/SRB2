@@ -3,11 +3,13 @@
 Source: srb2
 Section: games
 Priority: extra
-Maintainer: Callum Dickinson <gcfreak_ag20@hotmail.com>
+Maintainer: Sonic Team Junior <stjr@srb2.org>
 Build-Depends: debhelper (>= 7.0.50~),
  libsdl2-dev,
  libsdl2-mixer-dev,
- libpng12-dev (>= 1.2.7),
+ libpng12-dev (>= 1.2.7) | libpng-dev,
+ zlib1g-dev,
+ libgme-dev,
  libglu1-dev | libglu-dev,
  libosmesa6-dev | libgl-dev,
  nasm [i386]
@@ -16,27 +18,26 @@ Homepage: http://www.srb2.org
 
 Package: srb2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, srb2-data (= 2.1.14)
+Depends: ${shlibs:Depends}, ${misc:Depends}, srb2-data (>= 2.1.15), srb2-data (<= 2.1.21)
 Description: A cross-platform 3D Sonic fangame
  Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
  fangame built using a modified version of the Doom Legacy
  port of Doom. SRB2 is closely inspired by the original
  Sonic games from the Sega Genesis, and attempts to recreate
- the design in 3D. While SRB2 isn't fully completed, it already
- features tons of levels, enemies, speed, and quite a lot
- of the fun that the original Sonic games provided.
+ the design in 3D. It features tons of levels, enemies, speed,
+ and quite a lot of the fun that the original Sonic games provided.
+
 
 Package: srb2-dbg
 Architecture: any
 # FIXME: should be Depends: ${shlibs:Depends}, ${misc:Depends}, srb2-data (= 2.1.14), srb2 but dh_shlibdeps is being an asshat
-Depends: libc6, ${misc:Depends}, srb2-data (= 2.1.14), srb2
+Depends: libc6, ${misc:Depends}, srb2-data (>= 2.1.15), srb2-data (<= 2.1.21), srb2
 Description: A cross-platform 3D Sonic fangame
  Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
  fangame built using a modified version of the Doom Legacy
  port of Doom. SRB2 is closely inspired by the original
  Sonic games from the Sega Genesis, and attempts to recreate
- the design in 3D. While SRB2 isn't fully completed, it already
- features tons of levels, enemies, speed, and quite a lot
- of the fun that the original Sonic games provided.
- This is a debug binary, its symbols will be loaded by gdb
+ the design in 3D. It features tons of levels, enemies, speed,
+ and quite a lot of the fun that the original Sonic games provided.
+ This is a debug binary; its symbols will be loaded by gdb
  when the user starts the game with gdb for debugging.
