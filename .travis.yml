@@ -61,9 +61,9 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          env:
-          - _DEPLOYER_JOB_ENABLED=1
-          - _DEPLOYER_PPA_PACKAGE=1
+          # env:
+          # - _DEPLOYER_JOB_ENABLED=1
+          # - _DEPLOYER_PPA_PACKAGE=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
