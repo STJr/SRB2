@@ -261,7 +261,7 @@ before_install:
   # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
   - . ./travis/deployer.sh
   # Also check if we should now terminate
-  - if [[ "$DEPLOYER_JOB_ALL" != "1"]]; then
+  - if [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
       if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$_DEPLOYER_JOB_ENABLED" != "1" ]]; then
         return 0;
       fi;
