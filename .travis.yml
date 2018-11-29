@@ -286,7 +286,7 @@ install:
 before_script:
   # Get asset files (required for MD5)
   - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
-      wget --verbose --server-response -c "$ASSET_ARCHIVE_PATH" -O "$HOME/srb2_cache/assets.7z";
+      wget --verbose --server-response -N "$ASSET_ARCHIVE_PATH" -O "$HOME/srb2_cache/assets.7z";
       7z x "$HOME/srb2_cache/assets.7z" -o"$HOME/srb2_cache"-aos;
       for f in $ASSET_FILES_REQUIRED; do
         cp "$HOME/srb2_cache/$f" "assets/$f";
@@ -295,7 +295,7 @@ before_script:
 
   # Get individual required files
   - for f in $ASSET_FILES_REQUIRED; do
-      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+      wget --verbose --server-response -N "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
       if [ ! -f "$HOME/srb2_cache/$f" ]; then
         echo "Could not download \"$ASSET_BASE_PATH/$f\"";
         return 1;
@@ -305,14 +305,14 @@ before_script:
 
   # Get the docs
   - for f in $ASSET_FILES_DOCS; do
-      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+      wget --verbose --server-response -N "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
       cp "$HOME/srb2_cache/$f" "assets/$f";
     done;
 
   # Get optional files too
   - if [[ "$ASSET_GET_OPTIONAL" == "1" ]]; then
       for f in $ASSET_FILES_OPTIONAL; do
-        wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+        wget --verbose --server-response -N "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
         cp "$HOME/srb2_cache/$f" "assets/$f";
       done;
     fi;
