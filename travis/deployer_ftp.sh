@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # FTP Uploader
 #
 # Package files are uploaded to, e.g., ftp://username:password@example.com:21/path/to/upload/STJr/SRB2/master/460873812-151.1

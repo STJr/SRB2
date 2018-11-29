@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # Launchpad PPA uploader
 #
 

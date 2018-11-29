@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # Initialization
 #
 # Performs validity checks to ensure that Deployer is allowed to run

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # Build Script
 #
 # Builds the required targets depending on which sub-modules are enabled
