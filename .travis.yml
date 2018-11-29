@@ -61,6 +61,9 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
+          env:
+          - _DEPLOYER_JOB_ENABLED=1
+          - _DEPLOYER_PPA_ENABLED=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -225,6 +228,8 @@ matrix:
           osx_image: xcode7.3
           env:
           - _DEPLOYER_JOB_ENABLED=1
+          - _DEPLOYER_FTP_PACKAGE=1
+          - _DEPLOYER_FTP_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
@@ -262,7 +267,8 @@ before_install:
   - . ./travis/deployer.sh
   # Also check if we should now terminate
   - if [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
-      if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$_DEPLOYER_JOB_ENABLED" != "1" ]]; then
+      if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
+        echo "Exiting early because this job is not deploying.";
         exit;
       fi;
     fi
@@ -279,23 +285,33 @@ install:
 
 before_script:
   # Get asset files (required for MD5)
-  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
-  - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
+  - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
+      wget --verbose --server-response -c "$ASSET_ARCHIVE_PATH" -O "$HOME/srb2_cache/assets.7z";
+      7z x "$HOME/srb2_cache/assets.7z" -oassets;
+    fi;
+
+  # Get individual required files
+  - for f in $ASSET_FILES_REQUIRED; do
+      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+      if [ ! -f "$HOME/srb2_cache/$f" ]; then
+        echo "ERROR: Could not download \"$ASSET_BASE_PATH/$f\"";
+        return 1;
+      fi;
+      cp "$HOME/srb2_cache/$f" "assets/$f";
+    done;
 
   # Get the docs
-  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/README.txt -O $HOME/srb2_cache/README.txt;
-  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/LICENSE.txt -O $HOME/srb2_cache/LICENSE.txt;
-  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/LICENSE-3RD-PARTY.txt -O $HOME/srb2_cache/LICENSE-3RD-PARTY.txt;
-  - cp $HOME/srb2_cache/README.txt assets/README.txt;
-  - cp $HOME/srb2_cache/LICENSE.txt assets/LICENSE.txt;
-  - cp $HOME/srb2_cache/LICENSE-3RD-PARTY.txt assets/LICENSE-3RD-PARTY.txt;
+  - for f in $ASSET_FILES_DOCS; do
+      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+      cp "$HOME/srb2_cache/$f" "assets/$f";
+    done;
 
   # Get optional files too
-  - if [[ "$__DEPLOYER_ACTIVE" == "1" ]]; then
-      if [[ "$DEPLOYER_OPTIONALFILES" == "1" ]]; then
-        wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/music.dta -O $HOME/srb2_cache/music.dta;
-        cp $HOME/srb2_cache/music.dta assets/music.dta;
-      fi;
+  - if [[ "$ASSET_GET_OPTIONAL" == "1" ]]; then
+      for f in $ASSET_FILES_OPTIONAL; do
+        wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+        cp "$HOME/srb2_cache/$f" "assets/$f";
+      done;
     fi;
 
   # Prepare CMake
@@ -317,15 +333,12 @@ script:
   # https://cmake.org/Bug/view.php?id=9284
   #
   - if [[ "$__DEPLOYER_ACTIVE" == "1" ]]; then
-      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        sudo make -k package;
-      else
-        make -k package;
-      fi;
+      . ../travis/deployer_build.sh
     else
       make -k;
     fi;
 
 after_success:
-  # Run the FTP uploader
-  - . ../travis/deployer_uploader.sh
+  # Run the Deployer scripts
+  - . ../travis/deployer_ftp.sh
+  - . ../travis/deployer_ppa.sh
