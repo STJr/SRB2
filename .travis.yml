@@ -334,7 +334,7 @@ before_script:
 script:
   # Build our Makefile from Cmake!
   - if [[ "$__DEPLOYER_ACTIVE" == "1" ]]; then
-      . ../travis/deployer_build.sh
+      . ../travis/deployer_build.sh;
     else
       make -k;
     fi;
