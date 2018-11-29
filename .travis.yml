@@ -242,23 +242,111 @@ addons:
     - libpng-dev
     - libgl1-mesa-dev
     - libgme-dev
+    - zlib1g-dev
     - p7zip-full
+    - wput
 
 before_script:
+  # Is FTP uploading enabled?
+  - if [[ "$BUILDFTP_ENABLED" == "1" ]] && [[ "$BUILDFTP_HOSTNAME" != "" ]]; then
+      if [[ "$BUILDFTP_OSNAMES" == "" ]] || [[ $BUILDFTP_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
+        if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
+          if [[ "$BUILDFTP_BRANCHES" == "" ]] || [[ $BUILDFTP_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+            BUILDFTP_ACTIVE=1;
+          fi;
+        fi;
+      fi;
+    fi;
+  # Get asset files (required for MD5)
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
+  # Get the docs
+  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/README.txt -O $HOME/srb2_cache/README.txt;
+  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/LICENSE.txt -O $HOME/srb2_cache/LICENSE.txt;
+  - wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/LICENSE-3RD-PARTY.txt -O $HOME/srb2_cache/LICENSE-3RD-PARTY.txt;
+  - cp $HOME/srb2_cache/README.txt assets/README.txt;
+  - cp $HOME/srb2_cache/LICENSE.txt assets/LICENSE.txt;
+  - cp $HOME/srb2_cache/LICENSE-3RD-PARTY.txt assets/LICENSE-3RD-PARTY.txt;
+  # Get optional files too
+  - if [[ "$BUILDFTP_ACTIVE" == "1" ]]; then
+      if [[ "$BUILDFTP_OPTIONALFILES" == "1" ]]; then
+        wget --verbose --server-response -c http://alam.srb2.org/SRB2/2.1.21-Final/Resources/music.dta -O $HOME/srb2_cache/music.dta;
+        cp $HOME/srb2_cache/music.dta assets/music.dta;
+      fi;
+    fi;
+  # Prepare CMake
   - mkdir build
   - cd build
+  - mkdir package
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
-  - cmake .. -DCMAKE_BUILD_TYPE=Release
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2 sdl2_mixer game-music-emu p7zip; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2 sdl2_mixer game-music-emu zlib p7zip; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake||true; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
+  # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
+  # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
   - mkdir -p $HOME/srb2_cache
 
-script: make -k
+script:
+  # HACK: OSX packaging can't write libraries to .app package unless we're superuser
+  # because the original library files don't have WRITE permission
+  # Bug may be sidestepped by using CHMOD_BUNDLE_ITEMS=TRUE
+  # But I don't know where this is set. Not `cmake -D...` because this var is ignored.
+  # https://cmake.org/Bug/view.php?id=9284
+  - if [[ "$BUILDFTP_ACTIVE" == "1" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        sudo make -k package;
+      else
+        make -k package;
+      fi;
+    else
+      make -k;
+    fi;
+
+after_success:
+  # FTP Uploader
+  # Set these environment variables in your Travis-CI settings, where they are stored securely.
+  # Package files are uploaded to ftp://username:password@example.com:21/path/to/upload/STJr/SRB2/master/460873812-151.1
+  # With file `commit.txt` and folder(s) `bin` and `package`
+  #
+  # BUILDFTP_ENABLED = 1                       (leave blank to disable)
+  # BUILDFTP_OSNAMES = osx                     (whitelist of OS names to allow uploading; leave blank to upload from all OSes)
+  # BUILDFTP_BRANCHES = master,branch1,branch2 (whitelist of branches to upload; leave blank to upload all branches)
+  # BUILDFTP_OPTIONALFILES = 1                 (to download and package music.dta and README files; leave blank to disable)
+  # BUILDFTP_BINARY = 1                        (upload bin/ folder; leave blank to disable)
+  # BUILDFTP_NOPACKAGE = 1                     (do NOT upload package/ folder; leave blank to upload it)
+  #
+  # BUILDFTP_PROTOCOL = ftp                    (ftp or sftp or ftps or however your FTP URI begins)
+  # BUILDFTP_USER = username
+  # BUILDFTP_PASS = password
+  # BUILDFTP_HOSTNAME = example.com
+  # BUILDFTP_PORT = 21
+  # BUILDFTP_PATH = path/to/upload             (do not add trailing slash)
+  #
+  # DO NOT set BUILDFTP_ACTIVE, because that would bypass validity checks for enabling FTP uploads.
+  #
+  - if [[ "$BUILDFTP_ACTIVE" == "1" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install wput; fi;
+      echo "Travis-CI Build $TRAVIS_OS_NAME - $TRAVIS_REPO_SLUG/$TRAVIS_BRANCH - $TRAVIS_JOB_NUMBER - $TRAVIS_JOB_NAME" > "commit.txt";
+      echo "Job ID $TRAVIS_JOB_ID" >> "commit.txt";
+      echo "" >> "commit.txt";
+      echo "Commit $TRAVIS_COMMIT" >> "commit.txt";
+      echo "$TRAVIS_COMMIT_MESSAGE" >> "commit.txt";
+      echo "" >> "commit.txt";
+      if [[ "$BUILDFTP_PORT" == "" ]]; then BUILDFTP_PORT=21; fi;
+      if [[ "$BUILDFTP_PROTOCOL" == "" ]]; then BUILDFTP_PROTOCOL=ftp; fi;
+      BUILDFTP_LOCATION=$BUILDFTP_PROTOCOL://$BUILDFTP_USER:$BUILDFTP_PASS@$BUILDFTP_HOSTNAME:$BUILDFTP_PORT/$BUILDFTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER;
+      echo "Uploading to FTP...";
+      wput "commit.txt" "$BUILDFTP_LOCATION/commit.txt";
+      if [[ "$BUILDFTP_BINARY" == "1" ]]; then wput "bin" "$BUILDFTP_LOCATION/"; fi;
+      if [[ "$BUILDFTP_NOPACKAGE" != "1" ]]; then
+        for f in package/*.*; do
+          wput "$f" "$BUILDFTP_LOCATION/";
+        done;
+      fi;
+    fi
+  # ^^^ For some reason (permissions?), wput stalls when uploading "package" as a folder, so loop files manually

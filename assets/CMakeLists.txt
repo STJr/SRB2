@@ -1,13 +1,19 @@
 ## Assets Target Configuration ##
 
 # MD5 generation
-set(SRB2_ASSET_ALL
+set(SRB2_ASSET_REQUIRED
 	${CMAKE_CURRENT_SOURCE_DIR}/srb2.srb
 	${CMAKE_CURRENT_SOURCE_DIR}/player.dta
 	${CMAKE_CURRENT_SOURCE_DIR}/rings.dta
 	${CMAKE_CURRENT_SOURCE_DIR}/zones.dta
 	${CMAKE_CURRENT_SOURCE_DIR}/patch.dta
+)
+
+set(SRB2_ASSET_OPTIONAL
 	${CMAKE_CURRENT_SOURCE_DIR}/music.dta
+)
+
+set(SRB2_ASSET_DOCS
 	${CMAKE_CURRENT_SOURCE_DIR}/README.txt
 	${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt
 	${CMAKE_CURRENT_SOURCE_DIR}/LICENSE-3RD-PARTY.txt
@@ -28,13 +34,29 @@ endforeach()
 
 # Installation
 
-if(CLANG)
+if(${CMAKE_SYSTEM} MATCHES Darwin)
 	get_target_property(outname SRB2SDL2 OUTPUT_NAME)
-	install(FILES ${SRB2_ASSET_ALL}
+	install(FILES ${SRB2_ASSET_REQUIRED}
 		DESTINATION "${outname}.app/Contents/Resources"
 	)
-else()
-	install(FILES ${SRB2_ASSET_ALL}
+	install(FILES ${SRB2_ASSET_OPTIONAL}
+		DESTINATION "${outname}.app/Contents/Resources"
+		OPTIONAL
+	)
+	install(FILES ${SRB2_ASSET_DOCS}
 		DESTINATION .
+		OPTIONAL
+	)
+else()
+	install(FILES ${SRB2_ASSET_REQUIRED}
+		DESTINATION .
+	)
+	install(FILES ${SRB2_ASSET_OPTIONAL}
+		DESTINATION .
+		OPTIONAL
+	)
+	install(FILES ${SRB2_ASSET_DOCS}
+		DESTINATION .
+		OPTIONAL
 	)
 endif()
