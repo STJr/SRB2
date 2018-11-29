@@ -47,14 +47,16 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
     if [[ "$DEPLOYER_TRIGGER" == "" ]] || [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
-        # Set this so we only early-terminate builds when we are specifically deploying
-        __DEPLOYER_ACTIVE_GLOBALLY=1;
+        # Whitelist by branch name
+        if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+            # Set this so we only early-terminate builds when we are specifically deploying
+            # Trigger string and branch are encompassing conditions; the rest are job-specific
+            __DEPLOYER_ACTIVE_GLOBALLY=1;
 
-        # Is the job enabled for deployment?
-        if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
-            # Whitelist by OS names and branches
-            if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
-                if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+            # Is the job enabled for deployment?
+            if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
+                # Whitelist by OS names
+                if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
                     # Base Deployer is eligible for becoming active
                     # Now check for sub-modules
                     if [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
