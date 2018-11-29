@@ -229,7 +229,6 @@ matrix:
           env:
           - _DEPLOYER_JOB_ENABLED=1
           - _DEPLOYER_FTP_PACKAGE=1
-          - _DEPLOYER_FTP_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
