@@ -37,9 +37,9 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta patch.dta README.txt LICENSE.txt LICENSE-3RD-PARTY.txt
+DATAFILES := $(ASSET_FILES_REQUIRED) $(ASSET_FILES_DOCS) $(ASSET_FILES_OPTIONAL)
 
-DATADIR	:= usr/games/SRB2
+DATADIR	:= $(PACKAGE_INSTALL_PATH)
 RESOURCEDIR := .
 WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
@@ -50,7 +50,7 @@ build:
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
 		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
-			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
+			$(WGET) $(ASSET_BASE_PATH)/$$file; \
 		fi; \
 		if [ -f $(RESOURCEDIR)/$$file ]; then \
 			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \

@@ -36,10 +36,12 @@ Use these steps to prepare building a source package for Launchpad:
     2. cd [wherever-your-assets-folder-is]/assets/
     3. debuild -T clean (optional, if you already have asset files)
 
-Building the source package is a two-step process:
+Build the source package:
 
-    1. debuild -T build (this downloads the asset files from srb2.org if necessary)
-    2. debuild -S (builds the source package for Launchpad, including the asset files)
+    1. . [path-to-srb2-repo]/travis/deployer_debian_template.sh
+       * Initializes defaults for the package variables and fills in templates. Don't forget the first period!
+    2. debuild -T build (this downloads the asset files from srb2.org if necessary)
+    3. debuild -S (builds the source package for Launchpad, including the asset files)
 
 Then follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
 to your PPA and have Launchpad build your binary deb packages.

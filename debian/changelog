@@ -1,12 +1,5 @@
-srb2 (2.1.21~9) trusty; urgency=high
+${PACKAGE_NAME} (${PROGRAM_VERSION}-${__PACKAGE_DATETIME_DIGIT}) ${PACKAGE_DISTRO}; urgency=high
 
-  * SRB2 v2.1.21 release
+  * ${PROGRAM_NAME} v${PROGRAM_VERSION} program build
 
- -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 27 Nov 2018 16:45:00 -0500
-
-
-srb2 (2.0.6-5) maverick; urgency=high
-
-  * Initial proper release..
-
- -- Callum Dickinson <gcfreak_ag20@hotmail.com>  Sat, 29 Jan 2011 01:18:42 +1300
+ -- ${PACKAGE_NAME_EMAIL}  ${__PACKAGE_DATETIME}

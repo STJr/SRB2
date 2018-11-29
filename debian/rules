@@ -50,14 +50,14 @@ DIR	:= $(shell pwd)
 
 # FIXME: hate hate hate head/tail hack :(
 CONTROLF = $(DIR)/debian/control
-PACKAGE  = srb2
+PACKAGE  = $(PACKAGE_NAME)
 DBGPKG   = $(PACKAGE)-dbg
-TITLE	= Sonic Robo Blast 2
+TITLE	= $(PROGRAM_NAME)
 SECTION = Games/Action
-EXENAME = srb2
+EXENAME = $(PROGRAM_FILENAME)
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= usr/games/SRB2
+PKGDIR	= $(PROGRAM_PATH)
 DBGDIR	= usr/lib/debug/$(PKGDIR)
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
@@ -101,8 +101,8 @@ binary-arch:
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
 	# Install desktop file and banner image
-	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps
-	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications
+	$(INSTALL) $(DIR)/$(PROGRAM_FILENAME).png $(DIR)/debian/tmp/usr/share/pixmaps
+	$(INSTALL) $(DIR)/debian/$(PROGRAM_FILENAME).desktop $(DIR)/debian/tmp/usr/share/applications
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries

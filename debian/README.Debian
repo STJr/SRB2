@@ -36,9 +36,11 @@ Use these steps to prepare building a source package for Launchpad:
        * If you built srb2-data in the assets/ folder, MAKE SURE THAT FOLDER DOES NOT HAVE ASSETS,
          OR THEY MAY BE INCLUDED IN THE MAIN SOURCE PACKAGE!
 
-Building the source package takes just one step:
+Build the source package:
 
-    1. debuild -S (builds the source package for Launchpad)
+    1. . ../travis/deployer_debian_template.sh
+       * Initializes defaults for the package variables and fills in templates. Don't forget the first period!
+    2. debuild -S (builds the source package for Launchpad)
 
 Then follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
 to your PPA and have Launchpad build your binary deb packages.

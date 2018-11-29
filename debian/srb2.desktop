@@ -1,9 +1,9 @@
 [Desktop Entry]
-Name=Sonic Robo Blast 2
-Comment=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.
+Name=${PROGRAM_NAME}
+Comment=${PROGRAM_DESCRIPTION}
 Encoding=UTF-8
-Exec=/usr/games/SRB2/srb2
-Icon=/usr/share/pixmaps/srb2.png
+Exec=${PACKAGE_INSTALL_PATH/${PROGRAM_FILENAME}
+Icon=/usr/share/pixmaps/${PROGRAM_FILENAME}.png
 Terminal=false
 Type=Application
 StartupNotify=false
