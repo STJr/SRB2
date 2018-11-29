@@ -44,6 +44,11 @@
 # Validate Deployer state
 if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
     # Search for the trigger word
+    echo "Testing for trigger $DEPLOYER_TRIGGER, commit message:";
+    echo $TRAVIS_COMMIT_MESSAGE;
+    echo "[${DEPLOYER_TRIGGER}]";
+    echo "[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]";
+    echo "[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]";
     if [[ "$DEPLOYER_TRIGGER" == "" ]] || [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
