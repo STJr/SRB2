@@ -257,6 +257,16 @@ addons:
 
 
 before_install:
+  # Initialize Deployer; check if Deployer is enabled
+  # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
+  - . ./travis/deployer.sh
+  # Also check if we should now terminate
+  - if [[ "$DEPLOYER_JOB_ALL" != "1"]]; then
+      if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$_DEPLOYER_JOB_ENABLED" != "1" ]]; then
+        return 0;
+      fi;
+    fi
+
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
       brew install sdl2 sdl2_mixer game-music-emu zlib p7zip;
@@ -266,10 +276,6 @@ before_install:
 
 
 before_script:
-  # Initialize Deployer; check if Deployer is enabled
-  # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
-  - . ./travis/deployer.sh
-
   # Get asset files (required for MD5)
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
