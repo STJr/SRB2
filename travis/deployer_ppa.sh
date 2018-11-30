@@ -18,7 +18,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
         # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
         #     -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
-        debsign ${PACKAGEFILENAME}.changes \
+        debsign ${PACKAGEFILENAME}_source.changes \
             -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch';
 
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
@@ -32,8 +32,8 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
         # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
         #     -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes \
-            -p'gpg $OLDPWD/key.asc --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        debsign ${PACKAGEFILENAME}_source.changes \
+            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
         cd $OLDPWD;
     fi;
