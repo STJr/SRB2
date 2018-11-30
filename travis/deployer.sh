@@ -48,6 +48,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                     # Now check for sub-modules
                     if [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
                         if [[ "$_DEPLOYER_FTP_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_FTP_BINARY" == "1" ]]; then
+                            # TODO: If Linux, check if we're building a MAIN and/or ASSET package
                             echo "Deployer FTP target is enabled";
                             __DEPLOYER_FTP_ACTIVE=1;
                         else
@@ -57,8 +58,10 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                     fi;
 
                     if [[ "$_DEPLOYER_PPA_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-                        echo "Deployer PPA target is enabled";
-                        __DEPLOYER_PPA_ACTIVE=1;
+                        if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+                            echo "Deployer PPA target is enabled";
+                            __DEPLOYER_PPA_ACTIVE=1;
+                        fi;
                     fi;
 
                     # If any sub-modules are active, then so is the main module
