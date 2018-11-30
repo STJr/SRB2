@@ -41,5 +41,10 @@
 : ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
 : ${PROGRAM_FILENAME:=srb2}
 
+# If not running on travis, this is later set to the current datetime
+# if [[ "$TRAVIS_JOB_ID" != "" ]]; then
+#     : ${PACKAGE_SUBVERSION:=$TRAVIS_JOB_ID};
+# fi;
+
 # This file is called in debian_template.sh, so mark our completion so we don't run it again
 __DEBIAN_PARAMETERS_INITIALIZED=1
