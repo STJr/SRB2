@@ -38,7 +38,7 @@ Use these steps to prepare building a source package for Launchpad:
 
 Build the source package:
 
-    1. . ../travis/deployer_debian_template.sh
+    1. . [path_to_srb2_repo]/debian_template.sh
        * Initializes defaults for the package variables and fills in templates. Don't forget the first period!
     2. debuild -S (builds the source package for Launchpad)
 

@@ -271,6 +271,8 @@ before_install:
         exit;
       fi;
     fi
+  # Initialize defaults
+  - . ./travis/deployer_defaults.sh
 
 
 install:

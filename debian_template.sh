@@ -85,7 +85,7 @@ evaldirectory () {
 # Initialize package parameter defaults
 #
 if [[ "$__DEBIAN_PARAMETERS_INITIALIZED" != "1" ]]; then
-	. ${DIR}/travis/deployer.sh;
+	. ${DIR}/travis/deployer_defaults.sh;
 fi;
 
 # Clean up after ourselves; we only expect to run this script once
@@ -156,4 +156,3 @@ if [[ "$1" != "clean" ]]; then
 		"mkdir \"${toroot}\${dirtailname}\"";
 	fi;
 fi;
-	# evaltemplate ${DIR}/debian-template/copyright > test.txt
