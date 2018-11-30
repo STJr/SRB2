@@ -84,8 +84,8 @@ fi;
 __DEBIAN_PARAMETERS_INITIALIZED=0
 
 # for envsubst
-export __PACKAGE_DATETIME=${__PACKAGE_DATETIME}
-export __PACKAGE_DATETIME_DIGIT=${__PACKAGE_DATETIME_DIGIT}
+export __PACKAGE_DATETIME="$(date '+%a, %d %b %Y %H:%M:%S %z')"
+export __PACKAGE_DATETIME_DIGIT="$(date -u '+%Y%m%d%H%M%S')"
 
 if [[ "$PACKAGE_SUBVERSION" == "" ]]; then
 	PACKAGE_SUBVERSION=$__PACKAGE_DATETIME_DIGIT;
