@@ -48,7 +48,7 @@ enum hook {
 };
 extern const char *const hookNames[];
 
-void LUAh_MapChange(void); // Hook for map change (before load)
+void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)

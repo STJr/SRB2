@@ -314,14 +314,14 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 }
 
 // Hook for map change (before load)
-void LUAh_MapChange(void)
+void LUAh_MapChange(INT16 mapnumber)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_MapChange/8] & (1<<(hook_MapChange%8))))
 		return;
 
 	lua_settop(gL, 0);
-	lua_pushinteger(gL, gamemap);
+	lua_pushinteger(gL, mapnumber);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_MapChange)

@@ -1749,6 +1749,9 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	UINT8 flags;
 	INT32 resetplayer = 1, lastgametype;
 	UINT8 skipprecutscene, FLS;
+#ifdef HAVE_BLUA
+	INT16 mapnumber;
+#endif
 
 	if (playernum != serverplayer && playernum != adminplayer)
 	{
@@ -1810,7 +1813,8 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 #ifdef HAVE_BLUA
-	LUAh_MapChange();
+	mapnumber = M_MapNumber(mapname[3], mapname[4]);
+	LUAh_MapChange(mapnumber);
 #endif
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
