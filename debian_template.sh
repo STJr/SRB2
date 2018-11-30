@@ -105,7 +105,7 @@ fi;
 if [[ "$1" == "clean" ]]; then
 	toclean=$2;
 else
-	toclean=;
+	toclean=$1;
 fi;
 
 if [[ "$toclean" == "" ]] || [[ "$toclean" == "main" ]]; then
