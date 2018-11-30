@@ -51,11 +51,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	if [[ "$DEPLOYER_FTP_PROTOCOL" == "" ]]; then
 		DEPLOYER_FTP_PROTOCOL=ftp;
 	fi;
-	__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS@$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
+	#__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS@$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
+	__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
 
 	# Upload to FTP!
 	echo "Uploading to FTP...";
-	wput -v "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
+	#wput -v "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
+	curl --ftp-create-dirs -T "commit.txt" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/commit.txt";
 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
@@ -64,7 +66,8 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ../..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+				#wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/main/$f";
 			done;
 			cd $OLDPWD;
 		fi;
@@ -75,7 +78,8 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+				#wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
 			done;
 			cd $OLDPWD;
 		fi;
