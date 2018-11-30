@@ -352,4 +352,4 @@ script:
 after_success:
   # Run the Deployer scripts
   - . ../travis/deployer_ftp.sh
-  - . ../travis/deployer_ppa.sh
+  - . ../travis/deployer_dput.sh
