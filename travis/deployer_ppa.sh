@@ -5,9 +5,6 @@
 #
 
 if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
-    # Get the key to sign
-    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ${DEPLOYER_PPA_KEY_FINGERPRINT}
-
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION}
