@@ -12,14 +12,18 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 	gpg --import key.asc;
     srm key.asc;
 
+    echo "-- build";
     ls .;
+    echo "-- SRB2";
     ls ..;
+    echo "-- mazmazz";
     ls ../..;
+    echo "-- assets";
     ls ../assets;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
-        PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION};
+        PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ../..; # level above repo root
 
         debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
@@ -33,7 +37,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
     if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
         OLDPWD=$PWD;
-        PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION};
+        PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ..; # repo root
 
         debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
