@@ -14,12 +14,19 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        LAUNCHPADFTP="ftp://ppa.launchpad.net:21/~${DEPLOYER_PPA_PATH}/"
         cd ../..; # level above repo root
 
         debsign ${PACKAGEFILENAME}_source.changes \
             -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-        dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
-        echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
+
+        wput ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
+            ./${PACKAGEFILENAME}_source.buildinfo ./${PACKAGEFILENAME}_source.changes \
+            ${LAUNCHPADFTP}${PACKAGEFILENAME}.dsc ${LAUNCHPADFTP}${PACKAGEFILENAME}.tar.xz \
+            ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.buildinfo ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.changes;
+
+        #dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        #echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
 
         cd $OLDPWD;
     fi;
@@ -27,12 +34,19 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
     if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
         OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        LAUNCHPADFTP="ftp://ppa.launchpad.net:21/~${DEPLOYER_PPA_PATH}/"
         cd ..; # repo root
 
         debsign ${PACKAGEFILENAME}_source.changes \
             -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-        dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
-        echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
+
+        wput ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
+            ./${PACKAGEFILENAME}_source.buildinfo ./${PACKAGEFILENAME}_source.changes \
+            ${LAUNCHPADFTP}${PACKAGEFILENAME}.dsc ${LAUNCHPADFTP}${PACKAGEFILENAME}.tar.xz \
+            ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.buildinfo ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.changes;
+
+        #dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        #echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
 
         cd $OLDPWD;
     fi;
