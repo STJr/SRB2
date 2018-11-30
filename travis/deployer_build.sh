@@ -33,7 +33,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
 		/usr/bin/expect <(cat << EOF
 spawn debuild -S
-expect "Enter passphrase:"
+expect "Enter passphrase: "
 send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
 interact
 EOF
@@ -51,7 +51,7 @@ EOF
 
 		/usr/bin/expect <(cat << EOF
 spawn debuild -S
-expect "Enter passphrase:"
+expect "Enter passphrase: "
 send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
 interact
 EOF
