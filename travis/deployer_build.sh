@@ -30,7 +30,15 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 		. ../debian_template.sh main;
 		OLDPWD=$PWD;
 		cd ..;
-		debuild -S;
+
+		/usr/bin/expect <(cat << EOF
+spawn debuild -S
+expect "Enter passphrase:"
+send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
+interact
+EOF
+);
+
 		cd $OLDPWD;
 	fi;
 	if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
@@ -38,8 +46,17 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 		. ../debian_template.sh asset;
 		OLDPWD=$PWD;
 		cd ../assets;
-		debuild -T build;
-		debuild -S;
+
+		debuild -T build; # make sure the asset files exist
+
+		/usr/bin/expect <(cat << EOF
+spawn debuild -S
+expect "Enter passphrase:"
+send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
+interact
+EOF
+);
+
 		cd $OLDPWD;
 	fi;
 fi;
