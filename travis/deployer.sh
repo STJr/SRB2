@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # Initialization
 #
 # Performs validity checks to ensure that Deployer is allowed to run
@@ -25,14 +25,30 @@
 # See below blocks for more configuration options.
 
 # Validate Deployer state
-if [[ "$DEPLOYER_ENABLED" == "1" ]]; then
-	if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
-		if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
-			if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
-				if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
+    # Search for the trigger word
+    if [[ "$DEPLOYER_TRIGGER" != "" ]]; then
+        echo "Testing for trigger $DEPLOYER_TRIGGER, commit message: $TRAVIS_COMMIT_MESSAGE";
+        echo "[${DEPLOYER_TRIGGER}]";
+        echo "[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]";
+        echo "[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]";
+    fi;
+    if [[ "$DEPLOYER_TRIGGER" == "" ]] || [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER]"* ]] \
+    || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]"* ]] \
+    || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
+        # Whitelist by branch name
+        if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+            # Set this so we only early-terminate builds when we are specifically deploying
+            # Trigger string and branch are encompassing conditions; the rest are job-specific
+            __DEPLOYER_ACTIVE_GLOBALLY=1;
+
+            # Is the job enabled for deployment?
+            if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
+                # Whitelist by OS names
+                if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
                     # Base Deployer is eligible for becoming active
                     # Now check for sub-modules
-                    if [[ "$_DEPLOYER_FTP_ENABLED" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
+                    if [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
                         if [[ "$_DEPLOYER_FTP_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_FTP_BINARY" == "1" ]]; then
                             echo "Deployer FTP target is enabled";
                             __DEPLOYER_FTP_ACTIVE=1;
@@ -42,38 +58,61 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]]; then
                         fi;
                     fi;
 
-                    if [[ "$_DEPLOYER_PPA_ENABLED" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+                    if [[ "$_DEPLOYER_PPA_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
                         echo "Deployer PPA target is enabled";
                         __DEPLOYER_PPA_ACTIVE=1;
                     fi;
 
                     # If any sub-modules are active, then so is the main module
                     if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
-					    __DEPLOYER_ACTIVE=1;
+                        __DEPLOYER_ACTIVE=1;
                     fi;
-				fi;
-			fi;
-		fi;
-	fi;
+                fi;
+            fi;
+        fi;
+    else
+        if [[ "$DEPLOYER_TRIGGER" != "" ]]; then
+            echo "Testing for global trigger [$DEPLOYER_TRIGGER, commit message: $TRAVIS_COMMIT_MESSAGE";
+        fi;
+        if [[ "$DEPLOYER_TRIGGER" != "" ]] && [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER"* ]]; then
+            if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
+                # Assume that some job received the trigger, so mark this for early termination
+                __DEPLOYER_ACTIVE_GLOBALLY=1;
+            fi;
+        fi;
+    fi;
+fi;
+
+if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
+    echo "Deployer is active in another job";
+    if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]]; then
+        echo "Terminating this job due to non-deployment";
+    fi;
+fi;
+
+if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" != "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
+    echo "Deployer is not active";
 fi;
 
 # Asset Paths
 # If these are not in your settings, defaults below will be assigned.
 #
 # ASSET_ARCHIVE_PATH = http://example.com/assets.7z (path to single archive of assets. must be 7z.
-#                                                    filenames in this archive will not be downloaded again, but are required for packaging)
+#                                                    you should set the default filenames below to blank if
+#                                                    those files are in the archive)
 # ASSET_BASE_PATH = http://example.com/path         (base URL to single asset downloads)
 # ASSET_FILES_REQUIRED = file1.ext file2.ext        (required files in the build)
 # ASSET_FILES_DOCS = README.txt LICENSE.txt         (documentation files; will not error out if not found, but will always be downloaded)
-# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_GET_OPTIONAL=1)
+# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_GET_OPTIONAL=1
+#                                                    note that these will NOT be copied to cache, and will always be downloaded.)
 # ASSET_GET_OPTIONAL = 1                            (default is to NOT download optional files)
 
 # Set variables for assets
-${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
-${ASSET_BASE_PATH:=http://alam.srb2.org/SRB2/2.1.21-Final/Resources}
-${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
-${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
-${ASSET_FILES_OPTIONAL:=music.dta}
+: ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
+: ${ASSET_BASE_PATH:=http://alam.srb2.org/SRB2/2.1.21-Final/Resources}
+: ${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
+: ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
+: ${ASSET_FILES_OPTIONAL:=music.dta}
 
 # Package Parameters
 #

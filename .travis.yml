@@ -63,7 +63,7 @@ matrix:
           compiler: gcc-4.8
           env:
           - _DEPLOYER_JOB_ENABLED=1
-          - _DEPLOYER_PPA_ENABLED=1
+          - _DEPLOYER_PPA_PACKAGE=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -229,7 +229,6 @@ matrix:
           env:
           - _DEPLOYER_JOB_ENABLED=1
           - _DEPLOYER_FTP_PACKAGE=1
-          - _DEPLOYER_FTP_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
@@ -266,7 +265,7 @@ before_install:
   # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
   - . ./travis/deployer.sh
   # Also check if we should now terminate
-  - if [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
+  - if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" == "1" ]] && [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
       if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
         echo "Exiting early because this job is not deploying.";
         exit;
@@ -284,35 +283,48 @@ install:
 
 
 before_script:
+  - OLDPWD=$PWD
+  - cd "$HOME/srb2_cache"
+
   # Get asset files (required for MD5)
   - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
-      wget --verbose --server-response -c "$ASSET_ARCHIVE_PATH" -O "$HOME/srb2_cache/assets.7z";
-      7z x "$HOME/srb2_cache/assets.7z" -oassets;
+      wget --verbose --server-response -N "$ASSET_ARCHIVE_PATH";
+      7z x "$(basename $ASSET_ARCHIVE_PATH)" -o"$HOME/srb2_cache" -aos;
+      for f in $ASSET_FILES_REQUIRED; do
+        cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
+      done;
     fi;
 
   # Get individual required files
   - for f in $ASSET_FILES_REQUIRED; do
-      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
+      wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
       if [ ! -f "$HOME/srb2_cache/$f" ]; then
-        echo "ERROR: Could not download \"$ASSET_BASE_PATH/$f\"";
+        echo "Could not download \"$ASSET_BASE_PATH/$f\"";
         return 1;
       fi;
-      cp "$HOME/srb2_cache/$f" "assets/$f";
+      cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
     done;
 
   # Get the docs
   - for f in $ASSET_FILES_DOCS; do
-      wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
-      cp "$HOME/srb2_cache/$f" "assets/$f";
+      wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
+      cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
     done;
 
   # Get optional files too
   - if [[ "$ASSET_GET_OPTIONAL" == "1" ]]; then
       for f in $ASSET_FILES_OPTIONAL; do
-        wget --verbose --server-response -c "$ASSET_BASE_PATH/$f" -O "$HOME/srb2_cache/$f";
-        cp "$HOME/srb2_cache/$f" "assets/$f";
+        wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
+        cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
       done;
     fi;
+
+  - cd "$OLDPWD"
+
+  # Prepare CMake asset lists
+  - SRB2_ASSET_REQUIRED=$(echo ${ASSET_FILES_REQUIRED// /\;})
+  - SRB2_ASSET_OPTIONAL=$(echo ${ASSET_FILES_OPTIONAL// /\;})
+  - SRB2_ASSET_DOCS=$(echo ${ASSET_FILES_DOCS// /\;})
 
   # Prepare CMake
   - mkdir build
@@ -321,19 +333,14 @@ before_script:
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
   - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+      -DSRB2_ASSET_REQUIRED="${SRB2_ASSET_REQUIRED}" -DSRB2_ASSET_OPTIONAL="${SRB2_ASSET_OPTIONAL}"
+      -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
 
 
 script:
   # Build our Makefile from Cmake!
-  #
-  # HACK: OSX packaging can't write libraries to .app package unless we're superuser
-  # because the original library files don't have WRITE permission
-  # Bug may be sidestepped by using CHMOD_BUNDLE_ITEMS=TRUE
-  # But I don't know where this is set. Not `cmake -D...` because this var is ignored.
-  # https://cmake.org/Bug/view.php?id=9284
-  #
   - if [[ "$__DEPLOYER_ACTIVE" == "1" ]]; then
-      . ../travis/deployer_build.sh
+      . ../travis/deployer_build.sh;
     else
       make -k;
     fi;

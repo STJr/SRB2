@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Travis-CI Deployer
+# Deployer for Travis-CI
 # FTP Uploader
 #
 # Package files are uploaded to, e.g., ftp://username:password@example.com:21/path/to/upload/STJr/SRB2/master/460873812-151.1
@@ -24,10 +24,12 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 
 	if [[ "$TRAVIS_JOB_NAME" != "" ]]; then
 		JOBNAME=$TRAVIS_JOB_NAME;
-	else if [[ "$_DEPLOYER_JOB_NAME" != "" ]]; then
-		JOBNAME=$_DEPLOYER_JOB_NAME;
 	else
-		JOBNAME=$TRAVIS_OS_NAME;
+		if [[ "$_DEPLOYER_JOB_NAME" != "" ]]; then
+			JOBNAME=$_DEPLOYER_JOB_NAME;
+		else
+			JOBNAME=$TRAVIS_OS_NAME;
+		fi;
 	fi;
 
 	# Generate commit.txt file
