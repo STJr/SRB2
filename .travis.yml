@@ -259,7 +259,6 @@ addons:
     - libgme-dev
     - zlib1g-dev
     - p7zip-full
-    - wput
 
 
 before_install:

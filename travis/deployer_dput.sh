@@ -12,7 +12,7 @@ if [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" ]]; then
 
         # Attempted FTP upload instead of dput
         # LAUNCHPADFTP="ftp://ppa.launchpad.net:21/~${DEPLOYER_DPUT_PATH}/"
-        # wput ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
+        # wput --port-mode ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
         #     ./${PACKAGEFILENAME}_source.buildinfo ./${PACKAGEFILENAME}_source.changes \
         #     ${LAUNCHPADFTP}${PACKAGEFILENAME}.dsc ${LAUNCHPADFTP}${PACKAGEFILENAME}.tar.xz \
         #     ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.buildinfo ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.changes;
@@ -29,7 +29,7 @@ if [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" ]]; then
 
         # Attempted FTP upload instead of dput
         # LAUNCHPADFTP="ftp://ppa.launchpad.net:21/~${DEPLOYER_DPUT_PATH}/"
-        # wput ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
+        # wput --port-mode ./${PACKAGEFILENAME}.dsc ./${PACKAGEFILENAME}.tar.xz \
         #     ./${PACKAGEFILENAME}_source.buildinfo ./${PACKAGEFILENAME}_source.changes \
         #     ${LAUNCHPADFTP}${PACKAGEFILENAME}.dsc ${LAUNCHPADFTP}${PACKAGEFILENAME}.tar.xz \
         #     ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.buildinfo ${LAUNCHPADFTP}${PACKAGEFILENAME}_source.changes;

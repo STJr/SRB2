@@ -55,7 +55,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 
 	# Upload to FTP!
 	echo "Uploading to FTP...";
-	wput "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
+	wput --port-mode "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
@@ -64,7 +64,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ../..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+				wput --port-mode "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
 			done;
 			cd $OLDPWD;
 		fi;
@@ -75,19 +75,19 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+				wput --port-mode "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
 			done;
 			cd $OLDPWD;
 		fi;
 	else
 		if [[ "$_DEPLOYER_BINARY" == "1" ]]; then
-			wput "bin" "$__DEPLOYER_FTP_LOCATION/";
+			wput --port-mode "bin" "$__DEPLOYER_FTP_LOCATION/";
 		fi;
 
-		# For some reason (permissions?), wput stalls when uploading "package" as a folder, so loop files manually
+		# For some reason (permissions?), wput --port-mode stalls when uploading "package" as a folder, so loop files manually
 		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
 			for f in package/*.*; do
-				wput "$f" "$__DEPLOYER_FTP_LOCATION/";
+				wput --port-mode "$f" "$__DEPLOYER_FTP_LOCATION/";
 			done;
 		fi;
 	fi;
