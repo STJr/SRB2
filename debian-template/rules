@@ -57,7 +57,7 @@ SECTION = Games/Action
 EXENAME = $(PROGRAM_FILENAME)
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= $(PROGRAM_PATH)
+PKGDIR	= $(PACKAGE_INSTALL_PATH)
 DBGDIR	= usr/lib/debug/$(PKGDIR)
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications

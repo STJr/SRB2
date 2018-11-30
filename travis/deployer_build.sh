@@ -19,7 +19,7 @@ fi;
 if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 	echo "Building a Source Package for PPA";
 
-	 # Get the key to sign
+	# Get the key to sign
     gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ${DEPLOYER_PPA_KEY_FINGERPRINT}
 
 	# Make a source package for PPA
