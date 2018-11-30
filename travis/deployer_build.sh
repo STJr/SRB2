@@ -19,11 +19,6 @@ fi;
 if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 	echo "Building a Source Package for PPA";
 
-	# Get the key to sign
-    #gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ${DEPLOYER_PPA_KEY_FINGERPRINT}
-	echo "$DEPLOYER_PPA_KEY_PRIVATE" | base64 --decode > key.asc
-	gpg --import key.asc
-
 	# Make a source package for PPA
 	if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 		echo "Building main source Debian package";
@@ -31,13 +26,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 		OLDPWD=$PWD;
 		cd ..;
 
-		/usr/bin/expect <(cat << EOF
-spawn debuild -S
-expect "Enter passphrase: "
-send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
-interact
-EOF
-);
+		debuild -S;
 
 		cd $OLDPWD;
 	fi;
@@ -48,14 +37,7 @@ EOF
 		cd ../assets;
 
 		debuild -T build; # make sure the asset files exist
-
-		/usr/bin/expect <(cat << EOF
-spawn debuild -S
-expect "Enter passphrase: "
-send "${DEPLOYER_PPA_KEY_PASSPHRASE}\r"
-interact
-EOF
-);
+		debuild -S;
 
 		cd $OLDPWD;
 	fi;

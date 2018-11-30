@@ -5,25 +5,44 @@
 #
 
 if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
-    if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
-        OLDPWD=$PWD
-        PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION}
-        cd ../.. # level above repo root
+    # Get the key to sign
+    # Do this AFTER debuild so that we can specify the passphrase in command line
+	echo "$DEPLOYER_PPA_KEY_PRIVATE" | base64 --decode > key.asc;
+    echo "$DEPLOYER_PPA_KEY_PASSPHRASE" > phrase.txt;
+	gpg --import key.asc;
+    srm key.asc;
 
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes
-        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes"
-        cd $OLDPWD
+    ls .;
+    ls ..;
+    ls ../..;
+    ls ../assets;
+
+    if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
+        OLDPWD=$PWD;
+        PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION};
+        cd ../..; # level above repo root
+
+        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
+            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes \
+            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+
+        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        cd $OLDPWD;
     fi;
 
     if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
-        OLDPWD=$PWD
-        PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION}
-        cd .. # repo root
+        OLDPWD=$PWD;
+        PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}-${PACKAGE_SUBVERSION};
+        cd ..; # repo root
 
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes
-        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes"
-        cd $OLDPWD
+        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
+            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes \
+            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        cd $OLDPWD;
     fi;
+
+    srm phrase.txt;
 fi;

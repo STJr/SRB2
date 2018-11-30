@@ -57,7 +57,8 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                         fi;
                     fi;
 
-                    if [[ "$_DEPLOYER_PPA_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+                    if [[ "$_DEPLOYER_PPA_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]] \
+                    && [[ "$DEPLOYER_PPA_KEY_PRIVATE" != "" ]] && [[ "$DEPLOYER_PPA_KEY_PASSPHRASE" != "" ]]; then
                         if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
                             echo "Deployer PPA target is enabled";
                             __DEPLOYER_PPA_ACTIVE=1;
