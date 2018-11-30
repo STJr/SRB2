@@ -10,7 +10,6 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 	echo "$DEPLOYER_PPA_KEY_PRIVATE" | base64 --decode > key.asc;
     echo "$DEPLOYER_PPA_KEY_PASSPHRASE" > phrase.txt;
 	gpg --import key.asc;
-    srm key.asc;
 
     echo "-- build";
     ls .;
@@ -26,10 +25,10 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ../..; # level above repo root
 
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
-            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
+        #     -p'gpg $OLDPWD/key.asc --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
         debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes \
-            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+            -p'gpg $OLDPWD/key.asc --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
 
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
         cd $OLDPWD;
@@ -40,13 +39,14 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
         PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ..; # repo root
 
-        debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
-            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+        # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
+        #     -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
         debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.changes \
-            -p'gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
+            -p'gpg $OLDPWD/key.asc --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent';
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
         cd $OLDPWD;
     fi;
 
+    srm key.asc;
     srm phrase.txt;
 fi;

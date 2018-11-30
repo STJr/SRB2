@@ -26,7 +26,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 		OLDPWD=$PWD;
 		cd ..;
 
-		debuild -S;
+		debuild -S -us -uc; # don't sign yet, do during upload to skip passphrase prompt
 
 		cd $OLDPWD;
 	fi;
@@ -37,7 +37,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 		cd ../assets;
 
 		debuild -T build; # make sure the asset files exist
-		debuild -S;
+		debuild -S -us -uc; # don't sign yet, do during upload to skip passphrase prompt
 
 		cd $OLDPWD;
 	fi;
@@ -82,7 +82,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 					OLDPWD=$PWD;
 					cd ../assets;
 					debuild -T build;
-					debuild;
+					debuild -us -uc; # don't sign yet, do during upload to skip passphrase prompt
 					cd $OLDPWD;
 				fi;
 			else
