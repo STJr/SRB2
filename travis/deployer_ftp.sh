@@ -64,7 +64,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ../..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/main";
+				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
 			done;
 			cd $OLDPWD;
 		fi;
@@ -75,7 +75,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/asset";
+				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
 			done;
 			cd $OLDPWD;
 		fi;
