@@ -11,8 +11,6 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
     echo "$DEPLOYER_PPA_KEY_PASSPHRASE" > phrase.txt;
 	gpg --import key.asc;
 
-    ping -c 4 ppa.launchpad.net;
-
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
@@ -20,7 +18,8 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
         debsign ${PACKAGEFILENAME}_source.changes \
             -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
 
         cd $OLDPWD;
     fi;
@@ -32,7 +31,8 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
 
         debsign ${PACKAGEFILENAME}_source.changes \
             -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-        dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        dput -d -d ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+        echo cat < ./${PACKAGEFILENAME}_source.ppa.upload;
 
         cd $OLDPWD;
     fi;
