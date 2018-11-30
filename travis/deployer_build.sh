@@ -7,10 +7,10 @@
 
 # Get devscripts if we don't already have it
 if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
-	sudo apt-get install devscripts secure-delete;
+	sudo apt-get install devscripts secure-delete wput;
 else
 	if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] && [[ "$_DEPLOYER_FTP_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-		sudo apt-get install devscripts secure-delete;
+		sudo apt-get install devscripts secure-delete wput;
 	fi;
 fi;
 
