@@ -20,6 +20,10 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	# Install wput if we don't already have it
 	if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 		brew install wput;
+	else
+		if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+			sudo apt-get install wput;
+		fi;
 	fi;
 
 	if [[ "$TRAVIS_JOB_NAME" != "" ]]; then
