@@ -116,20 +116,22 @@ fi;
 
 # Package Parameters
 #
-# DEVELOPER_PACKAGE_ASSET_BUILD = 1 (build the data package, default is to skip)
+# PACKAGE_ASSET_BUILD = 1 (build the data package, default is to skip)
 
-${PACKAGE_NAME:=srb2}
-${PACKAGE_ASSET_MINVERSION:=2.1.15}
-${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
-${PACKAGE_DISTRO:=trusty}
-${PACKAGE_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
-${PACKAGE_GROUP_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
-${PACKAGE_WEBSITE:=<http://www.srb2.org>}
+: ${PACKAGE_NAME:=srb2}
+: ${PACKAGE_VERSION:=2.1.21}
+: ${PACKAGE_ASSET_MINVERSION:=2.1.15}
+: ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
+: ${PACKAGE_DISTRO:=trusty}
+: ${PACKAGE_URGENCY:=high}
+: ${PACKAGE_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
+: ${PACKAGE_GROUP_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
+: ${PACKAGE_WEBSITE:=<http://www.srb2.org>}
 
-${PROGRAM_NAME:=Sonic Robo Blast 2}
-${PROGRAM_VERSION:=2.1.21}
-${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
-${PROGRAM_FILENAME:=srb2}
+: ${PROGRAM_NAME:=Sonic Robo Blast 2}
+: ${PROGRAM_VERSION:=2.1.21}
+: ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
+: ${PROGRAM_FILENAME:=srb2}
 
-# This file is called in deployer_debian_template.sh, so mark our completion so we don't run it again
+# This file is called in debian_template.sh, so mark our completion so we don't run it again
 __DEBIAN_PARAMETERS_INITIALIZED=1
