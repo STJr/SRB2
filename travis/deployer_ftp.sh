@@ -53,14 +53,33 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	echo "Uploading to FTP...";
 	wput "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
 
-	if [[ "$_DEPLOYER_FTP_BINARY" == "1" ]]; then
-		wput "bin" "$__DEPLOYER_FTP_LOCATION/";
-	fi;
+	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
+		PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
+			# Main packages are in parent of root repo folder
+			OLDPWD=$PWD;
+			cd ../..;
+			wput "./${PACKAGEFILENAME}*" "$__DEPLOYER_FTP_LOCATION/package/main";
+			cd $OLDPWD;
+		fi;
 
-	# For some reason (permissions?), wput stalls when uploading "package" as a folder, so loop files manually
-	if [[ "$_DEPLOYER_FTP_PACKAGE" == "1" ]]; then
-		for f in package/*.*; do
-			wput "$f" "$__DEPLOYER_FTP_LOCATION/";
-		done;
+		if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+			# Asset packages are in root repo folder
+			OLDPWD=$PWD;
+			cd ..;
+			wput "./${PACKAGEFILENAME}*" "$__DEPLOYER_FTP_LOCATION/package/asset";
+			cd $OLDPWD;
+		fi;
+	else
+		if [[ "$_DEPLOYER_BINARY" == "1" ]]; then
+			wput "bin" "$__DEPLOYER_FTP_LOCATION/";
+		fi;
+
+		# For some reason (permissions?), wput stalls when uploading "package" as a folder, so loop files manually
+		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
+			for f in package/*.*; do
+				wput "$f" "$__DEPLOYER_FTP_LOCATION/";
+			done;
+		fi;
 	fi;
 fi

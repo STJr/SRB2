@@ -24,49 +24,65 @@
 
 # Validate Deployer state
 if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
-    # Search for the trigger word
+    # Logging message for trigger word
     if [[ "$DEPLOYER_TRIGGER" != "" ]]; then
         echo "Testing for trigger $DEPLOYER_TRIGGER, commit message: $TRAVIS_COMMIT_MESSAGE";
         echo "[${DEPLOYER_TRIGGER}]";
         echo "[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]";
         echo "[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]";
     fi;
+
+    #
+    # Search for the trigger word
+    #
     if [[ "$DEPLOYER_TRIGGER" == "" ]] || [[ $TRAVIS_COMMIT_MESSAGE == *"[$DEPLOYER_TRIGGER]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${_DEPLOYER_JOB_NAME}]"* ]] \
     || [[ $TRAVIS_COMMIT_MESSAGE == *"[${DEPLOYER_TRIGGER}-${TRAVIS_OS_NAME}]"* ]]; then
+        #
         # Whitelist by branch name
+        #
         if [[ "$DEPLOYER_BRANCHES" == "" ]] || [[ $DEPLOYER_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
             # Set this so we only early-terminate builds when we are specifically deploying
             # Trigger string and branch are encompassing conditions; the rest are job-specific
             __DEPLOYER_ACTIVE_GLOBALLY=1;
 
+            #
             # Is the job enabled for deployment?
+            #
             if [[ "$DEPLOYER_JOB_ALL" == "1" ]] || [[ "$_DEPLOYER_JOB_ENABLED" == "1" ]]; then
+                #
                 # Whitelist by OS names
+                #
                 if [[ "$DEPLOYER_OSNAMES" == "" ]] || [[ $DEPLOYER_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
                     # Base Deployer is eligible for becoming active
-                    # Now check for sub-modules
-                    if [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
-                        if [[ "$_DEPLOYER_FTP_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_FTP_BINARY" == "1" ]]; then
-                            # TODO: If Linux, check if we're building a MAIN and/or ASSET package
+
+                    # Are we building for Linux?
+                    if [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_SOURCEPACKAGE" == "1" ]]; then
+                        if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+                            if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+                                __DEPLOYER_DEBIAN_ACTIVE=1;
+                            fi;
+                        fi;
+                    fi;
+
+                    # Now check for deployment targets
+                    if [[ "$_DEPLOYER_FTP_TARGET" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
+                        if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_BINARY" == "1" ]]; then
                             echo "Deployer FTP target is enabled";
                             __DEPLOYER_FTP_ACTIVE=1;
                         else
-                            echo "Developer FTP target cannot be enabled: You must specify _DEPLOYER_FTP_PACKAGE=1";
-                            echo "and/or _DEPLOYER_FTP_BINARY=1 in your job's environment variables.";
+                            echo "Deployer FTP target cannot be enabled: You must specify _DEPLOYER_PACKAGE=1,";
+                            echo "and/or _DEPLOYER_BINARY=1 in your job's environment variables.";
                         fi;
                     fi;
 
-                    if [[ "$_DEPLOYER_PPA_PACKAGE" == "1" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]] \
-                    && [[ "$DEPLOYER_PPA_KEY_PRIVATE" != "" ]] && [[ "$DEPLOYER_PPA_KEY_PASSPHRASE" != "" ]]; then
-                        if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
-                            echo "Deployer PPA target is enabled";
-                            __DEPLOYER_PPA_ACTIVE=1;
-                        fi;
+                    if [[ "$_DEPLOYER_DPUT_TARGET" == "1" ]] && [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
+                        echo "Deployer DPUT target is enabled";
+                        __DEPLOYER_DPUT_ACTIVE=1;
                     fi;
 
-                    # If any sub-modules are active, then so is the main module
-                    if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
+                    # If any deployment targets are active, then so is the Deployer at large
+                    if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" ]]; then
                         __DEPLOYER_ACTIVE=1;
                     fi;
                 fi;
