@@ -83,8 +83,9 @@ fi;
 # during buildboting
 __DEBIAN_PARAMETERS_INITIALIZED=0
 
-__PACKAGE_DATETIME="$(date '+%a, %d %b %Y %H:%M:%S %z')"
-__PACKAGE_DATETIME_DIGIT="$(date -u '+%Y%m%d%H%M%S')"
+# for envsubst
+export __PACKAGE_DATETIME=${__PACKAGE_DATETIME}
+export __PACKAGE_DATETIME_DIGIT=${__PACKAGE_DATETIME_DIGIT}
 
 if [[ "$PACKAGE_SUBVERSION" == "" ]]; then
 	PACKAGE_SUBVERSION=$__PACKAGE_DATETIME_DIGIT;
