@@ -60,12 +60,15 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 				echo "Signing main package(s)";
 
+				# Main packages are in parent of root repo folder
 				OLDPWD=$PWD;
 				PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
 				cd ../..; # parent of repo root
 
-				debsign ./${PACKAGEFILENAME}_source.changes \
-					-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+				for f in ./${PACKAGEFILENAME}*.changes; do
+					debsign "$f" \
+						-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+				done;
 
 				cd $OLDPWD;
 			fi;
@@ -73,12 +76,15 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
 				echo "Signing asset package(s)";
 
+				# Asset packages are in root repo folder
 				OLDPWD=$PWD;
 				PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
 				cd ..; # repo root
 
-				debsign ./${PACKAGEFILENAME}_source.changes \
-					-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+				for f in ./${PACKAGEFILENAME}*.changes; do
+					debsign "$f" \
+						-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+				done;
 
 				cd $OLDPWD;
 			fi;

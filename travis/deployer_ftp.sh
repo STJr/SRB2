@@ -58,20 +58,25 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	wput "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
-		PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
+			PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
 			# Main packages are in parent of root repo folder
 			OLDPWD=$PWD;
 			cd ../..;
-			wput "./${PACKAGEFILENAME}*" "$__DEPLOYER_FTP_LOCATION/package/main";
+			for f in ./${PACKAGEFILENAME}*; do
+				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/main";
+			done;
 			cd $OLDPWD;
 		fi;
 
 		if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+			PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
 			# Asset packages are in root repo folder
 			OLDPWD=$PWD;
 			cd ..;
-			wput "./${PACKAGEFILENAME}*" "$__DEPLOYER_FTP_LOCATION/package/asset";
+			for f in ./${PACKAGEFILENAME}*; do
+				wput "$f" "$__DEPLOYER_FTP_LOCATION/package/asset";
+			done;
 			cd $OLDPWD;
 		fi;
 	else
