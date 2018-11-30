@@ -50,14 +50,14 @@ DIR	:= $(shell pwd)
 
 # FIXME: hate hate hate head/tail hack :(
 CONTROLF = $(DIR)/debian/control
-PACKAGE  = $(PACKAGE_NAME)
-DBGPKG   = $(PACKAGE)-dbg
-TITLE	= $(PROGRAM_NAME)
+PACKAGE  = ${PACKAGE_NAME}
+DBGPKG   = ${PACKAGE}-dbg
+TITLE	= ${PROGRAM_NAME}
 SECTION = Games/Action
-EXENAME = $(PROGRAM_FILENAME)
+EXENAME = ${PROGRAM_FILENAME}
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= $(PACKAGE_INSTALL_PATH)
+PKGDIR	= ${PACKAGE_INSTALL_PATH}
 DBGDIR	= usr/lib/debug/$(PKGDIR)
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
@@ -101,8 +101,8 @@ binary-arch:
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
 	# Install desktop file and banner image
-	$(INSTALL) $(DIR)/$(PROGRAM_FILENAME).png $(DIR)/debian/tmp/usr/share/pixmaps
-	$(INSTALL) $(DIR)/debian/$(PROGRAM_FILENAME).desktop $(DIR)/debian/tmp/usr/share/applications
+	$(INSTALL) $(DIR)/${PROGRAM_FILENAME}.png $(DIR)/debian/tmp/usr/share/pixmaps
+	$(INSTALL) $(DIR)/debian/${PROGRAM_FILENAME}.desktop $(DIR)/debian/tmp/usr/share/applications
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries

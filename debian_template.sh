@@ -6,16 +6,6 @@
 # Get script's actual path
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-# Function for bash templating
-# $1 = Path to template file
-# Returns templated text
-evaltemplate () {
-	eval "cat <<EOF
-$(<$1)
-EOF
-" 2> /dev/null
-}
-
 # Recursive function for directory crawling
 # $1 = Directory root to crawl
 # $2 = Code to eval on file
@@ -24,6 +14,7 @@ EOF
 dirlevel=0 # initialize
 dirtails=()
 
+# Utility function to make dira/dirb/dirc string
 makedirtailname () {
 	dirtailname=""
 	for tail in $dirtails; do
@@ -97,6 +88,7 @@ __PACKAGE_DATETIME_DIGIT="$(date -u '+%Y%m%d%H%M%S')"
 
 if [[ "$PACKAGE_SUBVERSION" == "" ]]; then
 	PACKAGE_SUBVERSION=$__PACKAGE_DATETIME_DIGIT;
+	export PACKAGE_SUBVERSION=${PACKAGE_SUBVERSION}; # for envsubst
 fi;
 
 #
@@ -129,8 +121,10 @@ if [[ "$1" != "clean" ]]; then
 
 	# HACK: ${shlibs:Depends} in the templates make the templating fail
 	# So just define replacemment variables
-	SHLIBS_DEPENDS="\${shlib:Depends}"
-	MISC_DEPENDS="\${misc:Depends}"
+	export SHLIBS_DEPENDS=${SHLIBS_DEPENDS}
+	export MISC_DEPENDS=${MISC_DEPENDS}
+
+	# Package parameters are exported for envsubst in deployer_defaults.sh
 
 	if [[ "$totemplate" == "" ]] || [[ "$totemplate" == "main" ]]; then
 		echo "Generating main package scripts";
@@ -138,10 +132,9 @@ if [[ "$1" != "clean" ]]; then
 		toroot=${DIR}/debian;
 		mkdir ${toroot};
 
-		# Root dir to crawl; file eval; directory eval
 		evaldirectory ${fromroot} \
-		"if [[ \"\$( basename \$name )\" != \"rules\" ]]; then evaltemplate \$name > ${toroot}\${dirtailname}/\$( basename \$name ); else cp \$name ${toroot}\${dirtailname}/\$( basename \$name ); fi" \
-		"mkdir \"${toroot}\${dirtailname}\"";
+			"cat \$name | envsubst > ${toroot}\${dirtailname}/\$( basename \$name )" \
+			"mkdir \"${toroot}\${dirtailname}\"";
 	fi;
 
 	if [[ "$totemplate" == "" ]] || [[ "$totemplate" == "asset" ]]; then
@@ -152,7 +145,7 @@ if [[ "$1" != "clean" ]]; then
 
 		# Root dir to crawl; file eval; directory eval
 		evaldirectory ${fromroot} \
-		"if [[ \"\$( basename \$name )\" != \"rules\" ]]; then evaltemplate \$name > ${toroot}\${dirtailname}/\$( basename \$name ); else cp \$name ${toroot}\${dirtailname}/\$( basename \$name ); fi" \
-		"mkdir \"${toroot}\${dirtailname}\"";
+			"cat \$name | envsubst > ${toroot}\${dirtailname}/\$( basename \$name )" \
+			"mkdir \"${toroot}\${dirtailname}\"";
 	fi;
 fi;
