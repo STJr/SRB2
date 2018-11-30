@@ -11,17 +11,17 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
     echo "$DEPLOYER_PPA_KEY_PASSPHRASE" > phrase.txt;
 	gpg --import key.asc;
 
+    ping ppa.launchpad.net;
+
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ../..; # level above repo root
 
-        # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
-        #     -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent";
         debsign ${PACKAGEFILENAME}_source.changes \
             -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+
         cd $OLDPWD;
     fi;
 
@@ -30,11 +30,10 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
         PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
         cd ..; # repo root
 
-        # debsign -k ${DEPLOYER_PPA_KEY_FINGERPRINT} ${PACKAGEFILENAME}.dsc \
-        #     -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent";
         debsign ${PACKAGEFILENAME}_source.changes \
-            -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch --no-use-agent";
+            -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
         dput ppa:${DEPLOYER_PPA_PATH} "${PACKAGEFILENAME}_source.changes";
+
         cd $OLDPWD;
     fi;
 
