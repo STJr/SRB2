@@ -11,7 +11,7 @@ if [[ "$__DEPLOYER_PPA_ACTIVE" == "1" ]]; then
     echo "$DEPLOYER_PPA_KEY_PASSPHRASE" > phrase.txt;
 	gpg --import key.asc;
 
-    ping ppa.launchpad.net;
+    ping -c 4 ppa.launchpad.net;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
