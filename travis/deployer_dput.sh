@@ -22,8 +22,14 @@ EOM
 Host *
     StrictHostKeyChecking no
     UserKnownHostsFile=/dev/null
+    PubKeyAuthentication yes
+    IdentityFile ${PWD}/key.pub
+    IdentitiesOnly yes
 EOM
     sudo sh -c "cat < ${PWD}/ssh_config >> /etc/ssh/ssh_config";
+
+    # Retrieve our secret key
+    echo "$DEPLOYER_PGP_KEY_PRIVATE" | base64 --decode > key.pub;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
@@ -53,4 +59,6 @@ EOM
 
         cd $OLDPWD;
     fi;
+
+    srm ./key.pub;
 fi;

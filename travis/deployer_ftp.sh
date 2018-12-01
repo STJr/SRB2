@@ -76,7 +76,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 		fi;
 
 		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
-			rm -r package/_CPack_Packages
+			sudo rm -r package/_CPack_Packages
 			find package -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
 		fi;
 	fi;
