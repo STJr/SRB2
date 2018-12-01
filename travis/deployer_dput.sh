@@ -38,40 +38,93 @@ EOM
     #pip install paramiko;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
-        OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
-        cd ../..; # level above repo root
+        PACKAGEDBGFILENAME=${PACKAGE_NAME}-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+		#PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+		#PACKAGENIGHTLYDBGFILENAME=${PACKAGE_NAME}-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        #PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+		#PACKAGEPATCHDBGFILENAME=${PACKAGE_NAME}-patch-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        #PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+		#PACKAGEPATCHNIGHTLYDBGFILENAME=${PACKAGE_NAME}-patch-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+        PACKAGEFILENAMES=(
+            PACKAGEFILENAME
+            PACKAGEDBGFILENAME
+            #PACKAGENIGHTLYFILENAME
+            #PACKAGENIGHTLYDBGFILENAME
+            #PACKAGEPATCHFILENAME
+            #PACKAGEPATCHDBGFILENAME
+            #PACKAGEPATCHNIGHTLYFILENAME
+            #PACKAGEPATCHNIGHTLYDBGFILENAME
+        );
+
+        # Main packages are in parent of root repo folder
+        OLDPWD=$PWD; # [repo]/build
+        cd ../..;
 
         # Enter passphrase if required
-        for f in ${PACKAGEFILENAME}*.changes; do
-            expect <(cat <<EOD
+        for n in ${PACKAGEFILENAMES}; do
+            for f in $n*.changes; do
+                # Binary builds also generate source builds, so exclude the source
+                # builds if desired
+                if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+                    if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
+                        continue;
+                    fi;
+                fi;
+
+                expect <(cat <<EOD
 spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
 expect "Enter passphrase for key"
 send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
 interact
 EOD
 );
+            done;
         done;
 
+        # Go back to [repo]/build folder
         cd $OLDPWD;
     fi;
 
     if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
-        OLDPWD=$PWD;
         PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
-        cd ..; # repo root
+        #PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        #PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+        #PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+        PACKAGEFILENAMES=(
+            PACKAGEFILENAME
+            #PACKAGENIGHTLYFILENAME
+            #PACKAGEPATCHFILENAME
+            #PACKAGEPATCHNIGHTLYFILENAME
+        )
+
+        # Asset packages are in root repo folder
+        OLDPWD=$PWD; # [repo]/build
+        cd ..;
 
         # Enter passphrase if required
-        for f in ${PACKAGEFILENAME}*.changes; do
-            expect <(cat <<EOD
+        for n in ${PACKAGEFILENAMES}; do
+            for f in $n*.changes; do
+                # Binary builds also generate source builds, so exclude the source
+                # builds if desired
+                if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+                    if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
+                        continue;
+                    fi;
+                fi;
+                expect <(cat <<EOD
 spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
 expect "Enter passphrase for key"
 send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
 interact
 EOD
 );
+            done;
         done;
 
+        # Go back to [repo]/build folder
         cd $OLDPWD;
     fi;
 

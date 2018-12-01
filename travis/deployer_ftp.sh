@@ -51,23 +51,77 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 			PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			PACKAGEDBGFILENAME=${PACKAGE_NAME}-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGENIGHTLYDBGFILENAME=${PACKAGE_NAME}-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHDBGFILENAME=${PACKAGE_NAME}-patch-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHNIGHTLYDBGFILENAME=${PACKAGE_NAME}-patch-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+			PACKAGEFILENAMES=(
+				PACKAGEFILENAME
+				PACKAGEDBGFILENAME
+				#PACKAGENIGHTLYFILENAME
+				#PACKAGENIGHTLYDBGFILENAME
+				#PACKAGEPATCHFILENAME
+				#PACKAGEPATCHDBGFILENAME
+				#PACKAGEPATCHNIGHTLYFILENAME
+				#PACKAGEPATCHNIGHTLYDBGFILENAME
+			);
+
 			# Main packages are in parent of root repo folder
-			OLDPWD=$PWD;
+			OLDPWD=$PWD; # [repo]/build
 			cd ../..;
-			for f in ./${PACKAGEFILENAME}*; do
-				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+
+			for n in ${PACKAGEFILENAMES}; do
+				for f in ./$n*; do
+					# Binary builds also generate source builds, so exclude the source
+					# builds if desired
+					if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
+							continue;
+						fi;
+					fi;
+					curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+				done;
 			done;
+
+			# Go back to [repo]/build folder
 			cd $OLDPWD;
 		fi;
 
 		if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
 			PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+			#PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+			PACKAGEFILENAMES=(
+				PACKAGEFILENAME
+				#PACKAGENIGHTLYFILENAME
+				#PACKAGEPATCHFILENAME
+				#PACKAGEPATCHNIGHTLYFILENAME
+			)
+
 			# Asset packages are in root repo folder
-			OLDPWD=$PWD;
+			OLDPWD=$PWD; # [repo]/build
 			cd ..;
-			for f in ./${PACKAGEFILENAME}*; do
-				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+
+			for n in ${PACKAGEFILENAMES}; do
+				for f in ./$n*; do
+					# Binary builds also generate source builds, so exclude the source
+					# builds if desired
+					if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
+							continue;
+						fi;
+					fi;
+					curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+				done;
 			done;
+
+			# Go back to [repo]/build folder
 			cd $OLDPWD;
 		fi;
 	else

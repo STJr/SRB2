@@ -15,7 +15,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 		# binaries and all
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 			. ../debian_template.sh main;
-			OLDPWD=$PWD;
+			OLDPWD=$PWD; # [repo]/build
 			cd ..; # repo root
 
 			if [[ "$_DEPLOYER_PACKAGE" != "1" ]]; then
@@ -32,7 +32,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 		# Also an asset package
 		if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
 			. ../debian_template.sh asset;
-			OLDPWD=$PWD;
+			OLDPWD=$PWD; # [repo]/build
 			cd ../assets;
 
 			# make sure the asset files exist, download them if they don't
@@ -60,14 +60,35 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 				echo "Signing main package(s)";
 
-				# Main packages are in parent of root repo folder
-				OLDPWD=$PWD;
 				PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				PACKAGEDBGFILENAME=${PACKAGE_NAME}-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGENIGHTLYDBGFILENAME=${PACKAGE_NAME}-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHDBGFILENAME=${PACKAGE_NAME}-patch-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHNIGHTLYDBGFILENAME=${PACKAGE_NAME}-patch-nightly-dbg_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+				PACKAGEFILENAMES=(
+					PACKAGEFILENAME
+					PACKAGEDBGFILENAME
+					#PACKAGENIGHTLYFILENAME
+					#PACKAGENIGHTLYDBGFILENAME
+					#PACKAGEPATCHFILENAME
+					#PACKAGEPATCHDBGFILENAME
+					#PACKAGEPATCHNIGHTLYFILENAME
+					#PACKAGEPATCHNIGHTLYDBGFILENAME
+				);
+
+				# Main packages are in parent of root repo folder
+				OLDPWD=$PWD; # [repo]/build
 				cd ../..; # parent of repo root
 
-				for f in ./${PACKAGEFILENAME}*.changes; do
-					debsign "$f" \
-						-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+				for n in ${PACKAGEFILENAMES}; do
+					for f in ./$n*.changes; do
+						debsign "$f" \
+							-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+					done;
 				done;
 
 				cd $OLDPWD;
@@ -76,15 +97,28 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
 				echo "Signing asset package(s)";
 
-				# Asset packages are in root repo folder
-				OLDPWD=$PWD;
 				PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGENIGHTLYFILENAME=${PACKAGE_NAME}-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHFILENAME=${PACKAGE_NAME}-patch-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+				#PACKAGEPATCHNIGHTLYFILENAME=${PACKAGE_NAME}-patch-nightly-data_${PACKAGE_VERSION}~${PACKAGE_SUBVERSION};
+
+				PACKAGEFILENAMES=(
+					PACKAGEFILENAME
+					#PACKAGENIGHTLYFILENAME
+					#PACKAGEPATCHFILENAME
+					#PACKAGEPATCHNIGHTLYFILENAME
+				)
+
+				# Asset packages are in root repo folder
+				OLDPWD=$PWD; # [repo]/build
 				cd ..; # repo root
 
-				for f in ./${PACKAGEFILENAME}*.changes; do
-					debsign "$f" \
-						-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
-				done;
+				for n in ${PACKAGEFILENAMES}; do
+					for f in ./$n*.changes; do
+						debsign "$f" \
+							-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+					done;
+				fi;
 
 				cd $OLDPWD;
 			fi;

@@ -286,6 +286,7 @@ install:
 
 
 before_script:
+  # OLDPWD is root repo folder
   - OLDPWD=$PWD
   - cd "$HOME/srb2_cache"
 
@@ -322,6 +323,7 @@ before_script:
       done;
     fi;
 
+  # Go back to root repo folder
   - cd "$OLDPWD"
 
   # Prepare CMake asset lists
