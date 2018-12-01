@@ -23,14 +23,14 @@ Host *
     StrictHostKeyChecking no
     UserKnownHostsFile=/dev/null
     PubKeyAuthentication yes
-    IdentityFile ${PWD}/key.pub
+    IdentityFile ${PWD}/key.private
     IdentitiesOnly yes
 EOM
     sudo sh -c "cat < ${PWD}/ssh_config >> /etc/ssh/ssh_config";
 
     # Generate an ssh key for identification
-    echo "$DEPLOYER_SSH_KEY_PUBLIC" | base64 --decode > key.pub;
-    chmod 700 ./key.pub;
+    echo "$DEPLOYER_SSH_KEY_PRIVATE" | base64 --decode > key.private;
+    chmod 700 ./key.private;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
@@ -61,5 +61,5 @@ EOM
         cd $OLDPWD;
     fi;
 
-    srm ./key.pub;
+    srm ./key.private;
 fi;
