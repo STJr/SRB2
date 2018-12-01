@@ -9,7 +9,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		echo "Building Debian package(s)"
 
-		sudo apt-get install devscripts secure-delete;
+		sudo apt-get install devscripts secure-delete expect;
 
 		# Build source packages first, since they zip up the entire source folder,
 		# binaries and all
@@ -90,8 +90,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
-						debsign "$f" \
-							-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+						expect <(cat <<EOD
+spawn debsign "$f" -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+expect "Would you like to use the current signature?"
+send "Y\r"
+interact
+EOD
+);
 					done;
 				done;
 
@@ -119,8 +124,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
-						debsign "$f" \
-							-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+						expect <(cat <<EOD
+spawn debsign "$f" -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+expect "Would you like to use the current signature?"
+send "Y\r"
+interact
+EOD
+);
 					done;
 				done;
 
