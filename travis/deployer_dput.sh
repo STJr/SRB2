@@ -32,7 +32,7 @@ EOM
     echo "$DEPLOYER_SSH_KEY_PRIVATE" | base64 --decode > key.private;
 
     # paramiko?
-    sudo apt-get install python-pip python-paramiko;
+    sudo apt-get install python-pip python-paramiko expect;
     pip install paramiko;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
