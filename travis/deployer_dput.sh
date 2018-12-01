@@ -28,9 +28,8 @@ Host *
 EOM
     sudo sh -c "cat < ${PWD}/ssh_config >> /etc/ssh/ssh_config";
 
-    # Generate an ssh key for identification
+    # Get the private key
     echo "$DEPLOYER_SSH_KEY_PRIVATE" | base64 --decode > key.private;
-    chmod 700 ./key.private;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
@@ -42,7 +41,14 @@ EOM
         cd ../..; # level above repo root
 
         for f in ${PACKAGEFILENAME}*.changes; do
-            dput -c "$OLDPWD/dput.cf" deployer "$f";
+            expect <(cat <<EOD
+spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
+expect "Enter passphrase for key"
+send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
+expect eof
+EOD
+);
+            #dput -c "$OLDPWD/dput.cf" deployer "$f";
         done;
 
         cd $OLDPWD;
@@ -55,7 +61,14 @@ EOM
 
         # Dput only works if you're using secure FTP
         for f in ${PACKAGEFILENAME}*.changes; do
-            dput -c "$OLDPWD/dput.cf" deployer "$f";
+            expect <(cat <<EOD
+spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
+expect "Enter passphrase for key"
+send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
+expect eof
+EOD
+);
+            #dput -c "$OLDPWD/dput.cf" deployer "$f";
         done;
 
         cd $OLDPWD;
