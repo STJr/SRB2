@@ -46,7 +46,7 @@ EOM
 spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
 expect "Enter passphrase for key"
 send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
-expect eof
+interact
 EOD
 );
             #dput -c "$OLDPWD/dput.cf" deployer "$f";
@@ -66,7 +66,7 @@ EOD
 spawn dput -c "${OLDPWD}/dput.cf" deployer "$f";
 expect "Enter passphrase for key"
 send "${DEPLOYER_SSH_KEY_PASSPHRASE}\r"
-expect eof
+interact
 EOD
 );
             #dput -c "$OLDPWD/dput.cf" deployer "$f";
