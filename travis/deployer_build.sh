@@ -9,7 +9,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		echo "Building Debian package(s)"
 
-		sudo apt-get install devscripts secure-delete expect;
+		sudo apt-get install devscripts debhelper secure-delete expect;
 
 		# Build source packages first, since they zip up the entire source folder,
 		# binaries and all
