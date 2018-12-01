@@ -30,6 +30,7 @@ EOM
 
     # Get the private key
     echo "$DEPLOYER_SSH_KEY_PRIVATE" | base64 --decode > key.private;
+    chmod 700 ./key.private;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko expect;
