@@ -17,15 +17,6 @@
 # DEPLOYER_FTP_PATH = path/to/upload             (do not add trailing slash)
 
 if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
-	# Install wput if we don't already have it
-	if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-		brew install wput;
-	else
-		if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-			sudo apt-get install wput;
-		fi;
-	fi;
-
 	if [[ "$TRAVIS_JOB_NAME" != "" ]]; then
 		JOBNAME=$TRAVIS_JOB_NAME;
 	else
@@ -51,12 +42,11 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	if [[ "$DEPLOYER_FTP_PROTOCOL" == "" ]]; then
 		DEPLOYER_FTP_PROTOCOL=ftp;
 	fi;
-	#__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS@$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
 	__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
 
 	# Upload to FTP!
 	echo "Uploading to FTP...";
-	wput -v "commit.txt" "$__DEPLOYER_FTP_LOCATION/commit.txt";
+	curl --ftp-create-dirs -T "commit.txt" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS "$__DEPLOYER_FTP_LOCATION/commit.txt";
 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
@@ -65,7 +55,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ../..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/main/$f";
 			done;
 			cd $OLDPWD;
 		fi;
@@ -76,19 +66,20 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			OLDPWD=$PWD;
 			cd ..;
 			for f in ./${PACKAGEFILENAME}*; do
-				wput -v "$f" "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
 			done;
 			cd $OLDPWD;
 		fi;
 	else
 		if [[ "$_DEPLOYER_BINARY" == "1" ]]; then
-			wput -v "bin" "$__DEPLOYER_FTP_LOCATION/";
+			for f in bin/*; do
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/$f";
+			done;
 		fi;
 
-		# For some reason (permissions?), wput -v stalls when uploading "package" as a folder, so loop files manually
 		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
-			for f in package/*.*; do
-				wput -v "$f" "$__DEPLOYER_FTP_LOCATION/";
+			for f in package/*; do
+				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/$f";
 			done;
 		fi;
 	fi;

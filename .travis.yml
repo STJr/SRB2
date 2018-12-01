@@ -63,7 +63,7 @@ matrix:
           compiler: gcc-4.8
           env:
           - _DEPLOYER_JOB_ENABLED=1
-          - _DEPLOYER_FTP_TARGET=1
+          - _DEPLOYER_DPUT_TARGET=1
           - _DEPLOYER_SOURCEPACKAGE=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
@@ -262,6 +262,8 @@ addons:
 
 
 before_install:
+  # Initialize Deployer defaults
+  - . ./travis/deployer_defaults.sh
   # Initialize Deployer; check if Deployer is enabled
   # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
   - . ./travis/deployer.sh
@@ -272,8 +274,6 @@ before_install:
         exit;
       fi;
     fi
-  # Initialize defaults
-  - . ./travis/deployer_defaults.sh
 
 
 install:

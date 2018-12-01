@@ -28,7 +28,7 @@
 
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.1.21}
-# PACKAGE_SUBVERSION -- configured in debian_template.sh
+: ${PACKAGE_SUBVERSION} # configured in debian_template.sh
 : ${PACKAGE_ASSET_MINVERSION:=2.1.15}
 : ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
 : ${PACKAGE_DISTRO:=trusty}
@@ -46,6 +46,12 @@
 # if [[ "$TRAVIS_JOB_ID" != "" ]]; then
 #     : ${PACKAGE_SUBVERSION:=$TRAVIS_JOB_ID};
 # fi;
+
+# DPUT Variables
+: ${DEPLOYER_DPUT_DOMAIN:=ppa.launchpad.net}
+: ${DEPLOYER_DPUT_METHOD:=sftp}
+: ${DEPLOYER_DPUT_INCOMING}
+: ${DEPLOYER_DPUT_USER:=anonymous}
 
 # Export all variables for envsubst templating
 

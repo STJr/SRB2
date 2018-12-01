@@ -67,7 +67,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
 
                     # Now check for deployment targets
                     if [[ "$_DEPLOYER_FTP_TARGET" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
-                        if [[ "$TRAVIS_OS_HOST" == "linux" ]] && [[ "$DEPLOYER_FTP_PROTOCOL" == "ftp"]]; then
+                        if [[ "$TRAVIS_OS_HOST" == "linux" ]] && [[ "$DEPLOYER_FTP_PROTOCOL" == "ftp" ]]; then
                             echo "Non-secure FTP will not work on Linux Travis-CI jobs!";
                             echo "Try SFTP or another target. Details:";
                             echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
@@ -82,9 +82,16 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                         fi;
                     fi;
 
-                    if [[ "$_DEPLOYER_DPUT_TARGET" == "1" ]] && [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
-                        echo "Deployer DPUT target is enabled";
-                        __DEPLOYER_DPUT_ACTIVE=1;
+                    if [[ "$_DEPLOYER_DPUT_TARGET" == "1" ]] && [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] \
+                    && [[ "$DEPLOYER_DPUT_INCOMING" != "" ]]; then
+                        if [[ "$DEPLOYER_DPUT_METHOD" == "ftp" ]]; then
+                            echo "DPUT will not work with non-secure FTP on Linux Travis-CI jobs!";
+                            echo "Try SFTP or another method for DPUT. Details:";
+                            echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
+                        else
+                            echo "Deployer DPUT target is enabled";
+                            __DEPLOYER_DPUT_ACTIVE=1;
+                        fi;
                     fi;
 
                     # If any deployment targets are active, then so is the Deployer at large
