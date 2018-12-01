@@ -2,6 +2,14 @@
 
 # Deployer for Travis-CI
 # Debian package templating
+#
+# Call this script BEFORE running debuild!
+# source ./debian_template.sh [clean] [main/asset]
+#
+# Before running this script,
+# you should also set PACKAGE_NAME_EMAIL="John Doe <jdoe@example.com>" to match
+# the identity of the key you will use to sign the package.
+#
 
 # Get script's actual path
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
@@ -89,6 +97,7 @@ export __PACKAGE_DATETIME_DIGIT="$(date -u '+%Y%m%d%H%M%S')"
 
 if [[ "$PACKAGE_SUBVERSION" == "" ]]; then
 	PACKAGE_SUBVERSION=$__PACKAGE_DATETIME_DIGIT;
+	__PACKAGE_SUBVERSION_BY_DATE=1;
 	export PACKAGE_SUBVERSION=${PACKAGE_SUBVERSION}; # for envsubst
 fi;
 
@@ -149,4 +158,8 @@ if [[ "$1" != "clean" ]]; then
 			"cat \$name | envsubst > ${toroot}\${dirtailname}/\$( basename \$name )" \
 			"mkdir \"${toroot}\${dirtailname}\"";
 	fi;
+fi;
+
+if [[ "$__DEPLOYER_ACTIVE" != "1" ]] && [[ "$__PACKAGE_SUBVERSION_BY_DATE" == "1" ]]; then
+	unset PACKAGE_SUBVERSION; # so we can reset the date on subsequent runs
 fi;

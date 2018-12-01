@@ -23,6 +23,16 @@
 #
 #############################################################################
 
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(DATADIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 

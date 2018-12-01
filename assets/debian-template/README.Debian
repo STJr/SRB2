@@ -12,9 +12,39 @@ with apt-key add. Thanks!
  -- Callum Dickinson <gcfreak_ag20@hotmail.com>  Fri, 26 Nov 2010 18:25:31 +1300
 
 
+---------------
+
+
+Templating
+
+Note that you MUST run [repo-root]/debian_template.sh before running debuild
+on these scripts! debian_template.sh fills these template files with working values.
+
+You should also set PACKAGE_NAME_EMAIL="John Doe <jdoe@example.com>" to match
+the identity of the key you will use to sign the package.
+
+
+Building for Launchpad PPA
+
+Run this step first:
+
+    1. source [repo-root]/debian_template.sh
+       * Initializes defaults for the package variables and fills in templates.
+
+Use these steps to prepare building a source package for Launchpad:
+
+    1. cd [repo-root]/assets/
+    2. debuild -T clean-all (optional; if you already have asset files, this clears them)
+
+Build the source package:
+
+    1. debuild -T build (this downloads the asset files from srb2.org if necessary)
+    2. debuild -S (builds the source package for Launchpad, including the asset files)
+
+
 Signing for Launchpad PPA
 
-First, follow the above instructions to generate a GnuPG key with your identity. You will need
+First, follow Callum's instructions to generate a GnuPG key with your identity. You will need
 to publish the fingerprint of that key to Ubuntu's key server.
 
     https://help.ubuntu.com/community/GnuPrivacyGuardHowto#Uploading_the_key_to_Ubuntu_keyserver
@@ -26,24 +56,18 @@ upload signed source packages and publish them onto your PPA.
 IF YOU UPLOAD A PACKAGE and Launchpad does NOT send you a confirmation or rejection email, that
 means your key is not set up correctly with your Launchpad account.
 
+Finally, if your packages have not already been signed, follow these steps:
 
-Building for Launchpad PPA
+    1. cd ..
+       * Packages are located in the parent folder of where debuild was called
+    2. debsign "srb2-data_[version]_source.changes"
+       * You may need to specify -k [key-fingerprint]
 
-Use these steps to prepare building a source package for Launchpad:
 
-    1. Highly recommend copying the assets/ folder to outside your repo folder, or else the asset
-       files may be included in the main source package, when you build that.
-    2. cd [wherever-your-assets-folder-is]/assets/
-    3. debuild -T clean (optional, if you already have asset files)
+Uploading for Launchpad PPA
 
-Build the source package:
-
-    1. . [path-to-srb2-repo]/travis/deployer_debian_template.sh
-       * Initializes defaults for the package variables and fills in templates. Don't forget the first period!
-    2. debuild -T build (this downloads the asset files from srb2.org if necessary)
-    3. debuild -S (builds the source package for Launchpad, including the asset files)
-
-Then follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
+Follow the instructions at <https://help.launchpad.net/Packaging/PPA/Uploading> to upload
 to your PPA and have Launchpad build your binary deb packages.
+
 
  -- Marco Zafra <marco.a.zafra@gmail.com>  Mon, 26 Nov 2018 21:13:00 -0500
