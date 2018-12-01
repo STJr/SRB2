@@ -91,7 +91,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
-						debsign --no-resign -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch" "$f";
+						debsign --no-re-sign -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch" "$f";
 					done;
 				done;
 
@@ -119,7 +119,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
-						debsign --no-resign -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch" "$f";
+						debsign --no-re-sign -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch" "$f";
 					done;
 				done;
 
