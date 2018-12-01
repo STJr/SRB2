@@ -72,15 +72,12 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 		fi;
 	else
 		if [[ "$_DEPLOYER_BINARY" == "1" ]]; then
-			for f in bin/*; do
-				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/$f";
-			done;
+			find bin -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
 		fi;
 
 		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
-			for f in package/*; do
-				curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/$f";
-			done;
+			rm -r package/_CPack_Packages
+			find package -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
 		fi;
 	fi;
 fi
