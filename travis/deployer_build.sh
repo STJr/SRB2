@@ -118,7 +118,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 						debsign "$f" \
 							-p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
 					done;
-				fi;
+				done;
 
 				cd $OLDPWD;
 			fi;
