@@ -131,8 +131,9 @@ if [[ "$1" != "clean" ]]; then
 
 	# HACK: ${shlibs:Depends} in the templates make the templating fail
 	# So just define replacemment variables
-	export SHLIBS_DEPENDS=${SHLIBS_DEPENDS}
-	export MISC_DEPENDS=${MISC_DEPENDS}
+	export SHLIBS_DEPENDS=${SHLIBS_DEPENDS};
+	export MISC_DEPENDS=${MISC_DEPENDS};
+	export DEBFILEVAR='$$file'; # used in assets/debian/rules
 
 	# Package parameters are exported for envsubst in deployer_defaults.sh
 

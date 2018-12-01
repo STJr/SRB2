@@ -59,15 +59,15 @@ build:
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
-			$(WGET) ${ASSET_BASE_PATH}/$$file; \
+		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
 		fi; \
-		if [ -f $(RESOURCEDIR)/$$file ]; then \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
-			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
 		fi; \
-		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/$$file ]; then \
-			echo $(DIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
+		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} ]; then \
+			echo $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} not found and could not be downloaded!; \
 			return 1; \
 		fi; \
 	done
