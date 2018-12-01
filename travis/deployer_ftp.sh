@@ -78,7 +78,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 				for f in ./$n*; do
 					# Binary builds also generate source builds, so exclude the source
 					# builds if desired
-					if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+					if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
 						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
 							continue;
 						fi;
@@ -112,7 +112,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 				for f in ./$n*; do
 					# Binary builds also generate source builds, so exclude the source
 					# builds if desired
-					if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+					if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
 						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
 							continue;
 						fi;
@@ -129,7 +129,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			find bin -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
 		fi;
 
-		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
+		if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
 			sudo rm -r package/_CPack_Packages
 			find package -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
 		fi;

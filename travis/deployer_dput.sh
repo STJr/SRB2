@@ -67,7 +67,7 @@ EOM
             for f in $n*.changes; do
                 # Binary builds also generate source builds, so exclude the source
                 # builds if desired
-                if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+                if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
                     if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
                         continue;
                     fi;
@@ -109,7 +109,7 @@ EOD
             for f in $n*.changes; do
                 # Binary builds also generate source builds, so exclude the source
                 # builds if desired
-                if [[ "$_DEPLOYER_SOURCEPACKAGE" != "1" ]]; then
+                if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
                     if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
                         continue;
                     fi;

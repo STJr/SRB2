@@ -18,11 +18,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			OLDPWD=$PWD; # [repo]/build
 			cd ..; # repo root
 
-			if [[ "$_DEPLOYER_PACKAGE" != "1" ]]; then
+			if [[ "$_DEPLOYER_PACKAGE_SOURCE" == "1" ]]; then
 				echo "Building main source Debian package";
 				debuild -S -us -uc;
-			else
-				echo "Building main source and binary Debian packages";
+			fi;
+
+			if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
+				echo "Building main binary Debian package";
 				debuild -us -uc;
 			fi;
 
@@ -38,11 +40,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 			# make sure the asset files exist, download them if they don't
 			debuild -T build;
 
-			if [[ "$_DEPLOYER_PACKAGE" != "1" ]]; then
-				echo "Building asset source Debian package";
+			if [[ "$_DEPLOYER_PACKAGE_SOURCE" == "1" ]]; then
+				echo "Building main source Debian package";
 				debuild -S -us -uc;
-			else
-				echo "Building asset source and binary Debian packages";
+			fi;
+
+			if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
+				echo "Building main binary Debian package";
 				debuild -us -uc;
 			fi;
 
@@ -142,7 +146,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 		#
 		# Check for package building
 		#
-		if [[ "$_DEPLOYER_PACKAGE" == "1" ]]; then
+		if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
 			echo "Building a Package";
 
 			# Make an OSX package; superuser is required for library bundling

@@ -57,7 +57,7 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                     # Base Deployer is eligible for becoming active
 
                     # Are we building for Linux?
-                    if [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_SOURCEPACKAGE" == "1" ]]; then
+                    if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]] || [[ "$_DEPLOYER_PACKAGE_SOURCE" == "1" ]]; then
                         if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
                             if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
                                 __DEPLOYER_DEBIAN_ACTIVE=1;
@@ -72,11 +72,11 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
                             echo "Try SFTP or another target. Details:";
                             echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
                         else
-                            if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_BINARY" == "1" ]]; then
+                            if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]] || [[ "$_DEPLOYER_BINARY" == "1" ]]; then
                                 echo "Deployer FTP target is enabled";
                                 __DEPLOYER_FTP_ACTIVE=1;
                             else
-                                echo "Deployer FTP target cannot be enabled: You must specify _DEPLOYER_PACKAGE=1,";
+                                echo "Deployer FTP target cannot be enabled: You must specify _DEPLOYER_PACKAGE_BINARY=1,";
                                 echo "and/or _DEPLOYER_BINARY=1 in your job's environment variables.";
                             fi;
                         fi;
