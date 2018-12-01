@@ -92,7 +92,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
 						expect <(cat <<EOD
-spawn debsign "$f" -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+spawn debsign \"$f\" -p\"gpg --passphrase-file $OLDPWD/phrase.txt --batch\";
 expect "Would you like to use the current signature?"
 send "Y\r"
 interact
@@ -126,7 +126,7 @@ EOD
 				for n in ${PACKAGEFILENAMES}; do
 					for f in ./$n*.changes; do
 						expect <(cat <<EOD
-spawn debsign "$f" -p"gpg --passphrase-file $OLDPWD/phrase.txt --batch";
+spawn debsign \"$f\" -p\"gpg --passphrase-file $OLDPWD/phrase.txt --batch\";
 expect "Would you like to use the current signature?"
 send "Y\r"
 interact
