@@ -17,12 +17,12 @@ allow_unsigned_uploads = 0
 EOM
 
     # shut up ssh! don't prompt us or else the build will stall
-    cat > "./ssh.cf" << EOM
+    cat >> "/etc/ssh/ssh_config" << EOM
+
 Host *
-   StrictHostKeyChecking no
-   UserKnownHostsFile=/dev/null
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
 EOM
-    alias ssh="ssh -F \"${PWD}/ssh.cf\"";
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
