@@ -11,9 +11,9 @@
 # ASSET_BASE_PATH = http://example.com/path         (base URL to single asset downloads)
 # ASSET_FILES_REQUIRED = file1.ext file2.ext        (required files in the build)
 # ASSET_FILES_DOCS = README.txt LICENSE.txt         (documentation files; will not error out if not found, but will always be downloaded)
-# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_GET_OPTIONAL=1
+# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_OPTIONAL_GET=1
 #                                                    note that these will NOT be copied to cache, and will always be downloaded.)
-# ASSET_GET_OPTIONAL = 1                            (default is to NOT download optional files)
+# ASSET_OPTIONAL_GET = 1                            (default is to NOT download optional files)
 
 # Set variables for assets
 : ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}

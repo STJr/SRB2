@@ -316,7 +316,7 @@ before_script:
     done;
 
   # Get optional files too
-  - if [[ "$ASSET_GET_OPTIONAL" == "1" ]]; then
+  - if [[ "$ASSET_OPTIONAL_GET" == "1" ]]; then
       for f in $ASSET_FILES_OPTIONAL; do
         wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
         cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
