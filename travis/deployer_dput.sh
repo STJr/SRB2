@@ -28,8 +28,9 @@ Host *
 EOM
     sudo sh -c "cat < ${PWD}/ssh_config >> /etc/ssh/ssh_config";
 
-    # Retrieve our secret key
-    echo "$DEPLOYER_PGP_KEY_PRIVATE" | base64 --decode > key.pub;
+    # Generate an ssh key for identification
+    echo "$DEPLOYER_SSH_KEY_PUBLIC" | base64 --decode > key.pub;
+    chmod 600 ./key.pub;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
