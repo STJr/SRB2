@@ -67,12 +67,18 @@ if [[ "$DEPLOYER_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; 
 
                     # Now check for deployment targets
                     if [[ "$_DEPLOYER_FTP_TARGET" == "1" ]] && [[ "$DEPLOYER_FTP_HOSTNAME" != "" ]]; then
-                        if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_BINARY" == "1" ]]; then
-                            echo "Deployer FTP target is enabled";
-                            __DEPLOYER_FTP_ACTIVE=1;
+                        if [[ "$TRAVIS_OS_HOST" == "linux" ]] && [[ "$DEPLOYER_FTP_PROTOCOL" == "ftp"]]; then
+                            echo "Non-secure FTP will not work on Linux Travis-CI jobs!";
+                            echo "Try SFTP or another target. Details:";
+                            echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
                         else
-                            echo "Deployer FTP target cannot be enabled: You must specify _DEPLOYER_PACKAGE=1,";
-                            echo "and/or _DEPLOYER_BINARY=1 in your job's environment variables.";
+                            if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DEPLOYER_PACKAGE" == "1" ]] || [[ "$_DEPLOYER_BINARY" == "1" ]]; then
+                                echo "Deployer FTP target is enabled";
+                                __DEPLOYER_FTP_ACTIVE=1;
+                            else
+                                echo "Deployer FTP target cannot be enabled: You must specify _DEPLOYER_PACKAGE=1,";
+                                echo "and/or _DEPLOYER_BINARY=1 in your job's environment variables.";
+                            fi;
                         fi;
                     fi;
 
