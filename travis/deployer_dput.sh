@@ -30,7 +30,7 @@ EOM
 
     # Generate an ssh key for identification
     echo "$DEPLOYER_SSH_KEY_PUBLIC" | base64 --decode > key.pub;
-    chmod 600 ./key.pub;
+    chmod 700 ./key.pub;
 
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
