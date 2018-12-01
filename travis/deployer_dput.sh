@@ -14,7 +14,7 @@ method = ${DEPLOYER_DPUT_METHOD}
 incoming = ${DEPLOYER_DPUT_INCOMING}
 login = ${DEPLOYER_DPUT_USER}
 allow_unsigned_uploads = 0
-EOM;
+EOM
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
