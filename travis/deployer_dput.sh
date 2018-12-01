@@ -16,6 +16,13 @@ login = ${DEPLOYER_DPUT_USER}
 allow_unsigned_uploads = 0
 EOM
 
+    # shut up ssh! don't prompt us or else the build will stall
+    cat > "~/.ssh/config" << EOM
+Host *
+   StrictHostKeyChecking no
+   UserKnownHostsFile=/dev/null
+EOM
+
     # paramiko?
     sudo apt-get install python-pip python-paramiko;
     pip install paramiko;
