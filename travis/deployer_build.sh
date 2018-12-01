@@ -16,7 +16,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 			. ../debian_template.sh main;
 			OLDPWD=$PWD;
-			cd ..;
+			cd ..; # repo root
 
 			if [[ "$_DEPLOYER_PACKAGE" != "1" ]]; then
 				echo "Building main source Debian package";
