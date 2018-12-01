@@ -34,7 +34,7 @@ EOM
     chmod 700 ./key.private;
 
     # paramiko required for ssh
-    sudo apt-get install python-paramiko; # python-pip
+    sudo apt-get install python-paramiko expect; # python-pip
     #pip install paramiko;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
