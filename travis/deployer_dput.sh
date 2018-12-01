@@ -7,14 +7,14 @@
 if [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" ]]; then
     # Output the DPUT config
     # Dput only works if you're using secure FTP, so that's what we default to.
-    cat > "~/.dput.cf" << EOM
+    cat > "./dput.cf" << EOM
 [deployer-ppa]
 fqdn = ${DEPLOYER_DPUT_DOMAIN}
 method = ${DEPLOYER_DPUT_METHOD}
 incoming = ${DEPLOYER_DPUT_INCOMING}
 login = ${DEPLOYER_DPUT_USER}
 allow_unsigned_uploads = 0
-EOM
+EOM;
 
     if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
         OLDPWD=$PWD;
@@ -22,7 +22,7 @@ EOM
         cd ../..; # level above repo root
 
         for f in ${PACKAGEFILENAME}*.changes; do
-            dput "$f";
+            dput -c "$OLDPWD/dput.cf" "$f";
         done;
 
         cd $OLDPWD;
@@ -35,7 +35,7 @@ EOM
 
         # Dput only works if you're using secure FTP
         for f in ${PACKAGEFILENAME}*.changes; do
-            dput "$f";
+            dput -c "$OLDPWD/dput.cf" "$f";
         done;
 
         cd $OLDPWD;
