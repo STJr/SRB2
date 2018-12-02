@@ -282,7 +282,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
-	SINT8 adminplayer; // Needs to be signed
+	SINT8 adminplayers[MAXPLAYERS]; // Needs to be signed
 
 	char server_context[8]; // Unique context id, generated at server startup.
 

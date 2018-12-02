@@ -2576,7 +2576,7 @@ void M_StartControlPanel(void)
 		MPauseMenu[mpause_switchteam].status = IT_DISABLED;
 		MPauseMenu[mpause_psetup].status = IT_DISABLED;
 
-		if ((server || adminplayer == consoleplayer))
+		if ((server || IsPlayerAdmin(consoleplayer)))
 		{
 			MPauseMenu[mpause_switchmap].status = IT_STRING | IT_CALL;
 			if (G_GametypeHasTeams())
@@ -3917,7 +3917,7 @@ static void M_Options(INT32 choice)
 	(void)choice;
 
 	// if the player is not admin or server, disable server options
-	OP_MainMenu[5].status = (Playing() && !(server || adminplayer == consoleplayer)) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
+	OP_MainMenu[5].status = (Playing() && !(server || IsPlayerAdmin(consoleplayer))) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
 
 	// if the player is playing _at all_, disable the erase data options
 	OP_DataOptionsMenu[1].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
