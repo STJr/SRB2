@@ -2552,14 +2552,12 @@ void G_DoReborn(INT32 playernum)
 			}
 		}
 		else
-#ifdef HAVE_BLUA
 		{
-			LUAh_MapChange();
+#ifdef HAVE_BLUA
+			LUAh_MapChange(gamemap);
 #endif
 			G_DoLoadLevel(true);
-#ifdef HAVE_BLUA
 		}
-#endif
 	}
 	else
 	{
@@ -5128,7 +5126,7 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_start = false;
 
 #ifdef HAVE_BLUA
-	LUAh_MapChange();
+	LUAh_MapChange(gamemap);
 #endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
