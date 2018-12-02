@@ -894,8 +894,8 @@ void I_GetJoystickEvents(void)
 	UINT64 joyhats = 0;
 #if 0
 	UINT64 joybuttons = 0;
-#endif
 	Sint16 axisx, axisy;
+#endif
 
 	if (!joystick_started) return;
 
@@ -963,6 +963,7 @@ void I_GetJoystickEvents(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick;
 
@@ -1013,6 +1014,7 @@ void I_GetJoystickEvents(void)
 		}
 		D_PostEvent(&event);
 	}
+#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1176,8 +1178,8 @@ void I_GetJoystick2Events(void)
 	UINT64 joyhats = 0;
 #if 0
 	INT64 joybuttons = 0;
-#endif
 	INT32 axisx, axisy;
+#endif
 
 	if (!joystick2_started)
 		return;
@@ -1247,6 +1249,7 @@ void I_GetJoystick2Events(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick2;
 
@@ -1297,7 +1300,7 @@ void I_GetJoystick2Events(void)
 		}
 		D_PostEvent(&event);
 	}
-
+#endif
 }
 
 /**	\brief	Open joystick handle
