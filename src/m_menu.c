@@ -2116,26 +2116,32 @@ boolean M_Responder(event_t *ev)
 	{
 		if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
 		{
-			if (ev->data3 == -1)
+			if (ev->data3 != INT32_MAX)
 			{
-				ch = KEY_UPARROW;
-				joywait = I_GetTime() + NEWTICRATE/7;
-			}
-			else if (ev->data3 == 1)
-			{
-				ch = KEY_DOWNARROW;
-				joywait = I_GetTime() + NEWTICRATE/7;
+				if (ev->data3 < 0)
+				{
+					ch = KEY_UPARROW;
+					joywait = I_GetTime() + NEWTICRATE/7;
+				}
+				else if (ev->data3 > 0)
+				{
+					ch = KEY_DOWNARROW;
+					joywait = I_GetTime() + NEWTICRATE/7;
+				}
 			}
 
-			if (ev->data2 == -1)
+			if (ev->data2 != INT32_MAX)
 			{
-				ch = KEY_LEFTARROW;
-				joywait = I_GetTime() + NEWTICRATE/17;
-			}
-			else if (ev->data2 == 1)
-			{
-				ch = KEY_RIGHTARROW;
-				joywait = I_GetTime() + NEWTICRATE/17;
+				if (ev->data2 < 0)
+				{
+					ch = KEY_LEFTARROW;
+					joywait = I_GetTime() + NEWTICRATE/17;
+				}
+				else if (ev->data2 > 0)
+				{
+					ch = KEY_RIGHTARROW;
+					joywait = I_GetTime() + NEWTICRATE/17;
+				}
 			}
 		}
 		else if (ev->type == ev_mouse && mousewait < I_GetTime())
