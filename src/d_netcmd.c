@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -677,6 +677,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_crosshair2);
 	CV_RegisterVar(&cv_alwaysfreelook);
 	CV_RegisterVar(&cv_alwaysfreelook2);
+	CV_RegisterVar(&cv_chasefreelook);
+	CV_RegisterVar(&cv_chasefreelook2);
 
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
@@ -1446,7 +1448,12 @@ static void Command_Playdemo_f(void)
 
 	CONS_Printf(M_GetText("Playing back demo '%s'.\n"), name);
 
-	G_DoPlayDemo(name);
+	// Internal if no extension, external if one exists
+	// If external, convert the file name to a path in SRB2's home directory
+	if (FIL_CheckExtension(name))
+		G_DoPlayDemo(va("%s"PATHSEP"%s", srb2home, name));
+	else
+		G_DoPlayDemo(name);
 }
 
 static void Command_Timedemo_f(void)
@@ -1799,6 +1806,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 			mapname, resetplayer, lastgametype, gametype, chmappending));
 		CONS_Printf(M_GetText("Speeding off to level...\n"));
 	}
+
+	CON_ToggleOff();
+	CON_ClearHUD();
+
 	if (demoplayback && !timingdemo)
 		precache = false;
 
@@ -1815,7 +1826,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
 	if (demoplayback && !timingdemo)
 		precache = true;
-	CON_ToggleOff();
 	if (timingdemo)
 		G_DoneLevelLoad();
 
@@ -2694,6 +2704,12 @@ static void Command_Login_f(void)
 	XBOXSTATIC UINT8 finalmd5[16];
 	const char *pw;
 
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
+
 	// If the server uses login, it will effectively just remove admin privileges
 	// from whoever has them. This is good.
 	if (COM_Argc() != 2)
@@ -2801,6 +2817,12 @@ static void Command_Verify_f(void)
 	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -3107,7 +3129,7 @@ static void Command_Addfile(void)
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
 	if (!(netgame || multiplayer) || musiconly)
 	{
-		P_AddWadFile(fn, NULL);
+		P_AddWadFile(fn);
 		return;
 	}
 
@@ -3171,7 +3193,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (IsPlayerAdmin(consoleplayer)) // Request to add file
+	if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -3340,7 +3362,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
+	if (ncs != FS_FOUND || !P_AddWadFile(filename))
 	{
 		Command_ExitGame_f();
 		if (ncs == FS_FOUND)

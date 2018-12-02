@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -206,7 +206,7 @@ static void ServerName_OnChange(void);
 
 #define DEF_PORT "28900"
 consvar_t cv_masterserver = {"masterserver", "ms.srb2.org:"DEF_PORT, CV_SAVE, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_servername = {"servername", "SRB2 server", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 INT16 ms_RoomId = -1;
 
@@ -557,9 +557,21 @@ const char *GetMODVersion(void)
 	msg.room = MODID; // Might as well use it for something.
 	sprintf(msg.buffer,"%d",MODVERSION);
 	if (MS_Write(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Could not send to the Master Server\n"));
+		M_StartMessage(M_GetText("Could not send to the Master Server\n"), NULL, MM_NOTHING);
+		CloseConnection();
 		return NULL;
+	}
 
-	MS_Read(&msg);
+	if (MS_Read(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("No reply from the Master Server\n"));
+		M_StartMessage(M_GetText("No reply from the Master Server\n"), NULL, MM_NOTHING);
+		CloseConnection();
+		return NULL;
+	}
+
 	CloseConnection();
 
 	if(strcmp(msg.buffer,"NULL") != 0)
@@ -587,9 +599,19 @@ void GetMODVersion_Console(void)
 	msg.room = MODID; // Might as well use it for something.
 	sprintf(msg.buffer,"%d",MODVERSION);
 	if (MS_Write(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Could not send to the Master Server\n"));
+		CloseConnection();
 		return;
+	}
 
-	MS_Read(&msg);
+	if (MS_Read(&msg) < 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("No reply from the Master Server\n"));
+		CloseConnection();
+		return;
+	}
+
 	CloseConnection();
 
 	if(strcmp(msg.buffer,"NULL") != 0)
@@ -956,8 +978,8 @@ void MasterClient_Ticker(void)
 
 static void ServerName_OnChange(void)
 {
-	UnregisterServer();
-	RegisterServer();
+	if (con_state == MSCS_REGISTERED)
+		AddToMasterServer(false);
 }
 
 static void MasterServer_OnChange(void)

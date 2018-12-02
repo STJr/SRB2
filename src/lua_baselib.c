@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,9 @@
 #ifdef HAVE_BLUA
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
+#ifdef ESLOPE
+#include "p_slopes.h" // P_GetZAt
+#endif
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_things.h"
@@ -1560,6 +1563,24 @@ static int lib_evCrumbleChain(lua_State *L)
 	return 0;
 }
 
+#ifdef ESLOPE
+// P_SLOPES
+////////////
+
+static int lib_pGetZAt(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	if (!slope)
+		return LUA_ErrInvalid(L, "pslope_t");
+
+	lua_pushfixed(L, P_GetZAt(slope, x, y));
+	return 1;
+}
+#endif
+
 // R_DEFS
 ////////////
 
@@ -2126,6 +2147,11 @@ static luaL_Reg lib[] = {
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
+
+#ifdef ESLOPE
+	// p_slopes
+	{"P_GetZAt",lib_pGetZAt},
+#endif
 
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},

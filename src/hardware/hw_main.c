@@ -2140,6 +2140,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					fixed_t texturevpeg;
+					boolean attachtobottom = false;
+#ifdef ESLOPE
+					boolean slopeskew = false; // skew FOF walls with slopes?
+#endif
 
 					// Wow, how was this missing from OpenGL for so long?
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
@@ -2147,24 +2151,50 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					if (newline)
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
-						if (newline->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
+#endif
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
-						if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						attachtobottom = !!(gr_linedef->flags & ML_DONTPEGBOTTOM);
+#ifdef ESLOPE
+						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
+#endif
 					}
 
 					grTex = HWR_GetTexture(texnum);
 
 #ifdef ESLOPE
-					wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
-					wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
-					wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
-					wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					if (!slopeskew) // no skewing
+					{
+						if (attachtobottom)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
+						wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
+					}
+					else
+					{
+						if (!attachtobottom) // skew by top
+						{
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (h - l + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (hS - lS + texturevpeg) * grTex->scaleY;
+						}
+						else // skew by bottom
+						{
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - (h - l) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - (hS - lS) * grTex->scaleY;
+						}
+					}
 #else
+					if (attachtobottom)
+						texturevpeg -= *rover->topheight - *rover->bottomheight;
 					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
 					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
 #endif
@@ -3527,9 +3557,7 @@ static void HWR_Subsector(size_t num)
 #ifndef POLYSKY
 	// Moved here because before, when above the ceiling and the floor does not have the sky flat, it doesn't draw the sky
 	if (gr_frontsector->ceilingpic == skyflatnum || gr_frontsector->floorpic == skyflatnum)
-	{
 		drawsky = true;
-	}
 #endif
 
 #ifdef R_FAKEFLOORS
@@ -5601,7 +5629,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 // ==========================================================================
 //
 // ==========================================================================
-static void HWR_DrawSkyBackground(player_t *player)
+static void HWR_DrawSkyBackground(void)
 {
 	FOutVector v[4];
 	angle_t angle;
@@ -5609,18 +5637,18 @@ static void HWR_DrawSkyBackground(player_t *player)
 	float aspectratio;
 	float angleturn;
 
-//  3--2
-//  | /|
-//  |/ |
-//  0--1
-
-	(void)player;
 	HWR_GetTexture(skytexture);
+	aspectratio = (float)vid.width/(float)vid.height;
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
 	//         and thus, the near clipping plane is set to 3.99
 	// Sryder: Just use the near clipping plane value then
+
+	//  3--2
+	//  | /|
+	//  |/ |
+	//  0--1
 	v[0].x = v[3].x = -ZCLIP_PLANE-1;
 	v[1].x = v[2].x =  ZCLIP_PLANE+1;
 	v[0].y = v[1].y = -ZCLIP_PLANE-1;
@@ -5635,7 +5663,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 	// The only time this will probably be an issue is when a sky wider than 1024 is used as a sky AND a regular wall texture
 
 	angle = (dup_viewangle + gr_xtoviewangle[0]);
-
 	dimensionmultiply = ((float)textures[skytexture]->width/256.0f);
 
 	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
@@ -5643,10 +5670,13 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	// Y
 	angle = aimingangle;
-
-	aspectratio = (float)vid.width/(float)vid.height;
 	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
-	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
+
+	if (splitscreen)
+	{
+		dimensionmultiply *= 2;
+		angle *= 2;
+	}
 
 	// Middle of the sky should always be at angle 0
 	// need to keep correct aspect ratio with X
@@ -5661,6 +5691,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 		v[3].tow = v[2].tow = (-1.0f/dimensionmultiply)-(0.5f-(0.5f/dimensionmultiply));
 		v[0].tow = v[1].tow = -(0.5f-(0.5f/dimensionmultiply));
 	}
+
+	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	if (angle > ANGLE_180) // Do this because we don't want the sky to suddenly teleport when crossing over 0 to 360 and vice versa
 	{
@@ -5825,12 +5857,8 @@ if (0)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
 }
 
-#ifndef _NDS
 	if (drawsky)
-		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
+		HWR_DrawSkyBackground();
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;
@@ -6046,12 +6074,8 @@ if (0)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
 }
 
-#ifndef _NDS
 	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
-		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
+		HWR_DrawSkyBackground();
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;
