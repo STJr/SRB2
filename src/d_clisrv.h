@@ -321,7 +321,7 @@ typedef struct
 	UINT8 cheatsenabled;
 	UINT8 isdedicated;
 	UINT8 fileneedednum;
-	SINT8 adminplayers;
+	SINT8 adminplayer;
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
