@@ -6736,13 +6736,9 @@ static void M_SetupJoystickMenu(INT32 choice)
 	for (i = 1; i < 8; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
-		{
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
-			CONS_Printf("%s\n", joystickInfo[i]);
-		}
 		else
 			strcpy(joystickInfo[i], joyNA);
-			CONS_Printf("%s\n", joystickInfo[i]);
 	}
 
 	M_SetupNextMenu(&OP_JoystickSetDef);
