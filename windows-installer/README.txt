@@ -27,7 +27,7 @@ How to Use
     * Installer.7z     - 32-bit full installer
     * Patch.7z         - 32-bit patch
     * Installer_x64.7z - 64-bit full installer
-    * Patch_x64.7z     - 64-bit full installer
+    * Patch_x64.7z     - 64-bit patch
 
 3. Set the text in VersionFilename.txt to the version identifier for the
    installer's filename.
