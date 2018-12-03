@@ -960,7 +960,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, mouseaiming, joyaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[consoleplayer];
 	camera_t *thiscam = &camera;
 
@@ -1161,11 +1161,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		}
 
 		axis = JoyAxis(AXISLOOK);
-		if (analogjoystickmove && axis != 0 && cv_lookaxis.value != 0)
+		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis.value != 0)
 			localaiming += (axis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis.value == 0 && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
 			localaiming = 0;
 
 		if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
@@ -1252,7 +1252,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, mouseaiming, joyaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[secondarydisplayplayer];
 	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
 
@@ -1450,11 +1450,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		}
 
 		axis = Joy2Axis(AXISLOOK);
-		if (analogjoystickmove && axis != 0 && cv_lookaxis2.value != 0)
+		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis2.value != 0)
 			localaiming2 += (axis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis2.value == 0 && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
 			localaiming2 = 0;
 
 		if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
