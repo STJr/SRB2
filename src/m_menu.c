@@ -2091,7 +2091,6 @@ boolean M_Responder(event_t *ev)
 		{
 			case KEY_MOUSE1:
 			case KEY_JOY1:
-			case KEY_JOY1 + 2:
 				ch = KEY_ENTER;
 				break;
 			case KEY_JOY1 + 3:
@@ -2099,6 +2098,9 @@ boolean M_Responder(event_t *ev)
 				break;
 			case KEY_MOUSE1 + 1:
 			case KEY_JOY1 + 1:
+				ch = KEY_ESCAPE;
+				break;
+			case KEY_JOY1 + 2:
 				ch = KEY_BACKSPACE;
 				break;
 			case KEY_HAT1:
