@@ -1494,9 +1494,9 @@ boolean M_ScreenshotResponder(event_t *ev)
 		return false;
 
 	ch = ev->data1;
-	if (ch == KEY_F8)
+	if (ch == gamecontrol[gc_screenshot][0] || ch == gamecontrol[gc_screenshot][1]) // remappable F8
 		M_ScreenShot();
-	else if (ch == KEY_F9)
+	else if (ch == gamecontrol[gc_recordgif][0] || ch == gamecontrol[gc_recordgif][1]) // remappable F9
 		((moviemode) ? M_StopMovie : M_StartMovie)();
 	else
 		return false;
