@@ -6731,7 +6731,7 @@ static void M_SetupJoystickMenu(INT32 choice)
 	INT32 n = I_NumJoys();
 	(void)choice;
 
-	strncpy(joystickInfo[i], "None", 5);
+	strcpy(joystickInfo[i], "None");
 
 	for (i = 1; i < 8; i++)
 	{
