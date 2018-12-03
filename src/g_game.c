@@ -987,9 +987,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
 
-	// todo joystick-juggling next
-	//thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
-	thisjoyaiming = cv_alwaysfreelook.value;
+	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
@@ -1289,9 +1287,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
 
-	// todo joystick-juggling next
-	//thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
-	thisjoyaiming = cv_alwaysfreelook2.value;
+	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
 
 	// Reset the vertical look if we're no longer joyaiming
 	if (!thisjoyaiming && joyaiming)
