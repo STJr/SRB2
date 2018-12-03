@@ -1087,6 +1087,11 @@ static menuitem_t OP_Joystick1Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+
+	// todo joystick-juggling next
+	// {IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook,   100},
+	// {IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,   110},
+	{IT_STRING | IT_CVAR, NULL, "Always Look Up/Down", &cv_alwaysfreelook,   100},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
@@ -1098,6 +1103,11 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+
+	// todo joystick-juggling next
+	// {IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,   100},
+	// {IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2,   110},
+	{IT_STRING | IT_CVAR, NULL, "Always Look Up/Down", &cv_alwaysfreelook2,   100},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
