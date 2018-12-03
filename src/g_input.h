@@ -121,6 +121,7 @@ typedef enum
 	gc_systemmenu,
 	gc_screenshot,
 	gc_recordgif,
+	gc_viewpoint,
 	gc_custom1, // Lua scriptable
 	gc_custom2, // Lua scriptable
 	gc_custom3, // Lua scriptable

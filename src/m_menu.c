@@ -1076,6 +1076,7 @@ static menuitem_t OP_MiscControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Screenshot",            M_ChangeControl, gc_screenshot },
 	{IT_CALL | IT_STRING2, NULL, "Toggle GIF Recording",  M_ChangeControl, gc_recordgif  },
 	{IT_CALL | IT_STRING2, NULL, "Open/Close Menu (ESC)", M_ChangeControl, gc_systemmenu },
+	{IT_CALL | IT_STRING2, NULL, "Change Viewpoint",      M_ChangeControl, gc_viewpoint  },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console      },
 };
 
