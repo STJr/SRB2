@@ -223,7 +223,6 @@ static void M_SelectableClearMenus(INT32 choice);
 static void M_Retry(INT32 choice);
 static void M_EndGame(INT32 choice);
 static void M_MapChange(INT32 choice);
-static void M_Pause(INT32 choice);
 static void M_ChangeLevel(INT32 choice);
 static void M_ConfirmSpectate(INT32 choice);
 static void M_ConfirmEnterGame(INT32 choice);
@@ -479,8 +478,6 @@ typedef enum
 // ---------------------
 static menuitem_t MPauseMenu[] =
 {
-	{IT_STRING  | IT_CALL,    NULL, "Pause",             M_Pause,                0},
-
 	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...", &MISC_ScrambleTeamDef, 16},
 	{IT_STRING  | IT_CALL,    NULL, "Switch Map..."    , M_MapChange,           24},
 
@@ -500,8 +497,7 @@ static menuitem_t MPauseMenu[] =
 
 typedef enum
 {
-	mpause_pause = 0,
-	mpause_scramble,
+	mpause_scramble = 0,
 	mpause_switchmap,
 
 	mpause_continue,
@@ -2095,11 +2091,6 @@ boolean M_Responder(event_t *ev)
 		{
 			ch = ev->data1;
 
-			// Pause by joystick means you bring up the menu
-			if (ch >= KEY_JOY1 && ch < KEY_JOY1 + JOYBUTTONS + JOYHATS*4 &&
-				(ch == gamecontrol[gc_pause][0] || ch == gamecontrol[gc_pause][1]))
-				ch = KEY_ESCAPE;
-
 			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 			switch (ch)
 			{
@@ -2195,11 +2186,6 @@ boolean M_Responder(event_t *ev)
 	// F-Keys
 	if (!menuactive)
 	{
-		// Pause by joystick means you bring up the menu
-		if (ch >= KEY_JOY1 && ch < KEY_JOY1 + JOYBUTTONS + JOYHATS*4 &&
-			(ch == gamecontrol[gc_pause][0] || ch == gamecontrol[gc_pause][1]))
-			ch = KEY_ESCAPE;
-
 		noFurtherInput = true;
 		switch (ch)
 		{
@@ -2587,7 +2573,6 @@ void M_StartControlPanel(void)
 	}
 	else // multiplayer
 	{
-		MPauseMenu[mpause_pause].status = IT_DISABLED;
 		MPauseMenu[mpause_switchmap].status = IT_DISABLED;
 		MPauseMenu[mpause_scramble].status = IT_DISABLED;
 		MPauseMenu[mpause_psetupsplit].status = IT_DISABLED;
@@ -2600,15 +2585,8 @@ void M_StartControlPanel(void)
 		if ((server || adminplayer == consoleplayer))
 		{
 			MPauseMenu[mpause_switchmap].status = IT_STRING | IT_CALL;
-			if (!splitscreen)
-				MPauseMenu[mpause_pause].status = IT_STRING | IT_CALL; // server admin only
 			if (G_GametypeHasTeams())
-			{
 				MPauseMenu[mpause_scramble].status = IT_STRING | IT_SUBMENU;
-				MPauseMenu[mpause_pause].alphaKey = MPauseMenu[mpause_scramble].alphaKey - 16; // adjust y
-			}
-			else
-				MPauseMenu[mpause_pause].alphaKey = MPauseMenu[mpause_switchmap].alphaKey - 16; // adjust y
 		}
 
 		if (splitscreen)
@@ -6266,13 +6244,6 @@ static void M_MapChange(INT32 choice)
 
 	M_PrepareLevelSelect();
 	M_SetupNextMenu(&MISC_ChangeLevelDef);
-}
-
-static void M_Pause(INT32 choice)
-{
-	(void)choice;
-
-	COM_ImmedExecute("pause");
 }
 
 static void M_StartSplitServerMenu(INT32 choice)
