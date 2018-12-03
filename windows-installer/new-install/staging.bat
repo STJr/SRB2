@@ -29,6 +29,15 @@ set "STAGINGDIR=%STAGINGDIR:~0,-1%"
 for %%d in ("%STAGINGDIR%") do set INSTALLDIR=%%~dpd
 set "INSTALLDIR=%INSTALLDIR:~0,-1%"
 
+:: FAILSAFE: Check if staging.txt exists in the directory
+:: If not, exit, so we don't mess up anything by accident.
+
+if exist "%STAGINGDIR%\staging.txt" (
+	echo.
+) else (
+	exit
+)
+
 :: Check if we need to create %userprofile%\SRB2
 
 set "USERDIR=%INSTALLDIR%"
@@ -90,11 +99,11 @@ echo f | xcopy /y "%STAGINGDIR%\LICENSE.txt" "%USERDIR%\LICENSE.txt"
 echo f | xcopy /y "%STAGINGDIR%\LICENSE-3RD-PARTY.txt" "%USERDIR%\LICENSE-3RD-PARTY.txt"
 echo Your game data and mods folder is: > "%USERDIR%\! Data and Mods Go Here !.txt"
 echo. >> "%USERDIR%\! Data and Mods Go Here !.txt"
-echo     "%USERDIR%" >> "%USERDIR%\! Data and Mods Go Here !.txt"
+echo     %USERDIR% >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo. >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo Your install folder is: >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo. >> "%USERDIR%\! Data and Mods Go Here !.txt"
-echo     "%INSTALLDIR%" >> "%USERDIR%\! Data and Mods Go Here !.txt"
+echo     %INSTALLDIR% >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo. >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo To run SRB2, go to: >> "%USERDIR%\! Data and Mods Go Here !.txt"
 echo. >> "%USERDIR%\! Data and Mods Go Here !.txt"
@@ -186,7 +195,11 @@ for %%F in ("%STAGINGDIR%\*") DO (
 	if ["%%~nxF"] == ["staging.bat"] (
 		echo.
 	) else (
-		move "%STAGINGDIR%\%%~nxF" "%INSTALLDIR%\%%~nxF"
+		if ["%%~nxF"] == ["staging.txt"] (
+			echo.
+		) else (
+			move "%STAGINGDIR%\%%~nxF" "%INSTALLDIR%\%%~nxF"
+		)
 	)
 )
 
@@ -222,7 +235,7 @@ if ["%OLDINSTALLCHANGED%"] == ["1"] (
 		"%systemroot%\explorer.exe" "%USERDIR%"
 		echo Finished! You may find your game data in this folder: > %TEMP%\srb2msgprompt.txt
 		echo. >> %TEMP%\srb2msgprompt.txt
-		echo %USERDIR% >> %TEMP%\srb2msgprompt.txt
+		echo     %USERDIR% >> %TEMP%\srb2msgprompt.txt
 		echo. >> %TEMP%\srb2msgprompt.txt
 		echo To run SRB2, go to: Start Menu ^> Programs ^> Sonic Robo Blast 2. >> %TEMP%\srb2msgprompt.txt
 		%MSGEXE% "%username%" < %TEMP%\srb2msgprompt.txt
