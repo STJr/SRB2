@@ -1575,11 +1575,11 @@ INT32 I_NumJoys(void)
 	return numjoy;
 }
 
+static char joyname[255]; // MAX_PATH; joystick name is straight from the driver
+
 const char *I_GetJoyName(INT32 joyindex)
 {
 	const char *tempname = NULL;
-	size_t templen;
-	char *joyname = NULL;
 	joyindex--; //SDL's Joystick System starts at 0, not 1
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
@@ -1587,11 +1587,7 @@ const char *I_GetJoyName(INT32 joyindex)
 		{
 			tempname = SDL_JoystickNameForIndex(joyindex);
 			if (tempname)
-			{
-				templen = strlen(tempname);
-				joyname = malloc(templen*sizeof(char));
-				strcpy(joyname, tempname);
-			}
+				strncpy(joyname, tempname, 255);
 		}
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
@@ -1599,11 +1595,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	{
 		tempname = SDL_JoystickNameForIndex(joyindex);
 		if (tempname)
-		{
-			templen = strlen(tempname);
-			joyname = malloc(templen*sizeof(char));
-			strcpy(joyname, tempname);
-		}
+			strncpy(joyname, tempname, 255);
 	}
 	return joyname;
 }
