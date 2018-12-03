@@ -1871,23 +1871,13 @@ static void ST_overlayDrawer(void)
 
 	if (!hu_showscores && !splitscreen && netgame && displayplayer == consoleplayer)
 	{
-		// Build the control string for viewpoint switching
-		// Longest control string goes to WII's DBLSEC_JOYMINUS_CC, at 18 chars
-		char secondcontrol[4+20];
-		char viewpointprompt[32+20];
-		if (gamecontrol[gc_viewpoint][1])
-			snprintf(secondcontrol, 3+20, " or %s", G_KeynumToString(gamecontrol[gc_viewpoint][1]));
-		else
-			secondcontrol[0] = 0;
-		snprintf(viewpointprompt, 32+20, "Press %s%s to watch another player.", G_KeynumToString(gamecontrol[gc_viewpoint][0]), secondcontrol);
-
 		if (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText(viewpointprompt));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press Viewpoint Key to watch a player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(116), 0, M_GetText("You cannot move while hiding."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText(viewpointprompt));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press Viewpoint Key to watch a player."));
 		}
 		else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
 		{
@@ -1910,7 +1900,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
 			else
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText(viewpointprompt));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press Viewpoint Key to watch a player."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(164), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}
