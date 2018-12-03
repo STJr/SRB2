@@ -1,0 +1,24 @@
+﻿;!@Install@!UTF-8!
+
+GUIFlags="8+32+64+4096"
+GUIMode="1"
+
+Title="Sonic Robo Blast 2 v2.1.21"
+BeginPrompt="Sonic Robo Blast 2 v2.1.21\nFull Installer\n\nSelect a folder to install SRB2 in.\n\nIf you install in AppData\\Local or Program Files, your game data will be saved to:\n%UserProfile%\\SRB2\n\nOtherwise, your game data will be in the installation folder.\n\nShortcuts will be created in your Start Menu."
+
+ExtractPathText="Installation folder:"
+InstallPath="%LocalAppData%\\SRB2"
+ExtractTitle="Installing..."
+ExtractDialogText="Installing SRB2 v2.1.21...\n\nCheck out our modding community!\nWe make levels, characters, and much more!\n\nVisit http://www.srb2.org/mods"
+
+Shortcut="Pu,{%%T\\srb2win.exe},{},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2},{%%T\\},{%%T\\srb2win.exe},{0}"
+Shortcut="Pu,{%%T\\srb2win.exe},{-win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (Windowed)},{%%T\\},{%%T\\srb2win.exe},{0}"
+Shortcut="Pu,{%%T\\srb2win.exe},{-opengl},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (OpenGL)},{%%T\\},{%%T\\srb2win.exe},{0}"
+Shortcut="Pu,{%%T\\srb2win.exe},{-opengl -win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (OpenGL, Windowed)},{%%T\\},{%%T\\srb2win.exe},{0}"
+Shortcut="Pu,{%%T\\srb2dd.exe},{},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (DirectDraw)},{%%T\\},{%%T\\srb2dd.exe},{0}"
+Shortcut="Pu,{%%T\\srb2dd.exe},{-win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (DirectDraw, Windowed)},{%%T\\},{%%T\\srb2dd.exe},{0}"
+Shortcut="Pu,{cmd.exe},{/c \"%%T\\uninstall.bat\"},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{Uninstall SRB2},{%%T\\},{shell32.dll},{31}"
+
+RunProgram="nowait:\"%%T\\new-install\\staging.bat\""
+
+;!@InstallEnd@!
