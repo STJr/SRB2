@@ -960,13 +960,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, joyaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[consoleplayer];
 	camera_t *thiscam = &camera;
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
 	static boolean resetdown; // don't cam reset every frame
+	static boolean joyaiming; // check the last frame's value if we need to reset the camera
 
 	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
 
@@ -985,6 +986,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
+
+	// todo joystick-juggling next
+	//thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+	thisjoyaiming = cv_alwaysfreelook.value;
+
+	// Reset the vertical look if we're no longer joyaiming
+	if (!thisjoyaiming && joyaiming)
+		localaiming = 0;
+	joyaiming = thisjoyaiming;
 
 	axis = JoyAxis(AXISTURN);
 	if (gamepadjoystickmove && axis != 0)
@@ -1252,13 +1262,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	INT32 tspeed, forward, side, axis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, mouseaiming, joyaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[secondarydisplayplayer];
 	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
 	static boolean resetdown; // don't cam reset every frame
+	static boolean joyaiming; // check the last frame's value if we need to reset the camera
 
 	G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 
@@ -1277,6 +1288,15 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
+
+	// todo joystick-juggling next
+	//thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
+	thisjoyaiming = cv_alwaysfreelook2.value;
+
+	// Reset the vertical look if we're no longer joyaiming
+	if (!thisjoyaiming && joyaiming)
+		localaiming2 = 0;
+	joyaiming = thisjoyaiming;
 
 	axis = Joy2Axis(AXISTURN);
 	if (gamepadjoystickmove && axis != 0)
