@@ -153,7 +153,11 @@ mkdir "%OLDINSTALLDIR%"
 
 set OLDINSTALLCHANGED=
 
-if ["%MoveOldExesDlls%"] == [""] goto MoveOldInstallNewFiles
+if ["%MoveOldExesDlls%"] == ["1"] (
+	goto MoveOldInstallExeDll
+) else (
+	goto MoveOldInstallNewFiles
+)
 
 : MoveOldInstallExeDll
 
