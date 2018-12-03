@@ -28,7 +28,6 @@
 #include "m_menu.h"
 #include "m_cheat.h"
 #include "p_setup.h" // NiGHTS grading
-#include "g_input.h" // Viewpoint string
 
 //random index
 #include "m_random.h"
