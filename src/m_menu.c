@@ -1089,6 +1089,9 @@ static menuitem_t OP_Joystick1Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook,   100},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,   110},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
@@ -1100,6 +1103,9 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,   100},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2,   110},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -2083,42 +2089,44 @@ boolean M_Responder(event_t *ev)
 		// (but still allow shift keyup so caps doesn't get stuck)
 		return false;
 	}
-	else if (ev->type == ev_keydown)
-	{
-		ch = ev->data1;
-
-		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
-		switch (ch)
-		{
-			case KEY_MOUSE1:
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
-				ch = KEY_ENTER;
-				break;
-			case KEY_JOY1 + 3:
-				ch = 'n';
-				break;
-			case KEY_MOUSE1 + 1:
-			case KEY_JOY1 + 1:
-				ch = KEY_BACKSPACE;
-				break;
-			case KEY_HAT1:
-				ch = KEY_UPARROW;
-				break;
-			case KEY_HAT1 + 1:
-				ch = KEY_DOWNARROW;
-				break;
-			case KEY_HAT1 + 2:
-				ch = KEY_LEFTARROW;
-				break;
-			case KEY_HAT1 + 3:
-				ch = KEY_RIGHTARROW;
-				break;
-		}
-	}
 	else if (menuactive)
 	{
-		if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
+		if (ev->type == ev_keydown)
+		{
+			ch = ev->data1;
+
+			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
+			switch (ch)
+			{
+				case KEY_MOUSE1:
+				case KEY_JOY1:
+					ch = KEY_ENTER;
+					break;
+				case KEY_JOY1 + 3:
+					ch = 'n';
+					break;
+				case KEY_MOUSE1 + 1:
+				case KEY_JOY1 + 1:
+					ch = KEY_ESCAPE;
+					break;
+				case KEY_JOY1 + 2:
+					ch = KEY_BACKSPACE;
+					break;
+				case KEY_HAT1:
+					ch = KEY_UPARROW;
+					break;
+				case KEY_HAT1 + 1:
+					ch = KEY_DOWNARROW;
+					break;
+				case KEY_HAT1 + 2:
+					ch = KEY_LEFTARROW;
+					break;
+				case KEY_HAT1 + 3:
+					ch = KEY_RIGHTARROW;
+					break;
+			}
+		}
+		else if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
 		{
 			if (ev->data3 == -1)
 			{
@@ -2173,6 +2181,8 @@ boolean M_Responder(event_t *ev)
 			}
 		}
 	}
+	else if (ev->type == ev_keydown) // Preserve event for other responders
+		ch = ev->data1;
 
 	if (ch == -1)
 		return false;
