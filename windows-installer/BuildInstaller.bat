@@ -26,13 +26,16 @@ if ["%SVZIP%"] == [""] (
 
 :: Operate on install archives
 
-type NUL > "%SCRIPTDIR%\new-install\staging.txt"
+type NUL > "%SCRIPTDIR%\staging\new-install\staging.txt"
 
 if exist "%SCRIPTDIR%\Installer.7z" (
 	if ["%SVZIP%"] == [""] (
 		echo.
 	) else (
-		"%SVZIP%" a "%SCRIPTDIR%\Installer.7z" "%SCRIPTDIR%\new-install"
+		cd "%SCRIPTDIR%\staging"
+		"%SVZIP%" a "%SCRIPTDIR%\Installer.7z" "%SCRIPTDIR%\staging\new-install"
+		"%SVZIP%" a "%SCRIPTDIR%\Installer.7z" "%SCRIPTDIR%\staging\! SRB2 INSTALL INSTRUCTIONS !.txt"
+		cd "%SCRIPTDIR%"
 	)
 	copy /y /b "%SCRIPTDIR%\sfx\7zsd_LZMA2.sfx" + "%SCRIPTDIR%\sfx\config-installer.txt" + "%SCRIPTDIR%\Installer.7z" "%SCRIPTDIR%\SRB2-%SRB2VERSIONNAME%-Installer.exe"
 )
@@ -41,7 +44,10 @@ if exist "%SCRIPTDIR%\Patch.7z" (
 	if ["%SVZIP%"] == [""] (
 		echo.
 	) else (
-		"%SVZIP%" a "%SCRIPTDIR%\Patch.7z" "%SCRIPTDIR%\new-install\"
+		cd "%SCRIPTDIR%\staging"
+		"%SVZIP%" a "%SCRIPTDIR%\Patch.7z" "%SCRIPTDIR%\staging\new-install\"
+		"%SVZIP%" a "%SCRIPTDIR%\Patch.7z" "%SCRIPTDIR%\staging\! SRB2 INSTALL INSTRUCTIONS !.txt"
+		cd "%SCRIPTDIR%"
 	)
 	copy /y /b "%SCRIPTDIR%\sfx\7zsd_LZMA2.sfx" + "%SCRIPTDIR%\sfx\config-patch.txt" + "%SCRIPTDIR%\Patch.7z" "%SCRIPTDIR%\SRB2-%SRB2VERSIONNAME%-Patch.exe"
 )
@@ -50,7 +56,10 @@ if exist "%SCRIPTDIR%\Installer_x64.7z" (
 	if ["%SVZIP%"] == [""] (
 		echo.
 	) else (
-		"%SVZIP%" a "%SCRIPTDIR%\Installer_x64.7z" "%SCRIPTDIR%\new-install\"
+		cd "%SCRIPTDIR%\staging"
+		"%SVZIP%" a "%SCRIPTDIR%\Installer_x64.7z" "%SCRIPTDIR%\staging\new-install\"
+		"%SVZIP%" a "%SCRIPTDIR%\Installer_x64.7z" "%SCRIPTDIR%\staging\! SRB2 INSTALL INSTRUCTIONS !.txt"
+		cd "%SCRIPTDIR%"
 	)
 	copy /y /b "%SCRIPTDIR%\sfx\7zsd_LZMA2_x64.sfx" + "%SCRIPTDIR%\sfx\config-installer.txt" + "%SCRIPTDIR%\Installer_x64.7z" "%SCRIPTDIR%\SRB2-%SRB2VERSIONNAME%-x64-Installer.exe"
 )
@@ -59,9 +68,12 @@ if exist "%SCRIPTDIR%\Patch_x64.7z" (
 	if ["%SVZIP%"] == [""] (
 		echo.
 	) else (
-		"%SVZIP%" a "%SCRIPTDIR%\Patch_x64.7z" "%SCRIPTDIR%\new-install\"
+		cd "%SCRIPTDIR%\staging"
+		"%SVZIP%" a "%SCRIPTDIR%\Patch_x64.7z" "%SCRIPTDIR%\staging\new-install\"
+		"%SVZIP%" a "%SCRIPTDIR%\Patch_x64.7z" "%SCRIPTDIR%\staging\! SRB2 INSTALL INSTRUCTIONS !.txt"
+		cd "%SCRIPTDIR%"
 	)
 	copy /y /b "%SCRIPTDIR%\sfx\7zsd_LZMA2_x64.sfx" + "%SCRIPTDIR%\sfx\config-patch.txt" + "%SCRIPTDIR%\Patch_x64.7z" "%SCRIPTDIR%\SRB2-%SRB2VERSIONNAME%-x64-Patch.exe"
 )
 
-del /f /q "%SCRIPTDIR%\new-install\staging.txt"
+del /f /q "%SCRIPTDIR%\staging\new-install\staging.txt"
