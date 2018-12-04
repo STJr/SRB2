@@ -15,11 +15,6 @@ cls
 :: 3. Moves new installaton files into install folder
 ::
 
-:: For 2.1.21, we are changing the DLL structure
-:: So move everything that's EXE or DLL
-
-set MoveOldExesDlls=1
-
 :: Get Parent folder (the SRB2 install folder)
 ::
 :: https://wiert.me/2011/08/30/batch-file-to-get-parent-directory-not-the-directory-of-the-batch-file-but-the-parent-of-that-directory/
@@ -205,24 +200,54 @@ if exist "!INSTALLDIR!\old-install\*" (
 
 mkdir "!OLDINSTALLDIR!"
 
-:
-: Move all EXEs and DLLs
-:
+::
+:: Move all old install files
+:: We support a list of explicit files to copy to old-install
+:: And later, we also loop through our staging files, look for the pre-existing copy in
+:: install root, then copy that also to old-install
+::
 
 set OLDINSTALLCHANGED=
 
-if ["!MoveOldExesDlls!"] == ["1"] (
-	goto MoveOldInstallExeDll
+if exist "!STAGINGDIR!\old-install-list.txt" (
+	goto MoveOldInstallOldFiles
 ) else (
 	goto MoveOldInstallNewFiles
 )
 
-: MoveOldInstallExeDll
+: MoveOldInstallOldFiles
 
-xcopy /y /v "!INSTALLDIR!\*.exe" "!OLDINSTALLDIR!"
-if errorlevel 0 del /f /q "!INSTALLDIR!\*.exe"
-xcopy /y /v "!INSTALLDIR!\*.dll" "!OLDINSTALLDIR!"
-if errorlevel 0 del /f /q "!INSTALLDIR!\*.dll"
+set "TESTFILE=!TEMP!\!RANDOM!.txt"
+
+:: Do our failsafes before copying the file in the list
+:: See uninstall.bat for details
+for /F "usebackq tokens=*" %%A in ("!STAGINGDIR!\old-install-list.txt") do (
+	if exist "!INSTALLDIR!\%%A" (
+		if ["%%A"] == [""] (
+			echo.
+		) else (
+			if ["%%A"] == ["%~nx0"] (
+				echo.
+			) else (
+				echo %%A> "!TESTFILE!"
+				findstr /r ".*[<>:\"\"/\\|?*%%].*" "!TESTFILE!" >nul
+				if !errorlevel! equ 0 (
+					echo %%A has invalid characters, skipping...
+				) else (
+					if exist "!INSTALLDIR!\%%A\*" (
+						echo %%A is a folder, skipping...
+					) else (
+						echo Moving !INSTALLDIR!\%%A to "old-install" folder
+						echo f | xcopy /y /v "!INSTALLDIR!\%%A" "!OLDINSTALLDIR!\%%A"
+						if errorlevel 0 del /f /q "!INSTALLDIR!\%%A"
+					)
+				)
+			)
+		)
+	)
+)
+
+del /q /f "!STAGINGDIR!\old-install-list.txt"
 
 for %%F in ("!OLDINSTALLDIR!\*") DO (
 	set OLDINSTALLCHANGED=1

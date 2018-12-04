@@ -74,19 +74,23 @@ set "TESTFILE=!TEMP!\!RANDOM!.txt"
 
 for /F "usebackq tokens=*" %%A in ("!INSTALLDIR!\uninstall-list.txt") do (
 	if exist "!INSTALLDIR!\%%A" (
-		if ["%%A"] == ["%~nx0"] (
+		if ["%%A"] == [""] (
 			echo.
 		) else (
-			echo %%A> "!TESTFILE!"
-			findstr /r ".*[<>:\"\"/\\|?*%%].*" "!TESTFILE!" >nul
-			if !errorlevel! equ 0 (
-				echo %%A has invalid characters, skipping...
+			if ["%%A"] == ["%~nx0"] (
+				echo.
 			) else (
-				if exist "!INSTALLDIR!\%%A\*" (
-					echo %%A is a folder, skipping...
+				echo %%A> "!TESTFILE!"
+				findstr /r ".*[<>:\"\"/\\|?*%%].*" "!TESTFILE!" >nul
+				if !errorlevel! equ 0 (
+					echo %%A has invalid characters, skipping...
 				) else (
-					echo Deleting !INSTALLDIR!\%%A
-					del /q /f "!INSTALLDIR!\%%A"
+					if exist "!INSTALLDIR!\%%A\*" (
+						echo %%A is a folder, skipping...
+					) else (
+						echo Deleting !INSTALLDIR!\%%A
+						del /q /f "!INSTALLDIR!\%%A"
+					)
 				)
 			)
 		)
