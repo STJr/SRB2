@@ -2965,7 +2965,7 @@ static void Command_MotD_f(void)
 		}
 
 	if ((netgame || multiplayer) && client)
-		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
+		SendNetXCmd(XD_SETMOTD, mymotd, i); // send the actual size of the motd string, not the full buffer's size
 	else
 	{
 		strcpy(motd, mymotd);
