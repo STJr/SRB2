@@ -1,6 +1,6 @@
 *
 *.*
-!new-install
+!staging
 !sfx
 !! MAKE SURE FILES ARE IN new-install ARCHIVE FOLDER !.txt
 !BuildInstaller.bat
