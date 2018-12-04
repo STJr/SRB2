@@ -1677,7 +1677,8 @@ static INT32 camtoggledelay, camtoggledelay2 = 0;
 boolean G_Responder(event_t *ev)
 {
 	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown && ev->data1 == KEY_F12)
+	if (gamestate == GS_LEVEL && ev->type == ev_keydown
+		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
 	{
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
