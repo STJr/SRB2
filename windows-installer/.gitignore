@@ -1,0 +1,10 @@
+*
+*.*
+!staging
+!sfx
+!uninstaller
+!! MAKE SURE FILES ARE IN new-install ARCHIVE FOLDER !.txt
+!BuildInstaller.bat
+!README.txt
+!VersionFileName.txt
+!.gitignore

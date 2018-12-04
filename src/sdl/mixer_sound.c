@@ -50,8 +50,8 @@
 
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
-#define GME_TREBLE 5.0
-#define GME_BASS 1.0
+#define GME_TREBLE 5.0f
+#define GME_BASS 1.0f
 
 #ifdef HAVE_ZLIB
 #ifndef _MSC_VER
