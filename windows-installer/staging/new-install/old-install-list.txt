@@ -1,0 +1,15 @@
+exchndl.dll
+fmodex.dll
+libFLAC-8.dll
+libgme.dll
+libintl-8.dll
+libmikmod-2.dll
+libogg-0.dll
+libvorbis-0.dll
+libvorbisfile-3.dll
+r_opengl.dll
+SDL2.dll
+SDL2_mixer.dll
+smpeg2.dll
+srb2dd.exe
+srb2win.exe
