@@ -2981,6 +2981,7 @@ void SV_ResetServer(void)
 		playeringame[i] = false;
 		playernode[i] = UINT8_MAX;
 		sprintf(player_names[i], "Player %d", i + 1);
+		adminplayers[i] = -1; // Populate the entire adminplayers array with -1.
 	}
 
 	mynode = 0;
@@ -3288,10 +3289,6 @@ boolean Playing(void)
 
 boolean SV_SpawnServer(void)
 {
-	INT32 i;
-	for (i = 0; i < MAXPLAYERS; i++)
-		adminplayers[i] = -1; // Populate the entire adminplayers array with -1.
-
 	if (demoplayback)
 		G_StopDemo(); // reset engine parameter
 	if (metalplayback)
