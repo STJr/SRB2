@@ -54,6 +54,8 @@
 #include "st_stuff.h"
 #include "i_sound.h"
 
+#include "i_joy.h" // for joystick menu controls
+
 // Condition Sets
 #include "m_cond.h"
 
@@ -160,7 +162,7 @@ typedef enum
 levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
-static char joystickInfo[8][25];
+static char joystickInfo[8][29];
 #ifndef NONET
 static UINT32 serverlistpage;
 #endif
@@ -1073,6 +1075,10 @@ static menuitem_t OP_MiscControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3      },
 
 	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause        },
+	{IT_CALL | IT_STRING2, NULL, "Screenshot",            M_ChangeControl, gc_screenshot },
+	{IT_CALL | IT_STRING2, NULL, "Toggle GIF Recording",  M_ChangeControl, gc_recordgif  },
+	{IT_CALL | IT_STRING2, NULL, "Open/Close Menu (ESC)", M_ChangeControl, gc_systemmenu },
+	{IT_CALL | IT_STRING2, NULL, "Change Viewpoint",      M_ChangeControl, gc_viewpoint  },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console      },
 };
 
@@ -1085,6 +1091,9 @@ static menuitem_t OP_Joystick1Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook,   100},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,   110},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
@@ -1096,6 +1105,9 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,   100},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2,   110},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -2064,6 +2076,7 @@ boolean M_Responder(event_t *ev)
 	INT32 ch = -1;
 //	INT32 i;
 	static tic_t joywait = 0, mousewait = 0;
+	static INT32 pjoyx = 0, pjoyy = 0;
 	static INT32 pmousex = 0, pmousey = 0;
 	static INT32 lastx = 0, lasty = 0;
 	void (*routine)(INT32 choice); // for some casting problem
@@ -2079,63 +2092,84 @@ boolean M_Responder(event_t *ev)
 		// (but still allow shift keyup so caps doesn't get stuck)
 		return false;
 	}
-	else if (ev->type == ev_keydown)
-	{
-		ch = ev->data1;
-
-		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
-		switch (ch)
-		{
-			case KEY_MOUSE1:
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
-				ch = KEY_ENTER;
-				break;
-			case KEY_JOY1 + 3:
-				ch = 'n';
-				break;
-			case KEY_MOUSE1 + 1:
-			case KEY_JOY1 + 1:
-				ch = KEY_BACKSPACE;
-				break;
-			case KEY_HAT1:
-				ch = KEY_UPARROW;
-				break;
-			case KEY_HAT1 + 1:
-				ch = KEY_DOWNARROW;
-				break;
-			case KEY_HAT1 + 2:
-				ch = KEY_LEFTARROW;
-				break;
-			case KEY_HAT1 + 3:
-				ch = KEY_RIGHTARROW;
-				break;
-		}
-	}
 	else if (menuactive)
 	{
-		if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
+		if (ev->type == ev_keydown)
 		{
-			if (ev->data3 == -1)
+			ch = ev->data1;
+
+			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
+			switch (ch)
 			{
-				ch = KEY_UPARROW;
-				joywait = I_GetTime() + NEWTICRATE/7;
+				case KEY_MOUSE1:
+				case KEY_JOY1:
+					ch = KEY_ENTER;
+					break;
+				case KEY_JOY1 + 3:
+					ch = 'n';
+					break;
+				case KEY_MOUSE1 + 1:
+				case KEY_JOY1 + 1:
+					ch = KEY_ESCAPE;
+					break;
+				case KEY_JOY1 + 2:
+					ch = KEY_BACKSPACE;
+					break;
+				case KEY_HAT1:
+					ch = KEY_UPARROW;
+					break;
+				case KEY_HAT1 + 1:
+					ch = KEY_DOWNARROW;
+					break;
+				case KEY_HAT1 + 2:
+					ch = KEY_LEFTARROW;
+					break;
+				case KEY_HAT1 + 3:
+					ch = KEY_RIGHTARROW;
+					break;
 			}
-			else if (ev->data3 == 1)
+		}
+		else if (ev->type == ev_joystick  && ev->data1 == 0 && joywait < I_GetTime())
+		{
+			const INT32 jdeadzone = JOYAXISRANGE/4;
+			if (ev->data3 != INT32_MAX)
 			{
-				ch = KEY_DOWNARROW;
-				joywait = I_GetTime() + NEWTICRATE/7;
+				if (Joystick.bGamepadStyle || abs(ev->data3) > jdeadzone)
+				{
+					if (ev->data3 < 0 && pjoyy >= 0)
+					{
+						ch = KEY_UPARROW;
+						joywait = I_GetTime() + NEWTICRATE/7;
+					}
+					else if (ev->data3 > 0 && pjoyy <= 0)
+					{
+						ch = KEY_DOWNARROW;
+						joywait = I_GetTime() + NEWTICRATE/7;
+					}
+					pjoyy = ev->data3;
+				}
+				else
+					pjoyy = 0;
 			}
 
-			if (ev->data2 == -1)
+			if (ev->data2 != INT32_MAX)
 			{
-				ch = KEY_LEFTARROW;
-				joywait = I_GetTime() + NEWTICRATE/17;
-			}
-			else if (ev->data2 == 1)
-			{
-				ch = KEY_RIGHTARROW;
-				joywait = I_GetTime() + NEWTICRATE/17;
+				if (Joystick.bGamepadStyle || abs(ev->data2) > jdeadzone)
+				{
+					if (ev->data2 < 0 && pjoyx >= 0)
+					{
+						ch = KEY_LEFTARROW;
+						joywait = I_GetTime() + NEWTICRATE/17;
+					}
+					else if (ev->data2 > 0 && pjoyx <= 0)
+					{
+						ch = KEY_RIGHTARROW;
+						joywait = I_GetTime() + NEWTICRATE/17;
+					}
+					pjoyx = ev->data2;
+				}
+				else
+					pjoyx = 0;
 			}
 		}
 		else if (ev->type == ev_mouse && mousewait < I_GetTime())
@@ -2169,9 +2203,13 @@ boolean M_Responder(event_t *ev)
 			}
 		}
 	}
+	else if (ev->type == ev_keydown) // Preserve event for other responders
+		ch = ev->data1;
 
 	if (ch == -1)
 		return false;
+	else if (ch == gamecontrol[gc_systemmenu][0] || ch == gamecontrol[gc_systemmenu][1]) // allow remappable ESC key
+		ch = KEY_ESCAPE;
 
 	// F-Keys
 	if (!menuactive)
@@ -6710,35 +6748,32 @@ static void M_DrawJoystick(void)
 
 	M_DrawGenericMenu();
 
-	for (i = 0;i < 8; i++)
+	for (i = 0;i < 7; i++)
 	{
-		M_DrawSaveLoadBorder(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i);
+		M_DrawTextBox(OP_JoystickSetDef.x-8, OP_JoystickSetDef.y+LINEHEIGHT*i-12, 28, 1);
+		//M_DrawSaveLoadBorder(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i);
 
 		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
 			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
-			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,V_GREENMAP,joystickInfo[i]);
+			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,V_GREENMAP,joystickInfo[i]);
 		else
-			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,0,joystickInfo[i]);
+			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,0,joystickInfo[i]);
 	}
 }
 
 static void M_SetupJoystickMenu(INT32 choice)
 {
 	INT32 i = 0;
-	const char *joyname = "None";
 	const char *joyNA = "Unavailable";
 	INT32 n = I_NumJoys();
 	(void)choice;
 
-	strcpy(joystickInfo[i], joyname);
+	strcpy(joystickInfo[i], "None");
 
 	for (i = 1; i < 8; i++)
 	{
-		if (i <= n && (joyname = I_GetJoyName(i)) != NULL)
-		{
-			strncpy(joystickInfo[i], joyname, 24);
-			joystickInfo[i][24] = '\0';
-		}
+		if (i <= n && (I_GetJoyName(i)) != NULL)
+			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
 		else
 			strcpy(joystickInfo[i], joyNA);
 	}

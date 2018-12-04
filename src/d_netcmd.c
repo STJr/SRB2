@@ -242,7 +242,7 @@ INT32 cv_debug;
 consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
 
-#if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) //joystick 1 and 2
+#if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) || defined(HAVE_SDL) || defined(_WIN32) //joystick 1 and 2
 consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
@@ -1759,6 +1759,9 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	UINT8 flags;
 	INT32 resetplayer = 1, lastgametype;
 	UINT8 skipprecutscene, FLS;
+#ifdef HAVE_BLUA
+	INT16 mapnumber;
+#endif
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -1820,7 +1823,8 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 #ifdef HAVE_BLUA
-	LUAh_MapChange();
+	mapnumber = M_MapNumber(mapname[3], mapname[4]);
+	LUAh_MapChange(mapnumber);
 #endif
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);

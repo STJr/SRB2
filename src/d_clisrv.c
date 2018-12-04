@@ -25,6 +25,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "keys.h"
+#include "g_input.h" // JOY1
 #include "m_menu.h"
 #include "console.h"
 #include "d_netfil.h"
@@ -1962,7 +1963,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 
 		I_OsPolling();
 		key = I_GetKey();
-		if (key == KEY_ESCAPE)
+		if (key == KEY_ESCAPE || key == KEY_JOY1+1)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
