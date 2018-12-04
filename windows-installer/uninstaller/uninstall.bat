@@ -11,28 +11,30 @@ set "USERDIR=!USERDIR:~0,-1!"
 
 : ProceedPrompt
 
-set PROCEED=
-set /p PROCEED="Are you sure you want to uninstall SRB2? [yes/no] "
-
-if /I ["!PROCEED:~0,1!"] == ["n"] exit
-if /I ["!PROCEED!"] == ["y"] (
-	echo Type Yes or No
-	echo.
-	goto ProceedPrompt
+if ["%1"] == ["/y"] (
+	set "PROCEED=1"
 ) else (
-	if /I ["!PROCEED!"] == ["yes"] (
-		set PROCEED=1
-	) else (
+	set PROCEED=
+	set /p PROCEED="Are you sure you want to uninstall SRB2? [yes/no] "
+
+	if /I ["!PROCEED:~0,1!"] == ["n"] exit
+	if /I ["!PROCEED!"] == ["y"] (
+		echo Type Yes or No
 		echo.
 		goto ProceedPrompt
+	) else (
+		if /I ["!PROCEED!"] == ["yes"] (
+			set PROCEED=1
+		) else (
+			echo.
+			goto ProceedPrompt
+		)
 	)
 )
 
 :: Failsafe, in case we Ctrl+C and decline "Terminate batch file?"
 
-if ["!PROCEED!"] == ["1"] (
-	echo.
-) else (
+if NOT ["!PROCEED!"] == ["1"] (
 	exit
 )
 
@@ -69,17 +71,14 @@ if errorlevel 1 (
 :: Can %%A be substring'd to get only the filename and extension?
 :: If so, print that to the temp file instead of the whole line
 :: And possibly do the folder check before the invalid char check.
+:: ALSO: Don't honor upward relative paths! (..\)
 ::
 set "TESTFILE=!TEMP!\!RANDOM!.txt"
 
 for /F "usebackq tokens=*" %%A in ("!INSTALLDIR!\uninstall-list.txt") do (
 	if exist "!INSTALLDIR!\%%A" (
-		if ["%%A"] == [""] (
-			echo.
-		) else (
-			if ["%%A"] == ["%~nx0"] (
-				echo.
-			) else (
+		if NOT ["%%A"] == [""] (
+			if NOT ["%%A"] == ["%~nx0"] (
 				echo %%A> "!TESTFILE!"
 				findstr /r ".*[<>:\"\"/\\|?*%%].*" "!TESTFILE!" >nul
 				if !errorlevel! equ 0 (
@@ -113,9 +112,7 @@ rmdir /s /q "!AppData!\Microsoft\Windows\Start Menu\Programs\Sonic Robo Blast 2"
 set USERDIRFILLED=
 set INSTALLDIRFILLED=
 for /F %%i in ('dir /b /a "!USERDIR!\*"') do (
-    if ["%%i"] == ["%~nx0"] (
-		echo.
-	) else (
+    if NOT ["%%i"] == ["%~nx0"] (
 		set USERDIRFILLED=1
 		goto InstallFilledCheck
 	)
@@ -123,9 +120,7 @@ for /F %%i in ('dir /b /a "!USERDIR!\*"') do (
 
 : InstallFilledCheck
 
-if /I ["!USERDIR!"] == ["!INSTALLDIR!"] (
-	echo.
-) else (
+if /I NOT ["!USERDIR!"] == ["!INSTALLDIR!"] (
 	for /F %%i in ('dir /b /a "!INSTALLDIR!\*"') do (
 		if ["%%i"] == ["%~nx0"] (
 			echo.
@@ -161,9 +156,7 @@ if ["!INSTALLDIRFILLED!"] == ["1"] (
 set FINALRESPONSE=
 set /p FINALRESPONSE="!FINALPROMPT! "
 
-if ["!FINALPROMPT!"] == ["Press Enter key to exit."] (
-	echo.
-) else (
+if NOT ["!FINALPROMPT!"] == ["Press Enter key to exit."] (
 	if /I ["!FINALRESPONSE:~0,1!"] == ["y"] (
 		if ["!USERDIRFILLED!"] == ["1"] (
 			"!SystemRoot!\explorer.exe" "!USERDIR!"

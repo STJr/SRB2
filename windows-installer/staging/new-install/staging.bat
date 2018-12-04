@@ -26,12 +26,28 @@ set "STAGINGDIR=!STAGINGDIR:~0,-1!"
 for %%d in ("!STAGINGDIR!") do set "INSTALLDIR=%%~dpd"
 set "INSTALLDIR=!INSTALLDIR:~0,-1!"
 
+:: Find 7z
+
+set SVZIP=
+if ["%SVZIP%"] == [""] (
+	if exist "!ProgramFiles(x86)!\7-Zip\7z.exe" set "SVZIP=!ProgramFiles(x86)!\7-Zip\7z.exe"
+	if exist "!ProgramFiles!\7-Zip\7z.exe" set "SVZIP=!ProgramFiles!\7-Zip\7z.exe"
+	if exist "!ProgramW6432!\7-Zip\7z.exe" set "SVZIP=!ProgramW6432!\7-Zip\7z.exe"
+)
+
+:: Is it in PATH?
+
+if ["%SVZIP%"] == [""] (
+	"7z.exe" --help > NUL 2> NUL
+	if NOT errorlevel 1 (
+		set "SVZIP=7z.exe"
+	)
+)
+
 :: FAILSAFE: Check if staging.txt exists in the directory
 :: If not, exit, so we don't mess up anything by accident.
 
-if exist "!STAGINGDIR!\staging.txt" (
-	echo.
-) else (
+if NOT exist "!STAGINGDIR!\staging.txt" (
 	exit
 )
 
@@ -93,25 +109,19 @@ if errorlevel 1 (
 
 : Are we in Program Files?
 echo.!STAGINGDIR! | findstr /C:"!ProgramFiles!" 1>nul
-if errorlevel 1 (
-	echo.
-) else (
+if NOT errorlevel 1 (
 	goto SetUserDir
 )
 
 :: Are we in Program Files (x86)?
 echo.!STAGINGDIR! | findstr /C:"!ProgramFiles(X86)!" 1>nul
-if errorlevel 1 (
-	echo.
-) else (
+if NOT errorlevel 1 (
 	goto SetUserDir
 )
 
 :: Are we 32-bit and actually in Program Files?
 echo.!STAGINGDIR! | findstr /C:"!ProgramW6432!" 1>nul
-if errorlevel 1 (
-	echo.
-) else (
+if NOT errorlevel 1 (
 	goto SetUserDir
 )
 
@@ -207,6 +217,16 @@ mkdir "!OLDINSTALLDIR!"
 :: install root, then copy that also to old-install
 ::
 
+:: Extract the uninstall-list.txt and uninstall-userdir.txt files from uninstaller.exe
+:: if it exists
+
+if exist "!INSTALLDIR!\uninstall.exe" (
+	if NOT ["!SVZIP!"] == [""] (
+		"!SVZIP!" x "!INSTALLDIR!\uninstall.exe" "uninstall-list.txt" -o"!INSTALLDIR!"
+		"!SVZIP!" x "!INSTALLDIR!\uninstall.exe" "uninstall-userdir.txt" -o"!INSTALLDIR!"
+	)
+)
+
 set OLDINSTALLCHANGED=
 
 if exist "!STAGINGDIR!\old-install-list.txt" (
@@ -223,12 +243,8 @@ set "TESTFILE=!TEMP!\!RANDOM!.txt"
 :: See uninstall.bat for details
 for /F "usebackq tokens=*" %%A in ("!STAGINGDIR!\old-install-list.txt") do (
 	if exist "!INSTALLDIR!\%%A" (
-		if ["%%A"] == [""] (
-			echo.
-		) else (
-			if ["%%A"] == ["%~nx0"] (
-				echo.
-			) else (
+		if NOT ["%%A"] == [""] (
+			if NOT ["%%A"] == ["%~nx0"] (
 				echo %%A> "!TESTFILE!"
 				findstr /r ".*[<>:\"\"/\\|?*%%].*" "!TESTFILE!" >nul
 				if !errorlevel! equ 0 (
@@ -267,12 +283,23 @@ dir /b /a-d "!STAGINGDIR!" >> "!INSTALLDIR!\uninstall-list.txt"
 echo !USERDIR! > "!INSTALLDIR!\uninstall-userdir.txt"
 
 :: Add the install-generated to the uninstall list
+:: NO FOLLOWING SPACES AFTER THE FILENAME!!!
 
-echo uninstall-list.txt >> "!INSTALLDIR!\uninstall-list.txt"
-echo uninstall-userdir.txt >> "!INSTALLDIR!\uninstall-list.txt"
+echo uninstall.bat>> "!INSTALLDIR!\uninstall-list.txt"
+echo uninstall-list.txt>> "!INSTALLDIR!\uninstall-list.txt"
+echo uninstall-userdir.txt>> "!INSTALLDIR!\uninstall-list.txt"
 :: *ahem* Prints as ^! SRB2 Data Folder ^!.lnk
 :: We need to escape the exclamations (^^!) and the carets themselves (^^^^)
-echo ^^^^^^! SRB2 Data Folder ^^^^^^!.lnk >> "!INSTALLDIR!\uninstall-list.txt"
+echo ^^^^^^! SRB2 Data Folder ^^^^^^!.lnk>> "!INSTALLDIR!\uninstall-list.txt"
+
+:: Add the uninstall list files to the uninstall EXE
+
+if NOT ["!SVZIP!"] == [""] (
+	if exist "!INSTALLDIR!\new-install\uninstall.exe" (
+		"!SVZIP!" a "!INSTALLDIR!\new-install\uninstall.exe" "!INSTALLDIR!\uninstall-list.txt" -sdel
+		"!SVZIP!" a "!INSTALLDIR!\new-install\uninstall.exe" "!INSTALLDIR!\uninstall-userdir.txt" -sdel
+	)
+)
 
 :: Start moving files
 
@@ -281,12 +308,8 @@ for %%F in ("!STAGINGDIR!\*") DO (
 		set OLDINSTALLCHANGED=1
 		move "!INSTALLDIR!\%%~nxF" "!OLDINSTALLDIR!\%%~nxF"
 	)
-	if ["%%~nxF"] == ["staging.bat"] (
-		echo.
-	) else (
-		if ["%%~nxF"] == ["staging.txt"] (
-			echo.
-		) else (
+	if NOT ["%%~nxF"] == ["staging.bat"] (
+		if NOT ["%%~nxF"] == ["staging.txt"] (
 			move "!STAGINGDIR!\%%~nxF" "!INSTALLDIR!\%%~nxF"
 		)
 	)
