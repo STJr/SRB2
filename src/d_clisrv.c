@@ -2650,13 +2650,16 @@ static void Command_Kick(void)
 		if (pn == -1 || pn == 0)
 			return;
 
-		// Special case if we are trying to kick a player who is downloading the game state:
-		// trigger a timeout instead of kicking them, because a kick would only
-		// take effect after they have finished downloading
-		if (sendingsavegame[playernode[pn]])
+		if (server)
 		{
-			Net_ConnectionTimeout(playernode[pn]);
-			return;
+			// Special case if we are trying to kick a player who is downloading the game state:
+			// trigger a timeout instead of kicking them, because a kick would only
+			// take effect after they have finished downloading
+			if (sendingsavegame[playernode[pn]])
+			{
+				Net_ConnectionTimeout(playernode[pn]);
+				return;
+			}
 		}
 
 		WRITESINT8(p, pn);
