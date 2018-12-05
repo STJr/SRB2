@@ -3448,17 +3448,12 @@ static void Command_Version_f(void)
 #endif
 
 	// Bitness
-#if defined(_WIN64)
-	CONS_Printf("x64 ");
-#elif defined(_WIN32)
-	CONS_Printf("x86 ");
-#elif defined(NONX86)
-	CONS_Printf("Non-x86 ");
-#elif defined(LINUX)
-	CONS_Printf("x86 ");
-#else
-	CONS_Printf("Bits Unknown ");
-#endif
+	if (sizeof(void*) == 4)
+		CONS_Printf("32-bit ");
+	else if (sizeof(void*) == 8)
+		CONS_Printf("64-bit ");
+	else // 16-bit? 128-bit?
+		CONS_Printf("Bits Unknown ");
 
 	// No ASM?
 #ifdef NOASM
