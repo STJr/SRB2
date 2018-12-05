@@ -3457,12 +3457,12 @@ static void Command_Version_f(void)
 
 	// No ASM?
 #ifdef NOASM
-	CONS_Printf("\205NOASM \200");
+	CONS_Printf("\x85" "NOASM " "\x80");
 #endif
 
 	// Debug build
 #ifdef _DEBUG
-	CONS_Printf("\205DEBUG \200");
+	CONS_Printf("\x85" "DEBUG " "\x80");
 #endif
 
 	CONS_Printf("\n");
