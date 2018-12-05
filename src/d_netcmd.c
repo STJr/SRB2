@@ -3427,51 +3427,37 @@ static void Command_Version_f(void)
 #endif
 
 	// Base library
-#ifdef HAVE_SDL
+#if defined( HAVE_SDL)
 	CONS_Printf("SDL ");
-#else
-#ifdef _WINDOWS
+#elif defined(_WINDOWS)
 	CONS_Printf("DD ");
-#endif
 #endif
 
 	// OS
 	// Would be nice to use SDL_GetPlatform for this
-#ifdef _WIN32
+#if defined(_WIN32)
 	CONS_Printf("Windows ");
-#else
-#ifdef LINUX
+#elif defined(LINUX)
 	CONS_Printf("Linux ");
-#else
-#ifdef MACOSX
+#elif defined(MACOSX)
 	CONS_Printf("macOS" );
-#else
-#ifdef UNIXCOMMON
+#elif defined(UNIXCOMMON)
 	CONS_Printf("Unix (Common) ");
 #else
 	CONS_Printf("Other OS ");
 #endif
-#endif
-#endif
-#endif
 
 	// Bitness
-#ifdef _WIN64
+#if defined(_WIN64)
 	CONS_Printf("x64 ");
-#else
-#ifdef _WIN32
+#elif defined(_WIN32)
 	CONS_Printf("x86 ");
-#else
-#ifdef NONX86
+#elif defined(NONX86)
 	CONS_Printf("Non-x86 ");
-#else
-#ifdef LINUX
+#elif defined(LINUX)
 	CONS_Printf("x86 ");
 #else
 	CONS_Printf("Bits Unknown ");
-#endif
-#endif
-#endif
 #endif
 
 	// No ASM?
