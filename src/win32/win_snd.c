@@ -43,6 +43,7 @@ static FMOD_CHANNEL *music_channel;
 
 static UINT8 music_volume, midi_volume, sfx_volume;
 static INT32 current_track;
+static boolean looppointloaded = false; // deferred loop point loading
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -549,8 +550,6 @@ boolean I_LoadSong(char *data, size_t len)
 {
 	FMOD_CREATESOUNDEXINFO fmt;
 	FMOD_RESULT e;
-	FMOD_TAG tag;
-	unsigned int loopstart, loopend;
 
 	if (
 #ifdef HAVE_LIBGME
@@ -685,6 +684,36 @@ boolean I_LoadSong(char *data, size_t len)
 		return false;
 	}
 
+	// Must load the loop point after starting song playback
+	// Otherwise, the music cuts off during screen wipes
+	looppointloaded = false;
+
+	return true;
+}
+
+void I_UnloadSong(void)
+{
+	I_StopSong();
+#ifdef HAVE_LIBGME
+	if (gme)
+	{
+		gme_delete(gme);
+		gme = NULL;
+	}
+#endif
+	if (music_stream)
+	{
+		FMR(FMOD_Sound_Release(music_stream));
+		music_stream = NULL;
+	}
+}
+
+static void FindLoopPoint()
+{
+	FMOD_RESULT e;
+	FMOD_TAG tag;
+	unsigned int loopstart, loopend;
+
 	// Try to find a loop point in streaming music formats (ogg, mp3)
 
 	// A proper LOOPPOINT is its own tag, stupid.
@@ -696,7 +725,8 @@ boolean I_LoadSong(char *data, size_t len)
 		FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_PCM, &loopend, FMOD_TIMEUNIT_PCM));
 		if (loopstart > 0)
 			FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
-		return true;
+		looppointloaded = true;
+		return;
 	}
 
 	// Use LOOPMS for time in miliseconds.
@@ -708,7 +738,8 @@ boolean I_LoadSong(char *data, size_t len)
 		FMR(FMOD_Sound_GetLoopPoints(music_stream, NULL, FMOD_TIMEUNIT_MS, &loopend, FMOD_TIMEUNIT_PCM));
 		if (loopstart > 0)
 			FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_MS, loopend, FMOD_TIMEUNIT_PCM));
-		return true;
+		looppointloaded = true;
+		return;
 	}
 
 	// Try to fetch it from the COMMENT tag, like A.J. Freda
@@ -733,28 +764,11 @@ boolean I_LoadSong(char *data, size_t len)
 			if (loopstart > 0)
 				FMR(FMOD_Sound_SetLoopPoints(music_stream, loopstart, FMOD_TIMEUNIT_PCM, loopend, FMOD_TIMEUNIT_PCM));
 		}
-		return true;
+		looppointloaded = true;
+		return;
 	}
 
-	// No special loop point
-	return true;
-}
-
-void I_UnloadSong(void)
-{
-	I_StopSong();
-#ifdef HAVE_LIBGME
-	if (gme)
-	{
-		gme_delete(gme);
-		gme = NULL;
-	}
-#endif
-	if (music_stream)
-	{
-		FMR(FMOD_Sound_Release(music_stream));
-		music_stream = NULL;
-	}
+	looppointloaded = true;
 }
 
 boolean I_PlaySong(boolean looping)
@@ -779,6 +793,9 @@ boolean I_PlaySong(boolean looping)
 		FMR(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 	FMR(FMOD_Channel_SetPriority(music_channel, 0));
 	current_track = 0;
+
+	if (!looppointloaded)
+		FindLoopPoint();
 
 	return true;
 }
