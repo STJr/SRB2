@@ -3430,7 +3430,7 @@ static void Command_Version_f(void)
 #ifdef HAVE_SDL
 	CONS_Printf("SDL ");
 #else
-#ifdef _WIN32
+#ifdef _WINDOWS
 	CONS_Printf("DD ");
 #endif
 #endif
