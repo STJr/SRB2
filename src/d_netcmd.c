@@ -3421,10 +3421,70 @@ static void Command_ListWADS_f(void)
 static void Command_Version_f(void)
 {
 #ifdef DEVELOP
-	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s)\n", compbranch, comprevision, compdate, comptime);
+	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s) ", compbranch, comprevision, compdate, comptime);
 #else
-	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s)\n", VERSIONSTRING, compdate, comptime, comprevision);
+	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision);
 #endif
+
+	// Base library
+#ifdef HAVE_SDL
+	CONS_Printf("SDL ");
+#else
+#ifdef _WIN32
+	CONS_Printf("DD ");
+#endif
+#endif
+
+	// OS
+	// Would be nice to use SDL_GetPlatform for this
+#ifdef _WIN32
+	CONS_Printf("Windows ");
+#else
+#ifdef LINUX
+	CONS_Printf("Linux ");
+#else
+#ifdef MACOSX
+	CONS_Printf("macOS" );
+#else
+#ifdef UNIXCOMMON
+	CONS_Printf("Unix (Common) ");
+#else
+	CONS_Printf("Other OS ");
+#endif
+#endif
+#endif
+#endif
+
+	// Bitness
+#ifdef _WIN64
+	CONS_Printf("x64 ");
+#else
+#ifdef _WIN32
+	CONS_Printf("x86 ");
+#else
+#ifdef NONX86
+	CONS_Printf("Non-x86 ");
+#else
+#ifdef LINUX
+	CONS_Printf("x86 ");
+#else
+	CONS_Printf("Bits Unknown ");
+#endif
+#endif
+#endif
+#endif
+
+	// No ASM?
+#ifdef NOASM
+	CONS_Printf("\205NOASM \200");
+#endif
+
+	// Debug build
+#ifdef _DEBUG
+	CONS_Printf("\205DEBUG \200");
+#endif
+
+	CONS_Printf("\n");
 }
 
 #ifdef UPDATE_ALERT
