@@ -1748,8 +1748,6 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 			|| !stricmp(v->name, "mousemove")
 			|| !stricmp(v->name, "mousemove2"))
 			return false;
-		if ()
-			return false;
 
 		// mousesens was changed from 35 to 20 due to oversensitivity
 		if ((!stricmp(v->name, "mousesens")
