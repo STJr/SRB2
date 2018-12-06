@@ -49,6 +49,7 @@ static void COM_Wait_f(void);
 static void COM_Help_f(void);
 static void COM_Toggle_f(void);
 
+static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 static consvar_t *CV_FindVar(const char *name);
 static const char *CV_StringValue(const char *var_name);
@@ -61,6 +62,17 @@ CV_PossibleValue_t CV_OnOff[] = {{0, "Off"}, {1, "On"}, {0, NULL}};
 CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
+
+// Filter consvars by MODVERSION
+// First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
+// Also set CV_HIDEN during runtime, after config is loaded
+consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// for default joyaxis detection
+static boolean joyaxis_default = false;
+static boolean joyaxis2_default = false;
+static INT32 joyaxis_count = 0;
+static INT32 joyaxis2_count = 0;
 
 #define COM_BUF_SIZE 8192 // command buffer size
 #define MAX_ALIAS_RECURSION 100 // max recursion allowed for aliases
@@ -1232,7 +1244,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 	char *svalue;
 	UINT8 stealth = false;
 
-	if (playernum != serverplayer && playernum != adminplayer && !serverloading)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum) && !serverloading)
 	{
 		// not from server or remote admin, must be hacked/buggy client
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal netvar command received from %s\n"), player_names[playernum]);
@@ -1361,7 +1373,7 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 		// send the value of the variable
 		XBOXSTATIC UINT8 buf[128];
 		UINT8 *p = buf;
-		if (!(server || (adminplayer == consoleplayer)))
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
 			return;
@@ -1568,6 +1580,200 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 	var->changed = 1; // user has changed it now
 }
 
+void CV_InitFilterVar(void)
+{
+	joyaxis_default = joyaxis2_default = true;
+	joyaxis_count = joyaxis2_count = 0;
+}
+
+static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
+{
+	// If ALL axis settings are previous defaults, set them to the new defaults
+	// MODVERSION < 26 (2.1.21)
+
+	if (joyaxis_default)
+	{
+#if !defined (_WII) && !defined  (WMINPUT)
+		if (!stricmp(v->name, "joyaxis_turn"))
+		{
+			if (joyaxis_count > 6) return false;
+			// we're currently setting the new defaults, don't interfere
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "X-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+#if !defined (PSP)
+		if (!stricmp(v->name, "joyaxis_move"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "Y-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+#endif
+#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
+		if (!stricmp(v->name, "joyaxis_side"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "Z-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+#endif
+#if !defined (_XBOX) && !defined (PSP)
+		if (!stricmp(v->name, "joyaxis_look"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+#endif
+		if (!stricmp(v->name, "joyaxis_fire")
+			|| !stricmp(v->name, "joyaxis_firenormal"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+#endif
+		// reset all axis settings to defaults
+		if (joyaxis_count == 6)
+		{
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis.name, cv_turnaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis.name, cv_moveaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis.name, cv_sideaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis.name, cv_lookaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis.name, cv_fireaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis.name, cv_firenaxis.defaultvalue));
+			joyaxis_count++;
+			return false;
+		}
+	}
+
+	if (joyaxis2_default)
+	{
+#if !defined (_WII) && !defined  (WMINPUT)
+		if (!stricmp(v->name, "joyaxis2_turn"))
+		{
+			if (joyaxis2_count > 6) return false;
+			// we're currently setting the new defaults, don't interfere
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "X-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+// #if !defined (PSP)
+		if (!stricmp(v->name, "joyaxis2_move"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "Y-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+// #endif
+#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
+		if (!stricmp(v->name, "joyaxis2_side"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "Z-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+#endif
+#if !defined (_XBOX) // && !defined (PSP)
+		if (!stricmp(v->name, "joyaxis2_look"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+#endif
+		if (!stricmp(v->name, "joyaxis2_fire")
+			|| !stricmp(v->name, "joyaxis2_firenormal"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+#endif
+
+		// reset all axis settings to defaults
+		if (joyaxis2_count == 6)
+		{
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis2.name, cv_turnaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis2.name, cv_moveaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis2.name, cv_sideaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis2.name, cv_lookaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis2.name, cv_fireaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis2.name, cv_firenaxis2.defaultvalue));
+			joyaxis2_count++;
+			return false;
+		}
+	}
+
+	// we haven't reached our counts yet, or we're not default
+	return true;
+}
+
+static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
+{
+	// True means allow the CV change, False means block it
+
+	// We only care about CV_SAVE because this filters the user's config files
+	// We do this same check in CV_Command
+	if (!(v->flags & CV_SAVE))
+		return true;
+
+	// We go by MODVERSION here
+	if (cv_execversion.value < 26) // 26 = 2.1.21
+	{
+		// MOUSE SETTINGS
+		// alwaysfreelook split between first and third person (chasefreelook)
+		// mousemove was on by default, which invalidates the current approach
+		if (!stricmp(v->name, "alwaysmlook")
+			|| !stricmp(v->name, "alwaysmlook2")
+			|| !stricmp(v->name, "mousemove")
+			|| !stricmp(v->name, "mousemove2"))
+			return false;
+
+		// mousesens was changed from 35 to 20 due to oversensitivity
+		if ((!stricmp(v->name, "mousesens")
+			|| !stricmp(v->name, "mousesens2")
+			|| !stricmp(v->name, "mouseysens")
+			|| !stricmp(v->name, "mouseysens2"))
+			&& atoi(valstr) == 35)
+			return false;
+
+		// JOYSTICK DEFAULTS
+		// use_joystick was changed from 0 to 1 to automatically use a joystick if available
+#if defined(HAVE_SDL) || defined(_WINDOWS)
+		if ((!stricmp(v->name, "use_joystick")
+			|| !stricmp(v->name, "use_joystick2"))
+			&& atoi(valstr) == 0)
+			return false;
+#endif
+
+		// axis defaults were changed to be friendly to 360 controllers
+		// if ALL axis settings are defaults, then change them to new values
+		if (!CV_FilterJoyAxisVars(v, valstr))
+			return false;
+	}
+	return true;
+}
+
 /** Displays or changes a variable from the console.
   * Since the user is presumed to have been directly responsible
   * for this change, the variable is marked as changed this game.
@@ -1592,8 +1798,11 @@ static boolean CV_Command(void)
 		return true;
 	}
 
-	CV_Set(v, COM_Argv(1));
-	v->changed = 1; // now it's been changed by (presumably) the user
+	if (!(v->flags & CV_SAVE) || CV_FilterVarByVersion(v, COM_Argv(1)))
+	{
+		CV_Set(v, COM_Argv(1));
+		v->changed = 1; // now it's been changed by (presumably) the user
+	}
 	return true;
 }
 

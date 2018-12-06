@@ -133,9 +133,10 @@ typedef enum
 	XD_DELFILE,     // 18
 	XD_SETMOTD,     // 19
 	XD_SUICIDE,     // 20
+	XD_DEMOTED,     // 21
 #ifdef HAVE_BLUA
-	XD_LUACMD,      // 21
-	XD_LUAVAR,      // 22
+	XD_LUACMD,      // 22
+	XD_LUAVAR,      // 23
 #endif
 	MAXNETXCMD
 } netxcmd_t;
@@ -190,6 +191,10 @@ void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
+boolean IsPlayerAdmin(INT32 playernum);
+void SetAdminPlayer(INT32 playernum);
+void ClearAdminPlayers(void);
+void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 
