@@ -342,12 +342,15 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	fademask_t *fmask;
 
 #ifdef _WINDOWS
-	boolean waspaused = false;
 	// DD HACK: Music doesn't work during wipes, so halt it before the wipe starts
-	if (S_MusicPlaying() && !S_MusicPaused())
+	boolean wasplaying = false;
+	char musname[7]; UINT16 flags; boolean looping;
+
+	S_MusicInfo(musname, &flags, &looping);
+	if (S_MusicPlaying())
 	{
-		S_PauseAudio();
-		waspaused = true;
+		S_StopMusic();
+		wasplaying = true;
 	}
 #endif
 
@@ -392,8 +395,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 #ifdef _WINDOWS
 	// DD HACK: Music doesn't work during wipes, so resume it after the wipe ends
-	if (waspaused)
-		S_ResumeAudio();
+	if (wasplaying)
+		S_ChangeMusic(musname, flags, looping);
 #endif
 #endif
 }
