@@ -67,6 +67,10 @@ extern SDLJoyInfo_t JoyInfo;
 */
 extern SDLJoyInfo_t JoyInfo2;
 
+// So we can call this from i_video event loop
+void I_ShutdownJoystick(void);
+void I_ShutdownJoystick2(void);
+
 void I_GetConsoleEvents(void);
 
 void SDLforceUngrabMouse(void);
