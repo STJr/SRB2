@@ -37,6 +37,7 @@
 #include "d_main.h"
 #include "m_argv.h"
 #include "i_system.h"
+#include "command.h" // cv_execversion
 
 #include "m_anigif.h"
 
@@ -440,7 +441,18 @@ void Command_LoadConfig_f(void)
 
 	strcpy(configfile, COM_Argv(1));
 	FIL_ForceExtension(configfile, ".cfg");
+
+	// temporarily reset execversion to default
+	cv_execversion.flags &= ~CV_HIDEN;
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
+	// exec the config
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	cv_execversion.flags |= CV_HIDEN;
 }
 
 /** Saves the current configuration and loads another.
@@ -477,9 +489,22 @@ void M_FirstLoadConfig(void)
 	// load default control
 	G_Controldefault();
 
+	// register execversion here before we load any configs
+	CV_RegisterVar(&cv_execversion);
+
+	// temporarily reset execversion to default
+	// we shouldn't need to do this, but JUST in case...
+	cv_execversion.flags &= ~CV_HIDEN;
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 	// no COM_BufExecute() needed; that does it right away
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	cv_execversion.flags |= CV_HIDEN;
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -535,6 +560,10 @@ void M_SaveConfig(const char *filename)
 
 	// header message
 	fprintf(f, "// SRB2 configuration file.\n");
+
+	// print execversion FIRST, because subsequent consvars need to be filtered
+	// always print current MODVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, MODVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 
