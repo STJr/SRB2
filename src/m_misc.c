@@ -489,6 +489,9 @@ void M_FirstLoadConfig(void)
 	// load default control
 	G_Controldefault();
 
+	// register execversion here before we load any configs
+	CV_RegisterVar(&cv_execversion);
+
 	// temporarily reset execversion to default
 	// we shouldn't need to do this, but JUST in case...
 	cv_execversion.flags &= ~CV_HIDEN;

@@ -66,7 +66,7 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 // Filter consvars by MODVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
-consvar_t cv_execversion = {"execversion","25",CV_SAVE,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
