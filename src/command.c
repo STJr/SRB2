@@ -1743,8 +1743,8 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 		// MOUSE SETTINGS
 		// alwaysfreelook split between first and third person (chasefreelook)
 		// mousemove was on by default, which invalidates the current approach
-		if (!stricmp(v->name, "alwaysfreelook")
-			|| !stricmp(v->name, "alwaysfreelook2")
+		if (!stricmp(v->name, "alwaysmlook")
+			|| !stricmp(v->name, "alwaysmlook2")
 			|| !stricmp(v->name, "mousemove")
 			|| !stricmp(v->name, "mousemove2"))
 			return false;
