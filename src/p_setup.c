@@ -2712,6 +2712,11 @@ boolean P_SetupLevel(boolean skipprecip)
 		tic_t endtime = starttime + (3*TICRATE)/2;
 		tic_t nowtime;
 
+#if defined(_WINDOWS)
+		// DD hack: Music doesn't work when wiping.
+		// Stop music now because we do a second wipe after a delay
+		S_StopMusic();
+#endif
 		S_StartSound(NULL, sfx_s3kaf);
 
 		F_WipeStartScreen();

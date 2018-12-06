@@ -27,6 +27,10 @@
 #include "d_main.h"
 #include "m_misc.h" // movie mode
 
+#ifdef _WINDOWS
+#include "s_sound.h" // DD music hack
+#endif
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
@@ -337,6 +341,16 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	UINT8 wipeframe = 0;
 	fademask_t *fmask;
 
+#ifdef _WINDOWS
+	boolean waspaused = false;
+	// DD HACK: Music doesn't work during wipes, so halt it before the wipe starts
+	if (S_MusicPlaying() && !S_MusicPaused())
+	{
+		S_PauseAudio();
+		waspaused = true;
+	}
+#endif
+
 	paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
@@ -375,5 +389,11 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			M_SaveFrame();
 	}
 	WipeInAction = false;
+
+#ifdef _WINDOWS
+	// DD HACK: Music doesn't work during wipes, so resume it after the wipe ends
+	if (waspaused)
+		S_ResumeAudio();
+#endif
 #endif
 }
