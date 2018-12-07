@@ -95,10 +95,10 @@ __DEBIAN_PARAMETERS_INITIALIZED=0
 export __PACKAGE_DATETIME="$(date '+%a, %d %b %Y %H:%M:%S %z')"
 export __PACKAGE_DATETIME_DIGIT="$(date -u '+%Y%m%d%H%M%S')"
 
-if [[ "$PACKAGE_SUBVERSION" == "" ]]; then
-	PACKAGE_SUBVERSION=$__PACKAGE_DATETIME_DIGIT;
-	__PACKAGE_SUBVERSION_BY_DATE=1;
-	export PACKAGE_SUBVERSION=${PACKAGE_SUBVERSION}; # for envsubst
+if [[ "$PACKAGE_REVISION" == "" ]]; then
+	PACKAGE_REVISION="-$__PACKAGE_DATETIME_DIGIT";
+	__PACKAGE_REVISION_BY_DATE=1;
+	export PACKAGE_REVISION=${PACKAGE_REVISION}; # for envsubst
 fi;
 
 #
@@ -161,6 +161,6 @@ if [[ "$1" != "clean" ]]; then
 	fi;
 fi;
 
-if [[ "$__DEPLOYER_ACTIVE" != "1" ]] && [[ "$__PACKAGE_SUBVERSION_BY_DATE" == "1" ]]; then
-	unset PACKAGE_SUBVERSION; # so we can reset the date on subsequent runs
+if [[ "$__DEPLOYER_ACTIVE" != "1" ]] && [[ "$__PACKAGE_REVISION_BY_DATE" == "1" ]]; then
+	unset PACKAGE_REVISION; # so we can reset the date on subsequent runs
 fi;
