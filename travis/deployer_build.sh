@@ -9,7 +9,7 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
 		echo "Building Debian package(s)"
 
-		sudo apt-get install devscripts debhelper secure-delete;
+		sudo apt-get install devscripts debhelper secure-delete expect;
 
 		# Build source packages first, since they zip up the entire source folder,
 		# binaries and all
@@ -20,12 +20,24 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 			if [[ "$_DEPLOYER_PACKAGE_SOURCE" == "1" ]]; then
 				echo "Building main source Debian package";
-				debuild -S -us -uc;
+				expect <(cat <<EOD
+spawn debuild -S -us -uc;
+expect "continue anyway? (y/n)"
+send "y\r"
+interact
+EOD
+);
 			fi;
 
 			if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
 				echo "Building main binary Debian package";
-				debuild -us -uc;
+				expect <(cat <<EOD
+spawn debuild -us -uc;
+expect "continue anyway? (y/n)"
+send "y\r"
+interact
+EOD
+);
 			fi;
 
 			cd $OLDPWD;
@@ -43,12 +55,24 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]] || [[ "$__DEPLOYER_DPUT_ACTIVE" == "1" 
 
 			if [[ "$_DEPLOYER_PACKAGE_SOURCE" == "1" ]]; then
 				echo "Building asset source Debian package";
-				debuild -S -us -uc;
+				expect <(cat <<EOD
+spawn debuild -S -us -uc;
+expect "continue anyway? (y/n)"
+send "y\r"
+interact
+EOD
+);
 			fi;
 
 			if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
 				echo "Building asset binary Debian package";
-				debuild -us -uc;
+				expect <(cat <<EOD
+spawn debuild -us -uc;
+expect "continue anyway? (y/n)"
+send "y\r"
+interact
+EOD
+);
 			fi;
 
 			cd $OLDPWD;
