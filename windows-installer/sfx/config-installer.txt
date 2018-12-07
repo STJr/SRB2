@@ -15,8 +15,6 @@ Shortcut="Pu,{%%T\\srb2win.exe},{},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB
 Shortcut="Pu,{%%T\\srb2win.exe},{-win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (Windowed)},{%%T\\},{%%T\\srb2win.exe},{0}"
 Shortcut="Pu,{%%T\\srb2win.exe},{-opengl},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (OpenGL)},{%%T\\},{%%T\\srb2win.exe},{0}"
 Shortcut="Pu,{%%T\\srb2win.exe},{-opengl -win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (OpenGL, Windowed)},{%%T\\},{%%T\\srb2win.exe},{0}"
-Shortcut="Pu,{%%T\\srb2dd.exe},{},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (DirectDraw)},{%%T\\},{%%T\\srb2dd.exe},{0}"
-Shortcut="Pu,{%%T\\srb2dd.exe},{-win},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{SRB2 (DirectDraw, Windowed)},{%%T\\},{%%T\\srb2dd.exe},{0}"
 Shortcut="Pu,{%%T\\uninstall.exe},{},{Sonic Robo Blast 2},{Sonic Robo Blast 2 (SRB2), a 3D Sonic the Hedgehog fangame.},{Uninstall SRB2},{%%T\\},{shell32.dll},{31}"
 
 RunProgram="nowait:\"%%T\\new-install\\staging.bat\""
