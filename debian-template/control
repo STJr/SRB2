@@ -7,7 +7,7 @@ Maintainer: ${PACKAGE_GROUP_NAME_EMAIL}
 Build-Depends: debhelper (>= 7.0.50~),
  libsdl2-dev,
  libsdl2-mixer-dev,
- libpng16-dev | libpng12-dev (>= 1.2.7) | libpng-dev,
+ libpng-dev | libpng16-dev | libpng12-dev (>= 1.2.7),
  zlib1g-dev,
  libgme-dev,
  libglu1-dev | libglu-dev,
@@ -24,7 +24,7 @@ Depends: ${SHLIBS_DEPENDS}, ${MISC_DEPENDS},
  libsdl2-mixer-2.0-0,
  zlib1g,
  libgme0,
- libpng16-16 | libpng12-0 | libpng
+ libpng | libpng16-16 | libpng12-0
 Description: A cross-platform 3D Sonic fangame
  Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
  fangame built using a modified version of the Doom Legacy
