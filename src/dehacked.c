@@ -3292,7 +3292,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	// do a copy of this for cross references probleme
 	//XBOXSTATIC actionf_t saveactions[NUMSTATES];
 	//XBOXSTATIC const char *savesprnames[NUMSPRITES];
-	XBOXSTATIC const char *savesfxnames[NUMSFX];
+	//XBOXSTATIC const char *savesfxnames[NUMSFX];
 
 	if (!deh_loaded)
 		initfreeslots();
@@ -3305,8 +3305,8 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	for (i = 0; i < NUMSPRITES; i++)
 		savesprnames[i] = sprnames[i];
 	*/
-	for (i = 0; i < NUMSFX; i++)
-		savesfxnames[i] = S_sfx[i].name;
+	/*for (i = 0; i < NUMSFX; i++)
+		savesfxnames[i] = S_sfx[i].name;*/
 
 	gamedataadded = false;
 
@@ -3510,7 +3510,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sfx(word2); // find a sound by name
 					if (i < NUMSFX && i >= 0)
-						readsound(f, i, savesfxnames);
+						readsound(f, i, NULL);
 					else
 					{
 						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
