@@ -380,30 +380,24 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-
-//
-// Computes the line length in fracunits, the OpenGL render needs this
-//
-
 /** Computes the length of a seg in fracunits.
-  * This is needed for splats.
   *
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
 fixed_t P_SegLength(seg_t *seg)
 {
-	fixed_t dx, dy;
-
-	// make a vector (start at origin)
-	dx = seg->v2->x - seg->v1->x;
-	dy = seg->v2->y - seg->v1->y;
-
-	return FixedHypot(dx, dy);
+	return FixedEuclidean(seg->v2->x,seg->v2->y,seg->v1->x,seg->v1->y);
 }
 
 #ifdef HWRENDER
-static inline float P_SegLengthf(seg_t *seg)
+/** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length as a float.
+  */
+static inline float P_SegLengthFloat(seg_t *seg)
 {
 	float dx, dy;
 
@@ -439,11 +433,11 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->v1 = &vertexes[SHORT(ml->v1)];
 		li->v2 = &vertexes[SHORT(ml->v2)];
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
+		li->length = P_SegLength(li);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
 		{
-			li->flength = P_SegLengthf(li);
+			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}

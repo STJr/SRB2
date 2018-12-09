@@ -237,6 +237,17 @@ FUNCMATH fixed_t FixedSqrt(fixed_t x);
 */
 FUNCMATH fixed_t FixedHypot(fixed_t x, fixed_t y);
 
+/**	\brief	The FixedEuclidean function
+
+	\param	x	fixed_t number
+	\param	y	fixed_t number
+
+	\return	sqrt(x*x+y*y)
+
+
+*/
+fixed_t FixedEuclidean(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
+
 /**	\brief	The FixedFloor function
 
 	\param	x	fixed_t number

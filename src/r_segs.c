@@ -1674,6 +1674,23 @@ static void R_RenderSegLoop (void)
 	}
 }
 
+// Uses precalculated seg->length
+static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
+{
+	if (!seg->linedef->dy)
+		return abs(y2 - seg->v1->y);
+	else if (!seg->linedef->dx)
+		return abs(x2 - seg->v1->x);
+	else
+	{
+		INT64 dx = (seg->v2->x)-(seg->v1->x);
+		INT64 dy = (seg->v2->y)-(seg->v1->y);
+		INT64 vdx = x2-(seg->v1->x);
+		INT64 vdy = y2-(seg->v1->y);
+		return ((dy*vdx)-(dx*vdy))/(seg->length);
+	}
+}
+
 //
 // R_StoreWallRange
 // A wall segment will be drawn
@@ -1684,6 +1701,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
+	boolean longboi;
 #ifndef ESLOPE
 	fixed_t       vtop;
 #endif
@@ -1729,10 +1747,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		offsetangle = ANGLE_90;
 
 	distangle = ANGLE_90 - offsetangle;
-	hyp = R_PointToDist (curline->v1->x, curline->v1->y);
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
-	rw_distance = FixedMul (hyp, sineval);
 
+	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
+	rw_distance = FixedMul(hyp, sineval);
+	longboi = (hyp >= INT32_MAX);
+
+	// big room fix
+	if (longboi)
+		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
 
 	ds_p->x1 = rw_x = start;
 	ds_p->x2 = stop;
@@ -2589,8 +2612,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (offsetangle > ANGLE_90)
 			offsetangle = ANGLE_90;
 
-		sineval = FINESINE(offsetangle >>ANGLETOFINESHIFT);
-		rw_offset = FixedMul (hyp, sineval);
+		sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
+		rw_offset = FixedMul(hyp, sineval);
+
+		// big room fix
+		if (longboi)
+		{
+			INT64 dx = (curline->v2->x)-(curline->v1->x);
+			INT64 dy = (curline->v2->y)-(curline->v1->y);
+			INT64 vdx = viewx-(curline->v1->x);
+			INT64 vdy = viewy-(curline->v1->y);
+			rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
+		}
 
 		if (rw_normalangle-rw_angle1 < ANGLE_180)
 			rw_offset = -rw_offset;
