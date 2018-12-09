@@ -3079,8 +3079,8 @@ static void readmaincfg(MYFILE *f)
 				filenamelen = strlen(gamedatafilename)-4;  // Strip off the extension
 				
 				// Also save a time attack folder
-				/*strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
-				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';*/
+				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
+				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
 				//strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
 				
