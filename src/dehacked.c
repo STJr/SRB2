@@ -3075,12 +3075,19 @@ static void readmaincfg(MYFILE *f)
 				strlwr(gamedatafilename);
 				savemoddata = true;
 
-				// Also save a time attack folder
+				
 				filenamelen = strlen(gamedatafilename)-4;  // Strip off the extension
-				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
-				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
+				
+				// Also save a time attack folder
+				/*strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
+				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';*/
 
-				strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
+				//strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
+				
+				//clears savegamename string since it already has defaults
+				memset(savegamename,0,sizeof(savegamename));
+				
+				strncpy(savegamename,gamedatafilename,filenamelen);
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
