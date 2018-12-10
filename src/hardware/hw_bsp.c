@@ -970,6 +970,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	polyvertex_t *rootpv;
 	size_t i;
 	fixed_t rootbbox[4];
+	INT32 j = 0;
 
 	CONS_Debug(DBG_RENDER, "Creating polygons, please wait...\n");
 	ls_count = ls_percent = 0; // reset the loading status
@@ -1027,7 +1028,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	AdjustSegs();
 
 	CONS_Printf("\nEXTRASUBSECTORS\n\n");
-	INT32 j = 0;
+
 	for (j = 0; j < bspnum; j++)
 	{
 		CONS_Printf("ESS-%d> ", j);
