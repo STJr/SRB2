@@ -550,6 +550,9 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 			//    I_Error("CutOutPoly: only one point for split line (%d %d) %d", ps, pe, debugpos);
 		}
 	}
+	CONS_Printf("X0 %.0f> Y0 %.0f> Z0 %.0f> X1 %.0f> Y1 %.0f> Z1 %.0f\n",
+		poly->pts[0].x, poly->pts[0].y, poly->pts[0].z,
+		poly->pts[1].x, poly->pts[1].y, poly->pts[1].z);
 	return poly;
 }
 
@@ -601,7 +604,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 	fdivline_t fdivline;
 	polyvertex_t *pt;
 	INT32 i;
-
+	bsp = &nodes[bspnum];
 	// Found a subsector?
 	if (bspnum & NF_SUBSECTOR)
 	{
@@ -630,6 +633,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 		}
 		else
 		{
+			CONS_Printf("SS-%d> ", bspnum % NF_SUBSECTOR);
 			HWR_SubsecPoly(bspnum&(~NF_SUBSECTOR), poly);
 			//Hurdler: implement a loading status
 
@@ -1014,11 +1018,28 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	rootpv->y = FIXED_TO_FLOAT(rootbbox[BOXBOTTOM]);  //ll
 	rootpv++;
 
+	CONS_Printf("\SUBSECTORS\n\n");
+
 	WalkBSPNode(bspnum, rootp, NULL,rootbbox);
 
 	i = SolveTProblem();
 	//CONS_Debug(DBG_RENDER, "%d point divides a polygon line\n",i);
 	AdjustSegs();
+
+	CONS_Printf("\nEXTRASUBSECTORS\n\n");
+	INT32 j = 0;
+	for (j = 0; j < bspnum; j++)
+	{
+		CONS_Printf("ESS-%d> ", j);
+		if (!extrasubsectors[j].planepoly)
+		{
+			CONS_Printf("\n");
+			continue;
+		}
+		CONS_Printf("X0 %.4f> Y0 %.4f> Z0 %.4f> X1 %.4f> Y1 %.4f> Z1 %.4f\n",
+			extrasubsectors[j].planepoly->pts[0].x, extrasubsectors[j].planepoly->pts[0].y, extrasubsectors[j].planepoly->pts[0].z,
+			extrasubsectors[j].planepoly->pts[1].x, extrasubsectors[j].planepoly->pts[1].y, extrasubsectors[j].planepoly->pts[1].z);
+	}
 
 	//debug debug..
 	//if (nobackpoly)

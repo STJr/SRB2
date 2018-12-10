@@ -548,7 +548,10 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
+	{
+		CONS_Debug(DBG_RENDER, "%d> No convex poly were generated for this subsector\n", gametic);
 		return;
+	}
 
 #ifdef ESLOPE
 	// Get the slope pointer to simplify future code
@@ -578,11 +581,14 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	nrPlaneVerts = xsub->planepoly->numpts;
 
 	if (nrPlaneVerts < 3)   //not even a triangle ?
+	{
+		CONS_Debug(DBG_RENDER, "%d> polygon size of %d is not a triangle\n", gametic, nrPlaneVerts);
 		return;
+	}
 
 	if (nrPlaneVerts > UINT16_MAX) // FIXME: exceeds plVerts size
 	{
-		CONS_Debug(DBG_RENDER, "polygon size of %d exceeds max value of %d vertices\n", nrPlaneVerts, UINT16_MAX);
+		CONS_Debug(DBG_RENDER, "%d> polygon size of %d exceeds max value of %d vertices\n", gametic, nrPlaneVerts, UINT16_MAX);
 		return;
 	}
 
@@ -3516,8 +3522,9 @@ static void HWR_Subsector(size_t num)
 		{
 			if (sub->validcount != validcount)
 			{
+				extrasubsector_t *extrasubsector = &extrasubsectors[num];
 				HWR_GetFlat(levelflats[gr_frontsector->floorpic].lumpnum);
-				HWR_RenderPlane(gr_frontsector, &extrasubsectors[num], false,
+				HWR_RenderPlane(gr_frontsector, extrasubsector, false,
 					// Hack to make things continue to work around slopes.
 					locFloorHeight == cullFloorHeight ? locFloorHeight : gr_frontsector->floorheight,
 					// We now return you to your regularly scheduled rendering.
