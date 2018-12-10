@@ -521,39 +521,39 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 			}
 		}
 
-		// there was a split
-		if (ps >= 0)
+	// there was a split
+	if (ps >= 0)
+	{
+		//need 2 points
+		if (pe >= 0)
 		{
-			//need 2 points
-			if (pe >= 0)
+			// generate FRONT poly
+			temppoly = HWR_AllocPoly(nump);
+			pv = temppoly->pts;
+			*pv++ = vs;
+			*pv++ = ve;
+			do
 			{
-				// generate FRONT poly
-				temppoly = HWR_AllocPoly(nump);
-				pv = temppoly->pts;
-				*pv++ = vs;
-				*pv++ = ve;
-				do
-				{
-					if (++ps == poly->numpts)
-						ps = 0;
-					*pv++ = poly->pts[ps];
-				} while (ps != pe);
-				HWR_FreePoly(poly);
-				poly = temppoly;
-			}
-			//hmmm... maybe we should NOT accept this, but this happens
-			// only when the cut is not needed it seems (when the cut
-			// line is aligned to one of the borders of the poly, and
-			// only some times..)
-			else
-				skipcut++;
-			//    I_Error("CutOutPoly: only one point for split line (%d %d) %d", ps, pe, debugpos);
+				if (++ps == poly->numpts)
+					ps = 0;
+				*pv++ = poly->pts[ps];
+			} while (ps != pe);
+			HWR_FreePoly(poly);
+			poly = temppoly;
 		}
+		//hmmm... maybe we should NOT accept this, but this happens
+		// only when the cut is not needed it seems (when the cut
+		// line is aligned to one of the borders of the poly, and
+		// only some times..)
+		else
+			skipcut++;
+		//    I_Error("CutOutPoly: only one point for split line (%d %d) %d", ps, pe, debugpos);
 	}
-	CONS_Printf("X0 %.0f> Y0 %.0f> Z0 %.0f> X1 %.0f> Y1 %.0f> Z1 %.0f\n",
-		poly->pts[0].x, poly->pts[0].y, poly->pts[0].z,
-		poly->pts[1].x, poly->pts[1].y, poly->pts[1].z);
-	return poly;
+}
+CONS_Printf("X0 %.0f> Y0 %.0f> Z0 %.0f> X1 %.0f> Y1 %.0f> Z1 %.0f\n",
+	poly->pts[0].x, poly->pts[0].y, poly->pts[0].z,
+	poly->pts[1].x, poly->pts[1].y, poly->pts[1].z);
+return poly;
 }
 
 // At this point, the poly should be convex and the exact
@@ -1018,7 +1018,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	rootpv->y = FIXED_TO_FLOAT(rootbbox[BOXBOTTOM]);  //ll
 	rootpv++;
 
-	CONS_Printf("\SUBSECTORS\n\n");
+	CONS_Printf("\nSUBSECTORS\n\n");
 
 	WalkBSPNode(bspnum, rootp, NULL,rootbbox);
 
