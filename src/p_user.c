@@ -8712,9 +8712,15 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
-	//if (player->awayviewtics)
-	//	player->awayviewtics--;
+	// Re-fixed by Jimita (11-12-2018)
+	if (player->awayviewtics)
+	{
+		player->awayviewtics--;
+		if (!player->awayviewtics)
+			player->awayviewtics = -1;
+		// The timer might've reached zero, but we'll run the remote view camera anyway.
+		// This is completely fine to do, since -1 evaluates to true in a "if (!player->awayviewtics)" conditional.
+	}
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -9492,8 +9498,9 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	// Reset it to zero if it's a -1.
+	if (player->awayviewtics < 0)
+		player->awayviewtics = 0;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)
