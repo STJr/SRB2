@@ -99,8 +99,8 @@ static const UINT8 NOCLIMBYELLOWS     = (11*16);
 #define FTOM(x) FixedMul(((x)<<FRACBITS),scale_ftom)
 #define MTOF(x) (FixedMul((x),scale_mtof)>>FRACBITS)
 // translates between frame-buffer and map coordinates
-#define CXMTOF(x) (f_x - (f_x/2) + MTOF((x)-m_x))
-#define CYMTOF(y) (f_y - (f_y/2) + (f_h - MTOF((y)-m_y)))
+#define CXMTOF(x) (f_x + MTOF((x)-m_x))
+#define CYMTOF(y) (f_y + (f_h - MTOF((y)-m_y)))
 
 #define MAPBITS (FRACBITS-4)
 #define FRACTOMAPBITS (FRACBITS-MAPBITS)
