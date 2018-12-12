@@ -319,8 +319,6 @@ static void D_Display(void)
 			if (!gametic)
 				break;
 			HU_Erase();
-			if (automapactive)
-				AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
@@ -374,12 +372,22 @@ static void D_Display(void)
 			break;
 	}
 
-	// clean up border stuff
-	// see if the border needs to be initially drawn
 	if (gamestate == GS_LEVEL)
 	{
 		// draw the view directly
-		if (!automapactive && !dedicated && cv_renderview.value)
+		boolean dorenderview = cv_renderview.value;
+		boolean dorenderautomap = false;
+
+		// Jimita
+		if (automapactive)
+		{
+			dorenderautomap = true;
+#ifndef MINIAUTOMAP
+			dorenderview = false;
+#endif
+		}
+
+		if (dorenderview)
 		{
 			if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 			{
@@ -436,8 +444,11 @@ static void D_Display(void)
 			lastdraw = false;
 		}
 
-		ST_Drawer();
+		// Jimita
+		if (dorenderautomap)
+			AM_Drawer();
 
+		ST_Drawer();
 		HU_Drawer();
 	}
 

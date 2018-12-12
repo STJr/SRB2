@@ -770,18 +770,6 @@ void HWR_DrawViewBorder(INT32 clearlines)
 //                                                     AM_MAP.C DRAWING STUFF
 // ==========================================================================
 
-// Clear the automap part of the screen
-void HWR_clearAutomap(void)
-{
-	FRGBAFloat fColor = {0, 0, 0, 1};
-
-	// minx,miny,maxx,maxy
-	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
-	HWD.pfnClearBuffer(true, true, &fColor);
-	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
-}
-
-
 // -----------------+
 // HWR_drawAMline   : draw a line of the automap (the clipping is already done in automap code)
 // Arg              : color is a RGB 888 value
