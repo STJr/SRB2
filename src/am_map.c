@@ -734,7 +734,7 @@ static boolean AM_clipMline(const mline_t *ml, fline_t *fl)
 //
 static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 {
-	fixed_t x, y, dx, dy, sx, sy, ax, ay, d;
+	INT32 x, y, dx, dy, sx, sy, ax, ay, d;
 
 #ifdef _DEBUG
 	static INT32 num = 0;
