@@ -365,12 +365,6 @@ static void AM_LevelInit(void)
 	f_w = vid.width;
 	f_h = vid.height;
 
-	// Jimita
-#ifdef MINIAUTOMAP
-	f_x = f_w / 2;
-	f_y = f_h / 2;
-#endif
-
 	AM_drawFline = AM_drawFline_soft;
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -757,7 +751,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 #endif
 
 	#define PUTDOT(xx,yy,cc) V_DrawFill(xx,yy,1,1,cc|V_NOSCALESTART);
-	#define CLIPDOT (x >= f_x && y >= f_y && x < f_x + f_w && y < f_y + f_h)
 
 	dx = fl->b.x - fl->a.x;
 	ax = 2 * (dx < 0 ? -dx : dx);
@@ -775,8 +768,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ay - ax/2;
 		for (;;)
 		{
-			if (CLIPDOT)
-				PUTDOT(x, y, color)
+			PUTDOT(x, y, color)
 			if (x == fl->b.x)
 				return;
 			if (d >= 0)
@@ -793,8 +785,7 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		d = ax - ay/2;
 		for (;;)
 		{
-			if (CLIPDOT)
-				PUTDOT(x, y, color)
+			PUTDOT(x, y, color)
 			if (y == fl->b.y)
 				return;
 			if (d >= 0)
@@ -807,7 +798,6 @@ static void AM_drawFline_soft(const fline_t *fl, INT32 color)
 		}
 	}
 
-	#undef CLIPDOT
 	#undef PUTDOT
 }
 

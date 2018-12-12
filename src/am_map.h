@@ -31,9 +31,6 @@ typedef struct
 #define AM_MSGENTERED (AM_MSGHEADER | ('e'<<8))
 #define AM_MSGEXITED (AM_MSGHEADER | ('x'<<8))
 
-// Jimita
-//#define MINIAUTOMAP
-
 extern boolean am_recalc; // true if screen size changes
 extern boolean automapactive; // In AutoMap mode?
 
