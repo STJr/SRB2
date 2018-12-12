@@ -8718,8 +8718,7 @@ void P_PlayerThink(player_t *player)
 		player->awayviewtics--;
 		if (!player->awayviewtics)
 			player->awayviewtics = -1;
-		// The timer might've reached zero, but we'll run the remote view camera anyway.
-		// This is completely fine to do, since -1 evaluates to true in a "if (!player->awayviewtics)" conditional.
+		// The timer might've reached zero, but we'll run the remote view camera anyway by setting it to -1.
 	}
 
 	/// \note do this in the cheat code
@@ -9498,7 +9497,6 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	// Reset it to zero if it's a -1.
 	if (player->awayviewtics < 0)
 		player->awayviewtics = 0;
 
