@@ -149,7 +149,14 @@ int main(int argc, char **argv)
 			)
 #endif
 		{
-			LoadLibraryA("exchndl.dll");
+			// XP and Vista users can't use the newest exchndl.dll
+			// and older exchndl.dll won't work with release builds >= 2.1.21
+			// Check for >= Version 6.1 (>= Win7)
+			DWORD winversion = GetVersion();
+			DWORD major = (DWORD)(LOBYTE(LOWORD(winversion)));
+    		DWORD minor = (DWORD)(HIBYTE(LOWORD(winversion)));
+			if (major > 6 || (major == 6 && minor > 0))
+				LoadLibraryA("exchndl.dll");
 		}
 	}
 #ifndef __MINGW32__

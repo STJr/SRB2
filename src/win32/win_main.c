@@ -663,8 +663,19 @@ int WINAPI WinMain (HINSTANCE hInstance,
 #endif
 		// Try Dr MinGW's exception handler.
 		if (!pfnIsDebuggerPresent || !pfnIsDebuggerPresent())
+		{
 #endif
-			LoadLibraryA("exchndl.dll");
+			// XP and Vista users can't use the newest exchndl.dll
+			// and older exchndl.dll won't work with release builds >= 2.1.21
+			// Check for >= Version 6.1 (Win7)
+			DWORD winversion = GetVersion();
+			DWORD major = (DWORD)(LOBYTE(LOWORD(winversion)));
+    		DWORD minor = (DWORD)(HIBYTE(LOWORD(winversion)));
+			if (major > 6 || (major == 6 && minor > 0))
+				LoadLibraryA("exchndl.dll");
+#if 0
+		}
+#endif
 
 #ifndef __MINGW32__
 		prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
