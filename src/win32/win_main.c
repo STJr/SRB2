@@ -670,7 +670,7 @@ int WINAPI WinMain (HINSTANCE hInstance,
 			// Check for >= Version 6.1 (Win7)
 			DWORD winversion = GetVersion();
 			DWORD major = (DWORD)(LOBYTE(LOWORD(winversion)));
-    		DWORD minor = (DWORD)(HIBYTE(LOWORD(winversion)));
+			DWORD minor = (DWORD)(HIBYTE(LOWORD(winversion)));
 			if (major > 6 || (major == 6 && minor > 0))
 				LoadLibraryA("exchndl.dll");
 #if 0
