@@ -534,8 +534,11 @@ void M_SaveConfig(const char *filename)
 		}
 
 		// append srb2home to beginning of filename
-		// configfile already has this applied
-		filepath = va(pandf,srb2home, filename);
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
 
 		f = fopen(filepath, "w");
 		// change it only if valid
@@ -543,7 +546,7 @@ void M_SaveConfig(const char *filename)
 			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}
