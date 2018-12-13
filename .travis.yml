@@ -290,10 +290,17 @@ before_script:
   - OLDPWD=$PWD
   - cd "$HOME/srb2_cache"
 
+  # stat is different for OSX
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      STATCMD="stat -f%y";
+    else
+      STATCMD="stat -c %y";
+    fi
+
   # Get asset files (required for MD5)
   - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
       if [ -f "$(basename $ASSET_ARCHIVE_PATH)" ]; then
-        echo "$(basename $ASSET_ARCHIVE_PATH) cache date -- $(stat -c %y $(basename $ASSET_ARCHIVE_PATH))";
+        echo "$(basename $ASSET_ARCHIVE_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_PATH))";
       fi;
       wget --verbose --server-response -N "$ASSET_ARCHIVE_PATH";
       7z x "$(basename $ASSET_ARCHIVE_PATH)" -o"$HOME/srb2_cache" -aos;
@@ -305,7 +312,7 @@ before_script:
   # Get individual required files
   - for f in $ASSET_FILES_REQUIRED; do
       if [ -f "$f" ]; then
-        echo "$f cache date -- $(stat -c %y $f)";
+        echo "$f cache date -- $($STATCMD $f)";
       fi;
       wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
       if [ ! -f "$HOME/srb2_cache/$f" ]; then
@@ -318,7 +325,7 @@ before_script:
   # Get the docs
   - for f in $ASSET_FILES_DOCS; do
       if [ -f "$f" ]; then
-        echo "$f cache date -- $(stat -c %y $f)";
+        echo "$f cache date -- $($STATCMD $f)";
       fi;
       wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
       cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
@@ -328,7 +335,7 @@ before_script:
   - if [[ "$ASSET_OPTIONAL_GET" == "1" ]]; then
       for f in $ASSET_FILES_OPTIONAL; do
         if [ -f "$f" ]; then
-          echo "$f cache date -- $(stat -c %y $f)";
+          echo "$f cache date -- $($STATCMD $f)";
         fi;
         wget --verbose --server-response -N "$ASSET_BASE_PATH/$f";
         cp "$HOME/srb2_cache/$f" "$OLDPWD/assets/$f";
