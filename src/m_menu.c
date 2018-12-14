@@ -6792,15 +6792,6 @@ void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-	// Hotplugging breaks if this block is run
-	// Because the cvar is set to 0, which disables controllers for that player
-#if 0 // #ifdef JOYSTICK_HOTPLUG
-	if (0 == cv_usejoystick.value)
-		CV_SetValue(&cv_usejoystick, 0);
-	if (0 == cv_usejoystick2.value)
-		CV_SetValue(&cv_usejoystick2, 0);
-#endif
-
 	for (i = 1; i < 8; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
@@ -6845,52 +6836,66 @@ static void M_AssignJoystick(INT32 choice)
 {
 #ifdef JOYSTICK_HOTPLUG
 	INT32 oldchoice;
-
-	if (choice > I_NumJoys())
-		return;
+	INT32 numjoys = I_NumJoys();
 
 	if (setupcontrols_secondaryplayer)
 	{
-		oldchoice = atoi(cv_usejoystick2.string) > I_NumJoys() ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
+		oldchoice = atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
 		CV_SetValue(&cv_usejoystick2, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
 		// update the string too
-		CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
-
-		if (oldchoice != choice)
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
 		{
-			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
-				CV_SetValue(&cv_usejoystick2, oldchoice);
+			CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
 
-			if (oldchoice ==
-				(atoi(cv_usejoystick2.string) > I_NumJoys() ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
-				M_StartMessage("This joystick is used by another\n"
-				               "player. Reset the joystick\n"
-							   "for that player first.\n\n"
-							   "(Press a key)\n", NULL, MM_NOTHING);
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick2.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick2, oldchoice);
+
+				if (oldchoice ==
+					(atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
+					M_StartMessage("This joystick is used by another\n"
+					               "player. Reset the joystick\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
 		}
 	}
 	else
 	{
-		oldchoice = atoi(cv_usejoystick.string) > I_NumJoys() ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
+		oldchoice = atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
 		CV_SetValue(&cv_usejoystick, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
 		// update the string too
-		CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
-
-		if (oldchoice != choice)
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
 		{
-			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
-				CV_SetValue(&cv_usejoystick, oldchoice);
+			CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
 
-			if (oldchoice ==
-				(atoi(cv_usejoystick.string) > I_NumJoys() ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
-				M_StartMessage("This joystick is used by another\n"
-				               "player. Reset the joystick\n"
-							   "for that player first.\n\n"
-							   "(Press a key)\n", NULL, MM_NOTHING);
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick, oldchoice);
+
+				if (oldchoice ==
+					(atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
+					M_StartMessage("This joystick is used by another\n"
+					               "player. Reset the joystick\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
 		}
 	}
 #else

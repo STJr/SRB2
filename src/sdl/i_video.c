@@ -930,12 +930,14 @@ void I_GetEvent(void)
 					// Was cv_usejoystick disabled in settings?
 					if (!strcmp(cv_usejoystick.string, "0") || !cv_usejoystick.value)
 						cv_usejoystick.value = 0;
-					else if (cv_usejoystick.value) // update the cvar ONLY if a device exists
+					else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						     && cv_usejoystick.value) // update the cvar ONLY if a device exists
 						CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
 
 					if (!strcmp(cv_usejoystick2.string, "0") || !cv_usejoystick2.value)
 						cv_usejoystick2.value = 0;
-					else if (cv_usejoystick2.value) // update the cvar ONLY if a device exists
+					else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+					         && cv_usejoystick2.value) // update the cvar ONLY if a device exists
 						CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
 
 					// Update all joysticks' init states
@@ -993,12 +995,14 @@ void I_GetEvent(void)
 				// Was cv_usejoystick disabled in settings?
 				if (!strcmp(cv_usejoystick.string, "0"))
 					cv_usejoystick.value = 0;
-				else if (cv_usejoystick.value) // update the cvar ONLY if a device exists
+				else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						 && cv_usejoystick.value) // update the cvar ONLY if a device exists
 					CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
 
 				if (!strcmp(cv_usejoystick2.string, "0"))
 					cv_usejoystick2.value = 0;
-				else if (cv_usejoystick2.value) // update the cvar ONLY if a device exists
+				else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
+						 && cv_usejoystick2.value) // update the cvar ONLY if a device exists
 					CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
 
 				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
