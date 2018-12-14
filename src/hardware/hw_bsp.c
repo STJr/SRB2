@@ -654,7 +654,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 		}
 		else
 		{
-			HWR_SubsecPoly(bspnum&(~NF_SUBSECTOR), poly);
+			HWR_SubsecPoly(bspnum & ~NF_SUBSECTOR, poly);
 
 			//Hurdler: implement a loading status
 #ifdef HWR_LOADING_SCREEN
@@ -666,7 +666,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 #endif
 		}
 		M_ClearBox(bbox);
-		poly = extrasubsectors[bspnum&~NF_SUBSECTOR].planepoly;
+		poly = extrasubsectors[bspnum & ~NF_SUBSECTOR].planepoly;
 
 		for (i = 0, pt = poly->pts; i < poly->numpts; i++,pt++)
 			M_AddToBox(bbox, FLOAT_TO_FIXED(pt->x), FLOAT_TO_FIXED(pt->y));
@@ -698,14 +698,13 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 	if (backpoly)
 	{
 		// Correct back bbox to include floor/ceiling convex polygon
-		WalkBSPNode(bsp->children[1], backpoly, &bsp->children[1],
-			bsp->bbox[1]);
+		WalkBSPNode(bsp->children[1], backpoly, &bsp->children[1], bsp->bbox[1]);
 
-		// enlarge bbox with seconde child
+		// enlarge bbox with second child
 		M_AddToBox(bbox, bsp->bbox[1][BOXLEFT  ],
-			bsp->bbox[1][BOXTOP   ]);
+		                 bsp->bbox[1][BOXTOP   ]);
 		M_AddToBox(bbox, bsp->bbox[1][BOXRIGHT ],
-			bsp->bbox[1][BOXBOTTOM]);
+		                 bsp->bbox[1][BOXBOTTOM]);
 	}
 }
 
@@ -785,9 +784,9 @@ static void SearchSegInBSP(INT32 bspnum,polyvertex_t *p,poly_t *poly)
 
 	if (bspnum & NF_SUBSECTOR)
 	{
-		if (bspnum!=-1)
+		if (bspnum != -1)
 		{
-			bspnum&=~NF_SUBSECTOR;
+			bspnum &= ~NF_SUBSECTOR;
 			q = extrasubsectors[bspnum].planepoly;
 			if (poly == q || !q)
 				return;
