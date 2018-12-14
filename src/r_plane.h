@@ -37,26 +37,13 @@ typedef struct visplane_s
 
 	// colormaps per sector
 	extracolormap_t *extra_colormap;
+	UINT16 padding;
 
-	// leave pads for [minx-1]/[maxx+1]
-
-	// words sucks .. should get rid of that.. but eats memory
-	// THIS IS UNSIGNED! VERY IMPORTANT!!
-	UINT16 pad1;
 	UINT16 top[MAXVIDWIDTH];
-	UINT16 pad2;
-	UINT16 pad3;
 	UINT16 bottom[MAXVIDWIDTH];
-	UINT16 pad4;
-
 	INT32 high, low; // R_PlaneBounds should set these.
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
-
-	// SoM: frontscale should be stored in the first seg of the subsector
-	// where the planes themselves are stored. I'm doing this now because
-	// the old way caused trouble with the drawseg array was re-sized.
-	INT32 scaleseg;
 
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES
@@ -75,17 +62,15 @@ extern INT16 *lastopening, *openings;
 extern size_t maxopenings;
 
 extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
-extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*8];
+extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*16];
 extern fixed_t cachedheight[MAXVIDHEIGHT];
 extern fixed_t cacheddistance[MAXVIDHEIGHT];
 extern fixed_t cachedxstep[MAXVIDHEIGHT];
 extern fixed_t cachedystep[MAXVIDHEIGHT];
 extern fixed_t basexscale, baseyscale;
 
-extern lighttable_t **planezlight;
-
 extern fixed_t *yslope;
-extern fixed_t distscale[MAXVIDWIDTH];
+extern lighttable_t **planezlight;
 
 void R_InitPlanes(void);
 void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
@@ -134,8 +119,8 @@ typedef struct planemgr_s
 #ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
 #endif
-} planemgr_t;
+} visffloor_t;
 
-extern planemgr_t ffloor[MAXFFLOORS];
+extern visffloor_t ffloor[MAXFFLOORS];
 extern INT32 numffloors;
 #endif
