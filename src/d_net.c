@@ -27,6 +27,7 @@
 #include "d_clisrv.h"
 #include "z_zone.h"
 #include "i_tcp.h"
+#include "d_main.h" // srb2home
 
 //
 // NETWORKING
@@ -1374,12 +1375,12 @@ boolean D_CheckNetGame(void)
 		{
 			k++;
 			sprintf(filename, "debug%d.txt", k);
-			debugfile = fopen(filename, "w");
+			debugfile = fopen(va("%s" PATHSEP "%s", srb2home, filename), "w");
 		}
 		if (debugfile)
-			CONS_Printf(M_GetText("debug output to: %s\n"), filename);
+			CONS_Printf(M_GetText("debug output to: %s\n"), va("%s" PATHSEP "%s", srb2home, filename));
 		else
-			CONS_Alert(CONS_WARNING, M_GetText("cannot debug output to file %s!\n"), filename);
+			CONS_Alert(CONS_WARNING, M_GetText("cannot debug output to file %s!\n"), va("%s" PATHSEP "%s", srb2home, filename));
 	}
 #endif
 #endif
