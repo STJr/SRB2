@@ -429,9 +429,9 @@ extern doomdata_t *netbuffer;
 
 extern consvar_t cv_playbackspeed;
 
-#define BASEPACKETSIZE ((size_t)&(((doomdata_t *)0)->u))
-#define FILETXHEADER ((size_t)((filetx_pak *)0)->data)
-#define BASESERVERTICSSIZE ((size_t)&(((doomdata_t *)0)->u.serverpak.cmds[0]))
+#define BASEPACKETSIZE      offsetof(doomdata_t, u)
+#define FILETXHEADER        offsetof(filetx_pak, data)
+#define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
 #define KICK_MSG_GO_AWAY     1
 #define KICK_MSG_CON_FAIL    2
