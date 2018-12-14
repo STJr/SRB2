@@ -6751,7 +6751,7 @@ static void M_ScreenshotOptions(INT32 choice)
 
 static void M_DrawJoystick(void)
 {
-	INT32 i;
+	INT32 i, compareval2, compareval;
 
 	M_DrawGenericMenu();
 
@@ -6760,8 +6760,23 @@ static void M_DrawJoystick(void)
 		M_DrawTextBox(OP_JoystickSetDef.x-8, OP_JoystickSetDef.y+LINEHEIGHT*i-12, 28, 1);
 		//M_DrawSaveLoadBorder(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i);
 
-		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
-			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
+#ifdef JOYSTICK_HOTPLUG
+		if (atoi(cv_usejoystick2.string) > I_NumJoys())
+			compareval2 = atoi(cv_usejoystick2.string);
+		else
+			compareval2 = cv_usejoystick2.value;
+
+		if (atoi(cv_usejoystick.string) > I_NumJoys())
+			compareval = atoi(cv_usejoystick.string);
+		else
+			compareval = cv_usejoystick.value;
+#else
+		compareval2 = cv_usejoystick2.value;
+		compareval = cv_usejoystick.value
+#endif
+
+		if ((setupcontrols_secondaryplayer && (i == compareval2))
+			|| (!setupcontrols_secondaryplayer && (i == compareval)))
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,V_GREENMAP,joystickInfo[i]);
 		else
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,0,joystickInfo[i]);
@@ -6836,7 +6851,7 @@ static void M_AssignJoystick(INT32 choice)
 
 	if (setupcontrols_secondaryplayer)
 	{
-		oldchoice = cv_usejoystick2.value;
+		oldchoice = atoi(cv_usejoystick2.string) > I_NumJoys() ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
 		CV_SetValue(&cv_usejoystick2, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
@@ -6848,7 +6863,8 @@ static void M_AssignJoystick(INT32 choice)
 			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
 				CV_SetValue(&cv_usejoystick2, oldchoice);
 
-			if (oldchoice == cv_usejoystick2.value)
+			if (oldchoice ==
+				(atoi(cv_usejoystick2.string) > I_NumJoys() ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
 				M_StartMessage("This joystick is used by another\n"
 				               "player. Reset the joystick\n"
 							   "for that player first.\n\n"
@@ -6857,7 +6873,7 @@ static void M_AssignJoystick(INT32 choice)
 	}
 	else
 	{
-		oldchoice = cv_usejoystick.value;
+		oldchoice = atoi(cv_usejoystick.string) > I_NumJoys() ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
 		CV_SetValue(&cv_usejoystick, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
@@ -6869,7 +6885,8 @@ static void M_AssignJoystick(INT32 choice)
 			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
 				CV_SetValue(&cv_usejoystick, oldchoice);
 
-			if (oldchoice == cv_usejoystick.value)
+			if (oldchoice ==
+				(atoi(cv_usejoystick.string) > I_NumJoys() ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
 				M_StartMessage("This joystick is used by another\n"
 				               "player. Reset the joystick\n"
 							   "for that player first.\n\n"
