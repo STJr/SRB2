@@ -217,29 +217,6 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	return &pt;
 }
 
-#if 0
-//Hurdler: it's not used anymore
-static boolean NearVertice (polyvertex_t *p1, polyvertex_t *p2)
-{
-#if 1
-	float diff;
-	diff = p2->x - p1->x;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-	diff = p2->y - p1->y;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-#else
-	if (p1->x != p2->x)
-		return false;
-	if (p1->y != p2->y)
-		return false;
-#endif
-	// p1 and p2 are considered the same vertex
-	return true;
-}
-#endif
-
 // if two vertice coords have a x and/or y difference
 // of less or equal than 1 FRACUNIT, they are considered the same
 // point. Note: hardcoded value, 1.0f could be anything else.
@@ -253,8 +230,7 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 	diff = p2->y - p1->y;
 	if (diff < -1.5f || diff > 1.5f)
 		return false;
-#else
-#if 0
+#elif 0
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
@@ -263,12 +239,9 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 #define  DIVLINE_VERTEX_DIFF   0.45f
 	float ep = DIVLINE_VERTEX_DIFF;
 	if (fabsf( p2->x - p1->x ) > ep )
-       return false;
-    if (fabsf( p2->y - p1->y ) > ep )
-       return false;
-    // p1 and p2 are considered the same vertex
-    return true;
-#endif
+		return false;
+	if (fabsf( p2->y - p1->y ) > ep )
+		return false;
 #endif
 	// p1 and p2 are considered the same vertex
 	return true;
