@@ -581,8 +581,6 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 // search for the segs source of this divline
 static inline void SearchDivline(node_t *bsp, fdivline_t *divline)
 {
-#if 0 // MAR - If you don't use the same partition line that the BSP uses, the front/back polys won't match the subsectors in the BSP!
-#endif
 	divline->x = FIXED_TO_FLOAT(bsp->x);
 	divline->y = FIXED_TO_FLOAT(bsp->y);
 	divline->dx = FIXED_TO_FLOAT(bsp->dx);
