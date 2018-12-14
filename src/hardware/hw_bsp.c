@@ -193,14 +193,14 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	v2dy = bsp->dy;
 
 	den = v2dy*v1dx - v2dx*v1dy;
-	if (den == 0)
+	if (den == 0.0)
 		return NULL;       // parallel
 
 	// first check the frac along the polygon segment,
 	// (do not accept hit with the extensions)
 	num = (v2x - v1x)*v2dy + (v1y - v2y)*v2dx;
 	frac = num / den;
-	if (frac < 0 || frac > 1)
+	if (frac < 0.0 || frac > 1.0)
 		return NULL;
 
 	// now get the frac along the BSP line
