@@ -288,7 +288,8 @@ OPTS += -DCOMPVERSION
 
 ifndef NONX86
 ifndef GCC29
-	M5=-march=pentium
+	#M5=-march=pentium
+	M5=-march=nocona -msse -mfpmath=sse
 	M4=-march=i486
 else
 	M5=-mpentium
