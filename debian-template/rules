@@ -67,9 +67,9 @@ SECTION = Games/Action
 EXENAME = ${PROGRAM_FILENAME}
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= ${PACKAGE_INSTALL_PATH}
+PKGDIR	= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 DBGDIR	= usr/lib/debug/$(PKGDIR)
-LINKDIR = ${PACKAGE_LINK_PATH}
+LINKDIR = $(shell echo "${PACKAGE_LINK_PATH}" | sed -e 's/^\///')
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
 PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
@@ -144,7 +144,7 @@ binary-arch:
 	# dh_installcron
 	# dh_installinfo
 	# dh_installman
-	dh_link $(echo $(BINDIR)/$(EXENAME) | sed -e 's/^\///') $(echo $(LINKDIR)/$(EXENAME) | sed -e 's/^\///')
+	dh_link $(BINDIR)/$(EXENAME) $(LINKDIR)/$(EXENAME)
 	dh_compress
 	dh_fixperms
 	# dh_perl
