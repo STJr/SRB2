@@ -116,9 +116,6 @@ static      INT32          firstEntry = 0;
 // Total mouse motion X/Y offsets
 static      INT32        mousemovex = 0, mousemovey = 0;
 
-// Keep track of joy unplugged count
-static      INT32        joyunplugcount = 0;
-
 // SDL vars
 static      SDL_Surface *vidSurface = NULL;
 static      SDL_Surface *bufSurface = NULL;
@@ -897,25 +894,21 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 				break;
 			case SDL_JOYDEVICEREMOVED:
+				if (JoyInfo.dev && !SDL_JoystickGetAttached(JoyInfo.dev))
 				{
-					// every time a device is unplugged, the "which" index increments by 1?
-					INT32 deviceIdx = evt.jdevice.which - joyunplugcount++;
-
-					CONS_Printf("Joy device %d removed%s\n", deviceIdx,
-						(JoyInfo.oldjoy-1 == deviceIdx) ? " was first joystick" :
-						(JoyInfo2.oldjoy-1 == deviceIdx) ? " was second joystick" : "");
-
-					// I_ShutdownJoystick doesn't shut down the subsystem
-					// It just fires neutral joy events to clean up the unplugged joy
-					if (JoyInfo.oldjoy-1 == deviceIdx)
-						I_ShutdownJoystick();
-					if (JoyInfo2.oldjoy-1 == deviceIdx)
-						I_ShutdownJoystick2();
-
-					// update the menu
-					if (currentMenu == &OP_JoystickSetDef)
-						M_SetupJoystickMenu(0);
+					CONS_Printf("Joy device %d removed, was first joystick\n", JoyInfo.oldjoy);
+					I_ShutdownJoystick();
 				}
+
+				if (JoyInfo2.dev && !SDL_JoystickGetAttached(JoyInfo2.dev))
+				{
+					CONS_Printf("Joy device %d removed, was second joystick\n", JoyInfo2.oldjoy);
+					I_ShutdownJoystick2();
+				}
+
+				// update the menu
+				if (currentMenu == &OP_JoystickSetDef)
+					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
 				I_Quit();
