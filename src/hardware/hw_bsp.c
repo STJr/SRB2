@@ -387,7 +387,7 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		*backpoly = HWR_AllocPoly(2 + nptback);
 	else
 		*backpoly = NULL;
-	if (nptfront)
+	if (nptfront > 0)
 		*frontpoly = HWR_AllocPoly(2 + nptfront);
 	else
 		*frontpoly = NULL;
