@@ -47,7 +47,10 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := ${ASSET_FILES_REQUIRED} ${ASSET_FILES_DOCS} ${ASSET_FILES_OPTIONAL}
+DATAFILES := ${ASSET_FILES_REQUIRED}
+DOCFILES := ${ASSET_FILES_DOCS}
+OPTIONALFILES := ${ASSET_FILES_OPTIONAL}
+GETOPTIONALFILES := ${ASSET_OPTIONAL_GET}
 
 DATADIR	:= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 RESOURCEDIR := .
@@ -71,6 +74,29 @@ build:
 			return 1; \
 		fi; \
 	done
+	# Do the same for DOCFILES, but don't error out if not found
+	for file in $(DOCFILES); do \
+		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
+		fi; \
+		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
+		fi; \
+	done
+	# Do the same for OPTIONALFILES if GETOPTIONALFILES == 1
+	if [[ "$(GETOPTIONALFILES)" == "1" ]]; then \
+		for file in $(OPTIONALFILES); do \
+			if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+				$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
+			fi; \
+			if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+				$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+				echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
+			fi; \
+		done; \
+	fi;
+
 
 binary-indep:
 	# Generate install folder file
