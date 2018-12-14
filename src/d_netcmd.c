@@ -3435,9 +3435,9 @@ static void Command_Version_f(void)
 
 	// OS
 	// Would be nice to use SDL_GetPlatform for this
-#if defined(_WIN32)
+#if defined (_WIN32) || defined (_WIN64)
 	CONS_Printf("Windows ");
-#elif defined(LINUX)
+#elif defined(__linux__)
 	CONS_Printf("Linux ");
 #elif defined(MACOSX)
 	CONS_Printf("macOS" );
