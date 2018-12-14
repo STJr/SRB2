@@ -6777,7 +6777,9 @@ void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-#ifdef JOYSTICK_HOTPLUG
+	// Hotplugging breaks if this block is run
+	// Because the cvar is set to 0, which disables controllers for that player
+#if 0 // #ifdef JOYSTICK_HOTPLUG
 	if (0 == cv_usejoystick.value)
 		CV_SetValue(&cv_usejoystick, 0);
 	if (0 == cv_usejoystick2.value)
@@ -6826,10 +6828,60 @@ static void M_Setup2PJoystickMenu(INT32 choice)
 
 static void M_AssignJoystick(INT32 choice)
 {
+#ifdef JOYSTICK_HOTPLUG
+	INT32 oldchoice;
+
+	if (choice > I_NumJoys())
+		return;
+
+	if (setupcontrols_secondaryplayer)
+	{
+		oldchoice = cv_usejoystick2.value;
+		CV_SetValue(&cv_usejoystick2, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
+
+		if (oldchoice != choice)
+		{
+			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
+				CV_SetValue(&cv_usejoystick2, oldchoice);
+
+			if (oldchoice == cv_usejoystick2.value)
+				M_StartMessage("This joystick is used by another\n"
+				               "player. Reset the joystick\n"
+							   "for that player first.\n\n"
+							   "(Press a key)\n", NULL, MM_NOTHING);
+		}
+	}
+	else
+	{
+		oldchoice = cv_usejoystick.value;
+		CV_SetValue(&cv_usejoystick, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
+
+		if (oldchoice != choice)
+		{
+			if (choice && oldchoice > I_NumJoys()) // if we did not select "None", we likely selected a used device
+				CV_SetValue(&cv_usejoystick, oldchoice);
+
+			if (oldchoice == cv_usejoystick.value)
+				M_StartMessage("This joystick is used by another\n"
+				               "player. Reset the joystick\n"
+							   "for that player first.\n\n"
+							   "(Press a key)\n", NULL, MM_NOTHING);
+		}
+	}
+#else
 	if (setupcontrols_secondaryplayer)
 		CV_SetValue(&cv_usejoystick2, choice);
 	else
 		CV_SetValue(&cv_usejoystick, choice);
+#endif
 }
 
 // =============
