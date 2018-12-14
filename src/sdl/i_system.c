@@ -1024,7 +1024,6 @@ static int joy_open(const char *fname)
 	SDL_Joystick *newdev = NULL;
 	int joyindex = atoi(fname);
 	int num_joy = 0;
-	int i;
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
@@ -1032,35 +1031,15 @@ static int joy_open(const char *fname)
 		return -1;
 	}
 
-	JoyReset(&JoyInfo);
-
 	if (joyindex <= 0)
-		return 0;
+		return -1;
 
 	num_joy = SDL_NumJoysticks();
 
-	if (num_joy == 0 || JoyInfo.oldjoy == joyindex)
+	if (num_joy == 0)
 	{
-//		I_OutputMsg("Unable to use that joystick #(%s), non-number\n",fname);
-		if (num_joy != 0)
-		{
-			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-
-			if (num_joy < joyindex)
-			{
-				CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
-				for (i = 0; i < num_joy; i++)
-					CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-				return 0;
-			}
-		}
-		else
-		{
-			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
-			return 0;
-		}
+		CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
+		return -1;
 	}
 
 	newdev = SDL_JoystickOpen(joyindex-1);
@@ -1081,6 +1060,7 @@ static int joy_open(const char *fname)
 			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo.dev))) // we failed, but already have a working device
 			return JoyInfo.axises;
 		// Else, we're changing devices, so send neutral joy events
+		CONS_Debug(DBG_GAMELOGIC, "Joystick1 device is changing; resetting events...\n");
 		I_ShutdownJoystick();
 	}
 
@@ -1317,7 +1297,6 @@ static int joy_open2(const char *fname)
 	SDL_Joystick *newdev = NULL;
 	int joyindex = atoi(fname);
 	int num_joy = 0;
-	int i;
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
@@ -1325,35 +1304,15 @@ static int joy_open2(const char *fname)
 		return -1;
 	}
 
-	JoyReset(&JoyInfo2);
-
 	if (joyindex <= 0)
-		return 0;
+		return -1;
 
 	num_joy = SDL_NumJoysticks();
 
-	if (num_joy == 0 || JoyInfo2.oldjoy == joyindex)
+	if (num_joy == 0)
 	{
-//		I_OutputMsg("Unable to use that joystick #(%s), non-number\n",fname);
-		if (num_joy != 0)
-		{
-			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
-			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-
-			if (num_joy < joyindex)
-			{
-				CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
-				for (i = 0; i < num_joy; i++)
-					CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
-				return 0;
-			}
-		}
-		else
-		{
-			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
-			return 0;
-		}
+		CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
+		return -1;
 	}
 
 	newdev = SDL_JoystickOpen(joyindex-1);
@@ -1374,6 +1333,7 @@ static int joy_open2(const char *fname)
 			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo2.dev))) // we failed, but already have a working device
 			return JoyInfo.axises;
 		// Else, we're changing devices, so send neutral joy events
+		CONS_Debug(DBG_GAMELOGIC, "Joystick2 device is changing; resetting events...\n");
 		I_ShutdownJoystick2();
 	}
 
@@ -1434,20 +1394,7 @@ void I_InitJoystick(void)
 
 	if (strcmp(cv_usejoystick.string, "0") && joy_open(cv_usejoystick.string) != -1)
 	{
-		// JoyInfo.oldjoy may already be filled because we attempted to hotplug
-		// a device and the device index has changed
-		// So in this case, get the new device index
-		//
-		// For now, it does not actually matter if the JoyInfo.oldjoy value is inaccurate. We don't use its
-		// exact value; we just use it like a boolean.
-		if (JoyInfo.oldjoy <= 0)
-			JoyInfo.oldjoy = atoi(cv_usejoystick.string);
-		else
-		{
-			CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index has changed: was %d, now %d\n",
-				JoyInfo.oldjoy, SDL_JoystickInstanceID(JoyInfo.dev) + 1);
-			JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
-		}
+		JoyInfo.oldjoy = atoi(cv_usejoystick.string);
 		joystick_started = 1;
 	}
 	else
@@ -1478,20 +1425,7 @@ void I_InitJoystick2(void)
 
 	if (strcmp(cv_usejoystick2.string, "0") && joy_open2(cv_usejoystick2.string) != -1)
 	{
-		// JoyInfo.oldjoy may already be filled because we attempted to hotplug
-		// a device and the device index has changed
-		// So in this case, get the new device index
-		//
-		// For now, it does not actually matter if the JoyInfo2.oldjoy value is inaccurate. We don't use its
-		// exact value; we just use it like a boolean.
-		if (JoyInfo2.oldjoy <= 0)
-			JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
-		else
-		{
-			CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index has changed: was %d, now %d\n",
-				JoyInfo2.oldjoy, SDL_JoystickInstanceID(JoyInfo2.dev) + 1);
-			JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
-		}
+		JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
 		joystick2_started = 1;
 	}
 	else
