@@ -1021,6 +1021,7 @@ void I_GetJoystickEvents(void)
 */
 static int joy_open(const char *fname)
 {
+	SDL_Joystick *newdev = NULL;
 	int joyindex = atoi(fname);
 	int num_joy = 0;
 	int i;
@@ -1062,7 +1063,28 @@ static int joy_open(const char *fname)
 		}
 	}
 
-	JoyInfo.dev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(joyindex-1);
+
+	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
+	// This indexing is SDL's responsibility and there's not much we can do about it.
+	//
+	// Example:
+	// 1. Plug Controller A   -> Index 0 opened
+	// 2. Plug Controller B   -> Index 1 opened
+	// 3. Unplug Controller A -> Index 0 closed, Index 1 active
+	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
+	// 5. Plug Controller B   -> Index 0 opened
+	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
+	if (JoyInfo.dev)
+	{
+		if (JoyInfo.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo.dev))) // we failed, but already have a working device
+			return JoyInfo.axises;
+		// Else, we're changing devices, so send neutral joy events
+		I_ShutdownJoystick();
+	}
+
+	JoyInfo.dev = newdev;
 
 	if (JoyInfo.dev == NULL)
 	{
@@ -1075,7 +1097,7 @@ static int joy_open(const char *fname)
 		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
 		if (JoyInfo.axises > JOYAXISSET*2)
 			JoyInfo.axises = JOYAXISSET*2;
-/*		if (joyaxes<2)
+	/*		if (joyaxes<2)
 		{
 			I_OutputMsg("Not enought axes?\n");
 			return 0;
@@ -1292,6 +1314,7 @@ void I_GetJoystick2Events(void)
 */
 static int joy_open2(const char *fname)
 {
+	SDL_Joystick *newdev = NULL;
 	int joyindex = atoi(fname);
 	int num_joy = 0;
 	int i;
@@ -1333,7 +1356,28 @@ static int joy_open2(const char *fname)
 		}
 	}
 
-	JoyInfo2.dev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(joyindex-1);
+
+	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
+	// This indexing is SDL's responsibility and there's not much we can do about it.
+	//
+	// Example:
+	// 1. Plug Controller A   -> Index 0 opened
+	// 2. Plug Controller B   -> Index 1 opened
+	// 3. Unplug Controller A -> Index 0 closed, Index 1 active
+	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
+	// 5. Plug Controller B   -> Index 0 opened
+	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
+	if (JoyInfo2.dev)
+	{
+		if (JoyInfo2.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo2.dev))) // we failed, but already have a working device
+			return JoyInfo.axises;
+		// Else, we're changing devices, so send neutral joy events
+		I_ShutdownJoystick2();
+	}
+
+	JoyInfo2.dev = newdev;
 
 	if (JoyInfo2.dev == NULL)
 	{
@@ -1390,7 +1434,16 @@ void I_InitJoystick(void)
 
 	if (strcmp(cv_usejoystick.string, "0") && joy_open(cv_usejoystick.string) != -1)
 	{
-		JoyInfo.oldjoy = atoi(cv_usejoystick.string);
+		// JoyInfo.oldjoy may already be filled because we attempted to hotplug
+		// a device and the device index has changed
+		// So in this case, get the new device index
+		//
+		// For now, it does not actually matter if the JoyInfo.oldjoy value is inaccurate. We don't use its
+		// exact value; we just use it like a boolean.
+		if (JoyInfo.oldjoy <= 0)
+			JoyInfo.oldjoy = atoi(cv_usejoystick.string);
+		else
+			JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
 		joystick_started = 1;
 	}
 	else
@@ -1421,7 +1474,16 @@ void I_InitJoystick2(void)
 
 	if (strcmp(cv_usejoystick2.string, "0") && joy_open2(cv_usejoystick2.string) != -1)
 	{
-		JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
+		// JoyInfo.oldjoy may already be filled because we attempted to hotplug
+		// a device and the device index has changed
+		// So in this case, get the new device index
+		//
+		// For now, it does not actually matter if the JoyInfo2.oldjoy value is inaccurate. We don't use its
+		// exact value; we just use it like a boolean.
+		if (JoyInfo2.oldjoy <= 0)
+			JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
+		else
+			JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
 		joystick2_started = 1;
 	}
 	else
