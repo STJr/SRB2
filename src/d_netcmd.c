@@ -46,6 +46,13 @@
 #include "m_cond.h"
 #include "m_anigif.h"
 
+#if defined(HAVE_SDL)
+#include "SDL.h"
+#if SDL_VERSION_ATLEAST(2,0,0)
+#include "sdl/sdlmain.h" // JOYSTICK_HOTPLUG
+#endif
+#endif
+
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
 #else
@@ -243,10 +250,19 @@ consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_S
 consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
 
 #if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) || defined(HAVE_SDL) || defined(_WINDOWS) //joystick 1 and 2
-consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
+// JOYSTICK_HOTPLUG is set by sdlmain.h (SDL2)
+// because SDL joystick indexes are unstable, and hotplugging can change a device's index.
+// So let's not save any index changes to the config
+consvar_t cv_usejoystick = {"use_joystick", "1", CV_CALL
+#ifndef JOYSTICK_HOTPLUG
+	|CV_SAVE
+#endif
+	, usejoystick_cons_t, I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_CALL
+#ifndef JOYSTICK_HOTPLUG
+	|CV_SAVE
+#endif
+	, usejoystick_cons_t, I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
 #elif defined (PSP) || defined (GP2X) || defined (_NDS) //only one joystick
 consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};

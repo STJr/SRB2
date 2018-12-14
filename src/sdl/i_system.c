@@ -1413,11 +1413,20 @@ void I_InitJoystick(void)
 		// the actual device index. So let's cheat a bit and find the device's current index.
 		JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
 		joystick_started = 1;
+
+		// If another joystick occupied this device, deactivate that joystick
+		if (JoyInfo2.dev == JoyInfo.dev)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Joystick2 was set to the same device; disabling...\n");
+			cv_usejoystick2.value = 0;
+			I_InitJoystick2();
+		}
 	}
 	else
 	{
 		if (JoyInfo.oldjoy)
 			I_ShutdownJoystick();
+		cv_usejoystick.value = 0;
 		joystick_started = 0;
 	}
 }
@@ -1445,11 +1454,20 @@ void I_InitJoystick2(void)
 		// the actual device index. So let's cheat a bit and find the device's current index.
 		JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
 		joystick2_started = 1;
+
+		// If another joystick occupied this device, deactivate that joystick
+		if (JoyInfo.dev == JoyInfo2.dev)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Joystick1 was set to the same device; disabling...\n");
+			cv_usejoystick.value = 0;
+			I_InitJoystick();
+		}
 	}
 	else
 	{
 		if (JoyInfo2.oldjoy)
 			I_ShutdownJoystick2();
+		cv_usejoystick2.value = 0;
 		joystick2_started = 0;
 	}
 

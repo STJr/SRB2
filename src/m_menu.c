@@ -62,6 +62,13 @@
 // And just some randomness for the exits.
 #include "m_random.h"
 
+#if defined(HAVE_SDL)
+#include "SDL.h"
+#if SDL_VERSION_ATLEAST(2,0,0)
+#include "sdl/sdlmain.h" // JOYSTICK_HOTPLUG
+#endif
+#endif
+
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
 int	snprintf(char *str, size_t n, const char *fmt, ...);
@@ -6770,12 +6777,34 @@ void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
+#ifdef JOYSTICK_HOTPLUG
+	if (0 == cv_usejoystick.value)
+		CV_SetValue(&cv_usejoystick, 0);
+	if (0 == cv_usejoystick2.value)
+		CV_SetValue(&cv_usejoystick2, 0);
+#endif
+
 	for (i = 1; i < 8; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
 		else
 			strcpy(joystickInfo[i], joyNA);
+
+#ifdef JOYSTICK_HOTPLUG
+		// We use cv_usejoystick.string as the USER-SET var
+		// and cv_usejoystick.value as the INTERNAL var
+		//
+		// In practice, if cv_usejoystick.string == 0, this overrides
+		// cv_usejoystick.value and always disables
+		//
+		// Update cv_usejoystick.string here so that the user can
+		// properly change this value.
+		if (i == cv_usejoystick.value)
+			CV_SetValue(&cv_usejoystick, i);
+		if (i == cv_usejoystick2.value)
+			CV_SetValue(&cv_usejoystick2, i);
+#endif
 	}
 
 	M_SetupNextMenu(&OP_JoystickSetDef);
