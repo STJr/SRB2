@@ -1019,10 +1019,9 @@ void I_GetJoystickEvents(void)
 
 
 */
-static int joy_open(const char *fname)
+static int joy_open(int joyindex)
 {
 	SDL_Joystick *newdev = NULL;
-	int joyindex = atoi(fname);
 	int num_joy = 0;
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
@@ -1292,10 +1291,9 @@ void I_GetJoystick2Events(void)
 
 
 */
-static int joy_open2(const char *fname)
+static int joy_open2(int joyindex)
 {
 	SDL_Joystick *newdev = NULL;
-	int joyindex = atoi(fname);
 	int num_joy = 0;
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
@@ -1392,16 +1390,18 @@ void I_InitJoystick(void)
 		}
 	}
 
-	if (strcmp(cv_usejoystick.string, "0") && joy_open(cv_usejoystick.string) != -1)
+	if (cv_usejoystick.value && joy_open(cv_usejoystick.value) != -1)
 	{
-		JoyInfo.oldjoy = atoi(cv_usejoystick.string);
+		// SDL's device indexes are unstable, so cv_usejoystick may not match
+		// the actual device index. So let's cheat a bit and use the instance ID.
+		// oldjoy's exact value doesn't matter, because we use it like a boolean
+		JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
 		joystick_started = 1;
 	}
 	else
 	{
 		if (JoyInfo.oldjoy)
 			I_ShutdownJoystick();
-		cv_usejoystick.value = 0;
 		joystick_started = 0;
 	}
 }
@@ -1423,16 +1423,18 @@ void I_InitJoystick2(void)
 		}
 	}
 
-	if (strcmp(cv_usejoystick2.string, "0") && joy_open2(cv_usejoystick2.string) != -1)
+	if (cv_usejoystick2.value && joy_open2(cv_usejoystick2.value) != -1)
 	{
-		JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
+		// SDL's device indexes are unstable, so cv_usejoystick2 may not match
+		// the actual device index. So let's cheat a bit and use the instance ID.
+		// oldjoy's exact value doesn't matter, because we use it like a boolean
+		JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
 		joystick2_started = 1;
 	}
 	else
 	{
 		if (JoyInfo2.oldjoy)
 			I_ShutdownJoystick2();
-		cv_usejoystick2.value = 0;
 		joystick2_started = 0;
 	}
 

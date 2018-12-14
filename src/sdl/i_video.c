@@ -885,7 +885,27 @@ void I_GetEvent(void)
 			case SDL_JOYDEVICEADDED:
 				CONS_Debug(DBG_GAMELOGIC, "Joystick device index %d added\n", evt.jdevice.which + 1);
 
-				// recount hotplugged joysticks
+				// Because SDL's device index is unstable, we're going to cheat here a bit:
+				// For the first joystick setting that is NOT active:
+				// Set cv_usejoystickX.value to the new device index (this does not change what is written to config.cfg)
+				// Set OTHERS' cv_usejoystickX.value to THEIR new device index, because it likely changed
+				if (!JoyInfo.dev || !SDL_JoystickGetAttached(JoyInfo.dev))
+				{
+					cv_usejoystick.value = evt.jdevice.which + 1;
+
+					if (JoyInfo2.dev)
+						cv_usejoystick2.value = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
+				}
+				else if (!JoyInfo2.dev || !SDL_JoystickGetAttached(JoyInfo2.dev))
+				{
+					cv_usejoystick2.value = evt.jdevice.which + 1;
+
+					if (JoyInfo.dev)
+						cv_usejoystick.value = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+				}
+
+				// If an active joystick's index has changed, these will just
+				// change the corresponding JoyInfo.oldjoy
 				I_InitJoystick();
 				I_InitJoystick2();
 
@@ -908,6 +928,13 @@ void I_GetEvent(void)
 					CONS_Debug(DBG_GAMELOGIC, "Joystick2 removed, device index: %d\n", JoyInfo2.oldjoy);
 					I_ShutdownJoystick2();
 				}
+
+				// Update the device indexes, because they likely changed
+				if (JoyInfo.dev)
+					JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+
+				if (JoyInfo2.dev)
+					JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
 
 				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
 				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
