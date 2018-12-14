@@ -1088,12 +1088,12 @@ static int joy_open(const char *fname)
 
 	if (JoyInfo.dev == NULL)
 	{
-		CONS_Printf(M_GetText("Couldn't open joystick: %s\n"), SDL_GetError());
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: Couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(JoyInfo.dev));
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: %s\n"), SDL_JoystickName(JoyInfo.dev));
 		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
 		if (JoyInfo.axises > JOYAXISSET*2)
 			JoyInfo.axises = JOYAXISSET*2;
@@ -1381,12 +1381,12 @@ static int joy_open2(const char *fname)
 
 	if (JoyInfo2.dev == NULL)
 	{
-		CONS_Printf(M_GetText("Couldn't open joystick2: %s\n"), SDL_GetError());
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
 		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
 		if (JoyInfo2.axises > JOYAXISSET*2)
 			JoyInfo2.axises = JOYAXISSET*2;
@@ -1443,7 +1443,11 @@ void I_InitJoystick(void)
 		if (JoyInfo.oldjoy <= 0)
 			JoyInfo.oldjoy = atoi(cv_usejoystick.string);
 		else
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index has changed: was %d, now %d\n",
+				JoyInfo.oldjoy, SDL_JoystickInstanceID(JoyInfo.dev) + 1);
 			JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+		}
 		joystick_started = 1;
 	}
 	else
@@ -1483,7 +1487,11 @@ void I_InitJoystick2(void)
 		if (JoyInfo2.oldjoy <= 0)
 			JoyInfo2.oldjoy = atoi(cv_usejoystick2.string);
 		else
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index has changed: was %d, now %d\n",
+				JoyInfo2.oldjoy, SDL_JoystickInstanceID(JoyInfo2.dev) + 1);
 			JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
+		}
 		joystick2_started = 1;
 	}
 	else

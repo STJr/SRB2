@@ -883,11 +883,14 @@ void I_GetEvent(void)
 				Impl_HandleJoystickButtonEvent(evt.jbutton, evt.type);
 				break;
 			case SDL_JOYDEVICEADDED:
-				CONS_Printf("Joy device %d added\n", evt.jdevice.which);
+				CONS_Debug(DBG_GAMELOGIC, "Joystick device index %d added\n", evt.jdevice.which + 1);
 
-				// recounts hotplugged joysticks
+				// recount hotplugged joysticks
 				I_InitJoystick();
 				I_InitJoystick2();
+
+				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
+				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
 
 				// update the menu
 				if (currentMenu == &OP_JoystickSetDef)
@@ -896,15 +899,18 @@ void I_GetEvent(void)
 			case SDL_JOYDEVICEREMOVED:
 				if (JoyInfo.dev && !SDL_JoystickGetAttached(JoyInfo.dev))
 				{
-					CONS_Printf("Joy device %d removed, was first joystick\n", JoyInfo.oldjoy);
+					CONS_Debug(DBG_GAMELOGIC, "Joystick1 removed, device index: %d\n", JoyInfo.oldjoy);
 					I_ShutdownJoystick();
 				}
 
 				if (JoyInfo2.dev && !SDL_JoystickGetAttached(JoyInfo2.dev))
 				{
-					CONS_Printf("Joy device %d removed, was second joystick\n", JoyInfo2.oldjoy);
+					CONS_Debug(DBG_GAMELOGIC, "Joystick2 removed, device index: %d\n", JoyInfo2.oldjoy);
 					I_ShutdownJoystick2();
 				}
+
+				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
+				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
 
 				// update the menu
 				if (currentMenu == &OP_JoystickSetDef)
