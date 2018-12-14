@@ -1400,7 +1400,7 @@ void I_InitJoystick(void)
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
-		CONS_Printf("Initing joy system\n");
+		CONS_Printf("I_InitJoystick()...\n");
 		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
@@ -1443,7 +1443,7 @@ void I_InitJoystick2(void)
 
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
-		CONS_Printf("Initing joy system\n");
+		CONS_Printf("I_InitJoystick2()...\n");
 		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == -1)
 		{
