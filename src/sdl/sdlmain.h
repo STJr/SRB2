@@ -71,6 +71,9 @@ extern SDLJoyInfo_t JoyInfo2;
 void I_ShutdownJoystick(void);
 void I_ShutdownJoystick2(void);
 
+// Cheat to get the device index for a joystick handle
+INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev);
+
 void I_GetConsoleEvents(void);
 
 void SDLforceUngrabMouse(void);

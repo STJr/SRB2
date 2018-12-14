@@ -828,6 +828,23 @@ void I_JoyScale2(void)
 	JoyInfo2.scale = Joystick2.bGamepadStyle?1:cv_joyscale2.value;
 }
 
+// Cheat to get the device index for a joystick handle
+INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev)
+{
+	INT32 i, count = SDL_NumJoysticks();
+
+	for (i = 0; dev && i < count; i++)
+	{
+		SDL_Joystick *test = SDL_JoystickOpen(i);
+		if (test && test == dev)
+			return i;
+		else if (JoyInfo.dev != test && JoyInfo2.dev != test)
+			SDL_JoystickClose(test);
+	}
+
+	return -1;
+}
+
 /**	\brief Joystick 1 buttons states
 */
 static UINT64 lastjoybuttons = 0;
@@ -1393,9 +1410,8 @@ void I_InitJoystick(void)
 	if (cv_usejoystick.value && joy_open(cv_usejoystick.value) != -1)
 	{
 		// SDL's device indexes are unstable, so cv_usejoystick may not match
-		// the actual device index. So let's cheat a bit and use the instance ID.
-		// oldjoy's exact value doesn't matter, because we use it like a boolean
-		JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+		// the actual device index. So let's cheat a bit and find the device's current index.
+		JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
 		joystick_started = 1;
 	}
 	else
@@ -1426,9 +1442,8 @@ void I_InitJoystick2(void)
 	if (cv_usejoystick2.value && joy_open2(cv_usejoystick2.value) != -1)
 	{
 		// SDL's device indexes are unstable, so cv_usejoystick2 may not match
-		// the actual device index. So let's cheat a bit and use the instance ID.
-		// oldjoy's exact value doesn't matter, because we use it like a boolean
-		JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
+		// the actual device index. So let's cheat a bit and find the device's current index.
+		JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
 		joystick2_started = 1;
 	}
 	else

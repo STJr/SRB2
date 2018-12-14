@@ -889,19 +889,33 @@ void I_GetEvent(void)
 				// For the first joystick setting that is NOT active:
 				// Set cv_usejoystickX.value to the new device index (this does not change what is written to config.cfg)
 				// Set OTHERS' cv_usejoystickX.value to THEIR new device index, because it likely changed
+				// If device doesn't exist, switch cv_usejoystick back to default value (.string)
+				// BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
 				if (!JoyInfo.dev || !SDL_JoystickGetAttached(JoyInfo.dev))
 				{
 					cv_usejoystick.value = evt.jdevice.which + 1;
 
 					if (JoyInfo2.dev)
-						cv_usejoystick2.value = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
+						cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+					else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy)
+						cv_usejoystick2.value = atoi(cv_usejoystick2.string);
+					else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy)
+						cv_usejoystick2.value = atoi(cv_usejoystick.string);
+					else // we tried...
+						cv_usejoystick2.value = 0;
 				}
 				else if (!JoyInfo2.dev || !SDL_JoystickGetAttached(JoyInfo2.dev))
 				{
 					cv_usejoystick2.value = evt.jdevice.which + 1;
 
 					if (JoyInfo.dev)
-						cv_usejoystick.value = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+						cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+					else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy)
+						cv_usejoystick.value = atoi(cv_usejoystick.string);
+					else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy)
+						cv_usejoystick.value = atoi(cv_usejoystick2.string);
+					else // we tried...
+						cv_usejoystick.value = 0;
 				}
 
 				// If an active joystick's index has changed, these will just
@@ -930,11 +944,25 @@ void I_GetEvent(void)
 				}
 
 				// Update the device indexes, because they likely changed
+				// If device doesn't exist, switch cv_usejoystick back to default value (.string)
+				// BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
 				if (JoyInfo.dev)
-					JoyInfo.oldjoy = SDL_JoystickInstanceID(JoyInfo.dev) + 1;
+					cv_usejoystick.value = JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
+				else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy)
+					cv_usejoystick.value = atoi(cv_usejoystick.string);
+				else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy)
+					cv_usejoystick.value = atoi(cv_usejoystick2.string);
+				else // we tried...
+					cv_usejoystick.value = 0;
 
 				if (JoyInfo2.dev)
-					JoyInfo2.oldjoy = SDL_JoystickInstanceID(JoyInfo2.dev) + 1;
+					cv_usejoystick2.value = JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
+				else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy)
+					cv_usejoystick2.value = atoi(cv_usejoystick2.string);
+				else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy)
+					cv_usejoystick2.value = atoi(cv_usejoystick.string);
+				else // we tried...
+					cv_usejoystick2.value = 0;
 
 				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
 				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
