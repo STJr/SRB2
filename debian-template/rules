@@ -144,7 +144,7 @@ binary-arch:
 	# dh_installcron
 	# dh_installinfo
 	# dh_installman
-	dh_link $(BINDIR)/$(EXENAME) $(LINKDIR)/$(EXENAME)
+	dh_link $(PKGDIR)/$(EXENAME) $(LINKDIR)/$(EXENAME)
 	dh_compress
 	dh_fixperms
 	# dh_perl
