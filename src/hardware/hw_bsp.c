@@ -294,57 +294,57 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		// start & end points
 		pv = fracdivline(bsp, &poly->pts[i], &poly->pts[j]);
 
-		if (pv)
+		if (pv == NULL)
+			continue;
+
+		if (ps < 0)
 		{
-			if (ps < 0)
+			// first point
+			ps = i;
+			vs = *pv;
+			fracs = bspfrac;
+		}
+		else
+		{
+			//the partition line traverse a junction between two segments
+			// or the two points are so close, they can be considered as one
+			// thus, don't accept, since split 2 must be another vertex
+			if (SameVertice(pv, &lastpv))
 			{
-				// first point
-				ps = i;
-				vs = *pv;
-				fracs = bspfrac;
-			}
-			else
-			{
-				//the partition line traverse a junction between two segments
-				// or the two points are so close, they can be considered as one
-				// thus, don't accept, since split 2 must be another vertex
-				if (SameVertice(pv, &lastpv))
+				if (pe < 0)
 				{
-					if (pe < 0)
-					{
-						ps = i;
-						psonline = 1;
-					}
-					else
-					{
-						pe = i;
-						peonline = 1;
-					}
+					ps = i;
+					psonline = 1;
 				}
 				else
 				{
-					if (pe < 0)
-					{
-						pe = i;
-						ve = *pv;
-						frace = bspfrac;
-					}
-					else
-					{
-					// a frac, not same vertice as last one
-					// we already got pt2 so pt 2 is not on the line,
-					// so we probably got back to the start point
-					// which is on the line
-						if (SameVertice(pv, &vs))
-							psonline = 1;
-						break;
-					}
+					pe = i;
+					peonline = 1;
 				}
 			}
-
-			// remember last point intercept to detect identical points
-			lastpv = *pv;
+			else
+			{
+				if (pe < 0)
+				{
+					pe = i;
+					ve = *pv;
+					frace = bspfrac;
+				}
+				else
+				{
+				// a frac, not same vertice as last one
+				// we already got pt2 so pt 2 is not on the line,
+				// so we probably got back to the start point
+				// which is on the line
+					if (SameVertice(pv, &vs))
+						psonline = 1;
+					break;
+				}
+			}
 		}
+
+		// remember last point intercept to detect identical points
+		lastpv = *pv;
 	}
 
 	// no split: the partition line is either parallel and
@@ -368,7 +368,7 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		return;
 	}
 
-	if (ps >= 0 && pe < 0)
+	if (pe < 0)
 	{
 		//I_Error("SplitPoly: only one point for split line (%d %d)", ps, pe);
 		*frontpoly = poly;
@@ -482,42 +482,42 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 
 			pv = fracdivline(&cutseg, &poly->pts[i], &poly->pts[j]);
 
-			if (pv)
+			if (pv == NULL)
+				continue;
+
+			if (ps < 0)
 			{
-				if (ps < 0)
+				ps = i;
+				vs = *pv;
+				fracs = bspfrac;
+			}
+			else
+			{
+				//frac 1 on previous segment,
+				//     0 on the next,
+				//the split line goes through one of the convex poly
+				// vertices, happens quite often since the convex
+				// poly is already adjacent to the subsector segs
+				// on most borders
+				if (SameVertice(pv, &vs))
+					continue;
+
+				if (fracs <= bspfrac)
 				{
+					nump = 2 + poly->numpts - (i-ps);
+					pe = ps;
 					ps = i;
-					vs = *pv;
-					fracs = bspfrac;
+					ve = *pv;
 				}
 				else
 				{
-					//frac 1 on previous segment,
-					//     0 on the next,
-					//the split line goes through one of the convex poly
-					// vertices, happens quite often since the convex
-					// poly is already adjacent to the subsector segs
-					// on most borders
-					if (SameVertice(pv, &vs))
-						continue;
-
-					if (fracs <= bspfrac)
-					{
-						nump = 2 + poly->numpts - (i-ps);
-						pe = ps;
-						ps = i;
-						ve = *pv;
-					}
-					else
-					{
-						nump = 2 + (i-ps);
-						pe = i;
-						ve = vs;
-						vs = *pv;
-					}
-					//found 2nd point
-					break;
+					nump = 2 + (i-ps);
+					pe = i;
+					ve = vs;
+					vs = *pv;
 				}
+				//found 2nd point
+				break;
 			}
 		}
 
