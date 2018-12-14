@@ -254,10 +254,21 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 	if (diff < -1.5f || diff > 1.5f)
 		return false;
 #else
+#if 0
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
 		return false;
+#else
+#define  DIVLINE_VERTEX_DIFF   0.45f
+	float ep = DIVLINE_VERTEX_DIFF;
+	if (fabsf( p2->x - p1->x ) > ep )
+       return false;
+    if (fabsf( p2->y - p1->y ) > ep )
+       return false;
+    // p1 and p2 are considered the same vertex
+    return true;
+#endif
 #endif
 	// p1 and p2 are considered the same vertex
 	return true;
