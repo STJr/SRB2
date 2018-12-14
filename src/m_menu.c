@@ -6835,12 +6835,12 @@ static void M_Setup2PJoystickMenu(INT32 choice)
 static void M_AssignJoystick(INT32 choice)
 {
 #ifdef JOYSTICK_HOTPLUG
-	INT32 oldchoice;
+	INT32 oldchoice, oldstringchoice;
 	INT32 numjoys = I_NumJoys();
 
 	if (setupcontrols_secondaryplayer)
 	{
-		oldchoice = atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
+		oldchoice = oldstringchoice = atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
 		CV_SetValue(&cv_usejoystick2, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
@@ -6856,10 +6856,10 @@ static void M_AssignJoystick(INT32 choice)
 
 			if (oldchoice != choice)
 			{
-				if (choice && oldchoice > numjoys) // if we did not select "None", we likely selected a used device
-					CV_SetValue(&cv_usejoystick2, oldchoice);
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick2, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
 
-				if (oldchoice ==
+				if (oldstringchoice ==
 					(atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
 					M_StartMessage("This joystick is used by another\n"
 					               "player. Reset the joystick\n"
@@ -6870,7 +6870,7 @@ static void M_AssignJoystick(INT32 choice)
 	}
 	else
 	{
-		oldchoice = atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
+		oldchoice = oldstringchoice = atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
 		CV_SetValue(&cv_usejoystick, choice);
 
 		// Just in case last-minute changes were made to cv_usejoystick.value,
@@ -6886,10 +6886,10 @@ static void M_AssignJoystick(INT32 choice)
 
 			if (oldchoice != choice)
 			{
-				if (choice && oldchoice > numjoys) // if we did not select "None", we likely selected a used device
-					CV_SetValue(&cv_usejoystick, oldchoice);
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
 
-				if (oldchoice ==
+				if (oldstringchoice ==
 					(atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
 					M_StartMessage("This joystick is used by another\n"
 					               "player. Reset the joystick\n"
