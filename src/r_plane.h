@@ -21,7 +21,6 @@
 //
 // Now what is a visplane, anyway?
 // Simple: kinda floor/ceiling polygon optimised for SRB2 rendering.
-// 7764 bytes! (for win32, anyway)
 //
 typedef struct visplane_s
 {
@@ -37,10 +36,10 @@ typedef struct visplane_s
 
 	// colormaps per sector
 	extracolormap_t *extra_colormap;
-	UINT16 padding;
 
-	UINT16 top[MAXVIDWIDTH];
-	UINT16 bottom[MAXVIDWIDTH];
+	// leave pads for [minx-1]/[maxx+1]
+	UINT16 padtopstart, top[MAXVIDWIDTH], padtopend;
+	UINT16 padbottomstart, bottom[MAXVIDWIDTH], padbottomend;
 	INT32 high, low; // R_PlaneBounds should set these.
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
