@@ -193,7 +193,7 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	v2dy = bsp->dy;
 
 	den = v2dy*v1dx - v2dx*v1dy;
-	if (den == 0)
+	if (fabsf(den) < 1.0E-36f)
 		return NULL;       // parallel
 
 	// first check the frac along the polygon segment,
@@ -253,10 +253,15 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 	diff = p2->y - p1->y;
 	if (diff < -1.5f || diff > 1.5f)
 		return false;
-#else
+#elif 0
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
+		return false;
+#else
+	if (fabsf( p2->x - p1->x ) > 1.0E-36f )
+		return false;
+	if (fabsf( p2->y - p1->y ) > 1.0E-36f )
 		return false;
 #endif
 	// p1 and p2 are considered the same vertex
