@@ -602,7 +602,7 @@ static void GLPerspective(GLdouble fovy, GLdouble aspect)
 	const GLdouble deltaZ = zFar - zNear;
 	GLdouble cotangent;
 
-	if ((fabsf(deltaZ) < 1.0E-36f) || fpclassify(sine) == FP_ZERO || fpclassify(aspect) == FP_ZERO)
+	if ((fabsf((float)deltaZ) < 1.0E-36f) || fpclassify(sine) == FP_ZERO || fpclassify(aspect) == FP_ZERO)
 	{
 		return;
 	}
