@@ -193,7 +193,7 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	v2dy = bsp->dy;
 
 	den = v2dy*v1dx - v2dx*v1dy;
-	if (fabsf(den) < 1.0E-36f)
+	if (fabsf((float)den) < 1.0E-36f)
 		return NULL;       // parallel
 
 	// first check the frac along the polygon segment,
