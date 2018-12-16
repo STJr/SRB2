@@ -87,8 +87,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(ClearMipMapCache);
 	GETFUNC(SetSpecialState);
 	GETFUNC(GetTextureUsed);
-	GETFUNC(DrawMD2);
-	GETFUNC(DrawMD2i);
+	GETFUNC(DrawModel);
 	GETFUNC(SetTransform);
 	GETFUNC(GetRenderVersion);
 #ifdef SHUFFLE

@@ -245,6 +245,12 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglColor4f glColor4f
 #define pglColor4fv glColor4fv
 #define pglTexCoord2f glTexCoord2f
+#define pglVertexPointer glVertexPointer
+#define pglNormalPointer glNormalPointer
+#define pglTexCoordPointer glTexCoordPointer
+#define pglDrawArrays glDrawArrays
+#define pglEnableClientState glEnableClientState
+#define pglDisableClientState pglDisableClientState
 
 /* Lighting */
 #define pglShadeModel glShadeModel
@@ -357,6 +363,18 @@ typedef void (APIENTRY * PFNglColor4fv) (const GLfloat *v);
 static PFNglColor4fv pglColor4fv;
 typedef void (APIENTRY * PFNglTexCoord2f) (GLfloat s, GLfloat t);
 static PFNglTexCoord2f pglTexCoord2f;
+typedef void (APIENTRY * PFNglVertexPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+static PFNglVertexPointer pglVertexPointer;
+typedef void (APIENTRY * PFNglNormalPointer) (GLenum type, GLsizei stride, const GLvoid *pointer);
+static PFNglNormalPointer pglNormalPointer;
+typedef void (APIENTRY * PFNglTexCoordPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+static PFNglTexCoordPointer pglTexCoordPointer;
+typedef void (APIENTRY * PFNglDrawArrays) (GLenum mode, GLint first, GLsizei count);
+static PFNglDrawArrays pglDrawArrays;
+typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
+static PFNglEnableClientState pglEnableClientState;
+typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
+static PFNglDisableClientState pglDisableClientState;
 
 /* Lighting */
 typedef void (APIENTRY * PFNglShadeModel) (GLenum mode);
@@ -495,6 +513,12 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglColor4f , glColor4f)
 	GETOPENGLFUNC(pglColor4fv , glColor4fv)
 	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
+	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
+	GETOPENGLFUNC(pglNormalPointer, glNormalPointer)
+	GETOPENGLFUNC(pglTexCoordPointer, glTexCoordPointer)
+	GETOPENGLFUNC(pglDrawArrays, glDrawArrays)
+	GETOPENGLFUNC(pglEnableClientState, glEnableClientState)
+	GETOPENGLFUNC(pglDisableClientState, glDisableClientState)
 
 	GETOPENGLFUNC(pglShadeModel , glShadeModel)
 	GETOPENGLFUNC(pglLightfv, glLightfv)
@@ -1878,14 +1902,15 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 	}
 }
 
-static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
-{
+static void DrawModelEx(model_t *model, mdlframe_t *frame, INT32 duration, INT32 tics, mdlframe_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+{	
 	INT32     val, count, pindex;
 	GLfloat s, t;
 	GLfloat ambient[4];
 	GLfloat diffuse[4];
 
 	float pol = 0.0f;
+	scale *= 0.5f;
 	float scalex = scale, scaley = scale, scalez = scale;
 
 	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
@@ -1963,68 +1988,107 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration,
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 	pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
 
-	val = *gl_cmd_buffer++;
+	pglScalef(scalex, scaley, scalez);
 
-	while (val != 0)
+	mesh_t *mesh = &model->meshes[0];
+
+	if (!nextframe || pol == 0.0f)
 	{
-		if (val < 0)
+		// Zoom! Take advantage of just shoving the entire arrays to the GPU.
+		pglEnableClientState(GL_VERTEX_ARRAY);
+		pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		pglEnableClientState(GL_NORMAL_ARRAY);
+		pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
+		pglNormalPointer(GL_FLOAT, 0, frame->normals);
+		pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+		pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
+		pglDisableClientState(GL_NORMAL_ARRAY);
+		pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		/*
+		pglBegin(GL_TRIANGLES);
+
+		int i = 0;
+		float *uvPtr = mesh->uvs;
+		float *frameVert = frame->vertices;
+		float *frameNormal = frame->normals;
+		for (i = 0; i < mesh->numTriangles; i++)
 		{
-			pglBegin(GL_TRIANGLE_FAN);
-			count = -val;
+			float uvx = *uvPtr++;
+			float uvy = *uvPtr++;
+
+			// Interpolate
+			float px1 = *frameVert++;
+			float py1 = *frameVert++;
+			float pz1 = *frameVert++;
+			float nx1 = *frameNormal++;
+			float ny1 = *frameNormal++;
+			float nz1 = *frameNormal++;
+
+			pglTexCoord2f(uvx, uvy);
+			pglNormal3f(nx1, ny1, nz1);
+			pglVertex3f(px1, py1, pz1);
 		}
-		else
+
+		pglEnd();*/
+	}
+	else
+	{
+		// Dangit, I soooo want to do this in a GLSL shader...
+		pglBegin(GL_TRIANGLES);
+
+		int i = 0;
+		float *uvPtr = mesh->uvs;
+		float *frameVert = frame->vertices;
+		float *frameNormal = frame->normals;
+		float *nextFrameVert = nextframe->vertices;
+		float *nextFrameNormal = frame->normals;
+		for (i = 0; i < mesh->numTriangles; i++)
 		{
-			pglBegin(GL_TRIANGLE_STRIP);
-			count = val;
-		}
+			float uvx = *uvPtr++;
+			float uvy = *uvPtr++;
 
-		while (count--)
-		{
-			s = *(float *) gl_cmd_buffer++;
-			t = *(float *) gl_cmd_buffer++;
-			pindex = *gl_cmd_buffer++;
+			// Interpolate
+			float px1 = *frameVert++;
+			float px2 = *nextFrameVert++;
+			float py1 = *frameVert++;
+			float py2 = *nextFrameVert++;
+			float pz1 = *frameVert++;
+			float pz2 = *nextFrameVert++;
+			float nx1 = *frameNormal++;
+			float nx2 = *nextFrameNormal++;
+			float ny1 = *frameNormal++;
+			float ny2 = *nextFrameNormal++;
+			float nz1 = *frameNormal++;
+			float nz2 = *nextFrameNormal++;
 
-			pglTexCoord2f(s, t);
-
-			if (!nextframe || pol == 0.0f)
-			{
-				pglNormal3f(frame->vertices[pindex].normal[0],
-				            frame->vertices[pindex].normal[1],
-				            frame->vertices[pindex].normal[2]);
-
-				pglVertex3f(frame->vertices[pindex].vertex[0]*scalex/2.0f,
-				            frame->vertices[pindex].vertex[1]*scaley/2.0f,
-				            frame->vertices[pindex].vertex[2]*scalez/2.0f);
-			}
-			else
-			{
-				// Interpolate
-				float px1 = frame->vertices[pindex].vertex[0]*scalex/2.0f;
-				float px2 = nextframe->vertices[pindex].vertex[0]*scalex/2.0f;
-				float py1 = frame->vertices[pindex].vertex[1]*scaley/2.0f;
-				float py2 = nextframe->vertices[pindex].vertex[1]*scaley/2.0f;
-				float pz1 = frame->vertices[pindex].vertex[2]*scalez/2.0f;
-				float pz2 = nextframe->vertices[pindex].vertex[2]*scalez/2.0f;
-				float nx1 = frame->vertices[pindex].normal[0];
-				float nx2 = nextframe->vertices[pindex].normal[0];
-				float ny1 = frame->vertices[pindex].normal[1];
-				float ny2 = nextframe->vertices[pindex].normal[1];
-				float nz1 = frame->vertices[pindex].normal[2];
-				float nz2 = nextframe->vertices[pindex].normal[2];
-
-				pglNormal3f((nx1 + pol * (nx2 - nx1)),
-				            (ny1 + pol * (ny2 - ny1)),
-				            (nz1 + pol * (nz2 - nz1)));
-				pglVertex3f((px1 + pol * (px2 - px1)),
-				            (py1 + pol * (py2 - py1)),
-				            (pz1 + pol * (pz2 - pz1)));
-			}
+			pglTexCoord2f(uvx, uvy);
+			pglNormal3f((nx1 + pol * (nx2 - nx1)),
+				(ny1 + pol * (ny2 - ny1)),
+				(nz1 + pol * (nz2 - nz1)));
+			pglVertex3f((px1 + pol * (px2 - px1)),
+				(py1 + pol * (py2 - py1)),
+				(pz1 + pol * (pz2 - pz1)));
 		}
 
 		pglEnd();
-
-		val = *gl_cmd_buffer++;
 	}
+
+/*	if (lightType != LIGHT_NONE)
+	{
+		glVertexAttribPointer(program->slots[Shaders::A_NORMAL_SLOT], 3, BGL_FLOAT, BGL_FALSE, 0, frame->normals);
+		//					if (normalmapped)
+		//						bglVertexAttribPointer(program->slots[Shaders::A_TANGENT_SLOT], 3, BGL_FLOAT, BGL_FALSE, 0, frame->tangents);
+	}
+
+	if (frame->colors)
+		glVertexAttribPointer(program->slots[Shaders::A_COLOR_SLOT], 4, GL_UNSIGNED_BYTE, BGL_TRUE, 0, frame->colors);
+	else
+	{
+		SetGlobalWhiteColorArray(mesh->numTriangles * 3);
+		glVertexAttribPointer(program->slots[Shaders::A_COLOR_SLOT], 3, BGL_UNSIGNED_BYTE, BGL_TRUE, 0, globalWhiteColorArray);
+	}
+	*/
 	pglPopMatrix(); // should be the same as glLoadIdentity
 	if (color)
 		pglDisable(GL_LIGHTING);
@@ -2035,16 +2099,10 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration,
 // -----------------+
 // HWRAPI DrawMD2   : Draw an MD2 model with glcommands
 // -----------------+
-EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+EXPORT void HWRAPI(DrawModel) (model_t *model, mdlframe_t *frame, INT32 duration, INT32 tics, mdlframe_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
-	DrawMD2Ex(gl_cmd_buffer, frame, duration, tics,  nextframe, pos, scale, flipped, color);
+	DrawModelEx(model, frame, duration, tics,  nextframe, pos, scale, flipped, color);
 }
-
-EXPORT void HWRAPI(DrawMD2) (INT32 *gl_cmd_buffer, md2_frame_t *frame, FTransform *pos, float scale)
-{
-	DrawMD2Ex(gl_cmd_buffer, frame, 0, 0,  NULL, pos, scale, false, NULL);
-}
-
 
 // -----------------+
 // SetTransform     :
