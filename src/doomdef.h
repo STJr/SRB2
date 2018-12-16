@@ -161,6 +161,9 @@ extern FILE *logstream;
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
 
+// Use .kart extension addons
+//#define USE_KART
+
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
 // to the latest version, fill these out.  Otherwise, just comment out UPDATE_ALERT and leave
