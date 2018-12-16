@@ -11,9 +11,9 @@
 # ASSET_BASE_PATH = http://example.com/path         (base URL to single asset downloads)
 # ASSET_FILES_REQUIRED = file1.ext file2.ext        (required files in the build)
 # ASSET_FILES_DOCS = README.txt LICENSE.txt         (documentation files; will not error out if not found, but will always be downloaded)
-# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_OPTIONAL_GET=1
+# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_FILES_OPTIONAL_GET=1
 #                                                    note that these will NOT be copied to cache, and will always be downloaded.)
-# ASSET_OPTIONAL_GET = 1                            (default is to NOT download optional files)
+# ASSET_FILES_OPTIONAL_GET = 1                            (default is to NOT download optional files)
 
 # Set variables for assets
 : ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
@@ -21,7 +21,7 @@
 : ${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
 : ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
 : ${ASSET_FILES_OPTIONAL:=music.dta}
-: ${ASSET_OPTIONAL_GET:=0}
+: ${ASSET_FILES_OPTIONAL_GET:=0}
 
 # Package Parameters
 #
@@ -63,7 +63,7 @@ export ASSET_BASE_PATH="${ASSET_BASE_PATH}"
 export ASSET_FILES_REQUIRED="${ASSET_FILES_REQUIRED}"
 export ASSET_FILES_DOCS="${ASSET_FILES_DOCS}"
 export ASSET_FILES_OPTIONAL="${ASSET_FILES_OPTIONAL}"
-export ASSET_OPTIONAL_GET="${ASSET_OPTIONAL_GET}"
+export ASSET_FILES_OPTIONAL_GET="${ASSET_FILES_OPTIONAL_GET}"
 
 export PACKAGE_NAME="${PACKAGE_NAME}"
 export PACKAGE_VERSION="${PACKAGE_VERSION}"

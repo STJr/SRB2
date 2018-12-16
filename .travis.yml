@@ -332,7 +332,7 @@ before_script:
     done;
 
   # Get optional files too
-  - if [[ "$ASSET_OPTIONAL_GET" == "1" ]]; then
+  - if [[ "$ASSET_FILES_OPTIONAL_GET" == "1" ]]; then
       for f in $ASSET_FILES_OPTIONAL; do
         if [ -f "$f" ]; then
           echo "$f cache date -- $($STATCMD $f)";
