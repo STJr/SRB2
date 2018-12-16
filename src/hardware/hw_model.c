@@ -320,7 +320,7 @@ model_t *LoadModel(const char *filename, int ztag)
 		material->shininess = 25.0f;
 	}
 
-	CONS_Printf("Generating VBOs for %s\n", filename);
+//	CONS_Printf("Generating VBOs for %s\n", filename);
 	for (i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *mesh = &model->meshes[i];
