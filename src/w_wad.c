@@ -1693,10 +1693,8 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"LTFNT", 5}, // Level title font changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
-		{"MKFNT", 5}, // Kart font changes
 
 		{"M_", 2}, // Menu changes
-		{"K_", 2}, // Kart graphic changes
 #endif
 		{NULL, 0},
 	};
