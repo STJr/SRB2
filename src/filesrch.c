@@ -552,7 +552,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 
 char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) plus 3 (null terminator, stop, and length including previous two)
 	"\5.txt", "\5.cfg", // exec
-	"\5.wad", "\6.kart", /*"\5.pk3",*/ "\5.soc", "\5.lua"}; // addfile
+	"\5.wad", "\6.kart", "\5.pk3", "\5.soc", "\5.lua"}; // addfile
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 

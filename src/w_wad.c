@@ -1256,7 +1256,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"PAL", 3}, // Palette changes
 		{"CLM", 3}, // Colormap changes
 		{"TRANS", 5}, // Translucency map
-
+#if 0
 		{"LTFNT", 5}, // Level title font changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
@@ -1264,7 +1264,7 @@ int W_VerifyNMUSlumps(const char *filename)
 
 		{"M_", 2}, // Menu changes
 		{"K_", 2}, // Kart graphic changes
-
+#endif
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);
