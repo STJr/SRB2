@@ -13,7 +13,7 @@ if [[ "$__DPL_FTP_ACTIVE" == "1" ]] || [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
 
 		# Build source packages first, since they zip up the entire source folder,
 		# binaries and all
-		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
+		if [[ "$_DPL_PACKAGE_MAIN" == "1" ]]; then
 			. ../debian_template.sh main;
 			OLDPWD=$PWD; # [repo]/build
 			cd ..; # repo root
@@ -44,7 +44,7 @@ EOD
 		fi;
 
 		# Also an asset package
-		if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+		if [[ "$_DPL_PACKAGE_ASSET" == "1" ]]; then
 			. ../debian_template.sh asset;
 			OLDPWD=$PWD; # [repo]/build
 			cd ../assets;
@@ -86,7 +86,7 @@ EOD
 			echo "$DPL_PGP_KEY_PASSPHRASE" > phrase.txt;
 			gpg --import key.asc;
 
-			if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
+			if [[ "$_DPL_PACKAGE_MAIN" == "1" ]]; then
 				echo "Signing main package(s)";
 
 				PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};
@@ -122,7 +122,7 @@ EOD
 				cd $OLDPWD;
 			fi;
 
-			if [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+			if [[ "$_DPL_PACKAGE_ASSET" == "1" ]]; then
 				echo "Signing asset package(s)";
 
 				PACKAGEFILENAME=${PACKAGE_NAME}-data_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};

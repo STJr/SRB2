@@ -15,6 +15,10 @@
 #                                                    note that these will NOT be copied to cache, and will always be downloaded.)
 # ASSET_FILES_OPTIONAL_GET = 1                            (default is to NOT download optional files)
 
+# Job Parameters
+: ${_DPL_PACKAGE_MAIN:=1}
+: ${_DPL_PACKAGE_ASSET}
+
 # Set variables for assets
 : ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
 : ${ASSET_BASE_PATH:=http://alam.srb2.org/SRB2/2.1.21-Final/Resources}
@@ -24,9 +28,6 @@
 : ${ASSET_FILES_OPTIONAL_GET:=0}
 
 # Package Parameters
-#
-# PACKAGE_ASSET_BUILD = 1 (build the data package, default is to skip)
-
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.1.21}
 : ${PACKAGE_SUBVERSION:=~14.04trusty} # configured in debian_template.sh

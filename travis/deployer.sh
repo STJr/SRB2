@@ -58,7 +58,7 @@ if [[ "$DPL_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
 
                     # Are we building for Linux?
                     if [[ "$_DPL_PACKAGE_BINARY" == "1" ]] || [[ "$_DPL_PACKAGE_SOURCE" == "1" ]]; then
-                        if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]] || [[ "$PACKAGE_ASSET_BUILD" == "1" ]]; then
+                        if [[ "$_DPL_PACKAGE_MAIN" == "1" ]] || [[ "$_DPL_PACKAGE_ASSET" == "1" ]]; then
                             if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
                                 __DPL_DEBIAN_ACTIVE=1;
                             fi;
