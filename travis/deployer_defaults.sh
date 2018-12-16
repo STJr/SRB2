@@ -20,8 +20,8 @@
 : ${_DPL_FTP_TARGET}            # Deploy to FTP
 : ${_DPL_DPUT_TARGET}           # Deploy to DPUT
 : ${_DPL_PACKAGE_SOURCE}        # Build packages into a Source distribution. Linux only.
-: ${_DPL_PACKAGE_BINARY}        # Build packages into a Binary distribution. Linux only.
-: ${_DPL_PACKAGE_MAIN:=1}       # Build main installation package
+: ${_DPL_PACKAGE_BINARY}        # Build packages into a Binary distribution.
+: ${_DPL_PACKAGE_MAIN:=1}       # Build main installation package. Linux only; OS X assumes this.
 : ${_DPL_PACKAGE_ASSET}         # Build asset installation package. Linux only.
 
 # Asset File Parameters
