@@ -2185,8 +2185,8 @@ static luaL_Reg lib[] = {
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
 
 	// r_data
-	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName),
-	{"R_TextureNumForName",lib_rTextureNumForName),
+	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
+	{"R_TextureNumForName",lib_rTextureNumForName},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},
