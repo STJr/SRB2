@@ -1012,9 +1012,8 @@ void V_DrawFadeConsBack(INT32 plines)
 
 // Gets string colormap, used for 0x80 color codes
 //
-static const UINT8 *V_GetStringColormap(INT32 colorflags)
+UINT8 *V_GetStringColormap(INT32 colorflags)
 {
-#if 0 // perfect
 	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
 	{
 	case 1: // 0x81, purple
@@ -1034,12 +1033,6 @@ static const UINT8 *V_GetStringColormap(INT32 colorflags)
 	default: // reset
 		return NULL;
 	}
-#else // optimised
-	colorflags = ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT);
-	if (!colorflags || colorflags > 15) // INT32 is signed, but V_CHARCOLORMASK is a very restrictive mask.
-		return NULL;
-	return (purplemap+((colorflags-1)<<8));
-#endif
 }
 
 // Writes a single character (draw WHITE if bit 7 set)

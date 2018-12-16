@@ -853,11 +853,6 @@ static void IdentifyVersion(void)
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-#if defined (DC) && 0
-		const char *musicfile = "music_dc.dta";
-#else
-		const char *musicfile = "music.dta";
-#endif
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
@@ -868,7 +863,11 @@ static void IdentifyVersion(void)
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
 
+#if defined (DC) && 0
+		MUSICTEST("music_dc.dta")
+#else
 		MUSICTEST("music.dta")
+#endif
 	}
 #endif
 }

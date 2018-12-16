@@ -1364,6 +1364,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                         NULL, "Server name",                 &cv_servername,         50},
+#endif
 
 	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",          &cv_inttime,            80},
 	{IT_STRING | IT_CVAR,    NULL, "Advance to next map",         &cv_advancemap,         90},
@@ -1467,6 +1468,9 @@ menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPa
 menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
 menu_t MISC_ChangeLevelDef = MAPICONMENUSTYLE(NULL, MISC_ChangeLevelMenu, &MPauseDef);
 menu_t MISC_HelpDef = IMAGEDEF(MISC_HelpMenu);
+
+static INT32 highlightflags, recommendedflags, warningflags;
+
 
 // Sky Room
 menu_t SR_PandoraDef =
@@ -3925,13 +3929,18 @@ static void M_AddonsOptions(INT32 choice)
 }
 
 #define LOCATIONSTRING1 "Visit \x83SRB2.ORG/MODS\x80 to get & make add-ons!"
-#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/MODS\x80 to get & make add-ons!"
+//#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/MODS\x80 to get & make add-ons!"
 
 static void M_Addons(INT32 choice)
 {
 	const char *pathname = ".";
 
 	(void)choice;
+
+	// If M_GetGameypeColor() is ever ported from Kart, then remove this.
+	highlightflags = V_YELLOWMAP;
+	recommendedflags = V_GREENMAP;
+	warningflags = V_REDMAP;
 
 #if 1
 	if (cv_addons_option.value == 0)
@@ -3958,7 +3967,8 @@ static void M_Addons(INT32 choice)
 
 	if (!preparefilemenu(false))
 	{
-		M_StartMessage(va("No files/folders found.\n\n%s\n\n(Press a key)\n", (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1)),NULL,MM_NOTHING);
+		M_StartMessage(va("No files/folders found.\n\n%s\n\n(Press a key)\n",LOCATIONSTRING1),NULL,MM_NOTHING);
+			// (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1))
 		return;
 	}
 	else
@@ -3978,7 +3988,7 @@ static void M_Addons(INT32 choice)
 	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
 	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
 	addonsp[EXT_KART] = W_CachePatchName("M_FKART", PU_STATIC);
-	//addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_STATIC);
+	addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_STATIC);
 	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
 	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
 	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_STATIC);
@@ -4131,7 +4141,8 @@ static void M_DrawAddons(void)
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
 	else
-		V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1));
+		V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, LOCATIONSTRING1);
+			// (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1)
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -4424,7 +4435,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_SOC:
 						case EXT_WAD:
 						case EXT_KART:
-						//case EXT_PK3:
+						case EXT_PK3:
 							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							break;
 						default:

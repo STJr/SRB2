@@ -150,6 +150,8 @@ void V_DrawFadeConsBack(INT32 plines);
 // draw a single character
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);
 
+UINT8 *V_GetStringColormap(INT32 colorflags);
+
 void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string);
 
 // wordwrap a string using the hu_font

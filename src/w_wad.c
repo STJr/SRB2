@@ -649,7 +649,6 @@ UINT16 W_InitFile(const char *filename)
 	restype_t type;
 	UINT16 numlumps = 0;
 	size_t i;
-	INT32 compressed = 0;
 	size_t packetsize;
 	UINT8 md5sum[16];
 	boolean important;
