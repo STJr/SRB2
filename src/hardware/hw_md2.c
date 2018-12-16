@@ -1053,7 +1053,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			}
 		}
 
-		//Hurdler: it seems there is still a small problem with mobj angle
+		// Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
