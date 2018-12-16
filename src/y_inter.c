@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2016 by Sonic Team Junior.
+// Copyright (C) 2004-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -57,7 +57,7 @@ typedef union
 {
 	struct
 	{
-		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[21]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
@@ -77,7 +77,7 @@ typedef union
 
 	struct
 	{
-		char passed1[SKINNAMESIZE+1]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
@@ -159,6 +159,20 @@ static void Y_CalculateMatchWinners(void);
 static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
+// Stuff copy+pasted from st_stuff.c
+static INT32 SCX(INT32 x)
+{
+	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
+}
+static INT32 SCY(INT32 z)
+{
+	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
+}
+
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, p)
+
 //
 // Y_IntermissionDrawer
 //
@@ -204,28 +218,31 @@ void Y_IntermissionDrawer(void)
 		INT32 bonusy;
 
 		// draw score
-		V_DrawScaledPatch(hudinfo[HUD_SCORE].x, hudinfo[HUD_SCORE].y, V_SNAPTOLEFT, sboscore);
-		V_DrawTallNum(hudinfo[HUD_SCORENUM].x, hudinfo[HUD_SCORENUM].y, V_SNAPTOLEFT, data.coop.score);
+		ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+		ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
 
 		// draw time
-		V_DrawScaledPatch(hudinfo[HUD_TIME].x, hudinfo[HUD_TIME].y, V_SNAPTOLEFT, sbotime);
+		ST_DrawPatchFromHud(HUD_TIME, sbotime);
 		if (cv_timetic.value == 1)
-			V_DrawTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT, data.coop.tics);
+			ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
 		else
 		{
+			INT32 seconds, minutes, tictrn;
+
+			seconds = G_TicsToSeconds(data.coop.tics);
+			minutes = G_TicsToMinutes(data.coop.tics, true);
+			tictrn  = G_TicsToCentiseconds(data.coop.tics);
+
+			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
+			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
+			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
+
 			// we should show centiseconds on the intermission screen too, if the conditions are right.
 			if (modeattacking || cv_timetic.value == 2)
 			{
-				V_DrawPaddedTallNum(hudinfo[HUD_TICS].x, hudinfo[HUD_TICS].y, V_SNAPTOLEFT,
-					G_TicsToCentiseconds(data.coop.tics), 2);
-				V_DrawScaledPatch(hudinfo[HUD_TIMETICCOLON].x, hudinfo[HUD_TIMETICCOLON].y, V_SNAPTOLEFT, sboperiod);
+				ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
+				ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
 			}
-
-			V_DrawPaddedTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT,
-				G_TicsToSeconds(data.coop.tics), 2);
-			V_DrawScaledPatch(hudinfo[HUD_TIMECOLON].x, hudinfo[HUD_TIMECOLON].y, V_SNAPTOLEFT, sbocolon);
-			V_DrawTallNum(hudinfo[HUD_MINUTES].x, hudinfo[HUD_MINUTES].y, V_SNAPTOLEFT,
-				G_TicsToMinutes(data.coop.tics, false));
 		}
 
 		// draw the "got through act" lines and act number
@@ -965,7 +982,8 @@ void Y_StartIntermission(void)
 	}
 
 	// We couldn't display the intermission even if we wanted to.
-	if (dedicated) return;
+	// But we still need to give the players their score bonuses, dummy.
+	//if (dedicated) return;
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
@@ -986,6 +1004,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the coop intermission for now
 			intertype = int_coop;
+			/* FALLTHRU */
 		case int_coop: // coop or single player, normal level
 		{
 			// award time and ring bonuses
@@ -1099,6 +1118,7 @@ void Y_StartIntermission(void)
 
 			// fall back into the special stage intermission for now
 			intertype = int_spec;
+			/* FALLTHRU */
 		case int_spec: // coop or single player, special stage
 		{
 			// Update visitation flags?
@@ -1420,6 +1440,7 @@ static void Y_CalculateCompetitionWinners(void)
 	UINT32 maxrings[MAXPLAYERS];
 	UINT32 monitors[MAXPLAYERS];
 	UINT32 scores[MAXPLAYERS];
+	char tempname[9];
 
 	memset(data.competition.points, 0, sizeof (data.competition.points));
 	memset(points, 0, sizeof (points));
@@ -1511,8 +1532,9 @@ static void Y_CalculateCompetitionWinners(void)
 		data.competition.monitors[data.competition.numplayers] = monitors[winner];
 		data.competition.scores[data.competition.numplayers] = scores[winner];
 
-		snprintf(data.competition.name[data.competition.numplayers], 9, "%s", player_names[winner]);
-		data.competition.name[data.competition.numplayers][8] = '\0';
+		strncpy(tempname, player_names[winner], 8);
+		tempname[8] = '\0';
+		strncpy(data.competition.name[data.competition.numplayers], tempname, 9);
 
 		data.competition.color[data.competition.numplayers] = &players[winner].skincolor;
 		data.competition.character[data.competition.numplayers] = &players[winner].skin;
@@ -1775,37 +1797,6 @@ void Y_EndIntermission(void)
 }
 
 //
-// Y_EndGame
-//
-// Why end the game?
-// Because Y_FollowIntermission and F_EndCutscene would
-// both do this exact same thing *in different ways* otherwise,
-// which made it so that you could only unlock Ultimate mode
-// if you had a cutscene after the final level and crap like that.
-// This function simplifies it so only one place has to be updated
-// when something new is added.
-void Y_EndGame(void)
-{
-	// Only do evaluation and credits in coop games.
-	if (gametype == GT_COOP)
-	{
-		if (nextmap == 1102-1) // end game with credits
-		{
-			F_StartCredits();
-			return;
-		}
-		if (nextmap == 1101-1) // end game with evaluation
-		{
-			F_StartGameEvaluation();
-			return;
-		}
-	}
-
-	// 1100 or competitive multiplayer, so go back to title screen.
-	D_StartTitle();
-}
-
-//
 // Y_FollowIntermission
 //
 static void Y_FollowIntermission(void)
@@ -1816,21 +1807,10 @@ static void Y_FollowIntermission(void)
 		return;
 	}
 
-	if (nextmap < 1100-1)
-	{
-		// normal level
-		G_AfterIntermission();
-		return;
-	}
-
-	// Start a custom cutscene if there is one.
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking)
-	{
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
-		return;
-	}
-
-	Y_EndGame();
+	// This handles whether to play a post-level cutscene, end the game,
+	// or simply go to the next level.
+	// No need to duplicate the code here!
+	G_AfterIntermission();
 }
 
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
@@ -1884,4 +1864,5 @@ static void Y_UnloadData(void)
 			//are not handled
 			break;
 	}
+
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -60,7 +60,6 @@ fixed_t projectiony; // aspect ratio
 // just for profiling purposes
 size_t framecount;
 
-size_t sscount;
 size_t loopcount;
 
 fixed_t viewx, viewy, viewz;
@@ -222,21 +221,11 @@ static void ChaseCam2_OnChange(void)
 
 static void FlipCam_OnChange(void)
 {
-	if (cv_flipcam.value)
-		players[consoleplayer].pflags |= PF_FLIPCAM;
-	else
-		players[consoleplayer].pflags &= ~PF_FLIPCAM;
-
 	SendWeaponPref();
 }
 
 static void FlipCam2_OnChange(void)
 {
-	if (cv_flipcam2.value)
-		players[secondarydisplayplayer].pflags |= PF_FLIPCAM;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_FLIPCAM;
-
 	SendWeaponPref2();
 }
 
@@ -366,69 +355,6 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-/***************************************
-*** Zdoom C++ to Legacy C conversion ***
-****************************************/
-
-// Utility to find the Z height at an XY location in a sector (for slopes)
-fixed_t R_SecplaneZatPoint(secplane_t *secplane, fixed_t x, fixed_t y)
-{
-	return FixedMul(secplane->ic, -secplane->d - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Returns the value of z at (x,y) if d is equal to dist
-fixed_t R_SecplaneZatPointDist (secplane_t *secplane, fixed_t x, fixed_t y, fixed_t dist)
-{
-	return FixedMul(secplane->ic, -dist - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Flips the plane's vertical orientiation, so that if it pointed up,
-// it will point down, and vice versa.
-void R_SecplaneFlipVert(secplane_t *secplane)
-{
-	secplane->a = -secplane->a;
-	secplane->b = -secplane->b;
-	secplane->c = -secplane->c;
-	secplane->d = -secplane->d;
-	secplane->ic = -secplane->ic;
-}
-
-// Returns true if 2 planes are the same
-boolean R_ArePlanesSame(secplane_t *original, secplane_t *other)
-{
-	return original->a == other->a && original->b == other->b
-		&& original->c == other->c && original->d == other->d;
-}
-
-// Returns true if 2 planes are different
-boolean R_ArePlanesDifferent(secplane_t *original, secplane_t *other)
-{
-	return original->a != other->a || original->b != other->b
-		|| original->c != other->c || original->d != other->d;
-}
-
-// Moves a plane up/down by hdiff units
-void R_SecplaneChangeHeight(secplane_t *secplane, fixed_t hdiff)
-{
-	secplane->d = secplane->d - FixedMul(hdiff, secplane->c);
-}
-
-// Returns how much this plane's height would change if d were set to oldd
-fixed_t R_SecplaneHeightDiff(secplane_t *secplane, fixed_t oldd)
-{
-	return FixedMul(oldd - secplane->d, secplane->ic);
-}
-
-fixed_t R_SecplanePointToDist(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, y, secplane->b, z, secplane->c);
-}
-
-fixed_t R_SecplanePointToDist2(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, secplane->b, y, z, secplane->c);
-}
-
 //
 // R_ScaleFromGlobalAngle
 // Returns the texture mapping scale for the current line (horizontal span)
@@ -555,9 +481,6 @@ static void R_InitTextureMapping(void)
 	// Take out the fencepost cases from viewangletox.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		t = FixedMul(FINETANGENT(i), focallength);
-		t = centerx - t;
-
 		if (viewangletox[i] == -1)
 			viewangletox[i] = 0;
 		else if (viewangletox[i] == viewwidth+1)
@@ -684,7 +607,7 @@ void R_ExecuteSetViewSize(void)
 	if (rendermode == render_soft)
 	{
 		// this is only used for planes rendering in software mode
-		j = viewheight*4;
+		j = viewheight*8;
 		for (i = 0; i < j; i++)
 		{
 			dy = ((i - viewheight*2)<<FRACBITS) + FRACUNIT/2;
@@ -1027,10 +950,9 @@ void R_SkyboxFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	sscount = 0;
-
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
+	// 18/08/18: (No it's actually 8*viewheight, thanks MPC aka Jimita for finding this out)
 
 	if (rendermode == render_soft)
 	{
@@ -1152,10 +1074,9 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	sscount = 0;
-
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
+	// 18/08/18: (No it's actually 8*viewheight, thanks MPC aka Jimita for finding this out)
 
 	if (rendermode == render_soft)
 	{
@@ -1298,9 +1219,9 @@ void R_RenderPlayerView(player_t *player)
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
 		if (cv_homremoval.value == 1)
-			V_DrawFill(0, 0, vid.width, vid.height, 31); // No HOM effect!
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // No HOM effect!
 		else //'development' HOM removal -- makes it blindingly obvious if HOM is spotted.
-			V_DrawFill(0, 0, vid.width, vid.height, 128+(timeinmap&15));
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 128+(timeinmap&15));
 	}
 
 	// load previous saved value of skyVisible for the player

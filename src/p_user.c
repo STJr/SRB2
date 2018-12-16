@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1221,11 +1221,12 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				// If the FOF is configured to let players through, continue.
-				if (!(rover->flags & FF_BLOCKPLAYER) && (rover->flags & FF_BLOCKOTHERS))
+				// If the FOF is configured to let the object through, continue.
+				if (!((rover->flags & FF_BLOCKPLAYER && mo->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mo->player)))
 					continue;
 
-				// If the the platform is intangile from below, continue.
+				// If the the platform is intangible from below, continue.
 				if (rover->flags & FF_PLATFORM)
 					continue;
 
@@ -1254,11 +1255,12 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				// If the FOF is configured to let players through, continue.
-				if (!(rover->flags & FF_BLOCKPLAYER) && (rover->flags & FF_BLOCKOTHERS))
+				// If the FOF is configured to let the object through, continue.
+				if (!((rover->flags & FF_BLOCKPLAYER && mo->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mo->player)))
 					continue;
 
-				// If the the platform is intangile from above, continue.
+				// If the the platform is intangible from above, continue.
 				if (rover->flags & FF_REVERSEPLATFORM)
 					continue;
 
@@ -1607,9 +1609,8 @@ void P_DoPlayerExit(player_t *player)
 #define SPACESPECIAL 12
 boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 {
-	sector_t *sector;
-
-	sector = mo->subsector->sector;
+	sector_t *sector = mo->subsector->sector;
+	fixed_t topheight, bottomheight;
 
 	if (GETSECSPECIAL(sector->special, 1) == SPACESPECIAL)
 		return true;
@@ -1620,13 +1621,23 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
 			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != SPACESPECIAL)
 				continue;
+#ifdef ESLOPE
+			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
+			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+#else
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+#endif
 
-			if (mo->z > *rover->topheight)
+			if (mo->z + (mo->height/2) > topheight)
 				continue;
 
-			if (mo->z + (mo->height/2) < *rover->bottomheight)
+			if (mo->z + (mo->height/2) < bottomheight)
 				continue;
 
 			return true;
@@ -1638,9 +1649,10 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 
 boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 {
-	sector_t *sector;
+	sector_t *sector = mo->subsector->sector;
+	fixed_t topheight, bottomheight;
 
-	sector = mo->subsector->sector;
+	fixed_t flipoffset = ((mo->eflags & MFE_VERTICALFLIP) ? (mo->height/2) : 0);
 
 	if (sector->ffloors)
 	{
@@ -1654,10 +1666,18 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 			if (!(rover->flags & FF_QUICKSAND))
 				continue;
 
-			if (mo->z > *rover->topheight)
+#ifdef ESLOPE
+			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) : *rover->topheight;
+			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) : *rover->bottomheight;
+#else
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+#endif
+
+			if (mo->z + flipoffset > topheight)
 				continue;
 
-			if (mo->z + (mo->height/2) < *rover->bottomheight)
+			if (mo->z + (mo->height/2) + flipoffset < bottomheight)
 				continue;
 
 			return true;
@@ -1818,6 +1838,12 @@ static void P_CheckBouncySectors(player_t *player)
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
+				if (!(rover->flags & FF_EXISTS))
+					continue; // FOFs should not be bouncy if they don't even "exist"
+
+				if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 15)
+					continue; // this sector type is required for FOFs to be bouncy
+
 				topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 				bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
@@ -1831,7 +1857,6 @@ static void P_CheckBouncySectors(player_t *player)
 						&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
 					top = false;
 
-				if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
 				{
 					fixed_t linedist;
 
@@ -1940,6 +1965,7 @@ static void P_CheckQuicksand(player_t *player)
 {
 	ffloor_t *rover;
 	fixed_t sinkspeed, friction;
+	fixed_t topheight, bottomheight;
 
 	if (!(player->mo->subsector->sector->ffloors && player->mo->momz <= 0))
 		return;
@@ -1951,16 +1977,38 @@ static void P_CheckQuicksand(player_t *player)
 		if (!(rover->flags & FF_QUICKSAND))
 			continue;
 
-		if (*rover->topheight >= player->mo->z && *rover->bottomheight < player->mo->z + player->mo->height)
+#ifdef ESLOPE
+		topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+		bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+#else
+		topheight = *rover->topheight;
+		bottomheight = *rover->bottomheight;
+#endif
+
+		if (topheight >= player->mo->z && bottomheight < player->mo->z + player->mo->height)
 		{
 			sinkspeed = abs(rover->master->v1->x - rover->master->v2->x)>>1;
 
 			sinkspeed = FixedDiv(sinkspeed,TICRATE*FRACUNIT);
 
-			player->mo->z -= sinkspeed;
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				fixed_t ceilingheight = P_GetCeilingZ(player->mo, player->mo->subsector->sector, player->mo->x, player->mo->y, NULL);
 
-			if (player->mo->z <= player->mo->subsector->sector->floorheight)
-				player->mo->z = player->mo->subsector->sector->floorheight;
+				player->mo->z += sinkspeed;
+
+				if (player->mo->z + player->mo->height >= ceilingheight)
+					player->mo->z = ceilingheight - player->mo->height;
+			}
+			else
+			{
+				fixed_t floorheight = P_GetFloorZ(player->mo, player->mo->subsector->sector, player->mo->x, player->mo->y, NULL);
+
+				player->mo->z -= sinkspeed;
+
+				if (player->mo->z <= floorheight)
+					player->mo->z = floorheight;
+			}
 
 			friction = abs(rover->master->v1->y - rover->master->v2->y)>>6;
 
@@ -2321,11 +2369,11 @@ static void P_DoClimbing(player_t *player)
 					floorclimb = true;
 
 #ifdef ESLOPE
-					bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
 					topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+					bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
 #else
-					bottomheight = *rover->bottomheight;
 					topheight = *rover->topheight;
+					bottomheight = *rover->bottomheight;
 #endif
 
 					// Only supports rovers that are moving like an 'elevator', not just the top or bottom.
@@ -2514,13 +2562,20 @@ static void P_DoClimbing(player_t *player)
 					// Is there a FOF directly below that we can move onto?
 					if (glidesector->sector->ffloors)
 					{
+						fixed_t topheight;
 						ffloor_t *rover;
 						for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 						{
 							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 								continue;
 
-							if (*rover->topheight > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
+#ifdef ESLOPE
+							topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+#else
+							topheight = *rover->topheight;
+#endif
+
+							if (topheight > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
 							{
 								foundfof = true;
 								break;
@@ -2898,14 +2953,12 @@ static void P_DoTeeter(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
+#ifdef ESLOPE
+				topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+				bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+#else
 				topheight = *rover->topheight;
 				bottomheight = *rover->bottomheight;
-
-#ifdef ESLOPE
-				if (*rover->t_slope)
-					topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
-				if (*rover->b_slope)
-					bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
 #endif
 
 				if (P_CheckSolidLava(player->mo, rover))
@@ -7057,7 +7110,6 @@ static void P_DoZoomTube(player_t *player)
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
 	boolean reverse;
-	fixed_t speedx,speedy,speedz;
 
 	player->mo->height = P_GetPlayerSpinHeight(player);
 
@@ -7078,17 +7130,17 @@ static void P_DoZoomTube(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
 
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - player->mo->z - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (speed > dist)
 	{
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
@@ -7128,14 +7180,9 @@ static void P_DoZoomTube(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
-			// calculate MOMX/MOMY/MOMZ for next waypoint
-			// change angle
-			player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
+			P_SetTarget(&player->mo->tracer, waypoint);
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			// calculate MOMX/MOMY/MOMZ for next waypoint
 
 			// change slope
 			dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - player->mo->z);
@@ -7146,21 +7193,13 @@ static void P_DoZoomTube(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
-			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let him fly.
+			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let them fly.
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, releasing from track...\n");
 		}
-	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
 	}
 
 	// change angle
@@ -7189,23 +7228,9 @@ static void P_DoRopeHang(player_t *player)
 	mobj_t *mo2;
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
-	fixed_t speedx,speedy,speedz;
 	fixed_t playerz;
 
 	player->mo->height = P_GetPlayerHeight(player);
-
-	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
-	{
-		P_SetTarget(&player->mo->tracer, NULL);
-
-		player->pflags |= PF_JUMPED;
-		player->pflags &= ~PF_ROPEHANG;
-
-		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
-		return;
-	}
 
 	// Play the 'clink' sound only if the player is moving.
 	if (!(leveltime & 7) && player->speed)
@@ -7223,9 +7248,22 @@ static void P_DoRopeHang(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+
+	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
+	{
+		P_SetTarget(&player->mo->tracer, NULL);
+
+		player->pflags |= PF_JUMPED;
+		player->pflags &= ~PF_ROPEHANG;
+
+		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
+		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
+			P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+		return;
+	}
 
 	// If not allowed to move, we're done here.
 	if (!speed)
@@ -7234,15 +7272,16 @@ static void P_DoRopeHang(player_t *player)
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - playerz - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (speed > dist)
 	{
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
 		player->mo->y = player->mo->tracer->y;
 		player->mo->z = player->mo->tracer->z - player->mo->height;
+		playerz = player->mo->tracer->z;
 		P_SetThingPosition(player->mo);
 
 		CONS_Debug(DBG_GAMELOGIC, "Looking for next waypoint...\n");
@@ -7298,6 +7337,8 @@ static void P_DoRopeHang(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
+			P_SetTarget(&player->mo->tracer, waypoint);
+
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
 			dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - playerz);
@@ -7308,8 +7349,6 @@ static void P_DoRopeHang(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
@@ -7327,12 +7366,6 @@ static void P_DoRopeHang(player_t *player)
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found!\n");
 		}
-	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
 	}
 }
 
@@ -7820,7 +7853,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
-	cameranoclip = (player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	// We probably shouldn't move the camera if there is no player or player mobj somehow
+	if (!player || !player->mo)
+		return true;
+
+	mo = player->mo;
+
+	cameranoclip = (player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
 	if (!(player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD))
 	{
@@ -7841,7 +7880,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		else if (player == &players[secondarydisplayplayer])
 			focusangle = localangle2;
 		else
-			focusangle = player->mo->angle;
+			focusangle = mo->angle;
 		if (thiscam == &camera)
 			camrotate = cv_cam_rotate.value;
 		else if (thiscam == &camera2)
@@ -7853,16 +7892,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		return true;
 	}
 
-	if (!player || !player->mo)
-		return true;
-
-	mo = player->mo;
-
 	thiscam->radius = FixedMul(20*FRACUNIT, mo->scale);
 	thiscam->height = FixedMul(16*FRACUNIT, mo->scale);
-
-	if (!mo)
-		return true;
 
 	// Don't run while respawning from a starpost
 	// Inu 4/8/13 Why not?!
@@ -7871,7 +7902,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (player->pflags & PF_NIGHTSMODE)
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = 0;
 	}
 	else if (player == &players[consoleplayer])
@@ -7886,7 +7917,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		focusangle = player->mo->angle;
+		focusangle = mo->angle;
 		focusaiming = player->aiming;
 	}
 
@@ -7933,12 +7964,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			angle = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
 			angle += ANGLE_90;
 		}
-		else if (player->mo->target)
+		else if (mo->target)
 		{
-			if (player->mo->target->flags & MF_AMBUSH)
-				angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+			if (mo->target->flags & MF_AMBUSH)
+				angle = R_PointToAngle2(mo->target->x, mo->target->y, mo->x, mo->y);
 			else
-				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8033,7 +8064,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
 		// Camera doesn't ALWAYS need to move, only when running...
-		if (abs(player->mo->momx) > 10)
+		if (abs(mo->momx) > 10)
 		{
 			// Move the camera all smooth-like, not jerk it around...
 			if (mo->momx > 0)
@@ -8340,24 +8371,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// Make player translucent if camera is too close (only in single player).
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
-		fixed_t vx = 0, vy = 0;
-		if (player->awayviewtics) {
+		fixed_t vx = thiscam->x, vy = thiscam->y;
+		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
+		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
 		}
-		else
-		{
-			vx = thiscam->x;
-			vy = thiscam->y;
-		}
 
-		if (P_AproxDistance(vx - player->mo->x, vy - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
-			player->mo->flags2 |= MF2_SHADOW;
+		if (P_AproxDistance(vx - mo->x, vy - mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+			mo->flags2 |= MF2_SHADOW;
 		else
-			player->mo->flags2 &= ~MF2_SHADOW;
+			mo->flags2 &= ~MF2_SHADOW;
 	}
 	else
-		player->mo->flags2 &= ~MF2_SHADOW;
+		mo->flags2 &= ~MF2_SHADOW;
 
 /*	if (!resetcalled && (player->pflags & PF_NIGHTSMODE && player->exiting))
 	{
@@ -8507,7 +8534,7 @@ static void P_CalcPostImg(player_t *player)
 	else
 		pviewheight = player->mo->z + player->viewheight;
 
-	if (player->awayviewtics)
+	if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj))
 	{
 		sector = player->awayviewmobj->subsector->sector;
 		pviewheight = player->awayviewmobj->z + 20*FRACUNIT;
@@ -8531,13 +8558,23 @@ static void P_CalcPostImg(player_t *player)
 	else if (sector->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight;
+		fixed_t bottomheight;
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			if (pviewheight >= *rover->topheight || pviewheight <= *rover->bottomheight)
+#ifdef ESLOPE
+			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+#else
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+#endif
+
+			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
 
 			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
@@ -8549,13 +8586,23 @@ static void P_CalcPostImg(player_t *player)
 	if (sector->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight;
+		fixed_t bottomheight;
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKPLAYER)
 				continue;
 
-			if (pviewheight >= *rover->topheight || pviewheight <= *rover->bottomheight)
+#ifdef ESLOPE
+			topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+			bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+#else
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+#endif
+
+			if (pviewheight >= topheight || pviewheight <= bottomheight)
 				continue;
 
 			*type = postimg_water;
@@ -8602,8 +8649,6 @@ void P_DoPityCheck(player_t *player)
 //
 // P_PlayerThink
 //
-
-boolean playerdeadview; // show match/chaos/tag/capture the flag rankings while in death view
 
 void P_PlayerThink(player_t *player)
 {
@@ -8656,6 +8701,13 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 #endif
+
+	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
+	{
+		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
+		player->awayviewtics = 0; // reset to zero
+	}
+
 	if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)
@@ -8667,8 +8719,9 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
+	//if (player->awayviewtics)
+	//	player->awayviewtics--;
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -8779,6 +8832,7 @@ void P_PlayerThink(player_t *player)
 	// check water content, set stuff in mobj
 	P_MobjCheckWater(player->mo);
 
+#ifndef SECTORSPECIALSAFTERTHINK
 #ifdef POLYOBJECTS
 	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
 #endif
@@ -8787,14 +8841,11 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->spectator)
 		P_PlayerInSpecialSector(player);
+#endif
 
 	if (player->playerstate == PST_DEAD)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
-		// show the multiplayer rankings while dead
-		if (player == &players[displayplayer])
-			playerdeadview = true;
-
 		P_DeathThink(player);
 
 		return;
@@ -8814,9 +8865,6 @@ void P_PlayerThink(player_t *player)
 		// of course, this is just a cheap hack, meh...
 		player->lives = cv_startinglives.value;
 	}
-
-	if (player == &players[displayplayer])
-		playerdeadview = false;
 
 	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
 	{
@@ -9148,6 +9196,17 @@ void P_PlayerAfterThink(player_t *player)
 
 	cmd = &player->cmd;
 
+#ifdef SECTORSPECIALSAFTERTHINK
+#ifdef POLYOBJECTS
+	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
+#endif
+	player->onconveyor = 0;
+	// check special sectors : damage & secrets
+
+	if (!player->spectator)
+		P_PlayerInSpecialSector(player);
+#endif
+
 	if (splitscreen && player == &players[secondarydisplayplayer])
 		thiscam = &camera2;
 	else if (player == &players[displayplayer])
@@ -9439,6 +9498,9 @@ void P_PlayerAfterThink(player_t *player)
 				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
+
+	if (player->awayviewtics)
+		player->awayviewtics--;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

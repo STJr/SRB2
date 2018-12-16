@@ -125,6 +125,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)s_openal.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -170,6 +171,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)s_openal.lib</ImportLibrary>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -216,6 +218,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)s_openal.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -262,6 +265,7 @@
       </DataExecutionPrevention>
       <ImportLibrary>$(IntDir)s_openal.lib</ImportLibrary>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>

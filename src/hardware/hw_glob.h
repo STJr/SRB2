@@ -27,6 +27,9 @@
 // the original aspect ratio of Doom graphics isn't square
 #define ORIGINAL_ASPECT (320.0f/200.0f)
 
+// Uncomment this to enable the OpenGL loading screen
+//#define HWR_LOADING_SCREEN
+
 // -----------
 // structures
 // -----------
@@ -68,6 +71,7 @@ typedef struct gr_vissprite_s
 	struct gr_vissprite_s *prev;
 	struct gr_vissprite_s *next;
 	float x1, x2;
+	float z1, z2;
 	float tz, ty;
 	lumpnum_t patchlumpnum;
 	boolean flip;

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-prefix=/usr/local/cross-tools/i686-w64-mingw32
+prefix=/opt/local/i686-w64-mingw32
 exec_prefix=${prefix}
 exec_prefix_set=no
 libdir=${exec_prefix}/lib
@@ -39,17 +39,17 @@ while test $# -gt 0; do
       echo $exec_prefix
       ;;
     --version)
-      echo 2.0.4
+      echo 2.0.9
       ;;
     --cflags)
       echo -I${prefix}/include/SDL2  -Dmain=SDL_main
       ;;
     --libs)
-      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2  -mwindows
+      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2 -mwindows
       ;;
     --static-libs)
 #    --libs|--static-libs)
-      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2  -mwindows  -Wl,--no-undefined -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -static-libgcc
+      echo -L${exec_prefix}/lib  -lmingw32 -lSDL2main -lSDL2 -mwindows  -Wl,--no-undefined -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lsetupapi -lversion -luuid -static-libgcc
       ;;
     *)
       echo "${usage}" 1>&2

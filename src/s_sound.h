@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
+#include "i_sound.h" // musictype_t
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
@@ -25,6 +26,10 @@
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+extern consvar_t cv_resetmusic;
+extern consvar_t cv_gamedigimusic;
+extern consvar_t cv_gamemidimusic;
+extern consvar_t cv_gamesounds;
 
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;
@@ -69,9 +74,9 @@ void S_RegisterSoundStuff(void);
 
 //
 // Initializes sound stuff, including volume
-// Sets channels, SFX and music volume, allocates channel buffer, sets S_sfx lookup.
+// Sets channels, SFX, allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume);
+void S_InitSfxChannels(INT32 sfxVolume);
 
 //
 // Per level startup code.
@@ -97,15 +102,39 @@ void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
 
+//
+// Music Status
+//
+
+boolean S_DigMusicDisabled(void);
+boolean S_MIDIMusicDisabled(void);
+boolean S_MusicDisabled(void);
+boolean S_MusicPlaying(void);
+boolean S_MusicPaused(void);
+musictype_t S_MusicType(void);
+boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+#define S_DigExists(a) S_MusicExists(a, false, true)
+#define S_MIDIExists(a) S_MusicExists(a, true, false)
+
+
+//
+// Music Properties
+//
+
+// Set Speed of Music
+boolean S_SpeedMusic(float speed);
+
+//
+// Music Routines
+//
+
 // Start music track, arbitrary, given its name, and set whether looping
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
 //       and the last bit we ignore (internal game flag for resetting music on reload)
 #define S_ChangeMusicInternal(a,b) S_ChangeMusic(a,0,b)
 void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
-
-// Set Speed of Music
-boolean S_SpeedMusic(float speed);
 
 // Stops the music.
 void S_StopMusic(void);
@@ -121,9 +150,11 @@ void S_UpdateSounds(void);
 
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
-void S_SetDigMusicVolume(INT32 volume);
-void S_SetMIDIMusicVolume(INT32 volume);
 void S_SetSfxVolume(INT32 volume);
+void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume);
+#define S_SetDigMusicVolume(a) S_SetMusicVolume(a,-1)
+#define S_SetMIDIMusicVolume(a) S_SetMusicVolume(-1,a)
+#define S_InitMusicVolume() S_SetMusicVolume(-1,-1)
 
 INT32 S_OriginPlaying(void *origin);
 INT32 S_IdPlaying(sfxenum_t id);

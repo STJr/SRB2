@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -210,17 +210,17 @@ void ST_doPaletteStuff(void)
 	else
 		palette = 0;
 
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		palette = 0; // No flashpals here in OpenGL
+#endif
+
 	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
 		st_palette = palette;
 
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_SetPaletteColor(0);
-		else
-#endif
 		if (rendermode != render_none)
 		{
 			V_SetPaletteLump(GetPalette()); // Reset the palette
@@ -1871,12 +1871,12 @@ static void ST_overlayDrawer(void)
 	if (!hu_showscores && !splitscreen && netgame && displayplayer == consoleplayer)
 	{
 		if (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press F12 to watch another player."));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press Viewpoint Key to watch a player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(116), 0, M_GetText("You cannot move while hiding."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press F12 to watch another player."));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press Viewpoint Key to watch a player."));
 		}
 		else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
 		{
@@ -1899,7 +1899,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
 			else
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press Viewpoint Key to watch a player."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(164), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}

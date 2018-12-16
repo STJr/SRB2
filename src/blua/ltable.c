@@ -478,6 +478,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
+    /* FALLTHRU */
     default: {
       Node *n = mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */

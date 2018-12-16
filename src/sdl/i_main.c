@@ -26,28 +26,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef _WII
-#include <limits.h>
-#include <network.h>
-#include <fat.h>
-#ifdef REMOTE_DEBUGGING
-#include <debug.h>
-#endif
-static char wiicwd[PATH_MAX] = "sd:/";
-static char localip[16] = {0};
-static char gateway[16] = {0};
-static char netmask[16] = {0};
-#endif
-
-#ifdef _PSP
-#include <pspmoduleinfo.h>
-#include <pspthreadman.h>
-PSP_HEAP_SIZE_KB(24*1024);
-PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
-PSP_MAIN_THREAD_NAME("SRB2");
-PSP_MAIN_THREAD_STACK_SIZE_KB(256);
-#endif
-
 #ifdef HAVE_SDL
 
 #ifdef HAVE_TTF
@@ -79,23 +57,12 @@ FILE *logstream = NULL;
 #endif
 #endif
 
-#if defined (_WIN32) && !defined (_XBOX)
+#if defined (_WIN32)
 #include "../win32/win_dbg.h"
 typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 #endif
 
-#ifdef _arch_dreamcast
-#include <arch/arch.h>
-KOS_INIT_FLAGS(INIT_DEFAULT
-//| INIT_NET
-//| INIT_MALLOCSTATS
-//| INIT_QUIET
-//| INIT_OCRAM
-//| INIT_NO_DCLOAD
-);
-#endif
-
-#if defined (_WIN32) && !defined (_XBOX) && !defined (_WIN32_WCE)
+#if defined (_WIN32)
 static inline VOID MakeCodeWritable(VOID)
 {
 #ifdef USEASM // Disable write-protection of code segment
@@ -136,13 +103,10 @@ static inline VOID MakeCodeWritable(VOID)
 
 	\return	int
 */
-#if defined (_XBOX) && defined (__GNUC__)
-void XBoxStartup()
-{
-	const char *logdir = NULL;
-	myargc = -1;
-	myargv = NULL;
-#else
+#if defined (__GNUC__) && (__GNUC__ >= 4)
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#endif
+
 #ifdef FORCESDLMAIN
 int SDL_main(int argc, char **argv)
 #else
@@ -152,56 +116,19 @@ int main(int argc, char **argv)
 	const char *logdir = NULL;
 	myargc = argc;
 	myargv = argv; /// \todo pull out path to exe from this string
-#endif
 
 #ifdef HAVE_TTF
-#ifdef _PS3
-	// apparently there is a bug in SDL_PSL1GHT which needs this to be set to work around
-	SDL_setenv("SDL_VIDEODRIVER", "psl1ght", 1);
-	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO, SDL_SWSURFACE|SDL_DOUBLEBUF);
-#elif defined(_WIN32)
+#ifdef _WIN32
 	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO|SDL_INIT_AUDIO, SDL_SWSURFACE);
 #else
 	I_StartupTTF(FONTPOINTSIZE, SDL_INIT_VIDEO, SDL_SWSURFACE);
 #endif
 #endif
 
-#ifdef _PS3
-	// initialise controllers.
-	//ioPadInit(7);
-#endif
-
-// init Wii-specific stuff
-#ifdef _WII
-	// Start network
-	if_config(localip, netmask, gateway, TRUE);
-
-#ifdef REMOTE_DEBUGGING
-#if REMOTE_DEBUGGING == 0
-	DEBUG_Init(GDBSTUB_DEVICE_TCP, GDBSTUB_DEF_TCPPORT); // Port 2828
-#elif REMOTE_DEBUGGING > 2
-	DEBUG_Init(GDBSTUB_DEVICE_TCP, REMOTE_DEBUGGING); // Custom Port
-#elif REMOTE_DEBUGGING < 0
-	DEBUG_Init(GDBSTUB_DEVICE_USB, GDBSTUB_DEF_CHANNEL); // Slot 1
-#else
-	DEBUG_Init(GDBSTUB_DEVICE_USB, REMOTE_DEBUGGING-1); // Custom Slot
-#endif
-#endif
-	// Start FAT filesystem
-	fatInitDefault();
-
-	if (getcwd(wiicwd, PATH_MAX))
-		I_PutEnv(va("HOME=%ssrb2wii", wiicwd));
-#endif
-
 	logdir = D_Home();
 
 #ifdef LOGMESSAGES
-#if defined(_WIN32_WCE) || defined(GP2X)
-	logstream = fopen(va("%s.log",argv[0]), "wt");
-#elif defined (_WII)
-	logstream = fopen(va("%s/log.txt",logdir), "wt");
-#elif defined (DEFAULTDIR)
+#ifdef DEFAULTDIR
 	if (logdir)
 		logstream = fopen(va("%s/"DEFAULTDIR"/log.txt",logdir), "wt");
 	else
@@ -211,8 +138,7 @@ int main(int argc, char **argv)
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
 	I_StartupSystem();
-#if defined (_WIN32) && !defined (_XBOX)
-#ifndef _WIN32_WCE
+#if defined (_WIN32)
 	{
 #if 0 // just load the DLL
 		p_IsDebuggerPresent pfnIsDebuggerPresent = (p_IsDebuggerPresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsDebuggerPresent");
@@ -226,11 +152,10 @@ int main(int argc, char **argv)
 			LoadLibraryA("exchndl.dll");
 		}
 	}
-#endif
+#ifndef __MINGW32__
 	prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
-#ifndef _WIN32_WCE
-	MakeCodeWritable();
 #endif
+	MakeCodeWritable();
 #endif
 	// startup SRB2
 	CONS_Printf("Setting up SRB2...\n");

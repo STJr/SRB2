@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -85,10 +85,7 @@ extern boolean fromlevelselect;
 // Internal parameters for sound rendering.
 // ========================================
 
-extern boolean nomidimusic; // defined in d_main.c
-extern boolean nosound;
-extern boolean nodigimusic;
-extern boolean music_disabled;
+extern boolean midi_disabled;
 extern boolean sound_disabled;
 extern boolean digital_disabled;
 
@@ -445,19 +442,17 @@ extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
 
 #if defined (macintosh)
 #define DEBFILE(msg) I_OutputMsg(msg)
-extern FILE *debugfile;
 #else
 #define DEBUGFILE
 #ifdef DEBUGFILE
 #define DEBFILE(msg) { if (debugfile) { fputs(msg, debugfile); fflush(debugfile); } }
-extern FILE *debugfile;
 #else
 #define DEBFILE(msg) {}
-extern FILE *debugfile;
 #endif
 #endif
 
 #ifdef DEBUGFILE
+extern FILE *debugfile;
 extern INT32 debugload;
 #endif
 
@@ -481,7 +476,8 @@ extern consvar_t cv_timetic; // display high resolution timer
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.
 extern ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
-extern INT32 adminplayer, serverplayer;
+extern INT32 serverplayer;
+extern INT32 adminplayers[MAXPLAYERS];
 
 /// \note put these in d_clisrv outright?
 

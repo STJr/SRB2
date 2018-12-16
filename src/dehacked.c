@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Load dehacked file and change tables and text
 
 #include "doomdef.h"
+#include "d_main.h" // for srb2home
 #include "g_game.h"
 #include "sounds.h"
 #include "info.h"
@@ -31,6 +32,7 @@
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_clisrv.h"
 
 #include "m_cond.h"
 
@@ -1034,7 +1036,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1615,7 +1620,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1859,7 +1867,6 @@ static void readframe(MYFILE *f, INT32 num)
 	char *word1;
 	char *word2 = NULL;
 	char *tmp;
-	INT32 j;
 
 	do
 	{
@@ -1873,16 +1880,6 @@ static void readframe(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
-
-			for (j = 0; s[j] != '\n'; j++)
-			{
-				if (s[j] == '=')
-				{
-					j += 2;
-					j = atoi(&s[j]);
-					break;
-				}
-			}
 
 			word1 = strtok(s, " ");
 			if (word1)
@@ -2128,7 +2125,10 @@ static void reademblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2268,7 +2268,10 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2352,7 +2355,10 @@ static void readunlockable(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2639,7 +2645,10 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2884,7 +2893,10 @@ static void readmaincfg(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -3068,8 +3080,10 @@ static void readmaincfg(MYFILE *f)
 				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
-				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
+				strcpy(savegamename, timeattackfolder);
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
+				// can't use sprintf since there is %u in savegamename
+				strcatbf(savegamename, srb2home, PATHSEP);
 
 				gamedataadded = true;
 			}
@@ -3121,7 +3135,10 @@ static void readwipes(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -7269,6 +7286,14 @@ struct {
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
+#ifdef ESLOPE
+	// Slope flags
+	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
+	{"SL_NODYNAMIC",SL_NODYNAMIC},      // Slope will never need to move during the level, so don't fuss with recalculating it
+	{"SL_ANCHORVERTEX",SL_ANCHORVERTEX},// Slope is using a Slope Vertex Thing to anchor its position
+	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
+#endif
+
 	// Angles
 	{"ANG1",ANG1},
 	{"ANG2",ANG2},
@@ -7392,6 +7417,14 @@ struct {
 
 	{"V_CHARCOLORSHIFT",V_CHARCOLORSHIFT},
 	{"V_ALPHASHIFT",V_ALPHASHIFT},
+
+	//Kick Reasons
+	{"KR_KICK",KR_KICK},
+	{"KR_PINGLIMIT",KR_PINGLIMIT},
+	{"KR_SYNCH",KR_SYNCH},
+	{"KR_TIMEOUT",KR_TIMEOUT},
+	{"KR_BAN",KR_BAN},
+	{"KR_LEAVE",KR_LEAVE},
 #endif
 
 	{NULL,0}
@@ -7766,7 +7799,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void FUNCMATH DEH_Check(void)
+void DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
@@ -8201,6 +8234,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
 		return 1;
+	} else if (fastcmp(word,"ultimatemode")) {
+		lua_pushboolean(L, ultimatemode != 0);
+		return 1;
 	} else if (fastcmp(word,"mariomode")) {
 		lua_pushboolean(L, mariomode != 0);
 		return 1;
@@ -8266,10 +8302,10 @@ static inline int lib_getenum(lua_State *L)
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;
-	} else if (fastcmp(word,"admin")) {
-		if (!playeringame[adminplayer] || adminplayer == serverplayer)
+	} else if (fastcmp(word,"admin")) { // BACKWARDS COMPATIBILITY HACK: This was replaced with IsPlayerAdmin(), but some 2.1 Lua scripts still use the admin variable. It now points to the first admin player in the array.
+		if (!playeringame[adminplayers[0]] || IsPlayerAdmin(serverplayer))
 			return 0;
-		LUA_PushUserdata(L, &players[adminplayer], META_PLAYER);
+		LUA_PushUserdata(L, &players[adminplayers[0]], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);

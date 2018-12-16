@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 16  // more precise version number
-#define VERSIONSTRING "v2.1.16"
-#define VERSIONSTRINGW L"v2.1.16"
+#define SUBVERSION 21  // more precise version number
+#define VERSIONSTRING "v2.1.21"
+#define VERSIONSTRINGW L"v2.1.21"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -205,7 +205,7 @@ extern FILE *logstream;
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 210
 
-// The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
+// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
 #define MODID 12
@@ -214,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 21
+#define MODVERSION 26
 
 // =========================================================================
 
@@ -497,5 +497,16 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Backwards compatibility with musicslots.
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+//#define SECTORSPECIALSAFTERTHINK
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
 
 #endif // __DOOMDEF__

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -327,21 +327,28 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	UINT16 start, end;
 	char wadname[MAX_WADPATH];
 
-	// find the sprites section in this pwad
-	// we need at least the S_END
-	// (not really, but for speedup)
+	switch (wadfiles[wadnum]->type)
+	{
+	case RET_WAD:
+		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
+		if (start == INT16_MAX)
+			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+		if (start == INT16_MAX)
+			start = 0; //let say S_START is lump 0
+		else
+			start++;   // just after S_START
+		end = W_CheckNumForNamePwad("S_END",wadnum,start);
+		if (end == INT16_MAX)
+			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
+		break;
+	case RET_PK3:
+		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
+		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
+		break;
+	default:
+		return;
+	}
 
-	start = W_CheckNumForNamePwad("S_START", wadnum, 0);
-	if (start == INT16_MAX)
-		start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-	if (start == INT16_MAX)
-		start = 0; //let say S_START is lump 0
-	else
-		start++;   // just after S_START
-
-	end = W_CheckNumForNamePwad("S_END",wadnum,start);
-	if (end == INT16_MAX)
-		end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 	if (end == INT16_MAX)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
@@ -891,11 +898,17 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #endif
 	fixed_t frac;
 	patch_t *patch;
+	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	if (vis->transmap)
 	{
@@ -1017,7 +1030,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			else
 */
 			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
-				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
+				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
 			{
 				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
@@ -1318,7 +1331,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
 
 	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
-		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
+		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
@@ -1445,6 +1458,17 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 			return;
 	}
 
+	// okay, we can't return now except for vertical clipping... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
+
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	gzt = thing->z + spritecachedinfo[lump].topoffset;
 	gz = gzt - spritecachedinfo[lump].height;
@@ -1563,8 +1587,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectSprite(thing);
 		}
 	}
 	else
@@ -1585,8 +1611,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectPrecipitationSprite(precipthing);
 		}
 	}
 	else
@@ -1699,21 +1727,25 @@ static void R_CreateDrawNodes(void)
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
+#ifdef POLYOBJECTS_PLANES
+		// Check for a polyobject plane, but only if this is a front line
+		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+			plane = ds->curline->polyseg->visplane;
+			R_PlaneBounds(plane);
+
+			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+				;
+			else {
+				// Put it in!
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = plane;
+				entry->seg = ds;
+			}
+			ds->curline->polyseg->visplane = NULL;
+		}
+#endif
 		if (ds->maskedtexturecol)
 		{
-#ifdef POLYOBJECTS_PLANES
-			// Check for a polyobject plane, but only if this is a front line
-			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
-				// Put it in!
-
-				entry = R_CreateDrawNode(&nodehead);
-				entry->plane = ds->curline->polyseg->visplane;
-				entry->seg = ds;
-				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
-				ds->curline->polyseg->visplane = NULL;
-			}
-#endif
-
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1755,6 +1787,29 @@ static void R_CreateDrawNodes(void)
 			}
 		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	// find all the remaining polyobject planes and add them on the end of the list
+	// probably this is a terrible idea if we wanted them to be sorted properly
+	// but it works getting them in for now
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (!PolyObjects[i].visplane)
+			continue;
+		plane = PolyObjects[i].visplane;
+		R_PlaneBounds(plane);
+
+		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		{
+			PolyObjects[i].visplane = NULL;
+			continue;
+		}
+		entry = R_CreateDrawNode(&nodehead);
+		entry->plane = plane;
+		// note: no seg is set, for what should be obvious reasons
+		PolyObjects[i].visplane = NULL;
+	}
+#endif
 
 	if (visspritecount == 0)
 		return;
@@ -1812,13 +1867,16 @@ static void R_CreateDrawNodes(void)
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				for (i = x1; i <= x2; i++)
+				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
-						break;
+					for (i = x1; i <= x2; i++)
+					{
+						if (r2->seg->frontscale[i] > rover->scale)
+							break;
+					}
+					if (i > x2)
+						continue;
 				}
-				if (i > x2)
-					continue;
 
 				entry = R_CreateDrawNode(NULL);
 				(entry->prev = r2->prev)->next = entry;
@@ -2272,7 +2330,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
-	strncpy(skin->charsel, "CHRSONIC", 8);
+	strncpy(skin->charsel, "CHRSONIC", 9);
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
 
@@ -2333,9 +2391,9 @@ void R_InitSkins(void)
 	strcpy(skin->realname,   "Sonic");
 	strcpy(skin->hudname,    "SONIC");
 
-	strncpy(skin->charsel,   "CHRSONIC", 8);
-	strncpy(skin->face,      "LIVSONIC", 8);
-	strncpy(skin->superface, "LIVSUPER", 8);
+	strncpy(skin->charsel,   "CHRSONIC", 9);
+	strncpy(skin->face,      "LIVSONIC", 9);
+	strncpy(skin->superface, "LIVSUPER", 9);
 	skin->prefcolor = SKINCOLOR_BLUE;
 
 	skin->ability =   CA_THOK;
@@ -2390,7 +2448,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin '%s' not found.\n"), skinname);
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
 	SetPlayerSkinByNum(playernum, 0);
@@ -2448,7 +2506,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
