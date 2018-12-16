@@ -44,7 +44,7 @@
 : ${DPL_DPUT_DOMAIN:=ppa.launchpad.net}
 : ${DPL_DPUT_METHOD:=sftp}
 : ${DPL_DPUT_INCOMING}
-: ${DPL_DPUT_USER:=anonymous}
+: ${DPL_DPUT_LOGIN:=anonymous}
 : ${DPL_SSH_KEY_PRIVATE}        # Base64-encoded private key file. Used to sign repository uploads
 : ${DPL_SSH_KEY_PASSPHRASE}     # Decodes the private key file.
 

@@ -12,7 +12,7 @@ if [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
 fqdn = ${DPL_DPUT_DOMAIN}
 method = ${DPL_DPUT_METHOD}
 incoming = ${DPL_DPUT_INCOMING}
-login = ${DPL_DPUT_USER}
+login = ${DPL_DPUT_LOGIN}
 allow_unsigned_uploads = 0
 EOM
 
