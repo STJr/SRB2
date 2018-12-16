@@ -216,6 +216,9 @@
     <ClInclude Include="..\hardware\hws_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\hw_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
@@ -603,6 +606,9 @@
     <ClCompile Include="..\hardware\hw_cache.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\hw_draw.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -631,6 +637,9 @@
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_blockmaplib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_consolelib.c">

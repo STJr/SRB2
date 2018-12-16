@@ -236,7 +236,7 @@ static void Snd_UnlockAudio(void) //Alam: Unlock audio data and reinstall audio 
 #endif
 }
 
-FUNCMATH static inline Uint16 Snd_LowerRate(Uint16 sr)
+static inline Uint16 Snd_LowerRate(Uint16 sr)
 {
 	if (sr <= audio.freq) // already lowered rate?
 		return sr; // good then
@@ -621,10 +621,11 @@ void I_FreeSfx(sfxinfo_t * sfx)
 // Pitching (that is, increased speed of playback)
 //  is set, but currently not used by mixing.
 //
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	(void)priority;
 	(void)pitch;
+	(void)channel;
 
 	if (nosound)
 		return 0;

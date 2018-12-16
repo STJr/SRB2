@@ -112,10 +112,10 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
-	v[0].x = v[3].x = (x*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-gpatch->topoffset*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
+	v[0].x = v[3].x = (x*sdupx-SHORT(gpatch->leftoffset)*pdupx)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdupx+(SHORT(gpatch->width)-SHORT(gpatch->leftoffset))*pdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdupy-SHORT(gpatch->topoffset)*pdupy)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdupy+(SHORT(gpatch->height)-SHORT(gpatch->topoffset))*pdupy)/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
@@ -179,18 +179,29 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscale = FIXED_TO_FLOAT(pscale);
 
-	if (option & V_OFFSET)
+	// See my comments in v_video.c's V_DrawFixedPatch
+	// -- Monster Iestyn 29/10/18
 	{
-		cx -= (float)gpatch->leftoffset * dupx * fscale;
-		cy -= (float)gpatch->topoffset * dupy * fscale;
-	}
-	else
-	{
-		cy -= (float)gpatch->topoffset * fscale;
+		float offsetx = 0.0f, offsety = 0.0f;
+
+		// left offset
 		if (option & V_FLIP)
-			cx -= ((float)gpatch->width - (float)gpatch->leftoffset) * fscale;
+			offsetx = (float)(SHORT(gpatch->width) - SHORT(gpatch->leftoffset)) * fscale;
 		else
-			cx -= (float)gpatch->leftoffset * fscale;
+			offsetx = (float)SHORT(gpatch->leftoffset) * fscale;
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		offsety = (float)SHORT(gpatch->topoffset) * fscale;
+
+		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
+		{
+			offsetx *= dupx;
+			offsety *= dupy;
+		}
+
+		cx -= offsetx;
+		cy -= offsety;
 	}
 
 	if (option & V_SPLITSCREEN)
@@ -216,14 +227,14 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if (vid.width != BASEVIDWIDTH * vid.dupx)
+			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if (vid.height != BASEVIDHEIGHT * vid.dupy)
+			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 			{
 				if ((option & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
 					cy += ((float)vid.height/2 - ((float)BASEVIDHEIGHT/2 * dupy));
@@ -237,13 +248,13 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	if (pscale != FRACUNIT)
 	{
-		fwidth = (float)gpatch->width * fscale * dupx;
-		fheight = (float)gpatch->height * fscale * dupy;
+		fwidth = (float)SHORT(gpatch->width) * fscale * dupx;
+		fheight = (float)SHORT(gpatch->height) * fscale * dupy;
 	}
 	else
 	{
-		fwidth = (float)gpatch->width * dupx;
-		fheight = (float)gpatch->height * dupy;
+		fwidth = (float)SHORT(gpatch->width) * dupx;
+		fheight = (float)SHORT(gpatch->height) * dupy;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
@@ -341,8 +352,8 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscale = FIXED_TO_FLOAT(pscale);
 
-	cy -= (float)gpatch->topoffset * fscale;
-	cx -= (float)gpatch->leftoffset * fscale;
+	cy -= (float)SHORT(gpatch->topoffset) * fscale;
+	cx -= (float)SHORT(gpatch->leftoffset) * fscale;
 
 	if (!(option & V_NOSCALESTART))
 	{
@@ -364,14 +375,14 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if (vid.width != BASEVIDWIDTH * vid.dupx)
+			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if (vid.height != BASEVIDHEIGHT * vid.dupy)
+			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 			{
 				if ((option & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
 					cy += ((float)vid.height/2 - ((float)BASEVIDHEIGHT/2 * dupy));
@@ -392,11 +403,11 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	if (fheight > h - sy)
 		fheight = h - sy;
 
-	if (fwidth > gpatch->width)
-		fwidth = gpatch->width;
+	if (fwidth > SHORT(gpatch->width))
+		fwidth = SHORT(gpatch->width);
 
-	if (fheight > gpatch->height)
-		fheight = gpatch->height;
+	if (fheight > SHORT(gpatch->height))
+		fheight = SHORT(gpatch->height);
 
 	if (pscale != FRACUNIT)
 	{
@@ -426,10 +437,10 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].sow = v[3].sow = ((sx)/(float)gpatch->width )*gpatch->max_s;
-	v[2].sow = v[1].sow = ((w )/(float)gpatch->width )*gpatch->max_s;
-	v[0].tow = v[1].tow = ((sy)/(float)gpatch->height)*gpatch->max_t;
-	v[2].tow = v[3].tow = ((h )/(float)gpatch->height)*gpatch->max_t;
+	v[0].sow = v[3].sow = ((sx)/(float)SHORT(gpatch->width) )*gpatch->max_s;
+	v[2].sow = v[1].sow = ((w )/(float)SHORT(gpatch->width) )*gpatch->max_s;
+	v[0].tow = v[1].tow = ((sy)/(float)SHORT(gpatch->height))*gpatch->max_t;
+	v[2].tow = v[3].tow = ((h )/(float)SHORT(gpatch->height))*gpatch->max_t;
 
 	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
 
@@ -939,14 +950,14 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 		fw *= dupx;
 		fh *= dupy;
 
-		if (vid.width != BASEVIDWIDTH * vid.dupx)
+		if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 		{
 			if (color & V_SNAPTORIGHT)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 			else if (!(color & V_SNAPTOLEFT))
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
 		}
-		if (vid.height != BASEVIDHEIGHT * dupy)
+		if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)

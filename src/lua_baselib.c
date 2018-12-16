@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,13 +14,22 @@
 #ifdef HAVE_BLUA
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
+#ifdef ESLOPE
+#include "p_slopes.h" // P_GetZAt
+#endif
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_things.h"
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+<<<<<<< HEAD
 #include "hu_stuff.h"	// HU_AddChatText
+=======
+#include "hu_stuff.h"
+#include "console.h"
+#include "d_netcmd.h" // IsPlayerAdmin
+>>>>>>> master
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -136,6 +145,16 @@ static int lib_evalMath(lua_State *L)
 	const char *word = luaL_checkstring(L, 1);
 	LUA_Deprecated(L, "EvalMath(string)", "_G[string]");
 	lua_pushinteger(L, LUA_EvalMath(word));
+	return 1;
+}
+
+static int lib_isPlayerAdmin(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	//HUDSAFE
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, IsPlayerAdmin(player-players));
 	return 1;
 }
 
@@ -1593,6 +1612,24 @@ static int lib_evCrumbleChain(lua_State *L)
 	return 0;
 }
 
+#ifdef ESLOPE
+// P_SLOPES
+////////////
+
+static int lib_pGetZAt(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	if (!slope)
+		return LUA_ErrInvalid(L, "pslope_t");
+
+	lua_pushfixed(L, P_GetZAt(slope, x, y));
+	return 1;
+}
+#endif
+
 // R_DEFS
 ////////////
 
@@ -2036,6 +2073,7 @@ static luaL_Reg lib[] = {
 	{"chatprint", lib_chatprint},
 	{"chatprintf", lib_chatprintf},
 	{"EvalMath", lib_evalMath},
+	{"IsPlayerAdmin", lib_isPlayerAdmin},
 
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
@@ -2165,6 +2203,11 @@ static luaL_Reg lib[] = {
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
+
+#ifdef ESLOPE
+	// p_slopes
+	{"P_GetZAt",lib_pGetZAt},
+#endif
 
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},

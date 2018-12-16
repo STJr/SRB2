@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -418,14 +418,18 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	numwords = COM_Argc() - usedargs;
 	I_Assert(numwords > 0);
 
+<<<<<<< HEAD
 	if (cv_mute.value && !(server || adminplayer == consoleplayer))	// TODO: Per Player mute.
+=======
+	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
+>>>>>>> master
 	{
 		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"));
 		return;
 	}
 
 	// Only servers/admins can CSAY.
-	if(!server && adminplayer != consoleplayer)
+	if(!server && IsPlayerAdmin(consoleplayer))
 		flags &= ~HU_CSAY;
 
 	// We handle HU_SERVER_SAY, not the caller.
@@ -565,7 +569,7 @@ static void Command_CSay_f(void)
 		return;
 	}
 
-	if(!server && adminplayer != consoleplayer)
+	if(!server && !IsPlayerAdmin(consoleplayer))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Only servers and admins can use csay.\n"));
 		return;
@@ -596,7 +600,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	msg = (char *)*p;
 	SKIPSTRING(*p);
 
-	if ((cv_mute.value || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && playernum != adminplayer)
+	if ((cv_mute.value || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, cv_mute.value ?
 			M_GetText("Illegal say command received from %s while muted\n") : M_GetText("Illegal csay command received from non-admin %s\n"),
@@ -719,7 +723,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		// Give admins and remote admins their symbols.
 		if (playernum == serverplayer)
 			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(adminchar) + 1, PU_STATIC, NULL);
-		else if (playernum == adminplayer)
+		else if (IsPlayerAdmin(playernum))
 			tempchar = (char *)Z_Calloc(strlen(cstart) + strlen(remotechar) + 1, PU_STATIC, NULL);
 		if (tempchar)
 		{
@@ -909,7 +913,7 @@ static void HU_queueChatChar(char c)
 		c_input = 0;
 		
 		// last minute mute check
-		if (cv_mute.value && !(server || adminplayer == consoleplayer))
+		if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 		{
 			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"));
 			return;
@@ -1012,9 +1016,9 @@ boolean HU_Responder(event_t *ev)
 	{
 		// enter chat mode
 		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
-			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
+			&& netgame && (!cv_mute.value || server || IsPlayerAdmin(consoleplayer)))
 		{
-			if (cv_mute.value && !(server || adminplayer == consoleplayer))
+			if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 				return false;
 			chat_on = true;
 			w_chat[0] = 0;
@@ -1023,13 +1027,18 @@ boolean HU_Responder(event_t *ev)
 			return true;
 		}
 		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
-			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
+			&& netgame && (!cv_mute.value || server || (IsPlayerAdmin(consoleplayer))))
 		{
+<<<<<<< HEAD
 			if (cv_mute.value && !(server || adminplayer == consoleplayer))
+=======
+			if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
+>>>>>>> master
 				return false;
 			chat_on = true;
 			w_chat[0] = 0;
 			teamtalk = true;
+<<<<<<< HEAD
 			chat_scrollmedown = true;
 			return true;
 		}
@@ -1561,6 +1570,9 @@ static void HU_DrawChat(void)
 			c = 0;
 			y += charheight;
 			typelines += 1;
+=======
+			return true;
+>>>>>>> master
 		}
 	}
 

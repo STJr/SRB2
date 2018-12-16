@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "tables.h"
 
 #include "d_event.h" // Screenshot responder
+#include "command.h"
 
 typedef enum {
 	MM_OFF = 0,
@@ -27,6 +28,12 @@ typedef enum {
 	MM_SCREENSHOT
 } moviemode_t;
 extern moviemode_t moviemode;
+
+extern consvar_t cv_screenshot_option, cv_screenshot_folder;
+extern consvar_t cv_moviemode;
+extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
+extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
+extern consvar_t cv_apng_delay;
 
 void M_StartMovie(void);
 void M_SaveFrame(void);

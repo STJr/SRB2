@@ -22,6 +22,10 @@ Build instructions:
 
 make -C src LINUX=1
 
+Build instructions for non-X86 devices (such as X64):
+
+make -C src LINUX=1 NONX86=1
+
 Build instructions to build for Wii Linux/SRB2Wii on a PowerPC system,
 follow cross-compiling instructions for cross-compiling on a x86 system:
 
