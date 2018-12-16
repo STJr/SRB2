@@ -1677,25 +1677,19 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   */
 int W_VerifyNMUSlumps(const char *filename)
 {
+	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
+	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
 	{
-		{"D_", 2}, // MIDI music
-		{"O_", 2}, // Digital music
-		{"DS", 2}, // Sound effects
-
-		{"ENDOOM", 6}, // ENDOOM text lump
-		{"PLAYPAL", 7}, // Palette
-		{"COLORMAP", 8}, // Colormap
-		{"PAL", 3}, // Palette changes
-		{"CLM", 3}, // Colormap changes
-		{"TRANS", 5}, // Translucency map
-#if 0
-		{"LTFNT", 5}, // Level title font changes
-		{"STCFN", 5}, // Console font changes
-		{"TNYFN", 5}, // Tiny console font changes
-
-		{"M_", 2}, // Menu changes
-#endif
+		{"D_", 2},
+		{"O_", 2},
+		{"DS", 2},
+		{"ENDOOM", 6},
+		{"PLAYPAL", 7},
+		{"COLORMAP", 8},
+		{"PAL", 3},
+		{"CLM", 3},
+		{"TRANS", 5},
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);
