@@ -125,6 +125,12 @@ extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
 extern CV_PossibleValue_t CV_Natural[];
+
+// Filter consvars by version
+extern consvar_t cv_execversion;
+
+void CV_InitFilterVar(void);
+
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);
 

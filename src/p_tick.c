@@ -607,7 +607,8 @@ void P_Ticker(boolean run)
 	}
 
 	// Keep track of how long they've been playing!
-	totalplaytime++;
+	if (!demoplayback) // Don't increment if a demo is playing.
+		totalplaytime++;
 
 	if (!useNightsSS && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();
