@@ -1,25 +1,30 @@
 #!/bin/bash
 
 # Deployer for Travis-CI
-# Asset Paths
+# Default Variables
 #
-# If these are not in your settings, defaults below will be assigned.
-#
-# ASSET_ARCHIVE_PATH = http://example.com/assets.7z (path to single archive of assets. must be 7z.
-#                                                    you should set the default filenames below to blank if
-#                                                    those files are in the archive)
-# ASSET_BASE_PATH = http://example.com/path         (base URL to single asset downloads)
-# ASSET_FILES_REQUIRED = file1.ext file2.ext        (required files in the build)
-# ASSET_FILES_DOCS = README.txt LICENSE.txt         (documentation files; will not error out if not found, but will always be downloaded)
-# ASSET_FILES_OPTIONAL = music.dta                  (optional files; will only be downloaded if ASSET_FILES_OPTIONAL_GET=1
-#                                                    note that these will NOT be copied to cache, and will always be downloaded.)
-# ASSET_FILES_OPTIONAL_GET = 1                            (default is to NOT download optional files)
+# Here are all of the user-set variables used by Deployer.
+# See the "Cross-platform deployment" page on SRB2 Wiki for documentation.
+
+# Core Parameters
+: ${DPL_ENABLED}                # Enable Deployer behavior; must be set for any deployment activity
+: ${DPL_JOB_ALL}                # Enable all jobs for deployment
+: ${DPL_JOB_TERMINATE_DISABLED} # If Deployer is active, terminate all jobs where Deployer is not triggered
+: ${DPL_TRIGGER}                # Use a [word] in the commit message to trigger Deployer
+: ${DPL_OSNAMES}                # Trigger Deployer by OS name (osx,linux)
+: ${DPL_BRANCHES}               # Trigger Deployer by git branch name
 
 # Job Parameters
-: ${_DPL_PACKAGE_MAIN:=1}
-: ${_DPL_PACKAGE_ASSET}
+: ${_DPL_JOB_ENABLED}           # Enable Deployer for this specific job. DPL_ENABLED must be set too.
+: ${_DPL_JOB_NAME}              # Identifier for the job, used for logging and trigger word matching
+: ${_DPL_FTP_TARGET}            # Deploy to FTP
+: ${_DPL_DPUT_TARGET}           # Deploy to DPUT
+: ${_DPL_PACKAGE_SOURCE}        # Build packages into a Source distribution. Linux only.
+: ${_DPL_PACKAGE_BINARY}        # Build packages into a Binary distribution. Linux only.
+: ${_DPL_PACKAGE_MAIN:=1}       # Build main installation package
+: ${_DPL_PACKAGE_ASSET}         # Build asset installation package. Linux only.
 
-# Set variables for assets
+# Asset File Parameters
 : ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
 : ${ASSET_BASE_PATH:=http://alam.srb2.org/SRB2/2.1.21-Final/Resources}
 : ${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
@@ -27,12 +32,27 @@
 : ${ASSET_FILES_OPTIONAL:=music.dta}
 : ${ASSET_FILES_OPTIONAL_GET:=0}
 
+# FTP Parameters
+: ${DPL_FTP_PROTOCOL}
+: ${DPL_FTP_USER}
+: ${DPL_FTP_PASS}
+: ${DPL_FTP_HOSTNAME}
+: ${DPL_FTP_PORT}
+: ${DPL_FTP_PATH}
+
+# DPUT Parameters
+: ${DPL_DPUT_DOMAIN:=ppa.launchpad.net}
+: ${DPL_DPUT_METHOD:=sftp}
+: ${DPL_DPUT_INCOMING}
+: ${DPL_DPUT_USER:=anonymous}
+: ${DPL_SSH_KEY_PRIVATE}        # Base64-encoded private key file. Used to sign repository uploads
+: ${DPL_SSH_KEY_PASSPHRASE}     # Decodes the private key file.
+
 # Package Parameters
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.1.21}
-: ${PACKAGE_SUBVERSION:=~14.04trusty} # configured in debian_template.sh
-: ${PACKAGE_REVISION} # configured in debian_template.sh
-: ${PACKAGE_ASSET_MINVERSION:=2.1.15}
+: ${PACKAGE_SUBVERSION:=~14.04trusty}
+: ${PACKAGE_REVISION}           # Defaults to UTC timestamp
 : ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
 : ${PACKAGE_LINK_PATH:=/usr/games}
 : ${PACKAGE_DISTRO:=trusty}
@@ -41,23 +61,17 @@
 : ${PACKAGE_GROUP_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
 : ${PACKAGE_WEBSITE:=<http://www.srb2.org>}
 
+: ${PACKAGE_ASSET_MINVERSION:=2.1.15}
+
 : ${PROGRAM_NAME:=Sonic Robo Blast 2}
 : ${PROGRAM_VERSION:=2.1.21}
 : ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
 : ${PROGRAM_FILENAME:=srb2}
 
-# If not running on travis, this is later set to the current datetime
-# if [[ "$TRAVIS_JOB_ID" != "" ]]; then
-#     : ${PACKAGE_SUBVERSION:=$TRAVIS_JOB_ID};
-# fi;
+: ${DPL_PGP_KEY_PRIVATE}        # Base64-encoded private key file. Used to sign Debian packages
+: ${DPL_PGP_KEY_PASSPHRASE}     # Decodes the private key file.
 
-# DPUT Variables
-: ${DPL_DPUT_DOMAIN:=ppa.launchpad.net}
-: ${DPL_DPUT_METHOD:=sftp}
-: ${DPL_DPUT_INCOMING}
-: ${DPL_DPUT_USER:=anonymous}
-
-# Export all variables for envsubst templating
+# Export Asset and Package Parameters for envsubst templating
 
 export ASSET_ARCHIVE_PATH="${ASSET_ARCHIVE_PATH}"
 export ASSET_BASE_PATH="${ASSET_BASE_PATH}"
