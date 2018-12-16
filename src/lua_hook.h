@@ -43,12 +43,13 @@ enum hook {
 	hook_PlayerMsg,
 	hook_HurtMsg,
 	hook_PlayerSpawn,
+	hook_PlayerQuit,
 
 	hook_MAX // last hook
 };
 extern const char *const hookNames[];
 
-void LUAh_MapChange(void); // Hook for map change (before load)
+void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)
@@ -77,5 +78,6 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector); // Hook
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook for chat messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source); // Hook for hurt messages
 #define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for G_SpawnPlayer
+void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 
 #endif

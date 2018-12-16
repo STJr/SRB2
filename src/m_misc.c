@@ -37,6 +37,7 @@
 #include "d_main.h"
 #include "m_argv.h"
 #include "i_system.h"
+#include "command.h" // cv_execversion
 
 #include "m_anigif.h"
 
@@ -440,7 +441,18 @@ void Command_LoadConfig_f(void)
 
 	strcpy(configfile, COM_Argv(1));
 	FIL_ForceExtension(configfile, ".cfg");
+
+	// temporarily reset execversion to default
+	cv_execversion.flags &= ~CV_HIDEN;
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
+	// exec the config
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	cv_execversion.flags |= CV_HIDEN;
 }
 
 /** Saves the current configuration and loads another.
@@ -477,9 +489,22 @@ void M_FirstLoadConfig(void)
 	// load default control
 	G_Controldefault();
 
+	// register execversion here before we load any configs
+	CV_RegisterVar(&cv_execversion);
+
+	// temporarily reset execversion to default
+	// we shouldn't need to do this, but JUST in case...
+	cv_execversion.flags &= ~CV_HIDEN;
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 	// no COM_BufExecute() needed; that does it right away
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	cv_execversion.flags |= CV_HIDEN;
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -493,6 +518,7 @@ void M_FirstLoadConfig(void)
 void M_SaveConfig(const char *filename)
 {
 	FILE *f;
+	char *filepath;
 
 	// make sure not to write back the config until it's been correctly loaded
 	if (!gameconfig_loaded)
@@ -507,13 +533,20 @@ void M_SaveConfig(const char *filename)
 			return;
 		}
 
-		f = fopen(filename, "w");
+		// append srb2home to beginning of filename
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
+
+		f = fopen(filepath, "w");
 		// change it only if valid
 		if (f)
-			strcpy(configfile, filename);
+			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}
@@ -535,6 +568,10 @@ void M_SaveConfig(const char *filename)
 
 	// header message
 	fprintf(f, "// SRB2 configuration file.\n");
+
+	// print execversion FIRST, because subsequent consvars need to be filtered
+	// always print current MODVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, MODVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 
@@ -1494,9 +1531,9 @@ boolean M_ScreenshotResponder(event_t *ev)
 		return false;
 
 	ch = ev->data1;
-	if (ch == KEY_F8)
+	if (ch == KEY_F8 || ch == gamecontrol[gc_screenshot][0] || ch == gamecontrol[gc_screenshot][1]) // remappable F8
 		M_ScreenShot();
-	else if (ch == KEY_F9)
+	else if (ch == KEY_F9 || ch == gamecontrol[gc_recordgif][0] || ch == gamecontrol[gc_recordgif][1]) // remappable F9
 		((moviemode) ? M_StopMovie : M_StartMovie)();
 	else
 		return false;
