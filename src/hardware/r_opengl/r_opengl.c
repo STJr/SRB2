@@ -241,14 +241,18 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglBegin glBegin
 #define pglEnd glEnd
 #define pglVertex3f glVertex3f
+#define pglVertex3sv glVertex3sv
 #define pglNormal3f glNormal3f
+#define pglNormal3bv glNormal3bv
 #define pglColor4f glColor4f
 #define pglColor4fv glColor4fv
 #define pglTexCoord2f glTexCoord2f
+#define pglTexCoord2fv glTexCoord2fv
 #define pglVertexPointer glVertexPointer
 #define pglNormalPointer glNormalPointer
 #define pglTexCoordPointer glTexCoordPointer
 #define pglDrawArrays glDrawArrays
+#define pglDrawElements glDrawElements
 #define pglEnableClientState glEnableClientState
 #define pglDisableClientState pglDisableClientState
 
@@ -355,14 +359,20 @@ typedef void (APIENTRY * PFNglEnd) (void);
 static PFNglEnd pglEnd;
 typedef void (APIENTRY * PFNglVertex3f) (GLfloat x, GLfloat y, GLfloat z);
 static PFNglVertex3f pglVertex3f;
+typedef void (APIENTRY * PFNglVertex3sv) (const GLshort *v);
+static PFNglVertex3sv pglVertex3sv;
 typedef void (APIENTRY * PFNglNormal3f) (GLfloat x, GLfloat y, GLfloat z);
 static PFNglNormal3f pglNormal3f;
+typedef void (APIENTRY * PFNglNormal3bv)(const GLbyte *v);
+static PFNglNormal3bv pglNormal3bv;
 typedef void (APIENTRY * PFNglColor4f) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 static PFNglColor4f pglColor4f;
 typedef void (APIENTRY * PFNglColor4fv) (const GLfloat *v);
 static PFNglColor4fv pglColor4fv;
 typedef void (APIENTRY * PFNglTexCoord2f) (GLfloat s, GLfloat t);
 static PFNglTexCoord2f pglTexCoord2f;
+typedef void (APIENTRY * PFNglTexCoord2fv) (const GLfloat *v);
+static PFNglTexCoord2fv pglTexCoord2fv;
 typedef void (APIENTRY * PFNglVertexPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 static PFNglVertexPointer pglVertexPointer;
 typedef void (APIENTRY * PFNglNormalPointer) (GLenum type, GLsizei stride, const GLvoid *pointer);
@@ -371,6 +381,8 @@ typedef void (APIENTRY * PFNglTexCoordPointer) (GLint size, GLenum type, GLsizei
 static PFNglTexCoordPointer pglTexCoordPointer;
 typedef void (APIENTRY * PFNglDrawArrays) (GLenum mode, GLint first, GLsizei count);
 static PFNglDrawArrays pglDrawArrays;
+typedef void (APIENTRY * PFNglDrawElements) (GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+static PFNglDrawElements pglDrawElements;
 typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
 static PFNglEnableClientState pglEnableClientState;
 typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
@@ -509,14 +521,18 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglBegin , glBegin)
 	GETOPENGLFUNC(pglEnd , glEnd)
 	GETOPENGLFUNC(pglVertex3f , glVertex3f)
+	GETOPENGLFUNC(pglVertex3sv, glVertex3sv)
 	GETOPENGLFUNC(pglNormal3f , glNormal3f)
+	GETOPENGLFUNC(pglNormal3bv, glNomral3bv)
 	GETOPENGLFUNC(pglColor4f , glColor4f)
 	GETOPENGLFUNC(pglColor4fv , glColor4fv)
 	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
+	GETOPENGLFUNC(pglTexCoord2fv, glTexCoord2fv)
 	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
 	GETOPENGLFUNC(pglNormalPointer, glNormalPointer)
 	GETOPENGLFUNC(pglTexCoordPointer, glTexCoordPointer)
 	GETOPENGLFUNC(pglDrawArrays, glDrawArrays)
+	GETOPENGLFUNC(pglDrawElements, glDrawElements)
 	GETOPENGLFUNC(pglEnableClientState, glEnableClientState)
 	GETOPENGLFUNC(pglDisableClientState, glDisableClientState)
 
@@ -1902,7 +1918,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 	}
 }
 
-static void DrawModelEx(model_t *model, mdlframe_t *frame, INT32 duration, INT32 tics, mdlframe_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {	
 	INT32     val, count, pindex;
 	GLfloat s, t;
@@ -1990,105 +2006,139 @@ static void DrawModelEx(model_t *model, mdlframe_t *frame, INT32 duration, INT32
 
 	pglScalef(scalex, scaley, scalez);
 
-	mesh_t *mesh = &model->meshes[0];
+	boolean useTinyFrames = model->meshes[0].tinyframes != NULL;
 
-	if (!nextframe || pol == 0.0f)
+	if (useTinyFrames)
+		pglScalef(1 / 64.0f, 1 / 64.0f, 1 / 64.0f);
+
+	for (int i = 0; i < model->numMeshes; i++)
 	{
-		// Zoom! Take advantage of just shoving the entire arrays to the GPU.
-		pglEnableClientState(GL_VERTEX_ARRAY);
-		pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		pglEnableClientState(GL_NORMAL_ARRAY);
-		pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
-		pglNormalPointer(GL_FLOAT, 0, frame->normals);
-		pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
-		pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
-		pglDisableClientState(GL_NORMAL_ARRAY);
-		pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		/*
-		pglBegin(GL_TRIANGLES);
+		mesh_t *mesh = &model->meshes[i];
 
-		int i = 0;
-		float *uvPtr = mesh->uvs;
-		float *frameVert = frame->vertices;
-		float *frameNormal = frame->normals;
-		for (i = 0; i < mesh->numTriangles; i++)
+		if (useTinyFrames)
 		{
-			float uvx = *uvPtr++;
-			float uvy = *uvPtr++;
+			tinyframe_t *frame = &mesh->tinyframes[frameIndex % mesh->numFrames];
+			tinyframe_t *nextframe = NULL;
 
-			// Interpolate
-			float px1 = *frameVert++;
-			float py1 = *frameVert++;
-			float pz1 = *frameVert++;
-			float nx1 = *frameNormal++;
-			float ny1 = *frameNormal++;
-			float nz1 = *frameNormal++;
+			if (nextFrameIndex != -1)
+				nextframe = &mesh->tinyframes[nextFrameIndex % mesh->numFrames];
 
-			pglTexCoord2f(uvx, uvy);
-			pglNormal3f(nx1, ny1, nz1);
-			pglVertex3f(px1, py1, pz1);
+			if (!nextframe || pol == 0.0f)
+			{
+				pglEnableClientState(GL_VERTEX_ARRAY);
+				pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglEnableClientState(GL_NORMAL_ARRAY);
+				pglVertexPointer(3, GL_SHORT, 0, frame->vertices);
+				pglNormalPointer(GL_BYTE, 0, frame->normals);
+				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+				pglDisableClientState(GL_NORMAL_ARRAY);
+				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+			}
+			else
+			{
+				// Dangit, I soooo want to do this in a GLSL shader...
+				pglBegin(GL_TRIANGLES);
+
+				short *buffer = malloc(mesh->numVertices * sizeof(short));
+				short *vertPtr = buffer;
+				char *normBuffer = malloc(mesh->numVertices * sizeof(char));
+				char *normPtr = normBuffer;
+
+				int j = 0;
+				for (j = 0; j < mesh->numVertices; j++)
+				{
+					// Interpolate
+					*vertPtr++ = (short)(frame->vertices[j] + (pol * (nextframe->vertices[j] - frame->vertices[j])));
+					*normPtr++ = (short)(frame->normals[j] + (pol * (nextframe->normals[j] - frame->normals[j])));
+				}
+
+				float *uvPtr = mesh->uvs;
+				vertPtr = buffer;
+				normPtr = normBuffer;
+				for (j = 0; j < mesh->numTriangles; j++)
+				{
+					pglTexCoord2fv(uvPtr);
+					pglNormal3bv(normPtr);
+					pglVertex3sv(vertPtr);
+
+					uvPtr += 2;
+					normPtr += 3;
+					vertPtr += 3;
+				}
+
+				free(buffer);
+				free(normBuffer);
+
+				pglEnd();
+			}
 		}
-
-		pglEnd();*/
-	}
-	else
-	{
-		// Dangit, I soooo want to do this in a GLSL shader...
-		pglBegin(GL_TRIANGLES);
-
-		int i = 0;
-		float *uvPtr = mesh->uvs;
-		float *frameVert = frame->vertices;
-		float *frameNormal = frame->normals;
-		float *nextFrameVert = nextframe->vertices;
-		float *nextFrameNormal = frame->normals;
-		for (i = 0; i < mesh->numTriangles; i++)
+		else
 		{
-			float uvx = *uvPtr++;
-			float uvy = *uvPtr++;
+			mdlframe_t *frame = &mesh->frames[frameIndex % mesh->numFrames];
+			mdlframe_t *nextframe = NULL;
 
-			// Interpolate
-			float px1 = *frameVert++;
-			float px2 = *nextFrameVert++;
-			float py1 = *frameVert++;
-			float py2 = *nextFrameVert++;
-			float pz1 = *frameVert++;
-			float pz2 = *nextFrameVert++;
-			float nx1 = *frameNormal++;
-			float nx2 = *nextFrameNormal++;
-			float ny1 = *frameNormal++;
-			float ny2 = *nextFrameNormal++;
-			float nz1 = *frameNormal++;
-			float nz2 = *nextFrameNormal++;
+			if (nextFrameIndex != -1)
+				nextframe = &mesh->frames[nextFrameIndex % mesh->numFrames];
 
-			pglTexCoord2f(uvx, uvy);
-			pglNormal3f((nx1 + pol * (nx2 - nx1)),
-				(ny1 + pol * (ny2 - ny1)),
-				(nz1 + pol * (nz2 - nz1)));
-			pglVertex3f((px1 + pol * (px2 - px1)),
-				(py1 + pol * (py2 - py1)),
-				(pz1 + pol * (pz2 - pz1)));
+			if (!nextframe || pol == 0.0f)
+			{
+				// Zoom! Take advantage of just shoving the entire arrays to the GPU.
+				pglEnableClientState(GL_VERTEX_ARRAY);
+				pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglEnableClientState(GL_NORMAL_ARRAY);
+				pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
+				pglNormalPointer(GL_FLOAT, 0, frame->normals);
+				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
+				pglDisableClientState(GL_NORMAL_ARRAY);
+				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+			}
+			else
+			{
+				// Dangit, I soooo want to do this in a GLSL shader...
+				pglBegin(GL_TRIANGLES);
+
+				int j = 0;
+				float *uvPtr = mesh->uvs;
+				float *frameVert = frame->vertices;
+				float *frameNormal = frame->normals;
+				float *nextFrameVert = nextframe->vertices;
+				float *nextFrameNormal = frame->normals;
+				for (j = 0; j < mesh->numTriangles; j++)
+				{
+					// Interpolate
+					float px1 = *frameVert++;
+					float px2 = *nextFrameVert++;
+					float py1 = *frameVert++;
+					float py2 = *nextFrameVert++;
+					float pz1 = *frameVert++;
+					float pz2 = *nextFrameVert++;
+					float nx1 = *frameNormal++;
+					float nx2 = *nextFrameNormal++;
+					float ny1 = *frameNormal++;
+					float ny2 = *nextFrameNormal++;
+					float nz1 = *frameNormal++;
+					float nz2 = *nextFrameNormal++;
+
+					pglTexCoord2fv(uvPtr);
+					pglNormal3f((nx1 + pol * (nx2 - nx1)),
+						(ny1 + pol * (ny2 - ny1)),
+						(nz1 + pol * (nz2 - nz1)));
+					pglVertex3f((px1 + pol * (px2 - px1)),
+						(py1 + pol * (py2 - py1)),
+						(pz1 + pol * (pz2 - pz1)));
+
+					uvPtr++;
+				}
+
+				pglEnd();
+			}
 		}
-
-		pglEnd();
 	}
 
-/*	if (lightType != LIGHT_NONE)
-	{
-		glVertexAttribPointer(program->slots[Shaders::A_NORMAL_SLOT], 3, BGL_FLOAT, BGL_FALSE, 0, frame->normals);
-		//					if (normalmapped)
-		//						bglVertexAttribPointer(program->slots[Shaders::A_TANGENT_SLOT], 3, BGL_FLOAT, BGL_FALSE, 0, frame->tangents);
-	}
-
-	if (frame->colors)
-		glVertexAttribPointer(program->slots[Shaders::A_COLOR_SLOT], 4, GL_UNSIGNED_BYTE, BGL_TRUE, 0, frame->colors);
-	else
-	{
-		SetGlobalWhiteColorArray(mesh->numTriangles * 3);
-		glVertexAttribPointer(program->slots[Shaders::A_COLOR_SLOT], 3, BGL_UNSIGNED_BYTE, BGL_TRUE, 0, globalWhiteColorArray);
-	}
-	*/
 	pglPopMatrix(); // should be the same as glLoadIdentity
 	if (color)
 		pglDisable(GL_LIGHTING);
@@ -2099,9 +2149,9 @@ static void DrawModelEx(model_t *model, mdlframe_t *frame, INT32 duration, INT32
 // -----------------+
 // HWRAPI DrawMD2   : Draw an MD2 model with glcommands
 // -----------------+
-EXPORT void HWRAPI(DrawModel) (model_t *model, mdlframe_t *frame, INT32 duration, INT32 tics, mdlframe_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
-	DrawModelEx(model, frame, duration, tics,  nextframe, pos, scale, flipped, color);
+	DrawModelEx(model, frameIndex, duration, tics,  nextFrameIndex, pos, scale, flipped, color);
 }
 
 // -----------------+

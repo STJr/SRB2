@@ -233,8 +233,6 @@ typedef struct
 // Load the model
 model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 {
-	useFloat = true; // Right now we always useFloat = true, because the GL subsystem needs some work for the other option to work.
-
 	model_t *retModel = NULL;
 	md2header_t *header;
 
@@ -397,17 +395,17 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 			framePtr--;
 			for (j = 0; j < header->numXYZ; j++, vertex++)
 			{
-				*vertptr = (short)(((vertex->v[1] * framePtr->scale[1]) + framePtr->translate[1]) / dataScale);
+				*vertptr = (short)(((vertex->v[0] * framePtr->scale[0]) + framePtr->translate[0]) / dataScale);
 				vertptr++;
 				*vertptr = (short)(((vertex->v[2] * framePtr->scale[2]) + framePtr->translate[2]) / dataScale);
 				vertptr++;
-				*vertptr = (short)(((vertex->v[0] * framePtr->scale[0]) + framePtr->translate[0]) / dataScale);
+				*vertptr = -1.0f * (short)(((vertex->v[1] * framePtr->scale[1]) + framePtr->translate[1]) / dataScale);
 				vertptr++;
 
 				// Normal
+				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][0] * 127);
 				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][1] * 127);
 				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][2] * 127);
-				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][0] * 127);
 			}
 		}
 
@@ -419,17 +417,17 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 		{
 			*indexptr = trisPtr->meshIndex[0];
 			indexptr++;
-			*indexptr = trisPtr->meshIndex[2];
-			indexptr++;
 			*indexptr = trisPtr->meshIndex[1];
 			indexptr++;
+			*indexptr = trisPtr->meshIndex[2];
+			indexptr++;
 
+			uvptr[trisPtr->meshIndex[0] * 2] = texcoords[trisPtr->stIndex[0]].s / (float)header->skinwidth;
+			uvptr[trisPtr->meshIndex[0] * 2 + 1] = (texcoords[trisPtr->stIndex[0]].t / (float)header->skinheight);
 			uvptr[trisPtr->meshIndex[1] * 2] = texcoords[trisPtr->stIndex[1]].s / (float)header->skinwidth;
 			uvptr[trisPtr->meshIndex[1] * 2 + 1] = (texcoords[trisPtr->stIndex[1]].t / (float)header->skinheight);
 			uvptr[trisPtr->meshIndex[2] * 2] = texcoords[trisPtr->stIndex[2]].s / (float)header->skinwidth;
 			uvptr[trisPtr->meshIndex[2] * 2 + 1] = (texcoords[trisPtr->stIndex[2]].t / (float)header->skinheight);
-			uvptr[trisPtr->meshIndex[0] * 2] = texcoords[trisPtr->stIndex[0]].s / (float)header->skinwidth;
-			uvptr[trisPtr->meshIndex[0] * 2 + 1] = (texcoords[trisPtr->stIndex[0]].t / (float)header->skinheight);
 		}
 	}
 	else // Full float loading method

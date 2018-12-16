@@ -144,8 +144,6 @@ static bool latlnginit = false;
 
 model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 {
-	useFloat = true; // Right now we always useFloat = true, because the GL subsystem needs some work for the other option to work.
-
 	if (!latlnginit)
 	{
 		LatLngInit();
@@ -307,20 +305,20 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 				for (k = 0; k < mdS->numVerts; k++)
 				{
 					// Vertex
-					*vertptr = mdV[k].y;
+					*vertptr = mdV[k].x;
 					vertptr++;
 					*vertptr = mdV[k].z;
 					vertptr++;
-					*vertptr = mdV[k].x;
+					*vertptr = 1.0f - mdV[k].y;
 					vertptr++;
 
 					// Normal
 					GetNormalFromLatLong(mdV[k].n, tempNormal);
-					*normptr = (byte)(tempNormal[1] * 127);
+					*normptr = (byte)(tempNormal[0] * 127);
 					normptr++;
 					*normptr = (byte)(tempNormal[2] * 127);
 					normptr++;
-					*normptr = (byte)(tempNormal[0] * 127);
+					*normptr = (byte)(tempNormal[1] * 127);
 					normptr++;
 				}
 			}
@@ -331,7 +329,7 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 			{
 				*uvptr = mdST[j].st[0];
 				uvptr++;
-				*uvptr = 1.0f - mdST[j].st[1];
+				*uvptr = mdST[j].st[1];
 				uvptr++;
 			}
 
@@ -342,9 +340,9 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 				// Indices
 				*indexptr = (unsigned short)mdT->index[0];
 				indexptr++;
-				*indexptr = (unsigned short)mdT->index[2];
-				indexptr++;
 				*indexptr = (unsigned short)mdT->index[1];
+				indexptr++;
+				*indexptr = (unsigned short)mdT->index[2];
 				indexptr++;
 			}
 		}
@@ -377,47 +375,47 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 					vertptr++;
 					*vertptr = mdV[mdT->index[0]].z * dataScale;
 					vertptr++;
-					*vertptr = mdV[mdT->index[0]].y * dataScale;
+					*vertptr = 1.0f - mdV[mdT->index[0]].y * dataScale;
 					vertptr++;
 
 					GetNormalFromLatLong(mdV[mdT->index[0]].n, tempNormal);
-					*normptr = tempNormal[1];
+					*normptr = tempNormal[0];
 					normptr++;
 					*normptr = tempNormal[2];
 					normptr++;
-					*normptr = tempNormal[0];
+					*normptr = tempNormal[1];
 					normptr++;
 
 					// Vertex 2
-					*vertptr = mdV[mdT->index[2]].x * dataScale;
-					vertptr++;
-					*vertptr = mdV[mdT->index[2]].z * dataScale;
-					vertptr++;
-					*vertptr = mdV[mdT->index[2]].y * dataScale;
-					vertptr++;
-
-					GetNormalFromLatLong(mdV[mdT->index[2]].n, tempNormal);
-					*normptr = tempNormal[1];
-					normptr++;
-					*normptr = tempNormal[2];
-					normptr++;
-					*normptr = tempNormal[0];
-					normptr++;
-
-					// Vertex 3
 					*vertptr = mdV[mdT->index[1]].x * dataScale;
 					vertptr++;
 					*vertptr = mdV[mdT->index[1]].z * dataScale;
 					vertptr++;
-					*vertptr = mdV[mdT->index[1]].y * dataScale;
+					*vertptr = 1.0f - mdV[mdT->index[1]].y * dataScale;
 					vertptr++;
 
 					GetNormalFromLatLong(mdV[mdT->index[1]].n, tempNormal);
-					*normptr = tempNormal[1];
+					*normptr = tempNormal[0];
 					normptr++;
 					*normptr = tempNormal[2];
 					normptr++;
+					*normptr = tempNormal[1];
+					normptr++;
+
+					// Vertex 3
+					*vertptr = mdV[mdT->index[2]].x * dataScale;
+					vertptr++;
+					*vertptr = mdV[mdT->index[2]].z * dataScale;
+					vertptr++;
+					*vertptr = 1.0f - mdV[mdT->index[2]].y * dataScale;
+					vertptr++;
+
+					GetNormalFromLatLong(mdV[mdT->index[2]].n, tempNormal);
 					*normptr = tempNormal[0];
+					normptr++;
+					*normptr = tempNormal[2];
+					normptr++;
+					*normptr = tempNormal[1];
 					normptr++;
 
 					mdT++; // Advance to next triangle
@@ -436,14 +434,14 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 				*uvptr = mdST[mdT->index[0]].st[1];
 				uvptr++;
 
-				*uvptr = mdST[mdT->index[2]].st[0];
-				uvptr++;
-				*uvptr = mdST[mdT->index[2]].st[1];
-				uvptr++;
-
 				*uvptr = mdST[mdT->index[1]].st[0];
 				uvptr++;
 				*uvptr = mdST[mdT->index[1]].st[1];
+				uvptr++;
+
+				*uvptr = mdST[mdT->index[2]].st[0];
+				uvptr++;
+				*uvptr = mdST[mdT->index[2]].st[1];
 				uvptr++;
 
 				mdT++; // Advance to next triangle
