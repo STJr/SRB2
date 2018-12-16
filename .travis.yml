@@ -62,9 +62,9 @@ matrix:
               - gcc-4.8
           compiler: gcc-4.8
           env:
-          - _DEPLOYER_JOB_ENABLED=1
-          - _DEPLOYER_DPUT_TARGET=1
-          - _DEPLOYER_PACKAGE_SOURCE=1
+          - _DPL_JOB_ENABLED=1
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -228,9 +228,9 @@ matrix:
         - os: osx
           osx_image: xcode7.3
           env:
-          - _DEPLOYER_JOB_ENABLED=1
-          - _DEPLOYER_FTP_TARGET=1
-          - _DEPLOYER_PACKAGE_BINARY=1
+          - _DPL_JOB_ENABLED=1
+          - _DPL_FTP_TARGET=1
+          - _DPL_PACKAGE_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
@@ -265,11 +265,11 @@ before_install:
   # Initialize Deployer defaults
   - . ./travis/deployer_defaults.sh
   # Initialize Deployer; check if Deployer is enabled
-  # This needs to be run in the current shell so that $__DEPLOYER_ACTIVE is set for this session
+  # This needs to be run in the current shell so that $__DPL_ACTIVE is set for this session
   - . ./travis/deployer.sh
   # Also check if we should now terminate
-  - if [[ "$__DEPLOYER_ACTIVE_GLOBALLY" == "1" ]] && [[ "$DEPLOYER_JOB_ALL" != "1" ]]; then
-      if [[ "$DEPLOYER_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$__DEPLOYER_ACTIVE" != "1" ]]; then
+  - if [[ "$__DPL_ACTIVE_GLOBALLY" == "1" ]] && [[ "$DPL_JOB_ALL" != "1" ]]; then
+      if [[ "$DPL_JOB_TERMINATE_DISABLED" == "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
         echo "Exiting early because this job is not deploying.";
         exit;
       fi;
@@ -363,7 +363,7 @@ before_script:
 
 script:
   # Build our Makefile from Cmake!
-  - if [[ "$__DEPLOYER_ACTIVE" == "1" ]]; then
+  - if [[ "$__DPL_ACTIVE" == "1" ]]; then
       . ../travis/deployer_build.sh;
     else
       make -k;

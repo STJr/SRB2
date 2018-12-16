@@ -51,10 +51,10 @@
 # fi;
 
 # DPUT Variables
-: ${DEPLOYER_DPUT_DOMAIN:=ppa.launchpad.net}
-: ${DEPLOYER_DPUT_METHOD:=sftp}
-: ${DEPLOYER_DPUT_INCOMING}
-: ${DEPLOYER_DPUT_USER:=anonymous}
+: ${DPL_DPUT_DOMAIN:=ppa.launchpad.net}
+: ${DPL_DPUT_METHOD:=sftp}
+: ${DPL_DPUT_INCOMING}
+: ${DPL_DPUT_USER:=anonymous}
 
 # Export all variables for envsubst templating
 

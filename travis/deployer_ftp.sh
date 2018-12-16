@@ -9,19 +9,19 @@
 # Set these environment variables in your Travis-CI settings, where they are stored securely.
 # See other shell scripts for more options.
 #
-# DEPLOYER_FTP_PROTOCOL = ftp                    (ftp or sftp or ftps or however your FTP URI begins)
-# DEPLOYER_FTP_USER = username
-# DEPLOYER_FTP_PASS = password
-# DEPLOYER_FTP_HOSTNAME = example.com
-# DEPLOYER_FTP_PORT = 21
-# DEPLOYER_FTP_PATH = path/to/upload             (do not add trailing slash)
+# DPL_FTP_PROTOCOL = ftp                    (ftp or sftp or ftps or however your FTP URI begins)
+# DPL_FTP_USER = username
+# DPL_FTP_PASS = password
+# DPL_FTP_HOSTNAME = example.com
+# DPL_FTP_PORT = 21
+# DPL_FTP_PATH = path/to/upload             (do not add trailing slash)
 
-if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
+if [[ "$__DPL_FTP_ACTIVE" == "1" ]]; then
 	if [[ "$TRAVIS_JOB_NAME" != "" ]]; then
 		JOBNAME=$TRAVIS_JOB_NAME;
 	else
-		if [[ "$_DEPLOYER_JOB_NAME" != "" ]]; then
-			JOBNAME=$_DEPLOYER_JOB_NAME;
+		if [[ "$_DPL_JOB_NAME" != "" ]]; then
+			JOBNAME=$_DPL_JOB_NAME;
 		else
 			JOBNAME=$TRAVIS_OS_NAME;
 		fi;
@@ -36,19 +36,19 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 	echo "" >> "commit.txt";
 
 	# Initialize FTP parameters
-	if [[ "$DEPLOYER_FTP_PORT" == "" ]]; then
-		DEPLOYER_FTP_PORT=21;
+	if [[ "$DPL_FTP_PORT" == "" ]]; then
+		DPL_FTP_PORT=21;
 	fi;
-	if [[ "$DEPLOYER_FTP_PROTOCOL" == "" ]]; then
-		DEPLOYER_FTP_PROTOCOL=ftp;
+	if [[ "$DPL_FTP_PROTOCOL" == "" ]]; then
+		DPL_FTP_PROTOCOL=ftp;
 	fi;
-	__DEPLOYER_FTP_LOCATION=$DEPLOYER_FTP_PROTOCOL://$DEPLOYER_FTP_HOSTNAME:$DEPLOYER_FTP_PORT/$DEPLOYER_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
+	__DPL_FTP_LOCATION=$DPL_FTP_PROTOCOL://$DPL_FTP_HOSTNAME:$DPL_FTP_PORT/$DPL_FTP_PATH/$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/$TRAVIS_JOB_ID-$TRAVIS_JOB_NUMBER-$JOBNAME;
 
 	# Upload to FTP!
 	echo "Uploading to FTP...";
-	curl --ftp-create-dirs -T "commit.txt" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS "$__DEPLOYER_FTP_LOCATION/commit.txt";
+	curl --ftp-create-dirs -T "commit.txt" -u $DPL_FTP_USER:$DPL_FTP_PASS "$__DPL_FTP_LOCATION/commit.txt";
 
-	if [[ "$__DEPLOYER_DEBIAN_ACTIVE" == "1" ]]; then
+	if [[ "$__DPL_DEBIAN_ACTIVE" == "1" ]]; then
 		if [[ "$PACKAGE_MAIN_NOBUILD" != "1" ]]; then
 			PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};
 			PACKAGEDBGFILENAME=${PACKAGE_NAME}-dbg_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};
@@ -78,12 +78,12 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 				for f in ./$n*; do
 					# Binary builds also generate source builds, so exclude the source
 					# builds if desired
-					if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
+					if [[ "$_DPL_PACKAGE_SOURCE" != "1" ]]; then
 						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
 							continue;
 						fi;
 					fi;
-					curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/main/$f";
+					curl --ftp-create-dirs -T "$f" -u $DPL_FTP_USER:$DPL_FTP_PASS  "$__DPL_FTP_LOCATION/package/main/$f";
 				done;
 			done;
 
@@ -112,12 +112,12 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 				for f in ./$n*; do
 					# Binary builds also generate source builds, so exclude the source
 					# builds if desired
-					if [[ "$_DEPLOYER_PACKAGE_SOURCE" != "1" ]]; then
+					if [[ "$_DPL_PACKAGE_SOURCE" != "1" ]]; then
 						if [[ "$f" == *"_source"* ]] || [[ "$f" == *".tar.xz"* ]]; then
 							continue;
 						fi;
 					fi;
-					curl --ftp-create-dirs -T "$f" -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS  "$__DEPLOYER_FTP_LOCATION/package/asset/$f";
+					curl --ftp-create-dirs -T "$f" -u $DPL_FTP_USER:$DPL_FTP_PASS  "$__DPL_FTP_LOCATION/package/asset/$f";
 				done;
 			done;
 
@@ -125,13 +125,13 @@ if [[ "$__DEPLOYER_FTP_ACTIVE" == "1" ]]; then
 			cd $OLDPWD;
 		fi;
 	else
-		if [[ "$_DEPLOYER_BINARY" == "1" ]]; then
-			find bin -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
+		if [[ "$_DPL_BINARY" == "1" ]]; then
+			find bin -type f -exec curl -u $DPL_FTP_USER:$DPL_FTP_PASS --ftp-create-dirs -T {} $__DPL_FTP_LOCATION/{} \;;
 		fi;
 
-		if [[ "$_DEPLOYER_PACKAGE_BINARY" == "1" ]]; then
+		if [[ "$_DPL_PACKAGE_BINARY" == "1" ]]; then
 			sudo rm -r package/_CPack_Packages
-			find package -type f -exec curl -u $DEPLOYER_FTP_USER:$DEPLOYER_FTP_PASS --ftp-create-dirs -T {} $__DEPLOYER_FTP_LOCATION/{} \;;
+			find package -type f -exec curl -u $DPL_FTP_USER:$DPL_FTP_PASS --ftp-create-dirs -T {} $__DPL_FTP_LOCATION/{} \;;
 		fi;
 	fi;
 fi

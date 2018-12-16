@@ -161,6 +161,6 @@ if [[ "$1" != "clean" ]]; then
 	fi;
 fi;
 
-if [[ "$__DEPLOYER_ACTIVE" != "1" ]] && [[ "$__PACKAGE_REVISION_BY_DATE" == "1" ]]; then
+if [[ "$__DPL_ACTIVE" != "1" ]] && [[ "$__PACKAGE_REVISION_BY_DATE" == "1" ]]; then
 	unset PACKAGE_REVISION; # so we can reset the date on subsequent runs
 fi;
