@@ -34,6 +34,8 @@
 #include "z_zone.h"
 #include "fastcmp.h"
 
+#include "filesrch.h"
+
 #include "i_video.h" // rendermode
 #include "d_netfil.h"
 #include "dehacked.h"
@@ -299,12 +301,22 @@ UINT16 W_LoadWadFile(const char *filename)
 	UINT32 numlumps;
 	size_t i;
 	INT32 compressed = 0;
-	size_t packetsize = 0;
-	serverinfo_pak *dummycheck = NULL;
+	size_t packetsize;
 	UINT8 md5sum[16];
+	boolean important;
 
-	// Shut the compiler up.
-	(void)dummycheck;
+	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
+		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
+
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	if (dirmenu)
+	{
+		refreshdirname = Z_StrDup(filename);
+		nameonly(refreshdirname);
+	}
+	else
+		refreshdirname = NULL;
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
@@ -313,6 +325,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
 		return INT16_MAX;
 	}
 
@@ -322,21 +335,21 @@ UINT16 W_LoadWadFile(const char *filename)
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
-	for (i = 0; i < numwadfiles; i++)
+	// see PutFileNeeded in d_netfil.c
+	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize += nameonlylength(wadfiles[i]->filename);
-		packetsize += 22; // MD5, etc.
-	}
+		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
-	packetsize += nameonlylength(filename);
-	packetsize += 22;
+		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+			refreshdirmenu |= REFRESHDIR_MAX;
+			if (handle)
+				fclose(handle);
+			return INT16_MAX;
+		}
 
-	if (packetsize > sizeof(dummycheck->fileneeded))
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-		if (handle)
-			fclose(handle);
-		return INT16_MAX;
+		packetsizetally = packetsize;
 	}
 
 	// detect dehacked file with the "soc" extension
@@ -483,6 +496,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
+	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
 	wadfile->filesize = (unsigned)ftell(handle);
 
@@ -1230,19 +1244,27 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   */
 int W_VerifyNMUSlumps(const char *filename)
 {
-	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
-	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
 	{
-		{"D_", 2},
-		{"O_", 2},
-		{"DS", 2},
-		{"ENDOOM", 6},
-		{"PLAYPAL", 7},
-		{"COLORMAP", 8},
-		{"PAL", 3},
-		{"CLM", 3},
-		{"TRANS", 5},
+		{"D_", 2}, // MIDI music
+		{"O_", 2}, // Digital music
+		{"DS", 2}, // Sound effects
+
+		{"ENDOOM", 6}, // ENDOOM text lump
+		{"PLAYPAL", 7}, // Palette
+		{"COLORMAP", 8}, // Colormap
+		{"PAL", 3}, // Palette changes
+		{"CLM", 3}, // Colormap changes
+		{"TRANS", 5}, // Translucency map
+
+		{"LTFNT", 5}, // Level title font changes
+		{"STCFN", 5}, // Console font changes
+		{"TNYFN", 5}, // Tiny console font changes
+		{"MKFNT", 5}, // Kart font changes
+
+		{"M_", 2}, // Menu changes
+		{"K_", 2}, // Kart graphic changes
+
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

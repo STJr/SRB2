@@ -35,7 +35,6 @@ typedef enum
 
 typedef struct
 {
-	UINT8 important;
 	UINT8 willsend; // Is the server willing to send it?
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
