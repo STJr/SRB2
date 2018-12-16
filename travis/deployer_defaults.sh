@@ -29,7 +29,7 @@
 
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.1.21}
-: ${PACKAGE_SUBVERSION} # configured in debian_template.sh
+: ${PACKAGE_SUBVERSION:=~14.04trusty} # configured in debian_template.sh
 : ${PACKAGE_REVISION} # configured in debian_template.sh
 : ${PACKAGE_ASSET_MINVERSION:=2.1.15}
 : ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
