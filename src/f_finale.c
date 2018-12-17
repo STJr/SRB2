@@ -562,84 +562,66 @@ static void F_IntroDrawScene(void)
 	void *patch;
 
 	// DRAW A FULL PIC INSTEAD OF FLAT!
-	if (intro_scenenum == 0);
-	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
-	else if (intro_scenenum == 2)
-	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
-	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
-	else if (intro_scenenum == 5)
-	{
-		if (intro_curtime >= 5*TICRATE)
-			background = W_CachePatchName("RADAR", PU_CACHE);
-		else
-		{
-			background = W_CachePatchName("DRAT", PU_CACHE);
-			highres = true;
+	switch (intro_cutscene) {
+		default: case 0: break; // do nothing
+		case 1: background = W_CachePatchName("INTRO1", PU_CACHE); break;
+		case 2: background = W_CachePatchName("INTRO2", PU_CACHE); highres = true; break;
+		case 3: background = W_CachePatchName("INTRO3", PU_CACHE); break;
+		case 4: background = W_CachePatchName("INTRO4", PU_CACHE); break;
+		case 5: {
+			if (intro_curtime >= 5*TICRATE)
+				background = W_CachePatchName("RADAR", PU_CACHE);
+			else
+			{
+				background = W_CachePatchName("DRAT", PU_CACHE);
+				highres = true;
+			}
+			break;
 		}
-	}
-	else if (intro_scenenum == 6)
-	{
-		background = W_CachePatchName("INTRO6", PU_CACHE);
-		cx = 180;
-		cy = 8;
-	}
-	else if (intro_scenenum == 7)
-	{
-		if (intro_curtime >= 6*TICRATE)
-			background = W_CachePatchName("SGRASS5", PU_CACHE);
-		else
-			background = W_CachePatchName("SGRASS1", PU_CACHE);
-	}
-	else if (intro_scenenum == 8)
-	{
-		background = W_CachePatchName("WATCHING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 9)
-	{
-		background = W_CachePatchName("ZOOMING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 10);
-	else if (intro_scenenum == 11)
-		background = W_CachePatchName("INTRO5", PU_CACHE);
-	else if (intro_scenenum == 12)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("CONFRONT", PU_CACHE);
-		else
-			background = W_CachePatchName("REVENGE", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 13)
-	{
-		background = W_CachePatchName("TAILSSAD", PU_CACHE);
-		highres = true;
-		bgxoffs = 144;
-		cx = 8;
-		cy = 8;
-	}
-	else if (intro_scenenum == 14)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("SONICDO2", PU_CACHE);
-		else
-			background = W_CachePatchName("SONICDO1", PU_CACHE);
-		highres = true;
-		cx = 224;
-		cy = 8;
-	}
-	else if (intro_scenenum == 15)
-	{
-		background = W_CachePatchName("INTRO7", PU_CACHE);
-		highres = true;
+		case 6: {
+			background = W_CachePatchName("INTRO6", PU_CACHE);
+			cx = 180;
+			cy = 8;
+			break;
+		}
+		case 7: {
+			if (intro_curtime >= 6*TICRATE)
+				background = W_CachePatchName("SGRASS5", PU_CACHE);
+			else
+				background = W_CachePatchName("SGRASS1", PU_CACHE);
+			break;
+		}
+		case 8: background = W_CachePatchName("WATCHING", PU_CACHE); highres = true; break;
+		case 9: background = W_CachePatchName("ZOOMING", PU_CACHE); highres = true; break;
+		case 10: break; // do nothing
+		case 11: background = W_CachePatchName("INTRO5", PU_CACHE); break;
+		case 12: {
+			if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("CONFRONT", PU_CACHE);
+			else
+				background = W_CachePatchName("REVENGE", PU_CACHE);
+			highres = true;
+			break;
+		}
+		case 13: {
+			background = W_CachePatchName("TAILSSAD", PU_CACHE);
+			highres = true;
+			bgxoffs = 144;
+			cx = 8;
+			cy = 8;
+			break;
+		}
+		case 14: {
+			if (intro_curtime >= 7*TICRATE)
+				background = W_CachePatchName("SONICDO2", PU_CACHE);
+			else
+				background = W_CachePatchName("SONICDO1", PU_CACHE);
+			highres = true;
+			cx = 224;
+			cy = 8;
+			break;
+		}
+		case 15: background = W_CachePatchName("INTRO7", PU_CACHE); highres = true; break;
 	}
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -780,56 +762,62 @@ void F_IntroDrawer(void)
 {
 	if (timetonext <= 0)
 	{
-		if (intro_scenenum == 0)
+		switch (intro_scenenum)
 		{
-			if (rendermode != render_none)
+			case 0:
 			{
-				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-				F_WipeEndScreen();
-				F_RunWipe(99,true);
-			}
-
-			S_ChangeMusicInternal("read_m", false);
-		}
-		else if (intro_scenenum == 3)
-			roidtics = BASEVIDWIDTH - 64;
-		else if (intro_scenenum == 10)
-		{
-			// The only fade to white in the entire damn game.
-			if (rendermode != render_none)
-			{
-				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
-				F_WipeEndScreen();
-				F_RunWipe(99,true);
-			}
-		}
-		else if (intro_scenenum == 15)
-		{
-			if (rendermode != render_none)
-			{
-				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-				F_WipeEndScreen();
-				F_RunWipe(99,true);
-			}
-
-			// Stay on black for a bit. =)
-			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				if (rendermode != render_none)
 				{
-					I_OsPolling();
-					I_UpdateNoBlit();
-					M_Drawer(); // menu is drawn even on top of wipes
-					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+					F_WipeStartScreen();
+					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+					F_WipeEndScreen();
+					F_RunWipe(99,true);
 				}
-			}
 
-			D_StartTitle();
-			return;
+				S_ChangeMusicInternal("read_m", false);
+				break;
+			}
+			case 3: roidtics = BASEVIDWIDTH - 64; break;
+			case 10:
+			{
+				// The only fade to white in the entire damn game.
+				if (rendermode != render_none)
+				{
+					F_WipeStartScreen();
+					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+					F_WipeEndScreen();
+					F_RunWipe(99,true);
+				}
+				break;
+			}
+			case 15:
+			{
+				if (rendermode != render_none)
+				{
+					F_WipeStartScreen();
+					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+					F_WipeEndScreen();
+					F_RunWipe(99,true);
+				}
+
+				// Stay on black for a bit. =)
+				{
+					tic_t quittime;
+					quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+					while (quittime > I_GetTime())
+					{
+						I_OsPolling();
+						I_UpdateNoBlit();
+						M_Drawer(); // menu is drawn even on top of wipes
+						I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+					}
+				}
+
+				D_StartTitle();
+				return;
+			}
+			default:
+				break; // do nothing
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);
 		timetonext = introscenetime[intro_scenenum];
