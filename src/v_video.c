@@ -881,6 +881,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
 	UINT8 *dest;
 	INT32 u, v;
+	UINT8 *fadetable;
 	UINT32 alphalevel = 0;
 
 	if (rendermode == render_none)
@@ -965,23 +966,20 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	if (!alphalevel) {
-        for (v = 0; v < h; v++, dest += vid.width) {
-            for (u = 0; u < w; u++) {
-                dest[u] = consolebgmap[dest[u]];
-            }
-        }
-	} else {        // mpc 12-04-2018
-        const UINT8 *fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
-        #define clip(x,y) (x>y) ? y : x
-        w = clip(w,vid.width);
-        h = clip(h,vid.height);
-        for (v = 0; v < h; v++, dest += vid.width) {
-            for (u = 0; u < w; u++) {
-                dest[u] = fadetable[consolebgmap[dest[u]]];
-            }
-        }
-	}
+	// Jimita (12-04-2018)
+	w = min(w, vid.width);
+	h = min(h, vid.height);
+	if (alphalevel)		// Use fadetable
+		fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+
+	for (v = 0; v < h; v++, dest += vid.width)
+		for (u = 0; u < w; u++)
+		{
+			if (!alphalevel)
+				dest[u] = consolebgmap[dest[u]];
+			else
+				dest[u] = fadetable[consolebgmap[dest[u]]];
+		}
 }
 
 //
