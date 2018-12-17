@@ -4198,7 +4198,7 @@ static void M_DrawAddons(void)
 		// This line was originally (m -= i), but GCC very helpfully gives us
 		// a Wstrict-overflow warning during optimization.
 		// i will always be negative here, so let's just add what would have been a double negative!
-		if ((m += abs(i)) > (ssize_t)sizedirmenu)
+		if ((m += labs(i)) > (ssize_t)sizedirmenu)
 			m = sizedirmenu;
 		i = 0;
 	}
