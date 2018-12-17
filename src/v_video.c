@@ -969,9 +969,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	// Jimita (12-04-2018)
 	w = min(w, vid.width);
 	h = min(h, vid.height);
-	if (alphalevel)		// Use fadetable
-		fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
-
+	fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
 	for (v = 0; v < h; v++, dest += vid.width)
 		for (u = 0; u < w; u++)
 		{
