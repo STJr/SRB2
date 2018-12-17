@@ -71,10 +71,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
-#if defined (__GNUC__) && (__GNUC__ >= 4)
-#define FIXUPO0
-#endif
-
 #define SKULLXOFF -32
 #define LINEHEIGHT 16
 #define STRINGHEIGHT 8
@@ -4122,10 +4118,6 @@ static boolean M_AddonsRefresh(void)
 	return false;
 }
 
-#ifdef FIXUPO0
-#pragma GCC optimize ("0")
-#endif
-
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
@@ -4203,6 +4195,9 @@ static void M_DrawAddons(void)
 	// then adjust!
 	if (i < 0)
 	{
+		// This line was originally (m -= i), but GCC very helpfully gives us
+		// a Wstrict-overflow warning during optimization.
+		// i will always be negative here, so let's just add what would have been a double negative!
 		if ((m += abs(i)) > (ssize_t)sizedirmenu)
 			m = sizedirmenu;
 		i = 0;
@@ -4270,10 +4265,6 @@ static void M_DrawAddons(void)
 	if (modifiedgame)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+2]);
 }
-
-#ifdef FIXUPO0
-#pragma GCC reset_options
-#endif
 
 static void M_AddonExec(INT32 ch)
 {
