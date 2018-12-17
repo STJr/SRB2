@@ -73,7 +73,7 @@ patch_t *cred_font[CRED_FONTSIZE];
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
-static INT32 c_input = 0;	// let's try to make the chat input less shitty.
+static size_t c_input = 0;	// let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
@@ -328,7 +328,7 @@ static UINT32 chat_nummsg_min = 0;
 static UINT32 chat_scroll = 0;
 static tic_t chat_scrolltime = 0;
 
-static INT32 chat_maxscroll = 0;	// how far can we scroll?
+static UINT32 chat_maxscroll = 0;	// how far can we scroll?
 
 //static chatmsg_t chat_mini[CHAT_BUFSIZE];	// Display the last few messages sent.
 //static chatmsg_t chat_log[CHAT_BUFSIZE];	// Keep every message sent to us in memory so we can scroll n shit, it's cool.
@@ -346,7 +346,7 @@ static INT16 addy = 0;	// use this to make the messages scroll smoothly when one
 static void HU_removeChatText_Mini(void)
 {
     // MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	size_t i;
     for(i=0;i<chat_nummsg_min-1;i++) {
         strcpy(chat_mini[i], chat_mini[i+1]);
         chat_timers[i] = chat_timers[i+1];
@@ -362,7 +362,7 @@ static void HU_removeChatText_Mini(void)
 static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	size_t i;
     for(i=0;i<chat_nummsg_log-1;i++) {
         strcpy(chat_log[i], chat_log[i+1]);
     }
@@ -841,7 +841,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 			{
 
 				// move everything past c_input for new characters:
-				INT32 m = HU_MAXMSGLEN-1;
+				size_t m = HU_MAXMSGLEN-1;
 				for (;(m>=c_input);m--)
 				{
 					if (s[m])
@@ -1199,7 +1199,7 @@ boolean HU_Responder(event_t *ev)
 // This is a muuuch better method than V_WORDWRAP.
 // again stolen and modified a bit from video.c, don't mind me, will need to rearrange this one day.
 // this one is simplified for the chat drawer.
-char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
+static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 {
 	int c;
 	size_t chw, i, lastusablespace = 0;
@@ -2611,7 +2611,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 //
 // HU_Draw32TabRankings
 //
-void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer)
+static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer)
 {
 	INT32 i;
 	const UINT8 *colormap;
