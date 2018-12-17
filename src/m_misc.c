@@ -443,7 +443,7 @@ void Command_LoadConfig_f(void)
 	FIL_ForceExtension(configfile, ".cfg");
 
 	// temporarily reset execversion to default
-	cv_execversion.flags &= ~CV_HIDEN;
+	cv_execversion.flags = 0;
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -452,7 +452,7 @@ void Command_LoadConfig_f(void)
 
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	cv_execversion.flags = CV_HIDEN;
 }
 
 /** Saves the current configuration and loads another.
@@ -494,7 +494,7 @@ void M_FirstLoadConfig(void)
 
 	// temporarily reset execversion to default
 	// we shouldn't need to do this, but JUST in case...
-	cv_execversion.flags &= ~CV_HIDEN;
+	cv_execversion.flags = 0;
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -504,7 +504,7 @@ void M_FirstLoadConfig(void)
 
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	cv_execversion.flags = CV_HIDEN;
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
