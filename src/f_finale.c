@@ -1702,6 +1702,34 @@ static INT32 textxpos, textypos;
 static boolean dofadenow = false, cutsceneover = false;
 static boolean runningprecutscene = false, precutresetplayer = false;
 
+static void F_InitScene(scene_t *scene, boolean cutscenestart)
+{
+	F_NewCutscene(scene->text);
+	picnum = 0;
+	picxpos = scene->xcoord[picnum];
+	picypos = scene->ycoord[picnum];
+	animtimer = pictime = scene->picduration[picnum];
+	textxpos = scene->textxpos;
+	textypos = scene->textypos;
+
+	if (scene->musswitch[0])
+		S_ChangeMusic(scene->musswitch, scene->musswitchflags, scene->musicloop);
+	else if (cutscenestart) // if at start of cutscene stop the music, otherwise continue playing existing music
+		S_StopMusic();
+}
+
+static boolean F_AdvanceScenePic(scene_t *scene)
+{
+	if (picnum >= 7 || scene->picname[picnum+1][0] == '\0') // is there a next picture to advance to?
+		return false;
+
+	picnum++;
+	picxpos = scene->xcoord[picnum];
+	picypos = scene->ycoord[picnum];
+	animtimer = pictime = scene->picduration[picnum];
+	return true;
+}
+
 static void F_AdvanceToNextScene(void)
 {
 	// Don't increment until after endcutscene check
@@ -1715,26 +1743,10 @@ static void F_AdvanceToNextScene(void)
 
 	timetonext = 0;
 	stoptimer = 0;
-	picnum = 0;
-	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
-
-	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
-			cutscenes[cutnum]->scene[scenenum].musswitchflags,
-			cutscenes[cutnum]->scene[scenenum].musicloop);
 
 	// Fade to the next
 	dofadenow = true;
-	F_NewCutscene(cutscenes[cutnum]->scene[scenenum].text);
-
-	picnum = 0;
-	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
-	textxpos = cutscenes[cutnum]->scene[scenenum].textxpos;
-	textypos = cutscenes[cutnum]->scene[scenenum].textypos;
-
-	animtimer = pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
+	F_InitScene(&cutscenes[cutnum]->scene[scenenum], false);
 }
 
 void F_EndCutScene(void)
@@ -1747,14 +1759,16 @@ void F_EndCutScene(void)
 	}
 	else
 	{
-		if (cutnum == creditscutscene-1)
-			F_StartGameEvaluation();
-		else if (cutnum == introtoplay-1)
-			D_StartTitle();
-		else if (nextmap < 1100-1)
-			G_NextLevel();
-		else
-			G_EndGame();
+		switch (cutnum) {
+			case creditscutscene-1: F_StartGameEvaluation(); break;
+			case introtoplay-1:     D_StartTitle();          break:
+			case default:
+				if (nextmap < 1100-1)
+					G_NextLevel();
+				else
+					G_EndGame();
+			break;
+		}
 	}
 }
 
@@ -1768,36 +1782,20 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-
-	F_NewCutscene(cutscenes[cutscenenum]->scene[0].text);
-
 	CON_ClearHUD();
 
 	cutsceneover = false;
 	runningprecutscene = precutscene;
 	precutresetplayer = resetplayer;
 
-	scenenum = picnum = 0;
 	cutnum = cutscenenum;
-	picxpos = cutscenes[cutnum]->scene[0].xcoord[0];
-	picypos = cutscenes[cutnum]->scene[0].ycoord[0];
-	textxpos = cutscenes[cutnum]->scene[0].textxpos;
-	textypos = cutscenes[cutnum]->scene[0].textypos;
-
-	pictime = cutscenes[cutnum]->scene[0].picduration[0];
+	scenenum = picnum = 0;
+	F_InitScene(&cutscenes[cutnum]->scene[scenenum], true);
 
 	keypressed = false;
 	finalecount = 0;
 	timetonext = 0;
-	animtimer = cutscenes[cutnum]->scene[0].picduration[0]; // Picture duration
 	stoptimer = 0;
-
-	if (cutscenes[cutnum]->scene[0].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
-			cutscenes[cutnum]->scene[0].musswitchflags,
-			cutscenes[cutnum]->scene[0].musicloop);
-	else
-		S_StopMusic();
 }
 
 //
@@ -1805,37 +1803,38 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 //
 void F_CutsceneDrawer(void)
 {
+	scene_t *scene = &cutscenes[cutnum]->scene[scenenum];
 	if (dofadenow && rendermode != render_none)
 	{
 		F_WipeStartScreen();
 
 		// Fade to any palette color you want.
-		if (cutscenes[cutnum]->scene[scenenum].fadecolor)
+		if (scene->fadecolor)
 		{
-			V_DrawFill(0,0,BASEVIDWIDTH,BASEVIDHEIGHT,cutscenes[cutnum]->scene[scenenum].fadecolor);
+			V_DrawFill(0,0,BASEVIDWIDTH,BASEVIDHEIGHT,scene->fadecolor);
 
 			F_WipeEndScreen();
-			F_RunWipe(cutscenes[cutnum]->scene[scenenum].fadeinid, true);
+			F_RunWipe(scene->fadeinid, true);
 
 			F_WipeStartScreen();
 		}
 	}
 	V_DrawFill(0,0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-	if (cutscenes[cutnum]->scene[scenenum].picname[picnum][0] != '\0')
+	if (scene->picname[picnum][0] != '\0')
 	{
-		if (cutscenes[cutnum]->scene[scenenum].pichires[picnum])
+		if (scene->pichires[picnum])
 			V_DrawSmallScaledPatch(picxpos, picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_CACHE));
+				W_CachePatchName(scene->picname[picnum], PU_CACHE));
 		else
 			V_DrawScaledPatch(picxpos,picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_CACHE));
+				W_CachePatchName(scene->picname[picnum], PU_CACHE));
 	}
 
 	if (dofadenow && rendermode != render_none)
 	{
 		F_WipeEndScreen();
-		F_RunWipe(cutscenes[cutnum]->scene[scenenum].fadeoutid, true);
+		F_RunWipe(scene->fadeoutid, true);
 	}
 
 	V_DrawString(textxpos, textypos, 0, cutscene_disptext);
@@ -1875,15 +1874,7 @@ void F_CutsceneTicker(void)
 		animtimer--;
 		if (animtimer <= 0)
 		{
-			if (picnum < 7 && cutscenes[cutnum]->scene[scenenum].picname[picnum+1][0] != '\0')
-			{
-				picnum++;
-				picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-				picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
-				pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
-				animtimer = pictime;
-			}
-			else
+			if (!F_AdvanceScenePic(&cutscenes[cutnum]->scene[scenenum]))
 				timetonext = 2;
 		}
 	}
