@@ -1248,6 +1248,18 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 
+			else if (fastcmp(word, "SAVEOVERRIDE"))
+			{
+				if      (fastcmp(word2, "DEFAULT")) i = SAVE_DEFAULT;
+				else if (fastcmp(word2, "ALWAYS"))  i = SAVE_ALWAYS;
+				else if (fastcmp(word2, "NEVER"))   i = SAVE_NEVER;
+
+				if (i >= SAVE_NEVER && i <= SAVE_ALWAYS)
+					mapheaderinfo[num-1]->saveoverride = (SINT8)i;
+				else
+					deh_warning("Level header %d: invalid save override number %d", num, i);
+			}
+
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))
@@ -7073,6 +7085,11 @@ struct {
 	{"LF2_RECORDATTACK",LF2_RECORDATTACK},
 	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
+
+	// Save override
+	{"SAVE_NEVER",SAVE_NEVER},
+	{"SAVE_DEFAULT",SAVE_DEFAULT},
+	{"SAVE_ALWAYS",SAVE_ALWAYS},
 
 	// NiGHTS grades
 	{"GRADE_F",GRADE_F},
