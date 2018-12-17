@@ -4189,19 +4189,14 @@ static void M_DrawAddons(void)
 	if (m > (ssize_t)sizedirmenu)
 		m = sizedirmenu;
 
-	// then top...
-	i = m - (2*numaddonsshown + 1);
-
-	// then adjust!
-	if (i < 0)
+	// then compute top and adjust bottom if needed!
+	if (m < (2*numaddonsshown + 1))
 	{
-		// This line was originally (m -= i), but GCC very helpfully gives us
-		// a Wstrict-overflow warning during optimization.
-		// i will always be negative here, so let's just add what would have been a double negative!
-		if ((m += labs(i)) > (ssize_t)sizedirmenu)
-			m = sizedirmenu;
+		m = min(sizedirmenu, 2*numaddonsshown + 1);
 		i = 0;
 	}
+	else
+		i = m - (2*numaddonsshown + 1);
 
 	if (i != 0)
 		V_DrawString(19, y+4 - (skullAnimCounter/5), highlightflags, "\x1A");
