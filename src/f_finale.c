@@ -454,6 +454,103 @@ void F_StartIntro(void)
 }
 
 //
+// F_DrawSTJrEggman
+//
+// Draw the "Waaaaaaah" intro
+//
+static void F_DrawSTJREggman(void)
+{
+	void *patch;
+	// aspect is FRACUNIT/2 for 4:3 (source) resolutions, smaller for 16:10 (SRB2) resolutions
+	fixed_t aspect = (FRACUNIT + (FRACUNIT*4/3 - FRACUNIT*vid.width/vid.height)/2)>>1;
+	fixed_t x,y;
+
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 2);
+	if (finalecount < 30) { // Cry!
+		if (finalecount < 4)
+			S_StopMusic();
+		if (finalecount == 4)
+			S_ChangeMusicInternal("stjr", false);
+		x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
+		y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
+		V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
+		W_UnlockCachedPatch(patch);
+		if (finalecount > 6) {
+			V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH2", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+		}
+		if (finalecount > 10) {
+			V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH3", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+		}
+		if (finalecount > 14) {
+			V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH4", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+		}
+	}
+	else if (finalecount-30 < 20) { // Big eggy
+		background = W_CachePatchName("FEEDIN", PU_CACHE);
+		x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2;
+		y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, aspect);
+		V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, aspect);
+	}
+	else if (finalecount-50 < 30) { // Zoom out
+		fixed_t scale = FixedDiv(aspect, FixedDiv((finalecount-50)<<FRACBITS, (15<<FRACBITS))+FRACUNIT);
+		background = W_CachePatchName("FEEDIN", PU_CACHE);
+		x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
+		y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
+		V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
+	}
+	else
+	{
+		{
+			// Draw tiny eggy
+			fixed_t scale = FixedMul(FRACUNIT/3, aspect);
+			background = W_CachePatchName("FEEDIN", PU_CACHE);
+			x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
+			y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
+			V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
+		}
+
+		if (finalecount-84 < 58) { // Pure Fat is driving up!
+			int ftime = (finalecount-84);
+			x = (-189*FRACUNIT) + (FixedMul((6<<FRACBITS)+FRACUNIT/3, ftime<<FRACBITS) - FixedMul((6<<FRACBITS)+FRACUNIT/3, FixedDiv(FixedMul(ftime<<FRACBITS, ftime<<FRACBITS), 120<<FRACBITS)));
+			y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
+			// Draw the body
+			V_DrawSciencePatch(x, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the door
+			V_DrawSciencePatch(x+FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the wheel
+			V_DrawSciencePatch(x+FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName(va("TYRE%02u",(abs(finalecount-144)/3)%16), PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the wheel cover
+			V_DrawSciencePatch(x+FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+		} else { // Pure Fat has stopped!
+			y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
+			// Draw the body
+			V_DrawSciencePatch(0, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the wheel
+			V_DrawSciencePatch(FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("TYRE00", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the wheel cover
+			V_DrawSciencePatch(FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+			// Draw the door
+			if (finalecount-TICRATE/2 > 4*TICRATE) { // Door is being raised!
+				int ftime = (finalecount-TICRATE/2-4*TICRATE);
+				y -= FixedDiv((ftime*ftime)<<FRACBITS, 23<<FRACBITS);
+			}
+			V_DrawSciencePatch(FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
+			W_UnlockCachedPatch(patch);
+		}
+	}
+}
+
+//
 // F_IntroDrawScene
 //
 static void F_IntroDrawScene(void)
@@ -557,94 +654,9 @@ static void F_IntroDrawScene(void)
 	else if (intro_scenenum == 0) // STJr presents
 	{
 		// "Waaaaaaah" intro
-		if (finalecount-TICRATE/2 < 4*TICRATE+23) {
-			// aspect is FRACUNIT/2 for 4:3 (source) resolutions, smaller for 16:10 (SRB2) resolutions
-			fixed_t aspect = (FRACUNIT + (FRACUNIT*4/3 - FRACUNIT*vid.width/vid.height)/2)>>1;
-			fixed_t x,y;
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 2);
-			if (finalecount < 30) { // Cry!
-				if (finalecount < 4)
-					S_StopMusic();
-				if (finalecount == 4)
-					S_ChangeMusicInternal("stjr", false);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
-				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
-				W_UnlockCachedPatch(patch);
-				if (finalecount > 6) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 10) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 14) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH4", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-			}
-			else if (finalecount-30 < 20) { // Big eggy
-				background = W_CachePatchName("FEEDIN", PU_CACHE);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, aspect);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, aspect);
-			}
-			else if (finalecount-50 < 30) { // Zoom out
-				fixed_t scale = FixedDiv(aspect, FixedDiv((finalecount-50)<<FRACBITS, (15<<FRACBITS))+FRACUNIT);
-				background = W_CachePatchName("FEEDIN", PU_CACHE);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-			}
-			else
-			{
-				{
-					// Draw tiny eggy
-					fixed_t scale = FixedMul(FRACUNIT/3, aspect);
-					background = W_CachePatchName("FEEDIN", PU_CACHE);
-					x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-					V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-				}
-
-				if (finalecount-84 < 58) { // Pure Fat is driving up!
-					int ftime = (finalecount-84);
-					x = (-189*FRACUNIT) + (FixedMul((6<<FRACBITS)+FRACUNIT/3, ftime<<FRACBITS) - FixedMul((6<<FRACBITS)+FRACUNIT/3, FixedDiv(FixedMul(ftime<<FRACBITS, ftime<<FRACBITS), 120<<FRACBITS)));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(x, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					V_DrawSciencePatch(x+FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(x+FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName(va("TYRE%02u",(abs(finalecount-144)/3)%16), PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(x+FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				} else { // Pure Fat has stopped!
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(0, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("TYRE00", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					if (finalecount-TICRATE/2 > 4*TICRATE) { // Door is being raised!
-						int ftime = (finalecount-TICRATE/2-4*TICRATE);
-						y -= FixedDiv((ftime*ftime)<<FRACBITS, 23<<FRACBITS);
-					}
-					V_DrawSciencePatch(FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-			}
-		} else {
+		if (finalecount-TICRATE/2 < 4*TICRATE+23)
+			F_DrawSTJREggman();
+		else {
 			V_DrawCreditString((160 - V_CreditStringWidth("SONIC TEAM JR")/2)<<FRACBITS, 80<<FRACBITS, 0, "SONIC TEAM JR");
 			V_DrawCreditString((160 - V_CreditStringWidth("PRESENTS")/2)<<FRACBITS, 96<<FRACBITS, 0, "PRESENTS");
 		}
