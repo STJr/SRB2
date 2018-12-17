@@ -57,6 +57,16 @@ typedef struct
 //           chat stuff
 //------------------------------------
 #define HU_MAXMSGLEN 224
+#define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
+#define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640)
+#define CHAT_MUTE (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
+#define OLD_MUTE (OLDCHAT && cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
+
+// some functions
+void HU_AddChatText(const char *text, boolean playsound);
+
+// set true when entering a chat message
+extern boolean chat_on;
 
 extern patch_t *hu_font[HU_FONTSIZE], *tny_font[HU_FONTSIZE];
 extern patch_t *tallnum[10];
@@ -71,22 +81,6 @@ extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
-
-/*typedef struct
-{
-	const char *msg;				// The final message we display on the HUD
-	tic_t time;				// how much time do we still keep the message around for in the mini chat?
-	boolean hasmention;		// make the message yellow if it has a mention because that's pretty cool.	
-} chatmsg_t;*/
-
-#define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
-#define OLDCHAT (cv_consolechat.value || dedicated || !netgame || vid.width < 640)
-
-// some functions
-void HU_AddChatText(const char *text);
-
-// set true when entering a chat message
-extern boolean chat_on;
 
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;

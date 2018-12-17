@@ -23,13 +23,9 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
-<<<<<<< HEAD
 #include "hu_stuff.h"	// HU_AddChatText
-=======
-#include "hu_stuff.h"
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
->>>>>>> master
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -99,16 +95,14 @@ static int lib_print(lua_State *L)
 static int lib_chatprint(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);	// retrieve string
+	boolean sound = luaL_checkboolean(L, 2);	// retrieve sound boolean
 	if (str == NULL)	// error if we don't have a string!
 		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprint"));
 	int len = strlen(str);
 	if (len > 255)	// string is too long!!!
 		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
-	
-	if (OLDCHAT)
-		CONS_Printf("%s\n", str);
-	else
-		HU_AddChatText(str);
+
+	HU_AddChatText(str, sound);
 	return 0;
 }
 
@@ -119,24 +113,22 @@ static int lib_chatprintf(lua_State *L)
 	player_t *plr;
 	if (n < 2)
 		return luaL_error(L, "chatprintf requires at least two arguments: player and text.");
-	
+
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));	// retrieve player
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");
 	if (plr != &players[consoleplayer])
 		return 0;
-	
+
 	const char *str = luaL_checkstring(L, 2);	// retrieve string
+	boolean sound = luaL_checkboolean(L, 3);	// sound?
 	if (str == NULL)	// error if we don't have a string!
 		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprintf"));
 	int len = strlen(str);
 	if (len > 255)	// string is too long!!!
 		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
-	
-	if (OLDCHAT)
-		CONS_Printf("%s\n", str);
-	else
-		HU_AddChatText(str);
+
+	HU_AddChatText(str, sound);
 	return 0;
 }
 
@@ -1758,9 +1750,9 @@ static int lib_sStartSound(lua_State *L)
 	{
 		if (hud_running)
 			origin = NULL;	// HUD rendering startsound shouldn't have an origin, just remove it instead of having a retarded error.
-		
+
 		S_StartSound(origin, sound_id);
-	}	
+	}
 	return 0;
 }
 

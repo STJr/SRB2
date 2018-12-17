@@ -131,11 +131,16 @@ static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}
 // whether to use console background picture, or translucent mode
 static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
-												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
-												{6, "Green"},	{7, "Blue"},	{8,	"Cyan"},
+static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{2, "Sepia"},
+												{3, "Brown"},		{4, "Pink"},		{5, "Raspberry"},
+												{6, "Red"},			{7, "Creamsicle"},	{8, "Orange"},
+												{9, "Gold"},		{10,"Yellow"},		{11,"Emerald"},
+												{12,"Green"},		{13,"Cyan"},		{14,"Steel"},
+												{15,"Periwinkle"},	{16,"Blue"},		{17,"Purple"},
+												{18,"Lavender"},
 												{0, NULL}};
-consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cons_backcolor = {"con_backcolor", "Black", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
 static void CON_Print(char *msg);
 
@@ -241,29 +246,41 @@ void CON_SetupBackColormap(void)
 	UINT16 i, palsum;
 	UINT8 j, palindex;
 	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
+	INT32 shift = 6;
 
 	if (!consolebgmap)
 		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 
 	switch (cons_backcolor.value)
 	{
-		case 0:		palindex = 15; 	break; // White
-		case 1:		palindex = 31;	break; // Gray
-		case 2:		palindex = 63;	break; // Brown
-		case 3:		palindex = 143;	break; // Red
-		case 4:		palindex = 95;	break; // Orange
-		case 5:		palindex = 111;	break; // Yellow
-		case 6:		palindex = 175;	break; // Green
-		case 7:		palindex = 239;	break; // Blue
-		case 8:		palindex = 219;	break; // Cyan
+		case 0:		palindex = 15; 	break; 	// White
+		case 1:		palindex = 31;	break; 	// Gray
+		case 2:		palindex = 47;	break;	// Sepia
+		case 3:		palindex = 63;	break; 	// Brown
+		case 4:		palindex = 150; shift = 7; 	break; 	// Pink
+		case 5:		palindex = 127; shift = 7;	break; 	// Raspberry
+		case 6:		palindex = 143;	break; 	// Red
+		case 7:		palindex = 86;	shift = 7;	break;	// Creamsicle
+		case 8:		palindex = 95;	break; 	// Orange
+		case 9:		palindex = 119; shift = 7;	break; 	// Gold
+		case 10:	palindex = 111;	break; 	// Yellow
+		case 11:	palindex = 191; shift = 7; 	break; 	// Emerald
+		case 12:	palindex = 175;	break; 	// Green
+		case 13:	palindex = 219;	break; 	// Cyan
+		case 14:	palindex = 207; shift = 7;	break; 	// Steel
+		case 15:	palindex = 230;	shift = 7; 	break; 	// Periwinkle
+		case 16:	palindex = 239;	break; 	// Blue
+		case 17:	palindex = 199; shift = 7; 	break; 	// Purple
+		case 18:	palindex = 255; shift = 7; 	break; 	// Lavender
 		// Default green
 		default:	palindex = 175; break;
+
 }
 
 	// setup background colormap
 	for (i = 0, j = 0; i < 768; i += 3, j++)
 	{
-		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> 6;
+		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> shift;
 		consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
 }
@@ -1035,17 +1052,17 @@ boolean CON_Responder(event_t *ev)
 	}
 	else if (key == KEY_KPADSLASH)
 		key = '/';
-	
+
 	// capslock
 	if (key == KEY_CAPSLOCK)	// it's a toggle.
-	{	
+	{
 		if (capslock)
 			capslock = false;
-		else	
+		else
 			capslock = true;
 		return true;
-	}	
-	
+	}
+
 	if (key >= 'a' && key <= 'z')
 	{
 		if (capslock ^ shiftdown)
