@@ -880,7 +880,7 @@ static UINT32 V_GetHWConsBackColor(void)
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
 	UINT8 *dest;
-    INT32 u, v;
+	INT32 u, v;
 	UINT32 alphalevel = 0;
 
 	if (rendermode == render_none)

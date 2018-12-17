@@ -1667,7 +1667,7 @@ static void HU_DrawChat(void)
 			if (splitscreen > 1)
 				p_dispy += 16;
 		}*/
-		y -= (G_RingSlingerGametype() ? 16 : 0);
+		p_dispy -= (G_RingSlingerGametype() ? 16 : 0);
 
 		// more kart leftovers.
 
