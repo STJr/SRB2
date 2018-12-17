@@ -1325,14 +1325,13 @@ static void HU_drawMiniChat(void)
 
 	y = chaty - charheight*(msglines+1);
 
-	if (splitscreen)
+	/*if (splitscreen)
 	{
 		y -= BASEVIDHEIGHT/2;
 		if (splitscreen > 1)
 			y += 16;
-	}
-	/*else
-		y -= (cv_kartspeedometer.value ? 16 : 0);*/
+	}*/
+	y -= (G_RingSlingerGametype() ? 16 : 0);
 
 	dx = 0;
 	dy = 0;
@@ -1462,9 +1461,8 @@ static void HU_drawChatLog(INT32 offset)
 		y -= BASEVIDHEIGHT/2;
 		if (splitscreen > 1)
 			y += 16;
-	}
-	else
-		y -= (cv_kartspeedometer.value ? 16 : 0);*/
+	}*/
+	y -= (G_RingSlingerGametype() ? 16 : 0);
 
 	// Unused SRB2KART splitscreen stuff. I'll leave it here in case it ever happens in Vanilla? (x2)
 
@@ -1574,9 +1572,8 @@ static void HU_DrawChat(void)
 			y += 16;
 			boxw = max(64, boxw/2);
 		}
-	}
-	else
-		y -= (cv_kartspeedometer.value ? 16 : 0);*/
+	}*/
+	y -= (G_RingSlingerGametype() ? 16 : 0);
 
 	// More unused SRB2KART stuff.
 
@@ -1669,9 +1666,8 @@ static void HU_DrawChat(void)
 			p_dispy -= BASEVIDHEIGHT/2;
 			if (splitscreen > 1)
 				p_dispy += 16;
-		}
-		else
-			p_dispy -= (cv_kartspeedometer.value ? 16 : 0);*/
+		}*/
+		y -= (G_RingSlingerGametype() ? 16 : 0);
 
 		// more kart leftovers.
 
