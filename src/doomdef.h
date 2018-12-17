@@ -216,6 +216,12 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 26
 
+// To version config.cfg, EXECVERSION was originally equal to MODVERSION
+// So keep it equal to MODVERSION, and increment MINOREXECVERSION whenever a config change
+// is needed that does not correspond to an increment in MODVERSION
+#define EXECVERSION 26
+#define MINOREXECVERSION 1
+
 // =========================================================================
 
 // The maximum number of players, multiplayer/networking.

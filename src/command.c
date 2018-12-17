@@ -63,7 +63,7 @@ CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
-// Filter consvars by MODVERSION
+// Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
 consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1589,7 +1589,7 @@ void CV_InitFilterVar(void)
 static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 {
 	// If ALL axis settings are previous defaults, set them to the new defaults
-	// MODVERSION < 26 (2.1.21)
+	// EXECVERSION < 26 (2.1.21)
 
 	if (joyaxis_default)
 	{
@@ -1730,6 +1730,11 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 {
+	INT32 majorexecversion = abs(cv_execversion.value) & 0xFFFF;
+#if 0 // unused for now
+	INT32 minorexecversion = abs(cv_execversion.value) >> 16;
+#endif
+
 	// True means allow the CV change, False means block it
 
 	// We only care about CV_SAVE because this filters the user's config files
@@ -1737,8 +1742,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 	if (!(v->flags & CV_SAVE))
 		return true;
 
-	// We go by MODVERSION here
-	if (cv_execversion.value < 26) // 26 = 2.1.21
+	if (majorexecversion < 26) // 26 = 2.1.21
 	{
 		// MOUSE SETTINGS
 		// alwaysfreelook split between first and third person (chasefreelook)

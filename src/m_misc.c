@@ -451,7 +451,7 @@ void Command_LoadConfig_f(void)
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
 	cv_execversion.flags |= CV_HIDEN;
 }
 
@@ -503,7 +503,7 @@ void M_FirstLoadConfig(void)
 	// no COM_BufExecute() needed; that does it right away
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
 	cv_execversion.flags |= CV_HIDEN;
 
 	// make sure I_Quit() will write back the correct config
@@ -562,8 +562,8 @@ void M_SaveConfig(const char *filename)
 	fprintf(f, "// SRB2 configuration file.\n");
 
 	// print execversion FIRST, because subsequent consvars need to be filtered
-	// always print current MODVERSION
-	fprintf(f, "%s \"%d\"\n", cv_execversion.name, MODVERSION);
+	// always print current EXECVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, (EXECVERSION + (MINOREXECVERSION << 16)));
 
 	// FIXME: save key aliases if ever implemented..
 
