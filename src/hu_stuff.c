@@ -456,8 +456,9 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		// what we're gonna do now is check if the node exists
 		// with that logic, characters 4 and 5 are our numbers:
 		const char *newmsg;
-		int spc = 1;	// used if nodenum[1] is a space.
 		char *nodenum = (char*) malloc(3);
+		INT32 spc = 1;	// used if nodenum[1] is a space.
+
 		strncpy(nodenum, msg+3, 5);
 		// check for undesirable characters in our "number"
 		if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
@@ -595,7 +596,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	char *msg;
 	boolean action = false;
 	char *ptr;
-	int spam_eatmsg = 0;
+	INT32 spam_eatmsg = 0;
 
 	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
@@ -1207,7 +1208,7 @@ boolean HU_Responder(event_t *ev)
 // this one is simplified for the chat drawer.
 static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 {
-	int c;
+	INT32 c;
 	size_t chw, i, lastusablespace = 0;
 	size_t slen;
 	char *newstring = Z_StrDup(string);
@@ -1634,8 +1635,8 @@ static void HU_DrawChat(void)
 		boolean skippedline = false;
 		if (c_input == (i+1))
 		{
-			int cursorx = (c+charwidth < boxw-charwidth) ? (chatx + 2 + c+charwidth) : (chatx+1);	// we may have to go down.
-			int cursory = (cursorx != chatx+1) ? (y) : (y+charheight);
+			INT32 cursorx = (c+charwidth < boxw-charwidth) ? (chatx + 2 + c+charwidth) : (chatx+1);	// we may have to go down.
+			INT32 cursory = (cursorx != chatx+1) ? (y) : (y+charheight);
 			if (hu_tick < 4)
 				V_DrawChatCharacter(cursorx, cursory+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, !cv_allcaps.value, NULL);
 
@@ -1644,7 +1645,6 @@ static void HU_DrawChat(void)
 				typelines += 1;
 				skippedline = true;
 			}
-
 		}
 
 		//Hurdler: isn't it better like that?
@@ -1789,8 +1789,8 @@ static void HU_DrawChat_Old(void)
 
 		if (c_input == (i+1) && hu_tick < 4)
 		{
-			int cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX);	// we may have to go down.
-			int cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
+			INT32 cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX);	// we may have to go down.
+			INT32 cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
 			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
 		}
 
