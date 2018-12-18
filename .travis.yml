@@ -9,6 +9,10 @@ dist: trusty
 
 matrix:
     include:
+################################
+# Test Buildbots
+# Deployer does not operate on these. See Deployer Buildbots, below.
+################################
         - os: linux
           addons:
             apt:
@@ -260,8 +264,8 @@ matrix:
           - _DPL_PACKAGE_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
 ################################
-# Deployer Buildbots - Linux
-# List asset build first; do on the oldest Ubuntu release
+# Deployer Buildbots - Linux assets
+# Set DPL_TERMINATE_ASSETS to disable all of these
 # List Ubuntu LTS next, newest to oldest
 # Then list non-LTS, newest to oldest
 ################################
@@ -276,18 +280,115 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          dist: trusty
-          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/ AND env(DPL_TERMINATE_ASSETS) != "1"
           env:
           - _DPL_JOB_ENABLED=1
-          - _DPL_JOB_NAME=linux-asset
+          - _DPL_JOB_NAME=bionic-asset
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_MAIN=0
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=bionic
+          #- PACKAGE_SUBVERSION=~18.04bionic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: trusty
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/ AND env(DPL_TERMINATE_ASSETS) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=trusty-asset
           - _DPL_DPUT_TARGET=1
           - _DPL_PACKAGE_SOURCE=1
           - _DPL_PACKAGE_MAIN=0
           - _DPL_PACKAGE_ASSET=1
           - PACKAGE_DISTRO=trusty
-          - PACKAGE_SUBVERSION=~14.04trusty
+          #- PACKAGE_SUBVERSION=~14.04trusty
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/ AND env(DPL_TERMINATE_ASSETS) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=disco-asset
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_MAIN=0
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=disco
+          #- PACKAGE_SUBVERSION=~19.04disco
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/ AND env(DPL_TERMINATE_ASSETS) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=cosmic-asset
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_MAIN=0
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=cosmic
+          #- PACKAGE_SUBVERSION=~18.10cosmic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/ AND env(DPL_TERMINATE_ASSETS) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=xenial-asset
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_MAIN=0
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=xenial
+          #- PACKAGE_SUBVERSION=~16.04xenial
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+################################
+# Deployer Buildbots - Linux binaries
+# List Ubuntu LTS next, newest to oldest
+# Then list non-LTS, newest to oldest
+################################
         - os: linux
           addons:
             apt:
