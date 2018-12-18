@@ -382,7 +382,10 @@ matrix:
           - PACKAGE_SUBVERESION=~16.04xenial
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
     allow_failures:
-      - env: _DPL_JOB_ENABLED=1
+      - os: linux
+        env: _DPL_JOB_ENABLED=1
+      - os: osx
+        env: _DPL_JOB_ENABLED=1
       - compiler: clang-3.5
       - compiler: clang-3.6
       - compiler: clang-3.7
