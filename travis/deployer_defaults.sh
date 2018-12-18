@@ -64,6 +64,7 @@
 : ${PACKAGE_ASSET_MINVERSION:=2.1.15}
 
 : ${PROGRAM_NAME:=Sonic Robo Blast 2}
+: ${PROGRAM_VENDOR:=Sonic Team Junior}
 : ${PROGRAM_VERSION:=2.1.21}
 : ${PROGRAM_DESCRIPTION:=A free 3D Sonic the Hedgehog fangame closely inspired by the original Sonic games on the Sega Genesis.}
 : ${PROGRAM_FILENAME:=srb2}
