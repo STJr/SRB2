@@ -26,8 +26,8 @@
 : ${_DPL_PACKAGE_ASSET}         # Build asset installation package. Linux only.
 
 # Asset File Parameters
-: ${ASSET_ARCHIVE_PATH:=http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z}
-: ${ASSET_BASE_PATH:=http://alam.srb2.org/SRB2/2.1.21-Final/Resources}
+: ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_release_2.1.21_assets/SRB2-v2115-assets-2.7z}
+: ${ASSET_BASE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_release_2.1.21_assets}
 : ${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
 : ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
 : ${ASSET_FILES_OPTIONAL:=music.dta}
