@@ -341,7 +341,7 @@ if(${SDL2_FOUND})
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		install(CODE "
 			include(BundleUtilities)
-			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/\${CPACK_PACKAGE_DESCRIPTION_SUMMARY}.app\"
+			fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/\${CPACK_PACKAGE_DESCRIPTION_SUMMARY}.app\"
 				\"\"
 				/Library/Frameworks
 			)"
