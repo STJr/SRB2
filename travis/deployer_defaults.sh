@@ -62,7 +62,7 @@
 : ${PACKAGE_GROUP_NAME_EMAIL:=Sonic Team Junior <stjr@srb2.org>}
 : ${PACKAGE_WEBSITE:=<http://www.srb2.org>}
 
-: ${PACKAGE_ASSET_MINVERSION:=2.1.15}
+: ${PACKAGE_ASSET_MINVERSION:=2.1.14}  # Number this the version BEFORE the actual required version, because we do a > check
 
 : ${PROGRAM_NAME:=Sonic Robo Blast 2}
 : ${PROGRAM_VENDOR:=Sonic Team Junior}
