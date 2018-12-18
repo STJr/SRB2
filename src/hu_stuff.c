@@ -2407,6 +2407,8 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	INT32 i,x,y;
 	INT32 redplayers = 0, blueplayers = 0;
 	boolean smol = false;
+	const UINT8 *colormap;
+	char name[MAXPLAYERNAME+1];
 
 	// before we draw, we must count how many players are in each team. It makes an additional loop, but we need to know if we have to draw a big or a small ranking.
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -2445,9 +2447,6 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two teams.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
-
-	const UINT8 *colormap;
-	char name[MAXPLAYERNAME+1];
 
 	i=0, redplayers=0, blueplayers=0;
 
