@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
+# DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
+# Version change is fine.
 project(SRB2
 	VERSION 2.1.21
 	LANGUAGES C)
