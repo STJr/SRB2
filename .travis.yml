@@ -252,7 +252,7 @@ matrix:
 ################################
         - os: osx
           osx_image: xcode7.3
-          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1") AND branch =~ /^.*deployer.*$/
           env:
           - _DPL_JOB_ENABLED=1
           - _DPL_JOB_NAME=osx
