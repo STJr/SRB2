@@ -116,9 +116,6 @@ fi;
 
 if [[ "$__DPL_ACTIVE_GLOBALLY" == "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
     echo "Deployer is active in another job";
-    if [[ "$DPL_JOB_TERMINATE_DISABLED" == "1" ]]; then
-        echo "Terminating this job due to non-deployment";
-    fi;
 fi;
 
 if [[ "$__DPL_ACTIVE_GLOBALLY" != "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then

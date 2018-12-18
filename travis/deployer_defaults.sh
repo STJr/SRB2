@@ -9,7 +9,7 @@
 # Core Parameters
 : ${DPL_ENABLED}                # Enable Deployer behavior; must be set for any deployment activity
 : ${DPL_JOB_ALL}                # Enable all jobs for deployment
-: ${DPL_JOB_TERMINATE_DISABLED} # If Deployer is active, terminate all jobs where Deployer is not triggered
+: ${DPL_TERMINATE_TESTS}        # Terminate all build test jobs (used in .travis.yml)
 : ${DPL_TRIGGER}                # Use a [word] in the commit message to trigger Deployer
 : ${DPL_OSNAMES}                # Trigger Deployer by OS name (osx,linux)
 : ${DPL_BRANCHES}               # Trigger Deployer by git branch name
