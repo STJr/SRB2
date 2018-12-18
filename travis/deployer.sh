@@ -11,6 +11,7 @@
 #
 # DPL_ENABLED = 1                       (leave blank to disable)
 # DPL_JOB_ALL = 1                       (run Deployer on all jobs; leave blank to act on specific jobs, see below)
+# DPL_JOBNAMES = name1,name2            (whitelist of job names to allow uploading; leave blank to upload from all jobs)
 # DPL_OSNAMES = osx                     (whitelist of OS names to allow uploading; leave blank to upload from all OSes)
 # DPL_BRANCHES = master,branch1,branch2 (whitelist of branches to upload; leave blank to upload all branches)
 #
@@ -51,52 +52,57 @@ if [[ "$DPL_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
             #
             if [[ "$DPL_JOB_ALL" == "1" ]] || [[ "$_DPL_JOB_ENABLED" == "1" ]]; then
                 #
-                # Whitelist by OS names
+                # Whitelist by job names
                 #
-                if [[ "$DPL_OSNAMES" == "" ]] || [[ $DPL_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
-                    # Base Deployer is eligible for becoming active
+                if [[ "$DPL_JOBNAMES" == "" ]] || [[ "$_DPL_JOB_NAME" == "" ]] || [[ $DPL_JOBNAMES == *"$_DPL_JOB_NAME"* ]]; then
+                    #
+                    # Whitelist by OS names
+                    #
+                    if [[ "$DPL_OSNAMES" == "" ]] || [[ $DPL_OSNAMES == *"$TRAVIS_OS_NAME"* ]]; then
+                        # Base Deployer is eligible for becoming active
 
-                    # Are we building for Linux?
-                    if [[ "$_DPL_PACKAGE_BINARY" == "1" ]] || [[ "$_DPL_PACKAGE_SOURCE" == "1" ]]; then
-                        if [[ "$_DPL_PACKAGE_MAIN" == "1" ]] || [[ "$_DPL_PACKAGE_ASSET" == "1" ]]; then
-                            if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-                                __DPL_DEBIAN_ACTIVE=1;
+                        # Are we building for Linux?
+                        if [[ "$_DPL_PACKAGE_BINARY" == "1" ]] || [[ "$_DPL_PACKAGE_SOURCE" == "1" ]]; then
+                            if [[ "$_DPL_PACKAGE_MAIN" == "1" ]] || [[ "$_DPL_PACKAGE_ASSET" == "1" ]]; then
+                                if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+                                    __DPL_DEBIAN_ACTIVE=1;
+                                fi;
                             fi;
                         fi;
-                    fi;
 
-                    # Now check for deployment targets
-                    if [[ "$_DPL_FTP_TARGET" == "1" ]] && [[ "$DPL_FTP_HOSTNAME" != "" ]]; then
-                        if [[ "$TRAVIS_OS_HOST" == "linux" ]] && [[ "$DPL_FTP_PROTOCOL" == "ftp" ]]; then
-                            echo "Non-secure FTP will not work on Linux Travis-CI jobs!";
-                            echo "Try SFTP or another target. Details:";
-                            echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
-                        else
-                            if [[ "$__DPL_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DPL_PACKAGE_BINARY" == "1" ]] || [[ "$_DPL_BINARY" == "1" ]]; then
-                                echo "Deployer FTP target is enabled";
-                                __DPL_FTP_ACTIVE=1;
+                        # Now check for deployment targets
+                        if [[ "$_DPL_FTP_TARGET" == "1" ]] && [[ "$DPL_FTP_HOSTNAME" != "" ]]; then
+                            if [[ "$TRAVIS_OS_HOST" == "linux" ]] && [[ "$DPL_FTP_PROTOCOL" == "ftp" ]]; then
+                                echo "Non-secure FTP will not work on Linux Travis-CI jobs!";
+                                echo "Try SFTP or another target. Details:";
+                                echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
                             else
-                                echo "Deployer FTP target cannot be enabled: You must specify _DPL_PACKAGE_BINARY=1,";
-                                echo "and/or _DPL_BINARY=1 in your job's environment variables.";
+                                if [[ "$__DPL_DEBIAN_ACTIVE" == "1" ]] || [[ "$_DPL_PACKAGE_BINARY" == "1" ]] || [[ "$_DPL_BINARY" == "1" ]]; then
+                                    echo "Deployer FTP target is enabled";
+                                    __DPL_FTP_ACTIVE=1;
+                                else
+                                    echo "Deployer FTP target cannot be enabled: You must specify _DPL_PACKAGE_BINARY=1,";
+                                    echo "and/or _DPL_BINARY=1 in your job's environment variables.";
+                                fi;
                             fi;
                         fi;
-                    fi;
 
-                    if [[ "$_DPL_DPUT_TARGET" == "1" ]] && [[ "$__DPL_DEBIAN_ACTIVE" == "1" ]] \
-                    && [[ "$DPL_DPUT_INCOMING" != "" ]]; then
-                        if [[ "$DPL_DPUT_METHOD" == "ftp" ]]; then
-                            echo "DPUT will not work with non-secure FTP on Linux Travis-CI jobs!";
-                            echo "Try SFTP or another method for DPUT. Details:";
-                            echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
-                        else
-                            echo "Deployer DPUT target is enabled";
-                            __DPL_DPUT_ACTIVE=1;
+                        if [[ "$_DPL_DPUT_TARGET" == "1" ]] && [[ "$__DPL_DEBIAN_ACTIVE" == "1" ]] \
+                        && [[ "$DPL_DPUT_INCOMING" != "" ]]; then
+                            if [[ "$DPL_DPUT_METHOD" == "ftp" ]]; then
+                                echo "DPUT will not work with non-secure FTP on Linux Travis-CI jobs!";
+                                echo "Try SFTP or another method for DPUT. Details:";
+                                echo "https://blog.travis-ci.com/2018-07-23-the-tale-of-ftp-at-travis-ci";
+                            else
+                                echo "Deployer DPUT target is enabled";
+                                __DPL_DPUT_ACTIVE=1;
+                            fi;
                         fi;
-                    fi;
 
-                    # If any deployment targets are active, then so is the Deployer at large
-                    if [[ "$__DPL_FTP_ACTIVE" == "1" ]] || [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
-                        __DPL_ACTIVE=1;
+                        # If any deployment targets are active, then so is the Deployer at large
+                        if [[ "$__DPL_FTP_ACTIVE" == "1" ]] || [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
+                            __DPL_ACTIVE=1;
+                        fi;
                     fi;
                 fi;
             fi;
