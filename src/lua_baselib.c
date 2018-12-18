@@ -1923,6 +1923,38 @@ static int lib_gExitLevel(lua_State *L)
 	return 0;
 }
 
+// Another Lua function that doesn't actually exist!
+// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+static int lib_gSetCustomExitVars(lua_State *L)
+{
+	int n = lua_gettop(L); // Num arguments
+	NOHUD
+
+	// LUA EXTENSION: Custom exit like support
+	// Supported:
+	//	G_SetCustomExitVars();			[reset to defaults]
+	//	G_SetCustomExitVars(int)		[nextmap override only]
+	//	G_SetCustomExitVars(bool)		[skipstats only]
+	//	G_SetCustomExitVars(int, bool)	[both of the above]
+	if (n >= 1)
+	{
+		if (lua_isnumber(L, 1) || n >= 2)
+		{
+			nextmapoverride = (INT16)luaL_checknumber(L, 1);
+			lua_pop(L, 1); // pop nextmapoverride; skipstats now 1 if available
+		}
+		skipstats = lua_optboolean(L, 1);
+	}
+	else
+	{
+		nextmapoverride = 0;
+		skipstats = false;
+	}
+	// ---
+
+	return 0;
+}
+
 static int lib_gIsSpecialStage(lua_State *L)
 {
 	INT32 mapnum = luaL_optinteger(L, 1, gamemap);
@@ -2180,6 +2212,7 @@ static luaL_Reg lib[] = {
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_ExitLevel",lib_gExitLevel},
+	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
 	{"G_GametypeHasTeams",lib_gGametypeHasTeams},
