@@ -61,10 +61,6 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          env:
-          - _DPL_JOB_ENABLED=1
-          - _DPL_DPUT_TARGET=1
-          - _DPL_PACKAGE_SOURCE=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -227,12 +223,137 @@ matrix:
 #          #Apple LLVM version 7.0.2 (clang-700.1.81)
         - os: osx
           osx_image: xcode7.3
+          #Apple LLVM version 7.3.0 (clang-703.0.31)
+################################
+# Deployer Buildbots - OSX
+################################
+        - os: osx
+          osx_image: xcode7.3
           env:
           - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=osx
           - _DPL_FTP_TARGET=1
           - _DPL_PACKAGE_BINARY=1
           #Apple LLVM version 7.3.0 (clang-703.0.31)
+################################
+# Deployer Buildbots - Linux
+# List Ubuntu LTS first, newest to oldest
+# Then list non-LTS, newest to oldest
+# Package assets (_DPL_PACKAGE_ASSET) on the oldest release
+################################
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=bionic
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=bionic
+          - PACKAGE_SUBVERESION=~18.04bionic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: trusty
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=trusty
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=trusty
+          - PACKAGE_SUBVERESION=~14.04trusty
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=disco
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=disco
+          - PACKAGE_SUBVERESION=~19.04disco
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=cosmic
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=cosmic
+          - PACKAGE_SUBVERESION=~18.10cosmic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=xenial
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=xenial
+          - PACKAGE_SUBVERESION=~16.04xenial
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
     allow_failures:
+      - env: _DPL_JOB_ENABLED=1
       - compiler: clang-3.5
       - compiler: clang-3.6
       - compiler: clang-3.7
