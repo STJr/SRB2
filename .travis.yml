@@ -530,7 +530,7 @@ before_install:
   # This needs to be run in the current shell so that $__DPL_ACTIVE is set for this session
   - . ./travis/deployer.sh
   # Also check if we should now terminate
-  - if [[ "$__DPL_ACTIVE_GLOBALLY" == "1" ]] && [[ "$DPL_JOB_ENABLE_ALL" != "1" ]]; then
+  - if [[ "$__DPL_TRY_TERMINATE_EARLY" == "1" ]]; then
       if [[ "$__DPL_ACTIVE" != "1" ]]; then
         echo "Exiting early because this job is not deploying.";
         exit;

@@ -45,7 +45,11 @@ if [[ "$DPL_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
         if [[ "$DPL_BRANCHES" == "" ]] || [[ $DPL_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
             # Set this so we only early-terminate builds when we are specifically deploying
             # Trigger string and branch are encompassing conditions; the rest are job-specific
-            __DPL_ACTIVE_GLOBALLY=1;
+            # This check only matters for deployer branches and when DPL_TERMINATE_TESTS=1,
+            # because we're filtering non-deployer jobs.
+            if [[ $TRAVIS_BRANCH == *"deployer"* ]] && [[ "$DPL_TERMINATE_TESTS" == "1" ]]; then
+                __DPL_TRY_TERMINATE_EARLY=1;
+            fi;
 
             #
             # Is the job enabled for deployment?
@@ -113,17 +117,21 @@ if [[ "$DPL_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
         fi;
         if [[ "$DPL_TRIGGER" != "" ]] && [[ $TRAVIS_COMMIT_MESSAGE == *"[$DPL_TRIGGER"* ]]; then
             if [[ "$DPL_BRANCHES" == "" ]] || [[ $DPL_BRANCHES == *"$TRAVIS_BRANCH"* ]]; then
-                # Assume that some job received the trigger, so mark this for early termination
-                __DPL_ACTIVE_GLOBALLY=1;
+                # This check only matters for deployer branches and when DPL_TERMINATE_TESTS=1,
+                # because we're filtering non-deployer jobs.
+                if [[ $TRAVIS_BRANCH == *"deployer"* ]] && [[ "$DPL_TERMINATE_TESTS" == "1" ]]; then
+                    # Assume that some job received the trigger, so mark this for early termination
+                    __DPL_TRY_TERMINATE_EARLY=1;
+                fi;
             fi;
         fi;
     fi;
 fi;
 
-if [[ "$__DPL_ACTIVE_GLOBALLY" == "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
+if [[ "$__DPL_TRY_TERMINATE_EARLY" == "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
     echo "Deployer is active in another job";
 fi;
 
-if [[ "$__DPL_ACTIVE_GLOBALLY" != "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
+if [[ "$__DPL_TRY_TERMINATE_EARLY" != "1" ]] && [[ "$__DPL_ACTIVE" != "1" ]]; then
     echo "Deployer is not active";
 fi;
