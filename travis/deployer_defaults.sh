@@ -52,7 +52,7 @@
 # Package Parameters
 : ${PACKAGE_NAME:=srb2}
 : ${PACKAGE_VERSION:=2.1.21}
-: ${PACKAGE_SUBVERSION:=~14.04trusty}
+: ${PACKAGE_SUBVERSION}         # Highly recommended to set this to reflect the distro series target (e.g., ~18.04bionic)
 : ${PACKAGE_REVISION}           # Defaults to UTC timestamp
 : ${PACKAGE_INSTALL_PATH:=/usr/games/SRB2}
 : ${PACKAGE_LINK_PATH:=/usr/games}
