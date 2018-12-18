@@ -727,9 +727,10 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else
         {
+			const UINT8 color = players[playernum].skincolor;
 
 			cstart = "\x83";
-			const UINT8 color = players[playernum].skincolor;
+
 			if (color <= SKINCOLOR_SILVER)
 				cstart = "\x80";	// White
 			else if (color <= SKINCOLOR_BLACK)
@@ -856,9 +857,11 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 	}
 	else if (ch == KEY_BACKSPACE)
 	{
+		size_t i = c_input;
+
 		if (c_input <= 0)
 			return false;
-		size_t i = c_input;
+
 		if (!s[i-1])
 			return false;
 
@@ -910,14 +913,17 @@ static void HU_queueChatChar(char c)
 	if (c == KEY_ENTER)
 	{
 		char buf[2+256];
-		size_t ci = 2;
 		char *msg = &buf[2];
+		size_t i = 0;
+		size_t ci = 2;
+		INT32 target = 0;
+
 		do {
 			c = w_chat[-2+ci++];
 			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
 				buf[ci-1]=c;
 		} while (c);
-		size_t i = 0;
+
 		for (;(i<HU_MAXMSGLEN);i++)
 			w_chat[i] = 0;	// reset this.
 
@@ -930,10 +936,12 @@ static void HU_queueChatChar(char c)
 			return;
 		}
 
-		INT32 target = 0;
-
 		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
 		{
+			INT32 spc = 1;	// used if nodenum[1] is a space.
+			char *nodenum = (char*) malloc(3);
+			const char *newmsg = msg+5+spc;
+
 			// what we're gonna do now is check if the node exists
 			// with that logic, characters 4 and 5 are our numbers:
 
@@ -944,8 +952,6 @@ static void HU_queueChatChar(char c)
 				return;
 			}
 
-			int spc = 1;	// used if nodenum[1] is a space.
-			char *nodenum = (char*) malloc(3);
 			strncpy(nodenum, msg+3, 5);
 			// check for undesirable characters in our "number"
 			if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
@@ -981,8 +987,8 @@ static void HU_queueChatChar(char c)
 				HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false);	// same
 				return;
 			}
+
 			// we need to get rid of the /pm<node>
-			const char *newmsg = msg+5+spc;
 			memcpy(msg, newmsg, 255);
 		}
 		if (ci > 3) // don't send target+flags+empty message.
@@ -2158,6 +2164,8 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 	UINT8 barcolor = 128;	// color we use for the bars (green, yellow or red)
 	SINT8 i = 0;
 	SINT8 yoffset = 6;
+	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
+
 	if (ping < 128)
 	{
 		numbars = 3;
@@ -2169,7 +2177,6 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 		barcolor = 103;
 	}
 
-	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
 	if (!notext || vid.width >= 640)	// how sad, we're using a shit resolution.
 		V_DrawSmallString(dx, y+4, V_ALLOWLOWERCASE, va("%dms", ping));
 
