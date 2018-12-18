@@ -20,7 +20,7 @@ matrix:
               - p7zip-full
               - gcc-4.4
           compiler: gcc-4.4
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
@@ -33,7 +33,7 @@ matrix:
               - p7zip-full
               - gcc-4.6
           compiler: gcc-4.6
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
@@ -46,11 +46,11 @@ matrix:
               - p7zip-full
               - gcc-4.7
           compiler: gcc-4.7
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-4.7
         - os: linux
           compiler: gcc
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
           addons:
@@ -65,7 +65,7 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -81,7 +81,7 @@ matrix:
               - gcc-7
           compiler: gcc-7
           env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough"
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
           addons:
@@ -97,11 +97,11 @@ matrix:
               - gcc-8
           compiler: gcc-8
           env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow"
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
           compiler: clang
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux
           addons:
@@ -116,7 +116,7 @@ matrix:
               - p7zip-full
               - clang-3.5
           compiler: clang-3.5
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #Ubuntu clang version 3.5.0-4ubuntu2~trusty2 (tags/RELEASE_350/final) (based on LLVM 3.5.0)
         - os: linux
           addons:
@@ -132,7 +132,7 @@ matrix:
               - p7zip-full
               - clang-3.6
           compiler: clang-3.6
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #Ubuntu clang version 3.6.2-svn240577-1~exp1 (branches/release_36) (based on LLVM 3.6.2)
         - os: linux
           addons:
@@ -148,7 +148,7 @@ matrix:
               - p7zip-full
               - clang-3.7
           compiler: clang-3.7
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #Ubuntu clang version 3.7.1-svn253571-1~exp1 (branches/release_37) (based on LLVM 3.7.1)
         - os: linux
           addons:
@@ -164,7 +164,7 @@ matrix:
               - p7zip-full
               - clang-3.8
           compiler: clang-3.8
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
         - os: linux
           addons:
@@ -180,7 +180,7 @@ matrix:
               - p7zip-full
               - clang-3.9
           compiler: clang-3.9
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #clang version 3.9.X
 #        - os: linux
 #          addons:
@@ -196,7 +196,7 @@ matrix:
 #              - p7zip-full
 #              - clang-4.0
 #          compiler: clang-4.0
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #clang version 4.0.X
 #        - os: linux
 #          addons:
@@ -212,40 +212,40 @@ matrix:
 #              - p7zip-full
 #              - clang-5.0
 #          compiler: clang-5.0
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #clang version 5.0.X
 #        - os: osx
 #          osx_image: beta-xcode6.1
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
 #        - os: osx
 #          osx_image: beta-xcode6.2
 #          compiler: gcc
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
 ##        - os: osx
 ##          osx_image: beta-xcode6.3
-##          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+##          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 ##          #I think xcode.6.3 VM is broken, it does not boot
 #        - os: osx
 #          osx_image: xcode6.4
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
 #        - os: osx
 #          osx_image: xcode7
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 7.0.0 (clang-700.0.72)
 #        - os: osx
 #          osx_image: xcode7.1
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 7.0.0 (clang-700.1.76)
 #        - os: osx
 #          osx_image: xcode7.2
-#          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
 #          #Apple LLVM version 7.0.2 (clang-700.1.81)
         - os: osx
           osx_image: xcode7.3
-          if: env(DPL_ENABLED) != "1" OR branch NOT IN (env(DPL_BRANCHES)) OR env(DPL_TERMINATE_TESTS) != "1"
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR env(DPL_BRANCHES) != "" AND branch NOT IN (env(DPL_BRANCHES))
           #Apple LLVM version 7.3.0 (clang-703.0.31)
 ################################
 # Deployer Buildbots - OSX
