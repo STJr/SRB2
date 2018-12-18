@@ -5,6 +5,11 @@
 #
 
 if [[ "$__DPL_DPUT_ACTIVE" == "1" ]]; then
+    # Install APT dependencies
+    # paramiko required for ssh
+    sudo apt-get install python-paramiko expect dput; # python-pip
+    #pip install paramiko;
+
     # Output the DPUT config
     # Dput only works if you're using secure FTP, so that's what we default to.
     cat > "./dput.cf" << EOM
@@ -32,10 +37,6 @@ EOM
     # Get the private key
     echo "$DPL_SSH_KEY_PRIVATE" | base64 --decode > key.private;
     chmod 700 ./key.private;
-
-    # paramiko required for ssh
-    sudo apt-get install python-paramiko expect; # python-pip
-    #pip install paramiko;
 
     if [[ "$_DPL_PACKAGE_MAIN" == "1" ]]; then
         PACKAGEFILENAME=${PACKAGE_NAME}_${PACKAGE_VERSION}${PACKAGE_SUBVERSION}${PACKAGE_REVISION};
