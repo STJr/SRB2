@@ -150,7 +150,7 @@ if(${SDL2_FOUND})
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
 		)
-		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "Sonic Robo Blast 2")
+		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 	else()
 		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_LIBRARIES}
@@ -337,7 +337,7 @@ if(${SDL2_FOUND})
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		install(CODE "
 			include(BundleUtilities)
-			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"
+			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/\${CPACK_PACKAGE_DESCRIPTION_SUMMARY}.app\"
 				\"\"
 				/Library/Frameworks
 			)"
