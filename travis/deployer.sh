@@ -10,7 +10,7 @@
 # See other shell scripts for more options.
 #
 # DPL_ENABLED = 1                       (leave blank to disable)
-# DPL_JOB_ALL = 1                       (run Deployer on all jobs; leave blank to act on specific jobs, see below)
+# DPL_JOB_ENABLE_ALL = 1                (run Deployer on all jobs; leave blank to act on specific jobs, see below)
 # DPL_JOBNAMES = name1,name2            (whitelist of job names to allow uploading; leave blank to upload from all jobs)
 # DPL_OSNAMES = osx                     (whitelist of OS names to allow uploading; leave blank to upload from all OSes)
 # DPL_BRANCHES = master,branch1,branch2 (whitelist of branches to upload; leave blank to upload all branches)
@@ -50,7 +50,7 @@ if [[ "$DPL_ENABLED" == "1" ]] && [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
             #
             # Is the job enabled for deployment?
             #
-            if [[ "$DPL_JOB_ALL" == "1" ]] || [[ "$_DPL_JOB_ENABLED" == "1" ]]; then
+            if [[ "$DPL_JOB_ENABLE_ALL" == "1" ]] || [[ "$_DPL_JOB_ENABLED" == "1" ]]; then
                 #
                 # Whitelist by job names
                 #
