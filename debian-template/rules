@@ -112,8 +112,8 @@ binary-arch:
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
 	# Install desktop file and banner image
-	$(INSTALL) $(DIR)/${PROGRAM_FILENAME}.png $(DIR)/debian/tmp/usr/share/pixmaps
-	$(INSTALL) $(DIR)/debian/${PROGRAM_FILENAME}.desktop $(DIR)/debian/tmp/usr/share/applications
+	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps/${PROGRAM_FILENAME}.png
+	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications/${PROGRAM_FILENAME}.desktop
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
