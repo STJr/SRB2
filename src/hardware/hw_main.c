@@ -4334,6 +4334,16 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		wallVerts[0].tow = wallVerts[1].tow = gpatch->max_t;
 	}
 
+	// if it has a dispoffset, push it a little towards the camera
+	if (spr->dispoffset) {
+		float co = -gr_viewcos*(0.05f*spr->dispoffset);
+		float si = -gr_viewsin*(0.05f*spr->dispoffset);
+		wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
+		wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
+		wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
+		wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
+	}
+
 	realtop = top = wallVerts[3].y;
 	realbot = bot = wallVerts[0].y;
 	towtop = wallVerts[3].tow;
@@ -4633,6 +4643,16 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		// SHADOW SPRITE! //
 		////////////////////
 		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
+	}
+
+	// if it has a dispoffset, push it a little towards the camera
+	if (spr->dispoffset) {
+		float co = -gr_viewcos*(0.05f*spr->dispoffset);
+		float si = -gr_viewsin*(0.05f*spr->dispoffset);
+		wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
+		wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
+		wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
+		wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
 	}
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
