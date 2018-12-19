@@ -112,10 +112,10 @@ static GLint       viewport[4];
 //			These need to start at 0 and be set to their number, and be reset to 0 when deleted so that intel GPUs
 //			can know when the textures aren't there, as textures are always considered resident in their virtual memory
 // TODO:	Store them in a more normal way
-#define SCRTEX_SCREENTEXTURE 65535
-#define SCRTEX_STARTSCREENWIPE 65534
-#define SCRTEX_ENDSCREENWIPE 65533
-#define SCRTEX_FINALSCREENTEXTURE 65532
+#define SCRTEX_SCREENTEXTURE 4294967295U
+#define SCRTEX_STARTSCREENWIPE 4294967294U
+#define SCRTEX_ENDSCREENWIPE 4294967293U
+#define SCRTEX_FINALSCREENTEXTURE 4294967292U
 static GLuint screentexture = 0;
 static GLuint startScreenWipe = 0;
 static GLuint endScreenWipe = 0;
@@ -1971,6 +1971,19 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 	pglEnable(GL_CULL_FACE);
 
+#ifdef USE_FTRANSFORM_MIRROR
+	// flipped is if the object is flipped
+	// pos->flip is if the screen is flipped vertically
+	// pos->mirror is if the screen is flipped horizontally
+	// XOR all the flips together to figure out what culling to use!
+	{
+		boolean reversecull = (flipped ^ pos->flip ^ pos->mirror);
+		if (reversecull)
+			pglCullFace(GL_FRONT);
+		else
+			pglCullFace(GL_BACK);
+	}
+#else
 	// pos->flip is if the screen is flipped too
 	if (flipped != pos->flip) // If either are active, but not both, invert the model's culling
 	{
@@ -1980,6 +1993,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	{
 		pglCullFace(GL_BACK);
 	}
+#endif
 
 #ifndef KOS_GL_COMPATIBILITY
 	pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
@@ -2004,8 +2018,11 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglTranslatef(pos->x, pos->z, pos->y);
 	if (flipped)
 		scaley = -scaley;
-	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
+#ifdef USE_FTRANSFORM_ANGLEZ
+	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f); // rotate by slope from Kart
+#endif
 	pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
+	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 
 	pglScalef(scalex, scaley, scalez);
 
@@ -2172,13 +2189,19 @@ EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration,
 // -----------------+
 EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 {
-	static INT32 special_splitscreen;
+	static boolean special_splitscreen;
 	pglLoadIdentity();
 	if (stransform)
 	{
 		// keep a trace of the transformation for md2
 		memcpy(&md2_transform, stransform, sizeof (md2_transform));
 
+#ifdef USE_FTRANSFORM_MIRROR
+		// mirroring from Kart
+		if (stransform->mirror)
+			pglScalef(-stransform->scalex, stransform->scaley, -stransform->scalez);
+		else
+#endif
 		if (stransform->flip)
 			pglScalef(stransform->scalex, -stransform->scaley, -stransform->scalez);
 		else
@@ -2190,7 +2213,7 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 
 		pglMatrixMode(GL_PROJECTION);
 		pglLoadIdentity();
-		special_splitscreen = (stransform->splitscreen && stransform->fovxangle == 90.0f);
+		special_splitscreen = (stransform->splitscreen == 1 && stransform->fovxangle == 90.0f);
 		if (special_splitscreen)
 			GLPerspective(53.13l, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
 		else
