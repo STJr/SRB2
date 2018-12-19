@@ -523,7 +523,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglVertex3f , glVertex3f)
 	GETOPENGLFUNC(pglVertex3sv, glVertex3sv)
 	GETOPENGLFUNC(pglNormal3f , glNormal3f)
-	GETOPENGLFUNC(pglNormal3bv, glNomral3bv)
+	GETOPENGLFUNC(pglNormal3bv, glNormal3bv)
 	GETOPENGLFUNC(pglColor4f , glColor4f)
 	GETOPENGLFUNC(pglColor4fv , glColor4fv)
 	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
@@ -2075,7 +2075,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				{
 					// Interpolate
 					*vertPtr++ = (short)(frame->vertices[j] + (pol * (nextframe->vertices[j] - frame->vertices[j])));
-					*normPtr++ = (short)(frame->normals[j] + (pol * (nextframe->normals[j] - frame->normals[j])));
+					*normPtr++ = (char)(frame->normals[j] + (pol * (nextframe->normals[j] - frame->normals[j])));
 				}
 
 				uvPtr = mesh->uvs;
@@ -2083,9 +2083,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				normPtr = normBuffer;
 				for (j = 0; j < mesh->numTriangles; j++)
 				{
-					pglTexCoord2fv((const GLfloat*) uvPtr);
-					pglNormal3bv((const GLbyte*) normPtr);
-					pglVertex3sv((const GLshort*) vertPtr);
+					pglTexCoord2fv(uvPtr);
+					pglNormal3bv((signed char*) normPtr);
+					pglVertex3sv(vertPtr);
 
 					uvPtr += 2;
 					normPtr += 3;
