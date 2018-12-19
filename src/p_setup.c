@@ -219,6 +219,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelselect = 0;
 	DEH_WriteUndoline("BONUSTYPE", va("%d", mapheaderinfo[num]->bonustype), UNDO_NONE);
 	mapheaderinfo[num]->bonustype = 0;
+	DEH_WriteUndoline("SAVEOVERRIDE", va("%d", mapheaderinfo[num]->saveoverride), UNDO_NONE);
+	mapheaderinfo[num]->saveoverride = SAVE_DEFAULT;
 	DEH_WriteUndoline("LEVELFLAGS", va("%d", mapheaderinfo[num]->levelflags), UNDO_NONE);
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
@@ -2626,6 +2628,28 @@ static void P_SetupCamera(void)
 	}
 }
 
+static boolean P_CanSave(void)
+{
+	// Saving is completely ignored under these conditions:
+	if ((cursaveslot < 0) // Playing without saving
+		|| (!modifiedgame || savemoddata) // Game is modified 
+		|| (netgame || multiplayer) // Not in single-player
+		|| (demoplayback || demorecording || metalrecording) // Currently in demo
+		|| (players[consoleplayer].lives <= 0) // Completely dead
+		|| (modeattacking || ultimatemode || G_IsSpecialStage(gamemap))) // Specialized instances
+		return false;
+
+	if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_ALWAYS)
+		return true; // Saving should ALWAYS happen!
+	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
+		return false; // Saving should NEVER happen!
+	
+	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
+	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
+			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
+			&& (gamemap != lastmapsaved));
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -3103,10 +3127,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode
-		&& !(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
-		&& (!G_IsSpecialStage(gamemap)) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))
+	if (P_CanSave())
 		G_SaveGame((UINT32)cursaveslot);
 
 	if (savedata.lives > 0)
