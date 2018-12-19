@@ -1682,6 +1682,25 @@ static int lib_rSetPlayerSkin(lua_State *L)
 	return 0;
 }
 
+// R_DATA
+////////////
+
+static int lib_rCheckTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_CheckTextureNumForName(name));
+	return 1;
+}
+
+static int lib_rTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_TextureNumForName(name));
+	return 1;
+}
+
 // S_SOUND
 ////////////
 
@@ -2164,6 +2183,10 @@ static luaL_Reg lib[] = {
 	{"R_Char2Frame",lib_rChar2Frame},
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
+
+	// r_data
+	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
+	{"R_TextureNumForName",lib_rTextureNumForName},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},
