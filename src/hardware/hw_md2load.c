@@ -237,6 +237,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	md2header_t *header;
 
 	size_t fileLen;
+	size_t fileReadLen;
 	int i, j, t;
 
 	size_t namelen;
@@ -284,8 +285,10 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	// read in file
 	buffer = malloc(fileLen);
-	fread(buffer, fileLen, 1, f);
+	fileReadLen = fread(buffer, fileLen, 1, f);
 	fclose(f);
+
+	(void)fileReadLen; // intentionally ignore return value, per buildbot
 
 	// get pointer to file header
 	header = (md2header_t*)buffer;

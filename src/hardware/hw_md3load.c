@@ -150,6 +150,7 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	model_t *retModel = NULL;
 	md3modelHeader *mdh;
 	long fileLen;
+	long fileReadLen;
 	char *buffer;
 	int surfEnd;
 	int i, t;
@@ -176,8 +177,10 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	// read in file
 	buffer = malloc(fileLen);
-	fread(buffer, fileLen, 1, f);
+	fileReadLen = fread(buffer, fileLen, 1, f);
 	fclose(f);
+
+	(void)fileReadLen; // intentionally ignore return value, per buildbot
 
 	// get pointer to file header
 	mdh = (md3modelHeader*)buffer;
