@@ -940,6 +940,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		GLPatch_t *gpatch;
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
+		//mdlframe_t *next = NULL;
 		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
@@ -1036,19 +1037,19 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 			if (spr->mobj->frame & FF_ANIMATE)
 			{
-				UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-				if (nextframe >= (UINT32)spr->mobj->state->var1)
-					nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
-				nextframe %= md2->model->header.numFrames;
-				next = &md2->model->frames[nextframe];
+				nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+				if (nextFrame >= spr->mobj->state->var1)
+					nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
+				nextFrame %= md2->model->meshes[0].numFrames;
+				//next = &md2->model->meshes[0].frames[nextFrame];
 			}
 			else
 			{
 				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
 					&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
 				{
-					const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-					next = &md2->model->frames[nextframe];
+					nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+					//next = &md2->model->meshes[0].frames[nextFrame];
 				}
 			}
 		}
