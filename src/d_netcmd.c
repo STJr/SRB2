@@ -995,8 +995,8 @@ static void SetPlayerName(INT32 playernum, char *newname)
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
 			if (netgame)
-				CONS_Printf(M_GetText("%s renamed to %s\n"),
-					player_names[playernum], newname);
+				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
+
 			strcpy(player_names[playernum], newname);
 		}
 	}
