@@ -27,20 +27,22 @@ vector_t vectorZaxis = { 0.0f, 0.0f, 1.0f };
 
 void VectorRotate(vector_t *rotVec, const vector_t *axisVec, float angle)
 {
+	float ux, uy, uz, vx, vy, vz, wx, wy, wz, sa, ca;
+
 	angle = U_Deg2Rad(angle);
 
 	// Rotate the point (x,y,z) around the vector (u,v,w)
-	float ux = axisVec->x * rotVec->x;
-	float uy = axisVec->x * rotVec->y;
-	float uz = axisVec->x * rotVec->z;
-	float vx = axisVec->y * rotVec->x;
-	float vy = axisVec->y * rotVec->y;
-	float vz = axisVec->y * rotVec->z;
-	float wx = axisVec->z * rotVec->x;
-	float wy = axisVec->z * rotVec->y;
-	float wz = axisVec->z * rotVec->z;
-	float sa = sinf(angle);
-	float ca = cosf(angle);
+	ux = axisVec->x * rotVec->x;
+	uy = axisVec->x * rotVec->y;
+	uz = axisVec->x * rotVec->z;
+	vx = axisVec->y * rotVec->x;
+	vy = axisVec->y * rotVec->y;
+	vz = axisVec->y * rotVec->z;
+	wx = axisVec->z * rotVec->x;
+	wy = axisVec->z * rotVec->y;
+	wz = axisVec->z * rotVec->z;
+	sa = sinf(angle);
+	ca = cosf(angle);
 
 	rotVec->x = axisVec->x*(ux + vy + wz) + (rotVec->x*(axisVec->y*axisVec->y + axisVec->z*axisVec->z) - axisVec->x*(vy + wz))*ca + (-wy + vz)*sa;
 	rotVec->y = axisVec->y*(ux + vy + wz) + (rotVec->y*(axisVec->x*axisVec->x + axisVec->z*axisVec->z) - axisVec->y*(ux + wz))*ca + (wx - uz)*sa;
@@ -105,7 +107,7 @@ void CreateVBO(mesh_t *mesh, mdlframe_t *frame)
 	float *tanPtr = frame->tangents;
 	float *uvPtr = mesh->uvs;
 	float *lightPtr = mesh->lightuvs;
-	byte *colorPtr = frame->colors;
+	char *colorPtr = frame->colors;
 
 	int i;
 	for (i = 0; i < mesh->numTriangles*3; i++)
@@ -364,17 +366,22 @@ void GenerateVertexNormals(model_t *model)
 	int i;
 	for (i = 0; i < model->numMeshes; i++)
 	{
+		int j;
+
 		mesh_t *mesh = &model->meshes[i];
 
 		if (!mesh->frames)
 			continue;
 
-		int j;
 		for (j = 0; j < mesh->numFrames; j++)
 		{
 			mdlframe_t *frame = &mesh->frames[j];
 			int memTag = PU_STATIC;
 			float *newNormals = (float*)Z_Malloc(sizeof(float)*3*mesh->numTriangles*3, memTag, 0);
+			int k;
+			float *vertPtr = frame->vertices;
+			float *oldNormals;
+
 			M_Memcpy(newNormals, frame->normals, sizeof(float)*3*mesh->numTriangles*3);
 
 /*			if (!systemSucks)
@@ -384,20 +391,20 @@ void GenerateVertexNormals(model_t *model)
 				M_Memcpy(newTangents, frame->tangents, sizeof(float)*3*mesh->numTriangles*3);
 			}*/
 
-			int k;
-			float *vertPtr = frame->vertices;
 			for (k = 0; k < mesh->numVertices; k++)
 			{
 				float x, y, z;
+				int vCount = 0;
+				vector_t normal;
+				int l;
+				float *testPtr = frame->vertices;
+
 				x = *vertPtr++;
 				y = *vertPtr++;
 				z = *vertPtr++;
 
-				int vCount = 0;
-				vector_t normal;
 				normal.x = normal.y = normal.z = 0;
-				int l;
-				float *testPtr = frame->vertices;
+
 				for (l = 0; l < mesh->numVertices; l++)
 				{
 					float testX, testY, testZ;
@@ -433,7 +440,7 @@ void GenerateVertexNormals(model_t *model)
 				}
 			}
 
-			float *oldNormals = frame->normals;
+			oldNormals = frame->normals;
 			frame->normals = newNormals;
 			Z_Free(oldNormals);
 
@@ -456,7 +463,7 @@ typedef struct materiallist_s
 
 static boolean AddMaterialToList(materiallist_t **head, material_t *material)
 {
-	materiallist_t *node;
+	materiallist_t *node, *newMatNode;
 	for (node = *head; node; node = node->next)
 	{
 		if (node->material == material)
@@ -464,7 +471,7 @@ static boolean AddMaterialToList(materiallist_t **head, material_t *material)
 	}
 
 	// Didn't find it, so add to the list
-	materiallist_t *newMatNode = (materiallist_t*)Z_Malloc(sizeof(materiallist_t), PU_CACHE, 0);
+	newMatNode = (materiallist_t*)Z_Malloc(sizeof(materiallist_t), PU_CACHE, 0);
 	newMatNode->material = material;
 	ListAdd(newMatNode, (listitem_t**)head);
 	return true;
@@ -478,12 +485,16 @@ static boolean AddMaterialToList(materiallist_t **head, material_t *material)
 //
 void Optimize(model_t *model)
 {
-	if (model->numMeshes <= 1)
-		return; // No need
-
 	int numMeshes = 0;
 	int i;
 	materiallist_t *matListHead = NULL;
+	int memTag;
+	mesh_t *newMeshes;
+	materiallist_t *node;
+
+	if (model->numMeshes <= 1)
+		return; // No need
+
 	for (i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *curMesh = &model->meshes[i];
@@ -501,15 +512,18 @@ void Optimize(model_t *model)
 			numMeshes++;
 	}
 
-	int memTag = PU_STATIC;
-	mesh_t *newMeshes = (mesh_t*)Z_Calloc(sizeof(mesh_t) * numMeshes, memTag, 0);
+	memTag = PU_STATIC;
+	newMeshes = (mesh_t*)Z_Calloc(sizeof(mesh_t) * numMeshes, memTag, 0);
 
 	i = 0;
-	materiallist_t *node;
 	for (node = matListHead; node; node = node->next)
 	{
 		material_t *curMat = node->material;
 		mesh_t *newMesh = &newMeshes[i];
+		mdlframe_t *curFrame;
+		int uvCount;
+		int vertCount;
+		int colorCount;
 
 		// Find all triangles with this material and count them
 		int numTriangles = 0;
@@ -529,20 +543,20 @@ void Optimize(model_t *model)
 //		if (node->material->lightmap)
 //			newMesh->lightuvs = (float*)Z_Malloc(sizeof(float)*2*numTriangles*3, memTag, 0);
 		newMesh->frames = (mdlframe_t*)Z_Calloc(sizeof(mdlframe_t), memTag, 0);
-		mdlframe_t *curFrame = &newMesh->frames[0];
+		curFrame = &newMesh->frames[0];
 
 		curFrame->material = curMat;
 		curFrame->normals = (float*)Z_Malloc(sizeof(float)*3*numTriangles*3, memTag, 0);
 //		if (!systemSucks)
 //			curFrame->tangents = (float*)Z_Malloc(sizeof(float)*3*numTriangles*3, memTag, 0);
 		curFrame->vertices = (float*)Z_Malloc(sizeof(float)*3*numTriangles*3, memTag, 0);
-		curFrame->colors = (byte*)Z_Malloc(sizeof(byte)*4*numTriangles*3, memTag, 0);
+		curFrame->colors = (char*)Z_Malloc(sizeof(char)*4*numTriangles*3, memTag, 0);
 
 		// Now traverse the meshes of the model, adding in
 		// vertices/normals/uvs that match the current material
-		int uvCount = 0;
-		int vertCount = 0;
-		int colorCount = 0;
+		uvCount = 0;
+		vertCount = 0;
+		colorCount = 0;
 		for (j = 0; j < model->numMeshes; j++)
 		{
 			mesh_t *curMesh = &model->meshes[j];
@@ -551,6 +565,8 @@ void Optimize(model_t *model)
 			{
 				float *dest;
 				float *src;
+				char *destByte;
+				char *srcByte;
 
 				M_Memcpy(&newMesh->uvs[uvCount],
 					curMesh->uvs,
@@ -587,22 +603,20 @@ void Optimize(model_t *model)
 
 				vertCount += 3 * curMesh->numTriangles * 3;
 
-				byte *destByte;
-				byte *srcByte;
-				destByte = (byte*)newMesh->frames[0].colors;
-				srcByte = (byte*)curMesh->frames[0].colors;
+				destByte = (char*)newMesh->frames[0].colors;
+				srcByte = (char*)curMesh->frames[0].colors;
 
 				if (srcByte)
 				{
 					M_Memcpy(&destByte[colorCount],
 						srcByte,
-						sizeof(byte)*4*curMesh->numTriangles*3);
+						sizeof(char)*4*curMesh->numTriangles*3);
 				}
 				else
 				{
 					memset(&destByte[colorCount],
 						255,
-						sizeof(byte)*4*curMesh->numTriangles*3);
+						sizeof(char)*4*curMesh->numTriangles*3);
 				}
 
 				colorCount += 4 * curMesh->numTriangles * 3;
@@ -622,21 +636,23 @@ void GeneratePolygonNormals(model_t *model, int ztag)
 	int i;
 	for (i = 0; i < model->numMeshes; i++)
 	{
+		int j;
 		mesh_t *mesh = &model->meshes[i];
 
 		if (!mesh->frames)
 			continue;
 
-		int j;
 		for (j = 0; j < mesh->numFrames; j++)
 		{
+			int k;
 			mdlframe_t *frame = &mesh->frames[j];
+			const float *vertices = frame->vertices;
+			vector_t *polyNormals;
 
 			frame->polyNormals = (vector_t*)Z_Malloc(sizeof(vector_t) * mesh->numTriangles, ztag, 0);
 
-			const float *vertices = frame->vertices;
-			vector_t *polyNormals = frame->polyNormals;
-			int k;
+			polyNormals = frame->polyNormals;
+
 			for (k = 0; k < mesh->numTriangles; k++)
 			{
 //				Vector::Normal(vertices, polyNormals);

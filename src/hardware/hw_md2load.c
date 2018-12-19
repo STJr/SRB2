@@ -17,7 +17,7 @@
 
 #define NUMVERTEXNORMALS 162
 
-// Quake 2 normals are indexed. Use avertexnormals[normalindex][x/y/z] and 
+// Quake 2 normals are indexed. Use avertexnormals[normalindex][x/y/z] and
 // you'll have your normals.
 float avertexnormals[NUMVERTEXNORMALS][3] = {
 {-0.525731f, 0.000000f, 0.850651f},
@@ -195,9 +195,9 @@ typedef struct
   int numXYZ;       // Number of vertices in each frame
   int numST;        // Number of texture coordinates in each frame.
   int numTris;      // Number of triangles in each frame
-  int numGLcmds;    // Number of dwords (4 bytes) in the gl command list. 
+  int numGLcmds;    // Number of dwords (4 bytes) in the gl command list.
   int numFrames;    // Number of frames
-  int offsetSkins;  // Offset, in bytes from the start of the file, to the list of skin names. 
+  int offsetSkins;  // Offset, in bytes from the start of the file, to the list of skin names.
   int offsetST;     // Offset, in bytes from the start of the file, to the list of texture coordinates
   int offsetTris;   // Offset, in bytes from the start of the file, to the list of triangles
   int offsetFrames; // Offset, in bytes from the start of the file, to the list of frames
@@ -236,6 +236,20 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	model_t *retModel = NULL;
 	md2header_t *header;
 
+	size_t fileLen;
+	int i, j, t;
+
+	size_t namelen;
+	char *texturefilename, *buffer;
+	const char *texPos;
+
+	const float WUNITS = 1.0f;
+	float dataScale;
+
+	md2triangle_t *tris;
+	md2texcoord_t *texcoords;
+	md2frame_t *frames;
+
 	FILE *f = fopen(fileName, "rb");
 
 	if (!f)
@@ -243,12 +257,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	retModel = (model_t*)Z_Calloc(sizeof(model_t), ztag, 0);
 
-	size_t fileLen;
-	int i, j;
-
-	size_t namelen;
-	char *texturefilename;
-	const char *texPos = strchr(fileName, '/');
+	texPos = strchr(fileName, '/');
 
 	if (texPos)
 	{
@@ -274,7 +283,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	fseek(f, 0, SEEK_SET);
 
 	// read in file
-	char *buffer = malloc(fileLen);
+	buffer = malloc(fileLen);
 	fread(buffer, fileLen, 1, f);
 	fclose(f);
 
@@ -284,13 +293,13 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	retModel->numMeshes = 1; // MD2 only has one mesh
 	retModel->meshes = (mesh_t*)Z_Calloc(sizeof(mesh_t) * retModel->numMeshes, ztag, 0);
 	retModel->meshes[0].numFrames = header->numFrames;
-	const float WUNITS = 1.0f;
-	float dataScale = WUNITS;
+
+	dataScale = WUNITS;
 
 	// Tris and ST are simple structures that can be straight-copied
-	md2triangle_t *tris = (md2triangle_t*)&buffer[header->offsetTris];
-	md2texcoord_t *texcoords = (md2texcoord_t*)&buffer[header->offsetST];
-	md2frame_t *frames = (md2frame_t*)&buffer[header->offsetFrames];
+	tris = (md2triangle_t*)&buffer[header->offsetTris];
+	texcoords = (md2texcoord_t*)&buffer[header->offsetST];
+	frames = (md2frame_t*)&buffer[header->offsetFrames];
 
 	// Read in textures
 	retModel->numMaterials = header->numSkins;
@@ -300,7 +309,6 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	retModel->materials = (material_t*)Z_Calloc(sizeof(material_t)*retModel->numMaterials, ztag, 0);
 
-	int t;
 	for (t = 0; t < retModel->numMaterials; t++)
 	{
 		retModel->materials[t].ambient[0] = 0.8f;
@@ -327,6 +335,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 		if (!systemSucks)
 		{
 			// Check for a normal map...??
+			Resource::resource_t *res
 			char openfilename[1024];
 			char normalMapName[1024];
 			strcpy(normalMapName, texturefilename);
@@ -355,7 +364,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 					openfilename[k] = '/';
 			}
 
-			Resource::resource_t *res = Resource::Open(openfilename);
+			res = Resource::Open(openfilename);
 			if (res)
 			{
 				Resource::Close(res);
@@ -368,15 +377,24 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	if (!useFloat) // Decompress to MD3 'tinyframe' space
 	{
+		char *ptr = (char*)frames;
+		md2triangle_t *trisPtr;
+		unsigned short *indexptr;
+		float *uvptr;
+
 		dataScale = 0.015624f; // 1 / 64.0f
 		retModel->meshes[0].tinyframes = (tinyframe_t*)Z_Calloc(sizeof(tinyframe_t)*header->numFrames, ztag, 0);
 		retModel->meshes[0].numVertices = header->numXYZ;
 		retModel->meshes[0].uvs = (float*)Z_Malloc (sizeof(float)*2*retModel->meshes[0].numVertices, ztag, 0);
 
-		byte *ptr = (byte*)frames;
 		for (i = 0; i < header->numFrames; i++, ptr += header->framesize)
 		{
+			short *vertptr;
+			char *normptr;
+			//char *tanptr;
 			md2frame_t *framePtr = (md2frame_t*)ptr;
+			md2vertex_t *vertex;
+
 			retModel->meshes[0].tinyframes[i].vertices = (short*)Z_Malloc(sizeof(short)*3*header->numXYZ, ztag, 0);
 			retModel->meshes[0].tinyframes[i].normals = (char*)Z_Malloc(sizeof(char)*3*header->numXYZ, ztag, 0);
 
@@ -384,14 +402,14 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 //				retModel->meshes[0].tinyframes[i].tangents = (char*)malloc(sizeof(char));//(char*)Z_Malloc(sizeof(char)*3*header->numVerts, ztag);
 			retModel->meshes[0].indices = (unsigned short*)Z_Malloc(sizeof(unsigned short) * 3 * header->numTris, ztag, 0);
 
-			short *vertptr = retModel->meshes[0].tinyframes[i].vertices;
-			char *normptr = retModel->meshes[0].tinyframes[i].normals;
+			vertptr = retModel->meshes[0].tinyframes[i].vertices;
+			normptr = retModel->meshes[0].tinyframes[i].normals;
 
-//			char *tanptr = retModel->meshes[0].tinyframes[i].tangents;
+//			tanptr = retModel->meshes[0].tinyframes[i].tangents;
 			retModel->meshes[0].tinyframes[i].material = &retModel->materials[0];
 
 			framePtr++; // Advance to vertex list
-			md2vertex_t *vertex = (md2vertex_t*)framePtr;
+			vertex = (md2vertex_t*)framePtr;
 			framePtr--;
 			for (j = 0; j < header->numXYZ; j++, vertex++)
 			{
@@ -403,16 +421,16 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 				vertptr++;
 
 				// Normal
-				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][0] * 127);
-				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][1] * 127);
-				*normptr++ = (byte)(avertexnormals[vertex->lightNormalIndex][2] * 127);
+				*normptr++ = (char)(avertexnormals[vertex->lightNormalIndex][0] * 127);
+				*normptr++ = (char)(avertexnormals[vertex->lightNormalIndex][1] * 127);
+				*normptr++ = (char)(avertexnormals[vertex->lightNormalIndex][2] * 127);
 			}
 		}
 
 		// This doesn't need to be done every frame!
-		md2triangle_t *trisPtr = tris;
-		unsigned short *indexptr = retModel->meshes[0].indices;
-		float *uvptr = (float*)retModel->meshes[0].uvs;
+		trisPtr = tris;
+		indexptr = retModel->meshes[0].indices;
+		uvptr = (float*)retModel->meshes[0].uvs;
 		for (j = 0; j < header->numTris; j++, trisPtr++)
 		{
 			*indexptr = trisPtr->meshIndex[0];
@@ -432,12 +450,14 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	}
 	else // Full float loading method
 	{
+		md2triangle_t *trisPtr = tris;
+		float *uvptr = retModel->meshes[0].uvs;
+		char *ptr = (char*)frames;
+
 		retModel->meshes[0].numVertices = header->numTris*3;
 		retModel->meshes[0].frames = (mdlframe_t*)Z_Calloc(sizeof(mdlframe_t)*header->numFrames, ztag, 0);
 		retModel->meshes[0].uvs = (float*)Z_Malloc(sizeof(float)*2*retModel->meshes[0].numVertices, ztag, 0);
 
-		md2triangle_t *trisPtr = tris;
-		float *uvptr = retModel->meshes[0].uvs;
 		for (i = 0; i < retModel->meshes[0].numTriangles; i++, trisPtr++)
 		{
 			*uvptr++ = texcoords[trisPtr->stIndex[0]].s / (float)header->skinwidth;
@@ -448,23 +468,24 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 			*uvptr++ = (texcoords[trisPtr->stIndex[2]].t / (float)header->skinheight);
 		}
 
-		byte *ptr = (byte*)frames;
 		for (i = 0; i < header->numFrames; i++, ptr += header->framesize)
 		{
+			md2vertex_t *vertex;
 			md2frame_t *framePtr = (md2frame_t*)ptr;
+			float *vertptr, *normptr;
 			retModel->meshes[0].frames[i].normals = (float*)Z_Malloc(sizeof(float)*3*header->numTris*3, ztag, 0);
 			retModel->meshes[0].frames[i].vertices = (float*)Z_Malloc(sizeof(float)*3*header->numTris*3, ztag, 0);
 //			if (retModel->materials[0].lightmap)
 //				retModel->meshes[0].frames[i].tangents = (float*)malloc(sizeof(float));//(float*)Z_Malloc(sizeof(float)*3*header->numTris*3, ztag);
-			float *vertptr, *normptr;
+
 			normptr = (float*)retModel->meshes[0].frames[i].normals;
 			vertptr = (float*)retModel->meshes[0].frames[i].vertices;
 			trisPtr = tris;
-			
+
 			retModel->meshes[0].frames[i].material = &retModel->materials[0];
 
 			framePtr++; // Advance to vertex list
-			md2vertex_t *vertex = (md2vertex_t*)framePtr;
+			vertex = (md2vertex_t*)framePtr;
 			framePtr--;
 			for (j = 0; j < header->numTris; j++, trisPtr++)
 			{

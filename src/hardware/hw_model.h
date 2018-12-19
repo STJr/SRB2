@@ -38,7 +38,7 @@ typedef struct
 	float *vertices;
 	float *normals;
 	float *tangents;
-	byte *colors;
+	char *colors;
 	unsigned int vboID;
 	vector_t *polyNormals;
 } mdlframe_t;

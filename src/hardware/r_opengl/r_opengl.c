@@ -1924,13 +1924,18 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	GLfloat diffuse[4];
 
 	float pol = 0.0f;
-	scale *= 0.5f;
 	float scalex = scale, scaley = scale, scalez = scale;
+
+	boolean useTinyFrames;
+
+	int i;
 
 	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
 #ifndef KOS_GL_COMPATIBILITY
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
 #endif
+
+	scale *= 0.5f;
 
 	if (duration != 0 && duration != -1 && tics != -1) // don't interpolate if instantaneous or infinite in length
 	{
@@ -2004,12 +2009,12 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 	pglScalef(scalex, scaley, scalez);
 
-	boolean useTinyFrames = model->meshes[0].tinyframes != NULL;
+	useTinyFrames = model->meshes[0].tinyframes != NULL;
 
 	if (useTinyFrames)
 		pglScalef(1 / 64.0f, 1 / 64.0f, 1 / 64.0f);
 
-	for (int i = 0; i < model->numMeshes; i++)
+	for (i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *mesh = &model->meshes[i];
 
@@ -2036,15 +2041,19 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			}
 			else
 			{
+				short *buffer, *vertPtr;
+				char *normBuffer, *normPtr;
+				float *uvPtr;
+				int j = 0;
+
 				// Dangit, I soooo want to do this in a GLSL shader...
 				pglBegin(GL_TRIANGLES);
 
-				short *buffer = malloc(mesh->numVertices * sizeof(short));
-				short *vertPtr = buffer;
-				char *normBuffer = malloc(mesh->numVertices * sizeof(char));
-				char *normPtr = normBuffer;
+				buffer = malloc(mesh->numVertices * sizeof(short));
+				vertPtr = buffer;
+				normBuffer = malloc(mesh->numVertices * sizeof(char));
+				normPtr = normBuffer;
 
-				int j = 0;
 				for (j = 0; j < mesh->numVertices; j++)
 				{
 					// Interpolate
@@ -2052,7 +2061,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 					*normPtr++ = (short)(frame->normals[j] + (pol * (nextframe->normals[j] - frame->normals[j])));
 				}
 
-				float *uvPtr = mesh->uvs;
+				uvPtr = mesh->uvs;
 				vertPtr = buffer;
 				normPtr = normBuffer;
 				for (j = 0; j < mesh->numTriangles; j++)
@@ -2096,15 +2105,21 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			}
 			else
 			{
+				int j = 0;
+				float *uvPtr;
+				float *frameVert;
+				float *frameNormal;
+				float *nextFrameVert;
+				float *nextFrameNormal;
+
 				// Dangit, I soooo want to do this in a GLSL shader...
 				pglBegin(GL_TRIANGLES);
 
-				int j = 0;
-				float *uvPtr = mesh->uvs;
-				float *frameVert = frame->vertices;
-				float *frameNormal = frame->normals;
-				float *nextFrameVert = nextframe->vertices;
-				float *nextFrameNormal = frame->normals;
+				uvPtr = mesh->uvs;
+				frameVert = frame->vertices;
+				frameNormal = frame->normals;
+				nextFrameVert = nextframe->vertices;
+				nextFrameNormal = frame->normals;
 				for (j = 0; j < mesh->numTriangles; j++)
 				{
 					// Interpolate
