@@ -40,8 +40,8 @@
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../r_things.h"
-// #include "../r_draw.h"
-// #include "../p_tick.h"
+#include "../r_draw.h"
+#include "../p_tick.h"
 #include "hw_model.h"
 
 #include "hw_main.h"
@@ -815,10 +815,12 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	return;
 }
 
-static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, const UINT8 *colormap, skincolors_t color)
+static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT32 skinnum, const UINT8 *colormap, skincolors_t color)
 {
 	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
 	GLMipmap_t *grmip, *newmip;
+
+	(void)skinnum;
 
 	if (colormap == colormaps || colormap == NULL)
 	{
@@ -889,7 +891,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	FSurfaceInfo Surf;
 
 	char filename[64];
+	INT32 frame = 0;
+	INT32 nextFrame = -1;
+	FTransform p;
 	md2_t *md2;
+	UINT8 color[4];
 
 	if (!cv_grmd2.value)
 		return;
@@ -934,6 +940,16 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	// Look at HWR_ProjectSprite for more
 	{
 		GLPatch_t *gpatch;
+		INT32 durs = spr->mobj->state->tics;
+		INT32 tics = spr->mobj->tics;
+		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
+		spritedef_t *sprdef;
+		spriteframe_t *sprframe;
+		float finalscale;
+
+		// Apparently people don't like jump frames like that, so back it goes
+		//if (tics > durs)
+			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
 			Surf.FlatColor.s.alpha = 0x40;
@@ -975,6 +991,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			}
 		}
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
+		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 		gpatch = md2->grpatch;
 		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
@@ -991,7 +1008,25 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format
 				&& gpatch->width == ((GLPatch_t *)md2->blendgrpatch)->width && gpatch->height == ((GLPatch_t *)md2->blendgrpatch)->height)
 			{
-				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, spr->colormap, (skincolors_t)spr->mobj->color);
+				INT32 skinnum;
+				if ((spr->mobj->flags & MF_BOSS) && (spr->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+				{
+					if (spr->mobj->type == MT_CYBRAKDEMON)
+						skinnum = TC_ALLWHITE;
+					else if (spr->mobj->type == MT_METALSONIC_BATTLE)
+						skinnum = TC_METALSONIC;
+					else
+						skinnum = TC_BOSS;
+				}
+				else if (spr->mobj->color)
+				{
+					if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+					{
+						skinnum = (INT32)((skin_t*)spr->mobj->skin-skins);
+					}
+					else skinnum = TC_DEFAULT;
+				}
+				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, skinnum, spr->colormap, (skincolors_t)spr->mobj->color);
 			}
 			else
 			{
@@ -1005,6 +1040,90 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
+
+		if (spr->mobj->frame & FF_ANIMATE)
+		{
+			// set duration and tics to be the correct values for FF_ANIMATE states
+			durs = spr->mobj->state->var2;
+			tics = spr->mobj->anim_duration;
+		}
+
+		//FIXME: this is not yet correct
+		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+#if 0
+		if (cv_grmd2.value == 1 && tics <= durs)
+		{
+			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
+			if (spr->mobj->frame & FF_ANIMATE)
+			{
+				UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+				if (nextframe >= (UINT32)spr->mobj->state->var1)
+					nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
+				nextframe %= md2->model->header.numFrames;
+				next = &md2->model->frames[nextframe];
+			}
+			else
+			{
+				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL)
+				{
+					const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+					next = &md2->model->frames[nextframe];
+				}
+			}
+		}
+#endif
+
+		//Hurdler: it seems there is still a small problem with mobj angle
+		p.x = FIXED_TO_FLOAT(spr->mobj->x);
+		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
+
+		if (spr->mobj->eflags & MFE_VERTICALFLIP)
+			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
+		else
+			p.z = FIXED_TO_FLOAT(spr->mobj->z);
+
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
+		else
+			sprdef = &sprites[spr->mobj->sprite];
+
+		sprframe = &sprdef->spriteframes[spr->mobj->frame & FF_FRAMEMASK];
+
+		if (sprframe->rotate)
+		{
+			const fixed_t anglef = AngleFixed(spr->mobj->angle);
+			p.angley = FIXED_TO_FLOAT(anglef);
+		}
+		else
+		{
+			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
+			p.angley = FIXED_TO_FLOAT(anglef);
+		}
+		p.anglex = 0.0f;
+		p.anglez = 0.0f;
+		if (spr->mobj->standingslope)
+		{
+			fixed_t tempz = spr->mobj->standingslope->normal.z;
+			fixed_t tempy = spr->mobj->standingslope->normal.y;
+			fixed_t tempx = spr->mobj->standingslope->normal.x;
+			fixed_t tempangle = AngleFixed(R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx));
+			p.anglez = FIXED_TO_FLOAT(tempangle);
+			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
+			p.anglex = FIXED_TO_FLOAT(tempangle);
+		}
+
+		color[0] = Surf.FlatColor.s.red;
+		color[1] = Surf.FlatColor.s.green;
+		color[2] = Surf.FlatColor.s.blue;
+		color[3] = Surf.FlatColor.s.alpha;
+
+		// SRB2CBTODO: MD2 scaling support
+		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
+
+		p.flip = atransform.flip;
+		p.mirror = atransform.mirror;
+
+		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, color);
 	}
 }
 
