@@ -73,7 +73,7 @@ patch_t *cred_font[CRED_FONTSIZE];
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
-static INT32 c_input = 0;	// let's try to make the chat input less shitty.
+static size_t c_input = 0;	// let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
@@ -328,7 +328,7 @@ static UINT32 chat_nummsg_min = 0;
 static UINT32 chat_scroll = 0;
 static tic_t chat_scrolltime = 0;
 
-static INT32 chat_maxscroll = 0;	// how far can we scroll?
+static UINT32 chat_maxscroll = 0;	// how far can we scroll?
 
 //static chatmsg_t chat_mini[CHAT_BUFSIZE];	// Display the last few messages sent.
 //static chatmsg_t chat_log[CHAT_BUFSIZE];	// Keep every message sent to us in memory so we can scroll n shit, it's cool.
@@ -346,7 +346,7 @@ static INT16 addy = 0;	// use this to make the messages scroll smoothly when one
 static void HU_removeChatText_Mini(void)
 {
     // MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	size_t i;
     for(i=0;i<chat_nummsg_min-1;i++) {
         strcpy(chat_mini[i], chat_mini[i+1]);
         chat_timers[i] = chat_timers[i+1];
@@ -362,7 +362,7 @@ static void HU_removeChatText_Mini(void)
 static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	size_t i;
     for(i=0;i<chat_nummsg_log-1;i++) {
         strcpy(chat_log[i], chat_log[i+1]);
     }
@@ -456,9 +456,10 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		// what we're gonna do now is check if the node exists
 		// with that logic, characters 4 and 5 are our numbers:
 		const char *newmsg;
-		int spc = 1;	// used if nodenum[1] is a space.
 		char *nodenum = (char*) malloc(3);
-		strncpy(nodenum, msg+3, 5);
+		INT32 spc = 1;	// used if nodenum[1] is a space.
+
+		strncpy(nodenum, msg+3, 3);
 		// check for undesirable characters in our "number"
 		if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
 		{
@@ -595,7 +596,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	char *msg;
 	boolean action = false;
 	char *ptr;
-	int spam_eatmsg = 0;
+	INT32 spam_eatmsg = 0;
 
 	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
@@ -727,9 +728,10 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else
         {
+			const UINT8 color = players[playernum].skincolor;
 
 			cstart = "\x83";
-			const UINT8 color = players[playernum].skincolor;
+
 			if (color <= SKINCOLOR_SILVER)
 				cstart = "\x80";	// White
 			else if (color <= SKINCOLOR_BLACK)
@@ -841,7 +843,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 			{
 
 				// move everything past c_input for new characters:
-				INT32 m = HU_MAXMSGLEN-1;
+				size_t m = HU_MAXMSGLEN-1;
 				for (;(m>=c_input);m--)
 				{
 					if (s[m])
@@ -856,9 +858,11 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 	}
 	else if (ch == KEY_BACKSPACE)
 	{
+		size_t i = c_input;
+
 		if (c_input <= 0)
 			return false;
-		size_t i = c_input;
+
 		if (!s[i-1])
 			return false;
 
@@ -910,14 +914,17 @@ static void HU_queueChatChar(char c)
 	if (c == KEY_ENTER)
 	{
 		char buf[2+256];
-		size_t ci = 2;
 		char *msg = &buf[2];
+		size_t i = 0;
+		size_t ci = 2;
+		INT32 target = 0;
+
 		do {
 			c = w_chat[-2+ci++];
 			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
 				buf[ci-1]=c;
 		} while (c);
-		size_t i = 0;
+
 		for (;(i<HU_MAXMSGLEN);i++)
 			w_chat[i] = 0;	// reset this.
 
@@ -930,10 +937,12 @@ static void HU_queueChatChar(char c)
 			return;
 		}
 
-		INT32 target = 0;
-
 		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
 		{
+			INT32 spc = 1;	// used if nodenum[1] is a space.
+			char *nodenum = (char*) malloc(3);
+			const char *newmsg = msg+5+spc;
+
 			// what we're gonna do now is check if the node exists
 			// with that logic, characters 4 and 5 are our numbers:
 
@@ -944,9 +953,7 @@ static void HU_queueChatChar(char c)
 				return;
 			}
 
-			int spc = 1;	// used if nodenum[1] is a space.
-			char *nodenum = (char*) malloc(3);
-			strncpy(nodenum, msg+3, 5);
+			strncpy(nodenum, msg+3, 3);
 			// check for undesirable characters in our "number"
 			if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
 			{
@@ -981,8 +988,8 @@ static void HU_queueChatChar(char c)
 				HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false);	// same
 				return;
 			}
+
 			// we need to get rid of the /pm<node>
-			const char *newmsg = msg+5+spc;
 			memcpy(msg, newmsg, 255);
 		}
 		if (ci > 3) // don't send target+flags+empty message.
@@ -1199,9 +1206,9 @@ boolean HU_Responder(event_t *ev)
 // This is a muuuch better method than V_WORDWRAP.
 // again stolen and modified a bit from video.c, don't mind me, will need to rearrange this one day.
 // this one is simplified for the chat drawer.
-char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
+static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 {
-	int c;
+	INT32 c;
 	size_t chw, i, lastusablespace = 0;
 	size_t slen;
 	char *newstring = Z_StrDup(string);
@@ -1628,8 +1635,8 @@ static void HU_DrawChat(void)
 		boolean skippedline = false;
 		if (c_input == (i+1))
 		{
-			int cursorx = (c+charwidth < boxw-charwidth) ? (chatx + 2 + c+charwidth) : (chatx+1);	// we may have to go down.
-			int cursory = (cursorx != chatx+1) ? (y) : (y+charheight);
+			INT32 cursorx = (c+charwidth < boxw-charwidth) ? (chatx + 2 + c+charwidth) : (chatx+1);	// we may have to go down.
+			INT32 cursory = (cursorx != chatx+1) ? (y) : (y+charheight);
 			if (hu_tick < 4)
 				V_DrawChatCharacter(cursorx, cursory+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, !cv_allcaps.value, NULL);
 
@@ -1638,7 +1645,6 @@ static void HU_DrawChat(void)
 				typelines += 1;
 				skippedline = true;
 			}
-
 		}
 
 		//Hurdler: isn't it better like that?
@@ -1686,7 +1692,7 @@ static void HU_DrawChat(void)
 
 
 				nodenum = (char*) malloc(3);
-				strncpy(nodenum, w_chat+3, 4);
+				strncpy(nodenum, w_chat+3, 3);
 				n = atoi((const char*) nodenum);	// turn that into a number
 				// special cases:
 
@@ -1783,8 +1789,8 @@ static void HU_DrawChat_Old(void)
 
 		if (c_input == (i+1) && hu_tick < 4)
 		{
-			int cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX);	// we may have to go down.
-			int cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
+			INT32 cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX);	// we may have to go down.
+			INT32 cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
 			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
 		}
 
@@ -2158,6 +2164,8 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 	UINT8 barcolor = 128;	// color we use for the bars (green, yellow or red)
 	SINT8 i = 0;
 	SINT8 yoffset = 6;
+	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
+
 	if (ping < 128)
 	{
 		numbars = 3;
@@ -2169,7 +2177,6 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 		barcolor = 103;
 	}
 
-	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
 	if (!notext || vid.width >= 640)	// how sad, we're using a shit resolution.
 		V_DrawSmallString(dx, y+4, V_ALLOWLOWERCASE, va("%dms", ping));
 
@@ -2400,6 +2407,8 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	INT32 i,x,y;
 	INT32 redplayers = 0, blueplayers = 0;
 	boolean smol = false;
+	const UINT8 *colormap;
+	char name[MAXPLAYERNAME+1];
 
 	// before we draw, we must count how many players are in each team. It makes an additional loop, but we need to know if we have to draw a big or a small ranking.
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -2438,9 +2447,6 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two teams.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
-
-	const UINT8 *colormap;
-	char name[MAXPLAYERNAME+1];
 
 	i=0, redplayers=0, blueplayers=0;
 
@@ -2611,7 +2617,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 //
 // HU_Draw32TabRankings
 //
-void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer)
+static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer)
 {
 	INT32 i;
 	const UINT8 *colormap;
