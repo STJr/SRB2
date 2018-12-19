@@ -1032,6 +1032,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		//FIXME: this is not yet correct
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 
+#ifdef USE_MODEL_NEXTFRAME
 		if (cv_grmd2.value == 1 && tics <= durs)
 		{
 			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
@@ -1053,6 +1054,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				}
 			}
 		}
+#endif
 
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);

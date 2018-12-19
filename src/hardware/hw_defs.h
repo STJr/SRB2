@@ -106,6 +106,9 @@ typedef struct
 //#define USE_FTRANSFORM_ANGLEZ
 //#define USE_FTRANSFORM_MIRROR
 
+// Vanilla features
+#define USE_MODEL_NEXTFRAME
+
 typedef struct
 {
 	FLOAT       x,y,z;           // position
