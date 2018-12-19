@@ -16,7 +16,7 @@
 #include <string.h>
 
 static float PI = (3.1415926535897932384626433832795f);
-float U_Deg2Rad(float deg)
+static float U_Deg2Rad(float deg)
 {
 	return deg * ((float)PI / 180.0f);
 }
@@ -49,11 +49,13 @@ void VectorRotate(vector_t *rotVec, const vector_t *axisVec, float angle)
 
 void CreateVBOTiny(mesh_t *mesh, tinyframe_t *frame)
 {
+	(void)mesh;
+	(void)frame;
     return;
 /*	int bufferSize = sizeof(VBO::vbotiny_t)*mesh->numTriangles*3;
 	VBO::vbotiny_t *buffer = (VBO::vbotiny_t*)Z_Malloc(bufferSize, PU_STATIC, 0);
 	VBO::vbotiny_t *bufPtr = buffer;
-    
+
 	short *vertPtr = frame->vertices;
 	char *normPtr = frame->normals;
 	float *uvPtr = mesh->uvs;
@@ -91,6 +93,8 @@ void CreateVBOTiny(mesh_t *mesh, tinyframe_t *frame)
 
 void CreateVBO(mesh_t *mesh, mdlframe_t *frame)
 {
+	(void)mesh;
+	(void)frame;
     return;
 /*	int bufferSize = sizeof(VBO::vbo64_t)*mesh->numTriangles*3;
 	VBO::vbo64_t *buffer = (VBO::vbo64_t*)Z_Malloc(bufferSize, PU_STATIC, 0);
@@ -161,7 +165,7 @@ void UnloadModel(model_t *model)
 	for (i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *mesh = &model->meshes[i];
-		
+
 		if (mesh->frames)
 		{
 			int j;
@@ -450,7 +454,7 @@ typedef struct materiallist_s
 	material_t *material;
 } materiallist_t;
 
-static bool AddMaterialToList(materiallist_t **head, material_t *material)
+static boolean AddMaterialToList(materiallist_t **head, material_t *material)
 {
 	materiallist_t *node;
 	for (node = *head; node; node = node->next)
@@ -619,7 +623,7 @@ void GeneratePolygonNormals(model_t *model, int ztag)
 	for (i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *mesh = &model->meshes[i];
-		
+
 		if (!mesh->frames)
 			continue;
 
@@ -648,7 +652,8 @@ void GeneratePolygonNormals(model_t *model, int ztag)
 //
 // Reload VBOs
 //
-void Reload(void)
+#if 0
+static void Reload(void)
 {
 /*	model_t *node;
 	for (node = modelHead; node; node = node->next)
@@ -673,9 +678,11 @@ void Reload(void)
 		}
 	}*/
 }
+#endif
 
 void DeleteVBOs(model_t *model)
 {
+	(void)model;
 /*	for (int i = 0; i < model->numMeshes; i++)
 	{
 		mesh_t *mesh = &model->meshes[i];

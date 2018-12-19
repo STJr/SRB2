@@ -1919,9 +1919,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 }
 
 static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
-{	
-	INT32     val, count, pindex;
-	GLfloat s, t;
+{
 	GLfloat ambient[4];
 	GLfloat diffuse[4];
 
@@ -2059,9 +2057,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				normPtr = normBuffer;
 				for (j = 0; j < mesh->numTriangles; j++)
 				{
-					pglTexCoord2fv(uvPtr);
-					pglNormal3bv(normPtr);
-					pglVertex3sv(vertPtr);
+					pglTexCoord2fv((const GLfloat*) uvPtr);
+					pglNormal3bv((const GLbyte*) normPtr);
+					pglVertex3sv((const GLshort*) vertPtr);
 
 					uvPtr += 2;
 					normPtr += 3;

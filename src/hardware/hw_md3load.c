@@ -95,6 +95,7 @@ static void GetNormalFromLatLong(short latlng, float *out)
 	out[2] = *lookup++;
 }
 
+#if 0
 static void NormalToLatLng(float *n, short *out)
 {
 	// Special cases
@@ -115,6 +116,7 @@ static void NormalToLatLng(float *n, short *out)
 		*out = (x << 8) + y;
 	}
 }
+#endif
 
 static inline void LatLngToNormal(short n, float *out)
 {
@@ -140,7 +142,7 @@ static void LatLngInit(void)
 	}
 }
 
-static bool latlnginit = false;
+static boolean latlnginit = false;
 
 model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 {
@@ -218,7 +220,7 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	}
 
 	retModel->meshes = (mesh_t*)Z_Calloc(sizeof(mesh_t)*retModel->numMeshes, ztag, 0);
-	
+
 	int matCount = 0;
 	for (i = 0, surfEnd = 0; i < mdh->numSurfaces; i++)
 	{
@@ -236,7 +238,7 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 			// Load material
 /*			retModel->materials[matCount].texture = Texture::ReadTexture(mdShader[j].name, ZT_TEXTURE);
-			
+
 			if (!systemSucks)
 			{
 				// Check for a normal map...??
