@@ -563,7 +563,7 @@ void M_SaveConfig(const char *filename)
 
 	// print execversion FIRST, because subsequent consvars need to be filtered
 	// always print current EXECVERSION
-	fprintf(f, "%s \"%d\"\n", cv_execversion.name, (EXECVERSION + (MINOREXECVERSION << 16)));
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, EXECVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 

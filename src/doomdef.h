@@ -216,11 +216,19 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 26
 
-// To version config.cfg, EXECVERSION was originally equal to MODVERSION
-// So keep it equal to MODVERSION, and increment MINOREXECVERSION whenever a config change
-// is needed that does not correspond to an increment in MODVERSION
-#define EXECVERSION 26
+// To version config.cfg, set MAJOREXECVERSION equal to MODVERSION
+// and increment SUBEXECVERSION whenever a config change is needed
+// that does not correspond to an increment in MODVERSION.
+// If MAJOREXECVERSION increases, set MINOREXECVERSION to 0.
+#define MAJOREXECVERSION 26
 #define MINOREXECVERSION 1
+// (It would have been nice to use VERSION and SUBVERSION but those are different for DEVELOP builds)
+
+// Macros
+#define GETMAJOREXECVERSION(v) (v & 0xFFFF)
+#define GETMINOREXECVERSION(v) (v >> 16)
+#define GETEXECVERSION(major,minor) (major + (minor << 16))
+#define EXECVERSION GETEXECVERSION(MAJOREXECVERSION, MINOREXECVERSION)
 
 // =========================================================================
 
