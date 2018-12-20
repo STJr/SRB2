@@ -1934,7 +1934,7 @@ static int lib_gSetCustomExitVars(lua_State *L)
 		if (lua_isnumber(L, 1) || n >= 2)
 		{
 			nextmapoverride = (INT16)luaL_checknumber(L, 1);
-			lua_pop(L, 1); // pop nextmapoverride; skipstats now 1 if available
+			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
 		}
 		skipstats = lua_optboolean(L, 1);
 	}
