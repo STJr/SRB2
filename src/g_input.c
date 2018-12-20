@@ -1215,12 +1215,12 @@ void G_Controldefault(void)
 	gamecontrolbis[gc_use       ][0] = KEY_2JOY1+4; // LB
 	gamecontrolbis[gc_camreset  ][0] = KEY_2JOY1+3; // Y
 	gamecontrolbis[gc_jump      ][0] = KEY_2JOY1+5; // RB
-	gamecontrolbis[gc_pause     ][0] = KEY_2JOY1+6; // Back
-	gamecontrolbis[gc_systemmenu][0] = KEY_2JOY1+7; // Start
+	//gamecontrolbis[gc_pause     ][0] = KEY_2JOY1+6; // Back
+	//gamecontrolbis[gc_systemmenu][0] = KEY_2JOY1+7; // Start
 	gamecontrolbis[gc_camtoggle ][0] = KEY_2HAT1+0; // D-Pad Up
 	gamecontrolbis[gc_screenshot][0] = KEY_2HAT1+1; // D-Pad Down
-	gamecontrolbis[gc_talkkey   ][0] = KEY_2HAT1+2; // D-Pad Left
-	gamecontrolbis[gc_scores    ][0] = KEY_2HAT1+3; // D-Pad Right
+	//gamecontrolbis[gc_talkkey   ][0] = KEY_2HAT1+2; // D-Pad Left
+	//gamecontrolbis[gc_scores    ][0] = KEY_2HAT1+3; // D-Pad Right
 #ifdef WMINPUT
 	gamecontrol[gc_forward    ][0] = KEY_JOY1+02; //UP
 	gamecontrol[gc_backward   ][0] = KEY_JOY1+03; //DOWN
