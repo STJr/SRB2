@@ -227,14 +227,14 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
 				if ((option & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
 					cy += ((float)vid.height/2 - ((float)BASEVIDHEIGHT/2 * dupy));
@@ -375,14 +375,14 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
 				if ((option & (V_SPLITSCREEN|V_SNAPTOBOTTOM)) == (V_SPLITSCREEN|V_SNAPTOBOTTOM))
 					cy += ((float)vid.height/2 - ((float)BASEVIDHEIGHT/2 * dupy));
@@ -834,14 +834,14 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 		fw *= dupx;
 		fh *= dupy;
 
-		if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 		{
 			if (color & V_SNAPTORIGHT)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 			else if (!(color & V_SNAPTOLEFT))
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
 		}
-		if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)
