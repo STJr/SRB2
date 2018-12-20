@@ -389,7 +389,9 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
   */
 fixed_t P_SegLength(seg_t *seg)
 {
-	return FixedEuclidean(seg->v2->x,seg->v2->y,seg->v1->x,seg->v1->y);
+	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
+	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
+	return FixedHypot(dx, dy)<<1;
 }
 
 #ifdef HWRENDER
@@ -2626,7 +2628,7 @@ static boolean P_CanSave(void)
 {
 	// Saving is completely ignored under these conditions:
 	if ((cursaveslot < 0) // Playing without saving
-		|| (!modifiedgame || savemoddata) // Game is modified 
+		|| (!modifiedgame || savemoddata) // Game is modified
 		|| (netgame || multiplayer) // Not in single-player
 		|| (demoplayback || demorecording || metalrecording) // Currently in demo
 		|| (players[consoleplayer].lives <= 0) // Completely dead
@@ -2637,7 +2639,7 @@ static boolean P_CanSave(void)
 		return true; // Saving should ALWAYS happen!
 	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
 		return false; // Saving should NEVER happen!
-	
+
 	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
 	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
 			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
