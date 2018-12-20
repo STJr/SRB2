@@ -1730,11 +1730,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 {
-	INT32 majorexecversion = abs(cv_execversion.value) & 0xFFFF;
-#if 0 // unused for now
-	INT32 minorexecversion = abs(cv_execversion.value) >> 16;
-#endif
-
 	// True means allow the CV change, False means block it
 
 	// We only care about CV_SAVE because this filters the user's config files
@@ -1742,7 +1737,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 	if (!(v->flags & CV_SAVE))
 		return true;
 
-	if (majorexecversion < 26) // 26 = 2.1.21
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 26) // 26 = 2.1.21
 	{
 		// MOUSE SETTINGS
 		// alwaysfreelook split between first and third person (chasefreelook)
