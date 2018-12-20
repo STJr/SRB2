@@ -217,9 +217,9 @@ extern FILE *logstream;
 #define MODVERSION 27
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
-// Increment SUBEXECVERSION whenever a config change is needed
-// that does not correspond to an increment in MODVERSION.
-// If MAJOREXECVERSION increases, set MINOREXECVERSION to 0.
+// Increment MINOREXECVERSION whenever a config change is needed that does not correspond
+// to an increment in MODVERSION. This might never happen in practice.
+// If MODVERSION increases, set MINOREXECVERSION to 0.
 #define MAJOREXECVERSION MODVERSION
 #define MINOREXECVERSION 0
 // (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)

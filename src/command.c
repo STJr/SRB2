@@ -49,6 +49,7 @@ static void COM_Wait_f(void);
 static void COM_Help_f(void);
 static void COM_Toggle_f(void);
 
+static void CV_EnforceExecVersion(void);
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 static consvar_t *CV_FindVar(const char *name);
@@ -66,7 +67,8 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 // Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
-consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+static boolean execversion_enabled = false;
+consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -1584,6 +1586,17 @@ void CV_InitFilterVar(void)
 {
 	joyaxis_default = joyaxis2_default = true;
 	joyaxis_count = joyaxis2_count = 0;
+}
+
+void CV_ToggleExecVersion(boolean enable)
+{
+	execversion_enabled = enable;
+}
+
+static void CV_EnforceExecVersion(void)
+{
+	if (!execversion_enabled)
+		CV_StealthSetValue(&cv_execversion, EXECVERSION);
 }
 
 static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
