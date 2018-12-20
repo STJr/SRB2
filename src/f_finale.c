@@ -1087,6 +1087,9 @@ static const char *credits[] = {
 	"Alex \"MistaED\" Fuller",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
+	"Simon \"sirjuddington\" Judd", // SLADE developer
+	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
+
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
