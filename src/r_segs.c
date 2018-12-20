@@ -1651,9 +1651,9 @@ static void R_RenderSegLoop (void)
 static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
 {
 	if (!seg->linedef->dy)
-		return abs(y2 - seg->v1->y);
+		return llabs(y2 - seg->v1->y);
 	else if (!seg->linedef->dx)
-		return abs(x2 - seg->v1->x);
+		return llabs(x2 - seg->v1->x);
 	else
 	{
 		INT64 dx = (seg->v2->x)-(seg->v1->x);
