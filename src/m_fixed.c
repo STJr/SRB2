@@ -125,7 +125,10 @@ fixed_t FixedEuclidean(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
 {
 	INT64 dx = x2-x1;
 	INT64 dy = y2-y1;
-	return (fixed_t)llrint(sqrt(dx*dx+dy*dy));
+	union {INT64 i; float x;} u;
+	u.x = (dx*dx+dy*dy);
+	u.i = (1<<29) + (u.i >> 1) - (1<<22);
+	return (fixed_t)llrintf(u.x);
 }
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
