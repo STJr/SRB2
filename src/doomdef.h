@@ -214,14 +214,14 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 26
+#define MODVERSION 27
 
 // To version config.cfg, set MAJOREXECVERSION equal to MODVERSION
 // and increment SUBEXECVERSION whenever a config change is needed
 // that does not correspond to an increment in MODVERSION.
 // If MAJOREXECVERSION increases, set MINOREXECVERSION to 0.
-#define MAJOREXECVERSION 26
-#define MINOREXECVERSION 1
+#define MAJOREXECVERSION 27
+#define MINOREXECVERSION 0
 // (It would have been nice to use VERSION and SUBVERSION but those are different for DEVELOP builds)
 
 // Macros
