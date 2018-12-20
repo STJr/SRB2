@@ -443,7 +443,7 @@ void Command_LoadConfig_f(void)
 	FIL_ForceExtension(configfile, ".cfg");
 
 	// temporarily reset execversion to default
-	cv_execversion.flags &= ~CV_HIDEN;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -451,8 +451,8 @@ void Command_LoadConfig_f(void)
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 }
 
 /** Saves the current configuration and loads another.
@@ -494,7 +494,7 @@ void M_FirstLoadConfig(void)
 
 	// temporarily reset execversion to default
 	// we shouldn't need to do this, but JUST in case...
-	cv_execversion.flags &= ~CV_HIDEN;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -503,8 +503,8 @@ void M_FirstLoadConfig(void)
 	// no COM_BufExecute() needed; that does it right away
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -562,8 +562,8 @@ void M_SaveConfig(const char *filename)
 	fprintf(f, "// SRB2 configuration file.\n");
 
 	// print execversion FIRST, because subsequent consvars need to be filtered
-	// always print current MODVERSION
-	fprintf(f, "%s \"%d\"\n", cv_execversion.name, MODVERSION);
+	// always print current EXECVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, EXECVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 
