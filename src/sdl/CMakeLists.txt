@@ -278,13 +278,13 @@ if(${SDL2_FOUND})
 				if (${CMAKE_GENERATOR} STREQUAL "MinGW Makefiles")
 					if(${SRB2_SYSTEM_BITS} EQUAL 64)
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
 						)
@@ -292,13 +292,13 @@ if(${SDL2_FOUND})
 				else()
 					if(${SRB2_SYSTEM_BITS} EQUAL 64)
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
 						)
