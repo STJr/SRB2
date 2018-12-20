@@ -1346,10 +1346,10 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 			*keynum2 = 0;
 		}
 		else
-			return 0;
+			return -1; // skip setting control
 	}
 	else if (keyidx == 1 && *keynum2 == KEY_PAUSE)
-		return 0;
+		return -1; // skip setting control
 
 #if !defined (DC) && !defined (_PSP) && !defined (GP2X) && !defined (_NDS) && !defined(WMINPUT) && !defined(_WII)
 	if (GETMAJOREXECVERSION(cv_execversion.value) < 27 && ( // v2.1.22
@@ -1460,26 +1460,34 @@ static void setcontrol(INT32 (*gc)[2])
 	keynum2 = G_KeyStringtoNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
 
-	(void)G_CheckDoubleUsage(keynum, true);
-
-	// if keynum was rejected, try it again with keynum2
-	if (!keynum && keynum2)
+	if (keynum >= 0)
 	{
-		keynum1 = keynum2; // push down keynum2
-		keynum2 = 0;
-		keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
 		(void)G_CheckDoubleUsage(keynum, true);
+
+		// if keynum was rejected, try it again with keynum2
+		if (!keynum && keynum2)
+		{
+			keynum1 = keynum2; // push down keynum2
+			keynum2 = 0;
+			keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
+			if (keynum >= 0)
+				(void)G_CheckDoubleUsage(keynum, true);
+		}
 	}
 
-	gc[numctrl][0] = keynum;
+	if (keynum >= 0)
+		gc[numctrl][0] = keynum;
 
 	if (keynum2)
 	{
 		keynum = G_FilterKeyByVersion(numctrl, 1, player, &keynum1, &keynum2);
-		if (keynum != gc[numctrl][0])
-			gc[numctrl][1] = keynum;
-		else
-			gc[numctrl][1] = 0;
+		if (keynum >= 0)
+		{
+			if (keynum != gc[numctrl][0])
+				gc[numctrl][1] = keynum;
+			else
+				gc[numctrl][1] = 0;
+		}
 	}
 	else
 		gc[numctrl][1] = 0;
