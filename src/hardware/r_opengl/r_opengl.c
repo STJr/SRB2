@@ -1924,6 +1924,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	GLfloat diffuse[4];
 
 	float pol = 0.0f;
+	scale *= 0.5f;
 	float scalex = scale, scaley = scale, scalez = scale;
 
 	boolean useTinyFrames;
@@ -1934,8 +1935,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 #ifndef KOS_GL_COMPATIBILITY
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
 #endif
-
-	scale *= 0.5f;
 
 	if (duration != 0 && duration != -1 && tics != -1) // don't interpolate if instantaneous or infinite in length
 	{
@@ -2054,22 +2053,16 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
 				pglDisableClientState(GL_NORMAL_ARRAY);
 				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglDisableClientState(GL_VERTEX_ARRAY);
 			}
 			else
 			{
-				short *buffer, *vertPtr;
-				char *normBuffer, *normPtr;
-				float *uvPtr;
-				int j = 0;
-
 				// Dangit, I soooo want to do this in a GLSL shader...
-				pglBegin(GL_TRIANGLES);
-
-				buffer = malloc(mesh->numVertices * sizeof(short));
-				vertPtr = buffer;
-				normBuffer = malloc(mesh->numVertices * sizeof(char));
-				normPtr = normBuffer;
+				short *buffer = malloc(mesh->numVertices * sizeof(short) * 3);
+				short *vertPtr = buffer;
+				char *normBuffer = malloc(mesh->numVertices * sizeof(char) * 3);
+				char *normPtr = normBuffer;
+				int j = 0;
 
 				for (j = 0; j < mesh->numVertices; j++)
 				{
@@ -2078,24 +2071,19 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 					*normPtr++ = (char)(frame->normals[j] + (pol * (nextframe->normals[j] - frame->normals[j])));
 				}
 
-				uvPtr = mesh->uvs;
-				vertPtr = buffer;
-				normPtr = normBuffer;
-				for (j = 0; j < mesh->numTriangles; j++)
-				{
-					pglTexCoord2fv(uvPtr);
-					pglNormal3bv((signed char*) normPtr);
-					pglVertex3sv(vertPtr);
-
-					uvPtr += 2;
-					normPtr += 3;
-					vertPtr += 3;
-				}
+				pglEnableClientState(GL_VERTEX_ARRAY);
+				pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglEnableClientState(GL_NORMAL_ARRAY);
+				pglVertexPointer(3, GL_SHORT, 0, buffer);
+				pglNormalPointer(GL_BYTE, 0, normBuffer);
+				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+				pglDisableClientState(GL_NORMAL_ARRAY);
+				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglDisableClientState(GL_VERTEX_ARRAY);
 
 				free(buffer);
 				free(normBuffer);
-
-				pglEnd();
 			}
 		}
 		else
@@ -2118,39 +2106,34 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
 				pglDisableClientState(GL_NORMAL_ARRAY);
 				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-				pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				pglDisableClientState(GL_VERTEX_ARRAY);
 			}
 			else
 			{
 				int j = 0;
-				float *uvPtr;
-				float *frameVert;
-				float *frameNormal;
-				float *nextFrameVert;
-				float *nextFrameNormal;
+				float *uvPtr = mesh->uvs;
+				float *frameVert = frame->vertices;
+				float *frameNormal = frame->normals;
+				float *nextFrameVert = nextframe->vertices;
+				float *nextFrameNormal = nextframe->normals;
 
 				// Dangit, I soooo want to do this in a GLSL shader...
 				pglBegin(GL_TRIANGLES);
 
-				uvPtr = mesh->uvs;
-				frameVert = frame->vertices;
-				frameNormal = frame->normals;
-				nextFrameVert = nextframe->vertices;
-				nextFrameNormal = frame->normals;
-				for (j = 0; j < mesh->numTriangles; j++)
+				for (j = 0; j < mesh->numTriangles * 3; j++)
 				{
 					// Interpolate
 					float px1 = *frameVert++;
-					float px2 = *nextFrameVert++;
 					float py1 = *frameVert++;
-					float py2 = *nextFrameVert++;
 					float pz1 = *frameVert++;
+					float px2 = *nextFrameVert++;
+					float py2 = *nextFrameVert++;
 					float pz2 = *nextFrameVert++;
 					float nx1 = *frameNormal++;
-					float nx2 = *nextFrameNormal++;
 					float ny1 = *frameNormal++;
-					float ny2 = *nextFrameNormal++;
 					float nz1 = *frameNormal++;
+					float nx2 = *nextFrameNormal++;
+					float ny2 = *nextFrameNormal++;
 					float nz2 = *nextFrameNormal++;
 
 					pglTexCoord2fv(uvPtr);
@@ -2161,7 +2144,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 						(py1 + pol * (py2 - py1)),
 						(pz1 + pol * (pz2 - pz1)));
 
-					uvPtr++;
+					uvPtr += 2;
 				}
 
 				pglEnd();

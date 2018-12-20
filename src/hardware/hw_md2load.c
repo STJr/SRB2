@@ -454,12 +454,13 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	else // Full float loading method
 	{
 		md2triangle_t *trisPtr = tris;
-		float *uvptr = retModel->meshes[0].uvs;
+		float *uvptr;
 		char *ptr = (char*)frames;
 
 		retModel->meshes[0].numVertices = header->numTris*3;
 		retModel->meshes[0].frames = (mdlframe_t*)Z_Calloc(sizeof(mdlframe_t)*header->numFrames, ztag, 0);
 		retModel->meshes[0].uvs = (float*)Z_Malloc(sizeof(float)*2*retModel->meshes[0].numVertices, ztag, 0);
+		uvptr = retModel->meshes[0].uvs;
 
 		for (i = 0; i < retModel->meshes[0].numTriangles; i++, trisPtr++)
 		{
