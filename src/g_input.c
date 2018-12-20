@@ -1300,30 +1300,152 @@ void G_SaveKeySetting(FILE *f)
 	}
 }
 
-void G_CheckDoubleUsage(INT32 keynum)
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify)
 {
+	INT32 result = gc_null;
 	if (cv_controlperkey.value == 1)
 	{
 		INT32 i;
 		for (i = 0; i < num_gamecontrols; i++)
 		{
 			if (gamecontrol[i][0] == keynum)
-				gamecontrol[i][0] = KEY_NULL;
+			{
+				result = i;
+				if (modify) gamecontrol[i][0] = KEY_NULL;
+			}
 			if (gamecontrol[i][1] == keynum)
-				gamecontrol[i][1] = KEY_NULL;
+			{
+				result = i;
+				if (modify) gamecontrol[i][1] = KEY_NULL;
+			}
 			if (gamecontrolbis[i][0] == keynum)
-				gamecontrolbis[i][0] = KEY_NULL;
+			{
+				result = i;
+				if (modify) gamecontrolbis[i][0] = KEY_NULL;
+			}
 			if (gamecontrolbis[i][1] == keynum)
-				gamecontrolbis[i][1] = KEY_NULL;
+			{
+				result = i;
+				if (modify) gamecontrolbis[i][1] = KEY_NULL;
+			}
+			if (result && !modify)
+				return result;
 		}
 	}
+	return result;
 }
 
-static void setcontrol(INT32 (*gc)[2], INT32 na)
+static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT32 *keynum1, INT32 *keynum2)
+{
+	// Special case: ignore KEY_PAUSE because it's hardcoded
+	if (keyidx == 0 && *keynum1 == KEY_PAUSE)
+	{
+		if (*keynum2 != KEY_PAUSE)
+		{
+			*keynum1 = *keynum2; // shift down keynum2 and continue
+			*keynum2 = 0;
+		}
+		else
+			return 0;
+	}
+	else if (keyidx == 1 && *keynum2 == KEY_PAUSE)
+		return 0;
+
+#if !defined (DC) && !defined (_PSP) && !defined (GP2X) && !defined (_NDS) && !defined(WMINPUT) && !defined(_WII)
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 27 && ( // v2.1.22
+		numctrl == gc_weaponnext || numctrl == gc_weaponprev || numctrl == gc_tossflag ||
+		numctrl == gc_use || numctrl == gc_camreset || numctrl == gc_jump ||
+		numctrl == gc_pause || numctrl == gc_systemmenu || numctrl == gc_camtoggle ||
+		numctrl == gc_screenshot || numctrl == gc_talkkey || numctrl == gc_scores
+	))
+	{
+		INT32 keynum = 0, existingctrl = 0;
+		INT32 defaultkey;
+		boolean defaultoverride = false;
+
+		// get the default gamecontrol
+		if (player == 0 && numctrl == gc_systemmenu)
+			defaultkey = gamecontrol[numctrl][0];
+		else
+			defaultkey = (player == 1 ? gamecontrolbis[numctrl][0] : gamecontrol[numctrl][1]);
+
+		// Assign joypad button defaults if there is an open slot.
+		// At this point, gamecontrol/bis should have the default controls
+		// (unless LOADCONFIG is being run)
+		//
+		// If the player runs SETCONTROL in-game, this block should not be reached
+		// because EXECVERSION is locked onto the latest version.
+		if (keyidx == 0 && !*keynum1)
+		{
+			if (*keynum2) // push keynum2 down; this is an edge case
+			{
+				*keynum1 = *keynum2;
+				*keynum2 = 0;
+				keynum = *keynum1;
+			}
+			else
+			{
+				keynum = defaultkey;
+				defaultoverride = true;
+			}
+		}
+		else if (keyidx == 1 && (!*keynum2 || (!*keynum1 && *keynum2))) // last one is the same edge case as above
+		{
+			keynum = defaultkey;
+			defaultoverride = true;
+		}
+		else // default to the specified keynum
+			keynum = (keyidx == 1 ? *keynum2 : *keynum1);
+
+		// Fill keynum2 with the default control
+		if (keyidx == 0 && !*keynum2)
+		{
+			*keynum2 = defaultkey;
+
+			// if keynum2 already matches keynum1, we probably recursed
+			// so unset it
+			if (*keynum1 == *keynum2)
+				*keynum2 = 0;
+		}
+
+		// check if the key is being used somewhere else before passing it
+		// pass it through if it's the same numctrl. This is an edge case -- when using
+		// LOADCONFIG, gamecontrol is not reset with default.
+		//
+		// Also, only check if we're actually overriding, to preserve behavior where
+		// config'd keys overwrite default keys.
+		if (defaultoverride)
+			existingctrl = G_CheckDoubleUsage(keynum, false);
+
+		if (keynum && (!existingctrl || existingctrl == numctrl))
+			return keynum;
+		else if (keyidx == 0 && *keynum2)
+		{
+			// try it again and push down keynum2
+			*keynum1 = *keynum2;
+			*keynum2 = 0;
+			return G_FilterKeyByVersion(numctrl, keyidx, player, keynum1, keynum2);
+			// recursion *should* be safe because we only assign keynum2 to a joy default
+			// and then clear it if we find that keynum1 already has the joy default.
+		}
+		else
+			return 0;
+	}
+#endif
+
+	// All's good, so pass the keynum as-is
+	if (keyidx == 1)
+		return *keynum2;
+	else //if (keyidx == 0)
+		return *keynum1;
+}
+
+static void setcontrol(INT32 (*gc)[2])
 {
 	INT32 numctrl;
 	const char *namectrl;
-	INT32 keynum;
+	INT32 keynum, keynum1, keynum2;
+	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 
 	namectrl = COM_Argv(1);
 	for (numctrl = 0; numctrl < num_gamecontrols && stricmp(namectrl, gamecontrolname[numctrl]);
@@ -1334,28 +1456,27 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		CONS_Printf(M_GetText("Control '%s' unknown\n"), namectrl);
 		return;
 	}
-	keynum = G_KeyStringtoNum(COM_Argv(2));
+	keynum1 = G_KeyStringtoNum(COM_Argv(2));
+	keynum2 = G_KeyStringtoNum(COM_Argv(3));
+	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
 
-	if (keynum == KEY_PAUSE) // fail silently; pause is hardcoded
+	(void)G_CheckDoubleUsage(keynum, true);
+
+	// if keynum was rejected, try it again with keynum2
+	if (!keynum && keynum2)
 	{
-		if (na == 4)
-		{
-			na--;
-			keynum = G_KeyStringtoNum(COM_Argv(3));
-			if (keynum == KEY_PAUSE)
-				return;
-		}
-		else
-			return;
+		keynum1 = keynum2; // push down keynum2
+		keynum2 = 0;
+		keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
+		(void)G_CheckDoubleUsage(keynum, true);
 	}
 
-	G_CheckDoubleUsage(keynum);
 	gc[numctrl][0] = keynum;
 
-	if (na == 4)
+	if (keynum2)
 	{
-		keynum = G_KeyStringtoNum(COM_Argv(3));
-		if (keynum != KEY_PAUSE)
+		keynum = G_FilterKeyByVersion(numctrl, 1, player, &keynum1, &keynum2);
+		if (keynum != gc[numctrl][0])
 			gc[numctrl][1] = keynum;
 		else
 			gc[numctrl][1] = 0;
@@ -1376,7 +1497,7 @@ void Command_Setcontrol_f(void)
 		return;
 	}
 
-	setcontrol(gamecontrol, na);
+	setcontrol(gamecontrol);
 }
 
 void Command_Setcontrol2_f(void)
@@ -1391,5 +1512,5 @@ void Command_Setcontrol2_f(void)
 		return;
 	}
 
-	setcontrol(gamecontrolbis, na);
+	setcontrol(gamecontrolbis);
 }
