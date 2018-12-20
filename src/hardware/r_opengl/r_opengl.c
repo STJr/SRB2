@@ -1924,8 +1924,8 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	GLfloat diffuse[4];
 
 	float pol = 0.0f;
-	scale *= 0.5f;
-	float scalex = scale, scaley = scale, scalez = scale;
+
+	float scalex, scaley, scalez;
 
 	boolean useTinyFrames;
 
@@ -1935,6 +1935,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 #ifndef KOS_GL_COMPATIBILITY
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
 #endif
+
+	scale *= 0.5f;
+	scalex = scaley = scalez = scale;
 
 	if (duration != 0 && duration != -1 && tics != -1) // don't interpolate if instantaneous or infinite in length
 	{
