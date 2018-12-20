@@ -59,6 +59,7 @@ DBGNAME	= debug/$(EXENAME)
 
 PKGDIR	= usr/games/SRB2
 DBGDIR	= usr/lib/debug/$(PKGDIR)
+LINKDIR = usr/games
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
 PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
@@ -133,7 +134,7 @@ binary-arch:
 	# dh_installcron
 	# dh_installinfo
 	# dh_installman
-	# dh_link
+	dh_link $(PKGDIR)/$(EXENAME) $(LINKDIR)/$(EXENAME)
 	dh_compress
 	dh_fixperms
 	# dh_perl

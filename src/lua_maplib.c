@@ -795,16 +795,16 @@ static int side_set(lua_State *L)
 		side->rowoffset = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
-        side->toptexture = luaL_checkinteger(L, 3);
+		side->toptexture = luaL_checkinteger(L, 3);
 		break;
 	case side_bottomtexture:
-        side->bottomtexture = luaL_checkinteger(L, 3);
+		side->bottomtexture = luaL_checkinteger(L, 3);
 		break;
 	case side_midtexture:
-        side->midtexture = luaL_checkinteger(L, 3);
+		side->midtexture = luaL_checkinteger(L, 3);
 		break;
 	case side_repeatcnt:
-        side->repeatcnt = luaL_checkinteger(L, 3);
+		side->repeatcnt = luaL_checkinteger(L, 3);
 		break;
 	}
 	return 0;
@@ -1504,6 +1504,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelselect);
 	else if (fastcmp(field,"bonustype"))
 		lua_pushinteger(L, header->bonustype);
+	else if (fastcmp(field,"saveoverride"))
+		lua_pushinteger(L, header->saveoverride);
 	else if (fastcmp(field,"levelflags"))
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))

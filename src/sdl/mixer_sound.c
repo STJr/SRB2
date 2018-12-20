@@ -92,6 +92,12 @@ void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
 
+#ifdef _WIN32
+	// Force DirectSound instead of WASAPI
+	// SDL 2.0.6+ defaults to the latter and it screws up our sound effects
+	SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
+#endif
+
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
 	{

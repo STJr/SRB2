@@ -1083,7 +1083,6 @@ static void R_Subsector(size_t num)
 				}
 
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
 						polysec->lightlevel, xoff, yoff,
 						polysec->floorpic_angle-po->angle,
@@ -1131,7 +1130,6 @@ static void R_Subsector(size_t num)
 				}
 
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL

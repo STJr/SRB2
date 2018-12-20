@@ -1344,24 +1344,12 @@ static void R_RenderSegLoop (void)
 
 		if (markfloor)
 		{
-#if 0 // Old Doom Legacy code
-			bottom = floorclip[rw_x]-1;
-			if (top <= ceilingclip[rw_x])
-				top = ceilingclip[rw_x]+1;
-			if (top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
-#else // Spiffy new PRBoom code
-			top  = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
-
+			top = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
 			if (++top <= bottom && floorplane)
 			{
 				floorplane->top[rw_x] = (INT16)top;
 				floorplane->bottom[rw_x] = (INT16)bottom;
 			}
-#endif
 		}
 
 		if (numffloors)
@@ -1645,26 +1633,11 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
-		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_frac += ffloor[i].f_step;
-		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
-			INT32 y_w;
-
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-			y_w = ffloor[i].b_frac >> HEIGHTBITS;
-
-			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)(y_w & 0xFFFF);
+			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
 
@@ -2808,11 +2781,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_pos >>= 4;
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
@@ -3093,7 +3061,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (ceilingplane) //SoM: 3/29/2000: Check for null ceiling planes
 			ceilingplane = R_CheckPlane (ceilingplane, rw_x, rw_stopx-1);
 		else
-			markceiling = 0;
+			markceiling = false;
+
+		// Don't render the ceiling again when rendering polyobjects
+		if (curline->polyseg)
+			markceiling = false;
 	}
 
 	// get a new or use the same visplane
@@ -3102,7 +3074,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (floorplane) //SoM: 3/29/2000: Check for null planes
 			floorplane = R_CheckPlane (floorplane, rw_x, rw_stopx-1);
 		else
-			markfloor = 0;
+			markfloor = false;
+
+		// Don't render the floor again when rendering polyobjects
+		if (curline->polyseg)
+			markfloor = false;
 	}
 
 	ds_p->numffloorplanes = 0;
