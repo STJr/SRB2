@@ -845,14 +845,14 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32
 		fw *= dupx;
 		fh *= dupy;
 
-		if (vid.width != BASEVIDWIDTH * vid.dupx)
+		if (fabsf((float)vid.width - ((float)BASEVIDWIDTH * dupx)) > 1.0E-36f)
 		{
 			if (options & V_SNAPTORIGHT)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 			else if (!(options & V_SNAPTOLEFT))
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
 		}
-		if (vid.height != BASEVIDHEIGHT * dupy)
+		if (fabsf((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) > 1.0E-36f)
 		{
 			// same thing here
 			if (options & V_SNAPTOBOTTOM)
@@ -900,7 +900,7 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32
 	v[2].sow = v[1].sow = 1.0f;
 	v[0].tow = v[1].tow = 0.0f;
 	v[2].tow = v[3].tow = 1.0f;
-	
+
 	Surf.FlatColor.rgba = UINT2RGBA(color);
 	Surf.FlatColor.s.alpha = 0x80;
 
