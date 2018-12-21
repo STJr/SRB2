@@ -1102,7 +1102,7 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 		if (var->flags & CV_FLOAT)
 		{
 			double d = atof(valstr);
-			if (!d && valstr[0] != '0')
+			if (fpclassify(d) == FP_ZERO && valstr[0] != '0')
 				v = INT32_MIN;
 			else
 				v = (INT32)(d * FRACUNIT);
