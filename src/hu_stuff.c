@@ -941,7 +941,7 @@ static void HU_queueChatChar(char c)
 		{
 			INT32 spc = 1;	// used if nodenum[1] is a space.
 			char *nodenum = (char*) malloc(3);
-			const char *newmsg = msg+5+spc;
+			const char *newmsg;
 
 			// what we're gonna do now is check if the node exists
 			// with that logic, characters 4 and 5 are our numbers:
@@ -990,6 +990,7 @@ static void HU_queueChatChar(char c)
 			}
 
 			// we need to get rid of the /pm<node>
+			newmsg = msg+5+spc;
 			memcpy(msg, newmsg, 255);
 		}
 		if (ci > 3) // don't send target+flags+empty message.

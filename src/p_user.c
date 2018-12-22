@@ -8372,7 +8372,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
-		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
@@ -8534,7 +8534,7 @@ static void P_CalcPostImg(player_t *player)
 	else
 		pviewheight = player->mo->z + player->viewheight;
 
-	if (player->awayviewtics)
+	if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj))
 	{
 		sector = player->awayviewmobj->subsector->sector;
 		pviewheight = player->awayviewmobj->z + 20*FRACUNIT;
@@ -8701,6 +8701,13 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 #endif
+
+	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
+	{
+		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
+		player->awayviewtics = 0; // reset to zero
+	}
+
 	if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)
