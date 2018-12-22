@@ -23,7 +23,7 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
-#include "hu_stuff.h"
+#include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
 
@@ -88,6 +88,51 @@ static int lib_print(lua_State *L)
     lua_pop(L, 1);  /* pop result */
   }
 	CONS_Printf("\n");
+	return 0;
+}
+
+// Print stuff in the chat, or in the console if we can't.
+static int lib_chatprint(lua_State *L)
+{
+	const char *str = luaL_checkstring(L, 1);	// retrieve string
+	boolean sound = luaL_checkboolean(L, 2);	// retrieve sound boolean
+	int len = strlen(str);
+
+	if (str == NULL)	// error if we don't have a string!
+		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprint"));
+
+	if (len > 255)	// string is too long!!!
+		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
+
+	HU_AddChatText(str, sound);
+	return 0;
+}
+
+// Same as above, but do it for only one player.
+static int lib_chatprintf(lua_State *L)
+{
+	int n = lua_gettop(L);  /* number of arguments */
+	const char *str = luaL_checkstring(L, 2);	// retrieve string
+	boolean sound = luaL_checkboolean(L, 3);	// sound?
+	int len = strlen(str);
+	player_t *plr;
+
+	if (n < 2)
+		return luaL_error(L, "chatprintf requires at least two arguments: player and text.");
+
+	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));	// retrieve player
+	if (!plr)
+		return LUA_ErrInvalid(L, "player_t");
+	if (plr != &players[consoleplayer])
+		return 0;
+
+	if (str == NULL)	// error if we don't have a string!
+		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprintf"));
+
+	if (len > 255)	// string is too long!!!
+		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
+
+	HU_AddChatText(str, sound);
 	return 0;
 }
 
@@ -1690,7 +1735,7 @@ static int lib_sStartSound(lua_State *L)
 	const void *origin = NULL;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD // kys @whoever did this.
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnil(L, 1))
@@ -1706,7 +1751,12 @@ static int lib_sStartSound(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
+	{
+		if (hud_running)
+			origin = NULL;	// HUD rendering startsound shouldn't have an origin, just remove it instead of having a retarded error.
+
 		S_StartSound(origin, sound_id);
+	}
 	return 0;
 }
 
@@ -2016,6 +2066,8 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"chatprint", lib_chatprint},
+	{"chatprintf", lib_chatprintf},
 	{"EvalMath", lib_evalMath},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 

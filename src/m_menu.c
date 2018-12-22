@@ -292,7 +292,7 @@ menu_t OP_SoundOptionsDef;
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
-menu_t OP_GameOptionsDef, OP_ServerOptionsDef;
+menu_t OP_GameOptionsDef, OP_ChatOptionsDef, OP_ServerOptionsDef;
 menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
@@ -1295,20 +1295,34 @@ static menuitem_t OP_GameOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                      NULL, "Master server",          &cv_masterserver,     10},
 #endif
-	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     40},
+	{IT_STRING | IT_SUBMENU, NULL, "Chat Options...",     &OP_ChatOptionsDef,   40},
+	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
-	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
+	                      NULL, "HUD Visibility",         &cv_translucenthud, 60},
+	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     70},
+	{IT_STRING | IT_CVAR, NULL, "Always Compact Rankings",          &cv_compactscoreboard,     80},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
+	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    90},
 #endif
-	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
+	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   100},
 
-	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
-	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
+	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 110},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,120},
+	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     130},
 
 	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
+};
+
+static menuitem_t OP_ChatOptionsMenu[] =
+{
+	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  10},
+
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     30},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    40},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    50},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  60},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  70},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  80},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -1705,6 +1719,7 @@ menu_t OP_ServerOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, 
 
 menu_t OP_NetgameOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_NetgameOptionsMenu, &OP_ServerOptionsDef, 30, 30);
 menu_t OP_GametypeOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_GametypeOptionsMenu, &OP_ServerOptionsDef, 30, 30);
+menu_t OP_ChatOptionsDef = DEFAULTMENUSTYLE("M_GAME", OP_ChatOptionsMenu, &OP_GameOptionsDef, 30, 30);
 menu_t OP_MonitorToggleDef =
 {
 	"M_SERVER",
@@ -6329,13 +6344,6 @@ static void M_DrawConnectIPMenu(void)
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
-
-	if (*setupm_ip == 0)
-	{
-		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
-		return;
-	}
-
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.

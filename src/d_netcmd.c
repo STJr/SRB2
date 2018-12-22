@@ -582,6 +582,7 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
+	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -638,6 +639,8 @@ void D_RegisterClientCommands(void)
 #endif
 
 	// register these so it is saved to config
+	if ((username = I_GetUserName()))
+		cv_playername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
@@ -673,6 +676,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_usegamma);
 
 	// m_menu.c
+	CV_RegisterVar(&cv_compactscoreboard);
+	CV_RegisterVar(&cv_chatheight);
+	CV_RegisterVar(&cv_chatwidth);
+	CV_RegisterVar(&cv_chattime);
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatbacktint);
+	CV_RegisterVar(&cv_consolechat);
+	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
 	CV_RegisterVar(&cv_alwaysfreelook);
@@ -984,8 +995,8 @@ static void SetPlayerName(INT32 playernum, char *newname)
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
 			if (netgame)
-				CONS_Printf(M_GetText("%s renamed to %s\n"),
-					player_names[playernum], newname);
+				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
+
 			strcpy(player_names[playernum], newname);
 		}
 	}
