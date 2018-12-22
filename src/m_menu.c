@@ -6344,6 +6344,10 @@ static void M_DrawConnectIPMenu(void)
 static void M_ConnectIP(INT32 choice)
 {
 	(void)choice;
+
+	if (*setupm_ip == 0)
+		return;
+
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 
 	// A little "please wait" message.

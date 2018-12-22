@@ -95,7 +95,7 @@ static int lib_print(lua_State *L)
 static int lib_chatprint(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);	// retrieve string
-	boolean sound = luaL_checkboolean(L, 2);	// retrieve sound boolean
+	boolean sound = lua_optboolean(L, 2);	// retrieve sound boolean
 	int len = strlen(str);
 
 	if (str == NULL)	// error if we don't have a string!
@@ -113,7 +113,7 @@ static int lib_chatprintf(lua_State *L)
 {
 	int n = lua_gettop(L);  /* number of arguments */
 	const char *str = luaL_checkstring(L, 2);	// retrieve string
-	boolean sound = luaL_checkboolean(L, 3);	// sound?
+	boolean sound = lua_optboolean(L, 3);	// sound?
 	int len = strlen(str);
 	player_t *plr;
 

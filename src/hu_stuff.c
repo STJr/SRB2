@@ -465,11 +465,15 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		{
 			// check if nodenum[1] is a space
 			if (nodenum[1] == ' ')
+			{
 				spc = 0;
+				free(nodenum);	// don't need this anymore.
 				// let it slide
+			}
 			else
 			{
 				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
+				free(nodenum);
 				return;
 			}
 		}
@@ -479,11 +483,13 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 				if (msg[5] != ' ')
 				{
 					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
+					free(nodenum);
 					return;
 				}
 			}
 
 		target = atoi((const char*) nodenum);	// turn that into a number
+		free(nodenum);
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!
@@ -906,6 +912,27 @@ static boolean teamtalk = false;
 static INT32 head = 0, tail = 0;*/
 // WHY DO YOU OVERCOMPLICATE EVERYTHING?????????
 
+// Clear spaces so we don't end up with messages only made out of emptiness
+static boolean HU_clearChatSpaces()
+{
+	size_t i = 0;	// Used to just check our message
+	char c;						// current character we're iterating.
+	boolean nothingbutspaces = true;
+
+	for (; i < strlen(w_chat); i++)	// iterate through message and eradicate all spaces that don't belong.
+	{
+		c = w_chat[i];
+		if (!c)
+			break;	// if there's nothing, it's safe to assume our message has ended, so let's not waste any more time here.
+
+		if (c != ' ')	// Isn't a space
+		{
+			nothingbutspaces = false;
+		}
+	}
+	return nothingbutspaces;
+}
+
 //
 //
 static void HU_queueChatChar(char c)
@@ -918,6 +945,9 @@ static void HU_queueChatChar(char c)
 		size_t i = 0;
 		size_t ci = 2;
 		INT32 target = 0;
+
+		if (HU_clearChatSpaces())	// Avoids being able to send empty messages, or something.
+			return;	// If this returns true, that means our message was NOTHING but spaces, so don't send it period.
 
 		do {
 			c = w_chat[-2+ci++];
@@ -959,11 +989,15 @@ static void HU_queueChatChar(char c)
 			{
 				// check if nodenum[1] is a space
 				if (nodenum[1] == ' ')
+				{
 					spc = 0;
+					free(nodenum);
 					// let it slide
+				}
 				else
 				{
 					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
+					free(nodenum);
 					return;
 				}
 			}
@@ -973,11 +1007,13 @@ static void HU_queueChatChar(char c)
 				if (msg[5] != ' ')
 				{
 					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
+					free(nodenum);
 					return;
 				}
 			}
 
 			target = atoi((const char*) nodenum);	// turn that into a number
+			free(nodenum);
 			//CONS_Printf("%d\n", target);
 
 			// check for target player, if it doesn't exist then we can't send the message!
@@ -1735,8 +1771,8 @@ static void HU_DrawChat(void)
 		}
 		if (count == 0)	// no results.
 		{
-			V_DrawFillConsoleMap(chatx-50, p_dispy- (6*count), 48, 6, 239 | V_SNAPTOBOTTOM | V_SNAPTOLEFT);	// fill it like the chat so the text doesn't become hard to read because of the hud.
-			V_DrawSmallString(chatx-48, p_dispy- (6*count), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, "NO RESULT.");
+			V_DrawFillConsoleMap(chatx+boxw+2, p_dispy- (6*count), 48, 6, 239 | V_SNAPTOBOTTOM | V_SNAPTOLEFT);	// fill it like the chat so the text doesn't become hard to read because of the hud.
+			V_DrawSmallString(chatx+boxw+4, p_dispy- (6*count), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, "NO RESULT.");
 		}
 	}
 
