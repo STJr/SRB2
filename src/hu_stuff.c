@@ -465,11 +465,8 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		{
 			// check if nodenum[1] is a space
 			if (nodenum[1] == ' ')
-			{
 				spc = 0;
-				free(nodenum);	// don't need this anymore.
 				// let it slide
-			}
 			else
 			{
 				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);
@@ -664,7 +661,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
 #ifdef HAVE_BLUA
-	if (LUAh_PlayerMsg(playernum, target, flags, msg, spam_eatmsg))
+	if (LUAh_PlayerMsg(playernum, target, flags, msg))
 		return;
 #endif
 
@@ -989,11 +986,8 @@ static void HU_queueChatChar(char c)
 			{
 				// check if nodenum[1] is a space
 				if (nodenum[1] == ' ')
-				{
 					spc = 0;
-					free(nodenum);
 					// let it slide
-				}
 				else
 				{
 					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.", false);

@@ -6346,7 +6346,10 @@ static void M_ConnectIP(INT32 choice)
 	(void)choice;
 
 	if (*setupm_ip == 0)
+	{
+		M_StartMessage("You must specify an IP address.\n", NULL, MM_NOTHING);
 		return;
+	}
 
 	COM_BufAddText(va("connect \"%s\"\n", setupm_ip));
 

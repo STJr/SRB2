@@ -952,10 +952,8 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 	return hooked;
 }
 
-// Hook for player chat
-// Added the "mute" field. It's set to true if the message was supposed to be eaten by spam protection.
-// But for netgame consistency purposes, this hook is ran first reguardless, so this boolean allows for modders to adapt if they so desire.
-boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg, int mute)
+
+boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -984,19 +982,14 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg, int mute)
 					LUA_PushUserdata(gL, &players[target-1], META_PLAYER); // target
 				}
 				lua_pushstring(gL, msg); // msg
-				if (mute)
-					lua_pushboolean(gL, true); // the message was supposed to be eaten by spamprotecc.
-				else
-					lua_pushboolean(gL, false);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -6);
-			lua_pushvalue(gL, -6);
-			lua_pushvalue(gL, -6);
-			lua_pushvalue(gL, -6);
-			lua_pushvalue(gL, -6);
-			if (lua_pcall(gL, 5, 1, 0)) {
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
