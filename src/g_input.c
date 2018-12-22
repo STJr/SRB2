@@ -98,6 +98,8 @@ void G_MapEventsToControls(event_t *ev)
 			break;
 
 		case ev_mouse: // buttons are virtual keys
+			if (menuactive || CON_Ready())
+				break;
 			mousex = (INT32)(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
 			mousey = (INT32)(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
 			mlooky = (INT32)(ev->data3*((cv_mouseysens.value*cv_mousesens.value)/110.0f + 0.1f));
@@ -105,7 +107,7 @@ void G_MapEventsToControls(event_t *ev)
 
 		case ev_joystick: // buttons are virtual keys
 			i = ev->data1;
-			if (i >= JOYAXISSET)
+			if (i >= JOYAXISSET || menuactive || CON_Ready())
 				break;
 			if (ev->data2 != INT32_MAX) joyxmove[i] = ev->data2;
 			if (ev->data3 != INT32_MAX) joyymove[i] = ev->data3;
@@ -113,13 +115,15 @@ void G_MapEventsToControls(event_t *ev)
 
 		case ev_joystick2: // buttons are virtual keys
 			i = ev->data1;
-			if (i >= JOYAXISSET)
+			if (i >= JOYAXISSET || menuactive || CON_Ready())
 				break;
 			if (ev->data2 != INT32_MAX) joy2xmove[i] = ev->data2;
 			if (ev->data3 != INT32_MAX) joy2ymove[i] = ev->data3;
 			break;
 
 		case ev_mouse2: // buttons are virtual keys
+			if (menuactive || CON_Ready())
+				break;
 			mouse2x = (INT32)(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
 			mouse2y = (INT32)(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
 			mlook2y = (INT32)(ev->data3*((cv_mouseysens2.value*cv_mousesens2.value)/110.0f + 0.1f));
