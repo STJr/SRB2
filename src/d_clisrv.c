@@ -2762,7 +2762,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		msg = KICK_MSG_CON_FAIL;
 	}
 
-	CONS_Printf("\x82%s ", player_names[pnum]);
+	//CONS_Printf("\x82%s ", player_names[pnum]);
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
@@ -3118,9 +3118,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	G_AddPlayer(newplayernum);
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
-
-	if (netgame)
-		CONS_Printf(M_GetText("Player %d has joined the game (node %d)\n"), newplayernum+1, node);
 
 	// the server is creating my player
 	if (node == mynode)
