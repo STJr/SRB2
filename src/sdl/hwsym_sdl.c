@@ -90,9 +90,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(DrawModel);
 	GETFUNC(SetTransform);
 	GETFUNC(GetRenderVersion);
-#ifdef SHUFFLE
 	GETFUNC(PostImgRedraw);
-#endif //SHUFFLE
 	GETFUNC(FlushScreenTextures);
 	GETFUNC(StartScreenWipe);
 	GETFUNC(EndScreenWipe);

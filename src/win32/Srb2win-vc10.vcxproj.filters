@@ -108,21 +108,9 @@
     <ClCompile Include="..\hardware\hw_md2.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
-    <ClInclude Include="..\hardware\hw_md2load.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hardware\hw_md3load.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hardware\hw_model.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
     <ClCompile Include="..\hardware\hw_trick.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
-    <ClInclude Include="..\hardware\u_list.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
     <ClCompile Include="..\hardware\hw3sound.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -465,6 +453,10 @@
     <ClCompile Include="..\string.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_md2load.c" />
+    <ClCompile Include="..\hardware\hw_md3load.c" />
+    <ClCompile Include="..\hardware\hw_model.c" />
+    <ClCompile Include="..\hardware\u_list.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="afxres.h">

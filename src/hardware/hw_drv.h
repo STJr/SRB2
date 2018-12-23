@@ -63,10 +63,8 @@ EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
 EXPORT INT32 HWRAPI(GetRenderVersion) (void);
 
-#ifdef SHUFFLE
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
-#endif
 EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
@@ -105,9 +103,7 @@ struct hwdriver_s
 #ifndef HAVE_SDL
 	Shutdown            pfnShutdown;
 #endif
-#ifdef SHUFFLE
 	PostImgRedraw       pfnPostImgRedraw;
-#endif
 	FlushScreenTextures pfnFlushScreenTextures;
 	StartScreenWipe     pfnStartScreenWipe;
 	EndScreenWipe       pfnEndScreenWipe;
