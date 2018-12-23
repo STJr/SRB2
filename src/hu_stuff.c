@@ -490,7 +490,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (playeringame[target]) // player exists
+		if (target < MAXPLAYERS && playeringame[target]) // player exists
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -1014,7 +1014,7 @@ static void HU_queueChatChar(char c)
 			//CONS_Printf("%d\n", target);
 
 			// check for target player, if it doesn't exist then we can't send the message!
-			if (playeringame[target]) // player exists
+			if (target < MAXPLAYERS && playeringame[target]) // player exists
 				target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 			else
 			{
