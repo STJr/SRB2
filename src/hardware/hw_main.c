@@ -4137,7 +4137,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	swallVerts[0].z = swallVerts[3].z = spr->z1;
 	swallVerts[2].z = swallVerts[1].z = spr->z2;
 
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 	{
 		// Always a pixel above the floor, perfectly flat.
 		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset * this_scale - (floorheight+3);
@@ -4305,7 +4305,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
 	else
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
@@ -4595,7 +4595,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	wallVerts[0].x = wallVerts[3].x = spr->x1;
 	wallVerts[2].x = wallVerts[1].x = spr->x2;
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
 	else
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
@@ -4851,7 +4851,7 @@ static void HWR_SortVisSprites(void)
 				best = ds;
 			}
 			// order visprites of same scale by dispoffset, smallest first
-			else if (ds->tz == bestdist && ds->dispoffset < bestdispoffset)
+			else if (fabsf(ds->tz - bestdist) < 1.0E-36f && ds->dispoffset < bestdispoffset)
 			{
 				bestdispoffset = ds->dispoffset;
 				best = ds;
@@ -5772,7 +5772,7 @@ void HWR_SetViewSize(void)
 
 	gr_viewwindowx = (vid.width - gr_viewwidth) / 2;
 	gr_windowcenterx = (float)(vid.width / 2);
-	if (gr_viewwidth == vid.width)
+	if (fabsf(gr_viewwidth - vid.width) < 1.0E-36f)
 	{
 		gr_baseviewwindowy = 0;
 		gr_basewindowcentery = gr_viewheight / 2;               // window top left corner at 0,0

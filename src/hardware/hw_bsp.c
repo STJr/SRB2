@@ -193,7 +193,7 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	v2dy = bsp->dy;
 
 	den = v2dy*v1dx - v2dx*v1dy;
-	if (fabs(den) < 1.0E-36f) // avoid checking exactly for 0.0
+	if (fabsf((float)den) < 1.0E-36f) // avoid checking exactly for 0.0
 		return NULL;       // parallel
 
 	// first check the frac along the polygon segment,
@@ -234,6 +234,11 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
+		return false;
+#elif 0
+	if (fabsf( p2->x - p1->x ) > 1.0E-36f )
+		return false;
+	if (fabsf( p2->y - p1->y ) > 1.0E-36f )
 		return false;
 #else
 #define  DIVLINE_VERTEX_DIFF   0.45f
