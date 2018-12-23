@@ -518,6 +518,7 @@ void M_FirstLoadConfig(void)
 void M_SaveConfig(const char *filename)
 {
 	FILE *f;
+	char *filepath;
 
 	// make sure not to write back the config until it's been correctly loaded
 	if (!gameconfig_loaded)
@@ -532,13 +533,20 @@ void M_SaveConfig(const char *filename)
 			return;
 		}
 
-		f = fopen(filename, "w");
+		// append srb2home to beginning of filename
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
+
+		f = fopen(filepath, "w");
 		// change it only if valid
 		if (f)
-			strcpy(configfile, filename);
+			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}
