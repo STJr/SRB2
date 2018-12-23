@@ -573,6 +573,7 @@ typedef struct seg_s
 	sector_t *frontsector;
 	sector_t *backsector;
 
+	fixed_t length;	// precalculated seg length
 #ifdef HWRENDER
 	// new pointers so that AdjustSegs doesn't mess with v1/v2
 	void *pv1; // polyvertex_t
