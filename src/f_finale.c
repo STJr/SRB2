@@ -1007,8 +1007,7 @@ static const char *credits[] = {
 	"\"Steel Titanium\"",
 	"Ben \"Cue\" Woodford",
 	// Git contributors with 5+ approved merges, at least a few of substantive quality, may be named
-	// Everyone else is acknowledged here
-	"STJr Git Contributors",
+	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors"
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1089,7 +1088,10 @@ static const char *credits[] = {
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
-
+	// Acknowledged here are the following:
+	// Merge Request authors with < 5 approved quality merges
+	// Golden - Extended thin font
+	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
