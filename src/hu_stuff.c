@@ -2001,7 +2001,7 @@ void HU_Drawer(void)
 	{
 		typelines = 1;
 		chat_scrolltime = 0;
-		if (!OLDCHAT && cv_consolechat.value < 2) // Don't display minimized chat if you set the mode to Window (Hidden)
+		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
 			HU_drawMiniChat(); // draw messages in a cool fashion.
 	}
 
