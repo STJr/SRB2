@@ -442,6 +442,10 @@ void Command_LoadConfig_f(void)
 	strcpy(configfile, COM_Argv(1));
 	FIL_ForceExtension(configfile, ".cfg");
 
+	// load default control
+	G_ClearAllControlKeys();
+	G_Controldefault();
+
 	// temporarily reset execversion to default
 	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
