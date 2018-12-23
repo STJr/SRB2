@@ -1440,39 +1440,6 @@ static void HU_drawMiniChat(void)
 
 }
 
-
-// HU_DrawUpArrow
-// You see, we don't have arrow graphics in 2.1 and I'm too lazy to include a 2 bytes file for it.
-
-static void HU_DrawUpArrow(INT32 x, INT32 y, INT32 options)
-{
-	// Ok I'm super lazy so let's make this as the worst draw function:
-	V_DrawFill(x+2, y, 1, 1, 103|options);
-	V_DrawFill(x+1, y+1, 3, 1, 103|options);
-	V_DrawFill(x, y+2, 5, 1, 103|options);	// that's the yellow part, I swear
-
-	V_DrawFill(x+3, y, 1, 1, 26|options);
-	V_DrawFill(x+4, y+1, 1, 1, 26|options);
-	V_DrawFill(x+5, y+2, 1, 1, 26|options);
-	V_DrawFill(x, y+3, 6, 1, 26|options);	// that's the black part. no racism intended. i swear.
-}
-
-// HU_DrawDownArrow
-// Should we talk about anime waifus to pass the time? This feels retarded.
-
-static void HU_DrawDownArrow(INT32 x, INT32 y, INT32 options)
-{
-	// Ok I'm super lazy so let's make this as the worst draw function:
-	V_DrawFill(x, y, 6, 1, 26|options);
-	V_DrawFill(x, y+1, 5, 1, 26|options);
-	V_DrawFill(x+1, y+2, 3, 1, 26|options);
-	V_DrawFill(x+2, y+3, 1, 1, 26|options);	// that's the black part. no racism intended. i swear.
-
-	V_DrawFill(x, y, 5, 1, 103|options);
-	V_DrawFill(x+1, y+1, 3, 1, 103|options);
-	V_DrawFill(x+2, y+2, 1, 1, 103|options);	// that's the yellow part, I swear
-}
-
 // HU_DrawChatLog
 
 static void HU_drawChatLog(INT32 offset)
@@ -1580,11 +1547,10 @@ static void HU_drawChatLog(INT32 offset)
 		chat_scroll = chat_maxscroll;
 
 	// draw arrows to indicate that we can (or not) scroll.
-
 	if (chat_scroll > 0)
-		HU_DrawUpArrow(chatx-8, ((justscrolledup) ? (chat_topy-1) : (chat_topy)), V_SNAPTOBOTTOM | V_SNAPTOLEFT);
+		V_DrawString(chatx-8, ((justscrolledup) ? (chat_topy-1) : (chat_topy)), V_SNAPTOBOTTOM | V_SNAPTOLEFT | V_YELLOWMAP, "\x1A"); // up arrow
 	if (chat_scroll < chat_maxscroll)
-		HU_DrawDownArrow(chatx-8, chat_bottomy-((justscrolleddown) ? 3 : 4), V_SNAPTOBOTTOM | V_SNAPTOLEFT);
+		V_DrawString(chatx-8, chat_bottomy-((justscrolleddown) ? 3 : 4), V_SNAPTOBOTTOM | V_SNAPTOLEFT | V_YELLOWMAP, "\x1B"); // down arrow
 
 	justscrolleddown = false;
 	justscrolledup = false;
