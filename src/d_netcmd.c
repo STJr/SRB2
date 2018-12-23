@@ -3448,7 +3448,7 @@ static void Command_Version_f(void)
 #elif defined(__linux__)
 	CONS_Printf("Linux ");
 #elif defined(MACOSX)
-	CONS_Printf("macOS" );
+	CONS_Printf("macOS ");
 #elif defined(UNIXCOMMON)
 	CONS_Printf("Unix (Common) ");
 #else
@@ -3471,6 +3471,11 @@ static void Command_Version_f(void)
 	// Debug build
 #ifdef _DEBUG
 	CONS_Printf("\x85" "DEBUG " "\x80");
+#endif
+
+	// DEVELOP build
+#ifdef DEVELOP
+	CONS_Printf("\x87" "DEVELOP " "\x80");
 #endif
 
 	CONS_Printf("\n");

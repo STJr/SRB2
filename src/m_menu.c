@@ -6852,9 +6852,10 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	OP_MPControlsMenu[0].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[1].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[2].status = IT_GRAYEDOUT2;
-	// Hide the pause/console controls too
+	// Hide the pause/console and system menu controls too
 	OP_MiscControlsMenu[3].status = IT_GRAYEDOUT2;
-	OP_MiscControlsMenu[4].status = IT_GRAYEDOUT2;
+	OP_MiscControlsMenu[6].status = IT_GRAYEDOUT2;
+	OP_MiscControlsMenu[8].status = IT_GRAYEDOUT2;
 
 	OP_ControlListDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);

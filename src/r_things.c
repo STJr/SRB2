@@ -1733,7 +1733,7 @@ static void R_CreateDrawNodes(void)
 			plane = ds->curline->polyseg->visplane;
 			R_PlaneBounds(plane);
 
-			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+			if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 				;
 			else {
 				// Put it in!
@@ -1762,7 +1762,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
+					if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1799,7 +1799,7 @@ static void R_CreateDrawNodes(void)
 		plane = PolyObjects[i].visplane;
 		R_PlaneBounds(plane);
 
-		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 		{
 			PolyObjects[i].visplane = NULL;
 			continue;

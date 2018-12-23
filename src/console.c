@@ -58,10 +58,7 @@ static boolean consoleready;  // console prompt is ready
        INT32 con_destlines; // vid lines used by console at final position
 static INT32 con_curlines;  // vid lines currently used by console
 
-       INT32 con_clipviewtop; // clip value for planes & sprites, so that the
-                            // part of the view covered by the console is not
-                            // drawn when not needed, this must be -1 when
-                            // console is off
+       INT32 con_clipviewtop; // (useless)
 
 static INT32 con_hudlines;        // number of console heads up message lines
 static INT32 con_hudtime[MAXHUDLINES];      // remaining time of display for hud msg lines
