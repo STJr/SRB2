@@ -1320,6 +1320,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	}
 
 	SDL_RaiseWindow(window);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 	SDL_SetWindowGrab(window, SDL_TRUE);
 
 	// Renderer-specific stuff
