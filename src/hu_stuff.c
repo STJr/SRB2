@@ -913,7 +913,7 @@ static INT32 head = 0, tail = 0;*/
 // WHY DO YOU OVERCOMPLICATE EVERYTHING?????????
 
 // Clear spaces so we don't end up with messages only made out of emptiness
-static boolean HU_clearChatSpaces()
+static boolean HU_clearChatSpaces(void)
 {
 	size_t i = 0; // Used to just check our message
 	char c; // current character we're iterating.
