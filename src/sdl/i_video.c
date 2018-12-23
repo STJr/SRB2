@@ -1319,6 +1319,9 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		return SDL_FALSE;
 	}
 
+	SDL_RaiseWindow(window);
+	SDL_SetWindowGrab(window, SDL_TRUE);
+
 	// Renderer-specific stuff
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
