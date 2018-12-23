@@ -382,30 +382,26 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-
-//
-// Computes the line length in fracunits, the OpenGL render needs this
-//
-
 /** Computes the length of a seg in fracunits.
-  * This is needed for splats.
   *
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
 fixed_t P_SegLength(seg_t *seg)
 {
-	fixed_t dx, dy;
-
-	// make a vector (start at origin)
-	dx = seg->v2->x - seg->v1->x;
-	dy = seg->v2->y - seg->v1->y;
-
-	return FixedHypot(dx, dy);
+	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
+	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
+	return FixedHypot(dx, dy)<<1;
 }
 
 #ifdef HWRENDER
-static inline float P_SegLengthf(seg_t *seg)
+/** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length as a float.
+  */
+static inline float P_SegLengthFloat(seg_t *seg)
 {
 	float dx, dy;
 
@@ -441,11 +437,11 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->v1 = &vertexes[SHORT(ml->v1)];
 		li->v2 = &vertexes[SHORT(ml->v2)];
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
+		li->length = P_SegLength(li);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
 		{
-			li->flength = P_SegLengthf(li);
+			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
@@ -2632,7 +2628,7 @@ static boolean P_CanSave(void)
 {
 	// Saving is completely ignored under these conditions:
 	if ((cursaveslot < 0) // Playing without saving
-		|| (!modifiedgame || savemoddata) // Game is modified 
+		|| (!modifiedgame || savemoddata) // Game is modified
 		|| (netgame || multiplayer) // Not in single-player
 		|| (demoplayback || demorecording || metalrecording) // Currently in demo
 		|| (players[consoleplayer].lives <= 0) // Completely dead
@@ -2643,7 +2639,7 @@ static boolean P_CanSave(void)
 		return true; // Saving should ALWAYS happen!
 	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
 		return false; // Saving should NEVER happen!
-	
+
 	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
 	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
 			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
