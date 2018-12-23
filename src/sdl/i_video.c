@@ -1319,10 +1319,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		return SDL_FALSE;
 	}
 
-	SDL_RaiseWindow(window);
-	SDL_SetRelativeMouseMode(SDL_TRUE);
-	SDL_SetWindowGrab(window, SDL_TRUE);
-
 	// Renderer-specific stuff
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -1559,6 +1555,15 @@ void I_StartupGraphics(void)
 	VID_Command_Info_f();
 	if (!disable_mouse) SDL_ShowCursor(SDL_DISABLE);
 	SDLdoUngrabMouse();
+
+	SDL_RaiseWindow(window);
+
+	if (mousegrabok && !M_CheckParm("-nomouse"))
+	{
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+	}
+
+	SDL_SetWindowGrab(window, SDL_TRUE);
 
 	graphics_started = true;
 }
