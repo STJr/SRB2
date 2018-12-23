@@ -443,7 +443,7 @@ void Command_LoadConfig_f(void)
 	FIL_ForceExtension(configfile, ".cfg");
 
 	// temporarily reset execversion to default
-	cv_execversion.flags = 0;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -452,7 +452,7 @@ void Command_LoadConfig_f(void)
 
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
-	cv_execversion.flags = CV_HIDEN;
+	CV_ToggleExecVersion(false);
 }
 
 /** Saves the current configuration and loads another.
@@ -494,7 +494,7 @@ void M_FirstLoadConfig(void)
 
 	// temporarily reset execversion to default
 	// we shouldn't need to do this, but JUST in case...
-	cv_execversion.flags = 0;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -504,7 +504,7 @@ void M_FirstLoadConfig(void)
 
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
-	cv_execversion.flags = CV_HIDEN;
+	CV_ToggleExecVersion(false);
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -518,6 +518,7 @@ void M_FirstLoadConfig(void)
 void M_SaveConfig(const char *filename)
 {
 	FILE *f;
+	char *filepath;
 
 	// make sure not to write back the config until it's been correctly loaded
 	if (!gameconfig_loaded)
@@ -532,13 +533,20 @@ void M_SaveConfig(const char *filename)
 			return;
 		}
 
-		f = fopen(filename, "w");
+		// append srb2home to beginning of filename
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
+
+		f = fopen(filepath, "w");
 		// change it only if valid
 		if (f)
-			strcpy(configfile, filename);
+			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}

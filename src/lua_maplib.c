@@ -795,16 +795,16 @@ static int side_set(lua_State *L)
 		side->rowoffset = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
-        side->toptexture = luaL_checkinteger(L, 3);
+		side->toptexture = luaL_checkinteger(L, 3);
 		break;
 	case side_bottomtexture:
-        side->bottomtexture = luaL_checkinteger(L, 3);
+		side->bottomtexture = luaL_checkinteger(L, 3);
 		break;
 	case side_midtexture:
-        side->midtexture = luaL_checkinteger(L, 3);
+		side->midtexture = luaL_checkinteger(L, 3);
 		break;
 	case side_repeatcnt:
-        side->repeatcnt = luaL_checkinteger(L, 3);
+		side->repeatcnt = luaL_checkinteger(L, 3);
 		break;
 	}
 	return 0;
@@ -1090,6 +1090,7 @@ static int ffloor_get(lua_State *L)
 {
 	ffloor_t *ffloor = *((ffloor_t **)luaL_checkudata(L, 1, META_FFLOOR));
 	enum ffloor_e field = luaL_checkoption(L, 2, ffloor_opt[0], ffloor_opt);
+	INT16 i;
 
 	if (!ffloor)
 	{
@@ -1109,11 +1110,11 @@ static int ffloor_get(lua_State *L)
 		lua_pushfixed(L, *ffloor->topheight);
 		return 1;
 	case ffloor_toppic: { // toppic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != *ffloor->toppic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+		levelflat_t *levelflat = &levelflats[*ffloor->toppic];
+		for (i = 0; i < 8; i++)
+			if (!levelflat->name[i])
+				break;
+		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
 	case ffloor_toplightlevel:
@@ -1123,11 +1124,11 @@ static int ffloor_get(lua_State *L)
 		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
 	case ffloor_bottompic: { // bottompic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != *ffloor->bottompic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+		levelflat_t *levelflat = &levelflats[*ffloor->bottompic];
+		for (i = 0; i < 8; i++)
+			if (!levelflat->name[i])
+				break;
+		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
 #ifdef ESLOPE
@@ -1504,6 +1505,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelselect);
 	else if (fastcmp(field,"bonustype"))
 		lua_pushinteger(L, header->bonustype);
+	else if (fastcmp(field,"saveoverride"))
+		lua_pushinteger(L, header->saveoverride);
 	else if (fastcmp(field,"levelflags"))
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))

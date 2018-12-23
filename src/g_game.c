@@ -375,6 +375,8 @@ typedef enum
 	AXISLOOK,
 	AXISSTRAFE,
 	AXISDEAD, //Axises that don't want deadzones
+	AXISJUMP,
+	AXISSPIN,
 	AXISFIRE,
 	AXISFIRENORMAL,
 } axis_input_e;
@@ -384,6 +386,8 @@ consvar_t cv_turnaxis = {"joyaxis_turn", "LStick.X", CV_SAVE, joyaxis_cons_t, NU
 consvar_t cv_moveaxis = {"joyaxis_move", "LStick.Y", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_sideaxis = {"joyaxis_side", "RStick.X", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_lookaxis = {"joyaxis_look", "RStick.Y", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_jumpaxis = {"joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis = {"joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis = {"joyaxis_fire", "LAnalog", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis = {"joyaxis_firenormal", "RAnalog", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #else
@@ -410,6 +414,8 @@ consvar_t cv_lookaxis = {"joyaxis_look", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_lookaxis = {"joyaxis_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 #endif
+consvar_t cv_jumpaxis = {"joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis = {"joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis = {"joyaxis_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis = {"joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -419,6 +425,8 @@ consvar_t cv_turnaxis2 = {"joyaxis2_turn", "LStick.X", CV_SAVE, joyaxis_cons_t, 
 consvar_t cv_moveaxis2 = {"joyaxis2_move", "LStick.Y", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_sideaxis2 = {"joyaxis2_side", "RStick.X", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_lookaxis2 = {"joyaxis2_look", "RStick.Y", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_jumpaxis2 = {"joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "LAnalog", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "RAnalog", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #else
@@ -437,6 +445,8 @@ consvar_t cv_sideaxis2 = {"joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NU
 #ifndef _XBOX
 consvar_t cv_lookaxis2 = {"joyaxis2_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
+consvar_t cv_jumpaxis2 = {"joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -804,6 +814,12 @@ static INT32 JoyAxis(axis_input_e axissel)
 		case AXISSTRAFE:
 			axisval = cv_sideaxis.value;
 			break;
+		case AXISJUMP:
+			axisval = cv_jumpaxis.value;
+			break;
+		case AXISSPIN:
+			axisval = cv_spinaxis.value;
+			break;
 		case AXISFIRE:
 			axisval = cv_fireaxis.value;
 			break;
@@ -880,6 +896,12 @@ static INT32 Joy2Axis(axis_input_e axissel)
 			break;
 		case AXISSTRAFE:
 			axisval = cv_sideaxis2.value;
+			break;
+		case AXISJUMP:
+			axisval = cv_jumpaxis2.value;
+			break;
+		case AXISSPIN:
+			axisval = cv_spinaxis2.value;
 			break;
 		case AXISFIRE:
 			axisval = cv_fireaxis2.value;
@@ -1126,7 +1148,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	if (PLAYER1INPUTDOWN(gc_use))
+	axis = JoyAxis(AXISSPIN);
+	if (PLAYER1INPUTDOWN(gc_use) || (cv_usejoystick.value && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
@@ -1148,7 +1171,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	if (PLAYER1INPUTDOWN(gc_jump))
+	axis = JoyAxis(AXISJUMP);
+	if (PLAYER1INPUTDOWN(gc_jump) || (cv_usejoystick.value && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1423,7 +1447,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	if (PLAYER2INPUTDOWN(gc_use))
+	axis = Joy2Axis(AXISSPIN);
+	if (PLAYER2INPUTDOWN(gc_use) || (cv_usejoystick2.value && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
@@ -1445,7 +1470,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	if (PLAYER2INPUTDOWN(gc_jump))
+	axis = Joy2Axis(AXISJUMP);
+	if (PLAYER2INPUTDOWN(gc_jump) || (cv_usejoystick2.value && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1585,11 +1611,6 @@ static void Analog_OnChange(void)
 
 	// cameras are not initialized at this point
 
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam_dist, 128);
-	if (cv_analog.value || demoplayback)
-		CV_SetValue(&cv_cam_dist, 192);
-
 	if (!cv_chasecam.value && cv_analog.value) {
 		CV_SetValue(&cv_analog, 0);
 		return;
@@ -1604,11 +1625,6 @@ static void Analog2_OnChange(void)
 		return;
 
 	// cameras are not initialized at this point
-
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam2_dist, 128);
-	if (cv_analog2.value)
-		CV_SetValue(&cv_cam2_dist, 192);
 
 	if (!cv_chasecam2.value && cv_analog2.value) {
 		CV_SetValue(&cv_analog2, 0);
