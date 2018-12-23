@@ -1335,7 +1335,7 @@ INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify)
 	return result;
 }
 
-static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT32 *keynum1, INT32 *keynum2)
+static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT32 *keynum1, INT32 *keynum2, boolean *nestedoverride)
 {
 	// Special case: ignore KEY_PAUSE because it's hardcoded
 	if (keyidx == 0 && *keynum1 == KEY_PAUSE)
@@ -1397,15 +1397,27 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 		else // default to the specified keynum
 			keynum = (keyidx == 1 ? *keynum2 : *keynum1);
 
+		// Did our last call override keynum2?
+		if (*nestedoverride)
+		{
+			defaultoverride = true;
+			*nestedoverride = false;
+		}
+
 		// Fill keynum2 with the default control
 		if (keyidx == 0 && !*keynum2)
 		{
 			*keynum2 = defaultkey;
+			// Tell the next call that this is an override
+			*nestedoverride = true;
 
 			// if keynum2 already matches keynum1, we probably recursed
 			// so unset it
 			if (*keynum1 == *keynum2)
+			{
 				*keynum2 = 0;
+				*nestedoverride = false;
+		}
 		}
 
 		// check if the key is being used somewhere else before passing it
@@ -1424,7 +1436,7 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 			// try it again and push down keynum2
 			*keynum1 = *keynum2;
 			*keynum2 = 0;
-			return G_FilterKeyByVersion(numctrl, keyidx, player, keynum1, keynum2);
+			return G_FilterKeyByVersion(numctrl, keyidx, player, keynum1, keynum2, nestedoverride);
 			// recursion *should* be safe because we only assign keynum2 to a joy default
 			// and then clear it if we find that keynum1 already has the joy default.
 		}
@@ -1446,6 +1458,7 @@ static void setcontrol(INT32 (*gc)[2])
 	const char *namectrl;
 	INT32 keynum, keynum1, keynum2;
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
+	boolean nestedoverride = false;
 
 	namectrl = COM_Argv(1);
 	for (numctrl = 0; numctrl < num_gamecontrols && stricmp(namectrl, gamecontrolname[numctrl]);
@@ -1458,7 +1471,7 @@ static void setcontrol(INT32 (*gc)[2])
 	}
 	keynum1 = G_KeyStringtoNum(COM_Argv(2));
 	keynum2 = G_KeyStringtoNum(COM_Argv(3));
-	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
+	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)
 	{
@@ -1469,7 +1482,7 @@ static void setcontrol(INT32 (*gc)[2])
 		{
 			keynum1 = keynum2; // push down keynum2
 			keynum2 = 0;
-			keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2);
+			keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 			if (keynum >= 0)
 				(void)G_CheckDoubleUsage(keynum, true);
 		}
@@ -1480,7 +1493,7 @@ static void setcontrol(INT32 (*gc)[2])
 
 	if (keynum2)
 	{
-		keynum = G_FilterKeyByVersion(numctrl, 1, player, &keynum1, &keynum2);
+		keynum = G_FilterKeyByVersion(numctrl, 1, player, &keynum1, &keynum2, &nestedoverride);
 		if (keynum >= 0)
 		{
 			if (keynum != gc[numctrl][0])
