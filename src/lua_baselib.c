@@ -1727,6 +1727,25 @@ static int lib_rSetPlayerSkin(lua_State *L)
 	return 0;
 }
 
+// R_DATA
+////////////
+
+static int lib_rCheckTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_CheckTextureNumForName(name));
+	return 1;
+}
+
+static int lib_rTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_TextureNumForName(name));
+	return 1;
+}
+
 // S_SOUND
 ////////////
 
@@ -1947,28 +1966,45 @@ static int lib_gDoReborn(lua_State *L)
 	return 0;
 }
 
-static int lib_gExitLevel(lua_State *L)
+// Another Lua function that doesn't actually exist!
+// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
 	NOHUD
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_ExitLevel();			[no modifications]
-	//	G_ExitLevel(int)		[nextmap override only]
-	//	G_ExitLevel(bool)		[skipstats only]
-	//	G_ExitLevel(int, bool)	[both of the above]
+	//	G_SetCustomExitVars();			[reset to defaults]
+	//	G_SetCustomExitVars(int)		[nextmap override only]
+	//	G_SetCustomExitVars(bool)		[skipstats only]
+	//	G_SetCustomExitVars(int, bool)	[both of the above]
 	if (n >= 1)
 	{
 		if (lua_isnumber(L, 1) || n >= 2)
 		{
 			nextmapoverride = (INT16)luaL_checknumber(L, 1);
-			lua_pop(L, 1); // pop nextmapoverride; skipstats now 1 if available
+			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
 		}
 		skipstats = lua_optboolean(L, 1);
 	}
+	else
+	{
+		nextmapoverride = 0;
+		skipstats = false;
+	}
 	// ---
 
+	return 0;
+}
+
+static int lib_gExitLevel(lua_State *L)
+{
+	int n = lua_gettop(L); // Num arguments
+	NOHUD
+	// Moved this bit to G_SetCustomExitVars
+	if (n >= 1) // Don't run the reset to defaults option
+		lib_gSetCustomExitVars(L);
 	G_ExitLevel();
 	return 0;
 }
@@ -2217,6 +2253,10 @@ static luaL_Reg lib[] = {
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
 
+	// r_data
+	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
+	{"R_TextureNumForName",lib_rTextureNumForName},
+
 	// s_sound
 	{"S_StartSound",lib_sStartSound},
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
@@ -2231,6 +2271,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
+	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
