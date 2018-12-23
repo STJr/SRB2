@@ -847,10 +847,13 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 
 				// move everything past c_input for new characters:
 				size_t m = HU_MAXMSGLEN-1;
-				for (;(m>=c_input);m--)
+				while (m>=c_input)
 				{
 					if (s[m])
 						s[m+1] = (s[m]);
+					if (m == 0) // prevent overflow
+						break;
+					m--;
 				}
 				s[c_input] = ch;		// and replace this.
 			}
@@ -1177,11 +1180,13 @@ boolean HU_Responder(event_t *ev)
 			else	// otherwise, we need to shift everything and make space, etc etc
 			{
 				size_t i = HU_MAXMSGLEN-1;
-				for (; i>=c_input;i--)
+				while (i >= c_input)
 				{
 					if (w_chat[i])
 						w_chat[i+pastelen] = w_chat[i];
-
+					if (i == 0) // prevent overflow
+						break;
+					i--;
 				}
 				memcpy(&w_chat[c_input], paste, pastelen);	// copy all of that.
 				c_input += pastelen;
