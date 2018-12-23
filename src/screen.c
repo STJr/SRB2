@@ -309,14 +309,6 @@ void SCR_Recalc(void)
 	if (automapactive)
 		AM_Stop();
 
-	// r_plane stuff: visplanes, openings, floorclip, ceilingclip, spanstart,
-	//                spanstop, yslope, distscale, cachedheight, cacheddistance,
-	//                cachedxstep, cachedystep
-	//             -> allocated at the maximum vidsize, static.
-
-	// r_main: xtoviewangle, allocated at the maximum size.
-	// r_things: negonearray, screenheightarray allocated max. size.
-
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();
 

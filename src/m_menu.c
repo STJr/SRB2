@@ -1089,25 +1089,29 @@ static menuitem_t OP_Joystick1Menu[] =
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis         ,  40},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis         ,  50},
 	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Jumping"  , &cv_jumpaxis         ,  70},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Spinning" , &cv_spinaxis         ,  80},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  90},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        , 100},
 
-	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook,   100},
-	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,   110},
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook, 120},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook,  130},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu,  10},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis2        ,  30},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis2        ,  40},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis2        ,  50},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        ,  60},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Jumping"  , &cv_jumpaxis2        ,  70},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Spinning" , &cv_spinaxis2        ,  80},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        ,  90},
+	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 100},
 
-	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,   100},
-	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2,   110},
+	{IT_STRING | IT_CVAR, NULL, "First-Person Vert-Look", &cv_alwaysfreelook2,120},
+	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2, 130},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -6837,9 +6841,10 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	OP_MPControlsMenu[0].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[1].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[2].status = IT_GRAYEDOUT2;
-	// Hide the pause/console controls too
+	// Hide the pause/console and system menu controls too
 	OP_MiscControlsMenu[3].status = IT_GRAYEDOUT2;
-	OP_MiscControlsMenu[4].status = IT_GRAYEDOUT2;
+	OP_MiscControlsMenu[6].status = IT_GRAYEDOUT2;
+	OP_MiscControlsMenu[8].status = IT_GRAYEDOUT2;
 
 	OP_ControlListDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);

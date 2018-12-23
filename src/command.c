@@ -32,6 +32,7 @@
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"
+#include "d_netfil.h" // findfile
 
 //========
 // protos.
@@ -641,6 +642,7 @@ static void COM_CEchoDuration_f(void)
 static void COM_Exec_f(void)
 {
 	UINT8 *buf = NULL;
+	char filename[256];
 
 	if (COM_Argc() < 2 || COM_Argc() > 3)
 	{
@@ -649,13 +651,23 @@ static void COM_Exec_f(void)
 	}
 
 	// load file
+	// Try with Argv passed verbatim first, for back compat
 	FIL_ReadFile(COM_Argv(1), &buf);
 
 	if (!buf)
 	{
-		if (!COM_CheckParm("-noerror"))
-			CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
-		return;
+		// Now try by searching the file path
+		// filename is modified with the full found path
+		strcpy(filename, COM_Argv(1));
+		if (findfile(filename, NULL, true) != FS_NOTFOUND)
+			FIL_ReadFile(filename, &buf);
+
+		if (!buf)
+		{
+			if (!COM_CheckParm("-noerror"))
+				CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
+			return;
+		}
 	}
 
 	if (!COM_CheckParm("-silent"))
@@ -1090,7 +1102,7 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 		if (var->flags & CV_FLOAT)
 		{
 			double d = atof(valstr);
-			if (!d && valstr[0] != '0')
+			if (fpclassify(d) == FP_ZERO && valstr[0] != '0')
 				v = INT32_MIN;
 			else
 				v = (INT32)(d * FRACUNIT);

@@ -31,7 +31,6 @@
 void HWR_Startup(void);
 void HWR_Shutdown(void);
 
-void HWR_clearAutomap(void);
 void HWR_drawAMline(const fline_t *fl, INT32 color);
 void HWR_FadeScreenMenuBack(UINT32 color, INT32 height);
 void HWR_DrawConsoleBack(UINT32 color, INT32 height);
