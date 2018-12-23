@@ -1010,6 +1010,16 @@ void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control)
 	setupcontrols[control][1] = KEY_NULL;
 }
 
+void G_ClearAllControlKeys(void)
+{
+	INT32 i;
+	for (i = 0; i < num_gamecontrols; i++)
+	{
+		G_ClearControlKeys(gamecontrol, i);
+		G_ClearControlKeys(gamecontrolbis, i);
+	}
+}
+
 //
 // Returns the name of a key (or virtual key for mouse and joy)
 // the input value being an keynum

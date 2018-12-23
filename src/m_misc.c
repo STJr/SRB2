@@ -443,6 +443,7 @@ void Command_LoadConfig_f(void)
 	FIL_ForceExtension(configfile, ".cfg");
 
 	// load default control
+	G_ClearAllControlKeys();
 	G_Controldefault();
 
 	// temporarily reset execversion to default
