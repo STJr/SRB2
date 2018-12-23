@@ -1730,6 +1730,7 @@ static void HU_DrawChat(void)
 				nodenum = (char*) malloc(3);
 				strncpy(nodenum, w_chat+3, 3);
 				n = atoi((const char*) nodenum);	// turn that into a number
+				free(nodenum);
 				// special cases:
 
 				if ((n == 0) && !(w_chat[4] == '0'))
