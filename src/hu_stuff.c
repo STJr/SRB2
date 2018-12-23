@@ -1488,26 +1488,26 @@ static void HU_drawChatLog(INT32 offset)
 	if (chat_scroll > chat_maxscroll)
 		chat_scroll = chat_maxscroll;
 
-	/*if (splitscreen)
+#ifdef NETSPLITSCREEN
+	if (splitscreen)
 	{
 		boxh = max(6, boxh/2);
 		if (splitscreen > 1)
 			boxw = max(64, boxw/2);
-	}*/
-
-	// Unused SRB2KART splitscreen stuff. I'll leave it here in case it ever happens in Vanilla?
+	}
+#endif
 
 	y = chaty - offset*charheight - (chat_scroll*charheight) - boxh*charheight - 12;
 
-	/*if (splitscreen)
+#ifdef NETSPLITSCREEN
+	if (splitscreen)
 	{
 		y -= BASEVIDHEIGHT/2;
 		if (splitscreen > 1)
 			y += 16;
-	}*/
+	}
+#endif
 	y -= (G_RingSlingerGametype() ? 16 : 0);
-
-	// Unused SRB2KART splitscreen stuff. I'll leave it here in case it ever happens in Vanilla? (x2)
 
 
 	chat_topy = y + chat_scroll*charheight;
@@ -1607,7 +1607,8 @@ static void HU_DrawChat(void)
 	const char *talk = ntalk;
 	const char *mute = "Chat has been muted.";
 
-	/*if (splitscreen)
+#ifdef NETSPLITSCREEN
+	if (splitscreen)
 	{
 		y -= BASEVIDHEIGHT/2;
 		if (splitscreen > 1)
@@ -1615,10 +1616,9 @@ static void HU_DrawChat(void)
 			y += 16;
 			boxw = max(64, boxw/2);
 		}
-	}*/
+	}
+#endif
 	y -= (G_RingSlingerGametype() ? 16 : 0);
-
-	// More unused SRB2KART stuff.
 
 	if (teamtalk)
 	{
@@ -1703,15 +1703,15 @@ static void HU_DrawChat(void)
 	{
 		INT32 count = 0;
 		INT32 p_dispy = chaty - charheight -1;
-		/*if (splitscreen)
+#ifdef NETSPLITSCREEN
+		if (splitscreen)
 		{
 			p_dispy -= BASEVIDHEIGHT/2;
 			if (splitscreen > 1)
 				p_dispy += 16;
-		}*/
+		}
+#endif
 		p_dispy -= (G_RingSlingerGametype() ? 16 : 0);
-
-		// more kart leftovers.
 
 		i = 0;
 		for(i=0; (i<MAXPLAYERS); i++)
