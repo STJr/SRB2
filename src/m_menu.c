@@ -6960,7 +6960,7 @@ static void M_ChangecontrolResponse(event_t *ev)
 				found = 0;
 				setupcontrols[control][1] = KEY_NULL;  //replace key 1,clear key2
 			}
-			G_CheckDoubleUsage(ch);
+			(void)G_CheckDoubleUsage(ch, true);
 			setupcontrols[control][found] = ch;
 		}
 		S_StartSound(NULL, sfx_strpst);
