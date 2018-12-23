@@ -161,6 +161,9 @@ extern FILE *logstream;
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
 
+// Use .kart extension addons
+//#define USE_KART
+
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
 // to the latest version, fill these out.  Otherwise, just comment out UPDATE_ALERT and leave
@@ -410,6 +413,7 @@ extern INT32 cv_debug;
 
 // Modifier key variables, accessible anywhere
 extern UINT8 shiftdown, ctrldown, altdown;
+extern boolean capslock;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)

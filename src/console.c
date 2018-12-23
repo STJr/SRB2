@@ -33,6 +33,7 @@
 #include "i_system.h"
 #include "d_main.h"
 #include "m_menu.h"
+#include "filesrch.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -128,11 +129,16 @@ static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}
 // whether to use console background picture, or translucent mode
 static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
-												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
-												{6, "Green"},	{7, "Blue"},	{8,	"Cyan"},
+static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{2, "Sepia"},
+												{3, "Brown"},		{4, "Pink"},		{5, "Raspberry"},
+												{6, "Red"},			{7, "Creamsicle"},	{8, "Orange"},
+												{9, "Gold"},		{10,"Yellow"},		{11,"Emerald"},
+												{12,"Green"},		{13,"Cyan"},		{14,"Steel"},
+												{15,"Periwinkle"},	{16,"Blue"},		{17,"Purple"},
+												{18,"Lavender"},
 												{0, NULL}};
-consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cons_backcolor = {"con_backcolor", "Black", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
 static void CON_Print(char *msg);
 
@@ -238,29 +244,41 @@ void CON_SetupBackColormap(void)
 	UINT16 i, palsum;
 	UINT8 j, palindex;
 	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
+	INT32 shift = 6;
 
 	if (!consolebgmap)
 		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 
 	switch (cons_backcolor.value)
 	{
-		case 0:		palindex = 15; 	break; // White
-		case 1:		palindex = 31;	break; // Gray
-		case 2:		palindex = 63;	break; // Brown
-		case 3:		palindex = 143;	break; // Red
-		case 4:		palindex = 95;	break; // Orange
-		case 5:		palindex = 111;	break; // Yellow
-		case 6:		palindex = 175;	break; // Green
-		case 7:		palindex = 239;	break; // Blue
-		case 8:		palindex = 219;	break; // Cyan
+		case 0:		palindex = 15; 	break; 	// White
+		case 1:		palindex = 31;	break; 	// Gray
+		case 2:		palindex = 47;	break;	// Sepia
+		case 3:		palindex = 63;	break; 	// Brown
+		case 4:		palindex = 150; shift = 7; 	break; 	// Pink
+		case 5:		palindex = 127; shift = 7;	break; 	// Raspberry
+		case 6:		palindex = 143;	break; 	// Red
+		case 7:		palindex = 86;	shift = 7;	break;	// Creamsicle
+		case 8:		palindex = 95;	break; 	// Orange
+		case 9:		palindex = 119; shift = 7;	break; 	// Gold
+		case 10:	palindex = 111;	break; 	// Yellow
+		case 11:	palindex = 191; shift = 7; 	break; 	// Emerald
+		case 12:	palindex = 175;	break; 	// Green
+		case 13:	palindex = 219;	break; 	// Cyan
+		case 14:	palindex = 207; shift = 7;	break; 	// Steel
+		case 15:	palindex = 230;	shift = 7; 	break; 	// Periwinkle
+		case 16:	palindex = 239;	break; 	// Blue
+		case 17:	palindex = 199; shift = 7; 	break; 	// Purple
+		case 18:	palindex = 255; shift = 7; 	break; 	// Lavender
 		// Default green
 		default:	palindex = 175; break;
+
 }
 
 	// setup background colormap
 	for (i = 0, j = 0; i < 768; i += 3, j++)
 	{
-		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> 6;
+		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> shift;
 		consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
 }
@@ -839,7 +857,7 @@ boolean CON_Responder(event_t *ev)
 
 		// ...why shouldn't it eat the key? if it doesn't, it just means you
 		// can control Sonic from the console, which is silly
-		return true; //return false;
+		return true;//return false;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)
@@ -1033,15 +1051,30 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	if (shiftdown)
+	// capslock
+	if (key == KEY_CAPSLOCK)	// it's a toggle.
+	{
+		if (capslock)
+			capslock = false;
+		else
+			capslock = true;
+		return true;
+	}
+
+	if (key >= 'a' && key <= 'z')
+	{
+		if (capslock ^ shiftdown)
+			key = shiftxform[key];
+	}
+	else if (shiftdown)
 		key = shiftxform[key];
 
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
-		return true; // even if key can't be printed, eat it anyway
+		return true;
 
 	// add key to cmd line here
-	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
+	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
 		key = key + 'a' - 'A';
 
 	if (input_sel != input_cur)
@@ -1258,12 +1291,15 @@ void CONS_Alert(alerttype_t level, const char *fmt, ...)
 	switch (level)
 	{
 		case CONS_NOTICE:
+			// no notice for notices, hehe
 			CONS_Printf("\x83" "%s" "\x80 ", M_GetText("NOTICE:"));
 			break;
 		case CONS_WARNING:
+			refreshdirmenu |= REFRESHDIR_WARNING;
 			CONS_Printf("\x82" "%s" "\x80 ", M_GetText("WARNING:"));
 			break;
 		case CONS_ERROR:
+			refreshdirmenu |= REFRESHDIR_ERROR;
 			CONS_Printf("\x85" "%s" "\x80 ", M_GetText("ERROR:"));
 			break;
 	}
@@ -1419,8 +1455,8 @@ static void CON_DrawHudlines(void)
 	if (con_hudlines <= 0)
 		return;
 
-	if (chat_on)
-		y = charheight; // leave place for chat input in the first row of text
+	if (chat_on && OLDCHAT)
+		y = charheight; // leave place for chat input in the first row of text (only do it if consolechat is on.)
 	else
 		y = 0;
 

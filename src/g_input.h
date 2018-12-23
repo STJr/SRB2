@@ -165,6 +165,6 @@ void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
 void G_Controldefault(void);
 void G_SaveKeySetting(FILE *f);
-void G_CheckDoubleUsage(INT32 keynum);
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
 
 #endif
