@@ -997,7 +997,9 @@ static const char *credits[] = {
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
@@ -1006,8 +1008,9 @@ static const char *credits[] = {
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"\"Steel Titanium\"",
 	"Ben \"Cue\" Woodford",
-	// Git contributors with 5+ approved merges, at least a few of substantive quality, may be named
-	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors"
+	// Git contributors with 5+ approved merges of substantive quality,
+	// or contributors with at least one groundbreaking merge, may be named.
+	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1089,8 +1092,8 @@ static const char *credits[] = {
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
 	// Acknowledged here are the following:
-	// Merge Request authors with < 5 approved quality merges
-	// Golden - Extended thin font
+	// Minor merge request authors, see guideline above
+	// Golden - Expanded thin font
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
