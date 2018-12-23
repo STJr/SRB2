@@ -1148,24 +1148,28 @@ void D_SRB2Main(void)
 #ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
-	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_RINGS_DTA); // rings.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
-	mainwads++; // srb2.srb
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+	mainwads++; // music.dta
+
+#else
+
+	mainwads++;	// srb2.srb/srb2.wad
 	mainwads++; // zones.dta
 	mainwads++; // player.dta
 	mainwads++; // rings.dta
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
-#else
 #ifdef USE_PATCH_DTA
-	mainwads++;	// patch.dta
+	mainwads++; // patch.dta
 #endif
 	mainwads++; // music.dta
+
 #endif //ifndef DEVELOP
 
 	mainwadstally = packetsizetally;
