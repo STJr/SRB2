@@ -1310,7 +1310,7 @@ void I_ShutdownTcpDriver(void)
 static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 {
 	SINT8 newnode = -1;
-	struct my_addrinfo *ai, *runp, hints;
+	struct my_addrinfo *ai = NULL, *runp, hints;
 	int gaie;
 
 	 if (!port || !port[0])
