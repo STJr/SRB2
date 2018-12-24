@@ -1701,6 +1701,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	}
 
 	pglEnable(GL_CULL_FACE);
+	pglEnable(GL_NORMALIZE);
 
 #ifdef USE_FTRANSFORM_MIRROR
 	// flipped is if the object is flipped
@@ -1860,6 +1861,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 		pglDisable(GL_LIGHTING);
 	pglShadeModel(GL_FLAT);
 	pglDisable(GL_CULL_FACE);
+	pglDisable(GL_NORMALIZE);
 }
 
 // -----------------+
