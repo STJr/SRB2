@@ -7630,6 +7630,9 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
+	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+		goto notrealplayer;
+
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
@@ -7748,6 +7751,8 @@ static void P_DeathThink(player_t *player)
 			}
 		}
 	}
+
+notrealplayer:
 
 	if (!player->mo)
 		return;
