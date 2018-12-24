@@ -3044,7 +3044,7 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
 				DEH_WriteUndoline(word, va("%d", disableSpeedAdjust), UNDO_NONE);
-				disableSpeedAdjust = (UINT8)get_number(word2);
+				disableSpeedAdjust = (value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
