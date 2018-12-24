@@ -3345,6 +3345,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
 	msecnode_t *n;
+	size_t i;
 
 	nofit = false;
 	crushchange = crunch;
@@ -3361,7 +3362,6 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// First, let's see if anything will keep it from crushing.
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
@@ -3423,7 +3423,6 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Nothing blocked us, so lets crush for real!
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
@@ -3475,6 +3474,17 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 				break; // exit and start over
 			}
 	} while (n); // repeat from scratch until all things left are marked valid
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+				P_CheckSector(po->lines[0]->frontsector, crunch); // Check the in-level sector also
+		}
+	}
 
 	return nofit;
 }
