@@ -1873,7 +1873,7 @@ static void ST_drawNiGHTSHUD(void)
 	}
 }
 
-static inline void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
+static void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
 {
 	INT32 q = stplyr->weapondelay, del = 0, p = 16;
 	while (q)
