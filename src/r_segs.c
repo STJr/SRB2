@@ -826,9 +826,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
 			->lightlevel >> LIGHTSEGSHIFT;
 
-	if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog));
-		else if (curline->v1->y == curline->v2->y)
-	lightnum--;
+	if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog))
+		;
+	else if (curline->v1->y == curline->v2->y)
+		lightnum--;
 	else if (curline->v1->x == curline->v2->x)
 		lightnum++;
 
@@ -1124,11 +1125,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			// Get data for the column
 			col = (column_t *)((UINT8 *)R_GetColumn(texnum,maskedtexturecol[dc_x]) - 3);
 
-			// guess what I just fixed? -monster psychic cat
+			// Jimita: Set light level then colormap (if present) for the column
 			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
-				pindex = MAXLIGHTSCALE - 1;
+				pindex = MAXLIGHTSCALE-1;
+
 			dc_colormap = walllights[pindex];
+			if (frontsector->extra_colormap)
+				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 			// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 			// will (hopefully) put less strain on the stack.
@@ -1251,9 +1255,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			// calculate lighting
 			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
-				pindex = MAXLIGHTSCALE - 1;
-			dc_colormap = walllights[pindex];
+				pindex = MAXLIGHTSCALE-1;
 
+			dc_colormap = walllights[pindex];
 			if (pfloor->flags & FF_FOG && pfloor->master->frontsector->extra_colormap)
 				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			else if (frontsector->extra_colormap)
