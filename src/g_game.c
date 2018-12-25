@@ -979,7 +979,7 @@ static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
-	INT32 tspeed, forward, side, axis, i;
+	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
@@ -1094,9 +1094,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = JoyAxis(AXISMOVE);
-	if (PLAYER1INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0))
+	altaxis = JoyAxis(AXISLOOK);
+	if (PLAYER1INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0)
+		|| ((player->pflags & PF_NIGHTSMODE)
+			&& (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (PLAYER1INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0))
+	if (PLAYER1INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0)
+		|| ((player->pflags & PF_NIGHTSMODE)
+			&& (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1200,18 +1205,21 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
 			localaiming = 0;
 
-		if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+		if (!(player->pflags & PF_NIGHTSMODE))
 		{
-			localaiming += KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
+			if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			{
+				localaiming += KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			{
+				localaiming -= KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER1INPUTDOWN(gc_centerview))
+				localaiming = 0;
 		}
-		else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
-		{
-			localaiming -= KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
-		}
-		else if (PLAYER1INPUTDOWN(gc_centerview))
-			localaiming = 0;
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
@@ -1281,7 +1289,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
-	INT32 tspeed, forward, side, axis, i;
+	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
@@ -1396,9 +1404,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = Joy2Axis(AXISMOVE);
-	if (PLAYER2INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0))
+	altaxis = Joy2Axis(AXISLOOK);
+	if (PLAYER2INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0)
+		|| ((player->pflags & PF_NIGHTSMODE)
+			&& (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (PLAYER2INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0))
+	if (PLAYER2INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0)
+		|| ((player->pflags & PF_NIGHTSMODE)
+			&& (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1499,18 +1512,21 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
 			localaiming2 = 0;
 
-		if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+		if (!(player->pflags & PF_NIGHTSMODE))
 		{
-			localaiming2 += KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
+			if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			{
+				localaiming2 += KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			{
+				localaiming2 -= KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER2INPUTDOWN(gc_centerview))
+				localaiming2 = 0;
 		}
-		else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
-		{
-			localaiming2 -= KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
-		}
-		else if (PLAYER2INPUTDOWN(gc_centerview))
-			localaiming2 = 0;
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
