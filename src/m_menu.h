@@ -124,6 +124,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_HEADER      (IT_SPACE  +IT_HEADERTEXT)
 #define IT_SECRET      (IT_SPACE  +IT_QUESTIONMARKS)
 
+#define MAXSTRINGLENGTH 32
+
 typedef union
 {
 	struct menu_s *submenu;      // IT_SUBMENU
@@ -222,6 +224,9 @@ void M_CheatActivationResponder(INT32 ch);
 // Screenshot menu updating
 void Moviemode_mode_Onchange(void);
 void Screenshot_option_Onchange(void);
+
+// Addons menu updating
+void Addons_option_Onchange(void);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(header, source, prev, x, y)\

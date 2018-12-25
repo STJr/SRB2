@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 21  // more precise version number
-#define VERSIONSTRING "v2.1.21"
-#define VERSIONSTRINGW L"v2.1.21"
+#define SUBVERSION 22  // more precise version number
+#define VERSIONSTRING "v2.1.22"
+#define VERSIONSTRINGW L"v2.1.22"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -160,6 +160,9 @@ extern FILE *logstream;
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
+
+// Use .kart extension addons
+//#define USE_KART
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -214,7 +217,21 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 26
+#define MODVERSION 27
+
+// To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
+// Increment MINOREXECVERSION whenever a config change is needed that does not correspond
+// to an increment in MODVERSION. This might never happen in practice.
+// If MODVERSION increases, set MINOREXECVERSION to 0.
+#define MAJOREXECVERSION MODVERSION
+#define MINOREXECVERSION 0
+// (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)
+
+// Macros
+#define GETMAJOREXECVERSION(v) (v & 0xFFFF)
+#define GETMINOREXECVERSION(v) (v >> 16)
+#define GETEXECVERSION(major,minor) (major + (minor << 16))
+#define EXECVERSION GETEXECVERSION(MAJOREXECVERSION, MINOREXECVERSION)
 
 // =========================================================================
 
@@ -396,6 +413,7 @@ extern INT32 cv_debug;
 
 // Modifier key variables, accessible anywhere
 extern UINT8 shiftdown, ctrldown, altdown;
+extern boolean capslock;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
@@ -408,6 +426,15 @@ INT32 I_GetKey(void);
 #endif
 #ifndef max // Double-Check with WATTCP-32's cdefs.h
 #define max(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+
+// Floating point comparison epsilons from float.h
+#ifndef FLT_EPSILON
+#define FLT_EPSILON 1.1920928955078125e-7f
+#endif
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16
 #endif
 
 // An assert-type mechanism.

@@ -952,7 +952,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 	return hooked;
 }
 
-// Hook for player chat
+
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 {
 	hook_p hookp;
@@ -1004,6 +1004,7 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 	lua_settop(gL, 0);
 	return hooked;
 }
+
 
 // Hook for hurt messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
