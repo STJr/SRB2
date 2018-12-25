@@ -410,6 +410,15 @@ INT32 I_GetKey(void);
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+// Floating point comparison epsilons from float.h
+#ifndef FLT_EPSILON
+#define FLT_EPSILON 1.1920928955078125e-7f
+#endif
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16
+#endif
+
 // An assert-type mechanism.
 #ifdef PARANOIA
 #define I_Assert(e) ((e) ? (void)0 : I_Error("assert failed: %s, file %s, line %d", #e, __FILE__, __LINE__))
