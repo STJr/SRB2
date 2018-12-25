@@ -1229,8 +1229,6 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 		}
 	}
 
-	CONS_Printf("Making a new colormap\n");
-
 	if (num_extra_colormaps == MAXCOLORMAPS)
 		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
 
