@@ -614,7 +614,7 @@ static boolean R_CheckBBox(const fixed_t *bspcoord)
 		if ((angle1 >= ANGLE_180) && (angle1 < ANGLE_270))
 			angle1 = ANGLE_180-1;
 		else
-			angle2 = -ANGLE_180;
+			angle2 = ANGLE_180;
 	}
 
 	if ((signed)angle2 >= (signed)clipangle) return false;
