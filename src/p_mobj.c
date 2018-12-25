@@ -7274,6 +7274,8 @@ void P_MobjThinker(mobj_t *mobj)
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 1 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 2)
+								S_StartSound(NULL, sfx_hoop3);
 
 							redflag = flagmo;
 						}
@@ -7285,6 +7287,8 @@ void P_MobjThinker(mobj_t *mobj)
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 2 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 1)
+								S_StartSound(NULL, sfx_hoop3);
 
 							blueflag = flagmo;
 						}
