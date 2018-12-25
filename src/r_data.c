@@ -1220,7 +1220,7 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 			continue;
 		if (maskcolor == extra_colormaps[i].maskcolor
 			&& fadecolor == extra_colormaps[i].fadecolor
-			&& fabsf((float)(maskamt - extra_colormaps[i].maskamt)) < 1.0E-36f
+			&& fabs(maskamt - extra_colormaps[i].maskamt) < 1.0E-36
 			&& fadestart == extra_colormaps[i].fadestart
 			&& fadeend == extra_colormaps[i].fadeend
 			&& fog == extra_colormaps[i].fog)
