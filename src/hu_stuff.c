@@ -368,9 +368,11 @@ static void HU_removeChatText_Log(void)
     }
     chat_nummsg_log--; // lost 1 msg.
 }
+#endif
 
 void HU_AddChatText(const char *text, boolean playsound)
 {
+#ifndef NONET
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
 		S_StartSound(NULL, sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
@@ -392,8 +394,13 @@ void HU_AddChatText(const char *text, boolean playsound)
 		CONS_Printf("%s\n", text);
 	else			// if we aren't, still save the message to log.txt
 		CON_LogMessage(va("%s\n", text));
+#else
+	(void)playsound;
+	CONS_Printf("%s\n", text);
+#endif
 }
 
+#ifndef NONET
 
 /** Runs a say command, sending an ::XD_SAY message.
   * A say command consists of a signed 8-bit integer for the target, an
@@ -823,7 +830,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		CONS_Printf("Dropped chat: %d %d %s\n", playernum, target, msg);
 #endif
 }
-#endif
 
 // Handles key input and string input
 //
@@ -891,6 +897,8 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 	return true; // ate the key
 }
 
+#endif
+
 //
 //
 void HU_Ticker(void)
@@ -906,6 +914,8 @@ void HU_Ticker(void)
 	else
 		hu_showscores = false;
 }
+
+#ifndef NONET
 
 static boolean teamtalk = false;
 /*static char chatchars[QUEUESIZE];
@@ -1039,6 +1049,7 @@ static void HU_queueChatChar(char c)
 		return;
 	}
 }
+#endif
 
 void HU_clearChatChars(void)
 {
@@ -1049,11 +1060,12 @@ void HU_clearChatChars(void)
 	c_input = 0;
 }
 
+#ifndef NONET
 static boolean justscrolleddown;
 static boolean justscrolledup;
 static INT16 typelines = 1; // number of drawfill lines we need when drawing the chat. it's some weird hack and might be one frame off but I'm lazy to make another loop.
 // It's up here since it has to be reset when we open the chat.
-
+#endif
 
 //
 // Returns true if key eaten
@@ -1099,6 +1111,7 @@ boolean HU_Responder(event_t *ev)
 		return true;
 	}
 
+#ifndef NONET
 	if (!chat_on)
 	{
 		// enter chat mode
@@ -1230,6 +1243,8 @@ boolean HU_Responder(event_t *ev)
 			c_input++;
 		return true;
 	}
+#endif
+
 	return false;
 }
 
@@ -1237,6 +1252,8 @@ boolean HU_Responder(event_t *ev)
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
+
+#ifndef NONET
 
 // Precompile a wordwrapped string to any given width.
 // This is a muuuch better method than V_WORDWRAP.
@@ -1817,7 +1834,7 @@ static void HU_DrawChat_Old(void)
 		}
 	}
 }
-
+#endif
 
 // draw the Crosshair, at the exact center of the view.
 //
@@ -1986,6 +2003,7 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
+#ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)
 	{
@@ -2025,6 +2043,7 @@ void HU_Drawer(void)
 				HU_removeChatText_Mini();
 		}
 	}
+#endif
 
 	if (cechotimer)
 		HU_DrawCEcho();
