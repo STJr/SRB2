@@ -166,7 +166,7 @@ enum EPolyFlags
 	                                    // When set, pass the color constant into the FSurfaceInfo -> FlatColor
 	PF_NoTexture        = 0x00002000,   // Use the small white texture
 	PF_Corona           = 0x00004000,   // Tell the rendrer we are drawing a corona
-	PF_MD2              = 0x00008000,   // Tell the rendrer we are drawing an MD2
+	PF_Unused           = 0x00008000,   // Unused
 	PF_RemoveYWrap      = 0x00010000,   // Force clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Force repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Force repeat texture on Y
