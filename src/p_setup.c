@@ -2630,7 +2630,7 @@ static boolean P_CanSave(void)
 {
 	// Saving is completely ignored under these conditions:
 	if ((cursaveslot < 0) // Playing without saving
-		|| (!modifiedgame || savemoddata) // Game is modified
+		|| (modifiedgame && !savemoddata) // Game is modified
 		|| (netgame || multiplayer) // Not in single-player
 		|| (demoplayback || demorecording || metalrecording) // Currently in demo
 		|| (players[consoleplayer].lives <= 0) // Completely dead
