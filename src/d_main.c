@@ -533,9 +533,6 @@ void D_SRB2Loop(void)
 	if (dedicated)
 		server = true;
 
-	if (M_CheckParm("-voodoo")) // 256x256 Texture Limiter
-		COM_BufAddText("gr_voodoocompatibility on\n");
-
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
 
 	CONS_Printf("I_StartupKeyboard()...\n");

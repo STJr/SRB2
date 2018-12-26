@@ -58,7 +58,6 @@ void HWR_AddCommands(void);
 void HWR_CorrectSWTricks(void);
 void transform(float *cx, float *cy, float *cz);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
-void HWR_SetPaletteColor(INT32 palcolor);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
 void HWR_StartScreenWipe(void);
@@ -92,7 +91,6 @@ extern consvar_t cv_grgammablue;
 extern consvar_t cv_grfiltermode;
 extern consvar_t cv_granisotropicmode;
 extern consvar_t cv_grcorrecttricks;
-extern consvar_t cv_voodoocompatibility;
 extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
 

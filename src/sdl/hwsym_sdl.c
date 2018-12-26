@@ -88,6 +88,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(SetSpecialState);
 	GETFUNC(GetTextureUsed);
 	GETFUNC(DrawModel);
+	GETFUNC(CreateModelVBOs);
 	GETFUNC(SetTransform);
 	GETFUNC(GetRenderVersion);
 	GETFUNC(PostImgRedraw);

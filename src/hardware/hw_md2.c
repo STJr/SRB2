@@ -981,6 +981,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			if (md2->model)
 			{
 				md2_printModelInfo(md2->model);
+				HWD.pfnCreateModelVBOs(md2->model);
 			}
 			else
 			{

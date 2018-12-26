@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include "r_opengl.h"
+#include "r_vbo.h"
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
 // for KOS: GL_TEXTURE_ENV, glAlphaFunc, glColorMask, glPolygonOffset, glReadPixels, GL_ALPHA_TEST, GL_POLYGON_OFFSET_FILL
@@ -42,7 +43,7 @@ struct GLRGBAFloat
 	GLfloat alpha;
 };
 typedef struct GLRGBAFloat GLRGBAFloat;
-static const float white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLubyte white[4] = { 255, 255, 255, 255 };
 
 // ==========================================================================
 //                                                                  CONSTANTS
@@ -227,6 +228,8 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglNormal3bv glNormal3bv
 #define pglColor4f glColor4f
 #define pglColor4fv glColor4fv
+#define pglColor4ub glColor4ub
+#define pglColor4ubv glColor4ubv
 #define pglTexCoord2f glTexCoord2f
 #define pglTexCoord2fv glTexCoord2fv
 #define pglVertexPointer glVertexPointer
@@ -237,6 +240,10 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglEnableClientState glEnableClientState
 #define pglDisableClientState glDisableClientState
 #define pglClientActiveTexture glClientActiveTexture
+#define pglGenBuffers glGenBuffers
+#define pglBindBuffer glBindBuffer
+#define pglBufferData glBufferData
+#define pglDeleteBuffers glDeleteBuffers
 
 /* Lighting */
 #define pglShadeModel glShadeModel
@@ -346,6 +353,10 @@ typedef void (APIENTRY * PFNglColor4f) (GLfloat red, GLfloat green, GLfloat blue
 static PFNglColor4f pglColor4f;
 typedef void (APIENTRY * PFNglColor4fv) (const GLfloat *v);
 static PFNglColor4fv pglColor4fv;
+typedef void (APIENTRY * PFNglColor4ub) (GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+static PFNglColor4ub pglColor4ub;
+typedef void (APIENTRY * PFNglColor4ubv) (const GLubyte *v);
+static PFNglColor4ubv pglColor4ubv;
 typedef void (APIENTRY * PFNglTexCoord2f) (GLfloat s, GLfloat t);
 static PFNglTexCoord2f pglTexCoord2f;
 typedef void (APIENTRY * PFNglTexCoord2fv) (const GLfloat *v);
@@ -364,6 +375,15 @@ typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
 static PFNglEnableClientState pglEnableClientState;
 typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
 static PFNglDisableClientState pglDisableClientState;
+typedef void (APIENTRY * PFNglGenBuffers) (GLsizei n, GLuint *buffers);
+static PFNglGenBuffers pglGenBuffers;
+typedef void (APIENTRY * PFNglBindBuffer) (GLenum target, GLuint buffer);
+static PFNglBindBuffer pglBindBuffer;
+typedef void (APIENTRY * PFNglBufferData) (GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
+static PFNglBufferData pglBufferData;
+typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
+static PFNglDeleteBuffers pglDeleteBuffers;
+
 
 /* Lighting */
 typedef void (APIENTRY * PFNglShadeModel) (GLenum mode);
@@ -492,6 +512,8 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglNormal3bv, glNormal3bv)
 	GETOPENGLFUNC(pglColor4f , glColor4f)
 	GETOPENGLFUNC(pglColor4fv , glColor4fv)
+	GETOPENGLFUNC(pglColor4ub, glColor4ub)
+	GETOPENGLFUNC(pglColor4ubv, glColor4ubv)
 	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
 	GETOPENGLFUNC(pglTexCoord2fv, glTexCoord2fv)
 	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
@@ -501,9 +523,6 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglDrawElements, glDrawElements)
 	GETOPENGLFUNC(pglEnableClientState, glEnableClientState)
 	GETOPENGLFUNC(pglDisableClientState, glDisableClientState)
-	GETOPENGLFUNC(pglClientActiveTexture, glClientActiveTexture)
-	if (!pglClientActiveTexture)
-		GETOPENGLFUNC(pglClientActiveTexture, glClientActiveTextureARB)
 
 	GETOPENGLFUNC(pglShadeModel , glShadeModel)
 	GETOPENGLFUNC(pglLightfv, glLightfv)
@@ -542,6 +561,10 @@ boolean SetupGLFunc13(void)
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");
 	pglClientActiveTexture = GetGLFunc("glClientActiveTexture");
 	pglMultiTexCoord2fv = GetGLFunc("glMultiTexCoord2fv");
+	pglGenBuffers = GetGLFunc("glGenBuffers");
+	pglBindBuffer = GetGLFunc("glBindBuffer");
+	pglBufferData = GetGLFunc("glBufferData");
+	pglDeleteBuffers = GetGLFunc("glDeleteBuffers");
 
 	return true;
 }
@@ -950,8 +973,6 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
                                    F2DCoord * v2,
                                    RGBA_t Color)
 {
-	GLRGBAFloat c;
-
 	// DBG_Printf ("DrawLine() (%f %f %f) %d\n", v1->x, -v1->y, -v1->z, v1->argb);
 	GLfloat p[12];
 	GLfloat dx, dy;
@@ -961,11 +982,6 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 	//SetBlend(PF_Modulated|PF_NoTexture);
 
 	pglDisable(GL_TEXTURE_2D);
-
-	c.red   = byte2float[Color.s.red];
-	c.green = byte2float[Color.s.green];
-	c.blue  = byte2float[Color.s.blue];
-	c.alpha = byte2float[Color.s.alpha];
 
 	// This is the preferred, 'modern' way of rendering lines -- creating a polygon.
 	if (fabsf(v2->x - v1->x) > FLT_EPSILON)
@@ -981,7 +997,7 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 	p[9] = v1->x + dx;  p[10] = -(v1->y - dy); p[11] = 1;
 
 	pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	pglColor4fv(&c.red);    // is in RGBA float format
+	pglColor4ubv((GLbyte*)&Color);
 	pglVertexPointer(3, GL_FLOAT, 0, p);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -1098,7 +1114,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 			if (oglflags & GLF_NOTEXENV)
 			{
 				if (!(PolyFlags & PF_Modulated))
-					pglColor4fv(white);
+					pglColor4ubv(white);
 			}
 			else
 #endif
@@ -1379,7 +1395,6 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 {
 	FUINT i;
 	FUINT j;
-	GLRGBAFloat c = {0,0,0,0};
 
 	if ((PolyFlags & PF_Corona) && (oglflags & GLF_NOZBUFREAD))
 		PolyFlags &= ~(PF_NoDepthTest|PF_Corona);
@@ -1388,24 +1403,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 
 	// If Modulated, mix the surface colour to the texture
 	if ((CurrentPolyFlags & PF_Modulated) && pSurf)
-	{
-		if (pal_col)
-		{ // hack for non-palettized mode
-			c.red   = (const_pal_col.red  +byte2float[pSurf->FlatColor.s.red])  /2.0f;
-			c.green = (const_pal_col.green+byte2float[pSurf->FlatColor.s.green])/2.0f;
-			c.blue  = (const_pal_col.blue +byte2float[pSurf->FlatColor.s.blue]) /2.0f;
-			c.alpha = byte2float[pSurf->FlatColor.s.alpha];
-		}
-		else
-		{
-			c.red   = byte2float[pSurf->FlatColor.s.red];
-			c.green = byte2float[pSurf->FlatColor.s.green];
-			c.blue  = byte2float[pSurf->FlatColor.s.blue];
-			c.alpha = byte2float[pSurf->FlatColor.s.alpha];
-		}
-
-		pglColor4fv(&c.red);    // is in RGBA float format
-	}
+		pglColor4ubv(&pSurf->FlatColor.s);
 
 	// this test is added for new coronas' code (without depth buffer)
 	// I think I should do a separate function for drawing coronas, so it will be a little faster
@@ -1452,8 +1450,15 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 		if (scalef < 0.05f)
 			return;
 
-		c.alpha *= scalef; // change the alpha value (it seems better than changing the size of the corona)
-		pglColor4fv(&c.red);
+		GLubyte c[4];
+		c[0] = pSurf->FlatColor.s.red;
+		c[1] = pSurf->FlatColor.s.green;
+		c[2] = pSurf->FlatColor.s.blue;
+
+		float alpha = byte2float[pSurf->FlatColor.s.alpha];
+		alpha *= scalef; // change the alpha value (it seems better than changing the size of the corona)
+		c[3] = (unsigned char)(alpha * 255);
+		pglColor4ubv(c);
 	}
 
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
@@ -1488,15 +1493,6 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			break;
 		}
 #endif
-
-		case HWD_SET_PALETTECOLOR:
-		{
-			pal_col = Value;
-			const_pal_col.blue  = byte2float[((Value>>16)&0xff)];
-			const_pal_col.green = byte2float[((Value>>8)&0xff)];
-			const_pal_col.red   = byte2float[((Value)&0xff)];
-			break;
-		}
 
 		case HWD_SET_FOG_COLOR:
 		{
@@ -1537,13 +1533,6 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			}
 			else
 				pglDisable(GL_FOG);
-			break;
-
-		case HWD_SET_POLYGON_SMOOTH:
-			if (Value)
-				pglEnable(GL_POLYGON_SMOOTH);
-			else
-				pglDisable(GL_POLYGON_SMOOTH);
 			break;
 
 		case HWD_SET_TEXTUREFILTERMODE:
@@ -1642,6 +1631,155 @@ static void AllocLerpTinyBuffer(size_t size)
 	vertTinyBuffer = malloc(lerpTinyBufferSize);
 	normTinyBuffer = malloc(lerpTinyBufferSize / 2);
 }
+
+#ifndef GL_STATIC_DRAW
+#define GL_STATIC_DRAW 0x88E4
+#endif
+
+#ifndef GL_ARRAY_BUFFER
+#define GL_ARRAY_BUFFER 0x8892
+#endif
+
+static void CreateModelVBO(mesh_t *mesh, mdlframe_t *frame)
+{
+	int bufferSize = sizeof(vbo64_t)*mesh->numTriangles * 3;
+	vbo64_t *buffer = (vbo64_t*)malloc(bufferSize);
+	vbo64_t *bufPtr = buffer;
+
+	float *vertPtr = frame->vertices;
+	float *normPtr = frame->normals;
+	float *tanPtr = frame->tangents;
+	float *uvPtr = mesh->uvs;
+	float *lightPtr = mesh->lightuvs;
+	char *colorPtr = frame->colors;
+
+	int i;
+	for (i = 0; i < mesh->numTriangles * 3; i++)
+	{
+		bufPtr->x = *vertPtr++;
+		bufPtr->y = *vertPtr++;
+		bufPtr->z = *vertPtr++;
+
+		bufPtr->nx = *normPtr++;
+		bufPtr->ny = *normPtr++;
+		bufPtr->nz = *normPtr++;
+
+		bufPtr->s0 = *uvPtr++;
+		bufPtr->t0 = *uvPtr++;
+
+		if (tanPtr != NULL)
+		{
+			bufPtr->tan0 = *tanPtr++;
+			bufPtr->tan1 = *tanPtr++;
+			bufPtr->tan2 = *tanPtr++;
+		}
+
+		if (lightPtr != NULL)
+		{
+			bufPtr->s1 = *lightPtr++;
+			bufPtr->t1 = *lightPtr++;
+		}
+
+		if (colorPtr)
+		{
+			bufPtr->r = *colorPtr++;
+			bufPtr->g = *colorPtr++;
+			bufPtr->b = *colorPtr++;
+			bufPtr->a = *colorPtr++;
+		}
+		else
+		{
+			bufPtr->r = 255;
+			bufPtr->g = 255;
+			bufPtr->b = 255;
+			bufPtr->a = 255;
+		}
+
+		bufPtr++;
+	}
+
+	pglGenBuffers(1, &frame->vboID);
+	pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+	pglBufferData(GL_ARRAY_BUFFER, bufferSize, buffer, GL_STATIC_DRAW);
+	free(buffer);
+}
+
+static void CreateModelVBOTiny(mesh_t *mesh, tinyframe_t *frame)
+{
+	int bufferSize = sizeof(vbotiny_t)*mesh->numTriangles * 3;
+	vbotiny_t *buffer = (vbotiny_t*)malloc(bufferSize);
+	vbotiny_t *bufPtr = buffer;
+
+	short *vertPtr = frame->vertices;
+	char *normPtr = frame->normals;
+	float *uvPtr = mesh->uvs;
+	char *tanPtr = frame->tangents;
+
+	int i;
+	for (i = 0; i < mesh->numVertices; i++)
+	{
+		bufPtr->x = *vertPtr++;
+		bufPtr->y = *vertPtr++;
+		bufPtr->z = *vertPtr++;
+
+		bufPtr->nx = *normPtr++;
+		bufPtr->ny = *normPtr++;
+		bufPtr->nz = *normPtr++;
+
+		bufPtr->s0 = *uvPtr++;
+		bufPtr->t0 = *uvPtr++;
+
+		if (tanPtr)
+		{
+			bufPtr->tanx = *tanPtr++;
+			bufPtr->tany = *tanPtr++;
+			bufPtr->tanz = *tanPtr++;
+		}
+
+		bufPtr++;
+	}
+
+	pglGenBuffers(1, &frame->vboID);
+	pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+	pglBufferData(GL_ARRAY_BUFFER, bufferSize, buffer, GL_STATIC_DRAW);
+	free(buffer);
+}
+
+EXPORT void HWRAPI(CreateModelVBOs) (model_t *model)
+{
+	int i;
+	for (i = 0; i < model->numMeshes; i++)
+	{
+		mesh_t *mesh = &model->meshes[i];
+
+		if (mesh->frames)
+		{
+			int j;
+			for (j = 0; j < model->meshes[i].numFrames; j++)
+			{
+				mdlframe_t *frame = &mesh->frames[j];
+				if (frame->vboID)
+					pglDeleteBuffers(1, &frame->vboID);
+				frame->vboID = 0;
+				CreateModelVBO(mesh, frame);
+			}
+		}
+		else if (mesh->tinyframes)
+		{
+			int j;
+			for (j = 0; j < model->meshes[i].numFrames; j++)
+			{
+				tinyframe_t *frame = &mesh->tinyframes[j];
+				if (frame->vboID)
+					pglDeleteBuffers(1, &frame->vboID);
+				frame->vboID = 0;
+				CreateModelVBOTiny(mesh, frame);
+			}
+		}
+	}
+}
+
+#define BUFFER_OFFSET(i) ((char*)NULL + (i))
 
 static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
@@ -1773,10 +1911,13 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
-				pglVertexPointer(3, GL_SHORT, 0, frame->vertices);
-				pglNormalPointer(GL_BYTE, 0, frame->normals);
-				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+				pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+				pglVertexPointer(3, GL_SHORT, sizeof(vbotiny_t), BUFFER_OFFSET(0));
+				pglNormalPointer(GL_BYTE, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short)*3));
+				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short) * 3 + sizeof(byte) * 6));
+
 				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+				pglBindBuffer(GL_ARRAY_BUFFER, 0);
 			}
 			else
 			{
@@ -1814,10 +1955,18 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
 				// Zoom! Take advantage of just shoving the entire arrays to the GPU.
-				pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
+/*				pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
 				pglNormalPointer(GL_FLOAT, 0, frame->normals);
 				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
-				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
+				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);*/
+
+				pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+				pglVertexPointer(3, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(0));
+				pglNormalPointer(GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 3));
+				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 6));
+
+				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+				pglBindBuffer(GL_ARRAY_BUFFER, 0);
 			}
 			else
 			{
@@ -1971,7 +2120,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 
 	// Draw a black square behind the screen texture,
 	// so nothing shows through the edges
-	pglColor4fv(white);
+	pglColor4ubv(white);
 
 	pglVertexPointer(3, GL_FLOAT, 0, blackBack);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -2143,7 +2292,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	pglBindTexture(GL_TEXTURE_2D, screentexture);
-	pglColor4fv(white);
+	pglColor4ubv(white);
 
 	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
 	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
@@ -2208,7 +2357,7 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 	// Draw the original screen
 	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
-	pglColor4fv(white);
+	pglColor4ubv(white);
 	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
 	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -2366,7 +2515,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	ClearBuffer(true, false, &clearColour);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
 
-	pglColor4fv(white);
+	pglColor4ubv(white);
 
 	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
 	pglVertexPointer(3, GL_FLOAT, 0, off);

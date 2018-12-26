@@ -1489,6 +1489,7 @@ void I_StartupGraphics(void)
 		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
 		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
+		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
 		HWD.pfnGetRenderVersion = hwSym("GetRenderVersion",NULL);
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
