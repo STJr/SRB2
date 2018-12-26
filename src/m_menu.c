@@ -1338,8 +1338,8 @@ static menuitem_t OP_GameOptionsMenu[] =
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                      NULL, "Master server",          &cv_masterserver,     10},
-#endif
 	{IT_STRING | IT_SUBMENU, NULL, "Chat Options...",     &OP_ChatOptionsDef,   40},
+#endif
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Visibility",         &cv_translucenthud, 60},
