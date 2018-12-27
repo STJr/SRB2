@@ -396,7 +396,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	if (!useFloat) // Decompress to MD3 'tinyframe' space
 	{
-		byte *ptr;
+		char *ptr;
 
 		md2triangle_t *trisPtr;
 		unsigned short *indexptr;
@@ -407,7 +407,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 		retModel->meshes[0].numVertices = header->numXYZ;
 		retModel->meshes[0].uvs = (float*)Z_Malloc(sizeof(float) * 2 * retModel->meshes[0].numVertices, ztag, 0);
 
-		ptr = (byte*)frames;
+		ptr = (char*)frames;
 		for (i = 0; i < header->numFrames; i++, ptr += header->framesize)
 		{
 			short *vertptr;
@@ -475,7 +475,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 		md2triangle_t *trisPtr;
 		float *uvptr;
 
-		byte *ptr;
+		char *ptr;
 
 		retModel->meshes[0].numVertices = header->numTris * 3;
 		retModel->meshes[0].frames = (mdlframe_t*)Z_Calloc(sizeof(mdlframe_t)*header->numFrames, ztag, 0);
@@ -493,7 +493,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 			*uvptr++ = (texcoords[trisPtr->stIndex[2]].t / (float)header->skinheight);
 		}
 
-		ptr = (byte*)frames;
+		ptr = (char*)frames;
 		for (i = 0; i < header->numFrames; i++, ptr += header->framesize)
 		{
 			float *vertptr, *normptr;
