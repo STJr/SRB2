@@ -309,7 +309,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	// read in file
 	buffer = malloc(fileLen);
-	fread(buffer, fileLen, 1, f);
+	if (fread(buffer, fileLen, 1, f)) { } // squash ignored fread error
 	fclose(f);
 
 	// get pointer to file header
