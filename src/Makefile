@@ -104,6 +104,7 @@ endif
 ifdef LINUX64
 LINUX=1
 NONX86=1
+64BIT=1
 endif
 
 ifdef HAIKU
@@ -178,6 +179,7 @@ endif #ifdef MINGW
 
 ifdef MINGW64
 MINGW=1
+64BIT=1
 include win32/Makefile.cfg
 endif #ifdef MINGW64
 
@@ -289,14 +291,13 @@ OPTS += -DCOMPVERSION
 ifndef NONX86
 ifndef GCC29
 	M5=-march=pentium
-	M4=-march=i486
 else
 	M5=-mpentium
-	M4=-m486
 endif
-else
+endif
+
+ifdef 64BIT
 	M5=-march=nocona
-	M4=-mnocona
 endif
 
 ifndef NOASM
