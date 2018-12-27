@@ -1653,8 +1653,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	GLfloat diffuse[4];
 
 	float pol = 0.0f;
-	scale *= 0.5f;
-	float scalex = scale, scaley = scale, scalez = scale;
+	float scalex, scaley, scalez;
 
 	boolean useTinyFrames;
 
@@ -1662,6 +1661,12 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
 	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
+
+	// Affect input model scaling
+	scale *= 0.5f;
+	scalex = scale;
+	scaley = scale;
+	scalez = scale;
 
 	if (duration != 0 && duration != -1 && tics != -1) // don't interpolate if instantaneous or infinite in length
 	{
@@ -1780,11 +1785,15 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			}
 			else
 			{
+				short *vertPtr;
+				char *normPtr;
+				int j;
+
 				// Dangit, I soooo want to do this in a GLSL shader...
 				AllocLerpTinyBuffer(mesh->numVertices * sizeof(short) * 3);
-				short *vertPtr = vertTinyBuffer;
-				char *normPtr = normTinyBuffer;
-				int j = 0;
+				vertPtr = vertTinyBuffer;
+				normPtr = normTinyBuffer;
+				j = 0;
 
 				for (j = 0; j < mesh->numVertices * 3; j++)
 				{
@@ -1817,10 +1826,13 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			}
 			else
 			{
+				float *vertPtr;
+				float *normPtr;
+
 				// Dangit, I soooo want to do this in a GLSL shader...
 				AllocLerpBuffer(mesh->numVertices * sizeof(float) * 3);
-				float *vertPtr = vertBuffer;
-				float *normPtr = normBuffer;
+				vertPtr = vertBuffer;
+				normPtr = normBuffer;
 				int j = 0;
 
 				for (j = 0; j < mesh->numVertices * 3; j++)
@@ -1939,6 +1951,14 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 	float xfix, yfix;
 	INT32 texsize = 2048;
 
+	const float blackBack[16] =
+	{
+		-16.0f, -16.0f, 6.0f,
+		-16.0f, 16.0f, 6.0f,
+		16.0f, 16.0f, 6.0f,
+		16.0f, -16.0f, 6.0f
+	};
+
 	// Use a power of two texture, dammit
 	if(screen_width <= 1024)
 		texsize = 1024;
@@ -1952,13 +1972,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 	pglDisable(GL_DEPTH_TEST);
 	pglDisable(GL_BLEND);
 
-	const float blackBack[16] =
-	{
-		-16.0f, -16.0f, 6.0f,
-		-16.0f, 16.0f, 6.0f,
-		16.0f, 16.0f, 6.0f,
-		16.0f, -16.0f, 6.0f
-	};
+	// const float blackBack[16]
 
 	pglEnableClientState(GL_VERTEX_ARRAY);
 
@@ -1974,6 +1988,9 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 		{
 			for(y=0;y<SCREENVERTS-1;y++)
 			{
+				float stCoords[8];
+				float vertCoords[12];
+
 				// Used for texture coordinates
 				// Annoying magic numbers to scale the square texture to
 				// a non-square screen..
@@ -1982,7 +1999,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 				float_nextx = (float)(x+1)/(xfix);
 				float_nexty = (float)(y+1)/(yfix);
 
-				float stCoords[8];
+				// float stCoords[8];
 				stCoords[0] = float_x;
 				stCoords[1] = float_y;
 				stCoords[2] = float_x;
@@ -1994,7 +2011,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 
 				pglTexCoordPointer(2, GL_FLOAT, 0, stCoords);
 
-				float vertCoords[12];
+				// float vertCoords[12];
 				vertCoords[0] = points[x][y][0];
 				vertCoords[1] = points[x][y][1];
 				vertCoords[2] = 4.4f;
@@ -2104,14 +2121,6 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 	float xfix, yfix;
 	INT32 texsize = 2048;
 
-	if(screen_width <= 1024)
-		texsize = 1024;
-	if(screen_width <= 512)
-		texsize = 512;
-
-	xfix = 1/((float)(texsize)/((float)((screen_width))));
-	yfix = 1/((float)(texsize)/((float)((screen_height))));
-
 	const float screenVerts[12] =
 	{
 		-1.0f, -1.0f, 1.0f,
@@ -2121,6 +2130,18 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 	};
 
 	float fix[8];
+
+	if(screen_width <= 1024)
+		texsize = 1024;
+	if(screen_width <= 512)
+		texsize = 512;
+
+	xfix = 1/((float)(texsize)/((float)((screen_width))));
+	yfix = 1/((float)(texsize)/((float)((screen_height))));
+
+	// const float screenVerts[12]
+
+	// float fix[8];
 	fix[0] = 0.0f;
 	fix[1] = 0.0f;
 	fix[2] = 0.0f;
@@ -2154,6 +2175,24 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 	INT32 fademaskdownloaded = tex_downloaded; // the fade mask that has been set
 
+	const float screenVerts[12] =
+	{
+		-1.0f, -1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f, -1.0f, 1.0f
+	};
+
+	float fix[8];
+
+	const float defaultST[8] =
+	{
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+		1.0f, 0.0f,
+		1.0f, 1.0f
+	};
+
 	(void)alpha;
 
 	// Use a power of two texture, dammit
@@ -2165,15 +2204,9 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 	xfix = 1/((float)(texsize)/((float)((screen_width))));
 	yfix = 1/((float)(texsize)/((float)((screen_height))));
 
-	const float screenVerts[12] =
-	{
-		-1.0f, -1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f, -1.0f, 1.0f
-	};
+	// const float screenVerts[12]
 
-	float fix[8];
+	// float fix[8];
 	fix[0] = 0.0f;
 	fix[1] = 0.0f;
 	fix[2] = 0.0f;
@@ -2210,13 +2243,7 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 	pglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	const float defaultST[8] =
-	{
-		0.0f, 1.0f,
-		0.0f, 0.0f,
-		1.0f, 0.0f,
-		1.0f, 1.0f
-	};
+	// const float defaultST[8]
 
 	pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -2307,6 +2334,9 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	FRGBAFloat clearColour;
 	INT32 texsize = 2048;
 
+	float off[12];
+	float fix[8];
+
 	if(screen_width <= 1024)
 		texsize = 1024;
 	if(screen_width <= 512)
@@ -2328,7 +2358,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 		yoff = newaspect / origaspect;
 	}
 
-	float off[12];
+	// float off[12];
 	off[0] = -xoff;
 	off[1] = -yoff;
 	off[2] = 1.0f;
@@ -2342,7 +2372,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	off[10] = -yoff;
 	off[11] = 1.0f;
 
-	float fix[8];
+	// float fix[8];
 	fix[0] = 0.0f;
 	fix[1] = 0.0f;
 	fix[2] = 0.0f;
