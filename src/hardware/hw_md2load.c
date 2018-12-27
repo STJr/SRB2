@@ -233,6 +233,8 @@ typedef struct
 // Load the model
 model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 {
+	FILE *f;
+
 	model_t *retModel = NULL;
 	md2header_t *header;
 
@@ -246,6 +248,10 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	const float WUNITS = 1.0f;
 	float dataScale = WUNITS;
+
+	md2triangle_t *tris;
+	md2texcoord_t *texcoords;
+	md2frame_t *frames;
 
 	int t;
 
@@ -263,7 +269,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 	useFloat = true;
 
-	FILE *f = fopen(fileName, "rb");
+	f = fopen(fileName, "rb");
 
 	if (!f)
 		return NULL;
@@ -316,9 +322,9 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	// float dataScale = WUNITS;
 
 	// Tris and ST are simple structures that can be straight-copied
-	md2triangle_t *tris = (md2triangle_t*)&buffer[header->offsetTris];
-	md2texcoord_t *texcoords = (md2texcoord_t*)&buffer[header->offsetST];
-	md2frame_t *frames = (md2frame_t*)&buffer[header->offsetFrames];
+	tris = (md2triangle_t*)&buffer[header->offsetTris];
+	texcoords = (md2texcoord_t*)&buffer[header->offsetST];
+	frames = (md2frame_t*)&buffer[header->offsetFrames];
 
 	// Read in textures
 	retModel->numMaterials = header->numSkins;

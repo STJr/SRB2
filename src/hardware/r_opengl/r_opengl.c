@@ -1828,12 +1828,13 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			{
 				float *vertPtr;
 				float *normPtr;
+				int j = 0;
 
 				// Dangit, I soooo want to do this in a GLSL shader...
 				AllocLerpBuffer(mesh->numVertices * sizeof(float) * 3);
 				vertPtr = vertBuffer;
 				normPtr = normBuffer;
-				int j = 0;
+				//int j = 0;
 
 				for (j = 0; j < mesh->numVertices * 3; j++)
 				{
