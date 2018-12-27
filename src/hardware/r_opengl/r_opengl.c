@@ -67,8 +67,10 @@ static float NEAR_CLIPPING_PLANE =   NZCLIP_PLANE;
 static  GLuint      NextTexAvail    = FIRST_TEX_AVAIL;
 static  GLuint      tex_downloaded  = 0;
 static  GLfloat     fov             = 90.0f;
+#if 0
 static  GLuint      pal_col         = 0;
 static  FRGBAFloat  const_pal_col;
+#endif
 static  FBITFIELD   CurrentPolyFlags;
 
 static  FTextureInfo*  gr_cachetail = NULL;
@@ -997,7 +999,7 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 	p[9] = v1->x + dx;  p[10] = -(v1->y - dy); p[11] = 1;
 
 	pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	pglColor4ubv((GLbyte*)&Color);
+	pglColor4ubv((GLubyte*)&Color);
 	pglVertexPointer(3, GL_FLOAT, 0, p);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -1403,7 +1405,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 
 	// If Modulated, mix the surface colour to the texture
 	if ((CurrentPolyFlags & PF_Modulated) && pSurf)
-		pglColor4ubv(&pSurf->FlatColor.s);
+		pglColor4ubv((GLubyte*)&pSurf->FlatColor.s);
 
 	// this test is added for new coronas' code (without depth buffer)
 	// I think I should do a separate function for drawing coronas, so it will be a little faster
