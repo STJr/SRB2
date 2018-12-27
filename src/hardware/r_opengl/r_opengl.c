@@ -33,7 +33,6 @@
 #include "r_vbo.h"
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
-// for KOS: GL_TEXTURE_ENV, glAlphaFunc, glColorMask, glPolygonOffset, glReadPixels, GL_ALPHA_TEST, GL_POLYGON_OFFSET_FILL
 
 struct GLRGBAFloat
 {
@@ -91,15 +90,9 @@ static FTransform  md2_transform;
 const GLubyte *gl_extensions = NULL;
 
 //Hurdler: 04/10/2000: added for the kick ass coronas as Boris wanted;-)
-static GLdouble    modelMatrix[16];
-static GLdouble    projMatrix[16];
+static GLfloat    modelMatrix[16];
+static GLfloat    projMatrix[16];
 static GLint       viewport[4];
-
-
-#ifdef USE_PALETTED_TEXTURE
-	PFNGLCOLORTABLEEXTPROC  glColorTableEXT = NULL;
-	GLubyte                 palette_tex[256*3];
-#endif
 
 // Yay for arbitrary  numbers! NextTexAvail is buggy for some reason.
 // Sryder:	NextTexAvail is broken for these because palette changes or changes to the texture filter or antialiasing
@@ -192,12 +185,11 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglAlphaFunc glAlphaFunc
 #define pglBlendFunc glBlendFunc
 #define pglCullFace glCullFace
-#define pglPolygonMode glPolygonMode
 #define pglPolygonOffset glPolygonOffset
 #define pglScissor glScissor
 #define pglEnable glEnable
 #define pglDisable glDisable
-#define pglGetDoublev glGetDoublev
+#define pglGetFloatv glGetFloatv
 //glGetIntegerv
 //glGetString
 #define pglHint glHint
@@ -215,25 +207,12 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglPopMatrix glPopMatrix
 #define pglLoadIdentity glLoadIdentity
 #define pglMultMatrixf glMultMatrixf
-#define pglMultMatrixd glMultMatrixd
 #define pglRotatef glRotatef
 #define pglScalef glScalef
 #define pglTranslatef glTranslatef
 
 /* Drawing Functions */
-#define pglBegin glBegin
-#define pglEnd glEnd
-#define pglVertex3f glVertex3f
-#define pglVertex3fv glVertex3fv
-#define pglVertex3sv glVertex3sv
-#define pglNormal3f glNormal3f
-#define pglNormal3bv glNormal3bv
-#define pglColor4f glColor4f
-#define pglColor4fv glColor4fv
-#define pglColor4ub glColor4ub
 #define pglColor4ubv glColor4ubv
-#define pglTexCoord2f glTexCoord2f
-#define pglTexCoord2fv glTexCoord2fv
 #define pglVertexPointer glVertexPointer
 #define pglNormalPointer glNormalPointer
 #define pglTexCoordPointer glTexCoordPointer
@@ -289,8 +268,6 @@ typedef void (APIENTRY * PFNglBlendFunc) (GLenum sfactor, GLenum dfactor);
 static PFNglBlendFunc pglBlendFunc;
 typedef void (APIENTRY * PFNglCullFace) (GLenum mode);
 static PFNglCullFace pglCullFace;
-typedef void (APIENTRY * PFNglPolygonMode) (GLenum face, GLenum mode);
-static PFNglPolygonMode pglPolygonMode;
 typedef void (APIENTRY * PFNglPolygonOffset) (GLfloat factor, GLfloat units);
 static PFNglPolygonOffset pglPolygonOffset;
 typedef void (APIENTRY * PFNglScissor) (GLint x, GLint y, GLsizei width, GLsizei height);
@@ -299,8 +276,8 @@ typedef void (APIENTRY * PFNglEnable) (GLenum cap);
 static PFNglEnable pglEnable;
 typedef void (APIENTRY * PFNglDisable) (GLenum cap);
 static PFNglDisable pglDisable;
-typedef void (APIENTRY * PFNglGetDoublev) (GLenum pname, GLdouble *params);
-static PFNglGetDoublev pglGetDoublev;
+typedef void (APIENTRY * PFNglGetFloatv) (GLenum pname, GLfloat *params);
+static PFNglGetFloatv pglGetFloatv;
 //glGetIntegerv
 //glGetString
 
@@ -327,8 +304,6 @@ typedef void (APIENTRY * PFNglLoadIdentity) (void);
 static PFNglLoadIdentity pglLoadIdentity;
 typedef void (APIENTRY * PFNglMultMatrixf) (const GLfloat *m);
 static PFNglMultMatrixf pglMultMatrixf;
-typedef void (APIENTRY * PFNglMultMatrixd) (const GLdouble *m);
-static PFNglMultMatrixd pglMultMatrixd;
 typedef void (APIENTRY * PFNglRotatef) (GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
 static PFNglRotatef pglRotatef;
 typedef void (APIENTRY * PFNglScalef) (GLfloat x, GLfloat y, GLfloat z);
@@ -337,32 +312,8 @@ typedef void (APIENTRY * PFNglTranslatef) (GLfloat x, GLfloat y, GLfloat z);
 static PFNglTranslatef pglTranslatef;
 
 /* Drawing Functions */
-typedef void (APIENTRY * PFNglBegin) (GLenum mode);
-static PFNglBegin pglBegin;
-typedef void (APIENTRY * PFNglEnd) (void);
-static PFNglEnd pglEnd;
-typedef void (APIENTRY * PFNglVertex3f) (GLfloat x, GLfloat y, GLfloat z);
-static PFNglVertex3f pglVertex3f;
-typedef void (APIENTRY * PFNglVertex3fv)(const GLfloat *v);
-static PFNglVertex3fv pglVertex3fv;
-typedef void (APIENTRY * PFNglVertex3sv) (const GLshort *v);
-static PFNglVertex3sv pglVertex3sv;
-typedef void (APIENTRY * PFNglNormal3f) (GLfloat x, GLfloat y, GLfloat z);
-static PFNglNormal3f pglNormal3f;
-typedef void (APIENTRY * PFNglNormal3bv)(const GLbyte *v);
-static PFNglNormal3bv pglNormal3bv;
-typedef void (APIENTRY * PFNglColor4f) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-static PFNglColor4f pglColor4f;
-typedef void (APIENTRY * PFNglColor4fv) (const GLfloat *v);
-static PFNglColor4fv pglColor4fv;
-typedef void (APIENTRY * PFNglColor4ub) (GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
-static PFNglColor4ub pglColor4ub;
 typedef void (APIENTRY * PFNglColor4ubv) (const GLubyte *v);
 static PFNglColor4ubv pglColor4ubv;
-typedef void (APIENTRY * PFNglTexCoord2f) (GLfloat s, GLfloat t);
-static PFNglTexCoord2f pglTexCoord2f;
-typedef void (APIENTRY * PFNglTexCoord2fv) (const GLfloat *v);
-static PFNglTexCoord2fv pglTexCoord2fv;
 typedef void (APIENTRY * PFNglVertexPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 static PFNglVertexPointer pglVertexPointer;
 typedef void (APIENTRY * PFNglNormalPointer) (GLenum type, GLsizei stride, const GLvoid *pointer);
@@ -475,19 +426,18 @@ boolean SetupGLfunc(void)
 
 	GETOPENGLFUNC(pglClearColor, glClearColor)
 
-	GETOPENGLFUNC(pglClear , glClear)
-	GETOPENGLFUNC(pglColorMask , glColorMask)
-	GETOPENGLFUNC(pglAlphaFunc , glAlphaFunc)
-	GETOPENGLFUNC(pglBlendFunc , glBlendFunc)
-	GETOPENGLFUNC(pglCullFace , glCullFace)
-	GETOPENGLFUNC(pglPolygonMode , glPolygonMode)
-	GETOPENGLFUNC(pglPolygonOffset , glPolygonOffset)
-	GETOPENGLFUNC(pglScissor , glScissor)
-	GETOPENGLFUNC(pglEnable , glEnable)
-	GETOPENGLFUNC(pglDisable , glDisable)
-	GETOPENGLFUNC(pglGetDoublev , glGetDoublev)
-	GETOPENGLFUNC(pglGetIntegerv , glGetIntegerv)
-	GETOPENGLFUNC(pglGetString , glGetString)
+	GETOPENGLFUNC(pglClear, glClear)
+	GETOPENGLFUNC(pglColorMask, glColorMask)
+	GETOPENGLFUNC(pglAlphaFunc, glAlphaFunc)
+	GETOPENGLFUNC(pglBlendFunc, glBlendFunc)
+	GETOPENGLFUNC(pglCullFace, glCullFace)
+	GETOPENGLFUNC(pglPolygonOffset, glPolygonOffset)
+	GETOPENGLFUNC(pglScissor, glScissor)
+	GETOPENGLFUNC(pglEnable, glEnable)
+	GETOPENGLFUNC(pglDisable, glDisable)
+	GETOPENGLFUNC(pglGetFloatv, glGetFloatv)
+	GETOPENGLFUNC(pglGetIntegerv, glGetIntegerv)
+	GETOPENGLFUNC(pglGetString, glGetString)
 
 	GETOPENGLFUNC(pglClearDepth , glClearDepth)
 	GETOPENGLFUNC(pglDepthFunc , glDepthFunc)
@@ -500,24 +450,11 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglPopMatrix , glPopMatrix)
 	GETOPENGLFUNC(pglLoadIdentity , glLoadIdentity)
 	GETOPENGLFUNC(pglMultMatrixf , glMultMatrixf)
-	GETOPENGLFUNC(pglMultMatrixd , glMultMatrixd)
 	GETOPENGLFUNC(pglRotatef , glRotatef)
 	GETOPENGLFUNC(pglScalef , glScalef)
 	GETOPENGLFUNC(pglTranslatef , glTranslatef)
 
-	GETOPENGLFUNC(pglBegin , glBegin)
-	GETOPENGLFUNC(pglEnd , glEnd)
-	GETOPENGLFUNC(pglVertex3f , glVertex3f)
-	GETOPENGLFUNC(pglVertex3fv, glVertex3fv)
-	GETOPENGLFUNC(pglVertex3sv, glVertex3sv)
-	GETOPENGLFUNC(pglNormal3f , glNormal3f)
-	GETOPENGLFUNC(pglNormal3bv, glNormal3bv)
-	GETOPENGLFUNC(pglColor4f , glColor4f)
-	GETOPENGLFUNC(pglColor4fv , glColor4fv)
-	GETOPENGLFUNC(pglColor4ub, glColor4ub)
 	GETOPENGLFUNC(pglColor4ubv, glColor4ubv)
-	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
-	GETOPENGLFUNC(pglTexCoord2fv, glTexCoord2fv)
 	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
 	GETOPENGLFUNC(pglNormalPointer, glNormalPointer)
 	GETOPENGLFUNC(pglTexCoordPointer, glTexCoordPointer)
@@ -584,40 +521,40 @@ static void SetNoTexture(void)
 	}
 }
 
-static void GLPerspective(GLdouble fovy, GLdouble aspect)
+static void GLPerspective(GLfloat fovy, GLfloat aspect)
 {
-	GLdouble m[4][4] =
+	GLfloat m[4][4] =
 	{
 		{ 1.0f, 0.0f, 0.0f, 0.0f},
 		{ 0.0f, 1.0f, 0.0f, 0.0f},
 		{ 0.0f, 0.0f, 1.0f,-1.0f},
 		{ 0.0f, 0.0f, 0.0f, 0.0f},
 	};
-	const GLdouble zNear = NEAR_CLIPPING_PLANE;
-	const GLdouble zFar = FAR_CLIPPING_PLANE;
-	const GLdouble radians = (GLdouble)(fovy / 2.0f * M_PIl / 180.0f);
-	const GLdouble sine = sin(radians);
-	const GLdouble deltaZ = zFar - zNear;
-	GLdouble cotangent;
+	const GLfloat zNear = NEAR_CLIPPING_PLANE;
+	const GLfloat zFar = FAR_CLIPPING_PLANE;
+	const GLfloat radians = (GLfloat)(fovy / 2.0f * M_PIl / 180.0f);
+	const GLfloat sine = sinf(radians);
+	const GLfloat deltaZ = zFar - zNear;
+	GLfloat cotangent;
 
 	if ((fabsf((float)deltaZ) < 1.0E-36f) || fpclassify(sine) == FP_ZERO || fpclassify(aspect) == FP_ZERO)
 	{
 		return;
 	}
-	cotangent = cos(radians) / sine;
+	cotangent = cosf(radians) / sine;
 
 	m[0][0] = cotangent / aspect;
 	m[1][1] = cotangent;
 	m[2][2] = -(zFar + zNear) / deltaZ;
 	m[3][2] = -2.0f * zNear * zFar / deltaZ;
 
-	pglMultMatrixd(&m[0][0]);
+	pglMultMatrixf(&m[0][0]);
 }
 
-static void GLProject(GLdouble objX, GLdouble objY, GLdouble objZ,
-                      GLdouble* winX, GLdouble* winY, GLdouble* winZ)
+static void GLProject(GLfloat objX, GLfloat objY, GLfloat objZ,
+                      GLfloat* winX, GLfloat* winY, GLfloat* winZ)
 {
-	GLdouble in[4], out[4];
+	GLfloat in[4], out[4];
 	int i;
 
 	for (i=0; i<4; i++)
@@ -684,7 +621,7 @@ void SetModelView(GLint w, GLint h)
 
 	// added for new coronas' code (without depth buffer)
 	pglGetIntegerv(GL_VIEWPORT, viewport);
-	pglGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
+	pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix);
 }
 
 
@@ -746,8 +683,6 @@ void SetStates(void)
 
 	//pglEnable(GL_CULL_FACE);
 	//pglCullFace(GL_FRONT);
-	//pglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//pglPolygonMode(GL_FRONT, GL_LINE);
 
 	//glFogi(GL_FOG_MODE, GL_EXP);
 	//pglHint(GL_FOG_HINT, GL_FASTEST);
@@ -763,7 +698,7 @@ void SetStates(void)
 	// bp : when no t&l :)
 	pglLoadIdentity();
 	pglScalef(1.0f, 1.0f, -1.0f);
-	pglGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
+	pglGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
 }
 
 
@@ -929,7 +864,7 @@ EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, f
 
 	// added for new coronas' code (without depth buffer)
 	pglGetIntegerv(GL_VIEWPORT, viewport);
-	pglGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
+	pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix);
 }
 
 
@@ -1191,17 +1126,6 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 		w = pTexInfo->width;
 		h = pTexInfo->height;
 
-#ifdef USE_PALETTED_TEXTURE
-		if (glColorTableEXT &&
-			(pTexInfo->grInfo.format == GR_TEXFMT_P_8) &&
-			!(pTexInfo->flags & TF_CHROMAKEYED))
-		{
-			// do nothing here.
-			// Not a problem with MiniGL since we don't use paletted texture
-		}
-		else
-#endif
-
 		if ((pTexInfo->grInfo.format == GR_TEXFMT_P_8) ||
 			(pTexInfo->grInfo.format == GR_TEXFMT_AP_88))
 		{
@@ -1413,8 +1337,8 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 	{
 		//rem: all 8 (or 8.0f) values are hard coded: it can be changed to a higher value
 		GLfloat     buf[8][8];
-		GLdouble    cx, cy, cz;
-		GLdouble    px = 0.0f, py = 0.0f, pz = -1.0f;
+		GLfloat    cx, cy, cz;
+		GLfloat    px = 0.0f, py = 0.0f, pz = -1.0f;
 		GLfloat     scalef = 0.0f;
 
 		GLubyte c[4];
@@ -2052,10 +1976,10 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 		fovx90 = stransform->fovxangle > 0.0f && fabsf(stransform->fovxangle - 90.0f) < 0.5f;
 		special_splitscreen = (stransform->splitscreen && fovx90);
 		if (special_splitscreen)
-			GLPerspective(53.13l, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
+			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
 		else
 			GLPerspective(stransform->fovxangle, ASPECT_RATIO);
-		pglGetDoublev(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
+		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
 		pglMatrixMode(GL_MODELVIEW);
 	}
 	else
@@ -2065,15 +1989,15 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 		pglMatrixMode(GL_PROJECTION);
 		pglLoadIdentity();
 		if (special_splitscreen)
-			GLPerspective(53.13l, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
+			GLPerspective(53.13f, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
 		else
 			//Hurdler: is "fov" correct?
 			GLPerspective(fov, ASPECT_RATIO);
-		pglGetDoublev(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
+		pglGetFloatv(GL_PROJECTION_MATRIX, projMatrix); // added for new coronas' code (without depth buffer)
 		pglMatrixMode(GL_MODELVIEW);
 	}
 
-	pglGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
+	pglGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix); // added for new coronas' code (without depth buffer)
 }
 
 EXPORT INT32  HWRAPI(GetTextureUsed) (void)
@@ -2308,7 +2232,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 }
 
 // Do screen fades!
-EXPORT void HWRAPI(DoScreenWipe)(float alpha)
+EXPORT void HWRAPI(DoScreenWipe)()
 {
 	INT32 texsize = 2048;
 	float xfix, yfix;
