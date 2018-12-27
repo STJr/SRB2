@@ -1417,6 +1417,10 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 		GLdouble    px = 0.0f, py = 0.0f, pz = -1.0f;
 		GLfloat     scalef = 0.0f;
 
+		GLubyte c[4];
+
+		float alpha;
+
 		cx = (pOutVerts[0].x + pOutVerts[2].x) / 2.0f; // we should change the coronas' ...
 		cy = (pOutVerts[0].y + pOutVerts[2].y) / 2.0f; // ... code so its only done once.
 		cz = pOutVerts[0].z;
@@ -1452,12 +1456,12 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 		if (scalef < 0.05f)
 			return;
 
-		GLubyte c[4];
+		// GLubyte c[4];
 		c[0] = pSurf->FlatColor.s.red;
 		c[1] = pSurf->FlatColor.s.green;
 		c[2] = pSurf->FlatColor.s.blue;
 
-		float alpha = byte2float[pSurf->FlatColor.s.alpha];
+		alpha = byte2float[pSurf->FlatColor.s.alpha];
 		alpha *= scalef; // change the alpha value (it seems better than changing the size of the corona)
 		c[3] = (unsigned char)(alpha * 255);
 		pglColor4ubv(c);
@@ -1916,7 +1920,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
 				pglVertexPointer(3, GL_SHORT, sizeof(vbotiny_t), BUFFER_OFFSET(0));
 				pglNormalPointer(GL_BYTE, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short)*3));
-				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short) * 3 + sizeof(byte) * 6));
+				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short) * 3 + sizeof(char) * 6));
 
 				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
 				pglBindBuffer(GL_ARRAY_BUFFER, 0);

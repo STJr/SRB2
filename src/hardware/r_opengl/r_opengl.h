@@ -118,8 +118,10 @@ typedef void (APIENTRY * PFNglGetIntegerv) (GLenum pname, GLint *params);
 extern PFNglGetIntegerv pglGetIntegerv;
 typedef const GLubyte* (APIENTRY  * PFNglGetString) (GLenum name);
 extern PFNglGetString pglGetString;
-typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
+#if 0
+typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap); // redefined in r_opengl.c
 static PFNglEnableClientState pglEnableClientState;
+#endif
 #endif
 
 // ==========================================================================
