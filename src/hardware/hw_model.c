@@ -412,7 +412,9 @@ void GenerateVertexNormals(model_t *model)
 					testY = *testPtr++;
 					testZ = *testPtr++;
 
-					if (x != testX || y != testY || z != testZ)
+					if (fabsf(x - testX) > FLT_EPSILON
+						|| fabsf(y - testY) > FLT_EPSILON
+						|| fabsf(z - testZ) > FLT_EPSILON)
 						continue;
 
 					// Found a vertex match! Add it...

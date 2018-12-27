@@ -965,7 +965,7 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 	c.alpha = byte2float[Color.s.alpha];
 
 	// This is the preferred, 'modern' way of rendering lines -- creating a polygon.
-	if (v2->x != v1->x)
+	if (fabsf(v2->x - v1->x) > FLT_EPSILON)
 		angle = (float)atan((v2->y-v1->y)/(v2->x-v1->x));
 	else
 		angle = (float)N_PI_DEMI;
@@ -1771,7 +1771,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			if (nextFrameIndex != -1)
 				nextframe = &mesh->tinyframes[nextFrameIndex % mesh->numFrames];
 
-			if (!nextframe || pol == 0.0f)
+			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
 				pglVertexPointer(3, GL_SHORT, 0, frame->vertices);
 				pglNormalPointer(GL_BYTE, 0, frame->normals);
@@ -2153,6 +2153,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 	float xfix, yfix;
 
 	INT32 fademaskdownloaded = tex_downloaded; // the fade mask that has been set
+
+	(void)alpha;
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 1024)
