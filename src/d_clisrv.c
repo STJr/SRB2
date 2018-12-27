@@ -2762,7 +2762,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		msg = KICK_MSG_CON_FAIL;
 	}
 
-	CONS_Printf("\x82%s ", player_names[pnum]);
+	//CONS_Printf("\x82%s ", player_names[pnum]);
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
@@ -2779,17 +2779,17 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
-			CONS_Printf(M_GetText("has been kicked (Go away)\n"));
+			HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 #ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
-			CONS_Printf(M_GetText("left the game (Broke ping limit)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Broke ping limit)", player_names[pnum]), false);
 			kickreason = KR_PINGLIMIT;
 			break;
 #endif
 		case KICK_MSG_CON_FAIL:
-			CONS_Printf(M_GetText("left the game (Synch failure)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
@@ -2826,26 +2826,26 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			}
 			break;
 		case KICK_MSG_TIMEOUT:
-			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Connection timeout)", player_names[pnum]), false);
 			kickreason = KR_TIMEOUT;
 			break;
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
-				CONS_Printf(M_GetText("left the game\n"));
+				HU_AddChatText(va("\x82*%s left the game", player_names[pnum]), false);
 			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
+			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
 			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
-			CONS_Printf(M_GetText("has been kicked (%s)\n"), reason);
+			HU_AddChatText(va("\x82*%s has been kicked (%s)", player_names[pnum], reason), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_CUSTOM_BAN:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
-			CONS_Printf(M_GetText("has been banned (%s)\n"), reason);
+			HU_AddChatText(va("\x82*%s has been banned (%s)", player_names[pnum], reason), false);
 			kickreason = KR_BAN;
 			break;
 	}
@@ -3119,9 +3119,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
 
-	if (netgame)
-		CONS_Printf(M_GetText("Player %d has joined the game (node %d)\n"), newplayernum+1, node);
-
 	// the server is creating my player
 	if (node == mynode)
 	{
@@ -3143,11 +3140,17 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		D_SendPlayerConfig();
 		addedtogame = true;
 	}
-	else if (server && netgame && cv_showjoinaddress.value)
+
+	if (netgame)
 	{
-		const char *address;
-		if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-			CONS_Printf(M_GetText("Player Address is %s\n"), address);
+		if (server && cv_showjoinaddress.value)
+		{
+			const char *address;
+			if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
+				HU_AddChatText(va("\x82*Player %d has joined the game (node %d) (%s)", newplayernum+1, node, address), false);	// merge join notification + IP to avoid clogging console/chat.
+		}
+		else
+			HU_AddChatText(va("\x82*Player %d has joined the game (node %d)", newplayernum+1, node), false);	// if you don't wanna see the join address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')

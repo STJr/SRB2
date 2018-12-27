@@ -160,10 +160,11 @@ INT32 G_KeyStringtoNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
+void G_ClearAllControlKeys(void);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
 void G_Controldefault(void);
 void G_SaveKeySetting(FILE *f);
-void G_CheckDoubleUsage(INT32 keynum);
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
 
 #endif

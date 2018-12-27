@@ -541,7 +541,7 @@ boolean SetupGLFunc13(void)
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");
 	pglClientActiveTexture = GetGLFunc("glClientActiveTexture");
 	pglMultiTexCoord2fv = GetGLFunc("glMultiTexCoord2fv");
-	
+
 	return true;
 }
 
@@ -574,7 +574,8 @@ static void GLPerspective(GLdouble fovy, GLdouble aspect)
 	const GLdouble deltaZ = zFar - zNear;
 	GLdouble cotangent;
 
-	if ((deltaZ == 0.0f) || (sine == 0.0f) || (aspect == 0.0f)) {
+	if ((fabsf((float)deltaZ) < 1.0E-36f) || fpclassify(sine) == FP_ZERO || fpclassify(aspect) == FP_ZERO)
+	{
 		return;
 	}
 	cotangent = cos(radians) / sine;
@@ -609,7 +610,7 @@ static void GLProject(GLdouble objX, GLdouble objY, GLdouble objZ,
 			out[2] * projMatrix[2*4+i] +
 			out[3] * projMatrix[3*4+i];
 	}
-	if (in[3] == 0.0f) return;
+	if (fpclassify(in[3]) == FP_ZERO) return;
 	in[0] /= in[3];
 	in[1] /= in[3];
 	in[2] /= in[3];
@@ -1806,7 +1807,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 			if (nextFrameIndex != -1)
 				nextframe = &mesh->frames[nextFrameIndex % mesh->numFrames];
 
-			if (!nextframe || pol == 0.0f)
+			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
 				// Zoom! Take advantage of just shoving the entire arrays to the GPU.
 				pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
@@ -1865,6 +1866,7 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	pglLoadIdentity();
 	if (stransform)
 	{
+		boolean fovx90;
 		// keep a trace of the transformation for md2
 		memcpy(&md2_transform, stransform, sizeof (md2_transform));
 
@@ -1885,7 +1887,8 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 
 		pglMatrixMode(GL_PROJECTION);
 		pglLoadIdentity();
-		special_splitscreen = (stransform->splitscreen == 1 && stransform->fovxangle == 90.0f);
+		fovx90 = stransform->fovxangle > 0.0f && fabsf(stransform->fovxangle - 90.0f) < 0.5f;
+		special_splitscreen = (stransform->splitscreen && fovx90);
 		if (special_splitscreen)
 			GLPerspective(53.13l, 2*ASPECT_RATIO);  // 53.13 = 2*atan(0.5)
 		else
@@ -1962,7 +1965,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 		// Draw a black square behind the screen texture,
 		// so nothing shows through the edges
 		pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		
+
 		pglVertexPointer(3, GL_FLOAT, 0, blackBack);
 		pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -2353,7 +2356,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	clearColour.alpha = 1;
 	ClearBuffer(true, false, &clearColour);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
-	
+
 	pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 	pglEnableClientState(GL_VERTEX_ARRAY);
 	pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -2365,7 +2368,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 
 	pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	pglDisableClientState(GL_VERTEX_ARRAY);
-	
+
 	tex_downloaded = finalScreenTexture;
 }
 

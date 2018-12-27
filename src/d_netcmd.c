@@ -38,6 +38,7 @@
 #include "d_main.h"
 #include "m_random.h"
 #include "f_finale.h"
+#include "filesrch.h"
 #include "mserv.h"
 #include "md5.h"
 #include "z_zone.h"
@@ -673,6 +674,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_usegamma);
 
 	// m_menu.c
+	CV_RegisterVar(&cv_compactscoreboard);
+	CV_RegisterVar(&cv_chatheight);
+	CV_RegisterVar(&cv_chatwidth);
+	CV_RegisterVar(&cv_chattime);
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatbacktint);
+	CV_RegisterVar(&cv_consolechat);
+	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
 	CV_RegisterVar(&cv_alwaysfreelook);
@@ -689,10 +698,22 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_moveaxis2);
 	CV_RegisterVar(&cv_lookaxis);
 	CV_RegisterVar(&cv_lookaxis2);
+	CV_RegisterVar(&cv_jumpaxis);
+	CV_RegisterVar(&cv_jumpaxis2);
+	CV_RegisterVar(&cv_spinaxis);
+	CV_RegisterVar(&cv_spinaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
 	CV_RegisterVar(&cv_firenaxis2);
+
+	// filesrch.c
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
+	CV_RegisterVar(&cv_addons_md5);
+	CV_RegisterVar(&cv_addons_showall);
+	CV_RegisterVar(&cv_addons_search_type);
+	CV_RegisterVar(&cv_addons_search_case);
 
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
@@ -984,8 +1005,8 @@ static void SetPlayerName(INT32 playernum, char *newname)
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
 			if (netgame)
-				CONS_Printf(M_GetText("%s renamed to %s\n"),
-					player_names[playernum], newname);
+				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
+
 			strcpy(player_names[playernum], newname);
 		}
 	}
@@ -3143,25 +3164,12 @@ static void Command_Addfile(void)
 			break;
 	++p;
 	// check total packet size and no of files currently loaded
+	// See W_LoadWadFile in w_wad.c
+	if ((numwadfiles >= MAX_WADFILES)
+	|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 	{
-		size_t packetsize = 0;
-		serverinfo_pak *dummycheck = NULL;
-
-		// Shut the compiler up.
-		(void)dummycheck;
-
-		// See W_LoadWadFile in w_wad.c
-		for (i = 0; i < numwadfiles; i++)
-			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-		packetsize += nameonlylength(fn) + 22;
-
-		if ((numwadfiles >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
-			return;
-		}
+		CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+		return;
 	}
 
 	WRITESTRINGN(buf_p,p,240);
@@ -3247,7 +3255,6 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	boolean kick = false;
 	boolean toomany = false;
 	INT32 i,j;
-	size_t packetsize = 0;
 	serverinfo_pak *dummycheck = NULL;
 
 	// Shut the compiler up.
@@ -3278,13 +3285,8 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-	packetsize += nameonlylength(filename) + 22;
-
 	if ((numwadfiles >= MAX_WADFILES)
-	|| (packetsize > sizeof(dummycheck->fileneeded)))
+	|| ((packetsizetally + nameonlylength(filename) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3440,7 +3442,7 @@ static void Command_Version_f(void)
 #elif defined(__linux__)
 	CONS_Printf("Linux ");
 #elif defined(MACOSX)
-	CONS_Printf("macOS" );
+	CONS_Printf("macOS ");
 #elif defined(UNIXCOMMON)
 	CONS_Printf("Unix (Common) ");
 #else
@@ -3463,6 +3465,11 @@ static void Command_Version_f(void)
 	// Debug build
 #ifdef _DEBUG
 	CONS_Printf("\x85" "DEBUG " "\x80");
+#endif
+
+	// DEVELOP build
+#ifdef DEVELOP
+	CONS_Printf("\x87" "DEVELOP " "\x80");
 #endif
 
 	CONS_Printf("\n");
@@ -3508,6 +3515,9 @@ static void Command_Playintro_f(void)
 {
 	if (netgame)
 		return;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	F_StartIntro();
 }
@@ -4065,6 +4075,9 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	if (!modeattacking)
 		D_StartTitle();

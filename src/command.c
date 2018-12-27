@@ -32,6 +32,7 @@
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"
+#include "d_netfil.h" // findfile
 
 //========
 // protos.
@@ -49,6 +50,7 @@ static void COM_Wait_f(void);
 static void COM_Help_f(void);
 static void COM_Toggle_f(void);
 
+static void CV_EnforceExecVersion(void);
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 static consvar_t *CV_FindVar(const char *name);
@@ -63,10 +65,11 @@ CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
-// Filter consvars by MODVERSION
+// Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
-consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+static boolean execversion_enabled = false;
+consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -641,6 +644,7 @@ static void COM_CEchoDuration_f(void)
 static void COM_Exec_f(void)
 {
 	UINT8 *buf = NULL;
+	char filename[256];
 
 	if (COM_Argc() < 2 || COM_Argc() > 3)
 	{
@@ -649,13 +653,23 @@ static void COM_Exec_f(void)
 	}
 
 	// load file
+	// Try with Argv passed verbatim first, for back compat
 	FIL_ReadFile(COM_Argv(1), &buf);
 
 	if (!buf)
 	{
-		if (!COM_CheckParm("-noerror"))
-			CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
-		return;
+		// Now try by searching the file path
+		// filename is modified with the full found path
+		strcpy(filename, COM_Argv(1));
+		if (findfile(filename, NULL, true) != FS_NOTFOUND)
+			FIL_ReadFile(filename, &buf);
+
+		if (!buf)
+		{
+			if (!COM_CheckParm("-noerror"))
+				CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
+			return;
+		}
 	}
 
 	if (!COM_CheckParm("-silent"))
@@ -1090,7 +1104,7 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 		if (var->flags & CV_FLOAT)
 		{
 			double d = atof(valstr);
-			if (!d && valstr[0] != '0')
+			if (fpclassify(d) == FP_ZERO && valstr[0] != '0')
 				v = INT32_MIN;
 			else
 				v = (INT32)(d * FRACUNIT);
@@ -1586,10 +1600,21 @@ void CV_InitFilterVar(void)
 	joyaxis_count = joyaxis2_count = 0;
 }
 
+void CV_ToggleExecVersion(boolean enable)
+{
+	execversion_enabled = enable;
+}
+
+static void CV_EnforceExecVersion(void)
+{
+	if (!execversion_enabled)
+		CV_StealthSetValue(&cv_execversion, EXECVERSION);
+}
+
 static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 {
 	// If ALL axis settings are previous defaults, set them to the new defaults
-	// MODVERSION < 26 (2.1.21)
+	// EXECVERSION < 26 (2.1.21)
 
 	if (joyaxis_default)
 	{
@@ -1737,8 +1762,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 	if (!(v->flags & CV_SAVE))
 		return true;
 
-	// We go by MODVERSION here
-	if (cv_execversion.value < 26) // 26 = 2.1.21
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 26) // 26 = 2.1.21
 	{
 		// MOUSE SETTINGS
 		// alwaysfreelook split between first and third person (chasefreelook)

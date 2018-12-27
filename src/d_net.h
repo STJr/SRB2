@@ -22,6 +22,7 @@
 #define MAXNETNODES 32
 #define BROADCASTADDR MAXNETNODES
 #define MAXSPLITSCREENPLAYERS 2 // Max number of players on a single computer
+//#define NETSPLITSCREEN // Kart's splitscreen netgame feature
 
 #define STATLENGTH (TICRATE*2)
 
