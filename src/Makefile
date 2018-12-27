@@ -294,6 +294,9 @@ else
 	M5=-mpentium
 	M4=-m486
 endif
+else
+	M5=-march=nocona
+	M4=-mnocona
 endif
 
 ifndef NOASM
