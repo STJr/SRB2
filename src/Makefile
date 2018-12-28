@@ -104,7 +104,7 @@ endif
 ifdef LINUX64
 LINUX=1
 NONX86=1
-64BIT=1
+X86_64=1
 endif
 
 ifdef HAIKU
@@ -179,7 +179,7 @@ endif #ifdef MINGW
 
 ifdef MINGW64
 MINGW=1
-64BIT=1
+X86_64=1
 include win32/Makefile.cfg
 endif #ifdef MINGW64
 
@@ -296,7 +296,7 @@ else
 endif
 endif
 
-ifdef 64BIT
+ifdef X86_64
 	M5=-march=nocona
 endif
 
