@@ -2232,7 +2232,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 }
 
 // Do screen fades!
-EXPORT void HWRAPI(DoScreenWipe)()
+EXPORT void HWRAPI(DoScreenWipe)(void)
 {
 	INT32 texsize = 2048;
 	float xfix, yfix;
@@ -2256,8 +2256,6 @@ EXPORT void HWRAPI(DoScreenWipe)()
 		1.0f, 0.0f,
 		1.0f, 1.0f
 	};
-
-	(void)alpha;
 
 	// Use a power of two texture, dammit
 	if(screen_width <= 1024)
