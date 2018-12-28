@@ -167,12 +167,13 @@ extern void (*walldrawerfunc)(void);
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+void SCR_SetupDrawRoutines(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup
 void SCR_CheckDefaultMode(void);
 // Set the mode number which is saved in the config
-void SCR_SetDefaultMode (void);
+void SCR_SetDefaultMode(void);
 
 void SCR_Startup (void);
 

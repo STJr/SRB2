@@ -96,6 +96,42 @@ boolean R_3DNow = false;
 boolean R_MMXExt = false;
 boolean R_SSE2 = false;
 
+void SCR_SetupDrawRoutines(void)
+{
+	spanfunc = basespanfunc = R_DrawSpan_8;
+	splatfunc = R_DrawSplat_8;
+	transcolfunc = R_DrawTranslatedColumn_8;
+	transtransfunc = R_DrawTranslatedTranslucentColumn_8;
+
+	colfunc = basecolfunc = R_DrawColumn_8;
+	shadecolfunc = R_DrawShadeColumn_8;
+	fuzzcolfunc = R_DrawTranslucentColumn_8;
+	walldrawerfunc = R_DrawWallColumn_8;
+	twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
+	twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
+#ifdef RUSEASM
+	if (R_ASM)
+	{
+		if (R_MMX)
+		{
+			colfunc = basecolfunc = R_DrawColumn_8_MMX;
+			//shadecolfunc = R_DrawShadeColumn_8_ASM;
+			//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
+			walldrawerfunc = R_DrawWallColumn_8_MMX;
+			twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
+			spanfunc = basespanfunc = R_DrawSpan_8_MMX;
+		}
+		else
+		{
+			colfunc = basecolfunc = R_DrawColumn_8_ASM;
+			//shadecolfunc = R_DrawShadeColumn_8_ASM;
+			//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
+			walldrawerfunc = R_DrawWallColumn_8_ASM;
+			twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_ASM;
+		}
+	}
+#endif
+}
 
 void SCR_SetMode(void)
 {
@@ -106,67 +142,10 @@ void SCR_SetMode(void)
 		return; // should never happen and don't change it during a wipe, BAD!
 
 	VID_SetMode(--setmodeneeded);
-
 	V_SetPalette(0);
 
-	//
-	//  setup the right draw routines for either 8bpp or 16bpp
-	//
-	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
-	{
-		spanfunc = basespanfunc = R_DrawSpan_8;
-		splatfunc = R_DrawSplat_8;
-		transcolfunc = R_DrawTranslatedColumn_8;
-		transtransfunc = R_DrawTranslatedTranslucentColumn_8;
-
-		colfunc = basecolfunc = R_DrawColumn_8;
-		shadecolfunc = R_DrawShadeColumn_8;
-		fuzzcolfunc = R_DrawTranslucentColumn_8;
-		walldrawerfunc = R_DrawWallColumn_8;
-		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
-		twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
-#ifdef RUSEASM
-		if (R_ASM)
-		{
-			if (R_MMX)
-			{
-				colfunc = basecolfunc = R_DrawColumn_8_MMX;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_MMX;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfunc = basespanfunc = R_DrawSpan_8_MMX;
-			}
-			else
-			{
-				colfunc = basecolfunc = R_DrawColumn_8_ASM;
-				//shadecolfunc = R_DrawShadeColumn_8_ASM;
-				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
-				walldrawerfunc = R_DrawWallColumn_8_ASM;
-				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_ASM;
-			}
-		}
-#endif
-	}
-/*	else if (vid.bpp > 1)
-	{
-		I_OutputMsg("using highcolor mode\n");
-		spanfunc = basespanfunc = R_DrawSpan_16;
-		transcolfunc = R_DrawTranslatedColumn_16;
-		transtransfunc = R_DrawTranslucentColumn_16; // No 16bit operation for this function
-
-		colfunc = basecolfunc = R_DrawColumn_16;
-		shadecolfunc = NULL; // detect error if used somewhere..
-		fuzzcolfunc = R_DrawTranslucentColumn_16;
-		walldrawerfunc = R_DrawWallColumn_16;
-	}*/
-	else
-		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
-/*#if !defined (DC) && !defined (WII)
-	if (SCR_IsAspectCorrect(vid.width, vid.height))
-		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
-#endif*/
-	// set the apprpriate drawer for the sky (tall or INT16)
+	// setup the right draw routines for 8bpp
+	SCR_SetupDrawRoutines();
 	setmodeneeded = 0;
 }
 
@@ -328,33 +307,30 @@ void SCR_Recalc(void)
 
 void SCR_CheckDefaultMode(void)
 {
-	INT32 scr_forcex, scr_forcey; // resolution asked from the cmd-line
+	INT32 scr_width, scr_height;
 
 	if (dedicated)
 		return;
 
-	// 0 means not set at the cmd-line
-	scr_forcex = scr_forcey = 0;
+	scr_width = cv_scr_width.value;
+	scr_height = cv_scr_height.value;
 
+	// resolution asked from the cmd-line
 	if (M_CheckParm("-width") && M_IsNextParm())
-		scr_forcex = atoi(M_GetNextParm());
+		scr_width = atoi(M_GetNextParm());
 
 	if (M_CheckParm("-height") && M_IsNextParm())
-		scr_forcey = atoi(M_GetNextParm());
+		scr_height = atoi(M_GetNextParm());
 
-	if (scr_forcex && scr_forcey)
-	{
-		CONS_Printf(M_GetText("Using resolution: %d x %d\n"), scr_forcex, scr_forcey);
-		// returns -1 if not found, thus will be 0 (no mode change) if not found
-		setmodeneeded = VID_GetModeForSize(scr_forcex, scr_forcey) + 1;
-	}
+	if (scr_width == cv_scr_width.value && scr_height == cv_scr_height.value)
+		CONS_Printf(M_GetText("User resolution: %d x %d (%d bits)\n"), cv_scr_width.value, cv_scr_height.value, cv_scr_depth.value);
 	else
-	{
-		CONS_Printf(M_GetText("Default resolution: %d x %d (%d bits)\n"), cv_scr_width.value,
-			cv_scr_height.value, cv_scr_depth.value);
-		// see note above
-		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
-	}
+		CONS_Printf(M_GetText("Using resolution: %d x %d\n"), scr_width, scr_height);
+
+	setmodeneeded = VID_GetModeForSize(scr_width, scr_height);
+	if (setmodeneeded == -1)
+		CONS_Alert(CONS_WARNING, M_GetText("Resolution %d x %d is invalid, using 320 x 200\n"), scr_width, scr_height);
+	setmodeneeded++;
 }
 
 // sets the modenum as the new default video mode to be saved in the config file

@@ -670,25 +670,24 @@ void R_ExecuteSetViewSize(void)
 void R_Init(void)
 {
 	// screensize independent
-	//I_OutputMsg("\nR_InitData");
 	R_InitData();
-
-	//I_OutputMsg("\nR_InitViewBorder");
 	R_InitViewBorder();
-	R_SetViewSize(); // setsizeneeded is set true
-
-	//I_OutputMsg("\nR_InitPlanes");
 	R_InitPlanes();
-
-	// this is now done by SCR_Recalc() at the first mode set
-	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
-
-	//I_OutputMsg("\nR_InitTranslationTables\n");
 	R_InitTranslationTables();
-
 	R_InitDrawNodes();
 
+	// If there were no mode changes at game start-up,
+	// since the drawing routines wouldn't be initialized,
+	// the game would crash at the first frame of the rendering loop
+
+	// If SCR_SetMode() returned early, call it on R_Init() instead
+	// to make sure the drawing routines were initialized correctly
+
+	SCR_SetupDrawRoutines();
+
+	// setsizeneeded is set true
+	R_SetViewSize();
 	framecount = 0;
 }
 
