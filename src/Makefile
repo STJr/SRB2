@@ -104,7 +104,6 @@ endif
 ifdef LINUX64
 LINUX=1
 NONX86=1
-X86_64=1
 endif
 
 ifdef HAIKU
