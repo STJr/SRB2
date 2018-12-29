@@ -4596,7 +4596,12 @@ void TryRunTics(tic_t realtics)
 	if (neededtic > gametic)
 	{
 		if (advancedemo)
-			D_StartTitle();
+		{
+			if (timedemo_quit)
+				COM_ImmedExecute("quit");
+			else
+				D_StartTitle();
+		}
 		else
 			// run the count * tics
 			while (neededtic > gametic)

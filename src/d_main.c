@@ -483,6 +483,13 @@ static void D_Display(void)
 			F_WipeEndScreen();
 			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 		}
+
+		// reset counters so timedemo doesn't count the wipe duration
+		if (timingdemo)
+		{
+			framecount = 0;
+			demostarttime = I_GetTime();
+		}
 	}
 
 	NetUpdate(); // send out any new accumulation
