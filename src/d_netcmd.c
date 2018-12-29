@@ -364,6 +364,11 @@ consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 
 
 consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
+char timedemo_name[256];
+boolean timedemo_csv;
+char timedemo_csv_id[256];
+boolean timedemo_quit;
+
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
@@ -1479,11 +1484,11 @@ static void Command_Playdemo_f(void)
 
 static void Command_Timedemo_f(void)
 {
-	char name[256];
+	size_t i = 0;
 
-	if (COM_Argc() != 2)
+	if (COM_Argc() < 2)
 	{
-		CONS_Printf(M_GetText("timedemo <demoname>: time a demo\n"));
+		CONS_Printf(M_GetText("timedemo <demoname> [-csv [<trialid>]] [-quit]: time a demo\n"));
 		return;
 	}
 
@@ -1500,12 +1505,23 @@ static void Command_Timedemo_f(void)
 		G_StopMetalDemo();
 
 	// open the demo file
-	strcpy (name, COM_Argv(1));
+	strcpy (timedemo_name, COM_Argv(1));
 	// dont add .lmp so internal game demos can be played
 
-	CONS_Printf(M_GetText("Timing demo '%s'.\n"), name);
+	// print timedemo results as CSV?
+	i = COM_CheckParm("-csv");
+	timedemo_csv = (i > 0);
+	if (COM_CheckParm("-quit") != i + 1)
+		strcpy(timedemo_csv_id, COM_Argv(i + 1)); // user-defined string to identify row
+	else
+		timedemo_csv_id[0] = 0;
 
-	G_TimeDemo(name);
+	// exit after the timedemo?
+	timedemo_quit = (COM_CheckParm("-quit") > 0);
+
+	CONS_Printf(M_GetText("Timing demo '%s'.\n"), timedemo_name);
+
+	G_TimeDemo(timedemo_name);
 }
 
 // stop current demo
