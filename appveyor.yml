@@ -4,8 +4,12 @@ os: MinGW
 environment:
  CC: ccache
  CCACHE_CC: i686-w64-mingw32-gcc
+ CCACHE_CC_64: x86_64-w64-mingw32-gcc
  WINDRES: windres
+ # c:\mingw-w64 i686 has gcc 6.3.0, so use c:\msys64 7.3.0 instead
  MINGW_SDK: c:\msys64\mingw32
+ # c:\msys64 x86_64 has gcc 8.2.0, so use c:\mingw-w64 7.3.0 instead
+ MINGW_SDK_64: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64
  CFLAGS: -Wall -W -Werror -Wno-error=implicit-fallthrough -Wimplicit-fallthrough=3 -Wno-tautological-compare -Wno-error=suggest-attribute=noreturn
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
@@ -23,20 +27,24 @@ cache:
 - C:\Users\appveyor\.ccache
 
 install:
+- if [%CONFIGURATION%] == [SDL64] ( set "MINGW_SDK=%MINGW_SDK_64%" )
+- if [%CONFIGURATION%] == [SDL64] ( set "CCACHE_CC=%CCACHE_CC_64%" )
+
 - if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
 - 7z x -y "%NASM_ZIP%.zip" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%NASM_ZIP% %MINGW_SDK%\bin nasm.exe || exit 0
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs "%TMP%\%NASM_ZIP%" "%MINGW_SDK%\bin" nasm.exe || exit 0
 
 - if not exist "%UPX_ZIP%.zip" appveyor DownloadFile "%UPX_URL%" -FileName "%UPX_ZIP%.zip"
 - 7z x -y "%UPX_ZIP%.zip" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%UPX_ZIP% %MINGW_SDK%\bin upx.exe || exit 0
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs "%TMP%\%UPX_ZIP%" "%MINGW_SDK%\bin" upx.exe || exit 0
 
 - if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
 - ccache -M 99M
-- xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
+- xcopy /Y /V /I ccache.exe "%MINGW_SDK%\bin"
 
 configuration:
 - SDL
+- SDL64
 - DD
 
 matrix:
@@ -44,26 +52,36 @@ matrix:
     - configuration: DD
 
 before_build:
-- set Path=%MINGW_SDK%\bin;%Path%
-- i686-w64-mingw32-gcc --version
+- set "Path=%MINGW_SDK%\bin;%Path%"
+- if [%CONFIGURATION%] == [SDL64] ( x86_64-w64-mingw32-gcc --version ) else ( i686-w64-mingw32-gcc --version )
 - mingw32-make --version
 - nasm -v
 - upx -V
 - ccache -V
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC72=1 CCACHE=1 NOOBJDUMP=1
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC72=1 NOOBJDUMP=1"
+- if [%CONFIGURATION%] == [SDL64] (
+    set "SRB2_MFLAGS=%SRB2_MFLAGS% MINGW64=1 SDL=1"
+  ) else (
+    set "SRB2_MFLAGS=%SRB2_MFLAGS% MINGW=1 %CONFIGURATION%=1"
+  )
 
 build_script:
-- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
-- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 ERRORMODE=1 -k
+- cmd: mingw32-make.exe %SRB2_MFLAGS% clean
+- cmd: mingw32-make.exe %SRB2_MFLAGS% ERRORMODE=1 -k
 
 after_build:
+- if [%CONFIGURATION%] == [SDL64] (
+    set "BUILD_PATH=bin\Mingw64\Release"
+  ) else (
+    set "BUILD_PATH=bin\Mingw\Release"
+  )
 - ccache -s
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
 - set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
 - set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
-- cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
+- cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 - cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
 - appveyor PushArtifact %BUILDSARCHIVE%
@@ -73,7 +91,7 @@ test: off
 #deploy:
 #  - provider: FTP
 #    protocol: ftps
-#    host: 
+#    host:
 #      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
 #    username:
 #      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
