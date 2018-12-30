@@ -19,6 +19,8 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
  CCACHE_DIR: C:\Users\appveyor\.ccache
+ # Disable UPX by default. The user can override this in their Appveyor project settings
+ NOUPX: 1
 
 cache:
 - nasm-2.12.01.zip
@@ -56,10 +58,11 @@ before_build:
 - if [%CONFIGURATION%] == [SDL64] ( x86_64-w64-mingw32-gcc --version ) else ( i686-w64-mingw32-gcc --version )
 - mingw32-make --version
 - nasm -v
-- upx -V
+- if not [%NOUPX%] == [1] ( upx -V )
 - ccache -V
 - ccache -s
-- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC72=1 NOOBJDUMP=1"
+- if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC72=1 NOOBJDUMP=1 %NOUPX%"
 - if [%CONFIGURATION%] == [SDL64] (
     set "SRB2_MFLAGS=%SRB2_MFLAGS% MINGW64=1 SDL=1"
   ) else (
