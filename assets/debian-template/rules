@@ -23,6 +23,16 @@
 #
 #############################################################################
 
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(DATADIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
@@ -37,9 +47,12 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta patch.dta README.txt LICENSE.txt LICENSE-3RD-PARTY.txt
+DATAFILES := ${ASSET_FILES_REQUIRED}
+DOCFILES := ${ASSET_FILES_DOCS}
+OPTIONALFILES := ${ASSET_FILES_OPTIONAL}
+GETOPTIONALFILES := ${ASSET_FILES_OPTIONAL_GET}
 
-DATADIR	:= usr/games/SRB2
+DATADIR	:= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 RESOURCEDIR := .
 WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
@@ -49,18 +62,41 @@ build:
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
-			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
+		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
 		fi; \
-		if [ -f $(RESOURCEDIR)/$$file ]; then \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
-			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
 		fi; \
-		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/$$file ]; then \
-			echo $(DIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
+		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} ]; then \
+			echo $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} not found and could not be downloaded!; \
 			return 1; \
 		fi; \
 	done
+	# Do the same for DOCFILES, but don't error out if not found
+	for file in $(DOCFILES); do \
+		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
+		fi; \
+		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
+		fi; \
+	done
+	# Do the same for OPTIONALFILES if GETOPTIONALFILES == 1
+	if [ "$(GETOPTIONALFILES)" = "1" ]; then \
+		for file in $(OPTIONALFILES); do \
+			if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+				$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
+			fi; \
+			if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
+				$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
+				echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
+			fi; \
+		done; \
+	fi;
+
 
 binary-indep:
 	# Generate install folder file
