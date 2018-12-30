@@ -146,7 +146,7 @@ if not [%X86_64%] == [1] ( goto X86_INSTALL )
 
 : Extract DLL binaries
 7z x -y "%ASSET_ARCHIVE_X64_PATH_LOCAL%" -o"assets\deployer\installer" >null
-if [%ASSET_PATCH_DLL_GET%] == [1] (
+if [%PACKAGE_PATCH_DLL_GET%] == [1] (
     7z x -y "!ASSET_ARCHIVE_X64_PATH_LOCAL!" -o"assets\deployer\patch" >null
 )
 
@@ -169,7 +169,7 @@ goto EOF
 
 : Extract DLL binaries
 7z x -y "%ASSET_ARCHIVE_X86_PATH_LOCAL%" -o"assets\deployer\installer" >null
-if [%ASSET_PATCH_DLL_GET%] == [1] (
+if [%PACKAGE_PATCH_DLL_GET%] == [1] (
     7z x -y "!ASSET_ARCHIVE_X86_PATH_LOCAL!" -o"assets\deployer\patch" >null
 )
 
