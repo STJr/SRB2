@@ -1674,16 +1674,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
-	boolean longboi;
-#ifndef ESLOPE
-	fixed_t       vtop;
-#endif
-	INT32           lightnum;
-	INT32           i, p;
+	boolean       longboi;
+	INT32         range;
+	INT32         lightnum;
+	INT32         i, p;
 	lightlist_t   *light;
 	r_lightlist_t *rlight;
-	INT32 range;
-#ifdef ESLOPE
+#ifndef ESLOPE
+	fixed_t       vtop;
+#else
 	vertex_t segleft, segright;
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 #endif
@@ -1724,9 +1723,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
 	rw_distance = FixedMul(hyp, sineval);
-	longboi = (hyp >= INT32_MAX);
 
-	// big room fix
+	// long wall fix
+	longboi = (curline->length>>16 > 2048);
 	if (longboi)
 		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
 
@@ -2588,14 +2587,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
 		rw_offset = FixedMul(hyp, sineval);
 
-		// big room fix
+		// long wall fix
 		if (longboi)
 		{
-			INT64 dx = (curline->v2->x)-(curline->v1->x);
-			INT64 dy = (curline->v2->y)-(curline->v1->y);
-			INT64 vdx = viewx-(curline->v1->x);
-			INT64 vdy = viewy-(curline->v1->y);
-			rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
+			INT64 dx = (curline->v2->x) - (curline->v1->x), dy = (curline->v2->y) - (curline->v1->y);
+			INT64 vdx = (viewx) - (curline->v1->x), vdy = (viewy) - (curline->v1->y);
+			INT64 offset = (dx*vdx+dy*vdy)>>1;
+			rw_offset = llabs((offset)/(curline->length>>1));
 		}
 
 		if (rw_normalangle-rw_angle1 < ANGLE_180)
