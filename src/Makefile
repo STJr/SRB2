@@ -293,13 +293,13 @@ OPTS += -DCOMPVERSION
 
 ifndef NONX86
 ifndef GCC29
-	M5?=-march=pentium
+	ARCHOPTS?=-march=pentium
 else
-	M5?=-mpentium
+	ARCHOPTS?=-mpentium
 endif
 else
 ifdef X86_64
-	M5?=-march=nocona
+	ARCHOPTS?=-march=nocona
 endif
 endif
 
@@ -428,7 +428,7 @@ else
 	WINDRESFLAGS = -DNDEBUG
 	CFLAGS+=-O3
 endif
-	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
+	CFLAGS+=-g $(OPTS) $(ARCHOPTS) $(WINDRESFLAGS)
 
 ifdef YASM
 ifdef STABS
@@ -916,15 +916,15 @@ endif
 ifndef NOHS
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
 
 $(OBJDIR)/s_fmod.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
 endif
 endif
 endif
@@ -954,11 +954,11 @@ else
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
 
 ifdef FILTERS
