@@ -1725,7 +1725,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_distance = FixedMul(hyp, sineval);
 
 	// long wall fix
-	longboi = (curline->length>>16 > 2048);
+	longboi = (curline->length>>FRACBITS > 2048);
 	if (longboi)
 		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
 
