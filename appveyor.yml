@@ -29,8 +29,10 @@ cache:
 - C:\Users\appveyor\.ccache
 
 install:
-- if [%CONFIGURATION%] == [SDL64] ( set "MINGW_SDK=%MINGW_SDK_64%" )
-- if [%CONFIGURATION%] == [SDL64] ( set "CCACHE_CC=%CCACHE_CC_64%" )
+- if [%CONFIGURATION%] == [SDL64] ( set "X86_64=1" )
+- if [%CONFIGURATION%] == [SDL64] ( set "CONFIGURATION=SDL" )
+- if [%X86_64%] == [1] ( set "MINGW_SDK=%MINGW_SDK_64%" )
+- if [%X86_64%] == [1] ( set "CCACHE_CC=%CCACHE_CC_64%" )
 
 - if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
 - 7z x -y "%NASM_ZIP%.zip" -o%TMP% >null
@@ -55,30 +57,28 @@ matrix:
 
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
-- if [%CONFIGURATION%] == [SDL64] ( x86_64-w64-mingw32-gcc --version ) else ( i686-w64-mingw32-gcc --version )
+- if [%X86_64%] == [1] ( x86_64-w64-mingw32-gcc --version ) else ( i686-w64-mingw32-gcc --version )
 - mingw32-make --version
-- nasm -v
+- if not [%X86_64%] == [1] ( nasm -v )
 - if not [%NOUPX%] == [1] ( upx -V )
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
 - set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC72=1 NOOBJDUMP=1 %NOUPX%"
-- if [%CONFIGURATION%] == [SDL64] (
-    set "SRB2_MFLAGS=%SRB2_MFLAGS% MINGW64=1 SDL=1"
-  ) else (
-    set "SRB2_MFLAGS=%SRB2_MFLAGS% MINGW=1 %CONFIGURATION%=1"
-  )
+- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1" ) else ( set "MINGW_FLAGS=MINGW=1" )
+- set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% clean
 - cmd: mingw32-make.exe %SRB2_MFLAGS% ERRORMODE=1 -k
 
 after_build:
-- if [%CONFIGURATION%] == [SDL64] (
+- if [%X86_64%] == [1] (
     set "BUILD_PATH=bin\Mingw64\Release"
   ) else (
     set "BUILD_PATH=bin\Mingw\Release"
   )
+- if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
