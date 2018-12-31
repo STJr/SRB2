@@ -28,10 +28,9 @@
 
 # Asset File Parameters
 : ${ASSET_ARCHIVE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-assets.7z}
-: ${ASSET_BASE_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets}
-: ${ASSET_FILES_REQUIRED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
+: ${ASSET_ARCHIVE_OPTIONAL_PATH:=https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-optional-assets.7z}
+: ${ASSET_FILES_HASHED:=srb2.srb zones.dta player.dta rings.dta patch.dta}
 : ${ASSET_FILES_DOCS:=README.txt LICENSE.txt LICENSE-3RD-PARTY.txt}
-: ${ASSET_FILES_OPTIONAL:=music.dta}
 : ${ASSET_FILES_OPTIONAL_GET:=0}
 
 # FTP Parameters
@@ -78,10 +77,9 @@
 # Export Asset and Package Parameters for envsubst templating
 
 export ASSET_ARCHIVE_PATH="${ASSET_ARCHIVE_PATH}"
-export ASSET_BASE_PATH="${ASSET_BASE_PATH}"
-export ASSET_FILES_REQUIRED="${ASSET_FILES_REQUIRED}"
+export ASSET_ARCHIVE_OPTIONAL_PATH="${ASSET_ARCHIVE_OPTIONAL_PATH}"
+export ASSET_FILES_HASHED="${ASSET_FILES_HASHED}"
 export ASSET_FILES_DOCS="${ASSET_FILES_DOCS}"
-export ASSET_FILES_OPTIONAL="${ASSET_FILES_OPTIONAL}"
 export ASSET_FILES_OPTIONAL_GET="${ASSET_FILES_OPTIONAL_GET}"
 
 export PACKAGE_NAME="${PACKAGE_NAME}"

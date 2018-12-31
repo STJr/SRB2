@@ -47,55 +47,31 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := ${ASSET_FILES_REQUIRED}
-DOCFILES := ${ASSET_FILES_DOCS}
-OPTIONALFILES := ${ASSET_FILES_OPTIONAL}
+ARCHIVEPATH := ${ASSET_ARCHIVE_PATH}
+ARCHIVEOPTIONALPATH := ${ASSET_ARCHIVE_OPTIONAL_PATH}
 GETOPTIONALFILES := ${ASSET_FILES_OPTIONAL_GET}
 
 DATADIR	:= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 RESOURCEDIR := .
+STAGINGDIR := $(RESOURCEDIR)/installer
 WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
 build:
 	$(MKDIR) $(DIR)/debian/tmp/$(DATADIR)
 	> $(DIR)/debian/source/include-binaries
-	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
-	for file in $(DATAFILES); do \
-		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
+	if [ ! -d $(STAGINGDIR) ]; then \
+		mkdir -p "$(STAGINGDIR)"; \
+		$(WGET) $(ARCHIVEPATH); \
+		7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEPATH))" -aos; \
+		if [ "$(GETOPTIONALFILES)" = "1" ]; then \
+			$(WGET) $(ARCHIVEOPTIONALPATH); \
+			7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEOPTIONALPATH))" -aos; \
 		fi; \
-		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
-			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
-		fi; \
-		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} ]; then \
-			echo $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR} not found and could not be downloaded!; \
-			return 1; \
-		fi; \
-	done
-	# Do the same for DOCFILES, but don't error out if not found
-	for file in $(DOCFILES); do \
-		if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-			$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
-		fi; \
-		if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-			$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
-			echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
-		fi; \
-	done
-	# Do the same for OPTIONALFILES if GETOPTIONALFILES == 1
-	if [ "$(GETOPTIONALFILES)" = "1" ]; then \
-		for file in $(OPTIONALFILES); do \
-			if [ ! -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-				$(WGET) ${ASSET_BASE_PATH}/${DEBFILEVAR}; \
-			fi; \
-			if [ -f $(RESOURCEDIR)/${DEBFILEVAR} ]; then \
-				$(INSTALL) $(RESOURCEDIR)/${DEBFILEVAR} $(DIR)/debian/tmp/$(DATADIR)/${DEBFILEVAR}; \
-				echo $(RESOURCEDIR)/${DEBFILEVAR} >> $(DIR)/debian/source/include-binaries; \
-			fi; \
-		done; \
-	fi;
+	fi
+	# Install asset directory and add asset file to include-binaries
+	cp -vr "$(STAGINGDIR)/." "$(DIR)/debian/tmp/$(DATADIR)"
+	find "$(STAGINGDIR)" >> $(DIR)/debian/source/include-binaries
 
 
 binary-indep:
