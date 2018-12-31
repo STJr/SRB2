@@ -37,7 +37,7 @@ environment:
  ASSET_ARCHIVE_PATCH_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-patch-assets.7z
  ASSET_ARCHIVE_X86_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x86-assets.7z
  ASSET_ARCHIVE_X64_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x64-assets.7z
- ASSET_FILES_OPTIONAL_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/music.dta
+ ASSET_ARCHIVE_OPTIONAL_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-optional-assets.7z
  # This is overridden to 1 for release tag builds
  ASSET_FILES_OPTIONAL_GET: 0
  # For patches, also include the X86/X64 DLLs.

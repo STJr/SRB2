@@ -102,10 +102,10 @@ if [%X86_64%] == [1] (
 )
 
 if [%ASSET_FILES_OPTIONAL_GET%] == [1] (
-    set "archivepath=%ASSET_FILES_OPTIONAL_PATH%"
+    set "archivepath=%ASSET_ARCHIVE_OPTIONAL_PATH%"
     call :ARCHIVE_NAME_PARTS
-    set "ASSET_FILES_OPTIONAL_PATH_LOCAL=!localarchivepath!"
-    if not exist "!localarchivepath!" appveyor DownloadFile "%ASSET_FILES_OPTIONAL_PATH%" -FileName "!localarchivepath!"
+    set "ASSET_ARCHIVE_OPTIONAL_PATH_LOCAL=!localarchivepath!"
+    if not exist "!localarchivepath!" appveyor DownloadFile "%ASSET_ARCHIVE_OPTIONAL_PATH%" -FileName "!localarchivepath!"
 )
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -120,7 +120,7 @@ mkdir "assets\deployer\patch"
 
 : Copy optional files to full installer (music.dta)
 if [%ASSET_FILES_OPTIONAL_GET%] == [1] (
-    xcopy /I /Y "%ASSET_FILES_OPTIONAL_PATH_LOCAL%" "assets\deployer\installer"
+    7z x -y "%ASSET_ARCHIVE_OPTIONAL_PATH_LOCAL%" -o"assets\deployer\installer" >null
 )
 
 : Copy EXE -- BUILD_PATH is from appveyor.yml
