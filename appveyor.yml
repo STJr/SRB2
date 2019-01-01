@@ -50,7 +50,7 @@ cache:
 - upx391w.zip
 - ccache.exe
 - C:\Users\appveyor\.ccache
-- assets\deployer\archives
+- C:\Users\appveyor\srb2_cache
 
 install:
 - if [%CONFIGURATION%] == [SDL64] ( set "X86_64=1" )
