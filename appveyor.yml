@@ -21,12 +21,36 @@ environment:
  CCACHE_DIR: C:\Users\appveyor\.ccache
  # Disable UPX by default. The user can override this in their Appveyor project settings
  NOUPX: 1
+ ##############################
+ # DEPLOYER VARIABLES
+ # DPL_ENABLED=1 builds installers for branch names starting with `deployer`.
+ # DPL_TAG_ENABLED=1 will also build installers for release tags. DPL_ENABLED=1 must also be set.
+ # Set these in the Appveyor project settings
+ ##############################
+ DPL_ENABLED: 0
+ DPL_TAG_ENABLED: 0
+ DPL_INSTALLER_NAME: SRB2-v2123
+ # Asset handling is barebones vs. Travis Deployer. We operate on 7z only.
+ # Include the README files and the OpenGL batch in the main and patch archives.
+ # The x86/x64 archives contain the DLL binaries.
+ ASSET_ARCHIVE_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-assets.7z
+ ASSET_ARCHIVE_PATCH_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-patch-assets.7z
+ ASSET_ARCHIVE_X86_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x86-assets.7z
+ ASSET_ARCHIVE_X64_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-x64-assets.7z
+ ASSET_ARCHIVE_OPTIONAL_PATH: https://github.com/mazmazz/SRB2/releases/download/SRB2_assets/SRB2-v2122-optional-assets.7z
+ # This is overridden to 1 for release tag builds
+ ASSET_FILES_OPTIONAL_GET: 0
+ # For patches, also include the X86/X64 DLLs.
+ PACKAGE_PATCH_DLL_GET: 0
+ # Delete all asset downloads so they can be redownloaded
+ ASSET_CLEAN: 0
 
 cache:
 - nasm-2.12.01.zip
 - upx391w.zip
 - ccache.exe
 - C:\Users\appveyor\.ccache
+- assets\deployer\archives
 
 install:
 - if [%CONFIGURATION%] == [SDL64] ( set "X86_64=1" )
@@ -92,6 +116,10 @@ after_build:
 - appveyor PushArtifact %BUILD_ARCHIVE%
 - cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
 - appveyor PushArtifact %BUILDSARCHIVE%
+##############################
+# DEPLOYER SCRIPT
+##############################
+- if [%DPL_ENABLED%] == [1] ( call "deployer\appveyor\deployer.bat" )
 
 test: off
 
