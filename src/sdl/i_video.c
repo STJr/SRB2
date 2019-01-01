@@ -580,6 +580,8 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
+
+		capslock = !!( SDL_GetModState() & KMOD_CAPS );// in case CL changes
 	}
 	else if (!mousefocus && !kbfocus)
 	{
