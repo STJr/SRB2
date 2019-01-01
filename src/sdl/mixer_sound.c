@@ -1049,7 +1049,7 @@ boolean I_LoadSong(char *data, size_t len)
 
 	while ((UINT32)(p - data) < len)
 	{
-		if (!loop_point && !strncmp(p, key1, key1len))
+		if (fpclassify(loop_point) == FP_ZERO && !strncmp(p, key1, key1len))
 		{
 			p += key1len; // skip LOOP
 			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
@@ -1068,13 +1068,13 @@ boolean I_LoadSong(char *data, size_t len)
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 		}
-		else if (!song_length && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
+		else if (fpclassify(song_length) == FP_ZERO && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
 		{
 			p += key4len; // skip LENGTHMS
 			song_length = (float)(atoi(p) / 1000.0L);
 		}
 		// below: search MP3 or other tags that use wide char encoding
-		else if (!loop_point && !memcmp(p, key1w, key1len*2)) // LOOP wide char
+		else if (fpclassify(loop_point) == FP_ZERO && !memcmp(p, key1w, key1len*2)) // LOOP wide char
 		{
 			p += key1len*2;
 			if (!memcmp(p, key2w, (key2len+1)*2)) // POINT= wide char
@@ -1106,7 +1106,7 @@ boolean I_LoadSong(char *data, size_t len)
 				loop_point = (float)(atoi(wval) / 1000.0L);
 			}
 		}
-		else if (!song_length && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
+		else if (fpclassify(song_length) == FP_ZERO && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
 		{
 			p += (key4len+1)*2;
 			wstart = (size_t)p;
@@ -1121,7 +1121,7 @@ boolean I_LoadSong(char *data, size_t len)
 			song_length = (float)(atoi(wval) / 1000.0L);
 		}
 
-		if (loop_point && song_length && song_length > loop_point) // Got what we needed
+		if (fpclassify(loop_point) != FP_ZERO && fpclassify(song_length) != FP_ZERO && song_length > loop_point) // Got what we needed
 			// the last case is a sanity check, in case the wide char searches were false matches.
 			break;
 		else // continue searching
@@ -1150,7 +1150,6 @@ void I_UnloadSong(void)
 
 boolean I_PlaySong(boolean looping)
 {
-	boolean lpz = fpclassify(loop_point) == FP_ZERO;
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -1164,7 +1163,7 @@ boolean I_PlaySong(boolean looping)
 	if (!music)
 		return false;
 
-	if (!song_length && (I_SongType() == MU_OGG || I_SongType() == MU_MP3 || I_SongType() == MU_FLAC))
+	if (fpclassify(song_length) == FP_ZERO && (I_SongType() == MU_OGG || I_SongType() == MU_MP3 || I_SongType() == MU_FLAC))
 		CONS_Debug(DBG_DETAILED, "This song is missing a LENGTHMS= tag! Required to make seeking work properly.\n");
 
 	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && Mix_PlayMusic(music, 0) == -1)
