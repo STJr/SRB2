@@ -23,13 +23,14 @@ void I_UpdateSound(void){};
 //  SFX I/O
 //
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	(void)id;
 	(void)vol;
 	(void)sep;
 	(void)pitch;
 	(void)priority;
+	(void)channel;
 	return -1;
 }
 

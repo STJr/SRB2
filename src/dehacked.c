@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,6 +32,7 @@
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_clisrv.h"
 
 #include "m_cond.h"
 
@@ -1035,7 +1036,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1244,6 +1248,18 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->bonustype = (SINT8)i;
 				else
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
+			}
+
+			else if (fastcmp(word, "SAVEOVERRIDE"))
+			{
+				if      (fastcmp(word2, "DEFAULT")) i = SAVE_DEFAULT;
+				else if (fastcmp(word2, "ALWAYS"))  i = SAVE_ALWAYS;
+				else if (fastcmp(word2, "NEVER"))   i = SAVE_NEVER;
+
+				if (i >= SAVE_NEVER && i <= SAVE_ALWAYS)
+					mapheaderinfo[num-1]->saveoverride = (SINT8)i;
+				else
+					deh_warning("Level header %d: invalid save override number %d", num, i);
 			}
 
 			else if (fastcmp(word, "LEVELFLAGS"))
@@ -1623,7 +1639,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -1867,7 +1886,6 @@ static void readframe(MYFILE *f, INT32 num)
 	char *word1;
 	char *word2 = NULL;
 	char *tmp;
-	INT32 j;
 
 	do
 	{
@@ -1881,16 +1899,6 @@ static void readframe(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
-
-			for (j = 0; s[j] != '\n'; j++)
-			{
-				if (s[j] == '=')
-				{
-					j += 2;
-					j = atoi(&s[j]);
-					break;
-				}
-			}
 
 			word1 = strtok(s, " ");
 			if (word1)
@@ -2136,7 +2144,10 @@ static void reademblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2276,7 +2287,10 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2360,7 +2374,10 @@ static void readunlockable(MYFILE *f, INT32 num)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2647,7 +2664,10 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2892,7 +2912,10 @@ static void readmaincfg(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -2936,7 +2959,7 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "USENIGHTSSS"))
 			{
 				DEH_WriteUndoline(word, va("%d", useNightsSS), UNDO_NONE);
-				useNightsSS = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+				useNightsSS = (value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
@@ -3010,7 +3033,7 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 				DEH_WriteUndoline(word, va("%d", looptitle), UNDO_NONE);
-				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				looptitle = (value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
@@ -3028,7 +3051,7 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
 				DEH_WriteUndoline(word, va("%d", disableSpeedAdjust), UNDO_NONE);
-				disableSpeedAdjust = (UINT8)get_number(word2);
+				disableSpeedAdjust = (value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
@@ -3076,7 +3099,7 @@ static void readmaincfg(MYFILE *f)
 				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
-				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
+				strcpy(savegamename, timeattackfolder);
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
@@ -3131,7 +3154,10 @@ static void readwipes(MYFILE *f)
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
-			*(tmp-1) = '\0';
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
 			strupr(word);
 
 			// Now get the part after
@@ -7068,6 +7094,11 @@ struct {
 	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
 
+	// Save override
+	{"SAVE_NEVER",SAVE_NEVER},
+	{"SAVE_DEFAULT",SAVE_DEFAULT},
+	{"SAVE_ALWAYS",SAVE_ALWAYS},
+
 	// NiGHTS grades
 	{"GRADE_F",GRADE_F},
 	{"GRADE_E",GRADE_E},
@@ -7280,6 +7311,14 @@ struct {
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
+#ifdef ESLOPE
+	// Slope flags
+	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
+	{"SL_NODYNAMIC",SL_NODYNAMIC},      // Slope will never need to move during the level, so don't fuss with recalculating it
+	{"SL_ANCHORVERTEX",SL_ANCHORVERTEX},// Slope is using a Slope Vertex Thing to anchor its position
+	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
+#endif
+
 	// Angles
 	{"ANG1",ANG1},
 	{"ANG2",ANG2},
@@ -7403,6 +7442,14 @@ struct {
 
 	{"V_CHARCOLORSHIFT",V_CHARCOLORSHIFT},
 	{"V_ALPHASHIFT",V_ALPHASHIFT},
+
+	//Kick Reasons
+	{"KR_KICK",KR_KICK},
+	{"KR_PINGLIMIT",KR_PINGLIMIT},
+	{"KR_SYNCH",KR_SYNCH},
+	{"KR_TIMEOUT",KR_TIMEOUT},
+	{"KR_BAN",KR_BAN},
+	{"KR_LEAVE",KR_LEAVE},
 #endif
 
 	{NULL,0}
@@ -7777,7 +7824,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void FUNCMATH DEH_Check(void)
+void DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
@@ -8212,6 +8259,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
 		return 1;
+	} else if (fastcmp(word,"ultimatemode")) {
+		lua_pushboolean(L, ultimatemode != 0);
+		return 1;
 	} else if (fastcmp(word,"mariomode")) {
 		lua_pushboolean(L, mariomode != 0);
 		return 1;
@@ -8280,10 +8330,11 @@ static inline int lib_getenum(lua_State *L)
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;
-	} else if (fastcmp(word,"admin")) {
-		if (!playeringame[adminplayer] || adminplayer == serverplayer)
+	} else if (fastcmp(word,"admin")) { // BACKWARDS COMPATIBILITY HACK: This was replaced with IsPlayerAdmin(), but some 2.1 Lua scripts still use the admin variable. It now points to the first admin player in the array.
+		LUA_Deprecated(L, "admin", "IsPlayerAdmin(player)");
+		if (!playeringame[adminplayers[0]] || IsPlayerAdmin(serverplayer))
 			return 0;
-		LUA_PushUserdata(L, &players[adminplayer], META_PLAYER);
+		LUA_PushUserdata(L, &players[adminplayers[0]], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);
@@ -8298,7 +8349,6 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, token);
 		return 1;
 	}
-
 	return 0;
 }
 
