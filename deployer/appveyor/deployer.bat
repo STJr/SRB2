@@ -49,12 +49,14 @@ if [%APPVEYOR_REPO_TAG%] == [true] (
 : Get asset archives
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if [%ASSET_CLEAN%] == [1] (
-    echo Cleaning asset archives...
-    rmdir /s /q "assets\deployer\archives"
+if exist "C:\Users\appveyor\srb2_cache\archives\" (
+    if [%ASSET_CLEAN%] == [1] (
+        echo Cleaning asset archives...
+        rmdir /s /q "C:\Users\appveyor\srb2_cache\archives"
+    )
 )
 
-if not exist "assets\deployer\archives" mkdir "assets\deployer\archives"
+if not exist "C:\Users\appveyor\srb2_cache\archives\" mkdir "C:\Users\appveyor\srb2_cache\archives"
 
 goto EXTRACT_ARCHIVES
 
@@ -69,7 +71,7 @@ for %%a in (%archivepath%) do (
     set "filename=%%~nxa"
 )
 
-set "localarchivepath=assets\deployer\archives\%filename%"
+set "localarchivepath=C:\Users\appveyor\srb2_cache\archives\%filename%"
 
 goto EOF
 
@@ -112,20 +114,20 @@ if [%ASSET_FILES_OPTIONAL_GET%] == [1] (
 : Build the installers
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-mkdir "assets\deployer\installer"
-mkdir "assets\deployer\patch"
+mkdir "assets\installer"
+mkdir "assets\patch"
 
-7z x -y "%ASSET_ARCHIVE_PATH_LOCAL%" -o"assets\deployer\installer" >null
-7z x -y "%ASSET_ARCHIVE_PATCH_PATH_LOCAL%" -o"assets\deployer\patch" >null
+7z x -y "%ASSET_ARCHIVE_PATH_LOCAL%" -o"assets\installer" >null
+7z x -y "%ASSET_ARCHIVE_PATCH_PATH_LOCAL%" -o"assets\patch" >null
 
 : Copy optional files to full installer (music.dta)
 if [%ASSET_FILES_OPTIONAL_GET%] == [1] (
-    7z x -y "%ASSET_ARCHIVE_OPTIONAL_PATH_LOCAL%" -o"assets\deployer\installer" >null
+    7z x -y "%ASSET_ARCHIVE_OPTIONAL_PATH_LOCAL%" -o"assets\installer" >null
 )
 
 : Copy EXE -- BUILD_PATH is from appveyor.yml
-robocopy /S /ns /nc /nfl /ndl /np /njh /njs "%BUILD_PATH%" "assets\deployer\installer" /XF "*.debug" ".gitignore"
-robocopy /S /ns /nc /nfl /ndl /np /njh /njs "%BUILD_PATH%" "assets\deployer\patch" /XF "*.debug" ".gitignore"
+robocopy /S /ns /nc /nfl /ndl /np /njh /njs "%BUILD_PATH%" "assets\installer" /XF "*.debug" ".gitignore"
+robocopy /S /ns /nc /nfl /ndl /np /njh /njs "%BUILD_PATH%" "assets\patch" /XF "*.debug" ".gitignore"
 
 : Are we building DD? (we were supposed to exit earlier!)
 if [%CONFIGURATION%] == [DD] ( set "DPL_INSTALLER_NAME=%DPL_INSTALLER_NAME%-DD" )
@@ -145,16 +147,16 @@ if not [%X86_64%] == [1] ( goto X86_INSTALL )
 ::::::::::::::::::::::::::::::::
 
 : Extract DLL binaries
-7z x -y "%ASSET_ARCHIVE_X64_PATH_LOCAL%" -o"assets\deployer\installer" >null
+7z x -y "%ASSET_ARCHIVE_X64_PATH_LOCAL%" -o"assets\installer" >null
 if [%PACKAGE_PATCH_DLL_GET%] == [1] (
-    7z x -y "!ASSET_ARCHIVE_X64_PATH_LOCAL!" -o"assets\deployer\patch" >null
+    7z x -y "!ASSET_ARCHIVE_X64_PATH_LOCAL!" -o"assets\patch" >null
 )
 
 : Build the installer
-7z a -sfx7z.sfx "%DPL_INSTALLER_NAME%-x64-Installer%INSTALLER_SUFFIX%.exe" .\assets\deployer\installer\*
+7z a -sfx7z.sfx "%DPL_INSTALLER_NAME%-x64-Installer%INSTALLER_SUFFIX%.exe" .\assets\installer\*
 
 : Build the patch
-7z a "%DPL_INSTALLER_NAME%-x64-Patch%INSTALLER_SUFFIX%.zip" .\assets\deployer\patch\*
+7z a "%DPL_INSTALLER_NAME%-x64-Patch%INSTALLER_SUFFIX%.zip" .\assets\patch\*
 
 : Upload artifacts
 appveyor PushArtifact "%DPL_INSTALLER_NAME%-x64-Installer%INSTALLER_SUFFIX%.exe"
@@ -168,16 +170,16 @@ goto EOF
 ::::::::::::::::::::::::::::::::
 
 : Extract DLL binaries
-7z x -y "%ASSET_ARCHIVE_X86_PATH_LOCAL%" -o"assets\deployer\installer" >null
+7z x -y "%ASSET_ARCHIVE_X86_PATH_LOCAL%" -o"assets\installer" >null
 if [%PACKAGE_PATCH_DLL_GET%] == [1] (
-    7z x -y "!ASSET_ARCHIVE_X86_PATH_LOCAL!" -o"assets\deployer\patch" >null
+    7z x -y "!ASSET_ARCHIVE_X86_PATH_LOCAL!" -o"assets\patch" >null
 )
 
 : Build the installer
-7z a -sfx7z.sfx "%DPL_INSTALLER_NAME%-Installer%INSTALLER_SUFFIX%.exe" .\assets\deployer\installer\*
+7z a -sfx7z.sfx "%DPL_INSTALLER_NAME%-Installer%INSTALLER_SUFFIX%.exe" .\assets\installer\*
 
 : Build the patch
-7z a "%DPL_INSTALLER_NAME%-Patch%INSTALLER_SUFFIX%.zip" .\assets\deployer\patch\*
+7z a "%DPL_INSTALLER_NAME%-Patch%INSTALLER_SUFFIX%.zip" .\assets\patch\*
 
 : Upload artifacts
 appveyor PushArtifact "%DPL_INSTALLER_NAME%-Installer%INSTALLER_SUFFIX%.exe"
