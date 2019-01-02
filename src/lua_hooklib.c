@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerMsg",
 	"HurtMsg",
 	"PlayerSpawn",
+	"PlayerQuit",
 	NULL
 };
 
@@ -314,14 +315,14 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 }
 
 // Hook for map change (before load)
-void LUAh_MapChange(void)
+void LUAh_MapChange(INT16 mapnumber)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_MapChange/8] & (1<<(hook_MapChange%8))))
 		return;
 
 	lua_settop(gL, 0);
-	lua_pushinteger(gL, gamemap);
+	lua_pushinteger(gL, mapnumber);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_MapChange)
@@ -951,7 +952,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 	return hooked;
 }
 
-// Hook for player chat
+
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 {
 	hook_p hookp;
@@ -1003,6 +1004,7 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 	lua_settop(gL, 0);
 	return hooked;
 }
+
 
 // Hook for hurt messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
@@ -1072,6 +1074,32 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 
 	lua_pop(gL, 1); // pop archFunc
 	// stack: tables
+}
+
+void LUAh_PlayerQuit(player_t *plr, int reason)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_PlayerQuit/8] & (1<<(hook_PlayerQuit%8))))
+		return;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_PlayerQuit)
+		{
+		    if (lua_gettop(gL) == 0)
+		    {
+		        LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
+		        lua_pushinteger(gL, reason); // Reason for quitting
+		    }
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			LUA_Call(gL, 2);
+		}
+
+	lua_settop(gL, 0);
 }
 
 #endif

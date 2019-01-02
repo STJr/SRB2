@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,6 +26,10 @@
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+extern consvar_t cv_resetmusic;
+extern consvar_t cv_gamedigimusic;
+extern consvar_t cv_gamemidimusic;
+extern consvar_t cv_gamesounds;
 
 #ifdef HAVE_OPENMPT
 extern consvar_t cv_modfilter;

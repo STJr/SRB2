@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,10 +54,14 @@ extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard di
 extern INT16 rw_maximums[NUM_WEAPONS];
 
 // used in game menu
+extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
 extern consvar_t cv_crosshair, cv_crosshair2;
-extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_mousemove;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_fireaxis,cv_firenaxis;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_fireaxis2,cv_firenaxis2;
+extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
+extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
+extern consvar_t cv_useranalog, cv_useranalog2;
+extern consvar_t cv_analog, cv_analog2;
+extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
+extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 // mouseaiming (looking up/down with the mouse or keyboard)
@@ -171,6 +175,7 @@ void G_NextLevel(void);
 void G_Continue(void);
 void G_UseContinue(void);
 void G_AfterIntermission(void);
+void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

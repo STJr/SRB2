@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,7 @@
 #include "d_main.h"
 #include "m_argv.h"
 #include "i_system.h"
+#include "command.h" // cv_execversion
 
 #include "m_anigif.h"
 
@@ -58,7 +59,7 @@ typedef off_t off64_t;
 
 #if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3))
 #define PRIdS "u"
-#elif defined (_WIN32) 
+#elif defined (_WIN32)
 #define PRIdS "Iu"
 #elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
 #define PRIdS "u"
@@ -440,7 +441,22 @@ void Command_LoadConfig_f(void)
 
 	strcpy(configfile, COM_Argv(1));
 	FIL_ForceExtension(configfile, ".cfg");
+
+	// load default control
+	G_ClearAllControlKeys();
+	G_Controldefault();
+
+	// temporarily reset execversion to default
+	CV_ToggleExecVersion(true);
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
+	// exec the config
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 }
 
 /** Saves the current configuration and loads another.
@@ -477,9 +493,22 @@ void M_FirstLoadConfig(void)
 	// load default control
 	G_Controldefault();
 
+	// register execversion here before we load any configs
+	CV_RegisterVar(&cv_execversion);
+
+	// temporarily reset execversion to default
+	// we shouldn't need to do this, but JUST in case...
+	CV_ToggleExecVersion(true);
+	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
+	CV_InitFilterVar();
+
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 	// no COM_BufExecute() needed; that does it right away
+
+	// don't filter anymore vars and don't let this convsvar be changed
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -493,6 +522,7 @@ void M_FirstLoadConfig(void)
 void M_SaveConfig(const char *filename)
 {
 	FILE *f;
+	char *filepath;
 
 	// make sure not to write back the config until it's been correctly loaded
 	if (!gameconfig_loaded)
@@ -507,13 +537,20 @@ void M_SaveConfig(const char *filename)
 			return;
 		}
 
-		f = fopen(filename, "w");
+		// append srb2home to beginning of filename
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
+
+		f = fopen(filepath, "w");
 		// change it only if valid
 		if (f)
-			strcpy(configfile, filename);
+			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}
@@ -535,6 +572,10 @@ void M_SaveConfig(const char *filename)
 
 	// header message
 	fprintf(f, "// SRB2 configuration file.\n");
+
+	// print execversion FIRST, because subsequent consvars need to be filtered
+	// always print current EXECVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, EXECVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 
@@ -646,11 +687,11 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_byte movie)
 {
 #ifdef PNG_TEXT_SUPPORTED
-#define SRB2PNGTXT 10 //PNG_KEYWORD_MAX_LENGTH(79) is the max
+#define SRB2PNGTXT 11 //PNG_KEYWORD_MAX_LENGTH(79) is the max
 	png_text png_infotext[SRB2PNGTXT];
 	char keytxt[SRB2PNGTXT][12] = {
 	"Title", "Description", "Playername", "Mapnum", "Mapname",
-	"Location", "Interface", "Revision", "Build Date", "Build Time"};
+	"Location", "Interface", "Render Mode", "Revision", "Build Date", "Build Time"};
 	char titletxt[] = "Sonic Robo Blast 2 " VERSIONSTRING;
 	png_charp playertxt =  cv_playername.zstring;
 	char desctxt[] = "SRB2 Screenshot";
@@ -666,12 +707,26 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 #else
 	 "Unknown";
 #endif
+	char rendermodetxt[9];
 	char maptext[8];
 	char lvlttltext[48];
 	char locationtxt[40];
 	char ctrevision[40];
 	char ctdate[40];
 	char cttime[40];
+
+	switch (rendermode)
+	{
+		case render_soft:
+			strcpy(rendermodetxt, "Software");
+			break;
+		case render_opengl:
+			strcpy(rendermodetxt, "OpenGL");
+			break;
+		default: // Just in case
+			strcpy(rendermodetxt, "None");
+			break;
+	}
 
 	if (gamestate == GS_LEVEL)
 		snprintf(maptext, 8, "%s", G_BuildMapName(gamemap));
@@ -710,9 +765,10 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	png_infotext[4].text = lvlttltext;
 	png_infotext[5].text = locationtxt;
 	png_infotext[6].text = interfacetxt;
-	png_infotext[7].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
-	png_infotext[8].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
-	png_infotext[9].text = strncpy(cttime, comptime, sizeof(cttime)-1);
+	png_infotext[7].text = rendermodetxt;
+	png_infotext[8].text = strncpy(ctrevision, comprevision, sizeof(ctrevision)-1);
+	png_infotext[9].text = strncpy(ctdate, compdate, sizeof(ctdate)-1);
+	png_infotext[10].text = strncpy(cttime, comptime, sizeof(cttime)-1);
 
 	png_set_text(png_ptr, png_info_ptr, png_infotext, SRB2PNGTXT);
 #undef SRB2PNGTXT
@@ -1479,9 +1535,13 @@ boolean M_ScreenshotResponder(event_t *ev)
 		return false;
 
 	ch = ev->data1;
-	if (ch == KEY_F8)
+
+	if (ch >= KEY_MOUSE1 && menuactive) // If it's not a keyboard key, then don't allow it in the menus!
+		return false;
+
+	if (ch == KEY_F8 || ch == gamecontrol[gc_screenshot][0] || ch == gamecontrol[gc_screenshot][1]) // remappable F8
 		M_ScreenShot();
-	else if (ch == KEY_F9)
+	else if (ch == KEY_F9 || ch == gamecontrol[gc_recordgif][0] || ch == gamecontrol[gc_recordgif][1]) // remappable F9
 		((moviemode) ? M_StopMovie : M_StartMovie)();
 	else
 		return false;

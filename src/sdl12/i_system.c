@@ -1575,18 +1575,28 @@ INT32 I_NumJoys(void)
 	return numjoy;
 }
 
+static char joyname[255]; // MAX_PATH; joystick name is straight from the driver
+
 const char *I_GetJoyName(INT32 joyindex)
 {
-	const char *joyname = "NA";
+	const char *tempname = NULL;
 	joyindex--; //SDL's Joystick System starts at 0, not 1
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != -1)
-			joyname = SDL_JoystickName(joyindex);
+		{
+			tempname = SDL_JoystickNameForIndex(joyindex);
+			if (tempname)
+				strncpy(joyname, tempname, 255);
+		}
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
 	else
-		joyname = SDL_JoystickName(joyindex);
+	{
+		tempname = SDL_JoystickNameForIndex(joyindex);
+		if (tempname)
+			strncpy(joyname, tempname, 255);
+	}
 	return joyname;
 }
 
@@ -2301,6 +2311,8 @@ void I_Quit(void)
 		printf("\r");
 		ShowEndTxt();
 	}
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
 #ifdef GP2X

@@ -3820,7 +3820,7 @@ msgid "another castle!"
 msgstr ""
 
 #: st_stuff.c:2092 st_stuff.c:2098 st_stuff.c:2120
-msgid "Press F12 to watch another player."
+msgid "Press Viewpoint Key to watch a player."
 msgstr ""
 
 #: st_stuff.c:2097

@@ -37,7 +37,7 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta
+DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta patch.dta README.txt LICENSE.txt LICENSE-3RD-PARTY.txt
 
 DATADIR	:= usr/games/SRB2
 RESOURCEDIR := .
@@ -45,16 +45,21 @@ WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
 build:
 	$(MKDIR) $(DIR)/debian/tmp/$(DATADIR)
+	> $(DIR)/debian/source/include-binaries
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		$(WGET) http://alam.srb2.org/SRB2/2.1.14-Final/Resources/$$file; \
-		if test "$$file" = "srb2.wad"; then \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/srb2.srb; \
-		else \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
+		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
+			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
 		fi; \
-		echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		if [ -f $(RESOURCEDIR)/$$file ]; then \
+			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
+			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
+		fi; \
+		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/$$file ]; then \
+			echo $(DIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
+			return 1; \
+		fi; \
 	done
 
 binary-indep:
@@ -95,15 +100,18 @@ binary: binary-indep
 	dh_builddeb
 
 clean:
-	$(RM) $(RESOURCEDIR)/*.wad
-	$(RM) $(RESOURCEDIR)/*.dta
-	$(RM) $(RESOURCEDIR)/*.plr
-	$(RM) $(RESOURCEDIR)/*.wpn
-	$(RM) $(RESOURCEDIR)/*.srb
-	$(RM) $(RESOURCEDIR)/*.dll
-	$(RM) $(DIR)/debian/tmp/*
-	$(RM) $(DIR)/debian/$(PACKAGE).install
-	$(RM) $(DIR)/debian/files
-	$(RM) $(DIR)/debian/source/include-binaries
+	$(RM) $(DIR)/debian/tmp/*; \
+	$(RM) $(DIR)/debian/$(PACKAGE).install; \
+	$(RM) $(DIR)/debian/files; \
+
+clean-all: clean
+	$(RM) $(RESOURCEDIR)/*.wad; \
+	$(RM) $(RESOURCEDIR)/*.dta; \
+	$(RM) $(RESOURCEDIR)/*.plr; \
+	$(RM) $(RESOURCEDIR)/*.wpn; \
+	$(RM) $(RESOURCEDIR)/*.srb; \
+	$(RM) $(RESOURCEDIR)/*.dll; \
+	$(RM) $(RESOURCEDIR)/*.txt; \
+	$(RM) $(DIR)/debian/source/include-binaries; \
 
 .PHONY: all clean binary binary-arch binary-indep build

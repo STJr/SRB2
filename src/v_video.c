@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -331,7 +331,6 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = 0;
-	boolean flip = false;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup;
 	INT32 dupx, dupy;
@@ -345,8 +344,8 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		return;
 
 #ifdef HWRENDER
-	// oh please
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Why?
+	if (rendermode != render_soft)
 	{
 		HWR_DrawFixedPatch((GLPatch_t *)patch, x, y, pscale, scrn, colormap);
 		return;
@@ -406,22 +405,32 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	colfrac = FixedDiv(FRACUNIT, fdup);
 	rowfrac = FixedDiv(FRACUNIT, fdup);
 
-	if (scrn & V_OFFSET) // Crosshair shit
+	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
+	// For now let's just at least give V_OFFSET the ability to support V_FLIP
+	// I'll probably make a better fix for 2.2 where I don't have to worry about breaking existing support for stuff
+	// -- Monster Iestyn 29/10/18
 	{
-		y -= FixedMul((SHORT(patch->topoffset)*dupy)<<FRACBITS,  pscale);
-		x -= FixedMul((SHORT(patch->leftoffset)*dupx)<<FRACBITS, pscale);
-	}
-	else
-	{
-		y -= FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+		fixed_t offsetx = 0, offsety = 0;
 
+		// left offset
 		if (scrn & V_FLIP)
-		{
-			flip = true;
-			x -= FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale) + 1;
-		}
+			offsetx = FixedMul((SHORT(patch->width) - SHORT(patch->leftoffset))<<FRACBITS, pscale) + 1;
 		else
-			x -= FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
+			offsetx = FixedMul(SHORT(patch->leftoffset)<<FRACBITS, pscale);
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		offsety = FixedMul(SHORT(patch->topoffset)<<FRACBITS, pscale);
+
+		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
+		{
+			offsetx = FixedMul(offsetx, dupx<<FRACBITS);
+			offsety = FixedMul(offsety, dupy<<FRACBITS);
+		}
+
+		// Subtract the offsets from x/y positions
+		x -= offsetx;
+		y -= offsety;
 	}
 
 	if (scrn & V_SPLITSCREEN)
@@ -497,7 +506,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	for (col = 0; (col>>FRACBITS) < SHORT(patch->width); col += colfrac, ++offx, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
-		if (flip) // offx is measured from right edge instead of left
+		if (scrn & V_FLIP) // offx is measured from right edge instead of left
 		{
 			if (x+pwidth-offx < 0) // don't draw off the left of the screen (WRAP PREVENTION)
 				break;
@@ -521,7 +530,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			if (flip)
+			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
 			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
 
@@ -653,14 +662,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skins[skinnum].flags & SF_HIRES
-#ifdef HWRENDER
-//	|| (rendermode != render_soft && rendermode != render_none)
-#endif
-	)
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
+	if (skinnum < 0 || skinnum >= numskins || (skins[skinnum].flags & SF_HIRES))
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE)); // Draw a star
 	else
-	{
+	{ // Find front angle of the first waiting frame of the character's actual sprites
 		spriteframe_t *sprframe = &skins[skinnum].spritedef.spriteframes[2 & FF_FRAMEMASK];
 		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
@@ -836,6 +841,145 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		memset(dest, c, w * vid.bpp);
 }
 
+#ifdef HWRENDER
+// This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
+static UINT32 V_GetHWConsBackColor(void)
+{
+	UINT32 hwcolor;
+	switch (cons_backcolor.value)
+	{
+		case 0:		hwcolor = 0xffffff00;	break; 	// White
+		case 1:		hwcolor = 0x80808000;	break; 	// Gray
+		case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
+		case 3:		hwcolor = 0x40201000;	break; 	// Brown
+		case 4:		hwcolor = 0xfa807200;	break; 	// Pink
+		case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
+		case 6:		hwcolor = 0xff000000;	break; 	// Red
+		case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
+		case 8:		hwcolor = 0xff800000;	break; 	// Orange
+		case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
+		case 10:	hwcolor = 0x80800000;	break; 	// Yellow
+		case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
+		case 12:	hwcolor = 0x00800000;	break; 	// Green
+		case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
+		case 14:	hwcolor = 0x4682b400;	break; 	// Steel
+		case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
+		case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
+		case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
+		case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
+		// Default green
+		default:	hwcolor = 0x00800000;	break;
+	}
+	return hwcolor;
+}
+#endif
+
+
+// THANK YOU MPC!!!
+
+void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
+{
+	UINT8 *dest;
+	INT32 u, v;
+	UINT8 *fadetable;
+	UINT32 alphalevel = 0;
+
+	if (rendermode == render_none)
+		return;
+
+#ifdef HWRENDER
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		UINT32 hwcolor = V_GetHWConsBackColor();
+		HWR_DrawConsoleFill(x, y, w, h, hwcolor, c);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
+		return;
+	}
+#endif
+
+	if (!(c & V_NOSCALESTART))
+	{
+		INT32 dupx = vid.dupx, dupy = vid.dupy;
+
+		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
+		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
+			memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
+			return;
+		}
+
+		x *= dupx;
+		y *= dupy;
+		w *= dupx;
+		h *= dupy;
+
+		// Center it if necessary
+		if (vid.width != BASEVIDWIDTH * dupx)
+		{
+			// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+			// so center this imaginary screen
+			if (c & V_SNAPTORIGHT)
+				x += (vid.width - (BASEVIDWIDTH * dupx));
+			else if (!(c & V_SNAPTOLEFT))
+				x += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+		}
+		if (vid.height != BASEVIDHEIGHT * dupy)
+		{
+			// same thing here
+			if (c & V_SNAPTOBOTTOM)
+				y += (vid.height - (BASEVIDHEIGHT * dupy));
+			else if (!(c & V_SNAPTOTOP))
+				y += (vid.height - (BASEVIDHEIGHT * dupy)) / 2;
+		}
+	}
+
+	if (x >= vid.width || y >= vid.height)
+		return; // off the screen
+	if (x < 0) {
+		w += x;
+		x = 0;
+	}
+	if (y < 0) {
+		h += y;
+		y = 0;
+	}
+
+	if (w <= 0 || h <= 0)
+		return; // zero width/height wouldn't draw anything
+	if (x + w > vid.width)
+		w = vid.width-x;
+	if (y + h > vid.height)
+		h = vid.height-y;
+
+	dest = screens[0] + y*vid.width + x;
+
+	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	{
+		if (alphalevel == 13)
+			alphalevel = hudminusalpha[cv_translucenthud.value];
+		else if (alphalevel == 14)
+			alphalevel = 10 - cv_translucenthud.value;
+		else if (alphalevel == 15)
+			alphalevel = hudplusalpha[cv_translucenthud.value];
+
+		if (alphalevel >= 10)
+			return; // invis
+	}
+
+	c &= 255;
+
+	// Jimita (12-04-2018)
+	w = min(w, vid.width);
+	h = min(h, vid.height);
+	fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+	for (v = 0; v < h; v++, dest += vid.width)
+		for (u = 0; u < w; u++)
+		{
+			if (!alphalevel)
+				dest[u] = consolebgmap[dest[u]];
+			else
+				dest[u] = fadetable[consolebgmap[dest[u]]];
+		}
+}
+
 //
 // Fills a box of pixels using a flat texture as a pattern, scaled to screen size.
 //
@@ -978,21 +1122,7 @@ void V_DrawFadeConsBack(INT32 plines)
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor;
-		switch (cons_backcolor.value)
-		{
-			case 0:		hwcolor = 0xffffff00;	break; // White
-			case 1:		hwcolor = 0x80808000;	break; // Gray
-			case 2:		hwcolor = 0x40201000;	break; // Brown
-			case 3:		hwcolor = 0xff000000;	break; // Red
-			case 4:		hwcolor = 0xff800000;	break; // Orange
-			case 5:		hwcolor = 0x80800000;	break; // Yellow
-			case 6:		hwcolor = 0x00800000;	break; // Green
-			case 7:		hwcolor = 0x0000ff00;	break; // Blue
-			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
-			// Default green
-			default:	hwcolor = 0x00800000;	break;
-		}
+		UINT32 hwcolor = V_GetHWConsBackColor();
 		HWR_DrawConsoleBack(hwcolor, plines);
 		return;
 	}
@@ -1007,7 +1137,7 @@ void V_DrawFadeConsBack(INT32 plines)
 
 // Gets string colormap, used for 0x80 color codes
 //
-static const UINT8 *V_GetStringColormap(INT32 colorflags)
+UINT8 *V_GetStringColormap(INT32 colorflags)
 {
 	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
 	{
@@ -1054,6 +1184,32 @@ void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
 		V_DrawMappedPatch(x, y, flags, hu_font[c], colormap);
 	else
 		V_DrawScaledPatch(x, y, flags, hu_font[c]);
+}
+
+// Writes a single character for the chat. (draw WHITE if bit 7 set)
+// Essentially the same as the above but it's small or big depending on what resolution you've chosen to huge..
+//
+void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap)
+{
+	INT32 w, flags;
+	//const UINT8 *colormap = V_GetStringColormap(c);
+
+	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
+	c &= 0x7f;
+	if (lowercaseallowed)
+		c -= HU_FONTSTART;
+	else
+		c = toupper(c) - HU_FONTSTART;
+	if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		return;
+
+	w = (vid.width < 640 ) ? (SHORT(hu_font[c]->width)/2) : (SHORT(hu_font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
+	if (x + w > vid.width)
+		return;
+
+	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font[c], colormap);
+
+
 }
 
 // Precompile a wordwrapped string to any given width.

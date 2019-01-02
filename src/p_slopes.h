@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2016 by Sonic Team Junior.
+// Copyright (C) 2015-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@
 #define P_SLOPES_H__
 
 #ifdef ESLOPE
+void P_CalculateSlopeNormal(pslope_t *slope);
 void P_ResetDynamicSlopes(void);
 void P_RunDynamicSlopes(void);
 // P_SpawnSlope_Line
