@@ -1899,6 +1899,42 @@ static int lib_sSpeedMusic(lua_State *L)
 	return 0;
 }
 
+static int lib_sMusicExists(lua_State *L)
+{
+	boolean checkMIDI = lua_opttrueboolean(L, 2);
+	boolean checkDigi = lua_opttrueboolean(L, 3);
+#ifdef MUSICSLOT_COMPATIBILITY
+	const char *music_name;
+	UINT32 music_num;
+	char music_compat_name[7];
+	UINT16 music_flags = 0;
+	NOHUD
+	if (lua_isnumber(L, 1))
+	{
+		music_num = (UINT32)luaL_checkinteger(L, 1);
+		music_flags = (UINT16)(music_num & 0x0000FFFF);
+		if (music_flags && music_flags <= 1035)
+			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
+		else if (music_flags && music_flags <= 1050)
+			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
+		else
+			music_compat_name[0] = 0; // becomes empty string
+		music_compat_name[6] = 0;
+		music_name = (const char *)&music_compat_name;
+	}
+	else
+	{
+		music_num = 0;
+		music_name = luaL_checkstring(L, 1);
+	}
+#else
+	const char *music_name = luaL_checkstring(L, 1);
+#endif
+	NOHUD
+	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
+	return 1;
+}
+
 static int lib_sStopMusic(lua_State *L)
 {
 	player_t *player = NULL;
@@ -1912,6 +1948,110 @@ static int lib_sStopMusic(lua_State *L)
 	if (!player || P_IsLocalPlayer(player))
 		S_StopMusic();
 	return 0;
+}
+
+static int lib_sSetInternalMusicVolume(lua_State *L)
+{
+	UINT32 volume = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_SetInternalMusicVolume(volume);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sStopFadingMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_StopFadingMusic();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeMusic(lua_State *L)
+{
+	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 1);
+	UINT32 ms;
+	INT32 source_volume;
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
+	{
+		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		ms = (UINT32)luaL_checkinteger(L, 2);
+		source_volume = -1;
+	}
+	else if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
+	{
+		player = *((player_t **)luaL_checkudata(L, 4, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		source_volume = (INT32)luaL_checkinteger(L, 2);
+		ms = (UINT32)luaL_checkinteger(L, 3);
+	}
+	else if (luaL_optinteger(L, 3, INT32_MAX) == INT32_MAX)
+	{
+		ms = (UINT32)luaL_checkinteger(L, 2);
+		source_volume = -1;
+	}
+	else
+	{
+		source_volume = (INT32)luaL_checkinteger(L, 2);
+		ms = (UINT32)luaL_checkinteger(L, 3);
+	}
+
+	NOHUD
+
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_FadeMusicFromVolume(target_volume, source_volume, ms));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeOutStopMusic(lua_State *L)
+{
+	UINT32 ms = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		lua_pushboolean(L, S_FadeOutStopMusic(ms));
+	}
+	else
+		lua_pushnil(L);
+	return 1;
 }
 
 static int lib_sOriginPlaying(lua_State *L)
@@ -2265,7 +2405,12 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
+	{"S_MusicExists",lib_sMusicExists},
 	{"S_StopMusic",lib_sStopMusic},
+	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
+	{"S_StopFadingMusic",lib_sStopFadingMusic},
+	{"S_FadeMusic",lib_sFadeMusic},
+	{"S_FadeOutStopMusic",lib_sFadeOutStopMusic},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
