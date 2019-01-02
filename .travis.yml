@@ -593,7 +593,8 @@ install:
 before_script:
   # OLDPWD is root repo folder
   - OLDPWD=$PWD
-  - mkdir -p "$OLDPWD/assets/installer"
+  - __ASSET_DIRECTORY="$OLDPWD/assets/installer"
+  - mkdir -p "$__ASSET_DIRECTORY"
   - cd "$HOME/srb2_cache"
 
   # Get stat command so we know what the cached archive date is.
@@ -610,7 +611,7 @@ before_script:
         echo "$(basename $ASSET_ARCHIVE_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_PATH))";
       fi;
       wget --verbose --server-response -N "$ASSET_ARCHIVE_PATH";
-      7z x "$(basename $ASSET_ARCHIVE_PATH)" -o"$OLDPWD/assets/installer" -aos;
+      7z x "$(basename $ASSET_ARCHIVE_PATH)" -o"$__ASSET_DIRECTORY" -aos;
     fi;
 
   # Get optional files too
@@ -619,16 +620,16 @@ before_script:
         echo "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_OPTIONAL_PATH))";
       fi;
       wget --verbose --server-response -N "$ASSET_ARCHIVE_OPTIONAL_PATH";
-      7z x "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" -o"$OLDPWD/assets/installer" -aos;
+      7z x "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" -o"$__ASSET_DIRECTORY" -aos;
     fi;
 
-  # Copy assets to repo staging folder, then go back to root repo folder
+  # Go back to root repo folder
   - cd "$OLDPWD"
 
   # Prepare CMake asset lists
   - SRB2_ASSET_HASHED=$(echo ${ASSET_FILES_HASHED// /\;})
   - SRB2_ASSET_DOCS=$(echo ${ASSET_FILES_DOCS// /\;})
-  - SRB2_ASSET_DIRECTORY="$OLDPWD/assets/installer"
+  - SRB2_ASSET_DIRECTORY="$__ASSET_DIRECTORY"
 
   # Prepare CMake
   - mkdir build
