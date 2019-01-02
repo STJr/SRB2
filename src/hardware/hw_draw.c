@@ -1082,21 +1082,24 @@ UINT8 *HWR_GetScreenshot(void)
 	return buf;
 }
 
-boolean HWR_Screenshot(const char *lbmname)
+boolean HWR_Screenshot(const char *pathname, char **error)
 {
 	boolean ret;
 	UINT8 *buf = malloc(vid.width * vid.height * 3 * sizeof (*buf));
 
 	if (!buf)
+	{
+		*error = "Failed to allocate memory for HWR_Screenshot";
 		return false;
+	}
 
 	// returns 24bit 888 RGB
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 
 #ifdef USE_PNG
-	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, NULL);
+	ret = M_SavePNG(pathname, buf, vid.width, vid.height, NULL, &*error);	// c_irl
 #else
-	ret = saveTGA(lbmname, buf, vid.width, vid.height);
+	ret = saveTGA(pathname, buf, vid.width, vid.height);
 #endif
 	free(buf);
 	return ret;
