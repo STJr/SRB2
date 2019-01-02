@@ -1899,42 +1899,6 @@ static int lib_sSpeedMusic(lua_State *L)
 	return 0;
 }
 
-static int lib_sMusicExists(lua_State *L)
-{
-	boolean checkMIDI = lua_opttrueboolean(L, 2);
-	boolean checkDigi = lua_opttrueboolean(L, 3);
-#ifdef MUSICSLOT_COMPATIBILITY
-	const char *music_name;
-	UINT32 music_num;
-	char music_compat_name[7];
-	UINT16 music_flags = 0;
-	NOHUD
-	if (lua_isnumber(L, 1))
-	{
-		music_num = (UINT32)luaL_checkinteger(L, 1);
-		music_flags = (UINT16)(music_num & 0x0000FFFF);
-		if (music_flags && music_flags <= 1035)
-			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
-		else if (music_flags && music_flags <= 1050)
-			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
-		else
-			music_compat_name[0] = 0; // becomes empty string
-		music_compat_name[6] = 0;
-		music_name = (const char *)&music_compat_name;
-	}
-	else
-	{
-		music_num = 0;
-		music_name = luaL_checkstring(L, 1);
-	}
-#else
-	const char *music_name = luaL_checkstring(L, 1);
-#endif
-	NOHUD
-	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
-	return 1;
-}
-
 static int lib_sStopMusic(lua_State *L)
 {
 	player_t *player = NULL;
@@ -2405,7 +2369,6 @@ static luaL_Reg lib[] = {
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
-	{"S_MusicExists",lib_sMusicExists},
 	{"S_StopMusic",lib_sStopMusic},
 	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
 	{"S_StopFadingMusic",lib_sStopFadingMusic},
