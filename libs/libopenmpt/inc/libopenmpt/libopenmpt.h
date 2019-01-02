@@ -167,8 +167,8 @@
 /*! \defgroup libopenmpt_c libopenmpt C */
 
 /*! \addtogroup libopenmpt_c
-  @{
-*/
+ * @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,19 +189,19 @@ LIBOPENMPT_API uint32_t openmpt_get_library_version(void);
  */
 LIBOPENMPT_API uint32_t openmpt_get_core_version(void);
 
-/*! Return a verbose library version string from openmpt_get_string(). \deprecated Please use \code "library_version" \endcode directly. */
+/*! Return a verbose library version string from openmpt_get_string(). \deprecated Please use `"library_version"` directly. */
 #define OPENMPT_STRING_LIBRARY_VERSION  LIBOPENMPT_DEPRECATED_STRING( "library_version" )
-/*! Return a verbose library features string from openmpt_get_string(). \deprecated Please use \code "library_features" \endcode directly. */
+/*! Return a verbose library features string from openmpt_get_string(). \deprecated Please use `"library_features"` directly. */
 #define OPENMPT_STRING_LIBRARY_FEATURES LIBOPENMPT_DEPRECATED_STRING( "library_features" )
-/*! Return a verbose OpenMPT core version string from openmpt_get_string(). \deprecated Please use \code "core_version" \endcode directly. */
+/*! Return a verbose OpenMPT core version string from openmpt_get_string(). \deprecated Please use `"core_version"` directly. */
 #define OPENMPT_STRING_CORE_VERSION     LIBOPENMPT_DEPRECATED_STRING( "core_version" )
-/*! Return information about the current build (e.g. the build date or compiler used) from openmpt_get_string(). \deprecated Please use \code "build" \endcode directly. */
+/*! Return information about the current build (e.g. the build date or compiler used) from openmpt_get_string(). \deprecated Please use `"build"` directly. */
 #define OPENMPT_STRING_BUILD            LIBOPENMPT_DEPRECATED_STRING( "build" )
-/*! Return all contributors from openmpt_get_string(). \deprecated Please use \code "credits" \endcode directly. */
+/*! Return all contributors from openmpt_get_string(). \deprecated Please use `"credits"` directly. */
 #define OPENMPT_STRING_CREDITS          LIBOPENMPT_DEPRECATED_STRING( "credits" )
-/*! Return contact information about libopenmpt from openmpt_get_string(). \deprecated Please use \code "contact" \endcode directly. */
+/*! Return contact information about libopenmpt from openmpt_get_string(). \deprecated Please use `"contact"` directly. */
 #define OPENMPT_STRING_CONTACT          LIBOPENMPT_DEPRECATED_STRING( "contact" )
-/*! Return the libopenmpt license from openmpt_get_string(). \deprecated Please use \code "license" \endcode directly. */
+/*! Return the libopenmpt license from openmpt_get_string(). \deprecated Please use `"license"` directly. */
 #define OPENMPT_STRING_LICENSE          LIBOPENMPT_DEPRECATED_STRING( "license" )
 
 /*! \brief Free a string returned by libopenmpt
@@ -503,7 +503,7 @@ LIBOPENMPT_API void * openmpt_error_func_errno_userdata( int * error );
  * \remarks openmpt_could_open_probability() expects the complete file data to be eventually available to it, even if it is asked to just parse the header. Verification will be unreliable (both false positives and false negatives), if you pretend that the file is just some few bytes of initial data threshold in size. In order to really just access the first bytes of a file, check in your callback functions whether data or seeking is requested beyond your initial data threshold, and in that case, return an error. openmpt_could_open_probability() will treat this as any other I/O error and return 0.0. You must not expect the correct result in this case. You instead must remember that it asked for more data than you currently want to provide to it and treat this situation as if openmpt_could_open_probability() returned 0.5.
  * \sa \ref libopenmpt_c_fileio
  * \sa openmpt_stream_callbacks
- * \deprecated Please use openmpt_module_could_open_probability2().
+ * \deprecated Please use openmpt_could_open_probability2().
  * \since 0.3.0
  */
 LIBOPENMPT_API LIBOPENMPT_DEPRECATED double openmpt_could_open_probability( openmpt_stream_callbacks stream_callbacks, void * stream, double effort, openmpt_log_func logfunc, void * user );
@@ -520,7 +520,7 @@ LIBOPENMPT_API LIBOPENMPT_DEPRECATED double openmpt_could_open_probability( open
  * \remarks openmpt_could_open_probability() expects the complete file data to be eventually available to it, even if it is asked to just parse the header. Verification will be unreliable (both false positives and false negatives), if you pretend that the file is just some few bytes of initial data threshold in size. In order to really just access the first bytes of a file, check in your callback functions whether data or seeking is requested beyond your initial data threshold, and in that case, return an error. openmpt_could_open_probability() will treat this as any other I/O error and return 0.0. You must not expect the correct result in this case. You instead must remember that it asked for more data than you currently want to provide to it and treat this situation as if openmpt_could_open_probability() returned 0.5.
  * \sa \ref libopenmpt_c_fileio
  * \sa openmpt_stream_callbacks
- * \deprecated Please use openmpt_module_could_open_probability2().
+ * \deprecated Please use openmpt_could_open_probability2().
  */
 LIBOPENMPT_API LIBOPENMPT_DEPRECATED double openmpt_could_open_propability( openmpt_stream_callbacks stream_callbacks, void * stream, double effort, openmpt_log_func logfunc, void * user );
 
@@ -1120,7 +1120,9 @@ LIBOPENMPT_API const char * openmpt_module_get_metadata_keys( openmpt_module * m
  * \param key Metadata item key to query. Use openmpt_module_get_metadata_keys to check for available keys.
  *          Possible keys are:
  *          - type: Module format extension (e.g. it)
- *          - type_long: Tracker name associated with the module format (e.g. Impulse Tracker)
+ *          - type_long: Format name associated with the module format (e.g. Impulse Tracker)
+ *          - originaltype: Module format extension (e.g. it) of the original module in case the actual type is a converted format (e.g. mo3 or gdm)
+ *          - originaltype_long: Format name associated with the module format (e.g. Impulse Tracker) of the original module in case the actual type is a converted format (e.g. mo3 or gdm)
  *          - container: Container format the module file is embedded in, if any (e.g. umx)
  *          - container_long: Full container name if the module is embedded in a container (e.g. Unreal Music)
  *          - tracker: Tracker that was (most likely) used to save the module file, if known
@@ -1397,9 +1399,14 @@ LIBOPENMPT_API const char * openmpt_module_highlight_pattern_row_channel( openmp
  *          - load.skip_subsongs_init: Set to "1" to avoid pre-initializing sub-songs. Skipping results in faster module loading but slower seeking.
  *          - seek.sync_samples: Set to "1" to sync sample playback when using openmpt_module_set_position_seconds or openmpt_module_set_position_order_row.
  *          - subsong: The current subsong. Setting it has identical semantics as openmpt_module_select_subsong(), getting it returns the currently selected subsong.
+ *          - play.at_end: Chooses the behaviour when the end of song is reached:
+ *                         - "fadeout": Fades the module out for a short while. Subsequent reads after the fadeout will return 0 rendered frames.
+ *                         - "continue": Returns 0 rendered frames when the song end is reached. Subsequent reads will continue playing from the song start or loop start.
+ *                         - "stop": Returns 0 rendered frames when the song end is reached. Subsequent reads will return 0 rendered frames.
  *          - play.tempo_factor: Set a floating point tempo factor. "1.0" is the default tempo.
  *          - play.pitch_factor: Set a floating point pitch factor. "1.0" is the default pitch.
- *          - render.resampler.emulate_amiga: Set to "1" to enable the Amiga resampler for Amiga modules. This emulates the sound characteristics of the Paula chip and overrides the selected interpolation filter. Non-Amiga module formats are not affected by this setting. 
+ *          - render.resampler.emulate_amiga: Set to "1" to enable the Amiga resampler for Amiga modules. This emulates the sound characteristics of the Paula chip and overrides the selected interpolation filter. Non-Amiga module formats are not affected by this setting.
+ *          - render.opl.volume_factor: Set volume factor applied to synthesized OPL sounds, relative to the default OPL volume.
  *          - dither: Set the dither algorithm that is used for the 16 bit versions of openmpt_module_read. Supported values are:
  *                    - 0: No dithering.
  *                    - 1: Default mode. Chosen by OpenMPT code, might change.
@@ -1432,8 +1439,8 @@ LIBOPENMPT_API int openmpt_module_ctl_set( openmpt_module * mod, const char * ct
 #endif
 
 /*!
-  @}
-*/
+ * @}
+ */
 
 #endif /* LIBOPENMPT_H */
 

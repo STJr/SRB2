@@ -150,7 +150,7 @@ public:
 	exception & operator = ( const exception & other ) noexcept;
 	exception & operator = ( exception && other ) noexcept;
 	virtual ~exception() noexcept;
-	virtual const char * what() const noexcept;
+	const char * what() const noexcept override;
 }; // class exception
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -173,19 +173,19 @@ LIBOPENMPT_CXX_API std::uint32_t get_core_version();
 
 namespace string {
 
-//! Return a verbose library version string from openmpt::string::get(). \deprecated Please use \code "library_version" \endcode directly.
+//! Return a verbose library version string from openmpt::string::get(). \deprecated Please use `"library_version"` directly.
 LIBOPENMPT_DEPRECATED static const char library_version  LIBOPENMPT_ATTR_DEPRECATED [] = "library_version";
-//! Return a verbose library features string from openmpt::string::get(). \deprecated Please use \code "library_features" \endcode directly.
+//! Return a verbose library features string from openmpt::string::get(). \deprecated Please use `"library_features"` directly.
 LIBOPENMPT_DEPRECATED static const char library_features LIBOPENMPT_ATTR_DEPRECATED [] = "library_features";
-//! Return a verbose OpenMPT core version string from openmpt::string::get(). \deprecated Please use \code "core_version" \endcode directly.
+//! Return a verbose OpenMPT core version string from openmpt::string::get(). \deprecated Please use `"core_version"` directly.
 LIBOPENMPT_DEPRECATED static const char core_version     LIBOPENMPT_ATTR_DEPRECATED [] = "core_version";
-//! Return information about the current build (e.g. the build date or compiler used) from openmpt::string::get(). \deprecated Please use \code "build" \endcode directly.
+//! Return information about the current build (e.g. the build date or compiler used) from openmpt::string::get(). \deprecated Please use `"build"` directly.
 LIBOPENMPT_DEPRECATED static const char build            LIBOPENMPT_ATTR_DEPRECATED [] = "build";
-//! Return all contributors from openmpt::string::get(). \deprecated Please use \code "credits" \endcode directly.
+//! Return all contributors from openmpt::string::get(). \deprecated Please use `"credits"` directly.
 LIBOPENMPT_DEPRECATED static const char credits          LIBOPENMPT_ATTR_DEPRECATED [] = "credits";
-//! Return contact information about libopenmpt from openmpt::string::get(). \deprecated Please use \code "contact" \endcode directly.
+//! Return contact information about libopenmpt from openmpt::string::get(). \deprecated Please use `"contact"` directly.
 LIBOPENMPT_DEPRECATED static const char contact          LIBOPENMPT_ATTR_DEPRECATED [] = "contact";
-//! Return the libopenmpt license from openmpt::string::get(). \deprecated Please use \code "license" \endcode directly.
+//! Return the libopenmpt license from openmpt::string::get(). \deprecated Please use `"license"` directly.
 LIBOPENMPT_DEPRECATED static const char license          LIBOPENMPT_ATTR_DEPRECATED [] = "license";
 
 //! Get library related metadata.
@@ -724,7 +724,9 @@ public:
 	  \param key Metadata item key to query. Use openmpt::module::get_metadata_keys to check for available keys.
 	           Possible keys are:
 	           - type: Module format extension (e.g. it)
-	           - type_long: Tracker name associated with the module format (e.g. Impulse Tracker)
+	           - type_long: Format name associated with the module format (e.g. Impulse Tracker)
+	           - originaltype: Module format extension (e.g. it) of the original module in case the actual type is a converted format (e.g. mo3 or gdm)
+	           - originaltype_long: Format name associated with the module format (e.g. Impulse Tracker) of the original module in case the actual type is a converted format (e.g. mo3 or gdm)
 	           - container: Container format the module file is embedded in, if any (e.g. umx)
 	           - container_long: Full container name if the module is embedded in a container (e.g. Unreal Music)
 	           - tracker: Tracker that was (most likely) used to save the module file, if known
@@ -966,9 +968,14 @@ public:
 	           - load.skip_subsongs_init: Set to "1" to avoid pre-initializing sub-songs. Skipping results in faster module loading but slower seeking.
 	           - seek.sync_samples: Set to "1" to sync sample playback when using openmpt::module::set_position_seconds or openmpt::module::set_position_order_row.
 	           - subsong: The current subsong. Setting it has identical semantics as openmpt::module::select_subsong(), getting it returns the currently selected subsong.
+	           - play.at_end: Chooses the behaviour when the end of song is reached:
+	                          - "fadeout": Fades the module out for a short while. Subsequent reads after the fadeout will return 0 rendered frames.
+	                          - "continue": Returns 0 rendered frames when the song end is reached. Subsequent reads will continue playing from the song start or loop start.
+	                          - "stop": Returns 0 rendered frames when the song end is reached. Subsequent reads will return 0 rendered frames.
 	           - play.tempo_factor: Set a floating point tempo factor. "1.0" is the default tempo.
 	           - play.pitch_factor: Set a floating point pitch factor. "1.0" is the default pitch.
 	           - render.resampler.emulate_amiga: Set to "1" to enable the Amiga resampler for Amiga modules. This emulates the sound characteristics of the Paula chip and overrides the selected interpolation filter. Non-Amiga module formats are not affected by this setting. 
+	           - render.opl.volume_factor: Set volume factor applied to synthesized OPL sounds, relative to the default OPL volume.
 	           - dither: Set the dither algorithm that is used for the 16 bit versions of openmpt::module::read. Supported values are:
 	                     - 0: No dithering.
 	                     - 1: Default mode. Chosen by OpenMPT code, might change.
