@@ -146,6 +146,7 @@ if(${SDL2_FOUND})
 			SDL2
 			SDL2_mixer
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -156,6 +157,7 @@ if(${SDL2_FOUND})
 			${SDL2_LIBRARIES}
 			${SDL2_MIXER_LIBRARIES}
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -235,6 +237,7 @@ if(${SDL2_FOUND})
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
 		${GME_INCLUDE_DIRS}
+		${OPENMPT_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
@@ -320,6 +323,9 @@ if(${SDL2_FOUND})
 		endif()
 		if(${SRB2_CONFIG_HAVE_GME})
 			getwinlib(libgme "libgme.dll")
+		endif()
+		if(${SRB2_CONFIG_HAVE_OPENMPT})
+			getwinlib(libopenmpt "libopenmpt.dll")
 		endif()
 
 		install(PROGRAMS
