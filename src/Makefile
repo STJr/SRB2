@@ -185,6 +185,16 @@ include djgppdos/Makefile.cfg
 endif
 
 ifdef MINGW
+ifndef NOOPENMPT
+HAVE_OPENMPT=1
+endif
+else
+ifdef OPENMPT
+HAVE_OPENMPT=1
+endif
+endif
+
+ifdef MINGW
 include win32/Makefile.cfg
 endif #ifdef MINGW
 
@@ -196,22 +206,6 @@ ifdef LINUX
 UNIXCOMMON=1
 ifndef NOGME
 HAVE_LIBGME=1
-endif
-endif
-
-ifdef MINGW
-ifndef NOOPENMPT
-HAVE_OPENMPT=1
-endif
-else
-ifdef MINGW64
-ifndef NOOPENMPT
-HAVE_OPENMPT=1
-endif
-else
-ifdef OPENMPT
-HAVE_OPENMPT=1
-endif
 endif
 endif
 
