@@ -106,7 +106,17 @@ endif
 ifdef LINUX64
 LINUX=1
 NONX86=1
+# LINUX64 does not imply X86_64=1; could mean ARM64 or Itanium
 endif
+
+ifdef MINGW64
+MINGW=1
+NONX86=1
+NOASM=1
+# MINGW64 should not necessarily imply X86_64=1, but we make that assumption elsewhere
+# Once that changes, remove this
+X86_64=1
+endif #ifdef MINGW64
 
 ifdef HAIKU
 SDL=1
@@ -177,11 +187,6 @@ endif
 ifdef MINGW
 include win32/Makefile.cfg
 endif #ifdef MINGW
-
-ifdef MINGW64
-MINGW=1
-include win32/Makefile.cfg
-endif #ifdef MINGW64
 
 ifdef UNIX
 UNIXCOMMON=1
@@ -306,11 +311,13 @@ OPTS += -DCOMPVERSION
 
 ifndef NONX86
 ifndef GCC29
-	M5=-march=pentium
-	M4=-march=i486
+	ARCHOPTS?=-march=pentium
 else
-	M5=-mpentium
-	M4=-m486
+	ARCHOPTS?=-mpentium
+endif
+else
+ifdef X86_64
+	ARCHOPTS?=-march=nocona
 endif
 endif
 
@@ -451,7 +458,7 @@ else
 	WINDRESFLAGS = -DNDEBUG
 	CFLAGS+=-O3
 endif
-	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
+	CFLAGS+=-g $(OPTS) $(ARCHOPTS) $(WINDRESFLAGS)
 
 ifdef YASM
 ifdef STABS
@@ -939,15 +946,15 @@ endif
 ifndef NOHS
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
 
 $(OBJDIR)/s_fmod.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
 endif
 endif
 endif
@@ -977,11 +984,11 @@ else
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
 
 ifdef FILTERS
