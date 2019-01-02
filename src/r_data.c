@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1198,7 +1198,11 @@ static void R_InitExtraColormaps(void)
 }
 #endif
 
+<<<<<<< HEAD
 // Search for flat name through all
+=======
+// Search for flat name.
+>>>>>>> public_next-20190101
 lumpnum_t R_GetFlatNumForName(const char *name)
 {
 	INT32 i;
@@ -1209,6 +1213,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
+<<<<<<< HEAD
 
 		if (wadfiles[i]->type == RET_PK3)
 		{
@@ -1242,6 +1247,32 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 					continue;
 			}
 		}
+=======
+		switch (wadfiles[i]->type)
+		{
+		case RET_WAD:
+			if ((start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0)) == INT16_MAX)
+			{
+				if ((start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
+					continue;
+				else if ((end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start)) == INT16_MAX)
+					continue;
+			}
+			else
+				if ((end = W_CheckNumForNamePwad("F_END", (UINT16)i, start)) == INT16_MAX)
+					continue;
+			break;
+		case RET_PK3:
+			if ((start = W_CheckNumForFolderStartPK3("Flats/", i, 0)) == INT16_MAX)
+				continue;
+			if ((end = W_CheckNumForFolderEndPK3("Flats/", i, start)) == INT16_MAX)
+				continue;
+			break;
+		default:
+			continue;
+		}
+
+>>>>>>> public_next-20190101
 		// Now find lump with specified name in that range.
 		lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
 		if (lump < end)
@@ -1611,8 +1642,67 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	UINT8 fadestart = extra_colormap->fadestart,
 		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
 
+<<<<<<< HEAD
 	lighttable_t *lighttable = NULL;
 	size_t i;
+=======
+#define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
+	if (p2[0] == '#')
+	{
+		// Get parameters like fadestart, fadeend, and the fogflag
+		fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
+		fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
+		if (fadestart > 30)
+			fadestart = 0;
+		if (fadeend > 31 || fadeend < 1)
+			fadeend = 31;
+		fadedist = fadeend - fadestart;
+		fog = NUMFROMCHAR(p2[1]);
+	}
+#undef NUMFROMCHAR
+
+	if (p3[0] == '#')
+	{
+		cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
+		cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
+		cdestb = cb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
+		fadecolor = (((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11));
+	}
+	else
+		cdestr = cdestg = cdestb = fadecolor = 0;
+#undef HEX2INT
+
+	for (i = 0; i < num_extra_colormaps; i++)
+	{
+		if (foundcolormaps[i] != LUMPERROR)
+			continue;
+		if (maskcolor == extra_colormaps[i].maskcolor
+			&& fadecolor == extra_colormaps[i].fadecolor
+			&& fabs(maskamt - extra_colormaps[i].maskamt) < DBL_EPSILON
+			&& fadestart == extra_colormaps[i].fadestart
+			&& fadeend == extra_colormaps[i].fadeend
+			&& fog == extra_colormaps[i].fog)
+		{
+			return (INT32)i;
+		}
+	}
+
+	if (num_extra_colormaps == MAXCOLORMAPS)
+		I_Error("R_CreateColormap: Too many colormaps! the limit is %d\n", MAXCOLORMAPS);
+
+	num_extra_colormaps++;
+
+	foundcolormaps[mapnum] = LUMPERROR;
+
+	// aligned on 8 bit for asm code
+	extra_colormaps[mapnum].colormap = NULL;
+	extra_colormaps[mapnum].maskcolor = (UINT16)maskcolor;
+	extra_colormaps[mapnum].fadecolor = (UINT16)fadecolor;
+	extra_colormaps[mapnum].maskamt = maskamt;
+	extra_colormaps[mapnum].fadestart = (UINT16)fadestart;
+	extra_colormaps[mapnum].fadeend = (UINT16)fadeend;
+	extra_colormaps[mapnum].fog = fog;
+>>>>>>> public_next-20190101
 
 	/////////////////////
 	// Calc the RGBA mask

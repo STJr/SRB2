@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -8689,6 +8689,9 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
+	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+		goto notrealplayer;
+
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
@@ -8815,6 +8818,8 @@ static void P_DeathThink(player_t *player)
 			P_RestoreMultiMusic(player);
 	}
 
+notrealplayer:
+
 	if (!player->mo)
 		return;
 
@@ -8912,7 +8917,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, height, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
 	INT32 camrotate;
 	boolean camstill, cameranoclip;
 	mobj_t *mo;
@@ -9108,14 +9113,14 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (splitscreen)
 		{
 			dist = FixedMul(dist, 3*FRACUNIT/2);
-			height = FixedMul(height, 3*FRACUNIT/2);
+			camheight = FixedMul(camheight, 3*FRACUNIT/2);
 		}
 
 		// x1.2 dist for analog
 		if (P_AnalogMove(player))
 		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
-			height = FixedMul(height, 6*FRACUNIT/5);
+			camheight = FixedMul(camheight, 6*FRACUNIT/5);
 		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
@@ -9165,9 +9170,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - height;
+		z = mo->z + mo->height - pviewheight - camheight;
 	else
-		z = mo->z + pviewheight + height;
+		z = mo->z + pviewheight + camheight;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -9442,7 +9447,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
-		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
@@ -9598,7 +9603,7 @@ static void P_CalcPostImg(player_t *player)
 	else
 		pviewheight = player->mo->z + player->viewheight;
 
-	if (player->awayviewtics)
+	if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj))
 	{
 		sector = player->awayviewmobj->subsector->sector;
 		pviewheight = player->awayviewmobj->z + 20*FRACUNIT;
@@ -9766,12 +9771,23 @@ void P_PlayerThink(player_t *player)
 	}
 #endif
 
+	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
+	{
+		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
+		player->awayviewtics = 0; // reset to zero
+	}
+
 	if (player->flashcount)
 		player->flashcount--;
 
-	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
-	//if (player->awayviewtics)
-	//	player->awayviewtics--;
+	// Re-fixed by Jimita (11-12-2018)
+	if (player->awayviewtics)
+	{
+		player->awayviewtics--;
+		if (!player->awayviewtics)
+			player->awayviewtics = -1;
+		// The timer might've reached zero, but we'll run the remote view camera anyway by setting it to -1.
+	}
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -10744,8 +10760,8 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	if (player->awayviewtics < 0)
+		player->awayviewtics = 0;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

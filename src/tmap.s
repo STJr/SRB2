@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,7 +13,7 @@
 // structures, must match the C structures!
 #include "asm_defs.inc"
 
-// Rappel: seuls EAX, ECX, EDX peuvent ˆtre ‚cras‚s librement.
+// Rappel: seuls EAX, ECX, EDX peuvent ï¿½tre ï¿½crasï¿½s librement.
 //         il faut sauver esi,edi, cd...gs
 
 /* Attention aux comparaisons!                                              */
@@ -28,7 +28,7 @@
 /*              cmp     A,B                     // B-A , set flags          */
 /*              jg      B_greater_than_A                                    */
 /*                                                                          */
-/*        (soustrait l'op‚rande source DE l'op‚rande destination,           */
+/*        (soustrait l'opï¿½rande source DE l'opï¿½rande destination,           */
 /*         comme sur Motorola! )                                            */
 
 // RAPPEL: Intel
@@ -66,7 +66,7 @@ C(vidwidth):    .long   0       //use this one out of the inner loops
 .globl C(ASM_PatchRowBytes)
 C(ASM_PatchRowBytes):
     pushl   %ebp
-    movl    %esp, %ebp      // assure l'"adressabilit‚ du stack"
+    movl    %esp, %ebp      // assure l'"adressabilitï¿½ du stack"
 
     movl    ARG1, %edx         // read first arg
     movl    %edx, C(vidwidth)

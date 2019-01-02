@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -309,14 +309,6 @@ void SCR_Recalc(void)
 	// be calculated next time the automap is activated.
 	if (automapactive)
 		AM_Stop();
-
-	// r_plane stuff: visplanes, openings, floorclip, ceilingclip, spanstart,
-	//                spanstop, yslope, distscale, cachedheight, cacheddistance,
-	//                cachedxstep, cachedystep
-	//             -> allocated at the maximum vidsize, static.
-
-	// r_main: xtoviewangle, allocated at the maximum size.
-	// r_things: negonearray, screenheightarray allocated max. size.
 
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();

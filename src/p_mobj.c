@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3729,7 +3729,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
-	else if (player->awayviewtics && player->awayviewmobj != NULL)	// Camera must obviously exist
+	else if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj)) // Camera must obviously exist
 	{
 		camera_t dummycam;
 		dummycam.subsector = player->awayviewmobj->subsector;
@@ -8476,6 +8476,8 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 1 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 2)
+								S_StartSound(NULL, sfx_hoop3);
 
 							redflag = flagmo;
 						}
@@ -8487,6 +8489,8 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 2 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 1)
+								S_StartSound(NULL, sfx_hoop3);
 
 							blueflag = flagmo;
 						}

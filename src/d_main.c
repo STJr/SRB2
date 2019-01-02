@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -160,6 +160,7 @@ void D_PostEvent_end(void) {};
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
+boolean capslock = 0;	// gee i wonder what this does.
 //
 // D_ModifierKeyResponder
 // Sets global shift/ctrl/alt variables, never actually eats events
@@ -307,8 +308,7 @@ static void D_Display(void)
 			if (!gametic)
 				break;
 			HU_Erase();
-			if (automapactive)
-				AM_Drawer();
+			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
@@ -863,25 +863,20 @@ static void IdentifyVersion(void)
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-		const char *musicfile = "music.dta";
-		const char *musicpath = va(pandf,srb2waddir,musicfile);
-		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
-		if (ms == 1)
-			D_AddFile(musicpath);
-		else if (ms == 0)
-			I_Error("File %s has been modified with non-music lumps",musicfile);
-	}
-#endif
+#define MUSICTEST(str) \
+		{\
+			const char *musicpath = va(pandf,srb2waddir,str);\
+			int ms = W_VerifyNMUSlumps(musicpath); \
+			if (ms == 1) \
+				D_AddFile(musicpath); \
+			else if (ms == 0) \
+				I_Error("File "str" has been modified with non-music/sound lumps"); \
+		}
 
-#ifdef DEVELOP // This section can be deleted when music_new is merged with music.dta
-	{
-		const char *musicfile = "music_new.dta";
-		const char *musicpath = va(pandf,srb2waddir,musicfile);
-		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
-		if (ms == 1)
-			D_AddFile(musicpath);
-		else if (ms == 0)
-			I_Error("File %s has been modified with non-music lumps",musicfile);
+		MUSICTEST("music.dta")
+#ifdef DEVELOP // remove when music_new.dta is merged into music.dta
+		MUSICTEST("music_new.dta")
+#endif
 	}
 #endif
 }
@@ -953,6 +948,20 @@ void D_SRB2Main(void)
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
+
+	// Print GPL notice for our console users (Linux)
+	CONS_Printf(
+	"\n\nSonic Robo Blast 2\n"
+	"Copyright (C) 1998-2018 by Sonic Team Junior\n\n"
+	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
+	"This is free software, and you are welcome to redistribute it\n"
+	"and/or modify it under the terms of the GNU General Public License\n"
+	"as published by the Free Software Foundation; either version 2 of\n"
+	"the License, or (at your option) any later version.\n"
+	"See the 'LICENSE.txt' file for details.\n\n"
+	"Sonic the Hedgehog and related characters are trademarks of SEGA.\n"
+	"We do not claim ownership of SEGA's intellectual property used\n"
+	"in this program.\n\n");
 
 	// keep error messages until the final flush(stderr)
 #if !defined (PC_DOS) && !defined(NOTERMIOS)
@@ -1128,27 +1137,37 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
+	mainwads = 0;
+
 #ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
-	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_RINGS_DTA); // rings.dta
 #ifdef USE_PATCH_DTA
-	//W_VerifyFileMD5(3, ASSET_HASH_PATCH_PK3); // patch.pk3
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
-
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	//mainwads++; // neither does music_new.dta
+#else
+
+	mainwads++;	// srb2.srb/srb2.wad
+	mainwads++; // zones.dta
+	mainwads++; // player.dta
+	mainwads++; // rings.dta
+#ifdef USE_PATCH_DTA
+	mainwads++; // patch.dta
+#endif
+	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	//mainwads++; // neither does music_new.dta
+
 #endif //ifndef DEVELOP
 
-	mainwads = 3; // there are 3 wads not to unload
-#ifdef USE_PATCH_DTA
-	++mainwads; // patch.pk3 adds one more
-#endif
-#ifdef DEVELOP
-	++mainwads; // music_new, too
-#endif
+	mainwadstally = packetsizetally;
 
 	mainwadstally = packetsizetally;
 
@@ -1226,7 +1245,7 @@ void D_SRB2Main(void)
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
 			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}

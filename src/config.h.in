@@ -21,15 +21,14 @@
 
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
 #define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
-#define SRB2_GIT_DESCRIBE     "${SRB2_GIT_DESCRIBE}"
-#define SRB2_GIT_BRANCH       "${SRB2_GIT_BRANCH}"
 
 #define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
 
 #else
 
 /* Manually defined asset hashes for non-CMake builds
- * Last updated 2015 / 05 / 03
+ * Last updated 2015 / 05 / 03 - v2.1.15 - main assets
+ * Last updated 2018 / ?? / ?? - v2.2 - patch.pk3
  */
 #define ASSET_HASH_SRB2_PK3   "c1b9577687f8a795104aef4600720ea7"
 #define ASSET_HASH_ZONES_DTA  "303838c6c534d9540288360fa49cca60"

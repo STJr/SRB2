@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -230,6 +230,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelselect = 0;
 	mapheaderinfo[num]->bonustype = 0;
 	mapheaderinfo[num]->maxbonuslives = -1;
+	mapheaderinfo[num]->saveoverride = SAVE_DEFAULT;
 	mapheaderinfo[num]->levelflags = 0;
 	mapheaderinfo[num]->menuflags = 0;
 #if 1 // equivalent to "FlickyList = DEMO"
@@ -391,30 +392,26 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-
-//
-// Computes the line length in fracunits, the OpenGL render needs this
-//
-
 /** Computes the length of a seg in fracunits.
-  * This is needed for splats.
   *
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
 fixed_t P_SegLength(seg_t *seg)
 {
-	fixed_t dx, dy;
-
-	// make a vector (start at origin)
-	dx = seg->v2->x - seg->v1->x;
-	dy = seg->v2->y - seg->v1->y;
-
-	return FixedHypot(dx, dy);
+	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
+	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
+	return FixedHypot(dx, dy)<<1;
 }
 
 #ifdef HWRENDER
-static inline float P_SegLengthf(seg_t *seg)
+/** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length as a float.
+  */
+static inline float P_SegLengthFloat(seg_t *seg)
 {
 	float dx, dy;
 
@@ -450,11 +447,11 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->v1 = &vertexes[SHORT(ml->v1)];
 		li->v2 = &vertexes[SHORT(ml->v2)];
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
+		li->length = P_SegLength(li);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
 		{
-			li->flength = P_SegLengthf(li);
+			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
@@ -1966,7 +1963,7 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname
 	if (!count || count >= 0x20000)
 		return false;
 
-	CONS_Printf("Reading blockmap lump for pk3...\n");
+	//CONS_Printf("Reading blockmap lump for pk3...\n");
 
 	// no need to malloc anything, assume the data is uncompressed for now
 	count /= 2;
@@ -2368,7 +2365,6 @@ void P_LoadThingsOnly(void)
 	}
 	else // phew it's just a WAD
 		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-
 	P_LoadThings();
 
 
@@ -2636,19 +2632,26 @@ static void P_SetupCamera(void)
 	}
 }
 
-static boolean CanSaveLevel(INT32 mapnum)
+static boolean P_CanSave(void)
 {
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
+	// Saving is completely ignored under these conditions:
+	if ((cursaveslot < 0) // Playing without saving
+		|| (modifiedgame && !savemoddata) // Game is modified
+		|| (netgame || multiplayer) // Not in single-player
+		|| (demoplayback || demorecording || metalrecording) // Currently in demo
+		|| (players[consoleplayer].lives <= 0) // Completely dead
+		|| (modeattacking || ultimatemode || G_IsSpecialStage(gamemap))) // Specialized instances
 		return false;
 
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
+	if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_ALWAYS)
+		return true; // Saving should ALWAYS happen!
+	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
+		return false; // Saving should NEVER happen!
 
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
+	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
+	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
+			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
+			&& (gamemap != lastmapsaved));
 }
 
 /** Loads a level from a lump or external wad.
@@ -2858,7 +2861,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
 
-
 	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
 	// As it is implemented right now, we're assuming an uncompressed WAD.
 	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
@@ -2870,6 +2872,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
 		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
+<<<<<<< HEAD
 
 		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
 		{
@@ -2916,6 +2919,49 @@ boolean P_SetupLevel(boolean skipprecip)
 		for (i = 0; i < 16; i++)
 			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 
+=======
+
+		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
+		{
+			I_Error("Bad WAD file for map %s!\n", maplumpname);
+		}
+
+		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
+		{
+			loadedbm = P_LoadRawBlockMap(
+							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
+							(fileinfo + ML_BLOCKMAP)->size,
+							(fileinfo + ML_BLOCKMAP)->name);
+		}
+		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
+		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
+		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
+		P_LoadRawLineDefs(wadData + (fileinfo + ML_LINEDEFS)->filepos, (fileinfo + ML_LINEDEFS)->size);
+		P_LoadRawSideDefs2(wadData + (fileinfo + ML_SIDEDEFS)->filepos);
+		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
+		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
+		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
+		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
+		{
+			P_LoadRawReject(
+					wadData + (fileinfo + ML_REJECT)->filepos,
+					(fileinfo + ML_REJECT)->size,
+					(fileinfo + ML_REJECT)->name);
+		}
+
+		// Important: take care of the ordering of the next functions.
+		if (!loadedbm)
+			P_CreateBlockMap(); // Graue 02-29-2004
+		P_LoadLineDefs2();
+		P_GroupLines();
+		numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+		// reset the player starts
+		for (i = 0; i < MAXPLAYERS; i++)
+			playerstarts[i] = NULL;
+		for (i = 0; i < 2; i++)
+			skyboxmo[i] = NULL;
+>>>>>>> public_next-20190101
 		P_MapStart();
 
 		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
@@ -2945,6 +2991,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
 			playerstarts[i] = NULL;
+<<<<<<< HEAD
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -2960,6 +3007,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
 	P_InitSpecials();
+=======
+		for (i = 0; i < 2; i++)
+			skyboxmo[i] = NULL;
+		P_MapStart();
+		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	}
+>>>>>>> public_next-20190101
 
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
@@ -3105,9 +3159,22 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_cam2_dist.changed)
 			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
 
+<<<<<<< HEAD
 		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
 		if (!cv_cam_rotate.changed)
 			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
+=======
+		if (!cv_cam2_height.changed)
+			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
+
+		if (!cv_cam2_dist.changed)
+			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
+
+		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
+		if (!cv_cam_rotate.changed)
+			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
+
+>>>>>>> public_next-20190101
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 
@@ -3173,8 +3240,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
+	if (P_CanSave())
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
@@ -3346,6 +3412,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
+<<<<<<< HEAD
 	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 
@@ -3363,6 +3430,12 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
+=======
+	boolean texturechange = false;
+	boolean mapsadded = false;
+	boolean replacedcurrentmap = false;
+
+>>>>>>> public_next-20190101
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
@@ -3454,7 +3527,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
-	// Search for sprite replacements.
+
+	//
+	// search for sprite replacements
+	//
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -169,10 +169,20 @@ void P_InitPicAnims(void)
 		// Find ANIMDEFS lump in the WAD
 		animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 
+<<<<<<< HEAD
 		while (animdefsLumpNum != INT16_MAX)
 		{
 			P_ParseANIMDEFSLump(w, animdefsLumpNum);
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
+=======
+			// Find ANIMDEFS lump in the WAD
+			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+			while (animdefsLumpNum != INT16_MAX)
+			{
+				P_ParseANIMDEFSLump(w, animdefsLumpNum);
+				animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
+			}
+>>>>>>> public_next-20190101
 		}
 	}
 

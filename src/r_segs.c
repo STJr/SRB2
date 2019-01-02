@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1669,32 +1669,34 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
-		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_frac += ffloor[i].f_step;
-		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
-			INT32 y_w;
-
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-			y_w = ffloor[i].b_frac >> HEIGHTBITS;
-
-			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)(y_w & 0xFFFF);
+			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
 
 		rw_scale += rw_scalestep;
 		topfrac += topstep;
 		bottomfrac += bottomstep;
+	}
+}
+
+// Uses precalculated seg->length
+static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
+{
+	if (!seg->linedef->dy)
+		return llabs(y2 - seg->v1->y);
+	else if (!seg->linedef->dx)
+		return llabs(x2 - seg->v1->x);
+	else
+	{
+		INT64 dx = (seg->v2->x)-(seg->v1->x);
+		INT64 dy = (seg->v2->y)-(seg->v1->y);
+		INT64 vdx = x2-(seg->v1->x);
+		INT64 vdy = y2-(seg->v1->y);
+		return ((dy*vdx)-(dx*vdy))/(seg->length);
 	}
 }
 
@@ -1708,6 +1710,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
+	boolean longboi;
 #ifndef ESLOPE
 	fixed_t       vtop;
 #endif
@@ -1753,10 +1756,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		offsetangle = ANGLE_90;
 
 	distangle = ANGLE_90 - offsetangle;
-	hyp = R_PointToDist (curline->v1->x, curline->v1->y);
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
-	rw_distance = FixedMul (hyp, sineval);
 
+	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
+	rw_distance = FixedMul(hyp, sineval);
+	longboi = (hyp >= INT32_MAX);
+
+	// big room fix
+	if (longboi)
+		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
 
 	ds_p->x1 = rw_x = start;
 	ds_p->x2 = stop;
@@ -2604,8 +2612,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (offsetangle > ANGLE_90)
 			offsetangle = ANGLE_90;
 
-		sineval = FINESINE(offsetangle >>ANGLETOFINESHIFT);
-		rw_offset = FixedMul (hyp, sineval);
+		sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
+		rw_offset = FixedMul(hyp, sineval);
+
+		// big room fix
+		if (longboi)
+		{
+			INT64 dx = (curline->v2->x)-(curline->v1->x);
+			INT64 dy = (curline->v2->y)-(curline->v1->y);
+			INT64 vdx = viewx-(curline->v1->x);
+			INT64 vdy = viewy-(curline->v1->y);
+			rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
+		}
 
 		if (rw_normalangle-rw_angle1 < ANGLE_180)
 			rw_offset = -rw_offset;
@@ -2797,11 +2815,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_pos >>= 4;
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
@@ -3082,7 +3095,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (ceilingplane) //SoM: 3/29/2000: Check for null ceiling planes
 			ceilingplane = R_CheckPlane (ceilingplane, rw_x, rw_stopx-1);
 		else
-			markceiling = 0;
+			markceiling = false;
+
+		// Don't render the ceiling again when rendering polyobjects
+		if (curline->polyseg)
+			markceiling = false;
 	}
 
 	// get a new or use the same visplane
@@ -3091,7 +3108,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (floorplane) //SoM: 3/29/2000: Check for null planes
 			floorplane = R_CheckPlane (floorplane, rw_x, rw_stopx-1);
 		else
-			markfloor = 0;
+			markfloor = false;
+
+		// Don't render the floor again when rendering polyobjects
+		if (curline->polyseg)
+			markfloor = false;
 	}
 
 	ds_p->numffloorplanes = 0;

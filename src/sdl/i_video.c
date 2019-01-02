@@ -200,7 +200,10 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowPosition(window,
+				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
+				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
+			);
 		}
 	}
 	else
@@ -357,6 +360,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 
 static void SDLdoUngrabMouse(void)
 {
+	SDL_ShowCursor(SDL_ENABLE);
 	SDL_SetWindowGrab(window, SDL_FALSE);
 	wrapmouseok = SDL_FALSE;
 	SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -366,6 +370,7 @@ void SDLforceUngrabMouse(void)
 {
 	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO && window != NULL)
 	{
+		SDL_ShowCursor(SDL_ENABLE);
 		SDL_SetWindowGrab(window, SDL_FALSE);
 		wrapmouseok = SDL_FALSE;
 		SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -575,6 +580,8 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
+
+		capslock = !!( SDL_GetModState() & KMOD_CAPS );// in case CL changes
 	}
 	else if (!mousefocus && !kbfocus)
 	{
@@ -767,6 +774,33 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	D_PostEvent(&event);
 }
 
+#if 0
+static void Impl_HandleJoystickHatEvent(SDL_JoyHatEvent evt)
+{
+	event_t event;
+	SDL_JoystickID joyid[2];
+
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
+
+	if (evt.hat >= JOYHATS)
+		return; // ignore hats with too high an index
+
+	if (evt.which == joyid[0])
+	{
+		event.data1 = KEY_HAT1 + (evt.hat*4);
+	}
+	else if (evt.which == joyid[1])
+	{
+		event.data1 = KEY_2HAT1 + (evt.hat*4);
+	}
+	else return;
+
+	// NOTE: UNFINISHED
+}
+#endif
+
 static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 {
 	event_t event;
@@ -803,6 +837,8 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 	SDLJoyRemap(&event);
 	if (event.type != ev_console) D_PostEvent(&event);
 }
+
+
 
 void I_GetEvent(void)
 {
@@ -844,6 +880,11 @@ void I_GetEvent(void)
 			case SDL_JOYAXISMOTION:
 				Impl_HandleJoystickAxisEvent(evt.jaxis);
 				break;
+#if 0
+			case SDL_JOYHATMOTION:
+				Impl_HandleJoystickHatEvent(evt.jhat)
+				break;
+#endif
 			case SDL_JOYBUTTONUP:
 			case SDL_JOYBUTTONDOWN:
 				Impl_HandleJoystickButtonEvent(evt.jbutton, evt.type);
@@ -1520,8 +1561,17 @@ void I_StartupGraphics(void)
 	realheight = (Uint16)vid.height;
 
 	VID_Command_Info_f();
-	if (!disable_mouse) SDL_ShowCursor(SDL_DISABLE);
 	SDLdoUngrabMouse();
+
+	SDL_RaiseWindow(window);
+
+	if (mousegrabok && !disable_mouse)
+	{
+		SDL_ShowCursor(SDL_DISABLE);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+		wrapmouseok = SDL_TRUE;
+		SDL_SetWindowGrab(window, SDL_TRUE);
+	}
 
 	graphics_started = true;
 }

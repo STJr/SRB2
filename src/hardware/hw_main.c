@@ -3576,9 +3576,7 @@ static void HWR_Subsector(size_t num)
 #ifndef POLYSKY
 	// Moved here because before, when above the ceiling and the floor does not have the sky flat, it doesn't draw the sky
 	if (gr_frontsector->ceilingpic == skyflatnum || gr_frontsector->floorpic == skyflatnum)
-	{
 		drawsky = true;
-	}
 #endif
 
 #ifdef R_FAKEFLOORS
@@ -4158,7 +4156,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	swallVerts[0].z = swallVerts[3].z = spr->z1;
 	swallVerts[2].z = swallVerts[1].z = spr->z2;
 
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 	{
 		// Always a pixel above the floor, perfectly flat.
 		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset * this_scale - (floorheight+3);
@@ -4326,7 +4324,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	wallVerts[1].z = wallVerts[2].z = spr->z2;
 
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
 	else
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
@@ -4353,6 +4351,16 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	}else{
 		wallVerts[3].tow = wallVerts[2].tow = 0;
 		wallVerts[0].tow = wallVerts[1].tow = gpatch->max_t;
+	}
+
+	// if it has a dispoffset, push it a little towards the camera
+	if (spr->dispoffset) {
+		float co = -gr_viewcos*(0.05f*spr->dispoffset);
+		float si = -gr_viewsin*(0.05f*spr->dispoffset);
+		wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
+		wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
+		wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
+		wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
 	}
 
 	realtop = top = wallVerts[3].y;
@@ -4607,7 +4615,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	wallVerts[0].x = wallVerts[3].x = spr->x1;
 	wallVerts[2].x = wallVerts[1].x = spr->x2;
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && this_scale != 1.0f)
+	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
 	else
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
@@ -4655,6 +4663,16 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		// SHADOW SPRITE! //
 		////////////////////
 		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
+	}
+
+	// if it has a dispoffset, push it a little towards the camera
+	if (spr->dispoffset) {
+		float co = -gr_viewcos*(0.05f*spr->dispoffset);
+		float si = -gr_viewsin*(0.05f*spr->dispoffset);
+		wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
+		wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
+		wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
+		wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
 	}
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
@@ -4853,7 +4871,7 @@ static void HWR_SortVisSprites(void)
 				best = ds;
 			}
 			// order visprites of same scale by dispoffset, smallest first
-			else if (ds->tz == bestdist && ds->dispoffset < bestdispoffset)
+			else if (fabsf(ds->tz - bestdist) < 1.0E-36f && ds->dispoffset < bestdispoffset)
 			{
 				bestdispoffset = ds->dispoffset;
 				best = ds;
@@ -5694,7 +5712,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 // ==========================================================================
 //
 // ==========================================================================
-static void HWR_DrawSkyBackground(player_t *player)
+static void HWR_DrawSkyBackground(void)
 {
 	FOutVector v[4];
 	angle_t angle;
@@ -5702,18 +5720,18 @@ static void HWR_DrawSkyBackground(player_t *player)
 	float aspectratio;
 	float angleturn;
 
-//  3--2
-//  | /|
-//  |/ |
-//  0--1
-
-	(void)player;
 	HWR_GetTexture(texturetranslation[skytexture]);
+	aspectratio = (float)vid.width/(float)vid.height;
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
 	//         and thus, the near clipping plane is set to 3.99
 	// Sryder: Just use the near clipping plane value then
+
+	//  3--2
+	//  | /|
+	//  |/ |
+	//  0--1
 	v[0].x = v[3].x = -ZCLIP_PLANE-1;
 	v[1].x = v[2].x =  ZCLIP_PLANE+1;
 	v[0].y = v[1].y = -ZCLIP_PLANE-1;
@@ -5737,10 +5755,13 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	// Y
 	angle = aimingangle;
-
-	aspectratio = (float)vid.width/(float)vid.height;
 	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
-	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
+
+	if (splitscreen)
+	{
+		dimensionmultiply *= 2;
+		angle *= 2;
+	}
 
 	// Middle of the sky should always be at angle 0
 	// need to keep correct aspect ratio with X
@@ -5755,6 +5776,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 		v[0].tow = v[1].tow = -(0.5f-(0.5f/dimensionmultiply)); // bottom
 		v[3].tow = v[2].tow = v[0].tow - (1.0f/dimensionmultiply); // top (or bottom - 1.0f)
 	}
+
+	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	if (angle > ANGLE_180) // Do this because we don't want the sky to suddenly teleport when crossing over 0 to 360 and vice versa
 	{
@@ -5814,7 +5837,7 @@ void HWR_SetViewSize(void)
 
 	gr_viewwindowx = (vid.width - gr_viewwidth) / 2;
 	gr_windowcenterx = (float)(vid.width / 2);
-	if (gr_viewwidth == vid.width)
+	if (fabsf(gr_viewwidth - vid.width) < 1.0E-36f)
 	{
 		gr_baseviewwindowy = 0;
 		gr_basewindowcentery = gr_viewheight / 2;               // window top left corner at 0,0
@@ -5920,7 +5943,7 @@ if (0)
 }
 
 	if (drawsky)
-		HWR_DrawSkyBackground(player);
+		HWR_DrawSkyBackground();
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;
@@ -6137,7 +6160,7 @@ if (0)
 }
 
 	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
-		HWR_DrawSkyBackground(player);
+		HWR_DrawSkyBackground();
 
 	//Hurdler: it doesn't work in splitscreen mode
 	drawsky = splitscreen;

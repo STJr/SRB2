@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -304,6 +304,7 @@ typedef struct
 	UINT8 levelselect;    ///< Is this map available in the level select? If so, which map list is it available in?
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
 	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
+	SINT8 saveoverride;   ///< Set how the game is allowed to save (1 for always, -1 for never, 0 is 2.1 default)
 
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
@@ -338,6 +339,11 @@ typedef struct
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
 #define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
+
+// Save override
+#define SAVE_NEVER   -1
+#define SAVE_DEFAULT  0
+#define SAVE_ALWAYS   1
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
@@ -562,7 +568,8 @@ extern consvar_t cv_showinputjoy; // display joystick in time attack
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.
 extern ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
-extern INT32 adminplayer, serverplayer;
+extern INT32 serverplayer;
+extern INT32 adminplayers[MAXPLAYERS];
 
 /// \note put these in d_clisrv outright?
 
