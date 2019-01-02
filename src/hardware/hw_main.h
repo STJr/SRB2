@@ -53,7 +53,7 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32
 void HWR_DrawPic(INT32 x,INT32 y,lumpnum_t lumpnum);
 
 UINT8 *HWR_GetScreenshot(void);
-boolean HWR_Screenshot(const char *pathname, char **error);
+boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
 void HWR_CorrectSWTricks(void);

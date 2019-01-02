@@ -1082,14 +1082,14 @@ UINT8 *HWR_GetScreenshot(void)
 	return buf;
 }
 
-boolean HWR_Screenshot(const char *pathname, char **error)
+boolean HWR_Screenshot(const char *pathname)
 {
 	boolean ret;
 	UINT8 *buf = malloc(vid.width * vid.height * 3 * sizeof (*buf));
 
 	if (!buf)
 	{
-		*error = "Failed to allocate memory for HWR_Screenshot";
+		CONS_Debug(DBG_RENDER, "HWR_Screenshot: Failed to allocate memory\n");
 		return false;
 	}
 
@@ -1097,7 +1097,7 @@ boolean HWR_Screenshot(const char *pathname, char **error)
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 
 #ifdef USE_PNG
-	ret = M_SavePNG(pathname, buf, vid.width, vid.height, NULL, &*error);	// c_irl
+	ret = M_SavePNG(pathname, buf, vid.width, vid.height, NULL);
 #else
 	ret = saveTGA(pathname, buf, vid.width, vid.height);
 #endif
