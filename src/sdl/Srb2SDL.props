@@ -5,7 +5,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;SDLMAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;HAVE_OPENMPT;SDLMAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

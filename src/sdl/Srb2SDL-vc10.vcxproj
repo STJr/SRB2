@@ -93,6 +93,7 @@
     <Import Project="..\..\libs\libpng.props" />
     <Import Project="..\..\libs\SDL2.props" />
     <Import Project="..\..\libs\SDL_mixer.props" />
+    <Import Project="..\..\libs\libopenmpt.props" />
     <Import Project="Srb2SDL.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -291,6 +292,7 @@
     <ClInclude Include="endtxt.h" />
     <ClInclude Include="hwsym_sdl.h" />
     <ClInclude Include="i_ttf.h" />
+    <ClInclude Include="load_libraries.h" />
     <ClInclude Include="ogl_sdl.h" />
     <ClInclude Include="sdlmain.h" />
   </ItemGroup>
@@ -465,6 +467,7 @@
     <ClCompile Include="i_system.c" />
     <ClCompile Include="i_ttf.c" />
     <ClCompile Include="i_video.c" />
+    <ClCompile Include="load_libraries.c" />
     <ClCompile Include="mixer_sound.c" />
     <ClCompile Include="ogl_sdl.c" />
     <ClCompile Include="SDL_main\SDL_windows_main.c" />
