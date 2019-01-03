@@ -615,7 +615,7 @@ before_script:
     fi;
 
   # Get optional files too
-  - if [[ "$ASSET_FILES_OPTIONAL_GET" == "1" ]] && [[ "$ASSET_ARCHIVE_OPTIONAL_PATH" != "" ]]; then
+  - if [[ "$__DPL_ACTIVE" == "1" ]] && [[ "$ASSET_FILES_OPTIONAL_GET" == "1" ]] && [[ "$ASSET_ARCHIVE_OPTIONAL_PATH" != "" ]]; then
       if [ -f "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" ]; then
         echo "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_OPTIONAL_PATH))";
       fi;
