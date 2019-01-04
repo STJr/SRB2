@@ -218,7 +218,7 @@ set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
 	"Enable zlib support.")
 set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support.")
-set(SRB2_CONFIG_HAVE_OPENMPT OFF CACHE BOOL
+set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
@@ -345,11 +345,11 @@ endif()
 if(${SRB2_CONFIG_HAVE_OPENMPT})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 		set(OPENMPT_FOUND ON)
-		set(OPENMPT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/inc/libopenmpt)
+		set(OPENMPT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/inc)
         if(${SRB2_SYSTEM_BITS} EQUAL 64)
-			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86 -llibopenmpt")
+			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86_64/mingw -lopenmpt")
 		else() # 32-bit
-			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86_64 -llibopenmpt")
+			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86/mingw -lopenmpt")
 		endif()
 	else()
 		find_package(OPENMPT)

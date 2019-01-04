@@ -284,12 +284,14 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				else()
@@ -298,12 +300,14 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				endif()
