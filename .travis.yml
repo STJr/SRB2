@@ -250,7 +250,7 @@ before_script:
   - cd build
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
-  - cmake .. -DCMAKE_BUILD_TYPE=Release
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DSRB2_CONFIG_HAVE_OPENMPT=OFF
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi

@@ -50,7 +50,7 @@ jobs:
             - v1-SRB2-{{ .Branch }}-{{ checksum "objs/Linux/SDL/Release/depend.dep" }}
       - run:
           name: Compile
-          command: make -C src LINUX=1 ERRORMODE=1 -k
+          command: make -C src LINUX=1 ERRORMODE=1 NOOPENMPT=1 -k
       - store_artifacts:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
