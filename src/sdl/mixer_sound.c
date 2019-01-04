@@ -1137,7 +1137,7 @@ boolean I_LoadSong(char *data, size_t len)
 #ifdef HAVE_OPENMPT
 	switch(Mix_GetMusicType(music))
 	{
-		case MUS_MODPLUG_UNUSED:
+		case MUS_MODPLUG:
 		case MUS_MOD:
 			mod = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 			if (!mod)
