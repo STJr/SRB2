@@ -447,9 +447,6 @@
     <ClInclude Include="sdlmain.h">
       <Filter>SDLApp</Filter>
     </ClInclude>
-    <ClInclude Include="load_libraries.h">
-      <Filter>SDLApp</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
@@ -886,9 +883,6 @@
       <Filter>SDLApp</Filter>
     </ClCompile>
     <ClCompile Include="SDL_main\SDL_windows_main.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
-    <ClCompile Include="load_libraries.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
   </ItemGroup>
