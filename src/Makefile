@@ -15,8 +15,8 @@
 #
 # Sets:
 #     Compile the DGJPP/DOS version with 'make WATTCP=1'
-#     Compile the DirectX/Mingw version with 'make MINGW=1'
-#     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
+#     Compile the DirectX/Mingw version with 'make MINGW=1 DIRECTX=1'
+#     Compile the SDL/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
 #     Compile the SDL/Solaris version with 'make SOLARIS=1'
 #     Compile the SDL/FreeBSD version with 'gmake FREEBSD=1'
