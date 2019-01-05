@@ -7,11 +7,14 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.4
           compiler: gcc-4.4
@@ -19,11 +22,14 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.6
           compiler: gcc-4.6
@@ -31,16 +37,30 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.7
           compiler: gcc-4.7
           #gcc-4.7
         - os: linux
+          addons:
+            apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
           compiler: gcc
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
@@ -48,11 +68,13 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
@@ -62,11 +84,13 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-7
           compiler: gcc-7
@@ -77,17 +101,30 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-8
           compiler: gcc-8
           env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow"
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
+          addons:
+            apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux
@@ -95,11 +132,13 @@ matrix:
             apt:
               sources:
               - llvm-toolchain-precise-3.5
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - clang-3.5
           compiler: clang-3.5
@@ -110,11 +149,13 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.6
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - clang-3.6
           compiler: clang-3.6
@@ -125,11 +166,13 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.7
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - clang-3.7
           compiler: clang-3.7
@@ -140,11 +183,13 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.8
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - clang-3.8
           compiler: clang-3.8
@@ -155,11 +200,13 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.9
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - clang-3.9
           compiler: clang-3.9
@@ -170,11 +217,13 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-4.0
 #              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
 #              - libgl1-mesa-dev
 #              - libgme-dev
+#              - libopenmpt-dev
 #              - p7zip-full
 #              - clang-4.0
 #          compiler: clang-4.0
@@ -185,11 +234,13 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-5.0
 #              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
 #              - libgl1-mesa-dev
 #              - libgme-dev
+#              - libopenmpt-dev
 #              - p7zip-full
 #              - clang-5.0
 #          compiler: clang-5.0
@@ -234,14 +285,6 @@ cache:
   directories:
   - $HOME/srb2_cache
 
-addons:
-  apt:
-    packages:
-    - libsdl2-mixer-dev
-    - libpng-dev
-    - libgl1-mesa-dev
-    - libgme-dev
-    - p7zip-full
 
 before_script:
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
@@ -250,7 +293,7 @@ before_script:
   - cd build
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DSRB2_CONFIG_HAVE_OPENMPT=OFF
+  - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
