@@ -26,6 +26,13 @@ jobs:
           name: Add i386 arch
           command: dpkg --add-architecture i386
       - run:
+          name: Add STJr PPA
+          command: |
+            apt-get -qq update
+            apt-get -qq -y install dirmngr
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0B1702D71499D9C25F986507F240F4449D3B0EC6
+            echo "deb http://ppa.launchpad.net/stjr/srb2/ubuntu trusty main" >> /etc/apt/sources.list
+      - run:
           name: Update APT listing
           command: apt-get -qq update
       - run:
@@ -36,7 +43,7 @@ jobs:
             - v1-SRB2-APT
       - run:
           name: Install SDK
-          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib upx
+          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx
       - save_cache:
           key: v1-SRB2-APT
           paths:
@@ -50,7 +57,7 @@ jobs:
             - v1-SRB2-{{ .Branch }}-{{ checksum "objs/Linux/SDL/Release/depend.dep" }}
       - run:
           name: Compile
-          command: make -C src LINUX=1 ERRORMODE=1 NOOPENMPT=1 -k
+          command: make -C src LINUX=1 ERRORMODE=1 -k
       - store_artifacts:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
