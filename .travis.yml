@@ -564,16 +564,20 @@ addons:
 before_install:
   # Initialize Deployer defaults
   - . ./deployer/travis/deployer_defaults.sh
+
   # Initialize Deployer; check if Deployer is enabled
   # This needs to be run in the current shell so that $__DPL_ACTIVE is set for this session
   - . ./deployer/travis/deployer.sh
-  # Also check if we should now terminate
+
+  # Also check if we should now terminate -- see `deployer.sh` for conditions.
+  # This should never happen on non-release buildbots when Deployer is not triggered.
   - if [[ "$__DPL_TRY_TERMINATE_EARLY" == "1" ]]; then
       if [[ "$__DPL_ACTIVE" != "1" ]]; then
         echo "Exiting early because this job is not deploying.";
         exit;
       fi;
     fi
+
   # If we're triggered by release tag, force ASSET_FILES_OPTIONAL_GET=1
   - if [[ "$__DPL_TAG_ELIGIBLE" = "1" ]]; then
       ASSET_FILES_OPTIONAL_GET=1;
@@ -606,6 +610,7 @@ before_script:
     fi
 
   # Get asset files (required for MD5)
+  # See `deployer_defaults.sh` for asset download path
   - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
       if [ -f "$(basename $ASSET_ARCHIVE_PATH)" ]; then
         echo "$(basename $ASSET_ARCHIVE_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_PATH))";
@@ -655,5 +660,8 @@ script:
 
 after_success:
   # Run the Deployer scripts
+  - if [[ "$__DPL_ACTIVE" != "1" ]]; then
+      exit;
+    fi;
   - . ../deployer/travis/deployer_ftp.sh
   - . ../deployer/travis/deployer_dput.sh
