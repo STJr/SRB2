@@ -659,9 +659,7 @@ script:
     fi;
 
 after_success:
-  # Run the Deployer scripts
-  - if [[ "$__DPL_ACTIVE" != "1" ]]; then
-      exit;
-    fi;
+  # Run the upload scripts
+  # These do nothing if Deployer is not triggered
   - . ../deployer/travis/deployer_ftp.sh
   - . ../deployer/travis/deployer_dput.sh
