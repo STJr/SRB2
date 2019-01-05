@@ -2,12 +2,12 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'Win32' OR '$(Platform)' == 'x64'">
     <IncludePath>$(SolutionDir)libs\gme\include;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Platform)' == 'Win32'">$(SolutionDir)libs\gme\win32;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Platform)' == 'x64'">$(SolutionDir)libs\gme\win64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
-  <ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'Win32' OR '$(Platform)' == 'x64'">
     <Link>
       <AdditionalDependencies>libgme.dll.a;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

@@ -5,7 +5,10 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>_WINDOWS;HAVE_LIBGME;HAVE_ZLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- x86/x64 defines: has specific libraries that ARM does not -->
+      <PreprocessorDefinitions Condition="'$(Platform)' == 'Win32' OR '$(Platform)' == 'x64'">HAVE_ZLIB;HAVE_LIBGME;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- ARM defines -->
+      <PreprocessorDefinitions Condition="'$(Platform)' != 'Win32' AND '$(Platform)' != 'x64'">_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link>
