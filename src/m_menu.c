@@ -7588,8 +7588,8 @@ static void M_ChangecontrolResponse(event_t *ev)
 	}
 	else if (ch == KEY_PAUSE)
 	{
-		// This buffer assumes a 100-character message plus a 32-character control name (per controltochangetext buffer size)
-		static char tmp[133];
+		// This buffer assumes a 125-character message plus a 32-character control name (per controltochangetext buffer size)
+		static char tmp[158];
 		menu_t *prev = currentMenu->prevMenu;
 
 		if (controltochange == gc_pause)
