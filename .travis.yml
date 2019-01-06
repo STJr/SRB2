@@ -602,9 +602,9 @@ install:
         brew install sdl2 sdl2_mixer game-music-emu p7zip;
         brew install cmake||true;
       else
-        brew install --build-bottle sdl2 game-music-emu zlib p7zip;
+        brew install --build-bottle sdl2 game-music-emu p7zip;
         brew install --build-bottle mazmazz/srb2/sdl2_mixer --with-flac --with-mpg123;
-        brew postinstall sdl2 game-music-emu zlib p7zip mazmazz/srb2/sdl2_mixer;
+        brew postinstall sdl2 game-music-emu p7zip mazmazz/srb2/sdl2_mixer;
         brew install cmake||true;
       fi;
     fi
