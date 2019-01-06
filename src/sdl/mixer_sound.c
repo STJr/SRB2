@@ -108,7 +108,6 @@ static UINT16 current_track;
 #endif
 
 #ifdef HAVE_OPENMPT
-static openmpt_module *mod = 0;
 int mod_err = OPENMPT_ERROR_OK;
 static const char *mod_err_str;
 static UINT16 current_subsong;
@@ -652,9 +651,13 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 	// play gme into stream
 	gme_play(gme, len/2, (short *)stream);
 
+	// Limiter to prevent music from being disorted with some formats
+	if (music_volume >= 18)
+		music_volume = 18;
+
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 42;
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
 }
 #endif
 
@@ -664,18 +667,20 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 	int i;
 	short *p;
 
+	(void)udata;
+
 	if (!mod || songpaused)
 		return;
 
-	(void)udata;
-
-	openmpt_module_set_render_param(mod, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
-	openmpt_module_set_repeat_count(mod, -1); // Always repeat
 	openmpt_module_read_interleaved_stereo(mod, SAMPLERATE, BUFFERSIZE, (short *)stream);
+
+	// Limiter to prevent music from being disorted with some formats
+	if (music_volume >= 18)
+		music_volume = 18;
 
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100) / 31;
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
 }
 #endif
 
@@ -1160,6 +1165,7 @@ boolean I_LoadSong(char *data, size_t len)
 		case MUS_MID:
 		case MUS_OGG:
 		case MUS_MP3:
+		case MUS_FLAC:
 			Mix_HookMusic(NULL, NULL);
 			break;
 		default:
@@ -1295,6 +1301,9 @@ boolean I_PlaySong(boolean looping)
 	if (mod)
 	{
 		openmpt_module_select_subsong(mod, 0);
+		openmpt_module_set_render_param(mod, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
+		if (looping)
+			openmpt_module_set_repeat_count(mod, -1); // Always repeat
 		current_subsong = 0;
 		Mix_HookMusic(mix_openmpt, mod);
 		return true;

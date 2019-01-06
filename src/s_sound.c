@@ -42,10 +42,6 @@ extern INT32 msg_id;
 #include "lua_hook.h" // MusicChange hook
 #endif
 
-#ifdef HAVE_OPENMPT
-#include "libopenmpt/libopenmpt.h"
-#endif
-
 #ifdef HW3SOUND
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
@@ -62,6 +58,8 @@ static void Command_RestartAudio_f(void);
 static void GameMIDIMusic_OnChange(void);
 static void GameSounds_OnChange(void);
 static void GameDigiMusic_OnChange(void);
+
+static void ModFilter_OnChange(void);
 
 // commands for music and sound servers
 #ifdef MUSSERV
@@ -114,7 +112,7 @@ consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, 
 
 #ifdef HAVE_OPENMPT
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
-consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE, interpolationfilter_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 #define S_MAX_VOLUME 127
@@ -280,11 +278,6 @@ void S_RegisterSoundStuff(void)
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-
-
-#ifdef HAVE_OPENMPT
-	CV_RegisterVar(&cv_modfilter);
-#endif
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
@@ -1854,4 +1847,10 @@ void GameMIDIMusic_OnChange(void)
 			}
 		}
 	}
+}
+
+void ModFilter_OnChange(void)
+{
+	if (mod)
+		openmpt_module_set_render_param(mod, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 }
