@@ -583,9 +583,6 @@ before_install:
       ASSET_FILES_OPTIONAL_GET=1;
     fi;
 
-  # Print version info
-  - gcc --version;
-
 
 install:
   # Install OS X library dependencies via Homebrew
