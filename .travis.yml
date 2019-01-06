@@ -583,6 +583,9 @@ before_install:
       ASSET_FILES_OPTIONAL_GET=1;
     fi;
 
+  # Print version info
+  - gcc --version;
+
 
 install:
   # Install OS X library dependencies via Homebrew
@@ -650,6 +653,10 @@ before_script:
   - mkdir package
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
+  # If OS X, set -march=core2 to build compatible binaries with old Macs
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      export CFLAGS="${CFLAGS} -march=core2";
+    fi;
   - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
       -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
       -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
