@@ -168,7 +168,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
-//static void Impl_SetWindowName(const char *title);
+static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
@@ -208,8 +208,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 	else
 	{
-		Impl_CreateWindow(fullscreen);
-		Impl_SetWindowIcon();
 		wasfullscreen = fullscreen;
 		SDL_SetWindowSize(window, width, height);
 		if (fullscreen)
@@ -1274,7 +1272,7 @@ INT32 VID_SetMode(INT32 modeNum)
 		}
 		vid.modenum = -1;
 	}
-	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
+	Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
 	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 
@@ -1357,7 +1355,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	return SDL_TRUE;
 }
 
-/*
 static void Impl_SetWindowName(const char *title)
 {
 	if (window == NULL)
@@ -1366,7 +1363,7 @@ static void Impl_SetWindowName(const char *title)
 	}
 	SDL_SetWindowTitle(window, title);
 }
-*/
+
 
 static void Impl_SetWindowIcon(void)
 {
@@ -1374,7 +1371,6 @@ static void Impl_SetWindowIcon(void)
 	{
 		return;
 	}
-	//SDL2STUB(); // Monster Iestyn: why is this stubbed?
 	SDL_SetWindowIcon(window, icoSurface);
 }
 
@@ -1515,12 +1511,9 @@ void I_StartupGraphics(void)
 	}
 #endif
 
-	// Fury: we do window initialization after GL setup to allow
-	// SDL_GL_LoadLibrary to work well on Windows
-
 	// Create window
-	//Impl_CreateWindow(USE_FULLSCREEN);
-	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
+	Impl_CreateWindow(USE_FULLSCREEN);
+	Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
 	vid.width = BASEVIDWIDTH; // Default size for startup
