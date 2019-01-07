@@ -756,15 +756,15 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				cstart = "\x86"; // Grey
 			else if (color <= SKINCOLOR_BLUE)
 				cstart = "\x84"; // Blue
-			else if (color <= SKINCOLOR_PEACH)
+			else if (color <= SKINCOLOR_PEACHY)
 				cstart = "\x87"; //... Orange???
 			else if (color == SKINCOLOR_PINK)
 				cstart = "\x85"; // Red.
 			else if (color <= SKINCOLOR_PURPLE)
 				cstart = "\x81"; // Purple
-			else if (color <= SKINCOLOR_ROSEWOOD)
+			else if (color <= SKINCOLOR_ORANGE)
 				cstart = "\x87"; // Orange
-			else if (color <= SKINCOLOR_DARKRED)
+			else if (color <= SKINCOLOR_CRIMSON)
 				cstart = "\x85"; // Red
 			else if (color <= SKINCOLOR_OLIVE)
 				cstart = "\x83"; // green
@@ -2222,7 +2222,7 @@ void HU_Erase(void)
 //======================================================================
 
 #define supercheckdef ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER))
-#define greycheckdef ((players[tab[i].num].mo && players[tab[i].num].mo->health <= 0) || players[tab[i].num].spectator)
+#define greycheckdef ((players[tab[i].num].mo && ((players[tab[i].num].rings <= 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres <= 0 && (maptol & TOL_NIGHTS)))) || players[tab[i].num].spectator)
 
 //
 // HU_drawPing
@@ -2375,25 +2375,25 @@ static void HU_Draw32Emeralds(INT32 x, INT32 y, INT32 pemeralds)
 {
 	//Draw the emeralds, in the CORRECT order, using tiny emerald sprites.
 	if (pemeralds & EMERALD1)
-		V_DrawSmallScaledPatch(x  , y, 0, tinyemeraldpics[0]);
+		V_DrawSmallScaledPatch(x  , y, 0, emeraldpics[1][0]);
 
 	if (pemeralds & EMERALD2)
-		V_DrawSmallScaledPatch(x+4, y, 0, tinyemeraldpics[1]);
+		V_DrawSmallScaledPatch(x+4, y, 0, emeraldpics[1][1]);
 
 	if (pemeralds & EMERALD3)
-		V_DrawSmallScaledPatch(x+8, y, 0, tinyemeraldpics[2]);
+		V_DrawSmallScaledPatch(x+8, y, 0, emeraldpics[1][2]);
 
 	if (pemeralds & EMERALD4)
-		V_DrawSmallScaledPatch(x+12  , y, 0, tinyemeraldpics[3]);
+		V_DrawSmallScaledPatch(x+12  , y, 0, emeraldpics[1][3]);
 
 	if (pemeralds & EMERALD5)
-		V_DrawSmallScaledPatch(x+16, y, 0, tinyemeraldpics[4]);
+		V_DrawSmallScaledPatch(x+16, y, 0, emeraldpics[1][4]);
 
 	if (pemeralds & EMERALD6)
-		V_DrawSmallScaledPatch(x+20, y, 0, tinyemeraldpics[5]);
+		V_DrawSmallScaledPatch(x+20, y, 0, emeraldpics[1][5]);
 
 	if (pemeralds & EMERALD7)
-		V_DrawSmallScaledPatch(x+24,   y,   0, tinyemeraldpics[6]);
+		V_DrawSmallScaledPatch(x+24,   y,   0, emeraldpics[1][6]);
 }
 
 //
@@ -2433,7 +2433,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		strlcpy(name, tab[i].name, 8);
 		V_DrawString(x + 10, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
+		             | (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
 
 		if (gametype == GT_CTF)
@@ -2459,12 +2459,12 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		else
 		{
 			colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-			if (players[tab[i].num].health <= 0)
+			if ((players[tab[i].num].rings <= 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres <= 0 && (maptol & TOL_NIGHTS)))
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, V_HUDTRANSHALF, faceprefix[players[tab[i].num].skin], colormap);
 			else
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
-		V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+		V_DrawRightAlignedThinString(x+128, y, (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 		if (!splitscreen)
 		{
 			if (!(tab[i].num == serverplayer))
@@ -2730,7 +2730,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 
 		V_DrawString(x + 10, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
+		             | (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives()) //show lives
@@ -2754,7 +2754,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, 0, superprefix[players[tab[i].num].skin], 0);
 			else
 			{
-				if (players[tab[i].num].health <= 0)
+				if ((players[tab[i].num].rings <= 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres <= 0 && (maptol & TOL_NIGHTS)))
 					V_DrawFixedPatch(x*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, V_HUDTRANSHALF, faceprefix[players[tab[i].num].skin], 0);
 				else
 					V_DrawFixedPatch(x*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, faceprefix[players[tab[i].num].skin], 0);
@@ -2770,7 +2770,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 			else
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-				if (players[tab[i].num].health <= 0)
+				if ((players[tab[i].num].rings <= 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres <= 0 && (maptol & TOL_NIGHTS)))
 					V_DrawFixedPatch(x*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, V_HUDTRANSHALF, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawFixedPatch(x*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, faceprefix[players[tab[i].num].skin], colormap);
@@ -2785,13 +2785,13 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedThinString(x+128, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+128, y, (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+128, y, (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+			V_DrawRightAlignedThinString(x+128, y, (((players[tab[i].num].rings > 0 && !(maptol & TOL_NIGHTS)) || (players[tab[i].num].spheres > 0 && (maptol & TOL_NIGHTS))) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 
 		y += 9;
 		if (i == 16)
