@@ -7516,7 +7516,7 @@ static void M_DrawControl(void)
 }
 
 static INT32 controltochange;
-static char controltochangetext[55];
+static char controltochangetext[33];
 
 static void M_ChangecontrolResponse(event_t *ev)
 {
@@ -7588,7 +7588,8 @@ static void M_ChangecontrolResponse(event_t *ev)
 	}
 	else if (ch == KEY_PAUSE)
 	{
-		static char tmp[155];
+		// This buffer assumes a 125-character message plus a 32-character control name (per controltochangetext buffer size)
+		static char tmp[158];
 		menu_t *prev = currentMenu->prevMenu;
 
 		if (controltochange == gc_pause)
@@ -7612,12 +7613,14 @@ static void M_ChangecontrolResponse(event_t *ev)
 
 static void M_ChangeControl(INT32 choice)
 {
-	static char tmp[55];
+	// This buffer assumes a 35-character message (per below) plus a max control name limit of 32 chars (per controltochangetext)
+	// If you change the below message, then change the size of this buffer!
+	static char tmp[68];
 
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
 		currentMenu->menuitems[choice].text);
-	strncpy(controltochangetext, currentMenu->menuitems[choice].text, 55);
+	strlcpy(controltochangetext, currentMenu->menuitems[choice].text, 33);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
 }
