@@ -3159,22 +3159,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (!cv_cam2_dist.changed)
 			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
 
-<<<<<<< HEAD
 		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
 		if (!cv_cam_rotate.changed)
 			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-=======
-		if (!cv_cam2_height.changed)
-			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
-
-		if (!cv_cam2_dist.changed)
-			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
-
-		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
-		if (!cv_cam_rotate.changed)
-			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-
->>>>>>> public_next-20190101
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 

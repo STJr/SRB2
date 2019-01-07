@@ -2733,15 +2733,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	}
 
 	if (P_IsLocalPlayer(player))
-<<<<<<< HEAD
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
-	else if(server || adminplayer == consoleplayer)
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
-=======
-		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
->>>>>>> public_next-20190101
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 

@@ -1078,11 +1078,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-<<<<<<< HEAD
 	if ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'))
-=======
-	if (client && (cv_forceskin.value != -1) && !(IsPlayerAdmin(playernum) && serverplayer == -1))
->>>>>>> public_next-20190101
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -3285,15 +3281,11 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
-<<<<<<< HEAD
-	INT32 i;
-=======
 	INT32 i,j;
 	serverinfo_pak *dummycheck = NULL;
 
 	// Shut the compiler up.
 	(void)dummycheck;
->>>>>>> public_next-20190101
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
@@ -4312,8 +4304,6 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-<<<<<<< HEAD
-=======
 	if ((server || IsPlayerAdmin(consoleplayer)) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
 	{
 		if (cv_forceskin.value == -2)
@@ -4328,7 +4318,6 @@ static void ForceSkin_OnChange(void)
 		return;
 	}
 
->>>>>>> public_next-20190101
 	// NOT in SP, silly!
 	if (!(netgame || multiplayer))
 		return;
