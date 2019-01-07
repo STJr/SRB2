@@ -1778,7 +1778,7 @@ void GameDigiMusic_OnChange(void)
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
-			S_ChangeMusicInternal("lclear", false);
+			S_ChangeMusicInternal("_clear", false);
 	}
 	else
 	{
@@ -1819,7 +1819,7 @@ void GameMIDIMusic_OnChange(void)
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
-			S_ChangeMusicInternal("lclear", false);
+			S_ChangeMusicInternal("_clear", false);
 	}
 	else
 	{

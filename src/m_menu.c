@@ -1221,22 +1221,22 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Chat", NULL, 110},
 	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  116},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     126},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    131},
-	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    136},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  141},
-	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  146},
-	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  151},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     121},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    126},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    131},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  136},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  141},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  146},
 
-	{IT_HEADER, NULL, "Level", NULL, 160},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 171},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 176},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   181},
+	{IT_HEADER, NULL, "Level", NULL, 155},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 166},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   176},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 190},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         196},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      201},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 185},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         191},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      196},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -1330,16 +1330,18 @@ static menuitem_t OP_OpenGLColorMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 10},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 20},
+	{IT_HEADER, NULL, "Game Audio", NULL, 0}, // 0 // ScrollMenu offsets
+	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 13}, // 6
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 23}, // 11
 
-	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 40},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  50},
+	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 43}, // 21
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  53}, // 26
 
-	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 70},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
+	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
 
-	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
+	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -1860,7 +1862,7 @@ menu_t OP_ColorOptionsDef =
 	NULL
 };
 
-menu_t OP_SoundOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_MonitorToggleDef =
@@ -9216,7 +9218,7 @@ static void M_DrawJoystick(void)
 
 		if (i == itemOn)
 		{
-			V_DrawScaledPatch(currentMenu->x - 24, OP_JoystickSetDef.y+LINEHEIGHT*i, 0,
+			V_DrawScaledPatch(currentMenu->x - 24, OP_JoystickSetDef.y+LINEHEIGHT*i-4, 0,
 				W_CachePatchName("M_CURSOR", PU_CACHE));
 		}
 	}
