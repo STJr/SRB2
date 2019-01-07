@@ -305,8 +305,6 @@ closedir (DIR * dirp)
   return rc;
 }
 #endif
-<<<<<<< HEAD
-=======
 
 static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
 #if 1
@@ -341,111 +339,6 @@ char *refreshdirname = NULL;
 
 size_t packetsizetally = 0;
 size_t mainwadstally = 0;
-
-#if defined (_XBOX) && defined (_MSC_VER)
-filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
-	boolean completepath, int maxsearchdepth)
-{
-//NONE?
-	startpath = filename = NULL;
-	wantedmd5sum = NULL;
-	maxsearchdepth = 0;
-	completepath = false;
-	return FS_NOTFOUND;
-}
-
-void closefilemenu(boolean validsize)
-{
-	(void)validsize;
-	return;
-}
-
-void searchfilemenu(char *tempname)
-{
-	(void)tempname;
-	return;
-}
-
-boolean preparefilemenu(boolean samedepth)
-{
-	(void)samedepth;
-	return false;
-}
-
-#elif defined (_WIN32_WCE)
-filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
-	boolean completepath, int maxsearchdepth)
-{
-#ifdef __GNUC__
-//NONE?
-	startpath = filename = NULL;
-	wantedmd5sum = NULL;
-	maxsearchdepth = 0;
-	completepath = false;
-#else
-	WIN32_FIND_DATA dta;
-	HANDLE searchhandle = INVALID_HANDLE_VALUE;
-	const wchar_t wm[4] = L"*.*";
->>>>>>> public_next-20190101
-
-static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
-#if 1
-												{1, "HOME"}, {2, "SRB2"},
-#endif
-<<<<<<< HEAD
-													{3, "CUSTOM"}, {0, NULL}};
-
-consvar_t cv_addons_option = {"addons_option", "Default", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_addons_folder = {"addons_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static CV_PossibleValue_t addons_md5_cons_t[] = {{0, "Name"}, {1, "Contents"}, {0, NULL}};
-consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-consvar_t cv_addons_showall = {"addons_showall", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-consvar_t cv_addons_search_case = {"addons_search_case", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static CV_PossibleValue_t addons_search_type_cons_t[] = {{0, "Start"}, {1, "Anywhere"}, {0, NULL}};
-consvar_t cv_addons_search_type = {"addons_search_type", "Anywhere", CV_SAVE, addons_search_type_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-char menupath[1024];
-size_t menupathindex[menudepth];
-size_t menudepthleft = menudepth;
-
-char menusearch[MAXSTRINGLENGTH+1];
-
-char **dirmenu, **coredirmenu; // core only local for this file
-size_t sizedirmenu, sizecoredirmenu; // ditto
-size_t dir_on[menudepth];
-UINT8 refreshdirmenu = 0;
-char *refreshdirname = NULL;
-
-size_t packetsizetally = 0;
-size_t mainwadstally = 0;
-=======
-	return FS_NOTFOUND;
-}
-
-void closefilemenu(boolean validsize)
-{
-	(void)validsize;
-	return;
-}
-
-void searchfilemenu(char *tempname)
-{
-	(void)tempname;
-	return;
-}
-
-boolean preparefilemenu(boolean samedepth)
-{
-	(void)samedepth;
-	return false;
-}
-
-#else
->>>>>>> public_next-20190101
 
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum, boolean completepath, int maxsearchdepth)
 {
@@ -552,11 +445,6 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return retval;
 }
 
-<<<<<<< HEAD
-char exttable[NUM_EXT_TABLE][5] = {
-	".txt", ".cfg", // exec
-	".wad", ".pk3", ".soc", ".lua"}; // addfile
-=======
 char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) plus 3 (null terminator, stop, and length including previous two)
 	"\5.txt", "\5.cfg", // exec
 	"\5.wad",
@@ -564,7 +452,6 @@ char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) pl
 	"\6.kart",
 #endif
 	"\5.pk3", "\5.soc", "\5.lua"}; // addfile
->>>>>>> public_next-20190101
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
@@ -575,15 +462,9 @@ static boolean filemenucmp(char *haystack, char *needle)
 	strlcpy(localhaystack, haystack, 128);
 	if (!cv_addons_search_case.value)
 		strupr(localhaystack);
-<<<<<<< HEAD
-	return ((cv_addons_search_type.value)
-		? (strstr(localhaystack, needle) != 0)
-		: (!strncmp(localhaystack, needle, menusearch[0])));
-=======
 	if (cv_addons_search_type.value)
 		return (strstr(localhaystack, needle) != 0);
 	return (!strncmp(localhaystack, needle, menusearch[0]));
->>>>>>> public_next-20190101
 }
 
 void closefilemenu(boolean validsize)
@@ -691,11 +572,7 @@ void searchfilemenu(char *tempname)
 	{
 		if ((!(dirmenu = Z_Realloc(dirmenu, sizeof(char *), PU_STATIC, NULL)))
 			|| !(dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS))))
-<<<<<<< HEAD
-				I_Error("Ran out of memory whilst preparing add-ons menu");
-=======
 				I_Error("searchfilemenu(): could not create \"No results...\".");
->>>>>>> public_next-20190101
 		sizedirmenu = 1;
 		dir_on[menudepthleft] = 0;
 		if (tempname)
@@ -704,11 +581,7 @@ void searchfilemenu(char *tempname)
 	}
 
 	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
-<<<<<<< HEAD
-		I_Error("Ran out of memory whilst preparing add-ons menu");
-=======
 		I_Error("searchfilemenu(): could not reallocate dirmenu.");
->>>>>>> public_next-20190101
 
 	sizedirmenu = 0;
 	for (i = first; i < sizecoredirmenu; i++)
@@ -727,11 +600,7 @@ void searchfilemenu(char *tempname)
 
 	if (tempname)
 	{
-<<<<<<< HEAD
-		dir_on[menudepthleft] = 0;
-=======
 		dir_on[menudepthleft] = 0; //first; -- can't be first, causes problems
->>>>>>> public_next-20190101
 		Z_Free(tempname);
 	}
 }
@@ -790,11 +659,7 @@ boolean preparefilemenu(boolean samedepth)
 					size_t len = strlen(dent->d_name)+1;
 					UINT8 ext;
 					for (ext = 0; ext < NUM_EXT_TABLE; ext++)
-<<<<<<< HEAD
-						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
-=======
 						if (!strcasecmp(exttable[ext]+1, dent->d_name+len-(exttable[ext][0]))) break; // extension comparison
->>>>>>> public_next-20190101
 					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				}
 			}
@@ -827,11 +692,7 @@ boolean preparefilemenu(boolean samedepth)
 	if (!(coredirmenu = Z_Realloc(coredirmenu, sizecoredirmenu*sizeof(char *), PU_STATIC, NULL)))
 	{
 		closedir(dirhandle); // just in case
-<<<<<<< HEAD
-		I_Error("Ran out of memory whilst preparing add-ons menu");
-=======
 		I_Error("preparefilemenu(): could not reallocate coredirmenu.");
->>>>>>> public_next-20190101
 	}
 
 	rewinddir(dirhandle);
@@ -864,11 +725,7 @@ boolean preparefilemenu(boolean samedepth)
 			{
 				if (!((numfolders+pos) < sizecoredirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
-<<<<<<< HEAD
-					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
-=======
 					if (!strcasecmp(exttable[ext]+1, dent->d_name+len-(exttable[ext][0]))) break; // extension comparison
->>>>>>> public_next-20190101
 				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
 
@@ -910,11 +767,7 @@ boolean preparefilemenu(boolean samedepth)
 				len = 255;
 
 			if (!(temp = Z_Malloc((len+DIR_STRING+folder) * sizeof (char), PU_STATIC, NULL)))
-<<<<<<< HEAD
-				I_Error("Ran out of memory whilst preparing add-ons menu");
-=======
 				I_Error("preparefilemenu(): could not create file entry.");
->>>>>>> public_next-20190101
 			temp[DIR_TYPE] = ext;
 			temp[DIR_LEN] = (UINT8)(len);
 			strlcpy(temp+DIR_STRING, dent->d_name, len);
@@ -932,11 +785,7 @@ boolean preparefilemenu(boolean samedepth)
 
 	if ((menudepthleft != menudepth-1) // now for UP... entry
 		&& !(coredirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP))))
-<<<<<<< HEAD
-			I_Error("Ran out of memory whilst preparing add-ons menu");
-=======
 			I_Error("preparefilemenu(): could not create \"UP...\".");
->>>>>>> public_next-20190101
 
 	menupath[menupathindex[menudepthleft]] = 0;
 	sizecoredirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
@@ -952,8 +801,3 @@ boolean preparefilemenu(boolean samedepth)
 
 	return true;
 }
-<<<<<<< HEAD
-=======
-
-#endif
->>>>>>> public_next-20190101
