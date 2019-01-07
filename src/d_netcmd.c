@@ -1439,13 +1439,13 @@ void SendWeaponPref(void)
 	UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[consoleplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog.value)
 		buf[0] |= 2;
-	if (players[consoleplayer].pflags & PF_DIRECTIONCHAR)
+	if (cv_directionchar.value)
 		buf[0] |= 4;
-	if (players[consoleplayer].pflags & PF_AUTOBRAKE)
+	if (cv_autobrake.value)
 		buf[0] |= 8;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
@@ -1455,13 +1455,13 @@ void SendWeaponPref2(void)
 	UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog2.value)
 		buf[0] |= 2;
-	if (players[secondarydisplayplayer].pflags & PF_DIRECTIONCHAR)
+	if (cv_directionchar2.value)
 		buf[0] |= 4;
-	if (players[secondarydisplayplayer].pflags & PF_AUTOBRAKE)
+	if (cv_autobrake2.value)
 		buf[0] |= 8;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
@@ -3105,26 +3105,14 @@ static void Command_Addfile(void)
 		if (*p == '\\' || *p == '/' || *p == ':')
 			break;
 	++p;
+
 	// check total packet size and no of files currently loaded
+	// See W_LoadWadFile in w_wad.c
+	if ((numwadfiles >= MAX_WADFILES)
+	|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 	{
-		size_t packetsize = 0;
-		serverinfo_pak *dummycheck = NULL;
-
-		// Shut the compiler up.
-		(void)dummycheck;
-
-		// See W_LoadWadFile in w_wad.c
-		for (i = 0; i < numwadfiles; i++)
-			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-		packetsize += nameonlylength(fn) + 22;
-
-		if ((numwadfiles >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
-			return;
-		}
+		CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+		return;
 	}
 
 	WRITESTRINGN(buf_p,p,240);
@@ -3174,11 +3162,6 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	boolean kick = false;
 	boolean toomany = false;
 	INT32 i;
-	size_t packetsize = 0;
-	serverinfo_pak *dummycheck = NULL;
-
-	// Shut the compiler up.
-	(void)dummycheck;
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
@@ -3205,13 +3188,8 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-	packetsize += nameonlylength(filename) + 22;
-
 	if ((numwadfiles >= MAX_WADFILES)
-	|| (packetsize > sizeof(dummycheck->fileneeded)))
+	|| ((packetsizetally + nameonlylength(filename) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3363,6 +3341,9 @@ static void Command_Playintro_f(void)
 {
 	if (netgame)
 		return;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	F_StartIntro();
 }
@@ -4011,6 +3992,9 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	if (!modeattacking)
 		D_StartTitle();

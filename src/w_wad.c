@@ -340,6 +340,16 @@ UINT16 W_InitFile(const char *filename)
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
 
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	if (dirmenu)
+	{
+		refreshdirname = Z_StrDup(filename);
+		nameonly(refreshdirname);
+	}
+	else
+		refreshdirname = NULL;
+
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
 	// check if limit of active wadfiles
@@ -360,9 +370,7 @@ UINT16 W_InitFile(const char *filename)
 	// see PutFileNeeded in d_netfil.c
 	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize = packetsizetally;
-
-		packetsize += nameonlylength(filename) + 22;
+		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
 		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 		{

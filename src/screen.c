@@ -281,7 +281,10 @@ void SCR_Recalc(void)
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
 
 #ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	// 13/11/18:
+	// The above is no longer necessary, since we want OpenGL to be just like software now
+	// -- Monster Iestyn
 #endif
 		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
 
@@ -438,15 +441,17 @@ void SCR_ClosedCaptions(void)
 	boolean gamestopped = (paused || P_AutoPause());
 	INT32 basey = BASEVIDHEIGHT;
 
+	if (gamestate != wipegamestate)
+		return;
+
 	if (gamestate == GS_LEVEL)
 	{
 		if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)
 		|| (!(maptol & TOL_NIGHTS)
-		&& ((cv_powerupdisplay.value == 2)
-		|| (cv_powerupdisplay.value == 1 && ((stplyr == &players[displayplayer] && !camera.chase)
-		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))))))
+		&& ((cv_powerupdisplay.value == 2) // "Always"
+		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
 			basey -= 16;
 	}
 

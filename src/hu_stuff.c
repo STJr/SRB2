@@ -1040,25 +1040,29 @@ UINT16 hu_demorings;
 
 static void HU_DrawDemoInfo(void)
 {
-	V_DrawString(4, 188-24, V_YELLOWMAP, va(M_GetText("%s's replay"), player_names[0]));
+	INT32 h = 188;
+	if (modeattacking == ATTACKING_NIGHTS)
+		h -= 12;
+
+	V_DrawString(4, h-24, V_YELLOWMAP|V_ALLOWLOWERCASE, va(M_GetText("%s's replay"), player_names[0]));
 	if (modeattacking)
 	{
-		V_DrawString(4, 188-16, V_YELLOWMAP|V_MONOSPACE, "SCORE:");
-		V_DrawRightAlignedString(120, 188-16, V_MONOSPACE, va("%d", hu_demoscore));
+		V_DrawString(4, h-16, V_YELLOWMAP|V_MONOSPACE, "SCORE:");
+		V_DrawRightAlignedString(120, h-16, V_MONOSPACE, va("%d", hu_demoscore));
 
-		V_DrawString(4, 188- 8, V_YELLOWMAP|V_MONOSPACE, "TIME:");
+		V_DrawString(4, h-8, V_YELLOWMAP|V_MONOSPACE, "TIME:");
 		if (hu_demotime != UINT32_MAX)
-			V_DrawRightAlignedString(120, 188- 8, V_MONOSPACE, va("%i:%02i.%02i",
+			V_DrawRightAlignedString(120, h-8, V_MONOSPACE, va("%i:%02i.%02i",
 				G_TicsToMinutes(hu_demotime,true),
 				G_TicsToSeconds(hu_demotime),
 				G_TicsToCentiseconds(hu_demotime)));
 		else
-			V_DrawRightAlignedString(120, 188- 8, V_MONOSPACE, "--:--.--");
+			V_DrawRightAlignedString(120, h-8, V_MONOSPACE, "--:--.--");
 
 		if (modeattacking == ATTACKING_RECORD)
 		{
-			V_DrawString(4, 188   , V_YELLOWMAP|V_MONOSPACE, "RINGS:");
-			V_DrawRightAlignedString(120, 188   , V_MONOSPACE, va("%d", hu_demorings));
+			V_DrawString(4, h, V_YELLOWMAP|V_MONOSPACE, "RINGS:");
+			V_DrawRightAlignedString(120, h, V_MONOSPACE, va("%d", hu_demorings));
 		}
 	}
 }
@@ -1126,6 +1130,31 @@ void HU_Drawer(void)
 			strcat(resynch_text, ".");
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
+	}
+
+	if (modeattacking && pausedelay > 0 && !pausebreakkey)
+	{
+		INT32 strength = ((pausedelay - 1 - NEWTICRATE/2)*10)/(NEWTICRATE/3);
+		INT32 y = hudinfo[HUD_LIVES].y - 13;
+
+		if (players[consoleplayer].powers[pw_carry] == CR_NIGHTSMODE)
+			y -= 16;
+		else
+		{
+			if (players[consoleplayer].pflags & PF_AUTOBRAKE)
+				y -= 8;
+			if (players[consoleplayer].pflags & PF_ANALOGMODE)
+				y -= 8;
+		}
+
+		V_DrawThinString(hudinfo[HUD_LIVES].x-2, y,
+			hudinfo[HUD_LIVES].f|((leveltime & 4) ? V_SKYMAP : V_BLUEMAP),
+			"HOLD TO RETRY...");
+
+		if (strength > 9)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		else if (strength > 0)
+			V_DrawFadeScreen(0, strength);
 	}
 }
 

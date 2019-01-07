@@ -296,7 +296,7 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if (vid.width != BASEVIDWIDTH * vid.dupx)
+			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
@@ -307,7 +307,7 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				else if (perplayershuffle & 8)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
 			}
-			if (vid.height != BASEVIDHEIGHT * vid.dupy)
+			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 			{
 				if (option & V_SNAPTOBOTTOM)
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
@@ -452,14 +452,14 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if (vid.width != BASEVIDWIDTH * vid.dupx)
+			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if (vid.height != BASEVIDHEIGHT * vid.dupy)
+			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 			{
 				if (option & V_SNAPTOBOTTOM)
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
@@ -1022,7 +1022,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 		fw *= dupx;
 		fh *= dupy;
 
-		if (vid.width != BASEVIDWIDTH * vid.dupx)
+		if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
 		{
 			if (color & V_SNAPTORIGHT)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
@@ -1033,7 +1033,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 			else if (perplayershuffle & 8)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
 		}
-		if (vid.height != BASEVIDHEIGHT * dupy)
+		if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)

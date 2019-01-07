@@ -329,19 +329,21 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 consvar_t cv_crosshair = {"crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_crosshair2 = {"crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_invertmouse = {"invertmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_alwaysfreelook = {"alwaysmlook", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_alwaysfreelook = {"alwaysmlook", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_invertmouse2 = {"invertmouse2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_alwaysfreelook2 = {"alwaysmlook2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mousemove = {"mousemove", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mousemove2 = {"mousemove2", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_analog = {"analog", "Off", CV_CALL, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_analog2 = {"analog2", "Off", CV_CALL, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog = {"useranalog", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog2 = {"useranalog2", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousemove = {"mousemove", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousemove2 = {"mousemove2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
+// previously "analog", "analog2", "useranalog", and "useranalog2", invalidating 2.1-era copies of config.cfg
+// changed because it'd be nice to see people try out our actually good controls with gamepads now autobrake exists
+consvar_t cv_analog = {"sessionanalog", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_analog2 = {"sessionanalog2", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_useranalog = {"configanalog", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_useranalog2 = {"configanalog2", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // deez New User eXperiences
+static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
 consvar_t cv_directionchar = {"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -1532,11 +1534,6 @@ static void Analog_OnChange(void)
 		return;
 	}
 
-	if (cv_analog.value)
-		players[consoleplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[consoleplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref();
 }
 
@@ -1552,51 +1549,26 @@ static void Analog2_OnChange(void)
 		return;
 	}
 
-	if (cv_analog2.value)
-		players[secondarydisplayplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref2();
 }
 
 static void DirectionChar_OnChange(void)
 {
-	if (cv_directionchar.value)
-		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref();
 }
 
 static void DirectionChar2_OnChange(void)
 {
-	if (cv_directionchar2.value)
-		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref2();
 }
 
 static void AutoBrake_OnChange(void)
 {
-	if (cv_autobrake.value)
-		players[consoleplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref();
 }
 
 static void AutoBrake2_OnChange(void)
 {
-	if (cv_autobrake2.value)
-		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref2();
 }
 
@@ -1681,7 +1653,8 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
-static INT32 pausedelay = 0;
+INT32 pausedelay = 0;
+boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
 //
@@ -1829,19 +1802,35 @@ boolean G_Responder(event_t *ev)
 	{
 		case ev_keydown:
 			if (ev->data1 == gamecontrol[gc_pause][0]
-				|| ev->data1 == gamecontrol[gc_pause][1])
+				|| ev->data1 == gamecontrol[gc_pause][1]
+				|| ev->data1 == KEY_PAUSE)
 			{
-				if (!pausedelay)
+				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					// don't let busy scripts prevent pausing
-					pausedelay = NEWTICRATE/7;
+					pausebreakkey = (ev->data1 == KEY_PAUSE);
+					if (menuactive || pausedelay < 0 || leveltime < 2)
+						return true;
 
-					// command will handle all the checks for us
-					COM_ImmedExecute("pause");
-					return true;
+					if (pausedelay < 1+(NEWTICRATE/2))
+						pausedelay = 1+(NEWTICRATE/2);
+					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
+					{
+						G_SetRetryFlag();
+						return true;
+					}
+					pausedelay++; // counteract subsequent subtraction this frame
 				}
 				else
-					pausedelay = NEWTICRATE/7;
+				{
+					INT32 oldpausedelay = pausedelay;
+					pausedelay = (NEWTICRATE/7);
+					if (!oldpausedelay)
+					{
+						// command will handle all the checks for us
+						COM_ImmedExecute("pause");
+						return true;
+					}
+				}
 			}
 			if (ev->data1 == gamecontrol[gc_camtoggle][0]
 				|| ev->data1 == gamecontrol[gc_camtoggle][1])
@@ -1901,11 +1890,19 @@ void G_Ticker(boolean run)
 		{
 			G_ClearRetryFlag();
 
-			// Costs a life to retry ... unless the player in question is dead already.
-			if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE)
-				players[consoleplayer].lives -= 1;
+			if (modeattacking)
+			{
+				pausedelay = INT32_MIN;
+				M_ModeAttackRetry(0);
+			}
+			else
+			{
+				// Costs a life to retry ... unless the player in question is dead already.
+				if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
+					players[consoleplayer].lives -= 1;
 
-			G_DoReborn(consoleplayer);
+				G_DoReborn(consoleplayer);
+			}
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -2004,8 +2001,13 @@ void G_Ticker(boolean run)
 
 	if (run)
 	{
-		if (pausedelay)
-			pausedelay--;
+		if (pausedelay && pausedelay != INT32_MIN)
+		{
+			if (pausedelay > 0)
+				pausedelay--;
+			else
+				pausedelay++;
+		}
 
 		if (camtoggledelay)
 			camtoggledelay--;
@@ -2939,6 +2941,9 @@ static void G_DoCompleted(void)
 	INT32 i;
 
 	tokenlist = 0; // Reset the list
+
+	if (modeattacking && pausedelay)
+		pausedelay = 0;
 
 	gameaction = ga_nothing;
 

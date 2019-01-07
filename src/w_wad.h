@@ -67,7 +67,7 @@ typedef struct
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
-#define MAX_WADPATH 128
+#define MAX_WADPATH 512
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 

@@ -47,6 +47,9 @@ void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
 
+// level title draw
+void ST_drawLevelTitle(tic_t titletime);
+
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);
 
