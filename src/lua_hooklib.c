@@ -200,6 +200,8 @@ static int lib_addHook(lua_State *L)
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
 	case hook_FollowMobj:
+	case hook_ShieldSpawn:
+	case hook_ShieldSpecial:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:

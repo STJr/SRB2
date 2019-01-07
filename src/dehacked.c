@@ -3225,7 +3225,7 @@ static void readmaincfg(MYFILE *f)
 				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
-				strncpy(savegamename, timeattackfolder, sizeof (timeattackfolder));
+				strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
@@ -6414,8 +6414,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TOAD",
 
 	// Nights-specific stuff
-	"S_NIGHTSDRONE1",
-	"S_NIGHTSDRONE2",
+	"S_NIGHTSDRONE_MAN1",
+	"S_NIGHTSDRONE_MAN2",
 	"S_NIGHTSDRONE_SPARKLING1",
 	"S_NIGHTSDRONE_SPARKLING2",
 	"S_NIGHTSDRONE_SPARKLING3",
@@ -6432,10 +6432,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTSDRONE_SPARKLING14",
 	"S_NIGHTSDRONE_SPARKLING15",
 	"S_NIGHTSDRONE_SPARKLING16",
-	"S_NIGHTSGOAL1",
-	"S_NIGHTSGOAL2",
-	"S_NIGHTSGOAL3",
-	"S_NIGHTSGOAL4",
+	"S_NIGHTSDRONE_GOAL1",
+	"S_NIGHTSDRONE_GOAL2",
+	"S_NIGHTSDRONE_GOAL3",
+	"S_NIGHTSDRONE_GOAL4",
 
 	"S_NIGHTSPARKLE1",
 	"S_NIGHTSPARKLE2",
@@ -7306,7 +7306,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AXISTRANSFER",
 	"MT_AXISTRANSFERLINE",
 	"MT_NIGHTSDRONE",
-	"MT_NIGHTSGOAL",
+	"MT_NIGHTSDRONE_MAN",
+	"MT_NIGHTSDRONE_SPARKLING",
+	"MT_NIGHTSDRONE_GOAL",
 	"MT_NIGHTSPARKLE",
 	"MT_NIGHTSLOOPHELPER",
 	"MT_NIGHTSBUMPER", // NiGHTS Bumper
@@ -7323,6 +7325,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTSEXTRATIME",
 	"MT_NIGHTSLINKFREEZE",
 	"MT_EGGCAPSULE",
+	"MT_IDEYAANCHOR",
 	"MT_NIGHTOPIANHELPER", // the actual helper object that orbits you
 	"MT_PIAN", // decorative singing friend
 	"MT_SHLEEP", // almost-decorative sleeping enemy

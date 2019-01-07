@@ -134,7 +134,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-	boolean final;
+	boolean final = false;
 
 	// Object was already sprung this tic
 	if (object->eflags & MFE_SPRUNG)

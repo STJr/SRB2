@@ -666,7 +666,7 @@ boolean I_SongPlaying(void)
 #ifdef HAVE_LIBGME
 		(I_SongType() == MU_GME && gme) ||
 #endif
-		(boolean)music
+		music != NULL
 	);
 }
 

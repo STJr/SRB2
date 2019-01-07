@@ -1063,7 +1063,7 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 //
 // HWR_SplitWall
 //
-static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, UINT32 cutflag, ffloor_t *pfloor)
+static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum, FSurfaceInfo* Surf, INT32 cutflag, ffloor_t *pfloor)
 {
 	/* SoM: split up and light walls according to the
 	 lightlist. This may also include leaving out parts
@@ -5731,7 +5731,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
-	v[0].sow = v[3].sow = ((float) (-angle) / ((ANGLE_90-1)*dimensionmultiply)); // left
+	v[0].sow = v[3].sow = (-1.0f * angle) / ((ANGLE_90-1)*dimensionmultiply); // left
 	v[2].sow = v[1].sow = v[0].sow + (1.0f/dimensionmultiply); // right (or left + 1.0f)
 	// use +angle and -1.0f above instead if you wanted old backwards behavior
 
