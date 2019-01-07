@@ -169,20 +169,10 @@ void P_InitPicAnims(void)
 		// Find ANIMDEFS lump in the WAD
 		animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 
-<<<<<<< HEAD
 		while (animdefsLumpNum != INT16_MAX)
 		{
 			P_ParseANIMDEFSLump(w, animdefsLumpNum);
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
-=======
-			// Find ANIMDEFS lump in the WAD
-			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
-			while (animdefsLumpNum != INT16_MAX)
-			{
-				P_ParseANIMDEFSLump(w, animdefsLumpNum);
-				animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", (UINT16)w, animdefsLumpNum + 1);
-			}
->>>>>>> public_next-20190101
 		}
 	}
 
