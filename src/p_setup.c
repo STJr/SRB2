@@ -2872,7 +2872,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		//filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
 		UINT32 numlumps = ((wadinfo_t *)wadData)->numlumps;
-<<<<<<< HEAD
 
 		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
 		{
@@ -2919,49 +2918,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		for (i = 0; i < 16; i++)
 			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 
-=======
-
-		if (numlumps < ML_REJECT) // at least 9 lumps should be in the wad for a map to be loaded
-		{
-			I_Error("Bad WAD file for map %s!\n", maplumpname);
-		}
-
-		if (numlumps > ML_BLOCKMAP) // enough room for a BLOCKMAP lump at least
-		{
-			loadedbm = P_LoadRawBlockMap(
-							wadData + (fileinfo + ML_BLOCKMAP)->filepos,
-							(fileinfo + ML_BLOCKMAP)->size,
-							(fileinfo + ML_BLOCKMAP)->name);
-		}
-		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
-		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
-		P_LoadRawSideDefs((fileinfo + ML_SIDEDEFS)->size);
-		P_LoadRawLineDefs(wadData + (fileinfo + ML_LINEDEFS)->filepos, (fileinfo + ML_LINEDEFS)->size);
-		P_LoadRawSideDefs2(wadData + (fileinfo + ML_SIDEDEFS)->filepos);
-		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
-		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
-		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
-		if (numlumps > ML_REJECT) // enough room for a REJECT lump at least
-		{
-			P_LoadRawReject(
-					wadData + (fileinfo + ML_REJECT)->filepos,
-					(fileinfo + ML_REJECT)->size,
-					(fileinfo + ML_REJECT)->name);
-		}
-
-		// Important: take care of the ordering of the next functions.
-		if (!loadedbm)
-			P_CreateBlockMap(); // Graue 02-29-2004
-		P_LoadLineDefs2();
-		P_GroupLines();
-		numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-		// reset the player starts
-		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
->>>>>>> public_next-20190101
 		P_MapStart();
 
 		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
@@ -2991,7 +2947,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
 			playerstarts[i] = NULL;
-<<<<<<< HEAD
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -3007,13 +2962,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	// init gravity, tag lists,
 	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
 	P_InitSpecials();
-=======
-		for (i = 0; i < 2; i++)
-			skyboxmo[i] = NULL;
-		P_MapStart();
-		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-	}
->>>>>>> public_next-20190101
 
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
@@ -3399,7 +3347,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
-<<<<<<< HEAD
+
+	boolean texturechange = false; ///\todo Useless; broken when back-frontporting PK3 changes?
 	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 
@@ -3417,12 +3366,6 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-=======
-	boolean texturechange = false;
-	boolean mapsadded = false;
-	boolean replacedcurrentmap = false;
-
->>>>>>> public_next-20190101
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;

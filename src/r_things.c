@@ -379,17 +379,10 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	UINT16 start, end;
 	char wadname[MAX_WADPATH];
 
-<<<<<<< HEAD
 	// Find the sprites section in this resource file.
-	if (wadfiles[wadnum]->type == RET_PK3)
-		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
-	else
-	{
-=======
 	switch (wadfiles[wadnum]->type)
 	{
 	case RET_WAD:
->>>>>>> public_next-20190101
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
@@ -397,21 +390,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			start = 0; //let say S_START is lump 0
 		else
 			start++;   // just after S_START
-<<<<<<< HEAD
-	}
 
-	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
-	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
-		return;
-
-	if (wadfiles[wadnum]->type == RET_PK3)
-		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
-	else
-	{
-		end = W_CheckNumForNamePwad("S_END",wadnum,start);
-		if (end == INT16_MAX)
-			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
-=======
 		end = W_CheckNumForNamePwad("S_END",wadnum,start);
 		if (end == INT16_MAX)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
@@ -422,7 +401,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		break;
 	default:
 		return;
->>>>>>> public_next-20190101
 	}
 
 	if (end == INT16_MAX)
