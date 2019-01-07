@@ -366,7 +366,6 @@ static void M_DrawControl(void);
 static void M_DrawMainVideoMenu(void);
 static void M_DrawVideoMode(void);
 static void M_DrawColorMenu(void);
-static void M_DrawSoundMenu(void);
 static void M_DrawScreenshotMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
@@ -1861,8 +1860,7 @@ menu_t OP_ColorOptionsDef =
 	NULL
 };
 
-menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
-menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_SoundOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_MonitorToggleDef =
@@ -3141,6 +3139,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 //
 // Draw border for the savegame description
 //
+#if 0 // once used for joysticks and savegames, now no longer
 static void M_DrawSaveLoadBorder(INT32 x,INT32 y)
 {
 	INT32 i;
@@ -3155,6 +3154,7 @@ static void M_DrawSaveLoadBorder(INT32 x,INT32 y)
 
 	V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSRGHT",PU_CACHE));
 }
+#endif
 
 // horizontally centered text
 static void M_CentreText(INT32 y, const char *string)
@@ -4270,7 +4270,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 				}
 				break;
 			}
-			// intentionall fallthrough
+			// below comment, verbatim: gcc 7 -Werror-implicit-fallthrough workaround
+			// fall through
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
@@ -9274,19 +9275,23 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	setupcontrols = gamecontrol;        // was called from main Options (for console player, then)
 	currentMenu->lastOn = itemOn;
 
-	// Unhide the five non-P2 controls and their headers
-	OP_ChangeControlsMenu[18+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	// Unhide the nine non-P2 controls and their headers
+	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
 	// ...
 	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
 	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
 	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+5].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+6].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+7].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+8].status = IT_CALL|IT_STRING2;
 	// ...
-	OP_ChangeControlsMenu[23+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[23+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[27+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[27+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[23+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[23+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[27+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[27+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_ChangeControlsDef);
@@ -9301,21 +9306,21 @@ static void M_Setup2PControlsMenu(INT32 choice)
 
 	// Hide the nine non-P2 controls and their headers
 	//OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
 	// ...
 	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
 	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
 	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+6].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+7].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+8].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[23+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[23+1].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[23+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[23+3].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[23+4].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[23+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[27+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[27+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+1].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[27+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[27+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ChangeControlsDef);

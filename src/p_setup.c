@@ -2643,7 +2643,8 @@ static boolean P_CanSave(void)
 		|| (modeattacking || ultimatemode || G_IsSpecialStage(gamemap))) // Specialized instances
 		return false;
 
-	if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_ALWAYS)
+	if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_ALWAYS
+		|| (mapheaderinfo[gamemap-1]->levelflags & LF_SAVEGAME))
 		return true; // Saving should ALWAYS happen!
 	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
 		return false; // Saving should NEVER happen!
@@ -2651,7 +2652,7 @@ static boolean P_CanSave(void)
 	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
 	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
 			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
-			&& (gamemap != lastmapsaved));
+			&& (gamemap != lastmaploaded));
 }
 
 /** Loads a level from a lump or external wad.
@@ -3348,7 +3349,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	char *name;
 	lumpinfo_t *lumpinfo;
 
-	boolean texturechange = false; ///\todo Useless; broken when back-frontporting PK3 changes?
+	//boolean texturechange = false; ///\todo Useless; broken when back-frontporting PK3 changes?
 	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 

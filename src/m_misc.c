@@ -444,7 +444,8 @@ void Command_LoadConfig_f(void)
 
 	// load default control
 	G_ClearAllControlKeys();
-	G_Controldefault();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], NULL, 0);
+	G_CopyControls(gamecontrolbis, gamecontrolbisdefault[gcs_fps], NULL, 0);
 
 	// temporarily reset execversion to default
 	CV_ToggleExecVersion(true);

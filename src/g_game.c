@@ -1047,11 +1047,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	axis = JoyAxis(AXISMOVE);
 	altaxis = JoyAxis(AXISLOOK);
 	if (movefkey || (gamepadjoystickmove && axis < 0)
-		|| ((player->pflags & PF_NIGHTSMODE)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
 			&& (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && axis > 0)
-		|| ((player->pflags & PF_NIGHTSMODE)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
 			&& (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
@@ -1147,7 +1147,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
 			localaiming = 0;
 
-		if (!(player->pflags & PF_NIGHTSMODE))
+		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
 			if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
 			{
@@ -1371,11 +1371,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	axis = Joy2Axis(AXISMOVE);
 	altaxis = Joy2Axis(AXISLOOK);
 	if (movefkey || (gamepadjoystickmove && axis < 0)
-		|| ((player->pflags & PF_NIGHTSMODE)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
 			&& (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && axis > 0)
-		|| ((player->pflags & PF_NIGHTSMODE)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
 			&& (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
@@ -1468,7 +1468,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
 			localaiming2 = 0;
 
-		if (!(player->pflags & PF_NIGHTSMODE))
+		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
 			if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
 			{

@@ -1206,7 +1206,7 @@ void F_CreditDrawer(void)
 		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
 
 	// Dim the background
-	V_DrawFadeScreen();
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
@@ -2553,7 +2553,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,
@@ -2584,7 +2584,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,

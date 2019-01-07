@@ -237,7 +237,7 @@ static UINT8 promptbgcolor = UINT8_MAX;
 void CON_SetupBackColormapEx(INT32 color, boolean prompt)
 {
 	UINT16 i, palsum;
-	UINT8 j, palindex, shift;
+	UINT8 j, palindex;
 	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
 	INT32 shift = 6;
 
