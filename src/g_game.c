@@ -128,6 +128,14 @@ INT16 titlemap = 0;
 boolean hidetitlepics = false;
 INT16 bootmap; //bootmap for loading a map on startup
 
+INT16 tutorialmap = 0; // map to load for tutorial
+boolean tutorialmode = false; // are we in a tutorial right now?
+INT32 tutorialgcs = gcs_custom; // which control scheme is loaded?
+INT32 tutorialusemouse = 0; // store cv_usemouse user value
+INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
+INT32 tutorialmousemove = 0; // store cv_mousemove user value
+INT32 tutorialanalog = 0; // store cv_analog user value
+
 boolean looptitle = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;
@@ -139,6 +147,7 @@ tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
 
 cutscene_t *cutscenes[128];
+textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 boolean skipstats;
@@ -1934,6 +1943,7 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker();
+			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 			break;

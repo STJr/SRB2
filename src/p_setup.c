@@ -1546,6 +1546,7 @@ static void P_LoadRawSideDefs2(void *data)
 			}
 
 			case 443: // Calls a named Lua function
+			case 459: // Control text prompt (named tag)
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -2757,6 +2758,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
 		I_UpdateNoVsync();
 	}
+
+	// Close text prompt before freeing the old level
+	F_EndTextPrompt(false, true);
 
 #ifdef HAVE_BLUA
 	LUA_InvalidateLevel();

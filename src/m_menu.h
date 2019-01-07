@@ -240,6 +240,8 @@ extern INT16 char_on, startchar;
 
 #define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
+void M_TutorialSaveControlResponse(INT32 ch);
+
 void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
