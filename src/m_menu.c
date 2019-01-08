@@ -4862,7 +4862,7 @@ static void M_Addons(INT32 choice)
 	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
 	{
 		size_t i;
-		for (i = 0; i < NUM_EXT+5; i++)
+		for (i = 0; i < NUM_EXT+4; i++)
 			W_UnlockCachedPatch(addonsp[i]);
 	}
 
@@ -5047,7 +5047,7 @@ static void M_DrawAddons(void)
 	x = currentMenu->x;
 	y = currentMenu->y + 1;
 
-	hilicol = V_GetStringColormap(highlightflags)[120];
+	hilicol = 0; // white
 
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), highlightflags|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), MAXSTRINGLENGTH*8+6, 1, hilicol);
@@ -5141,13 +5141,13 @@ static void M_DrawAddons(void)
 			'_' | 0x80, false);
 
 	x -= (21 + 5 + 16);
-	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+3]);
+	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+2]);
 
 	x = BASEVIDWIDTH - x - 16;
-	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
+	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+3]);
 
 	if (modifiedgame)
-		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+2]);
+		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+1]);
 }
 
 static void M_AddonExec(INT32 ch)
