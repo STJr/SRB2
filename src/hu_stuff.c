@@ -750,26 +750,41 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 			cstart = "\x83";
 
-			if (color <= SKINCOLOR_SILVER)
+			// Follow palette order at r_draw.c Color_Names
+			if (color <= SKINCOLOR_SILVER
+				|| color == SKINCOLOR_AETHER)
 				cstart = "\x80"; // White
-			else if (color <= SKINCOLOR_BLACK)
+			else if (color <= SKINCOLOR_BLACK
+				|| color == SKINCOLOR_SLATE)
 				cstart = "\x86"; // Grey
-			else if (color <= SKINCOLOR_BLUE)
-				cstart = "\x84"; // Blue
-			else if (color <= SKINCOLOR_PEACHY)
-				cstart = "\x87"; //... Orange???
-			else if (color == SKINCOLOR_PINK)
-				cstart = "\x85"; // Red.
-			else if (color <= SKINCOLOR_PURPLE)
-				cstart = "\x81"; // Purple
-			else if (color <= SKINCOLOR_ORANGE)
-				cstart = "\x87"; // Orange
-			else if (color <= SKINCOLOR_CRIMSON)
+			else if (color <= SKINCOLOR_YOGURT)
 				cstart = "\x85"; // Red
-			else if (color <= SKINCOLOR_OLIVE)
-				cstart = "\x83"; // green
-			else if (color <= SKINCOLOR_GOLD)
+			else if (color <= SKINCOLOR_BEIGE)
+				cstart = "\x86"; // Grey
+			else if (color <= SKINCOLOR_LAVENDER)
+				cstart = "\x81"; // Purple
+			else if (color <= SKINCOLOR_PEACHY)
+				cstart = "\x85"; // Red
+			else if (color <= SKINCOLOR_RUST)
+				cstart = "\x87"; // Orange
+			else if (color == SKINCOLOR_GOLD
+				|| color == SKINCOLOR_YELLOW)
 				cstart = "\x82"; // Yellow
+			else if (color == SKINCOLOR_SANDY
+				|| color == SKINCOLOR_OLIVE)
+				cstart = "\x81"; // Purple
+			else if (color <= SKINCOLOR_MINT)
+				cstart = "\x83"; // Green
+			else if (color <= SKINCOLOR_DUSK)
+				cstart = "\x84"; // Blue
+			else if (color == SKINCOLOR_PINK
+				|| color == SKINCOLOR_PASTEL
+				|| color == SKINCOLOR_BUBBLEGUM
+				|| color == SKINCOLOR_MAGENTA
+				|| color == SKINCOLOR_ROSY)
+				cstart = "\x85"; // Red
+			else if (color <= SKINCOLOR_PLUM)
+				cstart = "\x81"; // Purple
         }
 		prefix = cstart;
 
