@@ -403,6 +403,10 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		return;
 	}
 
+	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
+	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
+		return;
+
 	if (end == INT16_MAX)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
