@@ -5054,7 +5054,8 @@ static void M_DrawAddons(void)
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 30);
 
 	m = (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1);
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, m, 239);
+	// addons menu back color
+	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, m, 159);
 
 	// scrollbar!
 	if (sizedirmenu <= (2*numaddonsshown + 1))
