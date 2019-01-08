@@ -230,7 +230,6 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelselect = 0;
 	mapheaderinfo[num]->bonustype = 0;
 	mapheaderinfo[num]->maxbonuslives = -1;
-	mapheaderinfo[num]->saveoverride = SAVE_DEFAULT;
 	mapheaderinfo[num]->levelflags = 0;
 	mapheaderinfo[num]->menuflags = 0;
 #if 1 // equivalent to "FlickyList = DEMO"
@@ -2632,27 +2631,19 @@ static void P_SetupCamera(void)
 	}
 }
 
-static boolean P_CanSave(void)
+static boolean CanSaveLevel(INT32 mapnum)
 {
-	// Saving is completely ignored under these conditions:
-	if ((cursaveslot < 0) // Playing without saving
-		|| (modifiedgame && !savemoddata) // Game is modified
-		|| (netgame || multiplayer) // Not in single-player
-		|| (demoplayback || demorecording || metalrecording) // Currently in demo
-		|| (players[consoleplayer].lives <= 0) // Completely dead
-		|| (modeattacking || ultimatemode || G_IsSpecialStage(gamemap))) // Specialized instances
+	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
 		return false;
 
-	if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_ALWAYS
-		|| (mapheaderinfo[gamemap-1]->levelflags & LF_SAVEGAME))
-		return true; // Saving should ALWAYS happen!
-	else if (mapheaderinfo[gamemap-1]->saveoverride == SAVE_NEVER)
-		return false; // Saving should NEVER happen!
+	if (G_IsSpecialStage(mapnum) // don't save in special stages
+		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
+		return false;
 
-	// Default condition: In a non-hidden map, at the beginning of a zone or on a completed save-file, and not on save reload.
-	return (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
-			&& (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete)
-			&& (gamemap != lastmaploaded));
+	// Any levels that have the savegame flag can save normally.
+	// If the game is complete for this save slot, then any level can save!
+	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 /** Loads a level from a lump or external wad.
@@ -3176,7 +3167,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_RunCachedActions();
 
-	if (P_CanSave())
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
+		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!

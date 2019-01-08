@@ -2070,8 +2070,6 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->bonustype);
 	else if (fastcmp(field,"maxbonuslives"))
 		lua_pushinteger(L, header->maxbonuslives);
-	else if (fastcmp(field,"saveoverride"))
-		lua_pushinteger(L, header->saveoverride);
 	else if (fastcmp(field,"levelflags"))
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))
