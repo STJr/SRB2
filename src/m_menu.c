@@ -3862,7 +3862,7 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 			if (mapnum+1 == spstage_start)
 				return true;
 
-			// intentional fallthrough
+			/* FALLTHRU */
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
 			if (mapvisited[mapnum] & MV_MAX)
@@ -4272,8 +4272,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				}
 				break;
 			}
-			// below comment, verbatim: gcc 7 -Werror-implicit-fallthrough workaround
-			// fall through
+			/* FALLTHRU */
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
@@ -5309,7 +5308,7 @@ static void M_HandleAddons(INT32 choice)
 							M_StartMessage(va("%c%s\x80\nThis copy of SRB2 was compiled\nwithout support for .lua files.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), dirmenu[dir_on[menudepthleft]]+DIR_STRING),NULL,MM_NOTHING);
 							break;
 #endif
-						// else intentional fallthrough
+						/* FALLTHRU */
 						case EXT_SOC:
 						case EXT_WAD:
 #ifdef USE_KART
