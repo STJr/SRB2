@@ -588,6 +588,10 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			free(fullname);
 			return NULL;
 		}
+		
+		//If there any extra field or comments, skip them.
+		if(zentry->xtralen+zentry->commlen)
+			fseek(handle,zentry->xtralen+zentry->commlen,SEEK_CUR);
 
 		// Strip away file address and extension for the 8char name.
 		if ((trimname = strrchr(fullname, '/')) != 0)
