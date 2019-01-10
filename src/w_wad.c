@@ -520,6 +520,7 @@ typedef struct zlentry_s
 static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 {
     zend_t zend;
+    zlentry_t zlentry;
     zentry_t* zentries;
     zentry_t* zentry;
 
@@ -572,8 +573,20 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			free(zentry);
 			return NULL;
 		}
+		
+		long oldpos = ftell(handle);
+		
+		fseek(handle,zentry->offset,SEEK_SET);
+		if(fread(&zlentry,1,sizeof(zlentry_t), handle) < sizeof(zlentry_t))
+		{
+			CONS_Alert(CONS_ERROR, "Failed to read local file header (%s)\n", strerror(ferror(handle)));
+			Z_Free(lumpinfo);
+			free(zentry);
+			return NULL;
+		}
+		fseek(handle,oldpos,SEEK_SET);
 
-		lump_p->position = zentry->offset + zentry->namelen + zentry->xtralen + sizeof(zlentry_t);
+		lump_p->position = zentry->offset + zlentry.namelen + zlentry.xtralen + sizeof(zlentry_t);
 		lump_p->disksize = zentry->compsize;
 		lump_p->size = zentry->size;
 
