@@ -523,6 +523,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
     zlentry_t zlentry;
     zentry_t* zentries;
     zentry_t* zentry;
+    long oldpos;
 
 	UINT16 numlumps = *nlmp;
 	lumpinfo_t* lumpinfo;
@@ -574,7 +575,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			return NULL;
 		}
 		
-		long oldpos = ftell(handle);
+		oldpos = ftell(handle);
 		
 		fseek(handle,zentry->offset,SEEK_SET);
 		if(fread(&zlentry,1,sizeof(zlentry_t), handle) < sizeof(zlentry_t))
