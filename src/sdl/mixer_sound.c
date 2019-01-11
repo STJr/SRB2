@@ -50,8 +50,8 @@
 
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
-#define GME_TREBLE 5.0
-#define GME_BASS 1.0
+#define GME_TREBLE 5.0f
+#define GME_BASS 1.0f
 
 #ifdef HAVE_ZLIB
 #ifndef _MSC_VER
@@ -91,6 +91,12 @@ static INT32 current_track;
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
+
+#ifdef _WIN32
+	// Force DirectSound instead of WASAPI
+	// SDL 2.0.6+ defaults to the latter and it screws up our sound effects
+	SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
+#endif
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
@@ -759,6 +765,7 @@ void I_UnloadSong(void)
 
 boolean I_PlaySong(boolean looping)
 {
+	boolean lpz = fpclassify(loop_point) == FP_ZERO;
 #ifdef HAVE_LIBGME
 	if (gme)
 	{
@@ -772,14 +779,15 @@ boolean I_PlaySong(boolean looping)
 	if (!music)
 		return false;
 
-	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
+
+	if (Mix_PlayMusic(music, looping && lpz ? -1 : 0) == -1)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
 	}
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 
-	if (loop_point != 0.0f)
+	if (!lpz)
 		Mix_HookMusicFinished(music_loop);
 	return true;
 }

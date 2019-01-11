@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -70,7 +70,7 @@ typedef INT32 fixed_t;
 			:"=a" (ret)            // eax is always the result and the first operand (%0,%1)
 			:"0" (a), "r" (b)      // and %2 is what we use imull on with what in %1
 			, "I" (FRACBITS)       // %3 holds FRACBITS (normally 16)
-			:"%cc", "%edx"         // edx and condition codes clobbered
+			:"cc", "%edx"         // edx and condition codes clobbered
 		);
 		return ret;
 	}

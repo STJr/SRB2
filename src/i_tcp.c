@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1256,7 +1256,7 @@ void I_ShutdownTcpDriver(void)
 static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 {
 	SINT8 newnode = -1;
-	struct my_addrinfo *ai, *runp, hints;
+	struct my_addrinfo *ai = NULL, *runp, hints;
 	int gaie;
 
 	 if (!port || !port[0])

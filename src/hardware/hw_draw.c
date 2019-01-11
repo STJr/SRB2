@@ -296,7 +296,7 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
@@ -307,7 +307,7 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 				else if (perplayershuffle & 8)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
 			}
-			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
 				if (option & V_SNAPTOBOTTOM)
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
@@ -452,14 +452,14 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 				Z_Free(realpatch);
 			}
 			// centre screen
-			if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
 			}
-			if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
 				if (option & V_SNAPTOBOTTOM)
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
@@ -876,18 +876,6 @@ void HWR_DrawViewBorder(INT32 clearlines)
 //                                                     AM_MAP.C DRAWING STUFF
 // ==========================================================================
 
-// Clear the automap part of the screen
-void HWR_clearAutomap(void)
-{
-	FRGBAFloat fColor = {0, 0, 0, 1};
-
-	// minx,miny,maxx,maxy
-	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
-	HWD.pfnClearBuffer(true, true, &fColor);
-	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
-}
-
-
 // -----------------+
 // HWR_drawAMline   : draw a line of the automap (the clipping is already done in automap code)
 // Arg              : color is a RGB 888 value
@@ -908,6 +896,110 @@ void HWR_drawAMline(const fline_t *fl, INT32 color)
 	HWD.pfnDraw2DLine(&v1, &v2, color_rgba);
 }
 
+// -------------------+
+// HWR_DrawConsoleFill     : draw flat coloured transparent rectangle because that's cool, and hw sucks less than sw for that.
+// -------------------+
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32 options)
+{
+	FOutVector v[4];
+	FSurfaceInfo Surf;
+	float fx, fy, fw, fh;
+
+	if (w < 0 || h < 0)
+		return; // consistency w/ software
+
+//  3--2
+//  | /|
+//  |/ |
+//  0--1
+
+	fx = (float)x;
+	fy = (float)y;
+	fw = (float)w;
+	fh = (float)h;
+
+	if (!(options & V_NOSCALESTART))
+	{
+		float dupx = (float)vid.dupx, dupy = (float)vid.dupy;
+
+		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
+		{
+			RGBA_t rgbaColour = V_GetColor(color);
+			FRGBAFloat clearColour;
+			clearColour.red = (float)rgbaColour.s.red / 255;
+			clearColour.green = (float)rgbaColour.s.green / 255;
+			clearColour.blue = (float)rgbaColour.s.blue / 255;
+			clearColour.alpha = 1;
+			HWD.pfnClearBuffer(true, false, &clearColour);
+			return;
+		}
+
+		fx *= dupx;
+		fy *= dupy;
+		fw *= dupx;
+		fh *= dupy;
+
+		if (fabsf((float)vid.width - ((float)BASEVIDWIDTH * dupx)) > 1.0E-36f)
+		{
+			if (options & V_SNAPTORIGHT)
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+			else if (!(options & V_SNAPTOLEFT))
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
+		}
+		if (fabsf((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) > 1.0E-36f)
+		{
+			// same thing here
+			if (options & V_SNAPTOBOTTOM)
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+			else if (!(options & V_SNAPTOTOP))
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 2;
+		}
+	}
+
+	if (fx >= vid.width || fy >= vid.height)
+		return;
+	if (fx < 0)
+	{
+		fw += fx;
+		fx = 0;
+	}
+	if (fy < 0)
+	{
+		fh += fy;
+		fy = 0;
+	}
+
+	if (fw <= 0 || fh <= 0)
+		return;
+	if (fx + fw > vid.width)
+		fw = (float)vid.width - fx;
+	if (fy + fh > vid.height)
+		fh = (float)vid.height - fy;
+
+	fx = -1 + fx / (vid.width / 2);
+	fy = 1 - fy / (vid.height / 2);
+	fw = fw / (vid.width / 2);
+	fh = fh / (vid.height / 2);
+
+	v[0].x = v[3].x = fx;
+	v[2].x = v[1].x = fx + fw;
+	v[0].y = v[1].y = fy;
+	v[2].y = v[3].y = fy - fh;
+
+	//Hurdler: do we still use this argb color? if not, we should remove it
+	v[0].argb = v[1].argb = v[2].argb = v[3].argb = 0xff00ff00; //;
+	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+
+	v[0].sow = v[3].sow = 0.0f;
+	v[2].sow = v[1].sow = 1.0f;
+	v[0].tow = v[1].tow = 0.0f;
+	v[2].tow = v[3].tow = 1.0f;
+
+	Surf.FlatColor.rgba = UINT2RGBA(color);
+	Surf.FlatColor.s.alpha = 0x80;
+
+	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
+}
 
 // -----------------+
 // HWR_DrawFill     : draw flat coloured rectangle, with no texture
@@ -1022,7 +1114,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 		fw *= dupx;
 		fh *= dupy;
 
-		if ((float)vid.width != (float)BASEVIDWIDTH * dupx)
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 		{
 			if (color & V_SNAPTORIGHT)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
@@ -1033,7 +1125,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 			else if (perplayershuffle & 8)
 				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
 		}
-		if ((float)vid.height != (float)BASEVIDHEIGHT * dupy)
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)

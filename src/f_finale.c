@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1015,6 +1015,8 @@ static const char *credits[] = {
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
+	"Vivian \"toaster\" Grannell",
+	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
@@ -1022,6 +1024,7 @@ static const char *credits[] = {
 	"Ehab \"Wolfy\" Saeed",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
 	"\1Assistance",
@@ -1029,15 +1032,21 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"\"Steel Titanium\"",
 	"Ben \"Cue\" Woodford",
+	// Git contributors with 5+ approved merges of substantive quality,
+	// or contributors with at least one groundbreaking merge, may be named.
+	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1086,13 +1095,13 @@ static const char *credits[] = {
 	"Thomas \"Shadow Hog\" Igoe",
 	"Erik \"Torgo\" Nielsen",
 	"\"Kaito Sinclaire\"",
-	"Wessel \"Spherallic\" Smit",
+	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"Digiku\" Zafra",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
@@ -1113,11 +1122,17 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"Doom Legacy Project",
 	"iD Software",
-	"Alex \"MistaED\" Fuller",
+	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
+	"Alex \"MistaED\" Fuller",
+	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
+	"Simon \"sirjuddington\" Judd", // SLADE developer
+	// Acknowledged here are the following:
+	// Minor merge request authors, see guideline above
+	// Golden - Expanded thin font
+	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
@@ -1189,6 +1204,9 @@ void F_CreditDrawer(void)
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
 		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
+
+	// Dim the background
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
@@ -1998,7 +2016,7 @@ void F_CutsceneTicker(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (netgame && i != serverplayer && i != adminplayer)
+		if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 			continue;
 
 		if (players[i].cmd.buttons & BT_USE)
@@ -2535,7 +2553,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,
@@ -2566,7 +2584,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,
