@@ -151,7 +151,7 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
-extern menuitem_t PlayerMenu[32];
+extern menuitem_t PlayerMenu[MAXSKINS];
 
 typedef struct menu_s
 {
@@ -206,7 +206,7 @@ typedef struct
 	UINT8 netgame;
 } saveinfo_t;
 
-extern description_t description[32];
+extern description_t description[MAXSKINS];
 
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];
