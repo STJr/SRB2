@@ -1101,16 +1101,6 @@ boolean HU_Responder(event_t *ev)
 
 	c = (INT32)ev->data1;
 
-	// capslock (now handled outside of chat on so that it works everytime......)
-	if (c && c == KEY_CAPSLOCK) // it's a toggle.
-	{
-		if (capslock)
-			capslock = false;
-		else
-			capslock = true;
-		return true;
-	}
-
 #ifndef NONET
 	if (!chat_on)
 	{
