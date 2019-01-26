@@ -93,7 +93,9 @@ typedef off_t off64_t;
  #ifdef PNG_WRITE_SUPPORTED
   #define USE_PNG // Only actually use PNG if write is supported.
   #if defined (PNG_WRITE_APNG_SUPPORTED) //|| !defined(PNG_STATIC)
-   #define USE_APNG
+   #if (PNG_LIBPNG_VER_MAJOR) == 1 && (PNG_LIBPNG_VER_MINOR <= 4) // Supposedly, the current APNG code can't work on newer versions as is
+    #define USE_APNG
+   #endif
   #endif
   // See hardware/hw_draw.c for a similar check to this one.
  #endif
