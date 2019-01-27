@@ -2742,8 +2742,6 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
-	UINT8 i;
-
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
 	CV_RegisterVar(&cv_chooseskin);
@@ -2784,6 +2782,24 @@ void M_Init(void)
 	quitmsg[QUIT3MSG4] = M_GetText("Every time you press 'Y', an\nSRB2 Developer cries...\n\n(Press 'Y' to quit)");
 	quitmsg[QUIT3MSG5] = M_GetText("You'll be back to play soon, though...\n......right?\n\n(Press 'Y' to quit)");
 	quitmsg[QUIT3MSG6] = M_GetText("Aww, is Egg Rock Zone too\ndifficult for you?\n\n(Press 'Y' to quit)");
+
+#ifdef HWRENDER
+	// Permanently hide some options based on render mode
+	if (rendermode == render_soft)
+		OP_VideoOptionsMenu[1].status = IT_DISABLED;
+#endif
+
+#ifndef NONET
+	CV_RegisterVar(&cv_serversort);
+#endif
+
+	//todo put this somewhere better...
+	CV_RegisterVar(&cv_allcaps);
+}
+
+void M_InitCharacterTables(void)
+{
+	UINT8 i;
 
 	// Setup PlayerMenu table
 	for (i = 0; i < MAXSKINS; i++)
@@ -2828,19 +2844,6 @@ void M_Init(void)
 			strcpy(description[i].skinname, "");
 		}
 	}
-
-#ifdef HWRENDER
-	// Permanently hide some options based on render mode
-	if (rendermode == render_soft)
-		OP_VideoOptionsMenu[1].status = IT_DISABLED;
-#endif
-
-#ifndef NONET
-	CV_RegisterVar(&cv_serversort);
-#endif
-
-	//todo put this somewhere better...
-	CV_RegisterVar(&cv_allcaps);
 }
 
 // ==========================================================================

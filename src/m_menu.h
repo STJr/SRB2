@@ -38,6 +38,9 @@ void M_Drawer(void);
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
 
+// Called by D_SRB2Main also, sets up the playermenu and description tables.
+void M_InitCharacterTables(void);
+
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
 void M_StartControlPanel(void);
