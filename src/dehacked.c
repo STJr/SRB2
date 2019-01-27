@@ -437,7 +437,6 @@ static boolean findFreeSlot(INT32 *num)
 	// Send the character select entry to a free slot.
 	while (*num < MAXSKINS && PlayerMenu[*num].status != IT_DISABLED)
 		*num = *num+1;
-		CONS_Printf("%d\n", *num);
 
 	// No more free slots. :(
 	if (*num >= MAXSKINS)
