@@ -33,23 +33,23 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 {
 	// GREEN FLOWER 1
 	// ---
-	{0,  8156,  6936,   129, 1, 'A', SKINCOLOR_BLUE, 0,
+	{0,  8224,  5216,  1344, 1, 'A', SKINCOLOR_BLUE, 0,
 		"Go get your feet wet\n"
 		"to find this, the first emblem.\n"
 		"Yes, it's very deep.", 0},
-	{0,  3184,  1812,   928, 1, 'B', SKINCOLOR_LAVENDER, 0,
+	{0,  7584,  7264,   384, 1, 'B', SKINCOLOR_LAVENDER, 0,
 		"There are many rings,\n"
 		"but this one's not what you think.\n"
 		"There lies the emblem.", 0},
-	{0,  9024,  6716,   769, 1, 'C', SKINCOLOR_RED, 0,
+	{0,  4480,  2048,   112, 1, 'C', SKINCOLOR_RED, 0,
 		"Right next to a lake,\n"
 		"a ledge has been constructed.\n"
 		"Near there is the goal.", 0},
-	{0,  2080,  -384,   512, 1, 'D', SKINCOLOR_ORANGE, 0,
+	{0,  1920,  7968,  1118, 1, 'D', SKINCOLOR_ORANGE, 0,
 		"Streams come to an end\n"
 		"where they can no longer fall.\n"
 		"But if you went up...", 0},
-	{0,  -336,  2064,   195, 1, 'E', SKINCOLOR_EMERALD, 0,
+	{0, 10240,  5376,  1424, 1, 'E', SKINCOLOR_EMERALD, 0,
 		"This one's in plain sight.\n"
 		"Why haven't you claimed it?\n"
 		"Surely you saw it.", 0},
@@ -61,23 +61,23 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// GREEN FLOWER 2
 	// ---
-	{0,  2624, -6816,  1332, 2, 'A', SKINCOLOR_BLUE, 0,
+	{0, -1112,   568,   567, 2, 'A', SKINCOLOR_BLUE, 0,
 		"Near the giant lake\n"
 		"lies a cave with a 1-Up.\n"
 		"An emblem's there, too!", 0},
-	{0, -5728, -2848,  2848, 2, 'B', SKINCOLOR_LAVENDER, 0,
+	{0, -8448, -1120,  3024, 2, 'B', SKINCOLOR_LAVENDER, 0,
 		"Near the final lake,\n"
 		"a higher lake falls on in.\n"
 		"Three platforms await.", 0},
-	{0,  3648,  6464,  2576, 2, 'C', SKINCOLOR_RED, 0,
+	{0,  6960,  2888,  2072, 2, 'C', SKINCOLOR_RED, 0,
 		"Near the level's start,\n"
 		"a bridge crosses a river.\n"
 		"What's that river's source?", 0},
-	{0, -2032,-10048,   986, 2, 'D', SKINCOLOR_ORANGE, 0,
+	{0, -6080, -6720,  2816, 2, 'D', SKINCOLOR_ORANGE, 0,
 		"Near the level's end,\n"
 		"another bridge spans a lake.\n"
 		"What could be under...?", 0},
-	{0,  -170,   491,  3821, 2, 'E', SKINCOLOR_EMERALD, 0,
+	{0,  5576,  1528,  1176, 2, 'E', SKINCOLOR_EMERALD, 0,
 		"An ivied tunnel\n"
 		"has a corner that's sunlit.\n"
 		"Go reach for the sky!", 0},
@@ -94,23 +94,23 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// TECHNO HILL 1
 	// ---
-	{0, -5664, -5072,  2396, 4, 'A', SKINCOLOR_BLUE, 0,
+	{0,   896,  3808,   416, 4, 'A', SKINCOLOR_BLUE, 0,
 		"Three pipes reside near\n"
 		"where our heroes' paths split off.\n"
 		"You'll have to look up!", 0},
-	{0,  -784,-13968,  2888, 4, 'B', SKINCOLOR_LAVENDER, 0,
+	{0,  3008, -9152,    64, 4, 'B', SKINCOLOR_LAVENDER, 0,
 		"Climbing yields great range.\n"
 		"Yet, on a path for climbers,\n"
 		"flying is the key.", 0},
-	{0,  4160, -5824,  3776, 4, 'C', SKINCOLOR_RED, 0,
+	{0,  -768,-13888,  2944, 4, 'C', SKINCOLOR_RED, 0,
 		"That's sure lots of slime.\n"
 		"Say, do you ever wonder\n"
 		"what's dumping it all?", 0},
-	{0,  6400, -8352,  1764, 4, 'D', SKINCOLOR_ORANGE, 0,
+	{0,  4160, -5632,  3648, 4, 'D', SKINCOLOR_ORANGE, 0,
 		"Spinning through small gaps\n"
 		"can slip you into a cave.\n"
 		"In that cave's first stretch...", 0},
-	{0,  2848, -9088,   488, 4, 'E', SKINCOLOR_EMERALD, 0,
+	{0, -4608, -6592,  2264, 4, 'E', SKINCOLOR_EMERALD, 0,
 		"The slime lake is deep,\n"
 		"but reaching the floor takes height.\n"
 		"Scream \"Geronimo!\"...", 0},
@@ -122,7 +122,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// TECHNO HILL 2
 	// ---
-	{0,-19138, -2692,   688, 5, 'A', SKINCOLOR_BLUE, 0,
+	{0,-20352, -1536,   936, 5, 'A', SKINCOLOR_BLUE, 0,
 		"Near the first checkpoint,\n"
 		"a bridge crosses a slime pool.\n"
 		"(Sensing a pattern?)", 0},
@@ -130,7 +130,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Behind the windows,\n"
 		"near crushers, ever smashing\n"
 		"a conveyor belt.", 0},
-	{0,   580,  4552,  1344, 5, 'C', SKINCOLOR_RED, 0,
+	{0,  4192,-14208,  1736, 5, 'C', SKINCOLOR_RED, 0,
 		"A pipe drops onto\n"
 		"a half-outdoors conveyor.\n"
 		"But is it empty?", 0},
@@ -155,23 +155,23 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// DEEP SEA 1
 	// ---
-	{0,-16224, -2880,  3530, 7, 'A', SKINCOLOR_BLUE, 0,
+	{0, 17504,   480,   552, 7, 'A', SKINCOLOR_BLUE, 0,
 		"Climb up two maze walls.\n"
 		"Break the roof, then a corner.\n"
 		"There, glide, but stay dry.", 0},
-	{0, -8224,   896,  1056, 7, 'B', SKINCOLOR_LAVENDER, 0,
+	{0,  1760, 11216,   728, 7, 'B', SKINCOLOR_LAVENDER, 0,
 		"Follow the left path.\n"
 		"A square green button lurks deep.\n"
 		"Weight it down, somehow.", 0},
-	{0,  4992, -5072,  4136, 7, 'C', SKINCOLOR_RED, 0,
+	{0, 16128, 13952, -2208, 7, 'C', SKINCOLOR_RED, 0,
 		"A certain path holds\n"
 		"many gargoyle puzzles.\n"
 		"Victors reach a \"V\".", 0},
-	{0,  4576,  5168,  2660, 7, 'D', SKINCOLOR_ORANGE, 0,
+	{0, 17792, 12032, -1856, 7, 'D', SKINCOLOR_ORANGE, 0,
 		"A caved-in hallway?\n"
 		"The floor falls; the path goes down.\n"
 		"But those rocks looked weak...", 0},
-	{0, 12576, 16096,  -992, 7, 'E', SKINCOLOR_EMERALD, 0,
+	{0,  7137,  7010,  -448, 7, 'E', SKINCOLOR_EMERALD, 0,
 		"The end is quite dry.\n"
 		"Some rocks dam the water in.\n"
 		"Knuckles can fix that...", 0},
@@ -216,23 +216,23 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// CASTLE EGGMAN 1
 	// ---
-	{0, -6176, -5184,  -128, 10, 'A', SKINCOLOR_BLUE, 0,
+	{0,  5376, -6496,  4096, 10, 'A', SKINCOLOR_BLUE, 0,
 		"A drain feeds the lake.\n"
 		"Water rushes quickly through.\n"
 		"Go against the flow.", 0},
-	{0,  3648,-15296,  -992, 10, 'B', SKINCOLOR_LAVENDER, 0,
+	{0, 10720,  6080,  4160, 10, 'B', SKINCOLOR_LAVENDER, 0,
 		"The left starting path\n"
 		"goes atop a large wood deck.\n"
 		"Checked underneath yet?", 0},
-	{0, 11712, 21312,  5472, 10, 'C', SKINCOLOR_RED, 0,
+	{0,  4416,  8448,  3632, 10, 'C', SKINCOLOR_RED, 0,
 		"At last, the castle!\n"
 		"Hold up! Don't just barge right in!\n"
 		"What's the facade hold...?", 0},
-	{0, 20224, 13344,  3104, 10, 'D', SKINCOLOR_ORANGE, 0,
+	{0, -2176, -8832,  1160, 10, 'D', SKINCOLOR_ORANGE, 0,
 		"The final approach!\n"
 		"A tower holds the emblem\n"
 		"near a ring arrow.", 0},
-	{0,  9472, -5890,   710, 10, 'E', SKINCOLOR_EMERALD, 0,
+	{0,  1920, -2432,  1984, 10, 'E', SKINCOLOR_EMERALD, 0,
 		"The right starting path\n"
 		"hides this near a canopy,\n"
 		"high, where two trees meet.", 0},
@@ -495,6 +495,59 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	{ET_TIME,  0,0,0, 41, 'T', SKINCOLOR_GREY,  240*TICRATE, "", 0},
 	{ET_RINGS, 0,0,0, 41, 'R', SKINCOLOR_GOLD,          300, "", 0},
 
+	// FROZEN HILLSIDE 2
+	// ---
+	{ 0,  9216,-11840,   528, 43, 'A', SKINCOLOR_BLUE, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0,  8960, -7552,   912, 43, 'B', SKINCOLOR_LAVENDER, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0,  5344, -4384,    16, 43, 'C', SKINCOLOR_RED, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0, 12384,-19136,   -80, 43, 'D', SKINCOLOR_ORANGE, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0, 12288, -4864,  1040, 43, 'E', SKINCOLOR_EMERALD, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+
+	{ ET_SCORE, 0,0,0, 43, 'S', SKINCOLOR_BROWN,      425000, "", 0 },
+	{ ET_TIME,  0,0,0, 43, 'T', SKINCOLOR_GREY,  240 * TICRATE, "", 0 },
+	{ ET_RINGS, 0,0,0, 43, 'R', SKINCOLOR_GOLD,          300, "", 0 },
+
+	// HAUNTED HEIGHTS
+	// ---
+	{ 0,   -16,  3792,   864, 44, 'A', SKINCOLOR_BLUE, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0,-12800,  3936,  3312, 44, 'B', SKINCOLOR_LAVENDER, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0,  8928, 15072,   792, 44, 'C', SKINCOLOR_RED, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0,  5344, 12096,  3024, 44, 'D', SKINCOLOR_ORANGE, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+	{ 0, -6208, 19296,   992, 44, 'E', SKINCOLOR_EMERALD, 0,
+		"Look! A placeholder!\n"
+		"We should put something else here\n"
+		"before we ship this!", 0 },
+
+	{ ET_SCORE, 0,0,0, 44, 'S', SKINCOLOR_BROWN,      425000, "", 0 },
+	{ ET_TIME,  0,0,0, 44, 'T', SKINCOLOR_GREY,  240 * TICRATE, "", 0 },
+	{ ET_RINGS, 0,0,0, 44, 'R', SKINCOLOR_GOLD,          300, "", 0 },
 
 	// FLORAL FIELD
 	// ---
