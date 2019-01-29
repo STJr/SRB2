@@ -549,6 +549,13 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	{ ET_TIME,  0,0,0, 44, 'T', SKINCOLOR_GREY,  240 * TICRATE, "", 0 },
 	{ ET_RINGS, 0,0,0, 44, 'R', SKINCOLOR_GOLD,          300, "", 0 },
 
+	// CHRISTMAS CHIME
+	// ---
+	{ 0, -1840, -1024, 1644, 46, 'N', SKINCOLOR_RUST, 0, "", 0 },
+	{ ET_NGRADE, 0,0,0,      46, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0 },
+	{ ET_NTIME,  0,0,0,      46, 'T', SKINCOLOR_GREY,  60 * TICRATE, "", 0 },
+
+
 	// FLORAL FIELD
 	// ---
 	{0, 5394, -996, 160, 50, 'N', SKINCOLOR_RUST, 0, "", 0},
@@ -604,12 +611,6 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	{ET_NGRADE, 0,0,0,  57, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  57, 'T', SKINCOLOR_GREY, 150*TICRATE, "", 0},
 
-
-	// SPRING HILL
-	// ---
-	{0, -1840, -1024, 1644, 58, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,      58, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,      58, 'T', SKINCOLOR_GREY,  60*TICRATE, "", 0},
 };
 
 // Default Extra Emblems
