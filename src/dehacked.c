@@ -3554,6 +3554,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
+				continue;
 			}
 			else if (fastcmp(word, "EXTRAEMBLEM"))
 			{
@@ -3579,6 +3580,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
+				continue;
 			}
 			if (word2)
 			{
