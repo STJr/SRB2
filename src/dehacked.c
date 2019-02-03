@@ -3455,7 +3455,7 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
-static void DEH_LoadDehackedFile(MYFILE *f)
+static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
@@ -3664,7 +3664,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "EMBLEM"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3683,7 +3683,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "EXTRAEMBLEM"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3702,7 +3702,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3717,7 +3717,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "CONDITIONSET"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3748,7 +3748,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));
 
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						continue;
@@ -3819,7 +3819,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 // read dehacked lump in a wad (there is special trick for for deh
 // file that are converted to wad in w_wad.c)
-void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
+void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 {
 	MYFILE f;
 	f.wad = wad;
@@ -3828,13 +3828,13 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 	f.data[f.size] = 0;
-	DEH_LoadDehackedFile(&f);
+	DEH_LoadDehackedFile(&f, mainfile);
 	Z_Free(f.data);
 }
 
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
-	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
+	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -803,7 +803,7 @@ static void IdentifyVersion(void)
 	const char *srb2waddir = NULL;
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	// change to the directory where 'srb2.srb' is found
+	// change to the directory where 'srb2.pk3' is found
 	srb2waddir = I_LocateWad();
 #endif
 
@@ -1124,28 +1124,14 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup default unlockable conditions
-	M_SetupDefaultConditionSets();
-
-	// load wad, including the main wad file
-	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	if (!W_InitMultipleFiles(startupwadfiles))
-#ifdef _DEBUG
-		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#else
-		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
-#endif
-	D_CleanFile();
-
 	mainwads = 0;
 
 #ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
-	W_VerifyFileMD5(mainwads++, ASSET_HASH_RINGS_DTA); // rings.dta
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
@@ -1155,15 +1141,24 @@ void D_SRB2Main(void)
 	//mainwads++; // neither does music_new.dta
 #else
 
-	mainwads++;	// srb2.srb/srb2.wad
+	mainwads++;	// srb2.pk3
 	mainwads++; // zones.dta
 	mainwads++; // player.dta
-	mainwads++; // rings.dta
 #ifdef USE_PATCH_DTA
 	mainwads++; // patch.dta
 #endif
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
 	//mainwads++; // neither does music_new.dta
+
+	// load wad, including the main wad file
+	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
+	if (!W_InitMultipleFiles(startupwadfiles, mainwads))
+#ifdef _DEBUG
+		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#else
+		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+#endif
+	D_CleanFile();
 
 #endif //ifndef DEVELOP
 

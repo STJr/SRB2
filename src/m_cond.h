@@ -150,8 +150,7 @@ extern INT32 numextraemblems;
 
 extern UINT32 unlocktriggers;
 
-// Condition Set Setup
-void M_SetupDefaultConditionSets(void);
+// Condition set setup
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2);
 
 // Clearing secrets

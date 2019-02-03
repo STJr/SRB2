@@ -3359,7 +3359,7 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
