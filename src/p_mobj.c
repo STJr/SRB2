@@ -35,6 +35,7 @@
 #include "p_slopes.h"
 #endif
 #include "f_finale.h"
+#include "m_cond.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = {"movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -10174,6 +10175,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
+	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!
+		return;
+
 	// Objectplace landing point
 	noreturns:
 
@@ -10190,7 +10194,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
+	else if (i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN || i == MT_EMBLEM)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -10292,6 +10296,60 @@ You should think about modifying the deathmatch starts to take full advantage of
 #endif
 	switch(mobj->type)
 	{
+	case MT_EMBLEM:
+	{
+		INT32 i;
+		emblem_t *emblem = M_GetLevelEmblems(gamemap);
+
+		while (emblem)
+		{
+			if ((emblem->type == ET_GLOBAL || emblem->type == ET_SKIN) && emblem->tag == mthing->angle)
+				break;
+
+			emblem = M_GetLevelEmblems(-1);
+		}
+
+		if (!emblem)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "No map emblem for map %d with tag %d found!\n", gamemap, mthing->angle);
+			break;
+		}
+
+		i = emblem - emblemlocations;
+
+		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
+		P_SetMobjState(mobj, mobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
+
+		mobj->health = i + 1;
+		mobj->color = (UINT8)M_GetEmblemColor(&emblemlocations[i]);
+
+		if (emblemlocations[i].collected
+			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags |= MF_NOCLIP;
+			mobj->flags &= ~MF_SPECIAL;
+			mobj->flags |= MF_NOBLOCKMAP;
+			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
+			P_SetThingPosition(mobj);
+		}
+		else
+		{
+			mobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[i].type == ET_GLOBAL)
+			{
+				mobj->reactiontime = emblemlocations[i].var;
+				if (emblemlocations[i].var & GE_NIGHTSITEM)
+				{
+					mobj->flags |= MF_NIGHTSITEM;
+					mobj->flags &= ~MF_SPECIAL;
+					mobj->flags2 |= MF2_DONTDRAW;
+				}
+			}
+		}
+		break;
+	}
 	case MT_SKYBOX:
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			skyboxcenterpnts[mthing->extrainfo] = mobj;

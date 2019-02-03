@@ -2491,12 +2491,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
-			else if (fastcmp(word, "X"))
-				emblemlocations[num-1].x = (INT16)value;
-			else if (fastcmp(word, "Y"))
-				emblemlocations[num-1].y = (INT16)value;
-			else if (fastcmp(word, "Z"))
-				emblemlocations[num-1].z = (INT16)value;
+			else if (fastcmp(word, "TAG"))
+				emblemlocations[num-1].tag = (INT16)value;
 			else if (fastcmp(word, "MAPNUM"))
 			{
 				// Support using the actual map name,

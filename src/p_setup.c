@@ -961,10 +961,6 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-//
-// P_LoadThings
-//
-
 static void P_PrepareRawThings(UINT8 *data, size_t i)
 {
 	mapthing_t *mt;
@@ -1007,7 +1003,7 @@ static void P_PrepareThings(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-static void P_LoadThings(void)
+static void P_LoadThings(boolean loademblems)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -1031,6 +1027,9 @@ static void P_LoadThings(void)
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
 			continue; // These were already spawned
+
+		if (!loademblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
+			continue;
 
 		mt->mobj = NULL;
 		P_SpawnMapThing(mt);
@@ -1104,65 +1103,6 @@ static void P_LoadThings(void)
 			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
-}
-
-static inline void P_SpawnEmblems(void)
-{
-	INT32 i, color;
-	mobj_t *emblemmobj;
-
-	for (i = 0; i < numemblems; i++)
-	{
-		if (emblemlocations[i].level != gamemap || emblemlocations[i].type > ET_SKIN)
-			continue;
-
-		emblemmobj = P_SpawnMobj(emblemlocations[i].x<<FRACBITS, emblemlocations[i].y<<FRACBITS,
-			emblemlocations[i].z<<FRACBITS, MT_EMBLEM);
-
-		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
-		P_SetMobjStateNF(emblemmobj, emblemmobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
-
-		emblemmobj->health = i+1;
-		color = M_GetEmblemColor(&emblemlocations[i]);
-
-		emblemmobj->color = (UINT8)color;
-
-		if (emblemlocations[i].collected
-			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
-		{
-			P_UnsetThingPosition(emblemmobj);
-			emblemmobj->flags |= MF_NOCLIP;
-			emblemmobj->flags &= ~MF_SPECIAL;
-			emblemmobj->flags |= MF_NOBLOCKMAP;
-			emblemmobj->frame |= (tr_trans50<<FF_TRANSSHIFT);
-			P_SetThingPosition(emblemmobj);
-		}
-		else
-		{
-			emblemmobj->frame &= ~FF_TRANSMASK;
-
-			if (emblemlocations[i].type == ET_GLOBAL)
-			{
-				emblemmobj->reactiontime = emblemlocations[i].var;
-				if (emblemlocations[i].var & GE_NIGHTSITEM)
-				{
-					emblemmobj->flags |= MF_NIGHTSITEM;
-					emblemmobj->flags &= ~MF_SPECIAL;
-					emblemmobj->flags2 |= MF2_DONTDRAW;
-				}
-			}
-		}
-	}
-}
-
-static void P_SpawnSecretItems(boolean loademblems)
-{
-	// Now let's spawn those funky emblem things! Tails 12-08-2002
-	if (netgame || multiplayer || (modifiedgame && !savemoddata)) // No cheating!!
-		return;
-
-	if (loademblems)
-		P_SpawnEmblems();
 }
 
 // Experimental groovy write function!
@@ -2364,13 +2304,11 @@ void P_LoadThingsOnly(void)
 	}
 	else // phew it's just a WAD
 		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-	P_LoadThings();
-
+	P_LoadThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
 	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
-	P_SpawnSecretItems(true);
 }
 
 /** Compute MD5 message digest for bytes read from memory source
@@ -2959,11 +2897,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_ResetDynamicSlopes();
 #endif
 
-	P_LoadThings();
+	P_LoadThings(loademblems);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
-
-	P_SpawnSecretItems(loademblems);
 
 	for (numcoopstarts = 0; numcoopstarts < MAXPLAYERS; numcoopstarts++)
 		if (!playerstarts[numcoopstarts])
