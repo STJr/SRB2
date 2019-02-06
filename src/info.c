@@ -6033,7 +6033,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_EMBLEM
-		-1,             // doomednum
+		322,            // doomednum
 		S_EMBLEM1,      // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -6270,7 +6270,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_EMERALDSPAWN
-		323,            // doomednum
+		321,            // doomednum
 		S_INVISIBLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate

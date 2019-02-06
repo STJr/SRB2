@@ -2491,12 +2491,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
-			else if (fastcmp(word, "X"))
-				emblemlocations[num-1].x = (INT16)value;
-			else if (fastcmp(word, "Y"))
-				emblemlocations[num-1].y = (INT16)value;
-			else if (fastcmp(word, "Z"))
-				emblemlocations[num-1].z = (INT16)value;
+			else if (fastcmp(word, "TAG"))
+				emblemlocations[num-1].tag = (INT16)value;
 			else if (fastcmp(word, "MAPNUM"))
 			{
 				// Support using the actual map name,
@@ -3455,7 +3451,7 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
-static void DEH_LoadDehackedFile(MYFILE *f)
+static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
@@ -3515,15 +3511,16 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				continue;
 			}
 			word2 = strtok(NULL, " ");
+			if (word2) {
+				strupr(word2);
+				if (word2[strlen(word2) - 1] == '\n')
+					word2[strlen(word2) - 1] = '\0';
+				i = atoi(word2);
+			}
+			else
+				i = 0;
 			if (fastcmp(word, "CHARACTER"))
 			{
-				if (word2) {
-					strupr(word2);
-					if (word2[strlen(word2)-1] == '\n')
-						word2[strlen(word2)-1] = '\0';
-					i = atoi(word2);
-				} else
-					i = 0;
 				if (i >= 0 && i < 32)
 					readPlayer(f, i);
 				else
@@ -3533,13 +3530,60 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				continue;
 			}
+			else if (fastcmp(word, "EMBLEM"))
+			{
+				if (!mainfile && !gamedataadded)
+				{
+					deh_warning("You must define a custom gamedata to use \"%s\"", word);
+					ignorelines(f);
+				}
+				else
+				{
+					if (!word2)
+						i = numemblems + 1;
+
+					if (i > 0 && i <= MAXEMBLEMS)
+					{
+						if (numemblems < i)
+							numemblems = i;
+						reademblemdata(f, i);
+					}
+					else
+					{
+						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
+						ignorelines(f);
+					}
+				}
+				continue;
+			}
+			else if (fastcmp(word, "EXTRAEMBLEM"))
+			{
+				if (!mainfile && !gamedataadded)
+				{
+					deh_warning("You must define a custom gamedata to use \"%s\"", word);
+					ignorelines(f);
+				}
+				else
+				{
+					if (!word2)
+						i = numextraemblems + 1;
+
+					if (i > 0 && i <= MAXEXTRAEMBLEMS)
+					{
+						if (numextraemblems < i)
+							numextraemblems = i;
+						readextraemblemdata(f, i);
+					}
+					else
+					{
+						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
+						ignorelines(f);
+					}
+				}
+				continue;
+			}
 			if (word2)
 			{
-				strupr(word2);
-				if (word2[strlen(word2)-1] == '\n')
-					word2[strlen(word2)-1] = '\0';
-				i = atoi(word2);
-
 				if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
@@ -3662,47 +3706,9 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						ignorelines(f);
 					}
 				}
-				else if (fastcmp(word, "EMBLEM"))
-				{
-					if (!gamedataadded)
-					{
-						deh_warning("You must define a custom gamedata to use \"%s\"", word);
-						ignorelines(f);
-					}
-					else if (i > 0 && i <= MAXEMBLEMS)
-					{
-						if (numemblems < i)
-							numemblems = i;
-						reademblemdata(f, i);
-					}
-					else
-					{
-						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
-						ignorelines(f);
-					}
-				}
-				else if (fastcmp(word, "EXTRAEMBLEM"))
-				{
-					if (!gamedataadded)
-					{
-						deh_warning("You must define a custom gamedata to use \"%s\"", word);
-						ignorelines(f);
-					}
-					else if (i > 0 && i <= MAXEXTRAEMBLEMS)
-					{
-						if (numextraemblems < i)
-							numextraemblems = i;
-						readextraemblemdata(f, i);
-					}
-					else
-					{
-						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
-						ignorelines(f);
-					}
-				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3717,7 +3723,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "CONDITIONSET"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3748,7 +3754,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));
 
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						continue;
@@ -3819,7 +3825,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 // read dehacked lump in a wad (there is special trick for for deh
 // file that are converted to wad in w_wad.c)
-void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
+void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 {
 	MYFILE f;
 	f.wad = wad;
@@ -3828,13 +3834,13 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 	f.data[f.size] = 0;
-	DEH_LoadDehackedFile(&f);
+	DEH_LoadDehackedFile(&f, mainfile);
 	Z_Free(f.data);
 }
 
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
-	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
+	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

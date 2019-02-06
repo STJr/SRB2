@@ -87,9 +87,7 @@ typedef struct
 typedef struct
 {
 	UINT8 type;      ///< Emblem type
-	INT16 x;         ///< X coordinate.
-	INT16 y;         ///< Y coordinate.
-	INT16 z;         ///< Z coordinate.
+	INT16 tag;       ///< Tag of emblem mapthing
 	INT16 level;     ///< Level on which this emblem can be found.
 	UINT8 sprite;    ///< emblem sprite to use, 0 - 25
 	UINT8 color;     ///< skincolor to use
@@ -150,8 +148,7 @@ extern INT32 numextraemblems;
 
 extern UINT32 unlocktriggers;
 
-// Condition Set Setup
-void M_SetupDefaultConditionSets(void);
+// Condition set setup
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2);
 
 // Clearing secrets

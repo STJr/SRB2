@@ -28,7 +28,7 @@ typedef enum
 } undotype_f;
 
 void DEH_LoadDehackedLump(lumpnum_t lumpnum);
-void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump);
+void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile);
 
 void DEH_Check(void);
 
