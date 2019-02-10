@@ -409,7 +409,7 @@ static CV_PossibleValue_t serversort_cons_t[] = {
 	{1,"Modified State"},
 	{2,"Most Players"},
 	{3,"Least Players"},
-	{4,"Max Players"},
+	{4,"Max Player Slots"},
 	{5,"Gametype"},
 	{0,NULL}
 };
