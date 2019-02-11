@@ -435,11 +435,11 @@ static void readAnimTex(MYFILE *f, INT32 num)
 static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && PlayerMenu[*num].status != IT_DISABLED)
+	while (*num < MAXSKINS && PlayerMenu[*num].status != IT_DISABLED)
 		*num = *num+1;
 
 	// No more free slots. :(
-	if (*num >= 32)
+	if (*num >= MAXSKINS)
 		return false;
 
 	// Found one! ^_^
