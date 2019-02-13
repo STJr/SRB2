@@ -67,20 +67,25 @@ static const INT32 format2bpp[16] =
 static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
 								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
-								INT32 originy,
-								INT32 bpp
-								)
+								texpatch_t *originPatch, INT32 patchheight,
+								INT32 bpp)
 {
 	fixed_t yfrac, position, count;
 	UINT8 *dest;
 	const UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
+	INT32 originy = 0;
 
 	// for writing a pixel to dest
 	RGBA_t colortemp;
 	UINT8 alpha;
 	UINT8 texel;
 	UINT16 texelu16;
+
+	(void)patchheight; // This parameter is unused
+
+	if (originPatch) // originPatch can be NULL here, unlike in the software version
+		originy = originPatch->originy;
 
 	while (patchcol->topdelta != 0xff)
 	{
@@ -199,19 +204,17 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 		patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
 		HWR_DrawColumnInCache(patchcol, block, mipmap,
-								pheight, blockmodulo,
+								pblockheight, blockmodulo,
 								yfracstep, scale_y,
-								0,
-								bpp
-								);
+								NULL, pheight, // not that pheight is going to get used anyway...
+								bpp);
 	}
 }
 
 // This function we use for caching patches that belong to textures
 static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	INT32 pblockwidth, INT32 pblockheight,
-	INT32 ptexturewidth, INT32 ptextureheight,
-	INT32 originx, INT32 originy, // where to draw patch in surface block
+	texture_t *texture, texpatch_t *patch,
 	const patch_t *realpatch)
 {
 	INT32 x, x1, x2;
@@ -222,17 +225,20 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	UINT8 *block = mipmap->grInfo.data;
 	INT32 bpp;
 	INT32 blockmodulo;
+	INT32 width, height;
 
-	if (ptexturewidth <= 0 || ptextureheight <= 0)
+	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	x1 = originx;
-	x2 = x1 + SHORT(realpatch->width);
+	x1 = patch->originx;
+	width = SHORT(realpatch->width);
+	height = SHORT(realpatch->height);
+	x2 = x1 + width;
 
-	if (x1 > ptexturewidth || x2 < 0)
+	if (x1 > texture->width || x2 < 0)
 		return; // patch not located within texture's x bounds, ignore
 
-	if (originy > ptextureheight || (originy + SHORT(realpatch->height)) < 0)
+	if (patch->originy > texture->height || (patch->originy + height) < 0)
 		return; // patch not located within texture's y bounds, ignore
 
 	// patch is actually inside the texture!
@@ -245,19 +251,18 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 		x = x1;
 
 	// right edge
-	if (x2 > ptexturewidth)
-		x2 = ptexturewidth;
+	if (x2 > texture->width)
+		x2 = texture->width;
 
 
-	col = x * pblockwidth / ptexturewidth;
-	ncols = ((x2 - x) * pblockwidth) / ptexturewidth;
+	col = x * pblockwidth / texture->width;
+	ncols = ((x2 - x) * pblockwidth) / texture->width;
 
 /*
-	CONS_Debug(DBG_RENDER, "patch %dx%d texture %dx%d block %dx%d\n", SHORT(realpatch->width),
-															SHORT(realpatch->height),
-															ptexturewidth,
-															textureheight,
-															pblockwidth,pblockheight);
+	CONS_Debug(DBG_RENDER, "patch %dx%d texture %dx%d block %dx%d\n",
+															width, height,
+															texture->width,          texture->height,
+															pblockwidth,             pblockheight);
 	CONS_Debug(DBG_RENDER, "      col %d ncols %d x %d\n", col, ncols, x);
 */
 
@@ -266,9 +271,9 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (x1 < 0)
 		xfrac = -x1<<FRACBITS;
 
-	xfracstep = (ptexturewidth << FRACBITS) / pblockwidth;
-	yfracstep = (ptextureheight<< FRACBITS) / pblockheight;
-	scale_y   = (pblockheight  << FRACBITS) / ptextureheight;
+	xfracstep = (texture->width << FRACBITS) / pblockwidth;
+	yfracstep = (texture->height<< FRACBITS) / pblockheight;
+	scale_y   = (pblockheight  << FRACBITS) / texture->height;
 
 	bpp = format2bpp[mipmap->grInfo.format];
 
@@ -284,11 +289,10 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 		patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
 		HWR_DrawColumnInCache(patchcol, block, mipmap,
-								ptextureheight, blockmodulo,
+								pblockheight, blockmodulo,
 								yfracstep, scale_y,
-								originy,
-								bpp
-								);
+								patch, height,
+								bpp);
 	}
 }
 
@@ -534,8 +538,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
-		                     texture->width, texture->height,
-		                     patch->originx, patch->originy,
+		                     texture, patch,
 		                     realpatch);
 		Z_Unlock(realpatch);
 	}
