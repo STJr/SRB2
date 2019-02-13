@@ -139,10 +139,10 @@ static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *
 
 // sprite, use alpha and chroma key for hole
 static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
-	INT32 pblockwidth, INT32 pblockheight, INT32 blockmodulo,
+	INT32 pblockwidth, INT32 pblockheight,
 	INT32 ptexturewidth, INT32 ptextureheight,
 	INT32 originx, INT32 originy, // where to draw patch in surface block
-	patch_t *realpatch, INT32 bpp)
+	patch_t *realpatch)
 {
 	INT32 x, x1, x2;
 	INT32 col, ncols;
@@ -150,6 +150,8 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	fixed_t yfracstep, scale_y;
 	column_t *patchcol;
 	UINT8 *block = mipmap->grInfo.data;
+	INT32 bpp;
+	INT32 blockmodulo;
 
 	if (!ptexturewidth)
 		return;
@@ -198,8 +200,12 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	yfracstep = (ptextureheight<< FRACBITS) / pblockheight;
 	scale_y   = (pblockheight  << FRACBITS) / ptextureheight;
 
+	bpp = format2bpp[mipmap->grInfo.format];
+
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
+
+	blockmodulo = blockwidth*bpp;
 
 	// Draw each column to the block cache
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
@@ -477,11 +483,9 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		HWR_DrawPatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
-		                     blockwidth*format2bpp[grtex->mipmap.grInfo.format],
 		                     texture->width, texture->height,
 		                     patch->originx, patch->originy,
-		                     realpatch,
-		                     format2bpp[grtex->mipmap.grInfo.format]);
+		                     realpatch);
 		Z_Unlock(realpatch);
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
@@ -568,11 +572,9 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 
 		HWR_DrawPatchInCache(grMipmap,
 			newwidth, newheight,
-			blockwidth*format2bpp[grMipmap->grInfo.format],
 			grPatch->width, grPatch->height,
 			0, 0,
-			patch,
-			format2bpp[grMipmap->grInfo.format]);
+			patch);
 	}
 
 	grPatch->max_s = (float)newwidth / (float)blockwidth;
