@@ -160,6 +160,101 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	}
 }
 
+static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+								INT32 pblockheight, INT32 blockmodulo,
+								fixed_t yfracstep, fixed_t scale_y,
+								texpatch_t *originPatch, INT32 patchheight,
+								INT32 bpp)
+{
+	fixed_t yfrac, position, count;
+	UINT8 *dest;
+	const UINT8 *source;
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = 0;
+
+	// for writing a pixel to dest
+	RGBA_t colortemp;
+	UINT8 alpha;
+	UINT8 texel;
+	UINT16 texelu16;
+
+	if (originPatch) // originPatch can be NULL here, unlike in the software version
+		originy = originPatch->originy;
+
+	while (patchcol->topdelta != 0xff)
+	{
+		topdelta = patchcol->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patchcol->length-topdelta;
+		source = (const UINT8 *)patchcol + 3;
+		count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+		position = originy + topdelta;
+
+		yfrac = (patchcol->length-1) << FRACBITS;
+
+		if (position < 0)
+		{
+			yfrac += position<<FRACBITS;
+			count += (((position * scale_y) + (FRACUNIT/2)) >> FRACBITS);
+			position = 0;
+		}
+
+		position = ((position * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+
+		if (position < 0)
+			position = 0;
+
+		if (position + count >= pblockheight)
+			count = pblockheight - position;
+
+		dest = block + (position*blockmodulo);
+		while (count > 0)
+		{
+			count--;
+
+			texel = source[yfrac>>FRACBITS];
+
+			if (firetranslucent && (transtables[(texel<<8)+0x40000]!=texel))
+				alpha = 0x80;
+			else
+				alpha = 0xff;
+
+			//Hurdler: not perfect, but better than holes
+			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX && (mipmap->flags & TF_CHROMAKEYED))
+				texel = HWR_CHROMAKEY_EQUIVALENTCOLORINDEX;
+			//Hurdler: 25/04/2000: now support colormap in hardware mode
+			else if (mipmap->colormap)
+				texel = mipmap->colormap[texel];
+
+			// hope compiler will get this switch out of the loops (dreams...)
+			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
+			// Alam: SRB2 uses Mingw, HUGS
+			switch (bpp)
+			{
+				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+						 memcpy(dest, &texelu16, sizeof(UINT16));
+						 break;
+				case 3 : colortemp = V_GetColor(texel);
+						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+						 break;
+				case 4 : colortemp = V_GetColor(texel);
+						 colortemp.s.alpha = alpha;
+						 memcpy(dest, &colortemp, sizeof(RGBA_t));
+						 break;
+				// default is 1
+				default: *dest = texel;
+						 break;
+			}
+
+			dest += blockmodulo;
+			yfrac -= yfracstep;
+		}
+		patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length + 4);
+	}
+}
+
 
 // Simplified patch caching function
 // for use by sprites and other patches that are not part of a wall texture
@@ -226,9 +321,26 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	INT32 bpp;
 	INT32 blockmodulo;
 	INT32 width, height;
+	// Column drawing function pointer.
+	static void (*ColumnDrawerPointer)(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+								INT32 pblockheight, INT32 blockmodulo,
+								fixed_t yfracstep, fixed_t scale_y,
+								texpatch_t *originPatch, INT32 patchheight,
+								INT32 bpp);
 
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
+
+	/*if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+	{
+		if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
+			continue;
+		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawTransFlippedColumnInCache : HWR_DrawTransColumnInCache;
+	}
+	else*/
+	{
+		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
+	}
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);
@@ -286,9 +398,12 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	// Draw each column to the block cache
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
 	{
-		patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+		if (patch->flip & 1)
+			patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[(width-1)-(xfrac>>FRACBITS)]));
+		else
+			patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
-		HWR_DrawColumnInCache(patchcol, block, mipmap,
+		ColumnDrawerPointer(patchcol, block, mipmap,
 								pblockheight, blockmodulo,
 								yfracstep, scale_y,
 								patch, height,
