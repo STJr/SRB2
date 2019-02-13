@@ -147,6 +147,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 x, x1, x2;
 	INT32 col, ncols;
 	fixed_t xfrac, xfracstep;
+	fixed_t yfracstep, scale_y;
 	column_t *patchcol;
 	UINT8 *block = mipmap->grInfo.data;
 
