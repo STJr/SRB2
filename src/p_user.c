@@ -6234,15 +6234,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 //
 static void P_MoveNiGHTSToDrone(player_t *player)
 {
+	boolean flip, topaligned, middlealigned, bottomoffsetted;
+	fixed_t droneboxmandiff, zofs;
+
 	if (!player->drone)
 		return;
 
-	boolean flip = player->drone->flags2 & MF2_OBJECTFLIP;
-	boolean topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
-	boolean middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
-	boolean bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
-	fixed_t droneboxmandiff = max(player->drone->height - player->mo->height, 0);
-	fixed_t zofs;
+	flip = player->drone->flags2 & MF2_OBJECTFLIP;
+	topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
+	bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	droneboxmandiff = max(player->drone->height - player->mo->height, 0);
 
 	if (!flip)
 	{

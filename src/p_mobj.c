@@ -8085,7 +8085,6 @@ void P_MobjThinker(mobj_t *mobj)
 					// Invisible/bouncing mode.
 					else
 					{
-						fixed_t droneboxmandiff = max(mobj->height - droneman->height, 0);
 						INT32 i;
 						boolean bonustime = false;
 						fixed_t zcomp;
@@ -10298,8 +10297,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 	{
 	case MT_EMBLEM:
 	{
-		INT32 i;
+		INT32 j;
 		emblem_t *emblem = M_GetLevelEmblems(gamemap);
+		skincolors_t emcolor;
 
 		while (emblem)
 		{
@@ -10315,16 +10315,17 @@ You should think about modifying the deathmatch starts to take full advantage of
 			break;
 		}
 
-		i = emblem - emblemlocations;
+		j = emblem - emblemlocations;
 
-		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
-		P_SetMobjState(mobj, mobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
+		I_Assert(emblemlocations[j].sprite >= 'A' && emblemlocations[j].sprite <= 'Z');
+		P_SetMobjState(mobj, mobj->info->spawnstate + (emblemlocations[j].sprite - 'A'));
 
-		mobj->health = i + 1;
-		mobj->color = (UINT8)M_GetEmblemColor(&emblemlocations[i]);
+		mobj->health = j + 1;
+		emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
+		mobj->color = (UINT8)emcolor;
 
-		if (emblemlocations[i].collected
-			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
+		if (emblemlocations[j].collected
+			|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags |= MF_NOCLIP;
@@ -10337,10 +10338,10 @@ You should think about modifying the deathmatch starts to take full advantage of
 		{
 			mobj->frame &= ~FF_TRANSMASK;
 
-			if (emblemlocations[i].type == ET_GLOBAL)
+			if (emblemlocations[j].type == ET_GLOBAL)
 			{
-				mobj->reactiontime = emblemlocations[i].var;
-				if (emblemlocations[i].var & GE_NIGHTSITEM)
+				mobj->reactiontime = emblemlocations[j].var;
+				if (emblemlocations[j].var & GE_NIGHTSITEM)
 				{
 					mobj->flags |= MF_NIGHTSITEM;
 					mobj->flags &= ~MF_SPECIAL;
@@ -10942,35 +10943,37 @@ ML_EFFECT4 : Don't clip inside the ground
 			}
 
 			// spawn visual elements
-			mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, goaloffset, MT_NIGHTSDRONE_GOAL);
-			mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, sparkleoffset, MT_NIGHTSDRONE_SPARKLING);
-			mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, dronemanoffset, MT_NIGHTSDRONE_MAN);
-
-			P_SetTarget(&mobj->target, goalpost);
-			P_SetTarget(&goalpost->target, sparkle);
-			P_SetTarget(&goalpost->tracer, droneman);
-
-			// correct Z position
-			if (flip)
 			{
-				P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
-				P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
-				P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+				mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, goaloffset, MT_NIGHTSDRONE_GOAL);
+				mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, sparkleoffset, MT_NIGHTSDRONE_SPARKLING);
+				mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, dronemanoffset, MT_NIGHTSDRONE_MAN);
+
+				P_SetTarget(&mobj->target, goalpost);
+				P_SetTarget(&goalpost->target, sparkle);
+				P_SetTarget(&goalpost->tracer, droneman);
+
+				// correct Z position
+				if (flip)
+				{
+					P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
+					P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
+					P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+				}
+
+				// Remember position preference for later
+				mobj->flags &= ~(MF_SLIDEME | MF_GRENADEBOUNCE);
+				if (topaligned)
+					mobj->flags |= MF_SLIDEME;
+				else if (middlealigned)
+					mobj->flags |= MF_GRENADEBOUNCE;
+				else if (!bottomoffsetted)
+					mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
+
+				// Remember old Z position and flags for correction detection
+				goalpost->movefactor = mobj->z;
+				goalpost->friction = mobj->height;
+				goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 			}
-
-			// Remember position preference for later
-			mobj->flags &= ~(MF_SLIDEME | MF_GRENADEBOUNCE);
-			if (topaligned)
-				mobj->flags |= MF_SLIDEME;
-			else if (middlealigned)
-				mobj->flags |= MF_GRENADEBOUNCE;
-			else if (!bottomoffsetted)
-				mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
-
-			// Remember old Z position and flags for correction detection
-			goalpost->movefactor = mobj->z;
-			goalpost->friction = mobj->height;
-			goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 		}
 		break;
 	case MT_HIVEELEMENTAL:
