@@ -41,26 +41,114 @@ static INT32 blocksize, blockwidth, blockheight;
 INT32 patchformat = GR_TEXFMT_AP_88; // use alpha for holes
 INT32 textureformat = GR_TEXFMT_P_8; // use chromakey for hole
 
+
+// This code was originally placed directly in HWR_DrawPatchInCache.
+// It is now split from it for my sanity! (and the sanity of others)
+// -- Monster Iestyn (13/02/19)
+static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+								INT32 pblockwidth, INT32 pblockheight, INT32 blockmodulo,
+								fixed_t yfracstep, fixed_t scale_y,
+								INT32 originy,
+								INT32 bpp
+								)
+{
+	fixed_t yfrac, position, count;
+	UINT8 *dest;
+	UINT8 *source;
+	INT32 topdelta, prevdelta = -1;
+
+	// for writing a pixel to dest
+	RGBA_t colortemp;
+	UINT8 alpha;
+	UINT8 texel;
+	UINT16 texelu16;
+
+	while (patchcol->topdelta != 0xff)
+	{
+		topdelta = patchcol->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		source = (UINT8 *)patchcol + 3;
+		count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+		position = originy + topdelta;
+
+		yfrac = 0;
+		//yfracstep = (patchcol->length << FRACBITS) / count;
+		if (position < 0)
+		{
+			yfrac = -position<<FRACBITS;
+			count += (((position * scale_y) + (FRACUNIT/2)) >> FRACBITS);
+			position = 0;
+		}
+
+		position = ((position * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+
+		if (position < 0)
+			position = 0;
+
+		if (position + count >= pblockheight)
+			count = pblockheight - position;
+
+		dest = block + (position*blockmodulo);
+		while (count > 0)
+		{
+			count--;
+
+			texel = source[yfrac>>FRACBITS];
+
+			if (firetranslucent && (transtables[(texel<<8)+0x40000]!=texel))
+				alpha = 0x80;
+			else
+				alpha = 0xff;
+
+			//Hurdler: not perfect, but better than holes
+			if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX && (mipmap->flags & TF_CHROMAKEYED))
+				texel = HWR_CHROMAKEY_EQUIVALENTCOLORINDEX;
+			//Hurdler: 25/04/2000: now support colormap in hardware mode
+			else if (mipmap->colormap)
+				texel = mipmap->colormap[texel];
+
+			// hope compiler will get this switch out of the loops (dreams...)
+			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
+			// Alam: SRB2 uses Mingw, HUGS
+			switch (bpp)
+			{
+				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+						 memcpy(dest, &texelu16, sizeof(UINT16));
+						 break;
+				case 3 : colortemp = V_GetColor(texel);
+						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+						 break;
+				case 4 : colortemp = V_GetColor(texel);
+						 colortemp.s.alpha = alpha;
+						 memcpy(dest, &colortemp, sizeof(RGBA_t));
+						 break;
+				// default is 1
+				default: *dest = texel;
+						 break;
+			}
+
+			dest += blockmodulo;
+			yfrac += yfracstep;
+		}
+		patchcol = (column_t *)((UINT8 *)patchcol + patchcol->length + 4);
+	}
+}
+
+
 // sprite, use alpha and chroma key for hole
 static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 pblockwidth, INT32 pblockheight, INT32 blockmodulo,
 	INT32 ptexturewidth, INT32 ptextureheight,
 	INT32 originx, INT32 originy, // where to draw patch in surface block
-	const patch_t *realpatch, INT32 bpp)
+	patch_t *realpatch, INT32 bpp)
 {
 	INT32 x, x1, x2;
 	INT32 col, ncols;
 	fixed_t xfrac, xfracstep;
-	fixed_t yfrac, yfracstep, position, count;
-	fixed_t scale_y;
-	RGBA_t colortemp;
-	UINT8 *dest;
-	const UINT8 *source;
-	const column_t *patchcol;
-	UINT8 alpha;
+	column_t *patchcol;
 	UINT8 *block = mipmap->grInfo.data;
-	UINT8 texel;
-	UINT16 texelu16;
 
 	if (!ptexturewidth)
 		return;
@@ -107,88 +195,22 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 
 	xfracstep = (ptexturewidth << FRACBITS) / pblockwidth;
 	yfracstep = (ptextureheight<< FRACBITS) / pblockheight;
+	scale_y   = (pblockheight  << FRACBITS) / ptextureheight;
+
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
+	// Draw each column to the block cache
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
 	{
-		INT32 topdelta, prevdelta = -1;
-		patchcol = (const column_t *)((const UINT8 *)realpatch
-		 + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+		patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
-		scale_y = (pblockheight << FRACBITS) / ptextureheight;
-
-		while (patchcol->topdelta != 0xff)
-		{
-			topdelta = patchcol->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)patchcol + 3;
-			count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
-			position = originy + topdelta;
-
-			yfrac = 0;
-			//yfracstep = (patchcol->length << FRACBITS) / count;
-			if (position < 0)
-			{
-				yfrac = -position<<FRACBITS;
-				count += (((position * scale_y) + (FRACUNIT/2)) >> FRACBITS);
-				position = 0;
-			}
-
-			position = ((position * scale_y) + (FRACUNIT/2)) >> FRACBITS;
-
-			if (position < 0)
-				position = 0;
-
-			if (position + count >= pblockheight)
-				count = pblockheight - position;
-
-			dest = block + (position*blockmodulo);
-			while (count > 0)
-			{
-				count--;
-
-				texel = source[yfrac>>FRACBITS];
-
-				if (firetranslucent && (transtables[(texel<<8)+0x40000]!=texel))
-					alpha = 0x80;
-				else
-					alpha = 0xff;
-
-				//Hurdler: not perfect, but better than holes
-				if (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX && (mipmap->flags & TF_CHROMAKEYED))
-					texel = HWR_CHROMAKEY_EQUIVALENTCOLORINDEX;
-				//Hurdler: 25/04/2000: now support colormap in hardware mode
-				else if (mipmap->colormap)
-					texel = mipmap->colormap[texel];
-
-				// hope compiler will get this switch out of the loops (dreams...)
-				// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
-				// Alam: SRB2 uses Mingw, HUGS
-				switch (bpp)
-				{
-					case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
-					         memcpy(dest, &texelu16, sizeof(UINT16));
-					         break;
-					case 3 : colortemp = V_GetColor(texel);
-					         memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
-					         break;
-					case 4 : colortemp = V_GetColor(texel);
-					         colortemp.s.alpha = alpha;
-					         memcpy(dest, &colortemp, sizeof(RGBA_t));
-					         break;
-					// default is 1
-					default: *dest = texel;
-					         break;
-				}
-
-				dest += blockmodulo;
-				yfrac += yfracstep;
-			}
-			patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length + 4);
-		}
+		HWR_DrawColumnInCache(patchcol, block, mipmap,
+								pblockwidth, ptextureheight, blockmodulo,
+								yfracstep, scale_y,
+								originy,
+								bpp
+								);
 	}
 }
 
