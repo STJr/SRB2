@@ -156,8 +156,59 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 }
 
 
-// sprite, use alpha and chroma key for hole
+// Simplified patch caching function
+// for use by sprites and other patches that are not part of a wall texture
+// no alpha or flipping should be present since we do not want non-texture graphics to have them
+// no offsets are used either
+// -- Monster Iestyn (13/02/19)
 static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
+	INT32 pblockwidth, INT32 pblockheight,
+	INT32 pwidth, INT32 pheight,
+	const patch_t *realpatch)
+{
+	INT32 ncols;
+	fixed_t xfrac, xfracstep;
+	fixed_t yfracstep, scale_y;
+	const column_t *patchcol;
+	UINT8 *block = mipmap->grInfo.data;
+	INT32 bpp;
+	INT32 blockmodulo;
+
+	if (pwidth <= 0 || pheight <= 0)
+		return;
+
+	ncols = (pwidth * pblockwidth) / pwidth;
+
+	// source advance
+	xfrac = 0;
+	xfracstep = (pwidth        << FRACBITS) / pblockwidth;
+	yfracstep = (pheight       << FRACBITS) / pblockheight;
+	scale_y   = (pblockheight  << FRACBITS) / pheight;
+
+	bpp = format2bpp[mipmap->grInfo.format];
+
+	if (bpp < 1 || bpp > 4)
+		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
+
+	// NOTE: should this actually be pblockwidth*bpp?
+	blockmodulo = blockwidth*bpp;
+
+	// Draw each column to the block cache
+	for (; ncols--; block += bpp, xfrac += xfracstep)
+	{
+		patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+
+		HWR_DrawColumnInCache(patchcol, block, mipmap,
+								pheight, blockmodulo,
+								yfracstep, scale_y,
+								0,
+								bpp
+								);
+	}
+}
+
+// This function we use for caching patches that belong to textures
+static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	INT32 pblockwidth, INT32 pblockheight,
 	INT32 ptexturewidth, INT32 ptextureheight,
 	INT32 originx, INT32 originy, // where to draw patch in surface block
@@ -172,7 +223,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 bpp;
 	INT32 blockmodulo;
 
-	if (!ptexturewidth)
+	if (ptexturewidth <= 0 || ptextureheight <= 0)
 		return;
 
 	x1 = originx;
@@ -224,6 +275,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
+	// NOTE: should this actually be pblockwidth*bpp?
 	blockmodulo = blockwidth*bpp;
 
 	// Draw each column to the block cache
@@ -480,7 +532,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
-		HWR_DrawPatchInCache(&grtex->mipmap,
+		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
 		                     texture->width, texture->height,
 		                     patch->originx, patch->originy,
@@ -572,7 +624,6 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 		HWR_DrawPatchInCache(grMipmap,
 			newwidth, newheight,
 			grPatch->width, grPatch->height,
-			0, 0,
 			patch);
 	}
 
