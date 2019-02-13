@@ -41,12 +41,31 @@ static INT32 blocksize, blockwidth, blockheight;
 INT32 patchformat = GR_TEXFMT_AP_88; // use alpha for holes
 INT32 textureformat = GR_TEXFMT_P_8; // use chromakey for hole
 
+static const INT32 format2bpp[16] =
+{
+	0, //0
+	0, //1
+	1, //2  GR_TEXFMT_ALPHA_8
+	1, //3  GR_TEXFMT_INTENSITY_8
+	1, //4  GR_TEXFMT_ALPHA_INTENSITY_44
+	1, //5  GR_TEXFMT_P_8
+	4, //6  GR_RGBA
+	0, //7
+	0, //8
+	0, //9
+	2, //10 GR_TEXFMT_RGB_565
+	2, //11 GR_TEXFMT_ARGB_1555
+	2, //12 GR_TEXFMT_ARGB_4444
+	2, //13 GR_TEXFMT_ALPHA_INTENSITY_88
+	2, //14 GR_TEXFMT_AP_88
+};
+
 
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
 // -- Monster Iestyn (13/02/19)
-static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
-								INT32 pblockwidth, INT32 pblockheight, INT32 blockmodulo,
+static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
 								INT32 originy,
 								INT32 bpp
@@ -54,7 +73,7 @@ static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *
 {
 	fixed_t yfrac, position, count;
 	UINT8 *dest;
-	UINT8 *source;
+	const UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
 
 	// for writing a pixel to dest
@@ -69,7 +88,7 @@ static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *
 		if (topdelta <= prevdelta)
 			topdelta += prevdelta;
 		prevdelta = topdelta;
-		source = (UINT8 *)patchcol + 3;
+		source = (const UINT8 *)patchcol + 3;
 		count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
 		position = originy + topdelta;
 
@@ -132,7 +151,7 @@ static void HWR_DrawColumnInCache(column_t *patchcol, UINT8 *block, GLMipmap_t *
 			dest += blockmodulo;
 			yfrac += yfracstep;
 		}
-		patchcol = (column_t *)((UINT8 *)patchcol + patchcol->length + 4);
+		patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length + 4);
 	}
 }
 
@@ -142,13 +161,13 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 pblockwidth, INT32 pblockheight,
 	INT32 ptexturewidth, INT32 ptextureheight,
 	INT32 originx, INT32 originy, // where to draw patch in surface block
-	patch_t *realpatch)
+	const patch_t *realpatch)
 {
 	INT32 x, x1, x2;
 	INT32 col, ncols;
 	fixed_t xfrac, xfracstep;
 	fixed_t yfracstep, scale_y;
-	column_t *patchcol;
+	const column_t *patchcol;
 	UINT8 *block = mipmap->grInfo.data;
 	INT32 bpp;
 	INT32 blockmodulo;
@@ -210,10 +229,10 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	// Draw each column to the block cache
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
 	{
-		patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+		patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
 		HWR_DrawColumnInCache(patchcol, block, mipmap,
-								pblockwidth, ptextureheight, blockmodulo,
+								ptextureheight, blockmodulo,
 								yfracstep, scale_y,
 								originy,
 								bpp
@@ -377,26 +396,6 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 
 	//CONS_Debug(DBG_RENDER, "Width is %d, Height is %d\n", blockwidth, blockheight);
 }
-
-
-static const INT32 format2bpp[16] =
-{
-	0, //0
-	0, //1
-	1, //2  GR_TEXFMT_ALPHA_8
-	1, //3  GR_TEXFMT_INTENSITY_8
-	1, //4  GR_TEXFMT_ALPHA_INTENSITY_44
-	1, //5  GR_TEXFMT_P_8
-	4, //6  GR_RGBA
-	0, //7
-	0, //8
-	0, //9
-	2, //10 GR_TEXFMT_RGB_565
-	2, //11 GR_TEXFMT_ARGB_1555
-	2, //12 GR_TEXFMT_ARGB_4444
-	2, //13 GR_TEXFMT_ALPHA_INTENSITY_88
-	2, //14 GR_TEXFMT_AP_88
-};
 
 static UINT8 *MakeBlock(GLMipmap_t *grMipmap)
 {
