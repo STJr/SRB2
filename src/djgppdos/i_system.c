@@ -615,9 +615,6 @@ void I_Quit (void)
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
 	M_SaveConfig (NULL);   //save game config, cvars..
-#ifndef NONET
-	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(); // Tails 12-08-2002
 	if (demorecording)
 		G_CheckDemoStatus();
