@@ -23,6 +23,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef APNG_H
 #define APNG_H
 
+#ifndef _MSC_VER
+#ifndef _WII
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+#endif
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
 #include <png.h>
 
 typedef struct apng_info_def apng_info;
