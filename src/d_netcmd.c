@@ -1720,25 +1720,6 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 }
 
 /*
-Return the number of times a series of keywords, delimited by spaces, matched.
-*/
-static int measurekeywords(const char *s, const char *q)
-{
-	int r = 0;
-	char *qp;
-	for (qp = strtok(va("%s", q), " ");
-			qp;
-			qp = strtok(0, " "))
-	{
-		if (strcasestr(s, qp))
-		{
-			r++;
-		}
-	}
-	return r;
-}
-
-/*
 Easy macro; declare parm_*id* and define acceptableargc; put in the parameter
 to match as a string as *name*. Set *argn* to the number of extra arguments
 following the parameter. parm_*id* is filled with the index of the parameter
@@ -1768,16 +1749,10 @@ static void Command_Map_f(void)
 	boolean usemapcode = false;
 
 	INT32 newmapnum;
-	INT32 apromapnum = 0;
 
 	const char *mapname;
 	size_t      mapnamelen;
 	char   *realmapname = NULL;
-	char   *apromapname = NULL;
-
-	/* Keyword matching */
-	UINT8 *freq;
-	UINT8 freqc;
 
 	INT32 newgametype = gametype;
 
@@ -1877,65 +1852,7 @@ static void Command_Map_f(void)
 		}
 		else
 		{
-			freq = ZZ_Calloc(NUMMAPS * sizeof (UINT8));
-
-			for (i = 0, newmapnum = 1; i < NUMMAPS; ++i, ++newmapnum)
-				if (mapheaderinfo[i])
-			{
-				if (!( realmapname = G_BuildMapTitle(newmapnum) ))
-					continue;
-
-				/* Now that we found a perfect match no need to fucking guess. */
-				if (strnicmp(realmapname, mapname, mapnamelen) == 0)
-				{
-					Z_Free(apromapname);
-					break;
-				}
-
-				if (apromapnum == 0)
-				{
-					/* LEVEL 1--match keywords verbatim */
-					if (strcasestr(realmapname, mapname))
-					{
-						apromapnum = newmapnum;
-						apromapname = realmapname;
-						realmapname = 0;
-					}
-					else/* ...match individual keywords */
-					{
-						freq[i] += measurekeywords(realmapname, mapname);
-						freq[i] += measurekeywords(mapheaderinfo[i]->keyword,
-								mapname);
-					}
-				}
-
-				Z_Free(realmapname);/* leftover old name */
-			}
-
-			if (newmapnum == NUMMAPS+1)/* no perfect match--try a substring */
-			{
-				newmapnum = apromapnum;
-				realmapname = apromapname;
-			}
-
-			if (newmapnum == 0)/* calculate most queries met! */
-			{
-				freqc = 0;
-				for (i = 0; i < NUMMAPS; ++i)
-				{
-					if (freq[i] > freqc)
-					{
-						freqc = freq[i];
-						newmapnum = i + 1;
-					}
-				}
-				if (newmapnum)
-				{
-					realmapname = G_BuildMapTitle(newmapnum);
-				}
-			}
-
-			Z_Free(freq);
+			newmapnum = G_FindMap(mapname, &realmapname, NULL, NULL);
 		}
 	}
 
