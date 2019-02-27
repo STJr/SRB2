@@ -117,44 +117,7 @@ typedef enum
 const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
-// A rare case.
-// External files modify this menu, so we can't call it static.
-// And I'm too lazy to go through and rename it everywhere. ARRGH!
-description_t description[32] =
-{
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0},
-	{false, "???", "", "", 0, 0}
-};
+description_t description[MAXSKINS];
 INT16 char_on = -1, startchar = 1;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
@@ -2941,6 +2904,21 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
+}
+
+void M_InitCharacterTables(void)
+{
+	UINT8 i;
+
+	// Setup description table
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		description[i].used = false;
+		strcpy(description[i].notes, "???");
+		strcpy(description[i].picname, "");
+		strcpy(description[i].skinname, "");
+		description[i].prev = description[i].next = 0;
+	}
 }
 
 // ==========================================================================
@@ -9450,7 +9428,7 @@ static void M_DrawControl(void)
 #undef controlbuffer
 
 static INT32 controltochange;
-static char controltochangetext[55];
+static char controltochangetext[33];
 
 static void M_ChangecontrolResponse(event_t *ev)
 {
@@ -9522,7 +9500,8 @@ static void M_ChangecontrolResponse(event_t *ev)
 	}
 	else if (ch == KEY_PAUSE)
 	{
-		static char tmp[158]; // 125 char message + 32 char control name
+		// This buffer assumes a 125-character message plus a 32-character control name (per controltochangetext buffer size)
+		static char tmp[158];
 		menu_t *prev = currentMenu->prevMenu;
 
 		if (controltochange == gc_pause)
@@ -9546,7 +9525,9 @@ static void M_ChangecontrolResponse(event_t *ev)
 
 static void M_ChangeControl(INT32 choice)
 {
-	static char tmp[55];
+	// This buffer assumes a 35-character message (per below) plus a max control name limit of 32 chars (per controltochangetext)
+	// If you change the below message, then change the size of this buffer!
+	static char tmp[68];
 
 	if (tutorialmode && tutorialgcs) // don't allow control changes if temp control override is active
 		return;
@@ -9554,7 +9535,7 @@ static void M_ChangeControl(INT32 choice)
 	controltochange = currentMenu->menuitems[choice].alphaKey;
 	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
 		currentMenu->menuitems[choice].text);
-	strncpy(controltochangetext, currentMenu->menuitems[choice].text, 55);
+	strlcpy(controltochangetext, currentMenu->menuitems[choice].text, 33);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
 }

@@ -1124,6 +1124,10 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
+	// Setup character tables
+	// Have to be done here before files are loaded
+	M_InitCharacterTables();
+
 	mainwads = 0;
 
 #ifndef DEVELOP // md5s last updated 12/14/14
