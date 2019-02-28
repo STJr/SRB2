@@ -304,7 +304,8 @@ static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+5];
 
-#define numaddonsshown 4
+#define addonmenusize 9 // number of items actually displayed in the addons menu view, formerly (2*numaddonsshown + 1)
+#define numaddonsshown 4 // number of items to each side of the currently selected item, unless at top/bottom ends of directory
 
 static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight, boolean allowlowercase);
 
@@ -4987,7 +4988,8 @@ static boolean M_AddonsRefresh(void)
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
-	ssize_t i, m;
+	size_t i, m;
+	size_t t, b; // top and bottom item #s to draw in directory
 	const UINT8 *flashcol = NULL;
 	UINT8 hilicol;
 
@@ -5026,52 +5028,63 @@ static void M_DrawAddons(void)
 
 	hilicol = 0; // white
 
+#define boxwidth (MAXSTRINGLENGTH*8+6)
+
+	// draw the file path and the top white + black lines of the box
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), highlightflags|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
-	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), MAXSTRINGLENGTH*8+6, 1, hilicol);
-	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 30);
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), boxwidth, 1, hilicol);
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), boxwidth, 1, 30);
 
 	m = (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1);
 	// addons menu back color
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, m, 159);
+	V_DrawFill(x-21, y - 1, boxwidth, m, 159);
 
-	// scrollbar!
-	if (sizedirmenu <= (2*numaddonsshown + 1))
-		i = 0;
+	// The directory is too small for a scrollbar, so just draw a tall white line
+	if (sizedirmenu <= addonmenusize)
+	{
+		t = 0; // first item
+		b = sizedirmenu - 1; // last item
+		i = 0; // "scrollbar" at "top" position
+	}
 	else
 	{
-		ssize_t q = m;
-		m = ((2*numaddonsshown + 1) * m)/sizedirmenu;
+		size_t q = m;
+		m = (addonmenusize * m)/sizedirmenu; // height of scroll bar
 		if (dir_on[menudepthleft] <= numaddonsshown) // all the way up
-			i = 0;
-		else if (sizedirmenu <= (dir_on[menudepthleft] + numaddonsshown + 1)) // all the way down
-			i = q-m;
-		else
-			i = ((dir_on[menudepthleft] - numaddonsshown) * (q-m))/(sizedirmenu - (2*numaddonsshown + 1));
+		{
+			t = 0; // first item
+			b = addonmenusize - 1; //9th item
+			i = 0; // scrollbar at top position
+		}
+		else if (dir_on[menudepthleft] >= sizedirmenu - (numaddonsshown + 1)) // all the way down
+		{
+			t = sizedirmenu - addonmenusize; // # 9th last
+			b = sizedirmenu - 1; // last item
+			i = q-m; // scrollbar at bottom position
+		}
+		else // somewhere in the middle
+		{
+			t = dir_on[menudepthleft] - numaddonsshown; // 4 items above
+			b = dir_on[menudepthleft] + numaddonsshown; // 4 items below
+			i = (t * (q-m))/(sizedirmenu - addonmenusize); // calculate position of scrollbar
+		}
 	}
 
-	V_DrawFill(x + MAXSTRINGLENGTH*8+5 - 21, (y - 1) + i, 1, m, hilicol);
+	// draw the scrollbar!
+	V_DrawFill((x-21) + addons_boxwidth-1, (y - 1) + i, 1, m, hilicol);
 
-	// get bottom...
-	m = dir_on[menudepthleft] + numaddonsshown + 1;
-	if (m > (ssize_t)sizedirmenu)
-		m = sizedirmenu;
+#undef boxwidth
 
-	// then compute top and adjust bottom if needed!
-	if (m < (2*numaddonsshown + 1))
-	{
-		m = min(sizedirmenu, 2*numaddonsshown + 1);
-		i = 0;
-	}
-	else
-		i = m - (2*numaddonsshown + 1);
-
-	if (i != 0)
+	// draw up arrow that bobs up and down
+	if (t != 0)
 		V_DrawString(19, y+4 - (skullAnimCounter/5), highlightflags, "\x1A");
 
+	// make the selection box flash yellow
 	if (skullAnimCounter < 4)
 		flashcol = V_GetStringColormap(highlightflags);
 
-	for (; i < m; i++)
+	// draw icons and item names
+	for (i = t; i <= b; i++)
 	{
 		UINT32 flags = V_ALLOWLOWERCASE;
 		if (y > BASEVIDHEIGHT) break;
@@ -5087,12 +5100,14 @@ static void M_DrawAddons(void)
 			else
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[(type & ~EXT_LOADED)]);
 
+			// draw selection box for the item currently selected
 			if ((size_t)i == dir_on[menudepthleft])
 			{
 				V_DrawFixedPatch((x-(16+4))<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, 0, addonsp[NUM_EXT+1], flashcol);
 				flags = V_ALLOWLOWERCASE|highlightflags;
 			}
 
+			// draw name of the item, use ... if too long
 #define charsonside 14
 			if (dirmenu[i][DIR_LEN] > (charsonside*2 + 3))
 				V_DrawString(x, y+4, flags, va("%.*s...%s", charsonside, dirmenu[i]+DIR_STRING, dirmenu[i]+DIR_STRING+dirmenu[i][DIR_LEN]-(charsonside+1)));
@@ -5104,9 +5119,11 @@ static void M_DrawAddons(void)
 		y += 16;
 	}
 
-	if (m != (ssize_t)sizedirmenu)
+	// draw down arrow that bobs down and up
+	if (b != sizedirmenu)
 		V_DrawString(19, y-12 + (skullAnimCounter/5), highlightflags, "\x1B");
 
+	// draw search box
 	y = BASEVIDHEIGHT - currentMenu->y + 1;
 
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
@@ -5118,9 +5135,11 @@ static void M_DrawAddons(void)
 		V_DrawCharacter(x - 18 + V_StringWidth(menusearch+1, 0), y + 8,
 			'_' | 0x80, false);
 
+	// draw search icon
 	x -= (21 + 5 + 16);
 	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+3]);
 
+	// draw save icon
 	x = BASEVIDWIDTH - x - 16;
 	V_DrawSmallScaledPatch(x, y + 4, ((!modifiedgame || savemoddata) ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
 
