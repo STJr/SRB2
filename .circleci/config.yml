@@ -36,12 +36,15 @@ jobs:
             - v1-SRB2-APT
       - run:
           name: Install SDK
-          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib upx
+          command: apt-get -qq -y --no-install-recommends install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib upx
       - save_cache:
           key: v1-SRB2-APT
           paths:
             - /var/cache/apt/archives
       - checkout
+      - run:
+          name: Compile without network support
+          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1
       - run:
           name: Clean build
           command: make -C src LINUX=1 clean
