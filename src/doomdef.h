@@ -243,6 +243,19 @@ extern FILE *logstream;
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
+#define COLORRAMPSIZE 16
+#define COLORNAMESIZE 14
+
+typedef struct skincolor_s
+{
+	char name[COLORNAMESIZE+1];	//Skincolor name
+	UINT8 ramp[COLORRAMPSIZE];	//Colormap ramp
+	UINT8 md2color;				//Color used for MD2s
+	UINT8 invcolor;				//Signpost color
+	UINT8 invshade;				//Signpost color shade
+	boolean accessible;			//Accessible by the color command
+} skincolor_t;
+
 typedef enum
 {
 	SKINCOLOR_NONE = 0,
@@ -272,11 +285,8 @@ typedef enum
 	SKINCOLOR_YELLOW,
 	SKINCOLOR_GOLD,
 
-	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
-	MAXSKINCOLORS,
-
 	// Super special awesome Super flashing colors!
-	SKINCOLOR_SUPER1 = MAXSKINCOLORS,
+	SKINCOLOR_SUPER1,
 	SKINCOLOR_SUPER2,
 	SKINCOLOR_SUPER3,
 	SKINCOLOR_SUPER4,
@@ -295,9 +305,16 @@ typedef enum
 	SKINCOLOR_KSUPER3,
 	SKINCOLOR_KSUPER4,
 	SKINCOLOR_KSUPER5,
-
-	MAXTRANSLATIONS
+	
+	SKINCOLOR_FIRSTFREESLOT,
+	SKINCOLOR_LASTFREESLOT = 255-SKINCOLOR_FIRSTFREESLOT,
+	
+	MAXSKINCOLORS
 } skincolors_t;
+
+#define NUMCOLORFREESLOTS (SKINCOLOR_LASTFREESLOT-SKINCOLOR_FIRSTFREESLOT)+1
+
+extern skincolor_t skincolors[MAXSKINCOLORS];
 
 // State updates, number of tics / second.
 // NOTE: used to setup the timer rate, see I_StartupTimer().

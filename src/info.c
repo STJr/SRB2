@@ -13766,13 +13766,59 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 #endif
 };
 
+skincolor_t skincolors[MAXSKINCOLORS] = {
+	{"None",		{},									  0, 0, 		 8, false},
+	{"White",		{  0,  0,  1,  1,  2,  2,  3,  3,  4,  4,  5,  5,  6,  6,  7,  7},	  3, SKINCOLOR_BLACK,	10, true},
+	{"Silver",		{  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18},	 10, SKINCOLOR_GREY,	 4, true},
+	{"Grey",		{  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23},	 15, SKINCOLOR_SILVER,	12, true},
+	{"Black",		{ 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31},	 27, SKINCOLOR_WHITE,	 8, true},
+	{"Cyan",		{208,208,209,210,211,211,212,213,214,214,215,216,217,217,218,219},	215, 0,			 8, true},
+	{"Teal",		{247,247,247,247,220,220,220,221,221,221,222,222,222,223,223,223},	221, 0,			 8, true},
+	{"Steel_Blue",	{200,200,201,201,202,202,203,203,204,204,205,205,206,206,207,207},	203, 0,			 8, true},
+	{"Blue",		{226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241},	232, SKINCOLOR_ORANGE,	 9, true},
+	{"Peach",		{ 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79},	 71, 0,			 8, true},
+	{"Tan",			{ 72, 73, 74, 75, 76, 77, 78, 79, 48, 49, 50, 51, 52, 53, 54, 55},	 79, 0,			 8, true},
+	{"Pink",		{144,144,145,145,146,146,147,147,148,148,149,149,150,150,151,151},	147, 0,			 8, true},
+	{"Lavender",	{248,248,249,249,250,250,251,251,252,252,253,253,254,254,255,255},	251, 0,			 8, true},
+	{"Purple",		{192,192,193,193,194,194,195,195,196,196,197,197,198,198,199,199},	195, 0,			 8, true},
+	{"Orange",		{ 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,152,153},	 87, SKINCOLOR_BLUE,	12, true},
+	{"Rosewood",	{ 92, 92, 93, 94, 95, 95,152,153,154,154,155,156,157,157,158,159},	 94, 0,			 8, true},
+	{"Beige",		{ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47},	 40, 0,			 8, true},
+	{"Brown",		{ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63},	 57, 0,			 8, true},
+	{"Red",			{125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140},	130, SKINCOLOR_GREEN,	 5, true},
+	{"Dark_Red",	{133,133,134,134,135,135,136,136,137,137,138,138,139,139,140,140},	139, 0,			 8, true},
+	{"Neon_Green",	{160,184,184,184,185,185,186,186,186,187,187,188,188,188,189,189},	184, 0,			 8, true},
+	{"Green",		{160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175},	166, SKINCOLOR_RED,	11, true},
+	{"Zim",			{176,176,177,177,178,178,179,179,180,180,181,181,182,182,183,183},	180, SKINCOLOR_PURPLE,	 3, true},
+	{"Olive",		{105,105,105,106,106,107,107,108,108,108,109,109,110,110,111,111},	108, 0,			 8, true},
+	{"Yellow",		{103,103,104,104,105,105,106,106,107,107,108,108,109,109,110,110},	104, 0,			 8, true},
+	{"Gold",		{112,112,113,113,114,114,115,115,116,116,117,117,118,118,119,119},	115, 0,			 8, true},
+	
+	{"Super1",		{120,120,120,120,120,120,120,120,120,120, 96, 97, 98, 99,100,101},	 97, 0, 0, false},
+	{"Super2",		{ 96, 97, 98, 99,100,112,101,101,102,102,103,103,104,104,113,114},	100, 0, 0, false},
+	{"Super3",		{ 98, 99,100,112,101,101,102,102,103,103,104,104,113,114,115,116},	103, 0, 0, false},
+	{"Super4",		{112,101,101,102,102,103,103,104,104,113,114,115,116,117,118,119},	113, 0, 0, false},
+	{"Super5",		{101,101,102,102,103,103,104,104,113,114,115,116,117,118,119,155},	116, 0, 0, false},
+	
+	{"TSuper1",		{120,120,120,120,120,120,120,120,120,120, 80, 81, 82, 83, 84, 85},	 81, 0, 0, false},
+	{"TSuper2",		{120,120,120,120, 80, 80, 81, 81, 82, 82, 83, 83, 84, 84, 85, 85},	 82, 0, 0, false},
+	{"TSuper3",		{120,120, 80, 80, 81, 81, 82, 82, 83, 83, 84, 84, 85, 85, 86, 86},	 84, 0, 0, false},
+	{"TSuper4",		{120, 80, 81, 82, 83, 84, 85, 86, 87,115,115,116,117,117,118,119},	 85, 0, 0, false},
+	{"TSuper5",		{ 80, 81, 82, 83, 84, 85, 86, 87,115,115,116,116,117,118,118,119},	 87, 0, 0, false},
+	
+	{"KSuper1",		{120,120,120,120,121,121,121,121,122,122,122,122,123,123,123,123},	112, 0, 0, false},
+	{"KSuper2",		{120,120,120,121,121,121,122,122,123,123,123,124,124,124,125,125},	123, 0, 0, false},
+	{"KSuper3",		{120,120,121,121,122,122,123,123,124,124,125,125,126,126,127,127},	124, 0, 0, false},
+	{"KSuper4",		{121,121,122,122,123,123,124,124,125,125,126,126,127,127,128,128},	125, 0, 0, false},
+	{"KSuper5",		{122,122,123,123,124,124,125,125,126,126,127,127,128,128,129,129},	126, 0, 0, false}
+};
 
 /** Patches the mobjinfo table and state table.
   * Free slots are emptied out and set to initial values.
   */
 void P_PatchInfoTables(void)
 {
-	INT32 i;
+	INT32 i, j;
 	char *tempname;
 
 #if NUMSPRITEFREESLOTS > 1000
@@ -13795,6 +13841,12 @@ void P_PatchInfoTables(void)
 	sprnames[i][0] = '\0'; // i == NUMSPRITES
 	memset(&states[S_FIRSTFREESLOT], 0, sizeof (state_t) * NUMSTATEFREESLOTS);
 	memset(&mobjinfo[MT_FIRSTFREESLOT], 0, sizeof (mobjinfo_t) * NUMMOBJFREESLOTS);
+	memset(&skincolors[SKINCOLOR_FIRSTFREESLOT], 0, sizeof (skincolor_t) * NUMCOLORFREESLOTS);
+	for (i = SKINCOLOR_FIRSTFREESLOT; i <= SKINCOLOR_LASTFREESLOT; i++)
+		for (j = 0; j < COLORRAMPSIZE; j++) {
+			skincolors[i].ramp[j] = 120;
+			skincolors[i].accessible = false;
+		}
 	for (i = MT_FIRSTFREESLOT; i <= MT_LASTFREESLOT; i++)
 		mobjinfo[i].doomednum = -1;
 }
@@ -13803,7 +13855,8 @@ void P_PatchInfoTables(void)
 static char *sprnamesbackup;
 static state_t *statesbackup;
 static mobjinfo_t *mobjinfobackup;
-static size_t sprnamesbackupsize, statesbackupsize, mobjinfobackupsize;
+static skincolor_t *skincolorsbackup;
+static size_t sprnamesbackupsize, statesbackupsize, mobjinfobackupsize, skincolorsbackupsize;
 #endif
 
 void P_BackupTables(void)
@@ -13813,6 +13866,7 @@ void P_BackupTables(void)
 	sprnamesbackup = Z_Malloc(sizeof(sprnames), PU_STATIC, NULL);
 	statesbackup = Z_Malloc(sizeof(states), PU_STATIC, NULL);
 	mobjinfobackup = Z_Malloc(sizeof(mobjinfo), PU_STATIC, NULL);
+	skincolorsbackup = Z_Malloc(sizeof(skincolors), PU_STATIC, NULL);
 
 	// Sprite names
 	sprnamesbackupsize = lzf_compress(sprnames, sizeof(sprnames), sprnamesbackup, sizeof(sprnames));
@@ -13834,6 +13888,13 @@ void P_BackupTables(void)
 		mobjinfobackup = Z_Realloc(mobjinfobackup, mobjinfobackupsize, PU_STATIC, NULL);
 	else
 		M_Memcpy(mobjinfobackup, mobjinfo, sizeof(mobjinfo));
+	
+	//Skincolor info
+	skincolorsbackupsize = lzf_compress(skincolors, sizeof(skincolors), skincolorsbackup, sizeof(skincolors));
+	if (skincolorsbackupsize > 0)
+		skincolorsbackup = Z_Realloc(skincolorsbackup, skincolorsbackupsize, PU_STATIC, NULL);
+	else
+		M_Memcpy(skincolorsbackup, skincolors, sizeof(skincolors));
 #endif
 }
 
@@ -13865,6 +13926,14 @@ void P_ResetData(INT32 flags)
 			lzf_decompress(mobjinfobackup, mobjinfobackupsize, mobjinfo, sizeof(mobjinfo));
 		else
 			M_Memcpy(mobjinfo, mobjinfobackup, sizeof(mobjinfobackup));
+	}
+	
+	if (flags & 8)
+	{
+		if (skincolorsbackupsize > 0)
+			lzf_decompress(skincolorsbackup, skincolorsbackupsize, skincolors, sizeof(skincolors));
+		else
+			M_Memcpy(skincolors, skincolorsbackup, sizeof(skincolorsbackup));
 	}
 #endif
 }

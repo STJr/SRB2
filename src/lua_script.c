@@ -472,6 +472,7 @@ enum
 	ARCH_SLOPE,
 #endif
 	ARCH_MAPHEADER,
+	ARCH_SKINCOLOR,
 
 	ARCH_TEND=0xFF,
 };
@@ -494,6 +495,7 @@ static const struct {
 	{META_SLOPE,    ARCH_SLOPE},
 #endif
 	{META_MAPHEADER,   ARCH_MAPHEADER},
+	{META_SKINCOLOR, ARCH_SKINCOLOR},
 	{NULL,          ARCH_NULL}
 };
 
@@ -721,6 +723,13 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+		case ARCH_SKINCOLOR:
+		{
+			skincolor_t *info = *((skincolor_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_SKINCOLOR);
+			WRITEUINT16(save_p, info - skincolors);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -921,6 +930,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 #endif
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
+		break;
+	case ARCH_SKINCOLOR:
+		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
 		break;
 	case ARCH_TEND:
 		return 1;

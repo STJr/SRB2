@@ -23,6 +23,10 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
+extern CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
+extern void R_FlushTranslationColormapCache(void);
+extern UINT8 skincolor_blueteam, skincolor_redteam;
+
 boolean LUA_CallAction(const char *action, mobj_t *actor);
 state_t *astate;
 
@@ -865,6 +869,224 @@ static int sfxinfo_num(lua_State *L)
 	return 1;
 }
 
+////////////////////
+// SKINCOLOR INFO //
+////////////////////
+
+// Arbitrary skincolors[] table index -> skincolor_t *
+static int lib_getSkinColor(lua_State *L)
+{
+	UINT32 i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i >= MAXSKINCOLORS)
+		return luaL_error(L, "skincolors[] index %d out of range (0 - %d)", i, MAXSKINCOLORS-1);
+	LUA_PushUserdata(L, &skincolors[i], META_SKINCOLOR);
+	return 1;
+}
+
+//Set the entire c->ramp array
+static void setRamp(lua_State *L, skincolor_t* c) {
+	UINT32 i;
+	lua_pushnil(L);
+	for (i=0; i<COLORRAMPSIZE; i++) {
+		if (lua_objlen(L,-2)<COLORRAMPSIZE) {
+			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
+			break;
+		}
+		if (lua_next(L, -2) != 0) {
+			c->ramp[i] = lua_isnumber(L,-1) ? (UINT8)luaL_checkinteger(L,-1) : 120;
+			lua_pop(L, 1);
+		} else
+			c->ramp[i] = 120;
+	}
+	lua_pop(L,1);
+}
+
+// Lua table full of data -> skincolors[]
+static int lib_setSkinColor(lua_State *L)
+{
+	UINT32 j;
+	skincolor_t *info;
+	boolean teamcolor; // team colors cannot be denied accessibility
+	UINT8 cnum; //skincolor num
+	lua_remove(L, 1); // don't care about skincolors[] userdata.
+	{
+		cnum = (UINT8)luaL_checkinteger(L, 1);
+		if (cnum >= MAXSKINCOLORS)
+			return luaL_error(L, "skincolors[] index %d out of range (0 - %d)", cnum, MAXSKINCOLORS-1);
+		teamcolor = cnum==skincolor_blueteam || cnum==skincolor_redteam;
+		info = &skincolors[cnum]; // get the skincolor to assign to.
+	}
+	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
+	lua_remove(L, 1); // pop skincolor num, don't need it any more.
+	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the skincolor.
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter skincolors in HUD rendering code!");
+	
+	// clear the skincolor to start with, in case of missing table elements
+	memset(info,0,sizeof(skincolor_t));
+	if (teamcolor) info->accessible = true;
+	
+	Color_cons_t[cnum].value = cnum;
+	lua_pushnil(L);
+	while (lua_next(L, 1)) {
+		lua_Integer i = 0;
+		const char *str = NULL;
+		if (lua_isnumber(L, 2))
+			i = lua_tointeger(L, 2);
+		else
+			str = luaL_checkstring(L, 2);
+
+		if (i == 1 || (str && fastcmp(str,"name"))) {
+			const char* n = luaL_checkstring(L, 3);
+			if (strchr(n, ' ') != NULL)
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", n);
+			strlcpy(info->name, n, COLORNAMESIZE+1);
+			if (strlen(n) > COLORNAMESIZE)
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, COLORNAMESIZE, info->name);
+		} else if (i == 2 || (str && fastcmp(str,"ramp"))) {
+			if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
+				return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
+			else if (lua_istable(L, 3))
+				setRamp(L, info);
+			else
+				for (j=0; j<COLORRAMPSIZE; j++)
+					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
+			R_FlushTranslationColormapCache();
+		} else if (i == 3 || (str && fastcmp(str,"md2color")))
+			info->md2color = (UINT8)luaL_checkinteger(L, 3);
+		else if (i == 4 || (str && fastcmp(str,"invcolor")))
+			info->invcolor = (UINT8)luaL_checkinteger(L, 3);
+		else if (i == 4 || (str && fastcmp(str,"invshade")))
+			info->invshade = (UINT8)luaL_checkinteger(L, 3);
+		else if (!teamcolor && (i == 5 || (str && fastcmp(str,"accessible")))) {
+			info->accessible = lua_isboolean(L,3) ? lua_toboolean(L, 3) : true;
+		}
+		lua_pop(L, 1);
+	}
+	return 0;
+}
+
+// #skincolors -> MAXSKINCOLORS
+static int lib_skincolorslen(lua_State *L)
+{
+	lua_pushinteger(L, MAXSKINCOLORS);
+	return 1;
+}
+
+// skincolor_t *, field -> number
+static int skincolor_get(lua_State *L)
+{
+	skincolor_t *info = *((skincolor_t **)luaL_checkudata(L, 1, META_SKINCOLOR));
+	const char *field = luaL_checkstring(L, 2);
+
+	I_Assert(info != NULL);
+	I_Assert(info >= skincolors);
+
+	if (fastcmp(field,"name"))
+		lua_pushstring(L, info->name);
+	else if (fastcmp(field,"ramp"))
+		LUA_PushUserdata(L, info->ramp, META_COLORRAMP);
+	else if (fastcmp(field,"md2color"))
+		lua_pushinteger(L, info->md2color);
+	else if (fastcmp(field,"invcolor"))
+		lua_pushinteger(L, info->invcolor);
+	else if (fastcmp(field,"invshade"))
+		lua_pushinteger(L, info->invshade);
+	else if (fastcmp(field,"accessible"))
+		lua_pushinteger(L, info->accessible);
+	else
+		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
+	return 1;
+}
+
+// skincolor_t *, field, number -> skincolors[]
+static int skincolor_set(lua_State *L)
+{
+	UINT32 i;
+	skincolor_t *info = *((skincolor_t **)luaL_checkudata(L, 1, META_SKINCOLOR));
+	const char *field = luaL_checkstring(L, 2);
+	
+	I_Assert(info != NULL);
+	I_Assert(info >= skincolors);
+	
+	if (fastcmp(field,"name")) {
+		const char* n = luaL_checkstring(L, 3);
+		if (strchr(n, ' ') != NULL)
+			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", n);
+		strlcpy(info->name, n, COLORNAMESIZE+1);
+		if (strlen(n) > COLORNAMESIZE)
+			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, COLORNAMESIZE, info->name);
+	} else if (fastcmp(field,"ramp")) {
+		if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
+			return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
+		else if (lua_istable(L, 3))
+			setRamp(L, info);
+		else
+			for (i=0; i<COLORRAMPSIZE; i++)
+				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
+		R_FlushTranslationColormapCache();
+	} else if (fastcmp(field,"md2color"))
+		info->md2color = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"invcolor"))
+		info->invcolor = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"invshade"))
+		info->invshade = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"accessible"))
+		info->accessible = lua_isboolean(L,3) ? lua_toboolean(L, 3) : true;
+	else
+		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
+	return 1;
+}
+
+// skincolor_t * -> SKINCOLOR_*
+static int skincolor_num(lua_State *L)
+{
+	skincolor_t *info = *((skincolor_t **)luaL_checkudata(L, 1, META_SKINCOLOR));
+
+	I_Assert(info != NULL);
+	I_Assert(info >= skincolors);
+
+	lua_pushinteger(L, info-skincolors);
+	return 1;
+}
+
+// ramp, n -> ramp[n]
+static int colorramp_get(lua_State *L)
+{
+	UINT8 *colorramp = *((UINT8 **)luaL_checkudata(L, 1, META_COLORRAMP));
+	UINT32 n = luaL_checkinteger(L, 2);
+	if (n >= COLORRAMPSIZE)
+		return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' index %d out of range (0 - %d)", n, COLORRAMPSIZE-1);
+	lua_pushinteger(L, colorramp[n]);
+	return 1;
+}
+
+// ramp, n, value -> ramp[n] = value
+static int colorramp_set(lua_State *L)
+{
+	UINT8 *colorramp = *((UINT8 **)luaL_checkudata(L, 1, META_COLORRAMP));
+	UINT32 n = luaL_checkinteger(L, 2);
+	UINT8 i = (UINT8)luaL_checkinteger(L, 3);
+	if (n >= COLORRAMPSIZE)
+		return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' index %d out of range (0 - %d)", n, COLORRAMPSIZE-1);
+	if (hud_running)
+		return luaL_error(L, "Do not alter skincolor_t in HUD rendering code!");
+	colorramp[n] = i;
+	R_FlushTranslationColormapCache();
+	return 0;
+}
+
+// #ramp -> COLORRAMPSIZE
+static int colorramp_len(lua_State *L)
+{
+	lua_pushinteger(L, COLORRAMPSIZE);
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -901,6 +1123,28 @@ int LUA_InfoLib(lua_State *L)
 		lua_pushcfunction(L, mobjinfo_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_SKINCOLOR);
+		lua_pushcfunction(L, skincolor_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, skincolor_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, skincolor_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_COLORRAMP);
+		lua_pushcfunction(L, colorramp_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, colorramp_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, colorramp_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_SFXINFO);
 		lua_pushcfunction(L, sfxinfo_get);
@@ -948,6 +1192,19 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "mobjinfo");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSkinColor);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setSkinColor);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_skincolorslen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "skincolors");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

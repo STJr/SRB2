@@ -585,10 +585,9 @@ void D_RegisterClientCommands(void)
 {
 	INT32 i;
 
-	for (i = 0; i < MAXSKINCOLORS; i++)
-	{
+	for (i = 0; i < MAXSKINCOLORS; i++) {
 		Color_cons_t[i].value = i;
-		Color_cons_t[i].strvalue = Color_Names[i];
+		Color_cons_t[i].strvalue = skincolors[i].name;
 	}
 	Color_cons_t[MAXSKINCOLORS].value = 0;
 	Color_cons_t[MAXSKINCOLORS].strvalue = NULL;
@@ -1109,15 +1108,17 @@ static void SendNameAndColor(void)
 			CV_StealthSetValue(&cv_playercolor, skincolor_blueteam);
 	}
 
-	// never allow the color "none"
-	if (!cv_playercolor.value)
-	{
-		if (players[consoleplayer].skincolor)
+	// don't allow inaccessible colors
+	if (!skincolors[cv_playercolor.value].accessible) {
+		if (players[consoleplayer].skincolor && skincolors[players[consoleplayer].skincolor].accessible)
 			CV_StealthSetValue(&cv_playercolor, players[consoleplayer].skincolor);
-		else if (skins[players[consoleplayer].skin].prefcolor)
+		else if (skins[players[consoleplayer].skin].prefcolor && skincolors[skins[players[consoleplayer].skin].prefcolor].accessible)
 			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
-		else
+		else {
 			CV_StealthSet(&cv_playercolor, cv_playercolor.defaultvalue);
+			if (!skincolors[cv_playercolor.value].accessible)
+				CV_StealthSetValue(&cv_playercolor, skincolor_blueteam);
+		}
 	}
 
 	if (!strcmp(cv_playername.string, player_names[consoleplayer])
@@ -1162,7 +1163,7 @@ static void SendNameAndColor(void)
 			{
 				CV_StealthSetValue(&cv_playercolor, skins[cv_skin.value].prefcolor);
 
-				players[consoleplayer].skincolor = (cv_playercolor.value&0x1F) % MAXSKINCOLORS;
+				players[consoleplayer].skincolor = cv_playercolor.value % MAXSKINCOLORS;
 
 				if (players[consoleplayer].mo)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
@@ -1229,15 +1230,17 @@ static void SendNameAndColor2(void)
 			CV_StealthSetValue(&cv_playercolor2, skincolor_blueteam);
 	}
 
-	// never allow the color "none"
-	if (!cv_playercolor2.value)
-	{
-		if (players[secondplaya].skincolor)
+	// don't allow inaccessible colors
+	if (!skincolors[cv_playercolor2.value].accessible) {
+		if (players[secondplaya].skincolor && skincolors[players[secondplaya].skincolor].accessible)
 			CV_StealthSetValue(&cv_playercolor2, players[secondplaya].skincolor);
-		else if (skins[players[secondplaya].skin].prefcolor)
+		else if (skins[players[secondplaya].skin].prefcolor && skincolors[skins[players[secondplaya].skin].prefcolor].accessible)
 			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
-		else
+		else {
 			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
+			if (!skincolors[cv_playercolor2.value].accessible)
+				CV_StealthSetValue(&cv_playercolor2, skincolor_blueteam);
+		}
 	}
 
 	// We'll handle it later if we're not playing.
@@ -1286,7 +1289,7 @@ static void SendNameAndColor2(void)
 			{
 				CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
 
-				players[secondplaya].skincolor = (cv_playercolor2.value&0x1F) % MAXSKINCOLORS;
+				players[secondplaya].skincolor = cv_playercolor2.value % MAXSKINCOLORS;
 
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
@@ -1353,8 +1356,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 				kick = true;
 		}
 
-		// don't allow color "none"
-		if (!p->skincolor)
+		// don't allow color "none" or inaccessible colors
+		if (!p->skincolor || skincolors[p->skincolor].accessible == false)
 			kick = true;
 
 		if (kick)
@@ -4326,16 +4329,11 @@ static void Color_OnChange(void)
 		return;
 	}
 
-	if (!P_PlayerMoving(consoleplayer))
-	{
+	if (!P_PlayerMoving(consoleplayer) && skincolors[players[consoleplayer].skincolor].accessible == true)
 		// Color change menu scrolling fix is no longer necessary
 		SendNameAndColor();
-	}
 	else
-	{
-		CV_StealthSetValue(&cv_playercolor,
-			players[consoleplayer].skincolor);
-	}
+		CV_StealthSetValue(&cv_playercolor, players[consoleplayer].skincolor);
 }
 
 /** Sends a color change for the secondary splitscreen player, unless that
@@ -4348,16 +4346,11 @@ static void Color2_OnChange(void)
 	if (!Playing() || !splitscreen)
 		return; // do whatever you want
 
-	if (!P_PlayerMoving(secondarydisplayplayer))
-	{
+	if (!P_PlayerMoving(secondarydisplayplayer) && skincolors[players[secondarydisplayplayer].skincolor].accessible == true)
 		// Color change menu scrolling fix is no longer necessary
 		SendNameAndColor2();
-	}
 	else
-	{
-		CV_StealthSetValue(&cv_playercolor2,
-			players[secondarydisplayplayer].skincolor);
-	}
+		CV_StealthSetValue(&cv_playercolor2, players[secondarydisplayplayer].skincolor);
 }
 
 /** Displays the result of the chat being muted or unmuted.

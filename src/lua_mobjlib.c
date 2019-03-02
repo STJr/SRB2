@@ -524,8 +524,8 @@ static int mobj_set(lua_State *L)
 	case mobj_color:
 	{
 		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXTRANSLATIONS)
-			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		if (newcolor >= MAXSKINCOLORS)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
 		mo->color = newcolor;
 		break;
 	}

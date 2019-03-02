@@ -54,10 +54,12 @@ int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 // The crazy word-reading stuff uses these.
 static char *FREE_STATES[NUMSTATEFREESLOTS];
 static char *FREE_MOBJS[NUMMOBJFREESLOTS];
+static char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
 static UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
 #define initfreeslots() {\
 memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);\
 memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
+memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
 memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
 }
 
@@ -74,6 +76,7 @@ static hudnum_t get_huditem(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
 #endif
+skincolors_t get_skincolor(const char *word);
 
 boolean deh_loaded = false;
 static int dbg_line;
@@ -6848,8 +6851,6 @@ static const char *const ML_LIST[16] = {
 };
 #endif
 
-// This DOES differ from r_draw's Color_Names, unfortunately.
-// Also includes Super colors
 static const char *COLOR_ENUMS[] = {
 	"NONE",     	// SKINCOLOR_NONE
 	"WHITE",    	// SKINCOLOR_WHITE
@@ -7111,7 +7112,6 @@ struct {
 
 	// SKINCOLOR_ doesn't include these..!
 	{"MAXSKINCOLORS",MAXSKINCOLORS},
-	{"MAXTRANSLATIONS",MAXTRANSLATIONS},
 
 	// Precipitation
 	{"PRECIP_NONE",PRECIP_NONE},
@@ -7487,6 +7487,26 @@ static statenum_t get_state(const char *word)
 	return S_NULL;
 }
 
+skincolors_t get_skincolor(const char *word)
+{ // Returns the value of SKINCOLOR_ enumerations
+	skincolors_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("SKINCOLOR_",word,10))
+		word += 10; // take off the SKINCOLOR_
+	for (i = 0; i < NUMCOLORFREESLOTS; i++) {
+		if (!FREE_SKINCOLORS[i])
+			break;
+		if (fastcmp(word, FREE_SKINCOLORS[i]))
+			return SKINCOLOR_FIRSTFREESLOT+i;
+	}
+	for (i = 0; i < SKINCOLOR_FIRSTFREESLOT; i++)
+		if (fastcmp(word, COLOR_ENUMS[i]))
+			return i;
+	deh_warning("Couldn't find skincolor named 'SKINCOLOR_%s'",word);
+	return SKINCOLOR_GREEN;
+}
+
 static spritenum_t get_sprite(const char *word)
 { // Returns the value of SPR_ enumerations
 	spritenum_t i;
@@ -7740,6 +7760,11 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
+	else if (fastncmp("SKINCOLOR_",word,10)) {
+		r = get_skincolor(word);
+		free(word);
+		return r;
+	}
 	else if (fastncmp("MT_",word,3)) {
 		r = get_mobjtype(word);
 		free(word);
@@ -7771,17 +7796,6 @@ static fixed_t find_const(const char **rword)
 		r = get_huditem(word);
 		free(word);
 		return r;
-	}
-	else if (fastncmp("SKINCOLOR_",word,10)) {
-		char *p = word+10;
-		for (i = 0; i < MAXTRANSLATIONS; i++)
-			if (fastcmp(p, COLOR_ENUMS[i])) {
-				free(word);
-				return i;
-			}
-		const_warning("color",word);
-		free(word);
-		return 0;
 	}
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
@@ -7833,8 +7847,8 @@ void DEH_Check(void)
 	if (dehpowers != NUMPOWERS)
 		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
 
-	if (dehcolors != MAXTRANSLATIONS)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXTRANSLATIONS, sizeu1(dehcolors));
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
 #endif
 }
 
@@ -7938,6 +7952,21 @@ static inline int lib_freeslot(lua_State *L)
 					break;
 				}
 			if (i == NUMMOBJFREESLOTS)
+				return r;
+		}
+		else if (fastcmp(type, "SKINCOLOR"))
+		{
+			skincolors_t i;
+			for (i = 0; i < NUMCOLORFREESLOTS; i++)
+				if (!FREE_SKINCOLORS[i]) {
+					CONS_Printf("Skincolor SKINCOLOR_%s allocated.\n",word);
+					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+					strcpy(FREE_SKINCOLORS[i],word);
+					lua_pushinteger(L, i);
+					r++;
+					break;
+				}
+			if (i == NUMCOLORFREESLOTS)
 				return r;
 		}
 		Z_Free(s);
@@ -8184,13 +8213,20 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
-		for (i = 0; i < MAXTRANSLATIONS; i++)
+		for (i = 0; i < NUMCOLORFREESLOTS; i++) {
+			if (!FREE_SKINCOLORS[i])
+				break;
+			if (fastcmp(p, FREE_SKINCOLORS[i])) {
+				lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT+i);
+				return 1;
+			}
+		}
+		for (i = 0; i < SKINCOLOR_FIRSTFREESLOT; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
-		return 0;
+		return luaL_error(L, "skincolor '%s' could not be found.\n", word);
 	}
 	else if (!mathlib && fastncmp("A_",word,2)) {
 		char *caps;

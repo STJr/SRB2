@@ -5219,7 +5219,7 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// Set color
 	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+		if (!stricmp(skincolors[i].name,color))
 		{
 			players[0].skincolor = i;
 			break;
@@ -5464,7 +5464,7 @@ void G_AddGhost(char *defdemoname)
 	// Set color
 	gh->mo->color = ((skin_t*)gh->mo->skin)->prefcolor;
 	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+		if (!stricmp(skincolors[i].name,color))
 		{
 			gh->mo->color = (UINT8)i;
 			break;

@@ -3960,8 +3960,8 @@ void A_SignPlayer(mobj_t *actor)
 		return;
 
 	// Set the sign to be an appropriate background color for this player's skincolor.
-	actor->color = Color_Opposite[actor->target->player->skincolor*2];
-	actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
+	actor->color = skincolors[actor->target->player->skincolor].invcolor;
+	actor->frame += skincolors[actor->target->player->skincolor].invshade;
 
 	// spawn an overlay of the player's face.
 	ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
