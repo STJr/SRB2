@@ -154,6 +154,7 @@ size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump);
 size_t W_LumpLength(lumpnum_t lumpnum);
 
 boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
+boolean W_IsLumpFolder(UINT16 wad, UINT16 lump); // for detecting folder "lumps"
 
 #ifdef HAVE_ZLIB
 void zerr(int ret); // zlib error checking
