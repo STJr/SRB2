@@ -649,84 +649,87 @@ static void P_NetArchiveWorld(void)
 
 	mld = W_CacheLumpNum(lastloadedmaplumpnum+ML_LINEDEFS, PU_CACHE);
 	msd = W_CacheLumpNum(lastloadedmaplumpnum+ML_SIDEDEFS, PU_CACHE);
-	// do lines
-	for (i = 0; i < numlines; i++, mld++, li++)
+	if (mld && msd)
 	{
-		diff = diff2 = 0;
-
-		if (li->special != SHORT(mld->special))
-			diff |= LD_SPECIAL;
-
-		if (SHORT(mld->special) == 321 || SHORT(mld->special) == 322) // only reason li->callcount would be non-zero is if either of these are involved
-			diff |= LD_CLLCOUNT;
-
-		if (li->sidenum[0] != 0xffff)
+		// do lines
+		for (i = 0; i < numlines; i++, mld++, li++)
 		{
-			si = &sides[li->sidenum[0]];
-			if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
-				diff |= LD_S1TEXOFF;
-			//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1
-				&& si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture))
-				diff |= LD_S1TOPTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1
-				&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture))
-				diff |= LD_S1BOTTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1
-				&& si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture))
-				diff |= LD_S1MIDTEX;
-		}
-		if (li->sidenum[1] != 0xffff)
-		{
-			si = &sides[li->sidenum[1]];
-			if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
-				diff2 |= LD_S2TEXOFF;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1
-				&& si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture))
-				diff2 |= LD_S2TOPTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1
-				&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture))
-				diff2 |= LD_S2BOTTEX;
-			if (R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1
-				&& si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture))
-				diff2 |= LD_S2MIDTEX;
-			if (diff2)
-				diff |= LD_DIFF2;
-		}
+			diff = diff2 = 0;
 
-		if (diff)
-		{
-			statline++;
-			WRITEINT16(put, i);
-			WRITEUINT8(put, diff);
-			if (diff & LD_DIFF2)
-				WRITEUINT8(put, diff2);
-			if (diff & LD_FLAG)
-				WRITEINT16(put, li->flags);
-			if (diff & LD_SPECIAL)
-				WRITEINT16(put, li->special);
-			if (diff & LD_CLLCOUNT)
-				WRITEINT16(put, li->callcount);
+			if (li->special != SHORT(mld->special))
+				diff |= LD_SPECIAL;
 
-			si = &sides[li->sidenum[0]];
-			if (diff & LD_S1TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
-			if (diff & LD_S1TOPTEX)
-				WRITEINT32(put, si->toptexture);
-			if (diff & LD_S1BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
-			if (diff & LD_S1MIDTEX)
-				WRITEINT32(put, si->midtexture);
+			if (SHORT(mld->special) == 321 || SHORT(mld->special) == 322) // only reason li->callcount would be non-zero is if either of these are involved
+				diff |= LD_CLLCOUNT;
 
-			si = &sides[li->sidenum[1]];
-			if (diff2 & LD_S2TEXOFF)
-				WRITEFIXED(put, si->textureoffset);
-			if (diff2 & LD_S2TOPTEX)
-				WRITEINT32(put, si->toptexture);
-			if (diff2 & LD_S2BOTTEX)
-				WRITEINT32(put, si->bottomtexture);
-			if (diff2 & LD_S2MIDTEX)
-				WRITEINT32(put, si->midtexture);
+			if (li->sidenum[0] != 0xffff)
+			{
+				si = &sides[li->sidenum[0]];
+				if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
+					diff |= LD_S1TEXOFF;
+				//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
+				if (R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1
+						&& si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture))
+					diff |= LD_S1TOPTEX;
+				if (R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1
+						&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture))
+					diff |= LD_S1BOTTEX;
+				if (R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1
+						&& si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture))
+					diff |= LD_S1MIDTEX;
+			}
+			if (li->sidenum[1] != 0xffff)
+			{
+				si = &sides[li->sidenum[1]];
+				if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
+					diff2 |= LD_S2TEXOFF;
+				if (R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1
+						&& si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture))
+					diff2 |= LD_S2TOPTEX;
+				if (R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1
+						&& si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture))
+					diff2 |= LD_S2BOTTEX;
+				if (R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1
+						&& si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture))
+					diff2 |= LD_S2MIDTEX;
+				if (diff2)
+					diff |= LD_DIFF2;
+			}
+
+			if (diff)
+			{
+				statline++;
+				WRITEINT16(put, i);
+				WRITEUINT8(put, diff);
+				if (diff & LD_DIFF2)
+					WRITEUINT8(put, diff2);
+				if (diff & LD_FLAG)
+					WRITEINT16(put, li->flags);
+				if (diff & LD_SPECIAL)
+					WRITEINT16(put, li->special);
+				if (diff & LD_CLLCOUNT)
+					WRITEINT16(put, li->callcount);
+
+				si = &sides[li->sidenum[0]];
+				if (diff & LD_S1TEXOFF)
+					WRITEFIXED(put, si->textureoffset);
+				if (diff & LD_S1TOPTEX)
+					WRITEINT32(put, si->toptexture);
+				if (diff & LD_S1BOTTEX)
+					WRITEINT32(put, si->bottomtexture);
+				if (diff & LD_S1MIDTEX)
+					WRITEINT32(put, si->midtexture);
+
+				si = &sides[li->sidenum[1]];
+				if (diff2 & LD_S2TEXOFF)
+					WRITEFIXED(put, si->textureoffset);
+				if (diff2 & LD_S2TOPTEX)
+					WRITEINT32(put, si->toptexture);
+				if (diff2 & LD_S2BOTTEX)
+					WRITEINT32(put, si->bottomtexture);
+				if (diff2 & LD_S2MIDTEX)
+					WRITEINT32(put, si->midtexture);
+			}
 		}
 	}
 	WRITEUINT16(put, 0xffff);
