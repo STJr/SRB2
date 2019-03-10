@@ -15,6 +15,7 @@ matrix:
               - p7zip-full
               - gcc-4.4
           compiler: gcc-4.4
+          env: GCC44=1
           #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
@@ -27,6 +28,7 @@ matrix:
               - p7zip-full
               - gcc-4.6
           compiler: gcc-4.6
+          env: GCC46=1
           #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
@@ -39,9 +41,11 @@ matrix:
               - p7zip-full
               - gcc-4.7
           compiler: gcc-4.7
+          env: GCC47=1
           #gcc-4.7
         - os: linux
           compiler: gcc
+          env: GCC48=1
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
           addons:
@@ -56,6 +60,7 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
+          env: GCC48=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
@@ -70,7 +75,7 @@ matrix:
               - p7zip-full
               - gcc-7
           compiler: gcc-7
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough"
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough" GCC72=1
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
           addons:
@@ -85,7 +90,7 @@ matrix:
               - p7zip-full
               - gcc-8
           compiler: gcc-8
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow"
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow" GCC81=1
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
           compiler: clang
