@@ -736,6 +736,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chasefreelook);
 	CV_RegisterVar(&cv_chasefreelook2);
 	CV_RegisterVar(&cv_tutorialprompt);
+	CV_RegisterVar(&cv_showfocuslost);
+	CV_RegisterVar(&cv_pauseifunfocused);
 
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
