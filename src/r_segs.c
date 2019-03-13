@@ -3063,8 +3063,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else
 			markceiling = false;
 
-		// Don't render the ceiling again when rendering polyobjects
-		if (curline->polyseg)
+		// Don't mark ceiling flat lines for polys unless this line has an upper texture, otherwise we get flat leakage pulling downward
+		// (If it DOES have an upper texture and we do this, the ceiling won't render at all)
+		if (curline->polyseg && !curline->sidedef->toptexture)
 			markceiling = false;
 	}
 
@@ -3076,8 +3077,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else
 			markfloor = false;
 
-		// Don't render the floor again when rendering polyobjects
-		if (curline->polyseg)
+		// Don't mark floor flat lines for polys unless this line has a lower texture, otherwise we get flat leakage pulling upward
+		// (If it DOES have a lower texture and we do this, the floor won't render at all)
+		if (curline->polyseg && !curline->sidedef->bottomtexture)
 			markfloor = false;
 	}
 
