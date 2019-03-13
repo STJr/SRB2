@@ -7654,10 +7654,21 @@ static void P_SpawnScrollers(void)
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
-		fixed_t dy = l->dy >> SCROLL_SHIFT;
+		fixed_t dx = l->dx; // direction and speed of scrolling
+		fixed_t dy = l->dy;
 		INT32 control = -1, accel = 0; // no control sector or acceleration
 		INT32 special = l->special;
+
+		// If front texture X offset provided, override the amount with it.
+		if (sides[l->sidenum[0]].textureoffset != 0)
+		{
+			fixed_t len = sides[l->sidenum[0]].textureoffset;
+			fixed_t h = FixedHypot(dx, dy);
+			dx = FixedMul(FixedDiv(dx, h), len);
+			dy = FixedMul(FixedDiv(dy, h), len);
+		}
+		dx = dx >> SCROLL_SHIFT;
+		dy = dy >> SCROLL_SHIFT;
 
 		// These types are same as the ones they get set to except that the
 		// first side's sector's heights cause scrolling when they change, and
@@ -9106,6 +9117,7 @@ static void P_SpawnPushers(void)
 	register INT32 s;
 	mobj_t *thing;
 	pushertype_e pushertype;
+	fixed_t dx, dy;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
@@ -9154,12 +9166,25 @@ static void P_SpawnPushers(void)
 			continue;
 		}
 
+		dx = l->dx;
+		dy = l->dy;
+
+		// Obtain versor and scale it up according to texture offset, if provided; line length is ignored in this case.
+
+		if (sides[l->sidenum[0]].textureoffset != 0)
+		{
+			fixed_t len = sides[l->sidenum[0]].textureoffset;
+			fixed_t h = FixedHypot(dx, dy);
+			dx = FixedMul(FixedDiv(dx, h), len);
+			dy = FixedMul(FixedDiv(dy, h), len);
+		}
+
 		if (l->tag == 0)
-			Add_Pusher(pushertype, l->dx, l->dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+			Add_Pusher(pushertype, dx, dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 		else
 		{
 			for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-				Add_Pusher(pushertype, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				Add_Pusher(pushertype, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 		}
 	}
 }
