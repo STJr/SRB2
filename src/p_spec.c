@@ -2414,8 +2414,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				UINT32 prefadems = (UINT32)max(sides[line->sidenum[0]].textureoffset >> FRACBITS, 0);
 				UINT32 postfadems = (UINT32)max(sides[line->sidenum[0]].rowoffset >> FRACBITS, 0);
 				UINT8 fadetarget = (UINT8)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].textureoffset >> FRACBITS : 0, 0);
-				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : 0, -1);
+				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : -1, -1);
 
+				// Seek offset from current song position
 				if (line->flags & ML_EFFECT1)
 				{
 					// adjust for loop point if subtracting
@@ -2427,8 +2428,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						position = max(S_GetMusicPosition() + position, 0);
 				}
 
+				// Fade current music to target volume (if music won't be changed)
 				if ((line->flags & ML_EFFECT2) && fadetarget && musicsame)
 				{
+					// 0 fadesource means fade from current volume.
+					// meaning that we can't specify volume 0 as the source volume -- this starts at 1.
+					if (!fadesource)
+						fadesource = -1;
+
 					if (!postfadems)
 						S_SetInternalMusicVolume(fadetarget);
 					else
@@ -2437,6 +2444,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (position)
 						S_SetMusicPosition(position);
 				}
+				// Change the music and apply position/fade operations
 				else
 				{
 					strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
