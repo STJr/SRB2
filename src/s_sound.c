@@ -1526,7 +1526,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	else // reset volume to 100 with same music
 	{
 		I_StopFadingSong();
-		I_SetInternalMusicVolume(100);
+		I_FadeSong(100, 500, NULL);
 	}
 }
 
