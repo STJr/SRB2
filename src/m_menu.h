@@ -38,6 +38,9 @@ void M_Drawer(void);
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
 
+// Called by D_SRB2Main also, sets up the playermenu and description tables.
+void M_InitCharacterTables(void);
+
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
 void M_StartControlPanel(void);
@@ -151,7 +154,7 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
-extern menuitem_t PlayerMenu[32];
+extern menuitem_t PlayerMenu[MAXSKINS];
 
 typedef struct menu_s
 {
@@ -206,7 +209,7 @@ typedef struct
 	UINT8 netgame;
 } saveinfo_t;
 
-extern description_t description[32];
+extern description_t description[MAXSKINS];
 
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];

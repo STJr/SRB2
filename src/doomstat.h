@@ -33,8 +33,10 @@
 extern INT16 gamemap;
 extern char mapmusname[7];
 extern UINT16 mapmusflags;
+extern UINT32 mapmusposition;
 #define MUSIC_TRACKMASK   0x0FFF // ----************
 #define MUSIC_RELOADRESET 0x8000 // *---------------
+#define MUSIC_FORCERESET  0x4000 // -*--------------
 // Use other bits if necessary.
 
 extern INT16 maptol;
@@ -145,6 +147,7 @@ typedef struct
 
 	char   musswitch[7];
 	UINT16 musswitchflags;
+	UINT32 musswitchposition;
 
 	UINT8 fadecolor; // Color number for fade, 0 means don't do the first fade
 	UINT8 fadeinid;  // ID of the first fade, to a color -- ignored if fadecolor is 0
@@ -215,6 +218,7 @@ typedef struct
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
+	UINT32 muspos;    ///< Music position to jump to.
 	char forcecharacter[17];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
 	UINT8 weather;         ///< 0 = sunny day, 1 = storm, 2 = snow, 3 = rain, 4 = blank, 5 = thunder w/o rain, 6 = rain w/o lightning, 7 = heat wave.
 	INT16 skynum;          ///< Sky number to use.
@@ -242,6 +246,10 @@ typedef struct
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
+
+	// Music stuff.
+	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
+	char musintername[7];    ///< Intermission screen music.
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
