@@ -1305,6 +1305,7 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 127}, // 62
 };
 
 static menuitem_t OP_DataOptionsMenu[] =

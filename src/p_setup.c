@@ -2693,6 +2693,12 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		S_StartSound(NULL, sfx_s3kaf);
 
+		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
+		if (cv_resetmusic.value ||
+			strnicmp(S_MusicName(),
+				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
+			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
 
@@ -2700,6 +2706,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
 		nowtime = lastwipetic;
+
 		// Hold on white for extra effect.
 		while (nowtime < endtime)
 		{
@@ -2720,20 +2727,27 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!titlemapinaction)
 	{
-		// As oddly named as this is, this handles music only.
-		// We should be fine starting it here.
-		S_Start();
-
 		// Let's fade to black here
 		// But only if we didn't do the special stage wipe
 		if (rendermode != render_none && !ranspecialwipe)
 		{
+			// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0
+			if (cv_resetmusic.value ||
+				strnicmp(S_MusicName(),
+					(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
+				S_FadeOutStopMusic(FixedMul(
+					FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+
 			F_WipeStartScreen();
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 			F_WipeEndScreen();
 			F_RunWipe(wipedefs[wipe_level_toblack], false);
 		}
+
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
+		S_Start();
 
 		if (ranspecialwipe == 2)
 		{
