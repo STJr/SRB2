@@ -1489,7 +1489,9 @@ static int mapheaderinfo_get(lua_State *L)
 			if (!header->interscreen[i])
 				break;
 		lua_pushlstring(L, header->interscreen, i);
-	} else if (fastcmp(field,"runsoc"))
+	} else if (fastcmp(field,"musicinterfadeout"))
+		lua_pushinteger(L, header->musicinterfadeout);
+	else if (fastcmp(field,"runsoc"))
 		lua_pushstring(L, header->runsoc);
 	else if (fastcmp(field,"scriptname"))
 		lua_pushstring(L, header->scriptname);
