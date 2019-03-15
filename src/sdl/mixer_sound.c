@@ -1,3 +1,11 @@
+// SONIC ROBO BLAST 2
+//-----------------------------------------------------------------------------
+// Copyright (C) 2014-2018 by Sonic Team Junior.
+//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
+//-----------------------------------------------------------------------------
 /// \file
 /// \brief SDL Mixer interface for sound
 
@@ -42,12 +50,10 @@
 
 #ifdef HAVE_LIBGME
 #include "gme/gme.h"
-#define GME_TREBLE 5.0
-#define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
+#define GME_TREBLE 5.0f
+#define GME_BASS 1.0f
 
-#define HAVE_ZLIB
-
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -63,8 +69,8 @@
 #endif
 
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 UINT8 sound_started = false;
 
@@ -111,6 +117,12 @@ static void var_cleanup(void)
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
+
+#ifdef _WIN32
+	// Force DirectSound instead of WASAPI
+	// SDL 2.0.6+ defaults to the latter and it screws up our sound effects
+	SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
+#endif
 
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
@@ -165,7 +177,7 @@ void I_ShutdownSound(void)
 #endif
 }
 
-FUNCMATH void I_UpdateSound(void)
+void I_UpdateSound(void)
 {
 }
 
@@ -221,7 +233,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 			return NULL; // would and/or did wrap, can't store.
 		break;
 	}
-	sound = malloc(newsamples<<2); // samples * frequency shift * bytes per sample * channels
+	sound = Z_Malloc(newsamples<<2, PU_SOUND, NULL); // samples * frequency shift * bytes per sample * channels
 
 	s = (SINT8 *)stream;
 	d = (INT16 *)sound;
@@ -289,6 +301,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 {
 	void *lump;
 	Mix_Chunk *chunk;
+	SDL_RWops *rw;
 #ifdef HAVE_LIBGME
 	Music_Emu *emu;
 	gme_info_t *info;
@@ -405,7 +418,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return NULL; // No zlib support
 #endif
 	}
 	// Try to read it as a GME sound
@@ -432,21 +445,43 @@ void *I_GetSfx(sfxinfo_t *sfx)
 #endif
 
 	// Try to load it as a WAVE or OGG using Mixer.
-	return Mix_LoadWAV_RW(SDL_RWFromMem(lump, sfx->length), 1);
+	rw = SDL_RWFromMem(lump, sfx->length);
+	if (rw != NULL)
+	{
+		chunk = Mix_LoadWAV_RW(rw, 1);
+		return chunk;
+	}
+
+	return NULL; // haven't been able to get anything
 }
 
 void I_FreeSfx(sfxinfo_t *sfx)
 {
 	if (sfx->data)
+	{
+		Mix_Chunk *chunk = (Mix_Chunk*)sfx->data;
+		UINT8 *abufdata = NULL;
+		if (chunk->allocated == 0)
+		{
+			// We allocated the data in this chunk, so get the abuf from mixer, then let it free the chunk, THEN we free the data
+			// I believe this should ensure the sound is not playing when we free it
+			abufdata = chunk->abuf;
+		}
 		Mix_FreeChunk(sfx->data);
+		if (abufdata)
+		{
+			// I'm going to assume we used Z_Malloc to allocate this data.
+			Z_Free(abufdata);
+		}
+	}
 	sfx->data = NULL;
 	sfx->lumpnum = LUMPERROR;
 }
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
-	INT32 handle = Mix_PlayChannel(-1, S_sfx[id].data, 0);
+	INT32 handle = Mix_PlayChannel(channel, S_sfx[id].data, 0);
 	Mix_Volume(handle, volume);
 	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch; // Mixer can't handle pitch
@@ -601,7 +636,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 /// Music System
 /// ------------------------
 
-FUNCMATH void I_InitMusic(void)
+void I_InitMusic(void)
 {
 }
 
@@ -639,7 +674,7 @@ boolean I_SongPlaying(void)
 #ifdef HAVE_LIBGME
 		(I_SongType() == MU_GME && gme) ||
 #endif
-		(boolean)music
+		music != NULL
 	);
 }
 
@@ -883,6 +918,7 @@ boolean I_LoadSong(char *data, size_t len)
 
 	size_t wstart, wp;
 	char *p = data;
+	SDL_RWops *rw;
 
 	if (music
 #ifdef HAVE_LIBGME
@@ -978,7 +1014,8 @@ boolean I_LoadSong(char *data, size_t len)
 		}
 		Z_Free(inflatedData); // GME didn't open jack, but don't let that stop us from freeing this up
 #else
-		//CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		CONS_Alert(CONS_ERROR,"Cannot decompress VGZ; no zlib support\n");
+		return true;
 #endif
 	}
 	else if (!gme_open_data(data, len, &gme, 44100))
@@ -989,17 +1026,15 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
+	rw = SDL_RWFromMem(data, len);
+	if (rw != NULL)
+	{
+		music = Mix_LoadMUS_RW(rw, 1);
+	}
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
 		return false;
-	}
-
-	if (I_SongType() == MU_MP3)
-	{
-		CONS_Debug(DBG_BASIC, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
-		CONS_Debug(DBG_DETAILED, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
 	}
 
 	// Find the OGG loop point.
@@ -1008,7 +1043,7 @@ boolean I_LoadSong(char *data, size_t len)
 
 	while ((UINT32)(p - data) < len)
 	{
-		if (!loop_point && !strncmp(p, key1, key1len))
+		if (fpclassify(loop_point) == FP_ZERO && !strncmp(p, key1, key1len))
 		{
 			p += key1len; // skip LOOP
 			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
@@ -1027,13 +1062,13 @@ boolean I_LoadSong(char *data, size_t len)
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 		}
-		else if (!song_length && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
+		else if (fpclassify(song_length) == FP_ZERO && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
 		{
 			p += key4len; // skip LENGTHMS
 			song_length = (float)(atoi(p) / 1000.0L);
 		}
 		// below: search MP3 or other tags that use wide char encoding
-		else if (!loop_point && !memcmp(p, key1w, key1len*2)) // LOOP wide char
+		else if (fpclassify(loop_point) == FP_ZERO && !memcmp(p, key1w, key1len*2)) // LOOP wide char
 		{
 			p += key1len*2;
 			if (!memcmp(p, key2w, (key2len+1)*2)) // POINT= wide char
@@ -1065,7 +1100,7 @@ boolean I_LoadSong(char *data, size_t len)
 				loop_point = (float)(atoi(wval) / 1000.0L);
 			}
 		}
-		else if (!song_length && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
+		else if (fpclassify(song_length) == FP_ZERO && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
 		{
 			p += (key4len+1)*2;
 			wstart = (size_t)p;
@@ -1080,7 +1115,7 @@ boolean I_LoadSong(char *data, size_t len)
 			song_length = (float)(atoi(wval) / 1000.0L);
 		}
 
-		if (loop_point && song_length && song_length > loop_point) // Got what we needed
+		if (fpclassify(loop_point) != FP_ZERO && fpclassify(song_length) != FP_ZERO && song_length > loop_point) // Got what we needed
 			// the last case is a sanity check, in case the wide char searches were false matches.
 			break;
 		else // continue searching
@@ -1122,7 +1157,7 @@ boolean I_PlaySong(boolean looping)
 	if (!music)
 		return false;
 
-	if (!song_length && (I_SongType() == MU_OGG || I_SongType() == MU_MP3 || I_SongType() == MU_FLAC))
+	if (fpclassify(song_length) == FP_ZERO && (I_SongType() == MU_OGG || I_SongType() == MU_MP3 || I_SongType() == MU_FLAC))
 		CONS_Debug(DBG_DETAILED, "This song is missing a LENGTHMS= tag! Required to make seeking work properly.\n");
 
 	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && Mix_PlayMusic(music, 0) == -1)

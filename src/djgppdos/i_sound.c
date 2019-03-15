@@ -156,9 +156,11 @@ INT32 I_StartSound ( sfxenum_t     id,
                    INT32         vol,
                    INT32         sep,
                    INT32         pitch,
-                   INT32         priority )
+                   INT32         priority,
+				   INT32         channel)
 {
 	int voice;
+	(void)channel;
 
 	if (sound_disabled)
 	return 0;

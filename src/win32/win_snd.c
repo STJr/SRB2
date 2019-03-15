@@ -17,10 +17,8 @@
 #include "gme/gme.h"
 #define GME_TREBLE 5.0
 #define GME_BASS 1.0
-#ifdef HAVE_PNG /// TODO: compile with zlib support without libpng
 
-#define HAVE_ZLIB
-
+#ifdef HAVE_ZLIB
 #ifndef _MSC_VER
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -36,8 +34,8 @@
 #endif
 
 #include "zlib.h"
-#endif
-#endif
+#endif // HAVE_ZLIB
+#endif // HAVE_LIBGME
 
 static FMOD_SYSTEM *fsys;
 static FMOD_SOUND *music_stream;
@@ -354,12 +352,13 @@ void I_FreeSfx(sfxinfo_t *sfx)
 	sfx->data = NULL;
 }
 
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
 	FMOD_SOUND *sound;
 	FMOD_CHANNEL *chan;
 	INT32 i;
 	float frequency;
+	(void)channel;
 
 	sound = (FMOD_SOUND *)S_sfx[id].data;
 	I_Assert(sound != NULL);
@@ -458,6 +457,8 @@ void I_ShutdownMusic(void)
 
 musictype_t I_SongType(void)
 {
+	FMOD_SOUND_TYPE type;
+
 #ifdef HAVE_LIBGME
 	if (gme)
 		return MU_GME;
@@ -466,7 +467,6 @@ musictype_t I_SongType(void)
 	if (!music_stream)
 		return MU_NONE;
 
-	FMOD_SOUND_TYPE type;
 	if (FMOD_Sound_GetFormat(music_stream, &type, NULL, NULL, NULL) == FMOD_OK)
 	{
 		switch(type)
@@ -493,15 +493,15 @@ musictype_t I_SongType(void)
 
 boolean I_SongPlaying(void)
 {
-	return (boolean)music_stream;
+	return (music_stream != NULL);
 }
 
 boolean I_SongPaused(void)
 {
-	boolean fmpaused = false;
+	FMOD_BOOL fmpaused = false;
 	if (music_stream)
 		FMOD_Channel_GetPaused(music_channel, &fmpaused);
-	return fmpaused;
+	return (boolean)fmpaused;
 }
 
 /// ------------------------
@@ -552,7 +552,12 @@ boolean I_LoadSong(char *data, size_t len)
 	FMOD_TAG tag;
 	unsigned int loopstart, loopend;
 
-	if (gme || music_stream)
+	if (
+#ifdef HAVE_LIBGME
+		gme ||
+#endif
+		music_stream
+	)
 		I_UnloadSong();
 
 	memset(&fmt, 0, sizeof(FMOD_CREATESOUNDEXINFO));
@@ -810,11 +815,11 @@ void I_SetMusicVolume(UINT8 volume)
 	FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 }
 
-UINT32 I_GetSongLength()
+UINT32 I_GetSongLength(void)
 {
+	UINT32 length;
 	if (I_SongType() == MU_MID)
 		return 0;
-	UINT32 length;
 	FMR_MUSIC(FMOD_Sound_GetLength(music_stream, &length, FMOD_TIMEUNIT_MS));
 	return length;
 }
@@ -832,11 +837,11 @@ UINT32 I_GetSongLoopPoint(void)
 
 boolean I_SetSongPosition(UINT32 position)
 {
+	FMOD_RESULT e;
 	if(I_SongType() == MU_MID)
 		// Dummy out; this works for some MIDI, but not others.
 		// SDL does not support this for any MIDI.
 		return false;
-	FMOD_RESULT e;
 	e = FMOD_Channel_SetPosition(music_channel, position, FMOD_TIMEUNIT_MS);
 	if (e == FMOD_OK)
 		return true;
@@ -852,11 +857,11 @@ boolean I_SetSongPosition(UINT32 position)
 
 UINT32 I_GetSongPosition(void)
 {
+	FMOD_RESULT e;
+	unsigned int fmposition = 0;
 	if(I_SongType() == MU_MID)
 		// Dummy out because unsupported, even though FMOD does this correctly.
 		return 0;
-	FMOD_RESULT e;
-	unsigned int fmposition = 0;
 	e = FMOD_Channel_GetPosition(music_channel, &fmposition, FMOD_TIMEUNIT_MS);
 	if (e == FMOD_OK)
 		return (UINT32)fmposition;
@@ -927,6 +932,7 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	(void)target_volume;
 	(void)source_volume;
 	(void)ms;
+	(void)callback;
 	return false;
 }
 
@@ -934,6 +940,7 @@ boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
 {
 	(void)target_volume;
 	(void)ms;
+	(void)callback;
 	return false;
 }
 

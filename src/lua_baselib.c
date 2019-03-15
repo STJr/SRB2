@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,12 +14,18 @@
 #ifdef HAVE_BLUA
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
+#ifdef ESLOPE
+#include "p_slopes.h" // P_GetZAt
+#endif
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_things.h"
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+#include "hu_stuff.h"	// HU_AddChatText
+#include "console.h"
+#include "d_netcmd.h" // IsPlayerAdmin
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -85,11 +91,66 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
+// Print stuff in the chat, or in the console if we can't.
+static int lib_chatprint(lua_State *L)
+{
+	const char *str = luaL_checkstring(L, 1);	// retrieve string
+	boolean sound = lua_optboolean(L, 2);	// retrieve sound boolean
+	int len = strlen(str);
+
+	if (str == NULL)	// error if we don't have a string!
+		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprint"));
+
+	if (len > 255)	// string is too long!!!
+		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
+
+	HU_AddChatText(str, sound);
+	return 0;
+}
+
+// Same as above, but do it for only one player.
+static int lib_chatprintf(lua_State *L)
+{
+	int n = lua_gettop(L);  /* number of arguments */
+	const char *str = luaL_checkstring(L, 2);	// retrieve string
+	boolean sound = lua_optboolean(L, 3);	// sound?
+	int len = strlen(str);
+	player_t *plr;
+
+	if (n < 2)
+		return luaL_error(L, "chatprintf requires at least two arguments: player and text.");
+
+	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));	// retrieve player
+	if (!plr)
+		return LUA_ErrInvalid(L, "player_t");
+	if (plr != &players[consoleplayer])
+		return 0;
+
+	if (str == NULL)	// error if we don't have a string!
+		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprintf"));
+
+	if (len > 255)	// string is too long!!!
+		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
+
+	HU_AddChatText(str, sound);
+	return 0;
+}
+
 static int lib_evalMath(lua_State *L)
 {
 	const char *word = luaL_checkstring(L, 1);
 	LUA_Deprecated(L, "EvalMath(string)", "_G[string]");
 	lua_pushinteger(L, LUA_EvalMath(word));
+	return 1;
+}
+
+static int lib_isPlayerAdmin(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	//HUDSAFE
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, IsPlayerAdmin(player-players));
 	return 1;
 }
 
@@ -1548,6 +1609,24 @@ static int lib_evCrumbleChain(lua_State *L)
 	return 0;
 }
 
+#ifdef ESLOPE
+// P_SLOPES
+////////////
+
+static int lib_pGetZAt(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	if (!slope)
+		return LUA_ErrInvalid(L, "pslope_t");
+
+	lua_pushfixed(L, P_GetZAt(slope, x, y));
+	return 1;
+}
+#endif
+
 // R_DEFS
 ////////////
 
@@ -1649,6 +1728,25 @@ static int lib_rSetPlayerSkin(lua_State *L)
 	return 0;
 }
 
+// R_DATA
+////////////
+
+static int lib_rCheckTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_CheckTextureNumForName(name));
+	return 1;
+}
+
+static int lib_rTextureNumForName(lua_State *L)
+{
+	const char *name = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_TextureNumForName(name));
+	return 1;
+}
+
 // S_SOUND
 ////////////
 
@@ -1657,7 +1755,7 @@ static int lib_sStartSound(lua_State *L)
 	const void *origin = NULL;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
-	NOHUD
+	//NOHUD // kys @whoever did this.
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnil(L, 1))
@@ -1673,7 +1771,12 @@ static int lib_sStartSound(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
+	{
+		if (hud_running)
+			origin = NULL;	// HUD rendering startsound shouldn't have an origin, just remove it instead of having a retarded error.
+
 		S_StartSound(origin, sound_id);
+	}
 	return 0;
 }
 
@@ -1811,6 +1914,110 @@ static int lib_sStopMusic(lua_State *L)
 	return 0;
 }
 
+static int lib_sSetInternalMusicVolume(lua_State *L)
+{
+	UINT32 volume = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_SetInternalMusicVolume(volume);
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sStopFadingMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_StopFadingMusic();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeMusic(lua_State *L)
+{
+	UINT32 target_volume = (UINT32)luaL_checkinteger(L, 1);
+	UINT32 ms;
+	INT32 source_volume;
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
+	{
+		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		ms = (UINT32)luaL_checkinteger(L, 2);
+		source_volume = -1;
+	}
+	else if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
+	{
+		player = *((player_t **)luaL_checkudata(L, 4, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+		source_volume = (INT32)luaL_checkinteger(L, 2);
+		ms = (UINT32)luaL_checkinteger(L, 3);
+	}
+	else if (luaL_optinteger(L, 3, INT32_MAX) == INT32_MAX)
+	{
+		ms = (UINT32)luaL_checkinteger(L, 2);
+		source_volume = -1;
+	}
+	else
+	{
+		source_volume = (INT32)luaL_checkinteger(L, 2);
+		ms = (UINT32)luaL_checkinteger(L, 3);
+	}
+
+	NOHUD
+
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_FadeMusicFromVolume(target_volume, source_volume, ms));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sFadeOutStopMusic(lua_State *L)
+{
+	UINT32 ms = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		lua_pushboolean(L, S_FadeOutStopMusic(ms));
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 static int lib_sOriginPlaying(lua_State *L)
 {
 	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1865,28 +2072,45 @@ static int lib_gDoReborn(lua_State *L)
 	return 0;
 }
 
-static int lib_gExitLevel(lua_State *L)
+// Another Lua function that doesn't actually exist!
+// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
 	NOHUD
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_ExitLevel();			[no modifications]
-	//	G_ExitLevel(int)		[nextmap override only]
-	//	G_ExitLevel(bool)		[skipstats only]
-	//	G_ExitLevel(int, bool)	[both of the above]
+	//	G_SetCustomExitVars();			[reset to defaults]
+	//	G_SetCustomExitVars(int)		[nextmap override only]
+	//	G_SetCustomExitVars(bool)		[skipstats only]
+	//	G_SetCustomExitVars(int, bool)	[both of the above]
 	if (n >= 1)
 	{
 		if (lua_isnumber(L, 1) || n >= 2)
 		{
 			nextmapoverride = (INT16)luaL_checknumber(L, 1);
-			lua_pop(L, 1); // pop nextmapoverride; skipstats now 1 if available
+			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
 		}
 		skipstats = lua_optboolean(L, 1);
 	}
+	else
+	{
+		nextmapoverride = 0;
+		skipstats = false;
+	}
 	// ---
 
+	return 0;
+}
+
+static int lib_gExitLevel(lua_State *L)
+{
+	int n = lua_gettop(L); // Num arguments
+	NOHUD
+	// Moved this bit to G_SetCustomExitVars
+	if (n >= 1) // Don't run the reset to defaults option
+		lib_gSetCustomExitVars(L);
 	G_ExitLevel();
 	return 0;
 }
@@ -1984,7 +2208,10 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"chatprint", lib_chatprint},
+	{"chatprintf", lib_chatprintf},
 	{"EvalMath", lib_evalMath},
+	{"IsPlayerAdmin", lib_isPlayerAdmin},
 
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
@@ -2115,6 +2342,11 @@ static luaL_Reg lib[] = {
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
 
+#ifdef ESLOPE
+	// p_slopes
+	{"P_GetZAt",lib_pGetZAt},
+#endif
+
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},
 	{"R_PointToAngle2",lib_rPointToAngle2},
@@ -2127,6 +2359,10 @@ static luaL_Reg lib[] = {
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
 
+	// r_data
+	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
+	{"R_TextureNumForName",lib_rTextureNumForName},
+
 	// s_sound
 	{"S_StartSound",lib_sStartSound},
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
@@ -2134,6 +2370,10 @@ static luaL_Reg lib[] = {
 	{"S_ChangeMusic",lib_sChangeMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 	{"S_StopMusic",lib_sStopMusic},
+	{"S_SetInternalMusicVolume", lib_sSetInternalMusicVolume},
+	{"S_StopFadingMusic",lib_sStopFadingMusic},
+	{"S_FadeMusic",lib_sFadeMusic},
+	{"S_FadeOutStopMusic",lib_sFadeOutStopMusic},
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
@@ -2141,6 +2381,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_DoReborn",lib_gDoReborn},
+	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
