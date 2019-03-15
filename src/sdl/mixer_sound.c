@@ -1037,12 +1037,6 @@ boolean I_LoadSong(char *data, size_t len)
 		return false;
 	}
 
-	if (I_SongType() == MU_MP3)
-	{
-		CONS_Debug(DBG_BASIC, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
-		CONS_Debug(DBG_DETAILED, "MP3 songs are unsupported and may crash! Use OGG instead.\n");
-	}
-
 	// Find the OGG loop point.
 	loop_point = 0.0f;
 	song_length = 0.0f;

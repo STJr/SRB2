@@ -2045,8 +2045,8 @@ static void I_ShutdownTimer(void)
 //
 tic_t I_GetTime (void)
 {
-	static Uint32 basetime = 0;
-		   Uint32 ticks = SDL_GetTicks();
+	static Uint64 basetime = 0;
+		   Uint64 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
