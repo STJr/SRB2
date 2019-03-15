@@ -629,6 +629,14 @@ static void P_DeNightserizePlayer(player_t *player)
 			player->marescore = player->spheres =\
 			 player->rings = 0;
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+
+			// Reset music to beginning if MIXNIGHTSCOUNTDOWN
+			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_SetMusicPosition(0);
 		}
 
 		break;
@@ -639,7 +647,24 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->oldscale = 0;
 
 	// Restore from drowning music
-	P_RestoreMusic(player);
+	if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+		&& S_MusicType() != MU_MID
+#endif
+	)
+	{
+		S_StopSoundByNum(sfx_timeup);
+		S_StopFadingMusic();
+		S_SetInternalMusicVolume(100);
+
+		// Reset the music if you did not destroy all the capsules, because you failed.
+		// Why make the all-capsules exception: because it's your reward for nearly finishing the level!
+		// (unless the player auto-loses upon denightserizing; for death case, see above.)
+		if (P_FindLowestMare() != UINT8_MAX || G_IsSpecialStage(gamemap))
+			S_SetMusicPosition(0);
+	}
+	else
+		P_RestoreMusic(player);
 
 	P_RunDeNightserizeExecutors(player->mo);
 }
@@ -687,7 +712,16 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
-	P_RestoreMusic(player);
+	// Restore from drowning music
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+	{
+		S_StopSoundByNum(sfx_timeup);
+		S_StopFadingMusic();
+		S_SetInternalMusicVolume(100);
+	}
+	else
+		P_RestoreMusic(player);
+
 	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
@@ -6344,14 +6378,28 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		P_DeNightserizePlayer(player);
 		S_StartScreamSound(player->mo, sfx_s3k66);
-//		S_StopSoundByNum(sfx_timeup); // Kill the "out of time" music, if it's playing. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		P_RestoreMusic(player); // I have my doubts that this is the right place for this...
+
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		{
+			S_StopSoundByNum(sfx_timeup); // Kill the "out of time" music, if it's playing.
+			S_StopFadingMusic();
+			S_SetInternalMusicVolume(100);
+		}
+		else
+			P_RestoreMusic(player); // I have my doubts that this is the right place for this...
 
 		return;
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
-//		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+	{
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		{
+			S_FadeMusic(0, 10*MUSICRATE);
+			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+		}
+		else
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+	}
 
 	if (player->mo->z < player->mo->floorz)
 		player->mo->z = player->mo->floorz;
