@@ -6378,16 +6378,6 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		P_DeNightserizePlayer(player);
 		S_StartScreamSound(player->mo, sfx_s3k66);
-
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
-		{
-			S_StopSoundByNum(sfx_timeup); // Kill the "out of time" music, if it's playing.
-			S_StopFadingMusic();
-			S_SetInternalMusicVolume(100);
-		}
-		else
-			P_RestoreMusic(player); // I have my doubts that this is the right place for this...
-
 		return;
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
