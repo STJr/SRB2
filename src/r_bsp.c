@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -365,6 +365,36 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 	return sec;
 }
 
+boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
+{
+	return (
+#ifdef POLYOBJECTS
+		!line->polyseg &&
+#endif
+		back->ceilingpic == front->ceilingpic
+		&& back->floorpic == front->floorpic
+#ifdef ESLOPE
+		&& back->f_slope == front->f_slope
+		&& back->c_slope == front->c_slope
+#endif
+		&& back->lightlevel == front->lightlevel
+		&& !line->sidedef->midtexture
+		// Check offsets too!
+		&& back->floor_xoffs == front->floor_xoffs
+		&& back->floor_yoffs == front->floor_yoffs
+		&& back->floorpic_angle == front->floorpic_angle
+		&& back->ceiling_xoffs == front->ceiling_xoffs
+		&& back->ceiling_yoffs == front->ceiling_yoffs
+		&& back->ceilingpic_angle == front->ceilingpic_angle
+		// Consider altered lighting.
+		&& back->floorlightsec == front->floorlightsec
+		&& back->ceilinglightsec == front->ceilinglightsec
+		// Consider colormaps
+		&& back->extra_colormap == front->extra_colormap
+		&& ((!front->ffloors && !back->ffloors)
+		|| front->tag == back->tag));
+}
+
 //
 // R_AddLine
 // Clips the given segment and adds any visible pieces to the line list.
@@ -373,17 +403,17 @@ static void R_AddLine(seg_t *line)
 {
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
-	static sector_t tempsec; // ceiling/water hack
+	static sector_t tempsec;
+
+	portalline = false;
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
+	// big room fix
+	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
+	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
 	curline = line;
-	portalline = false;
-
-	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(line->v1->x, line->v1->y);
-	angle2 = R_PointToAngle(line->v2->x, line->v2->y);
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -526,36 +556,8 @@ static void R_AddLine(seg_t *line)
 	// Identical floor and ceiling on both sides, identical light levels on both sides,
 	// and no middle texture.
 
-	if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		backsector->ceilingpic == frontsector->ceilingpic
-		&& backsector->floorpic == frontsector->floorpic
-#ifdef ESLOPE
-		&& backsector->f_slope == frontsector->f_slope
-		&& backsector->c_slope == frontsector->c_slope
-#endif
-		&& backsector->lightlevel == frontsector->lightlevel
-		&& !curline->sidedef->midtexture
-		// Check offsets too!
-		&& backsector->floor_xoffs == frontsector->floor_xoffs
-		&& backsector->floor_yoffs == frontsector->floor_yoffs
-		&& backsector->floorpic_angle == frontsector->floorpic_angle
-		&& backsector->ceiling_xoffs == frontsector->ceiling_xoffs
-		&& backsector->ceiling_yoffs == frontsector->ceiling_yoffs
-		&& backsector->ceilingpic_angle == frontsector->ceilingpic_angle
-		// Consider altered lighting.
-		&& backsector->floorlightsec == frontsector->floorlightsec
-		&& backsector->ceilinglightsec == frontsector->ceilinglightsec
-		// Consider colormaps
-		&& backsector->extra_colormap == frontsector->extra_colormap
-		&& ((!frontsector->ffloors && !backsector->ffloors)
-		|| frontsector->tag == backsector->tag))
-	{
+	if (R_IsEmptyLine(line, frontsector, backsector))
 		return;
-	}
-
 
 clippass:
 	R_ClipPassWallSegment(x1, x2 - 1);
@@ -590,69 +592,35 @@ INT32 checkcoord[12][4] =
 	{2, 1, 3, 0}
 };
 
-static boolean R_CheckBBox(fixed_t *bspcoord)
+static boolean R_CheckBBox(const fixed_t *bspcoord)
 {
-	INT32 boxpos, sx1, sx2;
-	fixed_t px1, py1, px2, py2;
-	angle_t angle1, angle2, span, tspan;
+	angle_t angle1, angle2;
+	INT32 sx1, sx2, boxpos;
+	const INT32* check;
 	cliprange_t *start;
 
 	// Find the corners of the box that define the edges from current viewpoint.
-	if (viewx <= bspcoord[BOXLEFT])
-		boxpos = 0;
-	else if (viewx < bspcoord[BOXRIGHT])
-		boxpos = 1;
-	else
-		boxpos = 2;
-
-	if (viewy >= bspcoord[BOXTOP])
-		boxpos |= 0;
-	else if (viewy > bspcoord[BOXBOTTOM])
-		boxpos |= 1<<2;
-	else
-		boxpos |= 2<<2;
-
-	if (boxpos == 5)
+	if ((boxpos = (viewx <= bspcoord[BOXLEFT] ? 0 : viewx < bspcoord[BOXRIGHT] ? 1 : 2) + (viewy >= bspcoord[BOXTOP] ? 0 : viewy > bspcoord[BOXBOTTOM] ? 4 : 8)) == 5)
 		return true;
 
-	px1 = bspcoord[checkcoord[boxpos][0]];
-	py1 = bspcoord[checkcoord[boxpos][1]];
-	px2 = bspcoord[checkcoord[boxpos][2]];
-	py2 = bspcoord[checkcoord[boxpos][3]];
+	check = checkcoord[boxpos];
 
-	// check clip list for an open space
-	angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
-	angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	// big room fix
+	angle1 = R_PointToAngleEx(viewx, viewy, bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
+	angle2 = R_PointToAngleEx(viewx, viewy, bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
 
-	span = angle1 - angle2;
-
-	// Sitting on a line?
-	if (span >= ANGLE_180)
-		return true;
-
-	tspan = angle1 + clipangle;
-
-	if (tspan > doubleclipangle)
+	if ((signed)angle1 < (signed)angle2)
 	{
-		tspan -= doubleclipangle;
-
-		// Totally off the left edge?
-		if (tspan >= span)
-			return false;
-
-		angle1 = clipangle;
+		if ((angle1 >= ANGLE_180) && (angle1 < ANGLE_270))
+			angle1 = ANGLE_180-1;
+		else
+			angle2 = ANGLE_180;
 	}
-	tspan = clipangle - angle2;
-	if (tspan > doubleclipangle)
-	{
-		tspan -= doubleclipangle;
 
-		// Totally off the left edge?
-		if (tspan >= span)
-			return false;
-
-		angle2 = -(signed)clipangle;
-	}
+	if ((signed)angle2 >= (signed)clipangle) return false;
+	if ((signed)angle1 <= -(signed)clipangle) return false;
+	if ((signed)angle1 >= (signed)clipangle) angle1 = clipangle;
+	if ((signed)angle2 <= -(signed)clipangle) angle2 = 0-clipangle;
 
 	// Find the first clippost that touches the source post (adjacent pixels are touching).
 	angle1 = (angle1+ANGLE_90)>>ANGLETOFINESHIFT;
@@ -661,9 +629,7 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	sx2 = viewangletox[angle2];
 
 	// Does not cross a pixel.
-	if (sx1 == sx2)
-		return false;
-	sx2--;
+	if (sx1 >= sx2) return false;
 
 	start = solidsegs;
 	while (start->last < sx2)
@@ -1117,7 +1083,6 @@ static void R_Subsector(size_t num)
 				}
 
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
 						polysec->lightlevel, xoff, yoff,
 						polysec->floorpic_angle-po->angle,
@@ -1165,7 +1130,6 @@ static void R_Subsector(size_t num)
 				}
 
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL

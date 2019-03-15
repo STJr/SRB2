@@ -193,14 +193,14 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	v2dy = bsp->dy;
 
 	den = v2dy*v1dx - v2dx*v1dy;
-	if (den == 0)
+	if (fabsf((float)den) < 1.0E-36f) // avoid checking exactly for 0.0
 		return NULL;       // parallel
 
 	// first check the frac along the polygon segment,
 	// (do not accept hit with the extensions)
 	num = (v2x - v1x)*v2dy + (v1y - v2y)*v2dx;
 	frac = num / den;
-	if (frac < 0 || frac > 1)
+	if (frac < 0.0 || frac > 1.0)
 		return NULL;
 
 	// now get the frac along the BSP line
@@ -217,29 +217,6 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	return &pt;
 }
 
-#if 0
-//Hurdler: it's not used anymore
-static boolean NearVertice (polyvertex_t *p1, polyvertex_t *p2)
-{
-#if 1
-	float diff;
-	diff = p2->x - p1->x;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-	diff = p2->y - p1->y;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-#else
-	if (p1->x != p2->x)
-		return false;
-	if (p1->y != p2->y)
-		return false;
-#endif
-	// p1 and p2 are considered the same vertex
-	return true;
-}
-#endif
-
 // if two vertice coords have a x and/or y difference
 // of less or equal than 1 FRACUNIT, they are considered the same
 // point. Note: hardcoded value, 1.0f could be anything else.
@@ -253,10 +230,22 @@ static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 	diff = p2->y - p1->y;
 	if (diff < -1.5f || diff > 1.5f)
 		return false;
-#else
+#elif 0
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
+		return false;
+#elif 0
+	if (fabsf( p2->x - p1->x ) > 1.0E-36f )
+		return false;
+	if (fabsf( p2->y - p1->y ) > 1.0E-36f )
+		return false;
+#else
+#define  DIVLINE_VERTEX_DIFF   0.45f
+	float ep = DIVLINE_VERTEX_DIFF;
+	if (fabsf( p2->x - p1->x ) > ep )
+		return false;
+	if (fabsf( p2->y - p1->y ) > ep )
 		return false;
 #endif
 	// p1 and p2 are considered the same vertex
@@ -294,57 +283,57 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		// start & end points
 		pv = fracdivline(bsp, &poly->pts[i], &poly->pts[j]);
 
-		if (pv)
+		if (pv == NULL)
+			continue;
+
+		if (ps < 0)
 		{
-			if (ps < 0)
+			// first point
+			ps = i;
+			vs = *pv;
+			fracs = bspfrac;
+		}
+		else
+		{
+			//the partition line traverse a junction between two segments
+			// or the two points are so close, they can be considered as one
+			// thus, don't accept, since split 2 must be another vertex
+			if (SameVertice(pv, &lastpv))
 			{
-				// first point
-				ps = i;
-				vs = *pv;
-				fracs = bspfrac;
-			}
-			else
-			{
-				//the partition line traverse a junction between two segments
-				// or the two points are so close, they can be considered as one
-				// thus, don't accept, since split 2 must be another vertex
-				if (SameVertice(pv, &lastpv))
+				if (pe < 0)
 				{
-					if (pe < 0)
-					{
-						ps = i;
-						psonline = 1;
-					}
-					else
-					{
-						pe = i;
-						peonline = 1;
-					}
+					ps = i;
+					psonline = 1;
 				}
 				else
 				{
-					if (pe < 0)
-					{
-						pe = i;
-						ve = *pv;
-						frace = bspfrac;
-					}
-					else
-					{
-					// a frac, not same vertice as last one
-					// we already got pt2 so pt 2 is not on the line,
-					// so we probably got back to the start point
-					// which is on the line
-						if (SameVertice(pv, &vs))
-							psonline = 1;
-						break;
-					}
+					pe = i;
+					peonline = 1;
 				}
 			}
-
-			// remember last point intercept to detect identical points
-			lastpv = *pv;
+			else
+			{
+				if (pe < 0)
+				{
+					pe = i;
+					ve = *pv;
+					frace = bspfrac;
+				}
+				else
+				{
+				// a frac, not same vertice as last one
+				// we already got pt2 so pt 2 is not on the line,
+				// so we probably got back to the start point
+				// which is on the line
+					if (SameVertice(pv, &vs))
+						psonline = 1;
+					break;
+				}
+			}
 		}
+
+		// remember last point intercept to detect identical points
+		lastpv = *pv;
 	}
 
 	// no split: the partition line is either parallel and
@@ -368,7 +357,7 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		return;
 	}
 
-	if (ps >= 0 && pe < 0)
+	if (pe < 0)
 	{
 		//I_Error("SplitPoly: only one point for split line (%d %d)", ps, pe);
 		*frontpoly = poly;
@@ -387,7 +376,7 @@ static void SplitPoly (fdivline_t *bsp,         //splitting parametric line
 		*backpoly = HWR_AllocPoly(2 + nptback);
 	else
 		*backpoly = NULL;
-	if (nptfront)
+	if (nptfront > 0)
 		*frontpoly = HWR_AllocPoly(2 + nptfront);
 	else
 		*frontpoly = NULL;
@@ -482,42 +471,42 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 
 			pv = fracdivline(&cutseg, &poly->pts[i], &poly->pts[j]);
 
-			if (pv)
+			if (pv == NULL)
+				continue;
+
+			if (ps < 0)
 			{
-				if (ps < 0)
+				ps = i;
+				vs = *pv;
+				fracs = bspfrac;
+			}
+			else
+			{
+				//frac 1 on previous segment,
+				//     0 on the next,
+				//the split line goes through one of the convex poly
+				// vertices, happens quite often since the convex
+				// poly is already adjacent to the subsector segs
+				// on most borders
+				if (SameVertice(pv, &vs))
+					continue;
+
+				if (fracs <= bspfrac)
 				{
+					nump = 2 + poly->numpts - (i-ps);
+					pe = ps;
 					ps = i;
-					vs = *pv;
-					fracs = bspfrac;
+					ve = *pv;
 				}
 				else
 				{
-					//frac 1 on previous segment,
-					//     0 on the next,
-					//the split line goes through one of the convex poly
-					// vertices, happens quite often since the convex
-					// poly is already adjacent to the subsector segs
-					// on most borders
-					if (SameVertice(pv, &vs))
-						continue;
-
-					if (fracs <= bspfrac)
-					{
-						nump = 2 + poly->numpts - (i-ps);
-						pe = ps;
-						ps = i;
-						ve = *pv;
-					}
-					else
-					{
-						nump = 2 + (i-ps);
-						pe = i;
-						ve = vs;
-						vs = *pv;
-					}
-					//found 2nd point
-					break;
+					nump = 2 + (i-ps);
+					pe = i;
+					ve = vs;
+					vs = *pv;
 				}
+				//found 2nd point
+				break;
 			}
 		}
 
@@ -564,8 +553,6 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 	subsector_t *sub;
 	seg_t *lseg;
 
-	sscount++;
-
 	sub = &subsectors[num];
 	count = sub->numlines;
 	lseg = &segs[sub->firstline];
@@ -583,17 +570,41 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 // search for the segs source of this divline
 static inline void SearchDivline(node_t *bsp, fdivline_t *divline)
 {
-#if 0 // MAR - If you don't use the same partition line that the BSP uses, the front/back polys won't match the subsectors in the BSP!
-#endif
 	divline->x = FIXED_TO_FLOAT(bsp->x);
 	divline->y = FIXED_TO_FLOAT(bsp->y);
 	divline->dx = FIXED_TO_FLOAT(bsp->dx);
 	divline->dy = FIXED_TO_FLOAT(bsp->dy);
 }
 
+#ifdef HWR_LOADING_SCREEN
 //Hurdler: implement a loading status
 static size_t ls_count = 0;
 static UINT8 ls_percent = 0;
+
+static void loading_status(void)
+{
+	char s[16];
+	int x, y;
+
+	I_OsPolling();
+	CON_Drawer();
+	sprintf(s, "%d%%", (++ls_percent)<<1);
+	x = BASEVIDWIDTH/2;
+	y = BASEVIDHEIGHT/2;
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // Black background to match fade in effect
+	//V_DrawPatchFill(W_CachePatchName("SRB2BACK",PU_CACHE)); // SRB2 background, ehhh too bright.
+	M_DrawTextBox(x-58, y-8, 13, 1);
+	V_DrawString(x-50, y, V_YELLOWMAP, "Loading...");
+	V_DrawRightAlignedString(x+50, y, V_YELLOWMAP, s);
+
+	// Is this really necessary at this point..?
+	V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OPENGL MODE IS INCOMPLETE AND MAY");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "NOT DISPLAY SOME SURFACES.");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "USE AT SONIC'S RISK.");
+
+	I_UpdateNoVsync();
+}
+#endif
 
 // poly : the convex polygon that encloses all child subsectors
 static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *bbox)
@@ -632,36 +643,19 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 		}
 		else
 		{
-			HWR_SubsecPoly(bspnum&(~NF_SUBSECTOR), poly);
-			//Hurdler: implement a loading status
+			HWR_SubsecPoly(bspnum & ~NF_SUBSECTOR, poly);
 
+			//Hurdler: implement a loading status
+#ifdef HWR_LOADING_SCREEN
 			if (ls_count-- <= 0)
 			{
-				char s[16];
-				int x, y;
-
-				I_OsPolling();
 				ls_count = numsubsectors/50;
-				CON_Drawer();
-				sprintf(s, "%d%%", (++ls_percent)<<1);
-				x = BASEVIDWIDTH/2;
-				y = BASEVIDHEIGHT/2;
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // Black background to match fade in effect
-				//V_DrawPatchFill(W_CachePatchName("SRB2BACK",PU_CACHE)); // SRB2 background, ehhh too bright.
-				M_DrawTextBox(x-58, y-8, 13, 1);
-				V_DrawString(x-50, y, V_YELLOWMAP, "Loading...");
-				V_DrawRightAlignedString(x+50, y, V_YELLOWMAP, s);
-
-				// Is this really necessary at this point..?
-				V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OPENGL MODE IS INCOMPLETE AND MAY");
-				V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "NOT DISPLAY SOME SURFACES.");
-				V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "USE AT SONIC'S RISK.");
-
-				I_UpdateNoVsync();
+				loading_status();
 			}
+#endif
 		}
 		M_ClearBox(bbox);
-		poly = extrasubsectors[bspnum&~NF_SUBSECTOR].planepoly;
+		poly = extrasubsectors[bspnum & ~NF_SUBSECTOR].planepoly;
 
 		for (i = 0, pt = poly->pts; i < poly->numpts; i++,pt++)
 			M_AddToBox(bbox, FLOAT_TO_FIXED(pt->x), FLOAT_TO_FIXED(pt->y));
@@ -693,14 +687,13 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 	if (backpoly)
 	{
 		// Correct back bbox to include floor/ceiling convex polygon
-		WalkBSPNode(bsp->children[1], backpoly, &bsp->children[1],
-			bsp->bbox[1]);
+		WalkBSPNode(bsp->children[1], backpoly, &bsp->children[1], bsp->bbox[1]);
 
-		// enlarge bbox with seconde child
+		// enlarge bbox with second child
 		M_AddToBox(bbox, bsp->bbox[1][BOXLEFT  ],
-			bsp->bbox[1][BOXTOP   ]);
+		                 bsp->bbox[1][BOXTOP   ]);
 		M_AddToBox(bbox, bsp->bbox[1][BOXRIGHT ],
-			bsp->bbox[1][BOXBOTTOM]);
+		                 bsp->bbox[1][BOXBOTTOM]);
 	}
 }
 
@@ -780,9 +773,9 @@ static void SearchSegInBSP(INT32 bspnum,polyvertex_t *p,poly_t *poly)
 
 	if (bspnum & NF_SUBSECTOR)
 	{
-		if (bspnum!=-1)
+		if (bspnum != -1)
 		{
-			bspnum&=~NF_SUBSECTOR;
+			bspnum &= ~NF_SUBSECTOR;
 			q = extrasubsectors[bspnum].planepoly;
 			if (poly == q || !q)
 				return;
@@ -880,8 +873,8 @@ static void AdjustSegs(void)
 		count = subsectors[i].numlines;
 		lseg = &segs[subsectors[i].firstline];
 		p = extrasubsectors[i].planepoly;
-		if (!p)
-			continue;
+		//if (!p)
+			//continue;
 		for (; count--; lseg++)
 		{
 			float distv1,distv2,tmp;
@@ -894,29 +887,31 @@ static void AdjustSegs(void)
 				continue;
 #endif
 
-			for (j = 0; j < p->numpts; j++)
-			{
-				distv1 = p->pts[j].x - FIXED_TO_FLOAT(lseg->v1->x);
-				tmp    = p->pts[j].y - FIXED_TO_FLOAT(lseg->v1->y);
-				distv1 = distv1*distv1+tmp*tmp;
-				if (distv1 <= nearv1)
+			if (p) {
+				for (j = 0; j < p->numpts; j++)
 				{
-					v1found = j;
-					nearv1 = distv1;
-				}
-				// the same with v2
-				distv2 = p->pts[j].x - FIXED_TO_FLOAT(lseg->v2->x);
-				tmp    = p->pts[j].y - FIXED_TO_FLOAT(lseg->v2->y);
-				distv2 = distv2*distv2+tmp*tmp;
-				if (distv2 <= nearv2)
-				{
-					v2found = j;
-					nearv2 = distv2;
+					distv1 = p->pts[j].x - FIXED_TO_FLOAT(lseg->v1->x);
+					tmp    = p->pts[j].y - FIXED_TO_FLOAT(lseg->v1->y);
+					distv1 = distv1*distv1+tmp*tmp;
+					if (distv1 <= nearv1)
+					{
+						v1found = j;
+						nearv1 = distv1;
+					}
+					// the same with v2
+					distv2 = p->pts[j].x - FIXED_TO_FLOAT(lseg->v2->x);
+					tmp    = p->pts[j].y - FIXED_TO_FLOAT(lseg->v2->y);
+					distv2 = distv2*distv2+tmp*tmp;
+					if (distv2 <= nearv2)
+					{
+						v2found = j;
+						nearv2 = distv2;
+					}
 				}
 			}
-			if (nearv1 <= NEARDIST*NEARDIST)
+			if (p && nearv1 <= NEARDIST*NEARDIST)
 				// share vertice with segs
-				lseg->v1 = (vertex_t *)&(p->pts[v1found]);
+				lseg->pv1 = &(p->pts[v1found]);
 			else
 			{
 				// BP: here we can do better, using PointInSeg and compute
@@ -927,24 +922,24 @@ static void AdjustSegs(void)
 				polyvertex_t *pv = HWR_AllocVertex();
 				pv->x = FIXED_TO_FLOAT(lseg->v1->x);
 				pv->y = FIXED_TO_FLOAT(lseg->v1->y);
-				lseg->v1 = (vertex_t *)pv;
+				lseg->pv1 = pv;
 			}
-			if (nearv2 <= NEARDIST*NEARDIST)
-				lseg->v2 = (vertex_t *)&(p->pts[v2found]);
+			if (p && nearv2 <= NEARDIST*NEARDIST)
+				lseg->pv2 = &(p->pts[v2found]);
 			else
 			{
 				polyvertex_t *pv = HWR_AllocVertex();
 				pv->x = FIXED_TO_FLOAT(lseg->v2->x);
 				pv->y = FIXED_TO_FLOAT(lseg->v2->y);
-				lseg->v2 = (vertex_t *)pv;
+				lseg->pv2 = pv;
 			}
 
 			// recompute length
 			{
 				float x,y;
-				x = ((polyvertex_t *)lseg->v2)->x - ((polyvertex_t *)lseg->v1)->x
+				x = ((polyvertex_t *)lseg->pv2)->x - ((polyvertex_t *)lseg->pv1)->x
 					+ FIXED_TO_FLOAT(FRACUNIT/2);
-				y = ((polyvertex_t *)lseg->v2)->y - ((polyvertex_t *)lseg->v1)->y
+				y = ((polyvertex_t *)lseg->pv2)->y - ((polyvertex_t *)lseg->pv1)->y
 					+ FIXED_TO_FLOAT(FRACUNIT/2);
 				lseg->flength = (float)hypot(x, y);
 				// BP: debug see this kind of segs
@@ -966,7 +961,9 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	fixed_t rootbbox[4];
 
 	CONS_Debug(DBG_RENDER, "Creating polygons, please wait...\n");
+#ifdef HWR_LOADING_SCREEN
 	ls_count = ls_percent = 0; // reset the loading status
+#endif
 	CON_Drawer(); //let the user know what we are doing
 	I_FinishUpdate(); // page flip or blit buffer
 

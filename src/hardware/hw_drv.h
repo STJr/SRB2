@@ -32,19 +32,12 @@
 //                                                       STANDARD DLL EXPORTS
 // ==========================================================================
 
-#ifdef HAVE_SDL
-#undef VID_X11
-#endif
-
 EXPORT boolean HWRAPI(Init) (I_Error_t ErrorFunction);
 #ifndef HAVE_SDL
 EXPORT void HWRAPI(Shutdown) (void);
 #endif
 #ifdef _WINDOWS
 EXPORT void HWRAPI(GetModeList) (vmode_t **pvidmodes, INT32 *numvidmodes);
-#endif
-#ifdef VID_X11
-EXPORT Window HWRAPI(HookXwin) (Display *, INT32, INT32, boolean);
 #endif
 #if defined (PURESDL) || defined (macintosh)
 EXPORT void HWRAPI(SetPalette) (INT32 *, RGBA_t *gamma);
@@ -71,10 +64,6 @@ EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
 EXPORT INT32 HWRAPI(GetRenderVersion) (void);
 
-#ifdef VID_X11 // ifdef to be removed as soon as windoze supports that as well
-// metzgermeister: added for Voodoo detection
-EXPORT char *HWRAPI(GetRenderer) (void);
-#endif
 #ifdef SHUFFLE
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
@@ -114,10 +103,6 @@ struct hwdriver_s
 	GetRenderVersion    pfnGetRenderVersion;
 #ifdef _WINDOWS
 	GetModeList         pfnGetModeList;
-#endif
-#ifdef VID_X11
-	HookXwin            pfnHookXwin;
-	GetRenderer         pfnGetRenderer;
 #endif
 #ifndef HAVE_SDL
 	Shutdown            pfnShutdown;
