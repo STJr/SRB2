@@ -1182,19 +1182,17 @@ void zerr(int ret)
 #define NO_PNG_LUMPS
 
 #ifdef NO_PNG_LUMPS
-static void ErrorIfPNG(void *d, size_t s, char *f, char *l)
+static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)
 {
     if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
         return;
-#define sigcheck ((UINT8 *)d)
     // Check for PNG file signature using memcmp
     // As it may be faster on CPUs with slow unaligned memory access
     // Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
-    if (memcmp(&sigcheck[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0)
+    if (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0)
     {
         I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .PNG - please convert to either Doom or Flat (raw) image format.", l, f);
     }
-#undef sigcheck
 }
 #endif
 
