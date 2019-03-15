@@ -229,6 +229,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"hoop3",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hoop++"},
   {"hidden", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
   {"prloop", false, 104,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gust of wind"},
+  {"timeup",  true, 256,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous Countdown"},
   {"ngjump", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
   {"peww",   false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pew"},
 
