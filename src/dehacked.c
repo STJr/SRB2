@@ -1199,7 +1199,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "MUSICPOS"))
 				mapheaderinfo[num-1]->muspos = (UINT32)get_number(word2);
 			else if (fastcmp(word, "MUSICINTERFADEOUT"))
-				mapheaderinfo[num-1]->musicinterfadeout = (UINT32)get_number(word2);
+				mapheaderinfo[num-1]->musinterfadeout = (UINT32)get_number(word2);
 			else if (fastcmp(word, "MUSICINTER"))
 				deh_strlcpy(mapheaderinfo[num-1]->musintername, word2,
 					sizeof(mapheaderinfo[num-1]->musintername), va("Level header %d: intermission music", num));
