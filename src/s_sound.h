@@ -112,29 +112,49 @@ boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
 musictype_t S_MusicType(void);
+const char *S_MusicName(void);
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
 
-
 //
-// Music Properties
+// Music Effects
 //
 
 // Set Speed of Music
 boolean S_SpeedMusic(float speed);
 
 //
-// Music Routines
+// Music Seeking
+//
+
+// Get Length of Music
+UINT32 S_GetMusicLength(void);
+
+// Set LoopPoint of Music
+boolean S_SetMusicLoopPoint(UINT32 looppoint);
+
+// Get LoopPoint of Music
+UINT32 S_GetMusicLoopPoint(void);
+
+// Set Position of Music
+boolean S_SetMusicPosition(UINT32 position);
+
+// Get Position of Music
+UINT32 S_GetMusicPosition(void);
+
+//
+// Music Playback
 //
 
 // Start music track, arbitrary, given its name, and set whether looping
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
 //       and the last bit we ignore (internal game flag for resetting music on reload)
-#define S_ChangeMusicInternal(a,b) S_ChangeMusic(a,0,b)
-void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms);
+#define S_ChangeMusicInternal(a,b) S_ChangeMusicEx(a,0,b,0,0,0)
+#define S_ChangeMusic(a,b,c) S_ChangeMusicEx(a,b,c,0,0,0)
 
 // Stops the music.
 void S_StopMusic(void);
@@ -142,6 +162,17 @@ void S_StopMusic(void);
 // Stop and resume music, during game PAUSE.
 void S_PauseAudio(void);
 void S_ResumeAudio(void);
+
+//
+// Music Fading
+//
+
+void S_SetInternalMusicVolume(INT32 volume);
+void S_StopFadingMusic(void);
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms);
+#define S_FadeMusic(a, b) S_FadeMusicFromVolume(a, -1, b)
+#define S_FadeInChangeMusic(a,b,c,d) S_ChangeMusicEx(a,b,c,0,0,d)
+boolean S_FadeOutStopMusic(UINT32 ms);
 
 //
 // Updates music & sounds

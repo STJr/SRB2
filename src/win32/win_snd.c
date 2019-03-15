@@ -815,6 +815,60 @@ void I_SetMusicVolume(UINT8 volume)
 	FMR_MUSIC(FMOD_Channel_SetVolume(music_channel, music_volume / 31.0));
 }
 
+UINT32 I_GetSongLength(void)
+{
+	UINT32 length;
+	if (I_SongType() == MU_MID)
+		return 0;
+	FMR_MUSIC(FMOD_Sound_GetLength(music_stream, &length, FMOD_TIMEUNIT_MS));
+	return length;
+}
+
+boolean I_SetSongLoopPoint(UINT32 looppoint)
+{
+        (void)looppoint;
+        return false;
+}
+
+UINT32 I_GetSongLoopPoint(void)
+{
+	return 0;
+}
+
+boolean I_SetSongPosition(UINT32 position)
+{
+	FMOD_RESULT e;
+	if(I_SongType() == MU_MID)
+		// Dummy out; this works for some MIDI, but not others.
+		// SDL does not support this for any MIDI.
+		return false;
+	e = FMOD_Channel_SetPosition(music_channel, position, FMOD_TIMEUNIT_MS);
+	if (e == FMOD_OK)
+		return true;
+	else if (e == FMOD_ERR_UNSUPPORTED // Only music modules, numbnuts!
+			|| e == FMOD_ERR_INVALID_POSITION) // Out-of-bounds!
+		return false;
+	else // Congrats, you horribly broke it somehow
+	{
+		FMR_MUSIC(e);
+		return false;
+	}
+}
+
+UINT32 I_GetSongPosition(void)
+{
+	FMOD_RESULT e;
+	unsigned int fmposition = 0;
+	if(I_SongType() == MU_MID)
+		// Dummy out because unsupported, even though FMOD does this correctly.
+		return 0;
+	e = FMOD_Channel_GetPosition(music_channel, &fmposition, FMOD_TIMEUNIT_MS);
+	if (e == FMOD_OK)
+		return (UINT32)fmposition;
+	else
+		return 0;
+}
+
 boolean I_SetSongTrack(INT32 track)
 {
 	if (track != current_track) // If the track's already playing, then why bother?
@@ -858,4 +912,47 @@ boolean I_SetSongTrack(INT32 track)
 		}
 	}
 	return false;
+}
+
+/// ------------------------
+/// MUSIC FADING
+/// ------------------------
+
+void I_SetInternalMusicVolume(UINT8 volume)
+{
+	(void)volume;
+}
+
+void I_StopFadingSong(void)
+{
+}
+
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
+{
+	(void)target_volume;
+	(void)source_volume;
+	(void)ms;
+	(void)callback;
+	return false;
+}
+
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
+{
+	(void)target_volume;
+	(void)ms;
+	(void)callback;
+	return false;
+}
+
+boolean I_FadeOutStopSong(UINT32 ms)
+{
+	(void)ms;
+	return false;
+}
+
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
+{
+        (void)ms;
+        (void)looping;
+        return false;
 }

@@ -2408,16 +2408,68 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
+				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
+				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
+				INT32 position = (INT32)max(sides[line->sidenum[0]].midtexture, 0);
+				UINT32 prefadems = (UINT32)max(sides[line->sidenum[0]].textureoffset >> FRACBITS, 0);
+				UINT32 postfadems = (UINT32)max(sides[line->sidenum[0]].rowoffset >> FRACBITS, 0);
+				UINT8 fadetarget = (UINT8)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].textureoffset >> FRACBITS : 0, 0);
+				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : -1, -1);
 
-				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
-				mapmusname[6] = 0;
+				// Seek offset from current song position
+				if (line->flags & ML_EFFECT1)
+				{
+					// adjust for loop point if subtracting
+					if (position < 0 && S_GetMusicLength() &&
+						S_GetMusicPosition() > S_GetMusicLoopPoint() &&
+						S_GetMusicPosition() + position < S_GetMusicLoopPoint())
+						position = max(S_GetMusicLength() - (S_GetMusicLoopPoint() - (S_GetMusicPosition() + position)), 0);
+					else
+						position = max(S_GetMusicPosition() + position, 0);
+				}
 
-				mapmusflags = tracknum & MUSIC_TRACKMASK;
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusflags |= MUSIC_RELOADRESET;
+				// Fade current music to target volume (if music won't be changed)
+				if ((line->flags & ML_EFFECT2) && fadetarget && musicsame)
+				{
+					// 0 fadesource means fade from current volume.
+					// meaning that we can't specify volume 0 as the source volume -- this starts at 1.
+					if (!fadesource)
+						fadesource = -1;
 
-				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
+					if (!postfadems)
+						S_SetInternalMusicVolume(fadetarget);
+					else
+						S_FadeMusicFromVolume(fadetarget, fadesource, postfadems);
+
+					if (position)
+						S_SetMusicPosition(position);
+				}
+				// Change the music and apply position/fade operations
+				else
+				{
+					strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+					mapmusname[6] = 0;
+
+					mapmusflags = tracknum & MUSIC_TRACKMASK;
+					if (!(line->flags & ML_BLOCKMONSTERS))
+						mapmusflags |= MUSIC_RELOADRESET;
+					if (line->flags & ML_BOUNCY)
+						mapmusflags |= MUSIC_FORCERESET;
+
+					mapmusposition = position;
+
+					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4), position,
+						!(line->flags & ML_EFFECT2) ? prefadems : 0,
+						!(line->flags & ML_EFFECT2) ? postfadems : 0);
+
+					if ((line->flags & ML_EFFECT2) && fadetarget)
+					{
+						if (!postfadems)
+							S_SetInternalMusicVolume(fadetarget);
+						else
+							S_FadeMusicFromVolume(fadetarget, fadesource, postfadems);
+					}
+				}
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
 				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
