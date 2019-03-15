@@ -213,6 +213,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
 	mapheaderinfo[num]->muspos = 0;
+	mapheaderinfo[num]->musinterfadeout = 0;
 	mapheaderinfo[num]->musintername[0] = '\0';
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;

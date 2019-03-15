@@ -323,6 +323,7 @@ typedef struct
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
 	// Music stuff.
+	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
 	char musintername[7];    ///< Intermission screen music.
 
 	// Lua stuff.
