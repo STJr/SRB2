@@ -309,7 +309,7 @@ typedef struct
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
 	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
-	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
+	UINT8 levelflags;     ///< LF_flags:  merged booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
@@ -335,6 +335,7 @@ typedef struct
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
 #define LF_SAVEGAME      32 ///< Save the game upon loading this level
+#define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen

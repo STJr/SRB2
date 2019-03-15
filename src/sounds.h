@@ -295,6 +295,7 @@ typedef enum
 	sfx_hoop3,
 	sfx_hidden,
 	sfx_prloop,
+	sfx_timeup,
 	sfx_ngjump,
 	sfx_peww,
 
