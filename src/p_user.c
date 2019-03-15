@@ -8836,7 +8836,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (cv_playersforexit.value)
 		{
-			INT32 i, total = 0, exiting = 0;
+			INT32 i;
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -8845,12 +8845,11 @@ void P_PlayerThink(player_t *player)
 				if (players[i].lives <= 0)
 					continue;
 
-				total++;
-				if (players[i].exiting && players[i].exiting < 1*TICRATE+1)
-					exiting++;
+				if (!players[i].exiting || players[i].exiting > 1*TICRATE)
+					break;
 			}
 
-			if (!total || ((4*exiting)/total) >= cv_playersforexit.value)
+			if (i == MAXPLAYERS)
 			{
 				exitfadestarted = true;
 				S_FadeOutStopMusic(1*MUSICRATE);
