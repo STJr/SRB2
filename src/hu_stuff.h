@@ -28,7 +28,7 @@
 
 // Level title font
 #define LT_FONTSTART '!' // the first font characters
-#define LT_FONTEND 'Z' // the last font characters
+#define LT_FONTEND 'z' // the last font characters
 #define LT_FONTSIZE (LT_FONTEND - LT_FONTSTART + 1)
 
 #define CRED_FONTSTART '!' // the first font character

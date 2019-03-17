@@ -1201,6 +1201,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			word2 = tmp += 2;
 			i = atoi(word2); // used for numerical settings
 
+
+			if (fastcmp(word, "LEVELNAME"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
+					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+				continue;
+			}
 			// CHEAP HACK: move this over here for lowercase subtitles
 			if (fastcmp(word, "SUBTITLE"))
 			{
@@ -1344,12 +1352,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 
 			// Strings that can be truncated
-			else if (fastcmp(word, "LEVELNAME"))
-			{
-				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
-					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
-				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
-			}
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
