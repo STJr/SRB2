@@ -1952,19 +1952,17 @@ static void HU_DrawCEcho(void)
 
 static void HU_drawGametype(void)
 {
-	INT32 i = 0;
+	const char *strvalue = NULL;
 
-	for (i = 0; gametype_cons_t[i].strvalue; i++)
-	{
-		if (gametype_cons_t[i].value == gametype)
-		{
-			if (splitscreen)
-				V_DrawString(4, 184, 0, gametype_cons_t[i].strvalue);
-			else
-				V_DrawString(4, 192, 0, gametype_cons_t[i].strvalue);
-			return;
-		}
-	}
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		return; // not a valid gametype???
+
+	strvalue = Gametype_Names[gametype];
+
+	if (splitscreen)
+		V_DrawString(4, 184, 0, strvalue);
+	else
+		V_DrawString(4, 192, 0, strvalue);
 }
 
 //
