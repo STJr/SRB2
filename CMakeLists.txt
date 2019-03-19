@@ -54,6 +54,14 @@ macro(copy_files_to_build_dir target dlllist_var)
 	endif()
 endmacro()
 
+# 64-bit check
+if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+	message(STATUS "Target is 64-bit")
+	set(SRB2_SYSTEM_BITS 64)
+else()
+	set(SRB2_SYSTEM_BITS 32)
+endif()
+
 # OS macros
 if (UNIX)
 	add_definitions(-DUNIXCOMMON)
@@ -65,6 +73,9 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Linux")
 	add_definitions(-DLINUX)
+	if(${SRB2_SYSTEM_BITS} EQUAL 64)
+		add_definitions(-DLINUX64)
+	endif()
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Darwin")
