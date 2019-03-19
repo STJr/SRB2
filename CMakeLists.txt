@@ -55,7 +55,8 @@ macro(copy_files_to_build_dir target dlllist_var)
 endmacro()
 
 # 64-bit check
-if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+message(STATUS "CMAKE_SIZEOF_VOID_P=" ${CMAKE_SIZEOF_VOID_P})
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message(STATUS "Target is 64-bit")
 	set(SRB2_SYSTEM_BITS 64)
 else()
