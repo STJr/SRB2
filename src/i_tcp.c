@@ -612,7 +612,7 @@ static boolean SOCK_Get(void)
 		if (c != ERRSOCKET)
 		{
 			// find remote node number
-			for (j = 0; j <= MAXNETNODES; j++) //include LAN
+			for (j = 1; j <= MAXNETNODES; j++) //include LAN
 			{
 				if (SOCK_cmpaddr(&fromaddress, &clientaddress[j], 0))
 				{
