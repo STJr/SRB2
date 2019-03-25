@@ -223,15 +223,6 @@ matrix:
 #          #Apple LLVM version 7.0.2 (clang-700.1.81)
         - os: osx
           #osx_image: xcode7.3
-          addons:
-            homebrew:
-              packages:
-              - sdl2
-              - sdl2_mixer
-              - game-music-emu
-              - p7zip
-              - cmake
-            update: false
           #Apple LLVM version 7.3.0 (clang-703.0.31)
     allow_failures:
       - compiler: clang-3.5
@@ -256,6 +247,14 @@ addons:
     - libgl1-mesa-dev
     - libgme-dev
     - p7zip-full
+  homebrew:
+    packages:
+    - sdl2_mixer
+    - game-music-emu
+    - p7zip
+    - cmake
+    update: false
+
 
 before_script:
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
