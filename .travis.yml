@@ -255,7 +255,7 @@ addons:
     - game-music-emu
     - p7zip
     - cmake
-    update: false
+    update: true
 
 
 before_script:
