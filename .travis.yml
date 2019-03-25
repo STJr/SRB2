@@ -251,6 +251,9 @@ addons:
     - p7zip-full
   homebrew:
     packages:
+    - libmodplug
+    - liboog
+    - libvorbis
     - sdl2
     - game-music-emu
     - p7zip
