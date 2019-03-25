@@ -46,7 +46,10 @@ jobs:
           name: Compile without network support and BLUA
           command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 NO_LUA=1
       - run:
-          name: Clean build
+          name: wipe build
+          command: make -C src LINUX=1 cleandep
+      - run:
+          name: rebuild depend
           command: make -C src LINUX=1 clean
       - restore_cache:
           keys:
