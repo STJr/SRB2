@@ -253,7 +253,7 @@ addons:
     taps:
     - mazmazz/srb2
     packages:
-    - mazmazz/srb2/sdl2_mixer
+    - sdl2_mixer
     - game-music-emu
     - p7zip
     - cmake
