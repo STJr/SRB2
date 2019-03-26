@@ -96,6 +96,7 @@ static size_t input_len; // length of current line, used to bound cursor and suc
 // protos.
 static void CON_InputInit(void);
 static void CON_RecalcSize(void);
+static void CON_ChangeHeight(void);
 
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
@@ -447,6 +448,12 @@ static void CON_RecalcSize(void)
 		con_destlines = vid.height;
 	}
 
+	if (con_destlines > 0) // Resize console if already open
+	{
+		CON_ChangeHeight();
+		con_curlines = con_destlines;
+	}
+
 	// check for change of video width
 	if (conw == con_width)
 		return; // didn't change
@@ -494,6 +501,20 @@ static void CON_RecalcSize(void)
 
 	Z_Free(string);
 	Z_Free(tmp_buffer);
+}
+
+static void CON_ChangeHeight(void)
+{
+	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+
+	// toggle console in
+	con_destlines = (cons_height.value*vid.height)/100;
+	if (con_destlines < minheight)
+		con_destlines = minheight;
+	else if (con_destlines > vid.height)
+		con_destlines = vid.height;
+
+	con_destlines &= ~0x3; // multiple of text row height
 }
 
 // Handles Console moves in/out of screen (per frame)
@@ -584,16 +605,7 @@ void CON_Ticker(void)
 			CON_ClearHUD();
 		}
 		else
-		{
-			// toggle console in
-			con_destlines = (cons_height.value*vid.height)/100;
-			if (con_destlines < minheight)
-				con_destlines = minheight;
-			else if (con_destlines > vid.height)
-				con_destlines = vid.height;
-
-			con_destlines &= ~0x3; // multiple of text row height
-		}
+			CON_ChangeHeight();
 	}
 
 	// console movement
