@@ -347,23 +347,9 @@ static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // This gametype list is integral for many different reasons.
-// When you add gametypes here, don't forget to update them in CV_AddValue!
-CV_PossibleValue_t gametype_cons_t[] =
-{
-	{GT_COOP, "Co-op"},
+// When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
+CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
-	{GT_COMPETITION, "Competition"},
-	{GT_RACE, "Race"},
-
-	{GT_MATCH, "Match"},
-	{GT_TEAMMATCH, "Team Match"},
-
-	{GT_TAG, "Tag"},
-	{GT_HIDEANDSEEK, "Hide and Seek"},
-
-	{GT_CTF, "CTF"},
-	{0, NULL}
-};
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t serversort_cons_t[] = {
@@ -6545,7 +6531,7 @@ static void M_DrawRoomMenu(void)
 
 static void M_DrawConnectMenu(void)
 {
-	UINT16 i, j;
+	UINT16 i;
 	const char *gt = "Unknown";
 	INT32 numPages = (serverlistcount+(SERVERS_PER_PAGE-1))/SERVERS_PER_PAGE;
 
@@ -6591,11 +6577,8 @@ static void M_DrawConnectMenu(void)
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
 		gt = "Unknown";
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == serverlist[slindex].info.gametype)
-				gt = gametype_cons_t[j].strvalue;
-		}
+		if (serverlist[slindex].info.gametype < NUMGAMETYPES)
+			gt = Gametype_Names[serverlist[slindex].info.gametype];
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,
 		                         va("Players: %02d/%02d", serverlist[slindex].info.numberofplayer, serverlist[slindex].info.maxplayer));
