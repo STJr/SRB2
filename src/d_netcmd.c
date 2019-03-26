@@ -1832,7 +1832,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	if (demoplayback && !timingdemo)
 		precache = false;

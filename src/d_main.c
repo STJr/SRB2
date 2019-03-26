@@ -1397,7 +1397,6 @@ void D_SRB2Main(void)
 	else if (M_CheckParm("-skipintro"))
 	{
 		CON_ToggleOff();
-		CON_ClearHUD();
 		F_StartTitleScreen();
 	}
 	else
