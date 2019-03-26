@@ -726,7 +726,6 @@ void D_StartTitle(void)
 	paused = false;
 	advancedemo = false;
 	F_StartTitleScreen();
-	CON_ToggleOff();
 
 	// Reset the palette
 	if (rendermode != render_none)
