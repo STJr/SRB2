@@ -862,16 +862,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			leftheight -= viewz;
 			rightheight -= viewz;
 
-#define OVERFLOWTEST(height, scale) \
-	overflow_test = (INT64)centeryfrac - (((INT64)height*scale)>>FRACBITS); \
-	if (overflow_test < 0) overflow_test = -overflow_test; \
-	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+#define CLAMPMAX INT32_MAX
+#define CLAMPMIN (-INT32_MAX) // This is not INT32_MIN on purpose! INT32_MIN makes the drawers freak out.
+			// Monster Iestyn (25/03/18): do not skip these lights if they fail overflow test, just clamp them instead so they behave.
+			overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+			if      (overflow_test > (INT64)CLAMPMAX) rlight->height = CLAMPMAX;
+			else if (overflow_test > (INT64)CLAMPMIN) rlight->height = (fixed_t)overflow_test;
+			else                                      rlight->height = CLAMPMIN;
 
-			OVERFLOWTEST(leftheight, ds->scale1)
-			OVERFLOWTEST(rightheight, ds->scale2)
-
-			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
-			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+			if      (overflow_test > (INT64)CLAMPMAX) rlight->heightstep = CLAMPMAX;
+			else if (overflow_test > (INT64)CLAMPMIN) rlight->heightstep = (fixed_t)overflow_test;
+			else                                      rlight->heightstep = CLAMPMIN;
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 #else
 			if (light->height < *pfloor->bottomheight)
@@ -893,12 +895,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				leftheight -= viewz;
 				rightheight -= viewz;
 
-				OVERFLOWTEST(leftheight, ds->scale1)
-				OVERFLOWTEST(rightheight, ds->scale2)
-#undef OVERFLOWTEST
+				// Monster Iestyn (25/03/18): do not skip these lights if they fail overflow test, just clamp them instead so they behave.
+				overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+				if      (overflow_test > (INT64)CLAMPMAX) rlight->botheight = CLAMPMAX;
+				else if (overflow_test > (INT64)CLAMPMIN) rlight->botheight = (fixed_t)overflow_test;
+				else                                      rlight->botheight = CLAMPMIN;
 
-				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
-				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+				overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+				if      (overflow_test > (INT64)CLAMPMAX) rlight->botheightstep = CLAMPMAX;
+				else if (overflow_test > (INT64)CLAMPMIN) rlight->botheightstep = (fixed_t)overflow_test;
+				else                                      rlight->botheightstep = CLAMPMIN;
 				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 #else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
@@ -1070,9 +1076,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step * (x1 - ds->x1);
 	}
 #endif
-
-#define CLAMPMAX INT32_MAX
-#define CLAMPMIN (-INT32_MAX) // This is not INT32_MIN on purpose! INT32_MIN makes the drawers freak out.
 
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
