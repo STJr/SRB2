@@ -1396,12 +1396,12 @@ void D_SRB2Main(void)
 	}
 	else if (M_CheckParm("-skipintro"))
 	{
-		CON_ToggleOff();
-		CON_ClearHUD();
 		F_StartTitleScreen();
 	}
 	else
 		F_StartIntro(); // Tails 03-03-2002
+
+	CON_ToggleOff();
 
 	if (dedicated && server)
 	{
