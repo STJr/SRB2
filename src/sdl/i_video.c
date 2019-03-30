@@ -357,6 +357,14 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	return 0;
 }
 
+static void SDLdoGrabMouse(void)
+{
+	SDL_ShowCursor(SDL_DISABLE);
+	SDL_SetWindowGrab(window, SDL_TRUE);
+	if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
+		wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
+}
+
 static void SDLdoUngrabMouse(void)
 {
 	SDL_ShowCursor(SDL_ENABLE);
@@ -579,6 +587,9 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
+
+		if (USE_MOUSEINPUT)
+			SDLdoGrabMouse();
 	}
 	else if (!mousefocus && !kbfocus)
 	{
@@ -655,9 +666,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		// -- Monster Iestyn
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			SDL_SetWindowGrab(window, SDL_TRUE);
-			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
-				wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
+			SDLdoGrabMouse();
 		}
 	}
 }
@@ -1056,7 +1065,7 @@ void I_StartupMouse(void)
 	else
 		firsttimeonmouse = SDL_FALSE;
 	if (cv_usemouse.value)
-		return;
+		SDLdoGrabMouse();
 	else
 		SDLdoUngrabMouse();
 }
