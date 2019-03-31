@@ -1831,8 +1831,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		CONS_Printf(M_GetText("Speeding off to level...\n"));
 	}
 
-	CON_ToggleOff();
-
 	if (demoplayback && !timingdemo)
 		precache = false;
 
