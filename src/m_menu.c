@@ -5071,7 +5071,7 @@ static void M_DrawAddons(void)
 	}
 
 	// draw the scrollbar!
-	V_DrawFill((x-21) + addons_boxwidth-1, (y - 1) + i, 1, m, hilicol);
+	V_DrawFill((x-21) + boxwidth-1, (y - 1) + i, 1, m, hilicol);
 
 #undef boxwidth
 
