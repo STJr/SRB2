@@ -96,6 +96,7 @@ static size_t input_len; // length of current line, used to bound cursor and suc
 // protos.
 static void CON_InputInit(void);
 static void CON_RecalcSize(void);
+static void CON_ChangeHeight(void);
 
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
@@ -447,6 +448,12 @@ static void CON_RecalcSize(void)
 		con_destlines = vid.height;
 	}
 
+	if (con_destlines > 0) // Resize console if already open
+	{
+		CON_ChangeHeight();
+		con_curlines = con_destlines;
+	}
+
 	// check for change of video width
 	if (conw == con_width)
 		return; // didn't change
@@ -494,6 +501,20 @@ static void CON_RecalcSize(void)
 
 	Z_Free(string);
 	Z_Free(tmp_buffer);
+}
+
+static void CON_ChangeHeight(void)
+{
+	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+
+	// toggle console in
+	con_destlines = (cons_height.value*vid.height)/100;
+	if (con_destlines < minheight)
+		con_destlines = minheight;
+	else if (con_destlines > vid.height)
+		con_destlines = vid.height;
+
+	con_destlines &= ~0x3; // multiple of text row height
 }
 
 // Handles Console moves in/out of screen (per frame)
@@ -584,16 +605,7 @@ void CON_Ticker(void)
 			CON_ClearHUD();
 		}
 		else
-		{
-			// toggle console in
-			con_destlines = (cons_height.value*vid.height)/100;
-			if (con_destlines < minheight)
-				con_destlines = minheight;
-			else if (con_destlines > vid.height)
-				con_destlines = vid.height;
-
-			con_destlines &= ~0x3; // multiple of text row height
-		}
+			CON_ChangeHeight();
 	}
 
 	// console movement
@@ -1106,6 +1118,7 @@ static void CON_Print(char *msg)
 {
 	size_t l;
 	INT32 controlchars = 0; // for color changing
+	char color = '\x80';  // keep color across lines
 
 	if (msg == NULL)
 		return;
@@ -1131,7 +1144,7 @@ static void CON_Print(char *msg)
 		{
 			if (*msg & 0x80)
 			{
-				con_line[con_cx++] = *(msg++);
+				color = con_line[con_cx++] = *(msg++);
 				controlchars++;
 				continue;
 			}
@@ -1139,12 +1152,14 @@ static void CON_Print(char *msg)
 			{
 				con_cy--;
 				CON_Linefeed();
+				color = '\x80';
 				controlchars = 0;
 			}
 			else if (*msg == '\n') // linefeed
 			{
 				CON_Linefeed();
-				controlchars = 0;
+				con_line[con_cx++] = color;
+				controlchars = 1;
 			}
 			else if (*msg == ' ') // space
 			{
@@ -1152,7 +1167,8 @@ static void CON_Print(char *msg)
 				if (con_cx - controlchars >= con_width-11)
 				{
 					CON_Linefeed();
-					controlchars = 0;
+					con_line[con_cx++] = color;
+					controlchars = 1;
 				}
 			}
 			else if (*msg == '\t')
@@ -1167,7 +1183,8 @@ static void CON_Print(char *msg)
 				if (con_cx - controlchars >= con_width-11)
 				{
 					CON_Linefeed();
-					controlchars = 0;
+					con_line[con_cx++] = color;
+					controlchars = 1;
 				}
 			}
 			msg++;
@@ -1184,7 +1201,8 @@ static void CON_Print(char *msg)
 		if ((con_cx - controlchars) + l > con_width-11)
 		{
 			CON_Linefeed();
-			controlchars = 0;
+			con_line[con_cx++] = color;
+			controlchars = 1;
 		}
 
 		// a word at a time
@@ -1539,8 +1557,7 @@ static void CON_DrawConsole(void)
 	i = con_cy - con_scrollup;
 
 	// skip the last empty line due to the cursor being at the start of a new line
-	if (!con_scrollup && !con_cx)
-		i--;
+	i--;
 
 	i -= (con_curlines - minheight) / charheight;
 
