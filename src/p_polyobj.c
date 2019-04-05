@@ -28,6 +28,10 @@
 #include "r_state.h"
 #include "r_defs.h"
 
+
+#define POLYOBJECTS
+
+
 #ifdef POLYOBJECTS
 
 /*
@@ -2265,7 +2269,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 	}
 }
 
-// T_PolyObjDisplace: shift a polyobject based on a control sector's heights. -Red
+// T_PolyObjDisplace: shift a polyobject based on a control sector's heights.
 void T_PolyObjDisplace(polydisplace_t *th)
 {
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -2274,10 +2278,10 @@ void T_PolyObjDisplace(polydisplace_t *th)
 
 	if (!po)
 #ifdef RANGECHECK
-		I_Error("T_PolyDoorSwing: thinker has invalid id %d\n", th->polyObjNum);
+		I_Error("T_PolyObjDisplace: thinker has invalid id %d\n", th->polyObjNum);
 #else
 	{
-		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSwing: thinker with invalid id %d removed.\n", th->polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
 		P_RemoveThinkerDelayed(&th->thinker);
 		return;
 	}
@@ -2302,6 +2306,45 @@ void T_PolyObjDisplace(polydisplace_t *th)
 	dy = FixedMul(th->dy, delta);
 
 	if (Polyobj_moveXY(po, dx, dy))
+		th->oldHeights = newheights;
+}
+
+// T_PolyObjRotDisplace: rotate a polyobject based on a control sector's heights.
+void T_PolyObjRotDisplace(polyrotdisplace_t *th)
+{
+	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
+	fixed_t newheights, delta;
+	fixed_t rotangle;
+
+	if (!po)
+#ifdef RANGECHECK
+		I_Error("T_PolyObjRotDisplace: thinker has invalid id %d\n", th->polyObjNum);
+#else
+	{
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
+		P_RemoveThinkerDelayed(&th->thinker);
+		return;
+	}
+#endif
+
+	// check for displacement due to override and reattach when possible
+	if (po->thinker == NULL)
+	{
+		po->thinker = &th->thinker;
+
+		// reset polyobject's thrust
+		po->thrust = FRACUNIT;
+	}
+
+	newheights = th->controlSector->floorheight+th->controlSector->ceilingheight;
+	delta = newheights-th->oldHeights;
+
+	if (!delta)
+		return;
+
+	rotangle = FixedMul(th->rotscale, delta);
+
+	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs))
 		th->oldHeights = newheights;
 }
 
@@ -2758,6 +2801,52 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	{
 		prdata->polyObjNum = po->id; // change id to match child polyobject's
 		EV_DoPolyObjDisplace(prdata);
+	}
+
+	// action was successful
+	return 1;
+}
+
+INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
+{
+	polyobj_t *po;
+	polyobj_t *oldpo;
+	polyrotdisplace_t *th;
+	INT32 start;
+
+	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
+		return 0;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return 0;
+
+	// create a new thinker
+	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotDisplace;
+	PolyObj_AddThinker(&th->thinker);
+	po->thinker = &th->thinker;
+
+	// set fields
+	th->polyObjNum = prdata->polyObjNum;
+
+	th->controlSector = prdata->controlSector;
+	th->oldHeights = th->controlSector->floorheight+th->controlSector->ceilingheight;
+
+	th->rotscale = prdata->rotscale;
+	th->turnobjs = prdata->turnobjs;
+
+	oldpo = po;
+
+	// apply action to mirroring polyobjects as well
+	start = 0;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		prdata->polyObjNum = po->id; // change id to match child polyobject's
+		EV_DoPolyObjRotDisplace(prdata);
 	}
 
 	// action was successful
