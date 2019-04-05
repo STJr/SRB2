@@ -7738,10 +7738,21 @@ static void P_SpawnScrollers(void)
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
-		fixed_t dy = l->dy >> SCROLL_SHIFT;
+		fixed_t dx = l->dx; // direction and speed of scrolling
+		fixed_t dy = l->dy;
 		INT32 control = -1, accel = 0; // no control sector or acceleration
 		INT32 special = l->special;
+
+		// If front texture X offset provided, override the amount with it.
+		if (sides[l->sidenum[0]].textureoffset != 0)
+		{
+			fixed_t len = sides[l->sidenum[0]].textureoffset;
+			fixed_t h = FixedHypot(dx, dy);
+			dx = FixedMul(FixedDiv(dx, h), len);
+			dy = FixedMul(FixedDiv(dy, h), len);
+		}
+		dx = dx >> SCROLL_SHIFT;
+		dy = dy >> SCROLL_SHIFT;
 
 		// These types are same as the ones they get set to except that the
 		// first side's sector's heights cause scrolling when they change, and
@@ -7777,8 +7788,14 @@ static void P_SpawnScrollers(void)
 
 			case 513: // scroll effect ceiling
 			case 533: // scroll and carry objects on ceiling
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (l->tag == 0)
+					Add_Scroller(sc_ceiling, -dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+				else
+				{
+					for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
+						Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				}
+
 				if (special != 533)
 					break;
 				/* FALLTHRU */
@@ -7786,14 +7803,26 @@ static void P_SpawnScrollers(void)
 			case 523:	// carry objects on ceiling
 				dx = FixedMul(dx, CARRYFACTOR);
 				dy = FixedMul(dy, CARRYFACTOR);
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+
+				if (l->tag == 0)
+					Add_Scroller(sc_carry_ceiling, dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+				else
+				{
+					for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
+						Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				}
 				break;
 
 			case 510: // scroll effect floor
 			case 530: // scroll and carry objects on floor
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (l->tag == 0)
+					Add_Scroller(sc_floor, -dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+				else
+				{
+					for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
+						Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				}
+
 				if (special != 530)
 					break;
 				/* FALLTHRU */
@@ -7801,8 +7830,14 @@ static void P_SpawnScrollers(void)
 			case 520:	// carry objects on floor
 				dx = FixedMul(dx, CARRYFACTOR);
 				dy = FixedMul(dy, CARRYFACTOR);
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+
+				if (l->tag == 0)
+					Add_Scroller(sc_carry, dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+				else
+				{
+					for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
+						Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				}
 				break;
 
 			// scroll wall according to linedef
@@ -9165,43 +9200,77 @@ static void P_SpawnPushers(void)
 	line_t *l = lines;
 	register INT32 s;
 	mobj_t *thing;
+	pushertype_e pushertype;
+	fixed_t dx, dy;
 
 	for (i = 0; i < numlines; i++, l++)
+	{
 		switch (l->special)
 		{
-			case 541: // wind
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 544: // current
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 547: // push/pull
+		case 541: // wind
+			pushertype = p_wind;
+			break;
+
+		case 544: // current
+			pushertype = p_current;
+			break;
+		case 547: // push/pull
+			if (l->tag == 0)
+			{
+				s = l->frontsector - sectors;
+				if ((thing = P_GetPushThing(s)) != NULL) // No MT_P* means no effect
+					Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+			}
+			else
 				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
 				{
-					thing = P_GetPushThing(s);
-					if (thing) // No MT_P* means no effect
+					if ((thing = P_GetPushThing(s)) != NULL)  // No MT_P* means no effect
 						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				}
-				break;
-			case 545: // current up
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 546: // current down
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 542: // wind up
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 543: // wind down
-				for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
+
+			continue;
+
+		case 545: // current up
+			pushertype = p_upcurrent;
+			break;
+
+		case 546: // current down
+			pushertype = p_downcurrent;
+			break;
+
+		case 542: // wind up
+			pushertype = p_upwind;
+			break;
+
+		case 543: // wind down
+			pushertype = p_downwind;
+			break;
+
+		default:
+			continue;
 		}
+
+		dx = l->dx;
+		dy = l->dy;
+
+		// Obtain versor and scale it up according to texture offset, if provided; line length is ignored in this case.
+
+		if (sides[l->sidenum[0]].textureoffset != 0)
+		{
+			fixed_t len = sides[l->sidenum[0]].textureoffset;
+			fixed_t h = FixedHypot(dx, dy);
+			dx = FixedMul(FixedDiv(dx, h), len);
+			dy = FixedMul(FixedDiv(dy, h), len);
+		}
+
+		if (l->tag == 0)
+			Add_Pusher(pushertype, dx, dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+		else
+		{
+			for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
+				Add_Pusher(pushertype, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+		}
+	}
 }
 
 static void P_SearchForDisableLinedefs(void)
