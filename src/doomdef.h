@@ -561,9 +561,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
 
-///	Improved way of dealing with ping values and a ping limit.
-#define NEWPING
-
 ///	See name of player in your crosshair
 #define SEENAMES
 
