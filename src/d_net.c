@@ -1344,13 +1344,72 @@ boolean D_CheckNetGame(void)
 	return ret;
 }
 
+struct pingcell
+{
+	INT32 num;
+	INT32 ms;
+};
+
+static int pingcellcmp(const void *va, const void *vb)
+{
+	const struct pingcell *a, *b;
+	a = va;
+	b = vb;
+	return ( a->ms - b->ms );
+}
+
+/*
+New ping command formatted nicely to present ping in
+ascending order. And with equally spaced columns.
+The caller's ping is presented at the bottom too, for
+convenience.
+*/
+
 void Command_Ping_f(void)
 {
+	struct pingcell pingv[MAXPLAYERS];
+	INT32           pingc;
+
+	int name_width = 0;
+	int   ms_width = 0;
+
+	int n;
 	INT32 i;
-	for (i = 0; i < MAXPLAYERS;i++)
+
+	pingc = 0;
+	for (i = 1; i < MAXPLAYERS; ++i)
+		if (playeringame[i])
 	{
-		if (playeringame[i] && i != 0)
-			CONS_Printf(M_GetText("%.2d : %s\n %d ms\n"), i, player_names[i], playerpingtable[i]);
+		n = strlen(player_names[i]);
+		if (n > name_width)
+			name_width = n;
+
+		n = playerpingtable[i];
+		if (n > ms_width)
+			ms_width = n;
+
+		pingv[pingc].num = i;
+		pingv[pingc].ms  = playerpingtable[i];
+		pingc++;
+	}
+
+	     if (ms_width < 10)  ms_width = 1;
+	else if (ms_width < 100) ms_width = 2;
+	else                     ms_width = 3;
+
+	qsort(pingv, pingc, sizeof (struct pingcell), &pingcellcmp);
+
+	for (i = 0; i < pingc; ++i)
+	{
+		CONS_Printf("%02d : %-*s %*d ms\n",
+				pingv[i].num,
+				name_width, player_names[pingv[i].num],
+				ms_width,   pingv[i].ms);
+	}
+
+	if (!server && playeringame[consoleplayer])
+	{
+		CONS_Printf("\nYour ping is %d ms\n", playerpingtable[consoleplayer]);
 	}
 }
 
