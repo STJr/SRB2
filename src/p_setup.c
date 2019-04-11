@@ -212,6 +212,9 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
+	mapheaderinfo[num]->muspos = 0;
+	mapheaderinfo[num]->musinterfadeout = 0;
+	mapheaderinfo[num]->musintername[0] = '\0';
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -1428,19 +1431,33 @@ static void P_LoadRawSideDefs2(void *data)
 				{
 					M_Memcpy(process,msd->bottomtexture,8);
 					process[8] = '\0';
-					sd->bottomtexture = get_number(process)-1;
+					sd->bottomtexture = get_number(process);
 				}
-				M_Memcpy(process,msd->toptexture,8);
-				process[8] = '\0';
-				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
 
-				// If they type in O_ or D_ and their music name, just shrug,
-				// then copy the rest instead.
-				if ((process[0] == 'O' || process[0] == 'D') && process[7])
-					M_Memcpy(sd->text, process+2, 6);
-				else // Assume it's a proper music name.
-					M_Memcpy(sd->text, process, 6);
-				sd->text[6] = 0;
+				if (!(msd->midtexture[0] == '-' && msd->midtexture[1] == '\0') || msd->midtexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->midtexture,8);
+					process[8] = '\0';
+					sd->midtexture = get_number(process);
+				}
+
+				// always process if back sidedef, because we need that - symbol
+ 				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+				if (i == 1 || msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->toptexture,8);
+					process[8] = '\0';
+
+					// If they type in O_ or D_ and their music name, just shrug,
+					// then copy the rest instead.
+					if ((process[0] == 'O' || process[0] == 'D') && process[7])
+						M_Memcpy(sd->text, process+2, 6);
+					else // Assume it's a proper music name.
+						M_Memcpy(sd->text, process, 6);
+					sd->text[6] = 0;
+				}
+				else
+					sd->text[0] = 0;
 				break;
 			}
 

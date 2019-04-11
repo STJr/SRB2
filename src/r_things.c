@@ -2442,7 +2442,7 @@ void R_DrawMasked(void)
 // ==========================================================================
 
 INT32 numskins = 0;
-skin_t skins[MAXSKINS+1];
+skin_t skins[MAXSKINS];
 // FIXTHIS: don't work because it must be inistilised before the config load
 //#define SKINVALUES
 #ifdef SKINVALUES
@@ -2955,7 +2955,7 @@ void R_AddSkins(UINT16 wadnum)
 		// advance by default
 		lastlump = lump + 1;
 
-		if (numskins > MAXSKINS)
+		if (numskins >= MAXSKINS)
 		{
 			CONS_Debug(DBG_RENDER, "ignored skin (%d skins maximum)\n", MAXSKINS);
 			continue; // so we know how many skins couldn't be added

@@ -2756,8 +2756,18 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
 		{
-			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+				// win32 MIDI volume hack means we cannot fade down the music
+				&& S_MusicType() != MU_MID
+#endif
+			)
+			{
+				S_FadeMusic(0, 10*MUSICRATE);
+				S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+			}
+			else
+				S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 		}
 	}
 }
@@ -2940,7 +2950,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 }
 
-static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	fixed_t fallbackspeed;
 	angle_t ang;
@@ -3137,8 +3147,13 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (oldnightstime > 10*TICRATE
 		&& player->nightstime < 10*TICRATE)
 	{
-		//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		{
+			S_FadeMusic(0, 10*MUSICRATE);
+			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+		}
+		else
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 	}
 }
 

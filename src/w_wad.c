@@ -198,6 +198,7 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
+#ifdef HAVE_BLUA
 	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
@@ -206,6 +207,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
+#endif
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
@@ -806,9 +808,11 @@ UINT16 W_InitFile(const char *filename, boolean mainfile)
 		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
+#ifdef HAVE_BLUA
 	case RET_LUA:
 		LUA_LoadLump(numwadfiles - 1, 0);
 		break;
+#endif
 	default:
 		break;
 	}
@@ -1155,6 +1159,23 @@ void zerr(int ret)
 }
 #endif
 
+#define NO_PNG_LUMPS
+
+#ifdef NO_PNG_LUMPS
+static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)
+{
+    if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
+        return;
+    // Check for PNG file signature using memcmp
+    // As it may be faster on CPUs with slow unaligned memory access
+    // Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
+    if (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0)
+    {
+        I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .PNG - please convert to either Doom or Flat (raw) image format.", l, f);
+    }
+}
+#endif
+
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
   *
@@ -1194,7 +1215,15 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
 	case CM_NOCOMPRESSION:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
+#ifdef NO_PNG_LUMPS
+		{
+			size_t bytesread = fread(dest, 1, size, handle);
+			ErrorIfPNG(dest, bytesread, wadfiles[wad]->filename, l->name2);
+			return bytesread;
+		}
+#else
 		return fread(dest, 1, size, handle);
+#endif
 	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
 #ifdef ZWAD
@@ -1229,11 +1258,15 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			M_Memcpy(dest, decData + offset, size);
 			Z_Free(rawData);
 			Z_Free(decData);
+#ifdef NO_PNG_LUMPS
+			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+#endif
 			return size;
 #else
 			//I_Error("ZWAD files not supported on this platform.");
 			return 0;
 #endif
+
 		}
 #ifdef HAVE_ZLIB
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
@@ -1286,6 +1319,9 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(rawData);
 			Z_Free(decData);
 
+#ifdef NO_PNG_LUMPS
+			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+#endif
 			return size;
 		}
 #endif

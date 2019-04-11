@@ -264,7 +264,7 @@ void P_SpawnSlope_Line(int linenum)
 
 	if(!line->frontsector || !line->backsector)
 	{
-		CONS_Printf("P_SpawnSlope_Line used on a line without two sides.\n");
+		CONS_Debug(DBG_SETUP, "P_SpawnSlope_Line used on a line without two sides. (line number %i)\n", linenum);
 		return;
 	}
 

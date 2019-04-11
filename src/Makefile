@@ -281,6 +281,8 @@ endif
 
 LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
+
+OBJS+=$(OBJDIR)/apng.o
 endif
 
 ifdef HAVE_LIBGME
