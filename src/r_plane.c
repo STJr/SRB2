@@ -43,7 +43,7 @@
 //#define QUINCUNX
 
 // good night sweet prince
-#define SHITPLANESPARENCY
+//#define SHITPLANESPARENCY
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
 #define MAXVISPLANES 512
