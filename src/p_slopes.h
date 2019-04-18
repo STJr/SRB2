@@ -10,9 +10,6 @@
 /// \file  p_slopes.c
 /// \brief ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
 
-#ifndef P_SLOPES_H__
-#define P_SLOPES_H__
-
 #ifdef ESLOPE
 void P_CalculateSlopeNormal(pslope_t *slope);
 void P_ResetDynamicSlopes(void);
@@ -42,7 +39,12 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope);
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
 void P_ButteredSlope(mobj_t *mo);
 
-#endif
+/// Permit slopes to be dynamically altered.
+typedef struct
+{
+	thinker_t thinker;
+	pslope_t* slope;
+} dynplanethink_t;
 
-// EOF
+void T_DynamicSlope (dynplanethink_t* th);
 #endif // #ifdef ESLOPE
