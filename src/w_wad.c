@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,8 @@
 #include "z_zone.h"
 #include "fastcmp.h"
 
+#include "filesrch.h"
+
 #include "i_video.h" // rendermode
 #include "d_netfil.h"
 #include "dehacked.h"
@@ -63,21 +65,24 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #define O_BINARY 0
 #endif
 
-#if defined(_MSC_VER)
-#pragma pack(1)
+#ifdef HAVE_ZLIB
+#ifndef _MSC_VER
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
 #endif
 
-// a raw entry of the wad directory
-typedef struct
-{
-	UINT32 filepos; // file offset of the resource
-	UINT32 size; // size of the resource
-	char name[8]; // name of the resource
-} ATTRPACK filelump_t;
-
-#if defined(_MSC_VER)
-#pragma pack()
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
 #endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#include "zlib.h"
+#endif
+
 
 typedef struct
 {
@@ -113,8 +118,10 @@ void W_Shutdown(void)
 	while (numwadfiles--)
 	{
 		fclose(wadfiles[numwadfiles]->handle);
-		Z_Free(wadfiles[numwadfiles]->lumpinfo);
 		Z_Free(wadfiles[numwadfiles]->filename);
+		while (wadfiles[numwadfiles]->numlumps--)
+			Z_Free(wadfiles[numwadfiles]->lumpinfo[wadfiles[numwadfiles]->numlumps].name2);
+		Z_Free(wadfiles[numwadfiles]->lumpinfo);
 		Z_Free(wadfiles[numwadfiles]);
 	}
 }
@@ -174,6 +181,40 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 	return handle;
 }
 
+// Look for all DEHACKED and Lua scripts inside a PK3 archive.
+static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
+{
+	UINT16 posStart, posEnd;
+#ifdef HAVE_BLUA
+	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
+	if (posStart != INT16_MAX)
+	{
+		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+		posStart++;
+		for (; posStart < posEnd; posStart++)
+			LUA_LoadLump(wadnum, posStart);
+	}
+#endif
+	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
+	if (posStart != INT16_MAX)
+	{
+		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
+		posStart++;
+		for(; posStart < posEnd; posStart++)
+		{
+			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
+			size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+			char *name = malloc(length + 1);
+			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+			name[length] = '\0';
+			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
+			DEH_LoadDehackedLumpPwad(wadnum, posStart);
+			free(name);
+		}
+
+	}
+}
+
 // search for all DEHACKED lump in all wads and load it
 static inline void W_LoadDehackedLumps(UINT16 wadnum)
 {
@@ -194,16 +235,14 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{	// shameless copy+paste of code from LUA_LoadLump
-				char *name = malloc(strlen(wadfiles[wadnum]->filename)+10);
-				strcpy(name, wadfiles[wadnum]->filename);
-				if (!fasticmp(&name[strlen(name) - 4], ".soc")) {
-					// If it's not a .soc file, copy the lump name in too.
-					name[strlen(wadfiles[wadnum]->filename)] = '|';
-					M_Memcpy(name+strlen(wadfiles[wadnum]->filename)+1, lump_p->name, 8);
-					name[strlen(wadfiles[wadnum]->filename)+9] = '\0';
-				}
+				size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+				char *name = malloc(length + 1);
+				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
+				name[length] = '\0';
+
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
+				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
 			{
@@ -275,6 +314,324 @@ static void W_InvalidateLumpnumCache(void)
 	memset(lumpnumcache, 0, sizeof (lumpnumcache));
 }
 
+/** Detect a file type.
+ * \todo Actually detect the wad/pkzip headers and whatnot, instead of just checking the extensions.
+ */
+static restype_t ResourceFileDetect (const char* filename)
+{
+	if (!stricmp(&filename[strlen(filename) - 4], ".pk3"))
+		return RET_PK3;
+	if (!stricmp(&filename[strlen(filename) - 4], ".soc"))
+		return RET_SOC;
+	if (!stricmp(&filename[strlen(filename) - 4], ".lua"))
+		return RET_LUA;
+
+	return RET_WAD;
+}
+
+/** Create a 1-lump lumpinfo_t for standalone files.
+ */
+static lumpinfo_t* ResGetLumpsStandalone (FILE* handle, UINT16* numlumps, const char* lumpname)
+{
+	lumpinfo_t* lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
+	lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
+	lumpinfo->position = 0;
+	fseek(handle, 0, SEEK_END);
+	lumpinfo->size = ftell(handle);
+	fseek(handle, 0, SEEK_SET);
+	strcpy(lumpinfo->name, lumpname);
+	// Allocate the lump's full name.
+	lumpinfo->name2 = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+	strcpy(lumpinfo->name2, lumpname);
+	lumpinfo->name2[8] = '\0';
+	*numlumps = 1;
+	return lumpinfo;
+}
+
+/** Create a lumpinfo_t array for a WAD file.
+ */
+static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filename)
+{
+	UINT16 numlumps = *nlmp;
+	lumpinfo_t* lumpinfo;
+	size_t i;
+	INT32 compressed = 0;
+
+	wadinfo_t header;
+	lumpinfo_t *lump_p;
+	filelump_t *fileinfo;
+	void *fileinfov;
+
+	// read the header
+	if (fread(&header, 1, sizeof header, handle) < sizeof header)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Can't read wad header because %s\n"), strerror(ferror(handle)));
+		return NULL;
+	}
+
+	if (memcmp(header.identification, "ZWAD", 4) == 0)
+		compressed = 1;
+	else if (memcmp(header.identification, "IWAD", 4) != 0
+		&& memcmp(header.identification, "PWAD", 4) != 0
+		&& memcmp(header.identification, "SDLL", 4) != 0)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Invalid WAD header\n"));
+		return NULL;
+	}
+
+	header.numlumps = LONG(header.numlumps);
+	header.infotableofs = LONG(header.infotableofs);
+
+	// read wad file directory
+	i = header.numlumps * sizeof (*fileinfo);
+	fileinfov = fileinfo = malloc(i);
+	if (fseek(handle, header.infotableofs, SEEK_SET) == -1
+		|| fread(fileinfo, 1, i, handle) < i)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Corrupt wadfile directory (%s)\n"), strerror(ferror(handle)));
+		free(fileinfov);
+		return NULL;
+	}
+
+	numlumps = header.numlumps;
+
+	// fill in lumpinfo for this wad
+	lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
+	for (i = 0; i < numlumps; i++, lump_p++, fileinfo++)
+	{
+		lump_p->position = LONG(fileinfo->filepos);
+		lump_p->size = lump_p->disksize = LONG(fileinfo->size);
+		if (compressed) // wad is compressed, lump might be
+		{
+			UINT32 realsize = 0;
+			if (fseek(handle, lump_p->position, SEEK_SET)
+				== -1 || fread(&realsize, 1, sizeof realsize,
+				handle) < sizeof realsize)
+			{
+				I_Error("corrupt compressed file: %s; maybe %s", /// \todo Avoid the bailout?
+					filename, strerror(ferror(handle)));
+			}
+			realsize = LONG(realsize);
+			if (realsize != 0)
+			{
+				lump_p->size = realsize;
+				lump_p->compression = CM_LZF;
+			}
+			else
+			{
+				lump_p->size -= 4;
+				lump_p->compression = CM_NOCOMPRESSION;
+			}
+
+			lump_p->position += 4;
+			lump_p->disksize -= 4;
+		}
+		else
+			lump_p->compression = CM_NOCOMPRESSION;
+		memset(lump_p->name, 0x00, 9);
+		strncpy(lump_p->name, fileinfo->name, 8);
+		// Allocate the lump's full name.
+		lump_p->name2 = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+		strncpy(lump_p->name2, fileinfo->name, 8);
+		lump_p->name2[8] = '\0';
+	}
+	free(fileinfov);
+	*nlmp = numlumps;
+	return lumpinfo;
+}
+
+/** Optimized pattern search in a file.
+ */
+static boolean ResFindSignature (FILE* handle, char endPat[], UINT32 startpos)
+{
+	char *s;
+	int c;
+
+	fseek(handle, startpos, SEEK_SET);
+	s = endPat;
+	while((c = fgetc(handle)) != EOF)
+	{
+		if (*s != c && s > endPat) // No match?
+			s = endPat; // We "reset" the counter by sending the s pointer back to the start of the array.
+		if (*s == c)
+		{
+			s++;
+			if (*s == 0x00) // The array pointer has reached the key char which marks the end. It means we have matched the signature.
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
+typedef struct zend_s
+{
+	char signature[4];
+	UINT16 diskpos;
+	UINT16 cdirdisk;
+	UINT16 diskentries;
+	UINT16 entries;
+	UINT32 cdirsize;
+	UINT32 cdiroffset;
+	UINT16 commentlen;
+} ATTRPACK zend_t;
+
+typedef struct zentry_s
+{
+	char signature[4];
+	UINT16 version;
+	UINT16 versionneeded;
+	UINT16 flags;
+	UINT16 compression;
+	UINT16 modtime;
+	UINT16 moddate;
+	UINT32 CRC32;
+	UINT32 compsize;
+	UINT32 size;
+	UINT16 namelen;
+	UINT16 xtralen;
+	UINT16 commlen;
+	UINT16 diskstart;
+	UINT16 attrint;
+	UINT32 attrext;
+	UINT32 offset;
+} ATTRPACK zentry_t;
+
+typedef struct zlentry_s
+{
+	char signature[4];
+	UINT16 versionneeded;
+	UINT16 flags;
+	UINT16 compression;
+	UINT16 modtime;
+	UINT16 moddate;
+	UINT32 CRC32;
+	UINT32 compsize;
+	UINT32 size;
+	UINT16 namelen;
+	UINT16 xtralen;
+} ATTRPACK zlentry_t;
+#if defined(_MSC_VER)
+#pragma pack()
+#endif
+
+/** Create a lumpinfo_t array for a PKZip file.
+ */
+static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
+{
+    zend_t zend;
+    zentry_t* zentries;
+    zentry_t* zentry;
+
+	UINT16 numlumps = *nlmp;
+	lumpinfo_t* lumpinfo;
+	lumpinfo_t *lump_p;
+	size_t i;
+
+	char pat_central[] = {0x50, 0x4b, 0x01, 0x02, 0x00};
+	char pat_end[] = {0x50, 0x4b, 0x05, 0x06, 0x00};
+
+	// Look for central directory end signature near end of file.
+	// Contains entry number (number of lumps), and central directory start offset.
+	fseek(handle, 0, SEEK_END);
+	if (!ResFindSignature(handle, pat_end, max(0, ftell(handle) - (22 + 65536))))
+	{
+		CONS_Alert(CONS_ERROR, "Missing central directory\n");
+		return NULL;
+	}
+
+	fseek(handle, -4, SEEK_CUR);
+	if (fread(&zend, 1, sizeof zend, handle) < sizeof zend)
+	{
+		CONS_Alert(CONS_ERROR, "Corrupt central directory (%s)\n", strerror(ferror(handle)));
+		return NULL;
+	}
+	numlumps = zend.entries;
+
+	lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
+	zentry = zentries = malloc(numlumps * sizeof (*zentries));
+
+	fseek(handle, zend.cdiroffset, SEEK_SET);
+	for (i = 0; i < numlumps; i++, zentry++, lump_p++)
+	{
+		char* fullname;
+		char* trimname;
+		char* dotpos;
+
+		if (fread(zentry, 1, sizeof(zentry_t), handle) < sizeof(zentry_t))
+		{
+			CONS_Alert(CONS_ERROR, "Failed to read central directory (%s)\n", strerror(ferror(handle)));
+			Z_Free(lumpinfo);
+			free(zentry);
+			return NULL;
+		}
+		if (memcmp(zentry->signature, pat_central, 4))
+		{
+			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
+			Z_Free(lumpinfo);
+			free(zentry);
+			return NULL;
+		}
+
+		lump_p->position = zentry->offset + zentry->namelen + zentry->xtralen + sizeof(zlentry_t);
+		lump_p->disksize = zentry->compsize;
+		lump_p->size = zentry->size;
+
+		fullname = malloc(zentry->namelen + 1);
+		if (fgets(fullname, zentry->namelen + 1, handle) != fullname)
+		{
+			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", strerror(ferror(handle)));
+			Z_Free(lumpinfo);
+			free(zentry);
+			free(fullname);
+			return NULL;
+		}
+
+		// Strip away file address and extension for the 8char name.
+		if ((trimname = strrchr(fullname, '/')) != 0)
+			trimname++;
+		else
+			trimname = fullname; // Care taken for root files.
+
+		if ((dotpos = strrchr(trimname, '.')) == 0)
+			dotpos = fullname + strlen(fullname); // Watch for files without extension.
+
+		memset(lump_p->name, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
+		strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
+
+		lump_p->name2 = Z_Calloc(zentry->namelen + 1, PU_STATIC, NULL);
+		strncpy(lump_p->name2, fullname, zentry->namelen);
+
+		free(fullname);
+
+		switch(zentry->compression)
+		{
+		case 0:
+			lump_p->compression = CM_NOCOMPRESSION;
+			break;
+#ifdef HAVE_ZLIB
+		case 8:
+			lump_p->compression = CM_DEFLATE;
+			break;
+#endif
+		case 14:
+			lump_p->compression = CM_LZF;
+			break;
+		default:
+			CONS_Alert(CONS_WARNING, "%s: Unsupported compression method\n", fullname);
+			lump_p->compression = CM_UNSUPPORTED;
+			break;
+		}
+	}
+
+	*nlmp = numlumps;
+	return lumpinfo;
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -286,20 +643,30 @@ static void W_InvalidateLumpnumCache(void)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_LoadWadFile(const char *filename)
+UINT16 W_InitFile(const char *filename)
 {
 	FILE *handle;
-	lumpinfo_t *lumpinfo;
+	lumpinfo_t *lumpinfo = NULL;
 	wadfile_t *wadfile;
-	UINT32 numlumps;
+	restype_t type;
+	UINT16 numlumps = 0;
 	size_t i;
-	INT32 compressed = 0;
-	size_t packetsize = 0;
-	serverinfo_pak *dummycheck = NULL;
+	size_t packetsize;
 	UINT8 md5sum[16];
+	boolean important;
 
-	// Shut the compiler up.
-	(void)dummycheck;
+	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
+		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
+
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	if (dirmenu)
+	{
+		refreshdirname = Z_StrDup(filename);
+		nameonly(refreshdirname);
+	}
+	else
+		refreshdirname = NULL;
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
@@ -308,6 +675,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
 		return INT16_MAX;
 	}
 
@@ -317,131 +685,21 @@ UINT16 W_LoadWadFile(const char *filename)
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
-	for (i = 0; i < numwadfiles; i++)
+	// see PutFileNeeded in d_netfil.c
+	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize += nameonlylength(wadfiles[i]->filename);
-		packetsize += 22; // MD5, etc.
-	}
+		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
-	packetsize += nameonlylength(filename);
-	packetsize += 22;
-
-	if (packetsize > sizeof(dummycheck->fileneeded))
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-		if (handle)
-			fclose(handle);
-		return INT16_MAX;
-	}
-
-	// detect dehacked file with the "soc" extension
-	if (!stricmp(&filename[strlen(filename) - 4], ".soc"))
-	{
-		// This code emulates a wadfile with one lump name "OBJCTCFG"
-		// at position 0 and size of the whole file.
-		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		numlumps = 1;
-		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
-		lumpinfo->position = 0;
-		fseek(handle, 0, SEEK_END);
-		lumpinfo->size = ftell(handle);
-		fseek(handle, 0, SEEK_SET);
-		strcpy(lumpinfo->name, "OBJCTCFG");
-	}
-#ifdef HAVE_BLUA
-	// detect lua script with the "lua" extension
-	else if (!stricmp(&filename[strlen(filename) - 4], ".lua"))
-	{
-		// This code emulates a wadfile with one lump name "LUA_INIT"
-		// at position 0 and size of the whole file.
-		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		numlumps = 1;
-		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
-		lumpinfo->position = 0;
-		fseek(handle, 0, SEEK_END);
-		lumpinfo->size = ftell(handle);
-		fseek(handle, 0, SEEK_SET);
-		strcpy(lumpinfo->name, "LUA_INIT");
-	}
-#endif
-	else
-	{
-		// assume wad file
-		wadinfo_t header;
-		lumpinfo_t *lump_p;
-		filelump_t *fileinfo;
-		void *fileinfov;
-
-		// read the header
-		if (fread(&header, 1, sizeof header, handle) < sizeof header)
+		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Can't read wad header from %s because %s\n"), filename, strerror(ferror(handle)));
+			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+			refreshdirmenu |= REFRESHDIR_MAX;
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 
-		if (memcmp(header.identification, "ZWAD", 4) == 0)
-			compressed = 1;
-		else if (memcmp(header.identification, "IWAD", 4) != 0
-			&& memcmp(header.identification, "PWAD", 4) != 0
-			&& memcmp(header.identification, "SDLL", 4) != 0)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("%s does not have a valid WAD header\n"), filename);
-			return INT16_MAX;
-		}
-
-		header.numlumps = LONG(header.numlumps);
-		header.infotableofs = LONG(header.infotableofs);
-
-		// read wad file directory
-		i = header.numlumps * sizeof (*fileinfo);
-		fileinfov = fileinfo = malloc(i);
-		if (fseek(handle, header.infotableofs, SEEK_SET) == -1
-			|| fread(fileinfo, 1, i, handle) < i)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Wadfile directory in %s is corrupted (%s)\n"), filename, strerror(ferror(handle)));
-			free(fileinfov);
-			return INT16_MAX;
-		}
-
-		numlumps = header.numlumps;
-
-		// fill in lumpinfo for this wad
-		lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
-		for (i = 0; i < numlumps; i++, lump_p++, fileinfo++)
-		{
-			lump_p->position = LONG(fileinfo->filepos);
-			lump_p->size = lump_p->disksize = LONG(fileinfo->size);
-			if (compressed) // wad is compressed, lump might be
-			{
-				UINT32 realsize = 0;
-
-				if (fseek(handle, lump_p->position, SEEK_SET)
-					== -1 || fread(&realsize, 1, sizeof realsize,
-					handle) < sizeof realsize)
-				{
-					I_Error("corrupt compressed file: %s; maybe %s",
-						filename, strerror(ferror(handle)));
-				}
-				realsize = LONG(realsize);
-				if (realsize != 0)
-				{
-					lump_p->size = realsize;
-					lump_p->compressed = 1;
-				}
-				else
-				{
-					lump_p->size -= 4;
-					lump_p->compressed = 0;
-				}
-
-				lump_p->position += 4;
-				lump_p->disksize -= 4;
-			}
-			else lump_p->compressed = 0;
-			memset(lump_p->name, 0x00, 9);
-			strncpy(lump_p->name, fileinfo->name, 8);
-		}
-		free(fileinfov);
+		packetsizetally = packetsize;
 	}
 
 #ifndef NOMD5
@@ -457,10 +715,38 @@ UINT16 W_LoadWadFile(const char *filename)
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			if (handle)
+				fclose(handle);
 			return INT16_MAX;
 		}
 	}
 #endif
+
+	switch(type = ResourceFileDetect(filename))
+	{
+	case RET_SOC:
+		lumpinfo = ResGetLumpsStandalone(handle, &numlumps, "OBJCTCFG");
+		break;
+#ifdef HAVE_BLUA
+	case RET_LUA:
+		lumpinfo = ResGetLumpsStandalone(handle, &numlumps, "LUA_INIT");
+		break;
+#endif
+	case RET_PK3:
+		lumpinfo = ResGetLumpsZip(handle, &numlumps);
+		break;
+	case RET_WAD:
+		lumpinfo = ResGetLumpsWad(handle, &numlumps, filename);
+		break;
+	default:
+		CONS_Alert(CONS_ERROR, "Unsupported file format\n");
+	}
+
+	if (lumpinfo == NULL)
+	{
+		fclose(handle);
+		return INT16_MAX;
+	}
 
 	//
 	// link wad file to search files
@@ -470,8 +756,10 @@ UINT16 W_LoadWadFile(const char *filename)
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
+	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
 	wadfile->filesize = (unsigned)ftell(handle);
+	wadfile->type = type;
 
 	// already generated, just copy it over
 	M_Memcpy(&wadfile->md5sum, &md5sum, 16);
@@ -492,10 +780,30 @@ UINT16 W_LoadWadFile(const char *filename)
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
-	W_LoadDehackedLumps(numwadfiles-1);
+
+	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
+	switch (wadfile->type)
+	{
+	case RET_WAD:
+		W_LoadDehackedLumps(numwadfiles - 1);
+		break;
+	case RET_PK3:
+		W_LoadDehackedLumpsPK3(numwadfiles - 1);
+		break;
+	case RET_SOC:
+		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
+		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0);
+		break;
+#ifdef HAVE_BLUA
+	case RET_LUA:
+		LUA_LoadLump(numwadfiles - 1, 0);
+		break;
+#endif
+	default:
+		break;
+	}
 
 	W_InvalidateLumpnumCache();
-
 	return wadfile->numlumps;
 }
 
@@ -553,7 +861,7 @@ INT32 W_InitMultipleFiles(char **filenames)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		rc &= (W_LoadWadFile(*filenames) != INT16_MAX) ? 1 : 0;
+		rc &= (W_InitFile(*filenames) != INT16_MAX) ? 1 : 0;
 	}
 
 	if (!numwadfiles)
@@ -631,6 +939,51 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	return INT16_MAX;
 }
 
+// Look for the first lump from a folder.
+UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->name2, strlen(name)) == 0)
+			break;
+	}
+	return i;
+}
+
+// In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
+// Useful for finding folder ends.
+// Returns the position of the lumpinfo entry.
+UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->name2, strlen(name)))
+			break;
+	}
+	return i;
+}
+
+// In a PK3 type of resource file, it looks for an entry with the specified full name.
+// Returns lump position in PK3's lumpinfo, or INT16_MAX if not found.
+UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (!strnicmp(name, lump_p->name2, strlen(name)))
+		{
+			return i;
+		}
+	}
+	// Not found at all?
+	return INT16_MAX;
+}
+
 //
 // W_CheckNumForName
 // Returns LUMPERROR if name not found.
@@ -671,6 +1024,37 @@ lumpnum_t W_CheckNumForName(const char *name)
 	}
 }
 
+// Look for valid map data through all added files in descendant order.
+// Get a map marker for WADs, and a standalone WAD file lump inside PK3s.
+// TODO: Make it search through cache first, maybe...?
+lumpnum_t W_CheckNumForMap(const char *name)
+{
+	UINT16 lumpNum, end;
+	UINT32 i;
+	for (i = numwadfiles - 1; i < numwadfiles; i--)
+	{
+		if (wadfiles[i]->type == RET_WAD)
+		{
+			for (lumpNum = 0; lumpNum < wadfiles[i]->numlumps; lumpNum++)
+				if (!strncmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
+					return (i<<16) + lumpNum;
+		}
+		else if (wadfiles[i]->type == RET_PK3)
+		{
+			lumpNum = W_CheckNumForFolderStartPK3("maps/", i, 0);
+			if (lumpNum != INT16_MAX)
+				end = W_CheckNumForFolderEndPK3("maps/", i, lumpNum);
+			else
+				continue;
+			// Now look for the specified map.
+			for (++lumpNum; lumpNum < end; lumpNum++)
+				if (!strnicmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
+					return (i<<16) + lumpNum;
+		}
+	}
+	return LUMPERROR;
+}
+
 //
 // W_GetNumForName
 //
@@ -701,15 +1085,19 @@ lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, con
 	// scan wad files backwards so patch lump files take precedence
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
-		bsid = W_CheckNumForNamePwad(blockstart,(UINT16)i,0);
-		if (bsid == INT16_MAX)
-			continue; // block doesn't exist, keep going
-		beid = W_CheckNumForNamePwad(blockend,(UINT16)i,0);
-		// if block end doesn't exist, just search through everything
+		if (wadfiles[i]->type == RET_WAD)
+		{
+			bsid = W_CheckNumForNamePwad(blockstart, (UINT16)i, 0);
+			if (bsid == INT16_MAX)
+				continue; // Start block doesn't exist?
+			beid = W_CheckNumForNamePwad(blockend, (UINT16)i, 0);
+			if (beid == INT16_MAX)
+				continue; // End block doesn't exist?
 
-		check = W_CheckNumForNamePwad(name,(UINT16)i,bsid);
-		if (check < beid)
-			return (i<<16)+check; // found it, in our constraints
+			check = W_CheckNumForNamePwad(name, (UINT16)i, bsid);
+			if (check < beid)
+				return (i<<16)+check; // found it, in our constraints
+		}
 	}
 	return LUMPERROR;
 }
@@ -746,80 +1134,72 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 	return W_LumpLengthPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
-/** Reads bytes from the head of a lump, without doing decompression.
-  *
-  * \param wad Wad number to read from.
-  * \param lump Lump number to read from, within wad.
-  * \param dest Buffer in memory to serve as destination.
-  * \param size Number of bytes to read.
-  * \param offest Number of bytes to offset.
-  * \return Number of bytes read (should equal size).
-  * \sa W_ReadLumpHeader
-  */
-static size_t W_RawReadLumpHeader(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
+//
+// W_IsLumpWad
+// Is the lump a WAD? (presumably in a PK3)
+//
+boolean W_IsLumpWad(lumpnum_t lumpnum)
 {
-	size_t bytesread;
-	lumpinfo_t *l;
-	FILE *handle;
+	if (wadfiles[WADFILENUM(lumpnum)]->type == RET_PK3)
+	{
+		const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->name2;
 
-	l = wadfiles[wad]->lumpinfo + lump;
+		if (strlen(lumpfullName) < 4)
+			return false; // can't possibly be a WAD can it?
+		return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
+	}
 
-	handle = wadfiles[wad]->handle;
-
-	fseek(handle, (long)(l->position + offset), SEEK_SET);
-	bytesread = fread(dest, 1, size, handle);
-
-	return bytesread;
+	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
 }
 
-// Read a compressed lump; return it in newly Z_Malloc'd memory.
-// wad is number of wad file, lump is number of lump in wad.
-static void *W_ReadCompressedLump(UINT16 wad, UINT16 lump)
+#ifdef HAVE_ZLIB
+/* report a zlib or i/o error */
+void zerr(int ret)
 {
-#ifdef ZWAD
-	char *compressed, *data;
-	const lumpinfo_t *l = &wadfiles[wad]->lumpinfo[lump];
-	size_t retval;
-
-	compressed = Z_Malloc(l->disksize, PU_STATIC, NULL);
-	data = Z_Malloc(l->size, PU_STATIC, NULL);
-	if (W_RawReadLumpHeader(wad, lump, compressed, l->disksize, 0)
-		< l->disksize)
-	{
-		I_Error("wad %d, lump %d: cannot read compressed data",
-			wad, lump);
-	}
-
-	retval = lzf_decompress(compressed, l->disksize, data, l->size);
-#ifndef AVOID_ERRNO
-	if (retval == 0 && errno == E2BIG)
-	{
-		I_Error("wad %d, lump %d: compressed data too big "
-			"(bigger than %s)", wad, lump, sizeu1(l->size));
-	}
-	else if (retval == 0 && errno == EINVAL)
-		I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
-	else
-#endif
-	if (retval != l->size)
-	{
-		I_Error("wad %d, lump %d: decompressed to wrong number of "
-			"bytes (expected %s, got %s)", wad, lump,
-			sizeu1(l->size), sizeu2(retval));
-	}
-	Z_Free(compressed);
-	return data;
-#else
-	(void)wad;
-	(void)lump;
-	//I_Error("ZWAD files not supported on this platform.");
-	return NULL;
-#endif
+	    CONS_Printf("zpipe: ");
+    switch (ret) {
+    case Z_ERRNO:
+        if (ferror(stdin))
+            CONS_Printf("error reading stdin\n");
+        if (ferror(stdout))
+            CONS_Printf("error writing stdout\n");
+        break;
+    case Z_STREAM_ERROR:
+        CONS_Printf("invalid compression level\n");
+        break;
+    case Z_DATA_ERROR:
+        CONS_Printf("invalid or incomplete deflate data\n");
+        break;
+    case Z_MEM_ERROR:
+        CONS_Printf("out of memory\n");
+        break;
+    case Z_VERSION_ERROR:
+        CONS_Printf("zlib version mismatch!\n");
+    }
 }
+#endif
+
+#define NO_PNG_LUMPS
+
+#ifdef NO_PNG_LUMPS
+static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)
+{
+    if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
+        return;
+    // Check for PNG file signature using memcmp
+    // As it may be faster on CPUs with slow unaligned memory access
+    // Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature
+    if (memcmp(&d[0], "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8) == 0)
+    {
+        I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .PNG - please convert to either Doom or Flat (raw) image format.", l, f);
+    }
+}
+#endif
 
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
   *
+  * \param wad Wad number to read from.
   * \param lump Lump number to read from.
   * \param dest Buffer in memory to serve as destination.
   * \param size Number of bytes to read.
@@ -830,6 +1210,8 @@ static void *W_ReadCompressedLump(UINT16 wad, UINT16 lump)
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
 {
 	size_t lumpsize;
+	lumpinfo_t *l;
+	FILE *handle;
 
 	if (!TestValidLump(wad,lump))
 		return 0;
@@ -843,17 +1225,131 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	if (!size || size+offset > lumpsize)
 		size = lumpsize - offset;
 
-	if (wadfiles[wad]->lumpinfo[lump].compressed)
+	// Let's get the raw lump data.
+	// We setup the desired file handle to read the lump data.
+	l = wadfiles[wad]->lumpinfo + lump;
+	handle = wadfiles[wad]->handle;
+	fseek(handle, (long)(l->position + offset), SEEK_SET);
+
+	// But let's not copy it yet. We support different compression formats on lumps, so we need to take that into account.
+	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
-		UINT8 *data;
-		data = W_ReadCompressedLump(wad, lump);
-		if (!data) return 0;
-		M_Memcpy(dest, data+offset, size);
-		Z_Free(data);
-		return size;
+	case CM_NOCOMPRESSION:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
+#ifdef NO_PNG_LUMPS
+		{
+			size_t bytesread = fread(dest, 1, size, handle);
+			ErrorIfPNG(dest, bytesread, wadfiles[wad]->filename, l->name2);
+			return bytesread;
+		}
+#else
+		return fread(dest, 1, size, handle);
+#endif
+	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
+		{
+#ifdef ZWAD
+			char *rawData; // The lump's raw data.
+			char *decData; // Lump's decompressed real data.
+			size_t retval; // Helper var, lzf_decompress returns 0 when an error occurs.
+
+			rawData = Z_Malloc(l->disksize, PU_STATIC, NULL);
+			decData = Z_Malloc(l->size, PU_STATIC, NULL);
+
+			if (fread(rawData, 1, l->disksize, handle) < l->disksize)
+				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
+			retval = lzf_decompress(rawData, l->disksize, decData, l->size);
+#ifndef AVOID_ERRNO
+			if (retval == 0) // If this was returned, check if errno was set
+			{
+				// errno is a global var set by the lzf functions when something goes wrong.
+				if (errno == E2BIG)
+					I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+				else if (errno == EINVAL)
+					I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
+			}
+			// Otherwise, fall back on below error (if zero was actually the correct size then ???)
+#endif
+			if (retval != l->size)
+			{
+				I_Error("wad %d, lump %d: decompressed to wrong number of bytes (expected %s, got %s)", wad, lump, sizeu1(l->size), sizeu2(retval));
+			}
+
+			if (!decData) // Did we get no data at all?
+				return 0;
+			M_Memcpy(dest, decData + offset, size);
+			Z_Free(rawData);
+			Z_Free(decData);
+#ifdef NO_PNG_LUMPS
+			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+#endif
+			return size;
+#else
+			//I_Error("ZWAD files not supported on this platform.");
+			return 0;
+#endif
+
+		}
+#ifdef HAVE_ZLIB
+	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
+		{
+			UINT8 *rawData; // The lump's raw data.
+			UINT8 *decData; // Lump's decompressed real data.
+
+			int zErr; // Helper var.
+			z_stream strm;
+			unsigned long rawSize = l->disksize;
+			unsigned long decSize = l->size;
+
+			rawData = Z_Malloc(rawSize, PU_STATIC, NULL);
+			decData = Z_Malloc(decSize, PU_STATIC, NULL);
+
+			if (fread(rawData, 1, rawSize, handle) < rawSize)
+				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
+
+			strm.zalloc = Z_NULL;
+			strm.zfree = Z_NULL;
+			strm.opaque = Z_NULL;
+
+			strm.total_in = strm.avail_in = rawSize;
+			strm.total_out = strm.avail_out = decSize;
+
+			strm.next_in = rawData;
+			strm.next_out = decData;
+
+			zErr = inflateInit2(&strm, -15);
+			if (zErr == Z_OK)
+			{
+				zErr = inflate(&strm, Z_FINISH);
+				if (zErr == Z_STREAM_END)
+				{
+					M_Memcpy(dest, decData, size);
+				}
+				else
+				{
+					size = 0;
+					zerr(zErr);
+					(void)inflateEnd(&strm);
+				}
+			}
+			else
+			{
+				CONS_Printf("whopet\n");
+				size = 0;
+				zerr(zErr);
+			}
+
+			Z_Free(rawData);
+			Z_Free(decData);
+
+#ifdef NO_PNG_LUMPS
+			ErrorIfPNG(dest, size, wadfiles[wad]->filename, l->name2);
+#endif
+			return size;
+		}
+#endif
+	default:
+		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
-	else
-		return W_RawReadLumpHeader(wad, lump, dest, size, offset);
+	return -1;
 }
 
 size_t W_ReadLumpHeader(lumpnum_t lumpnum, void *dest, size_t size, size_t offset)
@@ -1137,12 +1633,12 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
 		return -1;
 
-	// detect dehacked file with the "soc" extension
-	if (stricmp(&filename[strlen(filename) - 4], ".soc") != 0
+	// detect wad file by the absence of the other supported extensions
+	if (stricmp(&filename[strlen(filename) - 4], ".soc")
 #ifdef HAVE_BLUA
-	&& stricmp(&filename[strlen(filename) - 4], ".lua") != 0
+	&& stricmp(&filename[strlen(filename) - 4], ".lua")
 #endif
-	)
+	&& stricmp(&filename[strlen(filename) - 4], ".pk3"))
 	{
 		// assume wad file
 		wadinfo_t header;

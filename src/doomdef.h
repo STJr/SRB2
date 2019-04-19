@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 20  // more precise version number
-#define VERSIONSTRING "v2.1.20"
-#define VERSIONSTRINGW L"v2.1.20"
+#define SUBVERSION 23  // more precise version number
+#define VERSIONSTRING "v2.1.23"
+#define VERSIONSTRINGW L"v2.1.23"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -160,6 +160,9 @@ extern FILE *logstream;
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
+
+// Use .kart extension addons
+//#define USE_KART
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -214,7 +217,21 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 25
+#define MODVERSION 28
+
+// To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
+// Increment MINOREXECVERSION whenever a config change is needed that does not correspond
+// to an increment in MODVERSION. This might never happen in practice.
+// If MODVERSION increases, set MINOREXECVERSION to 0.
+#define MAJOREXECVERSION MODVERSION
+#define MINOREXECVERSION 0
+// (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)
+
+// Macros
+#define GETMAJOREXECVERSION(v) (v & 0xFFFF)
+#define GETMINOREXECVERSION(v) (v >> 16)
+#define GETEXECVERSION(major,minor) (major + (minor << 16))
+#define EXECVERSION GETEXECVERSION(MAJOREXECVERSION, MINOREXECVERSION)
 
 // =========================================================================
 
@@ -396,6 +413,7 @@ extern INT32 cv_debug;
 
 // Modifier key variables, accessible anywhere
 extern UINT8 shiftdown, ctrldown, altdown;
+extern boolean capslock;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
@@ -408,6 +426,15 @@ INT32 I_GetKey(void);
 #endif
 #ifndef max // Double-Check with WATTCP-32's cdefs.h
 #define max(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+
+// Floating point comparison epsilons from float.h
+#ifndef FLT_EPSILON
+#define FLT_EPSILON 1.1920928955078125e-7f
+#endif
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16
 #endif
 
 // An assert-type mechanism.
@@ -501,5 +528,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 //#define SECTORSPECIALSAFTERTHINK
+
+/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
+/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
+/// on the bright side it fixes some weird issues with translucent walls
+/// \note	SRB2CB port.
+///      	SRB2CB itself ported this from PrBoom+
+#define NEWCLIP
 
 #endif // __DOOMDEF__

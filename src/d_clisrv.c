@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "keys.h"
+#include "g_input.h" // JOY1
 #include "m_menu.h"
 #include "console.h"
 #include "d_netfil.h"
@@ -401,8 +402,7 @@ static void ExtraDataTicker(void)
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
 						CONS_Alert(CONS_WARNING, M_GetText("Got unknown net command [%s]=%d (max %d)\n"), sizeu1(curpos - bufferstart), *curpos, bufferstart[0]);
-						D_FreeTextcmd(gametic);
-						return;
+						break;
 					}
 				}
 			}
@@ -1366,15 +1366,18 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
-	netbuffer->u.servercfg.adminplayer = (SINT8)adminplayer;
 
 	// we fill these structs with FFs so that any players not in game get sent as 0xFFFF
 	// which is nice and easy for us to detect
 	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
 	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
 
+	memset(netbuffer->u.servercfg.adminplayers, -1, sizeof(netbuffer->u.servercfg.adminplayers));
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		netbuffer->u.servercfg.adminplayers[i] = (SINT8)adminplayers[i];
+
 		if (!playeringame[i])
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
@@ -1569,8 +1572,6 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	playerdeadview = false;
-
 	if (P_LoadNetGame())
 	{
 		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
@@ -1626,6 +1627,8 @@ static void SendAskInfo(INT32 node, boolean viams)
 serverelem_t serverlist[MAXSERVERLIST];
 UINT32 serverlistcount = 0;
 
+#define FORCECLOSE 0x8000
+
 static void SL_ClearServerList(INT32 connectedserver)
 {
 	UINT32 i;
@@ -1633,7 +1636,7 @@ static void SL_ClearServerList(INT32 connectedserver)
 	for (i = 0; i < serverlistcount; i++)
 		if (connectedserver != serverlist[i].node)
 		{
-			Net_CloseConnection(serverlist[i].node);
+			Net_CloseConnection(serverlist[i].node|FORCECLOSE);
 			serverlist[i].node = 0;
 		}
 	serverlistcount = 0;
@@ -1715,12 +1718,25 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 				// Make sure MS version matches our own, to
 				// thwart nefarious servers who lie to the MS.
 
-				if(strcmp(version, server_list[i].version) == 0)
+				if (strcmp(version, server_list[i].version) == 0)
 				{
 					INT32 node = I_NetMakeNodewPort(server_list[i].ip, server_list[i].port);
 					if (node == -1)
 						break; // no more node free
 					SendAskInfo(node, true);
+					// Force close the connection so that servers can't eat
+					// up nodes forever if we never get a reply back from them
+					// (usually when they've not forwarded their ports).
+					//
+					// Don't worry, we'll get in contact with the working
+					// servers again when they send SERVERINFO to us later!
+					//
+					// (Note: as a side effect this probably means every
+					// server in the list will probably be using the same node (e.g. node 1),
+					// not that it matters which nodes they use when
+					// the connections are closed afterwards anyway)
+					// -- Monster Iestyn 12/11/18
+					Net_CloseConnection(node|FORCECLOSE);
 				}
 			}
 		}
@@ -1947,7 +1963,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 
 		I_OsPolling();
 		key = I_GetKey();
-		if (key == KEY_ESCAPE)
+		if (key == KEY_ESCAPE || key == KEY_JOY1+1)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -2030,7 +2046,7 @@ static void CL_ConnectToServer(boolean viams)
 	G_SetGamestate(GS_WAITINGPLAYERS);
 	wipegamestate = GS_WAITINGPLAYERS;
 
-	adminplayer = -1;
+	ClearAdminPlayers();
 	pnumnodes = 1;
 	oldtic = I_GetTime() - 1;
 #ifndef NONET
@@ -2342,7 +2358,7 @@ void CL_ClearPlayer(INT32 playernum)
 //
 // Removes a player from the current game
 //
-static void CL_RemovePlayer(INT32 playernum)
+static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 {
 	// Sanity check: exceptional cases (i.e. c-fails) can cause multiple
 	// kick commands to be issued for the same player.
@@ -2397,6 +2413,12 @@ static void CL_RemovePlayer(INT32 playernum)
 		}
 	}
 
+#ifdef HAVE_BLUA
+	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+#else
+	(void)reason;
+#endif
+
 	// Reset player data
 	CL_ClearPlayer(playernum);
 
@@ -2409,8 +2431,10 @@ static void CL_RemovePlayer(INT32 playernum)
 	// Reset the name
 	sprintf(player_names[playernum], "Player %d", playernum+1);
 
-	if (playernum == adminplayer)
-		adminplayer = -1; // don't stay admin after you're gone
+	if (IsPlayerAdmin(playernum))
+	{
+		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
+	}
 
 	if (playernum == displayplayer)
 		displayplayer = consoleplayer; // don't look through someone's view who isn't there
@@ -2528,7 +2552,7 @@ static void Command_Nodes(void)
 			if (I_GetNodeAddress && (address = I_GetNodeAddress(playernode[i])) != NULL)
 				CONS_Printf(" - %s", address);
 
-			if (i == adminplayer)
+			if (IsPlayerAdmin(i))
 				CONS_Printf(M_GetText(" (verified admin)"));
 
 			if (players[i].spectator)
@@ -2553,7 +2577,7 @@ static void Command_Ban(void)
 		return;
 	}
 
-	if (server || adminplayer == consoleplayer)
+	if (server || IsPlayerAdmin(consoleplayer))
 	{
 		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
@@ -2619,7 +2643,7 @@ static void Command_Kick(void)
 		return;
 	}
 
-	if (server || adminplayer == consoleplayer)
+	if (server || IsPlayerAdmin(consoleplayer))
 	{
 		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
@@ -2628,13 +2652,16 @@ static void Command_Kick(void)
 		if (pn == -1 || pn == 0)
 			return;
 
-		// Special case if we are trying to kick a player who is downloading the game state:
-		// trigger a timeout instead of kicking them, because a kick would only
-		// take effect after they have finished downloading
-		if (sendingsavegame[playernode[pn]])
+		if (server)
 		{
-			Net_ConnectionTimeout(playernode[pn]);
-			return;
+			// Special case if we are trying to kick a player who is downloading the game state:
+			// trigger a timeout instead of kicking them, because a kick would only
+			// take effect after they have finished downloading
+			if (sendingsavegame[playernode[pn]])
+			{
+				Net_ConnectionTimeout(playernode[pn]);
+				return;
+			}
 		}
 
 		WRITESINT8(p, pn);
@@ -2672,11 +2699,12 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	INT32 pnum, msg;
 	XBOXSTATIC char buf[3 + MAX_REASONLENGTH];
 	char *reason = buf;
+	kickreason_t kickreason = KR_KICK;
 
 	pnum = READUINT8(*p);
 	msg = READUINT8(*p);
 
-	if (pnum == serverplayer && playernum == adminplayer)
+	if (pnum == serverplayer && IsPlayerAdmin(playernum))
 	{
 		CONS_Printf(M_GetText("Server is being shut down remotely. Goodbye!\n"));
 
@@ -2687,7 +2715,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	}
 
 	// Is playernum authorized to make this kick?
-	if (playernum != serverplayer && playernum != adminplayer
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum)
 		&& !(playerpernode[playernode[playernum]] == 2
 		&& nodetoplayer2[playernode[playernum]] == pnum))
 	{
@@ -2736,7 +2764,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		msg = KICK_MSG_CON_FAIL;
 	}
 
-	CONS_Printf("\x82%s ", player_names[pnum]);
+	//CONS_Printf("\x82%s ", player_names[pnum]);
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
@@ -2753,15 +2781,18 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
-			CONS_Printf(M_GetText("has been kicked (Go away)\n"));
+			HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+			kickreason = KR_KICK;
 			break;
 #ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
-			CONS_Printf(M_GetText("left the game (Broke ping limit)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Broke ping limit)", player_names[pnum]), false);
+			kickreason = KR_PINGLIMIT;
 			break;
 #endif
 		case KICK_MSG_CON_FAIL:
-			CONS_Printf(M_GetText("left the game (Synch failure)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
+			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
 			{
@@ -2797,22 +2828,27 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			}
 			break;
 		case KICK_MSG_TIMEOUT:
-			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
+			HU_AddChatText(va("\x82*%s left the game (Connection timeout)", player_names[pnum]), false);
+			kickreason = KR_TIMEOUT;
 			break;
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
-				CONS_Printf(M_GetText("left the game\n"));
+				HU_AddChatText(va("\x82*%s left the game", player_names[pnum]), false);
+			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
+			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
+			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
-			CONS_Printf(M_GetText("has been kicked (%s)\n"), reason);
+			HU_AddChatText(va("\x82*%s has been kicked (%s)", player_names[pnum], reason), false);
+			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_CUSTOM_BAN:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
-			CONS_Printf(M_GetText("has been banned (%s)\n"), reason);
+			HU_AddChatText(va("\x82*%s has been banned (%s)", player_names[pnum], reason), false);
+			kickreason = KR_BAN;
 			break;
 	}
 
@@ -2840,7 +2876,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("You have been kicked by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 	else
-		CL_RemovePlayer(pnum);
+		CL_RemovePlayer(pnum, kickreason);
 }
 
 consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
@@ -2950,6 +2986,7 @@ void SV_ResetServer(void)
 		playeringame[i] = false;
 		playernode[i] = UINT8_MAX;
 		sprintf(player_names[i], "Player %d", i + 1);
+		adminplayers[i] = -1; // Populate the entire adminplayers array with -1.
 	}
 
 	mynode = 0;
@@ -3024,7 +3061,7 @@ void D_QuitNetGame(void)
 	}
 
 	D_CloseConnection();
-	adminplayer = -1;
+	ClearAdminPlayers();
 
 	DEBFILE("===========================================================================\n"
 	        "                         Log finish\n"
@@ -3055,7 +3092,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	INT16 node, newplayernum;
 	boolean splitscreenplayer;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		// protect against hacked/buggy client
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal add player command received from %s\n"), player_names[playernum]);
@@ -3084,9 +3121,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
 
-	if (netgame)
-		CONS_Printf(M_GetText("Player %d has joined the game (node %d)\n"), newplayernum+1, node);
-
 	// the server is creating my player
 	if (node == mynode)
 	{
@@ -3097,12 +3131,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			displayplayer = newplayernum;
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
-			// Apply player flags as soon as possible!
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
-			if (cv_flipcam.value)
-				players[newplayernum].pflags |= PF_FLIPCAM;
-			if (cv_analog.value)
-				players[newplayernum].pflags |= PF_ANALOGMODE;
 		}
 		else
 		{
@@ -3110,21 +3138,21 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			DEBFILE("spawning my brother\n");
 			if (botingame)
 				players[newplayernum].bot = 1;
-			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
-			if (cv_flipcam2.value)
-				players[newplayernum].pflags |= PF_FLIPCAM;
-			if (cv_analog2.value)
-				players[newplayernum].pflags |= PF_ANALOGMODE;
 		}
 		D_SendPlayerConfig();
 		addedtogame = true;
 	}
-	else if (server && netgame && cv_showjoinaddress.value)
+
+	if (netgame)
 	{
-		const char *address;
-		if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-			CONS_Printf(M_GetText("Player Address is %s\n"), address);
+		if (server && cv_showjoinaddress.value)
+		{
+			const char *address;
+			if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
+				HU_AddChatText(va("\x82*Player %d has joined the game (node %d) (%s)", newplayernum+1, node, address), false);	// merge join notification + IP to avoid clogging console/chat.
+		}
+		else
+			HU_AddChatText(va("\x82*Player %d has joined the game (node %d)", newplayernum+1, node), false);	// if you don't wanna see the join address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')
@@ -3308,7 +3336,7 @@ void SV_StopServer(void)
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
 
-	for (i = 0; i < BACKUPTICS; i++)
+	for (i = firstticstosend; i < firstticstosend + BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
 	consoleplayer = 0;
@@ -3592,7 +3620,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				gametype = netbuffer->u.servercfg.gametype;
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
-				adminplayer = netbuffer->u.servercfg.adminplayer;
+				for (j = 0; j < MAXPLAYERS; j++)
+					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -4461,6 +4490,7 @@ static void Local_Maketic(INT32 realtics)
 void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
 {
 	tic_t tic;
+	UINT8 numadjust = 0;
 
 	(void)x;
 	(void)y;
@@ -4470,7 +4500,21 @@ void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
 	// spawning, but will be applied afterwards.
 
 	for (tic = server ? maketic : (neededtic - 1); tic >= gametic; tic--)
+	{
+		if (numadjust++ == BACKUPTICS)
+		{
+			DEBFILE(va("SV_SpawnPlayer: All netcmds for player %d adjusted!\n", playernum));
+			// We already adjusted them all, waste of time doing the same thing over and over
+			// This shouldn't happen normally though, either gametic was 0 (which is handled now anyway)
+			// or maketic >= gametic + BACKUPTICS
+			// -- Monster Iestyn 16/01/18
+			break;
+		}
 		netcmds[tic%BACKUPTICS][playernum].angleturn = (INT16)((angle>>16) | TICCMD_RECEIVED);
+
+		if (!tic) // failsafe for gametic == 0 -- Monster Iestyn 16/01/18
+			break;
+	}
 }
 
 // create missed tic

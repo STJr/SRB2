@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,9 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
+#ifdef ESLOPE
+#include "p_slopes.h" // for P_SlopeById
+#endif
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -48,6 +51,7 @@ static lua_CFunction liblist[] = {
 	LUA_SkinLib, // skin_t, skins[]
 	LUA_ThinkerLib, // thinker_t
 	LUA_MapLib, // line_t, side_t, sector_t, subsector_t
+	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
 	NULL
 };
@@ -170,6 +174,7 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 		LUA_ClearState();
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
+
 	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
@@ -182,22 +187,30 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
 	char *name;
+	size_t len;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
-	name = malloc(strlen(wadfiles[wad]->filename)+10);
-	strcpy(name, wadfiles[wad]->filename);
-	if (!fasticmp(&name[strlen(name) - 4], ".lua")) {
-		// If it's not a .lua file, copy the lump name in too.
-		name[strlen(wadfiles[wad]->filename)] = '|';
-		M_Memcpy(name+strlen(wadfiles[wad]->filename)+1, wadfiles[wad]->lumpinfo[lump].name, 8);
-		name[strlen(wadfiles[wad]->filename)+9] = '\0';
+	len = strlen(wadfiles[wad]->filename); // length of file name
+
+	if (wadfiles[wad]->type == RET_LUA)
+	{
+		name = malloc(len+1);
+		strcpy(name, wadfiles[wad]->filename);
+	}
+	else // If it's not a .lua file, copy the lump name in too.
+	{
+		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
+		len += 1 + strlen(lump_p->name2); // length of file name, '|', and lump name
+		name = malloc(len+1);
+		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->name2);
+		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name);
+	LUA_LoadFile(&f, name); // actually load file!
 
 	free(name);
 	Z_Free(f.data);
@@ -455,6 +468,9 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+#ifdef ESLOPE
+	ARCH_SLOPE,
+#endif
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -474,6 +490,9 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+#ifdef ESLOPE
+	{META_SLOPE,    ARCH_SLOPE},
+#endif
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -526,9 +545,23 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TSTRING:
+	{
+		UINT16 len = (UINT16)lua_objlen(gL, myindex); // get length of string, including embedded zeros
+		const char *s = lua_tostring(gL, myindex);
+		UINT16 i = 0;
 		WRITEUINT8(save_p, ARCH_STRING);
-		WRITESTRING(save_p, lua_tostring(gL, myindex));
+		// if you're wondering why we're writing a string to save_p this way,
+		// it turns out that Lua can have embedded zeros ('\0') in the strings,
+		// so we can't use WRITESTRING as that cuts off when it finds a '\0'.
+		// Saving the size of the string also allows us to get the size of the string on the other end,
+		// fixing the awful crashes previously encountered for reading strings longer than 1024
+		// (yes I know that's kind of a stupid thing to care about, but it'd be evil to trim or ignore them?)
+		// -- Monster Iestyn 05/08/18
+		WRITEUINT16(save_p, len); // save size of string
+		while (i < len)
+			WRITECHAR(save_p, s[i++]); // write chars individually, including the embedded zeros
 		break;
+	}
 	case LUA_TTABLE:
 	{
 		boolean found = false;
@@ -664,6 +697,19 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+#ifdef ESLOPE
+		case ARCH_SLOPE:
+		{
+			pslope_t *slope = *((pslope_t **)lua_touserdata(gL, myindex));
+			if (!slope)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_SLOPE);
+				WRITEUINT16(save_p, slope->id);
+			}
+			break;
+		}
+#endif
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -767,11 +813,19 @@ static void ArchiveTables(void)
 		lua_pushnil(gL);
 		while (lua_next(gL, -2))
 		{
-			ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			// Write key
+			e = ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
+			{
+				lua_pushvalue(gL, -2);
+				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -1), luaL_typename(gL, -1), i);
+				lua_pop(gL, 1);
+			}
+			// Write value
 			e = ArchiveValue(TABLESINDEX, -1);
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
-			else if (e == 2)
+			else if (e == 2) // invalid value type
 			{
 				lua_pushvalue(gL, -2);
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
@@ -801,9 +855,19 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_STRING:
 	{
-		char value[1024];
-		READSTRING(save_p, value);
-		lua_pushstring(gL, value);
+		UINT16 len = READUINT16(save_p); // length of string, including embedded zeros
+		char *value;
+		UINT16 i = 0;
+		// See my comments in the ArchiveValue function;
+		// it's much the same for reading strings as writing them!
+		// (i.e. we can't use READSTRING either)
+		// -- Monster Iestyn 05/08/18
+		value = malloc(len); // make temp buffer of size len
+		// now read the actual string
+		while (i < len)
+			value[i++] = READCHAR(save_p); // read chars individually, including the embedded zeros
+		lua_pushlstring(gL, value, len); // push the string (note: this function supports embedded zeros)
+		free(value); // free the buffer
 		break;
 	}
 	case ARCH_TABLE:
@@ -850,8 +914,13 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
+#ifdef ESLOPE
+	case ARCH_SLOPE:
+		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
+		break;
+#endif
 	case ARCH_MAPHEADER:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
+		LUA_PushUserdata(gL, mapheaderinfo[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;
@@ -913,11 +982,17 @@ static void UnArchiveTables(void)
 		lua_rawgeti(gL, TABLESINDEX, i);
 		while (true)
 		{
-			if (UnArchiveValue(TABLESINDEX) == 1)
+			if (UnArchiveValue(TABLESINDEX) == 1) // read key
 				break;
-			if (UnArchiveValue(TABLESINDEX) == 2)
+			if (UnArchiveValue(TABLESINDEX) == 2) // read value
 				n++;
-			lua_rawset(gL, -3);
+			if (lua_isnil(gL, -2)) // if key is nil (if a function etc was accidentally saved)
+			{
+				CONS_Alert(CONS_ERROR, "A nil key in table %d was found! (Invalid key type or corrupted save?)\n", i);
+				lua_pop(gL, 2); // pop key and value instead of setting them in the table, to prevent Lua panic errors
+			}
+			else
+				lua_rawset(gL, -3);
 		}
 		lua_pop(gL, 1);
 	}

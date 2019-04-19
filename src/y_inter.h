@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2016 by Sonic Team Junior.
+// Copyright (C) 2004-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,6 @@ void Y_IntermissionDrawer(void);
 void Y_Ticker(void);
 void Y_StartIntermission(void);
 void Y_EndIntermission(void);
-void Y_EndGame(void);
 
 typedef enum
 {

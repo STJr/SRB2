@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -83,6 +83,8 @@ extern angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
 FUNCMATH unsigned SlopeDiv(unsigned num, unsigned den);
+// Only called by R_PointToAngleEx
+UINT64 SlopeDivEx(unsigned int num, unsigned int den);
 
 // 360 - angle_t(ANGLE_45) = ANGLE_315
 FUNCMATH FUNCINLINE static ATTRINLINE angle_t InvAngle(angle_t a)

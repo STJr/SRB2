@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -93,8 +93,6 @@ void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
 INT32 R_ColormapNumForName(char *name);
 INT32 R_CreateColormap(char *p1, char *p2, char *p3);
-void R_CreateColormap2(char *p1, char *p2, char *p3);
-void R_MakeColormaps(void);
 const char *R_ColormapNameForNum(INT32 num);
 
 extern INT32 numtextures;
