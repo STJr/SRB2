@@ -237,10 +237,8 @@ typedef struct linechain_s
 // Slopes
 #ifdef ESLOPE
 typedef enum {
-	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
-	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
-	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
-	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
+	SL_DYNAMIC = 1<<1, /// This plane slope will be assigned a thinker to make it dynamic.
 } slopeflags_t;
 
 typedef struct pslope_s
@@ -251,9 +249,6 @@ typedef struct pslope_s
 	// The plane's definition.
 	vector3_t o;		/// Plane origin.
 	vector3_t normal;	/// Plane normal.
-
-	// For comparing when a slope should be rendered
-	fixed_t lowz, highz;
 
 	vector2_t d;		/// Precomputed normalized projection of the normal over XY.
 	fixed_t zdelta;		/// Precomputed Z unit increase per XY unit.

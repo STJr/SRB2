@@ -262,10 +262,8 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	UINT8 flags = 0; // Slope flags
 	if (line->flags & ML_NOSONIC)
 		flags |= SL_NOPHYSICS;
-	if (!(line->flags & ML_NOTAILS))
-		flags |= SL_NODYNAMIC;
-	if (line->flags & ML_NOKNUX)
-		flags |= SL_ANCHORVERTEX;
+	if (line->flags & ML_NOTAILS)
+		flags |= SL_DYNAMIC;
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
@@ -316,8 +314,6 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(frontfloor)
 		{
-			fixed_t highest, lowest;
-			size_t l;
 			point.z = line->frontsector->floorheight; // Startz
 			dz = FixedDiv(origin.z - point.z, extent); // Destinationz
 
@@ -331,45 +327,16 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			// fslope->d = destination 3D point 2 of the vector
 			// fslope->normal is a 3D line perpendicular to the 3D vector
 
-			// To find the real highz/lowz of a slope, you need to check all the vertexes
-			// in the slope's sector with P_GetZAt to get the REAL lowz & highz
-			// Although these slopes are set by floorheights the ANGLE is what a slope is,
-			// so technically any slope can extend on forever (they are just bound by sectors)
-
-			// Default points for high and low
-			highest = point.z > origin.z ? point.z : origin.z;
-			lowest = point.z < origin.z ? point.z : origin.z;
-
-			// Now check to see what the REAL high and low points of the slope inside the sector
-			// TODO: Is this really needed outside of FOFs? -Red
-
-			for (l = 0; l < line->frontsector->linecount; l++)
-			{
-				fixed_t height = P_GetZAt(line->frontsector->f_slope, line->frontsector->lines[l]->v1->x, line->frontsector->lines[l]->v1->y);
-
-				if (height > highest)
-					highest = height;
-
-				if (height < lowest)
-					lowest = height;
-			}
-
-			// Sets extra clipping data for the frontsector's slope
-			fslope->highz = highest;
-			fslope->lowz = lowest;
-
 			fslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
 
-			if (spawnthinker && !(flags & SL_NODYNAMIC))
+			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynSlopeThinker(fslope, DP_FRONTFLOOR, line, extent, NULL, NULL);
 		}
 		if(frontceil)
 		{
-			fixed_t highest, lowest;
-			size_t l;
 			origin.z = line->backsector->ceilingheight;
 			point.z = line->frontsector->ceilingheight;
 			dz = FixedDiv(origin.z - point.z, extent);
@@ -377,31 +344,12 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope = line->frontsector->c_slope =
             MakeViaVectors(&point, &direction, dz, flags);
 
-			// Remember the way the slope is formed
-			highest = point.z > origin.z ? point.z : origin.z;
-			lowest = point.z < origin.z ? point.z : origin.z;
-
-			for (l = 0; l < line->frontsector->linecount; l++)
-			{
-				fixed_t height = P_GetZAt(line->frontsector->c_slope, line->frontsector->lines[l]->v1->x, line->frontsector->lines[l]->v1->y);
-
-				if (height > highest)
-					highest = height;
-
-				if (height < lowest)
-					lowest = height;
-			}
-
-			// This line special sets extra clipping data for the frontsector's slope
-			cslope->highz = highest;
-			cslope->lowz = lowest;
-
 			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
 
-			if (spawnthinker && !(flags & SL_NODYNAMIC))
+			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynSlopeThinker(cslope, DP_FRONTCEIL, line, extent, NULL, NULL);
 		}
 	}
@@ -430,45 +378,22 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(backfloor)
 		{
-			fixed_t highest, lowest;
-			size_t l;
 			point.z = line->backsector->floorheight;
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			fslope = line->backsector->f_slope =
             MakeViaVectors(&point, &direction, dz, flags);
 
-			// Remember the way the slope is formed
-			highest = point.z > origin.z ? point.z : origin.z;
-			lowest = point.z < origin.z ? point.z : origin.z;
-
-			for (l = 0; l < line->backsector->linecount; l++)
-			{
-				fixed_t height = P_GetZAt(line->backsector->f_slope, line->backsector->lines[l]->v1->x, line->backsector->lines[l]->v1->y);
-
-				if (height > highest)
-					highest = height;
-
-				if (height < lowest)
-					lowest = height;
-			}
-
-			// This line special sets extra clipping data for the frontsector's slope
-			fslope->highz = highest;
-			fslope->lowz = lowest;
-
 			fslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
 
-			if (spawnthinker && !(flags & SL_NODYNAMIC))
+			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynSlopeThinker(fslope, DP_BACKFLOOR, line, extent, NULL, NULL);
 		}
 		if(backceil)
 		{
-			fixed_t highest, lowest;
-			size_t l;
 			origin.z = line->frontsector->ceilingheight;
 			point.z = line->backsector->ceilingheight;
 			dz = FixedDiv(origin.z - point.z, extent);
@@ -476,31 +401,12 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope = line->backsector->c_slope =
             MakeViaVectors(&point, &direction, dz, flags);
 
-			// Remember the way the slope is formed
-			highest = point.z > origin.z ? point.z : origin.z;
-			lowest = point.z < origin.z ? point.z : origin.z;
-
-			for (l = 0; l < line->backsector->linecount; l++)
-			{
-				fixed_t height = P_GetZAt(line->backsector->c_slope, line->backsector->lines[l]->v1->x, line->backsector->lines[l]->v1->y);
-
-				if (height > highest)
-					highest = height;
-
-				if (height < lowest)
-					lowest = height;
-			}
-
-			// This line special sets extra clipping data for the backsector's slope
-			cslope->highz = highest;
-			cslope->lowz = lowest;
-
 			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
 
-			if (spawnthinker && !(flags & SL_NODYNAMIC))
+			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
 		}
 	}
@@ -548,7 +454,7 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 
 	ReconfigureViaVertexes(ret, vx[0], vx[1], vx[2]);
 
-	if (spawnthinker && !(flags & SL_NODYNAMIC))
+	if (spawnthinker && (flags & SL_DYNAMIC))
 		P_AddDynSlopeThinker(ret, DP_VERTEX, NULL, 0, tags, vx);
 
 	return ret;
@@ -562,11 +468,11 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	pslope_t **slopetoset;
 	UINT16 tag1, tag2, tag3;
 
-	UINT8 flags = SL_VERTEXSLOPE;
+	UINT8 flags = 0;
 	if (line->flags & ML_NOSONIC)
 		flags |= SL_NOPHYSICS;
-	if (!(line->flags & ML_NOTAILS))
-		flags |= SL_NODYNAMIC;
+	if (line->flags & ML_NOTAILS)
+		flags |= SL_DYNAMIC;
 
 	switch(line->special)
 	{
