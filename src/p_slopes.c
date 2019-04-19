@@ -31,8 +31,8 @@ UINT16 slopecount = 0;
 // Calculate line normal
 void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
-	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
-	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
+	slope->normal.x = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
+	slope->normal.y = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
 }
 
 /// Setup slope via 3 vertexes.
@@ -51,7 +51,6 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	if (vec1.z == 0 && vec2.z == 0)
 	{
 		/// \todo Fix fully flat cases.
-		CONS_Printf("Please fix me\n");
 
 		slope->zangle = slope->xydirection = 0;
 		slope->zdelta = slope->d.x = slope->d.y = 0;
