@@ -2911,7 +2911,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_InitSpecials();
 
 #ifdef ESLOPE
-	P_ResetDynamicSlopes();
+	P_ResetDynamicSlopes(fromnetsave);
 #endif
 
 	P_LoadThings(loademblems);

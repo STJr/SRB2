@@ -25,11 +25,6 @@
 // Object place
 #include "m_cheat.h"
 
-#ifdef ESLOPE
-// Dynamic slopes
-#include "p_slopes.h"
-#endif
-
 tic_t leveltime;
 
 //
@@ -614,11 +609,6 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		#ifdef ESLOPE
-		// Dynamic slopeness
-		P_RunDynamicSlopes();
-		#endif
-
 		P_RunThinkers();
 
 		// Run any "after all the other thinkers" stuff
@@ -733,11 +723,6 @@ void P_PreTicker(INT32 frames)
 
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
 			}
-
-#ifdef ESLOPE
-		// Dynamic slopeness
-		P_RunDynamicSlopes();
-#endif
 
 		P_RunThinkers();
 
