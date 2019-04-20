@@ -7351,14 +7351,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
 
-#ifdef ESLOPE // Slope copy specials. Handled here for sanity.
-			case 720:
-			case 721:
-			case 722:
-				P_CopySectorSlope(&lines[i]);
-				break;
-#endif
-
 			default:
 				break;
 		}

@@ -599,8 +599,7 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 	dynthinklist = NULL;
 	dynthinknum = 0;
 
-	// We'll handle copy slopes later, after all the tag lists have been made.
-	// Yes, this means copied slopes won't affect things' spawning heights. Too bad for you.
+	/// Generates line special-defined slopes.
 	for (i = 0; i < numlines; i++)
 	{
 		switch (lines[i].special)
@@ -627,10 +626,20 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 				break;
 		}
 	}
+
+	/// Copies slopes from tagged sectors via line specials.
+	/// \note Doesn't actually copy, but instead they share the same pointers.
+	for (i = 0; i < numlines; i++)
+		switch (lines[i].special)
+		{
+			case 720:
+			case 721:
+			case 722:
+				P_CopySectorSlope(&lines[i]);
+			default:
+				break;
+		}
 }
-
-
-
 
 // ============================================================================
 //
