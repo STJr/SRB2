@@ -1644,7 +1644,7 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 	e->sector = sector;
 	e->timer = (line->backsector->ceilingheight>>FRACBITS)+(line->backsector->floorheight>>FRACBITS);
 	P_SetTarget(&e->caller, mobj); // Use P_SetTarget to make sure the mobj doesn't get freed while we're delaying.
-	P_AddThinker(&e->thinker);
+	P_AddThinker(THINK_MAIN, &e->thinker);
 }
 
 /** Used by P_RunTriggerLinedef to check a NiGHTS trigger linedef's conditions
@@ -2253,7 +2253,7 @@ void P_SwitchWeather(INT32 weathernum)
 		thinker_t *think;
 		precipmobj_t *precipmobj;
 
-		for (think = thinkercap.next; think != &thinkercap; think = think->next)
+		for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -2269,7 +2269,7 @@ void P_SwitchWeather(INT32 weathernum)
 		precipmobj_t *precipmobj;
 		state_t *st;
 
-		for (think = thinkercap.next; think != &thinkercap; think = think->next)
+		for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -3136,7 +3136,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				scroll_t *scroller;
 				thinker_t *th;
 
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)T_Scroll)
 						continue;
@@ -3972,7 +3972,7 @@ void P_SetupSignExit(player_t *player)
 
 	// didn't find any signposts in the exit sector.
 	// spin all signposts in the level then.
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4004,7 +4004,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 	mobj_t *mo;
 	INT32 specialnum = 0;
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4437,7 +4437,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Find the center of the Eggtrap and release all the pretty animals!
 			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -4743,7 +4743,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -4822,7 +4822,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the last waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -4974,7 +4974,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5012,7 +5012,7 @@ DoneSection2:
 				}
 
 				// Find waypoint before this one (waypointlow)
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5039,7 +5039,7 @@ DoneSection2:
 				}
 
 				// Find waypoint after this one (waypointhigh)
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5758,7 +5758,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	// Just initialise both of these to placate the compiler.
 	i = 0;
-	th = thinkercap.next;
+	th = thlist[THINK_MAIN].next;
 
 	for(;;)
 	{
@@ -5768,7 +5768,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 				th = secthinkers[sec2num].thinkers[i];
 			else break;
 		}
-		else if (th == &thinkercap)
+		else if (th == &thlist[THINK_MAIN])
 			break;
 
 		// Should this FOF have spikeness?
@@ -5858,7 +5858,7 @@ static void P_AddSpikeThinker(sector_t *sec, INT32 referrer)
 
 	// create and initialize new thinker
 	spikes = Z_Calloc(sizeof (*spikes), PU_LEVSPEC, NULL);
-	P_AddThinker(&spikes->thinker);
+	P_AddThinker(THINK_MAIN, &spikes->thinker);
 
 	spikes->thinker.function.acp1 = (actionf_p1)T_SpikeSector;
 
@@ -5880,7 +5880,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 
 	// create and initialize new thinker
 	floater = Z_Calloc(sizeof (*floater), PU_LEVSPEC, NULL);
-	P_AddThinker(&floater->thinker);
+	P_AddThinker(THINK_MAIN, &floater->thinker);
 
 	floater->thinker.function.acp1 = (actionf_p1)T_FloatSector;
 
@@ -5904,7 +5904,7 @@ static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 
 	// create an initialize new thinker
 	bridge = Z_Calloc(sizeof (*bridge), PU_LEVSPEC, NULL);
-	P_AddThinker(&bridge->thinker);
+	P_AddThinker(THINK_MAIN, &bridge->thinker);
 
 	bridge->thinker.function.acp1 = (actionf_p1)T_BridgeThinker;
 
@@ -5940,7 +5940,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 
 	// create and initialize new displacement thinker
 	displace = Z_Calloc(sizeof (*displace), PU_LEVSPEC, NULL);
-	P_AddThinker(&displace->thinker);
+	P_AddThinker(THINK_MAIN, &displace->thinker);
 
 	displace->thinker.function.acp1 = (actionf_p1)T_PlaneDisplace;
 	displace->affectee = affectee;
@@ -5967,7 +5967,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 
 	// create and initialize new elevator thinker
 	block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
-	P_AddThinker(&block->thinker);
+	P_AddThinker(THINK_MAIN, &block->thinker);
 
 	block->thinker.function.acp1 = (actionf_p1)T_MarioBlockChecker;
 	block->sourceline = sourceline;
@@ -5996,7 +5996,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	levelspecthink_t *raise;
 
 	raise = Z_Calloc(sizeof (*raise), PU_LEVSPEC, NULL);
-	P_AddThinker(&raise->thinker);
+	P_AddThinker(THINK_MAIN, &raise->thinker);
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
@@ -6035,7 +6035,7 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	levelspecthink_t *airbob;
 
 	airbob = Z_Calloc(sizeof (*airbob), PU_LEVSPEC, NULL);
-	P_AddThinker(&airbob->thinker);
+	P_AddThinker(THINK_MAIN, &airbob->thinker);
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
@@ -6096,7 +6096,7 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 
 	// create and initialize new elevator thinker
 	thwomp = Z_Calloc(sizeof (*thwomp), PU_LEVSPEC, NULL);
-	P_AddThinker(&thwomp->thinker);
+	P_AddThinker(THINK_MAIN, &thwomp->thinker);
 
 	thwomp->thinker.function.acp1 = (actionf_p1)T_ThwompSector;
 
@@ -6132,7 +6132,7 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
 
 	// create and initialize new thinker
 	nobaddies = Z_Calloc(sizeof (*nobaddies), PU_LEVSPEC, NULL);
-	P_AddThinker(&nobaddies->thinker);
+	P_AddThinker(THINK_MAIN, &nobaddies->thinker);
 
 	nobaddies->thinker.function.acp1 = (actionf_p1)T_NoEnemiesSector;
 
@@ -6154,7 +6154,7 @@ static inline void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
 
 	// create and initialize new thinker
 	eachtime = Z_Calloc(sizeof (*eachtime), PU_LEVSPEC, NULL);
-	P_AddThinker(&eachtime->thinker);
+	P_AddThinker(THINK_MAIN, &eachtime->thinker);
 
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
@@ -6176,7 +6176,7 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(&elevator->thinker);
+	P_AddThinker(THINK_MAIN, &elevator->thinker);
 
 	elevator->thinker.function.acp1 = (actionf_p1)T_CameraScanner;
 	elevator->type = elevateBounce;
@@ -6272,7 +6272,7 @@ static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *lin
 
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LaserFlash;
 	flash->ffloor = ffloor;
@@ -6441,7 +6441,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	secthinkers = Z_Calloc(numsectors * sizeof(thinkerlist_t), PU_STATIC, NULL);
 
 	// Firstly, find out how many there are in each sector
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
 			secthinkers[((levelspecthink_t *)th)->sector - sectors].count++;
@@ -6461,7 +6461,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		}
 
 	// Finally, populate the lists.
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		size_t secnum = (size_t)-1;
 
@@ -7723,7 +7723,7 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	if ((s->control = control) != -1)
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
-	P_AddThinker(&s->thinker);
+	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
 /** Initializes the scrollers.
@@ -7892,7 +7892,7 @@ static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t o
 	d->exists = true;
 	d->timer = 1;
 
-	P_AddThinker(&d->thinker);
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 /** Makes a FOF appear/disappear
@@ -8381,7 +8381,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT);
 	}
 
-	P_AddThinker(&d->thinker);
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 /** Makes a FOF fade
@@ -8451,7 +8451,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 	}
 
 	sector->fadecolormapdata = d;
-	P_AddThinker(&d->thinker); // add thinker
+	P_AddThinker(THINK_MAIN, &d->thinker); // add thinker
 }
 
 void T_FadeColormap(fadecolormap_t *d)
@@ -8570,7 +8570,7 @@ static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32
 	else
 		f->roverfriction = false;
 
-	P_AddThinker(&f->thinker);
+	P_AddThinker(THINK_MAIN, &f->thinker);
 }
 
 /** Applies friction to all things in a sector.
@@ -8736,7 +8736,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 		p->z = p->source->z;
 	}
 	p->affectee = affectee;
-	P_AddThinker(&p->thinker);
+	P_AddThinker(THINK_MAIN, &p->thinker);
 }
 
 

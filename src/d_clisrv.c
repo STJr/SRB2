@@ -4228,12 +4228,12 @@ static INT16 Consistancy(void)
 		ret += P_GetRandSeed();
 
 #ifdef MOBJCONSISTANCY
-	if (!thinkercap.next)
+	if (!thlist[THINK_MAIN].next)
 	{
 		DEBFILE(va("Consistancy = %u\n", ret));
 		return ret;
 	}
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;

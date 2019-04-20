@@ -713,7 +713,7 @@ void P_EmeraldManager(void)
 		spawnpoints[i] = NULL;
 	}
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -3699,7 +3699,7 @@ void P_DestroyRobots(void)
 	mobj_t *mo;
 	thinker_t *think;
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4483,7 +4483,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			// scan the thinkers to make sure all the old pinch dummies are gone before making new ones
 			// this can happen if the boss was hurt earlier than expected
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -4574,7 +4574,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 		// scan the thinkers
 		// to find a point that matches
 		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5195,7 +5195,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				closestdist = INT32_MAX; // Just in case...
 
 				// Find waypoint he is closest to
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5250,7 +5250,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		// scan the thinkers to find
 		// the waypoint to use
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5382,7 +5382,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 		// Run through the thinkers ONCE and find all of the MT_BOSS9GATHERPOINT in the map.
 		// Build a hoop linked list of 'em!
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5848,7 +5848,7 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	fixed_t dist1, dist2 = 0;
 
 	// scan the thinkers to find the closest axis point
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -9047,7 +9047,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	}
 
 	if (!(mobj->flags & MF_NOTHINK))
-		P_AddThinker(&mobj->thinker);
+		P_AddThinker(THINK_MAIN, &mobj->thinker);
 
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
@@ -9122,7 +9122,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->momz = mobjinfo[type].speed;
 
 	mobj->thinker.function.acp1 = (actionf_p1)P_NullPrecipThinker;
-	P_AddThinker(&mobj->thinker);
+	P_AddThinker(THINK_MAIN, &mobj->thinker);
 
 	CalculatePrecipFloor(mobj);
 
@@ -9246,7 +9246,7 @@ void P_RemoveMobj(mobj_t *mobj)
 		else
 		{ // Add thinker just to delay removing it until refrences are gone.
 			mobj->flags &= ~MF_NOTHINK;
-			P_AddThinker((thinker_t *)mobj);
+			P_AddThinker(THINK_MAIN, (thinker_t *)mobj);
 #ifdef SCRAMBLE_REMOVED
 			// Invalidate mobj_t data to cause crashes if accessed!
 			memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
@@ -11085,7 +11085,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->health = (mthing->angle / 360) + 1;
 
 		// See if other starposts exist in this level that have the same value.
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;

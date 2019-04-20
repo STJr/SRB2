@@ -577,7 +577,7 @@ void Command_Teleport_f(void)
 			INT32 starpostmax = 0;
 			intz = starpostpath; // variable reuse - counting down for selection purposes
 
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -600,7 +600,7 @@ void Command_Teleport_f(void)
 				break;
 			}
 
-			if (th == &thinkercap)
+			if (th == &thlist[THINK_MAIN])
 			{
 				if (intz == starpostpath)
 					CONS_Alert(CONS_NOTICE, M_GetText("No starpost of position %d found (%d max).\n"), starpostnum, starpostmax);
@@ -1069,7 +1069,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 		thinker_t *th;
 		mobj_t *mo;
 
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;

@@ -35,8 +35,8 @@ tic_t leveltime;
 // but the first element must be thinker_t.
 //
 
-// Both the head and tail of the thinker list.
-thinker_t thinkercap;
+// The entries will behave like both the head and tail of the lists.
+thinker_t thlist[NUM_THINKERLISTS];
 
 void Command_Numthinkers_f(void)
 {
@@ -102,7 +102,7 @@ void Command_Numthinkers_f(void)
 			return;
 	}
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 	{
 		if (think->function.acp1 != action)
 			continue;
@@ -139,7 +139,7 @@ void Command_CountMobjs_f(void)
 
 			count = 0;
 
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -159,7 +159,7 @@ void Command_CountMobjs_f(void)
 	{
 		count = 0;
 
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -178,19 +178,18 @@ void Command_CountMobjs_f(void)
 //
 void P_InitThinkers(void)
 {
-	thinkercap.prev = thinkercap.next = &thinkercap;
+	UINT8 i;
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		thlist[i].prev = thlist[i].next = &thlist[i];
 }
 
-//
-// P_AddThinker
 // Adds a new thinker at the end of the list.
-//
-void P_AddThinker(thinker_t *thinker)
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 {
-	thinkercap.prev->next = thinker;
-	thinker->next = &thinkercap;
-	thinker->prev = thinkercap.prev;
-	thinkercap.prev = thinker;
+	thlist[n].prev->next = thinker;
+	thinker->next = &thlist[n];
+	thinker->prev = thlist[n].prev;
+	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
 }
@@ -296,11 +295,17 @@ if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its count
 //
 static inline void P_RunThinkers(void)
 {
-	for (currentthinker = thinkercap.next; currentthinker != &thinkercap; currentthinker = currentthinker->next)
+	size_t i;
+	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		if (currentthinker->function.acp1)
-			currentthinker->function.acp1(currentthinker);
+		//CONS_Printf("Running thinker list %d.\n", i);
+		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
+		{
+			if (currentthinker->function.acp1)
+				currentthinker->function.acp1(currentthinker);
+		}
 	}
+
 }
 
 //

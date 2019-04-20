@@ -3514,7 +3514,7 @@ void A_BossDeath(mobj_t *mo)
 
 	// scan the remaining thinkers to see
 	// if all bosses are dead
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -3573,7 +3573,7 @@ bossjustdie:
 
 		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
 		// scan the thinkers to find the runaway point
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5759,7 +5759,7 @@ void A_RingExplode(mobj_t *actor)
 
 	S_StartSound(actor, sfx_prloop);
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -7435,7 +7435,7 @@ void A_Boss3Path(mobj_t *actor)
 		// scan the thinkers
 		// to find a point that matches
 		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -7826,7 +7826,7 @@ void A_FindTarget(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTarget called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -7891,7 +7891,7 @@ void A_FindTracer(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTracer called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -8454,7 +8454,7 @@ void A_RemoteAction(mobj_t *actor)
 		fixed_t dist1 = 0, dist2 = 0;
 
 		// scan the thinkers
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -8720,7 +8720,7 @@ void A_SetObjectTypeState(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -9358,7 +9358,7 @@ void A_CheckThingCount(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;

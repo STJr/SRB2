@@ -64,7 +64,7 @@ static int lib_iterateThinkers(lua_State *L)
 	lua_settop(L, 2);
 
 	if (lua_isnil(L, 2))
-		th = &thinkercap;
+		th = &thlist[THINK_MAIN];
 	else if (lua_isuserdata(L, 2))
 	{
 		if (lua_islightuserdata(L, 2))
@@ -94,11 +94,11 @@ static int lib_iterateThinkers(lua_State *L)
 	if (!next)
 		return luaL_error(L, "next thinker invalidated during iteration");
 
-	for (; next != &thinkercap; next = next->next)
+	for (; next != &thlist[THINK_MAIN]; next = next->next)
 		if (!it->filter || next->function.acp1 == it->filter)
 		{
 			push_thinker(next);
-			if (next->next != &thinkercap)
+			if (next->next != &thlist[THINK_MAIN])
 			{
 				push_thinker(next->next);
 				it->next = luaL_ref(L, LUA_REGISTRYINDEX);

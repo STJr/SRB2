@@ -421,7 +421,7 @@ void LUA_InvalidateLevel(void)
 	if (!gL)
 		return;
 
-	for (th = thinkercap.next; th && th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th && th != &thlist[THINK_MAIN]; th = th->next)
 		LUA_InvalidateUserdata(th);
 
 	LUA_InvalidateMapthings();
@@ -1127,7 +1127,7 @@ void LUA_Archive(void)
 		ArchiveExtVars(&players[i], "player");
 	}
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{
 			// archive function will determine when to skip mobjs,
@@ -1161,7 +1161,7 @@ void LUA_UnArchive(void)
 
 	do {
 		mobjnum = READUINT32(save_p); // read a mobjnum
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 			if (th->function.acp1 == (actionf_p1)P_MobjThinker
 			&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
 				UnArchiveExtVars(th); // apply variables

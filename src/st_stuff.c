@@ -2289,7 +2289,7 @@ static void ST_doItemFinderIconsAndSound(void)
 		return;
 
 	// Scan thinkers to find emblem mobj with these ids
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;

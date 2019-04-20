@@ -61,15 +61,16 @@
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
-//
-// P_TICK
-//
-
 // both the head and tail of the thinker list
-extern thinker_t thinkercap;
+typedef enum{
+	THINK_POLYOBJ,
+	THINK_MAIN,
+	NUM_THINKERLISTS
+} thinklistnum_t; /**< Thinker lists. */
+extern thinker_t thlist[];
 
 void P_InitThinkers(void);
-void P_AddThinker(thinker_t *thinker);
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
 //
