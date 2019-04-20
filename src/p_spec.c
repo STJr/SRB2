@@ -3972,7 +3972,7 @@ void P_SetupSignExit(player_t *player)
 
 	// didn't find any signposts in the exit sector.
 	// spin all signposts in the level then.
-	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4004,7 +4004,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 	mobj_t *mo;
 	INT32 specialnum = 0;
 
-	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4437,7 +4437,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Find the center of the Eggtrap and release all the pretty animals!
 			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -4743,7 +4743,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -4822,7 +4822,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the last waypoint
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -4974,7 +4974,7 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5012,7 +5012,7 @@ DoneSection2:
 				}
 
 				// Find waypoint before this one (waypointlow)
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5039,7 +5039,7 @@ DoneSection2:
 				}
 
 				// Find waypoint after this one (waypointhigh)
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -8451,7 +8451,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 	}
 
 	sector->fadecolormapdata = d;
-	P_AddThinker(THINK_MAIN, &d->thinker); // add thinker
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 void T_FadeColormap(fadecolormap_t *d)

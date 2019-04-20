@@ -139,7 +139,7 @@ void Command_CountMobjs_f(void)
 
 			count = 0;
 
-			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -159,7 +159,7 @@ void Command_CountMobjs_f(void)
 	{
 		count = 0;
 
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -298,7 +298,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		//CONS_Printf("Running thinker list %d.\n", i);
+		CONS_Printf("Running thinker list %d.\n", i);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 			if (currentthinker->function.acp1)

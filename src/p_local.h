@@ -65,6 +65,7 @@
 typedef enum{
 	THINK_POLYOBJ,
 	THINK_MAIN,
+	THINK_MOBJ,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
 extern thinker_t thlist[];

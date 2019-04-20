@@ -9047,7 +9047,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	}
 
 	if (!(mobj->flags & MF_NOTHINK))
-		P_AddThinker(THINK_MAIN, &mobj->thinker);
+		P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
@@ -9122,7 +9122,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->momz = mobjinfo[type].speed;
 
 	mobj->thinker.function.acp1 = (actionf_p1)P_NullPrecipThinker;
-	P_AddThinker(THINK_MAIN, &mobj->thinker);
+	P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	CalculatePrecipFloor(mobj);
 
@@ -9246,7 +9246,7 @@ void P_RemoveMobj(mobj_t *mobj)
 		else
 		{ // Add thinker just to delay removing it until refrences are gone.
 			mobj->flags &= ~MF_NOTHINK;
-			P_AddThinker(THINK_MAIN, (thinker_t *)mobj);
+			P_AddThinker(THINK_MOBJ, (thinker_t *)mobj);
 #ifdef SCRAMBLE_REMOVED
 			// Invalidate mobj_t data to cause crashes if accessed!
 			memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));

@@ -2381,7 +2381,7 @@ mobj_t *P_FindNewPosition(UINT32 oldposition)
 	thinker_t *th;
 	mobj_t *mobj;
 
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -3636,7 +3636,7 @@ static inline void P_FinishMobjs(void)
 	mobj_t *mobj;
 
 	// put info field there real value
-	for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN];
+	for (currentthinker = thlist[THINK_MOBJ].next; currentthinker != &thlist[THINK_MOBJ];
 		currentthinker = currentthinker->next)
 	{
 		if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
@@ -3654,7 +3654,7 @@ static void P_RelinkPointers(void)
 	UINT32 temp;
 
 	// use info field (value = oldposition) to relink mobjs
-	for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN];
+	for (currentthinker = thlist[THINK_MOBJ].next; currentthinker != &thlist[THINK_MOBJ];
 		currentthinker = currentthinker->next)
 	{
 		if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
@@ -4035,7 +4035,7 @@ void P_SaveNetGame(void)
 	P_NetArchiveMisc();
 
 	// Assign the mobjnumber for pointer tracking
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{

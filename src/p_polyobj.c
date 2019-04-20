@@ -1508,7 +1508,7 @@ void Polyobj_InitLevel(void)
 
 	// run down the thinker list, count the number of spawn points, and save
 	// the mobj_t pointers on a queue for use below.
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{
@@ -1816,7 +1816,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 	// Find out target first.
 	// We redo this each tic to make savegame compatibility easier.
-	for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
 		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 			continue;
@@ -1897,7 +1897,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
 
 			// Find next waypoint
-			for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+			for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 			{
 				if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 					continue;
@@ -1936,7 +1936,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 					th->stophere = true;
 				}
 
-				for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
 					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 						continue;
@@ -1973,7 +1973,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 				if (!th->continuous)
 					th->comeback = false;
 
-				for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
 					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 						continue;
@@ -2524,7 +2524,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
-	for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
 		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 			continue;
@@ -2595,7 +2595,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Find the actual target movement waypoint
 	target = first;
-	/*for (wp = thlist[THINK_MAIN].next; wp != &thlist[THINK_MAIN]; wp = wp->next)
+	/*for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
 		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 			continue;
