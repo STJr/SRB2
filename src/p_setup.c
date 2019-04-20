@@ -2912,6 +2912,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 #ifdef ESLOPE
 	P_ResetDynamicSlopes(fromnetsave);
+	P_LinkSlopeThinkers(); // Spawn slope thinkers just after plane move thinkers to avoid movement/update delays.
 #endif
 
 	P_LoadThings(loademblems);

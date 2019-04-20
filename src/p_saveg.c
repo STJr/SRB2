@@ -1997,8 +1997,6 @@ static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type
 {
 	const dynplanethink_t* ht = (const void*)th;
 
-	CONS_Printf("Number of slopes: %d\n", slopecount);
-
 	WRITEUINT8(save_p, type);
 	WRITEUINT8(save_p, ht->type);
 	WRITEUINT32(save_p, SaveSlope(ht->slope));
