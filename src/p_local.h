@@ -61,7 +61,6 @@
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
-// both the head and tail of the thinker list
 typedef enum{
 	THINK_POLYOBJ,
 	THINK_MAIN,

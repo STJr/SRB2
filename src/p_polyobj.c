@@ -1647,7 +1647,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotate: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -1732,7 +1732,7 @@ void T_PolyObjMove(polymove_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjMove: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -1805,7 +1805,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjWaypoint: thinker with invalid id %d removed.", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2079,7 +2079,7 @@ void T_PolyDoorSlide(polyslidedoor_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSlide: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2184,7 +2184,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSwing: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2283,7 +2283,7 @@ void T_PolyObjDisplace(polydisplace_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2323,7 +2323,7 @@ void T_PolyObjRotDisplace(polyrotdisplace_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2865,7 +2865,7 @@ void T_PolyObjFlag(polymove_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFlag: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2968,7 +2968,7 @@ void T_PolyObjFade(polyfade_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFade: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
