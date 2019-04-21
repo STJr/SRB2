@@ -5558,11 +5558,6 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
-#ifdef ESLOPE
-	// Dynamic slopeness
-	P_RunDynamicSlopes();
-#endif
-
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
 	{
@@ -7355,14 +7350,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
-
-#ifdef ESLOPE // Slope copy specials. Handled here for sanity.
-			case 720:
-			case 721:
-			case 722:
-				P_CopySectorSlope(&lines[i]);
-				break;
-#endif
 
 			default:
 				break;
