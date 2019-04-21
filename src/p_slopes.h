@@ -10,6 +10,9 @@
 /// \file  p_slopes.c
 /// \brief ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
 
+#ifndef P_SLOPES_H__
+#define P_SLOPES_H__
+
 #include "m_fixed.h" // Vectors
 
 #ifdef ESLOPE
@@ -72,3 +75,4 @@ typedef struct
 void T_DynamicSlopeLine (dynplanethink_t* th);
 void T_DynamicSlopeVert (dynplanethink_t* th);
 #endif // #ifdef ESLOPE
+#endif // #ifndef P_SLOPES_H__
