@@ -1981,11 +1981,8 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		if (!rover || (rover->flags & FF_EXISTS))
 		{
 			// scan the thinkers to find players!
-			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
-
 				mo = (mobj_t *)th;
 				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator
 				    && mo->z <= thwomp->sector->ceilingheight

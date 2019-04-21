@@ -141,9 +141,6 @@ void Command_CountMobjs_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
-
 				if (((mobj_t *)th)->type == i)
 					count++;
 			}
@@ -161,9 +158,6 @@ void Command_CountMobjs_f(void)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
 			if (((mobj_t *)th)->type == i)
 				count++;
 		}

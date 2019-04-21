@@ -816,9 +816,6 @@ void P_ReloadRings(void)
 	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo = (mobj_t *)th;
 
 		if (mo->type == MT_HOOPCENTER)
@@ -885,9 +882,6 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo = (mobj_t *)th;
 
 		if (mo->type != MT_BLUESPHERE && mo->type != MT_NIGHTSCHIP
@@ -2300,9 +2294,6 @@ void P_LoadThingsOnly(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
-
 		mo = (mobj_t *)think;
 
 		if (mo)

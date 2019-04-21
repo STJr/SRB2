@@ -3974,9 +3974,6 @@ void P_SetupSignExit(player_t *player)
 	// spin all signposts in the level then.
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
-
 		thing = (mobj_t *)think;
 		if (thing->type != MT_SIGN)
 			continue;
@@ -4006,9 +4003,6 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
-
 		mo = (mobj_t *)think;
 
 		if (mo->type != flag)
@@ -4439,9 +4433,6 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
-
 				mo2 = (mobj_t *)th;
 				if (mo2->type == MT_EGGTRAP)
 					P_KillMobj(mo2, NULL, player->mo, 0);
@@ -4745,9 +4736,6 @@ DoneSection2:
 				// to find the first waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence
@@ -4824,9 +4812,6 @@ DoneSection2:
 				// to find the last waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence)
@@ -4976,9 +4961,6 @@ DoneSection2:
 				// to find the first waypoint
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -5014,9 +4996,6 @@ DoneSection2:
 				// Find waypoint before this one (waypointlow)
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -5041,9 +5020,6 @@ DoneSection2:
 				// Find waypoint after this one (waypointhigh)
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_TUBEWAYPOINT)

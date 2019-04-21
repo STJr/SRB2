@@ -1510,29 +1510,26 @@ void Polyobj_InitLevel(void)
 	// the mobj_t pointers on a queue for use below.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+		mobj_t *mo = (mobj_t *)th;
+
+		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
+			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
 		{
-			mobj_t *mo = (mobj_t *)th;
+			++numPolyObjects;
 
-			if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
-				mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
-			{
-				++numPolyObjects;
+			qitem = malloc(sizeof(mobjqitem_t));
+			memset(qitem, 0, sizeof(mobjqitem_t));
+			qitem->mo = mo;
+			M_QueueInsert(&(qitem->mqitem), &spawnqueue);
+		}
+		else if (mo->info->doomednum == POLYOBJ_ANCHOR_DOOMEDNUM)
+		{
+			++numAnchors;
 
-				qitem = malloc(sizeof(mobjqitem_t));
-				memset(qitem, 0, sizeof(mobjqitem_t));
-				qitem->mo = mo;
-				M_QueueInsert(&(qitem->mqitem), &spawnqueue);
-			}
-			else if (mo->info->doomednum == POLYOBJ_ANCHOR_DOOMEDNUM)
-			{
-				++numAnchors;
-
-				qitem = malloc(sizeof(mobjqitem_t));
-				memset(qitem, 0, sizeof(mobjqitem_t));
-				qitem->mo = mo;
-				M_QueueInsert(&(qitem->mqitem), &anchorqueue);
-			}
+			qitem = malloc(sizeof(mobjqitem_t));
+			memset(qitem, 0, sizeof(mobjqitem_t));
+			qitem->mo = mo;
+			M_QueueInsert(&(qitem->mqitem), &anchorqueue);
 		}
 	}
 
@@ -1818,9 +1815,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	// We redo this each tic to make savegame compatibility easier.
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-			continue;
-
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
@@ -1899,9 +1893,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			// Find next waypoint
 			for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 			{
-				if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-					continue;
-
 				mo2 = (mobj_t *)wp;
 
 				if (mo2->type != MT_TUBEWAYPOINT)
@@ -1938,9 +1929,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
-					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-						continue;
-
 					mo2 = (mobj_t *)wp;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -1975,9 +1963,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
-					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-						continue;
-
 					mo2 = (mobj_t *)wp;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
@@ -2526,9 +2511,6 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// Find the first waypoint we need to use
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-			continue;
-
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
@@ -2597,9 +2579,6 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	target = first;
 	/*for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-			continue;
-
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
