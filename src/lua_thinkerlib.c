@@ -18,7 +18,7 @@
 
 #define META_ITERATIONSTATE "iteration state"
 
-static const char *const iter_opt[] = {
+/*static const char *const iter_opt[] = {
 	"all",
 	"mobj",
 	NULL};
@@ -26,7 +26,7 @@ static const char *const iter_opt[] = {
 static const actionf_p1 iter_funcs[] = {
 	NULL,
 	(actionf_p1)P_MobjThinker
-};
+};*/
 
 struct iterationState {
 	actionf_p1 filter;
@@ -64,7 +64,7 @@ static int lib_iterateThinkers(lua_State *L)
 	lua_settop(L, 2);
 
 	if (lua_isnil(L, 2))
-		th = &thlist[THINK_MAIN];
+		th = &thlist[THINK_MOBJ];
 	else if (lua_isuserdata(L, 2))
 	{
 		if (lua_islightuserdata(L, 2))
@@ -94,11 +94,11 @@ static int lib_iterateThinkers(lua_State *L)
 	if (!next)
 		return luaL_error(L, "next thinker invalidated during iteration");
 
-	for (; next != &thlist[THINK_MAIN]; next = next->next)
+	for (; next != &thlist[THINK_MOBJ]; next = next->next)
 		if (!it->filter || next->function.acp1 == it->filter)
 		{
 			push_thinker(next);
-			if (next->next != &thlist[THINK_MAIN])
+			if (next->next != &thlist[THINK_MOBJ])
 			{
 				push_thinker(next->next);
 				it->next = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -120,7 +120,7 @@ static int lib_startIterate(lua_State *L)
 	luaL_getmetatable(L, META_ITERATIONSTATE);
 	lua_setmetatable(L, -2);
 
-	it->filter = iter_funcs[luaL_checkoption(L, 1, "mobj", iter_opt)];
+	it->filter = (actionf_p1)P_MobjThinker; //iter_funcs[luaL_checkoption(L, 1, "mobj", iter_opt)];
 	it->next = LUA_REFNIL;
 	return 2;
 }
@@ -138,7 +138,7 @@ int LUA_ThinkerLib(lua_State *L)
 		lua_pushcfunction(L, lib_iterateThinkers);
 		lua_pushcclosure(L, lib_startIterate, 1);
 		lua_setfield(L, -2, "iterate");
-	lua_setglobal(L, "thinkers");
+	lua_setglobal(L, "mobjs");
 	return 0;
 }
 
