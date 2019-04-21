@@ -171,7 +171,7 @@ static inline void P_AddDynSlopeThinker (pslope_t* slope, dynplanetype_t type, l
 	th->slope = slope;
 	th->type = type;
 
-	P_AddThinker(THINK_MAIN, &th->thinker);
+	P_AddThinker(THINK_DYNSLOPE, &th->thinker);
 }
 
 
