@@ -65,8 +65,10 @@ typedef enum{
 	THINK_LIMBO,
 	THINK_POLYOBJ,
 	THINK_MAIN,
-	THINK_DYNSLOPE,
 	THINK_MOBJ,
+#ifdef ESLOPE
+	THINK_DYNSLOPE,
+#endif
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
