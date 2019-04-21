@@ -244,10 +244,23 @@ void P_RemoveThinkerDelayed(void *pthinker)
 //
 void P_RemoveThinker(thinker_t *thinker)
 {
+	thinker_t *next = thinker->next;
 #ifdef HAVE_BLUA
 	LUA_InvalidateUserdata(thinker);
 #endif
 	thinker->function.acp1 = P_RemoveThinkerDelayed;
+
+	if (currentthinker == thinker)
+		currentthinker = thinker->prev;
+
+	// Remove thinker from its current list.
+	(next->prev = thinker->prev)->next = next;
+
+	// Now add it to the limbo list
+	thlist[THINK_LIMBO].prev->next = thinker;
+	thinker->next = &thlist[THINK_LIMBO];
+	thinker->prev = thlist[THINK_LIMBO].prev;
+	thlist[THINK_LIMBO].prev = thinker;
 }
 
 /*
@@ -298,7 +311,6 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		CONS_Printf("Running thinker list %d.\n", i);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 			if (currentthinker->function.acp1)

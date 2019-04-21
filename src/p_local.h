@@ -62,6 +62,7 @@
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
 typedef enum{
+	THINK_LIMBO,
 	THINK_POLYOBJ,
 	THINK_MAIN,
 	THINK_DYNSLOPE,
