@@ -2557,7 +2557,7 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 	I_Assert((oldmo != NULL) && (newmo != NULL));
 
 	// scan all thinkers
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -4455,7 +4455,7 @@ void G_ConsGhostTic(void)
 				demo_p += sizeof(angle_t); // angle, unnecessary for cons.
 
 				mobj = NULL;
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5851,7 +5851,7 @@ void G_DoPlayMetal(void)
 		metalbuffer = metal_p = W_CacheLumpNum(l, PU_STATIC);
 
 	// find metal sonic
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;

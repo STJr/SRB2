@@ -713,7 +713,7 @@ void P_EmeraldManager(void)
 		spawnpoints[i] = NULL;
 	}
 
-	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -3699,7 +3699,7 @@ void P_DestroyRobots(void)
 	mobj_t *mo;
 	thinker_t *think;
 
-	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue; // not a mobj thinker
@@ -4483,7 +4483,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			// scan the thinkers to make sure all the old pinch dummies are gone before making new ones
 			// this can happen if the boss was hurt earlier than expected
-			for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
 				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -4574,7 +4574,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 		// scan the thinkers
 		// to find a point that matches
 		// the number
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5195,7 +5195,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				closestdist = INT32_MAX; // Just in case...
 
 				// Find waypoint he is closest to
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -5250,7 +5250,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		// scan the thinkers to find
 		// the waypoint to use
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5382,7 +5382,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 		// Run through the thinkers ONCE and find all of the MT_BOSS9GATHERPOINT in the map.
 		// Build a hoop linked list of 'em!
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;
@@ -5848,7 +5848,7 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	fixed_t dist1, dist2 = 0;
 
 	// scan the thinkers to find the closest axis point
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -11085,7 +11085,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		mobj->health = (mthing->angle / 360) + 1;
 
 		// See if other starposts exist in this level that have the same value.
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 				continue;

@@ -97,7 +97,7 @@ void P_ClearStarPost(INT32 postnum)
 	mobj_t *mo2;
 
 	// scan the thinkers
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -126,7 +126,7 @@ void P_ResetStarposts(void)
 	thinker_t *th;
 	mobj_t *post;
 
-	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 			continue;
@@ -807,7 +807,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						// The player might have two Ideyas: toucher->tracer and toucher->tracer->hnext
 						// so handle their anchorpoints accordingly.
 						// scan the thinkers to find the corresponding anchorpoint
-						for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+						for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 						{
 							if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 								continue;
@@ -901,7 +901,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				count = 1;
 
 				// scan the remaining thinkers
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -951,7 +951,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				// Now we RE-scan all the thinkers to find close objects to pull
 				// in from the paraloop. Isn't this just so efficient?
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -1325,7 +1325,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				EV_DoElevator(&junk, bridgeFall, false);
 
 				// scan the remaining thinkers to find koopa
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;
@@ -1424,7 +1424,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				thinker_t *th;
 				mobj_t *mo2;
 
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 					continue;
@@ -2461,7 +2461,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 				// scan the thinkers to make sure all the old pinch dummies are gone on death
 				// this can happen if the boss was hurt earlier than expected
-				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
 						continue;

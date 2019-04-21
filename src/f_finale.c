@@ -1661,7 +1661,7 @@ void F_TitleScreenTicker(boolean run)
 		mobj_t *mo2;
 		mobj_t *cameraref = NULL;
 
-		for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
 				continue;
