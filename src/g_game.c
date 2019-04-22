@@ -4069,7 +4069,7 @@ static void measurekeywords(mapsearchfreq_t *fr,
 				PU_STATIC, NULL);
 }
 
-void writesimplefreq(mapsearchfreq_t *fr, INT32 *frc,
+static void writesimplefreq(mapsearchfreq_t *fr, INT32 *frc,
 		INT32 mapnum, UINT8 pos, UINT8 siz)
 {
 	fr[(*frc)].mapnum = mapnum;
