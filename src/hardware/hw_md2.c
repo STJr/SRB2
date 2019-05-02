@@ -1075,7 +1075,14 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sprframe->rotate)
 		{
-			const fixed_t anglef = AngleFixed(spr->mobj->angle);
+			fixed_t anglef = AngleFixed(spr->mobj->angle);
+			// \todo adapt for 2.2 directionchar? The below code is from Kart
+#if 0
+			if (spr->mobj->player)
+				anglef = AngleFixed(spr->mobj->player->frameangle);
+			else
+				anglef = AngleFixed(spr->mobj->angle);
+#endif
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
