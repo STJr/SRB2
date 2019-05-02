@@ -11912,6 +11912,45 @@ void A_DoNPCPain(mobj_t *actor)
 	P_InstaThrust(actor, actor->angle, -hspeed);
 }
 
+// Function: A_Boss5PinchRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = maximum value to setextravalue2 to (normally)
+// var2 = pinch annoyance
+//
+void A_Boss5ExtraRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 calc;
+	INT32 locspawn;
+	INT32 lochealth;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5ExtraRepeat", actor))
+		return;
+#endif
+
+	if (actor->extravalue2 > 0 && !(actor->flags2 & MF2_FRET))
+		return;
+
+	locspawn = actor->info->spawnhealth - actor->info->damage;
+	lochealth = actor->health - actor->info->damage;
+
+	if (locspawn <= 0 || lochealth <= 0)
+		calc = locvar1;
+	else
+		calc = (locvar1*(locspawn - lochealth))/locspawn;
+
+	if (calc > 2)
+		actor->extravalue2 = 1 + calc/2 + P_RandomKey(calc/2);
+	else
+		actor->extravalue2 = 1 + calc;
+
+	if (lochealth <= 0)
+		actor->extravalue2 += locvar2;
+}
+
 // Function: A_Boss5CheckOnGround
 //
 // Description: Ground checker.
