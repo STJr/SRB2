@@ -266,6 +266,7 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
+void A_DoNPCPain(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -11851,4 +11852,61 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
+}
+
+// Function: A_DoNPCPain
+//
+// Description: Something that looks like a player was hit, put them in pain.
+//
+// var1 = If zero, always fling the same amount.
+//        Otherwise, slowly reduce the vertical
+//        and horizontal speed to the base value
+//        multiplied by this the more damage is done.
+// var2 = If zero, use default fling values.
+//        Otherwise, vertical and horizontal speed
+//        will be multiplied by this.
+//
+void A_DoNPCPain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t vspeed = 0;
+	fixed_t hspeed = FixedMul(4*FRACUNIT, actor->scale);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCPain", actor))
+		return;
+#endif
+
+	actor->flags &= ~(MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT);
+
+	var1 = var2 = 0;
+	A_Pain(actor);
+
+	actor->z += P_MobjFlip(actor);
+
+	if (actor->eflags & MFE_UNDERWATER)
+		vspeed = FixedDiv(10511*FRACUNIT,2600*FRACUNIT);
+	else
+		vspeed = FixedDiv(69*FRACUNIT,10*FRACUNIT);
+
+	if (actor->target)
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x + actor->target->momx, actor->target->y + actor->target->momy);
+
+	if (locvar1)
+	{
+		if (actor->info->spawnhealth)
+			return; // there's something very wrong here if you're using this action on something with no starting health
+		locvar1 += ((FRACUNIT - locvar1)/actor->info->spawnhealth)*actor->health;
+		hspeed = FixedMul(hspeed, locvar1);
+		vspeed = FixedMul(vspeed, locvar1);
+	}
+
+	if (locvar2)
+	{
+		hspeed = FixedMul(hspeed, locvar2);
+		vspeed = FixedMul(vspeed, locvar2);
+	}
+
+	P_SetObjectMomZ(actor, vspeed, false);
+	P_InstaThrust(actor, actor->angle, -hspeed);
 }
