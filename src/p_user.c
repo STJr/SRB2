@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -629,6 +629,14 @@ static void P_DeNightserizePlayer(player_t *player)
 			player->marescore = player->spheres =\
 			 player->rings = 0;
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+
+			// Reset music to beginning if MIXNIGHTSCOUNTDOWN
+			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_SetMusicPosition(0);
 		}
 
 		break;
@@ -639,7 +647,24 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->oldscale = 0;
 
 	// Restore from drowning music
-	P_RestoreMusic(player);
+	if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+		&& S_MusicType() != MU_MID
+#endif
+	)
+	{
+		S_StopSoundByNum(sfx_timeup);
+		S_StopFadingMusic();
+		S_SetInternalMusicVolume(100);
+
+		// Reset the music if you did not destroy all the capsules, because you failed.
+		// Why make the all-capsules exception: because it's your reward for nearly finishing the level!
+		// (unless the player auto-loses upon denightserizing; for death case, see above.)
+		if (P_FindLowestMare() != UINT8_MAX || G_IsSpecialStage(gamemap))
+			S_SetMusicPosition(0);
+	}
+	else
+		P_RestoreMusic(player);
 
 	P_RunDeNightserizeExecutors(player->mo);
 }
@@ -687,7 +712,16 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
-	P_RestoreMusic(player);
+	// Restore from drowning music
+	if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+	{
+		S_StopSoundByNum(sfx_timeup);
+		S_StopFadingMusic();
+		S_SetInternalMusicVolume(100);
+	}
+	else
+		P_RestoreMusic(player);
+
 	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
@@ -1292,13 +1326,13 @@ void P_RestoreMusic(player_t *player)
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
-			S_ChangeMusic(mapmusname, mapmusflags, true);
+			S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 		}
 		else
 			S_ChangeMusicInternal("_shoes", true);
 	}
 	else
-		S_ChangeMusic(mapmusname, mapmusflags, true);
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
 
 //
@@ -6234,15 +6268,17 @@ static void P_DoNiGHTSCapsule(player_t *player)
 //
 static void P_MoveNiGHTSToDrone(player_t *player)
 {
+	boolean flip, topaligned, middlealigned, bottomoffsetted;
+	fixed_t droneboxmandiff, zofs;
+
 	if (!player->drone)
 		return;
 
-	boolean flip = player->drone->flags2 & MF2_OBJECTFLIP;
-	boolean topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
-	boolean middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
-	boolean bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
-	fixed_t droneboxmandiff = max(player->drone->height - player->mo->height, 0);
-	fixed_t zofs;
+	flip = player->drone->flags2 & MF2_OBJECTFLIP;
+	topaligned = (player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	middlealigned = (player->drone->flags & MF_GRENADEBOUNCE) && !(player->drone->flags & MF_SLIDEME);
+	bottomoffsetted = !(player->drone->flags & MF_SLIDEME) && !(player->drone->flags & MF_GRENADEBOUNCE);
+	droneboxmandiff = max(player->drone->height - player->mo->height, 0);
 
 	if (!flip)
 	{
@@ -6342,14 +6378,18 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		P_DeNightserizePlayer(player);
 		S_StartScreamSound(player->mo, sfx_s3k66);
-//		S_StopSoundByNum(sfx_timeup); // Kill the "out of time" music, if it's playing. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		P_RestoreMusic(player); // I have my doubts that this is the right place for this...
-
 		return;
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
-//		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+	{
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		{
+			S_FadeMusic(0, 10*MUSICRATE);
+			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+		}
+		else
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+	}
 
 	if (player->mo->z < player->mo->floorz)
 		player->mo->z = player->mo->floorz;
@@ -8689,6 +8729,9 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
+	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+		goto notrealplayer;
+
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
@@ -8815,6 +8858,8 @@ static void P_DeathThink(player_t *player)
 			P_RestoreMultiMusic(player);
 	}
 
+notrealplayer:
+
 	if (!player->mo)
 		return;
 
@@ -8912,7 +8957,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, height, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
 	INT32 camrotate;
 	boolean camstill, cameranoclip;
 	mobj_t *mo;
@@ -9092,8 +9137,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
-	height = camheight;
-
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
@@ -9108,14 +9151,14 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (splitscreen)
 		{
 			dist = FixedMul(dist, 3*FRACUNIT/2);
-			height = FixedMul(height, 3*FRACUNIT/2);
+			camheight = FixedMul(camheight, 3*FRACUNIT/2);
 		}
 
 		// x1.2 dist for analog
 		if (P_AnalogMove(player))
 		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
-			height = FixedMul(height, 6*FRACUNIT/5);
+			camheight = FixedMul(camheight, 6*FRACUNIT/5);
 		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
@@ -9165,9 +9208,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - height;
+		z = mo->z + mo->height - pviewheight - camheight;
 	else
-		z = mo->z + pviewheight + height;
+		z = mo->z + pviewheight + camheight;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -9365,7 +9408,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	if (mo->type == MT_EGGTRAP)
-		z = mo->z + 128*FRACUNIT + pviewheight + height;
+		z = mo->z + 128*FRACUNIT + pviewheight + camheight;
 
 	if (thiscam->z < thiscam->floorz && !cameranoclip)
 		thiscam->z = thiscam->floorz;
@@ -9442,7 +9485,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
 		fixed_t vx = thiscam->x, vy = thiscam->y;
-		if (player->awayviewtics && player->awayviewmobj != NULL)		// Camera must obviously exist
+		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
 		{
 			vx = player->awayviewmobj->x;
 			vy = player->awayviewmobj->y;
@@ -9598,7 +9641,7 @@ static void P_CalcPostImg(player_t *player)
 	else
 		pviewheight = player->mo->z + player->viewheight;
 
-	if (player->awayviewtics)
+	if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj))
 	{
 		sector = player->awayviewmobj->subsector->sector;
 		pviewheight = player->awayviewmobj->z + 20*FRACUNIT;
@@ -9733,8 +9776,11 @@ void P_PlayerThink(player_t *player)
 
 	if (player->bot)
 	{
-		if (player->playerstate == PST_LIVE && B_CheckRespawn(player))
-			player->playerstate = PST_REBORN;
+		if (player->playerstate == PST_LIVE || player->playerstate == PST_DEAD)
+		{
+			if (B_CheckRespawn(player))
+				player->playerstate = PST_REBORN;
+		}
 		if (player->playerstate == PST_REBORN)
 			return;
 	}
@@ -9766,12 +9812,23 @@ void P_PlayerThink(player_t *player)
 	}
 #endif
 
+	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
+	{
+		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
+		player->awayviewtics = 0; // reset to zero
+	}
+
 	if (player->flashcount)
 		player->flashcount--;
 
-	// By the time P_MoveChaseCamera is called, this might be zero. Do not do it here.
-	//if (player->awayviewtics)
-	//	player->awayviewtics--;
+	// Re-fixed by Jimita (11-12-2018)
+	if (player->awayviewtics)
+	{
+		player->awayviewtics--;
+		if (!player->awayviewtics)
+			player->awayviewtics = -1;
+		// The timer might've reached zero, but we'll run the remote view camera anyway by setting it to -1.
+	}
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -10744,8 +10801,8 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if (player->awayviewtics)
-		player->awayviewtics--;
+	if (player->awayviewtics < 0)
+		player->awayviewtics = 0;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

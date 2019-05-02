@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2016 by Sonic Team Junior.
+// Copyright (C) 2004-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -833,7 +833,17 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("_clear", false); // don't loop it
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
 		}
 
@@ -898,7 +908,17 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("_clear", false); // don't loop it
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
 		}
 

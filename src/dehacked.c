@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -305,11 +305,11 @@ static void clear_levels(void)
 static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && (description[*num].used))
+	while (*num < MAXSKINS && (description[*num].used))
 		*num = *num+1;
 
 	// No more free slots. :(
-	if (*num >= 32)
+	if (*num >= MAXSKINS)
 		return false;
 
 	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
@@ -1161,6 +1161,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 #endif
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
+			else if (fastcmp(word, "MUSICPOS"))
+				mapheaderinfo[num-1]->muspos = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICINTERFADEOUT"))
+				mapheaderinfo[num-1]->musinterfadeout = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICINTER"))
+				deh_strlcpy(mapheaderinfo[num-1]->musintername, word2,
+					sizeof(mapheaderinfo[num-1]->musintername), va("Level header %d: intermission music", num));
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -1264,6 +1271,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->levelflags |= LF_SAVEGAME;
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_SAVEGAME;
+			}
+			else if (fastcmp(word, "MIXNIGHTSCOUNTDOWN"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_MIXNIGHTSCOUNTDOWN;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_MIXNIGHTSCOUNTDOWN;
 			}
 
 			// Individual triggers for menu flags
@@ -1460,6 +1474,10 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
+			}
+			else if (fastcmp(word, "MUSICPOS"))
+			{
+				cutscenes[num]->scene[scenenum].musswitchposition = (UINT32)get_number(word2);
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
@@ -2647,12 +2665,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
-			else if (fastcmp(word, "X"))
-				emblemlocations[num-1].x = (INT16)value;
-			else if (fastcmp(word, "Y"))
-				emblemlocations[num-1].y = (INT16)value;
-			else if (fastcmp(word, "Z"))
-				emblemlocations[num-1].z = (INT16)value;
+			else if (fastcmp(word, "TAG"))
+				emblemlocations[num-1].tag = (INT16)value;
 			else if (fastcmp(word, "MAPNUM"))
 			{
 				// Support using the actual map name,
@@ -3294,7 +3308,7 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
-				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				looptitle = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLEMAP"))
@@ -3335,7 +3349,7 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
-				disableSpeedAdjust = (UINT8)get_number(word2);
+				disableSpeedAdjust = (value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
@@ -3380,7 +3394,7 @@ static void readmaincfg(MYFILE *f)
 				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
-				strncpy(savegamename, timeattackfolder, strlen(timeattackfolder));
+				strcpy(savegamename, timeattackfolder);
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
@@ -3616,7 +3630,7 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
-static void DEH_LoadDehackedFile(MYFILE *f)
+static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
@@ -3676,15 +3690,16 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				continue;
 			}
 			word2 = strtok(NULL, " ");
+			if (word2) {
+				strupr(word2);
+				if (word2[strlen(word2) - 1] == '\n')
+					word2[strlen(word2) - 1] = '\0';
+				i = atoi(word2);
+			}
+			else
+				i = 0;
 			if (fastcmp(word, "CHARACTER"))
 			{
-				if (word2) {
-					strupr(word2);
-					if (word2[strlen(word2)-1] == '\n')
-						word2[strlen(word2)-1] = '\0';
-					i = atoi(word2);
-				} else
-					i = 0;
 				if (i >= 0 && i < 32)
 					readPlayer(f, i);
 				else
@@ -3694,13 +3709,60 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				continue;
 			}
+			else if (fastcmp(word, "EMBLEM"))
+			{
+				if (!mainfile && !gamedataadded)
+				{
+					deh_warning("You must define a custom gamedata to use \"%s\"", word);
+					ignorelines(f);
+				}
+				else
+				{
+					if (!word2)
+						i = numemblems + 1;
+
+					if (i > 0 && i <= MAXEMBLEMS)
+					{
+						if (numemblems < i)
+							numemblems = i;
+						reademblemdata(f, i);
+					}
+					else
+					{
+						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
+						ignorelines(f);
+					}
+				}
+				continue;
+			}
+			else if (fastcmp(word, "EXTRAEMBLEM"))
+			{
+				if (!mainfile && !gamedataadded)
+				{
+					deh_warning("You must define a custom gamedata to use \"%s\"", word);
+					ignorelines(f);
+				}
+				else
+				{
+					if (!word2)
+						i = numextraemblems + 1;
+
+					if (i > 0 && i <= MAXEXTRAEMBLEMS)
+					{
+						if (numextraemblems < i)
+							numextraemblems = i;
+						readextraemblemdata(f, i);
+					}
+					else
+					{
+						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
+						ignorelines(f);
+					}
+				}
+				continue;
+			}
 			if (word2)
 			{
-				strupr(word2);
-				if (word2[strlen(word2)-1] == '\n')
-					word2[strlen(word2)-1] = '\0';
-				i = atoi(word2);
-
 				if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
@@ -3836,47 +3898,9 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						ignorelines(f);
 					}
 				}
-				else if (fastcmp(word, "EMBLEM"))
-				{
-					if (!gamedataadded)
-					{
-						deh_warning("You must define a custom gamedata to use \"%s\"", word);
-						ignorelines(f);
-					}
-					else if (i > 0 && i <= MAXEMBLEMS)
-					{
-						if (numemblems < i)
-							numemblems = i;
-						reademblemdata(f, i);
-					}
-					else
-					{
-						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
-						ignorelines(f);
-					}
-				}
-				else if (fastcmp(word, "EXTRAEMBLEM"))
-				{
-					if (!gamedataadded)
-					{
-						deh_warning("You must define a custom gamedata to use \"%s\"", word);
-						ignorelines(f);
-					}
-					else if (i > 0 && i <= MAXEXTRAEMBLEMS)
-					{
-						if (numextraemblems < i)
-							numextraemblems = i;
-						readextraemblemdata(f, i);
-					}
-					else
-					{
-						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
-						ignorelines(f);
-					}
-				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3891,7 +3915,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				}
 				else if (fastcmp(word, "CONDITIONSET"))
 				{
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						ignorelines(f);
@@ -3922,7 +3946,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));
 
-					if (!gamedataadded)
+					if (!mainfile && !gamedataadded)
 					{
 						deh_warning("You must define a custom gamedata to use \"%s\"", word);
 						continue;
@@ -3993,7 +4017,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 // read dehacked lump in a wad (there is special trick for for deh
 // file that are converted to wad in w_wad.c)
-void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
+void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 {
 	MYFILE f;
 	f.wad = wad;
@@ -4002,13 +4026,13 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 	f.data[f.size] = 0;
-	DEH_LoadDehackedFile(&f);
+	DEH_LoadDehackedFile(&f, mainfile);
 	Z_Free(f.data);
 }
 
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
-	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
+	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -8051,6 +8075,7 @@ struct {
 
 	// doomdef.h constants
 	{"TICRATE",TICRATE},
+	{"MUSICRATE",MUSICRATE},
 	{"RING_DIST",RING_DIST},
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
@@ -8137,6 +8162,7 @@ struct {
 	{"LF_NORELOAD",LF_NORELOAD},
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
+	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},
@@ -9536,15 +9562,19 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"mapmusflags")) {
 		lua_pushinteger(L, mapmusflags);
 		return 1;
+	} else if (fastcmp(word,"mapmusposition")) {
+		lua_pushinteger(L, mapmusposition);
+		return 1;
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;
-	} else if (fastcmp(word,"admin")) {
-		if (!playeringame[adminplayer] || adminplayer == serverplayer)
+	} else if (fastcmp(word,"admin")) { // BACKWARDS COMPATIBILITY HACK: This was replaced with IsPlayerAdmin(), but some 2.1 Lua scripts still use the admin variable. It now points to the first admin player in the array.
+		LUA_Deprecated(L, "admin", "IsPlayerAdmin(player)");
+		if (!playeringame[adminplayers[0]] || IsPlayerAdmin(serverplayer))
 			return 0;
-		LUA_PushUserdata(L, &players[adminplayer], META_PLAYER);
+		LUA_PushUserdata(L, &players[adminplayers[0]], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);
@@ -9559,7 +9589,6 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, token);
 		return 1;
 	}
-
 	return 0;
 }
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2016 by Sonic Team Junior.
+// Copyright (C) 2015-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -264,7 +264,7 @@ void P_SpawnSlope_Line(int linenum)
 
 	if(!line->frontsector || !line->backsector)
 	{
-		CONS_Printf("P_SpawnSlope_Line used on a line without two sides.\n");
+		CONS_Debug(DBG_SETUP, "P_SpawnSlope_Line used on a line without two sides. (line number %i)\n", linenum);
 		return;
 	}
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1198,7 +1198,7 @@ static void R_InitExtraColormaps(void)
 }
 #endif
 
-// Search for flat name through all
+// Search for flat name.
 lumpnum_t R_GetFlatNumForName(const char *name)
 {
 	INT32 i;
@@ -1209,39 +1209,30 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
-
-		if (wadfiles[i]->type == RET_PK3)
+		switch (wadfiles[i]->type)
 		{
-			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);
-			if (start == INT16_MAX)
-				continue;
-			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
-			if (end == INT16_MAX)
-				continue;
-		}
-		else // WAD type? use markers.
-		{
-			// Find the ranges to work with.
-			start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0);
-			if (start == INT16_MAX)
+		case RET_WAD:
+			if ((start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0)) == INT16_MAX)
 			{
-				start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0);
-				if (start == INT16_MAX)
+				if ((start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
 					continue;
-				else
-				{
-					end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start);
-					if (end == INT16_MAX)
-						continue;
-				}
+				else if ((end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start)) == INT16_MAX)
+					continue;
 			}
 			else
-			{
-				end = W_CheckNumForNamePwad("F_END", (UINT16)i, start);
-				if (end == INT16_MAX)
+				if ((end = W_CheckNumForNamePwad("F_END", (UINT16)i, start)) == INT16_MAX)
 					continue;
-			}
+			break;
+		case RET_PK3:
+			if ((start = W_CheckNumForFolderStartPK3("Flats/", i, 0)) == INT16_MAX)
+				continue;
+			if ((end = W_CheckNumForFolderEndPK3("Flats/", i, start)) == INT16_MAX)
+				continue;
+			break;
+		default:
+			continue;
 		}
+
 		// Now find lump with specified name in that range.
 		lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
 		if (lump < end)

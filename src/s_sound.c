@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,6 +39,10 @@ extern INT32 msg_id;
 #include "fastcmp.h"
 #include "m_misc.h" // for tunes command
 
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#include "lua_hook.h" // MusicChange hook
+#endif
+
 #ifdef HW3SOUND
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
@@ -50,6 +54,11 @@ CV_PossibleValue_t soundvolume_cons_t[] = {{0, "MIN"}, {31, "MAX"}, {0, NULL}};
 static void SetChannelsNum(void);
 static void Command_Tunes_f(void);
 static void Command_RestartAudio_f(void);
+
+// Sound system toggles
+static void GameMIDIMusic_OnChange(void);
+static void GameSounds_OnChange(void);
+static void GameDigiMusic_OnChange(void);
 
 // commands for music and sound servers
 #ifdef MUSSERV
@@ -96,6 +105,11 @@ consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, 
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// Sound system toggles, saved into the config
+consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 #define S_MAX_VOLUME 127
 
@@ -252,6 +266,9 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
+	CV_RegisterVar(&cv_gamesounds);
+	CV_RegisterVar(&cv_gamedigimusic);
+	CV_RegisterVar(&cv_gamemidimusic);
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
@@ -1360,6 +1377,12 @@ static void      *music_data;
 static UINT16    music_flags;
 static boolean   music_looping;
 
+static char      queue_name[7];
+static UINT16    queue_flags;
+static boolean   queue_looping;
+static UINT32    queue_position;
+static UINT32    queue_fadeinms;
+
 /// ------------------------
 /// Music Status
 /// ------------------------
@@ -1394,6 +1417,11 @@ musictype_t S_MusicType(void)
 	return I_SongType();
 }
 
+const char *S_MusicName(void)
+{
+	return music_name;
+}
+
 boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
 {
 	if (!I_SongPlaying())
@@ -1422,6 +1450,35 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 boolean S_SpeedMusic(float speed)
 {
 	return I_SetSongSpeed(speed);
+}
+
+/// ------------------------
+/// Music Seeking
+/// ------------------------
+
+UINT32 S_GetMusicLength(void)
+{
+	return I_GetSongLength();
+}
+
+boolean S_SetMusicLoopPoint(UINT32 looppoint)
+{
+	return I_SetSongLoopPoint(looppoint);
+}
+
+UINT32 S_GetMusicLoopPoint(void)
+{
+	return I_GetSongLoopPoint();
+}
+
+boolean S_SetMusicPosition(UINT32 position)
+{
+	return I_SetSongPosition(position);
+}
+
+UINT32 S_GetMusicPosition(void)
+{
+	return I_GetSongPosition();
 }
 
 /// ------------------------
@@ -1496,12 +1553,13 @@ static void S_UnloadMusic(void)
 	music_looping = false;
 }
 
-static boolean S_PlayMusic(boolean looping)
+static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 {
 	if (S_MusicDisabled())
 		return false;
 
-	if (!I_PlaySong(looping))
+	if ((!fadeinms && !I_PlaySong(looping)) ||
+		(fadeinms && !I_FadeInPlaySong(fadeinms, looping)))
 	{
 		S_UnloadMusic();
 		return false;
@@ -1511,38 +1569,93 @@ static boolean S_PlayMusic(boolean looping)
 	return true;
 }
 
-void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
+static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 fadeinms)
 {
+	strncpy(queue_name, mmusic, 7);
+	queue_flags = mflags;
+	queue_looping = looping;
+	queue_position = position;
+	queue_fadeinms = fadeinms;
+}
+
+static void S_ClearQueue(void)
+{
+	queue_name[0] = queue_flags = queue_looping = queue_position = queue_fadeinms = 0;
+}
+
+static void S_ChangeMusicToQueue(void)
+{
+	S_ChangeMusicEx(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
+	S_ClearQueue();
+}
+
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
+{
+	char newmusic[7];
+
 	if (S_MusicDisabled())
 		return;
 
-	// No Music (empty string)
-	if (mmusic[0] == 0)
-	{
-		S_StopMusic();
+	strncpy(newmusic, mmusic, 7);
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+		return;
+#endif
+	newmusic[6] = 0;
+
+ 	// No Music (empty string)
+	if (newmusic[0] == 0)
+ 	{
+		if (prefadems)
+			I_FadeSong(0, prefadems, &S_StopMusic);
+		else
+			S_StopMusic();
 		return;
 	}
 
-	if (strnicmp(music_name, mmusic, 6))
+	if (prefadems && S_MusicPlaying()) // queue music change for after fade // allow even if the music is the same
 	{
-		S_StopMusic(); // shutdown old music
+		CONS_Debug(DBG_DETAILED, "Now fading out song %s\n", music_name);
+		S_QueueMusic(newmusic, mflags, looping, position, fadeinms);
+		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
+		return;
+	}
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+ 	{
+		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
-		if (!S_LoadMusic(mmusic))
+		S_StopMusic();
+
+		if (!S_LoadMusic(newmusic))
 		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", mmusic);
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", newmusic);
 			return;
 		}
 
 		music_flags = mflags;
 		music_looping = looping;
 
-		if (!S_PlayMusic(looping))
-		{
-			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", mmusic);
+		if (!S_PlayMusic(looping, fadeinms))
+ 		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", newmusic);
 			return;
 		}
+
+		if (position)
+			I_SetSongPosition(position);
+
+		I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 	}
-	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+	else if (fadeinms) // let fades happen with same music
+	{
+		I_SetSongPosition(position);
+		I_FadeSong(100, fadeinms, NULL);
+ 	}
+	else // reset volume to 100 with same music
+	{
+		I_StopFadingSong();
+		I_FadeSong(100, 500, NULL);
+	}
 }
 
 void S_StopMusic(void)
@@ -1623,6 +1736,32 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	}
 }
 
+/// ------------------------
+/// Music Fading
+/// ------------------------
+
+void S_SetInternalMusicVolume(INT32 volume)
+{
+	I_SetInternalMusicVolume(min(max(volume, 0), 100));
+}
+
+void S_StopFadingMusic(void)
+{
+	I_StopFadingSong();
+}
+
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+{
+	if (source_volume < 0)
+		return I_FadeSong(target_volume, ms, NULL);
+	else
+		return I_FadeSongFromVolume(target_volume, source_volume, ms, NULL);
+}
+
+boolean S_FadeOutStopMusic(UINT32 ms)
+{
+	return I_FadeSong(0, ms, &S_StopMusic);
+}
 
 /// ------------------------
 /// Init & Others
@@ -1640,22 +1779,24 @@ void S_Start(void)
 		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
 		mapmusname[6] = 0;
 		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
 	if (cv_resetmusic.value)
 		S_StopMusic();
-	S_ChangeMusic(mapmusname, mapmusflags, true);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
 
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
 	UINT16 tunenum, track = 0;
+	UINT32 position = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf("tunes <name/num> [track] [speed] [position] / <-show> / <-default> / <-none>:\n");
 		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
 		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
 		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
@@ -1702,10 +1843,15 @@ static void Command_Tunes_f(void)
 		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
 	else
 		strncpy(mapmusname, tunearg, 7);
+
+	if (argc > 4)
+		position = (UINT32)atoi(COM_Argv(4));
+
 	mapmusname[6] = 0;
 	mapmusflags = (track & MUSIC_TRACKMASK);
+	mapmusposition = position;
 
-	S_ChangeMusic(mapmusname, mapmusflags, true);
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 
 	if (argc > 3)
 	{
@@ -1730,4 +1876,105 @@ static void Command_RestartAudio_f(void)
 	S_SetMusicVolume(cv_digmusicvolume.value, cv_midimusicvolume.value);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
+}
+
+void GameSounds_OnChange(void)
+{
+	if (M_CheckParm("-nosound"))
+		return;
+
+	if (sound_disabled)
+	{
+		sound_disabled = false;
+		S_InitSfxChannels(cv_soundvolume.value);
+		S_StartSound(NULL, sfx_strpst);
+	}
+	else
+	{
+		sound_disabled = true;
+		S_StopSounds();
+	}
+}
+
+void GameDigiMusic_OnChange(void)
+{
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nodigmusic"))
+		return;
+
+	if (digital_disabled)
+	{
+		digital_disabled = false;
+		I_InitMusic();
+		S_StopMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
+	}
+	else
+	{
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
+		{
+			if (midi_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
+	}
+}
+
+void GameMIDIMusic_OnChange(void)
+{
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nomidimusic"))
+		return;
+
+	if (midi_disabled)
+	{
+		midi_disabled = false;
+		I_InitMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
+	}
+	else
+	{
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
+		{
+			if (digital_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
+	}
 }

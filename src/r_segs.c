@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -885,16 +885,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			leftheight -= viewz;
 			rightheight -= viewz;
 
-#define OVERFLOWTEST(height, scale) \
-	overflow_test = (INT64)centeryfrac - (((INT64)height*scale)>>FRACBITS); \
-	if (overflow_test < 0) overflow_test = -overflow_test; \
-	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+#define CLAMPMAX INT32_MAX
+#define CLAMPMIN (-INT32_MAX) // This is not INT32_MIN on purpose! INT32_MIN makes the drawers freak out.
+			// Monster Iestyn (25/03/18): do not skip these lights if they fail overflow test, just clamp them instead so they behave.
+			overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+			if      (overflow_test > (INT64)CLAMPMAX) rlight->height = CLAMPMAX;
+			else if (overflow_test > (INT64)CLAMPMIN) rlight->height = (fixed_t)overflow_test;
+			else                                      rlight->height = CLAMPMIN;
 
-			OVERFLOWTEST(leftheight, ds->scale1)
-			OVERFLOWTEST(rightheight, ds->scale2)
-
-			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
-			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+			if      (overflow_test > (INT64)CLAMPMAX) rlight->heightstep = CLAMPMAX;
+			else if (overflow_test > (INT64)CLAMPMIN) rlight->heightstep = (fixed_t)overflow_test;
+			else                                      rlight->heightstep = CLAMPMIN;
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 #else
 			if (light->height < *pfloor->bottomheight)
@@ -916,12 +918,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				leftheight -= viewz;
 				rightheight -= viewz;
 
-				OVERFLOWTEST(leftheight, ds->scale1)
-				OVERFLOWTEST(rightheight, ds->scale2)
-#undef OVERFLOWTEST
+				// Monster Iestyn (25/03/18): do not skip these lights if they fail overflow test, just clamp them instead so they behave.
+				overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+				if      (overflow_test > (INT64)CLAMPMAX) rlight->botheight = CLAMPMAX;
+				else if (overflow_test > (INT64)CLAMPMIN) rlight->botheight = (fixed_t)overflow_test;
+				else                                      rlight->botheight = CLAMPMIN;
 
-				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
-				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+				overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+				if      (overflow_test > (INT64)CLAMPMAX) rlight->botheightstep = CLAMPMAX;
+				else if (overflow_test > (INT64)CLAMPMIN) rlight->botheightstep = (fixed_t)overflow_test;
+				else                                      rlight->botheightstep = CLAMPMIN;
 				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 #else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
@@ -1101,9 +1107,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step * (x1 - ds->x1);
 	}
 #endif
-
-#define CLAMPMAX INT32_MAX
-#define CLAMPMIN (-INT32_MAX) // This is not INT32_MIN on purpose! INT32_MIN makes the drawers freak out.
 
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
@@ -1669,32 +1672,34 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
-		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_frac += ffloor[i].f_step;
-		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
-			INT32 y_w;
-
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-			y_w = ffloor[i].b_frac >> HEIGHTBITS;
-
-			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)(y_w & 0xFFFF);
+			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
 
 		rw_scale += rw_scalestep;
 		topfrac += topstep;
 		bottomfrac += bottomstep;
+	}
+}
+
+// Uses precalculated seg->length
+static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
+{
+	if (!seg->linedef->dy)
+		return llabs(y2 - seg->v1->y);
+	else if (!seg->linedef->dx)
+		return llabs(x2 - seg->v1->x);
+	else
+	{
+		INT64 dx = (seg->v2->x)-(seg->v1->x);
+		INT64 dy = (seg->v2->y)-(seg->v1->y);
+		INT64 vdx = x2-(seg->v1->x);
+		INT64 vdy = y2-(seg->v1->y);
+		return ((dy*vdx)-(dx*vdy))/(seg->length);
 	}
 }
 
@@ -1708,6 +1713,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
+	boolean longboi;
 #ifndef ESLOPE
 	fixed_t       vtop;
 #endif
@@ -1753,10 +1759,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		offsetangle = ANGLE_90;
 
 	distangle = ANGLE_90 - offsetangle;
-	hyp = R_PointToDist (curline->v1->x, curline->v1->y);
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
-	rw_distance = FixedMul (hyp, sineval);
 
+	hyp = R_PointToDist(curline->v1->x, curline->v1->y);
+	rw_distance = FixedMul(hyp, sineval);
+	longboi = (hyp >= INT32_MAX);
+
+	// big room fix
+	if (longboi)
+		rw_distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
 
 	ds_p->x1 = rw_x = start;
 	ds_p->x2 = stop;
@@ -2604,8 +2615,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (offsetangle > ANGLE_90)
 			offsetangle = ANGLE_90;
 
-		sineval = FINESINE(offsetangle >>ANGLETOFINESHIFT);
-		rw_offset = FixedMul (hyp, sineval);
+		sineval = FINESINE(offsetangle>>ANGLETOFINESHIFT);
+		rw_offset = FixedMul(hyp, sineval);
+
+		// big room fix
+		if (longboi)
+		{
+			INT64 dx = (curline->v2->x)-(curline->v1->x);
+			INT64 dy = (curline->v2->y)-(curline->v1->y);
+			INT64 vdx = viewx-(curline->v1->x);
+			INT64 vdy = viewy-(curline->v1->y);
+			rw_offset = ((dx*vdx-dy*vdy))/(curline->length);
+		}
 
 		if (rw_normalangle-rw_angle1 < ANGLE_180)
 			rw_offset = -rw_offset;
@@ -2797,20 +2818,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
-				continue;
-#endif
-
 			ffloor[i].f_pos >>= 4;
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
-			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
-#else
-			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
-			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
 #endif
+			if (linedef->special == 41) // Horizon lines extend FOFs in contact with them too.
+			{
+				ffloor[i].f_step = 0;
+				ffloor[i].f_frac = (centeryfrac>>4);
+				topfrac++; // Prevent 1px HOM
+			}
+			else
+			{
+#ifdef ESLOPE
+				ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+				ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
+#else
+				ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
+				ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+#endif
+			}
 		}
 	}
 
@@ -3082,7 +3109,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (ceilingplane) //SoM: 3/29/2000: Check for null ceiling planes
 			ceilingplane = R_CheckPlane (ceilingplane, rw_x, rw_stopx-1);
 		else
-			markceiling = 0;
+			markceiling = false;
+
+		// Don't mark ceiling flat lines for polys unless this line has an upper texture, otherwise we get flat leakage pulling downward
+		// (If it DOES have an upper texture and we do this, the ceiling won't render at all)
+		if (curline->polyseg && !curline->sidedef->toptexture)
+			markceiling = false;
 	}
 
 	// get a new or use the same visplane
@@ -3091,7 +3123,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (floorplane) //SoM: 3/29/2000: Check for null planes
 			floorplane = R_CheckPlane (floorplane, rw_x, rw_stopx-1);
 		else
-			markfloor = 0;
+			markfloor = false;
+
+		// Don't mark floor flat lines for polys unless this line has a lower texture, otherwise we get flat leakage pulling upward
+		// (If it DOES have a lower texture and we do this, the floor won't render at all)
+		if (curline->polyseg && !curline->sidedef->bottomtexture)
+			markfloor = false;
 	}
 
 	ds_p->numffloorplanes = 0;

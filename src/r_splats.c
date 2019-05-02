@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -365,9 +365,8 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 #else
 	lighttable_t **planezlight;
 	fixed_t planeheight;
-	angle_t angle;
-	fixed_t distance;
-	fixed_t length;
+	angle_t angle, planecos, planesin;
+	fixed_t distance, span;
 	size_t indexr;
 	INT32 light;
 #endif
@@ -473,12 +472,22 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 		if (x2 >= vid.width)
 			x2 = vid.width - 1;
 
+		angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+		planecos = FINECOSINE(angle);
+		planesin = FINESINE(angle);
+
 		if (planeheight != cachedheight[y])
 		{
 			cachedheight[y] = planeheight;
 			distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 			ds_xstep = cachedxstep[y] = FixedMul(distance,basexscale);
 			ds_ystep = cachedystep[y] = FixedMul(distance,baseyscale);
+
+			if ((span = abs(centery-y)))
+			{
+				ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
+				ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
+			}
 		}
 		else
 		{
@@ -486,10 +495,9 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 			ds_xstep = cachedxstep[y];
 			ds_ystep = cachedystep[y];
 		}
-		length = FixedMul(distance, distscale[x1]);
-		angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-		ds_xfrac = viewx + FixedMul(FINECOSINE(angle), length);
-		ds_yfrac = -viewy - FixedMul(FINESINE(angle), length);
+
+		ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
+		ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 		ds_xfrac -= offsetx;
 		ds_yfrac += offsety;
 

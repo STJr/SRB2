@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -200,6 +200,8 @@ static int lib_addHook(lua_State *L)
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
 	case hook_FollowMobj:
+	case hook_ShieldSpawn:
+	case hook_ShieldSpecial:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:
@@ -325,14 +327,14 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 }
 
 // Hook for map change (before load)
-void LUAh_MapChange(void)
+void LUAh_MapChange(INT16 mapnumber)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_MapChange/8] & (1<<(hook_MapChange%8))))
 		return;
 
 	lua_settop(gL, 0);
-	lua_pushinteger(gL, gamemap);
+	lua_pushinteger(gL, mapnumber);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_MapChange)
@@ -968,7 +970,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 	return hooked;
 }
 
-// Hook for player chat
+
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 {
 	hook_p hookp;
@@ -1020,6 +1022,7 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 	lua_settop(gL, 0);
 	return hooked;
 }
+
 
 // Hook for hurt messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)

@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -171,6 +171,9 @@ void M_Drawer(void);
 
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
+
+// Called by D_SRB2Main also, sets up the playermenu and description tables.
+void M_InitCharacterTables(void);
 
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
@@ -361,7 +364,7 @@ typedef struct
 	INT32 gamemap;
 } saveinfo_t;
 
-extern description_t description[32];
+extern description_t description[MAXSKINS];
 
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];

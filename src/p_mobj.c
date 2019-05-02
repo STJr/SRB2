@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,6 +35,7 @@
 #include "p_slopes.h"
 #endif
 #include "f_finale.h"
+#include "m_cond.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = {"movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -3729,7 +3730,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 
 	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
-	else if (player->awayviewtics && player->awayviewmobj != NULL)	// Camera must obviously exist
+	else if (player->awayviewtics && player->awayviewmobj && !P_MobjWasRemoved(player->awayviewmobj)) // Camera must obviously exist
 	{
 		camera_t dummycam;
 		dummycam.subsector = player->awayviewmobj->subsector;
@@ -6199,17 +6200,18 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	boolean dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
 
-	INT32 rot = (baserot &= FINEMASK);
-	INT32 prevrot = (baseprevrot &= FINEMASK);
-
-	INT32 lastthreshold = FINEMASK; // needs to never be equal at start of loop
+	INT32 lastthreshold = -1; // needs to never be equal at start of loop
 	fixed_t lastfriction = INT32_MIN; // ditto; almost certainly never, but...
 
-	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] = pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+	INT32 rot;
+	INT32 prevrot;
+
+	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] =\
+	 pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
 
 	while (mobj)
 	{
-		if (!mobj->health)
+		if (P_MobjWasRemoved(mobj) || !mobj->health)
 		{
 			mobj = mobj->hnext;
 			continue;
@@ -6796,10 +6798,67 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FIREBARPOINT:
 			case MT_CUSTOMMACEPOINT:
 			case MT_HIDDEN_SLING:
-				// The following was pretty good, but liked breaking whenever mobj->lastlook changed.
-				//P_MaceRotate(mobj, ((leveltime + 1) * mobj->lastlook), (leveltime * mobj->lastlook));
-				P_MaceRotate(mobj, mobj->movedir + mobj->lastlook, mobj->movedir);
-				mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+				{
+					angle_t oldmovedir = mobj->movedir;
+
+					// Always update movedir to prevent desyncing (in the traditional sense, not the netplay sense).
+					mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+
+					// If too far away and not deliberately spitting in the face of optimisation, don't think!
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP))
+					{
+						UINT8 i;
+						// Quick! Look through players! Don't move unless a player is relatively close by.
+						// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
+						for (i = 0; i < MAXPLAYERS; ++i)
+							if (playeringame[i] && players[i].mo
+							 && P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200<<FRACBITS))
+								break; // Stop looking.
+						if (i == MAXPLAYERS)
+						{
+							if (!(mobj->flags2 & MF2_BEYONDTHEGRAVE))
+							{
+								mobj_t *ref = mobj;
+
+								// stop/hide all your babies
+								while ((ref = ref->hnext))
+								{
+									ref->eflags = (((ref->flags & MF_NOTHINK) ? 0 : 1)
+										| ((ref->flags & MF_NOCLIPTHING) ? 0 : 2)
+										| ((ref->flags2 & MF2_DONTDRAW) ? 0 : 4)); // oh my god this is nasty.
+									ref->flags |= MF_NOTHINK|MF_NOCLIPTHING;
+									ref->flags2 |= MF2_DONTDRAW;
+									ref->momx = ref->momy = ref->momz = 0;
+								}
+
+								mobj->flags2 |= MF2_BEYONDTHEGRAVE;
+							}
+
+							break; // don't make bubble!
+						}
+						else if (mobj->flags2 & MF2_BEYONDTHEGRAVE)
+						{
+							mobj_t *ref = mobj;
+
+							// start/show all your babies
+							while ((ref = ref->hnext))
+							{
+								if (ref->eflags & 1)
+									ref->flags &= ~MF_NOTHINK;
+								if (ref->eflags & 2)
+									ref->flags &= ~MF_NOCLIPTHING;
+								if (ref->eflags & 4)
+									ref->flags2 &= ~MF2_DONTDRAW;
+								ref->eflags = 0; // le sign
+							}
+
+							mobj->flags2 &= ~MF2_BEYONDTHEGRAVE;
+						}
+					}
+
+					// Okay, time to MOVE
+					P_MaceRotate(mobj, mobj->movedir, oldmovedir);
+				}
 				break;
 			case MT_HOOP:
 				if (mobj->fuse > 1)
@@ -8084,7 +8143,6 @@ void P_MobjThinker(mobj_t *mobj)
 					// Invisible/bouncing mode.
 					else
 					{
-						fixed_t droneboxmandiff = max(mobj->height - droneman->height, 0);
 						INT32 i;
 						boolean bonustime = false;
 						fixed_t zcomp;
@@ -8476,6 +8534,8 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 1 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 2)
+								S_StartSound(NULL, sfx_hoop3);
 
 							redflag = flagmo;
 						}
@@ -8487,6 +8547,8 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 							// Assumedly in splitscreen players will be on opposing teams
 							if (players[consoleplayer].ctfteam == 2 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
+							else if (players[consoleplayer].ctfteam == 1)
+								S_StartSound(NULL, sfx_hoop3);
 
 							blueflag = flagmo;
 						}
@@ -9995,7 +10057,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	 || mthing->type == mobjinfo[MT_REDTEAMRING].doomednum || mthing->type == mobjinfo[MT_BLUETEAMRING].doomednum
 	 || mthing->type == mobjinfo[MT_BLUESPHERE].doomednum || mthing->type == mobjinfo[MT_BOMBSPHERE].doomednum
 	 || (mthing->type >= 600 && mthing->type <= 609) // circles and diagonals
-	 || mthing->type == 1705 || mthing->type == 1713 || mthing->type == 1800) // hoops
+	 || mthing->type == 1705 || mthing->type == 1713) // hoops
 	{
 		// Don't spawn hoops, wings, or rings yet!
 		return;
@@ -10170,6 +10232,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 	if (i == MT_TOKEN && ((gametype != GT_COOP && gametype != GT_COMPETITION) || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
+	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!
+		return;
+
 	// Objectplace landing point
 	noreturns:
 
@@ -10186,7 +10251,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
+	else if (i == MT_SPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN || i == MT_EMBLEM)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -10288,6 +10353,62 @@ You should think about modifying the deathmatch starts to take full advantage of
 #endif
 	switch(mobj->type)
 	{
+	case MT_EMBLEM:
+	{
+		INT32 j;
+		emblem_t *emblem = M_GetLevelEmblems(gamemap);
+		skincolors_t emcolor;
+
+		while (emblem)
+		{
+			if ((emblem->type == ET_GLOBAL || emblem->type == ET_SKIN) && emblem->tag == mthing->angle)
+				break;
+
+			emblem = M_GetLevelEmblems(-1);
+		}
+
+		if (!emblem)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "No map emblem for map %d with tag %d found!\n", gamemap, mthing->angle);
+			break;
+		}
+
+		j = emblem - emblemlocations;
+
+		I_Assert(emblemlocations[j].sprite >= 'A' && emblemlocations[j].sprite <= 'Z');
+		P_SetMobjState(mobj, mobj->info->spawnstate + (emblemlocations[j].sprite - 'A'));
+
+		mobj->health = j + 1;
+		emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
+		mobj->color = (UINT8)emcolor;
+
+		if (emblemlocations[j].collected
+			|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags |= MF_NOCLIP;
+			mobj->flags &= ~MF_SPECIAL;
+			mobj->flags |= MF_NOBLOCKMAP;
+			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
+			P_SetThingPosition(mobj);
+		}
+		else
+		{
+			mobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[j].type == ET_GLOBAL)
+			{
+				mobj->reactiontime = emblemlocations[j].var;
+				if (emblemlocations[j].var & GE_NIGHTSITEM)
+				{
+					mobj->flags |= MF_NIGHTSITEM;
+					mobj->flags &= ~MF_SPECIAL;
+					mobj->flags2 |= MF2_DONTDRAW;
+				}
+			}
+		}
+		break;
+	}
 	case MT_SKYBOX:
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			skyboxcenterpnts[mthing->extrainfo] = mobj;
@@ -10421,8 +10542,9 @@ ML_NOCLIMB :
 	anything else - no functionality
 ML_EFFECT1 : Swings instead of spins
 ML_EFFECT2 : Linktype is replaced with macetype for all spokes not ending in chains (inverted for MT_FIREBARPOINT)
-ML_EFFECT3 : Spawn a bonus macetype at the hinge point
+ML_EFFECT3 : Spawn a bonus linktype at the hinge point
 ML_EFFECT4 : Don't clip inside the ground
+ML_EFFECT5 : Don't stop thinking when too far away
 */
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
@@ -10547,6 +10669,10 @@ ML_EFFECT4 : Don't clip inside the ground
 		}
 		else
 			mmin = mnumspokes;
+
+		// If over distance away, don't move UNLESS this flag is applied
+		if (lines[line].flags & ML_EFFECT5)
+			mobj->flags2 |= MF2_BOSSNOTRAP;
 
 		// Make the links the same type as the end - repeated below
 		if ((mobj->type != MT_CHAINPOINT) && (((lines[line].flags & ML_EFFECT2) == ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
@@ -10880,35 +11006,37 @@ ML_EFFECT4 : Don't clip inside the ground
 			}
 
 			// spawn visual elements
-			mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, goaloffset, MT_NIGHTSDRONE_GOAL);
-			mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, sparkleoffset, MT_NIGHTSDRONE_SPARKLING);
-			mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, dronemanoffset, MT_NIGHTSDRONE_MAN);
-
-			P_SetTarget(&mobj->target, goalpost);
-			P_SetTarget(&goalpost->target, sparkle);
-			P_SetTarget(&goalpost->tracer, droneman);
-
-			// correct Z position
-			if (flip)
 			{
-				P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
-				P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
-				P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+				mobj_t *goalpost = P_SpawnMobjFromMobj(mobj, 0, 0, goaloffset, MT_NIGHTSDRONE_GOAL);
+				mobj_t *sparkle = P_SpawnMobjFromMobj(mobj, 0, 0, sparkleoffset, MT_NIGHTSDRONE_SPARKLING);
+				mobj_t *droneman = P_SpawnMobjFromMobj(mobj, 0, 0, dronemanoffset, MT_NIGHTSDRONE_MAN);
+
+				P_SetTarget(&mobj->target, goalpost);
+				P_SetTarget(&goalpost->target, sparkle);
+				P_SetTarget(&goalpost->tracer, droneman);
+
+				// correct Z position
+				if (flip)
+				{
+					P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
+					P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
+					P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+				}
+
+				// Remember position preference for later
+				mobj->flags &= ~(MF_SLIDEME | MF_GRENADEBOUNCE);
+				if (topaligned)
+					mobj->flags |= MF_SLIDEME;
+				else if (middlealigned)
+					mobj->flags |= MF_GRENADEBOUNCE;
+				else if (!bottomoffsetted)
+					mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
+
+				// Remember old Z position and flags for correction detection
+				goalpost->movefactor = mobj->z;
+				goalpost->friction = mobj->height;
+				goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 			}
-
-			// Remember position preference for later
-			mobj->flags &= ~(MF_SLIDEME | MF_GRENADEBOUNCE);
-			if (topaligned)
-				mobj->flags |= MF_SLIDEME;
-			else if (middlealigned)
-				mobj->flags |= MF_GRENADEBOUNCE;
-			else if (!bottomoffsetted)
-				mobj->flags |= MF_SLIDEME | MF_GRENADEBOUNCE;
-
-			// Remember old Z position and flags for correction detection
-			goalpost->movefactor = mobj->z;
-			goalpost->friction = mobj->height;
-			goalpost->threshold = mobj->flags & (MF_SLIDEME | MF_GRENADEBOUNCE);
 		}
 		break;
 	case MT_HIVEELEMENTAL:

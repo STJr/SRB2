@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1873,7 +1873,7 @@ static void ST_drawNiGHTSHUD(void)
 	}
 }
 
-static inline void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
+static void ST_drawWeaponSelect(INT32 xoffs, INT32 y)
 {
 	INT32 q = stplyr->weapondelay, del = 0, p = 16;
 	while (q)
@@ -2085,7 +2085,7 @@ static void ST_drawTextHUD(void)
 	}
 
 	if (!splitscreen && dof12)
-		textHUDdraw(M_GetText("\x82""F12:""\x80 Switch view"))
+		textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
 
 	if (circuitmap)
 	{
