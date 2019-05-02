@@ -3836,6 +3836,7 @@ typedef enum mobj_type
 	MT_FBOMB,
 	MT_FSGNA,
 	MT_FSGNB,
+	MT_FANGWAYPOINT,
 
 	// Black Eggman (Boss 7)
 	MT_BLACKEGGMAN,
