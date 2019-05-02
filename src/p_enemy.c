@@ -11896,7 +11896,7 @@ void A_DoNPCPain(mobj_t *actor)
 
 	if (locvar1)
 	{
-		if (actor->info->spawnhealth)
+		if (!actor->info->spawnhealth)
 			return; // there's something very wrong here if you're using this action on something with no starting health
 		locvar1 += ((FRACUNIT - locvar1)/actor->info->spawnhealth)*actor->health;
 		hspeed = FixedMul(hspeed, locvar1);
