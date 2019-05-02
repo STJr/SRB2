@@ -268,6 +268,7 @@ void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
 void A_DoNPCPain(mobj_t *actor);
 void A_Boss5CheckOnGround(mobj_t *actor);
+void A_Boss5CheckFalling(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -11981,4 +11982,32 @@ void A_Boss5CheckOnGround(mobj_t *actor)
 		actor->momx = (4*actor->momx)/5;
 		actor->momy = (4*actor->momy)/5;
 	}
+}
+
+// Function: A_Boss5CheckFalling
+//
+// Description: Falling checker.
+//
+// var1 = state to change to when hitting ground.
+// var2 = state to change to when falling.
+//
+void A_Boss5CheckFalling(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckFalling", actor))
+		return;
+#endif
+
+	if (actor->health && actor->extravalue2 > 1)
+	{
+		var1 = locvar1;
+		var2 = 0;
+		A_Boss5CheckOnGround(actor);
+		return;
+	}
+
+	if (P_MobjFlip(actor)*actor->momz <= 0)
+		P_SetMobjState(actor, locvar2);
 }

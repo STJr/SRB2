@@ -2228,6 +2228,7 @@ static actionpointer_t actionpointers[] =
 	{{A_DoNPCPain},              "A_DONPCPAIN"},
 	{{A_Boss5ExtraRepeat},       "A_BOSS5EXTRAREPEAT"},
 	{{A_Boss5CheckOnGround},     "A_BOSS5CHECKONGROUND"},
+	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 
 	{{NULL},                   "NONE"},
 
