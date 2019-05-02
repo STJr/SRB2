@@ -267,6 +267,7 @@ void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
 void A_DoNPCPain(mobj_t *actor);
+void A_Boss5CheckOnGround(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -11909,4 +11910,36 @@ void A_DoNPCPain(mobj_t *actor)
 
 	P_SetObjectMomZ(actor, vspeed, false);
 	P_InstaThrust(actor, actor->angle, -hspeed);
+}
+
+// Function: A_Boss5CheckOnGround
+//
+// Description: Ground checker.
+//
+// var1 = state to change to upon hitting ground.
+// var2 = state to change to upon hitting ground if health == pinchhealth, assuming it exists
+//
+void A_Boss5CheckOnGround(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckOnGround", actor))
+		return;
+#endif
+
+	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| (actor->eflags & MFE_VERTICALFLIP && actor->z + actor->height >= actor->ceilingz))
+	{
+		if (locvar2 && (!actor->health || (actor->health == actor->info->damage && !(actor->flags2 & MF2_STRONGBOX))))
+			P_SetMobjState(actor, locvar2);
+		else
+			P_SetMobjState(actor, locvar1);
+	}
+
+	if (actor->tracer && P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y) < 2*actor->radius)
+	{
+		actor->momx = (4*actor->momx)/5;
+		actor->momy = (4*actor->momy)/5;
+	}
 }

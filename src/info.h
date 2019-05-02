@@ -240,6 +240,7 @@ void A_ParentTriesToSleep();
 void A_CryingToMomma();
 void A_CheckFlags2();
 void A_DoNPCPain();
+void A_Boss5CheckOnGround();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
