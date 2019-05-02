@@ -902,11 +902,9 @@ boolean I_LoadSong(char *data, size_t len)
 	const char *key1 = "LOOP";
 	const char *key2 = "POINT=";
 	const char *key3 = "MS=";
-	const char *key4 = "LENGTHMS=";
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
-	const size_t key4len = strlen(key4);
 
 	char *p = data;
 	SDL_RWops *rw;
@@ -1053,14 +1051,8 @@ boolean I_LoadSong(char *data, size_t len)
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 		}
-		else if (fpclassify(song_length) == FP_ZERO && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
-		{
-			p += key4len; // skip LENGTHMS
-			song_length = (float)(atoi(p) / 1000.0L);
-		}
 
-		if (fpclassify(loop_point) != FP_ZERO && fpclassify(song_length) != FP_ZERO && song_length > loop_point) // Got what we needed
-			// the last case is a sanity check, in case the wide char searches were false matches.
+		if (fpclassify(loop_point) != FP_ZERO) // Got what we needed
 			break;
 		else // continue searching
 			p++;
