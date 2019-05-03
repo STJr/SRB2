@@ -12028,7 +12028,10 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		actor->z -= hackoffset;
 
 		if (!numwaypoints)
+		{
+			Z_Free(waypoints); // free table
 			goto nowaypoints; // ???
+		}
 
 		key = P_RandomKey(numwaypoints);
 
