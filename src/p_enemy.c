@@ -266,6 +266,7 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
+void A_Boss5FindWaypoint(mobj_t *actor);
 void A_DoNPCSkid(mobj_t *actor);
 void A_DoNPCPain(mobj_t *actor);
 void A_PrepareRepeat(mobj_t *actor);
@@ -11861,6 +11862,193 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
+}
+
+// Function: A_Boss5FindWaypoint
+//
+// Description: Finds the next waypoint in sequence and sets it as its tracer.
+//
+// var1 = if 1, always go to ambush-marked waypoint. if 2, go to MT_BOSSFLYPOINT.
+// var2 = unused
+//
+void A_Boss5FindWaypoint(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	boolean avoidcenter;
+	INT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
+		return;
+#endif
+
+	avoidcenter = !actor->tracer || (mobj->health == mobj->info->damage+1);
+
+	if (locvar1 == 2) // look for the boss waypoint
+	{
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+				continue;
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
+		}
+		if (i == nummapthings)
+			return; // no boss flypoints found
+	}
+	else if (locvar1 == 1) // always go to ambush-marked waypoint
+	{
+		if (avoidcenter)
+			goto nowaypoints; // if we can't go the center, why on earth are we doing this?
+
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				P_SetTarget(&actor->tracer, mapthings[i].mobj);
+				break;
+			}
+		}
+
+		if (i == nummapthings)
+			goto nowaypoints;
+	}
+	else // locvar1 == 0
+	{
+		fixed_t hackoffset = P_MobjFlip(actor)*56*FRACUNIT;
+		INT32 numwaypoints = 0;
+		mobj_t **waypoints;
+		INT32 key;
+
+		actor->z += hackoffset;
+
+		// first, count how many waypoints we have
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+				continue;
+			numwaypoints++;
+		}
+
+		// players also count as waypoints apparently
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				numwaypoints++;
+			}
+		}
+
+		if (!numwaypoints)
+		{
+			// restore z position
+			actor->z -= hackoffset;
+			goto nowaypoints; // no waypoints :(
+		}
+
+		// allocate the table and reset count to zero
+		waypoints = Z_Calloc(sizeof(*waypoints)*numwaypoints, PU_STATIC, NULL);
+		numwaypoints = 0;
+
+		// now find them again and add them to the table!
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+				waypoints[numwaypoints++] = mapthings[i].mobj;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+				mapthings[i].mobj->reactiontime--;
+			else
+				waypoints[numwaypoints++] = mapthings[i].mobj;
+		}
+
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				waypoints[numwaypoints++] = players[i].mo;
+			}
+		}
+
+		// restore z position
+		actor->z -= hackoffset;
+
+		if (!numwaypoints)
+			goto nowaypoints; // ???
+
+		key = P_RandomKey(numwaypoints);
+
+		P_SetTarget(&actor->tracer, waypoints[key]);
+		if (actor->tracer->type == MT_FANGWAYPOINT)
+			actor->tracer->reactiontime = numwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
+		Z_Free(waypoints); // free table
+	}
+
+	// now face the tracer you just set!
+	A_FaceTracer(actor);
+	return;
+
+nowaypoints:
+	// no waypoints at all, guess the mobj has to disappear
+	if (actor->health)
+		P_KillMobj(actor, NULL, NULL, 0);
+	else
+		P_RemoveMobj(actor);
+	return;
 }
 
 // Function: A_DoNPCSkid
