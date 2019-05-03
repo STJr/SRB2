@@ -274,6 +274,7 @@ void A_Boss5Calm(mobj_t *actor);
 void A_Boss5CheckOnGround(mobj_t *actor);
 void A_Boss5CheckFalling(mobj_t *actor);
 void A_Boss5PinchShot(mobj_t *actor);
+void A_Boss5MakeItRain(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
 //for p_enemy.c
 
@@ -12139,6 +12140,42 @@ void A_Boss5PinchShot(mobj_t *actor)
 
 	missile->momx = missile->momy = 0;
 	missile->momz = P_MobjFlip(actor)*missile->info->speed/2;
+}
+
+// Function: A_Boss5MakeItRain
+//
+// Description: Pinch crisis.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5MakeItRain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 offset = (48 + locvar2)<<16; // upper 16 bits, not fixed_t!
+	INT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5MakeItRain", actor))
+		return;
+#endif
+
+	actor->flags2 |= MF2_STRONGBOX;
+
+	var1 = locvar1;
+	var2 = offset + 90;
+	A_TrapShot(actor);
+
+	for (i = 0; i < 8; i++)
+	{
+		actor->angle += ANGLE_45;
+
+		var1 = locvar1;
+		var2 = offset + (i & 1) ? 55 : 70;
+		A_TrapShot(actor);
+	}
+
+	actor->extravalue2 = 0;
 }
 
 // Function: A_LookForBetter

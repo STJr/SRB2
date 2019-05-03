@@ -247,6 +247,7 @@ void A_Boss5Calm();
 void A_Boss5CheckOnGround();
 void A_Boss5CheckFalling();
 void A_Boss5PinchShot();
+void A_Boss5MakeItRain();
 void A_LookForBetter();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
