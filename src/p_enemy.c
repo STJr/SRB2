@@ -266,6 +266,7 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
+void A_DoNPCSkid(mobj_t *actor);
 void A_DoNPCPain(mobj_t *actor);
 void A_PrepareRepeat(mobj_t *actor);
 void A_Boss5ExtraRepeat(mobj_t *actor);
@@ -11859,6 +11860,57 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
+}
+
+// Function: A_DoNPCSkid
+//
+// Description: Something that looks like a player is skidding.
+//
+// var1 = state to change to upon being slow enough
+// var2 = minimum speed
+//
+void A_DoNPCSkid(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x, y, z;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCSkid", actor))
+		return;
+#endif
+
+	x = actor->x;
+	y = actor->y;
+	z = actor->y;
+
+	if (!locvar2)
+		locvar2 = FRACUNIT/2;
+
+	if ((FixedHypot(actor->momx, actor->momy) < locvar2)
+	|| !P_TryMove(actor, actor->x + actor->momx, actor->y + actor->momy, false))
+	{
+		actor->momx = actor->momy = 0;
+		P_SetMobjState(actor, locvar1);
+		return;
+	}
+	else
+	{
+		actor->momx = (2*actor->momx)/3;
+		actor->momy = (2*actor->momy)/3;
+	}
+
+	P_TeleportMove(actor, x, y, z);
+
+	// Spawn a particle every 3 tics.
+	if (!(leveltime % 3))
+	{
+		mobj_t *particle = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_SPINDUST);
+		particle->tics = 10;
+
+		P_SetScale(particle, 2*actor->scale/3);
+		particle->destscale = actor->scale;
+		P_SetObjectMomZ(particle, FRACUNIT, false);
+	}
 }
 
 // Function: A_DoNPCPain

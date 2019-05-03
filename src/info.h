@@ -239,6 +239,7 @@ void A_WhoCaresIfYourSonIsABee();
 void A_ParentTriesToSleep();
 void A_CryingToMomma();
 void A_CheckFlags2();
+void A_DoNPCSkid();
 void A_DoNPCPain();
 void A_PrepareRepeat();
 void A_Boss5ExtraRepeat();
