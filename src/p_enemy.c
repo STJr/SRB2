@@ -272,6 +272,7 @@ void A_Boss5ExtraRepeat(mobj_t *actor);
 void A_Boss5Calm(mobj_t *actor);
 void A_Boss5CheckOnGround(mobj_t *actor);
 void A_Boss5CheckFalling(mobj_t *actor);
+void A_Boss5PinchShot(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
 //for p_enemy.c
 
@@ -12050,6 +12051,42 @@ void A_Boss5CheckFalling(mobj_t *actor)
 
 	if (P_MobjFlip(actor)*actor->momz <= 0)
 		P_SetMobjState(actor, locvar2);
+}
+
+// Function: A_Boss5PinchShot
+//
+// Description: Fires a missile directly upwards if in pinch.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5PinchShot(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t zoffset;
+	mobj_t *missile;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5PinchShot", actor))
+		return;
+#endif
+
+	if (actor->health > actor->info->damage)
+		return;
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		zoffset = actor->z + actor->height - FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+	else
+		zoffset = actor->z + FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+
+	missile = P_SpawnPointMissile(actor, actor->x, actor->y, zoffset, locvar1,
+										actor->x, actor->y, zoffset);
+
+	if (!missile)
+		return;
+
+	missile->momx = missile->momy = 0;
+	missile->momz = P_MobjFlip(actor)*missile->info->speed/2;
 }
 
 // Function: A_LookForBetter
