@@ -272,6 +272,7 @@ void A_Boss5ExtraRepeat(mobj_t *actor);
 void A_Boss5Calm(mobj_t *actor);
 void A_Boss5CheckOnGround(mobj_t *actor);
 void A_Boss5CheckFalling(mobj_t *actor);
+void A_LookForBetter(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12049,4 +12050,30 @@ void A_Boss5CheckFalling(mobj_t *actor)
 
 	if (P_MobjFlip(actor)*actor->momz <= 0)
 		P_SetMobjState(actor, locvar2);
+}
+
+// Function: A_LookForBetter
+//
+// Description: A_Look, except it finds a better target in multiplayer, and doesn't lose the target in singleplayer.
+//
+// var1 lower 16 bits = 0 - looks only in front, 1 - looks all around
+// var1 upper 16 bits = distance limit
+// var2 = unused
+//
+void A_LookForBetter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	mobj_t *oldtarget = NULL;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LookForBetter", actor))
+		return;
+#endif
+
+	P_SetTarget(&oldtarget, actor->target);
+
+	if (!P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale)))
+		P_SetTarget(&actor->target, oldtarget);
+
+	A_FaceTarget(actor);
 }
