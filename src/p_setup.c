@@ -2679,7 +2679,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	wipegamestate = -2;
+	wipegamestate = FORCEWIPEOFF;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2723,18 +2723,27 @@ boolean P_SetupLevel(boolean skipprecip)
 		// As oddly named as this is, this handles music only.
 		// We should be fine starting it here.
 		S_Start();
+	}
 
-		// Let's fade to black here
-		// But only if we didn't do the special stage wipe
-		if (rendermode != render_none && !ranspecialwipe)
-		{
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+	// Let's fade to black here
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !ranspecialwipe)
+	{
+		F_WipeStartScreen();
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-			F_WipeEndScreen();
-			F_RunWipe(wipedefs[wipe_level_toblack], false);
-		}
+		F_WipeEndScreen();
+		// for titlemap: run a specific wipe if specified
+		// needed for exiting time attack
+		if (wipetypepre != INT16_MAX)
+			F_RunWipe(
+				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+				false);
+		wipetypepre = -1;
+	}
 
+	if (!titlemapinaction)
+	{
 		if (ranspecialwipe == 2)
 		{
 			pausedelay = -3; // preticker plus one
