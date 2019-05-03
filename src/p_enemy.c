@@ -267,6 +267,9 @@ void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
 void A_DoNPCPain(mobj_t *actor);
+void A_PrepareRepeat(mobj_t *actor);
+void A_Boss5ExtraRepeat(mobj_t *actor);
+void A_Boss5Calm(mobj_t *actor);
 void A_Boss5CheckOnGround(mobj_t *actor);
 void A_Boss5CheckFalling(mobj_t *actor);
 //for p_enemy.c
@@ -11913,7 +11916,26 @@ void A_DoNPCPain(mobj_t *actor)
 	P_InstaThrust(actor, actor->angle, -hspeed);
 }
 
-// Function: A_Boss5PinchRepeat
+// Function: A_PrepareRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = value to set extravalue2 to
+// var2 = unused
+//
+void A_PrepareRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_PrepareRepeat", actor))
+		return;
+#endif
+
+	actor->extravalue2 = locvar1;
+}
+
+// Function: A_Boss5ExtraRepeat
 //
 // Description: Simple way to prepare A_Repeat.
 //
@@ -11950,6 +11972,23 @@ void A_Boss5ExtraRepeat(mobj_t *actor)
 
 	if (lochealth <= 0)
 		actor->extravalue2 += locvar2;
+}
+
+// Function: A_Boss5Calm
+//
+// Description: Simple way to disable MF2_FRET (and enable MF_SHOOTABLE the first time it's called)
+//
+// var1 = unused
+// var2 = unused
+//
+void A_Boss5Calm(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5Calm", actor))
+		return;
+#endif
+	actor->flags |= MF_SHOOTABLE;
+	actor->flags2 &= ~MF2_FRET;
 }
 
 // Function: A_Boss5CheckOnGround

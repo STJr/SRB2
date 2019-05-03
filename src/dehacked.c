@@ -2226,7 +2226,9 @@ static actionpointer_t actionpointers[] =
 	{{A_CryingToMomma},          "A_CRYINGTOMOMMA"},
 	{{A_CheckFlags2},            "A_CHECKFLAGS2"},
 	{{A_DoNPCPain},              "A_DONPCPAIN"},
+	{{A_PrepareRepeat},          "A_PREPAREREPEAT"},
 	{{A_Boss5ExtraRepeat},       "A_BOSS5EXTRAREPEAT"},
+	{{A_Boss5Calm},              "A_BOSS5CALM"},
 	{{A_Boss5CheckOnGround},     "A_BOSS5CHECKONGROUND"},
 	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 
