@@ -11944,6 +11944,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			}
 			else if (mapthings[i].mobj->reactiontime > 0)
 				continue;
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
 			numwaypoints++;
 		}
 
@@ -11998,7 +12000,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			}
 			else if (mapthings[i].mobj->reactiontime > 0)
 				mapthings[i].mobj->reactiontime--;
-			else
+			else if (P_CheckSight(actor, mapthings[i].mobj))
 				waypoints[numwaypoints++] = mapthings[i].mobj;
 		}
 
