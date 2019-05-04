@@ -12077,7 +12077,7 @@ void A_DoNPCSkid(mobj_t *actor)
 
 	x = actor->x;
 	y = actor->y;
-	z = actor->y;
+	z = actor->z;
 
 	if (!locvar2)
 		locvar2 = FRACUNIT/2;
