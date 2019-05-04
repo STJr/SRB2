@@ -12389,10 +12389,10 @@ void A_LookForBetter(mobj_t *actor)
 		return;
 #endif
 
-	P_SetTarget(&oldtarget, actor->target);
+	oldtarget = actor->target;
 
 	if (!P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale)))
-		P_SetTarget(&actor->target, oldtarget);
+		actor->target = oldtarget;
 
 	A_FaceTarget(actor);
 }
