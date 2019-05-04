@@ -15,6 +15,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "s_sound.h"
@@ -22,6 +23,7 @@
 #include "m_misc.h"
 #include "r_things.h"
 #include "i_video.h"
+#include "z_zone.h"
 #include "lua_hook.h"
 
 #ifdef HW3SOUND
@@ -11876,13 +11878,13 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	INT32 locvar1 = var1;
 	//INT32 locvar2 = var2;
 	boolean avoidcenter;
-	INT32 i;
+	UINT32 i;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
 		return;
 #endif
 
-	avoidcenter = !actor->tracer || (mobj->health == mobj->info->damage+1);
+	avoidcenter = !actor->tracer || (actor->health == actor->info->damage+1);
 
 	if (locvar1 == 2) // look for the boss waypoint
 	{
