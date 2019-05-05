@@ -375,44 +375,82 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		/////ENEMIES & BOSSES!!/////////////////////////////////
 		////////////////////////////////////////////////////////
 
-		if (special->type == MT_BLACKEGGMAN)
+		switch (special->type)
 		{
-			P_DamageMobj(toucher, special, special, 1, 0); // ouch
-			return;
-		}
-
-		if (special->type == MT_BIGMINE)
-		{
-			special->momx = toucher->momx/3;
-			special->momy = toucher->momy/3;
-			special->momz = toucher->momz/3;
-			toucher->momx /= -8;
-			toucher->momy /= -8;
-			toucher->momz /= -8;
-			special->flags &= ~MF_SPECIAL;
-			if (special->info->activesound)
-				S_StartSound(special, special->info->activesound);
-			P_SetTarget(&special->tracer, toucher);
-			player->homing = 0;
-			return;
-		}
-
-		if (special->type == MT_GSNAPPER && !elementalpierce
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
-		&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
-			return; // Can only hit snapper from above
-
-		if (special->type == MT_SPINCUSHION
-		&& (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0))
-		{
-			if (player->pflags & PF_BOUNCING)
+			case MT_BLACKEGGMAN:
 			{
-				toucher->momz = -toucher->momz;
-				P_DoAbilityBounce(player, false);
+				P_DamageMobj(toucher, special, special, 1, 0); // ouch
 				return;
 			}
-			else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
-				return; // Cannot hit sharp from above
+			 case MT_BIGMINE:
+			{
+				special->momx = toucher->momx/3;
+				special->momy = toucher->momy/3;
+				special->momz = toucher->momz/3;
+				toucher->momx /= -8;
+				toucher->momy /= -8;
+				toucher->momz /= -8;
+				special->flags &= ~MF_SPECIAL;
+				if (special->info->activesound)
+					S_StartSound(special, special->info->activesound);
+				P_SetTarget(&special->tracer, toucher);
+				player->homing = 0;
+				return;
+			}
+			case MT_GSNAPPER:
+				if (!elementalpierce
+				&& toucher->z < special->z + special->height
+				&& toucher->z + toucher->height > special->z
+				&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+					return; // Can only hit snapper from above
+				break;
+
+			case MT_SPINCUSHION:
+				if (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0)
+				{
+					if (player->pflags & PF_BOUNCING)
+					{
+						toucher->momz = -toucher->momz;
+						P_DoAbilityBounce(player, false);
+						return;
+					}
+					else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+						return; // Cannot hit sharp from above
+				}
+				break;
+			case MT_FANG:
+				if (!player->powers[pw_flashing]
+				&& !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+				&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				{
+					if ((special->state == &states[S_FANG_BOUNCE3]
+					  || special->state == &states[S_FANG_BOUNCE4]
+					  || special->state == &states[S_FANG_PINCHBOUNCE3]
+					  || special->state == &states[S_FANG_PINCHBOUNCE4])
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > 0)
+					{
+						P_DamageMobj(toucher, special, special, 1, 0);
+						P_SetTarget(&special->tracer, toucher);
+
+						if (special->state == &states[S_FANG_PINCHBOUNCE3]
+						 || special->state == &states[S_FANG_PINCHBOUNCE4])
+							P_SetMobjState(special, S_FANG_PINCHPATHINGSTART2);
+						else
+						{
+							var1 = var2 = 4;
+							A_Boss5ExtraRepeat(special);
+							P_SetMobjState(special, S_FANG_PATHINGCONT2); //S_FANG_PATHINGCONT1 if you want him to drop a bomb on the player
+						}
+						if (special->eflags & MFE_VERTICALFLIP)
+							special->z = toucher->z - special->height;
+						else
+							special->z = toucher->z + toucher->height;
+						return;
+					}
+				}
+				break;
+			default:
+				break;
 		}
 
 		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
