@@ -254,7 +254,8 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		// no wall to block sight with?
 		if ((front = seg->frontsector)->floorheight ==
 			(back = seg->backsector)->floorheight   &&
-			front->ceilingheight == back->ceilingheight)
+			front->ceilingheight == back->ceilingheight
+			&& !front->ffloors && !back->ffloors)
 			continue;
 
 		// possible occluder
@@ -288,6 +289,41 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 
 		if (los->topslope <= los->bottomslope)
 			return false;
+
+		// Monster Iestyn: check FOFs!
+		if (front->ffloors || back->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topslope, bottomslope;
+			// check front sector's FOFs first
+			for (rover = front->ffloors; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS)
+					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				{
+					continue;
+				}
+				topslope = FixedDiv(*rover->topheight - los->sightzstart , frac);
+				bottomslope = FixedDiv(*rover->bottomheight - los->sightzstart , frac);
+				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+					return false; // view completely blocked
+			}
+			// check back sector's FOFs as well
+			for (rover = back->ffloors; rover; rover = rover->next)
+			{
+				if (!(rover->flags & FF_EXISTS)
+					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				{
+					continue;
+				}
+				topslope = FixedDiv(*rover->topheight - los->sightzstart , frac);
+				bottomslope = FixedDiv(*rover->bottomheight - los->sightzstart , frac);
+				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
+					return false; // view completely blocked
+			}
+			// TODO: figure out if it's worth considering partially blocked cases or not?
+			// maybe to adjust los's top/bottom slopes if needed
+		}
 	}
 
 	// passed the subsector ok
