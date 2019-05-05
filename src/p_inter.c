@@ -3390,9 +3390,11 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] // ignore bouncing & such in invulnerability
 			|| player->powers[pw_super])
 		{
-			if (force || (inflictor && (inflictor->flags & MF_MISSILE)
-				&& (inflictor->flags2 & MF2_SUPERFIRE)
-				&& player->powers[pw_super]))
+			if (force
+			|| (player->powers[pw_super]
+			 && inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE) // Super Sonic is stunned!
+			|| (player->powers[pw_flashing]
+			 && source && source->type == MT_FANG && inflictor && inflictor->type == MT_CORK)) // Fang's cork bullets knock you back even when flashing
 			{
 #ifdef HAVE_BLUA
 				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
@@ -3400,8 +3402,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
-			else
-				return false;
+			return false;
 		}
 #ifdef HAVE_BLUA
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
