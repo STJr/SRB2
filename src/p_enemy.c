@@ -12042,12 +12042,15 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			{
 				if (avoidcenter)
 					continue;
-				waypoints[numwaypoints++] = mapthings[i].mobj;
 			}
 			else if (mapthings[i].mobj->reactiontime > 0)
+			{
 				mapthings[i].mobj->reactiontime--;
-			else if (P_CheckSight(actor, mapthings[i].mobj))
-				waypoints[numwaypoints++] = mapthings[i].mobj;
+				continue;
+			}
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
+			waypoints[numwaypoints++] = mapthings[i].mobj;
 		}
 
 		if (actor->extravalue2 > 1)
