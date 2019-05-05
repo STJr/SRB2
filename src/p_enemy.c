@@ -12385,16 +12385,11 @@ void A_LookForBetter(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	//INT32 locvar2 = var2;
-	mobj_t *oldtarget = NULL;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LookForBetter", actor))
 		return;
 #endif
 
-	oldtarget = actor->target;
-
-	if (!P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale)))
-		actor->target = oldtarget;
-
+	P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale));
 	A_FaceTarget(actor);
 }
