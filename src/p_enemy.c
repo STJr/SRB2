@@ -3562,59 +3562,103 @@ bossjustdie:
 	else if (P_MobjWasRemoved(mo))
 		return;
 #endif
-	if (mo->type == MT_BLACKEGGMAN || mo->type == MT_CYBRAKDEMON)
+	switch (mo->type)
 	{
-		mo->flags |= MF_NOCLIP;
-		mo->flags &= ~MF_SPECIAL;
+		case MT_BLACKEGGMAN:
+		case MT_CYBRAKDEMON:
+		{
+			mo->flags |= MF_NOCLIP;
+			mo->flags &= ~MF_SPECIAL;
 
-		S_StartSound(NULL, sfx_befall);
-	}
-	else if (mo->type == MT_KOOPA)
-	{
-		junk.tag = 650;
-		EV_DoCeiling(&junk, raiseToHighest);
-		return;
-	}
-	else // eggmobiles
-	{
-		// Stop exploding and prepare to run.
-		P_SetMobjState(mo, mo->info->xdeathstate);
-		if (P_MobjWasRemoved(mo))
+			S_StartSound(NULL, sfx_befall);
+			break;
+		}
+		case MT_KOOPA:
+		{
+			junk.tag = 650;
+			EV_DoCeiling(&junk, raiseToHighest);
 			return;
-
-		P_SetTarget(&mo->target, NULL);
-
-		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
-		// scan the thinkers to find the runaway point
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		}
+		case MT_FANG:
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type == MT_BOSSFLYPOINT)
+			if (mo->tracer)
 			{
-				// If this one's closer then the last one, go for it.
-				if (!mo->target ||
-					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
-					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
-						P_SetTarget(&mo->target, mo2);
-				// Otherwise... Don't!
+				var1 = var2 = 0;
+				A_Boss5Jump(mo);
+				mo->momx = ((16 - 1)*mo->momx)/16;
+				mo->momy = ((16 - 1)*mo->momy)/16;
+				if (!(mo->flags2 & MF2_AMBUSH))
+				{
+					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
+					const fixed_t speed = 64*FRACUNIT;
+					mobj_t *pole = P_SpawnMobj(
+						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->floorz + 4*FRACUNIT,
+						MT_FSGNB);
+					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
+						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
+						pole->z + 256*FRACUNIT,
+						MT_FSGNA));
+					pole->angle = mo->tracer->angle;
+					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
+					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+					pole->tracer->momx = pole->momx;
+					pole->tracer->momy = pole->momy;
+				}
 			}
+			else
+			{
+				P_SetObjectMomZ(mo, 10*FRACUNIT, false);
+				mo->flags |= MF_NOGRAVITY;
+			}
+			mo->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+			return;
 		}
-
-		mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
-		mo->flags |= MF_NOCLIPHEIGHT;
-
-		if (mo->target)
+		default: //eggmobiles
 		{
-			mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-			mo->flags2 |= MF2_BOSSFLEE;
-			mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			// Stop exploding and prepare to run.
+			P_SetMobjState(mo, mo->info->xdeathstate);
+			if (P_MobjWasRemoved(mo))
+				return;
+
+			P_SetTarget(&mo->target, NULL);
+
+			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+			// scan the thinkers to find the runaway point
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type == MT_BOSSFLYPOINT)
+				{
+					// If this one's closer then the last one, go for it.
+					if (!mo->target ||
+						P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
+						P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
+							P_SetTarget(&mo->target, mo2);
+					// Otherwise... Don't!
+				}
+			}
+
+			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
+			mo->flags |= MF_NOCLIPHEIGHT;
+
+			if (mo->target)
+			{
+				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
+				mo->flags2 |= MF2_BOSSFLEE;
+				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			}
+			else
+				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+			break;
 		}
-		else
-			mo->momz = FixedMul(2*FRACUNIT, mo->scale);
 	}
 
 	if (mo->type == MT_EGGMOBILE2)
