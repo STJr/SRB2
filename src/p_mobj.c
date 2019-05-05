@@ -7330,6 +7330,10 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->angle += (angle_t)mobj->movecount;
 				}
 				break;
+			case MT_FSGNA:
+				if (mobj->movedir)
+					mobj->angle += mobj->movedir;
+				break;
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
