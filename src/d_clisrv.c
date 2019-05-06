@@ -4597,7 +4597,7 @@ void TryRunTics(tic_t realtics)
 
 	if (realtics >= 1)
 	{
-		COM_BufExecute();
+		COM_BufTicker();
 		if (mapchangepending)
 			D_MapChange(-1, 0, ultimatemode, false, 2, false, fromlevelselect); // finish the map change
 	}
