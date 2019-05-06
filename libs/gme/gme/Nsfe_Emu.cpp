@@ -134,6 +134,9 @@ blargg_err_t Nsfe_Info::load( Data_Reader& in, Nsf_Emu* nsf_emu )
 		RETURN_ERR( in.read( block_header, sizeof block_header ) );
 		blargg_long size = get_le32( block_header [0] );
 		blargg_long tag  = get_le32( block_header [1] );
+
+		if ( size <= 0 )
+			return "Corrupt file";
 		
 		//debug_printf( "tag: %c%c%c%c\n", char(tag), char(tag>>8), char(tag>>16), char(tag>>24) );
 		

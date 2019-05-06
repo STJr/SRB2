@@ -60,7 +60,7 @@ void SDL_SYS_CDQuit(void)
 
 UINT8 cdaudio_started = 0;   // for system startup/shutdown
 
-consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cd_volume = {"cd_volume","18",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifndef NOSDLCD

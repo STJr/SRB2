@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -442,10 +442,8 @@ void F_StartIntro(void)
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	F_NewCutscene(introtext[0]);
 
 	intro_scenenum = 0;
@@ -977,10 +975,11 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
-	"Colette \"fickle\" Bordelon",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
+	"Vivian \"toaster\" Grannell",
+	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
@@ -988,6 +987,7 @@ static const char *credits[] = {
 	"Ehab \"Wolfy\" Saeed",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
 	"\1Assistance",
@@ -995,15 +995,21 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Vivian \"toaster\" Grannell",
+	"Victor \"Steel Titanium\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"Ben \"Cue\" Woodford",
+	// Git contributors with 5+ approved merges of substantive quality,
+	// or contributors with at least one groundbreaking merge, may be named.
+	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1048,15 +1054,15 @@ static const char *credits[] = {
 	"Dan \"Blitzzo\" Hagerstrand",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"Erik \"Torgo\" Nielsen",
 	"\"Kaito Sinclaire\"",
-	"Wessel \"Spherallic\" Smit",
+	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
+	"\"Torgo\"",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"Digiku\" Zafra",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
@@ -1077,11 +1083,17 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"Doom Legacy Project",
 	"iD Software",
-	"Alex \"MistaED\" Fuller",
+	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
+	"Alex \"MistaED\" Fuller",
+	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
+	"Simon \"sirjuddington\" Judd", // SLADE developer
+	// Acknowledged here are the following:
+	// Minor merge request authors, see guideline above
+	// Golden - Expanded thin font
+	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
@@ -1131,10 +1143,8 @@ void F_StartCredits(void)
 	}
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	S_ChangeMusicInternal("credit", false);
@@ -1154,6 +1164,9 @@ void F_CreditDrawer(void)
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
 		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
+
+	// Dim the background
+	V_DrawFadeScreen();
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
@@ -1177,16 +1190,34 @@ void F_CreditDrawer(void)
 		if (FixedMul(y,vid.dupy) > vid.height)
 			break;
 	}
+}
 
+void F_CreditTicker(void)
+{
+	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
+	UINT16 i;
+	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+
+	// Draw credits text on top
+	for (i = 0; credits[i]; i++)
+	{
+		switch(credits[i][0])
+		{
+			case 0: y += 80<<FRACBITS; break;
+			case 1: y += 30<<FRACBITS; break;
+			default: y += 12<<FRACBITS; break;
+		}
+		if (FixedMul(y,vid.dupy) > vid.height)
+			break;
+	}
+
+	// Do this here rather than in the drawer you doofus! (this is why dedicated mode broke at credits)
 	if (!credits[i] && y <= 120<<FRACBITS && !finalecount)
 	{
 		timetonext = 5*TICRATE+1;
 		finalecount = 5*TICRATE;
 	}
-}
 
-void F_CreditTicker(void)
-{
 	if (timetonext)
 		timetonext--;
 	else
@@ -1278,10 +1309,8 @@ void F_StartGameEvaluation(void)
 		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	finalecount = 0;
 }
@@ -1389,10 +1418,8 @@ void F_StartGameEnd(void)
 	G_SetGamestate(GS_GAMEEND);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	// In case menus are still up?!!
@@ -1406,6 +1433,7 @@ void F_StartGameEnd(void)
 //
 void F_GameEndDrawer(void)
 {
+	// this function does nothing
 }
 
 //
@@ -1592,10 +1620,8 @@ void F_StartContinue(void)
 	gameaction = ga_nothing;
 
 	keypressed = false;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	// In case menus are still up?!!
 	M_ClearMenus(true);
@@ -1715,9 +1741,10 @@ static void F_AdvanceToNextScene(void)
 	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
 	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[scenenum].musswitch,
 			cutscenes[cutnum]->scene[scenenum].musswitchflags,
-			cutscenes[cutnum]->scene[scenenum].musicloop);
+			cutscenes[cutnum]->scene[scenenum].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 
 	// Fade to the next
 	dofadenow = true;
@@ -1734,7 +1761,7 @@ static void F_AdvanceToNextScene(void)
 
 void F_EndCutScene(void)
 {
-	cutsceneover = true; // do this first, just in case Y_EndGame or something wants to turn it back false later
+	cutsceneover = true; // do this first, just in case G_EndGame or something wants to turn it back false later
 	if (runningprecutscene)
 	{
 		if (server)
@@ -1749,7 +1776,7 @@ void F_EndCutScene(void)
 		else if (nextmap < 1100-1)
 			G_NextLevel();
 		else
-			Y_EndGame();
+			G_EndGame();
 	}
 }
 
@@ -1761,13 +1788,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	G_SetGamestate(GS_CUTSCENE);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 
 	F_NewCutscene(cutscenes[cutscenenum]->scene[0].text);
-
-	CON_ClearHUD();
 
 	cutsceneover = false;
 	runningprecutscene = precutscene;
@@ -1789,9 +1813,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	stoptimer = 0;
 
 	if (cutscenes[cutnum]->scene[0].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[0].musswitch,
 			cutscenes[cutnum]->scene[0].musswitchflags,
-			cutscenes[cutnum]->scene[0].musicloop);
+			cutscenes[cutnum]->scene[0].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 	else
 		S_StopMusic();
 }
@@ -1854,7 +1879,7 @@ void F_CutsceneTicker(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (netgame && i != serverplayer && i != adminplayer)
+		if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 			continue;
 
 		if (players[i].cmd.buttons & BT_USE)

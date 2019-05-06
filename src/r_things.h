@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -79,7 +79,7 @@ typedef struct
 
 	char realname[SKINNAMESIZE+1]; // Display name for level completion.
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
-	char charsel[8], face[8], superface[8]; // Arbitrarily named patch lumps
+	char charsel[9], face[9], superface[9]; // Arbitrarily named patch lumps
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
@@ -185,7 +185,7 @@ typedef struct drawnode_s
 } drawnode_t;
 
 extern INT32 numskins;
-extern skin_t skins[MAXSKINS + 1];
+extern skin_t skins[MAXSKINS];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
@@ -224,6 +224,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE char R_Frame2Char(UINT8 frame)
 FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 {
 #if 1 // 2.1 compat
+	if (cn == '+') return '\\' - 'A'; // PK3 can't use backslash, so use + instead
 	return cn - 'A';
 #else
 	if (cn >= 'A' && cn <= 'Z') return cn - 'A';

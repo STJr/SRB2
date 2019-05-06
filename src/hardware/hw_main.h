@@ -31,7 +31,6 @@
 void HWR_Startup(void);
 void HWR_Shutdown(void);
 
-void HWR_clearAutomap(void);
 void HWR_drawAMline(const fline_t *fl, INT32 color);
 void HWR_FadeScreenMenuBack(UINT32 color, INT32 height);
 void HWR_DrawConsoleBack(UINT32 color, INT32 height);
@@ -52,6 +51,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
 void HWR_PrepLevelCache(size_t pnumtextures);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32 options);	// Lat: separate flags from color since color needs to be an uint to work right.
 void HWR_DrawPic(INT32 x,INT32 y,lumpnum_t lumpnum);
 
 void HWR_AddCommands(void);
@@ -95,6 +95,7 @@ extern consvar_t cv_grcorrecttricks;
 extern consvar_t cv_voodoocompatibility;
 extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
+extern consvar_t cv_grspritebillboarding;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 
