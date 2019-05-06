@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,6 +38,7 @@
 #include "d_main.h"
 #include "m_random.h"
 #include "f_finale.h"
+#include "filesrch.h"
 #include "mserv.h"
 #include "md5.h"
 #include "z_zone.h"
@@ -128,8 +129,6 @@ FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void);
 static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
-static void Command_Tunes_f(void);
-static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -146,7 +145,9 @@ static void Command_Changepassword_f(void);
 static void Command_Login_f(void);
 static void Got_Login(UINT8 **cp, INT32 playernum);
 static void Got_Verification(UINT8 **cp, INT32 playernum);
+static void Got_Removal(UINT8 **cp, INT32 playernum);
 static void Command_Verify_f(void);
+static void Command_RemoveAdmin_f(void);
 static void Command_MotD_f(void);
 static void Got_MotD_f(UINT8 **cp, INT32 playernum);
 
@@ -242,7 +243,7 @@ INT32 cv_debug;
 consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
 
-#if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) //joystick 1 and 2
+#if defined (DC) || defined (_XBOX) || defined (WMINPUT) || defined (_WII) || defined(HAVE_SDL) || defined(_WINDOWS) //joystick 1 and 2
 consvar_t cv_usejoystick = {"use_joystick", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_usejoystick2 = {"use_joystick2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
@@ -319,8 +320,6 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
-consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-
 static CV_PossibleValue_t pointlimit_cons_t[] = {{0, "MIN"}, {999999990, "MAX"}, {0, NULL}};
 consvar_t cv_pointlimit = {"pointlimit", "0", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
 	PointLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -368,7 +367,7 @@ consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
-INT32 adminplayer = -1;
+INT32 adminplayers[MAXPLAYERS];
 
 /// \warning Keep this up-to-date if you add/remove/rename net text commands
 const char *netxcmdnames[MAXNETXCMD - 1] =
@@ -410,6 +409,16 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
   */
 void D_RegisterServerCommands(void)
 {
+	INT32 i;
+
+	for (i = 0; i < NUMGAMETYPES; i++)
+	{
+		gametype_cons_t[i].value = i;
+		gametype_cons_t[i].strvalue = Gametype_Names[i];
+	}
+	gametype_cons_t[NUMGAMETYPES].value = 0;
+	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+
 	RegisterNetXCmd(XD_NAMEANDCOLOR, Got_NameAndColor);
 	RegisterNetXCmd(XD_WEAPONPREF, Got_WeaponPref);
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
@@ -430,8 +439,10 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("password", Command_Changepassword_f);
 	RegisterNetXCmd(XD_LOGIN, Got_Login);
 	COM_AddCommand("login", Command_Login_f); // useful in dedicated to kick off remote admin
-	COM_AddCommand("verify", Command_Verify_f);
+	COM_AddCommand("promote", Command_Verify_f);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
+	COM_AddCommand("demote", Command_RemoveAdmin_f);
+	RegisterNetXCmd(XD_DEMOTED, Got_Removal);
 
 	COM_AddCommand("motd", Command_MotD_f);
 	RegisterNetXCmd(XD_SETMOTD, Got_MotD_f); // For remote admin
@@ -668,18 +679,25 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ghost_guest);
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_usegamma);
 
 	// m_menu.c
+	CV_RegisterVar(&cv_compactscoreboard);
+	CV_RegisterVar(&cv_chatheight);
+	CV_RegisterVar(&cv_chatwidth);
+	CV_RegisterVar(&cv_chattime);
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatbacktint);
+	CV_RegisterVar(&cv_consolechat);
+	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
 	CV_RegisterVar(&cv_alwaysfreelook);
 	CV_RegisterVar(&cv_alwaysfreelook2);
+	CV_RegisterVar(&cv_chasefreelook);
+	CV_RegisterVar(&cv_chasefreelook2);
 
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
@@ -690,10 +708,22 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_moveaxis2);
 	CV_RegisterVar(&cv_lookaxis);
 	CV_RegisterVar(&cv_lookaxis2);
+	CV_RegisterVar(&cv_jumpaxis);
+	CV_RegisterVar(&cv_jumpaxis2);
+	CV_RegisterVar(&cv_spinaxis);
+	CV_RegisterVar(&cv_spinaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
 	CV_RegisterVar(&cv_firenaxis2);
+
+	// filesrch.c
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
+	CV_RegisterVar(&cv_addons_md5);
+	CV_RegisterVar(&cv_addons_showall);
+	CV_RegisterVar(&cv_addons_search_type);
+	CV_RegisterVar(&cv_addons_search_case);
 
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
@@ -985,8 +1015,8 @@ static void SetPlayerName(INT32 playernum, char *newname)
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
 			if (netgame)
-				CONS_Printf(M_GetText("%s renamed to %s\n"),
-					player_names[playernum], newname);
+				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
+
 			strcpy(player_names[playernum], newname);
 		}
 	}
@@ -1011,7 +1041,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && (cv_forceskin.value != -1) && !(IsPlayerAdmin(playernum) && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1162,7 +1192,7 @@ static void SendNameAndColor(void)
 	snacpending++;
 
 	// Don't change name if muted
-	if (cv_mute.value && !(server || adminplayer == consoleplayer))
+	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
 	else // Cleanup name if changing it
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
@@ -1369,9 +1399,9 @@ void SendWeaponPref(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[consoleplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam.value)
 		buf[0] |= 1;
-	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog.value)
 		buf[0] |= 2;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
@@ -1381,9 +1411,9 @@ void SendWeaponPref2(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+	if (cv_flipcam2.value)
 		buf[0] |= 1;
-	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+	if (cv_analog2.value)
 		buf[0] |= 2;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
@@ -1574,7 +1604,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer))
+		if (!IsPlayerAdmin(consoleplayer))
 		{
 			if (SV_SpawnServer())
 				buf[0] &= ~(1<<1);
@@ -1619,7 +1649,7 @@ static void Command_Map_f(void)
 {
 	const char *mapname;
 	size_t i;
-	INT32 j, newmapnum;
+	INT32 newmapnum;
 	boolean newresetplayers;
 	INT32 newgametype = gametype;
 
@@ -1632,7 +1662,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (client && !(adminplayer == consoleplayer))
+	if (client && !IsPlayerAdmin(consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1687,27 +1717,13 @@ static void Command_Map_f(void)
 			return;
 		}
 
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-			if (!strcasecmp(gametype_cons_t[j].strvalue, COM_Argv(i+1)))
-			{
-				// Don't do any variable setting here. Wait until you get your
-				// map packet first to avoid sending the same info twice!
-				newgametype = gametype_cons_t[j].value;
+		newgametype = G_GetGametypeByName(COM_Argv(i+1));
 
-				break;
-			}
-
-		if (!gametype_cons_t[j].strvalue) // reached end of the list with no match
+		if (newgametype == -1) // reached end of the list with no match
 		{
-			// assume they gave us a gametype number, which is okay too
-			for (j = 0; gametype_cons_t[j].strvalue != NULL; j++)
-			{
-				if (atoi(COM_Argv(i+1)) == gametype_cons_t[j].value)
-				{
-					newgametype = gametype_cons_t[j].value;
-					break;
-				}
-			}
+			INT32 j = atoi(COM_Argv(i+1)); // assume they gave us a gametype number, which is okay too
+			if (j >= 0 && j < NUMGAMETYPES)
+				newgametype = (INT16)j;
 		}
 	}
 
@@ -1722,12 +1738,11 @@ static void Command_Map_f(void)
 		char gametypestring[32] = "Single Player";
 
 		if (multiplayer)
-			for (i = 0; gametype_cons_t[i].strvalue != NULL; i++)
-				if (gametype_cons_t[i].value == newgametype)
-				{
-					strcpy(gametypestring, gametype_cons_t[i].strvalue);
-					break;
-				}
+		{
+			if (newgametype >= 0 && newgametype < NUMGAMETYPES
+			&& Gametype_Names[newgametype])
+				strcpy(gametypestring, Gametype_Names[newgametype]);
+		}
 
 		CONS_Alert(CONS_WARNING, M_GetText("%s doesn't support %s mode!\n(Use -force to override)\n"), mapname, gametypestring);
 		return;
@@ -1760,8 +1775,11 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	UINT8 flags;
 	INT32 resetplayer = 1, lastgametype;
 	UINT8 skipprecutscene, FLS;
+#ifdef HAVE_BLUA
+	INT16 mapnumber;
+#endif
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal map change received from %s\n"), player_names[playernum]);
 		if (server)
@@ -1807,6 +1825,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 			mapname, resetplayer, lastgametype, gametype, chmappending));
 		CONS_Printf(M_GetText("Speeding off to level...\n"));
 	}
+
 	if (demoplayback && !timingdemo)
 		precache = false;
 
@@ -1817,13 +1836,13 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 #ifdef HAVE_BLUA
-	LUAh_MapChange();
+	mapnumber = M_MapNumber(mapname[3], mapname[4]);
+	LUAh_MapChange(mapnumber);
 #endif
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
 	if (demoplayback && !timingdemo)
 		precache = true;
-	CON_ToggleOff();
 	if (timingdemo)
 		G_DoneLevelLoad();
 
@@ -1859,7 +1878,7 @@ static void Command_Pause(void)
 	else
 		WRITEUINT8(cp, 0);
 
-	if (cv_pause.value || server || (adminplayer == consoleplayer))
+	if (cv_pause.value || server || (IsPlayerAdmin(consoleplayer)))
 	{
 		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 		{
@@ -1877,7 +1896,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 	UINT8 dedicatedpause = false;
 	const char *playername;
 
-	if (netgame && !cv_pause.value && playernum != serverplayer && playernum != adminplayer)
+	if (netgame && !cv_pause.value && playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal pause command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2006,7 +2025,7 @@ static void Got_RandomSeed(UINT8 **cp, INT32 playernum)
   */
 static void Command_Clearscores_f(void)
 {
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		return;
 
 	SendNetXCmd(XD_CLEARSCORES, NULL, 1);
@@ -2026,7 +2045,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 	INT32 i;
 
 	(void)cp;
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal clear scores command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2247,7 +2266,7 @@ static void Command_ServerTeamChange_f(void)
 	UINT16 usvalue;
 	NetPacket.value.l = NetPacket.value.b = 0;
 
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2394,7 +2413,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 	if (NetPacket.packet.verification) // Special marker that the server sent the request
 	{
-		if (playernum != serverplayer && (playernum != adminplayer))
+		if (playernum != serverplayer && (!IsPlayerAdmin(playernum)))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
@@ -2433,7 +2452,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 	else
 	{
-		if (playernum != serverplayer && (playernum != adminplayer))
+		if (playernum != serverplayer && (!IsPlayerAdmin(playernum)))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 			if (server)
@@ -2661,10 +2680,12 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 #define BASESALT "basepasswordstorage"
 static UINT8 adminpassmd5[16];
+static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
+	adminpasswordset = true;
 }
 
 // Remote Administration
@@ -2699,6 +2720,12 @@ static void Command_Login_f(void)
 #else
 	XBOXSTATIC UINT8 finalmd5[16];
 	const char *pw;
+
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
 
 	// If the server uses login, it will effectively just remove admin privileges
 	// from whoever has them. This is good.
@@ -2736,17 +2763,66 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 	if (client)
 		return;
 
+	if (!adminpasswordset)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
+
 	// Do the final pass to compare with the sent md5
 	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", playernum), &finalmd5);
 
 	if (!memcmp(sentmd5, finalmd5, 16))
 	{
 		CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[playernum]);
-		COM_BufInsertText(va("verify %d\n", playernum)); // do this immediately
+		COM_BufInsertText(va("promote %d\n", playernum)); // do this immediately
 	}
 	else
 		CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[playernum]);
 #endif
+}
+
+boolean IsPlayerAdmin(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playernum == adminplayers[i])
+			return true;
+
+	return false;
+}
+
+void SetAdminPlayer(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playernum == adminplayers[i])
+			return; // Player is already admin
+
+		if (adminplayers[i] == -1)
+		{
+			adminplayers[i] = playernum; // Set the player to a free spot
+			break; // End the loop now. If it keeps going, the same player might get assigned to two slots.
+		}
+
+
+	}
+}
+
+void ClearAdminPlayers(void)
+{
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		adminplayers[i] = -1;
+}
+
+void RemoveAdminPlayer(INT32 playernum)
+{
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playernum == adminplayers[i])
+			adminplayers[i] = -1;
 }
 
 static void Command_Verify_f(void)
@@ -2761,9 +2837,15 @@ static void Command_Verify_f(void)
 		return;
 	}
 
+	if (!netgame)
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
+
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("verify <node>: give admin privileges to a node\n"));
+		CONS_Printf(M_GetText("promote <node>: give admin privileges to a node\n"));
 		return;
 	}
 
@@ -2797,12 +2879,68 @@ static void Got_Verification(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	adminplayer = num;
+	SetAdminPlayer(num);
 
 	if (num != consoleplayer)
 		return;
 
 	CONS_Printf(M_GetText("You are now a server administrator.\n"));
+}
+
+static void Command_RemoveAdmin_f(void)
+{
+	XBOXSTATIC char buf[8]; // Should be plenty
+	char *temp;
+	INT32 playernum;
+
+	if (client)
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("demote <node>: remove admin privileges from a node\n"));
+		return;
+	}
+
+	strlcpy(buf, COM_Argv(1), sizeof(buf));
+
+	playernum = atoi(buf);
+
+	temp = buf;
+
+	WRITEUINT8(temp, playernum);
+
+	if (playeringame[playernum])
+		SendNetXCmd(XD_DEMOTED, buf, 1);
+}
+
+static void Got_Removal(UINT8 **cp, INT32 playernum)
+{
+	INT16 num = READUINT8(*cp);
+
+	if (playernum != serverplayer) // it's not from the server (hacker or bug)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal demotion received from %s (serverplayer is %s)\n"), player_names[playernum], player_names[serverplayer]);
+		if (server)
+		{
+			XBOXSTATIC UINT8 buf[2];
+
+			buf[0] = (UINT8)playernum;
+			buf[1] = KICK_MSG_CON_FAIL;
+			SendNetXCmd(XD_KICK, &buf, 2);
+		}
+		return;
+	}
+
+	RemoveAdminPlayer(num);
+
+	if (num != consoleplayer)
+		return;
+
+	CONS_Printf(M_GetText("You are no longer a server administrator.\n"));
 }
 
 static void Command_MotD_f(void)
@@ -2816,7 +2954,7 @@ static void Command_MotD_f(void)
 		return;
 	}
 
-	if (!(server || (adminplayer == consoleplayer)))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2840,7 +2978,7 @@ static void Command_MotD_f(void)
 		}
 
 	if ((netgame || multiplayer) && client)
-		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
+		SendNetXCmd(XD_SETMOTD, mymotd, i); // send the actual size of the motd string, not the full buffer's size
 	else
 	{
 		strcpy(motd, mymotd);
@@ -2863,7 +3001,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum)
 		if (!isprint(mymotd[i]) || mymotd[i] == ';')
 			kick = true;
 
-	if ((playernum != serverplayer && playernum != adminplayer) || kick)
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal motd change received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2900,7 +3038,7 @@ static void Command_RunSOC(void)
 	else
 		fn = COM_Argv(1);
 
-	if (netgame && !(server || consoleplayer == adminplayer))
+	if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -2926,7 +3064,7 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 	char filename[256];
 	filestatus_t ncs = FS_NOTFOUND;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal runsoc command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2997,7 +3135,7 @@ static void Command_Addfile(void)
 	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
-		if (netgame && !(server || adminplayer == consoleplayer))
+		if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;
@@ -3008,7 +3146,7 @@ static void Command_Addfile(void)
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
 	if (!(netgame || multiplayer) || musiconly)
 	{
-		P_AddWadFile(fn, NULL);
+		P_AddWadFile(fn);
 		return;
 	}
 
@@ -3018,25 +3156,12 @@ static void Command_Addfile(void)
 			break;
 	++p;
 	// check total packet size and no of files currently loaded
+	// See W_LoadWadFile in w_wad.c
+	if ((numwadfiles >= MAX_WADFILES)
+	|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 	{
-		size_t packetsize = 0;
-		serverinfo_pak *dummycheck = NULL;
-
-		// Shut the compiler up.
-		(void)dummycheck;
-
-		// See W_LoadWadFile in w_wad.c
-		for (i = 0; i < numwadfiles; i++)
-			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-		packetsize += nameonlylength(fn) + 22;
-
-		if ((numwadfiles >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
-			return;
-		}
+		CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+		return;
 	}
 
 	WRITESTRINGN(buf_p,p,240);
@@ -3072,7 +3197,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
@@ -3121,8 +3246,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
-	INT32 i;
-	size_t packetsize = 0;
+	INT32 i,j;
 	serverinfo_pak *dummycheck = NULL;
 
 	// Shut the compiler up.
@@ -3140,7 +3264,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		if (!isprint(filename[i]) || filename[i] == ';')
 			kick = true;
 
-	if ((playernum != serverplayer && playernum != adminplayer) || kick)
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
 	{
 		XBOXSTATIC UINT8 buf[2];
 
@@ -3153,13 +3277,8 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
-
-	packetsize += nameonlylength(filename) + 22;
-
 	if ((numwadfiles >= MAX_WADFILES)
-	|| (packetsize > sizeof(dummycheck->fileneeded)))
+	|| ((packetsizetally + nameonlylength(filename) + 22) > MAXFILENEEDED*sizeof(UINT8)))
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3179,8 +3298,9 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 
 		CONS_Printf("%s",message);
 
-		if (adminplayer)
-			COM_BufAddText(va("sayto %d %s", adminplayer, message));
+		for (j = 0; j < MAXPLAYERS; j++)
+			if (adminplayers[j])
+				COM_BufAddText(va("sayto %d %s", adminplayers[j], message));
 
 		return;
 	}
@@ -3240,7 +3360,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
+	if (ncs != FS_FOUND || !P_AddWadFile(filename))
 	{
 		Command_ExitGame_f();
 		if (ncs == FS_FOUND)
@@ -3295,10 +3415,56 @@ static void Command_ListWADS_f(void)
 static void Command_Version_f(void)
 {
 #ifdef DEVELOP
-	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s)\n", compbranch, comprevision, compdate, comptime);
+	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s) ", compbranch, comprevision, compdate, comptime);
 #else
-	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s)\n", VERSIONSTRING, compdate, comptime, comprevision);
+	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision);
 #endif
+
+	// Base library
+#if defined( HAVE_SDL)
+	CONS_Printf("SDL ");
+#elif defined(_WINDOWS)
+	CONS_Printf("DD ");
+#endif
+
+	// OS
+	// Would be nice to use SDL_GetPlatform for this
+#if defined (_WIN32) || defined (_WIN64)
+	CONS_Printf("Windows ");
+#elif defined(__linux__)
+	CONS_Printf("Linux ");
+#elif defined(MACOSX)
+	CONS_Printf("macOS ");
+#elif defined(UNIXCOMMON)
+	CONS_Printf("Unix (Common) ");
+#else
+	CONS_Printf("Other OS ");
+#endif
+
+	// Bitness
+	if (sizeof(void*) == 4)
+		CONS_Printf("32-bit ");
+	else if (sizeof(void*) == 8)
+		CONS_Printf("64-bit ");
+	else // 16-bit? 128-bit?
+		CONS_Printf("Bits Unknown ");
+
+	// No ASM?
+#ifdef NOASM
+	CONS_Printf("\x85" "NOASM " "\x80");
+#endif
+
+	// Debug build
+#ifdef _DEBUG
+	CONS_Printf("\x85" "DEBUG " "\x80");
+#endif
+
+	// DEVELOP build
+#ifdef DEVELOP
+	CONS_Printf("\x87" "DEVELOP " "\x80");
+#endif
+
+	CONS_Printf("\n");
 }
 
 #ifdef UPDATE_ALERT
@@ -3312,7 +3478,6 @@ static void Command_ModDetails_f(void)
 //
 static void Command_ShowGametype_f(void)
 {
-	INT32 j;
 	const char *gametypestr = NULL;
 
 	if (!(netgame || multiplayer)) // print "Single player" instead of "Co-op"
@@ -3320,15 +3485,11 @@ static void Command_ShowGametype_f(void)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), M_GetText("Single player"));
 		return;
 	}
-	// find name string for current gametype
-	for (j = 0; gametype_cons_t[j].strvalue; j++)
-	{
-		if (gametype_cons_t[j].value == gametype)
-		{
-			gametypestr = gametype_cons_t[j].strvalue;
-			break;
-		}
-	}
+
+	// get name string for current gametype
+	if (gametype >= 0 && gametype < NUMGAMETYPES)
+		gametypestr = Gametype_Names[gametype];
+
 	if (gametypestr)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), gametypestr);
 	else // string for current gametype was not found above (should never happen)
@@ -3341,6 +3502,9 @@ static void Command_Playintro_f(void)
 {
 	if (netgame)
 		return;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	F_StartIntro();
 }
@@ -3467,15 +3631,13 @@ void D_GameTypeChanged(INT32 lastgametype)
 {
 	if (netgame)
 	{
-		INT32 j;
 		const char *oldgt = NULL, *newgt = NULL;
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == lastgametype)
-				oldgt = gametype_cons_t[j].strvalue;
-			if (gametype_cons_t[j].value == gametype)
-				newgt = gametype_cons_t[j].strvalue;
-		}
+
+		if (lastgametype >= 0 && lastgametype < NUMGAMETYPES)
+			oldgt = Gametype_Names[lastgametype];
+		if (gametype >= 0 && lastgametype < NUMGAMETYPES)
+			newgt = Gametype_Names[gametype];
+
 		if (oldgt && newgt)
 			CONS_Printf(M_GetText("Gametype was changed from %s to %s\n"), oldgt, newgt);
 	}
@@ -3574,7 +3736,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 			if (playeringame[i])
 				players[i].ctfteam = 0;
 
-		if (server || (adminplayer == consoleplayer))
+		if (server || (IsPlayerAdmin(consoleplayer)))
 		{
 			CV_StealthSetValue(&cv_teamscramble, 0);
 			teamscramble = 0;
@@ -3657,7 +3819,7 @@ static void TeamScramble_OnChange(void)
 	if (!cv_teamscramble.value)
 		teamscramble = 0;
 
-	if (!G_GametypeHasTeams() && (server || consoleplayer == adminplayer))
+	if (!G_GametypeHasTeams() && (server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("This command cannot be used in this gametype.\n"));
 		CV_StealthSetValue(&cv_teamscramble, 0);
@@ -3836,7 +3998,7 @@ static void Command_ExitLevel_f(void)
 {
 	if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
 		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-	else if (!(server || (adminplayer == consoleplayer)))
+	else if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
@@ -3852,7 +4014,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 	if (gameaction == ga_completed)
 		return;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal exitlevel command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -3878,95 +4040,6 @@ static void Command_Displayplayer_f(void)
 	CONS_Printf(M_GetText("Displayplayer is %d\n"), displayplayer);
 }
 
-static void Command_Tunes_f(void)
-{
-	const char *tunearg;
-	UINT16 tunenum, track = 0;
-	const size_t argc = COM_Argc();
-
-	if (argc < 2) //tunes slot ...
-	{
-		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
-		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
-		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
-		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
-		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
-		return;
-	}
-
-	tunearg = COM_Argv(1);
-	tunenum = (UINT16)atoi(tunearg);
-	track = 0;
-
-	if (!strcasecmp(tunearg, "-show"))
-	{
-		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
-			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
-		return;
-	}
-	if (!strcasecmp(tunearg, "-none"))
-	{
-		S_StopMusic();
-		return;
-	}
-	else if (!strcasecmp(tunearg, "-default"))
-	{
-		tunearg = mapheaderinfo[gamemap-1]->musname;
-		track = mapheaderinfo[gamemap-1]->mustrack;
-	}
-	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
-	if (tunenum && tunenum >= 1036)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
-		return;
-	}
-	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
-		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
-
-	if (argc > 2)
-		track = (UINT16)atoi(COM_Argv(2))-1;
-
-	if (tunenum)
-		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
-	else
-		strncpy(mapmusname, tunearg, 7);
-	mapmusname[6] = 0;
-	mapmusflags = (track & MUSIC_TRACKMASK);
-
-	S_ChangeMusic(mapmusname, mapmusflags, true);
-
-	if (argc > 3)
-	{
-		float speed = (float)atof(COM_Argv(3));
-		if (speed > 0.0f)
-			S_SpeedMusic(speed);
-	}
-}
-
-static void Command_RestartAudio_f(void)
-{
-	if (dedicated)  // No point in doing anything if game is a dedicated server.
-		return;
-
-	S_StopMusic();
-	I_ShutdownMusic();
-	I_ShutdownSound();
-	I_StartupSound();
-	I_InitMusic();
-	
-// These must be called or no sound and music until manually set.
-
-	I_SetSfxVolume(cv_soundvolume.value);
-	I_SetDigMusicVolume(cv_digmusicvolume.value);
-	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
-	if (Playing()) // Gotta make sure the player is in a level
-		P_RestoreMusic(&players[consoleplayer]);
-	
-}
-
 /** Quits a game and returns to the title screen.
   *
   */
@@ -3987,6 +4060,9 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+
+	if (dirmenu)
+		closefilemenu(true);
 
 	if (!modeattacking)
 		D_StartTitle();
@@ -4046,7 +4122,7 @@ static void Command_Cheats_f(void)
 {
 	if (COM_CheckParm("off"))
 	{
-		if (!(server || (adminplayer == consoleplayer)))
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		else
 			CV_ResetCheatNetVars();
@@ -4056,7 +4132,7 @@ static void Command_Cheats_f(void)
 	if (CV_CheatsEnabled())
 	{
 		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
-		if (server || (adminplayer == consoleplayer))
+		if (server || (IsPlayerAdmin(consoleplayer)))
 			CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
@@ -4125,7 +4201,7 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
+	if ((server || IsPlayerAdmin(consoleplayer)) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
 	{
 		if (cv_forceskin.value == -2)
 			CV_SetValue(&cv_forceskin, numskins-1);
@@ -4155,7 +4231,7 @@ static void ForceSkin_OnChange(void)
 //Allows the player's name to be changed if cv_mute is off.
 static void Name_OnChange(void)
 {
-	if (cv_mute.value && !(server || adminplayer == consoleplayer))
+	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You may not change your name when chat is muted.\n"));
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
@@ -4278,7 +4354,7 @@ static void Color2_OnChange(void)
   */
 static void Mute_OnChange(void)
 {
-	if (server || (adminplayer == consoleplayer))
+	if (server || (IsPlayerAdmin(consoleplayer)))
 		return;
 
 	if (cv_mute.value)

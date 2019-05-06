@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -844,14 +844,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
 		if (pl->bonustime && (pl->pflags & PF_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
-		   !(pl->anotherflyangle >= 90 &&   pl->anotherflyangle <= 270)
-		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
+		   !(pl->flyangle > 90 &&   pl->flyangle < 270)
+		^ (droneobj->extravalue1 > 90 && droneobj->extravalue1 < 270)
 		))
 		{
 			// Reload all the fancy ring stuff!
 			P_ReloadRings();
 		}
-		droneobj->extravalue1 = pl->anotherflyangle;
+		droneobj->extravalue1 = pl->flyangle;
 		droneobj->extravalue2 = (INT32)leveltime + TICRATE;
 	}
 
@@ -1778,18 +1778,6 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	return true;
 }
 
-//
-// CheckMissileImpact
-//
-static void CheckMissileImpact(mobj_t *mobj)
-{
-	if (!(mobj->flags & MF_MISSILE) || !mobj->target)
-		return;
-
-	if (!mobj->target->player)
-		return;
-}
-
 // The highest the camera will "step up" onto another floor.
 #define MAXCAMERASTEPMOVE MAXSTEPMOVE
 
@@ -2010,11 +1998,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		}
 
 		if (!P_CheckPosition(thing, tryx, tryy))
-		{
-			if (!P_MobjWasRemoved(thing))
-				CheckMissileImpact(thing);
 			return false; // solid wall or thing
-		}
 
 		if (!(thing->flags & MF_NOCLIP))
 		{
@@ -2040,7 +2024,6 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 			if (tmceilingz - tmfloorz < thing->height)
 			{
-				CheckMissileImpact(thing);
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
 				return false; // doesn't fit
@@ -2051,16 +2034,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->eflags & MFE_VERTICALFLIP)
 			{
 				if (thing->z < tmfloorz)
-				{
-					CheckMissileImpact(thing);
 					return false; // mobj must raise itself to fit
-				}
 			}
 			else if (tmceilingz < thingtop)
-			{
-				CheckMissileImpact(thing);
 				return false; // mobj must lower itself to fit
-			}
 
 			// Ramp test
 			if (maxstep > 0 && !(
@@ -2108,7 +2085,6 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			{
 				if (thingtop - tmceilingz > maxstep)
 				{
-					CheckMissileImpact(thing);
 					if (tmfloorthing)
 						tmhitthing = tmfloorthing;
 					return false; // too big a step up
@@ -2116,16 +2092,9 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 			else if (tmfloorz - thing->z > maxstep)
 			{
-				CheckMissileImpact(thing);
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
 				return false; // too big a step up
-			}
-
-			if (tmfloorz > thing->z)
-			{
-				if (thing->flags & MF_MISSILE)
-					CheckMissileImpact(thing);
 			}
 
 			if (!allowdropoff && !(thing->flags & MF_FLOAT) && thing->type != MT_SKIM && !tmfloorthing)

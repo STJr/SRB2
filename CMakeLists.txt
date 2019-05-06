@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(SRB2
-	VERSION 2.1.20
+	VERSION 2.1.23
 	LANGUAGES C)
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
@@ -54,12 +54,18 @@ macro(copy_files_to_build_dir target dlllist_var)
 	endif()
 endmacro()
 
-# 64-bit check
-if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+# bitness check
+set(SRB2_SYSTEM_BITS 0)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message(STATUS "Target is 64-bit")
 	set(SRB2_SYSTEM_BITS 64)
-else()
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	message(STATUS "Target is 32-bit")
 	set(SRB2_SYSTEM_BITS 32)
+endif()
+if(${SRB2_SYSTEM_BITS} EQUAL 0)
+	message(STATUS "Target bitness is unknown")
 endif()
 
 # OS macros
@@ -98,10 +104,10 @@ add_subdirectory(assets)
 ## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
-git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
+git_latest_commit(SRB2_COMP_COMMIT "${CMAKE_SOURCE_DIR}")
 git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
 set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
-set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}")
+set(SRB2_COMP_REVISION "${SRB2_COMP_COMMIT}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####

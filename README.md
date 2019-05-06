@@ -13,8 +13,6 @@
 - libupnp (Linux/OS X only)
 - libgme (Linux/OS X only)
 
-Warning: 64-bit builds are not netgame compatible with 32-bit builds. Use at your own risk.
-
 ## Compiling
 
 See [SRB2 Wiki/Source code compiling](http://wiki.srb2.org/wiki/Source_code_compiling)

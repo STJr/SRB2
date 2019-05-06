@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -44,6 +44,9 @@ void COM_ImmedExecute(const char *ptext);
 
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);
+
+// As above; and progress the wait timer.
+void COM_BufTicker(void);
 
 // setup command buffer, at game tartup
 void COM_Init(void);
@@ -125,6 +128,13 @@ extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
 extern CV_PossibleValue_t CV_Natural[];
+
+// Filter consvars by version
+extern consvar_t cv_execversion;
+
+void CV_InitFilterVar(void);
+void CV_ToggleExecVersion(boolean enable);
+
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);
 

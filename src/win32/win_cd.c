@@ -161,7 +161,7 @@ static BOOL wasPlaying;
 //static INT     cdVolume = 0;          // current cd volume (0-31)
 
 // 0-31 like Music & Sfx, though CD hardware volume is 0-255.
-consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cd_volume = {"cd_volume","18",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // allow Update for next/loop track
 // some crap cd drivers take up to
@@ -471,7 +471,7 @@ void I_PlayCD(UINT8 nTrack, UINT8 bLooping)
 	//faB: stop MIDI music, MIDI music will restart if volume is upped later
 	cv_digmusicvolume.value = 0;
 	cv_midimusicvolume.value = 0;
-	I_StopSong (0);
+	I_StopSong();
 
 	//faB: I don't use the notify message, I'm trying to minimize the delay
 	mciPlay.dwCallback = (DWORD)((size_t)hWndMain);

@@ -1365,6 +1365,20 @@
 			path = ../../m_misc.h;
 			refType = 2;
 		};
+		84177764085A10EB000C01D8 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = apng.c;
+			path = ../../apng.c;
+			refType = 2;
+		};
+		84177765085A10EB000C01D8 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = m_misc.h;
+			path = ../../apng.h;
+			refType = 2;
+		};
 		84177766085A10EB000C01D8 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
