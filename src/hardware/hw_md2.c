@@ -159,7 +159,7 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 #endif
 	png_FILE_p png_FILE;
 	//Filename checking fixed ~Monster Iestyn and Golden
-	char *pngfilename = va("%s"PATHSEP"md2"PATHSEP"%s", srb2home, filename);
+	char *pngfilename = va("%s"PATHSEP"mdls"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pngfilename, ".png");
 	png_FILE = fopen(pngfilename, "rb");
@@ -288,7 +288,7 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 	INT32 ch, rep;
 	FILE *file;
 	//Filename checking fixed ~Monster Iestyn and Golden
-	char *pcxfilename = va("%s"PATHSEP"md2"PATHSEP"%s", srb2home, filename);
+	char *pcxfilename = va("%s"PATHSEP"mdls"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pcxfilename, ".pcx");
 	file = fopen(pcxfilename, "rb");
@@ -477,13 +477,13 @@ void HWR_InitMD2(void)
 		md2_models[i].error = false;
 	}
 
-	// read the md2.dat file
+	// read the mdls.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("%s %s\n", M_GetText("Error while loading md2.dat:"), strerror(errno));
+		CONS_Printf("%s %s\n", M_GetText("Error while loading mdls.dat:"), strerror(errno));
 		nomd2s = true;
 		return;
 	}
@@ -491,7 +491,7 @@ void HWR_InitMD2(void)
 	{
 		if (stricmp(name, "PLAY") == 0)
 		{
-			CONS_Printf("MD2 for sprite PLAY detected in md2.dat, use a player skin instead!\n");
+			CONS_Printf("MD2 for sprite PLAY detected in mdls.dat, use a player skin instead!\n");
 			continue;
 		}
 
@@ -525,7 +525,7 @@ void HWR_InitMD2(void)
 			}
 		}
 		// no sprite/player skin name found?!?
-		CONS_Printf("Unknown sprite/player skin %s detected in md2.dat\n", name);
+		CONS_Printf("Unknown sprite/player skin %s detected in mdls.dat\n", name);
 md2found:
 		// move on to next line...
 		continue;
@@ -544,13 +544,13 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 
 	CONS_Printf("AddPlayerMD2()...\n");
 
-	// read the md2.dat file
+	// read the mdls.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("Error while loading md2.dat\n");
+		CONS_Printf("Error while loading mdls.dat\n");
 		nomd2s = true;
 		return;
 	}
@@ -579,7 +579,7 @@ playermd2found:
 void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startup
 {
 	FILE *f;
-	// name[18] is used to check for names in the md2.dat file that match with sprites or player skins
+	// name[18] is used to check for names in the mdls.dat file that match with sprites or player skins
 	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
 	char name[18], filename[32];
 	float scale, offset;
@@ -590,13 +590,13 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 	if (spritenum == SPR_PLAY) // Handled already NEWMD2: Per sprite, per-skin check
 		return;
 
-	// Read the md2.dat file
+	// Read the mdls.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "md2.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("Error while loading md2.dat\n");
+		CONS_Printf("Error while loading mdls.dat\n");
 		nomd2s = true;
 		return;
 	}
@@ -895,7 +895,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	md2_t *md2;
 	UINT8 color[4];
 
-	if (!cv_grmd2.value)
+	if (!cv_grmdls.value)
 		return;
 
 	if (spr->precip)
@@ -974,8 +974,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			return; // we already failed loading this before :(
 		if (!md2->model)
 		{
-			//CONS_Debug(DBG_RENDER, "Loading MD2... (%s)", sprnames[spr->mobj->sprite]);
-			sprintf(filename, "md2/%s", md2->filename);
+			//CONS_Debug(DBG_RENDER, "Loading model... (%s)", sprnames[spr->mobj->sprite]);
+			sprintf(filename, "mdls/%s", md2->filename);
 			md2->model = md2_readModel(filename);
 
 			if (md2->model)
@@ -1034,7 +1034,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 
 #ifdef USE_MODEL_NEXTFRAME
-		if (cv_grmd2.value == 1 && tics <= durs)
+		if (cv_grmdls.value == 1 && tics <= durs)
 		{
 			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 			if (spr->mobj->frame & FF_ANIMATE)
