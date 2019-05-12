@@ -5568,6 +5568,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI2",
 	"S_CACTI3",
 	"S_CACTI4",
+	"S_CACTI5",
+	"S_CACTI6",
+	"S_CACTI7",
+	"S_CACTI8",
+	"S_CACTI9",
+
+	// Warning signs sprites
+	"S_ARIDSIGN_CAUTION",
+	"S_ARIDSIGN_CACTI",
+	"S_ARIDSIGN_SHARPTURN",
 
 	// Flame jet
 	"S_FLAMEJETSTND",
@@ -7241,6 +7251,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI2",
 	"MT_CACTI3",
 	"MT_CACTI4",
+	"MT_CACTI5",
+	"MT_CACTI6",
+	"MT_CACTI7",
+	"MT_CACTI8",
+	"MT_CACTI9",
+	"MT_ARIDSIGN_CAUTION",
+	"MT_ARIDSIGN_CACTI",
+	"MT_ARIDSIGN_SHARPTURN",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",

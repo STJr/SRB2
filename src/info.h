@@ -457,6 +457,9 @@ typedef enum sprite
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
 	SPR_CACT, // Cacti sprites
+	SPR_WWSG, // Caution Sign
+	SPR_WWS2, // Cacti Sign
+	SPR_WWS3, // Sharp Turn Sign
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -2306,6 +2309,16 @@ typedef enum state
 	S_CACTI2,
 	S_CACTI3,
 	S_CACTI4,
+	S_CACTI5,
+	S_CACTI6,
+	S_CACTI7,
+	S_CACTI8,
+	S_CACTI9,
+
+	// Warning signs sprites
+	S_ARIDSIGN_CAUTION,
+	S_ARIDSIGN_CACTI,
+	S_ARIDSIGN_SHARPTURN,
 
 	// Flame jet
 	S_FLAMEJETSTND,
@@ -3999,6 +4012,14 @@ typedef enum mobj_type
 	MT_CACTI2,
 	MT_CACTI3,
 	MT_CACTI4,
+	MT_CACTI5, // Harmful Cactus 1
+	MT_CACTI6, // Harmful Cactus 2
+	MT_CACTI7, // Harmful Cactus 3
+	MT_CACTI8, // Harmful Cactus 4
+	MT_CACTI9, // Harmful Cactus 5
+	MT_ARIDSIGN_CAUTION, // Caution Sign
+	MT_ARIDSIGN_CACTI, // Cacti Sign
+	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,

@@ -343,6 +343,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BTBL
 	&lspr[NOLIGHT],     // SPR_STBL
 	&lspr[NOLIGHT],     // SPR_CACT
+	&lspr[NOLIGHT],     // SPR_WWSG
+	&lspr[NOLIGHT],     // SPR_WWS2
+	&lspr[NOLIGHT],     // SPR_WWS3
 
 	// Red Volcano Scenery
 	&lspr[REDBALL_L],   // SPR_FLME
