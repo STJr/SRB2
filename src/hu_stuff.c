@@ -1072,7 +1072,9 @@ static INT16 typelines = 1; // number of drawfill lines we need when drawing the
 //
 boolean HU_Responder(event_t *ev)
 {
+#ifndef NONET
 	INT32 c=0;
+#endif
 
 	if (ev->type != ev_keydown)
 		return false;
@@ -1099,9 +1101,9 @@ boolean HU_Responder(event_t *ev)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
+#ifndef NONET
 	c = (INT32)ev->data1;
 
-#ifndef NONET
 	if (!chat_on)
 	{
 		// enter chat mode
