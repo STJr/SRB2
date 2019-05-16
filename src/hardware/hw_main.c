@@ -4268,7 +4268,9 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
 static void HWR_RotateSpritePolyToAim(gr_vissprite_t *spr, FOutVector *wallVerts)
 {
-	if (cv_grspritebillboarding.value && spr && spr->mobj && wallVerts)
+	if (cv_grspritebillboarding.value
+		&& spr && spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE)
+		&& wallVerts)
 	{
 		float basey = FIXED_TO_FLOAT(spr->mobj->z);
 		float lowy = wallVerts[0].y;
@@ -4549,7 +4551,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		wallVerts[1].y = endbot;
 
 		// The x and y only need to be adjusted in the case that it's not a papersprite
-		if (cv_grspritebillboarding.value && spr->mobj)
+		if (cv_grspritebillboarding.value
+			&& spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE))
 		{
 			// Get the x and z of the vertices so billboarding draws correctly
 			realheight = realbot - realtop;
@@ -4578,7 +4581,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		wallVerts[0].y = wallVerts[1].y = bot;
 
 		// The x and y only need to be adjusted in the case that it's not a papersprite
-		if (cv_grspritebillboarding.value && spr->mobj)
+		if (cv_grspritebillboarding.value
+			&& spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE))
 		{
 			// Get the x and z of the vertices so billboarding draws correctly
 			realheight = realbot - realtop;
