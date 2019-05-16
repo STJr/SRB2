@@ -1115,16 +1115,6 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	// capslock
-	if (key == KEY_CAPSLOCK)	// it's a toggle.
-	{
-		if (capslock)
-			capslock = false;
-		else
-			capslock = true;
-		return true;
-	}
-
 	if (key >= 'a' && key <= 'z')
 	{
 		if (capslock ^ shiftdown)

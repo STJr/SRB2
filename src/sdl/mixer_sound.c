@@ -902,21 +902,10 @@ boolean I_LoadSong(char *data, size_t len)
 	const char *key1 = "LOOP";
 	const char *key2 = "POINT=";
 	const char *key3 = "MS=";
-	const char *key4 = "LENGTHMS=";
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
-	const size_t key4len = strlen(key4);
 
-	// for mp3 wide chars
-	const char *key1w = "L\0O\0O\0P\0";
-	const char *key2w = "P\0O\0I\0N\0T\0\0\0\xFF\xFE";
-	const char *key3w = "M\0S\0\0\0\xFF\xFE";
-	const char *key4w = "L\0E\0N\0G\0T\0H\0M\0S\0\0\0\xFF\xFE";
-	const char *wterm = "\0\0";
-	char wval[10];
-
-	size_t wstart, wp;
 	char *p = data;
 	SDL_RWops *rw;
 
@@ -1062,61 +1051,8 @@ boolean I_LoadSong(char *data, size_t len)
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 		}
-		else if (fpclassify(song_length) == FP_ZERO && !strncmp(p, key4, key4len)) // is it LENGTHMS=?
-		{
-			p += key4len; // skip LENGTHMS
-			song_length = (float)(atoi(p) / 1000.0L);
-		}
-		// below: search MP3 or other tags that use wide char encoding
-		else if (fpclassify(loop_point) == FP_ZERO && !memcmp(p, key1w, key1len*2)) // LOOP wide char
-		{
-			p += key1len*2;
-			if (!memcmp(p, key2w, (key2len+1)*2)) // POINT= wide char
-			{
-				p += (key2len+1)*2;
-				wstart = (size_t)p;
-				wp = 0;
-				while (wp < 9 && memcmp(p, wterm, 2))
-				{
-					wval[wp] = *p;
-					p += 2;
-					wp = ((size_t)(p-wstart))/2;
-				}
-				wval[min(wp, 9)] = 0;
-				loop_point = (float)((44.1L+atoi(wval) / 44100.0L));
-			}
-			else if (!memcmp(p, key3w, (key3len+1)*2)) // MS= wide char
-			{
-				p += (key3len+1)*2;
-				wstart = (size_t)p;
-				wp = 0;
-				while (wp < 9 && memcmp(p, wterm, 2))
-				{
-					wval[wp] = *p;
-					p += 2;
-					wp = ((size_t)(p-wstart))/2;
-				}
-				wval[min(wp, 9)] = 0;
-				loop_point = (float)(atoi(wval) / 1000.0L);
-			}
-		}
-		else if (fpclassify(song_length) == FP_ZERO && !memcmp(p, key4w, (key4len+1)*2)) // LENGTHMS= wide char
-		{
-			p += (key4len+1)*2;
-			wstart = (size_t)p;
-			wp = 0;
-			while (wp < 9 && memcmp(p, wterm, 2))
-			{
-				wval[wp] = *p;
-				p += 2;
-				wp = ((size_t)(p-wstart))/2;
-			}
-			wval[min(wp, 9)] = 0;
-			song_length = (float)(atoi(wval) / 1000.0L);
-		}
 
-		if (fpclassify(loop_point) != FP_ZERO && fpclassify(song_length) != FP_ZERO && song_length > loop_point) // Got what we needed
-			// the last case is a sanity check, in case the wide char searches were false matches.
+		if (fpclassify(loop_point) != FP_ZERO) // Got what we needed
 			break;
 		else // continue searching
 			p++;

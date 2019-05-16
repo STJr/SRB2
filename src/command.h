@@ -45,6 +45,9 @@ void COM_ImmedExecute(const char *ptext);
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);
 
+// As above; and progress the wait timer.
+void COM_BufTicker(void);
+
 // setup command buffer, at game tartup
 void COM_Init(void);
 
