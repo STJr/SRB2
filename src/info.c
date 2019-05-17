@@ -238,6 +238,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BTBL", // Big tumbleweed
 	"STBL", // Small tumbleweed
 	"CACT", // Cacti sprites
+	"WWSG", // Caution Sign
+	"WWS2", // Cacti Sign
+	"WWS3", // Sharp Turn Sign
 
 	// Red Volcano Scenery
 	"FLME", // Flame jet
@@ -2188,6 +2191,16 @@ state_t states[NUMSTATES] =
 	{SPR_CACT, 1, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI2
 	{SPR_CACT, 2, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI3
 	{SPR_CACT, 3, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI4
+	{SPR_CACT, 4, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI5
+	{SPR_CACT, 5, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI6
+	{SPR_CACT, 6, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI7
+	{SPR_CACT, 7, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI8
+	{SPR_CACT, 8, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI9
+
+	// Warning Signs
+	{SPR_WWSG, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_ARIDSIGN_CAUTION
+	{SPR_WWS2, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_ARIDSIGN_CACTI
+	{SPR_WWS3, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_ARIDSIGN_SHARPTURN
 
 	// Flame jet
 	{SPR_NULL, 0, 2*TICRATE, {NULL},             0, 0, S_FLAMEJETSTART}, // S_FLAMEJETSTND
@@ -10910,6 +10923,222 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI5
+		1207,           // doomednum
+		S_CACTI5,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		40*FRACUNIT,    // radius
+		128*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI6
+		1208,           // doomednum
+		S_CACTI6,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		132*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI7
+		1209,           // doomednum
+		S_CACTI7,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		224*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI8
+		1210,           // doomednum
+		S_CACTI8,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		208*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI9
+		1211,           // doomednum
+		S_CACTI9,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		48*FRACUNIT,    // radius
+		208*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ARIDSIGN_CAUTION
+		1212,           // doomednum
+		S_ARIDSIGN_CAUTION,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		22*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_SOLID|MF_PAPERCOLLISION, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ARIDSIGN_CACTI
+		1213,           // doomednum
+		S_ARIDSIGN_CACTI,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		22*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_SOLID|MF_PAPERCOLLISION, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ARIDSIGN_SHARPTURN
+		1214,           // doomednum
+		S_ARIDSIGN_SHARPTURN,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		192*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SCENERY|MF_SOLID|MF_PAPERCOLLISION, // flags
 		S_NULL          // raisestate
 	},
 
