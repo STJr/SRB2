@@ -250,6 +250,7 @@ void A_Boss5CheckFalling();
 void A_Boss5PinchShot();
 void A_Boss5MakeItRain();
 void A_LookForBetter();
+void A_Boss5BombExplode();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256

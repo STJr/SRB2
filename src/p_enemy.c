@@ -279,6 +279,7 @@ void A_Boss5CheckFalling(mobj_t *actor);
 void A_Boss5PinchShot(mobj_t *actor);
 void A_Boss5MakeItRain(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
+void A_Boss5BombExplode(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12439,4 +12440,84 @@ void A_LookForBetter(mobj_t *actor)
 
 	P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale));
 	A_FaceTarget(actor);
+}
+
+/* * Spawns a dust ring.
+  *	The dust ring behaves slightly randomly so it doesn't look too uniform.
+  *
+  * \param mobjtype Thing type to make a ring of.
+  * \param div Amount of things to spawn on the ring.
+  * \param x Center X coordinates.
+  * \param y Center Y coordinates.
+  * \param z Center Z coordinates.
+  * \param radius Radius.
+  * \param speed Additional thrust on particles.
+  * \param scale Scale.
+  */
+static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t speed, fixed_t scale)
+{
+	angle_t ang = FixedAngle(FixedDiv(360*FRACUNIT, div*FRACUNIT));  //(ANGLE_180/div)*2;
+	UINT32 i;
+
+	// it turned out the radius was effectively nullified thanks to errors in the original script
+	// BUT people preferred how it looked before I "fixed" it, so I got rid of the radius calculations altogether
+	// this was a bit of a mess to sort out, but at least it's probably somewhat fine now?
+	// -- Monster Iestyn (21/05/19)
+	(void)radius;
+
+	for (i = 0; i < div; i++)
+	{
+		mobj_t *dust = P_SpawnMobj(
+			x, //+ FixedMul(radius, FINECOSINE((ang*i) >> ANGLETOFINESHIFT)),
+			y, //+ FixedMul(radius, FINESINE((ang*i) >> ANGLETOFINESHIFT)),
+			z,
+			mobjtype
+			);
+
+		dust->angle = ang*i + ANGLE_90;
+		P_SetScale(dust, scale);
+		dust->destscale = FixedMul(4*FRACUNIT + P_RandomFixed(), scale);
+		dust->scalespeed = scale/24;
+		P_Thrust(dust, ang*i, speed + FixedMul(P_RandomFixed(), scale));
+		dust->momz = P_SignedRandom()*scale/64;
+	}
+}
+
+// Function: A_Boss5BombExplode
+//
+// Description: Boss 5's bomb exploding.
+//
+// var1 = Thing type to spawn as dust
+// var2 = unused
+//
+void A_Boss5BombExplode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5BombExplode", actor))
+		return;
+#endif
+
+	// The original Lua script did not use |= to add flags but just set these flags exactly apparently?
+	// (I may modify this later)
+	// -- Monster Iestyn (21/05/19)
+	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	actor->flags2 = MF2_EXPLOSION;
+
+	if (actor->target)
+		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
+
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, actor->scale);
+	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
+	// the above does not exist, so we set the quake values directly instead
+	quake.intensity = 9*actor->scale;
+	quake.time = TICRATE/6;
+	// the following quake values have no effect atm? ah well, may as well set them anyway
+	{
+		mappoint_t q_epicenter = {actor->x, actor->y, actor->z};
+		quake.epicenter = &q_epicenter;
+	}
+	quake.radius = 20*actor->radius;
 }

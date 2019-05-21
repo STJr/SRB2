@@ -2236,6 +2236,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
+	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 
 	{{NULL},                   "NONE"},
 
