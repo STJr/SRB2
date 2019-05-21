@@ -48,8 +48,20 @@ typedef struct
 	texpatch_t patches[0];
 } texture_t;
 
+typedef struct
+{
+	UINT8 *flat;
+	INT16 width, height;
+
+#ifdef ESLOPE
+	UINT8 *resizedflat;
+	INT16 resizedwidth, resizedheight;
+#endif
+} textureflat_t;
+
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
+extern textureflat_t *texflats;
 
 extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
@@ -94,7 +106,6 @@ const char *R_ColormapNameForNum(INT32 num);
 
 boolean R_CheckIfPatch(lumpnum_t lump);
 
-// Lactozilla
 void R_FlatPatch(patch_t *patch, UINT8 *flat);
 void R_FlatTexture(size_t tex, UINT8 *flat);
 void R_CropFlat(UINT8 *srcflat, UINT8 *destflat,

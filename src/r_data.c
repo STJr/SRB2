@@ -98,6 +98,7 @@ INT32 numtextures = 0; // total number of textures found,
 // size of following tables
 
 texture_t **textures = NULL;
+textureflat_t *texflats = NULL;
 static UINT32 **texturecolumnofs; // column offset lookup table for each texture
 static UINT8 **texturecache; // graphics data for each generated full-size texture
 
@@ -395,6 +396,7 @@ void R_LoadTextures(void)
 		}
 		Z_Free(texturetranslation);
 		Z_Free(textures);
+		Z_Free(texflats);
 	}
 
 	// Load patches and textures.
@@ -440,6 +442,7 @@ void R_LoadTextures(void)
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
@@ -1015,10 +1018,10 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		lump = LUMPERROR;
 	}
 
-	// Lactozilla
+	// Detect textures
 	if (lump == LUMPERROR)
 	{
-		// Scan wad files backwards so patched flats take preference.
+		// Scan wad files backwards so patched textures take preference.
 		for (i = numwadfiles - 1; i >= 0; i--)
 		{
 			switch (wadfiles[i]->type)
@@ -1683,7 +1686,6 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 	return result;
 }
 
-// Lactozilla
 void R_FlatPatch(patch_t *patch, UINT8 *flat)
 {
 	fixed_t col, ofs;

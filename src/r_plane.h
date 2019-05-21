@@ -94,6 +94,8 @@ void R_PlaneBounds(visplane_t *plane);
 
 // Draws a single visplane.
 void R_DrawSinglePlane(visplane_t *pl);
+void R_CheckFlatLength(size_t size);
+boolean R_CheckPowersOfTwo(void);
 
 typedef struct planemgr_s
 {

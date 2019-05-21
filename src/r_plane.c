@@ -653,96 +653,191 @@ void R_DrawPlanes(void)
 #endif
 }
 
-// Lactozilla
+boolean R_CheckPowersOfTwo(void)
+{
+	return (ds_powersoftwo = ((!((ds_flatwidth & (ds_flatwidth - 1)) || (ds_flatheight & (ds_flatheight - 1)))) && (ds_flatwidth == ds_flatheight)));
+}
+
+void R_CheckFlatLength(size_t size)
+{
+	switch (size)
+	{
+		case 4194304: // 2048x2048 lump
+			nflatmask = 0x3FF800;
+			nflatxshift = 21;
+			nflatyshift = 10;
+			nflatshiftup = 5;
+			ds_flatwidth = ds_flatheight = 2048;
+			break;
+		case 1048576: // 1024x1024 lump
+			nflatmask = 0xFFC00;
+			nflatxshift = 22;
+			nflatyshift = 12;
+			nflatshiftup = 6;
+			ds_flatwidth = ds_flatheight = 1024;
+			break;
+		case 262144:// 512x512 lump
+			nflatmask = 0x3FE00;
+			nflatxshift = 23;
+			nflatyshift = 14;
+			nflatshiftup = 7;
+			ds_flatwidth = ds_flatheight = 512;
+			break;
+		case 65536: // 256x256 lump
+			nflatmask = 0xFF00;
+			nflatxshift = 24;
+			nflatyshift = 16;
+			nflatshiftup = 8;
+			ds_flatwidth = ds_flatheight = 256;
+			break;
+		case 16384: // 128x128 lump
+			nflatmask = 0x3F80;
+			nflatxshift = 25;
+			nflatyshift = 18;
+			nflatshiftup = 9;
+			ds_flatwidth = ds_flatheight = 128;
+			break;
+		case 1024: // 32x32 lump
+			nflatmask = 0x3E0;
+			nflatxshift = 27;
+			nflatyshift = 22;
+			nflatshiftup = 11;
+			ds_flatwidth = ds_flatheight = 32;
+			break;
+		default: // 64x64 lump
+			nflatmask = 0xFC0;
+			nflatxshift = 26;
+			nflatyshift = 20;
+			nflatshiftup = 10;
+			ds_flatwidth = ds_flatheight = 64;
+			break;
+	}
+}
+
 static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
 {
+	textureflat_t *texflat = &texflats[levelflat->texturenum];
 	patch_t *patch = NULL;
+	UINT8 *tex;
+	boolean texturechanged = (leveltexture ? (levelflat->texturenum != levelflat->lasttexturenum) : false);
 
-	if (levelflat->flatpatch == NULL)
+	// Check if the texture changed.
+	if (leveltexture && (!texturechanged))
+	{
+		if (texflat != NULL && texflat->flat)
+		{
+			ds_source = texflat->flat;
+			ds_flatwidth = texflat->width;
+			ds_flatheight = texflat->height;
+			texturechanged = false;
+		}
+		else
+			texturechanged = true;
+	}
+
+	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
+	if (levelflat->flatpatch == NULL || texturechanged)
 	{
 #ifdef ESLOPE
 		INT32 resizewidth, resizeheight, newresize;
 		INT32 checkresizewidth, checkresizeheight;
 #endif // ESLOPE
 
-		if (!leveltexture)
+		if (leveltexture)
+		{
+			texture_t *texture = textures[levelflat->texturenum];
+			texflat->width = ds_flatwidth = texture->width;
+			texflat->height = ds_flatheight = texture->height;
+
+			texflat->flat = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
+			memset(texflat->flat, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
+			R_FlatTexture(levelflat->texturenum, texflat->flat);
+
+			ds_source = texflat->flat;
+		}
+		else
 		{
 			patch = (patch_t *)ds_source;
 			levelflat->width = ds_flatwidth = patch->width;
 			levelflat->height = ds_flatheight = patch->height;
 
+			levelflat->topoffset = patch->topoffset * FRACUNIT;
+			levelflat->leftoffset = patch->leftoffset * FRACUNIT;
+
 			levelflat->flatpatch = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
 			memset(levelflat->flatpatch, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
 			R_FlatPatch(patch, levelflat->flatpatch);
 
-			levelflat->topoffset = patch->topoffset * FRACUNIT;
-			levelflat->leftoffset = patch->leftoffset * FRACUNIT;
+			ds_source = levelflat->flatpatch;
 		}
-		else
-		{
-			texture_t *texture = textures[levelflat->texturenum];
-			levelflat->width = ds_flatwidth = texture->width;
-			levelflat->height = ds_flatheight = texture->height;
 
-			levelflat->flatpatch = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
-			memset(levelflat->flatpatch, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
-			R_FlatTexture(levelflat->texturenum, levelflat->flatpatch);
-
-			levelflat->topoffset = levelflat->leftoffset = 0;
-		}
-		ds_source = levelflat->flatpatch;
-
-		// If GZDoom has the same limitation then I'm not even going to bother.
-		// Crop the texture.
 #ifdef ESLOPE
-		// Scale up to nearest power of 2
-		resizewidth = resizeheight = 1;
-		while (resizewidth < levelflat->width)
-			resizewidth <<= 1;
-		while (resizeheight < levelflat->height)
-			resizeheight <<= 1;
-
-		// Scale down to fit in 2048x2048
-		if (resizewidth > 2048)
-			resizewidth = 2048;
-		if (resizeheight > 2048)
-			resizeheight = 2048;
-
-		// A single pixel difference is negligible.
-		checkresizewidth = levelflat->width - 1;
-		if (checkresizewidth & (checkresizewidth - 1))
+		// Crop the flat, if necessary.
+		if (!R_CheckPowersOfTwo())
 		{
-			checkresizewidth += 2;
+			// Scale up to nearest power of 2
+			resizewidth = resizeheight = 1;
+			while (resizewidth < ds_flatwidth)
+				resizewidth <<= 1;
+			while (resizeheight < ds_flatheight)
+				resizeheight <<= 1;
+
+			// Scale down to fit in 2048x2048
+			if (resizewidth > 2048)
+				resizewidth = 2048;
+			if (resizeheight > 2048)
+				resizeheight = 2048;
+
+			// A single pixel difference is negligible.
+			checkresizewidth = ds_flatwidth - 1;
 			if (checkresizewidth & (checkresizewidth - 1))
 			{
-				while (resizewidth > levelflat->width)
-					resizewidth >>= 1;
+				checkresizewidth += 2;
+				if (checkresizewidth & (checkresizewidth - 1))
+				{
+					while (resizewidth > ds_flatwidth)
+						resizewidth >>= 1;
+				}
+				else
+					resizewidth = checkresizewidth;
 			}
 			else
 				resizewidth = checkresizewidth;
-		}
-		else
-			resizewidth = checkresizewidth;
 
-		checkresizeheight = levelflat->height - 1;
-		if (checkresizeheight & (checkresizeheight - 1))
-		{
-			checkresizeheight += 2;
+			checkresizeheight = ds_flatheight - 1;
 			if (checkresizeheight & (checkresizeheight - 1))
 			{
-				while (resizeheight > levelflat->height)
-					resizeheight >>= 1;
+				checkresizeheight += 2;
+				if (checkresizeheight & (checkresizeheight - 1))
+				{
+					while (resizeheight > ds_flatheight)
+						resizeheight >>= 1;
+				}
+				else
+					resizeheight = checkresizeheight;
 			}
 			else
 				resizeheight = checkresizeheight;
-		}
-		else
-			resizeheight = checkresizeheight;
 
-		levelflat->resizedwidth = levelflat->resizedheight = (newresize = min(resizewidth, resizeheight));
-		levelflat->resizedflat = Z_Malloc(newresize * newresize, PU_LEVEL, NULL);
-		memset(levelflat->resizedflat, TRANSPARENTPIXEL, newresize * newresize);
-		R_CropFlat(levelflat->flatpatch, levelflat->resizedflat, levelflat->width, levelflat->height, min(resizewidth, newresize), min(resizeheight, newresize), newresize, newresize);
+			// Find smallest size.
+			newresize = min(resizewidth, resizeheight);
+
+			// Allocate texture.
+			tex = Z_Malloc(newresize * newresize, PU_LEVEL, NULL);
+			memset(tex, TRANSPARENTPIXEL, newresize * newresize);
+			R_CropFlat(ds_source, tex, ds_flatwidth, ds_flatheight, min(resizewidth, newresize), min(resizeheight, newresize), newresize, newresize);
+
+			if (leveltexture)
+			{
+				texflat->resizedflat = tex;
+				texflat->resizedwidth = texflat->resizedheight = newresize;
+			}
+			else
+			{
+				levelflat->resizedflat = tex;
+				levelflat->resizedwidth = levelflat->resizedheight = newresize;
+			}
+		}
 #endif // ESLOPE
 	}
 	else
@@ -758,58 +853,26 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
 #ifdef ESLOPE
 	if (currentplane->slope)
 	{
-		ds_source = levelflat->resizedflat;
-		ds_flatwidth = levelflat->resizedwidth;
-		ds_flatheight = levelflat->resizedheight;
-
-		// uuuuuuuhhhhhhhh.......................
-		switch (ds_flatwidth * ds_flatheight)
+		if (R_CheckPowersOfTwo())
 		{
-			case 4194304: // 2048x2048 lump
-				nflatmask = 0x3FF800;
-				nflatxshift = 21;
-				nflatyshift = 10;
-				nflatshiftup = 5;
-				break;
-			case 1048576: // 1024x1024 lump
-				nflatmask = 0xFFC00;
-				nflatxshift = 22;
-				nflatyshift = 12;
-				nflatshiftup = 6;
-				break;
-			case 262144:// 512x512 lump
-				nflatmask = 0x3FE00;
-				nflatxshift = 23;
-				nflatyshift = 14;
-				nflatshiftup = 7;
-				break;
-			case 65536: // 256x256 lump
-				nflatmask = 0xFF00;
-				nflatxshift = 24;
-				nflatyshift = 16;
-				nflatshiftup = 8;
-				break;
-			case 16384: // 128x128 lump
-				nflatmask = 0x3F80;
-				nflatxshift = 25;
-				nflatyshift = 18;
-				nflatshiftup = 9;
-				break;
-			case 1024: // 32x32 lump
-				nflatmask = 0x3E0;
-				nflatxshift = 27;
-				nflatyshift = 22;
-				nflatshiftup = 11;
-				break;
-			default: // 64x64 lump
-				nflatmask = 0xFC0;
-				nflatxshift = 26;
-				nflatyshift = 20;
-				nflatshiftup = 10;
-				break;
+			if (leveltexture)
+			{
+				ds_source = texflat->resizedflat;
+				ds_flatwidth = texflat->resizedwidth;
+				ds_flatheight = texflat->resizedheight;
+			}
+			else
+			{
+				ds_source = levelflat->resizedflat;
+				ds_flatwidth = levelflat->resizedwidth;
+				ds_flatheight = levelflat->resizedheight;
+			}
 		}
+		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
 	}
 #endif // ESLOPE
+
+	levelflat->lasttexturenum = levelflat->texturenum;
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -966,71 +1029,24 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	currentplane = pl;
 	levelflat = &levelflats[pl->picnum];
+	size = W_LumpLength(levelflat->lumpnum);
 
+	// Check if the flat is actually a texture.
 	if (levelflat->texturenum != 0 && levelflat->texturenum != -1)
 		R_GetPatchFlat(levelflat, true);
+	// Check if the flat is actually a patch.
+	else if (R_CheckIfPatch(levelflat->lumpnum))
+		R_GetPatchFlat(levelflat, false);
+	// Raw flat.
 	else
 	{
 		ds_source = (UINT8 *)W_CacheLumpNum(levelflat->lumpnum, PU_STATIC); // Stay here until Z_ChangeTag
-		size = W_LumpLength(levelflat->lumpnum);
-
-		switch (size)
-		{
-			case 4194304: // 2048x2048 lump
-				nflatmask = 0x3FF800;
-				nflatxshift = 21;
-				nflatyshift = 10;
-				nflatshiftup = 5;
-				ds_flatwidth = ds_flatheight = 2048;
-				break;
-			case 1048576: // 1024x1024 lump
-				nflatmask = 0xFFC00;
-				nflatxshift = 22;
-				nflatyshift = 12;
-				nflatshiftup = 6;
-				ds_flatwidth = ds_flatheight = 1024;
-				break;
-			case 262144:// 512x512 lump
-				nflatmask = 0x3FE00;
-				nflatxshift = 23;
-				nflatyshift = 14;
-				nflatshiftup = 7;
-				ds_flatwidth = ds_flatheight = 512;
-				break;
-			case 65536: // 256x256 lump
-				nflatmask = 0xFF00;
-				nflatxshift = 24;
-				nflatyshift = 16;
-				nflatshiftup = 8;
-				ds_flatwidth = ds_flatheight = 256;
-				break;
-			case 16384: // 128x128 lump
-				nflatmask = 0x3F80;
-				nflatxshift = 25;
-				nflatyshift = 18;
-				nflatshiftup = 9;
-				ds_flatwidth = ds_flatheight = 128;
-				break;
-			case 1024: // 32x32 lump
-				nflatmask = 0x3E0;
-				nflatxshift = 27;
-				nflatyshift = 22;
-				nflatshiftup = 11;
-				ds_flatwidth = ds_flatheight = 32;
-				break;
-			default: // 64x64 lump
-				nflatmask = 0xFC0;
-				nflatxshift = 26;
-				nflatyshift = 20;
-				nflatshiftup = 10;
-				ds_flatwidth = ds_flatheight = 64;
-				break;
-		}
+		R_CheckFlatLength(size);
 	}
 
-	if (R_CheckIfPatch(levelflat->lumpnum))
-		R_GetPatchFlat(levelflat, false);
-	ds_powersoftwo = (!((ds_flatwidth & (ds_flatwidth - 1)) || (ds_flatheight & (ds_flatheight - 1))));
+	// Check if the flat has dimensions that are powers-of-two numbers.
+	if (R_CheckPowersOfTwo())
+		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;

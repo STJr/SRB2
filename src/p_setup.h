@@ -36,20 +36,22 @@ typedef struct
 {
 	char name[9]; // resource name from wad
 	lumpnum_t lumpnum; // lump number of the flat
+	INT32 texturenum, lasttexturenum; // texture number of the flat
+	UINT16 width, height;
+	fixed_t topoffset, leftoffset;
 
 	// for flat animation
 	lumpnum_t baselumpnum;
+	INT32 basetexturenum;
 	INT32 animseq; // start pos. in the anim sequence
 	INT32 numpics;
 	INT32 speed;
 
-	// Lactozilla
+	// for patchflats
 	UINT8 *flatpatch;
-	UINT16 width, height;
-	fixed_t topoffset, leftoffset;
-	INT32 texturenum;
 
 #ifdef ESLOPE
+	// rescaled version of the above
 	UINT8 *resizedflat;
 	UINT16 resizedwidth, resizedheight;
 #endif
