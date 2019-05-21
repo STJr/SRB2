@@ -22,7 +22,7 @@
 
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
-openmpt_module *mod;
+openmpt_module *openmpt_mhandle;
 #endif
 
 // mask used to indicate sound origin is player item pickup

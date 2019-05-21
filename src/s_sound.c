@@ -1851,6 +1851,6 @@ void GameMIDIMusic_OnChange(void)
 
 void ModFilter_OnChange(void)
 {
-	if (mod)
-		openmpt_module_set_render_param(mod, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
+	if (openmpt_mhandle)
+		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 }
