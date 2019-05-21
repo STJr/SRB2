@@ -173,89 +173,11 @@ void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor
 //  viewheight
 
 #ifndef NOWATER
-static INT32 bgofs;
+INT32 ds_bgofs;
+INT32 ds_waterofs;
+
 static INT32 wtofs=0;
-static INT32 waterofs;
 static boolean itswater;
-#endif
-
-#ifndef NOWATER
-static void R_DrawTranslucentWaterSpan_8(void)
-{
-	UINT32 xposition;
-	UINT32 yposition;
-	UINT32 xstep, ystep;
-
-	UINT8 *source;
-	UINT8 *colormap;
-	UINT8 *dest;
-	UINT8 *dsrc;
-
-	size_t count;
-
-	// SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
-	// can be used for the fraction part. This allows calculation of the memory address in the
-	// texture with two shifts, an OR and one AND. (see below)
-	// for texture sizes > 64 the amount of precision we can allow will decrease, but only by one
-	// bit per power of two (obviously)
-	// Ok, because I was able to eliminate the variable spot below, this function is now FASTER
-	// than the original span renderer. Whodathunkit?
-	xposition = ds_xfrac << nflatshiftup; yposition = (ds_yfrac + waterofs) << nflatshiftup;
-	xstep = ds_xstep << nflatshiftup; ystep = ds_ystep << nflatshiftup;
-
-	source = ds_source;
-	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
-	dsrc = screens[1] + (ds_y+bgofs)*vid.width + ds_x1;
-	count = ds_x2 - ds_x1 + 1;
-
-	while (count >= 8)
-	{
-		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-		// have the uber complicated math to calculate it now, so that was a memory write we didn't
-		// need!
-		dest[0] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[1] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[2] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[3] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[4] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[5] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[6] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[7] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest += 8;
-		count -= 8;
-	}
-	while (count--)
-	{
-		*dest++ = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-	}
-}
 #endif
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
@@ -304,17 +226,17 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	{
 		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
 		// ripples da water texture
-		bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+		ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
 		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 
 		angle = (angle + 2048) & 8191;  // 90 degrees
-		ds_xfrac += FixedMul(FINECOSINE(angle), (bgofs<<FRACBITS));
-		ds_yfrac += FixedMul(FINESINE(angle), (bgofs<<FRACBITS));
+		ds_xfrac += FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
+		ds_yfrac += FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
 
-		if (y+bgofs>=viewheight)
-			bgofs = viewheight-y-1;
-		if (y+bgofs<0)
-			bgofs = -y;
+		if (y+ds_bgofs>=viewheight)
+			ds_bgofs = viewheight-y-1;
+		if (y+ds_bgofs<0)
+			ds_bgofs = -y;
 	}
 #endif
 
@@ -726,9 +648,140 @@ void R_DrawPlanes(void)
 		}
 	}
 #ifndef NOWATER
-	waterofs = (leveltime & 1)*16384;
+	ds_waterofs = (leveltime & 1)*16384;
 	wtofs = leveltime * 140;
 #endif
+}
+
+// Lactozilla
+static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
+{
+	patch_t *patch = NULL;
+
+	if (levelflat->flatpatch == NULL)
+	{
+#ifdef ESLOPE
+		INT32 resizewidth, resizeheight, newresize;
+#endif // ESLOPE
+
+		if (!leveltexture)
+		{
+			patch = (patch_t *)ds_source;
+			levelflat->width = ds_flatwidth = patch->width;
+			levelflat->height = ds_flatheight = patch->height;
+
+			levelflat->flatpatch = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
+			memset(levelflat->flatpatch, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
+			R_FlatPatch(patch, levelflat->flatpatch);
+
+			levelflat->topoffset = patch->topoffset * FRACUNIT;
+			levelflat->leftoffset = patch->leftoffset * FRACUNIT;
+		}
+		else
+		{
+			texture_t *texture = textures[levelflat->texturenum];
+			levelflat->width = ds_flatwidth = texture->width;
+			levelflat->height = ds_flatheight = texture->height;
+
+			levelflat->flatpatch = Z_Malloc(ds_flatwidth * ds_flatheight, PU_LEVEL, NULL);
+			memset(levelflat->flatpatch, TRANSPARENTPIXEL, ds_flatwidth * ds_flatheight);
+			R_FlatTexture(levelflat->texturenum, levelflat->flatpatch);
+
+			levelflat->topoffset = levelflat->leftoffset = 0;
+		}
+		ds_source = levelflat->flatpatch;
+
+		// If GZDoom has the same limitation then I'm not even going to bother.
+		// Crop the texture.
+#ifdef ESLOPE
+		// Scale up to nearest power of 2
+		resizewidth = resizeheight = 1;
+		while (resizewidth < levelflat->width)
+			resizewidth <<= 1;
+		while (resizeheight < levelflat->height)
+			resizeheight <<= 1;
+		// Scale down to fit in 2048x2048
+		if (resizewidth > 2048)
+			resizewidth = 2048;
+		if (resizeheight > 2048)
+			resizeheight = 2048;
+		// Then scale down to fit the actual flat dimensions
+		while (resizewidth > levelflat->width)
+			resizewidth >>= 1;
+		while (resizeheight > levelflat->height)
+			resizeheight >>= 1;
+
+		levelflat->resizedwidth = levelflat->resizedheight = (newresize = min(resizewidth, resizeheight));
+		levelflat->resizedflat = Z_Malloc(newresize * newresize, PU_LEVEL, NULL);
+		memset(levelflat->resizedflat, TRANSPARENTPIXEL, newresize * newresize);
+		R_CropFlat(levelflat->flatpatch, levelflat->resizedflat, levelflat->width, levelflat->height, newresize, newresize);
+#endif // ESLOPE
+	}
+	else
+	{
+		ds_source = levelflat->flatpatch;
+		ds_flatwidth = levelflat->width;
+		ds_flatheight = levelflat->height;
+
+		xoffs += levelflat->leftoffset;
+		yoffs += levelflat->topoffset;
+	}
+
+#ifdef ESLOPE
+	if (currentplane->slope)
+	{
+		ds_source = levelflat->resizedflat;
+		ds_flatwidth = levelflat->resizedwidth;
+		ds_flatheight = levelflat->resizedheight;
+
+		// uuuuuuuhhhhhhhh.......................
+		switch (ds_flatwidth * ds_flatheight)
+		{
+			case 4194304: // 2048x2048 lump
+				nflatmask = 0x3FF800;
+				nflatxshift = 21;
+				nflatyshift = 10;
+				nflatshiftup = 5;
+				break;
+			case 1048576: // 1024x1024 lump
+				nflatmask = 0xFFC00;
+				nflatxshift = 22;
+				nflatyshift = 12;
+				nflatshiftup = 6;
+				break;
+			case 262144:// 512x512 lump
+				nflatmask = 0x3FE00;
+				nflatxshift = 23;
+				nflatyshift = 14;
+				nflatshiftup = 7;
+				break;
+			case 65536: // 256x256 lump
+				nflatmask = 0xFF00;
+				nflatxshift = 24;
+				nflatyshift = 16;
+				nflatshiftup = 8;
+				break;
+			case 16384: // 128x128 lump
+				nflatmask = 0x3F80;
+				nflatxshift = 25;
+				nflatyshift = 18;
+				nflatshiftup = 9;
+				break;
+			case 1024: // 32x32 lump
+				nflatmask = 0x3E0;
+				nflatxshift = 27;
+				nflatyshift = 22;
+				nflatshiftup = 11;
+				break;
+			default: // 64x64 lump
+				nflatmask = 0xFC0;
+				nflatxshift = 26;
+				nflatyshift = 20;
+				nflatshiftup = 10;
+				break;
+		}
+	}
+#endif // ESLOPE
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -738,6 +791,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	INT32 stop, angle;
 	size_t size;
 	ffloor_t *rover;
+	levelflat_t *levelflat;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -878,63 +932,77 @@ void R_DrawSinglePlane(visplane_t *pl)
 		viewangle = pl->viewangle+pl->plangle;
 	}
 
-	currentplane = pl;
-
-	ds_source = (UINT8 *)
-		W_CacheLumpNum(levelflats[pl->picnum].lumpnum,
-			PU_STATIC); // Stay here until Z_ChangeTag
-
-	size = W_LumpLength(levelflats[pl->picnum].lumpnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			break;
-		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			break;
-		case 262144:// 512x512 lump'
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			break;
-		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			break;
-		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			break;
-		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			break;
-		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			break;
-	}
-
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
 	planeheight = abs(pl->height - pl->viewz);
+
+	currentplane = pl;
+	levelflat = &levelflats[pl->picnum];
+
+	if (levelflat->texturenum != 0 && levelflat->texturenum != -1)
+		R_GetPatchFlat(levelflat, true);
+	else
+	{
+		ds_source = (UINT8 *)W_CacheLumpNum(levelflat->lumpnum, PU_STATIC); // Stay here until Z_ChangeTag
+		size = W_LumpLength(levelflat->lumpnum);
+
+		switch (size)
+		{
+			case 4194304: // 2048x2048 lump
+				nflatmask = 0x3FF800;
+				nflatxshift = 21;
+				nflatyshift = 10;
+				nflatshiftup = 5;
+				ds_flatwidth = ds_flatheight = 2048;
+				break;
+			case 1048576: // 1024x1024 lump
+				nflatmask = 0xFFC00;
+				nflatxshift = 22;
+				nflatyshift = 12;
+				nflatshiftup = 6;
+				ds_flatwidth = ds_flatheight = 1024;
+				break;
+			case 262144:// 512x512 lump
+				nflatmask = 0x3FE00;
+				nflatxshift = 23;
+				nflatyshift = 14;
+				nflatshiftup = 7;
+				ds_flatwidth = ds_flatheight = 512;
+				break;
+			case 65536: // 256x256 lump
+				nflatmask = 0xFF00;
+				nflatxshift = 24;
+				nflatyshift = 16;
+				nflatshiftup = 8;
+				ds_flatwidth = ds_flatheight = 256;
+				break;
+			case 16384: // 128x128 lump
+				nflatmask = 0x3F80;
+				nflatxshift = 25;
+				nflatyshift = 18;
+				nflatshiftup = 9;
+				ds_flatwidth = ds_flatheight = 128;
+				break;
+			case 1024: // 32x32 lump
+				nflatmask = 0x3E0;
+				nflatxshift = 27;
+				nflatyshift = 22;
+				nflatshiftup = 11;
+				ds_flatwidth = ds_flatheight = 32;
+				break;
+			default: // 64x64 lump
+				nflatmask = 0xFC0;
+				nflatxshift = 26;
+				nflatyshift = 20;
+				nflatshiftup = 10;
+				ds_flatwidth = ds_flatheight = 64;
+				break;
+		}
+	}
+
+	if (R_CheckIfPatch(levelflat->lumpnum))
+		R_GetPatchFlat(levelflat, false);
+	ds_powersoftwo = (!((ds_flatwidth & (ds_flatwidth - 1)) || (ds_flatheight & (ds_flatheight - 1))));
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;

@@ -101,9 +101,7 @@ texture_t **textures = NULL;
 static UINT32 **texturecolumnofs; // column offset lookup table for each texture
 static UINT8 **texturecache; // graphics data for each generated full-size texture
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-INT32 *texturewidthmask;
-
+INT32 *texturewidth;
 fixed_t *textureheight; // needed for texture pegging
 
 INT32 *texturetranslation;
@@ -335,10 +333,14 @@ void R_CheckTextureCache(INT32 tex)
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 {
 	UINT8 *data;
+	INT32 width = texturewidth[tex];
 
-	col &= texturewidthmask[tex];
+	if (width & (width - 1))
+		col = (UINT32)col % width;
+	else
+		col &= (width - 1);
+
 	data = texturecache[tex];
-
 	if (!data)
 		data = R_GenerateTexture(tex);
 
@@ -376,7 +378,7 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 #define TX_END "TX_END"
 void R_LoadTextures(void)
 {
-	INT32 i, k, w;
+	INT32 i, w;
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	patch_t *patchlump;
@@ -443,9 +445,9 @@ void R_LoadTextures(void)
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
 	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
-	// Allocate texture width mask table.
-	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
-	// Allocate texture height mask table.
+	// Allocate texture width table.
+	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	// Allocate texture height table.
 	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
@@ -513,11 +515,7 @@ void R_LoadTextures(void)
 
 				Z_Unlock(patchlump);
 
-				k = 1;
-				while (k << 1 <= texture->width)
-					k <<= 1;
-
-				texturewidthmask[i] = k - 1;
+				texturewidth[i] = texture->width;
 				textureheight[i] = texture->height << FRACBITS;
 			}
 		}
@@ -905,7 +903,7 @@ void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 			newTexture = R_ParseTexture(true);
 			// Store the new texture
 			textures[*texindex] = newTexture;
-			texturewidthmask[*texindex] = newTexture->width - 1;
+			texturewidth[*texindex] = newTexture->width;
 			textureheight[*texindex] = newTexture->height << FRACBITS;
 			// Increment i back in R_LoadTextures()
 			(*texindex)++;
@@ -1015,6 +1013,41 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			break;
 		}
 		lump = LUMPERROR;
+	}
+
+	// Lactozilla
+	if (lump == LUMPERROR)
+	{
+		// Scan wad files backwards so patched flats take preference.
+		for (i = numwadfiles - 1; i >= 0; i--)
+		{
+			switch (wadfiles[i]->type)
+			{
+			case RET_WAD:
+				if ((start = W_CheckNumForNamePwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
+					continue;
+				if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
+					continue;
+				break;
+			case RET_PK3:
+				if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
+					continue;
+				if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
+					continue;
+				break;
+			default:
+				continue;
+			}
+
+			// Now find lump with specified name in that range.
+			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+			if (lump < end)
+			{
+				lump += (i<<16); // found it, in our constraints
+				break;
+			}
+			lump = LUMPERROR;
+		}
 	}
 
 	if (lump == LUMPERROR)
@@ -1602,4 +1635,145 @@ void R_PrecacheLevel(void)
 			"flatmemory:    %s k\n"
 			"texturememory: %s k\n"
 			"spritememory:  %s k\n", sizeu1(flatmemory>>10), sizeu2(texturememory>>10), sizeu3(spritememory>>10));
+}
+
+// https://github.com/coelckers/prboom-plus/blob/master/prboom2/src/r_patch.c#L350
+boolean R_CheckIfPatch(lumpnum_t lump)
+{
+	size_t size;
+	INT16 width, height;
+	patch_t *patch;
+	boolean result;
+
+	size = W_LumpLength(lump);
+
+	// minimum length of a valid Doom patch
+	if (size < 13)
+		return false;
+
+	patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+
+	width = SHORT(patch->width);
+	height = SHORT(patch->height);
+
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < size / 4);
+
+	if (result)
+	{
+		// The dimensions seem like they might be valid for a patch, so
+		// check the column directory for extra security. All columns
+		// must begin after the column directory, and none of them must
+		// point past the end of the patch.
+		INT16 x;
+
+		for (x = 0; x < width; x++)
+		{
+			UINT32 ofs = LONG(patch->columnofs[x]);
+
+			// Need one byte for an empty column (but there's patches that don't know that!)
+			if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)size)
+			{
+				result = false;
+				break;
+
+			}
+		}
+	}
+
+	Z_Free(patch);
+	return result;
+}
+
+// Lactozilla
+void R_FlatPatch(patch_t *patch, UINT8 *flat)
+{
+	fixed_t col, ofs;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	desttop = flat;
+	deststop = desttop + (patch->width * patch->height);
+
+	for (col = 0; col < SHORT(patch->width); col++, desttop++)
+	{
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
+
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+
+			dest = desttop + (topdelta * patch->width);
+			source = (UINT8 *)(column) + 3;
+			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+			{
+				if (source[ofs] != TRANSPARENTPIXEL)
+					*dest = source[ofs];
+				dest += patch->width;
+			}
+			column = (column_t *)((UINT8 *)column + column->length + 4);
+		}
+	}
+}
+
+void R_FlatTexture(size_t tex, UINT8 *flat)
+{
+	texture_t *texture = textures[tex];
+
+	fixed_t col, ofs;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	desttop = flat;
+	deststop = desttop + (texture->width * texture->height);
+
+	for (col = 0; col < SHORT(texture->width); col++, desttop++)
+	{
+		INT32 topdelta, prevdelta = -1;
+		column = (column_t *)R_GetColumn(tex, col);
+		if (!texture->holes)
+		{
+			dest = desttop;
+			source = (UINT8 *)(column);
+			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			{
+				if (source[ofs] != TRANSPARENTPIXEL)
+					*dest = source[ofs];
+				dest += texture->width;
+			}
+		}
+		else
+		{
+			while (column->topdelta != 0xff)
+			{
+				topdelta = column->topdelta;
+				if (topdelta <= prevdelta)
+					topdelta += prevdelta;
+				prevdelta = topdelta;
+
+				dest = desttop + (topdelta * texture->width);
+				source = (UINT8 *)(column) + 3;
+				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				{
+					if (source[ofs] != TRANSPARENTPIXEL)
+						*dest = source[ofs];
+					dest += texture->width;
+				}
+				column = (column_t *)((UINT8 *)column + column->length + 4);
+			}
+		}
+	}
+}
+
+void R_CropFlat(UINT8 *origflat, UINT8 *cropflat, UINT16 origwidth, UINT16 origheight, UINT16 cropwidth, UINT16 cropheight)
+{
+	UINT16 x, y;
+	for (y = 0; y < cropheight; y++)
+		for (x = 0; x < cropwidth; x++)
+			cropflat[(y * cropwidth) + x] = origflat[(y * origwidth) + x];
 }

@@ -30,6 +30,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../p_setup.h"
 
 //Hurdler: 25/04/2000: used for new colormap code in hardware mode
 //static UINT8 *gr_colormap = NULL; // by default it must be NULL ! (because colormap tables are not initialized)
@@ -551,11 +552,13 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 
 static size_t gr_numtextures;
 static GLTexture_t *gr_textures; // for ALL Doom textures
+static GLTexture_t *gr_textures2;
 
 void HWR_InitTextureCache(void)
 {
 	gr_numtextures = 0;
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 }
 
 
@@ -594,7 +597,10 @@ void HWR_FreeTextureCache(void)
 	// texturecache info, we can free it
 	if (gr_textures)
 		free(gr_textures);
+	if (gr_textures2)
+		free(gr_textures2);
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 	gr_numtextures = 0;
 }
 
@@ -612,6 +618,9 @@ void HWR_PrepLevelCache(size_t pnumtextures)
 	gr_textures = calloc(pnumtextures, sizeof (*gr_textures));
 	if (gr_textures == NULL)
 		I_Error("3D can't alloc gr_textures");
+	gr_textures2 = calloc(pnumtextures, sizeof (*gr_textures2));
+	if (gr_textures2 == NULL)
+		I_Error("3D can't alloc gr_textures2");
 }
 
 void HWR_SetPalette(RGBA_t *palette)
@@ -642,7 +651,7 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	GLTexture_t *grtex;
 #ifdef PARANOIA
 	if ((unsigned)tex >= gr_numtextures)
-		I_Error(" HWR_GetTexture: tex >= numtextures\n");
+		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
 	grtex = &gr_textures[tex];
 
@@ -657,6 +666,35 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
+// Lactozilla
+lumpnum_t gr_patchflat;
+
+static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
+{
+	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
+
+	grMipmap->width  = (UINT16)SHORT(patch->width);
+	grMipmap->height = (UINT16)SHORT(patch->height);
+
+	R_FlatPatch(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+
+	Z_Free(patch);
+}
+
+static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+{
+	// setup the texture info
+	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+	grMipmap->grInfo.format = GR_TEXFMT_P_8;
+	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+
+	grMipmap->width  = (UINT16)textures[texturenum]->width;
+	grMipmap->height = (UINT16)textures[texturenum]->height;
+
+	R_FlatTexture(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+}
 
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
@@ -695,14 +733,19 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 			pflatsize = 64;
 			break;
 	}
-	grMipmap->width  = (UINT16)pflatsize;
-	grMipmap->height = (UINT16)pflatsize;
 
-	// the flat raw data needn't be converted with palettized textures
-	W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
-		PU_HWRCACHE, &grMipmap->grInfo.data));
+	if (R_CheckIfPatch(flatlumpnum))
+		HWR_LoadPatchFlat(grMipmap, flatlumpnum);
+	else
+	{
+		grMipmap->width  = (UINT16)pflatsize;
+		grMipmap->height = (UINT16)pflatsize;
+
+		// the flat raw data needn't be converted with palettized textures
+		W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
+			PU_HWRCACHE, &grMipmap->grInfo.data));
+	}
 }
-
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use
 void HWR_GetFlat(lumpnum_t flatlumpnum)
@@ -718,6 +761,30 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 
 	// The system-memory data can be purged now.
 	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+
+	gr_patchflat = 0;
+	if (R_CheckIfPatch(flatlumpnum))
+		gr_patchflat = flatlumpnum;
+}
+
+void HWR_GetTextureFlat(INT32 texturenum)
+{
+	GLTexture_t *grtex;
+#ifdef PARANOIA
+	if ((unsigned)texturenum >= gr_numtextures)
+		I_Error("HWR_GetTextureFlat: texturenum >= numtextures\n");
+#endif
+	if (texturenum == 0 || texturenum == -1)
+		return;
+	grtex = &gr_textures2[texturenum];
+
+	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+		HWR_LoadTextureFlat(&grtex->mipmap, texturenum);
+
+	HWD.pfnSetTexture(&grtex->mipmap);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
 //

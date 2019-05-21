@@ -135,7 +135,7 @@ void SCR_SetMode(void)
 				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
 				walldrawerfunc = R_DrawWallColumn_8_MMX;
 				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfunc = basespanfunc = R_DrawSpan_8_MMX;
+				//spanfunc = basespanfunc = R_DrawSpan_8_MMX;
 			}
 			else
 			{

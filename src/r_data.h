@@ -51,9 +51,7 @@ typedef struct
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
 
-// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
-extern INT32 *texturewidthmask;
-
+extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
 
 extern INT16 color8to16[256]; // remap color index to highcolor
@@ -81,7 +79,6 @@ void R_PrecacheLevel(void);
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
 lumpnum_t R_GetFlatNumForName(const char *name);
-#define R_FlatNumForName(x) R_GetFlatNumForName(x)
 
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.
@@ -94,6 +91,13 @@ void R_ClearColormaps(void);
 INT32 R_ColormapNumForName(char *name);
 INT32 R_CreateColormap(char *p1, char *p2, char *p3);
 const char *R_ColormapNameForNum(INT32 num);
+
+boolean R_CheckIfPatch(lumpnum_t lump);
+
+// Lactozilla
+void R_FlatPatch(patch_t *patch, UINT8 *flat);
+void R_FlatTexture(size_t tex, UINT8 *flat);
+void R_CropFlat(UINT8 *origflat, UINT8 *cropflat, UINT16 origwidth, UINT16 origheight, UINT16 cropwidth, UINT16 cropheight);
 
 extern INT32 numtextures;
 

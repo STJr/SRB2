@@ -57,7 +57,9 @@ extern INT32 dc_texheight;
 extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
-extern UINT8 *ds_source; // start of a 64*64 tile image
+extern UINT16 ds_flatwidth, ds_flatheight;
+extern boolean ds_powersoftwo;
+extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
 #ifdef ESLOPE
@@ -125,6 +127,8 @@ void R_FillBackScreen(void);
 void R_DrawViewBorder(void);
 #endif
 
+#define TRANSPARENTPIXEL 247
+
 // -----------------
 // 8bpp DRAWING CODE
 // -----------------
@@ -165,6 +169,13 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogSpan_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
+
+#ifndef NOWATER
+void R_DrawTranslucentWaterSpan_8(void);
+
+extern INT32 ds_bgofs;
+extern INT32 ds_waterofs;
+#endif
 
 // ------------------
 // 16bpp DRAWING CODE
