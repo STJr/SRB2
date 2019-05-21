@@ -7,8 +7,6 @@ matrix:
         - os: linux
           addons:
             apt:
-              sources:
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -18,12 +16,11 @@ matrix:
               - p7zip-full
               - gcc-4.4
           compiler: gcc-4.4
+          env: GCC44=1
           #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
             apt:
-              sources:
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -33,12 +30,11 @@ matrix:
               - p7zip-full
               - gcc-4.6
           compiler: gcc-4.6
+          env: GCC46=1
           #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
             apt:
-              sources:
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -48,27 +44,17 @@ matrix:
               - p7zip-full
               - gcc-4.7
           compiler: gcc-4.7
+          env: GCC47=1
           #gcc-4.7
         - os: linux
-          addons:
-            apt:
-              sources:
-              - sourceline: 'ppa:stjr/srb2'
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - libopenmpt-dev
-              - p7zip-full
           compiler: gcc
+          env: GCC48=1
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
           addons:
             apt:
               sources:
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -78,13 +64,13 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
+          env: GCC48=1
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
               sources:
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -94,14 +80,13 @@ matrix:
               - p7zip-full
               - gcc-7
           compiler: gcc-7
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough"
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough" GCC72=1
           #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
         - os: linux
           addons:
             apt:
               sources:
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -111,20 +96,9 @@ matrix:
               - p7zip-full
               - gcc-8
           compiler: gcc-8
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow"
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow" GCC81=1
           #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
         - os: linux
-          addons:
-            apt:
-              sources:
-              - sourceline: 'ppa:stjr/srb2'
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - libopenmpt-dev
-              - p7zip-full
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux
@@ -132,7 +106,6 @@ matrix:
             apt:
               sources:
               - llvm-toolchain-precise-3.5
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -149,7 +122,6 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.6
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -166,7 +138,6 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.7
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -183,7 +154,6 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.8
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -200,7 +170,6 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.9
               - ubuntu-toolchain-r-test
-              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -217,7 +186,6 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-4.0
 #              - ubuntu-toolchain-r-test
-#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
@@ -234,7 +202,6 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-5.0
 #              - ubuntu-toolchain-r-test
-#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
@@ -267,9 +234,11 @@ matrix:
 #        - os: osx
 #          osx_image: xcode7.2
 #          #Apple LLVM version 7.0.2 (clang-700.1.81)
+#        - os: osx
+#          osx_image: xcode7.3
+#          #Apple LLVM version 7.3.0 (clang-703.0.31)
         - os: osx
-          osx_image: xcode7.3
-          #Apple LLVM version 7.3.0 (clang-703.0.31)
+          #Default: macOS 10.13 and Xcode 9.4.1
     allow_failures:
       - compiler: clang-3.5
       - compiler: clang-3.6
@@ -285,6 +254,26 @@ cache:
   directories:
   - $HOME/srb2_cache
 
+addons:
+  apt:
+    packages:
+    - libsdl2-mixer-dev
+    - libpng-dev
+    - libgl1-mesa-dev
+    - libgme-dev
+    - libopenmpt-dev
+    - p7zip-full
+  homebrew:
+    taps:
+    - mazmazz/srb2
+    packages:
+    - sdl2_mixer
+    - game-music-emu
+    - p7zip
+    - libopenmpt
+    - cmake
+    update: true
+
 
 before_script:
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
@@ -296,10 +285,6 @@ before_script:
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap mazmazz/srb2 ; fi # https://github.com/mazmazz/homebrew-srb2
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2 sdl2_mixer game-music-emu libopenmpt p7zip; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake||true; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
   - mkdir -p $HOME/srb2_cache
