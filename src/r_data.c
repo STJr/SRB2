@@ -1680,7 +1680,6 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 		}
 	}
 
-	Z_Free(patch);
 	return result;
 }
 

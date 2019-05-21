@@ -677,8 +677,6 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 	grMipmap->height = (UINT16)SHORT(patch->height);
 
 	R_FlatPatch(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
-
-	Z_Free(patch);
 }
 
 static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
