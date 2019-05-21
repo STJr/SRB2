@@ -47,7 +47,7 @@ typedef struct
 	UINT8 *flatpatch;
 	UINT16 width, height;
 	fixed_t topoffset, leftoffset;
-	size_t texturenum;
+	INT32 texturenum;
 
 #ifdef ESLOPE
 	UINT8 *resizedflat;

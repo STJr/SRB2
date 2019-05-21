@@ -662,6 +662,7 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
 	{
 #ifdef ESLOPE
 		INT32 resizewidth, resizeheight, newresize;
+		INT32 checkresizewidth, checkresizeheight;
 #endif // ESLOPE
 
 		if (!leveltexture)
@@ -700,21 +701,48 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
 			resizewidth <<= 1;
 		while (resizeheight < levelflat->height)
 			resizeheight <<= 1;
+
 		// Scale down to fit in 2048x2048
 		if (resizewidth > 2048)
 			resizewidth = 2048;
 		if (resizeheight > 2048)
 			resizeheight = 2048;
-		// Then scale down to fit the actual flat dimensions
-		while (resizewidth > levelflat->width)
-			resizewidth >>= 1;
-		while (resizeheight > levelflat->height)
-			resizeheight >>= 1;
+
+		// A single pixel difference is negligible.
+		checkresizewidth = levelflat->width - 1;
+		if (checkresizewidth & (checkresizewidth - 1))
+		{
+			checkresizewidth += 2;
+			if (checkresizewidth & (checkresizewidth - 1))
+			{
+				while (resizewidth > levelflat->width)
+					resizewidth >>= 1;
+			}
+			else
+				resizewidth = checkresizewidth;
+		}
+		else
+			resizewidth = checkresizewidth;
+
+		checkresizeheight = levelflat->height - 1;
+		if (checkresizeheight & (checkresizeheight - 1))
+		{
+			checkresizeheight += 2;
+			if (checkresizeheight & (checkresizeheight - 1))
+			{
+				while (resizeheight > levelflat->height)
+					resizeheight >>= 1;
+			}
+			else
+				resizeheight = checkresizeheight;
+		}
+		else
+			resizeheight = checkresizeheight;
 
 		levelflat->resizedwidth = levelflat->resizedheight = (newresize = min(resizewidth, resizeheight));
 		levelflat->resizedflat = Z_Malloc(newresize * newresize, PU_LEVEL, NULL);
 		memset(levelflat->resizedflat, TRANSPARENTPIXEL, newresize * newresize);
-		R_CropFlat(levelflat->flatpatch, levelflat->resizedflat, levelflat->width, levelflat->height, newresize, newresize);
+		R_CropFlat(levelflat->flatpatch, levelflat->resizedflat, levelflat->width, levelflat->height, min(resizewidth, newresize), min(resizeheight, newresize), newresize, newresize);
 #endif // ESLOPE
 	}
 	else

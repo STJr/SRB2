@@ -1656,7 +1656,7 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 	width = SHORT(patch->width);
 	height = SHORT(patch->height);
 
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < size / 4);
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
 
 	if (result)
 	{
@@ -1769,10 +1769,35 @@ void R_FlatTexture(size_t tex, UINT8 *flat)
 	}
 }
 
-void R_CropFlat(UINT8 *origflat, UINT8 *cropflat, UINT16 origwidth, UINT16 origheight, UINT16 cropwidth, UINT16 cropheight)
+void R_CropFlat(UINT8 *srcflat, UINT8 *destflat,
+				UINT16 srcwidth, UINT16 srcheight,
+				UINT16 resizewidth, UINT16 resizeheight,
+				UINT16 destwidth, UINT16 destheight)
 {
-	UINT16 x, y;
-	for (y = 0; y < cropheight; y++)
-		for (x = 0; x < cropwidth; x++)
-			cropflat[(y * cropwidth) + x] = origflat[(y * origwidth) + x];
+	UINT16 y;
+	UINT16 position = 0;
+	for (y = 0; y < destheight; y++)
+	{
+		if (position > (srcwidth * srcheight))
+			break;
+		if (srcwidth != resizewidth)
+		{
+			if (resizewidth > srcwidth)
+			{
+				UINT8 *pos2 = srcflat+position;
+				UINT8 lastpixel = *(pos2-1);
+				M_Memcpy(destflat, srcflat+position, destwidth);
+				memset(pos2, lastpixel, resizewidth-srcwidth);
+			}
+			else
+				M_Memcpy(destflat, srcflat+position, resizewidth);
+		}
+		else
+			M_Memcpy(destflat, srcflat+position, destwidth);
+		destflat += destwidth;
+		position += srcwidth;
+	}
+
+	while (y++ < min(resizeheight, srcheight))
+		memset(destflat + (y * destwidth), *(destflat - 1), destwidth);
 }

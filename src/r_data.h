@@ -97,7 +97,10 @@ boolean R_CheckIfPatch(lumpnum_t lump);
 // Lactozilla
 void R_FlatPatch(patch_t *patch, UINT8 *flat);
 void R_FlatTexture(size_t tex, UINT8 *flat);
-void R_CropFlat(UINT8 *origflat, UINT8 *cropflat, UINT16 origwidth, UINT16 origheight, UINT16 cropwidth, UINT16 cropheight);
+void R_CropFlat(UINT8 *srcflat, UINT8 *destflat,
+				UINT16 srcwidth, UINT16 srcheight,
+				UINT16 resizewidth, UINT16 resizeheight,
+				UINT16 destwidth, UINT16 destheight);
 
 extern INT32 numtextures;
 
