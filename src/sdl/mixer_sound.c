@@ -669,7 +669,7 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 
 	(void)udata;
 
-	if (!mod || songpaused)
+	if (!openmpt_mhandle || songpaused)
 		return;
 
 	openmpt_module_read_interleaved_stereo(openmpt_mhandle, SAMPLERATE, BUFFERSIZE, (short *)stream);
@@ -731,7 +731,7 @@ boolean I_SongPlaying(void)
 		(I_SongType() == MU_GME && gme) ||
 #endif
 #ifdef HAVE_OPENMPT
-		(I_SongType() == MU_MOD_EX && mod) ||
+		(I_SongType() == MU_MOD_EX && openmpt_mhandle) ||
 #endif
 		music != NULL
 	);
@@ -813,7 +813,7 @@ UINT32 I_GetSongLength(void)
 	else
 #endif
 #ifdef HAVE_OPENMPT
-	if (mod)
+	if (openmpt_mhandle)
 		return (UINT32)(openmpt_module_get_duration_seconds(openmpt_mhandle) * 1000.);
 	else
 #endif
@@ -1303,7 +1303,7 @@ boolean I_PlaySong(boolean looping)
 		openmpt_module_select_subsong(openmpt_mhandle, 0);
 		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 		if (looping)
-			openmpt_module_set_repeat_count(mod, -1); // Always repeat
+			openmpt_module_set_repeat_count(openmpt_mhandle, -1); // Always repeat
 		current_subsong = 0;
 		Mix_HookMusic(mix_openmpt, openmpt_mhandle);
 		return true;
