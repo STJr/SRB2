@@ -202,6 +202,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
 	&lspr[NOLIGHT],     //SPR_FBOM
 	&lspr[NOLIGHT],     //SPR_FSGN
+	&lspr[REDBALL_L],   //SPR_BARX // bomb explosion (also used by barrel)
+	&lspr[NOLIGHT],     //SPR_BARD // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	&lspr[NOLIGHT],     // SPR_EEGR

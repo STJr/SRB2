@@ -90,6 +90,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"FANG", // replaces EGGQ
 	"FBOM",
 	"FSGN",
+	"BARX", // bomb explosion (also used by barrel)
+	"BARD", // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	"EGGR",
@@ -1410,6 +1412,20 @@ state_t states[NUMSTATES] =
 
 	{SPR_FBOM, 0, 1, {A_GhostMe}, 0, 0, S_FBOMB2}, // S_FBOMB1
 	{SPR_FBOM, 1, 1, {A_GhostMe}, 0, 0, S_FBOMB1}, // S_FBOMB2
+	{SPR_BARX, 0|FF_FULLBRIGHT, 3, {A_SetObjectFlags}, MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP, 0, S_FBOMB_EXPL2}, // S_FBOMB_EXPL1
+	{SPR_BARX, 1|FF_FULLBRIGHT, 2, {A_Boss5BombExplode}, MT_TNTDUST, 0, S_FBOMB_EXPL3}, // S_FBOMB_EXPL2
+	{SPR_BARX, 1|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_FBOMB_EXPL4}, // S_FBOMB_EXPL3
+	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_FBOMB_EXPL5}, // S_FBOMB_EXPL4
+	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_FBOMB_EXPL6}, // S_FBOMB_EXPL5
+	{SPR_NULL, 0, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_FBOMB_EXPL6
+	{SPR_BARD, 0|FF_TRANS90, 2, {NULL}, 0, 0, S_TNTDUST_2}, // S_TNTDUST_1
+	{SPR_BARD, 0|FF_TRANS30, 2*TICRATE, {A_SetRandomTics}, 2, TICRATE, S_TNTDUST_3}, // S_TNTDUST_2
+	{SPR_BARD, 0|FF_TRANS40, 10, {NULL}, 0, 0, S_TNTDUST_4}, // S_TNTDUST_3
+	{SPR_BARD, 0|FF_TRANS50, 10, {NULL}, 0, 0, S_TNTDUST_5}, // S_TNTDUST_4
+	{SPR_BARD, 0|FF_TRANS60, 10, {NULL}, 0, 0, S_TNTDUST_6}, // S_TNTDUST_5
+	{SPR_BARD, 0|FF_TRANS70, 10, {NULL}, 0, 0, S_TNTDUST_7}, // S_TNTDUST_6
+	{SPR_BARD, 0|FF_TRANS80, 10, {NULL}, 0, 0, S_TNTDUST_8}, // S_TNTDUST_7
+	{SPR_BARD, 0|FF_TRANS90, 10, {NULL}, 0, 0, S_NULL}, // S_TNTDUST_8
 	{SPR_FSGN, 0|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNA
 	{SPR_FSGN, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNB
 	{SPR_FSGN, 2|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_FSGNC
@@ -5398,7 +5414,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,          // painsound
 		S_NULL,            // meleestate
 		S_NULL,            // missilestate
-		S_NULL, //S_TNTBARREL_EXPL1, // deathstate
+		S_FBOMB_EXPL1,     // deathstate
 		S_NULL,            // xdeathstate
 		sfx_s3k4e,         // deathsound
 		20*FRACUNIT,       // speed
@@ -5412,6 +5428,32 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL             // raisestate
 	},
 
+	{           // MT_TNTDUST
+		-1,                // doomednum
+		S_TNTDUST_1,       // spawnstate
+		1,                 // spawnhealth
+		S_NULL,            // seestate
+		sfx_None,          // seesound
+		0,                 // reactiontime
+		sfx_None,          // attacksound
+		S_NULL,            // painstate
+		0,                 // painchance
+		sfx_None,          // painsound
+		S_NULL,            // meleestate
+		S_NULL,            // missilestate
+		S_NULL,            // deathstate
+		S_NULL,            // xdeathstate
+		sfx_None,          // deathsound
+		20*FRACUNIT,       // speed
+		16*FRACUNIT,       // radius
+		32*FRACUNIT,       // height
+		0,                 // display offset
+		100,               // mass
+		0,                 // damage
+		sfx_None,          // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL             // raisestate
+	},
 	{           // MT_FSGNA
 		-1,                // doomednum
 		S_FSGNA,           // spawnstate

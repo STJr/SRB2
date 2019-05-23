@@ -321,6 +321,8 @@ typedef enum sprite
 	SPR_FANG, // replaces EGGQ
 	SPR_FBOM,
 	SPR_FSGN,
+	SPR_BARX, // bomb explosion (also used by barrel)
+	SPR_BARD, // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	SPR_EGGR,
@@ -1531,6 +1533,20 @@ typedef enum state
 
 	S_FBOMB1,
 	S_FBOMB2,
+	S_FBOMB_EXPL1,
+	S_FBOMB_EXPL2,
+	S_FBOMB_EXPL3,
+	S_FBOMB_EXPL4,
+	S_FBOMB_EXPL5,
+	S_FBOMB_EXPL6,
+	S_TNTDUST_1,
+	S_TNTDUST_2,
+	S_TNTDUST_3,
+	S_TNTDUST_4,
+	S_TNTDUST_5,
+	S_TNTDUST_6,
+	S_TNTDUST_7,
+	S_TNTDUST_8,
 	S_FSGNA,
 	S_FSGNB,
 	S_FSGNC,
@@ -3858,6 +3874,7 @@ typedef enum mobj_type
 	// Boss 5
 	MT_FANG,
 	MT_FBOMB,
+	MT_TNTDUST, // also used by barrel
 	MT_FSGNA,
 	MT_FSGNB,
 	MT_FANGWAYPOINT,
