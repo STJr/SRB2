@@ -2619,7 +2619,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 413: // Change music
 			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
+			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
 				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
 				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
@@ -2970,7 +2970,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				mobj_t *altview;
 
-				if (!mo || !mo->player) // only players have views
+				if ((!mo || !mo->player) && !titlemapinaction) // only players have views, and title screens
 					return;
 
 				if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
@@ -2979,6 +2979,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				altview = P_GetObjectTypeInSectorNum(MT_ALTVIEWMAN, secnum);
 				if (!altview)
 					return;
+
+				// If titlemap, set the camera ref for title's thinker
+				// This is not revoked until overwritten; awayviewtics is ignored
+				if (titlemapinaction)
+				{
+					titlemapcameraref = altview;
+					return;
+				}
 
 				P_SetTarget(&mo->player->awayviewmobj, altview);
 				mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;

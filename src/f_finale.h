@@ -40,6 +40,7 @@ void F_TextPromptTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -69,7 +70,8 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
-extern INT32 titlescrollspeed;
+extern INT32 titlescrollxspeed;
+extern INT32 titlescrollyspeed;
 
 typedef enum
 {
@@ -78,17 +80,38 @@ typedef enum
 	TITLEMAP_RUNNING
 } titlemap_enum;
 
+// Current menu parameters
+
 extern UINT8 titlemapinaction;
+extern mobj_t *titlemapcameraref;
+extern char curbgname[8];
+extern SINT8 curfadevalue;
+extern boolean curhidepics;
+extern INT32 curbgcolor;
+extern INT32 curbgxspeed;
+extern INT32 curbgyspeed;
+extern boolean curbghide;
+
+#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
+
+void F_InitMenuPresValues(void);
+void F_MenuPresTicker(boolean run);
 
 //
 // WIPE
 //
+// HACK for menu fading while titlemapinaction; skips the level check
+#define FORCEWIPE -3
+#define FORCEWIPEOFF -2
+
 extern boolean WipeInAction;
 extern INT32 lastwipetic;
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+tic_t F_GetWipeLength(UINT8 wipetype);
+boolean F_WipeExists(UINT8 wipetype);
 
 enum
 {

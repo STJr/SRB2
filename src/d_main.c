@@ -157,37 +157,11 @@ void D_PostEvent_end(void) {};
 #endif
 
 // modifier keys
+// Now handled in I_OsPolling
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
 boolean capslock = 0;	// gee i wonder what this does.
-//
-// D_ModifierKeyResponder
-// Sets global shift/ctrl/alt variables, never actually eats events
-//
-static inline void D_ModifierKeyResponder(event_t *ev)
-{
-	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
-	{
-		case KEY_LSHIFT: shiftdown |= 0x1; return;
-		case KEY_RSHIFT: shiftdown |= 0x2; return;
-		case KEY_LCTRL: ctrldown |= 0x1; return;
-		case KEY_RCTRL: ctrldown |= 0x2; return;
-		case KEY_LALT: altdown |= 0x1; return;
-		case KEY_RALT: altdown |= 0x2; return;
-		default: return;
-	}
-	else if (ev->type == ev_keyup) switch (ev->data1)
-	{
-		case KEY_LSHIFT: shiftdown &= ~0x1; return;
-		case KEY_RSHIFT: shiftdown &= ~0x2; return;
-		case KEY_LCTRL: ctrldown &= ~0x1; return;
-		case KEY_RCTRL: ctrldown &= ~0x2; return;
-		case KEY_LALT: altdown &= ~0x1; return;
-		case KEY_RALT: altdown &= ~0x2; return;
-		default: return;
-	}
-}
 
 //
 // D_ProcessEvents
@@ -200,9 +174,6 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
-
-		// Set global shift/ctrl/alt down variables
-		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -234,6 +205,9 @@ void D_ProcessEvents(void)
 // wipegamestate can be set to -1 to force a wipe on the next draw
 // added comment : there is a wipe eatch change of the gamestate
 gamestate_t wipegamestate = GS_LEVEL;
+// -1: Default; 0-n: Wipe index; INT16_MAX: do not wipe
+INT16 wipetypepre = -1;
+INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
@@ -267,7 +241,7 @@ static void D_Display(void)
 
 	// save the current screen if about to wipe
 	wipe = (gamestate != wipegamestate);
-	if (wipe)
+	if (wipe && wipetypepre != INT16_MAX)
 	{
 		// set for all later
 		wipedefindex = gamestate; // wipe_xxx_toblack
@@ -279,27 +253,37 @@ static void D_Display(void)
 				wipedefindex = wipe_multinter_toblack;
 		}
 
+		if (wipetypepre < 0 || !F_WipeExists(wipetypepre))
+			wipetypepre = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if ((wipegamestate != (gamestate_t)-2) // fades to black on its own timing, always
-			 && wipedefs[wipedefindex] != UINT8_MAX)
+			if ((wipegamestate == (gamestate_t)FORCEWIPE ||
+			        (wipegamestate != (gamestate_t)FORCEWIPEOFF
+						&& !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
+					) // fades to black on its own timing, always
+			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
-				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
 
 			F_WipeStartScreen();
 		}
+
+		wipetypepre = -1;
 	}
+	else
+		wipetypepre = -1;
 
 	// do buffered drawing
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			if (!titlemapinaction) {
+			if (!titlemapinaction || !curbghide) {
 				F_TitleScreenDrawer();
 				break;
 			}
@@ -361,14 +345,14 @@ static void D_Display(void)
 
 	// STUPID race condition...
 	if (wipegamestate == GS_INTRO && gamestate == GS_TITLESCREEN)
-		wipegamestate = -2;
+		wipegamestate = FORCEWIPEOFF;
 	else
 	{
 		wipegamestate = gamestate;
 
 		// clean up border stuff
 		// see if the border needs to be initially drawn
-		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide))
 		{
 			// draw the view directly
 
@@ -477,18 +461,25 @@ static void D_Display(void)
 	//
 	// wipe update
 	//
-	if (wipe)
+	if (wipe && wipetypepost != INT16_MAX)
 	{
 		// note: moved up here because NetUpdate does input changes
 		// and input during wipe tends to mess things up
 		wipedefindex += WIPEFINALSHIFT;
 
+		if (wipetypepost < 0 || !F_WipeExists(wipetypepost))
+			wipetypepost = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
-			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
+
+		wipetypepost = -1;
 	}
+	else
+		wipetypepost = -1;
 
 	NetUpdate(); // send out any new accumulation
 
@@ -741,7 +732,10 @@ void D_StartTitle(void)
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
+	F_InitMenuPresValues();
 	F_StartTitleScreen();
+
+	currentMenu = &MainDef; // reset the current menu ID
 
 	// Reset the palette
 	if (rendermode != render_none)
@@ -1114,6 +1108,13 @@ void D_SRB2Main(void)
 	// adapt tables to SRB2's needs, including extra slots for dehacked file support
 	P_PatchInfoTables();
 
+	// initiate menu metadata before SOCcing them
+	M_InitMenuPresTables();
+
+	// init title screen display params
+	if (M_CheckParm("-connect"))
+		F_InitMenuPresValues();
+
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
@@ -1400,6 +1401,7 @@ void D_SRB2Main(void)
 	}
 	else if (M_CheckParm("-skipintro"))
 	{
+		F_InitMenuPresValues();
 		F_StartTitleScreen();
 	}
 	else
