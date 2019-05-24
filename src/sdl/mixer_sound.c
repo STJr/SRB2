@@ -672,6 +672,7 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 	if (!openmpt_mhandle || songpaused)
 		return;
 
+	// Play module into stream
 	openmpt_module_read_interleaved_stereo(openmpt_mhandle, SAMPLERATE, BUFFERSIZE, (short *)stream);
 
 	// Limiter to prevent music from being disorted with some formats

@@ -1,6 +1,6 @@
 # libopenmpt mingw-w64 binary info
 
-Current built version as of 2019/01/03 is 0.4.0+r11103.pkg
+Current built version as of 2019/05/23 is 0.4.4+r11531.pkg
 
 * mingw binaries (.dll): `bin/[x86 or x86_64]/mingw`
 * mingw import libraries (.dll.a): `lib/[x86 or x86_64]/mingw`

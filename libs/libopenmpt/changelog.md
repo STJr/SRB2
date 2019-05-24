@@ -5,12 +5,64 @@ Changelog {#changelog}
 For fully detailed change log, please see the source repository directly. This
 is just a high-level summary.
 
+### libopenmpt 0.4.4 (2019-04-07)
+
+ *  [**Bug**] Channel VU meters were swapped.
+
+ *  Startrekker: Clamp speed to 31 ticks per row.
+ *  MTM: Ignore unused Exy commands on import. Command E5x (Set Finetune) is now
+    applied correctly.
+ *  MOD: Sample swapping was always enabled since it has been separated from the
+    ProTracker 1/2 compatibility flag. Now it is always enabled for Amiga-style
+    modules and otherwise the old heuristic is used again.
+
+ *  stb_vorbis: Update to v1.16 (2019-03-05).
+
+### libopenmpt 0.4.3 (2019-02-11)
+
+ *  [**Sec**] Possible crash due to null-pointer access when doing a portamento
+    from an OPL instrument to an empty instrument note map slot (r11348).
+
+ *  [**Bug**] libopenmpt did not compile on Apple platforms in C++17 mode.
+
+ *  IT: Various fixes for note-off + instrument number in Old Effects mode.
+ *  MO3: Import IT row highlights as written by MO3 2.4.1.2 or newer. Required
+    for modules using modern tempo mode.
+
+ *  miniz: Update to v2.0.8 (2018-09-19).
+ *  stb_vorbis: Update to v1.15 (2019-02-07).
+
+### libopenmpt 0.4.2 (2019-01-22)
+
+ *  [**Sec**] DSM: Assertion failure during file parsing with debug STLs
+    (r11209).
+ *  [**Sec**] J2B: Assertion failure during file parsing with debug STLs
+    (r11216).
+
+ *  S3M: Allow volume change of OPL instruments after Note Cut.
+
+### libopenmpt 0.4.1 (2019-01-06)
+
+ *  [**Bug**] Binaries compiled for winold (Windows XP, Vista, 7, for CPUs
+    without SSE2 support) did not actually work on CPUs without SSE2 support.
+ *  [**Bug**] libmodplug: Public symbols of the C++ API had `visibility=hidden`
+    set on non-MSVC systems, which made them not publicly accessible.
+ *  [**Bug**] Project files for Windows 10 desktop builds on ARM and ARM64
+    (`build/vs2017win10`) were missing from Windows source package.
+ *  [**Bug**] MSVC project files in Windows source package lacked additional
+    files required to build DLLs.
+
+ *  MO3: Apply playback changes based on "ModPlug-made" header flag.
+
+ *  minimp3: Update to commit e9df0760e94044caded36a55d70ab4152134adc5
+    (2018-12-23).
+
 ### libopenmpt 0.4.0 (2018-12-23)
 
  *  [**New**] libopenmpt now includes emulation of the OPL chip and thus plays
     OPL instruments in S3M, C67 and MPTM files. OPL chip emulation volume can be
     changed with the new ctl `render.opl.volume_factor`.
- *  [**New**] libopenmpt now supports C67 (CDFM Composer) files.
+ *  [**New**] libopenmpt now supports CDFM / Composer 670 module files.
  *  [**New**] Autotools `configure` and plain `Makefile` now honor the variable
     `CXXSTDLIB_PCLIBSPRIVATE` which serves the sole purpose of listing the
     standard library (or libraries) required for static linking. The contents of
