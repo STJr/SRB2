@@ -318,7 +318,10 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update gametype_cons_t in m_menu.c
+// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+
+// String names for gametypes
+extern const char *Gametype_Names[NUMGAMETYPES];
 
 extern tic_t totalplaytime;
 
