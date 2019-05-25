@@ -7,6 +7,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -21,6 +23,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -35,6 +39,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -55,6 +61,7 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -71,6 +78,7 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -87,6 +95,7 @@ matrix:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -106,6 +115,7 @@ matrix:
             apt:
               sources:
               - llvm-toolchain-precise-3.5
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -122,6 +132,7 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.6
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -138,6 +149,7 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.7
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -154,6 +166,7 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.8
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -170,6 +183,7 @@ matrix:
               sources:
               - llvm-toolchain-precise-3.9
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -186,6 +200,7 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-4.0
 #              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
@@ -202,6 +217,7 @@ matrix:
 #              sources:
 #              - llvm-toolchain-precise-5.0
 #              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
 #              packages:
 #              - libsdl2-mixer-dev
 #              - libpng-dev
@@ -256,6 +272,8 @@ cache:
 
 addons:
   apt:
+    sources:
+    - sourceline: 'ppa:stjr/srb2'
     packages:
     - libsdl2-mixer-dev
     - libpng-dev
@@ -285,7 +303,6 @@ before_script:
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B05F25D762E3157; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
   - mkdir -p $HOME/srb2_cache
