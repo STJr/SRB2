@@ -639,9 +639,6 @@ void I_Error(const char *error, ...)
 	if (!errorcount)
 	{
 		M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
-		D_SaveBan(); // save the ban list
-#endif
 		G_SaveGameData();
 	}
 

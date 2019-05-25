@@ -444,7 +444,6 @@ void F_StartIntro(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	F_NewCutscene(introtext[0]);
 
 	intro_scenenum = 0;
@@ -1146,7 +1145,6 @@ void F_StartCredits(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	S_ChangeMusicInternal("credit", false);
@@ -1192,16 +1190,34 @@ void F_CreditDrawer(void)
 		if (FixedMul(y,vid.dupy) > vid.height)
 			break;
 	}
+}
 
+void F_CreditTicker(void)
+{
+	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
+	UINT16 i;
+	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+
+	// Draw credits text on top
+	for (i = 0; credits[i]; i++)
+	{
+		switch(credits[i][0])
+		{
+			case 0: y += 80<<FRACBITS; break;
+			case 1: y += 30<<FRACBITS; break;
+			default: y += 12<<FRACBITS; break;
+		}
+		if (FixedMul(y,vid.dupy) > vid.height)
+			break;
+	}
+
+	// Do this here rather than in the drawer you doofus! (this is why dedicated mode broke at credits)
 	if (!credits[i] && y <= 120<<FRACBITS && !finalecount)
 	{
 		timetonext = 5*TICRATE+1;
 		finalecount = 5*TICRATE;
 	}
-}
 
-void F_CreditTicker(void)
-{
 	if (timetonext)
 		timetonext--;
 	else
@@ -1295,7 +1311,6 @@ void F_StartGameEvaluation(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	finalecount = 0;
 }
@@ -1405,7 +1420,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	// In case menus are still up?!!
@@ -1608,7 +1622,6 @@ void F_StartContinue(void)
 	keypressed = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	// In case menus are still up?!!
 	M_ClearMenus(true);
@@ -1728,9 +1741,10 @@ static void F_AdvanceToNextScene(void)
 	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
 	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[scenenum].musswitch,
 			cutscenes[cutnum]->scene[scenenum].musswitchflags,
-			cutscenes[cutnum]->scene[scenenum].musicloop);
+			cutscenes[cutnum]->scene[scenenum].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 
 	// Fade to the next
 	dofadenow = true;
@@ -1779,8 +1793,6 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 
 	F_NewCutscene(cutscenes[cutscenenum]->scene[0].text);
 
-	CON_ClearHUD();
-
 	cutsceneover = false;
 	runningprecutscene = precutscene;
 	precutresetplayer = resetplayer;
@@ -1801,9 +1813,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	stoptimer = 0;
 
 	if (cutscenes[cutnum]->scene[0].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[0].musswitch,
 			cutscenes[cutnum]->scene[0].musswitchflags,
-			cutscenes[cutnum]->scene[0].musicloop);
+			cutscenes[cutnum]->scene[0].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 	else
 		S_StopMusic();
 }
