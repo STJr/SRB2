@@ -1694,7 +1694,7 @@ void R_FlatPatch(patch_t *patch, UINT8 *flat)
 	UINT8 *source;
 
 	desttop = flat;
-	deststop = desttop + (patch->width * patch->height);
+	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
 
 	for (col = 0; col < SHORT(patch->width); col++, desttop++)
 	{
@@ -1708,13 +1708,13 @@ void R_FlatPatch(patch_t *patch, UINT8 *flat)
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 
-			dest = desttop + (topdelta * patch->width);
+			dest = desttop + (topdelta * SHORT(patch->width));
 			source = (UINT8 *)(column) + 3;
 			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
 			{
 				if (source[ofs] != TRANSPARENTPIXEL)
 					*dest = source[ofs];
-				dest += patch->width;
+				dest += SHORT(patch->width);
 			}
 			column = (column_t *)((UINT8 *)column + column->length + 4);
 		}
@@ -1733,9 +1733,8 @@ void R_FlatTexture(size_t tex, UINT8 *flat)
 	desttop = flat;
 	deststop = desttop + (texture->width * texture->height);
 
-	for (col = 0; col < SHORT(texture->width); col++, desttop++)
+	for (col = 0; col < texture->width; col++, desttop++)
 	{
-		INT32 topdelta, prevdelta = -1;
 		column = (column_t *)R_GetColumn(tex, col);
 		if (!texture->holes)
 		{
@@ -1750,6 +1749,7 @@ void R_FlatTexture(size_t tex, UINT8 *flat)
 		}
 		else
 		{
+			INT32 topdelta, prevdelta = -1;
 			while (column->topdelta != 0xff)
 			{
 				topdelta = column->topdelta;

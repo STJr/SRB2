@@ -531,6 +531,8 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	INT32             i;
 	float           flatxref,flatyref;
 	float fflatwidth, fflatheight;
+	INT32 flatflag;
+	boolean texflat = true;
 	size_t len;
 	float scrollx = 0.0f, scrolly = 0.0f;
 	angle_t angle = 0;
@@ -622,22 +624,25 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 			break;
 	}
 
-	if (gr_patchflat && R_CheckIfPatch(gr_patchflat))		// Just in case?
-	{
-		patch = (patch_t *)W_CacheLumpNum(gr_patchflat, PU_STATIC);
-		fflatwidth = patch->width;
-		fflatheight = patch->height;
-	}
+	flatflag = ((INT32)fflatwidth)-1;
 
 	if (texturenum != 0 && texturenum != -1)
 	{
 		fflatwidth = textures[texturenum]->width;
 		fflatheight = textures[texturenum]->height;
 	}
+	else if (gr_patchflat && R_CheckIfPatch(gr_patchflat))		// Just in case?
+	{
+		patch = (patch_t *)W_CacheLumpNum(gr_patchflat, PU_STATIC);
+		fflatwidth = SHORT(patch->width);
+		fflatheight = SHORT(patch->height);
+	}
+	else
+		texflat = false;
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)((FLOAT_TO_FIXED(pv->x) % llrint(fflatwidth)) / fflatwidth);
-	flatyref = (float)((FLOAT_TO_FIXED(pv->y) % llrint(fflatheight)) / fflatheight);
+	flatxref = (float)(((fixed_t)pv->x & (~flatflag)) / fflatwidth);
+	flatyref = (float)(((fixed_t)pv->y & (~flatflag)) / fflatheight);
 
 	// transform
 	v3d = planeVerts;
@@ -693,17 +698,24 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	for (i = 0; i < nrPlaneVerts; i++,v3d++,pv++)
 	{
 		// Hurdler: add scrolling texture on floor/ceiling
-		v3d->sow = (float)((pv->x / fflatwidth) - flatxref + scrollx);
-		v3d->tow = (float)(flatyref - (pv->y / fflatheight) + scrolly);
-
-		//v3d->sow = (float)(pv->x / fflatsize);
-		//v3d->tow = (float)(pv->y / fflatsize);
+		if (texflat)
+		{
+			v3d->sow = (float)(pv->x / fflatwidth) + scrollx;
+			v3d->tow = -(float)(pv->y / fflatheight) + scrolly;
+		}
+		else
+		{
+			v3d->sow = (float)((pv->x / fflatwidth) - flatxref + scrollx);
+			v3d->tow = (float)(flatyref - (pv->y / fflatheight) + scrolly);
+		}
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
 		{
 			tempxsow = FLOAT_TO_FIXED(v3d->sow);
 			tempytow = FLOAT_TO_FIXED(v3d->tow);
+			if (texflat)
+				tempytow = -tempytow;
 			v3d->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
 			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
 		}

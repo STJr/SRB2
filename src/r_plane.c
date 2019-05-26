@@ -758,8 +758,8 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture)
 		else
 		{
 			patch = (patch_t *)ds_source;
-			levelflat->width = ds_flatwidth = patch->width;
-			levelflat->height = ds_flatheight = patch->height;
+			levelflat->width = ds_flatwidth = SHORT(patch->width);
+			levelflat->height = ds_flatheight = SHORT(patch->height);
 
 			levelflat->topoffset = patch->topoffset * FRACUNIT;
 			levelflat->leftoffset = patch->leftoffset * FRACUNIT;
@@ -1031,13 +1031,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 	levelflat = &levelflats[pl->picnum];
 	size = W_LumpLength(levelflat->lumpnum);
 
-	// Check if the flat is actually a texture.
+	// Check if the flat is actually a wall texture.
 	if (levelflat->texturenum != 0 && levelflat->texturenum != -1)
 		R_GetPatchFlat(levelflat, true);
-	// Check if the flat is actually a patch.
+	// Maybe it's just a patch, then?
 	else if (R_CheckIfPatch(levelflat->lumpnum))
 		R_GetPatchFlat(levelflat, false);
-	// Raw flat.
+	// It's a raw flat.
 	else
 	{
 		ds_source = (UINT8 *)W_CacheLumpNum(levelflat->lumpnum, PU_STATIC); // Stay here until Z_ChangeTag

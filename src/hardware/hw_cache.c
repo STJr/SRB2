@@ -679,21 +679,6 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 	R_FlatPatch(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
-static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
-{
-	// setup the texture info
-	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
-	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
-	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-	grMipmap->grInfo.format = GR_TEXFMT_P_8;
-	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
-
-	grMipmap->width  = (UINT16)textures[texturenum]->width;
-	grMipmap->height = (UINT16)textures[texturenum]->height;
-
-	R_FlatTexture(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
-}
-
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	size_t size, pflatsize;
@@ -763,6 +748,21 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 	gr_patchflat = 0;
 	if (R_CheckIfPatch(flatlumpnum))
 		gr_patchflat = flatlumpnum;
+}
+
+static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+{
+	// setup the texture info
+	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+	grMipmap->grInfo.format = GR_TEXFMT_P_8;
+	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+
+	grMipmap->width  = (UINT16)textures[texturenum]->width;
+	grMipmap->height = (UINT16)textures[texturenum]->height;
+
+	R_FlatTexture(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
 void HWR_GetTextureFlat(INT32 texturenum)
