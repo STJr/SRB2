@@ -190,6 +190,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	GrTexInfo *grInfo)
 {
+#ifdef GLIDE_API_COMPATIBILITY
 	//   Build the full textures from patches.
 	static const GrLOD_t gr_lods[9] =
 	{
@@ -226,6 +227,9 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 
 	INT32     j,k;
 	INT32     max,min;
+#else
+	(void)grInfo;
+#endif
 
 	// find a power of 2 width/height
 	if (cv_grrounddown.value)
@@ -281,6 +285,7 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	}
 	else
 	{
+#ifdef GLIDE_API_COMPATIBILITY
 		//size up to nearest power of 2
 		blockwidth = 1;
 		while (blockwidth < originalwidth)
@@ -298,9 +303,14 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 		if (blockheight > 2048)
 			blockheight = 2048;
 			//I_Error("3D GenerateTexture : too big");
+#else
+		blockwidth = originalwidth;
+		blockheight = originalheight;
+#endif
 	}
 
 	// do the boring LOD stuff.. blech!
+#ifdef GLIDE_API_COMPATIBILITY
 	if (blockwidth >= blockheight)
 	{
 		max = blockwidth;
@@ -332,6 +342,7 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	if (blockwidth < blockheight)
 		j += 4;
 	grInfo->aspectRatioLog2 = gr_aspects[j].aspect;
+#endif
 
 	blocksize = blockwidth * blockheight;
 
@@ -684,9 +695,11 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 	size_t size, pflatsize;
 
 	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
 	grMipmap->grInfo.format = GR_TEXFMT_P_8;
 	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 
@@ -753,9 +766,11 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
 	grMipmap->grInfo.format = GR_TEXFMT_P_8;
 	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 
