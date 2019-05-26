@@ -3172,6 +3172,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	INT32             i;
 	float           flatxref,flatyref;
 	float fflatwidth, fflatheight;
+	INT32 flatflag;
+	boolean texflat = true;
 	size_t len;
 	float scrollx = 0.0f, scrolly = 0.0f;
 	angle_t angle = 0;
@@ -3231,22 +3233,25 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 			break;
 	}
 
-	if (gr_patchflat && R_CheckIfPatch(gr_patchflat))		// Just in case?
-	{
-		patch = (patch_t *)W_CacheLumpNum(gr_patchflat, PU_STATIC);
-		fflatwidth = patch->width;
-		fflatheight = patch->height;
-	}
+	flatflag = ((INT32)fflatwidth)-1;
 
 	if (texturenum != 0 && texturenum != -1)
 	{
 		fflatwidth = textures[texturenum]->width;
 		fflatheight = textures[texturenum]->height;
 	}
+	else if (gr_patchflat && R_CheckIfPatch(gr_patchflat))		// Just in case?
+	{
+		patch = (patch_t *)W_CacheLumpNum(gr_patchflat, PU_STATIC);
+		fflatwidth = SHORT(patch->width);
+		fflatheight = SHORT(patch->height);
+	}
+	else
+		texflat = false;
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)((polysector->origVerts[0].x % llrint(fflatwidth)) / fflatwidth);
-	flatyref = (float)((polysector->origVerts[0].y % llrint(fflatheight)) / fflatheight);
+	flatxref = (float)((polysector->origVerts[0].x & (~flatflag)) / fflatwidth);
+	flatyref = (float)((polysector->origVerts[0].y & (~flatflag)) / fflatheight);
 
 	// transform
 	v3d = planeVerts;
@@ -3300,15 +3305,26 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 
 	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
 	{
-		// Hurdler: add scrolling texture on floor/ceiling
-		v3d->sow = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) - flatxref + scrollx); // Go from the polysector's original vertex locations
-		v3d->tow = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly); // Means the flat is offset based on the original vertex locations
+		// Go from the polysector's original vertex locations
+		// Means the flat is offset based on the original vertex locations
+		if (texflat)
+		{
+			v3d->sow = (float)(FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) + scrollx;
+			v3d->tow = -(float)(FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly;
+		}
+		else
+		{
+			v3d->sow = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) - flatxref + scrollx);
+			v3d->tow = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly);
+		}
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
 		{
 			tempxsow = FLOAT_TO_FIXED(v3d->sow);
 			tempytow = FLOAT_TO_FIXED(v3d->tow);
+			if (texflat)
+				tempytow = -tempytow;
 			v3d->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
 			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
 		}

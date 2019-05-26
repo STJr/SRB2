@@ -613,8 +613,11 @@ INT32 P_AddLevelFlatRuntime(const char *flatname)
 
 		// store the flat lump number
 		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-		// Lactozilla
 		levelflat->texturenum = R_CheckTextureNumForName(flatname);
+		levelflat->lasttexturenum = levelflat->texturenum;
+
+		levelflat->baselumpnum = LUMPERROR;
+		levelflat->basetexturenum = -1;
 
 #ifndef ZDEBUG
 		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);

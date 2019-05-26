@@ -677,7 +677,7 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
-// Lactozilla
+// HWR_RenderPlane and HWR_RenderPolyObjectPlane need this to get the flat dimensions from a patch.
 lumpnum_t gr_patchflat;
 
 static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
