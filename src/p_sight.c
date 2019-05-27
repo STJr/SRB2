@@ -470,6 +470,8 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	if (s1 == s2) // Both sectors are the same.
 	{
 		ffloor_t *rover;
+		fixed_t topz1, bottomz1; // top, bottom heights at t1's position
+		fixed_t topz2, bottomz2; // likewise but for t2
 
 		for (rover = s1->ffloors; rover; rover = rover->next)
 		{
@@ -482,9 +484,30 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				continue;
 			}
 
+#ifdef ESLOPE
+			if (*rover->t_slope)
+			{
+				topz1 = P_GetZAt(*rover->t_slope, t1->x, t1->y);
+				topz2 = P_GetZAt(*rover->t_slope, t2->x, t2->y);
+			}
+			else
+				topz1 = topz2 = *rover->topheight;
+
+			if (*rover->b_slope)
+			{
+				bottomz1 = P_GetZAt(*rover->b_slope, t1->x, t1->y);
+				bottomz2 = P_GetZAt(*rover->b_slope, t2->x, t2->y);
+			}
+			else
+				bottomz1 = bottomz2 = *rover->bottomheight;
+#else
+			topz1 = topz2 = *rover->topheight;
+			bottomz1 = bottomz2 = *rover->bottomheight;
+#endif
+
 			// Check for blocking floors here.
-			if ((los.sightzstart < *rover->bottomheight && t2->z >= *rover->topheight)
-				|| (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->bottomheight))
+			if ((los.sightzstart < bottomz1 && t2->z >= topz2)
+				|| (los.sightzstart >= topz1 && t2->z + t2->height < bottomz2))
 			{
 				// no way to see through that
 				return false;
@@ -495,19 +518,19 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 
 			if (!(rover->flags & FF_INVERTPLANES))
 			{
-				if (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->topheight)
+				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
 
-				if (los.sightzstart < *rover->bottomheight && t2->z >= *rover->bottomheight)
+				if (los.sightzstart < bottomz1 && t2->z >= bottomz2)
 					return false; // blocked by lower outside plane
 			}
 
 			if (rover->flags & FF_INVERTPLANES || rover->flags & FF_BOTHPLANES)
 			{
-				if (los.sightzstart < *rover->topheight && t2->z >= *rover->topheight)
+				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane
 
-				if (los.sightzstart >= *rover->bottomheight && t2->z + t2->height < *rover->bottomheight)
+				if (los.sightzstart >= bottomz1 && t2->z + t2->height < bottomz2)
 					return false; // blocked by lower inside plane
 			}
 		}
