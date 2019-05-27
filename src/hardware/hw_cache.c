@@ -451,7 +451,10 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
 		HWR_DrawPatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
 		                     blockwidth*format2bpp[grtex->mipmap.grInfo.format],
@@ -683,11 +686,14 @@ lumpnum_t gr_patchflat;
 static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
+	size_t lumplength = W_LumpLength(flatlumpnum);
+	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
+		patch = R_PNGToPatch((UINT8 *)patch, lumplength);
 
 	grMipmap->width  = (UINT16)SHORT(patch->width);
 	grMipmap->height = (UINT16)SHORT(patch->height);
 
-	R_FlatPatch(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+	R_PatchToFlat(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
@@ -777,7 +783,7 @@ static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	grMipmap->width  = (UINT16)textures[texturenum]->width;
 	grMipmap->height = (UINT16)textures[texturenum]->height;
 
-	R_FlatTexture(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+	R_TextureToFlat(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
 }
 
 void HWR_GetTextureFlat(INT32 texturenum)

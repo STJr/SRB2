@@ -16,6 +16,7 @@
 
 #include "r_defs.h"
 #include "r_state.h"
+#include "p_setup.h" // levelflats
 
 #ifdef __GNUG__
 #pragma interface
@@ -105,13 +106,22 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3);
 const char *R_ColormapNameForNum(INT32 num);
 
 boolean R_CheckIfPatch(lumpnum_t lump);
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 
-void R_FlatPatch(patch_t *patch, UINT8 *flat);
-void R_FlatTexture(size_t tex, UINT8 *flat);
+void R_PatchToFlat(patch_t *patch, UINT8 *flat);
+void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_CropFlat(UINT8 *srcflat, UINT8 *destflat,
 				UINT16 srcwidth, UINT16 srcheight,
 				UINT16 resizewidth, UINT16 resizeheight,
 				UINT16 destwidth, UINT16 destheight);
+
+#ifndef NO_PNG_LUMPS
+boolean R_IsLumpPNG(UINT8 *d, size_t s);
+
+UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
+patch_t *R_PNGToPatch(UINT8 *png, size_t size);
+boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
+#endif
 
 extern INT32 numtextures;
 
