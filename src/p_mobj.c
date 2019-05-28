@@ -1985,6 +1985,9 @@ void P_XYMovement(mobj_t *mo)
 			// Now compare the Zs of the different quantizations
 			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
+#ifdef HWRENDER
+				mo->modeltilt = mo->standingslope;
+#endif
 				P_SlopeLaunch(mo);
 
 				//CONS_Printf("launched off of slope - ");
@@ -2557,6 +2560,9 @@ boolean P_ZMovement(mobj_t *mo)
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+#ifdef HWRENDER
+			mo->modeltilt = mo->standingslope;
+#endif
 			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 

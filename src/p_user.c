@@ -1995,6 +1995,10 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->fuse = ghost->info->damage;
 	ghost->skin = mobj->skin;
+	ghost->standingslope = mobj->standingslope;
+#ifdef HWRENDER
+	ghost->modeltilt = mobj->modeltilt;
+#endif
 
 	if (mobj->flags2 & MF2_OBJECTFLIP)
 		ghost->flags |= MF2_OBJECTFLIP;
