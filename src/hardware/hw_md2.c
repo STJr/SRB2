@@ -1635,11 +1635,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #ifdef USE_FTRANSFORM_ANGLEZ
 		// Slope rotation from Kart
 		p.anglez = 0.0f;
-		if (spr->mobj->standingslope)
+		if (spr->mobj->modeltilt)
 		{
-			fixed_t tempz = spr->mobj->standingslope->normal.z;
-			fixed_t tempy = spr->mobj->standingslope->normal.y;
-			fixed_t tempx = spr->mobj->standingslope->normal.x;
+			fixed_t tempz = spr->mobj->modeltilt->normal.z;
+			fixed_t tempy = spr->mobj->modeltilt->normal.y;
+			fixed_t tempx = spr->mobj->modeltilt->normal.x;
 			fixed_t tempangle = AngleFixed(R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx));
 			p.anglez = FIXED_TO_FLOAT(tempangle);
 			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
