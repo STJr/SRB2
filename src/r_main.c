@@ -66,8 +66,6 @@ size_t loopcount;
 fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
-boolean viewsky, skyVisible;
-boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 sector_t *viewsector;
 player_t *viewplayer;
 
@@ -739,7 +737,7 @@ static void R_SetupFreelook(void)
 
 #undef AIMINGTODY
 
-void R_SetupFrame(player_t *player, boolean skybox)
+void R_SetupFrame(player_t *player)
 {
 	camera_t *thiscam;
 	boolean chasecam = false;
@@ -769,7 +767,6 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	else if (!chasecam)
 		thiscam->chase = false;
 
-	viewsky = !skybox;
 	if (player->awayviewtics)
 	{
 		// cut-away view stuff
@@ -858,7 +855,6 @@ void R_SkyboxFrame(player_t *player)
 		thiscam = &camera;
 
 	// cut-away view stuff
-	viewsky = true;
 	viewmobj = skyboxmo[0];
 #ifdef PARANOIA
 	if (!viewmobj)
@@ -1022,9 +1018,6 @@ static void R_PortalFrame(portal_t *portal)
 
 void R_RenderPlayerView(player_t *player)
 {
-	portal_t *portal;
-	const boolean skybox = (skyboxmo[0] && cv_skybox.value);
-
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
 		if (cv_homremoval.value == 1)
@@ -1033,37 +1026,7 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
-	// load previous saved value of skyVisible for the player
-	if (splitscreen && player == &players[secondarydisplayplayer])
-		skyVisible = skyVisible2;
-	else
-		skyVisible = skyVisible1;
-
-	Portal_InitList();
-
-	if (skybox && skyVisible)
-	{
-		R_SkyboxFrame(player);
-
-		R_ClearClipSegs();
-		R_ClearDrawSegs();
-		R_ClearPlanes();
-		R_ClearSprites();
-#ifdef FLOORSPLATS
-		R_ClearVisibleFloorSplats();
-#endif
-
-		R_RenderBSPNode((INT32)numnodes - 1);
-		R_ClipSprites();
-		R_DrawPlanes();
-#ifdef FLOORSPLATS
-		R_DrawVisibleFloorSplats();
-#endif
-		R_DrawMasked();
-	}
-
-	R_SetupFrame(player, skybox);
-	skyVisible = false;
+	R_SetupFrame(player);
 	framecount++;
 	validcount++;
 
@@ -1075,6 +1038,7 @@ void R_RenderPlayerView(player_t *player)
 #ifdef FLOORSPLATS
 	R_ClearVisibleFloorSplats();
 #endif
+	Portal_InitList();
 
 	// check for new console commands.
 	NetUpdate();
@@ -1086,7 +1050,9 @@ void R_RenderPlayerView(player_t *player)
 	mytotal = 0;
 	ProfZeroTimer();
 #endif
+
 	R_RenderBSPNode((INT32)numnodes - 1);
+
 	R_ClipSprites();
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
@@ -1096,9 +1062,15 @@ void R_RenderPlayerView(player_t *player)
 #endif
 //profile stuff ---------------------------------------------------------
 
+	// Add skybox portals caused by sky visplanes.
+	if (cv_skybox.value)
+		Portal_AddSkyboxPortals();
+
 	// Portal rendering. Hijacks the BSP traversal.
 	if (portal_base)
 	{
+		portal_t *portal;
+
 		for(portal = portal_base; portal; portal = portal_base)
 		{
 			portalrender = portal->pass; // Recursiveness depth.
@@ -1135,16 +1107,6 @@ void R_RenderPlayerView(player_t *player)
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
 	R_DrawMasked();
-
-	// Check for new console commands.
-	NetUpdate();
-
-	// save value to skyVisible1 or skyVisible2
-	// this is so that P1 can't affect whether P2 can see a skybox or not, or vice versa
-	if (splitscreen && player == &players[secondarydisplayplayer])
-		skyVisible2 = skyVisible;
-	else
-		skyVisible1 = skyVisible;
 }
 
 // =========================================================================

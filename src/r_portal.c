@@ -13,7 +13,9 @@
 
 #include "r_portal.h"
 #include "r_plane.h"
-#include "r_main.h" // viewheight, viewwidth
+#include "r_main.h"
+#include "doomstat.h"
+#include "p_spec.h" // Skybox viewpoints
 #include "z_zone.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
@@ -39,7 +41,7 @@ void Portal_InitList (void)
  * the function is called, so it is useful for converting one-sided
  * lines into portals.
  */
-void Portal_ClipStoreFromRange (portal_t* portal)
+void Portal_ClipRange (portal_t* portal)
 {
 	INT32 start	= portal->start;
 	INT32 end	= portal->end;
@@ -179,9 +181,80 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 
 	portal->clipline = line2;
 
-	Portal_ClipStoreFromRange(portal);
+	Portal_ClipRange(portal);
 
 	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
 }
 
+/** Store the clipping window for a portal using a visplane.
+ *
+ * Since visplanes top/bottom windows work in an identical way,
+ * it can just be copied almost directly.
+ */
+static void Portal_ClipVisplane (const visplane_t* plane, portal_t* portal)
+{
+	INT16 start	= portal->start;
+	INT16 end	= portal->end;
+	INT32 i;
 
+	for (i = 0; i < end - start; i++)
+	{
+		portal->ceilingclip[i] = plane->top[i + start];
+		portal->floorclip[i] = plane->bottom[i + start] + 1;
+	}
+}
+
+extern INT32 viewwidth;
+
+/** Creates a skybox portal out of a visplane.
+ *
+ * Applies the necessary offsets and rotation to give
+ * a depth illusion to the skybox.
+ */
+void Portal_AddSkybox (const visplane_t* plane)
+{
+	INT16 start = plane->minx;
+	INT16 end = plane->maxx + 1;
+	mapheader_t *mh;
+	portal_t* portal;
+
+	if (!(start < end))
+		return;
+
+	portal = Portal_Add(start, end);
+
+	Portal_ClipVisplane(plane, portal);
+
+	portal->viewx = skyboxmo[0]->x;
+	portal->viewy = skyboxmo[0]->y;
+	portal->viewz = skyboxmo[0]->z;
+	portal->viewangle = viewangle + skyboxmo[0]->angle;
+
+	mh = mapheaderinfo[gamemap-1];
+
+	// If a relative viewpoint exists, offset the viewpoint.
+	if (skyboxmo[1])
+	{
+		fixed_t x = 0, y = 0;
+
+		if (mh->skybox_scalex > 0)
+			x = (viewx - skyboxmo[1]->x) / mh->skybox_scalex;
+		else if (mh->skybox_scalex < 0)
+			x = (viewx - skyboxmo[1]->x) * -mh->skybox_scalex;
+
+		if (mh->skybox_scaley > 0)
+			y = (viewy - skyboxmo[1]->y) / mh->skybox_scaley;
+		else if (mh->skybox_scaley < 0)
+			y = (viewy - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+		portal->viewx += x;
+		portal->viewy += y;
+	}
+
+	if (mh->skybox_scalez > 0)
+		portal->viewz += viewz / mh->skybox_scalez;
+	else if (mh->skybox_scalez < 0)
+		portal->viewz += viewz * -mh->skybox_scalez;
+
+	portal->clipline = -1;
+}

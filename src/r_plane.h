@@ -120,4 +120,6 @@ typedef struct planemgr_s
 
 extern visffloor_t ffloor[MAXFFLOORS];
 extern INT32 numffloors;
+
+void Portal_AddSkyboxPortals (void);
 #endif

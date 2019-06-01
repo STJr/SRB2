@@ -23,6 +23,8 @@
 #include "r_state.h"
 #include "r_splats.h" // faB(21jan):testing
 #include "r_sky.h"
+#include "r_portal.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -679,16 +681,6 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	INT32 x;
 	INT32 angle;
 
-	// If we're not supposed to draw the sky (e.g. for skyboxes), don't do anything!
-	// This probably utterly ruins sky rendering for FOFs and polyobjects, unfortunately
-	if (!viewsky)
-	{
-		// Mark that the sky was visible here for next tic
-		// (note: this is a hack and it sometimes can cause HOMs to appear for a tic IIRC)
-		skyVisible = true;
-		return;
-	}
-
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	wallcolfunc = walldrawerfunc;
@@ -1185,4 +1177,32 @@ void R_PlaneBounds(visplane_t *plane)
 	}
 	plane->high = hi;
 	plane->low = low;
+}
+
+/** Creates portals for the currently existing sky visplanes.
+ * The visplanes are also removed and cleared from the list.
+ */
+void Portal_AddSkyboxPortals (void)
+{
+	visplane_t *pl;
+	INT32 i;
+	UINT16 count = 0;
+
+	for (i = 0; i < MAXVISPLANES; i++, pl++)
+	{
+		for (pl = visplanes[i]; pl; pl = pl->next)
+		{
+			if (pl->picnum == skyflatnum)
+			{
+				Portal_AddSkybox(pl);
+
+				pl->minx = 0;
+				pl->maxx = -1;
+
+				count++;
+			}
+		}
+	}
+
+	CONS_Debug(DBG_RENDER, "Skybox portals: %d\n", count);
 }
