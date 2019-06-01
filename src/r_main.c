@@ -30,6 +30,7 @@
 #include "p_spec.h" // skyboxmo
 #include "z_zone.h"
 #include "m_random.h" // quake camera shake
+#include "r_portal.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -69,32 +70,6 @@ boolean viewsky, skyVisible;
 boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 sector_t *viewsector;
 player_t *viewplayer;
-
-// PORTALS!
-// You can thank and/or curse JTE for these.
-UINT8 portalrender;
-sector_t *portalcullsector;
-typedef struct portal_pair
-{
-	INT32 line1;
-	INT32 line2;
-	UINT8 pass;
-	struct portal_pair *next;
-
-	fixed_t viewx;
-	fixed_t viewy;
-	fixed_t viewz;
-	angle_t viewangle;
-
-	INT32 start;
-	INT32 end;
-	INT16 *ceilingclip;
-	INT16 *floorclip;
-	fixed_t *frontscale;
-} portal_pair;
-portal_pair *portal_base, *portal_cap;
-line_t *portalclipline;
-INT32 portalclipstart, portalclipend;
 
 //
 // precalculated math tables
@@ -1010,17 +985,8 @@ void R_SkyboxFrame(player_t *player)
 	R_SetupFreelook();
 }
 
-#define ANGLED_PORTALS
-
-static void R_PortalFrame(line_t *start, line_t *dest, portal_pair *portal)
+static void R_PortalFrame(portal_t *portal)
 {
-	vertex_t dest_c, start_c;
-#ifdef ANGLED_PORTALS
-	// delta angle
-	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
-#endif
-
-	//R_SetupFrame(player, false);
 	viewx = portal->viewx;
 	viewy = portal->viewy;
 	viewz = portal->viewz;
@@ -1029,93 +995,18 @@ static void R_PortalFrame(line_t *start, line_t *dest, portal_pair *portal)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	portalcullsector = dest->frontsector;
-	viewsector = dest->frontsector;
-	portalclipline = dest;
 	portalclipstart = portal->start;
 	portalclipend = portal->end;
 
-	// Offset the portal view by the linedef centers
-
-	// looking glass center
-	start_c.x = (start->v1->x + start->v2->x) / 2;
-	start_c.y = (start->v1->y + start->v2->y) / 2;
-
-	// other side center
-	dest_c.x = (dest->v1->x + dest->v2->x) / 2;
-	dest_c.y = (dest->v1->y + dest->v2->y) / 2;
-
-	// Heights!
-	viewz += dest->frontsector->floorheight - start->frontsector->floorheight;
-
-	// calculate the difference in position and rotation!
-#ifdef ANGLED_PORTALS
-	if (dangle == 0)
-#endif
-	{ // the entrance goes straight opposite the exit, so we just need to mess with the offset.
-		viewx += dest_c.x - start_c.x;
-		viewy += dest_c.y - start_c.y;
-		return;
-	}
-
-#ifdef ANGLED_PORTALS
-	viewangle += dangle;
-	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
-	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-	//CONS_Printf("dangle == %u\n", AngleFixed(dangle)>>FRACBITS);
-
-	// ????
+	if (portal->clipline != -1)
 	{
-		fixed_t disttopoint;
-		angle_t angtopoint;
-
-		disttopoint = R_PointToDist2(start_c.x, start_c.y, viewx, viewy);
-		angtopoint = R_PointToAngle2(start_c.x, start_c.y, viewx, viewy);
-		angtopoint += dangle;
-
-		viewx = dest_c.x+FixedMul(FINECOSINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
-		viewy = dest_c.y+FixedMul(FINESINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
-	}
-#endif
-}
-
-void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
-{
-	portal_pair *portal = Z_Malloc(sizeof(portal_pair), PU_LEVEL, NULL);
-	INT16 *ceilingclipsave = Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
-	INT16 *floorclipsave = Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
-	fixed_t *frontscalesave = Z_Malloc(sizeof(fixed_t)*(x2-x1), PU_LEVEL, NULL);
-
-	portal->line1 = line1;
-	portal->line2 = line2;
-	portal->pass = portalrender+1;
-	portal->next = NULL;
-
-	R_PortalStoreClipValues(x1, x2, ceilingclipsave, floorclipsave, frontscalesave);
-
-	portal->ceilingclip = ceilingclipsave;
-	portal->floorclip = floorclipsave;
-	portal->frontscale = frontscalesave;
-
-	portal->start = x1;
-	portal->end = x2;
-
-	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
-
-	portal->viewx = viewx;
-	portal->viewy = viewy;
-	portal->viewz = viewz;
-	portal->viewangle = viewangle;
-
-	if (!portal_base)
-	{
-		portal_base = portal;
-		portal_cap = portal;
+		portalclipline = &lines[portal->clipline];
+		viewsector = portalcullsector = portalclipline->frontsector;
 	}
 	else
 	{
-		portal_cap->next = portal;
-		portal_cap = portal;
+		portalclipline = NULL;
+		viewsector = portalcullsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
 }
 
@@ -1131,7 +1022,7 @@ void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 
 void R_RenderPlayerView(player_t *player)
 {
-	portal_pair *portal;
+	portal_t *portal;
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value);
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
@@ -1148,8 +1039,7 @@ void R_RenderPlayerView(player_t *player)
 	else
 		skyVisible = skyVisible1;
 
-	portalrender = 0;
-	portal_base = portal_cap = NULL;
+	Portal_InitList();
 
 	if (skybox && skyVisible)
 	{
@@ -1206,35 +1096,37 @@ void R_RenderPlayerView(player_t *player)
 #endif
 //profile stuff ---------------------------------------------------------
 
-	// PORTAL RENDERING
-	for(portal = portal_base; portal; portal = portal_base)
+	// Portal rendering. Hijacks the BSP traversal.
+	if (portal_base)
 	{
-		// render the portal
-		CONS_Debug(DBG_RENDER, "Rendering portal from line %d to %d\n", portal->line1, portal->line2);
-		portalrender = portal->pass;
+		for(portal = portal_base; portal; portal = portal_base)
+		{
+			portalrender = portal->pass; // Recursiveness depth.
 
-		R_PortalFrame(&lines[portal->line1], &lines[portal->line2], portal);
+			// Apply the viewpoint stored for the portal.
+			R_PortalFrame(portal);
 
-		R_PortalClearClipSegs(portal->start, portal->end);
+			// Hack in the clipsegs to delimit the starting
+			// clipping for sprites and possibly other similar
+			// future items.
+			R_PortalClearClipSegs(portal->start, portal->end);
 
-		R_PortalRestoreClipValues(portal->start, portal->end, portal->ceilingclip, portal->floorclip, portal->frontscale);
+			// Hack in the top/bottom clip values for the window
+			// that were previously stored.
+			Portal_ClipApply(portal);
 
-		validcount++;
+			// Render the BSP from the new viewpoint, and clip
+			// any sprites with the new clipsegs and window.
+			R_RenderBSPNode((INT32)numnodes - 1);
+			R_ClipSprites();
 
-		R_RenderBSPNode((INT32)numnodes - 1);
-		R_ClipSprites();
-		//R_DrawPlanes();
-		//R_DrawMasked();
+			Portal_Remove(portal);
 
-		// okay done. free it.
+			validcount++;
+		}
+
 		portalcullsector = NULL; // Just in case...
-		portal_base = portal->next;
-		Z_Free(portal->ceilingclip);
-		Z_Free(portal->floorclip);
-		Z_Free(portal->frontscale);
-		Z_Free(portal);
 	}
-	// END PORTAL RENDERING
 
 	R_DrawPlanes();
 #ifdef FLOORSPLATS

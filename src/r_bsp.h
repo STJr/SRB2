@@ -38,7 +38,6 @@ void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
-void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2);
 
 #ifdef POLYOBJECTS
 void R_SortPolyObjects(subsector_t *sub);

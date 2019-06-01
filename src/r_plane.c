@@ -112,50 +112,6 @@ void R_InitPlanes(void)
 	// FIXME: unused
 }
 
-// R_PortalStoreClipValues
-// Saves clipping values for later. -Red
-void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		*ceil = ceilingclip[start+i];
-		ceil++;
-		*floor = floorclip[start+i];
-		floor++;
-		*scale = frontscale[start+i];
-		scale++;
-	}
-}
-
-// R_PortalRestoreClipValues
-// Inverse of the above. Restores the old value!
-void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		ceilingclip[start+i] = *ceil;
-		ceil++;
-		floorclip[start+i] = *floor;
-		floor++;
-		frontscale[start+i] = *scale;
-		scale++;
-	}
-
-	// HACKS FOLLOW
-	for (i = 0; i < start; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-	for (i = end; i < vid.width; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-}
-
 //
 // R_MapPlane
 //

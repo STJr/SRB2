@@ -1249,7 +1249,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
@@ -1517,7 +1517,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
