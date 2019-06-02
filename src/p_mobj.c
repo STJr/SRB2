@@ -5014,6 +5014,47 @@ static void P_Boss4Thinker(mobj_t *mobj)
 }
 
 //
+// AI for the fifth boss.
+//
+static void P_Boss5Thinker(mobj_t *mobj)
+{
+	if (!mobj->health)
+	{
+		if (mobj->state == &states[mobj->info->xdeathstate])
+			mobj->momz -= (2*FRACUNIT)/3;
+		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
+			mobj->flags &= ~MF_NOCLIP;
+	}
+	else
+	{
+		if (mobj->flags2 & MF2_FRET && (leveltime & 1)
+		&& mobj->state != &states[S_FANG_PAIN1] && mobj->state != &states[S_FANG_PAIN2])
+			mobj->flags2 |= MF2_DONTDRAW;
+		else
+			mobj->flags2 &= ~MF2_DONTDRAW;
+	}
+
+	if (mobj->state == &states[S_FANG_BOUNCE3]
+	||  mobj->state == &states[S_FANG_BOUNCE4]
+	||  mobj->state == &states[S_FANG_PINCHBOUNCE3]
+	||  mobj->state == &states[S_FANG_PINCHBOUNCE4])
+	{
+		if (P_MobjFlip(mobj)*mobj->momz > 0
+		&& abs(mobj->momx) < FRACUNIT/2 && abs(mobj->momy) < FRACUNIT/2
+		&& !P_IsObjectOnGround(mobj))
+		{
+			mobj_t *prevtarget = mobj->target;
+			P_SetTarget(&mobj->target, NULL);
+			var1 = var2 = 0;
+			A_DoNPCPain(mobj);
+			P_SetTarget(&mobj->target, prevtarget);
+			P_SetMobjState(mobj, S_FANG_WALLHIT);
+			mobj->extravalue2++;
+		}
+	}
+}
+
+//
 // AI for Black Eggman
 // Note: You CANNOT have more than ONE Black Eggman
 // in a level! Just don't try it!
@@ -7289,6 +7330,10 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->angle += (angle_t)mobj->movecount;
 				}
 				break;
+			case MT_FSGNA:
+				if (mobj->movedir)
+					mobj->angle += mobj->movedir;
+				break;
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -7377,6 +7422,9 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 			case MT_EGGMOBILE4:
 				P_Boss4Thinker(mobj);
+				break;
+			case MT_FANG:
+				P_Boss5Thinker(mobj);
 				break;
 			case MT_BLACKEGGMAN:
 				P_Boss7Thinker(mobj);
@@ -9100,6 +9148,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_NIGHTSSTAR:
 			if (nummaprings >= 0)
 				nummaprings++;
+			break;
+		case MT_FBOMB:
+			mobj->flags2 |= MF2_EXPLOSION;
+			break;
 		default:
 			break;
 	}
