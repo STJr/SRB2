@@ -14,6 +14,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "r_main.h"
 #include "r_state.h"
 
@@ -216,6 +217,10 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		const sector_t *front, *back;
 		const vertex_t *v1,*v2;
 		fixed_t frac;
+		fixed_t frontf, backf, frontc, backc;
+#ifdef ESLOPE
+		fixed_t fracx, fracy;
+#endif
 
 		// already checked other side?
 		if (line->validcount == validcount)
@@ -250,37 +255,51 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		if (!(line->flags & ML_TWOSIDED))
 			return false;
 
+		// calculate fractional intercept (how far along we are divided by how far we are from t2)
+		frac = P_InterceptVector2(&los->strace, &divl);
+
+		front = seg->frontsector;
+		back  = seg->backsector;
+#ifdef ESLOPE
+		// calculate position at intercept
+		fracx = los->strace.x + FixedMul(los->strace.dx, frac);
+		fracy = los->strace.y + FixedMul(los->strace.dy, frac);
+		// calculate sector heights
+		frontf = (front->f_slope) ? P_GetZAt(front->f_slope, fracx, fracy) : front->floorheight;
+		frontc = (front->c_slope) ? P_GetZAt(front->c_slope, fracx, fracy) : front->ceilingheight;
+		backf  = (back->f_slope)  ? P_GetZAt(back->f_slope, fracx, fracy)  : back->floorheight;
+		backc  = (back->c_slope)  ? P_GetZAt(back->c_slope, fracx, fracy)  : back->ceilingheight;
+#else
+		frontf = front->floorheight;
+		frontc = front->ceilingheight;
+		backf  = back->floorheight;
+		backc  = back->ceilingheight;
+#endif
 		// crosses a two sided line
 		// no wall to block sight with?
-		if ((front = seg->frontsector)->floorheight ==
-			(back = seg->backsector)->floorheight   &&
-			front->ceilingheight == back->ceilingheight
-			&& !front->ffloors && !back->ffloors)
+		if (frontf == backf && frontc == backc
+		&& !front->ffloors & !back->ffloors) // (and no FOFs)
 			continue;
 
 		// possible occluder
 		// because of ceiling height differences
-		popentop = front->ceilingheight < back->ceilingheight ?
-			front->ceilingheight : back->ceilingheight ;
+		popentop = min(frontc, backc);
 
 		// because of floor height differences
-		popenbottom = front->floorheight > back->floorheight ?
-			front->floorheight : back->floorheight ;
+		popenbottom = max(frontf, backf);
 
 		// quick test for totally closed doors
 		if (popenbottom >= popentop)
 			return false;
 
-		frac = P_InterceptVector2(&los->strace, &divl);
-
-		if (front->floorheight != back->floorheight)
+		if (frontf != backf)
 		{
 			fixed_t slope = FixedDiv(popenbottom - los->sightzstart , frac);
 			if (slope > los->bottomslope)
 				los->bottomslope = slope;
 		}
 
-		if (front->ceilingheight != back->ceilingheight)
+		if (frontc != backc)
 		{
 			fixed_t slope = FixedDiv(popentop - los->sightzstart , frac);
 			if (slope < los->topslope)
@@ -295,6 +314,7 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 		{
 			ffloor_t *rover;
 			fixed_t topslope, bottomslope;
+			fixed_t topz, bottomz;
 			// check front sector's FOFs first
 			for (rover = front->ffloors; rover; rover = rover->next)
 			{
@@ -303,8 +323,16 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 				{
 					continue;
 				}
-				topslope = FixedDiv(*rover->topheight - los->sightzstart , frac);
-				bottomslope = FixedDiv(*rover->bottomheight - los->sightzstart , frac);
+
+#ifdef ESLOPE
+				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
+				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
+#else
+				topz    = *rover->topheight;
+				bottomz = *rover->bottomheight;
+#endif
+				topslope    = FixedDiv(topz - los->sightzstart , frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
 					return false; // view completely blocked
 			}
@@ -316,8 +344,16 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 				{
 					continue;
 				}
-				topslope = FixedDiv(*rover->topheight - los->sightzstart , frac);
-				bottomslope = FixedDiv(*rover->bottomheight - los->sightzstart , frac);
+
+#ifdef ESLOPE
+				topz    = (*rover->t_slope) ? P_GetZAt(*rover->t_slope, fracx, fracy) : *rover->topheight;
+				bottomz = (*rover->b_slope) ? P_GetZAt(*rover->b_slope, fracx, fracy) : *rover->bottomheight;
+#else
+				topz    = *rover->topheight;
+				bottomz = *rover->bottomheight;
+#endif
+				topslope    = FixedDiv(topz - los->sightzstart , frac);
+				bottomslope = FixedDiv(bottomz - los->sightzstart , frac);
 				if (topslope >= los->topslope && bottomslope <= los->bottomslope)
 					return false; // view completely blocked
 			}
@@ -434,6 +470,8 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	if (s1 == s2) // Both sectors are the same.
 	{
 		ffloor_t *rover;
+		fixed_t topz1, bottomz1; // top, bottom heights at t1's position
+		fixed_t topz2, bottomz2; // likewise but for t2
 
 		for (rover = s1->ffloors; rover; rover = rover->next)
 		{
@@ -446,9 +484,30 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				continue;
 			}
 
+#ifdef ESLOPE
+			if (*rover->t_slope)
+			{
+				topz1 = P_GetZAt(*rover->t_slope, t1->x, t1->y);
+				topz2 = P_GetZAt(*rover->t_slope, t2->x, t2->y);
+			}
+			else
+				topz1 = topz2 = *rover->topheight;
+
+			if (*rover->b_slope)
+			{
+				bottomz1 = P_GetZAt(*rover->b_slope, t1->x, t1->y);
+				bottomz2 = P_GetZAt(*rover->b_slope, t2->x, t2->y);
+			}
+			else
+				bottomz1 = bottomz2 = *rover->bottomheight;
+#else
+			topz1 = topz2 = *rover->topheight;
+			bottomz1 = bottomz2 = *rover->bottomheight;
+#endif
+
 			// Check for blocking floors here.
-			if ((los.sightzstart < *rover->bottomheight && t2->z >= *rover->topheight)
-				|| (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->bottomheight))
+			if ((los.sightzstart < bottomz1 && t2->z >= topz2)
+				|| (los.sightzstart >= topz1 && t2->z + t2->height < bottomz2))
 			{
 				// no way to see through that
 				return false;
@@ -459,19 +518,19 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 
 			if (!(rover->flags & FF_INVERTPLANES))
 			{
-				if (los.sightzstart >= *rover->topheight && t2->z + t2->height < *rover->topheight)
+				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
 
-				if (los.sightzstart < *rover->bottomheight && t2->z >= *rover->bottomheight)
+				if (los.sightzstart < bottomz1 && t2->z >= bottomz2)
 					return false; // blocked by lower outside plane
 			}
 
 			if (rover->flags & FF_INVERTPLANES || rover->flags & FF_BOTHPLANES)
 			{
-				if (los.sightzstart < *rover->topheight && t2->z >= *rover->topheight)
+				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane
 
-				if (los.sightzstart >= *rover->bottomheight && t2->z + t2->height < *rover->bottomheight)
+				if (los.sightzstart >= bottomz1 && t2->z + t2->height < bottomz2)
 					return false; // blocked by lower inside plane
 			}
 		}
