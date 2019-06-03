@@ -1087,14 +1087,14 @@ void R_RenderPlayerView(player_t *player)
 			// that were previously stored.
 			Portal_ClipApply(portal);
 
+			validcount++;
+
 			// Render the BSP from the new viewpoint, and clip
 			// any sprites with the new clipsegs and window.
 			R_RenderBSPNode((INT32)numnodes - 1);
 			R_ClipSprites();
 
 			Portal_Remove(portal);
-
-			validcount++;
 		}
 
 		portalcullsector = NULL; // Just in case...
