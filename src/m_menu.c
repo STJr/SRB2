@@ -112,41 +112,8 @@ typedef enum
 const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
-description_t description[32] =
-{
-	{"\x82Sonic\x80 is the fastest of the three, but also the hardest to control. Beginners beware, but experts will find Sonic very powerful.\n\n\x82""Ability:\x80 Speed Thok\nDouble jump to zoom forward with a huge burst of speed.\n\n\x82Tip:\x80 Simply letting go of forward does not slow down in SRB2. To slow down, hold the opposite direction.", "", "sonic"},
-	{"\x82Tails\x80 is the most mobile of the three, but has the slowest speed. Because of his mobility, he's well-\nsuited to beginners.\n\n\x82""Ability:\x80 Fly\nDouble jump to start flying for a limited time. Repetitively hit the jump button to ascend.\n\n\x82Tip:\x80 To quickly descend while flying, hit the spin button.", "", "tails"},
-	{"\x82Knuckles\x80 is well-\nrounded and can destroy breakable walls simply by touching them, but he can't jump as high as the other two.\n\n\x82""Ability:\x80 Glide & Climb\nDouble jump to glide in the air as long as jump is held. Glide into a wall to climb it.\n\n\x82Tip:\x80 Press spin while climbing to jump off the wall; press jump instead to jump off\nand face away from\nthe wall.", "", "knuckles"},
-	{"\x82Sonic & Tails\x80 team up to take on Dr. Eggman!\nControl Sonic while Tails desperately struggles to keep up.\n\nPlayer 2 can control Tails directly by setting the controls in the options menu.\nTails's directional controls are relative to Player 1's camera.\n\nTails can pick up Sonic while flying and carry him around.", "CHRS&T", "sonic&tails"},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""}
-};
+description_t description[MAXSKINS];
+
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -383,23 +350,9 @@ static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // This gametype list is integral for many different reasons.
-// When you add gametypes here, don't forget to update them in CV_AddValue!
-CV_PossibleValue_t gametype_cons_t[] =
-{
-	{GT_COOP, "Co-op"},
+// When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
+CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
-	{GT_COMPETITION, "Competition"},
-	{GT_RACE, "Race"},
-
-	{GT_MATCH, "Match"},
-	{GT_TEAMMATCH, "Team Match"},
-
-	{GT_TAG, "Tag"},
-	{GT_HIDEANDSEEK, "Hide and Seek"},
-
-	{GT_CTF, "CTF"},
-	{0, NULL}
-};
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t serversort_cons_t[] = {
@@ -845,41 +798,7 @@ static menuitem_t SP_LevelStatsMenu[] =
 // A rare case.
 // External files modify this menu, so we can't call it static.
 // And I'm too lazy to go through and rename it everywhere. ARRGH!
-menuitem_t PlayerMenu[32] =
-{
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0}
-};
+menuitem_t PlayerMenu[MAXSKINS];
 
 // -----------------------------------
 // Multiplayer and all of its submenus
@@ -2881,6 +2800,55 @@ void M_Init(void)
 
 	//todo put this somewhere better...
 	CV_RegisterVar(&cv_allcaps);
+}
+
+void M_InitCharacterTables(void)
+{
+	UINT8 i;
+
+	// Setup PlayerMenu table
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		PlayerMenu[i].status = (i < 4 ? IT_CALL : IT_DISABLED);
+		PlayerMenu[i].patch = PlayerMenu[i].text = NULL;
+		PlayerMenu[i].itemaction = M_ChoosePlayer;
+		PlayerMenu[i].alphaKey = 0;
+	}
+
+	// Setup description table
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		if (i == 0)
+		{
+			strcpy(description[i].notes, "\x82Sonic\x80 is the fastest of the three, but also the hardest to control. Beginners beware, but experts will find Sonic very powerful.\n\n\x82""Ability:\x80 Speed Thok\nDouble jump to zoom forward with a huge burst of speed.\n\n\x82Tip:\x80 Simply letting go of forward does not slow down in SRB2. To slow down, hold the opposite direction.");
+			strcpy(description[i].picname, "");
+			strcpy(description[i].skinname, "sonic");
+		}
+		else if (i == 1)
+		{
+			strcpy(description[i].notes, "\x82Tails\x80 is the most mobile of the three, but has the slowest speed. Because of his mobility, he's well-\nsuited to beginners.\n\n\x82""Ability:\x80 Fly\nDouble jump to start flying for a limited time. Repetitively hit the jump button to ascend.\n\n\x82Tip:\x80 To quickly descend while flying, hit the spin button.");
+			strcpy(description[i].picname, "");
+			strcpy(description[i].skinname, "tails");
+		}
+		else if (i == 2)
+		{
+			strcpy(description[i].notes, "\x82Knuckles\x80 is well-\nrounded and can destroy breakable walls simply by touching them, but he can't jump as high as the other two.\n\n\x82""Ability:\x80 Glide & Climb\nDouble jump to glide in the air as long as jump is held. Glide into a wall to climb it.\n\n\x82Tip:\x80 Press spin while climbing to jump off the wall; press jump instead to jump off\nand face away from\nthe wall.");
+			strcpy(description[i].picname, "");
+			strcpy(description[i].skinname, "knuckles");
+		}
+		else if (i == 3)
+		{
+			strcpy(description[i].notes, "\x82Sonic & Tails\x80 team up to take on Dr. Eggman!\nControl Sonic while Tails desperately struggles to keep up.\n\nPlayer 2 can control Tails directly by setting the controls in the options menu.\nTails's directional controls are relative to Player 1's camera.\n\nTails can pick up Sonic while flying and carry him around.");
+			strcpy(description[i].picname, "CHRS&T");
+			strcpy(description[i].skinname, "sonic&tails");
+		}
+		else
+		{
+			strcpy(description[i].notes, "???");
+			strcpy(description[i].picname, "");
+			strcpy(description[i].skinname, "");
+		}
+	}
 }
 
 // ==========================================================================
@@ -6582,7 +6550,7 @@ static void M_DrawRoomMenu(void)
 
 static void M_DrawConnectMenu(void)
 {
-	UINT16 i, j;
+	UINT16 i;
 	const char *gt = "Unknown";
 	INT32 numPages = (serverlistcount+(SERVERS_PER_PAGE-1))/SERVERS_PER_PAGE;
 
@@ -6628,11 +6596,8 @@ static void M_DrawConnectMenu(void)
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
 
 		gt = "Unknown";
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == serverlist[slindex].info.gametype)
-				gt = gametype_cons_t[j].strvalue;
-		}
+		if (serverlist[slindex].info.gametype < NUMGAMETYPES)
+			gt = Gametype_Names[serverlist[slindex].info.gametype];
 
 		V_DrawSmallString(currentMenu->x+46,S_LINEY(i)+8, globalflags,
 		                         va("Players: %02d/%02d", serverlist[slindex].info.numberofplayer, serverlist[slindex].info.maxplayer));

@@ -647,8 +647,6 @@ static void P_NetArchiveWorld(void)
 
 	WRITEUINT16(put, 0xffff);
 
-	mld = W_CacheLumpNum(lastloadedmaplumpnum+ML_LINEDEFS, PU_CACHE);
-	msd = W_CacheLumpNum(lastloadedmaplumpnum+ML_SIDEDEFS, PU_CACHE);
 	// do lines
 	for (i = 0; i < numlines; i++, mld++, li++)
 	{

@@ -247,6 +247,10 @@ typedef struct
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
+	// Music stuff.
+	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
+	char musintername[7];    ///< Intermission screen music.
+
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
 	UINT8 numCustomOptions;     ///< Internal. For Lua custom value support.
@@ -314,7 +318,10 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update gametype_cons_t in m_menu.c
+// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+
+// String names for gametypes
+extern const char *Gametype_Names[NUMGAMETYPES];
 
 extern tic_t totalplaytime;
 
