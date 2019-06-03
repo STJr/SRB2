@@ -14,6 +14,7 @@
 #include "doomdef.h"
 #include "byteptr.h"
 #include "hu_stuff.h"
+#include "font.h"
 
 #include "m_menu.h" // gametype_cons_t
 #include "m_cond.h" // emblems
@@ -60,19 +61,6 @@
 //-------------------------------------------
 //              heads up font
 //-------------------------------------------
-patch_t *hu_font[HU_FONTSIZE];
-patch_t *tny_font[HU_FONTSIZE];
-patch_t *tallnum[10]; // 0-9
-patch_t *nightsnum[10]; // 0-9
-
-// Level title and credits fonts
-patch_t *lt_font[LT_FONTSIZE];
-patch_t *cred_font[CRED_FONTSIZE];
-patch_t *ttlnum[10]; // act numbers (0-9)
-
-// Name tag fonts
-patch_t *ntb_font[NT_FONTSIZE];
-patch_t *nto_font[NT_FONTSIZE];
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
@@ -180,139 +168,54 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum);
 
 void HU_LoadGraphics(void)
 {
-	char buffer[9];
-	INT32 i, j;
+	INT32 i;
 
 	if (dedicated)
 		return;
 
-	j = HU_FONTSTART;
-	for (i = 0; i < HU_FONTSIZE; i++, j++)
-	{
-		// cache the heads-up font for entire game execution
-		sprintf(buffer, "STCFN%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			hu_font[i] = NULL;
-		else
-			hu_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		// tiny version of the heads-up font
-		sprintf(buffer, "TNYFN%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			tny_font[i] = NULL;
-		else
-			tny_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	j = LT_FONTSTART;
-	for (i = 0; i < LT_FONTSIZE; i++)
-	{
-		sprintf(buffer, "LTFNT%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			lt_font[i] = NULL;
-		else
-			lt_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	// cache the credits font for entire game execution (why not?)
-	j = CRED_FONTSTART;
-	for (i = 0; i < CRED_FONTSIZE; i++)
-	{
-		sprintf(buffer, "CRFNT%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			cred_font[i] = NULL;
-		else
-			cred_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	//cache numbers too!
-	for (i = 0; i < 10; i++)
-	{
-		sprintf(buffer, "STTNUM%d", i);
-		tallnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-		sprintf(buffer, "NGTNUM%d", i);
-		nightsnum[i] = (patch_t *) W_CachePatchName(buffer, PU_HUDGFX);
-	}
+	Font_Load();
 
 	// minus for negative tallnums
-	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
-	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
-
-	// cache act numbers for level titles
-	for (i = 0; i < 10; i++)
-	{
-		sprintf(buffer, "TTL%.2d", i);
-		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	// cache the base name tag font for entire game execution
-	j = NT_FONTSTART;
-	for (i = 0; i < NT_FONTSIZE; i++)
-	{
-		sprintf(buffer, "NTFNT%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			ntb_font[i] = NULL;
-		else
-			ntb_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	// cache the outline name tag font for entire game execution
-	j = NT_FONTSTART;
-	for (i = 0; i < NT_FONTSIZE; i++)
-	{
-		sprintf(buffer, "NTFNO%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			nto_font[i] = NULL;
-		else
-			nto_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
+	tallminus          = HU_CachePatch("STTMINUS");
+>>>>>>> 0a7f23e5e... Set up with the font system
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
 	for (i = 0; i < HU_CROSSHAIRS; i++)
 	{
-		sprintf(buffer, "CROSHAI%c", '1'+i);
-		crosshair[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+		crosshair[i]    = HU_CachePatch("CROSHAI%c", '1'+i);
 	}
 
-	emblemicon = W_CachePatchName("EMBLICON", PU_HUDGFX);
-	tokenicon = W_CachePatchName("TOKNICON", PU_HUDGFX);
-	exiticon = W_CachePatchName("EXITICON", PU_HUDGFX);
+	emblemicon = HU_CachePatch("EMBLICON");
+	tokenicon = HU_CachePatch("TOKNICON");
+	exiticon = HU_CachePatch("EXITICON");
 
-	emeraldpics[0][0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
-	emeraldpics[0][1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
-	emeraldpics[0][2] = W_CachePatchName("CHAOS3", PU_HUDGFX);
-	emeraldpics[0][3] = W_CachePatchName("CHAOS4", PU_HUDGFX);
-	emeraldpics[0][4] = W_CachePatchName("CHAOS5", PU_HUDGFX);
-	emeraldpics[0][5] = W_CachePatchName("CHAOS6", PU_HUDGFX);
-	emeraldpics[0][6] = W_CachePatchName("CHAOS7", PU_HUDGFX);
-	emeraldpics[0][7] = W_CachePatchName("CHAOS8", PU_HUDGFX);
+	emeraldpics[0][0] = HU_CachePatch("CHAOS1");
+	emeraldpics[0][1] = HU_CachePatch("CHAOS2");
+	emeraldpics[0][2] = HU_CachePatch("CHAOS3");
+	emeraldpics[0][3] = HU_CachePatch("CHAOS4");
+	emeraldpics[0][4] = HU_CachePatch("CHAOS5");
+	emeraldpics[0][5] = HU_CachePatch("CHAOS6");
+	emeraldpics[0][6] = HU_CachePatch("CHAOS7");
+	emeraldpics[0][7] = HU_CachePatch("CHAOS8");
 
-	emeraldpics[1][0] = W_CachePatchName("TEMER1", PU_HUDGFX);
-	emeraldpics[1][1] = W_CachePatchName("TEMER2", PU_HUDGFX);
-	emeraldpics[1][2] = W_CachePatchName("TEMER3", PU_HUDGFX);
-	emeraldpics[1][3] = W_CachePatchName("TEMER4", PU_HUDGFX);
-	emeraldpics[1][4] = W_CachePatchName("TEMER5", PU_HUDGFX);
-	emeraldpics[1][5] = W_CachePatchName("TEMER6", PU_HUDGFX);
-	emeraldpics[1][6] = W_CachePatchName("TEMER7", PU_HUDGFX);
-	//emeraldpics[1][7] = W_CachePatchName("TEMER8", PU_HUDGFX); -- unused
+	emeraldpics[1][0] = HU_CachePatch("TEMER1");
+	emeraldpics[1][1] = HU_CachePatch("TEMER2");
+	emeraldpics[1][2] = HU_CachePatch("TEMER3");
+	emeraldpics[1][3] = HU_CachePatch("TEMER4");
+	emeraldpics[1][4] = HU_CachePatch("TEMER5");
+	emeraldpics[1][5] = HU_CachePatch("TEMER6");
+	emeraldpics[1][6] = HU_CachePatch("TEMER7");
+	//emeraldpics[1][7] = HU_CachePatch("TEMER8"); -- unused
 
-	emeraldpics[2][0] = W_CachePatchName("EMBOX1", PU_HUDGFX);
-	emeraldpics[2][1] = W_CachePatchName("EMBOX2", PU_HUDGFX);
-	emeraldpics[2][2] = W_CachePatchName("EMBOX3", PU_HUDGFX);
-	emeraldpics[2][3] = W_CachePatchName("EMBOX4", PU_HUDGFX);
-	emeraldpics[2][4] = W_CachePatchName("EMBOX5", PU_HUDGFX);
-	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
-	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
-	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
+	emeraldpics[2][0] = HU_CachePatch("EMBOX1");
+	emeraldpics[2][1] = HU_CachePatch("EMBOX2");
+	emeraldpics[2][2] = HU_CachePatch("EMBOX3");
+	emeraldpics[2][3] = HU_CachePatch("EMBOX4");
+	emeraldpics[2][4] = HU_CachePatch("EMBOX5");
+	emeraldpics[2][5] = HU_CachePatch("EMBOX6");
+	emeraldpics[2][6] = HU_CachePatch("EMBOX7");
+	//emeraldpics[2][7] = HU_CachePatch("EMBOX8"); -- unused
 }
 
 // Initialise Heads up
@@ -320,6 +223,8 @@ void HU_LoadGraphics(void)
 //
 void HU_Init(void)
 {
+	font_t font;
+
 #ifndef NONET
 	COM_AddCommand("say", Command_Say_f);
 	COM_AddCommand("sayto", Command_Sayto_f);
@@ -331,7 +236,76 @@ void HU_Init(void)
 	// set shift translation table
 	shiftxform = english_shiftxform;
 
+	/*
+	Setup fonts
+	*/
+
+	if (!dedicated)
+	{
+#define  DIM( start, size ) ( font.start = start, font.size = size )
+#define ADIM( name )        DIM (name ## _FONTSTART, name ## _FONTSIZE)
+#define   PR( s )           strcpy(font.prefix, s)
+#define  DIG( n )           ( font.digits = n )
+#define  REG                Font_DumbRegister(&font)
+
+		DIG  (3);
+
+		ADIM (HU);
+
+		PR   ("STCFN");
+		REG;
+
+		PR   ("TNYFN");
+		REG;
+
+		ADIM (KART);
+		PR   ("MKFNT");
+		REG;
+
+		ADIM (LT);
+		PR   ("LTFNT");
+		REG;
+
+		ADIM (CRED);
+		PR   ("CRFNT");
+		REG;
+
+		DIG  (1);
+
+		DIM  (0, 10);
+
+		PR   ("STTNUM");
+		REG;
+
+		PR   ("NGTNUM");
+		REG;
+
+		PR   ("PINGN");
+		REG;
+
+#undef  REG
+#undef  DIG
+#undef  PR
+#undef  ADMIN
+#undef  DIM
+	}
+
 	HU_LoadGraphics();
+}
+
+patch_t *HU_CachePatch(const char *format, ...)
+{
+	va_list ap;
+	char buffer[9];
+
+	va_start (ap, format);
+	vsprintf(buffer, format, ap);
+	va_end   (ap);
+
+	if (W_CheckNumForName(buffer) == LUMPERROR)
+		return NULL;
+	else
+		return (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 }
 
 static inline void HU_Stop(void)
