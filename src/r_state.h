@@ -82,10 +82,6 @@ extern fixed_t viewx, viewy, viewz;
 extern angle_t viewangle, aimingangle;
 extern sector_t *viewsector;
 extern player_t *viewplayer;
-extern UINT8 portalrender;
-extern sector_t *portalcullsector;
-extern line_t *portalclipline;
-extern INT32 portalclipstart, portalclipend;
 
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;

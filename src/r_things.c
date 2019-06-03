@@ -24,6 +24,7 @@
 #include "i_video.h" // rendermode
 #include "r_things.h"
 #include "r_plane.h"
+#include "r_portal.h"
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
