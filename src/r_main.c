@@ -1018,6 +1018,9 @@ static void R_PortalFrame(portal_t *portal)
 
 void R_RenderPlayerView(player_t *player)
 {
+	UINT8			nummasks	= 1;
+	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
+
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
 		if (cv_homremoval.value == 1)
@@ -1051,7 +1054,12 @@ void R_RenderPlayerView(player_t *player)
 	ProfZeroTimer();
 #endif
 
+	masks[nummasks - 1].drawsegs[0]		= 0;
+	masks[nummasks - 1].vissprites[0]	= 0;
 	R_RenderBSPNode((INT32)numnodes - 1);
+	masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
+	masks[nummasks - 1].vissprites[1]	= visspritecount;
+
 
 	R_ClipSprites();
 #ifdef TIMING
@@ -1091,7 +1099,13 @@ void R_RenderPlayerView(player_t *player)
 
 			// Render the BSP from the new viewpoint, and clip
 			// any sprites with the new clipsegs and window.
+			masks = realloc(masks, (++nummasks)*sizeof(maskcount_t));
+
+			masks[nummasks - 1].drawsegs[0]		= ds_p - drawsegs;
+			masks[nummasks - 1].vissprites[0]	= visspritecount;
 			R_RenderBSPNode((INT32)numnodes - 1);
+			masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
+			masks[nummasks - 1].vissprites[1]	= visspritecount;
 			R_ClipSprites();
 
 			Portal_Remove(portal);
@@ -1106,7 +1120,9 @@ void R_RenderPlayerView(player_t *player)
 #endif
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
-	R_DrawMasked();
+	R_DrawMasked(masks, nummasks);
+
+	free(masks);
 }
 
 // =========================================================================

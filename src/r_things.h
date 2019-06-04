@@ -56,7 +56,18 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 void R_ClipSprites(void);
-void R_DrawMasked(void);
+
+/** Used to count the amount of masked elements
+ * per portal to later group them in separate
+ * drawnode lists.
+ */
+typedef struct
+{
+	size_t drawsegs[2];
+	size_t vissprites[2];
+} maskcount_t;
+
+void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
 // -----------
 // SKINS STUFF
@@ -207,6 +218,7 @@ typedef struct drawnode_s
 
 extern INT32 numskins;
 extern skin_t skins[MAXSKINS];
+extern UINT32 visspritecount;
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
