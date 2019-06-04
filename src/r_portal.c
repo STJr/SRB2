@@ -201,6 +201,7 @@ static void Portal_ClipVisplane (const visplane_t* plane, portal_t* portal)
 	{
 		portal->ceilingclip[i] = plane->top[i + start];
 		portal->floorclip[i] = plane->bottom[i + start] + 1;
+		portal->frontscale[i] = INT32_MAX;
 	}
 }
 
