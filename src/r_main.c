@@ -1061,8 +1061,7 @@ void R_RenderPlayerView(player_t *player)
 	masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
 	masks[nummasks - 1].vissprites[1]	= visspritecount;
 
-
-	R_ClipSprites();
+	R_ClipSprites(drawsegs, NULL);
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
 	mytotal += mycount; // 64bit add
@@ -1108,7 +1107,8 @@ void R_RenderPlayerView(player_t *player)
 			R_RenderBSPNode((INT32)numnodes - 1);
 			masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
 			masks[nummasks - 1].vissprites[1]	= visspritecount;
-			R_ClipSprites();
+
+			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);
 
 			Portal_Remove(portal);
 		}

@@ -2185,7 +2185,7 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 
 // R_ClipSprites
 // Clips vissprites without drawing, so that portals can work. -Red
-void R_ClipSprites(void)
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 {
 	vissprite_t *spr;
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
@@ -2211,7 +2211,7 @@ void R_ClipSprites(void)
 		// and buggy, by going past LEFT end of array:
 
 		//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-		for (ds = ds_p; ds-- > drawsegs ;)
+		for (ds = ds_p; ds-- > dsstart;)
 		{
 			// determine if the drawseg obscures the sprite
 			if (ds->x1 > spr->x2 ||
@@ -2223,33 +2223,36 @@ void R_ClipSprites(void)
 				continue;
 			}
 
-			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
-				continue; // is a portal
+			if (ds->portalpass != 66)
+			{
+				if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+					continue; // is a portal
+
+				if (ds->scale1 > ds->scale2)
+				{
+					lowscale = ds->scale2;
+					scale = ds->scale1;
+				}
+				else
+				{
+					lowscale = ds->scale1;
+					scale = ds->scale2;
+				}
+
+				if (scale < spr->sortscale ||
+					(lowscale < spr->sortscale &&
+					 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
+				{
+					// masked mid texture?
+					/*if (ds->maskedtexturecol)
+						R_RenderMaskedSegRange (ds, r1, r2);*/
+					// seg is behind sprite
+					continue;
+				}
+			}
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
-
-			if (ds->scale1 > ds->scale2)
-			{
-				lowscale = ds->scale2;
-				scale = ds->scale1;
-			}
-			else
-			{
-				lowscale = ds->scale1;
-				scale = ds->scale2;
-			}
-
-			if (scale < spr->sortscale ||
-			    (lowscale < spr->sortscale &&
-			     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
-			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
-				// seg is behind sprite
-				continue;
-			}
 
 			// clip this piece of the sprite
 			silhouette = ds->silhouette;
@@ -2367,6 +2370,17 @@ void R_ClipSprites(void)
 				//Fab : 26-04-98: was -1, now clips against console bottom
 				spr->cliptop[x] = (INT16)con_clipviewtop;
 		}
+
+		if (portal)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->clipbot[x] > portal->floorclip[x - portal->start])
+					spr->clipbot[x] = portal->floorclip[x - portal->start];
+				if (spr->cliptop[x] < portal->ceilingclip[x - portal->start])
+					spr->cliptop[x] = portal->ceilingclip[x - portal->start];
+			}
+		}
 	}
 }
 
@@ -2444,12 +2458,13 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 		R_CreateDrawNodes(&masks[i], &heads[i], false);
 	}
 
-	for (i = 0; i < nummasks; i++)
-		CONS_Printf("Mask no.%d:\ndrawsegs: %d\n vissprites: %d\n\n", i, masks[i].drawsegs[1] - masks[i].drawsegs[0], masks[i].vissprites[1] - masks[i].vissprites[0]);
+	//for (i = 0; i < nummasks; i++)
+	//	CONS_Printf("Mask no.%d:\ndrawsegs: %d\n vissprites: %d\n\n", i, masks[i].drawsegs[1] - masks[i].drawsegs[0], masks[i].vissprites[1] - masks[i].vissprites[0]);
 
 	for (; nummasks > 0; nummasks--)
 	{
 		viewz = masks[nummasks - 1].viewz;
+
 		R_DrawMaskedList(&heads[nummasks - 1]);
 		R_ClearDrawNodes(&heads[nummasks - 1]);
 	}

@@ -16,6 +16,7 @@
 
 #include "sounds.h"
 #include "r_plane.h"
+#include "r_portal.h"
 
 // "Left" and "Right" character symbols for additional rotation functionality
 #define ROT_L ('L' - '0')
@@ -54,7 +55,7 @@ void R_AddSpriteDefs(UINT16 wadnum);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(void);
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
 /** Used to count the amount of masked elements
  * per portal to later group them in separate

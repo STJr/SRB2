@@ -17,6 +17,7 @@
 #include "doomstat.h"
 #include "p_spec.h" // Skybox viewpoints
 #include "z_zone.h"
+#include "r_things.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
 sector_t *portalcullsector;
@@ -98,9 +99,9 @@ void Portal_ClipApply (const portal_t* portal)
 portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 {
 	portal_t *portal		= Z_Malloc(sizeof(portal_t), PU_LEVEL, NULL);
-	INT16 *ceilingclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
-	INT16 *floorclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
-	fixed_t *frontscalesave	= Z_Malloc(sizeof(fixed_t)*(x2-x1), PU_LEVEL, NULL);
+	INT16 *ceilingclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);
+	INT16 *floorclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);
+	fixed_t *frontscalesave	= Z_Malloc(sizeof(fixed_t)*(x2-x1 + 1), PU_LEVEL, NULL);
 
 	// Linked list.
 	if (!portal_base)
@@ -199,15 +200,7 @@ static void Portal_ClipVisplane (const visplane_t* plane, portal_t* portal)
 
 	for (i = 0; i < end - start; i++)
 	{
-		if (plane->bottom[i + start] == 0)
-		{
-			portal->ceilingclip[i] = 0;
-			portal->floorclip[i] = 0;
-			continue;
-		}
-
-
-		portal->ceilingclip[i] = plane->top[i + start] - 1;
+		portal->ceilingclip[i] = plane->top[i + start];
 		portal->floorclip[i] = plane->bottom[i + start] + 1;
 		portal->frontscale[i] = INT32_MAX;
 	}
@@ -229,6 +222,25 @@ void Portal_AddSkybox (const visplane_t* plane)
 
 	if (!(start < end))
 		return;
+
+	/** Trims a visplane's horizontal gap to match its render area.
+	 *
+	 * Visplanes' minx/maxx may sometimes exceed the area they're
+	 * covering. This merely adjusts the boundaries to the next
+	 * valid area.
+	 */
+
+	while (plane->bottom[start] == 0 && plane->top[start] == 65535 && start < end)
+	{
+		start++;
+	}
+
+
+	while (plane->bottom[end - 1] == 0 && plane->top[start] == 65535 && end > start)
+	{
+		end--;
+	}
+
 
 	portal = Portal_Add(start, end);
 

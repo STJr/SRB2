@@ -11,6 +11,9 @@
 /// \file  r_portal.h
 /// \brief Software renderer portal struct, functions, linked list extern.
 
+#ifndef __R_PORTAL__
+#define __R_PORTAL__
+
 #include "r_data.h"
 #include "r_plane.h" // visplanes
 
@@ -52,3 +55,5 @@ void Portal_AddSkybox	(const visplane_t* plane);
 
 void Portal_ClipRange (portal_t* portal);
 void Portal_ClipApply (const portal_t* portal);
+
+#endif
