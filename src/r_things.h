@@ -45,7 +45,6 @@ extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
-void R_SortVisSprites(void);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -65,6 +64,7 @@ typedef struct
 {
 	size_t drawsegs[2];
 	size_t vissprites[2];
+	fixed_t viewz;			/**< View z stored at the time of the BSP traversal for the view/portal. Masked sorting/drawing needs it. */
 } maskcount_t;
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
