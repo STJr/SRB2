@@ -1071,7 +1071,7 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 
 	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value)
+	if (cv_skybox.value && skyboxmo[0])
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
