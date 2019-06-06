@@ -65,7 +65,8 @@ typedef struct
 {
 	size_t drawsegs[2];
 	size_t vissprites[2];
-	fixed_t viewz;			/**< View z stored at the time of the BSP traversal for the view/portal. Masked sorting/drawing needs it. */
+	fixed_t viewx, viewy, viewz;			/**< View z stored at the time of the BSP traversal for the view/portal. Masked sorting/drawing needs it. */
+	sector_t* viewsector;
 } maskcount_t;
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);

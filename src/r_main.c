@@ -1056,7 +1056,11 @@ void R_RenderPlayerView(player_t *player)
 
 	masks[nummasks - 1].drawsegs[0]		= 0;
 	masks[nummasks - 1].vissprites[0]	= 0;
+	masks[nummasks - 1].viewx = viewx;
+	masks[nummasks - 1].viewy = viewy;
 	masks[nummasks - 1].viewz = viewz;
+	masks[nummasks - 1].viewsector = viewsector;
+	curdrawsegs = ds_p;
 	R_RenderBSPNode((INT32)numnodes - 1);
 	masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
 	masks[nummasks - 1].vissprites[1]	= visspritecount;
@@ -1103,7 +1107,12 @@ void R_RenderPlayerView(player_t *player)
 
 			masks[nummasks - 1].drawsegs[0]		= ds_p - drawsegs;
 			masks[nummasks - 1].vissprites[0]	= visspritecount;
+			masks[nummasks - 1].viewx = viewx;
+			masks[nummasks - 1].viewy = viewy;
 			masks[nummasks - 1].viewz = viewz;
+			masks[nummasks - 1].viewsector = viewsector;
+			curdrawsegs = ds_p;
+
 			R_RenderBSPNode((INT32)numnodes - 1);
 			masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;
 			masks[nummasks - 1].vissprites[1]	= visspritecount;

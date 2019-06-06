@@ -2454,7 +2454,12 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 	for (i = 0; i < nummasks; i++)
 	{
 		heads[i].next = heads[i].prev = &heads[i];
+
+		viewx = masks[i].viewx;
+		viewy = masks[i].viewy;
 		viewz = masks[i].viewz;
+		viewsector = masks[i].viewsector;
+
 		R_CreateDrawNodes(&masks[i], &heads[i], false);
 	}
 
@@ -2463,7 +2468,10 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 
 	for (; nummasks > 0; nummasks--)
 	{
+		viewx = masks[nummasks - 1].viewx;
+		viewy = masks[nummasks - 1].viewy;
 		viewz = masks[nummasks - 1].viewz;
+		viewsector = masks[nummasks - 1].viewsector;
 
 		R_DrawMaskedList(&heads[nummasks - 1]);
 		R_ClearDrawNodes(&heads[nummasks - 1]);

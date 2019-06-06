@@ -1738,6 +1738,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
+		size_t curpos = curdrawsegs - drawsegs;
 		size_t pos = ds_p - drawsegs;
 		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
 		if (firstseg)
@@ -1745,6 +1746,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
 		ds_p = drawsegs + pos;
 		maxdrawsegs = newmax;
+		curdrawsegs = drawsegs + curpos;
 		if (firstseg)
 			firstseg = drawsegs + (size_t)firstseg;
 	}
@@ -1794,7 +1796,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// borrowed fix from *cough* zdoom *cough*
 			// [RH] We also need to adjust the openings pointers that
 			//    were already stored in drawsegs.
-			for (ds = drawsegs; ds < ds_p; ds++)
+			for (ds = curdrawsegs; ds < ds_p; ds++)
 			{
 #define ADJUST(p) if (ds->p + ds->x1 >= oldopenings && ds->p + ds->x1 <= oldlast) ds->p = ds->p - oldopenings + openings;
 				ADJUST(maskedtexturecol);
