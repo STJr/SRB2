@@ -200,7 +200,14 @@ static void Portal_ClipVisplane (const visplane_t* plane, portal_t* portal)
 
 	for (i = 0; i < end - start; i++)
 	{
-		portal->ceilingclip[i] = plane->top[i + start];
+		// Invalid column.
+		if (plane->top[i + start] == 65535)
+		{
+			portal->ceilingclip[i] = -1;
+			portal->floorclip[i] = -1;
+			continue;
+		}
+		portal->ceilingclip[i] = plane->top[i + start] - 1;
 		portal->floorclip[i] = plane->bottom[i + start] + 1;
 		portal->frontscale[i] = INT32_MAX;
 	}
@@ -219,6 +226,11 @@ void Portal_AddSkybox (const visplane_t* plane)
 	INT16 end = plane->maxx + 1;
 	mapheader_t *mh;
 	portal_t* portal;
+
+	// Visplanes have 1-px pads on their sides (extra columns).
+	// Trim them, else it may render out of bounds.
+	if (end > viewwidth)
+		end = viewwidth;
 
 	if (!(start < end))
 		return;
