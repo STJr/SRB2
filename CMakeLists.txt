@@ -56,12 +56,18 @@ macro(copy_files_to_build_dir target dlllist_var)
 	endif()
 endmacro()
 
-# 64-bit check
-if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+# bitness check
+set(SRB2_SYSTEM_BITS 0)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message(STATUS "Target is 64-bit")
 	set(SRB2_SYSTEM_BITS 64)
-else()
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	message(STATUS "Target is 32-bit")
 	set(SRB2_SYSTEM_BITS 32)
+endif()
+if(${SRB2_SYSTEM_BITS} EQUAL 0)
+	message(STATUS "Target bitness is unknown")
 endif()
 
 # OS macros

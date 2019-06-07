@@ -22,8 +22,13 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 const char Data_Reader::eof_error [] = "Unexpected end of file";
 
+#define RETURN_VALIDITY_CHECK( cond ) \
+	do { if ( unlikely( !(cond) ) ) return "Corrupt file"; } while(0)
+
 blargg_err_t Data_Reader::read( void* p, long s )
 {
+	RETURN_VALIDITY_CHECK( s > 0 );
+
 	long result = read_avail( p, s );
 	if ( result != s )
 	{
@@ -38,6 +43,8 @@ blargg_err_t Data_Reader::read( void* p, long s )
 
 blargg_err_t Data_Reader::skip( long count )
 {
+	RETURN_VALIDITY_CHECK( count >= 0 );
+
 	char buf [512];
 	while ( count )
 	{
@@ -54,7 +61,8 @@ long File_Reader::remain() const { return size() - tell(); }
 
 blargg_err_t File_Reader::skip( long n )
 {
-	assert( n >= 0 );
+	RETURN_VALIDITY_CHECK( n >= 0 );
+
 	if ( !n )
 		return 0;
 	return seek( tell() + n );
@@ -67,13 +75,14 @@ Subset_Reader::Subset_Reader( Data_Reader* dr, long size )
 	in = dr;
 	remain_ = dr->remain();
 	if ( remain_ > size )
-		remain_ = size;
+		remain_ = max( 0l, size );
 }
 
 long Subset_Reader::remain() const { return remain_; }
 
 long Subset_Reader::read_avail( void* p, long s )
 {
+	s = max( 0l, s );
 	if ( s > remain_ )
 		s = remain_;
 	remain_ -= s;
@@ -85,7 +94,7 @@ long Subset_Reader::read_avail( void* p, long s )
 Remaining_Reader::Remaining_Reader( void const* h, long size, Data_Reader* r )
 {
 	header = (char const*) h;
-	header_end = header + size;
+	header_end = header + max( 0l, size );
 	in = r;
 }
 
@@ -93,6 +102,7 @@ long Remaining_Reader::remain() const { return header_end - header + in->remain(
 
 long Remaining_Reader::read_first( void* out, long count )
 {
+	count = max( 0l, count );
 	long first = header_end - header;
 	if ( first )
 	{
@@ -107,8 +117,9 @@ long Remaining_Reader::read_first( void* out, long count )
 
 long Remaining_Reader::read_avail( void* out, long count )
 {
+	count = max( 0l, count );
 	long first = read_first( out, count );
-	long second = count - first;
+	long second = max( 0l, count - first );
 	if ( second )
 	{
 		second = in->read_avail( (char*) out + first, second );
@@ -120,8 +131,9 @@ long Remaining_Reader::read_avail( void* out, long count )
 
 blargg_err_t Remaining_Reader::read( void* out, long count )
 {
+	count = max( 0l, count );
 	long first = read_first( out, count );
-	long second = count - first;
+	long second = max( 0l, count - first );
 	if ( !second )
 		return 0;
 	return in->read( (char*) out + first, second );
@@ -131,7 +143,7 @@ blargg_err_t Remaining_Reader::read( void* out, long count )
 
 Mem_File_Reader::Mem_File_Reader( const void* p, long s ) :
 	begin( (const char*) p ),
-	size_( s )
+	size_( max( 0l, s ) )
 {
 	pos = 0;
 }
@@ -141,6 +153,7 @@ long Mem_File_Reader::size() const { return size_; }
 long Mem_File_Reader::read_avail( void* p, long s )
 {
 	long r = remain();
+	s = max( 0l, s );
 	if ( s > r )
 		s = r;
 	memcpy( p, begin + pos, s );
@@ -152,6 +165,7 @@ long Mem_File_Reader::tell() const { return pos; }
 
 blargg_err_t Mem_File_Reader::seek( long n )
 {
+	RETURN_VALIDITY_CHECK( n >= 0 );
 	if ( n > size_ )
 		return eof_error;
 	pos = n;
@@ -164,7 +178,7 @@ Callback_Reader::Callback_Reader( callback_t c, long size, void* d ) :
 	callback( c ),
 	data( d )
 {
-	remain_ = size;
+	remain_ = max( 0l, size );
 }
 
 long Callback_Reader::remain() const { return remain_; }
@@ -173,13 +187,14 @@ long Callback_Reader::read_avail( void* out, long count )
 {
 	if ( count > remain_ )
 		count = remain_;
-	if ( Callback_Reader::read( out, count ) )
+	if ( count < 0 || Callback_Reader::read( out, count ) )
 		count = -1;
 	return count;
 }
 
 blargg_err_t Callback_Reader::read( void* out, long count )
 {
+	RETURN_VALIDITY_CHECK( count >= 0 );
 	if ( count > remain_ )
 		return eof_error;
 	return callback( data, out, count );
@@ -210,11 +225,12 @@ long Std_File_Reader::size() const
 
 long Std_File_Reader::read_avail( void* p, long s )
 {
-	return fread( p, 1, s, (FILE*) file_ );
+	return fread( p, 1, max( 0l, s ), (FILE*) file_ );
 }
 
 blargg_err_t Std_File_Reader::read( void* p, long s )
 {
+	RETURN_VALIDITY_CHECK( s > 0 );
 	if ( s == (long) fread( p, 1, s, (FILE*) file_ ) )
 		return 0;
 	if ( feof( (FILE*) file_ ) )

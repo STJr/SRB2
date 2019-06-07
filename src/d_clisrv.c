@@ -2415,6 +2415,8 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 
 #ifdef HAVE_BLUA
 	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+#else
+	(void)reason;
 #endif
 
 	// Reset player data
@@ -4561,7 +4563,7 @@ void TryRunTics(tic_t realtics)
 
 	if (realtics >= 1)
 	{
-		COM_BufExecute();
+		COM_BufTicker();
 		if (mapchangepending)
 			D_MapChange(-1, 0, ultimatemode, false, 2, false, fromlevelselect); // finish the map change
 	}
