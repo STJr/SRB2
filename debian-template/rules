@@ -23,6 +23,16 @@
 #
 #############################################################################
 
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(PKGDIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
@@ -50,16 +60,16 @@ DIR	:= $(shell pwd)
 
 # FIXME: hate hate hate head/tail hack :(
 CONTROLF = $(DIR)/debian/control
-PACKAGE  = srb2
-DBGPKG   = $(PACKAGE)-dbg
-TITLE	= Sonic Robo Blast 2
+PACKAGE  = ${PACKAGE_NAME}
+DBGPKG   = ${PACKAGE}-dbg
+TITLE	= ${PROGRAM_NAME}
 SECTION = Games/Action
-EXENAME = srb2
+EXENAME = ${PROGRAM_FILENAME}
 DBGNAME	= debug/$(EXENAME)
 
-PKGDIR	= usr/games/SRB2
+PKGDIR	= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 DBGDIR	= usr/lib/debug/$(PKGDIR)
-LINKDIR = usr/games
+LINKDIR = $(shell echo "${PACKAGE_LINK_PATH}" | sed -e 's/^\///')
 PIXMAPS_DIR = usr/share/pixmaps
 DESKTOP_DIR = usr/share/applications
 PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
@@ -102,8 +112,8 @@ binary-arch:
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
 	# Install desktop file and banner image
-	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps
-	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications
+	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps/${PROGRAM_FILENAME}.png
+	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications/${PROGRAM_FILENAME}.desktop
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
