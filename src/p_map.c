@@ -551,6 +551,44 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 }
 
+// Boss 5 post-defeat comedy
+static void P_SlapStick(mobj_t *fang, mobj_t *pole)
+{
+	fixed_t momx1, momx2, momy1, momy2;
+
+#define dist 3
+	momx1 = pole->momx/dist;
+	momy1 = pole->momy/dist;
+	momx2 = fang->momx/dist;
+	momy2 = fang->momy/dist;
+
+	pole->tracer->momx = momx1 + (dist-1)*momx2;
+	pole->tracer->momy = momy1 + (dist-1)*momy2;
+	fang->momx = (dist-1)*momx1 + momx2;
+	fang->momy = (dist-1)*momy1 + momy2;
+#undef dist
+
+	P_SetMobjState(pole, pole->info->deathstate);
+
+	P_SetObjectMomZ(pole->tracer, 6*FRACUNIT, false);
+	pole->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
+	pole->tracer->movedir = ANGLE_67h;
+	if ((R_PointToAngle(fang->x - pole->tracer->x, fang->y - pole->tracer->y) - pole->angle) > ANGLE_180)
+		pole->tracer->movedir = InvAngle(pole->tracer->movedir);
+
+	P_SetObjectMomZ(fang, 14*FRACUNIT, false);
+	fang->flags |= MF_NOGRAVITY|MF_NOCLIP;
+	P_SetMobjState(fang, fang->info->xdeathstate);
+
+	pole->tracer->tics = pole->tics = fang->tics;
+
+	var1 = var2 = 0;
+	A_Scream(pole->tracer);
+	S_StartSound(fang, sfx_altdi1);
+
+	P_SetTarget(&pole->tracer, NULL);
+}
+
 //
 // PIT_CheckThing
 //
@@ -779,6 +817,20 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // force no collide
 	}
 #endif
+
+	if (tmthing->type == MT_FANG && thing->type == MT_FSGNB)
+	{
+		if (thing->z > tmthing->z + tmthing->height)
+			return true; // overhead
+		if (thing->z + thing->height < tmthing->z)
+			return true; // underneath
+		if (!thing->tracer)
+			return true;
+		P_SlapStick(tmthing, thing);
+		// no return value was used in the original prototype script at this point,
+		// so I'm assuming we fall back on the solid code to determine how it all ends?
+		// -- Monster Iestyn
+	}
 
 	// Billiards mines!
 	if (thing->type == MT_BIGMINE)
