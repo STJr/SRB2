@@ -18,6 +18,7 @@
 #include "p_spec.h" // Skybox viewpoints
 #include "z_zone.h"
 #include "r_things.h"
+#include "r_sky.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
 sector_t *portalcullsector;
@@ -215,25 +216,19 @@ static void Portal_ClipVisplane (const visplane_t* plane, portal_t* portal)
 
 extern INT32 viewwidth;
 
-/** Creates a skybox portal out of a visplane.
- *
- * Applies the necessary offsets and rotation to give
- * a depth illusion to the skybox.
- */
-void Portal_AddSkybox (const visplane_t* plane)
+static boolean TrimVisplaneBounds (const visplane_t* plane, INT16* start, INT16* end)
 {
-	INT16 start = plane->minx;
-	INT16 end = plane->maxx + 1;
-	mapheader_t *mh;
-	portal_t* portal;
+	*start = plane->minx;
+	*end = plane->maxx + 1;
 
 	// Visplanes have 1-px pads on their sides (extra columns).
 	// Trim them, else it may render out of bounds.
-	if (end > viewwidth)
-		end = viewwidth;
+	if (*end > viewwidth)
+		*end = viewwidth;
 
-	if (!(start < end))
-		return;
+	if (!(*start < *end))
+		return true;
+
 
 	/** Trims a visplane's horizontal gap to match its render area.
 	 *
@@ -242,17 +237,33 @@ void Portal_AddSkybox (const visplane_t* plane)
 	 * valid area.
 	 */
 
-	while (plane->bottom[start] == 0 && plane->top[start] == 65535 && start < end)
+	while (plane->bottom[*start] == 0 && plane->top[*start] == 65535 && *start < *end)
 	{
-		start++;
+		(*start)++;
 	}
 
 
-	while (plane->bottom[end - 1] == 0 && plane->top[start] == 65535 && end > start)
+	while (plane->bottom[*end - 1] == 0 && plane->top[*start] == 65535 && *end > *start)
 	{
-		end--;
+		(*end)--;
 	}
 
+	return false;
+}
+
+/** Creates a skybox portal out of a visplane.
+ *
+ * Applies the necessary offsets and rotation to give
+ * a depth illusion to the skybox.
+ */
+void Portal_AddSkybox (const visplane_t* plane)
+{
+	INT16 start, end;
+	mapheader_t *mh;
+	portal_t* portal;
+
+	if (TrimVisplaneBounds(plane, &start, &end))
+		return;
 
 	portal = Portal_Add(start, end);
 
@@ -290,4 +301,32 @@ void Portal_AddSkybox (const visplane_t* plane)
 		portal->viewz += viewz * -mh->skybox_scalez;
 
 	portal->clipline = -1;
+}
+
+/** Creates portals for the currently existing sky visplanes.
+ * The visplanes are also removed and cleared from the list.
+ */
+void Portal_AddSkyboxPortals (void)
+{
+	visplane_t *pl;
+	INT32 i;
+	UINT16 count = 0;
+
+	for (i = 0; i < MAXVISPLANES; i++, pl++)
+	{
+		for (pl = visplanes[i]; pl; pl = pl->next)
+		{
+			if (pl->picnum == skyflatnum)
+			{
+				Portal_AddSkybox(pl);
+
+				pl->minx = 0;
+				pl->maxx = -1;
+
+				count++;
+			}
+		}
+	}
+
+	CONS_Debug(DBG_RENDER, "Skybox portals: %d\n", count);
 }

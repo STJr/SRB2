@@ -1081,6 +1081,7 @@ void R_RenderPlayerView(player_t *player)
 	// Portal rendering. Hijacks the BSP traversal.
 	if (portal_base)
 	{
+		INT32 i, p;
 		portal_t *portal;
 
 		for(portal = portal_base; portal; portal = portal_base)
@@ -1112,6 +1113,16 @@ void R_RenderPlayerView(player_t *player)
 			masks[nummasks - 1].viewz = viewz;
 			masks[nummasks - 1].viewsector = viewsector;
 			curdrawsegs = ds_p;
+
+			// opening / clipping determination
+			for (i = 0; i < viewwidth; i++)
+			{
+				for (p = 0; p < MAXFFLOORS; p++)
+				{
+					ffloor[p].f_clip[i] = (INT16)viewheight;
+					ffloor[p].c_clip[i] = -1;
+				}
+			}
 
 			R_RenderBSPNode((INT32)numnodes - 1);
 			masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;

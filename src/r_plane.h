@@ -18,6 +18,8 @@
 #include "r_data.h"
 #include "p_polyobj.h"
 
+#define MAXVISPLANES 512
+
 //
 // Now what is a visplane, anyway?
 // Simple: kinda floor/ceiling polygon optimised for SRB2 rendering.
@@ -53,6 +55,7 @@ typedef struct visplane_s
 #endif
 } visplane_t;
 
+extern visplane_t *visplanes[MAXVISPLANES];
 extern visplane_t *floorplane;
 extern visplane_t *ceilingplane;
 

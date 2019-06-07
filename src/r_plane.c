@@ -45,9 +45,8 @@
 //#define QUINCUNX
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
-#define MAXVISPLANES 512
 
-static visplane_t *visplanes[MAXVISPLANES];
+visplane_t *visplanes[MAXVISPLANES];
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -1177,32 +1176,4 @@ void R_PlaneBounds(visplane_t *plane)
 	}
 	plane->high = hi;
 	plane->low = low;
-}
-
-/** Creates portals for the currently existing sky visplanes.
- * The visplanes are also removed and cleared from the list.
- */
-void Portal_AddSkyboxPortals (void)
-{
-	visplane_t *pl;
-	INT32 i;
-	UINT16 count = 0;
-
-	for (i = 0; i < MAXVISPLANES; i++, pl++)
-	{
-		for (pl = visplanes[i]; pl; pl = pl->next)
-		{
-			if (pl->picnum == skyflatnum)
-			{
-				Portal_AddSkybox(pl);
-
-				pl->minx = 0;
-				pl->maxx = -1;
-
-				count++;
-			}
-		}
-	}
-
-	CONS_Debug(DBG_RENDER, "Skybox portals: %d\n", count);
 }
