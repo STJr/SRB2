@@ -12596,7 +12596,7 @@ void A_DustDevilThink(mobj_t *actor)
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
 	INT32 bx, by, xl, xh, yl, yh;
-	fixed_t radius = actor->radius + MAXRADIUS;
+	fixed_t radius = actor->radius;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_DustDevilThink", actor))
@@ -12615,12 +12615,12 @@ void A_DustDevilThink(mobj_t *actor)
 	}
 
 	//Spawn random dust around the column on the base.
-	//TODO: Dust shouldn't be shrinking
 	if (P_IsObjectOnGround(actor)) {
 		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
 		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
 		P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
-		dust->scale = scale * 3;
+		dust->destscale = scale * 3;
+		P_SetScale(dust, dust->destscale);
 	}
 
 	actor->extravalue1++;
