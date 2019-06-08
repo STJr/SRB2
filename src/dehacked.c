@@ -2393,6 +2393,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
+	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
 
 	{{NULL},                   "NONE"},
 
@@ -5681,6 +5682,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDSIGN_CACTI",
 	"S_ARIDSIGN_SHARPTURN",
 
+	//Dust devil
+	"S_DUSTDEVIL",
+	"S_DUSTLAYER1",
+	"S_DUSTLAYER2",
+	"S_DUSTLAYER3",
+	"S_DUSTLAYER4",
+	"S_DUSTLAYER5",
+	"S_ARIDDUST1",
+	"S_ARIDDUST2",
+	"S_ARIDDUST3",
+
 	// Flame jet
 	"S_FLAMEJETSTND",
 	"S_FLAMEJETSTART",
@@ -7369,6 +7381,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
+	"MT_DUSTDEVIL",
+	"MT_DUSTLAYER",
+	"MT_ARIDDUST",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",

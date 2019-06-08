@@ -280,6 +280,7 @@ void A_Boss5PinchShot(mobj_t *actor);
 void A_Boss5MakeItRain(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
 void A_Boss5BombExplode(mobj_t *actor);
+void A_DustDevilThink(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12520,4 +12521,146 @@ void A_Boss5BombExplode(mobj_t *actor)
 		quake.epicenter = &q_epicenter;
 	}
 	quake.radius = 20*actor->radius;
+}
+
+static mobj_t *dustdevil;
+
+static boolean PIT_DustDevilLaunch(mobj_t *thing)
+{
+	player_t *player = thing->player;
+
+	if (!player)
+		return true;
+
+	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
+		return true;
+
+	if (thing->z + thing->height >= dustdevil->z && dustdevil->z + dustdevil->height >= thing->z) {
+		fixed_t pos = thing->z - dustdevil->z;
+		fixed_t thrust = max(FixedDiv(pos, dustdevil->height) * 20, 8 * FRACUNIT);
+		angle_t fa = R_PointToAngle2(thing->x, thing->y, dustdevil->x, dustdevil->y) >> ANGLETOFINESHIFT;
+		fixed_t c = FINECOSINE(fa);
+		fixed_t s = FINESINE(fa);
+		fixed_t thresh = dustdevil->scale * 20;
+
+		//Player in the swirl part.
+		if (dustdevil->height - pos > thresh)
+		{
+			fixed_t dist = FixedHypot(thing->x - dustdevil->x, thing->y - dustdevil->y);
+			fixed_t dragamount = 6 * FRACUNIT;
+			fixed_t x, y;
+
+			if (player->powers[pw_nocontrol] == 0)
+				A_PlayActiveSound(dustdevil);
+			player->powers[pw_nocontrol] = 2;
+			player->drawangle += ANG20;
+			P_SetPlayerMobjState(thing, S_PLAY_PAIN);
+
+			if (dist > dragamount)
+			{
+				x = thing->x + FixedMul(c, dragamount);
+				y = thing->y + FixedMul(s, dragamount);
+			}
+			else
+			{
+				x = dustdevil->x;
+				y = dustdevil->y;
+			}
+			P_TryMove(thing, x - thing->momx, y - thing->momy, true);
+		}
+		else
+		{ //Player on the top of the tornado.
+			thing->z = dustdevil->z + dustdevil->height;
+			thrust = 20 * FRACUNIT;
+			player->powers[pw_nocontrol] = 0;
+			S_StartSound(thing, sfx_wdjump);
+			P_SetPlayerMobjState(thing, S_PLAY_FALL);
+			player->pflags &= ~PF_JUMPED;
+		}
+
+		thing->momz = thrust;
+	}
+
+	return true;
+}
+
+// Function: A_DustDevilThink
+//
+// Description: Thinker for the dust devil.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DustDevilThink(mobj_t *actor)
+{
+	fixed_t scale = actor->scale;
+	mobj_t *layer = actor->tracer;
+	INT32 bx, by, xl, xh, yl, yh;
+	fixed_t radius = actor->radius + MAXRADIUS;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DustDevilThink", actor))
+		return;
+#endif
+
+	//Chained thinker for the spiralling dust column.
+	while (layer) {
+		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
+		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
+		layer->scale = scale;
+		layer->angle += ANG10 / 2;
+		layer->momx = actor->momx;
+		layer->momy = actor->momy;
+		layer = layer->tracer;
+	}
+
+	//Spawn random dust around the column on the base.
+	//TODO: Dust shouldn't be shrinking
+	if (P_IsObjectOnGround(actor)) {
+		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
+		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
+		P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
+		dust->scale = scale * 3;
+	}
+
+	actor->extravalue1++;
+	if (actor->extravalue1 == 12) {
+		size_t i = 0;
+		actor->extravalue1 = 0;
+
+		//Create a set of items for the rising dust column
+		for (; i <= 3; i++) {
+			fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
+			fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
+			fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
+			fixed_t pz = actor->z;
+
+			layer = P_SpawnMobj(px, py, pz, MT_DUSTLAYER);
+			layer->momz = 5 * scale;
+			layer->angle = ANGLE_90 + ANGLE_90*i;
+			layer->extravalue1 = TICRATE * 3;
+
+			//Chain them
+			layer->tracer = actor->tracer;
+			actor->tracer = layer;
+		}
+	}
+
+	//The physics are handled here.
+	yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
+	yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
+	xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
+	xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
+
+	dustdevil = actor;
+
+	for (bx = xl; bx <= xh; bx++)
+		for (by = yl; by <= yh; by++)
+			P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
+
+	//Whirlwind sound effect.
+	if (leveltime % 70 == 0)
+		S_StartSound(actor, sfx_s3kcel);
 }

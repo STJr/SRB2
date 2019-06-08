@@ -251,6 +251,7 @@ void A_Boss5PinchShot();
 void A_Boss5MakeItRain();
 void A_LookForBetter();
 void A_Boss5BombExplode();
+void A_DustDevilThink();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -476,6 +477,8 @@ typedef enum sprite
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
+	SPR_TAZD, // Dust devil
+	SPR_ADST, // Arid dust
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -2426,6 +2429,17 @@ typedef enum state
 	S_ARIDSIGN_CACTI,
 	S_ARIDSIGN_SHARPTURN,
 
+	//Dust devil
+	S_DUSTDEVIL,
+	S_DUSTLAYER1,
+	S_DUSTLAYER2,
+	S_DUSTLAYER3,
+	S_DUSTLAYER4,
+	S_DUSTLAYER5,
+	S_ARIDDUST1,
+	S_ARIDDUST2,
+	S_ARIDDUST3,
+
 	// Flame jet
 	S_FLAMEJETSTND,
 	S_FLAMEJETSTART,
@@ -4134,6 +4148,9 @@ typedef enum mobj_type
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
+	MT_DUSTDEVIL,
+	MT_DUSTLAYER,
+	MT_ARIDDUST,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,
