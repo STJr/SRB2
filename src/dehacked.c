@@ -5682,7 +5682,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDSIGN_CACTI",
 	"S_ARIDSIGN_SHARPTURN",
 
-	//Dust devil
+	// Oil lamp
+	"S_OILLAMP",
+	"S_OILLAMPFLARE",
+
+	// Dust devil
 	"S_DUSTDEVIL",
 	"S_DUSTLAYER1",
 	"S_DUSTLAYER2",
@@ -7381,6 +7385,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
+	"MT_OILLAMP",
 	"MT_DUSTDEVIL",
 	"MT_DUSTLAYER",
 	"MT_ARIDDUST",

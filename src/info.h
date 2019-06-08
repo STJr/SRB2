@@ -477,6 +477,8 @@ typedef enum sprite
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
+	SPR_OILL, // Oil lamp
+	SPR_OILF, // Oil lamp flare
 	SPR_TAZD, // Dust devil
 	SPR_ADST, // Arid dust
 
@@ -2429,7 +2431,11 @@ typedef enum state
 	S_ARIDSIGN_CACTI,
 	S_ARIDSIGN_SHARPTURN,
 
-	//Dust devil
+	// Oil lamp
+	S_OILLAMP,
+	S_OILLAMPFLARE,
+
+	// Dust devil
 	S_DUSTDEVIL,
 	S_DUSTLAYER1,
 	S_DUSTLAYER2,
@@ -4148,6 +4154,7 @@ typedef enum mobj_type
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
+	MT_OILLAMP,
 	MT_DUSTDEVIL,
 	MT_DUSTLAYER,
 	MT_ARIDDUST,

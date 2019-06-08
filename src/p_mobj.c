@@ -9152,6 +9152,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_FBOMB:
 			mobj->flags2 |= MF2_EXPLOSION;
 			break;
+		case MT_OILLAMP:
+			{
+				mobj_t* overlay = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_OVERLAY);
+				P_SetTarget(&overlay->target, mobj);
+				P_SetMobjState(overlay, S_OILLAMPFLARE);
+				break;
+			}
 		default:
 			break;
 	}
