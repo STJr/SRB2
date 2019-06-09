@@ -281,6 +281,7 @@ void A_Boss5MakeItRain(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
 void A_Boss5BombExplode(mobj_t *actor);
 void A_DustDevilThink(mobj_t *actor);
+void A_TNTExplode(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12663,4 +12664,118 @@ void A_DustDevilThink(mobj_t *actor)
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
 		S_StartSound(actor, sfx_s3kcel);
+}
+
+// stuff used by A_TNTExplode
+static mobj_t *barrel;
+static fixed_t exploderadius;
+static fixed_t explodethrust;
+
+static boolean PIT_TNTExplode(mobj_t *nearby)
+{
+	fixed_t dx, dy, dz;
+	fixed_t dm;
+
+	if (nearby == barrel)
+		return true;
+
+	dx = nearby->x - barrel->x;
+	dy = nearby->y - barrel->y;
+	dz = nearby->z - barrel->z + (nearby->height - barrel->height/2)/2;
+	dm = P_AproxDistance(P_AproxDistance(dx, dy), dz);
+
+	if (dm >= exploderadius || !P_CheckSight(barrel, nearby)) // out of range or not visible
+		return true;
+
+	if (barrel->type == nearby->type) // nearby is also a barrel
+	{
+		if (nearby->state == &states[nearby->info->spawnstate])
+		{
+			if (barrel->info->attacksound)
+				S_StartSound(nearby, barrel->info->attacksound);
+			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
+			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
+			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
+			nearby->flags = MF_NOBLOCKMAP|MF_MISSILE;
+			P_SetMobjState(nearby, nearby->info->missilestate);
+		}
+	}
+	else
+	{
+		if (barrel->target == nearby)
+		{
+			mobj_t *tar = barrel->target; // temporarily store barrel's target
+			barrel->target = NULL;
+			P_DamageMobj(nearby, barrel, NULL, 1, 0);
+			barrel->target = tar;
+		}
+		else
+		{
+			P_DamageMobj(nearby,
+				(barrel->target) ? barrel->target : barrel,
+				(barrel->target) ? barrel->target : barrel,
+				1, 0);
+		}
+	}
+
+	return true;
+}
+
+// Function: A_TNTExplode
+//
+// Description: Creates a TNT explosion. Used by TNT barrels and the like.
+//
+// var1 = Thing type to spawn as dust.
+// var2 = unused
+//
+void A_TNTExplode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	INT32 x, y;
+	INT32 xl, xh, yl, yh;
+	static mappoint_t epicenter = {0,0,0};
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TNTExplode", actor))
+		return;
+#endif
+
+	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	actor->flags2 = MF2_EXPLOSION;
+	if (actor->info->deathsound)
+		S_StartSound(actor, actor->info->deathsound);
+
+	explodethrust = 32*FRACUNIT;
+	exploderadius = 256*FRACUNIT;
+
+	xl = (unsigned)(actor->x - exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(actor->x + exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(actor->y - exploderadius - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(actor->y + exploderadius - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
+
+	barrel = actor;
+
+	for (x = xl; x <= xh; x++)
+		for (y = yl; y <= yh; y++)
+			P_BlockThingsIterator(x, y, PIT_TNTExplode);
+
+	// cause a quake -- P_StartQuake does not exist yet
+	epicenter.x = actor->x;
+	epicenter.y = actor->y;
+	epicenter.z = actor->z;
+	quake.intensity = 9*FRACUNIT;
+	quake.time = TICRATE/6;
+	quake.epicenter = &epicenter;
+	quake.radius = 512*FRACUNIT;
+
+	if (locvar1)
+	{
+		P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 64, 0, actor->scale);
+		P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 96, FRACUNIT, actor->scale);
+	}
+
+	actor->destscale *= 4;
 }

@@ -247,6 +247,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"WWS3", // Sharp Turn Sign
 	"OILL", // Oil lamp
 	"OILF", // Oil lamp flare
+	"BARR", // TNT barrel
+	"REMT", // TNT proximity shell
 	"TAZD", // Dust devil
 	"ADST", // Arid dust
 
@@ -2322,6 +2324,42 @@ state_t states[NUMSTATES] =
 	// Oil lamp
 	{SPR_OILL, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_OILLAMP
 	{SPR_OILF, FF_TRANS90|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_OILLAMPFLARE
+
+	// TNT barrel
+	{SPR_BARR, 0, -1, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_STND1
+	{SPR_BARX, 0|FF_FULLBRIGHT, 3, {A_SetObjectFlags}, MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP, 0, S_TNTBARREL_EXPL2}, // S_TNTBARREL_EXPL1
+	{SPR_BARX, 1|FF_FULLBRIGHT, 2, {A_TNTExplode}, MT_TNTDUST, 0, S_TNTBARREL_EXPL3}, // S_TNTBARREL_EXPL2
+	{SPR_BARX, 1|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_TNTBARREL_EXPL4}, // S_TNTBARREL_EXPL3
+	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
+	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
+	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
+	{SPR_BARR, 1|FF_ANIMATE, -1, {NULL}, 7, 2, S_NULL}, // S_TNTBARREL_FLYING
+
+	// TNT proximity shell
+	{SPR_REMT, 0, 10, {A_Look}, 33554433, 0, S_PROXIMITY_TNT}, // S_PROXIMITY_TNT
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER2}, // S_PROXIMITY_TNT_TRIGGER1
+	{SPR_REMT, 0, 16, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER3}, // S_PROXIMITY_TNT_TRIGGER2
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER4}, // S_PROXIMITY_TNT_TRIGGER3
+	{SPR_REMT, 0, 16, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER5}, // S_PROXIMITY_TNT_TRIGGER4
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER6}, // S_PROXIMITY_TNT_TRIGGER5
+	{SPR_REMT, 0, 4, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER7}, // S_PROXIMITY_TNT_TRIGGER6
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER8}, // S_PROXIMITY_TNT_TRIGGER7
+	{SPR_REMT, 0, 4, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER9}, // S_PROXIMITY_TNT_TRIGGER8
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER10}, // S_PROXIMITY_TNT_TRIGGER9
+	{SPR_REMT, 0, 4, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER11}, // S_PROXIMITY_TNT_TRIGGER10
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER12}, // S_PROXIMITY_TNT_TRIGGER11
+	{SPR_REMT, 0, 4, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER13}, // S_PROXIMITY_TNT_TRIGGER12
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER14}, // S_PROXIMITY_TNT_TRIGGER13
+	{SPR_REMT, 0, 2, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER15}, // S_PROXIMITY_TNT_TRIGGER14
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER16}, // S_PROXIMITY_TNT_TRIGGER15
+	{SPR_REMT, 0, 2, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER17}, // S_PROXIMITY_TNT_TRIGGER16
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER18}, // S_PROXIMITY_TNT_TRIGGER17
+	{SPR_REMT, 0, 2, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER19}, // S_PROXIMITY_TNT_TRIGGER18
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER20}, // S_PROXIMITY_TNT_TRIGGER19
+	{SPR_REMT, 0, 2, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER21}, // S_PROXIMITY_TNT_TRIGGER20
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_PROXIMITY_TNT_TRIGGER22}, // S_PROXIMITY_TNT_TRIGGER21
+	{SPR_REMT, 0, 2, {NULL}, 0, 0, S_PROXIMITY_TNT_TRIGGER23}, // S_PROXIMITY_TNT_TRIGGER22
+	{SPR_REMT, 1|FF_FULLBRIGHT, 1, {A_PlayActiveSound}, 0, 0, S_TNTBARREL_EXPL1}, // S_PROXIMITY_TNT_TRIGGER23
 
 	// Dust devil
 	{SPR_NULL, 0, 1, {A_DustDevilThink}, 0, 0, S_DUSTDEVIL}, //S_DUSTDEVIL
@@ -11459,6 +11497,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_s3k4b,      // activesound
 		MF_SCENERY|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SPAWNCEILING, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_TNTBARREL
+		1216,           // doomednum
+		S_TNTBARREL_STND1,      // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_bowl,       // attacksound
+		S_TNTBARREL_EXPL1,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_TNTBARREL_FLYING,         // missilestate
+		S_TNTBARREL_EXPL1,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k4e,      // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		63*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k8d,      // activesound
+		MF_SOLID|MF_SHOOTABLE|MF_ENEMY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PROXIMITYTNT
+		1217,           // doomednum
+		S_PROXIMITY_TNT,    // spawnstate
+		1,              // spawnhealth
+		S_PROXIMITY_TNT_TRIGGER1,         // seestate
+		sfx_s3k5c,      // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k4e,      // deathsound
+		0,              // speed
+		64*FRACUNIT,    // radius
+		40*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k89,      // activesound
+		MF_SOLID,       // flags
 		S_NULL          // raisestate
 	},
 

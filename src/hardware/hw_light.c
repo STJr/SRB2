@@ -352,6 +352,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_WWS3
 	&lspr[NOLIGHT],     // SPR_OILL
 	&lspr[NOLIGHT],     // SPR_OILF
+	&lspr[NOLIGHT],     // SPR_BARR
+	&lspr[NOLIGHT],     // SPR_REMT
 	&lspr[NOLIGHT],     // SPR_TAZD
 	&lspr[NOLIGHT],     // SPR_ADST
 

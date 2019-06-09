@@ -818,6 +818,41 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (thing->type == MT_TNTBARREL && tmthing->player)
+	{
+		if (tmthing->momz < 0)
+		{
+			if (tmthing->z + tmthing->momz > thing->z + thing->height)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z > thing->z + thing->height)
+				return true;
+		}
+
+		if (tmthing->momz > 0)
+		{
+			if (tmthing->z + tmthing->height + tmthing->momz < thing->z)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z + tmthing->height < thing->z)
+				return true;
+		}
+
+		if ((tmthing->player->pflags & (PF_SPINNING | PF_GLIDING))
+			|| ((tmthing->player->pflags & PF_JUMPED)
+				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
+					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
+				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height / 2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+			|| (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)))
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+	}
+
 	if (tmthing->type == MT_FANG && thing->type == MT_FSGNB)
 	{
 		if (thing->z > tmthing->z + tmthing->height)

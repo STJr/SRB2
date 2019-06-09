@@ -9159,6 +9159,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				P_SetMobjState(overlay, S_OILLAMPFLARE);
 				break;
 			}
+		case MT_TNTBARREL:
+			mobj->momx = 1; //stack hack
+			break;
 		default:
 			break;
 	}
