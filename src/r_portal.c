@@ -97,7 +97,7 @@ void Portal_ClipApply (const portal_t* portal)
 	}
 }
 
-portal_t* Portal_Add (const INT16 x1, const INT16 x2)
+static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 {
 	portal_t *portal		= Z_Malloc(sizeof(portal_t), PU_LEVEL, NULL);
 	INT16 *ceilingclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);

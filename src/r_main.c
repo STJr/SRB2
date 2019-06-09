@@ -1114,15 +1114,7 @@ void R_RenderPlayerView(player_t *player)
 			masks[nummasks - 1].viewsector = viewsector;
 			curdrawsegs = ds_p;
 
-			// opening / clipping determination
-			for (i = 0; i < viewwidth; i++)
-			{
-				for (p = 0; p < MAXFFLOORS; p++)
-				{
-					ffloor[p].f_clip[i] = (INT16)viewheight;
-					ffloor[p].c_clip[i] = -1;
-				}
-			}
+			R_ClearFFloorClips();
 
 			R_RenderBSPNode((INT32)numnodes - 1);
 			masks[nummasks - 1].drawsegs[1]		= ds_p - drawsegs;

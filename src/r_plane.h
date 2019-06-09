@@ -76,6 +76,7 @@ extern lighttable_t **planezlight;
 
 void R_InitPlanes(void);
 void R_ClearPlanes(void);
+void R_ClearFFloorClips (void);
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2);
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2);

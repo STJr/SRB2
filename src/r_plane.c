@@ -305,6 +305,23 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 }
 
+void R_ClearFFloorClips (void)
+{
+	INT32 i, p;
+
+	// opening / clipping determination
+	for (i = 0; i < viewwidth; i++)
+	{
+		for (p = 0; p < MAXFFLOORS; p++)
+		{
+			ffloor[p].f_clip[i] = (INT16)viewheight;
+			ffloor[p].c_clip[i] = -1;
+		}
+	}
+
+	numffloors = 0;
+}
+
 //
 // R_ClearPlanes
 // At begining of frame.
@@ -326,8 +343,6 @@ void R_ClearPlanes(void)
 			ffloor[p].c_clip[i] = -1;
 		}
 	}
-
-	numffloors = 0;
 
 	for (i = 0; i < MAXVISPLANES; i++)
 	for (*freehead = visplanes[i], visplanes[i] = NULL;
