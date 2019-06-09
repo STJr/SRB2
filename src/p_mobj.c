@@ -8412,6 +8412,33 @@ void P_MobjThinker(mobj_t *mobj)
 							mobj->flags2 |= MF2_DONTDRAW;
 					}
 				break;
+			case MT_TRAINDUSTSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *traindust = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_PARTICLE);
+					traindust->flags = MF_SCENERY;
+					P_SetMobjState(traindust, S_TRAINDUST);
+					traindust->frame = P_RandomRange(0, 8) | FF_TRANS90;
+					traindust->angle = mobj->angle;
+					traindust->tics = TICRATE * 4;
+					traindust->destscale = FRACUNIT * 64;
+					traindust->scalespeed = FRACUNIT / 24;
+					P_SetScale(traindust, FRACUNIT * 6);
+				}
+				break;
+			case MT_TRAINSTEAMSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *steam = P_SpawnMobj(mobj->x + FRACUNIT*P_SignedRandom() / 2, mobj->y + FRACUNIT*P_SignedRandom() / 2, mobj->z, MT_PARTICLE);
+					P_SetMobjState(steam, S_TRAINSTEAM);
+					steam->frame = P_RandomRange(0, 1) | FF_TRANS90;
+					steam->tics = TICRATE * 8;
+					steam->destscale = FRACUNIT * 64;
+					steam->scalespeed = FRACUNIT / 8;
+					P_SetScale(steam, FRACUNIT * 16);
+					steam->momx = P_SignedRandom() * 32;
+					steam->momy = -64 * FRACUNIT;
+					steam->momz = 2 * FRACUNIT;
+				}
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{

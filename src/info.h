@@ -490,6 +490,7 @@ typedef enum sprite
 	SPR_ADST, // Arid dust
 	SPR_TRAE, // Train cameo locomotive
 	SPR_TRAI, // Train cameo wagon
+	SPR_STEA, // Train steam
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -2500,6 +2501,10 @@ typedef enum state
 	S_TRAINCAMEOSPAWNER_5,
 	S_TRAINPUFFMAKER,
 
+	// Train
+	S_TRAINDUST,
+	S_TRAINSTEAM,
+
 	// Flame jet
 	S_FLAMEJETSTND,
 	S_FLAMEJETSTART,
@@ -4218,6 +4223,8 @@ typedef enum mobj_type
 	MT_ARIDDUST,
 	MT_TRAINCAMEOSPAWNER,
 	MT_TRAINSEG,
+	MT_TRAINDUSTSPAWNER,
+	MT_TRAINSTEAMSPAWNER,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,
