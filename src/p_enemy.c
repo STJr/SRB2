@@ -283,6 +283,8 @@ void A_Boss5BombExplode(mobj_t *actor);
 void A_DustDevilThink(mobj_t *actor);
 void A_TNTExplode(mobj_t *actor);
 void A_DebrisRandom(mobj_t *actor);
+void A_TrainCameo(mobj_t *actor);
+void A_TrainCameo2(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12803,5 +12805,92 @@ void A_DebrisRandom(mobj_t *actor)
 	var2 = 359;
 	A_ChangeAngleAbsolute(actor);
 	P_Thrust(actor, actor->angle, FRACUNIT * 2);
+}
 
+static mobj_t *P_TrainSeg(mobj_t *src, fixed_t x, fixed_t y, fixed_t z, angle_t ang, spritenum_t spr, UINT32 frame)
+{
+	mobj_t *s = P_SpawnMobj(x, y, z, MT_TRAINSEG);
+	s->fuse = 16*TICRATE;
+	s->sprite = spr;
+	s->frame = frame|FF_PAPERSPRITE;
+	s->angle = ang;
+	P_Thrust(s, src->angle, 7*FRACUNIT);
+	return s;
+}
+
+// Function: A_TrainCameo
+//
+// Description: Sets up train cameo locomotive.
+//
+// var1 = Train width.
+// var2 = Train length.
+//
+void A_TrainCameo(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	angle_t ang = actor->angle;
+	mobj_t *m;
+	spritenum_t spr = SPR_TRAE;
+	fixed_t span = locvar1*FRACUNIT;
+	fixed_t len = locvar2*FRACUNIT;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TrainCameo", actor))
+		return;
+#endif
+
+	//Spawn sides.
+	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
+	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+
+	//Center.
+	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+
+	//Front and back.
+	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+
+	//Smoke spawner.
+	m = P_TrainSeg(actor, x - (20 * FRACUNIT), y, z + (30 * FRACUNIT), ang + ANGLE_90, spr, 0);
+	P_SetMobjState(m, S_TRAINPUFFMAKER);
+}
+
+// Function: A_TrainCameo2
+//
+// Description: Sets up train cameo wagon.
+//
+// var1 = Train width.
+// var2 = Train length.
+//
+void A_TrainCameo2(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	angle_t ang = actor->angle;
+	spritenum_t spr = SPR_TRAI;
+	fixed_t span = locvar1*FRACUNIT;
+	fixed_t len = locvar2*FRACUNIT;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TrainCameo2", actor))
+		return;
+#endif
+
+	//Spawn sides.
+	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
+	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+
+	//Center.
+	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+
+	//Front and back.
+	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
 }

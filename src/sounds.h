@@ -262,6 +262,7 @@ typedef enum
 	sfx_corkp,
 	sfx_corkh,
 	sfx_bowl,
+	sfx_chuchu,
 
 	// Menu, interface
 	sfx_chchng,

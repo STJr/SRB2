@@ -254,6 +254,9 @@ void A_Boss5BombExplode();
 void A_DustDevilThink();
 void A_TNTExplode();
 void A_DebrisRandom();
+void A_TrainCameo();
+void A_TrainCameo2();
+
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -485,6 +488,8 @@ typedef enum sprite
 	SPR_REMT, // TNT proximity shell
 	SPR_TAZD, // Dust devil
 	SPR_ADST, // Arid dust
+	SPR_TRAE, // Train cameo locomotive
+	SPR_TRAI, // Train cameo wagon
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -2487,6 +2492,14 @@ typedef enum state
 	S_ARIDDUST2,
 	S_ARIDDUST3,
 
+	// Train cameo
+	S_TRAINCAMEOSPAWNER_1,
+	S_TRAINCAMEOSPAWNER_2,
+	S_TRAINCAMEOSPAWNER_3,
+	S_TRAINCAMEOSPAWNER_4,
+	S_TRAINCAMEOSPAWNER_5,
+	S_TRAINPUFFMAKER,
+
 	// Flame jet
 	S_FLAMEJETSTND,
 	S_FLAMEJETSTART,
@@ -4203,6 +4216,8 @@ typedef enum mobj_type
 	MT_DUSTDEVIL,
 	MT_DUSTLAYER,
 	MT_ARIDDUST,
+	MT_TRAINCAMEOSPAWNER,
+	MT_TRAINSEG,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,

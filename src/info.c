@@ -251,6 +251,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"REMT", // TNT proximity shell
 	"TAZD", // Dust devil
 	"ADST", // Arid dust
+	"TRAE", // Train cameo locomotive
+	"TRAI", // Train cameo wagon
 
 	// Red Volcano Scenery
 	"FLME", // Flame jet
@@ -2372,6 +2374,14 @@ state_t states[NUMSTATES] =
 	{SPR_ADST, 0|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST1
 	{SPR_ADST, 3|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST2
 	{SPR_ADST, 6|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST3
+
+	// Train cameo
+	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_TRAINCAMEOSPAWNER_2}, // S_TRAINCAMEOSPAWNER_1
+	{SPR_NULL, 0, 14, {A_TrainCameo}, 20, 18, S_TRAINCAMEOSPAWNER_3}, // S_TRAINCAMEOSPAWNER_2
+	{SPR_NULL, 0, 1, {A_Repeat}, 1, 0, S_TRAINCAMEOSPAWNER_4}, // S_TRAINCAMEOSPAWNER_3
+	{SPR_NULL, 0, 18, {A_TrainCameo2}, 20, 44, S_TRAINCAMEOSPAWNER_5}, // S_TRAINCAMEOSPAWNER_4
+	{SPR_NULL, 0, 1, {A_Repeat}, 5, S_TRAINCAMEOSPAWNER_4, S_NULL}, // S_TRAINCAMEOSPAWNER_5
+	{SPR_NULL, 0, 2, {A_SmokeTrailer}, MT_SMOKE, 0, S_TRAINPUFFMAKER}, // S_TRAINPUFFMAKER
 
 	// Flame jet
 	{SPR_NULL, 0, 2*TICRATE, {NULL},             0, 0, S_FLAMEJETSTART}, // S_FLAMEJETSTND
@@ -11635,6 +11645,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_TRAINCAMEOSPAWNER
+		1222,           // doomednum
+		S_TRAINCAMEOSPAWNER_1,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		28*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOCLIP, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_TRAINSEG
+		-1,             // doomednum
+		S_INVISIBLE,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		FRACUNIT,       // radius
+		FRACUNIT,       // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
 

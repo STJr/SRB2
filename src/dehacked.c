@@ -2396,6 +2396,8 @@ static actionpointer_t actionpointers[] =
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
 	{{A_TNTExplode},             "A_TNTEXPLODE"},
 	{{A_DebrisRandom},           "A_DEBRISRANDOM"},
+	{{A_TrainCameo},             "A_TRAINCAMEO"},
+	{{A_TrainCameo2},            "A_TRAINCAMEO2"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5734,6 +5736,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDDUST2",
 	"S_ARIDDUST3",
 
+	// Train cameo
+	"S_TRAINCAMEOSPAWNER_1",
+	"S_TRAINCAMEOSPAWNER_2",
+	"S_TRAINCAMEOSPAWNER_3",
+	"S_TRAINCAMEOSPAWNER_4",
+	"S_TRAINCAMEOSPAWNER_5",
+	"S_TRAINPUFFMAKER",
+
 	// Flame jet
 	"S_FLAMEJETSTND",
 	"S_FLAMEJETSTART",
@@ -7430,6 +7440,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_DUSTDEVIL",
 	"MT_DUSTLAYER",
 	"MT_ARIDDUST",
+	"MT_TRAINCAMEOSPAWNER",
+	"MT_TRAINSEG",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",
