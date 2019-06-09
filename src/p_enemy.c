@@ -282,6 +282,7 @@ void A_LookForBetter(mobj_t *actor);
 void A_Boss5BombExplode(mobj_t *actor);
 void A_DustDevilThink(mobj_t *actor);
 void A_TNTExplode(mobj_t *actor);
+void A_DebrisRandom(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12778,4 +12779,29 @@ void A_TNTExplode(mobj_t *actor)
 	}
 
 	actor->destscale *= 4;
+}
+
+// Function: A_DebrisRandom
+//
+// Description: Randomizes debris frame and movement.
+//
+// var1 = Frame range.
+// var2 = unused
+//
+void A_DebrisRandom(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DebrisRandom", actor))
+		return;
+#endif
+
+	actor->frame |= P_RandomRange(0, locvar1);
+	var1 = 0;
+	var2 = 359;
+	A_ChangeAngleAbsolute(actor);
+	P_Thrust(actor, actor->angle, FRACUNIT * 2);
+
 }

@@ -2395,6 +2395,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
 	{{A_TNTExplode},             "A_TNTEXPLODE"},
+	{{A_DebrisRandom},           "A_DEBRISRANDOM"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -7055,6 +7056,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
+	"S_WOODDEBRIS",
+
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -7749,6 +7752,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
+	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",

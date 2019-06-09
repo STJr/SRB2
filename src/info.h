@@ -253,6 +253,7 @@ void A_LookForBetter();
 void A_Boss5BombExplode();
 void A_DustDevilThink();
 void A_TNTExplode();
+void A_DebrisRandom();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -676,6 +677,7 @@ typedef enum sprite
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
 	SPR_BMNB, // Mine Explosion
+	SPR_WDDB, // Wood Debris
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -3807,6 +3809,8 @@ typedef enum state
 	S_DUST3,
 	S_DUST4,
 
+	S_WOODDEBRIS,
+
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -4521,6 +4525,7 @@ typedef enum mobj_type
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
 	MT_DUST,
+	MT_WOODDEBRIS,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,
