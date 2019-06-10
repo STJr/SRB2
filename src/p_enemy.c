@@ -2322,7 +2322,7 @@ static void P_VultureHoverParticle(mobj_t *actor)
 			fixed_t pz = P_FloorzAtPos(px, py, actor->z, actor->height);
 
 			dust = P_SpawnMobj(px, py, pz, MT_ARIDDUST);
-			P_SetMobjState(dust, (statenum_t)(dust->state + P_RandomRange(0, 2)));
+			P_SetMobjState(dust, (statenum_t)(dust->state - states + P_RandomRange(0, 2)));
 			P_Thrust(dust, angle, FixedDiv(12*FRACUNIT, max(FRACUNIT, fdist/2)));
 			dust->momx += actor->momx;
 			dust->momy += actor->momy;
