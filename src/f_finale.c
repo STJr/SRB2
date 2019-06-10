@@ -1421,7 +1421,7 @@ void F_InitMenuPresValues(void)
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
-	curbghide = false;
+	curbghide = true;
 
 	// Find current presentation values
 	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");

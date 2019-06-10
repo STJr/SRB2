@@ -2196,6 +2196,7 @@ void M_InitMenuPresTables(void)
 		menupres[i].bgcolor = -1;
 		menupres[i].titlescrollxspeed = INT32_MAX;
 		menupres[i].titlescrollyspeed = INT32_MAX;
+		menupres[i].bghide = true;
 		// default true
 		menupres[i].enterbubble = true;
 		menupres[i].exitbubble = true;
@@ -2464,7 +2465,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
-	curbghide = false;
+	curbghide = true;
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
