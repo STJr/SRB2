@@ -11619,7 +11619,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_s3k8d,      // activesound
-		MF_SOLID|MF_SHOOTABLE|MF_ENEMY, // flags
+		MF_SOLID|MF_SHOOTABLE|MF_ENEMY|MF_PUSHABLE, // flags
 		S_NULL          // raisestate
 	},
 
