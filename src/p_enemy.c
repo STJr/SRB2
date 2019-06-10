@@ -285,6 +285,7 @@ void A_TNTExplode(mobj_t *actor);
 void A_DebrisRandom(mobj_t *actor);
 void A_TrainCameo(mobj_t *actor);
 void A_TrainCameo2(mobj_t *actor);
+void A_CanarivoreGas(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -12457,9 +12458,10 @@ void A_LookForBetter(mobj_t *actor)
   * \param z Center Z coordinates.
   * \param radius Radius.
   * \param speed Additional thrust on particles.
-  * \param scale Scale.
+  * \param initscale Initial scale when spawning.
+  * \param scale "Default" scale.
   */
-static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t speed, fixed_t scale)
+static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t speed, fixed_t initscale, fixed_t scale)
 {
 	angle_t ang = FixedAngle(FixedDiv(360*FRACUNIT, div*FRACUNIT));  //(ANGLE_180/div)*2;
 	UINT32 i;
@@ -12480,7 +12482,7 @@ static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fi
 			);
 
 		dust->angle = ang*i + ANGLE_90;
-		P_SetScale(dust, scale);
+		P_SetScale(dust, FixedMul(initscale, scale));
 		dust->destscale = FixedMul(4*FRACUNIT + P_RandomFixed(), scale);
 		dust->scalespeed = scale/24;
 		P_Thrust(dust, ang*i, speed + FixedMul(P_RandomFixed(), scale));
@@ -12513,8 +12515,8 @@ void A_Boss5BombExplode(mobj_t *actor)
 	if (actor->target)
 		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
 
-	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, actor->scale);
-	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, actor->scale);
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, FRACUNIT, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, FRACUNIT, actor->scale);
 	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
 	// the above does not exist, so we set the quake values directly instead
 	quake.intensity = 9*actor->scale;
@@ -12776,8 +12778,8 @@ void A_TNTExplode(mobj_t *actor)
 
 	if (locvar1)
 	{
-		P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 64, 0, actor->scale);
-		P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 96, FRACUNIT, actor->scale);
+		P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 64, 0, FRACUNIT, actor->scale);
+		P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 96, FRACUNIT, FRACUNIT, actor->scale);
 	}
 
 	actor->destscale *= 4;
@@ -12893,4 +12895,24 @@ void A_TrainCameo2(mobj_t *actor)
 	//Front and back.
 	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
 	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+}
+
+// Function: A_CanarivoreGas
+//
+// Description: Releases gas clouds. Used by the Canarivore.
+//
+// var1 = Mobj type.
+// var2 = Unused
+//
+void A_CanarivoreGas(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CanarivoreGas", actor))
+		return;
+#endif
+
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z + actor->height / 5, 18, 0, FRACUNIT/10, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z + actor->height / 5, 28, FRACUNIT, FRACUNIT/10, actor->scale);
 }

@@ -175,6 +175,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_MNUS
 	&lspr[NOLIGHT],     // SPR_SSHL
 	&lspr[NOLIGHT],     // SPR_UNID
+	&lspr[NOLIGHT],     // SPR_CANA
+	&lspr[NOLIGHT],     // SPR_CANG
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes

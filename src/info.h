@@ -256,7 +256,7 @@ void A_TNTExplode();
 void A_DebrisRandom();
 void A_TrainCameo();
 void A_TrainCameo2();
-
+void A_CanarivoreGas();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -300,6 +300,8 @@ typedef enum sprite
 	SPR_MNUS, // Minus
 	SPR_SSHL, // Spring Shell
 	SPR_UNID, // Unidus
+	SPR_CANA, // Canarivore
+	SPR_CANG, // Canarivore gas
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -1254,6 +1256,28 @@ typedef enum state
 	S_UNIDUS_STND,
 	S_UNIDUS_RUN,
 	S_UNIDUS_BALL,
+
+	// Canarivore
+	S_CANARIVORE_LOOK,
+	S_CANARIVORE_AWAKEN1,
+	S_CANARIVORE_AWAKEN2,
+	S_CANARIVORE_AWAKEN3,
+	S_CANARIVORE_GAS1,
+	S_CANARIVORE_GAS2,
+	S_CANARIVORE_GAS3,
+	S_CANARIVORE_GAS4,
+	S_CANARIVORE_GAS5,
+	S_CANARIVORE_GASREPEAT,
+	S_CANARIVORE_CLOSE1,
+	S_CANARIVORE_CLOSE2,
+	S_CANARIVOREGAS_1,
+	S_CANARIVOREGAS_2,
+	S_CANARIVOREGAS_3,
+	S_CANARIVOREGAS_4,
+	S_CANARIVOREGAS_5,
+	S_CANARIVOREGAS_6,
+	S_CANARIVOREGAS_7,
+	S_CANARIVOREGAS_8,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -3917,6 +3941,8 @@ typedef enum mobj_type
 	MT_YELLOWSHELL, // Spring Shell (yellow)
 	MT_UNIDUS, // Unidus
 	MT_UNIBALL, // Unidus Ball
+	MT_CANARIVORE, // Canarivore
+	MT_CANARIVORE_GAS, // Canarivore gas
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,

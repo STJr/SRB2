@@ -385,7 +385,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k91",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Closed"},
   {"s3k92",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ghost"},
-  {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rebuilding"},
+  {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gas release"},
   {"s3k94",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spike"},
   {"s3k95",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lava burst"},
   {"s3k96",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling object"},

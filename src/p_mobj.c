@@ -8439,6 +8439,34 @@ void P_MobjThinker(mobj_t *mobj)
 					steam->momz = 2 * FRACUNIT;
 				}
 				break;
+			case MT_CANARIVORE_GAS:
+				{
+					fixed_t momz;
+
+					if (mobj->flags2 & MF2_AMBUSH)
+					{
+						mobj->momx = FixedMul(mobj->momx, 50 * FRACUNIT / 51);
+						mobj->momy = FixedMul(mobj->momy, 50 * FRACUNIT / 51);
+						break;
+					}
+
+					if (mobj->eflags & MFE_VERTICALFLIP)
+					{
+						if ((mobj->z + mobj->height + mobj->momz) <= mobj->ceilingz)
+							break;
+					}
+					else
+					{
+						if ((mobj->z + mobj->momz) >= mobj->floorz)
+							break;
+					}
+
+					momz = abs(mobj->momz);
+					if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
+						P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
+					mobj->flags2 |= MF2_AMBUSH;
+					break;
+				}
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{

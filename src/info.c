@@ -63,6 +63,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"MNUS", // Minus
 	"SSHL", // Spring Shell
 	"UNID", // Unidus
+	"CANA", // Canarivore
+	"CANG", // Canarivore gas
 
 	// Generic Boss Items
 	"JETF", // Boss jet fumes
@@ -1109,6 +1111,29 @@ state_t states[NUMSTATES] =
 	{SPR_UNID, 0, 4, {A_Look},       0, 0, S_UNIDUS_STND}, // S_UNIDUS_STND
 	{SPR_UNID, 0, 1, {A_Chase},      0, 0, S_UNIDUS_RUN }, // S_UNIDUS_RUN
 	{SPR_UNID, 1, 1, {A_UnidusBall}, 1, 0, S_UNIDUS_BALL}, // S_UNIDUS_BALL
+
+	// Canarivore
+	{SPR_CANA, 0, 5,  {A_Look},          1200*FRACUNIT+1,   1,                 S_CANARIVORE_LOOK},      // S_CANARIVORE_LOOK
+	{SPR_CANA, 0, 3,  {A_PlaySound},     sfx_s3k76,         1,                 S_CANARIVORE_AWAKEN2},   // S_CANARIVORE_AWAKEN1
+	{SPR_CANA, 1, 5,  {NULL},            0,                 0,                 S_CANARIVORE_AWAKEN3},   // S_CANARIVORE_AWAKEN2
+	{SPR_CANA, 2, 8,  {NULL},            0,                 0,                 S_CANARIVORE_GAS1},      // S_CANARIVORE_AWAKEN3
+	{SPR_CANA, 2, 15, {A_PlaySound},     sfx_s3k93,         1,                 S_CANARIVORE_GAS2},      // S_CANARIVORE_GAS1
+	{SPR_CANA, 1, 4,  {NULL},            0,                 0,                 S_CANARIVORE_GAS3},      // S_CANARIVORE_GAS2
+	{SPR_CANA, 2, 0,  {A_PlaySound},     sfx_s3k97,         1,                 S_CANARIVORE_GAS4},      // S_CANARIVORE_GAS3
+	{SPR_CANA, 2, 5,  {A_CanarivoreGas}, MT_CANARIVORE_GAS, 0,                 S_CANARIVORE_GAS5},      // S_CANARIVORE_GAS4
+	{SPR_CANA, 1, 5,  {NULL},            0,                 0,                 S_CANARIVORE_GASREPEAT}, // S_CANARIVORE_GAS5
+	{SPR_CANA, 2, 0,  {A_Repeat},        6,                 S_CANARIVORE_GAS4, S_CANARIVORE_CLOSE1},    // S_CANARIVORE_GASREPEAT
+	{SPR_CANA, 1, 8,  {NULL},            0,                 0,                 S_CANARIVORE_CLOSE2},     // S_CANARIVORE_CLOSE1
+	{SPR_CANA, 0, 90, {NULL},            sfx_s3k5d,         1,                 S_CANARIVORE_LOOK},      // S_CANARIVORE_CLOSE2
+
+	{SPR_CANG, 0|FF_TRANS90, 2,         {NULL},            0, 0,       S_CANARIVOREGAS_2}, // S_CANARIVOREGAS_1
+	{SPR_CANG, 0|FF_TRANS30, 2*TICRATE, {A_SetRandomTics}, 2, TICRATE, S_CANARIVOREGAS_3}, // S_CANARIVOREGAS_2
+	{SPR_CANG, 0|FF_TRANS40, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_4}, // S_CANARIVOREGAS_3
+	{SPR_CANG, 0|FF_TRANS50, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_5}, // S_CANARIVOREGAS_4
+	{SPR_CANG, 0|FF_TRANS60, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_6}, // S_CANARIVOREGAS_5
+	{SPR_CANG, 0|FF_TRANS70, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_7}, // S_CANARIVOREGAS_6
+	{SPR_CANG, 0|FF_TRANS80, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_8}, // S_CANARIVOREGAS_7
+	{SPR_CANG, 0|FF_TRANS90, 10,        {NULL},            0, 0,       S_NULL},            // S_CANARIVOREGAS_8
 
 	// Boss Explosion
 	{SPR_BOM2, FF_FULLBRIGHT|FF_ANIMATE, (5*7), {NULL}, 6, 5, S_NULL}, // S_BOSSEXPLODE
@@ -4797,6 +4822,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8*FRACUNIT,     // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CANARIVORE
+		134,            // doomednum
+		S_CANARIVORE_LOOK,  // spawnstate
+		1,              // spawnhealth
+		S_CANARIVORE_AWAKEN1,   // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD_FLICKY,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		12*FRACUNIT,    // radius
+		80*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_SPAWNCEILING|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CANARIVORE_GAS
+		-1,             // doomednum
+		S_CANARIVOREGAS_1,  // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k5d,      // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOCLIP|MF_SPECIAL, // flags
 		S_NULL          // raisestate
 	},
 
