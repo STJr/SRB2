@@ -2460,8 +2460,11 @@ void A_VultureFly(mobj_t *actor)
 	if (leveltime % 4 == 0)
 		S_StartSound(actor, actor->info->activesound);
 
+	if (angledif > ANGLE_180)
+		angledif = InvAngle(angledif);
+
 	// Tweak the target height according to the position.
-	if (abs(angledif) < ANGLE_45) // Centered?
+	if (angledif < ANGLE_45) // Centered?
 	{
 		actor->reactiontime = actor->info->reactiontime;
 		if (dxy > 768*FRACUNIT)
@@ -2471,7 +2474,7 @@ void A_VultureFly(mobj_t *actor)
 	{
 		actor->reactiontime--;
 
-		if (abs(angledif) < ANGLE_90)
+		if (angledif < ANGLE_90)
 			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/2, 192*FRACUNIT), dz);
 		else
 			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + 232*FRACUNIT, dz);
