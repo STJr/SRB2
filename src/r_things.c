@@ -1352,8 +1352,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1570,8 +1570,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
