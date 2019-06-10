@@ -115,6 +115,9 @@ void A_CrushclawAim();
 void A_CrushclawLaunch();
 void A_VultureVtol();
 void A_VultureCheck();
+void A_VultureHover();
+void A_VultureBlast();
+void A_VultureFly();
 void A_SkimChase();
 void A_SkullAttack();
 void A_LobShot();
@@ -1144,15 +1147,10 @@ typedef enum state
 
 	// Vulture
 	S_VULTURE_STND,
-	S_VULTURE_VTOL1,
-	S_VULTURE_VTOL2,
-	S_VULTURE_VTOL3,
-	S_VULTURE_VTOL4,
+	S_VULTURE_DRIFT,
 	S_VULTURE_ZOOM1,
 	S_VULTURE_ZOOM2,
-	S_VULTURE_ZOOM3,
-	S_VULTURE_ZOOM4,
-	S_VULTURE_ZOOM5,
+	S_VULTURE_STUNNED,
 
 	// Pointy
 	S_POINTY1,

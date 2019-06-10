@@ -996,16 +996,11 @@ state_t states[NUMSTATES] =
 	{SPR_SNLR, 0, 1, {A_SnailerThink}, 0, 0, S_SNAILER1}, // S_SNAILER1
 
 	// Vulture
-	{SPR_VLTR, 4, 35,        {A_Look},  1, 0, S_VULTURE_STND},  // S_VULTURE_STND
-	{SPR_VLTR, 4, 1,  {A_VultureVtol},  0, 0, S_VULTURE_VTOL2}, // S_VULTURE_VTOL1
-	{SPR_VLTR, 5, 1,  {A_VultureVtol},  0, 0, S_VULTURE_VTOL3}, // S_VULTURE_VTOL2
-	{SPR_VLTR, 6, 1,  {A_VultureVtol},  0, 0, S_VULTURE_VTOL4}, // S_VULTURE_VTOL3
-	{SPR_VLTR, 7, 1,  {A_VultureVtol},  0, 0, S_VULTURE_VTOL1}, // S_VULTURE_VTOL4
-	{SPR_VLTR, 0, 1,       {A_Thrust}, 30, 1, S_VULTURE_ZOOM2}, // S_VULTURE_ZOOM1
-	{SPR_VLTR, 0, 1, {A_VultureCheck},  0, 0, S_VULTURE_ZOOM3}, // S_VULTURE_ZOOM2
-	{SPR_VLTR, 1, 1, {A_VultureCheck},  0, 0, S_VULTURE_ZOOM4}, // S_VULTURE_ZOOM3
-	{SPR_VLTR, 2, 1, {A_VultureCheck},  0, 0, S_VULTURE_ZOOM5}, // S_VULTURE_ZOOM4
-	{SPR_VLTR, 3, 1, {A_VultureCheck},  0, 0, S_VULTURE_ZOOM2}, // S_VULTURE_ZOOM5
+	{SPR_VLTR, 4, 35,        {A_Look},         1, 0, S_VULTURE_STND},  // S_VULTURE_STND
+	{SPR_VLTR, 4, 3,         {A_VultureHover}, 0, 0, S_VULTURE_DRIFT}, // S_VULTURE_DRIFT
+	{SPR_VLTR, 0, 6,         {A_VultureBlast}, 0, 0, S_VULTURE_ZOOM2}, // S_VULTURE_ZOOM1
+	{SPR_VLTR, 0, 3,         {A_VultureFly},   0, 0, S_VULTURE_ZOOM2}, // S_VULTURE_ZOOM2
+	{SPR_VLTR, 0, 3*TICRATE, {NULL},           0, 0, S_VULTURE_DRIFT}, // S_VULTURE_STUNNED
 
 	// Pointy
 	{SPR_PNTY, 0,  1, {A_PointyThink}, 0, 0, S_POINTY1}, // S_POINTY1
@@ -4451,26 +4446,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		115,            // doomednum
 		S_VULTURE_STND, // spawnstate
 		1,              // spawnhealth
-		S_VULTURE_VTOL1,// seestate
+		S_VULTURE_DRIFT,// seestate
 		sfx_None,       // seesound
-		2,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		TICRATE/2,      // reactiontime
+		sfx_s3k60,      // attacksound
+		S_VULTURE_STUNNED, // painstate
 		S_NULL,         // painchance
-		sfx_None,       // painsound
+		sfx_s3k96,      // painsound
 		S_NULL,         // meleestate
 		S_VULTURE_ZOOM1,// missilestate
 		S_XPLD_FLICKY,  // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
-		3,              // speed
+		5,              // speed
 		12*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		TICRATE,        // mass
 		0,              // damage
 		sfx_jet,        // activesound
-		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY, // flags
+		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY|MF_SLIDEME, // flags
 		S_NULL          // raisestate
 	},
 

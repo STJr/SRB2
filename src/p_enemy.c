@@ -79,6 +79,9 @@ void A_CrushclawAim(mobj_t *actor);
 void A_CrushclawLaunch(mobj_t *actor);
 void A_VultureVtol(mobj_t *actor);
 void A_VultureCheck(mobj_t *actor);
+void A_VultureHover(mobj_t *actor);
+void A_VultureBlast(mobj_t *actor);
+void A_VultureFly(mobj_t *actor);
 void A_SkimChase(mobj_t *actor);
 void A_FaceTarget(mobj_t *actor);
 void A_FaceTracer(mobj_t *actor);
@@ -2299,6 +2302,219 @@ void A_VultureCheck(mobj_t *actor)
 		actor->angle -= ANGLE_180; // turn around
 		P_SetMobjState(actor, actor->info->spawnstate);
 	}
+}
+
+static void P_VultureHoverParticle(mobj_t *actor)
+{
+	fixed_t fdist = actor->z - P_FloorzAtPos(actor->x, actor->y, actor->z, actor->height);
+
+	if (fdist < 128*FRACUNIT)
+	{
+		mobj_t *dust;
+		UINT8 i;
+		angle_t angle = (leveltime % 2)*ANGLE_45/2;
+
+		for (i = 0; i <= 7; i++)
+		{
+			angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+			fixed_t px = actor->x + FixedMul(fdist + 64*FRACUNIT, FINECOSINE(fa));
+			fixed_t py = actor->y + FixedMul(fdist + 64*FRACUNIT, FINESINE(fa));
+			fixed_t pz = P_FloorzAtPos(px, py, actor->z, actor->height);
+
+			dust = P_SpawnMobj(px, py, pz, MT_ARIDDUST);
+			P_SetMobjState(dust, (statenum_t)(dust->state + P_RandomRange(0, 2)));
+			P_Thrust(dust, angle, FixedDiv(12*FRACUNIT, max(FRACUNIT, fdist/2)));
+			dust->momx += actor->momx;
+			dust->momy += actor->momy;
+			angle += ANGLE_45;
+		}
+	}
+}
+
+// Function: A_VultureHover
+//
+// Description: Vulture hovering and checking whether to attack.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureHover(mobj_t *actor)
+{
+	fixed_t targetz;
+	fixed_t distdif;
+	fixed_t memz = actor->z;
+	INT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureHover", actor))
+		return;
+#endif
+
+	if (!actor->target)
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	actor->flags |= MF_NOGRAVITY;
+
+	actor->momx -= actor->momx/24;
+	actor->momy -= actor->momy/24;
+
+	P_VultureHoverParticle(actor);
+
+	A_FaceTarget(actor);
+	targetz = actor->target->z + actor->target->height / 2;
+	for (i = -1; i <= 1; i++)
+	{
+		actor->z = targetz - i * 128 * FRACUNIT;
+		if (P_CheckSight(actor, actor->target))
+		{
+			targetz -= i * 128 * FRACUNIT;
+			break;
+		}
+	}
+	actor->z = memz;
+
+	distdif = (actor->z + actor->height/2) - targetz;
+
+	if (abs(actor->momz*16) > abs(distdif))
+		actor->momz -= actor->momz/16;
+	else if (distdif < 0)
+		actor->momz = min(actor->momz+FRACUNIT/8, actor->info->speed*FRACUNIT);
+	else
+		actor->momz = max(actor->momz-FRACUNIT/8, -actor->info->speed*FRACUNIT);
+
+	if (abs(distdif) < 128*FRACUNIT && abs(actor->momz) < FRACUNIT && P_CheckSight(actor, actor->target))
+	{
+		P_SetMobjState(actor, actor->info->missilestate);
+		actor->momx = 0;
+		actor->momy = 0;
+		actor->momz = 0;
+		actor->extravalue1 = 0;
+	}
+}
+
+// Function: A_VultureBlast
+//
+// Description: Vulture spawning a dust cloud.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureBlast(mobj_t *actor)
+{
+	mobj_t *dust;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureBlast", actor))
+		return;
+#endif
+
+	S_StartSound(actor, actor->info->attacksound);
+
+	for (i = 0; i <= 7; i++)
+	{
+		angle_t fa = ((i*(angle_t)ANGLE_45) >> ANGLETOFINESHIFT) & FINEMASK;
+		angle_t faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -FINESINE(faa)), actor->y + 48*FixedMul(FINECOSINE(fa), FINECOSINE(faa)), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
+
+		P_SetScale(dust, 4*FRACUNIT);
+		dust->destscale = FRACUNIT;
+		dust->scalespeed = 4*FRACUNIT/TICRATE;
+		dust->fuse = TICRATE;
+		dust->momx = FixedMul(FINECOSINE(fa), -FINESINE(faa))*3;
+		dust->momy = FixedMul(FINECOSINE(fa), FINECOSINE(faa))*3;
+		dust->momz = FINESINE(fa)*6;
+	}
+}
+
+// Function: A_VultureFly
+//
+// Description: Vulture charging towards target.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureFly(mobj_t *actor)
+{
+	fixed_t speedmax = 18*FRACUNIT;
+	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	fixed_t dx = actor->target->x - actor->x;
+	fixed_t dy = actor->target->y - actor->y;
+	fixed_t dz = actor->target->z - actor->z;
+	fixed_t dxy = FixedHypot(dx, dy);
+	fixed_t dm;
+	mobj_t *dust;
+	fixed_t momm;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureFly", actor))
+		return;
+#endif
+
+	if (leveltime % 4 == 0)
+		S_StartSound(actor, actor->info->activesound);
+
+	// Tweak the target height according to the position.
+	if (abs(angledif) < ANGLE_45) // Centered?
+	{
+		actor->reactiontime = actor->info->reactiontime;
+		if (dxy > 768*FRACUNIT)
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/8, 128*FRACUNIT), dz);
+	}
+	else
+	{
+		actor->reactiontime--;
+
+		if (abs(angledif) < ANGLE_90)
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/2, 192*FRACUNIT), dz);
+		else
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + 232*FRACUNIT, dz);
+	}
+
+	dm = FixedHypot(dz, dxy);
+
+	P_VultureHoverParticle(actor);
+
+	dust = P_SpawnMobj(actor->x + P_RandomFixed() - FRACUNIT/2, actor->y + P_RandomFixed() - FRACUNIT/2, actor->z + actor->height/2 + P_RandomFixed() - FRACUNIT/2, MT_PARTICLE);
+	P_SetScale(dust, 2*FRACUNIT);
+	dust->destscale = FRACUNIT/3;
+	dust->scalespeed = FRACUNIT/40;
+	dust->fuse = TICRATE*2;
+
+	actor->momx += FixedDiv(dx, dm)*2;
+	actor->momy += FixedDiv(dy, dm)*2;
+	actor->momz += FixedDiv(dz, dm)*2;
+
+	momm = FixedHypot(actor->momz, FixedHypot(actor->momx, actor->momy));
+
+	if (momm > speedmax/2 && actor->reactiontime == 0)
+	{
+		P_SetMobjState(actor, actor->info->seestate);
+		return;
+	}
+
+	//Hits a wall hard?
+	if (actor->extravalue1 - momm > 15*FRACUNIT)
+	{
+		actor->flags &= ~MF_NOGRAVITY;
+		P_SetMobjState(actor, actor->info->painstate);
+		S_StopSound(actor);
+		S_StartSound(actor, actor->info->painsound);
+		return;
+	}
+	actor->extravalue1 = momm;
+
+	if (momm > speedmax)
+	{
+		actor->momx = FixedMul(FixedDiv(actor->momx, momm), speedmax);
+		actor->momy = FixedMul(FixedDiv(actor->momy, momm), speedmax);
+		actor->momz = FixedMul(FixedDiv(actor->momz, momm), speedmax);
+	}
+
+	actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
 }
 
 // Function: A_SkimChase

@@ -853,6 +853,17 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 
+	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
+	{
+		fixed_t dx = thing->x - tmthing->x;
+		fixed_t dy = thing->y - tmthing->y;
+		fixed_t dz = thing->z - tmthing->z;
+		fixed_t dm = FixedHypot(dz, FixedHypot(dx, dy));
+		thing->momx += FixedDiv(dx, dm);
+		thing->momy += FixedDiv(dy, dm);
+		thing->momz += FixedDiv(dz, dm);
+	}
+
 	if (tmthing->type == MT_FANG && thing->type == MT_FSGNB)
 	{
 		if (thing->z > tmthing->z + tmthing->height)

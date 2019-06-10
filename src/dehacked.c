@@ -2265,6 +2265,9 @@ static actionpointer_t actionpointers[] =
 	{{A_CrushclawLaunch},        "A_CRUSHCLAWLAUNCH"},
 	{{A_VultureVtol},            "A_VULTUREVTOL"},
 	{{A_VultureCheck},           "A_VULTURECHECK"},
+	{{A_VultureHover},           "A_VULTUREHOVER"},
+	{{A_VultureBlast},           "A_VULTUREBLAST"},
+	{{A_VultureFly},             "A_VULTUREFLY"},
 	{{A_SkimChase},              "A_SKIMCHASE"},
 	{{A_1upThinker},             "A_1UPTHINKER"},
 	{{A_SkullAttack},            "A_SKULLATTACK"},
@@ -4386,15 +4389,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Vulture
 	"S_VULTURE_STND",
-	"S_VULTURE_VTOL1",
-	"S_VULTURE_VTOL2",
-	"S_VULTURE_VTOL3",
-	"S_VULTURE_VTOL4",
+	"S_VULTURE_DRIFT",
 	"S_VULTURE_ZOOM1",
 	"S_VULTURE_ZOOM2",
-	"S_VULTURE_ZOOM3",
-	"S_VULTURE_ZOOM4",
-	"S_VULTURE_ZOOM5",
+	"S_VULTURE_STUNNED",
 
 	// Pointy
 	"S_POINTY1",
