@@ -289,6 +289,9 @@ void A_DebrisRandom(mobj_t *actor);
 void A_TrainCameo(mobj_t *actor);
 void A_TrainCameo2(mobj_t *actor);
 void A_CanarivoreGas(mobj_t *actor);
+void A_KillSegments(mobj_t *actor);
+void A_SnapperSpawn(mobj_t *actor);
+void A_SnapperThinker(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -13196,4 +13199,262 @@ void A_CanarivoreGas(mobj_t *actor)
 
 	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z + actor->height / 5, 18, 0, FRACUNIT/10, actor->scale);
 	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z + actor->height / 5, 28, FRACUNIT, FRACUNIT/10, actor->scale);
+}
+
+//
+// Function: A_KillSegments
+//
+// Description: Causes segments attached via tracer chain to be killed; forces into next state.
+//
+// var1 = Fuse (if 0, default to TICRATE/2).
+// var2 = Unused
+//
+void A_KillSegments(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	mobj_t *seg = actor->tracer;
+	INT32 fuse = locvar1 ? locvar1 : TICRATE/2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_KillSegments", actor))
+		return;
+#endif
+
+	while (seg)
+	{
+		mobj_t *kseg = seg;
+		seg = seg->tracer;
+
+		kseg->flags = MF_NOBLOCKMAP|MF_BOUNCE;
+		kseg->flags2 = 0;
+		kseg->fuse = fuse;
+		P_Thrust(kseg, R_PointToAngle2(actor->x, actor->y, kseg->x, kseg->y), 3*actor->scale);
+		kseg->momz = 3*actor->scale;
+	}
+
+	P_SetMobjState(actor, actor->state->nextstate);
+}
+
+static void P_SnapperLegPlace(mobj_t *mo)
+{
+	mobj_t *seg = mo->tracer;
+	fixed_t x0 = mo->x;
+	fixed_t y0 = mo->y;
+	angle_t a = mo->angle;
+	angle_t fa = (a >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	fixed_t x, y;
+	INT32 o1, o2;
+	INT32 woffset = mo->extravalue1;
+	INT32 side = mo->extravalue2;
+	INT32 alt;
+
+	// Move head first.
+	fixed_t rad = mo->radius;
+	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
+
+	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + mo->height/3);
+	seg->angle = a;
+
+	// Move as many legs as available.
+	seg = seg->tracer;
+	do
+	{
+		o1 = seg->extravalue1;
+		o2 = seg->extravalue2;
+		alt = seg->cusval;
+
+		if (alt == 1)
+			o2 += woffset;
+		else
+			o2 -= woffset;
+
+		if (alt != side)
+		{
+			x = c*o2 + s*o1;
+			y = s*o2 - c*o1;
+			P_TryMove(seg, x0 + x, y0 + y, true);
+			P_SetMobjState(seg, seg->info->raisestate);
+		}
+		else
+			P_SetMobjState(seg, seg->info->spawnstate);
+
+		seg->angle = R_PointToAngle2(x0, y0, seg->x, seg->y);
+
+		seg = seg->tracer;
+	} while (seg);
+}
+
+//
+// Function: A_SnapperSpawn
+//
+// Description: Sets up Green Snapper legs and head.
+//
+// var1 = Leg mobj type.
+// var2 = Head mobj type.
+//
+void A_SnapperSpawn(mobj_t *actor)
+{
+	mobjtype_t legtype = (mobjtype_t)var1;
+	mobjtype_t headtype = (mobjtype_t)var2;
+	mobj_t *ptr = actor;
+	INT32 i;
+	mobj_t *seg;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SnapperSpawn", actor))
+		return;
+#endif
+
+	// It spawns 1 head.
+	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
+	ptr->tracer = seg;
+	ptr = seg;
+
+	// It spawns 4 legs which will be handled in the thinker function.
+	for (i = 1; i <= 4; i++)
+	{
+		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
+		ptr->tracer = seg;
+		ptr = seg;
+
+		// The legs' base offsets are stored as extravalues, as relative coordinates in xy space.
+		seg->extravalue1 = 28;
+		seg->extravalue2 = 28;
+		if (i % 2)
+			seg->extravalue1 = -seg->extravalue1;
+
+		if ((i/2) % 2)
+			seg->extravalue2 = -seg->extravalue2;
+
+		// Alternating motion stuff.
+		seg->cusval = ((i + 1)/2) % 2;
+	}
+
+	actor->extravalue1 = 0;
+	actor->extravalue2 = 0;
+	P_SnapperLegPlace(actor);
+}
+
+//
+// Function: A_SnapperThinker
+//
+// Description: Thinker for Green Snapper.
+//
+// var1 = Unused
+// var2 = Unused
+//
+void A_SnapperThinker(mobj_t *actor)
+{
+	fixed_t x0 = actor->x;
+	fixed_t y0 = actor->y;
+	fixed_t xs, ys;
+	fixed_t x1, y1;
+	fixed_t dist;
+	boolean chasing;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SnapperThinker", actor))
+		return;
+#endif
+
+	// We make a check just in case there's no spawnpoint.
+	if (actor->spawnpoint)
+	{
+		xs = actor->spawnpoint->x*FRACUNIT;
+		ys = actor->spawnpoint->y*FRACUNIT;
+	}
+	else
+	{
+		xs = x0;
+		ys = y0;
+	}
+
+	// Look for nearby, valid players to chase angrily at.
+	if ((actor->target || P_LookForPlayers(actor, true, false, 1024*FRACUNIT))
+		&& P_AproxDistance(actor->target->x - xs, actor->target->y - ys) < 2048*FRACUNIT
+		&& abs(actor->target->z - actor->z) < 80*FRACUNIT
+		&& P_CheckSight(actor, actor->target))
+	{
+		chasing = true;
+		x1 = actor->target->x;
+		y1 = actor->target->y;
+	}
+	else
+	{
+		chasing = false;
+		x1 = xs;
+		y1 = ys;
+	}
+
+	dist = P_AproxDistance(x1 - x0, y1 - y0);
+
+	// The snapper either chases what it considers to be a nearby player, or instead decides to go back to its spawnpoint.
+	if (chasing || dist > 32*FRACUNIT)
+	{
+		INT32 speed = actor->info->speed + actor->info->reactiontime - actor->reactiontime;
+
+		angle_t maxang = FixedAngle(speed*FRACUNIT/2);
+		angle_t ang = actor->angle;
+		angle_t realang = R_PointToAngle2(x0, y0, x1, y1);
+		angle_t dif = realang - ang;
+		angle_t fa;
+		fixed_t c, s;
+
+		if (dif < ANGLE_180 && dif > maxang)
+			actor->angle += maxang;
+		else if (dif >= ANGLE_180 && dif < InvAngle(maxang))
+			actor->angle -= maxang;
+		else
+			actor->angle = realang;
+
+		fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+		c = FINECOSINE(fa);
+		s = FINESINE(fa);
+
+		P_TryMove(actor, actor->x + c*speed, actor->y + s*speed, false);
+
+		// The snapper spawns dust if going fast!
+		if (actor->reactiontime < 4)
+		{
+			mobj_t *dust = P_SpawnMobj(x0, y0, actor->z, MT_SPINDUST);
+			P_Thrust(dust, ang + ANGLE_180 + FixedAngle(P_RandomRange(-20, 20)*FRACUNIT), speed*FRACUNIT);
+		}
+
+		if (actor->extravalue2 == 0)
+		{
+			if (actor->extravalue1 > 16)
+			{
+				A_PlayActiveSound(actor);
+				actor->extravalue2 = 1;
+
+				// If the snapper is chasing, accelerate; otherwise, decelerate.
+				if (chasing)
+					actor->reactiontime = max(0, actor->reactiontime - 1);
+				else
+					actor->reactiontime = min(actor->info->reactiontime, actor->reactiontime + 1);
+			}
+			else
+				actor->extravalue1 += speed;
+		}
+		else
+		{
+			if (actor->extravalue1 < -16)
+			{
+				A_PlayActiveSound(actor);
+				actor->extravalue2 = 0;
+
+				// If the snapper is chasing, accelerate; otherwise, decelerate.
+				if (chasing)
+					actor->reactiontime = max(0, actor->reactiontime - 1);
+				else
+					actor->reactiontime = min(actor->info->reactiontime, actor->reactiontime + 1);
+			}
+			else
+				actor->extravalue1 -= speed;
+		}
+	}
+
+	P_SnapperLegPlace(actor);
 }

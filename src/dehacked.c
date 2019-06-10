@@ -2402,6 +2402,9 @@ static actionpointer_t actionpointers[] =
 	{{A_TrainCameo},             "A_TRAINCAMEO"},
 	{{A_TrainCameo2},            "A_TRAINCAMEO2"},
 	{{A_CanarivoreGas},          "A_CANARIVOREGAS"},
+	{{A_KillSegments},           "A_KILLSEGMENTS"},
+	{{A_SnapperSpawn},           "A_SNAPPERSPAWN"},
+	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4443,11 +4446,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGSHIELDBREAK",
 
 	// Green Snapper
+	"S_SNAPPER_SPAWN",
+	"S_SNAPPER_SPAWN2",
 	"S_GSNAPPER_STND",
 	"S_GSNAPPER1",
 	"S_GSNAPPER2",
 	"S_GSNAPPER3",
 	"S_GSNAPPER4",
+	"S_SNAPPER_XPLD",
+	"S_SNAPPER_LEG",
+	"S_SNAPPER_LEGRAISE",
+	"S_SNAPPER_HEAD",
 
 	// Minus
 	"S_MINUS_INIT",
@@ -7175,6 +7184,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGGUARD", // Egg Guard
 	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
+	"MT_SNAPPER_LEG", // Green Snapper leg
+	"MT_SNAPPER_HEAD", // Green Snapper head
 	"MT_MINUS", // Minus
 	"MT_MINUSDIRT", // Minus dirt
 	"MT_SPRINGSHELL", // Spring Shell

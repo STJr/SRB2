@@ -60,6 +60,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"SPSH", // Egg Guard
 	"ESHI", // Egg Guard's shield
 	"GSNP", // Green Snapper
+	"GSNL", // Green Snapper leg
+	"GSNH", // Green Snapper head
 	"MNUS", // Minus
 	"MNUD", // Minus dirt
 	"SSHL", // Spring Shell
@@ -1054,11 +1056,17 @@ state_t states[NUMSTATES] =
 	{SPR_ESHI, 0, TICRATE/2, {NULL}, 0, 0, S_NULL}, // S_EGGSHIELDBREAK
 
 	// Green Snapper
-	{SPR_GSNP, 0, 1,  {A_Look}, 0, 0, S_GSNAPPER_STND}, // S_GSNAPPER_STND
-	{SPR_GSNP, 0, 2, {A_Chase}, 0, 0, S_GSNAPPER2},     // S_GSNAPPER1
-	{SPR_GSNP, 1, 2, {A_Chase}, 0, 0, S_GSNAPPER3},     // S_GSNAPPER2
-	{SPR_GSNP, 2, 2, {A_Chase}, 0, 0, S_GSNAPPER4},     // S_GSNAPPER3
-	{SPR_GSNP, 3, 2, {A_Chase}, 0, 0, S_GSNAPPER1},     // S_GSNAPPER4
+	{SPR_GSNP, 0, TICRATE, {NULL},             0,              0,               S_SNAPPER_SPAWN2}, // S_SNAPPER_SPAWN
+	{SPR_GSNP, 0, 2,       {A_SnapperSpawn},   MT_SNAPPER_LEG, MT_SNAPPER_HEAD, S_GSNAPPER_STND},  // S_SNAPPER_SPAWN2
+	{SPR_GSNP, 0, 1,       {A_SnapperThinker}, 0,              0,               S_GSNAPPER_STND},  // S_GSNAPPER_STND
+	{SPR_GSNP, 0, 2,       {A_Chase},          0,              0,               S_GSNAPPER2},      // S_GSNAPPER1
+	{SPR_GSNP, 1, 2,       {A_Chase},          0,              0,               S_GSNAPPER3},      // S_GSNAPPER2
+	{SPR_GSNP, 2, 2,       {A_Chase},          0,              0,               S_GSNAPPER4},      // S_GSNAPPER3
+	{SPR_GSNP, 3, 2,       {A_Chase},          0,              0,               S_GSNAPPER1},      // S_GSNAPPER4
+	{SPR_GSNP, 0, -1,      {A_KillSegments},   0,              0,               S_XPLD_FLICKY},    // S_SNAPPER_XPLD
+	{SPR_GSNL, 0, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_LEG
+	{SPR_GSNL, 1, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_LEGRAISE
+	{SPR_GSNH, 0, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_HEAD
 
 	// Minus
 	{SPR_MNUD, 0,            1,  {NULL},           0, 0, S_MINUS_STND},     // S_MINUS_INIT (required for objectplace to work)
@@ -4679,28 +4687,82 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GSNAPPER
 		120,            // doomednum
-		S_GSNAPPER_STND,// spawnstate
+		S_SNAPPER_SPAWN,// spawnstate
 		1,              // spawnhealth
 		S_GSNAPPER1,    // seestate
 		sfx_None,       // seesound
-		32,             // reactiontime
+		10,             // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_XPLD_FLICKY,  // deathstate
+		S_SNAPPER_XPLD, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
-		3,              // speed
+		4,              // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k7e,      // activesound
+		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SNAPPER_LEG
+		-1,             // doomednum
+		S_SNAPPER_LEG,  // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		6*FRACUNIT,     // radius
+		12*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
+		MF_SCENERY|MF_PAIN|MF_NOCLIPHEIGHT|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
+		S_SNAPPER_LEGRAISE // raisestate
+	},
+
+	{           // MT_SNAPPER_HEAD
+		-1,             // doomednum
+		S_SNAPPER_HEAD, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		6*FRACUNIT,     // radius
+		12*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

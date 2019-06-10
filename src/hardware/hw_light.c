@@ -172,6 +172,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPSH
 	&lspr[NOLIGHT],     // SPR_ESHI
 	&lspr[NOLIGHT],     // SPR_GSNP
+	&lspr[NOLIGHT],     // SPR_GSNL
+	&lspr[NOLIGHT],     // SPR_GSNH
 	&lspr[NOLIGHT],     // SPR_MNUS
 	&lspr[NOLIGHT],     // SPR_MNUD
 	&lspr[NOLIGHT],     // SPR_SSHL

@@ -260,6 +260,9 @@ void A_DebrisRandom();
 void A_TrainCameo();
 void A_TrainCameo2();
 void A_CanarivoreGas();
+void A_KillSegments();
+void A_SnapperSpawn();
+void A_SnapperThinker();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -300,6 +303,8 @@ typedef enum sprite
 	SPR_SPSH, // Egg Guard
 	SPR_ESHI, // Egg Guard's shield
 	SPR_GSNP, // Green Snapper
+	SPR_GSNL, // Green Snapper leg
+	SPR_GSNH, // Green Snapper head
 	SPR_MNUS, // Minus
 	SPR_MNUD, // Minus dirt
 	SPR_SSHL, // Spring Shell
@@ -1202,11 +1207,17 @@ typedef enum state
 	S_EGGSHIELDBREAK,
 
 	// Green Snapper
+	S_SNAPPER_SPAWN,
+	S_SNAPPER_SPAWN2,
 	S_GSNAPPER_STND,
 	S_GSNAPPER1,
 	S_GSNAPPER2,
 	S_GSNAPPER3,
 	S_GSNAPPER4,
+	S_SNAPPER_XPLD,
+	S_SNAPPER_LEG,
+	S_SNAPPER_LEGRAISE,
+	S_SNAPPER_HEAD,
 
 	// Minus
 	S_MINUS_INIT,
@@ -3954,6 +3965,8 @@ typedef enum mobj_type
 	MT_EGGGUARD, // Egg Guard
 	MT_EGGSHIELD, // Egg Guard's shield
 	MT_GSNAPPER, // Green Snapper
+	MT_SNAPPER_LEG, // Green Snapper leg
+	MT_SNAPPER_HEAD, // Green Snapper head
 	MT_MINUS, // Minus
 	MT_MINUSDIRT, // Minus dirt
 	MT_SPRINGSHELL, // Spring Shell
