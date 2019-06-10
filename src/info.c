@@ -61,6 +61,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ESHI", // Egg Guard's shield
 	"GSNP", // Green Snapper
 	"MNUS", // Minus
+	"MNUD", // Minus dirt
 	"SSHL", // Spring Shell
 	"UNID", // Unidus
 	"CANA", // Canarivore
@@ -1060,8 +1061,18 @@ state_t states[NUMSTATES] =
 	{SPR_GSNP, 3, 2, {A_Chase}, 0, 0, S_GSNAPPER1},     // S_GSNAPPER4
 
 	// Minus
-	{SPR_NULL,  0, 1, {A_Look},         0, 0, S_MINUS_STND},      // S_MINUS_STND
-	{SPR_MNUS, 16, 1, {A_MinusDigging}, 0, 0, S_MINUS_DIGGING},   // S_MINUS_DIGGING
+	{SPR_MNUD, 0,            1,  {NULL},           0, 0, S_MINUS_STND},     // S_MINUS_INIT (required for objectplace to work)
+	{SPR_NULL, 0,            10, {A_Look},         0, 0, S_MINUS_STND},     // S_MINUS_STND
+	{SPR_NULL, 0,            1,  {A_MinusDigging}, 1, 0, S_MINUS_DIGGING2}, // S_MINUS_DIGGING1
+	{SPR_NULL, 0,            1,  {A_MinusDigging}, 0, 0, S_MINUS_DIGGING3}, // S_MINUS_DIGGING2
+	{SPR_NULL, 0,            1,  {A_MinusDigging}, 0, 0, S_MINUS_DIGGING4}, // S_MINUS_DIGGING3
+	{SPR_NULL, 0,            1,  {A_MinusDigging}, 0, 0, S_MINUS_DIGGING1}, // S_MINUS_DIGGING4
+	{SPR_NULL, 0,            25, {NULL},           0, 0, S_MINUS_POPUP},    // S_MINUS_BURST0
+	{SPR_MNUD, FF_ANIMATE,   5,  {NULL},           1, 2, S_MINUS_BURST2},   // S_MINUS_BURST1
+	{SPR_MNUD, 1|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUS_BURST3},   // S_MINUS_BURST2
+	{SPR_MNUD, 2|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUS_BURST4},   // S_MINUS_BURST3
+	{SPR_MNUD, 3|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUS_BURST5},   // S_MINUS_BURST4
+	{SPR_MNUD, 4|FF_ANIMATE, 5,  {NULL},           1, 2, S_MINUSDIRT2},     // S_MINUS_BURST5
 	{SPR_MNUS,  0, 1, {A_MinusPopup},   0, 0, S_MINUS_UPWARD1},   // S_MINUS_POPUP
 	{SPR_MNUS,  0, 1, {A_MinusCheck},   0, 0, S_MINUS_UPWARD2},   // S_MINUS_UPWARD1
 	{SPR_MNUS,  1, 1, {A_MinusCheck},   0, 0, S_MINUS_UPWARD3},   // S_MINUS_UPWARD2
@@ -1079,6 +1090,14 @@ state_t states[NUMSTATES] =
 	{SPR_MNUS, 13, 1, {A_MinusCheck},   0, 0, S_MINUS_DOWNWARD7}, // S_MINUS_DOWNWARD6
 	{SPR_MNUS, 14, 1, {A_MinusCheck},   0, 0, S_MINUS_DOWNWARD8}, // S_MINUS_DOWNWARD7
 	{SPR_MNUS, 15, 1, {A_MinusCheck},   0, 0, S_MINUS_DOWNWARD1}, // S_MINUS_DOWNWARD8
+
+	{SPR_MNUD, FF_ANIMATE, 6, {NULL}, 1, 5, S_MINUSDIRT2}, // S_MINUSDIRT1
+	{SPR_MNUD, 5,          8, {NULL}, 3, 5, S_MINUSDIRT3}, // S_MINUSDIRT2
+	{SPR_MNUD, 4,          8, {NULL}, 3, 5, S_MINUSDIRT4}, // S_MINUSDIRT3
+	{SPR_MNUD, 3,          8, {NULL}, 3, 5, S_MINUSDIRT5}, // S_MINUSDIRT4
+	{SPR_MNUD, 2,          8, {NULL}, 3, 5, S_MINUSDIRT6}, // S_MINUSDIRT5
+	{SPR_MNUD, 1,          8, {NULL}, 3, 5, S_MINUSDIRT7}, // S_MINUSDIRT6
+	{SPR_MNUD, 0,          8, {NULL}, 3, 5, S_NULL},       // S_MINUSDIRT7
 
 	// Spring Shell
 	{SPR_SSHL,  0,  4, {A_Look},  0, 0, S_SSHELL_STND},    // S_SSHELL_STND
@@ -4687,29 +4706,56 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_MINUS
 		121,            // doomednum
-		S_MINUS_STND,   // spawnstate
+		S_MINUS_INIT,   // spawnstate
 		1,              // spawnhealth
-		S_MINUS_DIGGING,// seestate
+		S_MINUS_DIGGING1,// seestate
 		sfx_None,       // seesound
 		32,             // reactiontime
-		sfx_s3k82,      // attacksound
+		sfx_s3kccs,     // attacksound
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound
-		S_MINUS_DOWNWARD1,// meleestate
+		S_MINUS_BURST0, // meleestate
 		S_MINUS_POPUP,  // missilestate
 		S_XPLD_FLICKY,  // deathstate
 		S_NULL,         // xdeathstate
 		sfx_pop,        // deathsound
-		12,             // speed
+		17,             // speed
 		24*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
-		sfx_mindig,     // activesound
-		MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE, // flags
-		S_MINUS_UPWARD1  // raisestate
+		sfx_s3kd3s,     // activesound
+		MF_ENEMY|MF_NOCLIPTHING, // flags
+		S_MINUS_BURST1  // raisestate
+	},
+
+	{           // MT_MINUSDIRT
+		-1,             // doomednum
+		S_MINUSDIRT1,   // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		8*FRACUNIT,     // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPTHING, // flags
+		S_NULL          // raisestate
 	},
 
 	{           // MT_SPRINGSHELL

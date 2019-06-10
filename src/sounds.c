@@ -456,7 +456,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kcas", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"},
   {"s3kcal", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"}, // ditto
   {"s3kcbs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
-  {"s3kcbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominuous rumbling"}, // ditto
+  {"s3kcbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"}, // ditto
   {"s3kccs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"},
   {"s3kccl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"}, // ditto
   {"s3kcds", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
@@ -471,8 +471,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kd1l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd2s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"},
   {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Moving chain"}, // ditto
-  {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
+  {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Digging"},
+  {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Digging"}, // ditto
   {"s3kd4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"},
   {"s3kd4l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"}, // ditto
   {"s3kd5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling lava"},

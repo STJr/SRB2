@@ -4450,8 +4450,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GSNAPPER4",
 
 	// Minus
+	"S_MINUS_INIT",
 	"S_MINUS_STND",
-	"S_MINUS_DIGGING",
+	"S_MINUS_DIGGING1",
+	"S_MINUS_DIGGING2",
+	"S_MINUS_DIGGING3",
+	"S_MINUS_DIGGING4",
+	"S_MINUS_BURST0",
+	"S_MINUS_BURST1",
+	"S_MINUS_BURST2",
+	"S_MINUS_BURST3",
+	"S_MINUS_BURST4",
+	"S_MINUS_BURST5",
 	"S_MINUS_POPUP",
 	"S_MINUS_UPWARD1",
 	"S_MINUS_UPWARD2",
@@ -4469,6 +4479,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MINUS_DOWNWARD6",
 	"S_MINUS_DOWNWARD7",
 	"S_MINUS_DOWNWARD8",
+
+	// Minus dirt
+	"S_MINUSDIRT1",
+	"S_MINUSDIRT2",
+	"S_MINUSDIRT3",
+	"S_MINUSDIRT4",
+	"S_MINUSDIRT5",
+	"S_MINUSDIRT6",
+	"S_MINUSDIRT7",
 
 	// Spring Shell
 	"S_SSHELL_STND",
@@ -7157,6 +7176,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
 	"MT_MINUS", // Minus
+	"MT_MINUSDIRT", // Minus dirt
 	"MT_SPRINGSHELL", // Spring Shell
 	"MT_YELLOWSHELL", // Spring Shell (yellow)
 	"MT_UNIDUS", // Unidus

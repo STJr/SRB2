@@ -5143,56 +5143,110 @@ void A_ShootBullet(mobj_t *actor)
 		S_StartSound(actor, actor->info->attacksound);
 }
 
+static mobj_t *minus;
+
+static boolean PIT_MinusCarry(mobj_t *thing)
+{
+	if (minus->type == thing->type)
+		return true;
+
+	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+		return true;
+
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+		return true;
+
+	if (abs(thing->z - minus->z) > minus->height)
+		return true;
+
+	minus->tracer = thing;
+	minus->tracer->flags &= ~MF_PUSHABLE;
+
+	return true;
+}
+
 // Function: A_MinusDigging
 //
 // Description: Minus digging in the ground.
 //
-// var1 = unused
+// var1 = If 1, play digging sound.
 // var2 = unused
 //
 void A_MinusDigging(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 rad = 32;
+	angle_t fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t dis = actor->info->speed*4;
+	fixed_t x = FINECOSINE(fa)*dis + actor->x + FRACUNIT*P_RandomRange(-rad, rad);
+	fixed_t y = FINESINE(fa)*dis + actor->y + FRACUNIT*P_RandomRange(-rad, rad);
+	fixed_t mz = (actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz : actor->floorz;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusDigging", actor))
 		return;
 #endif
-	actor->flags &= ~MF_SPECIAL;
-	actor->flags &= ~MF_SHOOTABLE;
 
 	if (!actor->target)
 	{
-		A_Look(actor);
+		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
 	}
 
-	if (actor->reactiontime)
+	mobj_t *par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+	if (actor->eflags & MFE_VERTICALFLIP)
+		par->eflags |= MFE_VERTICALFLIP;
+	P_TryMove(par, x, y, false);
+
+	// If close enough, prepare to attack
+	if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < actor->radius*2)
 	{
-		actor->reactiontime--;
+		P_SetMobjState(actor, actor->info->meleestate);
+		P_TryMove(actor, actor->target->x, actor->target->y, false);
+		S_StartSound(actor, actor->info->attacksound);
+
+		// Spawn growing dirt pile.
+		mobj_t *par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+		P_SetMobjState(par, actor->info->raisestate);
+		P_SetScale(par, actor->scale*2);
+		if (actor->eflags & MFE_VERTICALFLIP)
+			par->eflags |= MFE_VERTICALFLIP;
 		return;
 	}
-
-	// Dirt trail
-	P_SpawnGhostMobj(actor);
-
-	actor->flags |= MF_NOCLIPTHING;
-	var1 = 3;
-	A_Chase(actor);
-	actor->flags &= ~MF_NOCLIPTHING;
 
 	// Play digging sound
-	if (!(leveltime & 15))
-		S_StartSound(actor, actor->info->activesound);
+	if (locvar1 == 1)
+		A_PlayActiveSound(actor);
 
-	// If we're close enough to our target, pop out of the ground
-	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) < actor->radius
-		&& abs(actor->target->z - actor->z) < 2*actor->height)
-		P_SetMobjState(actor, actor->info->missilestate);
+	// Move
+	var1 = 3;
+	A_Chase(actor);
 
-	// Snap to ground
-	if (actor->eflags & MFE_VERTICALFLIP)
-		actor->z = actor->ceilingz - actor->height;
+	// Carry over shit, maybe
+	if (!actor->tracer)
+	{
+		fixed_t radius = 3*actor->radius;
+		fixed_t yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
+		fixed_t yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
+		fixed_t xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
+		fixed_t xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
+		fixed_t bx, by;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
+
+		minus = actor;
+
+		for (bx = xl; bx <= xh; bx++)
+			for (by = yl; by <= yh; by++)
+				P_BlockThingsIterator(bx, by, PIT_MinusCarry);
+	}
 	else
-		actor->z = actor->floorz;
+	{
+		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
+			actor->tracer->z = mz;
+		else
+			actor->tracer = NULL;
+	}
 }
 
 // Function: A_MinusPopup
@@ -5204,45 +5258,56 @@ void A_MinusDigging(mobj_t *actor)
 //
 void A_MinusPopup(mobj_t *actor)
 {
+	INT32 num = 6;
+	angle_t ani = FixedAngle(FRACUNIT*360/num);
+	INT32 i;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusPopup", actor))
 		return;
 #endif
-	P_SetObjectMomZ(actor, 10*FRACUNIT, false);
 
-	actor->flags |= MF_SPECIAL;
-	actor->flags |= MF_SHOOTABLE;
+	if (actor->eflags & MFE_VERTICALFLIP)
+		actor->momz = -10*FRACUNIT;
+	else
+		actor->momz = 10*FRACUNIT;
 
-	// Sound for busting out of the ground.
-	S_StartSound(actor, actor->info->attacksound);
+	actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
+	S_StartSound(actor, sfx_s3k82);
+	for (i = 1; i <= num; i++)
+	{
+		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		P_Thrust(rock, ani*i, FRACUNIT);
+		rock->momz = 3*FRACUNIT;
+		P_SetScale(rock, FRACUNIT/3);
+	}
+	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
+	if (actor->tracer)
+		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
+
 }
 
 // Function: A_MinusCheck
 //
 // Description: If the minus hits the floor, dig back into the ground.
 //
-// var1 = unused
+// var1 = State to switch to (if 0, use seestate).
 // var2 = unused
 //
 void A_MinusCheck(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
 		return;
 #endif
-	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
-	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz))
-	{
-		actor->flags &= ~MF_SPECIAL;
-		actor->flags &= ~MF_SHOOTABLE;
-		actor->reactiontime = TICRATE;
-		P_SetMobjState(actor, actor->info->seestate);
-		return;
-	}
 
-	// 'Falling' animation
-	if (P_MobjFlip(actor)*actor->momz < 0 && actor->state < &states[actor->info->meleestate])
-		P_SetMobjState(actor, actor->info->meleestate);
+	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz) || (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
+	{
+		P_SetMobjState(actor, locvar1 ? locvar1 : actor->info->seestate);
+		actor->flags = actor->info->flags;
+	}
 }
 
 // Function: A_ChickenCheck
