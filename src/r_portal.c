@@ -21,7 +21,6 @@
 #include "r_sky.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
-sector_t *portalcullsector;
 
 // Linked list for portals.
 portal_t *portal_base, *portal_cap;

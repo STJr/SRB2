@@ -44,7 +44,6 @@ extern portal_t* portal_base;
 extern portal_t* portal_cap;
 extern UINT8 portalrender;
 
-extern sector_t *portalcullsector;
 extern line_t *portalclipline;
 extern INT32 portalclipstart, portalclipend;
 
