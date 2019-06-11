@@ -1305,6 +1305,11 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+#endif
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
