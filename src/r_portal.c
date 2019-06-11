@@ -279,6 +279,7 @@ void Portal_AddSkybox (const visplane_t* plane)
 	if (skyboxmo[1])
 	{
 		fixed_t x = 0, y = 0;
+		angle_t ang = skyboxmo[0]->angle>>ANGLETOFINESHIFT;
 
 		if (mh->skybox_scalex > 0)
 			x = (viewx - skyboxmo[1]->x) / mh->skybox_scalex;
@@ -290,8 +291,9 @@ void Portal_AddSkybox (const visplane_t* plane)
 		else if (mh->skybox_scaley < 0)
 			y = (viewy - skyboxmo[1]->y) * -mh->skybox_scaley;
 
-		portal->viewx += x;
-		portal->viewy += y;
+		// Apply transform to account for the skybox viewport angle.
+		portal->viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+		portal->viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
 	}
 
 	if (mh->skybox_scalez > 0)
