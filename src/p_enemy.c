@@ -2354,7 +2354,7 @@ void A_VultureHover(mobj_t *actor)
 		return;
 #endif
 
-	if (!actor->target)
+	if (!actor->target || P_MobjWasRemoved(actor->target))
 	{
 		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
@@ -12898,7 +12898,7 @@ void A_DustDevilThink(mobj_t *actor)
 #endif
 
 	//Chained thinker for the spiralling dust column.
-	while (layer) {
+	while (layer && !P_MobjWasRemoved(layer)) {
 		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
 		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
 		layer->scale = scale;
