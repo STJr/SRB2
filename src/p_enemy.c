@@ -15,6 +15,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "s_sound.h"
@@ -22,6 +23,7 @@
 #include "m_misc.h"
 #include "r_things.h"
 #include "i_video.h"
+#include "z_zone.h"
 #include "lua_hook.h"
 
 #ifdef HW3SOUND
@@ -266,6 +268,18 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
+void A_Boss5FindWaypoint(mobj_t *actor);
+void A_DoNPCSkid(mobj_t *actor);
+void A_DoNPCPain(mobj_t *actor);
+void A_PrepareRepeat(mobj_t *actor);
+void A_Boss5ExtraRepeat(mobj_t *actor);
+void A_Boss5Calm(mobj_t *actor);
+void A_Boss5CheckOnGround(mobj_t *actor);
+void A_Boss5CheckFalling(mobj_t *actor);
+void A_Boss5PinchShot(mobj_t *actor);
+void A_Boss5MakeItRain(mobj_t *actor);
+void A_LookForBetter(mobj_t *actor);
+void A_Boss5BombExplode(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -3549,59 +3563,103 @@ bossjustdie:
 	else if (P_MobjWasRemoved(mo))
 		return;
 #endif
-	if (mo->type == MT_BLACKEGGMAN || mo->type == MT_CYBRAKDEMON)
+	switch (mo->type)
 	{
-		mo->flags |= MF_NOCLIP;
-		mo->flags &= ~MF_SPECIAL;
+		case MT_BLACKEGGMAN:
+		case MT_CYBRAKDEMON:
+		{
+			mo->flags |= MF_NOCLIP;
+			mo->flags &= ~MF_SPECIAL;
 
-		S_StartSound(NULL, sfx_befall);
-	}
-	else if (mo->type == MT_KOOPA)
-	{
-		junk.tag = 650;
-		EV_DoCeiling(&junk, raiseToHighest);
-		return;
-	}
-	else // eggmobiles
-	{
-		// Stop exploding and prepare to run.
-		P_SetMobjState(mo, mo->info->xdeathstate);
-		if (P_MobjWasRemoved(mo))
+			S_StartSound(NULL, sfx_befall);
+			break;
+		}
+		case MT_KOOPA:
+		{
+			junk.tag = 650;
+			EV_DoCeiling(&junk, raiseToHighest);
 			return;
-
-		P_SetTarget(&mo->target, NULL);
-
-		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
-		// scan the thinkers to find the runaway point
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		}
+		case MT_FANG:
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type == MT_BOSSFLYPOINT)
+			if (mo->tracer)
 			{
-				// If this one's closer then the last one, go for it.
-				if (!mo->target ||
-					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
-					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
-						P_SetTarget(&mo->target, mo2);
-				// Otherwise... Don't!
+				var1 = var2 = 0;
+				A_Boss5Jump(mo);
+				mo->momx = ((16 - 1)*mo->momx)/16;
+				mo->momy = ((16 - 1)*mo->momy)/16;
+				if (!(mo->flags2 & MF2_AMBUSH))
+				{
+					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
+					const fixed_t speed = 64*FRACUNIT;
+					mobj_t *pole = P_SpawnMobj(
+						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->floorz + 4*FRACUNIT,
+						MT_FSGNB);
+					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
+						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
+						pole->z + 256*FRACUNIT,
+						MT_FSGNA));
+					pole->angle = mo->tracer->angle;
+					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
+					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+					pole->tracer->momx = pole->momx;
+					pole->tracer->momy = pole->momy;
+				}
 			}
+			else
+			{
+				P_SetObjectMomZ(mo, 10*FRACUNIT, false);
+				mo->flags |= MF_NOGRAVITY;
+			}
+			mo->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+			return;
 		}
-
-		mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
-		mo->flags |= MF_NOCLIPHEIGHT;
-
-		if (mo->target)
+		default: //eggmobiles
 		{
-			mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-			mo->flags2 |= MF2_BOSSFLEE;
-			mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			// Stop exploding and prepare to run.
+			P_SetMobjState(mo, mo->info->xdeathstate);
+			if (P_MobjWasRemoved(mo))
+				return;
+
+			P_SetTarget(&mo->target, NULL);
+
+			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+			// scan the thinkers to find the runaway point
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type == MT_BOSSFLYPOINT)
+				{
+					// If this one's closer then the last one, go for it.
+					if (!mo->target ||
+						P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
+						P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
+							P_SetTarget(&mo->target, mo2);
+					// Otherwise... Don't!
+				}
+			}
+
+			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
+			mo->flags |= MF_NOCLIPHEIGHT;
+
+			if (mo->target)
+			{
+				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
+				mo->flags2 |= MF2_BOSSFLEE;
+				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			}
+			else
+				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+			break;
 		}
-		else
-			mo->momz = FixedMul(2*FRACUNIT, mo->scale);
 	}
 
 	if (mo->type == MT_EGGMOBILE2)
@@ -11851,4 +11909,615 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
+}
+
+// Function: A_Boss5FindWaypoint
+//
+// Description: Finds the next waypoint in sequence and sets it as its tracer.
+//
+// var1 = if 1, always go to ambush-marked waypoint. if 2, go to MT_BOSSFLYPOINT.
+// var2 = unused
+//
+void A_Boss5FindWaypoint(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	boolean avoidcenter;
+	UINT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
+		return;
+#endif
+
+	avoidcenter = !actor->tracer || (actor->health == actor->info->damage+1);
+
+	if (locvar1 == 2) // look for the boss waypoint
+	{
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+				continue;
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
+		}
+		if (i == nummapthings)
+			return; // no boss flypoints found
+	}
+	else if (locvar1 == 1) // always go to ambush-marked waypoint
+	{
+		if (avoidcenter)
+			goto nowaypoints; // if we can't go the center, why on earth are we doing this?
+
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				P_SetTarget(&actor->tracer, mapthings[i].mobj);
+				break;
+			}
+		}
+
+		if (i == nummapthings)
+			goto nowaypoints;
+	}
+	else // locvar1 == 0
+	{
+		fixed_t hackoffset = P_MobjFlip(actor)*56*FRACUNIT;
+		INT32 numwaypoints = 0;
+		mobj_t **waypoints;
+		INT32 key;
+
+		actor->z += hackoffset;
+
+		// first, count how many waypoints we have
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+				continue;
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
+			numwaypoints++;
+		}
+
+		// players also count as waypoints apparently
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				numwaypoints++;
+			}
+		}
+
+		if (!numwaypoints)
+		{
+			// restore z position
+			actor->z -= hackoffset;
+			goto nowaypoints; // no waypoints :(
+		}
+
+		// allocate the table and reset count to zero
+		waypoints = Z_Calloc(sizeof(*waypoints)*numwaypoints, PU_STATIC, NULL);
+		numwaypoints = 0;
+
+		// now find them again and add them to the table!
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+			{
+				mapthings[i].mobj->reactiontime--;
+				continue;
+			}
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
+			waypoints[numwaypoints++] = mapthings[i].mobj;
+		}
+
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				waypoints[numwaypoints++] = players[i].mo;
+			}
+		}
+
+		// restore z position
+		actor->z -= hackoffset;
+
+		if (!numwaypoints)
+		{
+			Z_Free(waypoints); // free table
+			goto nowaypoints; // ???
+		}
+
+		key = P_RandomKey(numwaypoints);
+
+		P_SetTarget(&actor->tracer, waypoints[key]);
+		if (actor->tracer->type == MT_FANGWAYPOINT)
+			actor->tracer->reactiontime = numwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
+		Z_Free(waypoints); // free table
+	}
+
+	// now face the tracer you just set!
+	A_FaceTracer(actor);
+	return;
+
+nowaypoints:
+	// no waypoints at all, guess the mobj has to disappear
+	if (actor->health)
+		P_KillMobj(actor, NULL, NULL, 0);
+	else
+		P_RemoveMobj(actor);
+	return;
+}
+
+// Function: A_DoNPCSkid
+//
+// Description: Something that looks like a player is skidding.
+//
+// var1 = state to change to upon being slow enough
+// var2 = minimum speed
+//
+void A_DoNPCSkid(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x, y, z;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCSkid", actor))
+		return;
+#endif
+
+	x = actor->x;
+	y = actor->y;
+	z = actor->z;
+
+	if (!locvar2)
+		locvar2 = FRACUNIT/2;
+
+	if ((FixedHypot(actor->momx, actor->momy) < locvar2)
+	|| !P_TryMove(actor, actor->x + actor->momx, actor->y + actor->momy, false))
+	{
+		actor->momx = actor->momy = 0;
+		P_SetMobjState(actor, locvar1);
+		return;
+	}
+	else
+	{
+		actor->momx = (2*actor->momx)/3;
+		actor->momy = (2*actor->momy)/3;
+	}
+
+	P_TeleportMove(actor, x, y, z);
+
+	// Spawn a particle every 3 tics.
+	if (!(leveltime % 3))
+	{
+		mobj_t *particle = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_SPINDUST);
+		particle->tics = 10;
+
+		P_SetScale(particle, 2*actor->scale/3);
+		particle->destscale = actor->scale;
+		P_SetObjectMomZ(particle, FRACUNIT, false);
+	}
+}
+
+// Function: A_DoNPCPain
+//
+// Description: Something that looks like a player was hit, put them in pain.
+//
+// var1 = If zero, always fling the same amount.
+//        Otherwise, slowly reduce the vertical
+//        and horizontal speed to the base value
+//        multiplied by this the more damage is done.
+// var2 = If zero, use default fling values.
+//        Otherwise, vertical and horizontal speed
+//        will be multiplied by this.
+//
+void A_DoNPCPain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t vspeed = 0;
+	fixed_t hspeed = FixedMul(4*FRACUNIT, actor->scale);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCPain", actor))
+		return;
+#endif
+
+	actor->flags &= ~(MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT);
+
+	var1 = var2 = 0;
+	A_Pain(actor);
+
+	actor->z += P_MobjFlip(actor);
+
+	if (actor->eflags & MFE_UNDERWATER)
+		vspeed = FixedDiv(10511*FRACUNIT,2600*FRACUNIT);
+	else
+		vspeed = FixedDiv(69*FRACUNIT,10*FRACUNIT);
+
+	if (actor->target)
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x + actor->target->momx, actor->target->y + actor->target->momy);
+
+	if (locvar1)
+	{
+		if (!actor->info->spawnhealth)
+			return; // there's something very wrong here if you're using this action on something with no starting health
+		locvar1 += ((FRACUNIT - locvar1)/actor->info->spawnhealth)*actor->health;
+		hspeed = FixedMul(hspeed, locvar1);
+		vspeed = FixedMul(vspeed, locvar1);
+	}
+
+	if (locvar2)
+	{
+		hspeed = FixedMul(hspeed, locvar2);
+		vspeed = FixedMul(vspeed, locvar2);
+	}
+
+	P_SetObjectMomZ(actor, vspeed, false);
+	P_InstaThrust(actor, actor->angle, -hspeed);
+}
+
+// Function: A_PrepareRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = value to set extravalue2 to
+// var2 = unused
+//
+void A_PrepareRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_PrepareRepeat", actor))
+		return;
+#endif
+
+	actor->extravalue2 = locvar1;
+}
+
+// Function: A_Boss5ExtraRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = maximum value to setextravalue2 to (normally)
+// var2 = pinch annoyance
+//
+void A_Boss5ExtraRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 calc;
+	INT32 locspawn;
+	INT32 lochealth;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5ExtraRepeat", actor))
+		return;
+#endif
+
+	if (actor->extravalue2 > 0 && !(actor->flags2 & MF2_FRET))
+		return;
+
+	locspawn = actor->info->spawnhealth - actor->info->damage;
+	lochealth = actor->health - actor->info->damage;
+
+	if (locspawn <= 0 || lochealth <= 0)
+		calc = locvar1;
+	else
+		calc = (locvar1*(locspawn - lochealth))/locspawn;
+
+	if (calc > 2)
+		actor->extravalue2 = 1 + calc/2 + P_RandomKey(calc/2);
+	else
+		actor->extravalue2 = 1 + calc;
+
+	if (lochealth <= 0)
+		actor->extravalue2 += locvar2;
+}
+
+// Function: A_Boss5Calm
+//
+// Description: Simple way to disable MF2_FRET (and enable MF_SHOOTABLE the first time it's called)
+//
+// var1 = unused
+// var2 = unused
+//
+void A_Boss5Calm(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5Calm", actor))
+		return;
+#endif
+	actor->flags |= MF_SHOOTABLE;
+	actor->flags2 &= ~MF2_FRET;
+}
+
+// Function: A_Boss5CheckOnGround
+//
+// Description: Ground checker.
+//
+// var1 = state to change to upon hitting ground.
+// var2 = state to change to upon hitting ground if health == pinchhealth, assuming it exists
+//
+void A_Boss5CheckOnGround(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckOnGround", actor))
+		return;
+#endif
+
+	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| (actor->eflags & MFE_VERTICALFLIP && actor->z + actor->height >= actor->ceilingz))
+	{
+		if (locvar2 && (!actor->health || (actor->health == actor->info->damage && !(actor->flags2 & MF2_STRONGBOX))))
+			P_SetMobjState(actor, locvar2);
+		else
+			P_SetMobjState(actor, locvar1);
+	}
+
+	if (actor->tracer && P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y) < 2*actor->radius)
+	{
+		actor->momx = (4*actor->momx)/5;
+		actor->momy = (4*actor->momy)/5;
+	}
+}
+
+// Function: A_Boss5CheckFalling
+//
+// Description: Falling checker.
+//
+// var1 = state to change to when hitting ground.
+// var2 = state to change to when falling.
+//
+void A_Boss5CheckFalling(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckFalling", actor))
+		return;
+#endif
+
+	if (actor->health && actor->extravalue2 > 1)
+	{
+		var1 = locvar1;
+		var2 = 0;
+		A_Boss5CheckOnGround(actor);
+		return;
+	}
+
+	if (P_MobjFlip(actor)*actor->momz <= 0)
+		P_SetMobjState(actor, locvar2);
+}
+
+// Function: A_Boss5PinchShot
+//
+// Description: Fires a missile directly upwards if in pinch.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5PinchShot(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t zoffset;
+	mobj_t *missile;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5PinchShot", actor))
+		return;
+#endif
+
+	if (actor->health > actor->info->damage)
+		return;
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		zoffset = actor->z + actor->height - FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+	else
+		zoffset = actor->z + FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+
+	missile = P_SpawnPointMissile(actor, actor->x, actor->y, zoffset, locvar1,
+										actor->x, actor->y, zoffset);
+
+	if (!missile)
+		return;
+
+	missile->momx = missile->momy = 0;
+	missile->momz = P_MobjFlip(actor)*missile->info->speed/2;
+}
+
+// Function: A_Boss5MakeItRain
+//
+// Description: Pinch crisis.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5MakeItRain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 offset = (48 + locvar2)<<16; // upper 16 bits, not fixed_t!
+	INT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5MakeItRain", actor))
+		return;
+#endif
+
+	actor->flags2 |= MF2_STRONGBOX;
+
+	var1 = locvar1;
+	var2 = offset + 90;
+	A_TrapShot(actor);
+
+	for (i = 0; i < 8; i++)
+	{
+		actor->angle += ANGLE_45;
+
+		var1 = locvar1;
+		var2 = offset + (i & 1) ? 55 : 70;
+		A_TrapShot(actor);
+	}
+
+	actor->extravalue2 = 0;
+}
+
+// Function: A_LookForBetter
+//
+// Description: A_Look, except it finds a better target in multiplayer, and doesn't lose the target in singleplayer.
+//
+// var1 lower 16 bits = 0 - looks only in front, 1 - looks all around
+// var1 upper 16 bits = distance limit
+// var2 = unused
+//
+void A_LookForBetter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LookForBetter", actor))
+		return;
+#endif
+
+	P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale));
+	A_FaceTarget(actor);
+}
+
+/* * Spawns a dust ring.
+  *	The dust ring behaves slightly randomly so it doesn't look too uniform.
+  *
+  * \param mobjtype Thing type to make a ring of.
+  * \param div Amount of things to spawn on the ring.
+  * \param x Center X coordinates.
+  * \param y Center Y coordinates.
+  * \param z Center Z coordinates.
+  * \param radius Radius.
+  * \param speed Additional thrust on particles.
+  * \param scale Scale.
+  */
+static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t speed, fixed_t scale)
+{
+	angle_t ang = FixedAngle(FixedDiv(360*FRACUNIT, div*FRACUNIT));  //(ANGLE_180/div)*2;
+	UINT32 i;
+
+	// it turned out the radius was effectively nullified thanks to errors in the original script
+	// BUT people preferred how it looked before I "fixed" it, so I got rid of the radius calculations altogether
+	// this was a bit of a mess to sort out, but at least it's probably somewhat fine now?
+	// -- Monster Iestyn (21/05/19)
+	(void)radius;
+
+	for (i = 0; i < div; i++)
+	{
+		mobj_t *dust = P_SpawnMobj(
+			x, //+ FixedMul(radius, FINECOSINE((ang*i) >> ANGLETOFINESHIFT)),
+			y, //+ FixedMul(radius, FINESINE((ang*i) >> ANGLETOFINESHIFT)),
+			z,
+			mobjtype
+			);
+
+		dust->angle = ang*i + ANGLE_90;
+		P_SetScale(dust, scale);
+		dust->destscale = FixedMul(4*FRACUNIT + P_RandomFixed(), scale);
+		dust->scalespeed = scale/24;
+		P_Thrust(dust, ang*i, speed + FixedMul(P_RandomFixed(), scale));
+		dust->momz = P_SignedRandom()*scale/64;
+	}
+}
+
+// Function: A_Boss5BombExplode
+//
+// Description: Boss 5's bomb exploding.
+//
+// var1 = Thing type to spawn as dust
+// var2 = unused
+//
+void A_Boss5BombExplode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5BombExplode", actor))
+		return;
+#endif
+
+	// The original Lua script did not use |= to add flags but just set these flags exactly apparently?
+	// (I may modify this later)
+	// -- Monster Iestyn (21/05/19)
+	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	actor->flags2 = MF2_EXPLOSION;
+
+	if (actor->target)
+		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
+
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, actor->scale);
+	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
+	// the above does not exist, so we set the quake values directly instead
+	quake.intensity = 9*actor->scale;
+	quake.time = TICRATE/6;
+	// the following quake values have no effect atm? ah well, may as well set them anyway
+	{
+		mappoint_t q_epicenter = {actor->x, actor->y, actor->z};
+		quake.epicenter = &q_epicenter;
+	}
+	quake.radius = 20*actor->radius;
 }

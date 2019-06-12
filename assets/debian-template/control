@@ -1,15 +1,15 @@
 # SRB2-data Debian package control file.
 
-Source: srb2-data
+Source: ${PACKAGE_NAME}-data
 Section: games
 Priority: extra
-Maintainer: Sonic Team Junior <stjr@srb2.org>
+Maintainer: ${PACKAGE_GROUP_NAME_EMAIL}
 Build-Depends: debhelper (>= 7.0.50~),
  wget
 Standards-Version: 3.8.4
-Homepage: http://www.srb2.org
+Homepage: ${PACKAGE_WEBSITE}
 
-Package: srb2-data
+Package: ${PACKAGE_NAME}-data
 Architecture: all
 Description: A cross-platform 3D Sonic fangame
  Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
