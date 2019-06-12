@@ -263,6 +263,7 @@ void A_CanarivoreGas();
 void A_KillSegments();
 void A_SnapperSpawn();
 void A_SnapperThinker();
+void A_SaloonDoorSpawn();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -499,6 +500,8 @@ typedef enum sprite
 	SPR_REMT, // TNT proximity shell
 	SPR_TAZD, // Dust devil
 	SPR_ADST, // Arid dust
+	SPR_NON2, // Saloon door thinker
+	SPR_SALD, // Saloon door
 	SPR_TRAE, // Train cameo locomotive
 	SPR_TRAI, // Train cameo wagon
 	SPR_STEA, // Train steam
@@ -2546,6 +2549,10 @@ typedef enum state
 	S_ARIDDUST2,
 	S_ARIDDUST3,
 
+	// Saloon door
+	S_SALOONDOOR,
+	S_SALOONDOORTHINKER,
+
 	// Train cameo
 	S_TRAINCAMEOSPAWNER_1,
 	S_TRAINCAMEOSPAWNER_2,
@@ -4279,6 +4286,8 @@ typedef enum mobj_type
 	MT_DUSTDEVIL,
 	MT_DUSTLAYER,
 	MT_ARIDDUST,
+	MT_SALOONDOOR,
+	MT_SALOONDOORTHINKER,
 	MT_TRAINCAMEOSPAWNER,
 	MT_TRAINSEG,
 	MT_TRAINDUSTSPAWNER,

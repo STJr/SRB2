@@ -2405,6 +2405,7 @@ static actionpointer_t actionpointers[] =
 	{{A_KillSegments},           "A_KILLSEGMENTS"},
 	{{A_SnapperSpawn},           "A_SNAPPERSPAWN"},
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
+	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5785,6 +5786,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDDUST2",
 	"S_ARIDDUST3",
 
+	// Saloon door
+	"S_SALOONDOOR",
+	"S_SALOONDOORTHINKER",
+
 	// Train cameo
 	"S_TRAINCAMEOSPAWNER_1",
 	"S_TRAINCAMEOSPAWNER_2",
@@ -7498,6 +7503,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_DUSTDEVIL",
 	"MT_DUSTLAYER",
 	"MT_ARIDDUST",
+	"MT_SALOONDOOR",
+	"MT_SALOONDOORTHINKER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
@@ -8500,6 +8507,7 @@ struct {
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
+	{"CR_MINECART",CR_MINECART},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

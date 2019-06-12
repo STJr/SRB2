@@ -292,6 +292,7 @@ void A_CanarivoreGas(mobj_t *actor);
 void A_KillSegments(mobj_t *actor);
 void A_SnapperSpawn(mobj_t *actor);
 void A_SnapperThinker(mobj_t *actor);
+void A_SaloonDoorSpawn(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -13460,4 +13461,55 @@ void A_SnapperThinker(mobj_t *actor)
 	}
 
 	P_SnapperLegPlace(actor);
+}
+
+// Function: A_SaloonDoorSpawn
+//
+// Description: Spawns a saloon door.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SaloonDoorSpawn(mobj_t *actor)
+{
+	angle_t ang = actor->angle;
+	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	INT32 d = 48;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	mobj_t *door;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
+		return;
+#endif
+
+	//Front
+	door = P_SpawnMobj(x + c*d, y + s*d, z, MT_SALOONDOOR);
+	door->angle = ang + ANGLE_180;
+
+	// Origin angle
+	door->extravalue1 = AngleFixed(door->angle);
+
+	// Angular speed
+	door->extravalue2 = 0;
+
+	// Origin door
+	door->tracer = actor;
+
+	//Back
+	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
+	door->angle = ang;
+
+	// Origin angle
+	door->extravalue1 = AngleFixed(door->angle);
+
+	// Angular speed
+	door->extravalue2 = 0;
+
+	// Origin door
+	door->tracer = actor;
 }

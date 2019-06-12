@@ -8467,6 +8467,34 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->flags2 |= MF2_AMBUSH;
 					break;
 				}
+			case MT_SALOONDOOR:
+				{
+					fixed_t x = mobj->tracer->x;
+					fixed_t y = mobj->tracer->y;
+					fixed_t z = mobj->tracer->z;
+					angle_t oang = FixedAngle(mobj->extravalue1);
+					angle_t fa = (oang >> ANGLETOFINESHIFT) & FINEMASK;
+					fixed_t c0 = -96*FINECOSINE(fa);
+					fixed_t s0 = -96*FINESINE(fa);
+					angle_t fma;
+					fixed_t c, s;
+
+					// Adjust angular speed
+					fixed_t da = AngleFixed(mobj->angle - oang);
+					if (da > 180*FRACUNIT)
+						da -= 360*FRACUNIT;
+					mobj->extravalue2 = 8*(mobj->extravalue2 - da/32)/9;
+
+					// Update angle
+					mobj->angle += FixedAngle(mobj->extravalue2);
+
+					// Update position
+					fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
+					c = 48*FINECOSINE(fma);
+					s = 48*FINESINE(fma);
+					P_TeleportMove(mobj, x + c0 + c, y + s0 + s, z);
+					break;
+				}
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{

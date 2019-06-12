@@ -256,6 +256,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"REMT", // TNT proximity shell
 	"TAZD", // Dust devil
 	"ADST", // Arid dust
+	"NON2", // Saloon door thinker
+	"SALD", // Saloon door
 	"TRAE", // Train cameo locomotive
 	"TRAI", // Train cameo wagon
 	"STEA", // Train steam
@@ -2422,6 +2424,10 @@ state_t states[NUMSTATES] =
 	{SPR_ADST, 0|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST1
 	{SPR_ADST, 3|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST2
 	{SPR_ADST, 6|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST3
+
+	// Saloon door
+	{SPR_SALD, 0|FF_PAPERSPRITE, -1, {NULL},              0, 0, S_NULL}, // S_SALOONDOOR
+	{SPR_NON2, 0,                -1, {A_SaloonDoorSpawn}, 0, 0, S_NULL}, // S_SALONDOORTHINKER
 
 	// Train cameo
 	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_TRAINCAMEOSPAWNER_2}, // S_TRAINCAMEOSPAWNER_1
@@ -11831,6 +11837,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_SALOONDOOR
+		-1,             // doomednum
+		S_SALOONDOOR,   // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		48*FRACUNIT,    // radius
+		160*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k90,      // activesound
+		MF_SOLID|MF_NOGRAVITY|MF_RUNSPAWNFUNC|MF_PAPERCOLLISION, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_SALOONDOORTHINKER
+		1221,           // doomednum
+		S_SALOONDOORTHINKER,   // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		96*FRACUNIT,    // radius
+		160*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
 	},
 

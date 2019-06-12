@@ -818,6 +818,21 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (thing->type == MT_SALOONDOOR && tmthing->player)
+	{
+		if ((tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->player->mo->tracer && !P_MobjWasRemoved(tmthing->player->mo->tracer)))
+		{
+			fixed_t dx = tmthing->momx;
+			fixed_t dy = tmthing->momy;
+			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
+			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
+			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
+			S_StartSound(tmthing, thing->info->activesound);
+			thing->extravalue2 += FixedMul(s, dm);
+			return true;
+		}
+	}
+
 	if (thing->type == MT_TNTBARREL && tmthing->player)
 	{
 		if (tmthing->momz < 0)
