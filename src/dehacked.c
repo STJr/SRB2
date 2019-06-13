@@ -2406,6 +2406,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnapperSpawn},           "A_SNAPPERSPAWN"},
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
+	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5786,6 +5787,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDDUST2",
 	"S_ARIDDUST3",
 
+	// Minecart
+	"S_MINECART_IDLE",
+	"S_MINECART_DTH1",
+	"S_MINECARTEND",
+	"S_MINECARTSEG_FRONT",
+	"S_MINECARTSEG_BACK",
+	"S_MINECARTSEG_LEFT",
+	"S_MINECARTSEG_RIGHT",
+	"S_MINECARTSIDEMARK1",
+	"S_MINECARTSIDEMARK2",
+	"S_MINECARTSPARK",
+
 	// Saloon door
 	"S_SALOONDOOR",
 	"S_SALOONDOORTHINKER",
@@ -7503,12 +7516,19 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_DUSTDEVIL",
 	"MT_DUSTLAYER",
 	"MT_ARIDDUST",
+	"MT_MINECART",
+	"MT_MINECARTSPAWNER",
+	"MT_MINECARTEND",
+	"MT_MINECARTENDSOLID",
+	"MT_MINECARTSIDEMARK",
+	"MT_MINECARTSPARK",
 	"MT_SALOONDOOR",
 	"MT_SALOONDOORTHINKER",
 	"MT_TRAINCAMEOSPAWNER",
 	"MT_TRAINSEG",
 	"MT_TRAINDUSTSPAWNER",
 	"MT_TRAINSTEAMSPAWNER",
+	"MT_MINECARTSWITCHPOINT",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",

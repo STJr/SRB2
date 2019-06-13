@@ -1709,6 +1709,53 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			special->momz = toucher->momz;
 			return;
 
+		case MT_MINECARTSPAWNER:
+			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			{
+				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+				P_SetTarget(&mcart->target, toucher);
+				mcart->angle = toucher->angle = player->drawangle = special->angle;
+				mcart->friction = FRACUNIT;
+
+				P_ResetPlayer(player);
+				player->powers[pw_carry] = CR_MINECART;
+				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetTarget(&toucher->tracer, mcart);
+				toucher->momx = toucher->momy = toucher->momz = 0;
+
+				special->fuse = 3*TICRATE;
+				special->flags2 |= MF2_DONTDRAW;
+			}
+			return;
+
+		case MT_MINECARTEND:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				fixed_t maxz = max(toucher->z, special->z + 35*special->scale);
+
+				toucher->momx = toucher->tracer->momx/2;
+				toucher->momy = toucher->tracer->momy/2;
+				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
+				P_ResetPlayer(player);
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetMobjState(toucher, S_PLAY_FALL);
+				P_SetTarget(&toucher->tracer->target, NULL);
+				P_KillMobj(toucher->tracer, toucher, special, 0);
+				P_SetTarget(&toucher->tracer, NULL);
+				player->powers[pw_carry] = CR_NONE;
+				P_TeleportMove(toucher, special->x, special->y, maxz);
+			}
+			return;
+
+		case MT_MINECARTSWITCHPOINT:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				boolean destambush = special->flags & MF2_AMBUSH;
+				if ((toucher->tracer->angle - special->angle + ANGLE_90) >= ANGLE_180)
+					destambush ^= MF2_AMBUSH;
+				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
+			}
+			return;
 		default: // SOC or script pickup
 			if (player->bot)
 				return;
@@ -2554,6 +2601,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		case MT_EGGTRAP:
 			// Time for birdies! Yaaaaaaaay!
 			target->fuse = TICRATE*2;
+			break;
+
+		case MT_MINECART:
+			A_KillSegments(target); // found in green snapper's code - the minecart segments need hardcode-side support to flash while they have a nonzero fuse
+			A_Scream(target);
+			P_SetMobjState(target, S_TNTBARREL_EXPL3);
+			target->momx = target->momy = target->momz = 0;
 			break;
 
 		case MT_PLAYER:

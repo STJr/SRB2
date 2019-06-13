@@ -8495,6 +8495,16 @@ void P_MobjThinker(mobj_t *mobj)
 					P_TeleportMove(mobj, x + c0 + c, y + s0 + s, z);
 					break;
 				}
+			case MT_MINECARTSPAWNER:
+				if (!mobj->fuse || mobj->fuse > TICRATE)
+					break;
+				if (mobj->fuse == 2)
+				{
+					mobj->fuse = 0;
+					break;
+				}
+				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -9244,6 +9254,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 		case MT_TNTBARREL:
 			mobj->momx = 1; //stack hack
+			break;
+		case MT_MINECARTEND:
+			mobj->tracer = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID);
+			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
 		default:
 			break;

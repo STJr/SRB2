@@ -256,6 +256,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"REMT", // TNT proximity shell
 	"TAZD", // Dust devil
 	"ADST", // Arid dust
+	"MCRT", // Minecart
+	"MCSP", // Minecart spark
 	"NON2", // Saloon door thinker
 	"SALD", // Saloon door
 	"TRAE", // Train cameo locomotive
@@ -2424,6 +2426,18 @@ state_t states[NUMSTATES] =
 	{SPR_ADST, 0|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST1
 	{SPR_ADST, 3|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST2
 	{SPR_ADST, 6|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST3
+
+	// Minecart
+	{SPR_NULL, 0,                 1, {NULL},                 0, 0, S_MINECART_IDLE}, // S_MINECART_IDLE
+	{SPR_NULL, 0,                45, {NULL},                 0, 0, S_NULL},          // S_MINECART_DTH1
+	{SPR_MCRT, 8|FF_PAPERSPRITE, -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTEND
+	{SPR_MCRT, 0|FF_PAPERSPRITE, -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTSEG_FRONT
+	{SPR_MCRT, 1|FF_PAPERSPRITE, -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTSEG_BACK
+	{SPR_MCRT, 2|FF_PAPERSPRITE, -1, {NULL},                 2, 3, S_NULL},          // S_MINECARTSEG_LEFT
+	{SPR_MCRT, 5|FF_PAPERSPRITE, -1, {NULL},                 2, 3, S_NULL},          // S_MINECARTSEG_RIGHT
+	{SPR_LCKN, 2|FF_FULLBRIGHT,   2, {NULL},                 0, 0, S_NULL},          // S_MINECARTSIDEMARK1
+	{SPR_LCKN, 0|FF_FULLBRIGHT,   2, {NULL},                 0, 0, S_NULL},          // S_MINECARTSIDEMARK2
+	{SPR_MCSP, FF_FULLBRIGHT,     1, {A_MinecartSparkThink}, 0, 0, S_MINECARTSPARK}, // S_MINECARTSPARK
 
 	// Saloon door
 	{SPR_SALD, 0|FF_PAPERSPRITE, -1, {NULL},              0, 0, S_NULL}, // S_SALOONDOOR
@@ -11840,6 +11854,168 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{          // MT_MINECART
+		-1,             // doomednum
+		S_MINECART_IDLE,// spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		24*FRACUNIT,    // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_statu2,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_MINECART_DTH1,// deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k59,      // deathsound
+		20*FRACUNIT,    // speed
+		22*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_s3k76,      // activesound
+		MF_PUSHABLE,    // flags
+		MT_MINECARTSIDEMARK // raisestate
+	},
+
+	{          // MT_MINECARTSPAWNER
+		1219,           // doomednum
+		S_INVISIBLE,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		22*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL,     // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_MINECARTEND
+		1220,           // doomednum
+		S_MINECARTEND,  // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		160*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL,     // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_MINECARTENDSOLID
+		-1,             // doomednum
+		S_INVISIBLE,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_PAPERCOLLISION, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_MINECARTSIDEMARK
+		-1,             // doomednum
+		S_MINECARTSIDEMARK1, // spawnstate
+		1,              // spawnhealth
+		S_MINECARTSIDEMARK2, // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		22*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_MINECARTSPARK
+		-1,             // doomednum
+		S_MINECARTSPARK,// spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		2*FRACUNIT,     // radius
+		2*FRACUNIT,     // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_BOUNCE|MF_NOCLIPTHING|MF_GRENADEBOUNCE, // flags
+		S_NULL          // raisestate
+	},
+
 	{          // MT_SALOONDOOR
 		-1,             // doomednum
 		S_SALOONDOOR,   // spawnstate
@@ -11999,6 +12175,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP, // flags
+		S_NULL          // raisestate
+	},
+
+	{          // MT_MINECARTSWITCHPOINT
+		1229,           // doomednum
+		S_INVISIBLE,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		FRACUNIT,       // radius
+		160*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

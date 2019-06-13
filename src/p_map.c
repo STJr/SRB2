@@ -818,6 +818,22 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (tmthing->type == MT_MINECART)
+	{
+		//height check
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !(thing->health))
+			return true;
+
+		if (thing->type == MT_TNTBARREL)
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+		else if ((thing->flags & MF_MONITOR) || (thing->flags & MF_ENEMY))
+		{
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			if (tmthing->momz*P_MobjFlip(tmthing) < 0)
+				tmthing->momz = abs(tmthing->momz)*P_MobjFlip(tmthing);
+		}
+	}
+
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
 		if ((tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->player->mo->tracer && !P_MobjWasRemoved(tmthing->player->mo->tracer)))
@@ -1456,7 +1472,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
-		else if (thing->flags & MF_SPRING)
+		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)

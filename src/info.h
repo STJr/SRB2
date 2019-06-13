@@ -264,6 +264,7 @@ void A_KillSegments();
 void A_SnapperSpawn();
 void A_SnapperThinker();
 void A_SaloonDoorSpawn();
+void A_MinecartSparkThink();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -500,6 +501,8 @@ typedef enum sprite
 	SPR_REMT, // TNT proximity shell
 	SPR_TAZD, // Dust devil
 	SPR_ADST, // Arid dust
+	SPR_MCRT, // Minecart
+	SPR_MCSP, // Minecart spark
 	SPR_NON2, // Saloon door thinker
 	SPR_SALD, // Saloon door
 	SPR_TRAE, // Train cameo locomotive
@@ -2549,6 +2552,18 @@ typedef enum state
 	S_ARIDDUST2,
 	S_ARIDDUST3,
 
+	// Minecart
+	S_MINECART_IDLE,
+	S_MINECART_DTH1,
+	S_MINECARTEND,
+	S_MINECARTSEG_FRONT,
+	S_MINECARTSEG_BACK,
+	S_MINECARTSEG_LEFT,
+	S_MINECARTSEG_RIGHT,
+	S_MINECARTSIDEMARK1,
+	S_MINECARTSIDEMARK2,
+	S_MINECARTSPARK,
+
 	// Saloon door
 	S_SALOONDOOR,
 	S_SALOONDOORTHINKER,
@@ -4286,12 +4301,19 @@ typedef enum mobj_type
 	MT_DUSTDEVIL,
 	MT_DUSTLAYER,
 	MT_ARIDDUST,
+	MT_MINECART,
+	MT_MINECARTSPAWNER,
+	MT_MINECARTEND,
+	MT_MINECARTENDSOLID,
+	MT_MINECARTSIDEMARK,
+	MT_MINECARTSPARK,
 	MT_SALOONDOOR,
 	MT_SALOONDOORTHINKER,
 	MT_TRAINCAMEOSPAWNER,
 	MT_TRAINSEG,
 	MT_TRAINDUSTSPAWNER,
 	MT_TRAINSTEAMSPAWNER,
+	MT_MINECARTSWITCHPOINT,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,

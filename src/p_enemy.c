@@ -293,6 +293,7 @@ void A_KillSegments(mobj_t *actor);
 void A_SnapperSpawn(mobj_t *actor);
 void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
+void A_MinecartSparkThink(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -13512,4 +13513,41 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 
 	// Origin door
 	door->tracer = actor;
+}
+
+// Function: A_MinecartSparkThink
+//
+// Description: Thinker for the minecart spark.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_MinecartSparkThink(mobj_t *actor)
+{
+	fixed_t dx = actor->momx;
+	fixed_t dy = actor->momy;
+	fixed_t dz, dm;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MinecartSparkThink", actor))
+		return;
+#endif
+
+	if (actor->momz == 0 && P_IsObjectOnGround(actor))
+		actor->momz = P_RandomRange(2, 4)*FRACUNIT;
+
+	dz = actor->momz;
+	dm = FixedHypot(FixedHypot(dx, dy), dz);
+	dx = FixedDiv(dx, dm);
+	dy = FixedDiv(dy, dm);
+	dz = FixedDiv(dz, dm);
+
+	for (i = 1; i <= 8; i++)
+	{
+		mobj_t *trail = P_SpawnMobj(actor->x - dx*i, actor->y - dy*i, actor->z - dz*i, MT_PARTICLE);
+		trail->tics = 2;
+		trail->sprite = actor->sprite;
+		P_SetScale(trail, trail->scale/4);
+	}
 }
