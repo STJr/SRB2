@@ -5167,7 +5167,7 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 	if (abs(thing->z - minus->z) > minus->height)
 		return true;
 
-	minus->tracer = thing;
+	P_SetTarget(&minus->tracer, thing);
 	minus->tracer->flags &= ~MF_PUSHABLE;
 
 	return true;
@@ -5253,7 +5253,7 @@ void A_MinusDigging(mobj_t *actor)
 		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
 			actor->tracer->z = mz;
 		else
-			actor->tracer = NULL;
+			P_SetTarget(&actor->tracer, NULL);
 	}
 }
 
@@ -12936,8 +12936,8 @@ void A_DustDevilThink(mobj_t *actor)
 			layer->extravalue1 = TICRATE * 3;
 
 			//Chain them
-			layer->tracer = actor->tracer;
-			actor->tracer = layer;
+			P_SetTarget(&layer->tracer, actor->tracer);
+			P_SetTarget(&actor->tracer, layer);
 		}
 	}
 
@@ -13314,14 +13314,14 @@ void A_SnapperSpawn(mobj_t *actor)
 
 	// It spawns 1 head.
 	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
-	ptr->tracer = seg;
+	P_SetTarget(&ptr->tracer, seg);
 	ptr = seg;
 
 	// It spawns 4 legs which will be handled in the thinker function.
 	for (i = 1; i <= 4; i++)
 	{
 		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
-		ptr->tracer = seg;
+		P_SetTarget(&ptr->tracer, seg);
 		ptr = seg;
 
 		// The legs' base offsets are stored as extravalues, as relative coordinates in xy space.
