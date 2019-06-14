@@ -6728,6 +6728,67 @@ static void P_KoopaThinker(mobj_t *koopa)
 	}
 }
 
+// Spawns and chains the minecart sides.
+static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
+{
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	mobj_t *prevseg = mobj;
+	mobj_t *seg;
+	UINT8 i;
+
+	for (i = 0; i < 4; i++)
+	{
+		seg = P_SpawnMobj(x, y, z, MT_PARTICLE);
+		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
+		if (i >= 2)
+			seg->extravalue1 = (i == 2) ? -18 : 18;
+		else
+		{
+			seg->extravalue2 = (i == 0) ? 24 : -24;
+			seg->cusval = -90;
+		}
+		if (mode)
+			seg->frame &= ~FF_ANIMATE;
+		P_SetTarget(&prevseg->tracer, seg);
+		prevseg = seg;
+	}
+}
+
+// Updates the chained segments.
+static void P_UpdateMinecartSegments(mobj_t *mobj)
+{
+	mobj_t *seg = mobj->tracer;
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	angle_t ang = mobj->angle;
+	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	INT32 dx, dy;
+	INT32 sang;
+
+	while (seg)
+	{
+		dx = seg->extravalue1;
+		dy = seg->extravalue2;
+		sang = seg->cusval;
+		P_TeleportMove(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
+		seg->angle = ang + FixedAngle(FRACUNIT*sang);
+		seg->flags2 = (seg->flags2 & ~MF2_DONTDRAW) | (mobj->flags2 & MF2_DONTDRAW);
+		seg = seg->tracer;
+	}
+}
+
+void P_HandleMinecartSegments(mobj_t *mobj)
+{
+	if (!mobj->tracer)
+		P_SpawnMinecartSegments(mobj, (mobj->type == MT_MINECART));
+	P_UpdateMinecartSegments(mobj);
+}
+
 //
 // P_MobjThinker
 //
@@ -8496,6 +8557,7 @@ void P_MobjThinker(mobj_t *mobj)
 					break;
 				}
 			case MT_MINECARTSPAWNER:
+				P_HandleMinecartSegments(mobj);
 				if (!mobj->fuse || mobj->fuse > TICRATE)
 					break;
 				if (mobj->fuse == 2)
@@ -8504,6 +8566,14 @@ void P_MobjThinker(mobj_t *mobj)
 					break;
 				}
 				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
+			case MT_MINECART:
+				// If player is ded, remove this minecart
+				if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health)
+				{
+					P_KillMobj(mobj, NULL, NULL, 0);
+					return;
+				}
 				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
