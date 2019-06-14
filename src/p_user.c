@@ -9927,7 +9927,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 			mobj_t *snax = P_GetAxis(sides[lines[lline].sidenum[0]].textureoffset >> FRACBITS);
 			if (!snax)
 				return NULL;
-			P_GetAxisPosition(x, y, snax, &ny, &nx, &nang, &dummy);
+			P_GetAxisPosition(x, y, snax, &nx, &ny, &nang, &dummy);
 			angdiff = nang - targetangle;
 			if (angdiff < ANG10/2 || angdiff > ANGLE_MAX - ANG10/2)
 			{
