@@ -6749,7 +6749,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 			seg->extravalue2 = (i == 0) ? 24 : -24;
 			seg->cusval = -90;
 		}
-		if (mode)
+		if (!mode)
 			seg->frame &= ~FF_ANIMATE;
 		P_SetTarget(&prevseg->tracer, seg);
 		prevseg = seg;

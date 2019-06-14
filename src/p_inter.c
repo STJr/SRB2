@@ -1750,8 +1750,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_MINECARTSWITCHPOINT:
 			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
 			{
-				boolean destambush = special->flags & MF2_AMBUSH;
-				if ((toucher->tracer->angle - special->angle + ANGLE_90) >= ANGLE_180)
+				mobjflag2_t destambush = special->flags2 & MF2_AMBUSH;
+				angle_t angdiff = toucher->tracer->angle - special->angle;
+				if (angdiff > ANGLE_90 && angdiff < ANGLE_270)
 					destambush ^= MF2_AMBUSH;
 				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
 			}

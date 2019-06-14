@@ -9768,7 +9768,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			fixed_t fofz = rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
+			fixed_t fofz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
 			if (abs(z - fofz) <= 40*FRACUNIT)
 			{
 				sec = &sectors[rover->secnum];
@@ -9782,31 +9782,28 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z)
 
 static size_t P_GetMinecartSpecialLine(sector_t *sec)
 {
-	size_t line = -1;
-
 	if (!sec)
 		return -1;
 
 	if (sec->tag != 0)
-		line = P_FindSpecialLineFromTag(16, sec->tag, -1);
+		return P_FindSpecialLineFromTag(16, sec->tag, -1);
 
 	// Also try for lines facing the sector itself, with tag 0.
-	if (line == -1)
 	{
 		UINT32 i;
 		for (i = 0; i < sec->linecount; i++)
 		{
 			line_t *li = sec->lines[i];
 			if (li->tag == 0 && li->special == 16 && li->frontsector == sec)
-				line = i;
+				return li - lines;
 		}
 	}
 
-	return line;
+	return -1;
 }
 
 // Get an axis of a certain ID number
-static mobj_t *P_GetAxis(UINT16 num)
+static mobj_t *P_GetAxis(INT32 num)
 {
 	thinker_t *th;
 	mobj_t *mobj;
@@ -9823,12 +9820,12 @@ static mobj_t *P_GetAxis(UINT16 num)
 			break;
 
 		// Skip if this axis isn't the one we want.
-		if (!mobj->spawnpoint || mobj->spawnpoint->options != num)
+		if (mobj->health != num)
 			continue;
 
 		return mobj;
 	}
-	CONS_Debug(DBG_GAMELOGIC, "P_GetAxis: Track segment %d is missing!\n", num);
+	CONS_Alert(CONS_WARNING, "P_GetAxis: Track segment %d is missing!\n", num);
 	return NULL;
 }
 
@@ -9861,17 +9858,11 @@ static void P_GetAxisPosition(fixed_t x, fixed_t y, mobj_t *amo, fixed_t *newx, 
 	}
 	else // Keep minecart to circle
 	{
-		fixed_t rad;
-		fixed_t distfactor;
+		fixed_t rad = amo->radius;
+		fixed_t distfactor = FixedDiv(rad, R_PointToDist2(ax, ay, x, y));
 
 		gr = R_PointToAngle2(ax, ay, x, y);
 		ang = gr + ANGLE_90;
-		if (amo->spawnpoint->angle < 16384) // Counterclockwise
-			rad = amo->spawnpoint->angle*FRACUNIT;
-		else // Clockwise
-			rad = (amo->spawnpoint->angle - 16384)*FRACUNIT;
-
-		distfactor = FixedDiv(rad, R_PointToDist2(ax, ay, x, y));
 		x = ax + FixedMul(x - ax, distfactor);
 		y = ay + FixedMul(y - ay, distfactor);
 	}
@@ -9934,6 +9925,8 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 			angle_t nang, dummy, angdiff;
 			mobj_t *mark;
 			mobj_t *snax = P_GetAxis(sides[lines[lline].sidenum[0]].textureoffset >> FRACBITS);
+			if (!snax)
+				return NULL;
 			P_GetAxisPosition(x, y, snax, &ny, &nx, &nang, &dummy);
 			angdiff = nang - targetangle;
 			if (angdiff < ANG10/2 || angdiff > ANGLE_MAX - ANG10/2)
@@ -9966,7 +9959,7 @@ static void P_MinecartThink(player_t *player)
 	mobj_t *minecart = player->mo->tracer;
 	angle_t fa;
 
-	if (!minecart || !P_MobjWasRemoved(minecart) || !minecart->health)
+	if (!minecart || P_MobjWasRemoved(minecart) || !minecart->health)
 	{
 		// Minecart died on you, so kill yourself.
 		P_KillMobj(player->mo, NULL, NULL, 0);
@@ -10045,6 +10038,12 @@ static void P_MinecartThink(player_t *player)
 			boolean jumped = false;
 			fixed_t currentSpeed;
 
+			if (!axis)
+			{
+				P_KillMobj(player->mo, NULL, NULL, 0);
+				return;
+			}
+
 			minecart->movefactor = 0;
 			P_ResetScore(player);
 			// Handle angle and position
@@ -10072,7 +10071,7 @@ static void P_MinecartThink(player_t *player)
 			// Sideways detection
 			if (minecart->flags2 & MF2_AMBUSH)
 			{
-				angle_t fa = minecart->angle;
+				angle_t fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 				fixed_t c = FINECOSINE(fa);
 				fixed_t s = FINESINE(fa);
 
@@ -10120,7 +10119,7 @@ static void P_MinecartThink(player_t *player)
 			if (!jumped)
 			{
 				// Natural acceleration and boosters
-				if (currentSpeed < minecart->info->seesound)
+				if (currentSpeed < minecart->info->speed)
 					currentSpeed += FRACUNIT/4;
 
 				if (minecart->standingslope)
