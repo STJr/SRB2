@@ -9782,11 +9782,13 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z)
 
 static size_t P_GetMinecartSpecialLine(sector_t *sec)
 {
+	size_t line = -1;
+
 	if (!sec)
-		return -1;
+		return line;
 
 	if (sec->tag != 0)
-		return P_FindSpecialLineFromTag(16, sec->tag, -1);
+		line = P_FindSpecialLineFromTag(16, sec->tag, -1);
 
 	// Also try for lines facing the sector itself, with tag 0.
 	{
@@ -9795,11 +9797,11 @@ static size_t P_GetMinecartSpecialLine(sector_t *sec)
 		{
 			line_t *li = sec->lines[i];
 			if (li->tag == 0 && li->special == 16 && li->frontsector == sec)
-				return li - lines;
+				line = li - lines;
 		}
 	}
 
-	return -1;
+	return line;
 }
 
 // Get an axis of a certain ID number
@@ -10165,6 +10167,9 @@ static void P_MinecartThink(player_t *player)
 	player->mo->momy = minecart->momy;
 	player->mo->momz = 0;
 	P_TryMove(player->mo, player->mo->x + minecart->momx, player->mo->y + minecart->momy, true);
+
+	if (player->powers[pw_flashing] == flashingtics)
+		player->powers[pw_flashing]--;
 }
 
 //
