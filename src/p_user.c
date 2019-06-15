@@ -9930,8 +9930,9 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 			if (!snax)
 				return NULL;
 			P_GetAxisPosition(x, y, snax, &nx, &ny, &nang, &dummy);
-			angdiff = nang - targetangle;
-			if (angdiff < ANG10/2 || angdiff > ANGLE_MAX - ANG10/2)
+			angdiff = ((nang - targetangle) + ANG10/2) & ~ANGLE_180;
+			//Axes must be directly parallel or antiparallel, give or take 5 degrees.
+			if (angdiff < ANG10)
 			{
 				mark = P_SpawnMobj(nx, ny, nz, mobj->info->raisestate);
 				return mark;
