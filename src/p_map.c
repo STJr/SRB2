@@ -836,10 +836,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
-		if (tmthing->player->powers[pw_carry] == CR_MINECART)
+		if (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer) && tmthing->tracer->health)
 		{
-			fixed_t dx = tmthing->momx;
-			fixed_t dy = tmthing->momy;
+			fixed_t dx = tmthing->tracer->momx;
+			fixed_t dy = tmthing->tracer->momy;
 			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
 			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);

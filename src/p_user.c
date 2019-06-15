@@ -9881,23 +9881,21 @@ static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
 	fixed_t c = FixedMul(FINECOSINE(fa), mo->radius);
 	fixed_t s = FixedMul(FINESINE(fa), mo->radius);
 	mobj_t *spark;
-	UINT8 b1 = (leveltime % 2 == 1) ? 1 : -1;
-	UINT8 b2 = ((leveltime / 2) % 2 == 1) ? 1 : -1;
-	fixed_t r = FRACUNIT*P_RandomRange(-1, 1);
+	SINT8 b1 = (leveltime & 1) ? 1 : -1;
+	SINT8 b2 = (leveltime & 2) ? 1 : -1;
+	fixed_t r1 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t r2 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t r3 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t fm = (maindir >> ANGLETOFINESHIFT) & FINEMASK;
 
 	spark = P_SpawnMobj(mo->x - b2*s + b1*c, mo->y + b2*c + b1*s, mo->z, MT_MINECARTSPARK);
-	spark->momx = mo->momx + r;
-	spark->momy = mo->momy + r;
-	spark->momz = mo->momz + r;
+	spark->momx = mo->momx + r1 + 8*FINECOSINE(fm);
+	spark->momy = mo->momy + r2 + 8*FINESINE(fm);
+	spark->momz = mo->momz + r3;
 
-	if (maindir)
-	{
-		fixed_t fm = (maindir >> ANGLETOFINESHIFT) & FINEMASK;
-		spark->momx += 8*FINECOSINE(fm);
-		spark->momy += 8*FINESINE(fm);
-	}
 	P_Thrust(spark, R_PointToAngle2(mo->x, mo->y, spark->x, spark->y), 8*FRACUNIT);
 	P_SetScale(spark, FRACUNIT/4);
+	spark->destscale = spark->scale;
 	spark->fuse = TICRATE/3;
 }
 
@@ -9979,7 +9977,7 @@ static void P_MinecartThink(player_t *player)
 		else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
 			player->mo->angle = minecart->angle - MINECARTCONEMAX;
 
-		if (angdiff + minecart->angle != player->mo->angle)
+		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_AnalogMove(player)))
 		{
 			if (player == &players[consoleplayer])
 				localangle = player->mo->angle;
@@ -10051,7 +10049,7 @@ static void P_MinecartThink(player_t *player)
 			P_ResetScore(player);
 			// Handle angle and position
 			P_GetAxisPosition(minecart->x, minecart->y, axis, &newx, &newy, &targetangle, &grind);
-			if (grind)
+			if (axis->type != MT_AXISTRANSFERLINE)
 				P_SpawnSparks(minecart, grind);
 			P_TryMove(minecart, newx, newy, true);
 
@@ -10062,13 +10060,14 @@ static void P_MinecartThink(player_t *player)
 				minecart->angle = targetangle;
 			else
 				minecart->angle = targetangle + ANGLE_180;
-			player->mo->angle += (minecart->angle - prevangle); // maintain relative angle on turns
-			if (angdiff + minecart->angle != targetangle)
+			angdiff = (minecart->angle - prevangle);
+			if (angdiff && (!demoplayback || P_AnalogMove(player)))  // maintain relative angle on turns
 			{
+				player->mo->angle += angdiff;
 				if (player == &players[consoleplayer])
-					localangle = player->mo->angle;
+					localangle += angdiff;
 				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
+					localangle2 += angdiff;
 			}
 
 			// Sideways detection
@@ -10164,9 +10163,9 @@ static void P_MinecartThink(player_t *player)
 
 	// Move player to minecart.
 	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
-	player->mo->momx = minecart->momx;
-	player->mo->momy = minecart->momy;
-	player->mo->momz = 0;
+	if (player->powers[pw_carry] != CR_MINECART)
+		return;
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 	P_TryMove(player->mo, player->mo->x + minecart->momx, player->mo->y + minecart->momy, true);
 
 	if (player->powers[pw_flashing] == flashingtics)

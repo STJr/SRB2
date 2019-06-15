@@ -13547,5 +13547,6 @@ void A_MinecartSparkThink(mobj_t *actor)
 		trail->tics = 2;
 		trail->sprite = actor->sprite;
 		P_SetScale(trail, trail->scale/4);
+		trail->destscale = trail->scale;
 	}
 }

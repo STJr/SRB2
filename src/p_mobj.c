@@ -8567,14 +8567,6 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				mobj->flags2 ^= MF2_DONTDRAW;
 				break;
-			case MT_MINECART:
-				// If player is ded, remove this minecart
-				if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health)
-				{
-					P_KillMobj(mobj, NULL, NULL, 0);
-					return;
-				}
-				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -8951,6 +8943,16 @@ void P_PushableThinker(mobj_t *mobj)
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+
+	if (mobj->type == MT_MINECART && mobj->health)
+	{
+		// If player is ded, remove this minecart
+		if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health)
+		{
+			P_KillMobj(mobj, NULL, NULL, 0);
+			return;
+		}
+	}
 
 	if (mobj->fuse == 1) // it would explode in the MobjThinker code
 	{
