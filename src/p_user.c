@@ -9990,9 +9990,7 @@ static void P_MinecartThink(player_t *player)
 	//P_ResetPlayer(player);
 
 	// Player holding jump?
-	if (player->cmd.buttons & BT_JUMP)
-		player->pflags |= PF_JUMPDOWN;
-	else
+	if (!(player->cmd.buttons & BT_JUMP))
 		player->pflags &= ~PF_JUMPDOWN;
 
 	// Handle segments.
@@ -10103,8 +10101,10 @@ static void P_MinecartThink(player_t *player)
 			//	currentSpeed -= FRACUNIT/8;
 
 			// Jumping
-			if (player->cmd.buttons & BT_JUMP)
+			if ((player->cmd.buttons & BT_JUMP) && !(player->pflags & PF_JUMPDOWN))
 			{
+				player->pflags |= PF_JUMPDOWN;
+
 				if (minecart->eflags & MFE_ONGROUND)
 					minecart->eflags &= ~MFE_ONGROUND;
 				minecart->z += P_MobjFlip(minecart);

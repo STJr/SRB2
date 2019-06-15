@@ -1718,6 +1718,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				mcart->friction = FRACUNIT;
 
 				P_ResetPlayer(player);
+				player->pflags |= PF_JUMPDOWN;
 				player->powers[pw_carry] = CR_MINECART;
 				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
 				P_SetTarget(&toucher->tracer, mcart);
