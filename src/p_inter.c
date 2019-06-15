@@ -3026,6 +3026,9 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 
 	P_ResetPlayer(player);
 
+	if (!player->spectator)
+		player->mo->flags2 &= ~MF2_DONTDRAW;
+
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
 	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{

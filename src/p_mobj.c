@@ -7563,37 +7563,34 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_PLAYER:
 			/// \todo Have the player's dead body completely finish its animation even if they've already respawned.
-			if (!(mobj->flags2 & MF2_DONTDRAW))
-			{
-				if (!mobj->fuse)
-				{ // Go away.
-					/// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
-					mobj->momz = 0;
-					if (mobj->player)
-						mobj->flags2 |= MF2_DONTDRAW;
-					else // safe to remove, nobody's going to complain!
-					{
-						P_RemoveMobj(mobj);
-						return;
-					}
-				}
-				else // Apply gravity to fall downwards.
+			if (!mobj->fuse)
+			{ // Go away.
+			  /// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
+				mobj->momz = 0;
+				if (mobj->player)
+					mobj->flags2 |= MF2_DONTDRAW;
+				else // safe to remove, nobody's going to complain!
 				{
-					if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
-					{
-							fixed_t r = mobj->radius>>FRACBITS;
-							mobj_t *explosion = P_SpawnMobj(
-								mobj->x + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->y + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->z + (P_RandomKey(mobj->height>>FRACBITS)<<FRACBITS),
-								MT_BOSSEXPLODE);
-							S_StartSound(explosion, sfx_cybdth);
-					}
-					if (mobj->movedir == DMG_DROWNED)
-						P_SetObjectMomZ(mobj, -FRACUNIT/2, true); // slower fall from drowning
-					else
-						P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+					P_RemoveMobj(mobj);
+					return;
 				}
+			}
+			else // Apply gravity to fall downwards.
+			{
+				if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
+				{
+					fixed_t r = mobj->radius >> FRACBITS;
+					mobj_t *explosion = P_SpawnMobj(
+						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
+						MT_BOSSEXPLODE);
+					S_StartSound(explosion, sfx_cybdth);
+				}
+				if (mobj->movedir == DMG_DROWNED)
+					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning
+				else
+					P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
 			}
 			break;
 		default:
