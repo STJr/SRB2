@@ -2607,6 +2607,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		case MT_MINECART:
 			A_Scream(target);
 			target->momx = target->momy = target->momz = 0;
+			if (target->target && target->target->health)
+				P_KillMobj(target->target, target, source, 0);
 			break;
 
 		case MT_PLAYER:

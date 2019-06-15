@@ -10004,7 +10004,6 @@ static void P_MinecartThink(player_t *player)
 	fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
-		P_KillMobj(player->mo, NULL, NULL, 0);
 		P_KillMobj(minecart, NULL, NULL, 0);
 		return;
 	}
@@ -10041,7 +10040,7 @@ static void P_MinecartThink(player_t *player)
 
 			if (!axis)
 			{
-				P_KillMobj(player->mo, NULL, NULL, 0);
+				P_KillMobj(minecart, NULL, NULL, 0);
 				return;
 			}
 
@@ -10152,7 +10151,6 @@ static void P_MinecartThink(player_t *player)
 			if ((P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
 			|| (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2)) // hit a wall
 			{
-				P_KillMobj(player->mo, NULL, NULL, 0);
 				P_KillMobj(minecart, NULL, NULL, 0);
 				return;
 			}
