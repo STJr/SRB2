@@ -2580,9 +2580,9 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
+		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 		{
-			// Kill enemies and bosses that fall into death pits.
+			// Kill enemies, bosses and minecarts that fall into death pits.
 			if (mo->health)
 			{
 				P_KillMobj(mo, NULL, NULL, 0);
