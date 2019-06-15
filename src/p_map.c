@@ -836,7 +836,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
-		if ((tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->player->mo->tracer && !P_MobjWasRemoved(tmthing->player->mo->tracer)))
+		if (tmthing->player->powers[pw_carry] == CR_MINECART)
 		{
 			fixed_t dx = tmthing->momx;
 			fixed_t dy = tmthing->momy;
