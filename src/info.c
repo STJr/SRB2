@@ -1067,7 +1067,7 @@ state_t states[NUMSTATES] =
 	{SPR_GSNP, 1, 2,       {A_Chase},          0,              0,               S_GSNAPPER3},      // S_GSNAPPER2
 	{SPR_GSNP, 2, 2,       {A_Chase},          0,              0,               S_GSNAPPER4},      // S_GSNAPPER3
 	{SPR_GSNP, 3, 2,       {A_Chase},          0,              0,               S_GSNAPPER1},      // S_GSNAPPER4
-	{SPR_GSNP, 0, -1,      {A_KillSegments},   0,              0,               S_XPLD_FLICKY},    // S_SNAPPER_XPLD
+	{SPR_GSNP, 0, 0,       {A_KillSegments},   0,              0,               S_XPLD_FLICKY},    // S_SNAPPER_XPLD
 	{SPR_GSNL, 0, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_LEG
 	{SPR_GSNL, 1, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_LEGRAISE
 	{SPR_GSNH, 0, -1,      {NULL},             0,              0,               S_NULL},           // S_SNAPPER_HEAD
@@ -2428,16 +2428,16 @@ state_t states[NUMSTATES] =
 	{SPR_ADST, 6|FF_ANIMATE, 24, {NULL}, 3, 8, S_NULL}, // S_ARIDDUST3
 
 	// Minecart
-	{SPR_NULL, 0,                            1, {NULL},                 0, 0, S_MINECART_IDLE}, // S_MINECART_IDLE
-	{SPR_NULL, 0,                           45, {NULL},                 0, 0, S_NULL},          // S_MINECART_DTH1
-	{SPR_MCRT, 8|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTEND
-	{SPR_MCRT, 0|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTSEG_FRONT
-	{SPR_MCRT, 1|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},          // S_MINECARTSEG_BACK
-	{SPR_MCRT, 2|FF_PAPERSPRITE|FF_ANIMATE, -1, {NULL},                 2, 3, S_NULL},          // S_MINECARTSEG_LEFT
-	{SPR_MCRT, 5|FF_PAPERSPRITE|FF_ANIMATE, -1, {NULL},                 2, 3, S_NULL},          // S_MINECARTSEG_RIGHT
-	{SPR_LCKN, 2|FF_FULLBRIGHT,              2, {NULL},                 0, 0, S_NULL},          // S_MINECARTSIDEMARK1
-	{SPR_LCKN, 0|FF_FULLBRIGHT,              2, {NULL},                 0, 0, S_NULL},          // S_MINECARTSIDEMARK2
-	{SPR_MCSP, FF_FULLBRIGHT,                1, {A_MinecartSparkThink}, 0, 0, S_MINECARTSPARK}, // S_MINECARTSPARK
+	{SPR_NULL, 0,                            1, {NULL},                 0, 0, S_MINECART_IDLE},   // S_MINECART_IDLE
+	{SPR_NULL, 0,                            0, {A_KillSegments},       0, 0, S_TNTBARREL_EXPL3}, // S_MINECART_DTH1
+	{SPR_MCRT, 8|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTEND
+	{SPR_MCRT, 0|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_FRONT
+	{SPR_MCRT, 1|FF_PAPERSPRITE,            -1, {NULL},                 0, 0, S_NULL},            // S_MINECARTSEG_BACK
+	{SPR_MCRT, 2|FF_PAPERSPRITE|FF_ANIMATE, -1, {NULL},                 2, 3, S_NULL},            // S_MINECARTSEG_LEFT
+	{SPR_MCRT, 5|FF_PAPERSPRITE|FF_ANIMATE, -1, {NULL},                 2, 3, S_NULL},            // S_MINECARTSEG_RIGHT
+	{SPR_LCKN, 2|FF_FULLBRIGHT,              2, {NULL},                 0, 0, S_NULL},            // S_MINECARTSIDEMARK1
+	{SPR_LCKN, 0|FF_FULLBRIGHT,              2, {NULL},                 0, 0, S_NULL},            // S_MINECARTSIDEMARK2
+	{SPR_MCSP, FF_FULLBRIGHT,                1, {A_MinecartSparkThink}, 0, 0, S_MINECARTSPARK},   // S_MINECARTSPARK
 
 	// Saloon door
 	{SPR_SALD, 0|FF_PAPERSPRITE, -1, {NULL},              0, 0, S_NULL}, // S_SALOONDOOR

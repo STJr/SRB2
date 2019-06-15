@@ -13209,7 +13209,7 @@ void A_CanarivoreGas(mobj_t *actor)
 //
 // Function: A_KillSegments
 //
-// Description: Causes segments attached via tracer chain to be killed; forces into next state.
+// Description: Causes segments attached via tracer chain to be killed.
 //
 // var1 = Fuse (if 0, default to TICRATE/2).
 // var2 = Unused
@@ -13236,8 +13236,6 @@ void A_KillSegments(mobj_t *actor)
 		P_Thrust(kseg, R_PointToAngle2(actor->x, actor->y, kseg->x, kseg->y), 3*actor->scale);
 		kseg->momz = 3*actor->scale;
 	}
-
-	P_SetMobjState(actor, actor->state->nextstate);
 }
 
 static void P_SnapperLegPlace(mobj_t *mo)

@@ -2604,6 +2604,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = TICRATE*2;
 			break;
 
+		case MT_MINECART:
+			A_Scream(target);
+			target->momx = target->momy = target->momz = 0;
+			break;
+
 		case MT_PLAYER:
 			{
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
@@ -2633,14 +2638,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	}
 
 	// Final state setting - do something instead of P_SetMobjState;
-	if (target->type == MT_MINECART)
-	{
-		A_KillSegments(target); // found in green snapper's code - the minecart segments need hardcode-side support to flash while they have a nonzero fuse
-		A_Scream(target);
-		P_SetMobjState(target, S_TNTBARREL_EXPL3);
-		target->momx = target->momy = target->momz = 0;
-	}
-	else if (target->type == MT_SPIKE && target->info->deathstate != S_NULL)
+	if (target->type == MT_SPIKE && target->info->deathstate != S_NULL)
 	{
 		const angle_t ang = ((inflictor) ? inflictor->angle : 0) + ANGLE_90;
 		const fixed_t scale = target->scale;
