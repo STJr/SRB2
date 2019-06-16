@@ -6740,7 +6740,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 
 	for (i = 0; i < 4; i++)
 	{
-		seg = P_SpawnMobj(x, y, z, MT_PARTICLE);
+		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
 			seg->extravalue1 = (i == 2) ? -18 : 18;
@@ -8640,6 +8640,10 @@ void P_MobjThinker(mobj_t *mobj)
 	// Check fuse
 	if (mobj->fuse)
 	{
+
+		if (mobj->type == MT_SNAPPER_HEAD || mobj->type == MT_SNAPPER_LEG || mobj->type == MT_MINECARTSEG)
+			mobj->flags2 ^= MF2_DONTDRAW;
+
 		mobj->fuse--;
 		if (!mobj->fuse)
 		{
