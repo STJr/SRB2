@@ -8948,7 +8948,7 @@ void P_PushableThinker(mobj_t *mobj)
 	if (mobj->type == MT_MINECART && mobj->health)
 	{
 		// If player is ded, remove this minecart
-		if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health)
+		if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health || !mobj->target->player || mobj->target->player->powers[pw_carry] != CR_MINECART)
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
 			return;
