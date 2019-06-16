@@ -9753,7 +9753,7 @@ void P_DoPityCheck(player_t *player)
 	}
 }
 
-static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z)
+static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *nz)
 {
 	sector_t *sec = R_PointInSubsector(x, y)->sector;
 
@@ -9768,15 +9768,20 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			fixed_t fofz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
-			if (abs(z - fofz) <= 40*FRACUNIT)
+			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
+			if (abs(z - *nz) <= 40*FRACUNIT)
 			{
 				sec = &sectors[rover->secnum];
-				break;
+				return sec;
 			}
 		}
 
 	}
+
+	*nz = sec->f_slope ? P_GetZAt(sec->f_slope, x, y) : sec->floorheight;
+	if (abs(z - *nz) > 40*FRACUNIT)
+		return NULL;
+
 	return sec;
 }
 
@@ -9906,7 +9911,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 	INT16 fwooffset = FixedHypot(mobj->momx, mobj->momy) >> FRACBITS;
 	fixed_t x = mobj->x;
 	fixed_t y = mobj->y;
-	fixed_t z = mobj->z + 40*FRACUNIT;
+	fixed_t z = mobj->z;
 	UINT8 i;
 
 	for (i = 4; i <= 10; i++)
@@ -9916,9 +9921,8 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 
 		x += interval*xcom*i + fwooffset*c*i;
 		y += interval*ycom*i + fwooffset*s*i;
-		nz = P_FloorzAtPos(x, y, z, mobj->height);
 
-		lline = P_GetMinecartSpecialLine(P_GetMinecartSector(x, y, nz));
+		lline = P_GetMinecartSpecialLine(P_GetMinecartSector(x, y, z, &nz));
 		if (lline != -1)
 		{
 			fixed_t nx, ny;
@@ -10010,6 +10014,7 @@ static void P_MinecartThink(player_t *player)
 	{
 		sector_t *sec;
 		size_t lnum;
+		fixed_t dummy;
 
 		// Just hit floor.
 		if (minecart->eflags & MFE_JUSTHITFLOOR)
@@ -10018,7 +10023,7 @@ static void P_MinecartThink(player_t *player)
 			S_StartSound(minecart, sfx_s3k96);
 		}
 
-		sec = P_GetMinecartSector(minecart->x, minecart->y, minecart->z);
+		sec = P_GetMinecartSector(minecart->x, minecart->y, minecart->z, &dummy);
 
 		if (sec)
 			lnum = P_GetMinecartSpecialLine(sec);
