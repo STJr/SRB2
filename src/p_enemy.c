@@ -6300,6 +6300,10 @@ void A_MixUp(mobj_t *actor)
 			}
 
 		//get this done first!
+		if (players[one].powers[pw_carry] == CR_MINECART && players[one].mo->tracer && !(P_MobjWasRemoved(players[one].mo->tracer)))
+			P_SetTarget(&players[one].mo->tracer->target, players[two].mo);
+		if (players[two].powers[pw_carry] == CR_MINECART && players[two].mo->tracer && !(P_MobjWasRemoved(players[two].mo->tracer)))
+			P_SetTarget(&players[two].mo->tracer->target, players[one].mo);
 		tempthing = players[one].mo->tracer;
 		P_SetTarget(&players[one].mo->tracer, players[two].mo->tracer);
 		P_SetTarget(&players[two].mo->tracer, tempthing);
@@ -6441,6 +6445,8 @@ void A_MixUp(mobj_t *actor)
 
 				//...carry after.  same reasoning.
 				players[i].powers[pw_carry] = transcarry[teleportfrom];
+				if (transcarry[teleportfrom] == CR_MINECART && transtracer[teleportfrom] && !(P_MobjWasRemoved(transtracer[teleportfrom])))
+					P_SetTarget(&transtracer[teleportfrom]->target, players[i].mo);
 
 				teleported[i] = true;
 				counter++;
