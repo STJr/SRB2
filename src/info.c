@@ -2387,7 +2387,7 @@ state_t states[NUMSTATES] =
 	{SPR_BARX, 1|FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_TNTBARREL_EXPL4}, // S_TNTBARREL_EXPL3
 	{SPR_BARX, 2|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL5}, // S_TNTBARREL_EXPL4
 	{SPR_BARX, 3|FF_FULLBRIGHT, 3, {NULL}, 0, 0, S_TNTBARREL_EXPL6}, // S_TNTBARREL_EXPL5
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
+	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_TNTBARREL_EXPL6
 	{SPR_BARR, 1|FF_ANIMATE, -1, {NULL}, 7, 2, S_NULL}, // S_TNTBARREL_FLYING
 
 	// TNT proximity shell
@@ -5699,7 +5699,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,                 // display offset
 		0,                 // mass
 		0,                 // damage
-		sfx_s3k8d,         // activesound
+		sfx_None,          // activesound
 		MF_NOBLOCKMAP|MF_MISSILE, // flags
 		S_NULL             // raisestate
 	},
@@ -11741,7 +11741,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // display offset
 		100,            // mass
 		0,              // damage
-		sfx_s3k8d,      // activesound
+		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE|MF_ENEMY|MF_PUSHABLE, // flags
 		S_NULL          // raisestate
 	},
