@@ -844,7 +844,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
 			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
 			S_StartSound(tmthing, thing->info->activesound);
-			thing->extravalue2 += FixedMul(s, dm);
+			thing->extravalue2 += 2*FixedMul(s, dm)/3;
 			return true;
 		}
 	}

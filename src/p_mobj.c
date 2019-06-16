@@ -8536,6 +8536,7 @@ void P_MobjThinker(mobj_t *mobj)
 					fixed_t s0 = -96*FINESINE(fa);
 					angle_t fma;
 					fixed_t c, s;
+					angle_t angdiff;
 
 					// Adjust angular speed
 					fixed_t da = AngleFixed(mobj->angle - oang);
@@ -8545,6 +8546,18 @@ void P_MobjThinker(mobj_t *mobj)
 
 					// Update angle
 					mobj->angle += FixedAngle(mobj->extravalue2);
+
+					angdiff = mobj->angle - FixedAngle(mobj->extravalue1);
+					if (angdiff > (ANGLE_90 - ANG2) && angdiff < ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_90 - ANG2);
+						mobj->extravalue2 /= 2;
+					}
+					else if (angdiff < (ANGLE_270 + ANG2) && angdiff >= ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_270 + ANG2);
+						mobj->extravalue2 /= 2;
+					}
 
 					// Update position
 					fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
