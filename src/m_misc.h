@@ -58,7 +58,7 @@ void FIL_ForceExtension(char *path, const char *extension);
 boolean FIL_CheckExtension(const char *in);
 
 #ifdef HAVE_PNG
-boolean M_SavePNG(const char *filename, void *data, int width, int height, const boolean palette);
+boolean M_SavePNG(const char *filename, void *data, int width, int height, const UINT8 *palette);
 #endif
 
 extern boolean takescreenshot;

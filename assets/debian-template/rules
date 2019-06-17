@@ -23,6 +23,16 @@
 #
 #############################################################################
 
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(DATADIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
@@ -37,30 +47,32 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta patch.dta README.txt LICENSE.txt LICENSE-3RD-PARTY.txt
+ARCHIVEPATH := ${ASSET_ARCHIVE_PATH}
+ARCHIVEOPTIONALPATH := ${ASSET_ARCHIVE_OPTIONAL_PATH}
+GETOPTIONALFILES := ${ASSET_FILES_OPTIONAL_GET}
 
-DATADIR	:= usr/games/SRB2
+DATADIR	:= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
 RESOURCEDIR := .
+STAGINGDIR := $(RESOURCEDIR)/installer
 WGET	:= wget -P $(RESOURCEDIR) -c -nc
 
 build:
 	$(MKDIR) $(DIR)/debian/tmp/$(DATADIR)
 	> $(DIR)/debian/source/include-binaries
-	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
-	for file in $(DATAFILES); do \
-		if [ ! -f $(RESOURCEDIR)/$$file ]; then \
-			$(WGET) http://alam.srb2.org/SRB2/2.1.21-Final/Resources/$$file; \
+	if [ ! -d $(STAGINGDIR) ]; then \
+		mkdir -p "$(STAGINGDIR)"; \
+		$(WGET) $(ARCHIVEPATH); \
+		7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEPATH))" -aos; \
+		if [ "$(GETOPTIONALFILES)" = "1" ]; then \
+			$(WGET) $(ARCHIVEOPTIONALPATH); \
+			7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEOPTIONALPATH))" -aos; \
 		fi; \
-		if [ -f $(RESOURCEDIR)/$$file ]; then \
-			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/$$file; \
-			echo $(RESOURCEDIR)/$$file >> $(DIR)/debian/source/include-binaries; \
-		fi; \
-		if [ ! -f $(DIR)/debian/tmp/$(DATADIR)/$$file ]; then \
-			echo $(DIR)/debian/tmp/$(DATADIR)/$$file not found and could not be downloaded!; \
-			return 1; \
-		fi; \
-	done
+	fi
+	# Install asset directory and add asset file to include-binaries
+	cp -vr "$(STAGINGDIR)/." "$(DIR)/debian/tmp/$(DATADIR)"
+	find "$(STAGINGDIR)" >> $(DIR)/debian/source/include-binaries
+
 
 binary-indep:
 	# Generate install folder file
