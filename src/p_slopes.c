@@ -602,7 +602,7 @@ void P_CopySectorSlope(line_t *line)
 
 	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
 	if (fsec->numattached)
-		for (i = 0; i < fsec->numattached; i++)
+		for (i = 0; i < (int)fsec->numattached; i++)
 			sectors[fsec->attached[i]].hasslope = true;
 
 	line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
