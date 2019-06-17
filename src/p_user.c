@@ -9769,7 +9769,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 				continue;
 
 			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
-			if (abs(z - *nz) <= 40*FRACUNIT)
+			if (abs(z - *nz) <= 56*FRACUNIT)
 			{
 				sec = &sectors[rover->secnum];
 				return sec;
@@ -9779,7 +9779,7 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 	}
 
 	*nz = sec->f_slope ? P_GetZAt(sec->f_slope, x, y) : sec->floorheight;
-	if (abs(z - *nz) > 40*FRACUNIT)
+	if (abs(z - *nz) > 56*FRACUNIT)
 		return NULL;
 
 	return sec;
