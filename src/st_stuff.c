@@ -1968,37 +1968,27 @@ static void ST_drawMatchHUD(void)
 
 static void ST_drawTextHUD(void)
 {
-	INT32 y = 176 - 16; // HUD_LIVES
-	boolean dof12 = false, dospecheader = false;
+	INT32 y = 42 + 16; // HUD_RINGS
+	boolean donef12 = false;
 
 #define textHUDdraw(str) \
 {\
 	V_DrawThinString(16, y, V_PERPLAYER|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, str);\
-	y -= 8;\
+	y += 8;\
 }
 
 	if (F_GetPromptHideHud(y))
 		return;
 
-	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
+	if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
+		textHUDdraw(M_GetText("\x86""Spectator mode:"))
+
+	if (circuitmap)
 	{
-		if (leveltime < hidetime * TICRATE)
-		{
-			if (stplyr->pflags & PF_TAGIT)
-			{
-				textHUDdraw(M_GetText("Waiting for players to hide..."))
-				textHUDdraw(M_GetText("\x82""You are blindfolded!"))
-			}
-			else if (gametype == GT_HIDEANDSEEK)
-				textHUDdraw(M_GetText("Hide before time runs out!"))
-			else
-				textHUDdraw(M_GetText("Flee before you are hunted!"))
-		}
-		else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
-		{
-			textHUDdraw(M_GetText("You cannot move while hiding."))
-			dof12 = true;
-		}
+		if (stplyr->exiting)
+			textHUDdraw(M_GetText("\x82""FINISHED!"))
+		else
+			textHUDdraw(va("Lap:""\x82 %u/%d", stplyr->laps+1, cv_numlaps.value))
 	}
 
 	if (!stplyr->spectator && stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
@@ -2027,13 +2017,23 @@ static void ST_drawTextHUD(void)
 
 		if (exiting < total)
 		{
+			if (!splitscreen && !donef12)
+			{
+				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+				donef12 = true;
+			}
 			total -= exiting;
 			textHUDdraw(va(M_GetText("%d player%s remaining"), total, ((total == 1) ? "" : "s")))
-			dof12 = true;
 		}
 	}
 	else if (gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
-		dof12 = true;
+	{
+		if (!splitscreen && !donef12)
+		{
+			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+			donef12 = true;
+		}
+	}
 	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
 	{
 		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
@@ -2045,6 +2045,15 @@ static void ST_drawTextHUD(void)
 	}
 	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
 	{
+		if (!splitscreen && !donef12)
+		{
+			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+			donef12 = true;
+		}
+
+		textHUDdraw(M_GetText("\x82""JUMP:""\x80 Rise"))
+		textHUDdraw(M_GetText("\x82""SPIN:""\x80 Lower"))
+
 		if (G_IsSpecialStage(gamemap) && (maptol & TOL_NIGHTS))
 			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
 		else if (gametype == GT_COOP)
@@ -2076,27 +2085,32 @@ static void ST_drawTextHUD(void)
 		}
 		else
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
-
-		textHUDdraw(M_GetText("\x82""SPIN:""\x80 Lower"))
-		textHUDdraw(M_GetText("\x82""JUMP:""\x80 Rise"))
-
-		dof12 = true;
-		dospecheader = true;
 	}
 
-	if (!splitscreen && dof12)
-		textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
-
-	if (circuitmap)
+	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
 	{
-		if (stplyr->exiting)
-			textHUDdraw(M_GetText("\x82""FINISHED!"))
-		else
-			textHUDdraw(va("Lap:""\x82 %u/%d", stplyr->laps+1, cv_numlaps.value))
+		if (leveltime < hidetime * TICRATE)
+		{
+			if (stplyr->pflags & PF_TAGIT)
+			{
+				textHUDdraw(M_GetText("\x82""You are blindfolded!"))
+				textHUDdraw(M_GetText("Waiting for players to hide..."))
+			}
+			else if (gametype == GT_HIDEANDSEEK)
+				textHUDdraw(M_GetText("Hide before time runs out!"))
+			else
+				textHUDdraw(M_GetText("Flee before you are hunted!"))
+		}
+		else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
+		{
+			if (!splitscreen && !donef12)
+			{
+				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+				donef12 = true;
+			}
+			textHUDdraw(M_GetText("You cannot move while hiding."))
+		}
 	}
-
-	if (dospecheader)
-		textHUDdraw(M_GetText("\x86""Spectator mode:"))
 
 #undef textHUDdraw
 

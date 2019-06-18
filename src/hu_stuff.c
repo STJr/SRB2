@@ -1327,7 +1327,7 @@ static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 // 30/7/18: chaty is now the distance at which the lowest point of the chat will be drawn if that makes any sense.
 
-INT16 chatx = 13, chaty = 169; // let's use this as our coordinates, shh
+INT16 chatx = 14, chaty = 180; // let's use this as our coordinates
 
 // chat stuff by VincyTM LOL XD!
 
@@ -1502,8 +1502,8 @@ static void HU_drawChatLog(INT32 offset)
 	if (splitscreen)
 	{
 		y -= BASEVIDHEIGHT/2;
-		if (splitscreen > 1)
-			y += 16;
+		//if (splitscreen > 1)
+			//y += 16;
 	}
 #endif
 	y -= (G_RingSlingerGametype() ? 16 : 0);
@@ -2302,7 +2302,9 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		             | V_ALLOWLOWERCASE, tab[i].name);
 
 		// Draw emeralds
-		if (!players[tab[i].num].powers[pw_super]
+		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
+			HU_DrawEmeralds(x-12,y+2,255);
+		else if (!players[tab[i].num].powers[pw_super]
 			|| ((leveltime/7) & 1))
 		{
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
@@ -2574,7 +2576,9 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		}
 
 		// Draw emeralds
-		if (!players[tab[i].num].powers[pw_super]
+		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
+			HU_DrawEmeralds(x-12,y+2,255);
+		else if (!players[tab[i].num].powers[pw_super]
 			|| ((leveltime/7) & 1))
 		{
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
@@ -2646,7 +2650,9 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			V_DrawSmallScaledPatch(x - SHORT(exiticon->width)/2 - 1, y-3, 0, exiticon);
 
 		// Draw emeralds
-		if (!players[tab[i].num].powers[pw_super]
+		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
+			HU_DrawEmeralds(x-12,y+2,255);
+		else if (!players[tab[i].num].powers[pw_super]
 			|| ((leveltime/7) & 1))
 		{
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
@@ -2746,7 +2752,12 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 			V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, tagico, 0);
 
 		// Draw emeralds
-		if (!players[tab[i].num].powers[pw_super]
+		if (players[tab[i].num].powers[pw_invulnerability] && players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
+		{
+			HU_Draw32Emeralds(x+60, y+2, 255);
+			//HU_DrawEmeralds(x-12,y+2,255);
+		}
+		else if (!players[tab[i].num].powers[pw_super]
 			|| ((leveltime/7) & 1))
 		{
 			HU_Draw32Emeralds(x+60, y+2, tab[i].emeralds);
