@@ -4101,17 +4101,18 @@ void P_RainThinker(precipmobj_t *mobj)
 	}
 
 	// adjust height
-	if ((mobj->z += mobj->momz) <= mobj->floorz)
+	if ((mobj->z += mobj->momz) > mobj->floorz)
+		return;
+
+	// no splashes on sky or bottomless pits
+	if (mobj->precipflags & PCF_PIT)
 	{
-		// no splashes on sky or bottomless pits
-		if (mobj->precipflags & PCF_PIT)
-			mobj->z = mobj->ceilingz;
-		else
-		{
-			mobj->z = mobj->floorz;
-			P_SetPrecipMobjState(mobj, S_SPLASH1);
-		}
+		mobj->z = mobj->ceilingz;
+		return;
 	}
+
+	mobj->z = mobj->floorz;
+	P_SetPrecipMobjState(mobj, S_SPLASH1);
 }
 
 static void P_RingThinker(mobj_t *mobj)
@@ -9431,7 +9432,7 @@ void P_SpawnPrecipitation(void)
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
 
-	if (dedicated || !cv_precipdensity.value || curWeather == PRECIP_NONE)
+	if (dedicated || /*!cv_precipdensity*/!cv_drawdist_precip.value || curWeather == PRECIP_NONE)
 		return;
 
 	// Use the blockmap to narrow down our placing patterns
@@ -9440,7 +9441,7 @@ void P_SpawnPrecipitation(void)
 		basex = bmaporgx + (i % bmapwidth) * MAPBLOCKSIZE;
 		basey = bmaporgy + (i / bmapwidth) * MAPBLOCKSIZE;
 
-		for (j = 0; j < cv_precipdensity.value; ++j)
+		//for (j = 0; j < cv_precipdensity.value; ++j) -- density is 1 for us always
 		{
 			x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 			y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);

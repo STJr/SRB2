@@ -5431,7 +5431,7 @@ static void HWR_AddSprites(sector_t *sec)
 	}
 
 #ifdef HWPRECIP
-	// Someone seriously wants infinite draw distance for precipitation?
+	// no, no infinite draw distance for precipitation. this option at zero is supposed to turn it off
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
@@ -5446,13 +5446,6 @@ static void HWR_AddSprites(sector_t *sec)
 
 			HWR_ProjectPrecipitationSprite(precipthing);
 		}
-	}
-	else
-	{
-		// Draw everything in sector, no checks
-		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
-			if (!(precipthing->precipflags & PCF_INVISIBLE))
-				HWR_ProjectPrecipitationSprite(precipthing);
 	}
 #endif
 }
@@ -5774,16 +5767,6 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	x1 = tr_x + x1 * rightcos;
 	x2 = tr_x - x2 * rightcos;
 
-	// okay, we can't return now... this is a hack, but weather isn't networked, so it should be ok
-	if (!(thing->precipflags & PCF_THUNK))
-	{
-		if (thing->precipflags & PCF_RAIN)
-			P_RainThinker(thing);
-		else
-			P_SnowThinker(thing);
-		thing->precipflags |= PCF_THUNK;
-	}
-
 	//
 	// store information in a vissprite
 	//
@@ -5804,6 +5787,16 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
 
 	vis->precip = true;
+
+	// okay... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 }
 #endif
 
