@@ -1701,9 +1701,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		case MT_CANARIVORE_GAS:
 			// if player and gas touch, attach gas to player (overriding any gas that already attached) and apply slowdown effect
-			P_TeleportMove(special, toucher->x - toucher->momx / 2, toucher->y - toucher->momy / 2, toucher->z - toucher->momz / 2);
-			toucher->momx = FixedMul(toucher->momx, 50 * FRACUNIT / 51);
-			toucher->momy = FixedMul(toucher->momy, 50 * FRACUNIT / 51);
+			P_UnsetThingPosition(special);
+			special->x = toucher->x - toucher->momx/2;
+			special->y = toucher->y - toucher->momy/2;
+			special->z = toucher->z - toucher->momz/2;
+			P_SetThingPosition(special);
+			toucher->momx = FixedMul(toucher->momx, 50*FRACUNIT/51);
+			toucher->momy = FixedMul(toucher->momy, 50*FRACUNIT/51);
 			special->momx = toucher->momx;
 			special->momy = toucher->momy;
 			special->momz = toucher->momz;
