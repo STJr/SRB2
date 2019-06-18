@@ -28,6 +28,7 @@
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_draw.h"
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -8728,6 +8729,14 @@ struct {
 	{"KR_TIMEOUT",KR_TIMEOUT},
 	{"KR_BAN",KR_BAN},
 	{"KR_LEAVE",KR_LEAVE},
+
+	// translation colormaps
+	{"TC_DEFAULT",TC_DEFAULT},
+	{"TC_BOSS",TC_BOSS},
+	{"TC_METALSONIC",TC_METALSONIC},
+	{"TC_ALLWHITE",TC_ALLWHITE},
+	{"TC_RAINBOW",TC_RAINBOW},
+	{"TC_BLINK",TC_BLINK},
 #endif
 
 	{NULL,0}

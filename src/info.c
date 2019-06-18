@@ -5397,7 +5397,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,                 // mass
 		3,                 // damage
 		sfx_boingf,        // activesound
-		MF_SPECIAL|MF_BOSS|MF_SHOOTABLE, // flags
+		MF_SPECIAL|MF_BOSS|MF_SHOOTABLE|MF_GRENADEBOUNCE, // flags
 		S_NULL             // raisestate
 	},
 

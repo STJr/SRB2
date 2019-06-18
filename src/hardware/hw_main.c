@@ -5660,7 +5660,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		if (vis->mobj->type == MT_CYBRAKDEMON)
 			vis->colormap = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
@@ -5672,7 +5672,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	else if (thing->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
+		if (thing->colorized)
+			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, thing->color, GTC_CACHE);
+		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)thing->skin-skins;
 			vis->colormap = R_GetTranslationColormap((INT32)skinnum, thing->color, GTC_CACHE);

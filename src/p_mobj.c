@@ -8894,6 +8894,7 @@ void P_SceneryThinker(mobj_t *mobj)
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	const mobjinfo_t *info = &mobjinfo[type];
+	UINT8 sc = -1;
 	state_t *st;
 	mobj_t *mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
@@ -9150,11 +9151,35 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			if (nummaprings >= 0)
 				nummaprings++;
 			break;
+		case MT_METALSONIC_BATTLE:
+		case MT_METALSONIC_RACE:
+			sc = 3;
+			break;
+		case MT_FANG:
+			sc = 4;
+			break;
 		case MT_FBOMB:
 			mobj->flags2 |= MF2_EXPLOSION;
 			break;
 		default:
 			break;
+	}
+
+	if (sc != -1)
+	{
+		UINT8 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+
+			if (players[i].skin == sc)
+			{
+				mobj->color = SKINCOLOR_SILVER;
+				mobj->colorized = true;
+				break;
+			}
+		}
 	}
 
 	if (!(mobj->flags & MF_NOTHINK))
@@ -9427,7 +9452,7 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i, j, mrand;
+	INT32 i, /*j,*/ mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;

@@ -126,10 +126,12 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define BOSS_TT_CACHE_INDEX (MAXSKINS + 1)
 #define METALSONIC_TT_CACHE_INDEX (MAXSKINS + 2)
 #define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
+#define RAINBOW_TT_CACHE_INDEX (MAXSKINS + 4)
+#define BLINK_TT_CACHE_INDEX (MAXSKINS + 5)
 #define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
-static UINT8** translationtablecache[MAXSKINS + 4] = {NULL};
+static UINT8** translationtablecache[MAXSKINS + 6] = {NULL};
 
 const UINT8 Color_Index[MAXTRANSLATIONS-1][16] = {
 	// {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // SKINCOLOR_NONE
@@ -457,17 +459,85 @@ void R_InitTranslationTables(void)
 
 	\return	void
 */
+
+// Define for getting accurate color brightness readings according to how the human eye sees them.
+// https://en.wikipedia.org/wiki/Relative_luminance
+// 0.2126 to red
+// 0.7152 to green
+// 0.0722 to blue
+// (See this same define in hw_md2.c!)
+#define SETBRIGHTNESS(brightness,r,g,b) \
+	brightness = (UINT8)(((1063*((UINT16)r)/5000) + (3576*((UINT16)g)/5000) + (361*((UINT16)b)/5000)) / 3)
+
+/** \brief	Generates the rainbow colourmaps that are used when a player has the invincibility power... stolen from kart, with permission
+
+	\param	dest_colormap	colormap to populate
+	\param	skincolor		translation color
+*/
+static void R_RainbowColormap(UINT8 *dest_colormap, UINT8 skincolor)
+{
+	INT32 i;
+	RGBA_t color;
+	UINT8 brightness;
+	INT32 j;
+	UINT8 colorbrightnesses[16];
+	UINT16 brightdif;
+	INT32 temp;
+
+	// first generate the brightness of all the colours of that skincolour
+	for (i = 0; i < 16; i++)
+	{
+		color = V_GetColor(Color_Index[skincolor-1][i]);
+		SETBRIGHTNESS(colorbrightnesses[i], color.s.red, color.s.green, color.s.blue);
+	}
+
+	// next, for every colour in the palette, choose the transcolor that has the closest brightness
+	for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+	{
+		if (i == 0 || i == 31) // pure black and pure white don't change
+		{
+			dest_colormap[i] = (UINT8)i;
+			continue;
+		}
+		color = V_GetColor(i);
+		SETBRIGHTNESS(brightness, color.s.red, color.s.green, color.s.blue);
+		brightdif = 256;
+		for (j = 0; j < 16; j++)
+		{
+			temp = abs((INT16)brightness - (INT16)colorbrightnesses[j]);
+			if (temp < brightdif)
+			{
+				brightdif = (UINT16)temp;
+				dest_colormap[i] = Color_Index[skincolor-1][j];
+			}
+		}
+	}
+}
+
+#undef SETBRIGHTNESS
+
 static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT8 color)
 {
 	INT32 i, starttranscolor, skinramplength;
 
 	// Handle a couple of simple special cases
-	if (skinnum == TC_BOSS || skinnum == TC_ALLWHITE || skinnum == TC_METALSONIC || color == SKINCOLOR_NONE)
+	if (skinnum == TC_BOSS
+		|| skinnum == TC_ALLWHITE
+		|| skinnum == TC_METALSONIC
+		|| skinnum == TC_BLINK
+		|| color == SKINCOLOR_NONE)
 	{
-		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+		if (skinnum == TC_ALLWHITE)
+			memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8**));
+		else if (skinnum == TC_BLINK && color != SKINCOLOR_NONE)
 		{
-			if (skinnum == TC_ALLWHITE) dest_colormap[i] = 0;
-			else dest_colormap[i] = (UINT8)i;
+			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+				dest_colormap[i] = Color_Index[color-1][3];
+		}
+		else
+		{
+			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+				dest_colormap[i] = (UINT8)i;
 		}
 
 		// White!
@@ -476,6 +546,11 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		else if (skinnum == TC_METALSONIC)
 			dest_colormap[159] = 0;
 
+		return;
+	}
+	else if (skinnum == TC_RAINBOW)
+	{
+		R_RainbowColormap(dest_colormap, color);
 		return;
 	}
 
@@ -522,6 +597,8 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags)
 	else if (skinnum == TC_BOSS) skintableindex = BOSS_TT_CACHE_INDEX;
 	else if (skinnum == TC_METALSONIC) skintableindex = METALSONIC_TT_CACHE_INDEX;
 	else if (skinnum == TC_ALLWHITE) skintableindex = ALLWHITE_TT_CACHE_INDEX;
+	else if (skinnum == TC_RAINBOW) skintableindex = RAINBOW_TT_CACHE_INDEX;
+	else if (skinnum == TC_BLINK) skintableindex = BLINK_TT_CACHE_INDEX;
 	else skintableindex = skinnum;
 
 	if (flags & GTC_CACHE)
