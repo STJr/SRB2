@@ -1743,12 +1743,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
 				P_ResetPlayer(player);
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
-				P_SetMobjState(toucher, S_PLAY_FALL);
+				P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				P_SetTarget(&toucher->tracer->target, NULL);
 				P_KillMobj(toucher->tracer, toucher, special, 0);
 				P_SetTarget(&toucher->tracer, NULL);
 				player->powers[pw_carry] = CR_NONE;
-				P_TeleportMove(toucher, special->x, special->y, maxz);
+				P_UnsetThingPosition(toucher);
+				toucher->x = special->x;
+				toucher->y = special->y;
+				toucher->z = maxz;
+				P_SetThingPosition(toucher);
 			}
 			return;
 

@@ -10162,7 +10162,7 @@ static void P_MinecartThink(player_t *player)
 		}
 	}
 
-	P_SetMobjState(player->mo, S_PLAY_STND);
+	P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
 	// Move player to minecart.
 	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
