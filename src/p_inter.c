@@ -2813,25 +2813,46 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	if (player->powers[pw_flashing] || player->powers[pw_invulnerability])
 		return false;
 
-	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
-		source && source->player && source->player->pflags & PF_TAGIT)))
-		return false;
-
 	// Don't allow any damage before the round starts.
 	if (leveltime <= hidetime * TICRATE)
 		return false;
+
+	// Ignore IT players shooting each other, unless friendlyfire is on.
+	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
+		source && source->player && source->player->pflags & PF_TAGIT)))
+	{
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+		return false;
+	}
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
 	if (!(cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
-		if (!(inflictor->flags & MF_FIRE))
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+		else if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
 		if (inflictor->flags2 & MF2_BOUNCERING)
 			inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 		return false;
 	}
+
+	if (inflictor->type == MT_LHRT)
+		return false;
 
 	// The tag occurs so long as you aren't shooting another tagger with friendlyfire on.
 	if (source->player->pflags & PF_TAGIT && !(player->pflags & PF_TAGIT))
@@ -2899,7 +2920,17 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
 		if (!cv_friendlyfire.value && (G_PlatformGametype()))
+		{
+			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+			{
+				if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				{
+					P_SwitchShield(player, SH_PINK);
+					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+				}
+			}
 			return false;
+		}
 	}
 
 	// Tag handling
@@ -2913,7 +2944,15 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		// unless cv_friendlyfire is on.
 		if (!cv_friendlyfire.value && target->player->ctfteam == source->player->ctfteam)
 		{
-			if (!(inflictor->flags & MF_FIRE))
+			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+			{
+				if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				{
+					P_SwitchShield(player, SH_PINK);
+					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+				}
+			}
+			else if (!(inflictor->flags & MF_FIRE))
 				P_GivePlayerRings(target->player, 1);
 			if (inflictor->flags2 & MF2_BOUNCERING)
 				inflictor->fuse = 0; // bounce ring disappears at -1 not 0
@@ -2921,6 +2960,9 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 			return false;
 		}
 	}
+
+	if (inflictor->type == MT_LHRT)
+		return false;
 
 	// Add pity.
 	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]

@@ -364,6 +364,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"GFLG", // Got Flag sign
 
 	"CORK",
+	"LHRT",
 
 	// Ring Weapons
 	"RRNG", // Red Ring
@@ -2664,12 +2665,18 @@ state_t states[NUMSTATES] =
 	{SPR_ELEM, FF_FULLBRIGHT|20, 1, {NULL}, 0, 0, S_ELEMF10}, // S_ELEMF9
 	{SPR_NULL, 0,                1, {NULL}, 0, 0, S_ELEMF1 }, // S_ELEMF10
 
-	{SPR_PITY, FF_TRANS30  , 2, {NULL}, 0, 0, S_PITY2}, // S_PITY1
-	{SPR_PITY, FF_TRANS30|1, 2, {NULL}, 0, 0, S_PITY3}, // S_PITY2
-	{SPR_PITY, FF_TRANS30|2, 2, {NULL}, 0, 0, S_PITY4}, // S_PITY3
-	{SPR_PITY, FF_TRANS20|3, 2, {NULL}, 0, 0, S_PITY5}, // S_PITY4
-	{SPR_PITY, FF_TRANS30|4, 2, {NULL}, 0, 0, S_PITY6}, // S_PITY5
-	{SPR_PITY, FF_TRANS20|5, 2, {NULL}, 0, 0, S_PITY1}, // S_PITY6
+	{SPR_PITY, FF_TRANS30   , 2, {NULL}, 0, 0, S_PITY2},  // S_PITY1
+	{SPR_PITY, FF_TRANS30| 1, 2, {NULL}, 0, 0, S_PITY3},  // S_PITY2
+	{SPR_PITY, FF_TRANS30| 2, 2, {NULL}, 0, 0, S_PITY4},  // S_PITY3
+	{SPR_PITY, FF_TRANS30| 3, 2, {NULL}, 0, 0, S_PITY5},  // S_PITY4
+	{SPR_PITY, FF_TRANS30| 4, 2, {NULL}, 0, 0, S_PITY6},  // S_PITY5
+	{SPR_PITY, FF_TRANS30| 5, 2, {NULL}, 0, 0, S_PITY7},  // S_PITY6
+	{SPR_PITY, FF_TRANS30| 6, 2, {NULL}, 0, 0, S_PITY8},  // S_PITY7
+	{SPR_PITY, FF_TRANS30| 7, 2, {NULL}, 0, 0, S_PITY9},  // S_PITY8
+	{SPR_PITY, FF_TRANS30| 8, 2, {NULL}, 0, 0, S_PITY10}, // S_PITY9
+	{SPR_PITY, FF_TRANS30| 9, 2, {NULL}, 0, 0, S_PITY11}, // S_PITY10
+	{SPR_PITY, FF_TRANS30|10, 2, {NULL}, 0, 0, S_PITY12}, // S_PITY11
+	{SPR_PITY, FF_TRANS30|11, 2, {NULL}, 0, 0, S_PITY1},  // S_PITY12
 
 	{SPR_FIRS, FF_FULLBRIGHT|FF_TRANS40  , 2, {NULL}, 0, 0, S_FIRS2}, // S_FIRS1
 	{SPR_FIRS, FF_FULLBRIGHT|FF_TRANS40|1, 2, {NULL}, 0, 0, S_FIRS3}, // S_FIRS2
@@ -3165,7 +3172,8 @@ state_t states[NUMSTATES] =
 	// CTF Sign
 	{SPR_GFLG,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
 
-	{SPR_CORK, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
+	{SPR_CORK,             0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
+	{SPR_LHRT, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LHRT
 
 	// Red Rings (thrown)
 	{SPR_RRNG, FF_FULLBRIGHT,   1, {A_ThrownRing}, 0, 0, S_RRNG2}, // S_RRNG1
@@ -16096,6 +16104,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LHRT
+		-1,             // doomednum
+		S_LHRT,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_SPRK1,        // deathstate
+		S_SPRK1,        // xdeathstate
+		sfx_None,       // deathsound
+		60*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_MISSILE, // flags
 		S_NULL          // raisestate
 	},
 

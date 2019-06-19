@@ -196,6 +196,7 @@ typedef enum
 	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
+	SH_PINK, // PITY IN PINK!
 
 	// Normal shields that use flags
 	SH_ATTRACT = SH_PITY|SH_PROTECTELECTRIC,

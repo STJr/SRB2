@@ -7861,6 +7861,10 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 				}
 				break;
+			case MT_LHRT:
+				mobj->momx = FixedMul(mobj->momx, (48*FRACUNIT)/50);
+				mobj->momy = FixedMul(mobj->momy, (48*FRACUNIT)/50);
+				break;
 			case MT_EGGCAPSULE:
 				if (!mobj->reactiontime)
 				{
@@ -8546,6 +8550,9 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 				case MT_THROWNGRENADE:
 				case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
 					P_SetMobjState(mobj, mobj->info->deathstate);
+					break;
+				case MT_LHRT:
+					P_KillMobj(mobj, NULL, NULL, 0);
 					break;
 				case MT_BLUEFLAG:
 				case MT_REDFLAG:

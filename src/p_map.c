@@ -1076,7 +1076,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial for shell
 		{
 			UINT8 damagetype = tmthing->info->mass;
 			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!

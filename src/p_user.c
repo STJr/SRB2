@@ -1609,6 +1609,7 @@ void P_SpawnShieldOrb(player_t *player)
 		orbtype = MT_ARMAGEDDON_ORB;
 		break;
 	case SH_PITY:
+	case SH_PINK: // PITY IN PINK
 		orbtype = MT_PITY_ORB;
 		break;
 	case SH_FLAMEAURA:
@@ -1639,7 +1640,13 @@ void P_SpawnShieldOrb(player_t *player)
 	shieldobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, orbtype);
 	shieldobj->flags2 |= MF2_SHIELD;
 	P_SetTarget(&shieldobj->target, player->mo);
-	shieldobj->color = (UINT8)shieldobj->info->painchance;
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK)
+	{
+		shieldobj->color = SKINCOLOR_PINK;
+		shieldobj->colorized = true;
+	}
+	else
+		shieldobj->color = (UINT8)shieldobj->info->painchance;
 	shieldobj->threshold = (player->powers[pw_shield] & SH_FORCE) ? SH_FORCE : (player->powers[pw_shield] & SH_NOSTACK);
 
 	if (shieldobj->info->seestate)
@@ -1787,6 +1794,9 @@ void P_SpawnThokMobj(player_t *player)
 	if (player->spectator)
 		return;
 
+	if (!type)
+		return;
+
 	if (type == MT_GHOST)
 		mobj = P_SpawnGhostMobj(player->mo); // virtually does everything here for us
 	else
@@ -1845,6 +1855,9 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		return;
 
 	if (player->spectator)
+		return;
+
+	if (!type)
 		return;
 
 	if (type == MT_GHOST)
@@ -2002,10 +2015,42 @@ boolean P_PlayerHitFloor(player_t *player)
 			}
 			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
 			{
+				mobjtype_t type = player->spinitem;
 				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
 				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_s3k8b);
 				player->pflags |= PF_FULLSTASIS;
+
+				// hearticles
+				if (type)
+				{
+					UINT8 i = 0;
+					angle_t throwang = -(2*ANG30);
+					fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
+					fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
+					fixed_t zo = 6*player->mo->scale;
+					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
+					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
+					mobj_t *missile;
+					if (mu2 < mu)
+						mu2 = mu;
+					while (i < 5)
+					{
+						missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
+						P_SetTarget(&missile->target, player->mo);
+						missile->angle = throwang + player->drawangle;
+						P_Thrust(missile, player->drawangle + ANGLE_90,
+							P_ReturnThrustY(missile, throwang, mu)); // side to side component
+						P_Thrust(missile, player->drawangle, mu2); // forward component
+						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+						missile->fuse = TICRATE/2;
+
+						i++;
+						throwang += ANG30;
+					}
+					if (mobjinfo[type].seesound)
+						S_StartSound(missile, missile->info->seesound);
+				}
 			}
 			else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
 			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
@@ -9806,12 +9851,12 @@ void P_DoPityCheck(player_t *player)
 	// Apply pity shield if available.
 	if ((player->pity >= 3 || player->pity < 0) && player->powers[pw_shield] == SH_NONE)
 	{
+		P_SwitchShield(player, SH_PITY);
+
 		if (player->pity > 0)
 			S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
 
 		player->pity = 0;
-		player->powers[pw_shield] = SH_PITY;
-		P_SpawnShieldOrb(player);
 	}
 }
 

@@ -6027,6 +6027,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY4",
 	"S_PITY5",
 	"S_PITY6",
+	"S_PITY7",
+	"S_PITY8",
+	"S_PITY9",
+	"S_PITY10",
+	"S_PITY11",
+	"S_PITY12",
 
 	"S_FIRS1",
 	"S_FIRS2",
@@ -6519,6 +6525,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GOTFLAG",
 
 	"S_CORK",
+	"S_LHRT",
 
 	// Red Ring
 	"S_RRNG1",
@@ -7579,6 +7586,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MACHINEAMBIENCE",
 
 	"MT_CORK",
+	"MT_LHRT",
 
 	// Ring Weapons
 	"MT_REDRING",
@@ -8342,6 +8350,7 @@ struct {
 	{"SH_PITY",SH_PITY},
 	{"SH_WHIRLWIND",SH_WHIRLWIND},
 	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
+	{"SH_PINK",SH_PINK},
 	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},

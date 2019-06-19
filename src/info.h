@@ -595,6 +595,7 @@ typedef enum sprite
 	SPR_GFLG, // Got Flag sign
 
 	SPR_CORK,
+	SPR_LHRT,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -2771,6 +2772,12 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
+	S_PITY7,
+	S_PITY8,
+	S_PITY9,
+	S_PITY10,
+	S_PITY11,
+	S_PITY12,
 
 	S_FIRS1,
 	S_FIRS2,
@@ -3263,6 +3270,7 @@ typedef enum state
 	S_GOTFLAG,
 
 	S_CORK,
+	S_LHRT,
 
 	// Red Ring
 	S_RRNG1,
@@ -4343,6 +4351,7 @@ typedef enum mobj_type
 	MT_MACHINEAMBIENCE,
 
 	MT_CORK,
+	MT_LHRT,
 
 	// Ring Weapons
 	MT_REDRING,
