@@ -980,7 +980,6 @@ void P_ResetPlayer(player_t *player)
 // P_PlayerCanDamage
 //
 // Can player do damage?
-// Doesn't count invincibility or super, for the sake of monitors.
 //
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 {
@@ -999,24 +998,35 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	}
 #endif
 
+	// Invinc/super. Not for Monitors.
+	if (!(thing->flags & MF_MONITOR) && (player->powers[pw_invulnerability] || player->powers[pw_super]))
+		return true;
+
+	// NiGHTS drill. Wasn't originally for monitors, but that's more an oversight being corrected than anything else.
 	if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		return true;
 
+	// Jumping.
 	if ((player->pflags & PF_JUMPED)
 	&& (!(player->pflags & PF_NOJUMPDAMAGE)
 		|| (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		return true;
 
-	if (player->pflags & (PF_SPINNING|PF_GLIDING))
+	// Spinning.
+	if (player->pflags & PF_SPINNING)
 		return true;
 
-	if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+	// From the front.
+	if (((player->pflags & PF_GLIDING) || (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+	&& (player->drawangle - R_PointToAngle2(player->mo->x - player->mo->momx, player->mo->y - player->mo->momy, thing->x, thing->y) +  + ANGLE_90) < ANGLE_180)
 		return true;
 
+	// From the top.
 	if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING)
 	&& (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
 		return true;
 
+	// Shield stomp.
 	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
 		return true;
 
@@ -4336,7 +4346,11 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						P_SetObjectMomZ(player->mo, player->mindash, false);
 						if (player->mo->eflags & MFE_UNDERWATER)
 							player->mo->momz >>= 1;
+#if 0
 						if (FixedMul(player->speed, FINECOSINE(((player->mo->angle - R_PointToAngle2(0, 0, player->rmomx, player->rmomy)) >> ANGLETOFINESHIFT) & FINEMASK)) < FixedMul(player->maxdash, player->mo->scale))
+#else
+						if (player->speed < FixedMul(player->maxdash, player->mo->scale))
+#endif
 						{
 							player->drawangle = player->mo->angle;
 							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));

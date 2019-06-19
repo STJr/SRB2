@@ -453,8 +453,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				break;
 		}
 
-		if (player->powers[pw_invulnerability] || player->powers[pw_super]
-		|| P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
+		if (P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
