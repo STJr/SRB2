@@ -977,6 +977,42 @@ void P_ResetPlayer(player_t *player)
 		CV_SetValue(&cv_analog2, true);
 }
 
+// P_PlayerCanDamage
+//
+// Can player do damage?
+// Doesn't count invincibility or super, for the sake of monitors.
+//
+boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
+{
+	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
+		return false;
+
+	if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+		return true;
+
+	if ((player->pflags & PF_JUMPED)
+	&& (!(player->pflags & PF_NOJUMPDAMAGE)
+		|| (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		return true;
+
+	if (player->pflags & (PF_SPINNING|PF_GLIDING))
+		return true;
+
+	if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		return true;
+
+	if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING)
+	&& (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
+		return true;
+
+	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
+		return true;
+
+	return false;
+}
+
+
+
 //
 // P_GivePlayerRings
 //

@@ -453,13 +453,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				break;
 		}
 
-		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
-		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super]
-		|| elementalpierce) // Do you possess the ability to subdue the object?
+		if (player->powers[pw_invulnerability] || player->powers[pw_super]
+		|| P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
@@ -1750,6 +1745,10 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 
 	deadtarget = (player->mo->health <= 0);
 
+	// Don't log every hazard hit if they don't want us to.
+	if (!deadtarget && !cv_hazardlog.value)
+		return;
+
 	// Target's name
 	snprintf(targetname, sizeof(targetname), "%s%s%s",
 	         CTFTEAMCODE(player),
@@ -1853,7 +1852,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		switch (damagetype)
 		{
 			case DMG_WATER:
-				str = M_GetText("%s was %s by chemical water.\n");
+				str = M_GetText("%s was %s by dangerous water.\n");
 				break;
 			case DMG_FIRE:
 				str = M_GetText("%s was %s by molten lava.\n");
@@ -1899,10 +1898,6 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	}
 
 	if (!str) // Should not happen! Unless we missed catching something above.
-		return;
-
-	// Don't log every hazard hit if they don't want us to.
-	if (!deadtarget && !cv_hazardlog.value)
 		return;
 
 	if (deathonly)

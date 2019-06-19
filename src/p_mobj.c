@@ -3396,11 +3396,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
-#define SH_OP (SH_PROTECTFIRE|SH_PROTECTWATER|SH_PROTECTELECTRIC)
-			if ((p->powers[pw_shield] & SH_OP) == SH_OP) // No.
-				P_KillMobj(mobj, NULL, NULL, DMG_INSTAKILL);
-#undef SH_OP
-			else if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
+			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
 			{ // Water removes electric and non-water fire shields...
 				P_FlashPal(p,
 				electric
@@ -7109,6 +7105,9 @@ void P_MobjThinker(mobj_t *mobj)
 					P_RemoveMobj(mobj);
 					return;
 				}
+
+				mobj->flags2 &= ~MF2_DONTDRAW;
+
 				mobj->x = mobj->target->x;
 				mobj->y = mobj->target->y;
 
