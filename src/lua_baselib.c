@@ -956,7 +956,7 @@ static int lib_pPlayerCanDamage(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
-	//HUDSAFE
+	NOHUD // was hud safe but then i added a lua hook
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");

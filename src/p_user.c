@@ -987,6 +987,18 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
 		return false;
 
+#ifdef HAVE_BLUA
+	{
+		UINT8 shouldCollide = LUAh_PlayerCanDamage(player, thing);
+		if (P_MobjWasRemoved(thing))
+			return false; // removed???
+		if (shouldCollide == 1)
+			return true; // force yes
+		else if (shouldCollide == 2)
+			return false; // force no
+	}
+#endif
+
 	if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		return true;
 
