@@ -12716,7 +12716,7 @@ void A_Boss5MakeItRain(mobj_t *actor)
 		actor->angle += ANGLE_45;
 
 		var1 = locvar1;
-		var2 = offset + (i & 1) ? 55 : 70;
+		var2 = offset + (i & 1) ? 80 : 85;
 		A_TrapShot(actor);
 	}
 
