@@ -4514,7 +4514,7 @@ DoneSection2:
 					break;
 				}
 
-				player->mo->angle = lineangle;
+				player->mo->angle = player->drawangle = lineangle;
 
 				if (!demoplayback || P_AnalogMove(player))
 				{
