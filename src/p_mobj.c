@@ -9164,6 +9164,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_FANG:
 			sc = 4;
 			break;
+		case MT_CORK:
+			mobj->flags2 |= MF2_SUPERFIRE;
+			break;
 		case MT_FBOMB:
 			mobj->flags2 |= MF2_EXPLOSION;
 			break;
