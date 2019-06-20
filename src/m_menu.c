@@ -1000,12 +1000,13 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Orbital"  , &cv_cam_orbit , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 70},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 80},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  110},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1015,12 +1016,13 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
 	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Orbital"  , &cv_cam2_orbit , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 70},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 80},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  110},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
