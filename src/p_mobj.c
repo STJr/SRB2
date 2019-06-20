@@ -7862,8 +7862,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_LHRT:
-				mobj->momx = FixedMul(mobj->momx, (48*FRACUNIT)/50);
-				mobj->momy = FixedMul(mobj->momy, (48*FRACUNIT)/50);
+				mobj->momx = FixedMul(mobj->momx, (49*FRACUNIT)/50);
+				mobj->momy = FixedMul(mobj->momy, (49*FRACUNIT)/50);
 				break;
 			case MT_EGGCAPSULE:
 				if (!mobj->reactiontime)
