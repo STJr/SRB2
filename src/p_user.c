@@ -2015,7 +2015,7 @@ boolean P_PlayerHitFloor(player_t *player)
 			}
 			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
 			{
-				mobjtype_t type = player->spinitem;
+				mobjtype_t type = player->revitem;
 				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
 				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_s3k8b);
