@@ -5189,6 +5189,7 @@ void A_MinusDigging(mobj_t *actor)
 	fixed_t x = FINECOSINE(fa)*dis + actor->x + FRACUNIT*P_RandomRange(-rad, rad);
 	fixed_t y = FINESINE(fa)*dis + actor->y + FRACUNIT*P_RandomRange(-rad, rad);
 	fixed_t mz = (actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz : actor->floorz;
+	mobj_t *par;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusDigging", actor))
@@ -5201,7 +5202,7 @@ void A_MinusDigging(mobj_t *actor)
 		return;
 	}
 
-	mobj_t *par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+	par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
 	if (actor->eflags & MFE_VERTICALFLIP)
 		par->eflags |= MFE_VERTICALFLIP;
 	P_TryMove(par, x, y, false);
@@ -5214,7 +5215,7 @@ void A_MinusDigging(mobj_t *actor)
 		S_StartSound(actor, actor->info->attacksound);
 
 		// Spawn growing dirt pile.
-		mobj_t *par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+		par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
 		P_SetMobjState(par, actor->info->raisestate);
 		P_SetScale(par, actor->scale*2);
 		if (actor->eflags & MFE_VERTICALFLIP)
@@ -5313,7 +5314,7 @@ void A_MinusCheck(mobj_t *actor)
 
 	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz) || (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
 	{
-		P_SetMobjState(actor, locvar1 ? locvar1 : actor->info->seestate);
+		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
 		actor->flags = actor->info->flags;
 	}
 }

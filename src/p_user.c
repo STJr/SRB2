@@ -9785,9 +9785,9 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 	return sec;
 }
 
-static size_t P_GetMinecartSpecialLine(sector_t *sec)
+static INT32 P_GetMinecartSpecialLine(sector_t *sec)
 {
-	size_t line = -1;
+	INT32 line = -1;
 
 	if (!sec)
 		return line;
@@ -9917,7 +9917,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 	for (i = 4; i <= 10; i++)
 	{
 		fixed_t nz;
-		size_t lline;
+		INT32 lline;
 
 		x += interval*xcom*i + fwooffset*c*i;
 		y += interval*ycom*i + fwooffset*s*i;
@@ -9944,7 +9944,7 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 	return NULL;
 }
 
-static void P_ParabolicMove(mobj_t *mo, fixed_t x, fixed_t y, fixed_t z, fixed_t gravity, fixed_t speed)
+static void P_ParabolicMove(mobj_t *mo, fixed_t x, fixed_t y, fixed_t z, fixed_t g, fixed_t speed)
 {
 	fixed_t dx = x - mo->x;
 	fixed_t dy = y - mo->y;
@@ -9952,7 +9952,7 @@ static void P_ParabolicMove(mobj_t *mo, fixed_t x, fixed_t y, fixed_t z, fixed_t
 	fixed_t dh = P_AproxDistance(dx, dy);
 	fixed_t c = FixedDiv(dx, dh);
 	fixed_t s = FixedDiv(dy, dh);
-	fixed_t fixConst = FixedDiv(speed, gravity);
+	fixed_t fixConst = FixedDiv(speed, g);
 
 	mo->momx = FixedMul(c, speed);
 	mo->momy = FixedMul(s, speed);
@@ -10013,7 +10013,7 @@ static void P_MinecartThink(player_t *player)
 	if (P_IsObjectOnGround(minecart))
 	{
 		sector_t *sec;
-		size_t lnum;
+		INT32 lnum;
 		fixed_t dummy;
 
 		// Just hit floor.
@@ -10075,9 +10075,9 @@ static void P_MinecartThink(player_t *player)
 			// Sideways detection
 			if (minecart->flags2 & MF2_AMBUSH)
 			{
-				angle_t fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
-				fixed_t c = FINECOSINE(fa);
-				fixed_t s = FINESINE(fa);
+				angle_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
+				fixed_t c = FINECOSINE(fa2);
+				fixed_t s = FINESINE(fa2);
 
 				detleft = P_LookForRails(minecart, c, s, targetangle, -s, c);
 				detright = P_LookForRails(minecart, c, s, targetangle, s, -c);
@@ -10130,9 +10130,9 @@ static void P_MinecartThink(player_t *player)
 
 				if (minecart->standingslope)
 				{
-					fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
+					fixed_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 					fixed_t front = P_GetZAt(minecart->standingslope, minecart->x, minecart->y);
-					fixed_t back = P_GetZAt(minecart->standingslope, minecart->x - FINECOSINE(fa), minecart->y - FINESINE(fa));
+					fixed_t back = P_GetZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
 
 					if (abs(front - back) < 3*FRACUNIT)
 						currentSpeed += (back - front)/3;
