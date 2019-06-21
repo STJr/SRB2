@@ -2922,7 +2922,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
 		if (!cv_friendlyfire.value && (G_PlatformGametype()))
 		{
-			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
 				if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
