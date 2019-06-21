@@ -149,6 +149,7 @@ if(${SDL2_FOUND})
 			SDL2
 			SDL2_mixer
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -159,6 +160,7 @@ if(${SDL2_FOUND})
 			${SDL2_LIBRARIES}
 			${SDL2_MIXER_LIBRARIES}
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -238,6 +240,7 @@ if(${SDL2_FOUND})
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
 		${GME_INCLUDE_DIRS}
+		${OPENMPT_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
@@ -284,12 +287,14 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				else()
@@ -298,12 +303,14 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
 							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				endif()
@@ -323,6 +330,9 @@ if(${SDL2_FOUND})
 		endif()
 		if(${SRB2_CONFIG_HAVE_GME})
 			getwinlib(libgme "libgme.dll")
+		endif()
+		if(${SRB2_CONFIG_HAVE_OPENMPT})
+			getwinlib(libopenmpt "libopenmpt.dll")
 		endif()
 
 		install(PROGRAMS
