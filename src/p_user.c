@@ -10468,6 +10468,10 @@ void P_PlayerThink(player_t *player)
 		if (!P_AnalogMove(player))
 			player->mo->angle = (cmd->angleturn << 16 /* not FRACBITS */);
 
+		ticruned++;
+		if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
+			ticmiss++;
+
 		P_MinecartThink(player);
 	}
 	else if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_ZOOMTUBE))
