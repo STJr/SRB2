@@ -2824,7 +2824,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
-			if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
 			{
 				P_SwitchShield(player, SH_PINK);
 				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -2839,7 +2839,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
-			if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
 			{
 				P_SwitchShield(player, SH_PINK);
 				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -2924,7 +2924,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		{
 			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
-				if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
 					P_SwitchShield(player, SH_PINK);
 					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -2947,7 +2947,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		{
 			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 			{
-				if (player->spinitem != MT_LHRT && player->revitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
 					P_SwitchShield(player, SH_PINK);
 					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
