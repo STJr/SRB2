@@ -9971,7 +9971,6 @@ static void P_MinecartThink(player_t *player)
 		return;
 	}
 
-#if 0
 	//Limit player's angle to a cone.
 #define MINECARTCONEMAX FixedAngle(20*FRACUNIT)
 	{
@@ -9989,9 +9988,6 @@ static void P_MinecartThink(player_t *player)
 				localangle2 = player->mo->angle;
 		}
 	}
-#endif
-
-	//P_ResetPlayer(player);
 
 	// Player holding jump?
 	if (!(player->cmd.buttons & BT_JUMP))
@@ -10475,7 +10471,12 @@ void P_PlayerThink(player_t *player)
 	if (player->mo->reactiontime)
 		player->mo->reactiontime--;
 	else if (player->powers[pw_carry] == CR_MINECART)
+	{
+		if (!P_AnalogMove(player))
+			player->mo->angle = (cmd->angleturn << 16 /* not FRACBITS */);
+
 		P_MinecartThink(player);
+	}
 	else if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_ZOOMTUBE))
 	{
 		if (player->powers[pw_carry] == CR_ROPEHANG)
