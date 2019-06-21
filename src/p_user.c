@@ -10086,17 +10086,10 @@ static void P_MinecartThink(player_t *player)
 				currentSpeed *= -1;
 
 			// Player-specific behavior.
-			// Update side hopper marker sprites if pressing strafe.
 			if (detleft && player->cmd.sidemove < 0)
-			{
-				P_SetMobjState(detleft, detleft->info->seestate);
 				sidelock = detleft;
-			}
 			else if (detright && player->cmd.sidemove > 0)
-			{
-				P_SetMobjState(detright, detright->info->seestate);
 				sidelock = detright;
-			}
 
 			//if (player->cmd.buttons & BT_USE && currentSpeed > 4*FRACUNIT)
 			//	currentSpeed -= FRACUNIT/8;

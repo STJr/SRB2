@@ -11991,9 +11991,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{          // MT_MINECARTSIDEMARK
 		-1,             // doomednum
-		S_MINECARTSIDEMARK1, // spawnstate
+		S_MINECARTSIDEMARK2, // spawnstate
 		1,              // spawnhealth
-		S_MINECARTSIDEMARK2, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
