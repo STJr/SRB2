@@ -565,14 +565,14 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		{
 			CONS_Alert(CONS_ERROR, "Failed to read central directory (%s)\n", strerror(ferror(handle)));
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			return NULL;
 		}
 		if (memcmp(zentry->signature, pat_central, 4))
 		{
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			return NULL;
 		}
 
@@ -585,7 +585,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		{
 			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", strerror(ferror(handle)));
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			free(fullname);
 			return NULL;
 		}
@@ -626,6 +626,8 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			break;
 		}
 	}
+
+	free(zentries);
 
 	*nlmp = numlumps;
 	return lumpinfo;
