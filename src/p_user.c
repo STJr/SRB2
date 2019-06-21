@@ -10106,7 +10106,7 @@ static void P_MinecartThink(player_t *player)
 			//	currentSpeed -= FRACUNIT/8;
 
 			// Jumping
-			if ((player->cmd.buttons & BT_JUMP) && !(player->pflags & PF_JUMPDOWN))
+			if (sidelock || ((player->cmd.buttons & BT_JUMP) && !(player->pflags & PF_JUMPDOWN)))
 			{
 				player->pflags |= PF_JUMPDOWN;
 
