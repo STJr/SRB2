@@ -172,9 +172,14 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPSH
 	&lspr[NOLIGHT],     // SPR_ESHI
 	&lspr[NOLIGHT],     // SPR_GSNP
+	&lspr[NOLIGHT],     // SPR_GSNL
+	&lspr[NOLIGHT],     // SPR_GSNH
 	&lspr[NOLIGHT],     // SPR_MNUS
+	&lspr[NOLIGHT],     // SPR_MNUD
 	&lspr[NOLIGHT],     // SPR_SSHL
 	&lspr[NOLIGHT],     // SPR_UNID
+	&lspr[NOLIGHT],     // SPR_CANA
+	&lspr[NOLIGHT],     // SPR_CANG
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -350,6 +355,19 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_WWSG
 	&lspr[NOLIGHT],     // SPR_WWS2
 	&lspr[NOLIGHT],     // SPR_WWS3
+	&lspr[NOLIGHT],     // SPR_OILL
+	&lspr[NOLIGHT],     // SPR_OILF
+	&lspr[NOLIGHT],     // SPR_BARR
+	&lspr[NOLIGHT],     // SPR_REMT
+	&lspr[NOLIGHT],     // SPR_TAZD
+	&lspr[NOLIGHT],     // SPR_ADST
+	&lspr[NOLIGHT],     // SPR_MCRT
+	&lspr[NOLIGHT],     // SPR_MCSP
+	&lspr[NOLIGHT],     // SPR_NON2
+	&lspr[NOLIGHT],     // SPR_SALD
+	&lspr[NOLIGHT],     // SPR_TRAE
+	&lspr[NOLIGHT],     // SPR_TRAI
+	&lspr[NOLIGHT],     // SPR_STEA
 
 	// Red Volcano Scenery
 	&lspr[REDBALL_L],   // SPR_FLME
@@ -542,6 +560,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
 	&lspr[REDBALL_L],    // SPR_BMNB
+	&lspr[NOLIGHT],      // SPR_WDDB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA

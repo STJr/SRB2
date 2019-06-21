@@ -2265,6 +2265,9 @@ static actionpointer_t actionpointers[] =
 	{{A_CrushclawLaunch},        "A_CRUSHCLAWLAUNCH"},
 	{{A_VultureVtol},            "A_VULTUREVTOL"},
 	{{A_VultureCheck},           "A_VULTURECHECK"},
+	{{A_VultureHover},           "A_VULTUREHOVER"},
+	{{A_VultureBlast},           "A_VULTUREBLAST"},
+	{{A_VultureFly},             "A_VULTUREFLY"},
 	{{A_SkimChase},              "A_SKIMCHASE"},
 	{{A_1upThinker},             "A_1UPTHINKER"},
 	{{A_SkullAttack},            "A_SKULLATTACK"},
@@ -2393,8 +2396,18 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
-
-	{{NULL},                   "NONE"},
+	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
+	{{A_TNTExplode},             "A_TNTEXPLODE"},
+	{{A_DebrisRandom},           "A_DEBRISRANDOM"},
+	{{A_TrainCameo},             "A_TRAINCAMEO"},
+	{{A_TrainCameo2},            "A_TRAINCAMEO2"},
+	{{A_CanarivoreGas},          "A_CANARIVOREGAS"},
+	{{A_KillSegments},           "A_KILLSEGMENTS"},
+	{{A_SnapperSpawn},           "A_SNAPPERSPAWN"},
+	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
+	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
+	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
+	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
 	{{NULL},                   NULL},
@@ -4381,15 +4394,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Vulture
 	"S_VULTURE_STND",
-	"S_VULTURE_VTOL1",
-	"S_VULTURE_VTOL2",
-	"S_VULTURE_VTOL3",
-	"S_VULTURE_VTOL4",
+	"S_VULTURE_DRIFT",
 	"S_VULTURE_ZOOM1",
 	"S_VULTURE_ZOOM2",
-	"S_VULTURE_ZOOM3",
-	"S_VULTURE_ZOOM4",
-	"S_VULTURE_ZOOM5",
+	"S_VULTURE_STUNNED",
 
 	// Pointy
 	"S_POINTY1",
@@ -4440,15 +4448,31 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGSHIELDBREAK",
 
 	// Green Snapper
+	"S_SNAPPER_SPAWN",
+	"S_SNAPPER_SPAWN2",
 	"S_GSNAPPER_STND",
 	"S_GSNAPPER1",
 	"S_GSNAPPER2",
 	"S_GSNAPPER3",
 	"S_GSNAPPER4",
+	"S_SNAPPER_XPLD",
+	"S_SNAPPER_LEG",
+	"S_SNAPPER_LEGRAISE",
+	"S_SNAPPER_HEAD",
 
 	// Minus
+	"S_MINUS_INIT",
 	"S_MINUS_STND",
-	"S_MINUS_DIGGING",
+	"S_MINUS_DIGGING1",
+	"S_MINUS_DIGGING2",
+	"S_MINUS_DIGGING3",
+	"S_MINUS_DIGGING4",
+	"S_MINUS_BURST0",
+	"S_MINUS_BURST1",
+	"S_MINUS_BURST2",
+	"S_MINUS_BURST3",
+	"S_MINUS_BURST4",
+	"S_MINUS_BURST5",
 	"S_MINUS_POPUP",
 	"S_MINUS_UPWARD1",
 	"S_MINUS_UPWARD2",
@@ -4466,6 +4490,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MINUS_DOWNWARD6",
 	"S_MINUS_DOWNWARD7",
 	"S_MINUS_DOWNWARD8",
+
+	// Minus dirt
+	"S_MINUSDIRT1",
+	"S_MINUSDIRT2",
+	"S_MINUSDIRT3",
+	"S_MINUSDIRT4",
+	"S_MINUSDIRT5",
+	"S_MINUSDIRT6",
+	"S_MINUSDIRT7",
 
 	// Spring Shell
 	"S_SSHELL_STND",
@@ -4493,6 +4526,28 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_UNIDUS_STND",
 	"S_UNIDUS_RUN",
 	"S_UNIDUS_BALL",
+
+	// Canarivore
+	"S_CANARIVORE_LOOK",
+	"S_CANARIVORE_AWAKEN1",
+	"S_CANARIVORE_AWAKEN2",
+	"S_CANARIVORE_AWAKEN3",
+	"S_CANARIVORE_GAS1",
+	"S_CANARIVORE_GAS2",
+	"S_CANARIVORE_GAS3",
+	"S_CANARIVORE_GAS4",
+	"S_CANARIVORE_GAS5",
+	"S_CANARIVORE_GASREPEAT",
+	"S_CANARIVORE_CLOSE1",
+	"S_CANARIVORE_CLOSE2",
+	"S_CANARIVOREGAS_1",
+	"S_CANARIVOREGAS_2",
+	"S_CANARIVOREGAS_3",
+	"S_CANARIVOREGAS_4",
+	"S_CANARIVOREGAS_5",
+	"S_CANARIVOREGAS_6",
+	"S_CANARIVOREGAS_7",
+	"S_CANARIVOREGAS_8",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -5680,6 +5735,85 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARIDSIGN_CAUTION",
 	"S_ARIDSIGN_CACTI",
 	"S_ARIDSIGN_SHARPTURN",
+
+	// Oil lamp
+	"S_OILLAMP",
+	"S_OILLAMPFLARE",
+
+	// TNT barrel
+	"S_TNTBARREL_STND1",
+	"S_TNTBARREL_EXPL1",
+	"S_TNTBARREL_EXPL2",
+	"S_TNTBARREL_EXPL3",
+	"S_TNTBARREL_EXPL4",
+	"S_TNTBARREL_EXPL5",
+	"S_TNTBARREL_EXPL6",
+	"S_TNTBARREL_FLYING",
+
+	// TNT proximity shell
+	"S_PROXIMITY_TNT",
+	"S_PROXIMITY_TNT_TRIGGER1",
+	"S_PROXIMITY_TNT_TRIGGER2",
+	"S_PROXIMITY_TNT_TRIGGER3",
+	"S_PROXIMITY_TNT_TRIGGER4",
+	"S_PROXIMITY_TNT_TRIGGER5",
+	"S_PROXIMITY_TNT_TRIGGER6",
+	"S_PROXIMITY_TNT_TRIGGER7",
+	"S_PROXIMITY_TNT_TRIGGER8",
+	"S_PROXIMITY_TNT_TRIGGER9",
+	"S_PROXIMITY_TNT_TRIGGER10",
+	"S_PROXIMITY_TNT_TRIGGER11",
+	"S_PROXIMITY_TNT_TRIGGER12",
+	"S_PROXIMITY_TNT_TRIGGER13",
+	"S_PROXIMITY_TNT_TRIGGER14",
+	"S_PROXIMITY_TNT_TRIGGER15",
+	"S_PROXIMITY_TNT_TRIGGER16",
+	"S_PROXIMITY_TNT_TRIGGER17",
+	"S_PROXIMITY_TNT_TRIGGER18",
+	"S_PROXIMITY_TNT_TRIGGER19",
+	"S_PROXIMITY_TNT_TRIGGER20",
+	"S_PROXIMITY_TNT_TRIGGER21",
+	"S_PROXIMITY_TNT_TRIGGER22",
+	"S_PROXIMITY_TNT_TRIGGER23",
+
+	// Dust devil
+	"S_DUSTDEVIL",
+	"S_DUSTLAYER1",
+	"S_DUSTLAYER2",
+	"S_DUSTLAYER3",
+	"S_DUSTLAYER4",
+	"S_DUSTLAYER5",
+	"S_ARIDDUST1",
+	"S_ARIDDUST2",
+	"S_ARIDDUST3",
+
+	// Minecart
+	"S_MINECART_IDLE",
+	"S_MINECART_DTH1",
+	"S_MINECARTEND",
+	"S_MINECARTSEG_FRONT",
+	"S_MINECARTSEG_BACK",
+	"S_MINECARTSEG_LEFT",
+	"S_MINECARTSEG_RIGHT",
+	"S_MINECARTSIDEMARK1",
+	"S_MINECARTSIDEMARK2",
+	"S_MINECARTSPARK",
+
+	// Saloon door
+	"S_SALOONDOOR",
+	"S_SALOONDOORTHINKER",
+
+	// Train cameo
+	"S_TRAINCAMEOSPAWNER_1",
+	"S_TRAINCAMEOSPAWNER_2",
+	"S_TRAINCAMEOSPAWNER_3",
+	"S_TRAINCAMEOSPAWNER_4",
+	"S_TRAINCAMEOSPAWNER_5",
+	"S_TRAINPUFFMAKER",
+
+	// Train
+	"S_TRAINDUST",
+	"S_TRAINSTEAM",
 
 	// Flame jet
 	"S_FLAMEJETSTND",
@@ -7003,6 +7137,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
+	"S_WOODDEBRIS",
+
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -7066,11 +7202,16 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGGUARD", // Egg Guard
 	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
+	"MT_SNAPPER_LEG", // Green Snapper leg
+	"MT_SNAPPER_HEAD", // Green Snapper head
 	"MT_MINUS", // Minus
+	"MT_MINUSDIRT", // Minus dirt
 	"MT_SPRINGSHELL", // Spring Shell
 	"MT_YELLOWSHELL", // Spring Shell (yellow)
 	"MT_UNIDUS", // Unidus
 	"MT_UNIBALL", // Unidus Ball
+	"MT_CANARIVORE", // Canarivore
+	"MT_CANARIVORE_GAS", // Canarivore gas
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -7369,6 +7510,26 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
+	"MT_OILLAMP",
+	"MT_TNTBARREL",
+	"MT_PROXIMITYTNT",
+	"MT_DUSTDEVIL",
+	"MT_DUSTLAYER",
+	"MT_ARIDDUST",
+	"MT_MINECART",
+	"MT_MINECARTSEG",
+	"MT_MINECARTSPAWNER",
+	"MT_MINECARTEND",
+	"MT_MINECARTENDSOLID",
+	"MT_MINECARTSIDEMARK",
+	"MT_MINECARTSPARK",
+	"MT_SALOONDOOR",
+	"MT_SALOONDOORTHINKER",
+	"MT_TRAINCAMEOSPAWNER",
+	"MT_TRAINSEG",
+	"MT_TRAINDUSTSPAWNER",
+	"MT_TRAINSTEAMSPAWNER",
+	"MT_MINECARTSWITCHPOINT",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",
@@ -7691,6 +7852,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
+	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -8366,6 +8528,7 @@ struct {
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
+	{"CR_MINECART",CR_MINECART},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
