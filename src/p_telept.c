@@ -125,8 +125,6 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 	if (!P_TeleportMove(thing, x, y, z))
 		return false;
 
-	thing->angle = angle;
-
 	if (!dontstopmove)
 		thing->momx = thing->momy = thing->momz = 0;
 	else // Change speed to match direction
@@ -178,6 +176,8 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 		if (flash)
 			P_FlashPal(thing->player, PAL_MIXUP, 10);
 	}
+
+	thing->angle = angle;
 
 	return true;
 }
