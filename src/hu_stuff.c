@@ -1468,7 +1468,6 @@ static void HU_drawMiniChat(void)
 		if (splitscreen > 1)
 			y += 16;
 	}*/
-	y -= (G_RingSlingerGametype() ? 16 : 0);
 
 	dx = 0;
 	dy = 0;
@@ -1677,7 +1676,6 @@ static void HU_DrawChat(void)
 		}
 	}
 #endif
-	y -= (G_RingSlingerGametype() ? 16 : 0);
 
 	if (teamtalk)
 	{
@@ -1770,7 +1768,6 @@ static void HU_DrawChat(void)
 				p_dispy += 16;
 		}
 #endif
-		p_dispy -= (G_RingSlingerGametype() ? 16 : 0);
 
 		i = 0;
 		for(i=0; (i<MAXPLAYERS); i++)
