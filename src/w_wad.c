@@ -1157,13 +1157,13 @@ boolean W_IsLumpWad(lumpnum_t lumpnum)
 // W_IsLumpFolder
 // Is the lump a folder? (in a PK3 obviously)
 //
-boolean W_IsLumpFolder(UINT16 wad, UINT16 lump);
+boolean W_IsLumpFolder(UINT16 wad, UINT16 lump)
 {
 	if (wadfiles[wad]->type == RET_PK3)
 	{
-		const char *name = wadfiles[wad]->lumpinfo[lump]->name2;
+		const char *name = wadfiles[wad]->lumpinfo[lump].name2;
 
-		return (name[strlen(name)-1] == '/') // folders end in '/'
+		return (name[strlen(name)-1] == '/'); // folders end in '/'
 	}
 
 	return false; // non-PK3s don't have folders
