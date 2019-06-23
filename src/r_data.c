@@ -1054,6 +1054,7 @@ void R_ReInitColormaps(UINT16 num)
 {
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
+	const lumpnum_t basecolormaplump = W_GetNumForName(colormap);
 
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
@@ -1061,17 +1062,16 @@ void R_ReInitColormaps(UINT16 num)
 	// Load in the light tables, now 64k aligned for smokie...
 	lump = W_GetNumForName(colormap);
 	if (lump == LUMPERROR)
-		lump = W_GetNumForName("COLORMAP");
+		lump = basecolormaplump;
 	else
 	{
-		if (W_LumpLength(lump) != W_LumpLength(W_GetNumForName("COLORMAP")))
+		if (W_LumpLength(lump) != W_LumpLength(basecolormaplump))
 		{
-			CONS_Alert(CONS_WARNING, "%s lump size does not match COLORMAP, using COLORMAP instead.\n", colormap);
-			lump = W_GetNumForName("COLORMAP");
+			CONS_Alert(CONS_WARNING, "%s lump size does not match COLORMAP, results may be unexpected.\n", colormap);
 		}
 	}
 
-	W_ReadLump(lump, colormaps);
+	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
