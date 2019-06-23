@@ -1323,6 +1323,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_WIDEICON;
 			}
+			else if (fastcmp(word, "STARTRINGS"))
+				mapheaderinfo[num-1]->startrings = (UINT16)i;
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
