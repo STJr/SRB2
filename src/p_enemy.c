@@ -6268,7 +6268,7 @@ void A_MixUp(mobj_t *actor)
 	else if (numplayers == 2) // Special case -- simple swap
 	{
 		fixed_t x, y, z;
-		angle_t angle;
+		angle_t angle, drawangle;
 		INT32 one = -1, two = 0; // default value 0 to make the compiler shut up
 
 		// Zoom tube stuff
@@ -6322,6 +6322,7 @@ void A_MixUp(mobj_t *actor)
 		y = players[one].mo->y;
 		z = players[one].mo->z;
 		angle = players[one].mo->angle;
+		drawangle = players[one].drawangle;
 
 		starpostx = players[one].starpostx;
 		starposty = players[one].starposty;
@@ -6337,9 +6338,13 @@ void A_MixUp(mobj_t *actor)
 				players[two].starpostnum, players[two].starposttime, players[two].starpostangle,
 				players[two].mo->flags2);
 
+		players[one].drawangle = players[two].drawangle;
+
 		P_MixUp(players[two].mo, x, y, z, angle, starpostx, starposty, starpostz,
 				starpostnum, starposttime, starpostangle,
 				mflags2);
+
+		players[two].drawangle = drawangle;
 
 		//carry set after mixup.  Stupid P_ResetPlayer() takes away some of the stuff we look for...
 		//but not all of it!  So we need to make sure they aren't set wrong or anything.
@@ -6352,7 +6357,7 @@ void A_MixUp(mobj_t *actor)
 	else
 	{
 		fixed_t position[MAXPLAYERS][3];
-		angle_t anglepos[MAXPLAYERS];
+		angle_t anglepos[MAXPLAYERS][2];
 		INT32 pindex[MAXPLAYERS], counter = 0, teleportfrom = 0;
 
 		// Zoom tube stuff
@@ -6371,7 +6376,7 @@ void A_MixUp(mobj_t *actor)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			position[i][0] = position[i][1] = position[i][2] = anglepos[i] = pindex[i] = -1;
+			position[i][0] = position[i][1] = position[i][2] = anglepos[i][0] = anglepos[i][1] = pindex[i] = -1;
 			teleported[i] = false;
 		}
 
@@ -6387,7 +6392,8 @@ void A_MixUp(mobj_t *actor)
 				position[counter][1] = players[i].mo->y;
 				position[counter][2] = players[i].mo->z;
 				pindex[counter] = i;
-				anglepos[counter] = players[i].mo->angle;
+				anglepos[counter][0] = players[i].mo->angle;
+				anglepos[counter][1] = players[i].drawangle;
 				players[i].mo->momx = players[i].mo->momy = players[i].mo->momz =
 					players[i].rmomx = players[i].rmomy = 1;
 				players[i].cmomx = players[i].cmomy = 0;
@@ -6439,10 +6445,12 @@ void A_MixUp(mobj_t *actor)
 				players[i].speed = transspeed[teleportfrom];
 				P_SetTarget(&players[i].mo->tracer, transtracer[teleportfrom]);
 
-				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom],
+				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom][0],
 					spposition[teleportfrom][0], spposition[teleportfrom][1], spposition[teleportfrom][2],
 					starpostnum[teleportfrom], starposttime[teleportfrom], starpostangle[teleportfrom],
 					flags2[teleportfrom]);
+
+				players[i].drawangle = anglepos[teleportfrom][1];
 
 				//...carry after.  same reasoning.
 				players[i].powers[pw_carry] = transcarry[teleportfrom];
