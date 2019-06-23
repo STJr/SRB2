@@ -242,7 +242,7 @@ void HU_Init(void)
 
 	if (!dedicated)
 	{
-#define  DIM( start, size ) ( font.start = start, font.size = size )
+#define  DIM( s, n ) ( font.start = s, font.size = n )
 #define ADIM( name )        DIM (name ## _FONTSTART, name ## _FONTSIZE)
 #define   PR( s )           strcpy(font.prefix, s)
 #define  DIG( n )           ( font.digits = n )

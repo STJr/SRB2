@@ -10,7 +10,7 @@
 /// \file  font.h
 /// \brief Font setup
 
-#ifndef __FONT_H_
+#ifndef __FONT_H__
 #define __FONT_H__
 
 #define MAX_FONTS 32
