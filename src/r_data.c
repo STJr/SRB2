@@ -1064,9 +1064,9 @@ void R_ReInitColormaps(UINT16 num)
 		lump = W_GetNumForName("COLORMAP");
 	else
 	{
-		if (W_LumpLength(lump) > W_LumpLength(W_GetNumForName("COLORMAP")))
+		if (W_LumpLength(lump) != W_LumpLength(W_GetNumForName("COLORMAP")))
 		{
-			CONS_Alert(CONS_WARNING, "%s lump size is too big, using COLORMAP.\n", colormap);
+			CONS_Alert(CONS_WARNING, "%s lump size does not match COLORMAP, using COLORMAP instead.\n", colormap);
 			lump = W_GetNumForName("COLORMAP");
 		}
 	}
