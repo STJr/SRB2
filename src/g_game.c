@@ -2397,6 +2397,8 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	P_SpawnPlayer(playernum);
 
+	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
+
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
@@ -2451,8 +2453,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		}
 	}
 	P_MovePlayerToSpawn(playernum, spawnpoint);
-
-	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 #ifdef HAVE_BLUA
 	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
