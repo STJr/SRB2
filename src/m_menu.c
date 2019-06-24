@@ -1193,13 +1193,12 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Level", NULL, 155},
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        161},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 166},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   176},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 166},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS mode Draw Dist.",    &cv_drawdist_nights, 171},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 185},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         191},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      196},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      191},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -2674,20 +2673,35 @@ static void M_ChangeCvar(INT32 choice)
 {
 	consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
 
+	if (choice == -1)
+	{
+		if (cv == &cv_playercolor)
+		{
+			SINT8 skinno = R_SkinAvailable(cv_chooseskin.string);
+			if (skinno != -1)
+				CV_SetValue(cv,skins[skinno].prefcolor);
+			return;
+		}
+		CV_Set(cv,cv->defaultvalue);
+		return;
+	}
+
+	choice = (choice<<1) - 1;
+
 	if (((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
 	{
-		CV_SetValue(cv,cv->value+(choice*2-1));
+		CV_SetValue(cv,cv->value+(choice));
 	}
 	else if (cv->flags & CV_FLOAT)
 	{
 		char s[20];
-		sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice*2-1)*(1.0f/16.0f));
+		sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
 		CV_Set(cv,s);
 	}
 	else
-		CV_AddValue(cv,choice*2-1);
+		CV_AddValue(cv,choice);
 }
 
 static boolean M_ChangeStringCvar(INT32 choice)
@@ -3123,6 +3137,23 @@ boolean M_Responder(event_t *ev)
 				S_StartSound(NULL, sfx_shldls);
 				return true;
 			}
+
+			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
+				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
+			{
+				consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
+
+				if (cv == &cv_chooseskin
+					|| cv == &cv_nextmap
+					|| cv == &cv_newgametype)
+					return true;
+
+				if (currentMenu != &OP_SoundOptionsDef || itemOn > 3)
+					S_StartSound(NULL, sfx_menu1);
+				routine(-1);
+				return true;
+			}
+
 			// Why _does_ backspace go back anyway?
 			//currentMenu->lastOn = itemOn;
 			//if (currentMenu->prevMenu)
@@ -9563,6 +9594,16 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[l-1] = 0;
 			}
+			else if (itemOn == 2)
+			{
+				UINT8 col = skins[setupm_fakeskin].prefcolor;
+				if (setupm_fakecolor != col)
+				{
+					S_StartSound(NULL,sfx_menu1); // Tails
+					setupm_fakecolor = col;
+				}
+			}
+			break;
 			break;
 
 		case KEY_DEL:
