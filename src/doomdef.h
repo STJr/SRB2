@@ -381,11 +381,19 @@ typedef enum
 
 // Special linedef executor tag numbers!
 enum {
-	LE_PINCHPHASE      = -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
-	LE_ALLBOSSESDEAD   = -3, // All bosses in the map are dead (Egg capsule raise)
-	LE_BOSSDEAD        = -4, // A boss in the map died (Chaos mode boss tally)
-	LE_BOSS4DROP       = -5,  // CEZ boss dropped its cage
-	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
+	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
+	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
+	LE_BOSSDEAD        =    -4, // A boss in the map died (Chaos mode boss tally)
+	LE_BOSS4DROP       =    -5, // CEZ boss dropped its cage
+	LE_BRAKVILEATACK   =    -6, // Brak's doing his LOS attack, oh noes
+	LE_TURRET          = 32000, // THZ turret
+	LE_BRAKPLATFORM    =  4200, // v2.0 Black Eggman destroys platform
+	LE_CAPSULE2        =   682, // Egg Capsule
+	LE_CAPSULE1        =   681, // Egg Capsule
+	LE_CAPSULE0        =   680, // Egg Capsule
+	LE_KOOPA           =   650, // Distant cousin to Gay Bowser
+	LE_AXE             =   649, // MKB Axe object
+	LE_PARAMWIDTH      =  -100  // If an object that calls LinedefExecute has a nonzero parameter value, this times the parameter will be subtracted. (Mostly for the purpose of coexisting bosses...)
 };
 
 // Name of local directory for config files and savegames

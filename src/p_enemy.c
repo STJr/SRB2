@@ -3740,7 +3740,10 @@ void A_BossDeath(mobj_t *mo)
 		return;
 #endif
 
-	P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
+	if (mo->spawnpoint && mo->spawnpoint->extrainfo)
+		P_LinedefExecute(LE_BOSSDEAD+(mo->spawnpoint->extrainfo*LE_PARAMWIDTH), mo, NULL);
+	else
+		P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
 	mo->health = 0;
 
 	// Boss is dead (but not necessarily fleeing...)
@@ -3778,11 +3781,11 @@ void A_BossDeath(mobj_t *mo)
 	else
 	{
 		// Bring the egg trap up to the surface
-		junk.tag = 680;
+		junk.tag = LE_CAPSULE0;
 		EV_DoElevator(&junk, elevateHighest, false);
-		junk.tag = 681;
+		junk.tag = LE_CAPSULE1;
 		EV_DoElevator(&junk, elevateUp, false);
-		junk.tag = 682;
+		junk.tag = LE_CAPSULE2;
 		EV_DoElevator(&junk, elevateHighest, false);
 	}
 
@@ -3806,7 +3809,7 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
-			junk.tag = 650;
+			junk.tag = LE_KOOPA;
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;
 		}
@@ -3866,15 +3869,17 @@ bossjustdie:
 
 				mo2 = (mobj_t *)th;
 
-				if (mo2->type == MT_BOSSFLYPOINT)
-				{
-					// If this one's closer then the last one, go for it.
-					if (!mo->target ||
-						P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
-						P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
-							P_SetTarget(&mo->target, mo2);
-					// Otherwise... Don't!
-				}
+				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				// If this one's further then the last one, don't go for it.
+				if (mo->target &&
+					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
+					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
+						continue;
+
+				// Otherwise... Do!
+				P_SetTarget(&mo->target, mo2);
 			}
 
 			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
@@ -6700,7 +6705,10 @@ void A_Boss1Chase(mobj_t *actor)
 		}
 		else
 		{
-			P_LinedefExecute(LE_PINCHPHASE, actor, NULL);
+			if (actor->spawnpoint && actor->spawnpoint->extrainfo)
+				P_LinedefExecute(LE_PINCHPHASE+(actor->spawnpoint->extrainfo*LE_PARAMWIDTH), actor, NULL);
+			else
+				P_LinedefExecute(LE_PINCHPHASE, actor, NULL);
 			P_SetMobjState(actor, actor->info->raisestate);
 		}
 
@@ -7905,6 +7913,8 @@ void A_LinedefExecute(mobj_t *actor)
 
 	if (locvar2)
 		tagnum += locvar2*(AngleFixed(actor->angle)>>FRACBITS);
+	else if (actor->spawnpoint && actor->spawnpoint->extrainfo)
+		tagnum += (actor->spawnpoint->extrainfo*LE_PARAMWIDTH);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecute: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
 
@@ -12724,7 +12734,7 @@ void A_Boss5MakeItRain(mobj_t *actor)
 		actor->angle += ANGLE_45;
 
 		var1 = locvar1;
-		var2 = offset + (i & 1) ? 55 : 70;
+		var2 = offset + (i & 1) ? 80 : 85;
 		A_TrapShot(actor);
 	}
 

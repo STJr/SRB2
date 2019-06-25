@@ -1359,7 +1359,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->bot)
 					return;
 
-				junk.tag = 649;
+				junk.tag = LE_AXE;
 				EV_DoElevator(&junk, bridgeFall, false);
 
 				// scan the remaining thinkers to find koopa
@@ -1369,11 +1369,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						continue;
 
 					mo2 = (mobj_t *)th;
-					if (mo2->type == MT_KOOPA)
-					{
-						mo2->momz = 5*FRACUNIT;
-						break;
-					}
+
+					if (mo2->type != MT_KOOPA)
+						continue;
+
+					mo2->momz = 5*FRACUNIT;
+					break;
 				}
 			}
 			break;
@@ -3464,14 +3465,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return true;
 			}
 		}
-		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] // ignore bouncing & such in invulnerability
-			|| player->powers[pw_super])
+		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{
 			if (force
-			|| (player->powers[pw_super]
-			 && inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE) // Super Sonic is stunned!
-			|| (player->powers[pw_flashing]
-			 && source && source->type == MT_FANG && inflictor && inflictor->type == MT_CORK)) // Fang's cork bullets knock you back even when flashing
+			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
 #ifdef HAVE_BLUA
 				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
