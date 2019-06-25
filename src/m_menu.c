@@ -4483,7 +4483,7 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			return false;
 
 		case LLM_LEVELSELECT:
-			if (mapheaderinfo[mapnum]->levelselect != maplistoption)
+			if (!(mapheaderinfo[mapnum]->levelselect & maplistoption))
 				return false;
 
 			return true;
@@ -6758,7 +6758,7 @@ static void M_LoadGameLevelSelect(INT32 choice)
 
 	SP_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
-	maplistoption = 1;
+	maplistoption = 1+2;
 
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
