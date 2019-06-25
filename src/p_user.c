@@ -1124,13 +1124,13 @@ void P_RestoreMusic(player_t *player)
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
-			S_ChangeMusic(mapmusname, mapmusflags, true);
+			S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 		}
 		else
 			S_ChangeMusicInternal("shoes", true);
 	}
 	else
-		S_ChangeMusic(mapmusname, mapmusflags, true);
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
 
 //
@@ -8688,8 +8688,11 @@ void P_PlayerThink(player_t *player)
 
 	if (player->bot)
 	{
-		if (player->playerstate == PST_LIVE && B_CheckRespawn(player))
-			player->playerstate = PST_REBORN;
+		if (player->playerstate == PST_LIVE || player->playerstate == PST_DEAD)
+		{
+			if (B_CheckRespawn(player))
+				player->playerstate = PST_REBORN;
+		}
 		if (player->playerstate == PST_REBORN)
 			return;
 	}

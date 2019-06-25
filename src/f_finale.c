@@ -995,6 +995,7 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
+	"Victor \"Steel Titanium\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
@@ -1005,7 +1006,6 @@ static const char *credits[] = {
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
-	"\"Steel Titanium\"",
 	"Ben \"Cue\" Woodford",
 	// Git contributors with 5+ approved merges of substantive quality,
 	// or contributors with at least one groundbreaking merge, may be named.
@@ -1054,12 +1054,12 @@ static const char *credits[] = {
 	"Dan \"Blitzzo\" Hagerstrand",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"Erik \"Torgo\" Nielsen",
 	"\"Kaito Sinclaire\"",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
+	"\"Torgo\"",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
 	"Marco \"mazmazz\" Zafra",
@@ -1741,9 +1741,10 @@ static void F_AdvanceToNextScene(void)
 	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
 	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[scenenum].musswitch,
 			cutscenes[cutnum]->scene[scenenum].musswitchflags,
-			cutscenes[cutnum]->scene[scenenum].musicloop);
+			cutscenes[cutnum]->scene[scenenum].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 
 	// Fade to the next
 	dofadenow = true;
@@ -1812,9 +1813,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	stoptimer = 0;
 
 	if (cutscenes[cutnum]->scene[0].musswitch[0])
-		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
+		S_ChangeMusicEx(cutscenes[cutnum]->scene[0].musswitch,
 			cutscenes[cutnum]->scene[0].musswitchflags,
-			cutscenes[cutnum]->scene[0].musicloop);
+			cutscenes[cutnum]->scene[0].musicloop,
+			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
 	else
 		S_StopMusic();
 }
