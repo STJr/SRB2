@@ -718,7 +718,6 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boolean
 {
 	textureflat_t *texflat = &texflats[levelflat->texturenum];
 	patch_t *patch = NULL;
-	UINT8 *tex;
 	boolean texturechanged = (leveltexture ? (levelflat->texturenum != levelflat->lasttexturenum) : false);
 
 	// Check if the texture changed.
@@ -738,11 +737,6 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boolean
 	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
 	if (levelflat->flatpatch == NULL || texturechanged)
 	{
-#ifdef ESLOPE
-		INT32 resizewidth, resizeheight, newresize;
-		INT32 checkresizewidth, checkresizeheight;
-#endif // ESLOPE
-
 		if (leveltexture)
 		{
 			texture_t *texture = textures[levelflat->texturenum];
@@ -793,75 +787,6 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boolean
 			}
 			ds_source = levelflat->flatpatch;
 		}
-
-#ifdef ESLOPE
-		// Crop the flat, if necessary.
-		if (!R_CheckPowersOfTwo())
-		{
-			// Scale up to nearest power of 2
-			resizewidth = resizeheight = 1;
-			while (resizewidth < ds_flatwidth)
-				resizewidth <<= 1;
-			while (resizeheight < ds_flatheight)
-				resizeheight <<= 1;
-
-			// Scale down to fit in 2048x2048
-			if (resizewidth > 2048)
-				resizewidth = 2048;
-			if (resizeheight > 2048)
-				resizeheight = 2048;
-
-			// A single pixel difference is negligible.
-			checkresizewidth = ds_flatwidth - 1;
-			if (checkresizewidth & (checkresizewidth - 1))
-			{
-				checkresizewidth += 2;
-				if (checkresizewidth & (checkresizewidth - 1))
-				{
-					while (resizewidth > ds_flatwidth)
-						resizewidth >>= 1;
-				}
-				else
-					resizewidth = checkresizewidth;
-			}
-			else
-				resizewidth = checkresizewidth;
-
-			checkresizeheight = ds_flatheight - 1;
-			if (checkresizeheight & (checkresizeheight - 1))
-			{
-				checkresizeheight += 2;
-				if (checkresizeheight & (checkresizeheight - 1))
-				{
-					while (resizeheight > ds_flatheight)
-						resizeheight >>= 1;
-				}
-				else
-					resizeheight = checkresizeheight;
-			}
-			else
-				resizeheight = checkresizeheight;
-
-			// Find smallest size.
-			newresize = min(resizewidth, resizeheight);
-
-			// Allocate texture.
-			tex = Z_Malloc(newresize * newresize, PU_LEVEL, NULL);
-			memset(tex, TRANSPARENTPIXEL, newresize * newresize);
-			R_CropFlat(ds_source, tex, ds_flatwidth, ds_flatheight, min(resizewidth, newresize), min(resizeheight, newresize), newresize, newresize);
-
-			if (leveltexture)
-			{
-				texflat->resizedflat = tex;
-				texflat->resizedwidth = texflat->resizedheight = newresize;
-			}
-			else
-			{
-				levelflat->resizedflat = tex;
-				levelflat->resizedwidth = levelflat->resizedheight = newresize;
-			}
-		}
-#endif // ESLOPE
 	}
 	else
 	{
@@ -872,28 +797,6 @@ static void R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boolean
 		xoffs += levelflat->leftoffset;
 		yoffs += levelflat->topoffset;
 	}
-
-#ifdef ESLOPE
-	if (currentplane->slope)
-	{
-		if (R_CheckPowersOfTwo())
-		{
-			if (leveltexture)
-			{
-				ds_source = texflat->resizedflat;
-				ds_flatwidth = texflat->resizedwidth;
-				ds_flatheight = texflat->resizedheight;
-			}
-			else
-			{
-				ds_source = levelflat->resizedflat;
-				ds_flatwidth = levelflat->resizedwidth;
-				ds_flatheight = levelflat->resizedheight;
-			}
-		}
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-	}
-#endif // ESLOPE
 
 	levelflat->lasttexturenum = levelflat->texturenum;
 }
@@ -1085,22 +988,34 @@ void R_DrawSinglePlane(visplane_t *pl)
 		floatv3_t p, m, n;
 		float ang;
 		float vx, vy, vz;
-		float fudge;
+		float fudge = 0;
 		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 		// use this as a temp var to store P_GetZAt's return value each time
 		fixed_t temp;
 
-		xoffs &= ((1 << (32-nflatshiftup))-1);
-		yoffs &= ((1 << (32-nflatshiftup))-1);
+		if (ds_powersoftwo)
+		{
+			// But xoffs and yoffs are zero..... ???!?!?!???!?!?!
+			// (Except when flat alignment is involved)
+			xoffs &= ((1 << (32-nflatshiftup))-1);
+			yoffs &= ((1 << (32-nflatshiftup))-1);
 
-		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 
-		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+			// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+			fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
-		xoffs = (fixed_t)(xoffs*fudge);
-		yoffs = (fixed_t)(yoffs/fudge);
+			xoffs = (fixed_t)(xoffs*fudge);
+			yoffs = (fixed_t)(yoffs/fudge);
+		}
+		else
+		{
+			// Whoops, this is actually incorrect behaviour.
+			// Keep xoffs and yoffs as they are if this flat has offsets
+			//xoffs = -pl->slope->o.x;
+			//yoffs = pl->slope->o.y;
+		}
 
 		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
 		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
@@ -1135,13 +1050,16 @@ void R_DrawSinglePlane(visplane_t *pl)
 		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
-		m.x /= fudge;
-		m.y /= fudge;
-		m.z /= fudge;
+		if (ds_powersoftwo)
+		{
+			m.x /= fudge;
+			m.y /= fudge;
+			m.z /= fudge;
 
-		n.x *= fudge;
-		n.y *= fudge;
-		n.z *= fudge;
+			n.x *= fudge;
+			n.y *= fudge;
+			n.z *= fudge;
+		}
 
 		// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
@@ -1158,14 +1076,26 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_sz.z *= focallengthf;
 
 		// Premultiply the texture vectors with the scale factors
+		if (ds_powersoftwo)
+		{
 #define SFMULT 65536.f*(1<<nflatshiftup)
-		ds_su.x *= SFMULT;
-		ds_su.y *= SFMULT;
-		ds_su.z *= SFMULT;
-		ds_sv.x *= SFMULT;
-		ds_sv.y *= SFMULT;
-		ds_sv.z *= SFMULT;
+			ds_su.x *= SFMULT;
+			ds_su.y *= SFMULT;
+			ds_su.z *= SFMULT;
+			ds_sv.x *= SFMULT;
+			ds_sv.y *= SFMULT;
+			ds_sv.z *= SFMULT;
 #undef SFMULT
+		}
+		else
+		{
+			ds_su.x *= 65536.f;
+			ds_su.y *= 65536.f;
+			ds_su.z *= 65536.f;
+			ds_sv.x *= 65536.f;
+			ds_sv.y *= 65536.f;
+			ds_sv.z *= 65536.f;
+		}
 
 		if (spanfunc == R_DrawTranslucentSpan_8)
 			spanfunc = R_DrawTiltedTranslucentSpan_8;

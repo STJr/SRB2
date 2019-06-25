@@ -53,11 +53,6 @@ typedef struct
 {
 	UINT8 *flat;
 	INT16 width, height;
-
-#ifdef ESLOPE
-	UINT8 *resizedflat;
-	INT16 resizedwidth, resizedheight;
-#endif
 } textureflat_t;
 
 // all loaded and prepared textures from the start of the game
@@ -110,10 +105,6 @@ UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
-void R_CropFlat(UINT8 *srcflat, UINT8 *destflat,
-				UINT16 srcwidth, UINT16 srcheight,
-				UINT16 resizewidth, UINT16 resizeheight,
-				UINT16 destwidth, UINT16 destheight);
 
 #ifndef NO_PNG_LUMPS
 boolean R_IsLumpPNG(UINT8 *d, size_t s);

@@ -724,7 +724,24 @@ void R_DrawTiltedSpan_8(void)
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
-		*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+		if (!ds_powersoftwo)
+		{
+			fixed_t x = ((u-viewx) >> FRACBITS);
+			fixed_t y = ((v-viewy) >> FRACBITS);
+
+			// Carefully align all of my Friends.
+			if (x < 0)
+				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+			if (y < 0)
+				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+			x %= ds_flatwidth;
+			y %= ds_flatheight;
+
+			*dest = colormap[source[((y * ds_flatwidth) + x)]];
+		}
+		else
+			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		dest++;
 		iz += ds_sz.x;
 		uz += ds_su.x;
@@ -761,7 +778,24 @@ void R_DrawTiltedSpan_8(void)
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				*dest = colormap[source[((y * ds_flatwidth) + x)]];
+			}
+			else
+				*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 			dest++;
 			u += stepu;
 			v += stepv;
@@ -777,7 +811,24 @@ void R_DrawTiltedSpan_8(void)
 			u = (INT64)(startu);
 			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				*dest = colormap[source[((y * ds_flatwidth) + x)]];
+			}
+			else
+				*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		}
 		else
 		{
@@ -798,7 +849,24 @@ void R_DrawTiltedSpan_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+				if (!ds_powersoftwo)
+				{
+					fixed_t x = ((u-viewx) >> FRACBITS);
+					fixed_t y = ((v-viewy) >> FRACBITS);
+
+					// Carefully align all of my Friends.
+					if (x < 0)
+						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					if (y < 0)
+						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+					x %= ds_flatwidth;
+					y %= ds_flatheight;
+
+					*dest = colormap[source[((y * ds_flatwidth) + x)]];
+				}
+				else
+					*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -859,7 +927,24 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		v = (INT64)(vz*z) + viewy;
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
+		if (!ds_powersoftwo)
+		{
+			fixed_t x = ((u-viewx) >> FRACBITS);
+			fixed_t y = ((v-viewy) >> FRACBITS);
+
+			// Carefully align all of my Friends.
+			if (x < 0)
+				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+			if (y < 0)
+				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+			x %= ds_flatwidth;
+			y %= ds_flatheight;
+
+			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+		}
+		else
+			*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 		dest++;
 		iz += ds_sz.x;
 		uz += ds_su.x;
@@ -896,7 +981,24 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+			}
+			else
+				*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 			dest++;
 			u += stepu;
 			v += stepv;
@@ -912,7 +1014,24 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			u = (INT64)(startu);
 			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+			}
+			else
+				*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 		}
 		else
 		{
@@ -933,7 +1052,24 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
+				if (!ds_powersoftwo)
+				{
+					fixed_t x = ((u-viewx) >> FRACBITS);
+					fixed_t y = ((v-viewy) >> FRACBITS);
+
+					// Carefully align all of my Friends.
+					if (x < 0)
+						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					if (y < 0)
+						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+					x %= ds_flatwidth;
+					y %= ds_flatheight;
+
+					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+				}
+				else
+					*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -994,9 +1130,28 @@ void R_DrawTiltedSplat_8(void)
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
-		val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+		if (!ds_powersoftwo)
+		{
+			fixed_t x = ((u-viewx) >> FRACBITS);
+			fixed_t y = ((v-viewy) >> FRACBITS);
+
+			// Carefully align all of my Friends.
+			if (x < 0)
+				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+			if (y < 0)
+				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+			x %= ds_flatwidth;
+			y %= ds_flatheight;
+
+			val = source[((y * ds_flatwidth) + x)];
+		}
+		else
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+
 		if (val != TRANSPARENTPIXEL)
 			*dest = colormap[val];
+
 		dest++;
 		iz += ds_sz.x;
 		uz += ds_su.x;
@@ -1033,7 +1188,24 @@ void R_DrawTiltedSplat_8(void)
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+			}
+			else
+				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val != TRANSPARENTPIXEL)
 				*dest = colormap[val];
 			dest++;
@@ -1051,7 +1223,24 @@ void R_DrawTiltedSplat_8(void)
 			u = (INT64)(startu);
 			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (!ds_powersoftwo)
+			{
+				fixed_t x = ((u-viewx) >> FRACBITS);
+				fixed_t y = ((v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+			}
+			else
+				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val != TRANSPARENTPIXEL)
 				*dest = colormap[val];
 		}
@@ -1075,6 +1264,24 @@ void R_DrawTiltedSplat_8(void)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+				if (!ds_powersoftwo)
+				{
+					fixed_t x = ((u-viewx) >> FRACBITS);
+					fixed_t y = ((v-viewy) >> FRACBITS);
+
+					// Carefully align all of my Friends.
+					if (x < 0)
+						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					if (y < 0)
+						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+					x %= ds_flatwidth;
+					y %= ds_flatheight;
+
+					val = source[((y * ds_flatwidth) + x)];
+				}
+				else
+					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
 					*dest = colormap[val];
 				dest++;

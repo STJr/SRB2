@@ -49,12 +49,6 @@ typedef struct
 
 	// for patchflats
 	UINT8 *flatpatch;
-
-#ifdef ESLOPE
-	// rescaled version of the above
-	UINT8 *resizedflat;
-	UINT16 resizedwidth, resizedheight;
-#endif
 } levelflat_t;
 
 extern size_t numlevelflats;
