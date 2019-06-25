@@ -972,6 +972,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (ds_powersoftwo)
 		{
 			// But xoffs and yoffs are zero..... ???!?!?!???!?!?!
+			// (Except when flat alignment is involved)
 			xoffs &= ((1 << (32-nflatshiftup))-1);
 			yoffs &= ((1 << (32-nflatshiftup))-1);
 
@@ -986,9 +987,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else
 		{
-			// The origin vector is a vertex from whatever linedef defined this slope
-			xoffs = -pl->slope->o.x;
-			yoffs = pl->slope->o.y;
+			// Whoops, this is actually incorrect behaviour.
+			// Keep xoffs and yoffs as they are if this flat has offsets
+			//xoffs = -pl->slope->o.x;
+			//yoffs = pl->slope->o.y;
 		}
 
 		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
