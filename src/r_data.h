@@ -52,11 +52,6 @@ typedef struct
 {
 	UINT8 *flat;
 	INT16 width, height;
-
-#ifdef ESLOPE
-	UINT8 *resizedflat;
-	INT16 resizedwidth, resizedheight;
-#endif
 } textureflat_t;
 
 // all loaded and prepared textures from the start of the game
