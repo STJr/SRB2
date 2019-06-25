@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 23  // more precise version number
-#define VERSIONSTRING "v2.1.23"
-#define VERSIONSTRINGW L"v2.1.23"
+#define SUBVERSION 24  // more precise version number
+#define VERSIONSTRING "v2.1.24"
+#define VERSIONSTRINGW L"v2.1.24"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -217,7 +217,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 28
+#define MODVERSION 29
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -304,6 +304,8 @@ typedef enum
 #define TICRATE 35
 #define NEWTICRATERATIO 1 // try 4 for 140 fps :)
 #define NEWTICRATE (TICRATE*NEWTICRATERATIO)
+
+#define MUSICRATE 1000 // sound timing is calculated by milliseconds
 
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 

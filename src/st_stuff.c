@@ -197,7 +197,7 @@ void ST_Ticker(void)
 }
 
 // 0 is default, any others are special palettes.
-static INT32 st_palette = 0;
+INT32 st_palette = 0;
 
 void ST_doPaletteStuff(void)
 {
