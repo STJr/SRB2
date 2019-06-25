@@ -2397,6 +2397,8 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	P_SpawnPlayer(playernum);
 
+	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
+
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
