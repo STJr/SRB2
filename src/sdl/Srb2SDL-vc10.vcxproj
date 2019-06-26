@@ -235,6 +235,7 @@
     <ClInclude Include="..\hardware\hw_md3load.h" />
     <ClInclude Include="..\hardware\hw_model.h" />
     <ClInclude Include="..\hardware\u_list.h" />
+    <ClInclude Include="..\font.h" />
     <ClInclude Include="..\hu_stuff.h" />
     <ClInclude Include="..\info.h" />
     <ClInclude Include="..\i_addrinfo.h" />
@@ -385,6 +386,7 @@
     <ClCompile Include="..\hardware\hw_trick.c" />
     <ClCompile Include="..\hardware\r_opengl\r_opengl.c" />
     <ClCompile Include="..\hardware\u_list.c" />
+    <ClCompile Include="..\font.c" />
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
     <ClCompile Include="..\i_addrinfo.c">

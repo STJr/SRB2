@@ -426,6 +426,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/am_map.o   \
 		$(OBJDIR)/command.o  \
 		$(OBJDIR)/console.o  \
+		$(OBJDIR)/font.o     \
 		$(OBJDIR)/hu_stuff.o \
 		$(OBJDIR)/y_inter.o  \
 		$(OBJDIR)/st_stuff.o \
