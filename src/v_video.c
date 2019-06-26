@@ -2091,6 +2091,293 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	return newstring;
 }
 
+static inline fixed_t FixedCharacterDim(
+		fixed_t  scale,
+		fixed_t   chw,
+		INT32    hchw,
+		INT32    dupx,
+		fixed_t *  cwp)
+{
+	(void)hchw;
+	(void)dupx;
+	(*cwp) = chw;
+	return 0;
+}
+
+static inline fixed_t VariableCharacterDim(
+		fixed_t  scale,
+		fixed_t   chw,
+		INT32    hchw,
+		INT32    dupx,
+		fixed_t *  cwp)
+{
+	(void)chw;
+	(void)hchw;
+	(void)dupx;
+	(*cwp) = FixedMul ((*cwp) << FRACBITS, scale);
+	return 0;
+}
+
+static inline fixed_t CenteredCharacterDim(
+		fixed_t  scale,
+		fixed_t   chw,
+		INT32    hchw,
+		INT32    dupx,
+		fixed_t *  cwp)
+{
+	INT32 cxoff;
+	/*
+	For example, center a 4 wide patch to 8 width:
+	4/2   = 2
+	8/2   = 4
+	4 - 2 = 2 (our offset)
+	2 + 4 = 6 = 8 - 2 (equal space on either side)
+	*/
+	cxoff  = hchw -((*cwp) >> 1 );
+	(*cwp) = chw;
+	return FixedMul (( cxoff * dupx )<< FRACBITS, scale);
+}
+
+static inline fixed_t BunchedCharacterDim(
+		fixed_t  scale,
+		fixed_t   chw,
+		INT32    hchw,
+		INT32    dupx,
+		fixed_t *  cwp)
+{
+	(void)chw;
+	(void)hchw;
+	(void)dupx;
+	(*cwp) = FixedMul (max (1, (*cwp) - 1) << FRACBITS, scale);
+	return 0;
+}
+
+void V_DrawStringScaled(
+		fixed_t    x,
+		fixed_t    y,
+		fixed_t      scale,
+		fixed_t spacescale,
+		fixed_t    lfscale,
+		INT32      flags,
+		int        fontno,
+		const char *s)
+{
+	fixed_t    chw;
+	INT32     hchw;/* half-width for centering */
+	fixed_t spacew;
+	fixed_t    lfh;
+
+	INT32     dupx;
+
+	fixed_t  right;
+	fixed_t    bot;
+
+	fixed_t (*dim_fn)(fixed_t,fixed_t,INT32,INT32,fixed_t *);
+
+	font_t   *font;
+
+	boolean uppercase;
+	boolean notcolored;
+
+	const UINT8 *colormap;
+
+	fixed_t cx, cy;
+
+	fixed_t cxoff;
+	fixed_t cw;
+
+	INT32     spacing;
+	fixed_t   left;
+
+	int c;
+
+	uppercase  = !( flags & V_ALLOWLOWERCASE );
+	flags     &= ~(V_FLIP);/* These two (V_ALLOWLOWERCASE) share a bit. */
+
+	colormap   =  V_GetStringColormap(( flags & V_CHARCOLORMASK ));
+	notcolored = !colormap;
+
+	font       = &fontv[fontno];
+
+	chw        = 0;
+
+	spacing = ( flags & V_SPACINGMASK );
+
+	/*
+	Hardcoded until a better system can be implemented
+	for determining how fonts space.
+	*/
+	switch (fontno)
+	{
+		default:
+		case HU_FONT:
+			spacew = 4;
+			switch (spacing)
+			{
+				case V_MONOSPACE:
+					spacew = 8;
+					/* FALLTHRU */
+				case V_OLDSPACING:
+					chw    = 8;
+					break;
+				case V_6WIDTHSPACE:
+					spacew = 6;
+			}
+			break;
+		case TINY_FONT:
+			spacew = 2;
+			switch (spacing)
+			{
+				case V_MONOSPACE:
+					spacew = 5;
+					/* FALLTHRU */
+				case V_OLDSPACING:
+					chw    = 5;
+					break;
+				// Out of video flags, so we're reusing this for alternate charwidth instead
+				/*case V_6WIDTHSPACE:
+				  spacewidth = 3;*/
+			}
+			break;
+		case KART_FONT:
+			spacew = 12;
+			switch (spacing)
+			{
+				case V_MONOSPACE:
+					spacew = 12;
+					/* FALLTHRU */
+				case V_OLDSPACING:
+					chw    = 12;
+					break;
+				case V_6WIDTHSPACE:
+					spacew = 6;
+			}
+			break;
+	}
+	switch (fontno)
+	{
+		default:
+		case HU_FONT:
+		case TINY_FONT:
+		case KART_FONT:
+			if (( flags & V_RETURN8 ))
+				lfh =  8;
+			else
+				lfh = 12;
+			break;
+		case LT_FONT:
+		case CRED_FONT:
+			lfh    = 12;
+			break;
+	}
+
+	hchw     = chw >> 1;
+
+	chw    <<= FRACBITS;
+	spacew <<= FRACBITS;
+
+#define Mul( id, scale ) ( id = FixedMul (scale, id) )
+	Mul    (chw,      scale);
+	Mul (spacew,      scale);
+	Mul    (lfh,      scale);
+
+	Mul (spacew, spacescale);
+	Mul    (lfh,    lfscale);
+#undef  Mul
+
+	if (( flags & V_NOSCALESTART ))
+	{
+		dupx      = vid.dupx;
+
+		hchw     *=     dupx;
+
+		chw      *=     dupx;
+		spacew   *=     dupx;
+		lfh      *= vid.dupy;
+
+		right     = vid.width;
+	}
+	else
+	{
+		dupx      = 1;
+
+		right     = ( vid.width / vid.dupx );
+		if (!( flags & V_SNAPTOLEFT ))
+		{
+			left   = ( right - BASEVIDWIDTH )/ 2;/* left edge of drawable area */
+			x      = ( left << FRACBITS )+ x;
+			right -= left;
+		}
+	}
+
+	right      <<=               FRACBITS;
+	bot          = vid.height << FRACBITS;
+
+	if (fontno == TINY_FONT)
+	{
+		if (chw)
+			dim_fn = FixedCharacterDim;
+		else
+		{
+			/* Reuse this flag for the alternate bunched-up spacing. */
+			if (( flags & V_6WIDTHSPACE ))
+				dim_fn = BunchedCharacterDim;
+			else
+				dim_fn = VariableCharacterDim;
+		}
+	}
+	else
+	{
+		if (chw)
+			dim_fn = CenteredCharacterDim;
+		else
+			dim_fn = VariableCharacterDim;
+	}
+
+	cx = x;
+	cy = y;
+
+	for (; ( c = *s ); ++s)
+	{
+		switch (c)
+		{
+			case '\n':
+				cy += lfh;
+				if (cy >= bot)
+					return;
+				cx  =   x;
+				break;
+			default:
+				if (( c & 0x80 ))
+				{
+					if (notcolored)
+					{
+						colormap = V_GetStringColormap(
+								( ( c & 0x7f )<< V_CHARCOLORSHIFT )&
+								V_CHARCOLORMASK);
+					}
+				}
+				else if (cx < right)
+				{
+					if (uppercase)
+						c = toupper(c);
+
+					c -= font->start;
+					if (c >= 0 && c < font->size && font->font[c])
+					{
+						cw = SHORT (font->font[c]->width) * dupx;
+						cxoff = (*dim_fn)(scale, chw, hchw, dupx, &cw);
+						V_DrawFixedPatch(cx + cxoff, cy, scale,
+								flags, font->font[c], colormap);
+						cx += cw;
+					}
+					else
+						cx += spacew;
+				}
+		}
+	}
+}
+
 //
 // Write a string using the hu_font
 // NOTE: the text is centered for screens larger than the base width

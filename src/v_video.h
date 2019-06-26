@@ -195,6 +195,17 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string);
 char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
 UINT8 *V_GetStringColormap(INT32 colorflags);
 
+// draw a string using a font
+void V_DrawStringScaled(
+		fixed_t     x,
+		fixed_t     y,
+		fixed_t           scale,
+		fixed_t     space_scale,
+		fixed_t  linefeed_scale,
+		INT32       flags,
+		int         font,
+		const char *text);
+
 // draw a string using the hu_font
 void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string);
 void V_DrawCenteredString(INT32 x, INT32 y, INT32 option, const char *string);
