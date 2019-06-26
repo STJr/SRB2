@@ -135,6 +135,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
 	boolean final = false;
+	UINT8 strong = 0;
 
 	// Object was already sprung this tic
 	if (object->eflags & MFE_SPRUNG)
@@ -147,6 +148,14 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	// "Even in Death" is a song from Volume 8, not a command.
 	if (!spring->health || !object->health)
 		return false;
+
+	if (object->player)
+	{
+		if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+			strong = 1;
+		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
+			strong = 2;
+	}
 
 	if (spring->info->painchance == -1) // Pinball bumper mode.
 	{
@@ -187,6 +196,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (object->player)
 		{
 			fixed_t playervelocity;
+
+			if (strong)
+				vertispeed <<= 1;
 
 			if (!(object->player->pflags & PF_THOKKED) && !(object->player->homing)
 			&& ((playervelocity = FixedDiv(9*FixedHypot(object->player->speed, object->momz), 10<<FRACBITS)) > vertispeed))
@@ -260,11 +272,8 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
-	if (object->player
-	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
-	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
+	if (strong)
 	{
-		S_StartSound(object, sfx_s3k8b);
 		if (horizspeed)
 			horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
 		if (vertispeed)
@@ -398,6 +407,12 @@ springstate:
 				P_SetMobjState(P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE), mobjinfo[MT_SCORE].spawnstate+11);
 			P_AddPlayerScore(object->player, 10);
 			spring->reactiontime--;
+		}
+
+		if (strong)
+		{
+			P_TwinSpinRejuvenate(object->player, (strong == 1 ? object->player->thokitem : object->player->revitem));
+			S_StartSound(object, sfx_sprong); // strong spring. sprong.
 		}
 	}
 
@@ -1504,7 +1519,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					if (elementalpierce == 2)
 						P_DoBubbleBounce(player);
 					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+					{
 						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+							P_TwinSpinRejuvenate(player, player->thokitem);
+					}
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
 				{

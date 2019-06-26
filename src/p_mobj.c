@@ -281,6 +281,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
+	case S_PLAY_FLY_TIRED:
 	case S_PLAY_SWIM:
 	case S_PLAY_GLIDE:
 	case S_PLAY_BOUNCE:
@@ -1509,8 +1510,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->player)
 	{
 		if ((mo->player->pflags & PF_GLIDING)
-		|| (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
-			|| mo->state-states == S_PLAY_FLY_TIRED)))
+		|| (mo->player->charability == CA_FLY && mo->player->panim == PA_ABILITY))
 			gravityadd = gravityadd/3; // less gravity while flying/gliding
 		if (mo->player->climbing || (mo->player->powers[pw_carry] == CR_NIGHTSMODE))
 			gravityadd = 0;
@@ -5484,7 +5484,6 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 	// AI goes here.
 	{
-		boolean danger = true;
 		angle_t angle;
 		if (mobj->threshold)
 			mobj->momz = (mobj->watertop-mobj->z)/16; // Float to your desired position FASTER
@@ -5837,29 +5836,26 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			//A_FaceTarget(mobj);
 
 			// Check if we're being attacked
-			if (!(mobj->target->player->pflags & (PF_JUMPED|PF_SPINNING)
-			|| mobj->target->player->powers[pw_tailsfly]
-			|| mobj->target->player->powers[pw_invulnerability]
-			|| mobj->target->player->powers[pw_super]))
-				danger = false;
+			if (!mobj->target || !mobj->target->player || !P_PlayerCanDamage(mobj->target->player, mobj))
+				goto nodanger;
 			if (mobj->target->x+mobj->target->radius+abs(mobj->target->momx*2) < mobj->x-mobj->radius)
-				danger = false;
+				goto nodanger;
 			if (mobj->target->x-mobj->target->radius-abs(mobj->target->momx*2) > mobj->x+mobj->radius)
-				danger = false;
+				goto nodanger;
 			if (mobj->target->y+mobj->target->radius+abs(mobj->target->momy*2) < mobj->y-mobj->radius)
-				danger = false;
+				goto nodanger;
 			if (mobj->target->y-mobj->target->radius-abs(mobj->target->momy*2) > mobj->y+mobj->radius)
-				danger = false;
+				goto nodanger;
 			if (mobj->target->z+mobj->target->height+mobj->target->momz*2 < mobj->z)
-				danger = false;
+				goto nodanger;
 			if (mobj->target->z+mobj->target->momz*2 > mobj->z+mobj->height)
-				danger = false;
-			if (danger) {
-				// An incoming attack is detected! What should we do?!
-				// Go into vector form!
-				vectorise;
-				return;
-			}
+				goto nodanger;
+
+			// An incoming attack is detected! What should we do?!
+			// Go into vector form!
+			vectorise;
+			return;
+nodanger:
 
 			// Move normally: Approach the player using normal thrust and simulated friction.
 			dist = P_AproxDistance(mobj->x-mobj->target->x, mobj->y-mobj->target->y);
@@ -7920,8 +7916,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_LHRT:
-				mobj->momx = FixedMul(mobj->momx, (49*FRACUNIT)/50);
-				mobj->momy = FixedMul(mobj->momy, (49*FRACUNIT)/50);
+				mobj->momx = FixedMul(mobj->momx, mobj->extravalue2);
+				mobj->momy = FixedMul(mobj->momy, mobj->extravalue2);
 				break;
 			case MT_EGGCAPSULE:
 				if (!mobj->reactiontime)

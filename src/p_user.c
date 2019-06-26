@@ -1021,9 +1021,13 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	&& (player->drawangle - R_PointToAngle2(player->mo->x - player->mo->momx, player->mo->y - player->mo->momy, thing->x, thing->y) +  + ANGLE_90) < ANGLE_180)
 		return true;
 
-	// From the top.
-	if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING)
-	&& (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
+	// From the top/bottom.
+	if (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0)
+	{
+		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
+			return true;
+	}
+	else if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 		return true;
 
 	// Shield stomp.
@@ -1752,6 +1756,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	}
 
 	ghost->color = mobj->color;
+	ghost->colorized = mobj->colorized; // alternatively, "true" for sonic advance style colourisation
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->sprite = mobj->sprite;
@@ -2031,9 +2036,11 @@ boolean P_PlayerHitFloor(player_t *player)
 					fixed_t zo = 6*player->mo->scale;
 					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
 					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
+					fixed_t ev;
 					mobj_t *missile;
 					if (mu2 < mu)
 						mu2 = mu;
+					ev = (50*FRACUNIT - (mu/25))/50;
 					while (i < 5)
 					{
 						missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
@@ -2044,6 +2051,7 @@ boolean P_PlayerHitFloor(player_t *player)
 						P_Thrust(missile, player->drawangle, mu2); // forward component
 						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
 						missile->fuse = TICRATE/2;
+						missile->extravalue2 = ev;
 
 						i++;
 						throwang += ANG30;
@@ -4527,6 +4535,57 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 	S_StartSound(player->mo, sfx_boingf);
 	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
 	player->pflags |= PF_BOUNCING|PF_THOKKED;
+}
+
+//
+// P_TwinSpinRejuvenate
+//
+// CA_TWINSPIN landing handling
+//
+void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type)
+{
+	fixed_t actionspd;
+	angle_t movang, ang, fa;
+	fixed_t v, h;
+	UINT8 i;
+
+	if (!player->mo || !type)
+		return;
+
+	actionspd = FixedMul(player->actionspd, player->mo->scale);
+
+	fa = (R_PointToAngle2(0, 0, player->mo->momz, FixedHypot(player->mo->momx, player->mo->momy))>>ANGLETOFINESHIFT) & FINEMASK;
+	movang = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+	ang = 0;
+
+	v = FixedMul(actionspd, FINESINE(fa));
+	h = actionspd - FixedMul(actionspd, FINECOSINE(fa));
+
+	// hearticles
+	for (i = 0; i <= 7; i++)
+	{
+		fixed_t side = actionspd - FixedMul(h, abs(FINESINE((ang>>ANGLETOFINESHIFT) & FINEMASK)));
+		fixed_t xo = P_ReturnThrustX(NULL, ang + movang, side);
+		fixed_t yo = P_ReturnThrustY(NULL, ang + movang, side);
+		fixed_t zo = -FixedMul(FINECOSINE(((ang>>ANGLETOFINESHIFT) & FINEMASK)), v);
+		mobj_t *missile = P_SpawnMobjFromMobj(player->mo,
+			xo,
+			yo,
+			player->mo->height/2 + zo,
+			type);
+		P_SetTarget(&missile->target, player->mo);
+		P_SetScale(missile, (missile->destscale >>= 1));
+		missile->angle = ang + movang;
+		missile->fuse = TICRATE/2;
+		missile->extravalue2 = (99*FRACUNIT)/100;
+		missile->momx = xo;
+		missile->momy = yo;
+		missile->momz = zo;
+
+		ang += ANGLE_45;
+	}
+
+	player->pflags &= ~PF_THOKKED;
 }
 
 //
@@ -7899,6 +7958,7 @@ static void P_MovePlayer(player_t *player)
 								{
 									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 									player->pflags &= ~PF_NOJUMPDAMAGE;
+									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 									S_StartSound(player->mo, sfx_s3k40);
 									player->homing = 3*TICRATE;
 								}

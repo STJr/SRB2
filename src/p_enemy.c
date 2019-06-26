@@ -2411,6 +2411,8 @@ void A_VultureBlast(mobj_t *actor)
 {
 	mobj_t *dust;
 	UINT8 i;
+	angle_t faa;
+	fixed_t faacos, faasin;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_VultureBlast", actor))
@@ -2419,18 +2421,21 @@ void A_VultureBlast(mobj_t *actor)
 
 	S_StartSound(actor, actor->info->attacksound);
 
+	faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	faacos = FINECOSINE(faa);
+	faasin = FINESINE(faa);
+
 	for (i = 0; i <= 7; i++)
 	{
 		angle_t fa = ((i*(angle_t)ANGLE_45) >> ANGLETOFINESHIFT) & FINEMASK;
-		angle_t faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
-		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -FINESINE(faa)), actor->y + 48*FixedMul(FINECOSINE(fa), FINECOSINE(faa)), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
+		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -faasin), actor->y + 48*FixedMul(FINECOSINE(fa), faacos), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
 
 		P_SetScale(dust, 4*FRACUNIT);
 		dust->destscale = FRACUNIT;
 		dust->scalespeed = 4*FRACUNIT/TICRATE;
 		dust->fuse = TICRATE;
-		dust->momx = FixedMul(FINECOSINE(fa), -FINESINE(faa))*3;
-		dust->momy = FixedMul(FINECOSINE(fa), FINECOSINE(faa))*3;
+		dust->momx = FixedMul(FINECOSINE(fa), -faasin)*3;
+		dust->momy = FixedMul(FINECOSINE(fa), faacos)*3;
 		dust->momz = FINESINE(fa)*6;
 	}
 }
@@ -6631,7 +6636,7 @@ void A_RecyclePowers(mobj_t *actor)
 		players[recv_pl].ringweapons = weapons[send_pl];
 		players[recv_pl].currentweapon = weaponheld[send_pl];
 
-		if (((players[recv_pl].powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (players[recv_pl].revitem == MT_LHRT)) // Healers can't keep their buff.
+		if (((players[recv_pl].powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (players[recv_pl].revitem == MT_LHRT || players[recv_pl].spinitem == MT_LHRT || players[recv_pl].thokitem == MT_LHRT)) // Healers can't keep their buff.
 			players[recv_pl].powers[pw_shield] &= SH_STACK;
 
 		P_SpawnShieldOrb(&players[recv_pl]);

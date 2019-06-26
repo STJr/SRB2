@@ -468,18 +468,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				toucher->momx = -toucher->momx;
 				toucher->momy = -toucher->momy;
+				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
+					toucher->momz = -toucher->momz/2;
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
-		}
-		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
-		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
-		&& player->charability == CA_FLY
-		&& (player->powers[pw_tailsfly]
-		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with her propeller.
-		{
-			toucher->momz = -toucher->momz/2;
-
-			P_DamageMobj(special, toucher, toucher, 1, 0);
+			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+				P_TwinSpinRejuvenate(player, player->thokitem);
 		}
 		else
 			P_DamageMobj(toucher, special, special, 1, 0);
@@ -2898,7 +2892,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
-			if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 			{
 				P_SwitchShield(player, SH_PINK);
 				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -2913,7 +2907,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
-			if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 			{
 				P_SwitchShield(player, SH_PINK);
 				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -2998,7 +2992,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		{
 			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
-				if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
+				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
 					P_SwitchShield(player, SH_PINK);
 					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
@@ -3021,7 +3015,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		{
 			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 			{
-				if (player->revitem != MT_LHRT) // Healers do not get to heal other healers.
+				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
 					P_SwitchShield(player, SH_PINK);
 					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
