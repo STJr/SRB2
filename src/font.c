@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #include "hu_stuff.h"
 #include "font.h"
+#include "z_zone.h"
 
 font_t       fontv[MAX_FONTS];
 int          fontc;
@@ -28,8 +29,8 @@ FontCache (font_t *fnt)
 	{
 		fnt->font[i] = HU_CachePatch(
 				"%s%.*d",
-				fnt->digits,
 				fnt->prefix,
+				fnt->digits,
 				c);
 	}
 }
@@ -54,10 +55,10 @@ Font_DumbRegister (const font_t *sfnt)
 
 	fnt = &fontv[fontc];
 
+	memcpy(fnt, sfnt, sizeof (font_t));
+
 	if (!( fnt->font = ZZ_Alloc(sfnt->size * sizeof (patch_t *)) ))
 		return -1;
-
-	memcpy(fnt, sfnt, sizeof (font_t));
 
 	return fontc++;
 }
