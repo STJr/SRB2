@@ -233,7 +233,8 @@ typedef enum
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
-	CR_MACESPIN
+	CR_MACESPIN,
+	CR_MINECART
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)

@@ -2580,9 +2580,9 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
+		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 		{
-			// Kill enemies and bosses that fall into death pits.
+			// Kill enemies, bosses and minecarts that fall into death pits.
 			if (mo->health)
 			{
 				P_KillMobj(mo, NULL, NULL, 0);
@@ -6725,6 +6725,67 @@ static void P_KoopaThinker(mobj_t *koopa)
 	}
 }
 
+// Spawns and chains the minecart sides.
+static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
+{
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	mobj_t *prevseg = mobj;
+	mobj_t *seg;
+	UINT8 i;
+
+	for (i = 0; i < 4; i++)
+	{
+		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
+		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
+		if (i >= 2)
+			seg->extravalue1 = (i == 2) ? -18 : 18;
+		else
+		{
+			seg->extravalue2 = (i == 0) ? 24 : -24;
+			seg->cusval = -90;
+		}
+		if (!mode)
+			seg->frame &= ~FF_ANIMATE;
+		P_SetTarget(&prevseg->tracer, seg);
+		prevseg = seg;
+	}
+}
+
+// Updates the chained segments.
+static void P_UpdateMinecartSegments(mobj_t *mobj)
+{
+	mobj_t *seg = mobj->tracer;
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	angle_t ang = mobj->angle;
+	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	INT32 dx, dy;
+	INT32 sang;
+
+	while (seg)
+	{
+		dx = seg->extravalue1;
+		dy = seg->extravalue2;
+		sang = seg->cusval;
+		P_TeleportMove(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
+		seg->angle = ang + FixedAngle(FRACUNIT*sang);
+		seg->flags2 = (seg->flags2 & ~MF2_DONTDRAW) | (mobj->flags2 & MF2_DONTDRAW);
+		seg = seg->tracer;
+	}
+}
+
+void P_HandleMinecartSegments(mobj_t *mobj)
+{
+	if (!mobj->tracer)
+		P_SpawnMinecartSegments(mobj, (mobj->type == MT_MINECART));
+	P_UpdateMinecartSegments(mobj);
+}
+
 //
 // P_MobjThinker
 //
@@ -7502,37 +7563,34 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_PLAYER:
 			/// \todo Have the player's dead body completely finish its animation even if they've already respawned.
-			if (!(mobj->flags2 & MF2_DONTDRAW))
-			{
-				if (!mobj->fuse)
-				{ // Go away.
-					/// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
-					mobj->momz = 0;
-					if (mobj->player)
-						mobj->flags2 |= MF2_DONTDRAW;
-					else // safe to remove, nobody's going to complain!
-					{
-						P_RemoveMobj(mobj);
-						return;
-					}
-				}
-				else // Apply gravity to fall downwards.
+			if (!mobj->fuse)
+			{ // Go away.
+			  /// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
+				mobj->momz = 0;
+				if (mobj->player)
+					mobj->flags2 |= MF2_DONTDRAW;
+				else // safe to remove, nobody's going to complain!
 				{
-					if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
-					{
-							fixed_t r = mobj->radius>>FRACBITS;
-							mobj_t *explosion = P_SpawnMobj(
-								mobj->x + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->y + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->z + (P_RandomKey(mobj->height>>FRACBITS)<<FRACBITS),
-								MT_BOSSEXPLODE);
-							S_StartSound(explosion, sfx_cybdth);
-					}
-					if (mobj->movedir == DMG_DROWNED)
-						P_SetObjectMomZ(mobj, -FRACUNIT/2, true); // slower fall from drowning
-					else
-						P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+					P_RemoveMobj(mobj);
+					return;
 				}
+			}
+			else // Apply gravity to fall downwards.
+			{
+				if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
+				{
+					fixed_t r = mobj->radius >> FRACBITS;
+					mobj_t *explosion = P_SpawnMobj(
+						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
+						MT_BOSSEXPLODE);
+					S_StartSound(explosion, sfx_cybdth);
+				}
+				if (mobj->movedir == DMG_DROWNED)
+					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning
+				else
+					P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
 			}
 			break;
 		default:
@@ -8416,6 +8474,114 @@ void P_MobjThinker(mobj_t *mobj)
 							mobj->flags2 |= MF2_DONTDRAW;
 					}
 				break;
+			case MT_TRAINDUSTSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *traindust = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_PARTICLE);
+					traindust->flags = MF_SCENERY;
+					P_SetMobjState(traindust, S_TRAINDUST);
+					traindust->frame = P_RandomRange(0, 8) | FF_TRANS90;
+					traindust->angle = mobj->angle;
+					traindust->tics = TICRATE * 4;
+					traindust->destscale = FRACUNIT * 64;
+					traindust->scalespeed = FRACUNIT / 24;
+					P_SetScale(traindust, FRACUNIT * 6);
+				}
+				break;
+			case MT_TRAINSTEAMSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *steam = P_SpawnMobj(mobj->x + FRACUNIT*P_SignedRandom() / 2, mobj->y + FRACUNIT*P_SignedRandom() / 2, mobj->z, MT_PARTICLE);
+					P_SetMobjState(steam, S_TRAINSTEAM);
+					steam->frame = P_RandomRange(0, 1) | FF_TRANS90;
+					steam->tics = TICRATE * 8;
+					steam->destscale = FRACUNIT * 64;
+					steam->scalespeed = FRACUNIT / 8;
+					P_SetScale(steam, FRACUNIT * 16);
+					steam->momx = P_SignedRandom() * 32;
+					steam->momy = -64 * FRACUNIT;
+					steam->momz = 2 * FRACUNIT;
+				}
+				break;
+			case MT_CANARIVORE_GAS:
+				{
+					fixed_t momz;
+
+					if (mobj->flags2 & MF2_AMBUSH)
+					{
+						mobj->momx = FixedMul(mobj->momx, 50 * FRACUNIT / 51);
+						mobj->momy = FixedMul(mobj->momy, 50 * FRACUNIT / 51);
+						break;
+					}
+
+					if (mobj->eflags & MFE_VERTICALFLIP)
+					{
+						if ((mobj->z + mobj->height + mobj->momz) <= mobj->ceilingz)
+							break;
+					}
+					else
+					{
+						if ((mobj->z + mobj->momz) >= mobj->floorz)
+							break;
+					}
+
+					momz = abs(mobj->momz);
+					if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
+						P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
+					mobj->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
+					mobj->flags2 |= MF2_AMBUSH;
+					break;
+				}
+			case MT_SALOONDOOR:
+				{
+					fixed_t x = mobj->tracer->x;
+					fixed_t y = mobj->tracer->y;
+					fixed_t z = mobj->tracer->z;
+					angle_t oang = FixedAngle(mobj->extravalue1);
+					angle_t fa = (oang >> ANGLETOFINESHIFT) & FINEMASK;
+					fixed_t c0 = -96*FINECOSINE(fa);
+					fixed_t s0 = -96*FINESINE(fa);
+					angle_t fma;
+					fixed_t c, s;
+					angle_t angdiff;
+
+					// Adjust angular speed
+					fixed_t da = AngleFixed(mobj->angle - oang);
+					if (da > 180*FRACUNIT)
+						da -= 360*FRACUNIT;
+					mobj->extravalue2 = 8*(mobj->extravalue2 - da/32)/9;
+
+					// Update angle
+					mobj->angle += FixedAngle(mobj->extravalue2);
+
+					angdiff = mobj->angle - FixedAngle(mobj->extravalue1);
+					if (angdiff > (ANGLE_90 - ANG2) && angdiff < ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_90 - ANG2);
+						mobj->extravalue2 /= 2;
+					}
+					else if (angdiff < (ANGLE_270 + ANG2) && angdiff >= ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_270 + ANG2);
+						mobj->extravalue2 /= 2;
+					}
+
+					// Update position
+					fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
+					c = 48*FINECOSINE(fma);
+					s = 48*FINESINE(fma);
+					P_TeleportMove(mobj, x + c0 + c, y + s0 + s, z);
+					break;
+				}
+			case MT_MINECARTSPAWNER:
+				P_HandleMinecartSegments(mobj);
+				if (!mobj->fuse || mobj->fuse > TICRATE)
+					break;
+				if (mobj->fuse == 2)
+				{
+					mobj->fuse = 0;
+					break;
+				}
+				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -8492,6 +8658,10 @@ void P_MobjThinker(mobj_t *mobj)
 	// Check fuse
 	if (mobj->fuse)
 	{
+
+		if (mobj->type == MT_SNAPPER_HEAD || mobj->type == MT_SNAPPER_LEG || mobj->type == MT_MINECARTSEG)
+			mobj->flags2 ^= MF2_DONTDRAW;
+
 		mobj->fuse--;
 		if (!mobj->fuse)
 		{
@@ -8795,6 +8965,16 @@ void P_PushableThinker(mobj_t *mobj)
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+
+	if (mobj->type == MT_MINECART && mobj->health)
+	{
+		// If player is ded, remove this minecart
+		if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health || !mobj->target->player || mobj->target->player->powers[pw_carry] != CR_MINECART)
+		{
+			P_KillMobj(mobj, NULL, NULL, 0);
+			return;
+		}
+	}
 
 	if (mobj->fuse == 1) // it would explode in the MobjThinker code
 	{
@@ -9169,6 +9349,20 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_FBOMB:
 			mobj->flags2 |= MF2_EXPLOSION;
+			break;
+		case MT_OILLAMP:
+			{
+				mobj_t* overlay = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_OVERLAY);
+				P_SetTarget(&overlay->target, mobj);
+				P_SetMobjState(overlay, S_OILLAMPFLARE);
+				break;
+			}
+		case MT_TNTBARREL:
+			mobj->momx = 1; //stack hack
+			break;
+		case MT_MINECARTEND:
+			mobj->tracer = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID);
+			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
 		default:
 			break;

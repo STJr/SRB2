@@ -195,6 +195,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},
   {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork fired"},
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
+  {"bowl",   false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bowling"},
+  {"chuchu", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Train horn"},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},
@@ -311,13 +313,13 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k48",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pulse"},
   {"s3k49",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k4a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Grab"},
-  {"s3k4b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Water splash"},
+  {"s3k4b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Splash"},
   {"s3k4c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy hit"},
   {"s3k4d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing bullet"},
   {"s3k4e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Big explosion"},
   {"s3k4f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},
   {"s3k50",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Siren"},
-  {"s3k51",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling hazard"},
+  {"s3k51",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling"},
   {"s3k52",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spike"},
   {"s3k53",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"s3k54",  false,  64, 64, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing"}, // MetalSonic shot fire
@@ -362,7 +364,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k7b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Soft bounce"},
   {"s3k7c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Magnet"},
   {"s3k7d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3k7e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Eating dirt"},
+  {"s3k7e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Dust"},
   {"s3k7f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Freeze"},
   {"s3k80",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ice spike burst"},
   {"s3k81",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Burst"},
@@ -373,7 +375,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k86",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Alarm"},
   {"s3k87",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"},
   {"s3k88",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic squeak"},
-  {"s3k89",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Advanced technology"},
+  {"s3k89",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Advanced tech"},
   {"s3k8a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Boing"},
   {"s3k8b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful hit"},
   {"s3k8c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Humming power"},
@@ -383,10 +385,10 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k91",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Closed"},
   {"s3k92",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ghost"},
-  {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rebuilding"},
+  {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gas release"},
   {"s3k94",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spike"},
   {"s3k95",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lava burst"},
-  {"s3k96",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling object"},
+  {"s3k96",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Landing"},
   {"s3k97",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wind"},
   {"s3k98",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling spike"},
   {"s3k99",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"},
@@ -454,13 +456,13 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kcas", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"},
   {"s3kcal", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"}, // ditto
   {"s3kcbs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
-  {"s3kcbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominuous rumbling"}, // ditto
+  {"s3kcbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"}, // ditto
   {"s3kccs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"},
   {"s3kccl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"}, // ditto
   {"s3kcds", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
   {"s3kcdl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"}, // ditto
   {"s3kces", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wind tunnel"},
-  {"s3kcel", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wind tunnel"}, // ditto
+  {"s3kcel", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Dust devil"}, // ditto
   {"s3kcfs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3kcfl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd0s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising"},
@@ -469,8 +471,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kd1l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
   {"s3kd2s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turning"},
   {"s3kd2l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Moving chain"}, // ditto
-  {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // ditto
+  {"s3kd3s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Digging"},
+  {"s3kd3l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Digging"}, // ditto
   {"s3kd4s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"},
   {"s3kd4l", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Engine"}, // ditto
   {"s3kd5s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling lava"},

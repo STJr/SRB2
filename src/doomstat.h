@@ -313,6 +313,7 @@ typedef struct
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+	UINT16 startrings;      ///< Number of rings players start with.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.

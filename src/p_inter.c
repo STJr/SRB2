@@ -1694,6 +1694,73 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 
+		case MT_CANARIVORE_GAS:
+			// if player and gas touch, attach gas to player (overriding any gas that already attached) and apply slowdown effect
+			P_UnsetThingPosition(special);
+			special->x = toucher->x - toucher->momx/2;
+			special->y = toucher->y - toucher->momy/2;
+			special->z = toucher->z - toucher->momz/2;
+			P_SetThingPosition(special);
+			toucher->momx = FixedMul(toucher->momx, 50*FRACUNIT/51);
+			toucher->momy = FixedMul(toucher->momy, 50*FRACUNIT/51);
+			special->momx = toucher->momx;
+			special->momy = toucher->momy;
+			special->momz = toucher->momz;
+			return;
+
+		case MT_MINECARTSPAWNER:
+			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			{
+				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+				P_SetTarget(&mcart->target, toucher);
+				mcart->angle = toucher->angle = player->drawangle = special->angle;
+				mcart->friction = FRACUNIT;
+
+				P_ResetPlayer(player);
+				player->pflags |= PF_JUMPDOWN;
+				player->powers[pw_carry] = CR_MINECART;
+				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetTarget(&toucher->tracer, mcart);
+				toucher->momx = toucher->momy = toucher->momz = 0;
+
+				special->fuse = 3*TICRATE;
+				special->flags2 |= MF2_DONTDRAW;
+			}
+			return;
+
+		case MT_MINECARTEND:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				fixed_t maxz = max(toucher->z, special->z + 35*special->scale);
+
+				toucher->momx = toucher->tracer->momx/2;
+				toucher->momy = toucher->tracer->momy/2;
+				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
+				P_ResetPlayer(player);
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+				P_SetTarget(&toucher->tracer->target, NULL);
+				P_KillMobj(toucher->tracer, toucher, special, 0);
+				P_SetTarget(&toucher->tracer, NULL);
+				player->powers[pw_carry] = CR_NONE;
+				P_UnsetThingPosition(toucher);
+				toucher->x = special->x;
+				toucher->y = special->y;
+				toucher->z = maxz;
+				P_SetThingPosition(toucher);
+			}
+			return;
+
+		case MT_MINECARTSWITCHPOINT:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				mobjflag2_t destambush = special->flags2 & MF2_AMBUSH;
+				angle_t angdiff = toucher->tracer->angle - special->angle;
+				if (angdiff > ANGLE_90 && angdiff < ANGLE_270)
+					destambush ^= MF2_AMBUSH;
+				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
+			}
+			return;
 		default: // SOC or script pickup
 			if (player->bot)
 				return;
@@ -2541,6 +2608,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = TICRATE*2;
 			break;
 
+		case MT_MINECART:
+			A_Scream(target);
+			target->momx = target->momy = target->momz = 0;
+			if (target->target && target->target->health)
+				P_KillMobj(target->target, target, source, 0);
+			break;
+
 		case MT_PLAYER:
 			{
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
@@ -2996,6 +3070,9 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	P_ResetPlayer(player);
+
+	if (!player->spectator)
+		player->mo->flags2 &= ~MF2_DONTDRAW;
 
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
 	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
@@ -3624,9 +3701,6 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		}
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mo->momz *= -1;
-
-		if (P_IsObjectOnGround(player->mo))
-			player->powers[pw_carry] = CR_NONE;
 	}
 
 	player->losstime += 10*TICRATE;

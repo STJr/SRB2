@@ -1304,6 +1304,11 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+#endif
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -4478,7 +4483,7 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			return false;
 
 		case LLM_LEVELSELECT:
-			if (mapheaderinfo[mapnum]->levelselect != maplistoption)
+			if (!(mapheaderinfo[mapnum]->levelselect & maplistoption))
 				return false;
 
 			return true;
@@ -6753,7 +6758,7 @@ static void M_LoadGameLevelSelect(INT32 choice)
 
 	SP_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
-	maplistoption = 1;
+	maplistoption = 1+2;
 
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
