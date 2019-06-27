@@ -1983,17 +1983,17 @@ void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
 		c -= HU_FONTSTART;
 	else
 		c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+	if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 		return;
 
-	w = SHORT(hu_font[c]->width);
+	w = SHORT(fontv[HU_FONT].font[c]->width);
 	if (x + w > vid.width)
 		return;
 
 	if (colormap != NULL)
-		V_DrawMappedPatch(x, y, flags, hu_font[c], colormap);
+		V_DrawMappedPatch(x, y, flags, fontv[HU_FONT].font[c], colormap);
 	else
-		V_DrawScaledPatch(x, y, flags, hu_font[c]);
+		V_DrawScaledPatch(x, y, flags, fontv[HU_FONT].font[c]);
 }
 
 // Writes a single character for the chat. (draw WHITE if bit 7 set)
@@ -2010,14 +2010,14 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 		c -= HU_FONTSTART;
 	else
 		c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+	if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 		return;
 
 	w = (vid.width < 640 ) ? (SHORT(hu_font[c]->width)/2) : (SHORT(hu_font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
 	if (x + w > vid.width)
 		return;
 
-	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font[c], colormap);
+	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, fontv[HU_FONT].font[c], colormap);
 
 
 }
@@ -2070,13 +2070,13 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 			c = toupper(c);
 		c -= HU_FONTSTART;
 
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 		{
 			chw = spacewidth;
 			lastusablespace = i;
 		}
 		else
-			chw = (charwidth ? charwidth : hu_font[c]->width);
+			chw = (charwidth ? charwidth : fontv[HU_FONT].font[c]->width);
 
 		x += chw;
 
@@ -2498,7 +2498,7 @@ void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 {
-	INT32 w = SHORT(tallnum[0]->width);
+	INT32 w = SHORT(fontv[TALLNUM_FONT].font[0]->width);
 	boolean neg;
 
 	if (flags & V_NOSCALESTART)
@@ -2511,7 +2511,7 @@ void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 	do
 	{
 		x -= w;
-		V_DrawScaledPatch(x, y, flags, tallnum[num % 10]);
+		V_DrawScaledPatch(x, y, flags, fontv[TALLNUM_FONT].font[num % 10]);
 		num /= 10;
 	} while (num);
 
@@ -2524,7 +2524,7 @@ void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 // Does not handle negative numbers in a special way, don't try to feed it any.
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 {
-	INT32 w = SHORT(tallnum[0]->width);
+	INT32 w = SHORT(fontv[TALLNUM_FONT].font[0]->width);
 
 	if (flags & V_NOSCALESTART)
 		w *= vid.dupx;
@@ -2536,7 +2536,7 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 	do
 	{
 		x -= w;
-		V_DrawScaledPatch(x, y, flags, tallnum[num % 10]);
+		V_DrawScaledPatch(x, y, flags, fontv[TALLNUM_FONT].font[num % 10]);
 		num /= 10;
 	} while (--digits);
 }
@@ -2771,7 +2771,7 @@ INT32 V_CreditStringWidth(const char *string)
 		if (c < 0 || c >= CRED_FONTSIZE)
 			w += 16;
 		else
-			w += SHORT(cred_font[c]->width);
+			w += SHORT(fontv[CRED_FONT].font[c]->width);
 	}
 
 	return w;
@@ -2790,10 +2790,10 @@ INT32 V_LevelNameWidth(const char *string)
 		if (string[i] & 0x80)
 			continue;
 		c = string[i] - LT_FONTSTART;
-		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
+		if (c < 0 || c >= LT_FONTSIZE || !fontv[LT_FONT].font[c])
 			w += 16;
 		else
-			w += SHORT(lt_font[c]->width);
+			w += SHORT(fontv[LT_FONT].font[c]->width);
 	}
 
 	return w;
@@ -2809,11 +2809,11 @@ INT32 V_LevelNameHeight(const char *string)
 	for (i = 0; i < strlen(string); i++)
 	{
 		c = string[i] - LT_FONTSTART;
-		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
+		if (c < 0 || c >= LT_FONTSIZE || !fontv[LT_FONT].font[c])
 			continue;
 
-		if (SHORT(lt_font[c]->height) > w)
-			w = SHORT(lt_font[c]->height);
+		if (SHORT(fontv[LT_FONT].font[c]->height) > w)
+			w = SHORT(fontv[LT_FONT].font[c]->height);
 	}
 
 	return w;
@@ -2865,10 +2865,10 @@ INT32 V_StringWidth(const char *string, INT32 option)
 		if (string[i] & 0x80)
 			continue;
 		c = toupper(string[i]) - HU_FONTSTART;
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 			w += spacewidth;
 		else
-			w += (charwidth ? charwidth : SHORT(hu_font[c]->width));
+			w += (charwidth ? charwidth : SHORT(fontv[HU_FONT].font[c]->width));
 	}
 
 	if (option & V_NOSCALESTART)
@@ -2905,10 +2905,10 @@ INT32 V_SmallStringWidth(const char *string, INT32 option)
 		if (string[i] & 0x80)
 			continue;
 		c = toupper(string[i]) - HU_FONTSTART;
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 			w += spacewidth;
 		else
-			w += (charwidth ? charwidth : SHORT(hu_font[c]->width)/2);
+			w += (charwidth ? charwidth : SHORT(fontv[HU_FONT].font[c]->width)/2);
 	}
 
 	return w;
@@ -2942,10 +2942,10 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 		if (string[i] & 0x80)
 			continue;
 		c = toupper(string[i]) - HU_FONTSTART;
-		if (c < 0 || c >= HU_FONTSIZE || !tny_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !fontv[TINY_FONT].font[c])
 			w += spacewidth;
 		else
-			w += (charwidth ? charwidth : SHORT(tny_font[c]->width));
+			w += (charwidth ? charwidth : SHORT(fontv[TINY_FONT].font[c]->width));
 	}
 
 	return w;
