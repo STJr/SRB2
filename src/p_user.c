@@ -8824,6 +8824,44 @@ void P_PlayerThink(player_t *player)
 	if (player->exiting && countdown2)
 		player->exiting = 5;
 
+	// Same check as below, just at 1 second before
+	// so we can fade music
+	if (!exitfadestarted &&
+		player->exiting > 0 && player->exiting <= 1*TICRATE &&
+		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
+			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
+		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
+		player->lives > 0 && // don't fade on game over (competition)
+		P_IsLocalPlayer(player))
+	{
+		if (cv_playersforexit.value)
+		{
+			INT32 i;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+
+				if (!players[i].exiting || players[i].exiting > 1*TICRATE)
+					break;
+			}
+
+			if (i == MAXPLAYERS)
+			{
+				exitfadestarted = true;
+				S_FadeOutStopMusic(1*MUSICRATE);
+			}
+		}
+		else
+		{
+			exitfadestarted = true;
+			S_FadeOutStopMusic(1*MUSICRATE);
+		}
+	}
+
 	if (player->exiting == 2 || countdown2 == 2)
 	{
 		if (cv_playersforexit.value) // Count to be sure everyone's exited
