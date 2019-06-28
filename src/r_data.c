@@ -1916,7 +1916,7 @@ static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 		return NULL;
 
 	// Convert the image to 8bpp
-	flat = Z_Malloc(width * height, PU_STATIC, NULL);
+	flat = Z_Malloc(width * height, PU_LEVEL, NULL);
 	memset(flat, TRANSPARENTPIXEL, width * height);
 	for (y = 0; y < height; y++)
 	{
@@ -1944,7 +1944,7 @@ static UINT8 *PNG_GetAlphaMask(UINT8 *png, size_t size)
 		return NULL;
 
 	// Convert the image to 8bpp
-	mask = Z_Malloc(width * height, PU_STATIC, NULL);
+	mask = Z_Malloc(width * height, PU_LEVEL, NULL);
 	memset(mask, 0, width * height);
 	for (y = 0; y < height; y++)
 	{
