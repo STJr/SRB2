@@ -8524,7 +8524,6 @@ void P_MobjThinker(mobj_t *mobj)
 					momz = abs(mobj->momz);
 					if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
 						P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
-					mobj->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
 					mobj->flags2 |= MF2_AMBUSH;
 					break;
 				}
