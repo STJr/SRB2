@@ -4384,6 +4384,8 @@ static void P_Boss3Thinker(mobj_t *mobj)
 	}
 
 	if (mobj->health <= 0)
+		return;
+	/*
 	{
 		mobj->movecount = 0;
 		mobj->reactiontime = 0;
@@ -4396,89 +4398,37 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			mobj->momz = mobj->info->speed;
 			return;
 		}
-	}
+		else
+		{
+			mobj->flags |= MF_NOGRAVITY|MF_NOCLIP;
+			mobj->flags |= MF_NOCLIPHEIGHT;
+			mobj->threshold = -1;
+			return;
+		}
+	}*/
 
-	if (mobj->reactiontime) // Shock mode
+	if (mobj->reactiontime) // At the bottom of the water
 	{
 		UINT32 i;
+		SINT8 curpath = mobj->threshold;
+
+		// Choose one of the paths you're not already on
+		mobj->threshold = P_RandomKey(8-1);
+		if (mobj->threshold >= curpath)
+			mobj->threshold++;
 
 		if (mobj->state != &states[mobj->info->spawnstate])
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 
 		mobj->reactiontime--;
-		if (!mobj->reactiontime)
-		{
-			ffloor_t *rover;
-
-			// Shock the water
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator)
-					continue;
-
-				if (!players[i].mo)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if (players[i].mo->eflags & MFE_UNDERWATER)
-					P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
-			}
-
-			// Make the water flash
-			for (i = 0; i < numsectors; i++)
-			{
-				if (!sectors[i].ffloors)
-					continue;
-
-				for (rover = sectors[i].ffloors; rover; rover = rover->next)
-				{
-					if (!(rover->flags & FF_EXISTS))
-						continue;
-
-					if (!(rover->flags & FF_SWIMMABLE))
-						continue;
-
-					P_SpawnLightningFlash(rover->master->frontsector);
-					break;
-				}
-			}
-
-			if ((UINT32)mobj->extravalue1 + TICRATE*2 < leveltime)
-			{
-				mobj->extravalue1 = (INT32)leveltime;
-				S_StartSound(0, sfx_buzz1);
-			}
-
-			// If in the center, check to make sure
-			// none of the players are in the water
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator)
-					continue;
-
-				if (!players[i].mo || players[i].bot)
-					continue;
-
-				if (players[i].mo->health <= 0)
-					continue;
-
-				if (players[i].mo->eflags & MFE_UNDERWATER)
-				{ // Stay put
-					mobj->reactiontime = 2*TICRATE;
-					return;
-				}
-			}
-		}
 
 		if (!mobj->reactiontime && mobj->health <= mobj->info->damage)
 		{ // Spawn pinch dummies from the center when we're leaving it.
 			thinker_t *th;
 			mobj_t *mo2;
 			mobj_t *dummy;
-			SINT8 way = mobj->threshold - 1; // 0 through 4.
-			SINT8 way2;
+			SINT8 way0 = mobj->threshold; // 0 through 4.
+			SINT8 way1, way2;
 
 			i = 0; // reset i to 0 so we can check how many clones we've removed
 
@@ -4490,62 +4440,67 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					continue;
 
 				mo2 = (mobj_t *)th;
-				if (mo2->type == (mobjtype_t)mobj->info->mass && mo2->tracer == mobj)
-				{
-					P_RemoveMobj(mo2);
-					i++;
-				}
-				if (i == 2) // we've already removed 2 of these, let's stop now
+				if (mo2->type != (mobjtype_t)mobj->info->mass)
+					continue;
+				if (mo2->tracer != mobj)
+					continue;
+
+				P_RemoveMobj(mo2);
+				if (++i == 2) // we've already removed 2 of these, let's stop now
 					break;
 			}
 
-			way = (way + P_RandomRange(1,3)) % 5; // dummy 1 at one of the first three options after eggmobile
+			way1 = P_RandomKey(8-2);
+			if (way1 >= curpath)
+				way1++;
+			if (way1 >= way0)
+			{
+				way1++;
+				if (way1 == curpath)
+					way1++;
+			}
+
 			dummy = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->info->mass);
 			dummy->angle = mobj->angle;
-			dummy->threshold = way + 1;
-			dummy->tracer = mobj;
+			dummy->threshold = way1;
+			P_SetTarget(&dummy->tracer, mobj);
+			dummy->movefactor = mobj->movefactor;
+			dummy->cusval = mobj->cusval;
 
-			do
-				way2 = (way + P_RandomRange(1,3)) % 5; // dummy 2 has to be careful,
-			while (way2 == mobj->threshold - 1); // to make sure it doesn't try to go the Eggman Way if dummy 1 rolled high.
+			way2 = P_RandomKey(8-3);
+			if (way2 >= curpath)
+				way2++;
+			if (way2 >= way0)
+			{
+				way2++;
+				if (way2 == curpath)
+					way2++;
+			}
+			if (way2 >= way1)
+			{
+				way2++;
+				if (way2 == curpath || way2 == way0)
+					way2++;
+			}
+
 			dummy = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->info->mass);
 			dummy->angle = mobj->angle;
-			dummy->threshold = way2 + 1;
-			dummy->tracer = mobj;
+			dummy->threshold = way2;
+			P_SetTarget(&dummy->tracer, mobj);
+			dummy->movefactor = mobj->movefactor;
+			dummy->cusval = mobj->cusval;
 
-			CONS_Debug(DBG_GAMELOGIC, "Eggman path %d - Dummy selected paths %d and %d\n", mobj->threshold, way + 1, dummy->threshold);
-			P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+			CONS_Debug(DBG_GAMELOGIC, "Eggman path %d - Dummy selected paths %d and %d\n", way0, way1, way2);
+			P_LinedefExecute(LE_PINCHPHASE+(mobj->cusval*LE_PARAMWIDTH), mobj, NULL);
 		}
 	}
 	else if (mobj->movecount) // Firing mode
 	{
-		UINT32 i;
-
 		// look for a new target
 		P_BossTargetPlayer(mobj, false);
 
 		if (!mobj->target || !mobj->target->player)
 			return;
-
-		// Are there any players underwater? If so, shock them!
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (!playeringame[i] || players[i].spectator)
-				continue;
-
-			if (!players[i].mo || players[i].bot)
-				continue;
-
-			if (players[i].mo->health <= 0)
-				continue;
-
-			if (players[i].mo->eflags & MFE_UNDERWATER)
-			{
-				mobj->movecount = 0;
-				P_SetMobjState(mobj, mobj->info->spawnstate);
-				return;
-			}
-		}
 
 		// Always face your target.
 		A_FaceTarget(mobj);
@@ -4561,9 +4516,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 	}
 	else if (mobj->threshold >= 0) // Traveling mode
 	{
-		thinker_t *th;
-		mobj_t *mo2;
-		fixed_t dist, dist2;
+		fixed_t dist = 0;
 		fixed_t speed;
 
 		P_SetTarget(&mobj->target, NULL);
@@ -4572,89 +4525,104 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			&& !(mobj->flags2 & MF2_FRET))
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 
-		// scan the thinkers
-		// to find a point that matches
-		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		if (!(mobj->flags2 & MF2_STRONGBOX))
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
+			thinker_t *th;
+			mobj_t *mo2;
 
-			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2->spawnpoint->angle == mobj->threshold)
+			P_SetTarget(&mobj->tracer, NULL);
+
+			// scan the thinkers
+			// to find a point that matches
+			// the number
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			{
-				P_SetTarget(&mobj->target, mo2);
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+				if (mo2->type != MT_BOSS3WAYPOINT)
+					continue;
+				if (!mo2->spawnpoint)
+					continue;
+				if (mo2->spawnpoint->angle != mobj->threshold)
+					continue;
+				if (mo2->spawnpoint->extrainfo != mobj->cusval)
+					continue;
+
+				P_SetTarget(&mobj->tracer, mo2);
 				break;
 			}
 		}
 
-		if (!mobj->target) // Should NEVER happen
+		if (!mobj->tracer) // Should NEVER happen
 		{
-			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 was unable to find specified waypoint: %d\n", mobj->threshold);
+			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 was unable to find specified waypoint: %d, %d\n", mobj->threshold, mobj->cusval);
 			return;
 		}
-
-		dist = P_AproxDistance(P_AproxDistance(mobj->target->x - mobj->x, mobj->target->y - mobj->y), mobj->target->z - mobj->z);
-
-		if (dist < 1)
-			dist = 1;
 
 		if ((mobj->movedir) || (mobj->health <= mobj->info->damage))
 			speed = mobj->info->speed * 2;
 		else
 			speed = mobj->info->speed;
 
-		mobj->momx = FixedMul(FixedDiv(mobj->target->x - mobj->x, dist), speed);
-		mobj->momy = FixedMul(FixedDiv(mobj->target->y - mobj->y, dist), speed);
-		mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, dist), speed);
-
-		if (mobj->momx != 0 || mobj->momy != 0)
-			mobj->angle = R_PointToAngle2(0, 0, mobj->momx, mobj->momy);
-
-		dist2 = P_AproxDistance(P_AproxDistance(mobj->target->x - (mobj->x + mobj->momx), mobj->target->y - (mobj->y + mobj->momy)), mobj->target->z - (mobj->z + mobj->momz));
-
-		if (dist2 < 1)
-			dist2 = 1;
-
-		if ((dist >> FRACBITS) <= (dist2 >> FRACBITS))
+		if (mobj->tracer->x == mobj->x && mobj->tracer->y == mobj->y)
 		{
-			// If further away, set XYZ of mobj to waypoint location
+			// apply ambush for old routing, otherwise whack a mole only
+			dist = P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z + mobj->movefactor - mobj->z);
+
+			if (dist < 1)
+				dist = 1;
+
+			mobj->momx = FixedMul(FixedDiv(mobj->tracer->x - mobj->x, dist), speed);
+			mobj->momy = FixedMul(FixedDiv(mobj->tracer->y - mobj->y, dist), speed);
+			mobj->momz = FixedMul(FixedDiv(mobj->tracer->z + mobj->movefactor - mobj->z, dist), speed);
+
+			if (mobj->momx != 0 || mobj->momy != 0)
+				mobj->angle = R_PointToAngle2(0, 0, mobj->momx, mobj->momy);
+		}
+
+		if (dist <= speed)
+		{
+			// If distance to point is less than travel in that frame, set XYZ of mobj to waypoint location
 			P_UnsetThingPosition(mobj);
-			mobj->x = mobj->target->x;
-			mobj->y = mobj->target->y;
-			mobj->z = mobj->target->z;
+			mobj->x = mobj->tracer->x;
+			mobj->y = mobj->tracer->y;
+			mobj->z = mobj->tracer->z + mobj->movefactor;
 			mobj->momx = mobj->momy = mobj->momz = 0;
 			P_SetThingPosition(mobj);
 
-			if (mobj->threshold == 0)
+			if (!mobj->movefactor) // to firing mode
 			{
-				mobj->reactiontime = 1; // Bzzt! Shock the water!
-				mobj->movedir = 0;
+				UINT8 i;
+				angle_t ang = 0;
 
-				if (mobj->health <= 0)
+				mobj->movecount = mobj->health+1;
+				mobj->movefactor = -512*FRACUNIT;
+
+				// shock the water!
+				for (i = 0; i < 64; i++)
 				{
-					mobj->flags |= MF_NOGRAVITY|MF_NOCLIP;
-					mobj->flags |= MF_NOCLIPHEIGHT;
-					mobj->threshold = -1;
-					return;
+					mobj_t *shock = P_SpawnMobjFromMobj(mobj, 0, 0, 4*FRACUNIT, MT_SHOCK);
+					P_SetTarget(&shock->target, mobj);
+					P_InstaThrust(shock, ang, shock->info->speed);
+					P_CheckMissileSpawn(shock);
+					ang += (ANGLE_MAX/64);
 				}
+				S_StartSound(mobj, sfx_fizzle);
 			}
-
-			// Set to next waypoint in sequence
-			if (mobj->target->spawnpoint)
+			else if (mobj->flags2 & (MF2_STRONGBOX|MF2_CLASSICPUSH)) // just hit the bottom of your tube
 			{
-				// From the center point, choose one of the five paths
-				if (mobj->target->spawnpoint->angle == 0)
-					mobj->threshold = P_RandomRange(1,5);
-				else
-					mobj->threshold = mobj->target->spawnpoint->extrainfo;
-
-				// If the deaf flag is set, go into firing mode
-				if (mobj->target->spawnpoint->options & MTF_AMBUSH)
-					mobj->movecount = mobj->health+1;
+				mobj->flags2 &= ~(MF2_STRONGBOX|MF2_CLASSICPUSH);
+				mobj->reactiontime = 1; // spawn pinch dummies
+				mobj->movedir = 0;
 			}
-			else // This should never happen, as well
-				CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 waypoint has no spawnpoint associated with it.\n");
+			else // just shifted to another tube
+			{
+				mobj->flags2 |= MF2_STRONGBOX;
+				if (mobj->health > 0)
+					mobj->movefactor = 0;
+			}
 		}
 	}
 }
@@ -7520,6 +7488,34 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			}
 			break;
+		case MT_FAKEMOBILE:
+			if (mobj->scale == mobj->destscale)
+			{
+				if (!mobj->fuse)
+				{
+					S_StartSound(mobj, sfx_s3k77);
+					mobj->flags2 |= MF2_DONTDRAW;
+					mobj->fuse = TICRATE;
+				}
+				return;
+			}
+			if (!mobj->reactiontime)
+			{
+				if (P_RandomChance(FRACUNIT/2))
+					mobj->movefactor = FRACUNIT;
+				else
+					mobj->movefactor = -FRACUNIT;
+				if (P_RandomChance(FRACUNIT/2))
+					mobj->movedir = ANG20;
+				else
+					mobj->movedir = -ANG20;
+				mobj->reactiontime = 5;
+			}
+			mobj->momz += mobj->movefactor;
+			mobj->angle += mobj->movedir;
+			P_InstaThrust(mobj, mobj->angle, -mobj->info->speed);
+			mobj->reactiontime--;
+			break;
 		case MT_EGGSHIELD:
 			mobj->flags2 ^= MF2_DONTDRAW;
 			break;
@@ -9278,6 +9274,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Special condition for the 2nd boss.
 			mobj->watertop = mobj->info->speed;
 			break;
+		case MT_EGGMOBILE3:
+			mobj->movefactor = -512*FRACUNIT;
+			mobj->flags2 |= MF2_CLASSICPUSH;
+			break;
 		case MT_FLICKY_08:
 			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
 			break;
@@ -9624,7 +9624,7 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i, j, mrand;
+	INT32 i, mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
@@ -10664,6 +10664,9 @@ You should think about modifying the deathmatch starts to take full advantage of
 			skyboxcenterpnts[mthing->extrainfo] = mobj;
 		else
 			skyboxviewpnts[mthing->extrainfo] = mobj;
+		break;
+	case MT_EGGMOBILE3:
+		mobj->cusval = mthing->extrainfo;
 		break;
 	case MT_FAN:
 		if (mthing->options & MTF_OBJECTSPECIAL)

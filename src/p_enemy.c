@@ -2858,6 +2858,7 @@ void A_BossFireShot(mobj_t *actor)
 	fixed_t x, y, z;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	mobj_t *missile;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_BossFireShot", actor))
@@ -2925,7 +2926,10 @@ void A_BossFireShot(mobj_t *actor)
 			break;
 	}
 
-	P_SpawnXYZMissile(actor, actor->target, locvar1, x, y, z);
+	missile = P_SpawnXYZMissile(actor, actor->target, locvar1, x, y, z);
+
+	if (missile && actor->tracer && (actor->tracer->flags & MF_BOSS)) // Don't harm your papa.
+		P_SetTarget(&missile->target, actor->tracer);
 }
 
 // Function: A_Boss7FireMissiles
@@ -7762,9 +7766,11 @@ void A_Boss3TakeDamage(mobj_t *actor)
 		return;
 #endif
 	actor->movecount = var1;
+	actor->movefactor = -512*FRACUNIT;
 
-	if (actor->target && actor->target->spawnpoint)
-		actor->threshold = actor->target->spawnpoint->extrainfo;
+	/*if (actor->target && actor->target->spawnpoint)
+		actor->threshold = actor->target->spawnpoint->extrainfo;*/
+
 }
 
 // Function: A_Boss3Path
@@ -7801,24 +7807,34 @@ void A_Boss3Path(mobj_t *actor)
 	}
 	else if (actor->threshold >= 0) // Traveling mode
 	{
-		thinker_t *th;
-		mobj_t *mo2;
-		fixed_t dist, dist2;
+		fixed_t dist = 0;
 		fixed_t speed;
 
-		P_SetTarget(&actor->target, NULL);
-
-		// scan the thinkers
-		// to find a point that matches
-		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		if (!(actor->flags2 & MF2_STRONGBOX))
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
+			thinker_t *th;
+			mobj_t *mo2;
 
-			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2->spawnpoint->angle == actor->threshold)
+			P_SetTarget(&actor->target, NULL);
+
+			// scan the thinkers
+			// to find a point that matches
+			// the number
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+				if (mo2->type != MT_BOSS3WAYPOINT)
+					continue;
+				if (!mo2->spawnpoint)
+					continue;
+				if (mo2->spawnpoint->angle != actor->threshold)
+					continue;
+				if (mo2->spawnpoint->extrainfo != actor->cusval)
+					continue;
+
 				P_SetTarget(&actor->target, mo2);
 				break;
 			}
@@ -7826,14 +7842,9 @@ void A_Boss3Path(mobj_t *actor)
 
 		if (!actor->target) // Should NEVER happen
 		{
-			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy was unable to find specified waypoint: %d\n", actor->threshold);
+			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy was unable to find specified waypoint: %d, %d\n", actor->threshold, actor->cusval);
 			return;
 		}
-
-		dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z - actor->z);
-
-		if (dist < 1)
-			dist = 1;
 
 		if (actor->tracer && ((actor->tracer->movedir)
 		|| (actor->tracer->health <= actor->tracer->info->damage)))
@@ -7841,52 +7852,52 @@ void A_Boss3Path(mobj_t *actor)
 		else
 			speed = actor->info->speed;
 
-		actor->momx = FixedMul(FixedDiv(actor->target->x - actor->x, dist), speed);
-		actor->momy = FixedMul(FixedDiv(actor->target->y - actor->y, dist), speed);
-		actor->momz = FixedMul(FixedDiv(actor->target->z - actor->z, dist), speed);
+		if (actor->target->x == actor->x && actor->target->y == actor->y)
+		{
+			dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z + actor->movefactor - actor->z);
 
-		if (actor->momx != 0 || actor->momy != 0)
-			actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+			if (dist < 1)
+				dist = 1;
 
-		dist2 = P_AproxDistance(P_AproxDistance(actor->target->x - (actor->x + actor->momx), actor->target->y - (actor->y + actor->momy)), actor->target->z - (actor->z + actor->momz));
+			actor->momx = FixedMul(FixedDiv(actor->target->x - actor->x, dist), speed);
+			actor->momy = FixedMul(FixedDiv(actor->target->y - actor->y, dist), speed);
+			actor->momz = FixedMul(FixedDiv(actor->target->z + actor->movefactor - actor->z, dist), speed);
 
-		if (dist2 < 1)
-			dist2 = 1;
+			if (actor->momx != 0 || actor->momy != 0)
+				actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+		}
 
-		if ((dist >> FRACBITS) <= (dist2 >> FRACBITS))
+		if (dist <= speed)
 		{
 			// If further away, set XYZ of mobj to waypoint location
 			P_UnsetThingPosition(actor);
 			actor->x = actor->target->x;
 			actor->y = actor->target->y;
-			actor->z = actor->target->z;
+			actor->z = actor->target->z + actor->movefactor;
 			actor->momx = actor->momy = actor->momz = 0;
 			P_SetThingPosition(actor);
 
-			if (actor->threshold == 0)
+			if (!actor->movefactor) // firing mode
+			{
+				actor->movecount |= 2;
+				actor->movefactor = -512*FRACUNIT;
+				actor->flags2 &= ~MF2_STRONGBOX;
+			}
+			else if (!(actor->flags2 & MF2_STRONGBOX)) // just spawned or going down
+			{
+				actor->flags2 |= MF2_STRONGBOX;
+				actor->movefactor = -512*FRACUNIT;
+			}
+			else if (!(actor->flags2 & MF2_AMBUSH)) // just shifted tube
+			{
+				actor->flags2 |= MF2_AMBUSH;
+				actor->movefactor = 0;
+			}
+			else // just hit the bottom of your tube
 			{
 				P_RemoveMobj(actor); // Cycle completed. Dummy removed.
 				return;
 			}
-
-			// Set to next waypoint in sequence
-			if (actor->target->spawnpoint)
-			{
-				// From the center point, choose one of the five paths
-				if (actor->target->spawnpoint->angle == 0)
-				{
-					P_RemoveMobj(actor); // Cycle completed. Dummy removed.
-					return;
-				}
-				else
-					actor->threshold = actor->target->spawnpoint->extrainfo;
-
-				// If the deaf flag is set, go into firing mode
-				if (actor->target->spawnpoint->options & MTF_AMBUSH)
-					actor->movecount |= 2;
-			}
-			else // This should never happen, as well
-				CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy waypoint has no spawnpoint associated with it.\n");
 		}
 	}
 }

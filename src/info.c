@@ -1268,6 +1268,11 @@ state_t states[NUMSTATES] =
 
 	// Boss 3
 	{SPR_EGGO,  0,   1, {NULL},                    0, 0, S_EGGMOBILE3_STND},    // S_EGGMOBILE3_STND
+	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH2},  // S_EGGMOBILE3_LAUGH1
+	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH3},  // S_EGGMOBILE3_LAUGH2
+	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH4},  // S_EGGMOBILE3_LAUGH3
+	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH5},  // S_EGGMOBILE3_LAUGH4
+	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_ATK1},  // S_EGGMOBILE3_LAUGH5
 	{SPR_EGGO,  1,   2, {NULL},                    0, 0, S_EGGMOBILE3_ATK2},    // S_EGGMOBILE3_ATK1
 	{SPR_EGGO,  2,   2, {NULL},                    0, 0, S_EGGMOBILE3_ATK3A},   // S_EGGMOBILE3_ATK2
 	{SPR_EGGO,  3,   2, {A_BossFireShot}, MT_TORPEDO, 2, S_EGGMOBILE3_ATK3B},   // S_EGGMOBILE3_ATK3A
@@ -1275,12 +1280,7 @@ state_t states[NUMSTATES] =
 	{SPR_EGGO,  3,   2, {A_BossFireShot}, MT_TORPEDO, 3, S_EGGMOBILE3_ATK3D},   // S_EGGMOBILE3_ATK3C
 	{SPR_EGGO,  3,   2, {A_BossFireShot}, MT_TORPEDO, 5, S_EGGMOBILE3_ATK4},    // S_EGGMOBILE3_ATK3D
 	{SPR_EGGO,  4,   2, {NULL},                    0, 0, S_EGGMOBILE3_ATK5},    // S_EGGMOBILE3_ATK4
-	{SPR_EGGO,  5,   2, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH1},  // S_EGGMOBILE3_ATK5
-	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH2},  // S_EGGMOBILE3_LAUGH1
-	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH3},  // S_EGGMOBILE3_LAUGH2
-	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH4},  // S_EGGMOBILE3_LAUGH3
-	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH5},  // S_EGGMOBILE3_LAUGH4
-	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH6},  // S_EGGMOBILE3_LAUGH5
+	{SPR_EGGO,  5,   2, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH6},  // S_EGGMOBILE3_ATK5
 	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH7},  // S_EGGMOBILE3_LAUGH6
 	{SPR_EGGO,  6,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH8},  // S_EGGMOBILE3_LAUGH7
 	{SPR_EGGO,  7,   4, {NULL},                    0, 0, S_EGGMOBILE3_LAUGH9},  // S_EGGMOBILE3_LAUGH8
@@ -1327,14 +1327,14 @@ state_t states[NUMSTATES] =
 	// Boss 3 Pinch
 	{SPR_FAKE, 0,  1, {A_BossJetFume},            1, 0, S_FAKEMOBILE},       // S_FAKEMOBILE_INIT
 	{SPR_FAKE, 0,  1, {A_Boss3Path},              0, 0, S_FAKEMOBILE},       // S_FAKEMOBILE
-	{SPR_FAKE, 0,  2, {NULL},                     0, 0, S_FAKEMOBILE_ATK2},  // S_FAKEMOBILE_ATK1
+	{SPR_FAKE, 0, 22, {NULL},                     0, 0, S_FAKEMOBILE_ATK2},  // S_FAKEMOBILE_ATK1
 	{SPR_FAKE, 0,  2, {NULL},                     0, 0, S_FAKEMOBILE_ATK3A}, // S_FAKEMOBILE_ATK2
 	{SPR_FAKE, 0,  2, {A_BossFireShot}, MT_TORPEDO2, 2, S_FAKEMOBILE_ATK3B}, // S_FAKEMOBILE_ATK3A
 	{SPR_FAKE, 0,  2, {A_BossFireShot}, MT_TORPEDO2, 4, S_FAKEMOBILE_ATK3C}, // S_FAKEMOBILE_ATK3B
 	{SPR_FAKE, 0,  2, {A_BossFireShot}, MT_TORPEDO2, 3, S_FAKEMOBILE_ATK3D}, // S_FAKEMOBILE_ATK3C
-	{SPR_FAKE, 0,  2, {A_BossFireShot}, MT_TORPEDO2, 5, S_FAKEMOBILE_ATK4},  // S_FAKEMOBILE_ATK3D
-	{SPR_FAKE, 0,  2, {NULL},                     0, 0, S_FAKEMOBILE_ATK5},  // S_FAKEMOBILE_ATK4
-	{SPR_FAKE, 0,  2, {NULL},                     0, 0, S_FAKEMOBILE},       // S_FAKEMOBILE_ATK5
+	{SPR_FAKE, 0,  2, {A_BossFireShot}, MT_TORPEDO2, 5, S_FAKEMOBILE},       // S_FAKEMOBILE_ATK3D
+	{SPR_FAKE, 0,  1, {NULL},                     0, 0, S_FAKEMOBILE_DIE2},  // S_FAKEMOBILE_DIE1
+	{SPR_NULL, 0,  1, {NULL},                     0, 0, S_FAKEMOBILE_DIE1},  // S_FAKEMOBILE_DIE2
 
 	// Boss 4
 	{SPR_EGGP, 0, -1, {NULL},           0,          0, S_NULL},              // S_EGGMOBILE4_STND
@@ -2886,7 +2886,7 @@ state_t states[NUMSTATES] =
 	{SPR_NULL,                           0, 15*2, {NULL}, 0, 0, S_ZAPSB2 }, // S_ZAPSB11
 
 	// Thunder spark
-	{SPR_SSPK, FF_ANIMATE, 18, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
+	{SPR_SSPK, FF_ANIMATE, -1, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
 
 	// Invincibility Sparkles
 	{SPR_IVSP, FF_ANIMATE, 32, {NULL}, 31, 1, S_NULL},   // S_IVSP
@@ -5500,7 +5500,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_PROPELLER,       // painchance
 		sfx_dmpain,         // painsound
 		S_NULL,             // meleestate
-		S_EGGMOBILE3_ATK1,  // missilestate
+		S_EGGMOBILE3_LAUGH1,// missilestate
 		S_EGGMOBILE3_DIE1,  // deathstate
 		S_EGGMOBILE3_FLEE1, // xdeathstate
 		sfx_cybdth,         // deathsound
@@ -5555,9 +5555,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_s3k7b,          // painsound
 		S_NULL,             // meleestate
 		S_FAKEMOBILE_ATK1,  // missilestate
-		S_XPLD1,            // deathstate
+		S_FAKEMOBILE_DIE1,  // deathstate
 		S_NULL,             // xdeathstate
-		sfx_pop,            // deathsound
+		sfx_mswarp,         // deathsound
 		8*FRACUNIT,         // speed
 		32*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
@@ -5567,6 +5567,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,           // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT, // flags
 		S_NULL              // raisestate
+	},
+
+	{           // MT_SHOCK
+		-1,             // doomednum
+		S_THUNDERCOIN_SPARK, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_SPRK1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		10*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		35*FRACUNIT,    // height
+		0,              // display offset
+		DMG_ELECTRIC|(sfx_buzz2<<8), // mass
+		20,             // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
 	},
 
 	{           // MT_EGGMOBILE4
@@ -9086,7 +9113,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_MINE_BOOM1,   // deathstate
+		S_XPLD1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cybdth,     // deathsound
 		20*FRACUNIT,    // speed
@@ -9113,7 +9140,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_MINE_BOOM1,   // deathstate
+		S_XPLD1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cybdth,     // deathsound
 		20*FRACUNIT,    // speed

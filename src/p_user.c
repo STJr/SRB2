@@ -4362,6 +4362,7 @@ void P_DoJumpShield(player_t *player)
 			P_InstaThrust(spark, travelangle + i*(ANGLE_MAX/numangles), FixedMul(4*FRACUNIT, spark->scale));
 			if (i % 2)
 				P_SetObjectMomZ(spark, -4*FRACUNIT, false);
+			spark->fuse = 18;
 		}
 #undef limitangle
 #undef numangles
