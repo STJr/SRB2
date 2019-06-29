@@ -29,7 +29,7 @@ typedef enum {
 } moviemode_t;
 extern moviemode_t moviemode;
 
-extern consvar_t cv_screenshot_option, cv_screenshot_folder;
+extern consvar_t cv_screenshot_option, cv_screenshot_folder, cv_screenshot_colorprofile;
 extern consvar_t cv_moviemode;
 extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
 extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
@@ -40,13 +40,7 @@ void M_SaveFrame(void);
 void M_StopMovie(void);
 
 // the file where game vars and settings are saved
-#ifdef DC
-#define CONFIGFILENAME "srb2dc.cfg"
-#elif defined (PSP)
-#define CONFIGFILENAME "srb2psp.cfg"
-#else
 #define CONFIGFILENAME "config.cfg"
-#endif
 
 INT32 M_MapNumber(char first, char second);
 

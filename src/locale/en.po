@@ -1377,11 +1377,6 @@ msgstr ""
 msgid "modifiedgame is false, you can unlock secrets\n"
 msgstr ""
 
-#: d_netcmd.c:4599
-#, c-format
-msgid "Valid skin numbers are 0 to %d (-1 disables)\n"
-msgstr ""
-
 #: d_netcmd.c:4617 d_netcmd.c:4629
 msgid "You may not change your name when chat is muted.\n"
 msgstr ""

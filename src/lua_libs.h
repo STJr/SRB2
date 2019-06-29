@@ -38,6 +38,10 @@ extern lua_State *gL;
 #define META_SUBSECTOR "SUBSECTOR_T*"
 #define META_SECTOR "SECTOR_T*"
 #define META_FFLOOR "FFLOOR_T*"
+#ifdef HAVE_LUA_SEGS
+#define META_SEG "SEG_T*"
+#define META_NODE "NODE_T*"
+#endif
 #ifdef ESLOPE
 #define META_SLOPE "PSLOPE_T*"
 #define META_VECTOR2 "VECTOR2_T"
@@ -49,11 +53,19 @@ extern lua_State *gL;
 
 #define META_SECTORLINES "SECTOR_T*LINES"
 #define META_SIDENUM "LINE_T*SIDENUM"
+#ifdef HAVE_LUA_SEGS
+#define META_NODEBBOX "NODE_T*BBOX"
+#define META_NODECHILDREN "NODE_T*CHILDREN"
+#endif
+
+#define META_BBOX "BOUNDING_BOX"
 
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
 #define META_CAMERA "CAMERA_T*"
+
+#define META_ACTION "ACTIONF_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 

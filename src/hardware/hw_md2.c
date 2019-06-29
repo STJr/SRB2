@@ -28,12 +28,12 @@
 
 #include "../doomdef.h"
 #include "../doomstat.h"
+#include "../fastcmp.h"
 
 #ifdef HWRENDER
 #include "hw_drv.h"
 #include "hw_light.h"
 #include "hw_md2.h"
-#include "../d_main.h"
 #include "../r_bsp.h"
 #include "../r_main.h"
 #include "../m_misc.h"
@@ -647,135 +647,10 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	image = gpatch->mipmap.grInfo.data;
 	blendimage = blendgpatch->mipmap.grInfo.data;
 
-	switch (color)
-	{
-		case SKINCOLOR_WHITE:
-			blendcolor = V_GetColor(3);
-			break;
-		case SKINCOLOR_SILVER:
-			blendcolor = V_GetColor(10);
-			break;
-		case SKINCOLOR_GREY:
-			blendcolor = V_GetColor(15);
-			break;
-		case SKINCOLOR_BLACK:
-			blendcolor = V_GetColor(27);
-			break;
-		case SKINCOLOR_CYAN:
-			blendcolor = V_GetColor(215);
-			break;
-		case SKINCOLOR_TEAL:
-			blendcolor = V_GetColor(221);
-			break;
-		case SKINCOLOR_STEELBLUE:
-			blendcolor = V_GetColor(203);
-			break;
-		case SKINCOLOR_BLUE:
-			blendcolor = V_GetColor(232);
-			break;
-		case SKINCOLOR_PEACH:
-			blendcolor = V_GetColor(71);
-			break;
-		case SKINCOLOR_TAN:
-			blendcolor = V_GetColor(79);
-			break;
-		case SKINCOLOR_PINK:
-			blendcolor = V_GetColor(147);
-			break;
-		case SKINCOLOR_LAVENDER:
-			blendcolor = V_GetColor(251);
-			break;
-		case SKINCOLOR_PURPLE:
-			blendcolor = V_GetColor(195);
-			break;
-		case SKINCOLOR_ORANGE:
-			blendcolor = V_GetColor(87);
-			break;
-		case SKINCOLOR_ROSEWOOD:
-			blendcolor = V_GetColor(94);
-			break;
-		case SKINCOLOR_BEIGE:
-			blendcolor = V_GetColor(40);
-			break;
-		case SKINCOLOR_BROWN:
-			blendcolor = V_GetColor(57);
-			break;
-		case SKINCOLOR_RED:
-			blendcolor = V_GetColor(130);
-			break;
-		case SKINCOLOR_DARKRED:
-			blendcolor = V_GetColor(139);
-			break;
-		case SKINCOLOR_NEONGREEN:
-			blendcolor = V_GetColor(184);
-			break;
-		case SKINCOLOR_GREEN:
-			blendcolor = V_GetColor(166);
-			break;
-		case SKINCOLOR_ZIM:
-			blendcolor = V_GetColor(180);
-			break;
-		case SKINCOLOR_OLIVE:
-			blendcolor = V_GetColor(108);
-			break;
-		case SKINCOLOR_YELLOW:
-			blendcolor = V_GetColor(104);
-			break;
-		case SKINCOLOR_GOLD:
-			blendcolor = V_GetColor(115);
-			break;
-
-		case SKINCOLOR_SUPER1:
-			blendcolor = V_GetColor(97);
-			break;
-		case SKINCOLOR_SUPER2:
-			blendcolor = V_GetColor(100);
-			break;
-		case SKINCOLOR_SUPER3:
-			blendcolor = V_GetColor(103);
-			break;
-		case SKINCOLOR_SUPER4:
-			blendcolor = V_GetColor(113);
-			break;
-		case SKINCOLOR_SUPER5:
-			blendcolor = V_GetColor(116);
-			break;
-
-		case SKINCOLOR_TSUPER1:
-			blendcolor = V_GetColor(81);
-			break;
-		case SKINCOLOR_TSUPER2:
-			blendcolor = V_GetColor(82);
-			break;
-		case SKINCOLOR_TSUPER3:
-			blendcolor = V_GetColor(84);
-			break;
-		case SKINCOLOR_TSUPER4:
-			blendcolor = V_GetColor(85);
-			break;
-		case SKINCOLOR_TSUPER5:
-			blendcolor = V_GetColor(87);
-			break;
-
-		case SKINCOLOR_KSUPER1:
-			blendcolor = V_GetColor(122);
-			break;
-		case SKINCOLOR_KSUPER2:
-			blendcolor = V_GetColor(123);
-			break;
-		case SKINCOLOR_KSUPER3:
-			blendcolor = V_GetColor(124);
-			break;
-		case SKINCOLOR_KSUPER4:
-			blendcolor = V_GetColor(125);
-			break;
-		case SKINCOLOR_KSUPER5:
-			blendcolor = V_GetColor(126);
-			break;
-		default:
-			blendcolor = V_GetColor(247);
-			break;
-	}
+	if (color == SKINCOLOR_NONE || color >= MAXTRANSLATIONS)
+		blendcolor = V_GetColor(0xff);
+	else
+		blendcolor = V_GetColor(Color_Index[color-1][4]);
 
 	while (size--)
 	{
@@ -882,6 +757,51 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, con
 	res?
 	run?
 	*/
+
+static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+{
+	UINT8 super = 0, i = 0;
+
+	if (!md2 || !skin)
+		return 0;
+
+	while (!(md2->model->spr2frames[spr2*2 + 1])
+		&& spr2 != SPR2_STND
+		&& ++i != 32) // recursion limiter
+	{
+		if (spr2 & FF_SPR2SUPER)
+		{
+			super = FF_SPR2SUPER;
+			spr2 &= ~FF_SPR2SUPER;
+			continue;
+		}
+
+		switch(spr2)
+		{
+
+		// Normal special cases.
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
+			break;
+		case SPR2_TIRE:
+			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+
+		// Use the handy list, that's what it's there for!
+		default:
+			spr2 = spr2defaults[spr2];
+			break;
+		}
+
+		spr2 |= super;
+	}
+
+	return spr2;
+}
+
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
 void HWR_DrawMD2(gr_vissprite_t *spr)
@@ -917,8 +837,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
 
-			if (sector->lightlist[light].extra_colormap)
-				colormap = sector->lightlist[light].extra_colormap;
+			if (*sector->lightlist[light].extra_colormap)
+				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else
 		{
@@ -940,8 +860,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		GLPatch_t *gpatch;
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
+<<<<<<< HEAD
 		//mdlframe_t *next = NULL;
 		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
+=======
+		md2_frame_t *curr, *next = NULL;
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
+>>>>>>> origin/master
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		float finalscale;
@@ -1030,44 +955,104 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			tics = spr->mobj->anim_duration;
 		}
 
+<<<<<<< HEAD
 		//FIXME: this is not yet correct
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 
 #ifdef USE_MODEL_NEXTFRAME
 		if (cv_grmdls.value == 1 && tics <= durs)
+=======
+#define INTERPOLERATION_LIMIT TICRATE/4
+
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
+>>>>>>> origin/master
 		{
-			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
-			if (spr->mobj->frame & FF_ANIMATE)
+			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
+			if (mod > ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
+				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
+			//FIXME: this is not yet correct
+			frame = (spr->mobj->frame & FF_FRAMEMASK);
+			if (frame >= mod)
+				frame = 0;
+			buff = md2->model->glCommandBuffer;
+			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
+			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 			{
+<<<<<<< HEAD
 				nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 				if (nextFrame >= spr->mobj->state->var1)
 					nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
 				nextFrame %= md2->model->meshes[0].numFrames;
 				//next = &md2->model->meshes[0].frames[nextFrame];
-			}
-			else
-			{
-				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-					&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+=======
+				if (durs > INTERPOLERATION_LIMIT)
+					durs = INTERPOLERATION_LIMIT;
+
+				if (spr->mobj->frame & FF_ANIMATE
+					|| (spr->mobj->state->nextstate != S_NULL
+					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite
+					&& (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) == spr->mobj->sprite2))
 				{
+					if (++frame >= mod)
+						frame = 0;
+					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
+						next = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
+				}
+>>>>>>> origin/master
+			}
+		}
+		else
+		{
+			//FIXME: this is not yet correct
+			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+			buff = md2->model->glCommandBuffer;
+			curr = &md2->model->frames[frame];
+			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
+			{
+				if (durs > INTERPOLERATION_LIMIT)
+					durs = INTERPOLERATION_LIMIT;
+
+				// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
+				if (spr->mobj->frame & FF_ANIMATE)
+				{
+<<<<<<< HEAD
 					nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 					//next = &md2->model->meshes[0].frames[nextFrame];
+=======
+					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+					if (nextframe >= (UINT32)spr->mobj->state->var1)
+						nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
+					nextframe %= md2->model->header.numFrames;
+					next = &md2->model->frames[nextframe];
+>>>>>>> origin/master
+				}
+				else
+				{
+					if (spr->mobj->state->nextstate != S_NULL
+					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite)
+					{
+						const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+						next = &md2->model->frames[nextframe];
+					}
 				}
 			}
 		}
 #endif
 
+#undef INTERPOLERATION_LIMIT
+
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
-		if (spr->mobj->eflags & MFE_VERTICALFLIP)
+		if (flip)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
+			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
 		else
 			sprdef = &sprites[spr->mobj->sprite];
 
@@ -1075,14 +1060,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sprframe->rotate)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->angle);
-			// \todo adapt for 2.2 directionchar? The below code is from Kart
-#if 0
-			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->frameangle);
-			else
-				anglef = AngleFixed(spr->mobj->angle);
-#endif
+			const fixed_t anglef = AngleFixed((spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle));
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else

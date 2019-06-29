@@ -359,7 +359,7 @@ static void P_DoAutobalanceTeams(void)
 	totalred = red + redflagcarrier;
 	totalblue = blue + blueflagcarrier;
 
-	if ((abs(totalred - totalblue) > cv_autobalance.value))
+	if ((abs(totalred - totalblue) > max(1, (totalred + totalblue) / 8)))
 	{
 		if (totalred > totalblue)
 		{
@@ -372,8 +372,7 @@ static void P_DoAutobalanceTeams(void)
 			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
 			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 		}
-
-		if (totalblue > totalred)
+		else //if (totalblue > totalred)
 		{
 			i = M_RandomKey(blue);
 			NetPacket.packet.newteam = 1;
@@ -425,7 +424,7 @@ void P_DoTeamscrambling(void)
 
 static inline void P_DoSpecialStageStuff(void)
 {
-	boolean inwater = false;
+	boolean stillalive = false;
 	INT32 i;
 
 	// Can't drown in a special stage
@@ -437,68 +436,60 @@ static inline void P_DoSpecialStageStuff(void)
 		players[i].powers[pw_underwater] = players[i].powers[pw_spacetime] = 0;
 	}
 
-	if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
-		S_SpeedMusic(1.4f);
+	//if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+		//S_SpeedMusic(1.4f);
 
-	if (sstimer < 7 && sstimer > 0) // The special stage time is up!
+	if (sstimer && !objectplacing)
 	{
-		sstimer = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-			{
-				players[i].exiting = (14*TICRATE)/5 + 1;
-				players[i].pflags &= ~PF_GLIDING;
-			}
-
-			if (i == consoleplayer)
-				S_StartSound(NULL, sfx_lose);
-		}
-
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
-			S_SpeedMusic(1.0f);
-
-		stagefailed = true;
-	}
-
-	if (sstimer > 1) // As long as time isn't up...
-	{
-		UINT32 ssrings = 0;
+		UINT16 countspheres = 0;
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				ssrings += (players[i].mo->health-1);
+				tic_t oldnightstime = players[i].nightstime;
+				countspheres += players[i].spheres;
 
 				// If in water, deplete timer 6x as fast.
-				if ((players[i].mo->eflags & MFE_TOUCHWATER)
-					|| (players[i].mo->eflags & MFE_UNDERWATER))
-					inwater = true;
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+					players[i].nightstime -= 5;
+				if (--players[i].nightstime > 6)
+				{
+					if (P_IsLocalPlayer(&players[i]) && oldnightstime > 10*TICRATE && players[i].nightstime <= 10*TICRATE)
+						S_ChangeMusicInternal("_drown", false);
+					stillalive = true;
+				}
+				else if (!players[i].exiting)
+				{
+					players[i].exiting = (14*TICRATE)/5 + 1;
+					players[i].pflags &= ~(PF_GLIDING|PF_BOUNCING);
+					players[i].nightstime = 0;
+					if (P_IsLocalPlayer(&players[i]))
+						S_StartSound(NULL, sfx_s3k66);
+				}
 			}
 
-		if (ssrings >= totalrings && totalrings > 0)
+		if (stillalive)
 		{
-			// Halt all the players
-			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i])
-				{
-					players[i].mo->momx = players[i].mo->momy = 0;
-					players[i].exiting = (14*TICRATE)/5 + 1;
-				}
+			if (countspheres >= ssspheres)
+			{
+				// Halt all the players
+				for (i = 0; i < MAXPLAYERS; i++)
+					if (playeringame[i])
+					{
+						players[i].mo->momx = players[i].mo->momy = 0;
+						players[i].exiting = (14*TICRATE)/5 + 1;
+					}
 
-			sstimer = 0;
-
-			P_GiveEmerald(true);
+				sstimer = 0;
+				P_GiveEmerald(true);
+				P_RestoreMusic(&players[consoleplayer]);
+			}
 		}
-
-		// Decrement the timer
-		if (!objectplacing)
+		else
 		{
-			if (inwater)
-				sstimer -= 6;
-			else
-				sstimer--;
+			sstimer = 0;
+			stagefailed = true;
 		}
 	}
 }
@@ -534,7 +525,7 @@ static inline void P_DoTagStuff(void)
 		for (i=0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && !players[i].spectator && players[i].playerstate == PST_LIVE
-			&& !(players[i].pflags & (PF_TAGIT|PF_TAGGED)))
+			&& !(players[i].pflags & (PF_TAGIT|PF_GAMETYPEOVER)))
 				//points given is the number of participating players divided by two.
 				P_AddPlayerScore(&players[i], participants/2);
 		}
@@ -610,7 +601,7 @@ void P_Ticker(boolean run)
 	if (!demoplayback) // Don't increment if a demo is playing.
 		totalplaytime++;
 
-	if (!useNightsSS && G_IsSpecialStage(gamemap))
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();
 
 	if (runemeraldmanager)
@@ -652,7 +643,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -664,7 +655,9 @@ void P_Ticker(boolean run)
 				if (!players[i].mo)
 					continue;
 
-				P_DamageMobj(players[i].mo, NULL, NULL, 10000);
+				if (multiplayer || netgame)
+					players[i].exiting = 0;
+				P_DamageMobj(players[i].mo, NULL, NULL, 1, DMG_INSTAKILL);
 			}
 		}
 

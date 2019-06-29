@@ -54,7 +54,13 @@ static int iterationState_gc(lua_State *L)
 static int lib_iterateThinkers(lua_State *L)
 {
 	thinker_t *th = NULL, *next = NULL;
-	struct iterationState *it = luaL_checkudata(L, 1, META_ITERATIONSTATE);
+	struct iterationState *it;
+
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
+
+	it = luaL_checkudata(L, 1, META_ITERATIONSTATE);
+
 	lua_settop(L, 2);
 
 	if (lua_isnil(L, 2))
@@ -105,6 +111,9 @@ static int lib_iterateThinkers(lua_State *L)
 static int lib_startIterate(lua_State *L)
 {
 	struct iterationState *it;
+
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 
 	lua_pushvalue(L, lua_upvalueindex(1));
 	it = lua_newuserdata(L, sizeof(struct iterationState));

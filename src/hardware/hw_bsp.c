@@ -29,6 +29,7 @@
 #include "../m_argv.h"
 #include "../i_video.h"
 #include "../w_wad.h"
+#include "../p_setup.h" // levelfadecol
 
 // --------------------------------------------------------------------------
 // This is global data for planes rendering

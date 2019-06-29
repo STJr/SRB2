@@ -18,13 +18,25 @@
 #define ZWAD
 
 #ifdef ZWAD
-#ifdef _WIN32_WCE
-#define AVOID_ERRNO
-#else
 #include <errno.h>
-#endif
 #include "lzf.h"
 #endif
+
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE
+#endif
+
+//#ifdef HAVE_ZLIB
+#include "zlib.h"
+//#endif // HAVE_ZLIB
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -121,6 +133,7 @@ void W_Shutdown(void)
 		Z_Free(wadfiles[numwadfiles]->filename);
 		while (wadfiles[numwadfiles]->numlumps--)
 			Z_Free(wadfiles[numwadfiles]->lumpinfo[wadfiles[numwadfiles]->numlumps].name2);
+
 		Z_Free(wadfiles[numwadfiles]->lumpinfo);
 		Z_Free(wadfiles[numwadfiles]);
 	}
@@ -188,7 +201,7 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 }
 
 // Look for all DEHACKED and Lua scripts inside a PK3 archive.
-static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
+static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 #ifdef HAVE_BLUA
@@ -196,7 +209,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		posStart++;
+		posStart++; // first "lump" will be "Lua/" folder itself, so ignore it
 		for (; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
@@ -205,7 +218,8 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("SOC/", wadnum, posStart);
-		posStart++;
+
+		posStart++; // first "lump" will be "SOC/" folder itself, so ignore it
 		for(; posStart < posEnd; posStart++)
 		{
 			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
@@ -214,15 +228,14 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->name2);
 			name[length] = '\0';
 			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
-			DEH_LoadDehackedLumpPwad(wadnum, posStart);
+			DEH_LoadDehackedLumpPwad(wadnum, posStart, mainfile);
 			free(name);
 		}
-
 	}
 }
 
 // search for all DEHACKED lump in all wads and load it
-static inline void W_LoadDehackedLumps(UINT16 wadnum)
+static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump;
 
@@ -247,18 +260,18 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 				name[length] = '\0';
 
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
-				DEH_LoadDehackedLumpPwad(wadnum, lump);
+				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
 			{
 				CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
-				DEH_LoadDehackedLumpPwad(wadnum, lump);
+				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 			}
 			else if (memcmp(lump_p->name,"OBJCTCFG",8)==0) // Check for OBJCTCFG
 			{
 				CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
-				DEH_LoadDehackedLumpPwad(wadnum, lump);
+				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 			}
 	}
 
@@ -650,7 +663,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_InitFile(const char *filename)
+UINT16 W_InitFile(const char *filename, boolean mainfile)
 {
 	FILE *handle;
 	lumpinfo_t *lumpinfo = NULL;
@@ -760,6 +773,7 @@ UINT16 W_InitFile(const char *filename)
 	//
 	wadfile = Z_Malloc(sizeof (*wadfile), PU_STATIC, NULL);
 	wadfile->filename = Z_StrDup(filename);
+	wadfile->type = type;
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
@@ -792,14 +806,14 @@ UINT16 W_InitFile(const char *filename)
 	switch (wadfile->type)
 	{
 	case RET_WAD:
-		W_LoadDehackedLumps(numwadfiles - 1);
+		W_LoadDehackedLumps(numwadfiles - 1, mainfile);
 		break;
 	case RET_PK3:
-		W_LoadDehackedLumpsPK3(numwadfiles - 1);
+		W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
 		break;
 	case RET_SOC:
 		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
-		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0);
+		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 #ifdef HAVE_BLUA
 	case RET_LUA:
@@ -814,38 +828,6 @@ UINT16 W_InitFile(const char *filename)
 	return wadfile->numlumps;
 }
 
-#ifdef DELFILE
-void W_UnloadWadFile(UINT16 num)
-{
-	INT32 i;
-	wadfile_t *delwad = wadfiles[num];
-	lumpcache_t *lumpcache;
-	if (num == 0)
-		return;
-	CONS_Printf(M_GetText("Removing WAD %s...\n"), wadfiles[num]->filename);
-
-	DEH_UnloadDehackedWad(num);
-	wadfiles[num] = NULL;
-	lumpcache = delwad->lumpcache;
-	numwadfiles--;
-#ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
-		HWR_FreeTextureCache();
-	M_AATreeFree(delwad->hwrcache);
-#endif
-	if (*lumpcache)
-	{
-		for (i = 0;i < delwad->numlumps;i++)
-			Z_ChangeTag(lumpcache[i], PU_PURGELEVEL);
-	}
-	Z_Free(lumpcache);
-	fclose(delwad->handle);
-	Z_Free(delwad->filename);
-	Z_Free(delwad);
-	CONS_Printf(M_GetText("Done unloading WAD.\n"));
-}
-#endif
-
 /** Tries to load a series of files.
   * All files are wads unless they have an extension of ".soc" or ".lua".
   *
@@ -857,7 +839,7 @@ void W_UnloadWadFile(UINT16 num)
   * \return 1 if all files were loaded, 0 if at least one was missing or
   *           invalid.
   */
-INT32 W_InitMultipleFiles(char **filenames)
+INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
 {
 	INT32 rc = 1;
 
@@ -868,7 +850,7 @@ INT32 W_InitMultipleFiles(char **filenames)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		rc &= (W_InitFile(*filenames) != INT16_MAX) ? 1 : 0;
+		rc &= (W_InitFile(*filenames, numwadfiles < mainfiles) != INT16_MAX) ? 1 : 0;
 	}
 
 	if (!numwadfiles)
@@ -936,10 +918,8 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-		{
 			if (memcmp(lump_p->name,uname,8) == 0)
 				return i;
-		}
 	}
 
 	// not found.
@@ -1179,7 +1159,7 @@ boolean W_IsLumpFolder(UINT16 wad, UINT16 lump)
 /* report a zlib or i/o error */
 void zerr(int ret)
 {
-	    CONS_Printf("zpipe: ");
+    CONS_Printf("zpipe: ");
     switch (ret) {
     case Z_ERRNO:
         if (ferror(stdin))
@@ -1356,7 +1336,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			}
 			else
 			{
-				CONS_Printf("whopet\n");
 				size = 0;
 				zerr(zErr);
 			}
@@ -1373,7 +1352,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	default:
 		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
-	return -1;
+	return 0;
 }
 
 size_t W_ReadLumpHeader(lumpnum_t lumpnum, void *dest, size_t size, size_t offset)
@@ -1757,8 +1736,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
-		{"SBO", 3}, // Acceptable HUD changes (Score Time Rings)
-		{"RRINGS", 6}, // Rings HUD (not named as SBO)
+		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
 

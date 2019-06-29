@@ -42,6 +42,7 @@ extern tic_t demostarttime;
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
 extern boolean demo_start;
+extern boolean demosynced;
 
 extern mobj_t *metalplayback;
 
@@ -53,14 +54,19 @@ extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
+extern INT32 pausedelay;
+extern boolean pausebreakkey;
 
 // used in game menu
+extern consvar_t cv_tutorialprompt;
 extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
 extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
+extern consvar_t cv_directionchar, cv_directionchar2;
+extern consvar_t cv_autobrake, cv_autobrake2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
 extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
@@ -94,7 +100,7 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
 void G_PlayerReborn(INT32 player);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
-	boolean skipprecutscene);
+	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
 
 // XMOD spawning
@@ -117,6 +123,8 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride);
 void G_SaveGameData(void);
 
 void G_SaveGame(UINT32 slot);
+
+void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
 // Only called by startup code.
 void G_RecordDemo(const char *name);

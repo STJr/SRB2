@@ -36,6 +36,7 @@ extern INT32 msg_id;
 #include "d_main.h"
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
+#include "fastcmp.h"
 #include "m_misc.h" // for tunes command
 
 #if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
@@ -59,6 +60,8 @@ static void GameMIDIMusic_OnChange(void);
 static void GameSounds_OnChange(void);
 static void GameDigiMusic_OnChange(void);
 
+static void ModFilter_OnChange(void);
+
 // commands for music and sound servers
 #ifdef MUSSERV
 consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -73,12 +76,8 @@ consvar_t sndserver_arg = {"sndserver_arg", "-quiet", CV_SAVE, NULL, 0, NULL, NU
 #define SURROUND
 #endif
 
-#if defined (_WIN32_WCE) || defined (DC) || defined(GP2X)
-consvar_t cv_samplerate = {"samplerate", "11025", 0, CV_Unsigned, NULL, 11025, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
-#elif defined(_PSP) || defined(_WINDOWS)
+#ifdef _WINDOWS
 consvar_t cv_samplerate = {"samplerate", "44100", 0, CV_Unsigned, NULL, 44100, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
-#elif defined(_WII)
-consvar_t cv_samplerate = {"samplerate", "32000", 0, CV_Unsigned, NULL, 32000, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #else
 consvar_t cv_samplerate = {"samplerate", "22050", 0, CV_Unsigned, NULL, 22050, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #endif
@@ -93,12 +92,18 @@ static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NUL
 consvar_t cv_soundvolume = {"soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static void Captioning_OnChange(void)
+{
+	S_ResetCaptions();
+	if (cv_closedcaptioning.value)
+		S_StartSound(NULL, sfx_menu1);
+}
+
+consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
 // number of channels available
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
-consvar_t cv_numChannels = {"snd_channels", "8", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
-#endif
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -107,6 +112,11 @@ consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL,
 consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+#ifdef HAVE_OPENMPT
+static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
+consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
+#endif
 
 #define S_MAX_VOLUME 127
 
@@ -142,22 +152,23 @@ consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, 
 // percent attenuation from front to back
 #define S_IFRACVOL 30
 
-typedef struct
-{
-	// sound information (if null, channel avail.)
-	sfxinfo_t *sfxinfo;
-
-	// origin of sound
-	const void *origin;
-
-	// handle of the sound being played
-	INT32 handle;
-
-} channel_t;
-
 // the set of channels available
 static channel_t *channels = NULL;
 static INT32 numofchannels = 0;
+
+caption_t closedcaptions[NUMCAPTIONS];
+
+void S_ResetCaptions(void)
+{
+	UINT8 i;
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		closedcaptions[i].c = NULL;
+		closedcaptions[i].s = NULL;
+		closedcaptions[i].t = 0;
+		closedcaptions[i].b = 0;
+	}
+}
 
 //
 // Internals.
@@ -265,10 +276,12 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_gamesounds);
 	CV_RegisterVar(&cv_gamedigimusic);
 	CV_RegisterVar(&cv_gamemidimusic);
+#ifdef HAVE_OPENMPT
+	CV_RegisterVar(&cv_modfilter);
+#endif
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
@@ -323,6 +336,8 @@ static void SetChannelsNum(void)
 	// Free all channels for use
 	for (i = 0; i < numofchannels; i++)
 		channels[i].sfxinfo = 0;
+
+	S_ResetCaptions();
 }
 
 
@@ -365,6 +380,8 @@ void S_StopSounds(void)
 	for (cnum = 0; cnum < numofchannels; cnum++)
 		if (channels[cnum].sfxinfo)
 			S_StopChannel(cnum);
+
+	S_ResetCaptions();
 }
 
 void S_StopSoundByID(void *origin, sfxenum_t sfx_id)
@@ -411,6 +428,92 @@ void S_StopSoundByNum(sfxenum_t sfxnum)
 			break;
 		}
 	}
+}
+
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
+{
+	UINT8 i, set, moveup, start;
+	boolean same = false;
+	sfxinfo_t *sfx;
+
+	if (!cv_closedcaptioning.value) // no captions at all
+		return;
+
+	// check for bogus sound #
+	// I_Assert(sfx_id >= 0); -- allowing sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
+	I_Assert(sfx_id < NUMSFX);
+
+	sfx = &S_sfx[sfx_id];
+
+	if (sfx->caption[0] == '/') // no caption for this one
+		return;
+
+	start = ((closedcaptions[0].s && (closedcaptions[0].s-S_sfx == sfx_None)) ? 1 : 0);
+
+	if (sfx_id)
+	{
+		for (i = start; i < (set = NUMCAPTIONS-1); i++)
+		{
+			same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
+			if (same)
+			{
+				set = i;
+				break;
+			}
+		}
+	}
+	else
+	{
+		set = 0;
+		same = (closedcaptions[0].s == sfx);
+	}
+
+	moveup = 255;
+
+	if (!same)
+	{
+		for (i = start; i < set; i++)
+		{
+			if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+			{
+				set = i;
+				if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+					moveup = i;
+				break;
+			}
+		}
+		for (i = NUMCAPTIONS-1; i > set; i--)
+		{
+			if (sfx == closedcaptions[i].s)
+			{
+				closedcaptions[i].c = NULL;
+				closedcaptions[i].s = NULL;
+				closedcaptions[i].t = 0;
+				closedcaptions[i].b = 0;
+			}
+		}
+	}
+
+	if (moveup != 255)
+	{
+		for (i = moveup; i < NUMCAPTIONS-1; i++)
+		{
+			if (!(closedcaptions[i].c || closedcaptions[i].s))
+				break;
+		}
+		for (; i > set; i--)
+		{
+			closedcaptions[i].c = closedcaptions[i-1].c;
+			closedcaptions[i].s = closedcaptions[i-1].s;
+			closedcaptions[i].t = closedcaptions[i-1].t;
+			closedcaptions[i].b = closedcaptions[i-1].b;
+		}
+	}
+
+	closedcaptions[set].c = ((cnum == -1) ? NULL : &channels[cnum]);
+	closedcaptions[set].s = sfx;
+	closedcaptions[set].t = lifespan;
+	closedcaptions[set].b = 2; // bob
 }
 
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
@@ -553,6 +656,9 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 			sep = (~sep) & 255;
 #endif
 
+		// Handle closed caption input.
+		S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
 		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
@@ -603,6 +709,9 @@ dontplay:
 		sep = (~sep) & 255;
 #endif
 
+	// Handle closed caption input.
+	S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
 	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
@@ -624,6 +733,7 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 //				sfx_id = sfx_mario8;
 //				break;
 			case sfx_thok:
+			case sfx_wepfir:
 				sfx_id = sfx_mario7;
 				break;
 			case sfx_pop:
@@ -633,6 +743,14 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 				sfx_id = sfx_mario6;
 				break;
 			case sfx_shield:
+			case sfx_wirlsg:
+			case sfx_forcsg:
+			case sfx_elemsg:
+			case sfx_armasg:
+			case sfx_attrsg:
+			case sfx_s3k3e:
+			case sfx_s3k3f:
+			case sfx_s3k41:
 				sfx_id = sfx_mario3;
 				break;
 			case sfx_itemup:
@@ -710,6 +828,7 @@ static INT32 actualmidimusicvolume;
 void S_UpdateSounds(void)
 {
 	INT32 audible, cnum, volume, sep, pitch;
+	UINT8 i;
 	channel_t *c;
 
 	listener_t listener;
@@ -737,9 +856,7 @@ void S_UpdateSounds(void)
 		I_UpdateMumble(NULL, listener);
 #endif
 
-		// Stop cutting FMOD out. WE'RE sick of it.
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 
 	if (dedicated || sound_disabled)
@@ -778,8 +895,7 @@ void S_UpdateSounds(void)
 	if (hws_mode != HWS_DEFAULT_MODE)
 	{
 		HW3S_UpdateSources();
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 #endif
 
@@ -867,7 +983,32 @@ void S_UpdateSounds(void)
 		}
 	}
 
+notinlevel:
 	I_UpdateSound();
+
+	{
+		boolean gamestopped = (paused || P_AutoPause());
+		for (i = 0; i < NUMCAPTIONS; i++) // update captions
+		{
+			if (!closedcaptions[i].s)
+				continue;
+
+			if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
+				continue;
+
+			if (!(--closedcaptions[i].t))
+			{
+				closedcaptions[i].c = NULL;
+				closedcaptions[i].s = NULL;
+			}
+			else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+			{
+				closedcaptions[i].c = NULL;
+				if (closedcaptions[i].t > CAPTIONFADETICS)
+					closedcaptions[i].t = CAPTIONFADETICS;
+			}
+		}
+	}
 }
 
 void S_SetSfxVolume(INT32 volume)
@@ -1461,10 +1602,6 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 {
 	char newmusic[7];
 
-#if defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined(GP2X)
-	S_ClearSfx();
-#endif
-
 	if (S_MusicDisabled())
 		return;
 
@@ -1541,6 +1678,12 @@ void S_StopMusic(void)
 	S_SpeedMusic(1.0f);
 	I_StopSong();
 	S_UnloadMusic(); // for now, stopping also means you unload the song
+
+	if (cv_closedcaptioning.value)
+	{
+		if (closedcaptions[0].s-S_sfx == sfx_None)
+			closedcaptions[0].t = CAPTIONFADETICS;
+	}
 }
 
 //
@@ -1777,7 +1920,7 @@ void GameDigiMusic_OnChange(void)
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
-			S_ChangeMusicInternal("lclear", false);
+			S_ChangeMusicInternal("_clear", false);
 	}
 	else
 	{
@@ -1818,7 +1961,7 @@ void GameMIDIMusic_OnChange(void)
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
 		else
-			S_ChangeMusicInternal("lclear", false);
+			S_ChangeMusicInternal("_clear", false);
 	}
 	else
 	{
@@ -1843,4 +1986,10 @@ void GameMIDIMusic_OnChange(void)
 			}
 		}
 	}
+}
+
+void ModFilter_OnChange(void)
+{
+	if (openmpt_mhandle)
+		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 }

@@ -86,7 +86,7 @@ INT32 lastwipetic = 0;
 static UINT8 *wipe_scr_start; //screen 3
 static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
-static fixed_t paldiv;
+static fixed_t paldiv = 0;
 
 /** Create fademask_t from lump
   *
@@ -145,7 +145,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	while (lsize--)
 	{
 		// Determine pixel to use from fademask
-		pcolor = &pLocalPalette[*lump++];
+		pcolor = &pMasterPalette[*lump++];
 		*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
 
@@ -337,7 +337,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	UINT8 wipeframe = 0;
 	fademask_t *fmask;
 
-	paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
+	if (!paldiv)
+		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
 	WipeInAction = true;
@@ -375,5 +376,50 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			M_SaveFrame();
 	}
 	WipeInAction = false;
+#endif
+}
+
+/** Returns tic length of wipe
+  * One lump equals one tic
+  */
+tic_t F_GetWipeLength(UINT8 wipetype)
+{
+#ifdef NOWIPE
+	return 0;
+#else
+	static char lumpname[10] = "FADEmmss";
+	lumpnum_t lumpnum;
+	UINT8 wipeframe;
+
+	if (wipetype > 99)
+		return 0;
+
+	for (wipeframe = 0; wipeframe < 100; wipeframe++)
+	{
+		sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipetype, (UINT16)wipeframe);
+
+		lumpnum = W_CheckNumForName(lumpname);
+		if (lumpnum == LUMPERROR)
+			return --wipeframe;
+	}
+	return --wipeframe;
+#endif
+}
+
+boolean F_WipeExists(UINT8 wipetype)
+{
+#ifdef NOWIPE
+	return false;
+#else
+	static char lumpname[10] = "FADEmm00";
+	lumpnum_t lumpnum;
+
+	if (wipetype > 99)
+		return false;
+
+	sprintf(&lumpname[4], "%.2hu00", (UINT16)wipetype);
+
+	lumpnum = W_CheckNumForName(lumpname);
+	return !(lumpnum == LUMPERROR);
 #endif
 }

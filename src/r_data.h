@@ -21,6 +21,9 @@
 #pragma interface
 #endif
 
+// Possible alpha types for a patch.
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT}; // , AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+
 // moved here for r_sky.c (texpatch_t is used)
 
 // A single patch from a texture definition,
@@ -31,6 +34,9 @@ typedef struct
 	// Block origin (always UL), which has already accounted for the internal origin of the patch.
 	INT16 originx, originy;
 	UINT16 wad, lump;
+	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
+	UINT8 alpha; // Translucency value
+	enum patchalphastyle style;
 } texpatch_t;
 
 // A maptexturedef_t describes a rectangular texture,
@@ -42,6 +48,7 @@ typedef struct
 	char name[8];
 	INT16 width, height;
 	boolean holes;
+	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.
 	INT16 patchcount;
@@ -61,7 +68,7 @@ extern INT16 *hicolormaps; // remap high colors to high colors..
 
 extern CV_PossibleValue_t Color_cons_t[];
 
-// Load TEXTURE1/TEXTURE2/PNAMES definitions, create lookup tables
+// Load TEXTURES definitions, create lookup tables
 void R_LoadTextures(void);
 void R_FlushTextureCache(void);
 
@@ -89,11 +96,57 @@ void R_ClearTextureNumCache(boolean btell);
 INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
 
+// Extra Colormap lumps (C_START/C_END) are not used anywhere
+// Uncomment to enable
+//#define EXTRACOLORMAPLUMPS
+
+// Uncomment to make extra_colormaps order Newest -> Oldest
+//#define COLORMAPREVERSELIST
+
 void R_ReInitColormaps(UINT16 num);
 void R_ClearColormaps(void);
-INT32 R_ColormapNumForName(char *name);
-INT32 R_CreateColormap(char *p1, char *p2, char *p3);
-const char *R_ColormapNameForNum(INT32 num);
+extracolormap_t *R_CreateDefaultColormap(boolean lighttable);
+extracolormap_t *R_GetDefaultColormap(void);
+extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lighttable);
+void R_AddColormapToList(extracolormap_t *extra_colormap);
+
+#ifdef EXTRACOLORMAPLUMPS
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump);
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump);
+#else
+boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog);
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog);
+#endif
+boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgba, boolean checkfadergba, boolean checkparams);
+boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, boolean checkrgba, boolean checkfadergba, boolean checkparams);
+extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap);
+
+lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
+extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3);
+extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
+	boolean subR, boolean subG, boolean subB, boolean subA,
+	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
+	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
+	boolean lighttable);
+#ifdef EXTRACOLORMAPLUMPS
+extracolormap_t *R_ColormapForName(char *name);
+const char *R_NameForColormap(extracolormap_t *extra_colormap);
+#endif
+
+#define R_GetRgbaR(rgba) (rgba & 0xFF)
+#define R_GetRgbaG(rgba) ((rgba >> 8) & 0xFF)
+#define R_GetRgbaB(rgba) ((rgba >> 16) & 0xFF)
+#define R_GetRgbaA(rgba) ((rgba >> 24) & 0xFF)
+#define R_GetRgbaRGB(rgba) (rgba & 0xFFFFFF)
+#define R_PutRgbaR(r) (r)
+#define R_PutRgbaG(g) (g << 8)
+#define R_PutRgbaB(b) (b << 16)
+#define R_PutRgbaA(a) (a << 24)
+#define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
+#define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
 extern INT32 numtextures;
 

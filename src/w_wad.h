@@ -96,7 +96,6 @@ typedef enum restype
 	RET_UNKNOWN,
 } restype_t;
 
-
 typedef struct wadfile_s
 {
 	char *filename;
@@ -110,7 +109,8 @@ typedef struct wadfile_s
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
-	boolean important;
+
+	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
 #define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
@@ -126,14 +126,11 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename);
-#ifdef DELFILE
-void W_UnloadWadFile(UINT16 num);
-#endif
+UINT16 W_InitFile(const char *filename, boolean mainfile);
 
 // W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
 // so that it stops with a message if a file was not found, but not if all is okay.
-INT32 W_InitMultipleFiles(char **filenames);
+INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

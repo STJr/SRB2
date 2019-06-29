@@ -22,7 +22,15 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
-#define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
+// for functions not allowed in hud.add hooks
+#define NOHUD if (hud_running)\
+return luaL_error(L, "HUD rendering code should not call this function!");
+// for functions not allowed in hooks or coroutines (supercedes above)
+#define NOHOOK if (!lua_lumploading)\
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+// for functions only allowed within a level
+#define INLEVEL if (gamestate != GS_LEVEL)\
+return luaL_error(L, "This function can only be used in a level!");
 
 static const char *cvname = NULL;
 
@@ -83,7 +91,7 @@ deny:
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
 	{
-		XBOXSTATIC UINT8 bufn[2];
+		UINT8 bufn[2];
 
 		bufn[0] = (UINT8)playernum;
 		bufn[1] = KICK_MSG_CON_FAIL;
@@ -183,7 +191,7 @@ static int lib_comAddCommand(lua_State *L)
 	strlwr(name);
 
 	luaL_checktype(L, 2, LUA_TFUNCTION);
-	NOHUD
+	NOHOOK
 	if (lua_gettop(L) >= 3)
 	{ // For the third argument, only take a boolean or a number.
 		lua_settop(L, 3);
@@ -295,7 +303,7 @@ static int lib_cvRegisterVar(lua_State *L)
 	consvar_t *cvar;
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
-	NOHUD
+	NOHOOK
 	cvar = lua_newuserdata(L, sizeof(consvar_t));
 	luaL_getmetatable(L, META_CVAR);
 	lua_setmetatable(L, -2);
@@ -423,6 +431,7 @@ static int lib_consPrintf(lua_State *L)
 	if (n < 2)
 		return luaL_error(L, "CONS_Printf requires at least two arguments: player and text.");
 	//HUDSAFE
+	INLEVEL
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");

@@ -1204,7 +1204,16 @@ found:
 		var->value = (INT32)(d * FRACUNIT);
 	}
 	else
-		var->value = atoi(var->string);
+	{
+		if (var == &cv_forceskin)
+		{
+			var->value = R_SkinAvailable(var->string);
+			if (!R_SkinUsable(-1, var->value))
+				var->value = -1;
+		}
+		else
+			var->value = atoi(var->string);
+	}
 
 finish:
 	// See the note above.
@@ -1270,7 +1279,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1289,9 +1298,6 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
 		return;
 	}
-#if 0 //defined (GP2X) || defined (PSP)
-	CONS_Printf("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue);
-#endif
 	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
 
 	Setvalue(cvar, svalue, stealth);
@@ -1390,12 +1396,22 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		XBOXSTATIC UINT8 buf[128];
+		UINT8 buf[128];
 		UINT8 *p = buf;
 		if (!(server || (IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
 			return;
+		}
+
+		if (var == &cv_forceskin)
+		{
+			INT32 skin = R_SkinAvailable(value);
+			if ((stricmp(value, "None")) && ((skin == -1) || !R_SkinUsable(-1, skin)))
+			{
+				CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+				return;
+			}
 		}
 
 		// Only add to netcmd buffer if in a netgame, otherwise, just change it.
@@ -1431,6 +1447,30 @@ void CV_StealthSet(consvar_t *var, const char *value)
 	CV_SetCVar(var, value, true);
 }
 
+/** Sets a numeric value to a variable, sometimes calling its callback
+  * function.
+  *
+  * \param var   The variable.
+  * \param value The numeric value, converted to a string before setting.
+  * \param stealth Do we call the callback function or not?
+  */
+static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
+{
+	char val[32];
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		if ((value < 0) || (value >= numskins))
+			sprintf(val, "None");
+		else
+			sprintf(val, "%s", skins[value].name);
+	}
+	else
+		sprintf(val, "%d", value);
+
+	CV_SetCVar(var, val, stealth);
+}
+
 /** Sets a numeric value to a variable without calling its callback
   * function.
   *
@@ -1440,10 +1480,7 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 void CV_StealthSetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, true);
+	CV_SetValueMaybeStealth(var, value, true);
 }
 
 // New wrapper for what used to be CV_Set()
@@ -1461,10 +1498,7 @@ void CV_Set(consvar_t *var, const char *value)
   */
 void CV_SetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, false);
+	CV_SetValueMaybeStealth(var, value, false);
 }
 
 /** Adds a value to a console variable.
@@ -1484,7 +1518,23 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 	// count pointlimit better
 	if (var == &cv_pointlimit && (gametype == GT_MATCH))
 		increment *= 50;
-	newvalue = var->value + increment;
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		INT32 oldvalue = var->value;
+		newvalue = oldvalue;
+		do
+		{
+			newvalue += increment;
+			if (newvalue < -1)
+				newvalue = (numskins - 1);
+			else if (newvalue >= numskins)
+				newvalue = -1;
+		} while ((oldvalue != newvalue)
+				&& !(R_SkinUsable(-1, newvalue)));
+	}
+	else
+		newvalue = var->value + increment;
 
 	if (var->PossibleValue)
 	{
@@ -1554,34 +1604,27 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			if (var == &cv_chooseskin)
 			{
 				// Special case for the chooseskin variable, used only directly from the menu
-				if (increment > 0) // Going up!
+				newvalue = var->value - 1;
+				do
 				{
-					newvalue = var->value - 1;
-					do
+					if (increment > 0) // Going up!
 					{
 						newvalue++;
 						if (newvalue == MAXSKINS)
 							newvalue = 0;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
-				else if (increment < 0) // Going down!
-				{
-					newvalue = var->value - 1;
-					do
+					}
+					else if (increment < 0) // Going down!
 					{
 						newvalue--;
 						if (newvalue == -1)
 							newvalue = MAXSKINS-1;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
+					}
+				} while (var->PossibleValue[newvalue].strvalue == NULL);
+
+				var->value = newvalue + 1;
+				var->string = var->PossibleValue[newvalue].strvalue;
+				var->func();
+				return;
 			}
 #ifdef PARANOIA
 			if (currentindice == -1)

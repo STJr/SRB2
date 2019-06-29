@@ -77,14 +77,16 @@ extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
-extern patch_t *emeraldpics[7];
-extern patch_t *tinyemeraldpics[7];
+extern patch_t *ttlnum[20];
+extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;
 extern patch_t *bflagico;
 extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
+extern patch_t *tallinfin;
+extern patch_t *tokenicon;
 
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;

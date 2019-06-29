@@ -78,7 +78,7 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 extern consvar_t cv_shadow, cv_shadowoffs;
 extern consvar_t cv_translucency;
-extern consvar_t cv_precipdensity, cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
+extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
@@ -94,7 +94,7 @@ void R_ExecuteSetViewSize(void);
 
 void R_SkyboxFrame(player_t *player);
 
-void R_SetupFrame(player_t *player, boolean skybox);
+void R_SetupFrame(player_t *player);
 // Called by G_Drawer.
 void R_RenderPlayerView(player_t *player);
 

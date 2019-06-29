@@ -54,6 +54,11 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerMsg",
 	"HurtMsg",
 	"PlayerSpawn",
+	"ShieldSpawn",
+	"ShieldSpecial",
+	"MobjMoveBlocked",
+	"MapThingSpawn",
+	"FollowMobj",
 	"PlayerQuit",
 	NULL
 };
@@ -106,8 +111,8 @@ static int lib_addHook(lua_State *L)
 
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 
-	if (hud_running)
-		return luaL_error(L, "HUD rendering code should not call this function!");
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 	switch(hook.type)
 	{
@@ -125,6 +130,8 @@ static int lib_addHook(lua_State *L)
 	case hook_BossDeath:
 	case hook_MobjRemoved:
 	case hook_HurtMsg:
+	case hook_MobjMoveBlocked:
+	case hook_MapThingSpawn:
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
@@ -183,6 +190,8 @@ static int lib_addHook(lua_State *L)
 	case hook_MobjDeath:
 	case hook_BossDeath:
 	case hook_MobjRemoved:
+	case hook_MobjMoveBlocked:
+	case hook_MapThingSpawn:
 		lastp = &mobjhooks[hook.s.mt];
 		break;
 	case hook_JumpSpecial:
@@ -190,6 +199,9 @@ static int lib_addHook(lua_State *L)
 	case hook_SpinSpecial:
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
+	case hook_FollowMobj:
+	case hook_ShieldSpawn:
+	case hook_ShieldSpecial:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:
@@ -597,7 +609,7 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 }
 
 // Hook for P_DamageMobj by mobj type (Should mobj take damage?)
-UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	hook_p hookp;
 	UINT8 shouldDamage = 0; // 0 = default, 1 = force yes, 2 = force no.
@@ -651,14 +663,16 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
 				lua_pushinteger(gL, damage);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			if (lua_pcall(gL, 4, 1, 0)) {
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			if (lua_pcall(gL, 5, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -680,7 +694,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 }
 
 // Hook for P_DamageMobj by mobj type (Mobj actually takes damage!)
-boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -729,14 +743,16 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
 				lua_pushinteger(gL, damage);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			if (lua_pcall(gL, 4, 1, 0)) {
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			if (lua_pcall(gL, 5, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -753,7 +769,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 }
 
 // Hook for P_KillMobj by mobj type
-boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
+boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -799,13 +815,15 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 				LUA_PushUserdata(gL, target, META_MOBJ);
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			if (lua_pcall(gL, 3, 1, 0)) {
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -1007,7 +1025,7 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 
 
 // Hook for hurt messages
-boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
+boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -1025,13 +1043,15 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
 				LUA_PushUserdata(gL, player, META_PLAYER);
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			if (lua_pcall(gL, 3, 1, 0)) {
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -1074,6 +1094,106 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 
 	lua_pop(gL, 1); // pop archFunc
 	// stack: tables
+}
+
+boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_MapThingSpawn/8] & (1<<(hook_MapThingSpawn%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	// Look for all generic mobj map thing spawn hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MapThingSpawn)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, mo, META_MOBJ);
+				LUA_PushUserdata(gL, mthing, META_MAPTHING);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[mo->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MapThingSpawn)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, mo, META_MOBJ);
+				LUA_PushUserdata(gL, mthing, META_MAPTHING);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	return hooked;
+}
+
+// Hook for P_PlayerAfterThink Smiles mobj-following
+boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_FollowMobj/8] & (1<<(hook_FollowMobj%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+		if (hookp->type == hook_FollowMobj)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, player, META_PLAYER);
+				LUA_PushUserdata(gL, mobj, META_MOBJ);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	return hooked;
 }
 
 void LUAh_PlayerQuit(player_t *plr, int reason)
