@@ -58,20 +58,18 @@ EXPORT void HWRAPI(ClearMipMapCache) (void);
 EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
 
 //Hurdler: added for new development
-EXPORT void HWRAPI(DrawMD2) (INT32 *gl_cmd_buffer, md2_frame_t *frame, FTransform *pos, float scale);
-EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration, INT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color);
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 *color);
+EXPORT void HWRAPI(CreateModelVBOs) (model_t *model);
 EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
 EXPORT INT32 HWRAPI(GetRenderVersion) (void);
 
-#ifdef SHUFFLE
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
-#endif
 EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
-EXPORT void HWRAPI(DoScreenWipe) (float alpha);
+EXPORT void HWRAPI(DoScreenWipe) (void);
 EXPORT void HWRAPI(DrawIntermissionBG) (void);
 EXPORT void HWRAPI(MakeScreenTexture) (void);
 EXPORT void HWRAPI(MakeScreenFinalTexture) (void);
@@ -96,8 +94,8 @@ struct hwdriver_s
 	GClipRect           pfnGClipRect;
 	ClearMipMapCache    pfnClearMipMapCache;
 	SetSpecialState     pfnSetSpecialState;//Hurdler: added for backward compatibility
-	DrawMD2             pfnDrawMD2;
-	DrawMD2i            pfnDrawMD2i;
+	DrawModel           pfnDrawModel;
+	CreateModelVBOs     pfnCreateModelVBOs;
 	SetTransform        pfnSetTransform;
 	GetTextureUsed      pfnGetTextureUsed;
 	GetRenderVersion    pfnGetRenderVersion;
@@ -107,9 +105,7 @@ struct hwdriver_s
 #ifndef HAVE_SDL
 	Shutdown            pfnShutdown;
 #endif
-#ifdef SHUFFLE
 	PostImgRedraw       pfnPostImgRedraw;
-#endif
 	FlushScreenTextures pfnFlushScreenTextures;
 	StartScreenWipe     pfnStartScreenWipe;
 	EndScreenWipe       pfnEndScreenWipe;

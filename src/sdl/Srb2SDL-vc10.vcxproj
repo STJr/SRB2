@@ -228,6 +228,10 @@
     <ClInclude Include="..\hardware\hw_light.h" />
     <ClInclude Include="..\hardware\hw_main.h" />
     <ClInclude Include="..\hardware\hw_md2.h" />
+    <ClInclude Include="..\hardware\hw_md2load.h" />
+    <ClInclude Include="..\hardware\hw_md3load.h" />
+    <ClInclude Include="..\hardware\hw_model.h" />
+    <ClInclude Include="..\hardware\u_list.h" />
     <ClInclude Include="..\hu_stuff.h" />
     <ClInclude Include="..\info.h" />
     <ClInclude Include="..\i_addrinfo.h" />
@@ -366,8 +370,12 @@
     <ClCompile Include="..\hardware\hw_light.c" />
     <ClCompile Include="..\hardware\hw_main.c" />
     <ClCompile Include="..\hardware\hw_md2.c" />
+    <ClCompile Include="..\hardware\hw_md2load.c" />
+    <ClCompile Include="..\hardware\hw_md3load.c" />
+    <ClCompile Include="..\hardware\hw_model.c" />
     <ClCompile Include="..\hardware\hw_trick.c" />
     <ClCompile Include="..\hardware\r_opengl\r_opengl.c" />
+    <ClCompile Include="..\hardware\u_list.c" />
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
     <ClCompile Include="..\i_addrinfo.c">
