@@ -101,6 +101,7 @@ static UINT32 fading_timer;
 static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
+static boolean fading_nocleanup;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -122,7 +123,12 @@ static void var_cleanup(void)
 	songpaused = is_looping =\
 	 is_fading = false;
 
-	fading_callback = NULL;
+	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
+	// song has stopped playing
+	if (!fading_nocleanup)
+		fading_callback = NULL;
+	else
+		fading_nocleanup = false; // use it once, set it back immediately
 
 	internal_volume = 100;
 }
@@ -153,6 +159,8 @@ void I_StartupSound(void)
 		// call to start audio failed -- we do not have it
 		return;
 	}
+
+	fading_nocleanup = false;
 
 	var_cleanup();
 
@@ -598,7 +606,15 @@ static void music_loop(void)
 		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	}
 	else
+	{
+		// HACK: Let fade timing proceed beyond the end of a
+		// non-looping song. This is a specific case where the timing
+		// should persist after stopping a song, so I don't believe
+		// this should apply every time the user stops a song.
+		// This is auto-unset in var_cleanup, called by I_StopSong
+		fading_nocleanup = true;
 		I_StopSong();
+	}
 }
 
 static UINT32 music_fade(UINT32 interval, void *param)
@@ -1273,7 +1289,10 @@ boolean I_PlaySong(boolean looping)
 
 void I_StopSong(void)
 {
-	I_StopFadingSong();
+	// HACK: See music_loop on why we want fade timing to proceed
+	// after end of song
+	if (!fading_nocleanup)
+		I_StopFadingSong();
 
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -1412,6 +1431,8 @@ void I_StopFadingSong(void)
 		SDL_RemoveTimer(fading_id);
 	is_fading = false;
 	fading_source = fading_target = fading_timer = fading_duration = fading_id = 0;
+	// don't unset fading_nocleanup here just yet; fading_callback is cleaned up
+	// in var_cleanup()
 }
 
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))

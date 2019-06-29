@@ -573,13 +573,20 @@ void P_Ticker(boolean run)
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			P_MapEnd();
+			S_SetStackAdjustmentStart();
 			return;
 		}
 	}
 
 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
+	{
+		S_SetStackAdjustmentStart();
 		return;
+	}
+
+	if (!S_MusicPaused())
+		S_AdjustMusicStackTics();
 
 	postimgtype = postimgtype2 = postimg_none;
 
