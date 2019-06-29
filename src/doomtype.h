@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,12 @@
 
 /* 7.18.1.1  Exact-width integer types */
 #ifdef _MSC_VER
+// libopenmpt.h will include stdint.h later;
+// include it now so that INT8_MAX etc. don't get redefined
+#ifdef HAVE_OPENMPT
+#include <stdint.h>
+#endif
+
 #define UINT8 unsigned __int8
 #define SINT8 signed __int8
 
@@ -171,6 +177,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif // __BYTEBOOL__
 
 /* 7.18.2.1  Limits of exact-width integer types */
+
 #ifndef INT8_MIN
 #define INT8_MIN (-128)
 #endif

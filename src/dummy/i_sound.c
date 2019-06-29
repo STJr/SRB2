@@ -181,7 +181,7 @@ boolean I_SetSongTrack(int track)
 
 void I_SetInternalMusicVolume(UINT8 volume)
 {
-	(void)handle;
+	(void)volume;
 }
 
 void I_StopFadingSong(void)

@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /root/SRB2
     docker:
-      - image: debian:jessie
+      - image: debian:stretch
         environment:
           CC: ccache gcc -m32
           PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
@@ -26,6 +26,13 @@ jobs:
           name: Add i386 arch
           command: dpkg --add-architecture i386
       - run:
+          name: Add STJr PPA
+          command: |
+            apt-get -qq update
+            apt-get -qq -y install dirmngr
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0B1702D71499D9C25F986507F240F4449D3B0EC6
+            echo "deb http://ppa.launchpad.net/stjr/srb2/ubuntu trusty main" >> /etc/apt/sources.list
+      - run:
           name: Update APT listing
           command: apt-get -qq update
       - run:
@@ -36,14 +43,21 @@ jobs:
             - v1-SRB2-APT
       - run:
           name: Install SDK
-          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib upx
+          command: apt-get -qq -y --no-install-recommends install git build-essential nasm libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
+
       - save_cache:
           key: v1-SRB2-APT
           paths:
             - /var/cache/apt/archives
       - checkout
       - run:
-          name: Clean build
+          name: Compile without network support and BLUA
+          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 NO_LUA=1
+      - run:
+          name: wipe build
+          command: make -C src LINUX=1 cleandep
+      - run:
+          name: rebuild depend
           command: make -C src LINUX=1 clean
       - restore_cache:
           keys:

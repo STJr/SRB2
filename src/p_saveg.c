@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,6 +58,7 @@ typedef enum
 	FIRSTAXIS  = 0x10,
 	SECONDAXIS = 0x20,
 	FOLLOW     = 0x40,
+	DRONE      = 0x80,
 } player_saveflags;
 
 //
@@ -198,10 +199,10 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].drillmeter);
 		WRITEUINT8(save_p, players[i].drilldelay);
 		WRITEUINT8(save_p, players[i].bonustime);
+		WRITEFIXED(save_p, players[i].oldscale);
 		WRITEUINT8(save_p, players[i].mare);
 		WRITEUINT8(save_p, players[i].marelap);
 		WRITEUINT8(save_p, players[i].marebonuslap);
-
 		WRITEUINT32(save_p, players[i].marebegunat);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
@@ -236,6 +237,9 @@ static void P_NetArchivePlayers(void)
 		if (players[i].followmobj)
 			flags |= FOLLOW;
 
+		if (players[i].drone)
+			flags |= DRONE;
+
 		WRITEINT16(save_p, players[i].lastsidehit);
 		WRITEINT16(save_p, players[i].lastlinehit);
 
@@ -263,6 +267,9 @@ static void P_NetArchivePlayers(void)
 
 		if (flags & FOLLOW)
 			WRITEUINT32(save_p, players[i].followmobj->mobjnum);
+
+		if (flags & DRONE)
+			WRITEUINT32(save_p, players[i].drone->mobjnum);
 
 		WRITEFIXED(save_p, players[i].camerascale);
 		WRITEFIXED(save_p, players[i].shieldscale);
@@ -396,10 +403,10 @@ static void P_NetUnArchivePlayers(void)
 		players[i].drillmeter = READINT32(save_p);
 		players[i].drilldelay = READUINT8(save_p);
 		players[i].bonustime = (boolean)READUINT8(save_p);
+		players[i].oldscale = READFIXED(save_p);
 		players[i].mare = READUINT8(save_p);
 		players[i].marelap = READUINT8(save_p);
 		players[i].marebonuslap = READUINT8(save_p);
-
 		players[i].marebegunat = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
@@ -447,6 +454,9 @@ static void P_NetUnArchivePlayers(void)
 		if (flags & FOLLOW)
 			players[i].followmobj = (mobj_t *)(size_t)READUINT32(save_p);
 
+		if (flags & DRONE)
+			players[i].drone = (mobj_t *)(size_t)READUINT32(save_p);
+
 		players[i].camerascale = READFIXED(save_p);
 		players[i].shieldscale = READFIXED(save_p);
 
@@ -486,7 +496,7 @@ static UINT32 num_ffloors = 0; // for loading
 // But also check for equality and return the matching index
 static UINT32 CheckAddNetColormapToList(extracolormap_t *extra_colormap)
 {
-	extracolormap_t *exc, *exc_prev;
+	extracolormap_t *exc, *exc_prev = NULL;
 	UINT32 i = 0;
 
 	if (!net_colormaps)
@@ -1302,6 +1312,7 @@ typedef enum
 	tc_polyswingdoor,
 	tc_polyflag,
 	tc_polydisplace,
+	tc_polyrotdisplace,
 	tc_polyfade,
 #endif
 	tc_end
@@ -2078,6 +2089,17 @@ static void SavePolydisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->oldHeights);
 }
 
+static void SavePolyrotdisplaceThinker(const thinker_t *th, const UINT8 type)
+{
+	const polyrotdisplace_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEINT32(save_p, ht->polyObjNum);
+	WRITEUINT32(save_p, SaveSector(ht->controlSector));
+	WRITEFIXED(save_p, ht->rotscale);
+	WRITEUINT8(save_p, ht->turnobjs);
+	WRITEFIXED(save_p, ht->oldHeights);
+}
+
 static void SavePolyfadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyfade_t *ht = (const void *)th;
@@ -2321,6 +2343,11 @@ static void P_NetArchiveThinkers(void)
 		else if (th->function.acp1 == (actionf_p1)T_PolyObjDisplace)
 		{
 			SavePolydisplaceThinker(th, tc_polydisplace);
+			continue;
+		}
+		else if (th->function.acp1 == (actionf_p1)T_PolyObjRotDisplace)
+		{
+			SavePolyrotdisplaceThinker(th, tc_polyrotdisplace);
 			continue;
 		}
 		else if (th->function.acp1 == (actionf_p1)T_PolyObjFade)
@@ -3207,6 +3234,18 @@ static inline void LoadPolydisplaceThinker(actionf_p1 thinker)
 	P_AddThinker(&ht->thinker);
 }
 
+static inline void LoadPolyrotdisplaceThinker(actionf_p1 thinker)
+{
+	polyrotdisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->polyObjNum = READINT32(save_p);
+	ht->controlSector = LoadSector(READUINT32(save_p));
+	ht->rotscale = READFIXED(save_p);
+	ht->turnobjs = READUINT8(save_p);
+	ht->oldHeights = READFIXED(save_p);
+	P_AddThinker(&ht->thinker);
+}
+
 //
 // LoadPolyfadeThinker
 //
@@ -3434,6 +3473,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_polydisplace:
 				LoadPolydisplaceThinker((actionf_p1)T_PolyObjDisplace);
+				break;
+
+			case tc_polyrotdisplace:
+				LoadPolyrotdisplaceThinker((actionf_p1)T_PolyObjRotDisplace);
 				break;
 
 			case tc_polyfade:
@@ -3669,6 +3712,13 @@ static void P_RelinkPointers(void)
 				mobj->player->followmobj = NULL;
 				if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(temp)))
 					CONS_Debug(DBG_GAMELOGIC, "followmobj not found on %d\n", mobj->type);
+			}
+			if (mobj->player && mobj->player->drone)
+			{
+				temp = (UINT32)(size_t)mobj->player->drone;
+				mobj->player->drone = NULL;
+				if (!P_SetTarget(&mobj->player->drone, P_FindNewPosition(temp)))
+					CONS_Debug(DBG_GAMELOGIC, "drone not found on %d\n", mobj->type);
 			}
 		}
 	}

@@ -2,7 +2,7 @@
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
-# Copyright (C) 2003-2014 by Sonic Team Junior.
+# Copyright (C) 2003-2018 by Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.
@@ -74,6 +74,7 @@
 #     Compile without BSD API, add 'NONET=1'
 #     Compile without IPX/SPX, add 'NOIPX=1'
 #     Compile Mingw/SDL with S_DS3S, add 'DS3D=1'
+#     Compile without libopenmpt, add 'NOOPENMPT=1'
 #     Compile with S_FMOD3D, add 'FMOD=1' (WIP)
 #     Compile with S_OPENAL, add 'OPENAL=1' (WIP)
 #     To link with the whole SDL_Image lib to load Icons, add 'SDL_IMAGE=1' but it isn't not realy needed
@@ -100,7 +101,17 @@ endif
 ifdef LINUX64
 LINUX=1
 NONX86=1
+# LINUX64 does not imply X86_64=1; could mean ARM64 or Itanium
 endif
+
+ifdef MINGW64
+MINGW=1
+NONX86=1
+NOASM=1
+# MINGW64 should not necessarily imply X86_64=1, but we make that assumption elsewhere
+# Once that changes, remove this
+X86_64=1
+endif #ifdef MINGW64
 
 ifdef HAIKU
 SDL=1
@@ -140,6 +151,10 @@ endif
 
 ifdef DJGPPDOS
 include djgppdos/Makefile.cfg
+endif
+
+ifndef NOOPENMPT
+HAVE_OPENMPT=1
 endif
 
 ifdef MINGW
@@ -228,11 +243,13 @@ OPTS += -DCOMPVERSION
 
 ifndef NONX86
 ifndef GCC29
-	M5=-march=pentium
-	M4=-march=i486
+	ARCHOPTS?=-march=pentium
 else
-	M5=-mpentium
-	M4=-m486
+	ARCHOPTS?=-mpentium
+endif
+else
+ifdef X86_64
+	ARCHOPTS?=-march=nocona
 endif
 endif
 
@@ -271,6 +288,8 @@ endif
 
 LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
+
+OBJS+=$(OBJDIR)/apng.o
 endif
 
 ifdef HAVE_LIBGME
@@ -282,6 +301,17 @@ LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
 
 LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
+endif
+
+ifdef HAVE_OPENMPT
+OPTS+=-DHAVE_OPENMPT
+
+LIBOPENMPT_PKGCONFIG?=libopenmpt
+LIBOPENMPT_CFLAGS?=$(shell $(PKG_CONFIG) $(LIBOPENMPT_PKGCONFIG) --cflags)
+LIBOPENMPT_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBOPENMPT_PKGCONFIG) --libs)
+
+LIBS+=$(LIBOPENMPT_LDFLAGS)
+CFLAGS+=$(LIBOPENMPT_CFLAGS)
 endif
 
 ifndef NOZLIB
@@ -353,7 +383,7 @@ else
 	WINDRESFLAGS = -DNDEBUG
 	CFLAGS+=-O3
 endif
-	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
+	CFLAGS+=-g $(OPTS) $(ARCHOPTS) $(WINDRESFLAGS)
 
 ifdef YASM
 ifdef STABS
@@ -443,6 +473,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_sky.o    \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
+		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
 		$(OBJDIR)/v_video.o  \
 		$(OBJDIR)/s_sound.o  \
@@ -610,7 +641,6 @@ $(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
 	-$(MKDIR) $(BIN)
 	@echo Linking S_OpenAL.so...
 	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lopenal
-
 endif
 
 else
@@ -723,15 +753,15 @@ endif
 ifndef NOHS
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
 
 $(OBJDIR)/s_fmod.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
 endif
 endif
 endif
@@ -761,11 +791,11 @@ else
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
-	$(CC) $(M5) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
+	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
 endif
 

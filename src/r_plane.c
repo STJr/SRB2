@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,19 +16,26 @@
 #include "doomdef.h"
 #include "console.h"
 #include "g_game.h"
+#include "p_setup.h" // levelflats
+#include "p_slopes.h"
 #include "r_data.h"
 #include "r_local.h"
 #include "r_state.h"
 #include "r_splats.h" // faB(21jan):testing
 #include "r_sky.h"
+#include "r_portal.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_tick.h"
 
-#include "p_setup.h" // levelflats
-
-#include "p_slopes.h"
+#ifdef TIMING
+#include "p5prof.h"
+	INT64 mycount;
+	INT64 mytotal = 0;
+	UINT32 nombre = 100000;
+#endif
 
 //
 // opening
@@ -37,13 +44,9 @@
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
 
-// good night sweet prince
-#define SHITPLANESPARENCY
-
 //SoM: 3/23/2000: Use Boom visplane hashing.
-#define MAXVISPLANES 512
 
-static visplane_t *visplanes[MAXVISPLANES];
+visplane_t *visplanes[MAXVISPLANES];
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -51,7 +54,7 @@ visplane_t *floorplane;
 visplane_t *ceilingplane;
 static visplane_t *currentplane;
 
-planemgr_t ffloor[MAXFFLOORS];
+visffloor_t ffloor[MAXFFLOORS];
 INT32 numffloors;
 
 //SoM: 3/23/2000: Boom visplane hashing routine.
@@ -89,10 +92,9 @@ static fixed_t planeheight;
 //                (this is to calculate yslopes only when really needed)
 //                (when mouselookin', yslope is moving into yslopetab)
 //                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*4];
+fixed_t yslopetab[MAXVIDHEIGHT*16];
 fixed_t *yslope;
 
-fixed_t distscale[MAXVIDWIDTH];
 fixed_t basexscale, baseyscale;
 
 fixed_t cachedheight[MAXVIDHEIGHT];
@@ -111,87 +113,24 @@ void R_InitPlanes(void)
 	// FIXME: unused
 }
 
-// R_PortalStoreClipValues
-// Saves clipping values for later. -Red
-void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		*ceil = ceilingclip[start+i];
-		ceil++;
-		*floor = floorclip[start+i];
-		floor++;
-		*scale = frontscale[start+i];
-		scale++;
-	}
-}
-
-// R_PortalRestoreClipValues
-// Inverse of the above. Restores the old value!
-void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		ceilingclip[start+i] = *ceil;
-		ceil++;
-		floorclip[start+i] = *floor;
-		floor++;
-		frontscale[start+i] = *scale;
-		scale++;
-	}
-
-	// HACKS FOLLOW
-	for (i = 0; i < start; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-	for (i = end; i < vid.width; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-}
-
-
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-         INT64 mycount;
-         INT64 mytotal = 0;
-         UINT32 nombre = 100000;
-#endif
-//profile stuff ---------------------------------------------------------
-
-
 //
 // R_MapPlane
 //
 // Uses global vars:
-//  planeheight
-//  ds_source
 //  basexscale
 //  baseyscale
+//  centerx
 //  viewx
 //  viewy
-//  xoffs
-//  yoffs
-//  planeangle
-//
-// BASIC PRIMITIVE
-//
+//  viewsin
+//  viewcos
+//  viewheight
+
 #ifndef NOWATER
 static INT32 bgofs;
 static INT32 wtofs=0;
 static INT32 waterofs;
 static boolean itswater;
-#endif
-
-#ifdef __mips__
-//#define NOWATER
 #endif
 
 #ifndef NOWATER
@@ -275,8 +214,8 @@ static void R_DrawTranslucentWaterSpan_8(void)
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
-	angle_t angle;
-	fixed_t distance, length;
+	angle_t angle, planecos, planesin;
+	fixed_t distance, span;
 	size_t pindex;
 
 #ifdef RANGECHECK
@@ -287,12 +226,22 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// from r_splats's R_RenderFloorSplat
 	if (x1 >= vid.width) x1 = vid.width - 1;
 
+	angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+	planecos = FINECOSINE(angle);
+	planesin = FINESINE(angle);
+
 	if (planeheight != cachedheight[y])
 	{
 		cachedheight[y] = planeheight;
 		distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 		ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
 		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+
+		if ((span = abs(centery-y)))
+		{
+			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
+			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
+		}
 	}
 	else
 	{
@@ -301,13 +250,8 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
-	length = FixedMul (distance,distscale[x1]);
-	angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-	/// \note Wouldn't it be faster just to add viewx and viewy
-	// to the plane's x/yoffs anyway??
-
-	ds_xfrac = FixedMul(FINECOSINE(angle), length) + xoffs;
-	ds_yfrac = yoffs - FixedMul(FINESINE(angle), length);
+	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
 #ifndef NOWATER
 	if (itswater)
@@ -315,8 +259,9 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
 		// ripples da water texture
 		bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 
-		angle = (angle + 2048) & 8191;  //90�
+		angle = (angle + 2048) & 8191;  // 90 degrees
 		ds_xfrac += FixedMul(FINECOSINE(angle), (bgofs<<FRACBITS));
 		ds_yfrac += FixedMul(FINESINE(angle), (bgofs<<FRACBITS));
 
@@ -328,7 +273,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 
 	pindex = distance >> LIGHTZSHIFT;
-
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
@@ -361,12 +305,27 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 }
 
+void R_ClearFFloorClips (void)
+{
+	INT32 i, p;
+
+	// opening / clipping determination
+	for (i = 0; i < viewwidth; i++)
+	{
+		for (p = 0; p < MAXFFLOORS; p++)
+		{
+			ffloor[p].f_clip[i] = (INT16)viewheight;
+			ffloor[p].c_clip[i] = -1;
+		}
+	}
+
+	numffloors = 0;
+}
+
 //
 // R_ClearPlanes
 // At begining of frame.
 //
-// NOTE: Uses con_clipviewtop, so that when console is on,
-//       we don't draw the part of the view hidden under the console.
 void R_ClearPlanes(void)
 {
 	INT32 i, p;
@@ -376,16 +335,14 @@ void R_ClearPlanes(void)
 	for (i = 0; i < viewwidth; i++)
 	{
 		floorclip[i] = (INT16)viewheight;
-		ceilingclip[i] = (INT16)con_clipviewtop;
+		ceilingclip[i] = -1;
 		frontscale[i] = INT32_MAX;
 		for (p = 0; p < MAXFFLOORS; p++)
 		{
 			ffloor[p].f_clip[i] = (INT16)viewheight;
-			ffloor[p].c_clip[i] = (INT16)con_clipviewtop;
+			ffloor[p].c_clip[i] = -1;
 		}
 	}
-
-	numffloors = 0;
 
 	for (i = 0; i < MAXVISPLANES; i++)
 	for (*freehead = visplanes[i], visplanes[i] = NULL;
@@ -738,16 +695,6 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	INT32 x;
 	INT32 angle;
 
-	// If we're not supposed to draw the sky (e.g. for skyboxes), don't do anything!
-	// This probably utterly ruins sky rendering for FOFs and polyobjects, unfortunately
-	if (!viewsky)
-	{
-		// Mark that the sky was visible here for next tic
-		// (note: this is a hack and it sometimes can cause HOMs to appear for a tic IIRC)
-		skyVisible = true;
-		return;
-	}
-
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	wallcolfunc = walldrawerfunc;
@@ -816,11 +763,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
-#ifdef SHITPLANESPARENCY
-		if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
-#else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -874,11 +817,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
-#ifdef SHITPLANESPARENCY
-			if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
-#else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;

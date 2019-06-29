@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 
 #include "sounds.h"
 #include "r_plane.h"
+#include "r_portal.h"
 
 // "Left" and "Right" character symbols for additional rotation functionality
 #define ROT_L ('L' - '0')
@@ -45,7 +46,6 @@ extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
-void R_SortVisSprites(void);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -55,8 +55,21 @@ void R_AddSpriteDefs(UINT16 wadnum);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(void);
-void R_DrawMasked(void);
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+
+/** Used to count the amount of masked elements
+ * per portal to later group them in separate
+ * drawnode lists.
+ */
+typedef struct
+{
+	size_t drawsegs[2];
+	size_t vissprites[2];
+	fixed_t viewx, viewy, viewz;			/**< View z stored at the time of the BSP traversal for the view/portal. Masked sorting/drawing needs it. */
+	sector_t* viewsector;
+} maskcount_t;
+
+void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
 // -----------
 // SKINS STUFF
@@ -75,7 +88,7 @@ typedef struct
 
 	char realname[SKINNAMESIZE+1]; // Display name for level completion.
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
-	char charsel[8], face[8], superface[8]; // Arbitrarily named patch lumps
+	char charsel[9], face[9], superface[9]; // Arbitrarily named patch lumps
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
@@ -206,7 +219,8 @@ typedef struct drawnode_s
 } drawnode_t;
 
 extern INT32 numskins;
-extern skin_t skins[MAXSKINS + 1];
+extern skin_t skins[MAXSKINS];
+extern UINT32 visspritecount;
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
@@ -246,6 +260,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE char R_Frame2Char(UINT8 frame)
 FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 {
 #if 0 // 2.1 compat
+	if (cn == '+') return '\\' - 'A'; // PK3 can't use backslash, so use + instead
 	return cn - 'A';
 #else
 	if (cn >= 'A' && cn <= 'Z') return cn - 'A';

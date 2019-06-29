@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,8 +56,11 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-// wipes
-#include "f_finale.h"
+#ifdef HAVE_BLUA
+#include "lua_hud.h" // level title
+#endif
+
+#include "f_finale.h" // wipes
 
 #include "md5.h" // map MD5
 
@@ -100,6 +103,7 @@ side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
 boolean levelloading;
+UINT8 levelfadecol;
 
 // BLOCKMAP
 // Created from axis aligned bounding box
@@ -205,10 +209,13 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->startrings = 0;
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
 	mapheaderinfo[num]->muspos = 0;
+	mapheaderinfo[num]->musinterfadeout = 0;
+	mapheaderinfo[num]->musintername[0] = '\0';
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -388,30 +395,26 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-
-//
-// Computes the line length in fracunits, the OpenGL render needs this
-//
-
 /** Computes the length of a seg in fracunits.
-  * This is needed for splats.
   *
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
 fixed_t P_SegLength(seg_t *seg)
 {
-	fixed_t dx, dy;
-
-	// make a vector (start at origin)
-	dx = seg->v2->x - seg->v1->x;
-	dy = seg->v2->y - seg->v1->y;
-
-	return FixedHypot(dx, dy);
+	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
+	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
+	return FixedHypot(dx, dy)<<1;
 }
 
 #ifdef HWRENDER
-static inline float P_SegLengthf(seg_t *seg)
+/** Computes the length of a seg as a float.
+  * This is needed for OpenGL.
+  *
+  * \param seg Seg to compute length for.
+  * \return Length as a float.
+  */
+static inline float P_SegLengthFloat(seg_t *seg)
 {
 	float dx, dy;
 
@@ -447,11 +450,11 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 		li->v1 = &vertexes[SHORT(ml->v1)];
 		li->v2 = &vertexes[SHORT(ml->v2)];
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
+		li->length = P_SegLength(li);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
 		{
-			li->flength = P_SegLengthf(li);
+			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
@@ -962,10 +965,6 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
-//
-// P_LoadThings
-//
-
 static void P_PrepareRawThings(UINT8 *data, size_t i)
 {
 	mapthing_t *mt;
@@ -1008,7 +1007,7 @@ static void P_PrepareThings(lumpnum_t lumpnum)
 	Z_Free(data);
 }
 
-static void P_LoadThings(void)
+static void P_LoadThings(boolean loademblems)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -1032,6 +1031,9 @@ static void P_LoadThings(void)
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
 			continue; // These were already spawned
+
+		if (!loademblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
+			continue;
 
 		mt->mobj = NULL;
 		P_SpawnMapThing(mt);
@@ -1094,7 +1096,7 @@ static void P_LoadThings(void)
 		 || mt->type == mobjinfo[MT_REDTEAMRING].doomednum || mt->type == mobjinfo[MT_BLUETEAMRING].doomednum
 		 || mt->type == mobjinfo[MT_BLUESPHERE].doomednum || mt->type == mobjinfo[MT_BOMBSPHERE].doomednum
 		 || (mt->type >= 600 && mt->type <= 609) // circles and diagonals
-		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800) // hoops
+		 || mt->type == 1705 || mt->type == 1713) // hoops
 		{
 			mt->mobj = NULL;
 
@@ -1105,65 +1107,6 @@ static void P_LoadThings(void)
 			P_SpawnHoopsAndRings(mt, false);
 		}
 	}
-}
-
-static inline void P_SpawnEmblems(void)
-{
-	INT32 i, color;
-	mobj_t *emblemmobj;
-
-	for (i = 0; i < numemblems; i++)
-	{
-		if (emblemlocations[i].level != gamemap || emblemlocations[i].type > ET_SKIN)
-			continue;
-
-		emblemmobj = P_SpawnMobj(emblemlocations[i].x<<FRACBITS, emblemlocations[i].y<<FRACBITS,
-			emblemlocations[i].z<<FRACBITS, MT_EMBLEM);
-
-		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
-		P_SetMobjStateNF(emblemmobj, emblemmobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
-
-		emblemmobj->health = i+1;
-		color = M_GetEmblemColor(&emblemlocations[i]);
-
-		emblemmobj->color = (UINT8)color;
-
-		if (emblemlocations[i].collected
-			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
-		{
-			P_UnsetThingPosition(emblemmobj);
-			emblemmobj->flags |= MF_NOCLIP;
-			emblemmobj->flags &= ~MF_SPECIAL;
-			emblemmobj->flags |= MF_NOBLOCKMAP;
-			emblemmobj->frame |= (tr_trans50<<FF_TRANSSHIFT);
-			P_SetThingPosition(emblemmobj);
-		}
-		else
-		{
-			emblemmobj->frame &= ~FF_TRANSMASK;
-
-			if (emblemlocations[i].type == ET_GLOBAL)
-			{
-				emblemmobj->reactiontime = emblemlocations[i].var;
-				if (emblemlocations[i].var & GE_NIGHTSITEM)
-				{
-					emblemmobj->flags |= MF_NIGHTSITEM;
-					emblemmobj->flags &= ~MF_SPECIAL;
-					emblemmobj->flags2 |= MF2_DONTDRAW;
-				}
-			}
-		}
-	}
-}
-
-static void P_SpawnSecretItems(boolean loademblems)
-{
-	// Now let's spawn those funky emblem things! Tails 12-08-2002
-	if (netgame || multiplayer || (modifiedgame && !savemoddata)) // No cheating!!
-		return;
-
-	if (loademblems)
-		P_SpawnEmblems();
 }
 
 // Experimental groovy write function!
@@ -1489,19 +1432,33 @@ static void P_LoadRawSideDefs2(void *data)
 				{
 					M_Memcpy(process,msd->bottomtexture,8);
 					process[8] = '\0';
-					sd->bottomtexture = get_number(process)-1;
+					sd->bottomtexture = get_number(process);
 				}
-				M_Memcpy(process,msd->toptexture,8);
-				process[8] = '\0';
-				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
 
-				// If they type in O_ or D_ and their music name, just shrug,
-				// then copy the rest instead.
-				if ((process[0] == 'O' || process[0] == 'D') && process[7])
-					M_Memcpy(sd->text, process+2, 6);
-				else // Assume it's a proper music name.
-					M_Memcpy(sd->text, process, 6);
-				sd->text[6] = 0;
+				if (!(msd->midtexture[0] == '-' && msd->midtexture[1] == '\0') || msd->midtexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->midtexture,8);
+					process[8] = '\0';
+					sd->midtexture = get_number(process);
+				}
+
+				// always process if back sidedef, because we need that - symbol
+ 				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+				if (i == 1 || msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->toptexture,8);
+					process[8] = '\0';
+
+					// If they type in O_ or D_ and their music name, just shrug,
+					// then copy the rest instead.
+					if ((process[0] == 'O' || process[0] == 'D') && process[7])
+						M_Memcpy(sd->text, process+2, 6);
+					else // Assume it's a proper music name.
+						M_Memcpy(sd->text, process, 6);
+					sd->text[6] = 0;
+				}
+				else
+					sd->text[0] = 0;
 				break;
 			}
 
@@ -1963,7 +1920,7 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count, const char *lumpname
 	if (!count || count >= 0x20000)
 		return false;
 
-	CONS_Printf("Reading blockmap lump for pk3...\n");
+	//CONS_Printf("Reading blockmap lump for pk3...\n");
 
 	// no need to malloc anything, assume the data is uncompressed for now
 	count /= 2;
@@ -2219,7 +2176,7 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = 0;
+	nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
@@ -2297,7 +2254,7 @@ static void P_LevelInitStuff(void)
 		 players[i].texttimer = players[i].linkcount =\
 		 players[i].linktimer = players[i].flyangle =\
 		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].mare = players[i].marelap =\
+		 players[i].oldscale = players[i].mare = players[i].marelap =\
 		 players[i].marebonuslap = players[i].lapbegunat =\
 		 players[i].lapstartedtime = players[i].totalmarescore =\
 		 players[i].realtime = players[i].exiting = 0;
@@ -2315,7 +2272,7 @@ static void P_LevelInitStuff(void)
 		// unset ALL the pointers. P_SetTarget isn't needed here because if this
 		// function is being called we're just going to clobber the data anyways
 		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = NULL;
+		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
 	}
 }
 
@@ -2365,14 +2322,11 @@ void P_LoadThingsOnly(void)
 	}
 	else // phew it's just a WAD
 		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
-
-	P_LoadThings();
-
+	P_LoadThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
 	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
-	P_SpawnSecretItems(true);
 }
 
 /** Compute MD5 message digest for bytes read from memory source
@@ -2596,6 +2550,43 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static void P_SetupCamera(void)
+{
+	if (players[displayplayer].mo && (server || addedtogame))
+	{
+		camera.x = players[displayplayer].mo->x;
+		camera.y = players[displayplayer].mo->y;
+		camera.z = players[displayplayer].mo->z;
+		camera.angle = players[displayplayer].mo->angle;
+		camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+	}
+	else
+	{
+		mapthing_t *thing;
+
+		switch (gametype)
+		{
+		case GT_MATCH:
+		case GT_TAG:
+			thing = deathmatchstarts[0];
+			break;
+
+		default:
+			thing = playerstarts[0];
+			break;
+		}
+
+		if (thing)
+		{
+			camera.x = thing->x;
+			camera.y = thing->y;
+			camera.z = thing->z;
+			camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
+			camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
+		}
+	}
+}
+
 static boolean CanSaveLevel(INT32 mapnum)
 {
 	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
@@ -2635,7 +2626,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
-
 
 	// Reset the palette
 	if (rendermode != render_none)
@@ -2689,9 +2679,14 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Cancel all d_main.c fadeouts (keep fade in though).
+	wipegamestate = FORCEWIPEOFF;
+
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	if (modeattacking && !demoplayback && (pausedelay == INT32_MIN))
+		ranspecialwipe = 2;
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;
@@ -2724,11 +2719,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_StopSounds();
 	S_ClearSfx();
 
-	// As oddly named as this is, this handles music only.
-	// We should be fine starting it here.
-	/// ... as long as this isn't a titlemap transition, that is
 	if (!titlemapinaction)
+	{
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
 		S_Start();
+	}
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
@@ -2738,22 +2734,39 @@ boolean P_SetupLevel(boolean skipprecip)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipe_level_toblack], false);
+		// for titlemap: run a specific wipe if specified
+		// needed for exiting time attack
+		if (wipetypepre != INT16_MAX)
+			F_RunWipe(
+				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+				false);
+		wipetypepre = -1;
 	}
 
-	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
-	if (!titlemapinaction && rendermode != render_none)
+	if (!titlemapinaction)
 	{
-		// Don't include these in the fade!
-		char tx[64];
-		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-		snprintf(tx, 63, "%s%s%s",
-			mapheaderinfo[gamemap-1]->lvlttl,
-			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-		I_UpdateNoVsync();
+		if (ranspecialwipe == 2)
+		{
+			pausedelay = -3; // preticker plus one
+			S_StartSound(NULL, sfx_s3k73);
+		}
+
+		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+		if (rendermode != render_none)
+		{
+			// Don't include these in the fade!
+			char tx[64];
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+			snprintf(tx, 63, "%s%s%s",
+				mapheaderinfo[gamemap-1]->lvlttl,
+				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+			I_UpdateNoVsync();
+		}
 	}
+
+	levelfadecol = (ranspecialwipe) ? 0 : 31;
 
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
@@ -2804,7 +2817,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
 	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
-
 
 	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
 	// As it is implemented right now, we're assuming an uncompressed WAD.
@@ -2912,11 +2924,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_ResetDynamicSlopes();
 #endif
 
-	P_LoadThings();
+	P_LoadThings(loademblems);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
-
-	P_SpawnSecretItems(loademblems);
 
 	for (numcoopstarts = 0; numcoopstarts < MAXPLAYERS; numcoopstarts++)
 		if (!playerstarts[numcoopstarts])
@@ -3039,37 +3049,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (players[displayplayer].mo && (server || addedtogame))
-		{
-			camera.x = players[displayplayer].mo->x;
-			camera.y = players[displayplayer].mo->y;
-			camera.z = players[displayplayer].mo->z;
-			camera.angle = players[displayplayer].mo->angle;
-		}
-		else
-		{
-			mapthing_t *thing;
-
-			switch (gametype)
-			{
-			case GT_MATCH:
-			case GT_TAG:
-				thing = deathmatchstarts[0];
-				break;
-
-			default:
-				thing = playerstarts[0];
-				break;
-			}
-
-			if (thing)
-			{
-				camera.x = thing->x;
-				camera.y = thing->y;
-				camera.z = thing->z;
-				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
-			}
-		}
+		P_SetupCamera();
 
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_height.changed)
@@ -3132,8 +3112,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
-	if (rendermode != render_none)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
+	if (rendermode != render_none && !titlemapinaction)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -3168,7 +3148,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		savedata.lives = 0;
 	}
 
-	skyVisible = skyVisible1 = skyVisible2 = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;
@@ -3181,6 +3160,45 @@ boolean P_SetupLevel(boolean skipprecip)
 #ifdef HAVE_BLUA
 		LUAh_MapLoad();
 #endif
+	}
+
+	// Stage title!
+	if (rendermode != render_none
+		&& (!titlemapinaction)
+		&& ranspecialwipe != 2
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
+#ifdef HAVE_BLUA
+		&& LUA_HudEnabled(hud_stagetitle)
+#endif
+	)
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (10*NEWTICRATERATIO);
+		tic_t nowtime = starttime;
+		tic_t lasttime = starttime;
+		while (nowtime < endtime)
+		{
+			// draw loop
+			while (!((nowtime = I_GetTime()) - lasttime))
+				I_Sleep();
+			lasttime = nowtime;
+
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+			stplyr = &players[consoleplayer];
+			ST_drawLevelTitle(nowtime - starttime);
+			if (splitscreen)
+			{
+				stplyr = &players[secondarydisplayplayer];
+				ST_drawLevelTitle(nowtime - starttime);
+			}
+
+			I_OsPolling();
+			I_UpdateNoBlit();
+			I_FinishUpdate(); // page flip or blit buffer
+
+			if (moviemode) // make sure we save frames for the white hold too
+				M_SaveFrame();
+		}
 	}
 
 	return true;
@@ -3284,6 +3302,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
+
+	//boolean texturechange = false; ///\todo Useless; broken when back-frontporting PK3 changes?
 	boolean mapsadded = false;
 	boolean replacedcurrentmap = false;
 
@@ -3301,7 +3321,7 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
@@ -3392,7 +3412,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
-	// Search for sprite replacements.
+
+	//
+	// search for sprite replacements
+	//
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they

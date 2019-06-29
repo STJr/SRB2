@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,6 +29,7 @@
 #include "g_input.h"
 #include "console.h"
 #include "m_random.h"
+#include "m_misc.h" // moviemode functionality
 #include "y_inter.h"
 #include "m_cond.h"
 #include "p_local.h"
@@ -43,14 +44,15 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollspeed = 80;
+INT32 titlescrollxspeed = 80;
+INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 
 static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
-static INT16 skullAnimCounter; // Chevron animation
+static INT16 skullAnimCounter; // Prompts: Chevron animation
 static INT32 roidtics; // Asteroid spinning
 
 static INT32 deplete;
@@ -59,6 +61,20 @@ static tic_t stoptimer;
 static boolean keypressed = false;
 
 // (no longer) De-Demo'd Title Screen
+static tic_t xscrolltimer;
+static tic_t yscrolltimer;
+static INT32 menuanimtimer; // Title screen: background animation timing
+mobj_t *titlemapcameraref = NULL;
+
+// menu presentation state
+char curbgname[8];
+SINT8 curfadevalue;
+boolean curhidepics;
+INT32 curbgcolor;
+INT32 curbgxspeed;
+INT32 curbgyspeed;
+boolean curbghide;
+
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
 static UINT32 demoIdleLeft;
@@ -78,8 +94,6 @@ static patch_t *ttspop4;
 static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
-
-static void F_SkyScroll(INT32 scrollspeed);
 
 //
 // PROMPT STATE
@@ -181,101 +195,6 @@ static void F_NewCutscene(const char *basetext)
 	cutscene_textcount = TICRATE/2;
 }
 
-//
-// F_DrawPatchCol
-//
-static void F_DrawPatchCol(INT32 x, patch_t *patch, INT32 col)
-{
-	const column_t *column;
-	const UINT8 *source;
-	UINT8 *desttop, *dest = NULL;
-	const UINT8 *deststop, *destbottom;
-	size_t count;
-
-	desttop = screens[0] + x*vid.dupx;
-	deststop = screens[0] + vid.rowbytes * vid.height;
-	destbottom = desttop + vid.height*vid.width;
-
-	do {
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
-
-		// step through the posts in a column
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)column + 3;
-			dest = desttop + topdelta*vid.width;
-			count = column->length;
-
-			while (count--)
-			{
-				INT32 dupycount = vid.dupy;
-
-				while (dupycount-- && dest < destbottom)
-				{
-					INT32 dupxcount = vid.dupx;
-					while (dupxcount-- && dest <= deststop)
-						*dest++ = *source;
-
-					dest += (vid.width - vid.dupx);
-				}
-				source++;
-			}
-			column = (const column_t *)((const UINT8 *)column + column->length + 4);
-		}
-
-		desttop += SHORT(patch->height)*vid.dupy*vid.width;
-	} while(dest < destbottom);
-}
-
-//
-// F_SkyScroll
-//
-static void F_SkyScroll(INT32 scrollspeed)
-{
-	INT32 scrolled, x, mx, fakedwidth;
-	patch_t *pat;
-	INT16 patwidth;
-
-	pat = W_CachePatchName("TITLESKY", PU_CACHE);
-
-	patwidth = SHORT(pat->width);
-	animtimer = ((finalecount*scrollspeed)/16 + patwidth) % patwidth;
-
-	fakedwidth = vid.width / vid.dupx;
-
-	if (rendermode == render_soft)
-	{ // if only hardware rendering could be this elegant and complete
-		scrolled = (patwidth - animtimer) - 1;
-		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
-			F_DrawPatchCol(x, pat, mx);
-	}
-#ifdef HWRENDER
-	else if (rendermode != render_none)
-	{ // if only software rendering could be this simple and retarded
-		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-		INT32 y, pw = patwidth * dupz, ph = SHORT(pat->height) * dupz;
-		scrolled = animtimer * dupz;
-		for (x = 0; x < vid.width; x += pw)
-		{
-			for (y = 0; y < vid.height; y += ph)
-			{
-				if (scrolled > 0)
-					V_DrawScaledPatch(scrolled - pw, y, V_NOSCALESTART, pat);
-
-				V_DrawScaledPatch(x + scrolled, y, V_NOSCALESTART, pat);
-			}
-		}
-	}
-#endif
-
-	W_UnlockCachedPatch(pat);
-}
-
 // =============
 //  INTRO SCENE
 // =============
@@ -331,7 +250,7 @@ void F_StartIntro(void)
 	introtext[2] = M_GetText(
 	"As it was about to drain the rings\n"
 	"away from the planet, Sonic burst into\n"
-	"the Satellite and for what he thought\n"
+	"the control room and for what he thought\n"
 	"would be the last time,\xB4 defeated\n"
 	"Dr. Eggman.\n#");
 
@@ -341,11 +260,11 @@ void F_StartIntro(void)
 	"return,\xB8 bringing an all new threat.\n#");
 
 	introtext[4] = M_GetText(
-	"\xA8""About once every year, a strange asteroid\n"
+	"\xA8""About every five years, a strange asteroid\n"
 	"hovers around the planet.\xBF It suddenly\n"
 	"appears from nowhere, circles around, and\n"
 	"\xB6- just as mysteriously as it arrives -\xB6\n"
-	"vanishes after about one week.\xBF\n"
+	"vanishes after only one week.\xBF\n"
 	"No one knows why it appears, or how.\n#");
 
 	introtext[5] = M_GetText(
@@ -398,7 +317,7 @@ void F_StartIntro(void)
 	"\xA5\"6...\xD2""5...\xD2""4...\"\xA8\xD2\n"
 	"Sonic knew he was getting closer to the\n"
 	"zone, and pushed himself harder.\xB4 Finally,\n"
-	"the mountain appeared in the horizon.\xD2\xD2\n"
+	"the mountain appeared on the horizon.\xD2\xD2\n"
 	"\xA5\"3...\xD2""2...\xD2""1...\xD2""Zero.\"\n#");
 
 	introtext[11] = M_GetText(
@@ -470,11 +389,10 @@ void F_StartIntro(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	F_NewCutscene(introtext[0]);
 
 	intro_scenenum = 0;
-	finalecount = animtimer = stoptimer = 0;
+	finalecount = animtimer = skullAnimCounter = stoptimer = 0;
 	roidtics = BASEVIDWIDTH - 64;
 	timetonext = introscenetime[intro_scenenum];
 }
@@ -706,7 +624,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			F_SkyScroll(80*4);
+			F_SkyScroll(80*4, 0, "TITLESKY");
 			if (timetonext == 6)
 			{
 				stoptimer = finalecount;
@@ -831,18 +749,27 @@ void F_IntroDrawer(void)
 
 			// Stay on black for a bit. =)
 			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				tic_t nowtime, quittime, lasttime;
+				nowtime = lasttime = I_GetTime();
+				quittime = nowtime + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+				while (quittime > nowtime)
 				{
+					while (!((nowtime = I_GetTime()) - lasttime))
+						I_Sleep();
+					lasttime = nowtime;
+
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
 					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+
+					if (moviemode) // make sure we save frames for the white hold too
+						M_SaveFrame();
 				}
 			}
 
 			D_StartTitle();
+			wipegamestate = GS_INTRO;
 			return;
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);
@@ -1005,6 +932,8 @@ static const char *credits[] = {
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
+	"Vivian \"toaster\" Grannell",
+	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
@@ -1012,6 +941,7 @@ static const char *credits[] = {
 	"Ehab \"Wolfy\" Saeed",
 	"\"Kaito Sinclaire\"",
 	"\"SSNTails\"",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Programming",
 	"\1Assistance",
@@ -1019,15 +949,21 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
-	"Vivian \"toaster\" Grannell",
+	"Victor \"Steel Titanium\" Fuentes",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Jimita\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
 	"Ben \"Cue\" Woodford",
+	// Git contributors with 5+ approved merges of substantive quality,
+	// or contributors with at least one groundbreaking merge, may be named.
+	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
@@ -1074,15 +1010,15 @@ static const char *credits[] = {
 	"Dan \"Blitzzo\" Hagerstrand",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"Erik \"Torgo\" Nielsen",
 	"\"Kaito Sinclaire\"",
-	"Wessel \"Spherallic\" Smit",
+	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
+	"\"Torgo\"",
 	"Jarrett \"JEV3\" Voight",
 	"Johnny \"Sonikku\" Wallbank",
-	"Marco \"Digiku\" Zafra",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
@@ -1103,11 +1039,17 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"Doom Legacy Project",
 	"iD Software",
-	"Alex \"MistaED\" Fuller",
+	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
+	"Alex \"MistaED\" Fuller",
+	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
+	"Simon \"sirjuddington\" Judd", // SLADE developer
+	// Acknowledged here are the following:
+	// Minor merge request authors, see guideline above
+	// Golden - Expanded thin font
+	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
@@ -1159,7 +1101,6 @@ void F_StartCredits(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	S_ChangeMusicInternal("_creds", false);
@@ -1179,6 +1120,9 @@ void F_CreditDrawer(void)
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
 		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (credits_pics[i].y<<FRACBITS) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_CACHE), FRACUNIT>>1);
+
+	// Dim the background
+	V_DrawFadeScreen(0xFF00, 16);
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
@@ -1202,16 +1146,34 @@ void F_CreditDrawer(void)
 		if (FixedMul(y,vid.dupy) > vid.height)
 			break;
 	}
+}
 
+void F_CreditTicker(void)
+{
+	// "Simulate" the drawing of the credits so that dedicated mode doesn't get stuck
+	UINT16 i;
+	fixed_t y = (80<<FRACBITS) - 5*(animtimer<<FRACBITS)/8;
+
+	// Draw credits text on top
+	for (i = 0; credits[i]; i++)
+	{
+		switch(credits[i][0])
+		{
+			case 0: y += 80<<FRACBITS; break;
+			case 1: y += 30<<FRACBITS; break;
+			default: y += 12<<FRACBITS; break;
+		}
+		if (FixedMul(y,vid.dupy) > vid.height)
+			break;
+	}
+
+	// Do this here rather than in the drawer you doofus! (this is why dedicated mode broke at credits)
 	if (!credits[i] && y <= 120<<FRACBITS && !finalecount)
 	{
 		timetonext = 5*TICRATE+1;
 		finalecount = 5*TICRATE;
 	}
-}
 
-void F_CreditTicker(void)
-{
 	if (timetonext)
 		timetonext--;
 	else
@@ -1305,7 +1267,6 @@ void F_StartGameEvaluation(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	finalecount = 0;
 }
@@ -1415,7 +1376,6 @@ void F_StartGameEnd(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 	S_StopMusic();
 
 	// In case menus are still up?!!
@@ -1447,12 +1407,104 @@ void F_GameEndTicker(void)
 // ==============
 //  TITLE SCREEN
 // ==============
+
+void F_InitMenuPresValues(void)
+{
+	menuanimtimer = 0;
+	prevMenuId = 0;
+	activeMenuId = MainDef.menuid;
+
+	// Set defaults for presentation values
+	strncpy(curbgname, "TITLESKY", 8);
+	curfadevalue = 16;
+	curhidepics = hidetitlepics;
+	curbgcolor = -1;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
+	curbghide = true;
+
+	// Find current presentation values
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurFadeValue(16);
+	M_SetMenuCurHideTitlePics();
+}
+
+//
+// F_SkyScroll
+//
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
+{
+	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
+	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
+	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	INT16 patwidth, patheight;
+	INT32 pw, ph; // scaled by dupz
+	patch_t *pat;
+	INT32 i, j;
+
+	if (rendermode == render_none)
+		return;
+
+	if (!patchname || !patchname[0])
+	{
+		V_DrawFill(0, 0, vid.width, vid.height, 31);
+		return;
+	}
+
+	if (!scrollxspeed && !scrollyspeed)
+	{
+		V_DrawPatchFill(W_CachePatchName(patchname, PU_CACHE));
+		return;
+	}
+
+	pat = W_CachePatchName(patchname, PU_CACHE);
+
+	patwidth = SHORT(pat->width);
+	patheight = SHORT(pat->height);
+	pw = patwidth * dupz;
+	ph = patheight * dupz;
+
+	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
+	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
+
+	xscrolltimer = ((menuanimtimer*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
+	yscrolltimer = ((menuanimtimer*scrollyspeed)/16 + patheight*yneg) % (patheight);
+
+	// coordinate offsets
+	xscrolled = xscrolltimer * dupz;
+	yscrolled = yscrolltimer * dupz;
+
+	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
+		i < tilex;
+		x += pw, i++)
+	{
+		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
+			j < tiley;
+			y += ph, j++)
+		{
+			V_DrawScaledPatch(
+				(xispos) ? xscrolled - x : x + xscrolled,
+				(yispos) ? yscrolled - y : y + yscrolled,
+				V_NOSCALESTART, pat);
+		}
+	}
+
+	W_UnlockCachedPatch(pat);
+}
+
 void F_StartTitleScreen(void)
 {
-	S_ChangeMusicInternal("_title", looptitle);
+	if (menupres[MN_MAIN].musname[0])
+		S_ChangeMusic(menupres[MN_MAIN].musname, menupres[MN_MAIN].mustrack, menupres[MN_MAIN].muslooping);
+	else
+		S_ChangeMusicInternal("_title", looptitle);
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
+	{
 		finalecount = 0;
+		wipetypepost = menupres[MN_MAIN].enterwipe;
+	}
 	else
 		wipegamestate = GS_TITLESCREEN;
 
@@ -1462,6 +1514,7 @@ void F_StartTitleScreen(void)
 
 		gamestate_t prevwipegamestate = wipegamestate;
 		titlemapinaction = TITLEMAP_LOADING;
+		titlemapcameraref = NULL;
 		gamemap = titlemap;
 
 		if (!mapheaderinfo[gamemap-1])
@@ -1502,6 +1555,10 @@ void F_StartTitleScreen(void)
 		camera.chase = true;
 		camera.height = 0;
 
+		// Run enter linedef exec for MN_MAIN, since this is where we start
+		if (menupres[MN_MAIN].entertag)
+			P_LinedefExecute(menupres[MN_MAIN].entertag, players[displayplayer].mo, NULL);
+
 		wipegamestate = prevwipegamestate;
 	}
 	else
@@ -1515,7 +1572,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	animtimer = 0;
+	animtimer = skullAnimCounter = 0;
 
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
@@ -1540,19 +1597,24 @@ void F_StartTitleScreen(void)
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
+	boolean hidepics;
+
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	if (!titlemapinaction)
-		F_SkyScroll(titlescrollspeed);
+	if (curbgcolor >= 0)
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
+		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
-	// Don't draw outside of the title screewn, or if the patch isn't there.
+	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
 	// rei|miru: use title pics?
-	if (hidetitlepics)
+	hidepics = curhidepics;
+	if (hidepics)
 #ifdef HAVE_BLUA
 		goto luahook;
 #else
@@ -1602,6 +1664,14 @@ luahook:
 #endif
 }
 
+// separate animation timer for backgrounds, since we also count
+// during GS_TIMEATTACK
+void F_MenuPresTicker(boolean run)
+{
+	if (run)
+		menuanimtimer++;
+}
+
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenTicker(boolean run)
 {
@@ -1619,22 +1689,28 @@ void F_TitleScreenTicker(boolean run)
 		mobj_t *mo2;
 		mobj_t *cameraref = NULL;
 
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		// If there's a Line 422 Switch Cut-Away view, don't force us.
+		if (!titlemapcameraref || titlemapcameraref->type != MT_ALTVIEWMAN)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-				continue;
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+					continue;
 
-			mo2 = (mobj_t *)th;
+				mo2 = (mobj_t *)th;
 
-			 if (!mo2)
-				continue;
+				if (!mo2)
+					continue;
 
-			if (mo2->type != MT_ALTVIEWMAN)
-				continue;
+				if (mo2->type != MT_ALTVIEWMAN)
+					continue;
 
-			cameraref = mo2;
-			break;
+				cameraref = titlemapcameraref = mo2;
+				break;
+			}
 		}
+		else
+			cameraref = titlemapcameraref;
 
 		if (cameraref)
 		{
@@ -1648,7 +1724,7 @@ void F_TitleScreenTicker(boolean run)
 		else
 		{
 			// Default behavior: Do a lil' camera spin if a title map is loaded;
-			camera.angle += titlescrollspeed*ANG1/64;
+			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
 
@@ -1727,7 +1803,6 @@ void F_StartContinue(void)
 	keypressed = false;
 	paused = false;
 	CON_ToggleOff();
-	CON_ClearHUD();
 
 	// In case menus are still up?!!
 	M_ClearMenus(true);
@@ -1893,13 +1968,14 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 
 	G_SetGamestate(GS_CUTSCENE);
 
+	if (wipegamestate == GS_CUTSCENE)
+		wipegamestate = -1;
+
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
 
 	F_NewCutscene(cutscenes[cutscenenum]->scene[0].text);
-
-	CON_ClearHUD();
 
 	cutsceneover = false;
 	runningprecutscene = precutscene;
@@ -1987,7 +2063,7 @@ void F_CutsceneTicker(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (netgame && i != serverplayer && i != adminplayer)
+		if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 			continue;
 
 		if (players[i].cmd.buttons & BT_USE)
@@ -2524,7 +2600,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,
@@ -2555,7 +2631,7 @@ void F_TextPromptTicker(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (netgame && i != serverplayer && i != adminplayer)
+				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 					continue;
 				else if (splitscreen) {
 					// Both players' controls are locked,

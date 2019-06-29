@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -232,7 +232,8 @@ typedef enum
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
-	CR_MACESPIN
+	CR_MACESPIN,
+	CR_MINECART
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -455,6 +456,8 @@ typedef struct player_s
 	UINT8 drilldelay;
 	boolean bonustime; // Capsule destroyed, now it's bonus time!
 	mobj_t *capsule; // Go inside the capsule
+	mobj_t *drone; // Move center to the drone
+	fixed_t oldscale; // Pre-Nightserize scale
 	UINT8 mare; // Current mare
 	UINT8 marelap; // Current mare lap
 	UINT8 marebonuslap; // Current mare lap starting from bonus time

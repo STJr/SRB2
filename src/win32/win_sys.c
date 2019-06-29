@@ -639,9 +639,6 @@ void I_Error(const char *error, ...)
 	if (!errorcount)
 	{
 		M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
-		D_SaveBan(); // save the ban list
-#endif
 		G_SaveGameData();
 	}
 
@@ -771,6 +768,8 @@ void I_Quit(void)
 		ShowEndTxt(co);
 	}
 	fflush(stderr);
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 	W_Shutdown();
 	exit(0);
 }

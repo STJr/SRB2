@@ -216,6 +216,9 @@
     <ClInclude Include="..\hardware\hws_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\hw_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
@@ -290,6 +293,9 @@
     </ClInclude>
     <ClInclude Include="..\lua_script.h">
       <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\apng.h">
+      <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\md5.h">
       <Filter>M_Misc</Filter>
@@ -604,6 +610,9 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw_cache.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw_draw.c">

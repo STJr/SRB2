@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2016 by Sonic Team Junior.
+// Copyright (C) 2006-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,10 @@
 #include "r_main.h"
 #include "r_state.h"
 #include "r_defs.h"
+
+
+#define POLYOBJECTS
+
 
 #ifdef POLYOBJECTS
 
@@ -1150,7 +1154,7 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 //
 // Moves a polyobject on the x-y plane.
 //
-static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y)
+static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs)
 {
 	size_t i;
 	vertex_t vec;
@@ -1171,9 +1175,12 @@ static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y)
 	for (i = 0; i < po->numLines; ++i)
 		Polyobj_bboxAdd(po->lines[i]->bbox, &vec);
 
-	// check for blocking things (yes, it needs to be done separately)
-	for (i = 0; i < po->numLines; ++i)
-		hitflags |= Polyobj_clipThings(po, po->lines[i]);
+	if (checkmobjs)
+	{
+		// check for blocking things (yes, it needs to be done separately)
+		for (i = 0; i < po->numLines; ++i)
+			hitflags |= Polyobj_clipThings(po, po->lines[i]);
+	}
 
 	if (hitflags & 2)
 	{
@@ -1191,7 +1198,8 @@ static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y)
 		po->spawnSpot.x += vec.x;
 		po->spawnSpot.y += vec.y;
 
-		Polyobj_carryThings(po, x, y);
+		if (checkmobjs)
+			Polyobj_carryThings(po, x, y);
 		Polyobj_removeFromBlockmap(po); // unlink it from the blockmap
 		Polyobj_removeFromSubsec(po);   // unlink it from its subsector
 		Polyobj_linkToBlockmap(po);     // relink to blockmap
@@ -1358,7 +1366,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 //
 // Rotates a polyobject around its start point.
 //
-static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings)
+static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
 {
 	size_t i;
 	angle_t angle;
@@ -1390,11 +1398,14 @@ static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings)
 	for (i = 0; i < po->numLines; ++i)
 		Polyobj_rotateLine(po->lines[i]);
 
-	// check for blocking things
-	for (i = 0; i < po->numLines; ++i)
-		hitflags |= Polyobj_clipThings(po, po->lines[i]);
+	if (checkmobjs)
+	{
+		// check for blocking things
+		for (i = 0; i < po->numLines; ++i)
+			hitflags |= Polyobj_clipThings(po, po->lines[i]);
 
-	Polyobj_rotateThings(po, origin, delta, turnthings);
+		Polyobj_rotateThings(po, origin, delta, turnthings);
+	}
 
 	if (hitflags & 2)
 	{
@@ -1610,19 +1621,23 @@ void Polyobj_InitLevel(void)
 // Called when a savegame is being loaded. Rotates and translates an
 // existing polyobject to its position when the game was saved.
 //
+// Monster Iestyn 05/04/19: Please do not interact with mobjs! You
+// can cause I_Error crashes that way, and all the important mobjs are
+// going to be deleted afterwards anyway.
+//
 void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y)
 {
 	fixed_t dx, dy;
 
 	// first, rotate to the saved angle
-	Polyobj_rotate(po, angle, false);
+	Polyobj_rotate(po, angle, false, false);
 
 	// determine component distances to translate
 	dx = x - po->spawnSpot.x;
 	dy = y - po->spawnSpot.y;
 
 	// translate
-	Polyobj_moveXY(po, dx, dy);
+	Polyobj_moveXY(po, dx, dy, false);
 }
 
 // Thinker Functions
@@ -1662,7 +1677,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, th->turnobjs) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, th->turnobjs, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1746,7 +1761,7 @@ void T_PolyObjMove(polymove_t *th)
 	}
 
 	// move the polyobject one step along its movement angle
-	if (Polyobj_moveXY(po, th->momx, th->momy))
+	if (Polyobj_moveXY(po, th->momx, th->momy, true))
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1860,12 +1875,15 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		fixed_t diffz;
 		amtx = (target->x - th->diffx) - po->centerPt.x;
 		amty = (target->y - th->diffy) - po->centerPt.y;
-		Polyobj_moveXY(po, amtx, amty);
+		Polyobj_moveXY(po, amtx, amty, true);
 		// TODO: use T_MovePlane
 		amtz = (po->lines[0]->backsector->ceilingheight - po->lines[0]->backsector->floorheight)/2;
 		diffz = po->lines[0]->backsector->floorheight - (target->z - amtz);
 		po->lines[0]->backsector->floorheight = target->z - amtz;
 		po->lines[0]->backsector->ceilingheight = target->z + amtz;
+		// Sal: Remember to check your sectors!
+		P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 		// Apply action to mirroring polyobjects as well
 		start = 0;
 		while ((po = Polyobj_GetChild(oldpo, &start)))
@@ -1873,10 +1891,13 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			if (po->isBad)
 				continue;
 
-			Polyobj_moveXY(po, amtx, amty);
+			Polyobj_moveXY(po, amtx, amty, true);
 			// TODO: use T_MovePlane
 			po->lines[0]->backsector->floorheight += diffz; // move up/down by same amount as the parent did
 			po->lines[0]->backsector->ceilingheight += diffz;
+			// Sal: Remember to check your sectors!
+			P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+			P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 		}
 
 		po = oldpo;
@@ -2033,10 +2054,13 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	}
 
 	// Move the polyobject
-	Polyobj_moveXY(po, momx, momy);
+	Polyobj_moveXY(po, momx, momy, true);
 	// TODO: use T_MovePlane
 	po->lines[0]->backsector->floorheight += momz;
 	po->lines[0]->backsector->ceilingheight += momz;
+	// Sal: Remember to check your sectors!
+	P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage)); // frontsector is NEEDED for crushing
+	P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage)); // backsector may not be necessary, but just in case
 
 	// Apply action to mirroring polyobjects as well
 	start = 0;
@@ -2045,10 +2069,13 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		if (po->isBad)
 			continue;
 
-		Polyobj_moveXY(po, momx, momy);
+		Polyobj_moveXY(po, momx, momy, true);
 		// TODO: use T_MovePlane
 		po->lines[0]->backsector->floorheight += momz;
 		po->lines[0]->backsector->ceilingheight += momz;
+		// Sal: Remember to check your sectors!
+		P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 	}
 }
 
@@ -2091,7 +2118,7 @@ void T_PolyDoorSlide(polyslidedoor_t *th)
 	}
 
 	// move the polyobject one step along its movement angle
-	if (Polyobj_moveXY(po, th->momx, th->momy))
+	if (Polyobj_moveXY(po, th->momx, th->momy, true))
 	{
 		INT32 avel = abs(th->speed);
 
@@ -2197,7 +2224,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, false) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, false, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -2253,7 +2280,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 	}
 }
 
-// T_PolyObjDisplace: shift a polyobject based on a control sector's heights. -Red
+// T_PolyObjDisplace: shift a polyobject based on a control sector's heights.
 void T_PolyObjDisplace(polydisplace_t *th)
 {
 	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
@@ -2262,10 +2289,10 @@ void T_PolyObjDisplace(polydisplace_t *th)
 
 	if (!po)
 #ifdef RANGECHECK
-		I_Error("T_PolyDoorSwing: thinker has invalid id %d\n", th->polyObjNum);
+		I_Error("T_PolyObjDisplace: thinker has invalid id %d\n", th->polyObjNum);
 #else
 	{
-		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSwing: thinker with invalid id %d removed.\n", th->polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
 		P_RemoveThinkerDelayed(&th->thinker);
 		return;
 	}
@@ -2289,7 +2316,46 @@ void T_PolyObjDisplace(polydisplace_t *th)
 	dx = FixedMul(th->dx, delta);
 	dy = FixedMul(th->dy, delta);
 
-	if (Polyobj_moveXY(po, dx, dy))
+	if (Polyobj_moveXY(po, dx, dy, true))
+		th->oldHeights = newheights;
+}
+
+// T_PolyObjRotDisplace: rotate a polyobject based on a control sector's heights.
+void T_PolyObjRotDisplace(polyrotdisplace_t *th)
+{
+	polyobj_t *po = Polyobj_GetForNum(th->polyObjNum);
+	fixed_t newheights, delta;
+	fixed_t rotangle;
+
+	if (!po)
+#ifdef RANGECHECK
+		I_Error("T_PolyObjRotDisplace: thinker has invalid id %d\n", th->polyObjNum);
+#else
+	{
+		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
+		P_RemoveThinkerDelayed(&th->thinker);
+		return;
+	}
+#endif
+
+	// check for displacement due to override and reattach when possible
+	if (po->thinker == NULL)
+	{
+		po->thinker = &th->thinker;
+
+		// reset polyobject's thrust
+		po->thrust = FRACUNIT;
+	}
+
+	newheights = th->controlSector->floorheight+th->controlSector->ceilingheight;
+	delta = newheights-th->oldHeights;
+
+	if (!delta)
+		return;
+
+	rotangle = FixedMul(th->rotscale, delta);
+
+	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs, true))
 		th->oldHeights = newheights;
 }
 
@@ -2746,6 +2812,52 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	{
 		prdata->polyObjNum = po->id; // change id to match child polyobject's
 		EV_DoPolyObjDisplace(prdata);
+	}
+
+	// action was successful
+	return 1;
+}
+
+INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
+{
+	polyobj_t *po;
+	polyobj_t *oldpo;
+	polyrotdisplace_t *th;
+	INT32 start;
+
+	if (!(po = Polyobj_GetForNum(prdata->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", prdata->polyObjNum);
+		return 0;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return 0;
+
+	// create a new thinker
+	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotDisplace;
+	PolyObj_AddThinker(&th->thinker);
+	po->thinker = &th->thinker;
+
+	// set fields
+	th->polyObjNum = prdata->polyObjNum;
+
+	th->controlSector = prdata->controlSector;
+	th->oldHeights = th->controlSector->floorheight+th->controlSector->ceilingheight;
+
+	th->rotscale = prdata->rotscale;
+	th->turnobjs = prdata->turnobjs;
+
+	oldpo = po;
+
+	// apply action to mirroring polyobjects as well
+	start = 0;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		prdata->polyObjNum = po->id; // change id to match child polyobject's
+		EV_DoPolyObjRotDisplace(prdata);
 	}
 
 	// action was successful

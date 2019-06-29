@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -309,10 +309,11 @@ typedef struct
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
 	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
-	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
+	UINT8 levelflags;     ///< LF_flags:  merged booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+	UINT16 startrings;      ///< Number of rings players start with.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
@@ -321,6 +322,10 @@ typedef struct
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
+
+	// Music stuff.
+	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
+	char musintername[7];    ///< Intermission screen music.
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
@@ -335,6 +340,7 @@ typedef struct
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
 #define LF_SAVEGAME      32 ///< Save the game upon loading this level
+#define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
@@ -550,6 +556,8 @@ extern boolean precache;
 // wipegamestate can be set to -1
 //  to force a wipe on the next draw
 extern gamestate_t wipegamestate;
+extern INT16 wipetypepre;
+extern INT16 wipetypepost;
 
 // debug flag to cancel adaptiveness
 extern boolean singletics;
@@ -566,7 +574,8 @@ extern consvar_t cv_showinputjoy; // display joystick in time attack
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.
 extern ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
-extern INT32 adminplayer, serverplayer;
+extern INT32 serverplayer;
+extern INT32 adminplayers[MAXPLAYERS];
 
 /// \note put these in d_clisrv outright?
 

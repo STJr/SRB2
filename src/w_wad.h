@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,22 @@
 #pragma interface
 #endif
 
+// a raw entry of the wad directory
+// NOTE: This sits here and not in w_wad.c because p_setup.c makes use of it to load map WADs inside PK3s.
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
+typedef struct
+{
+	UINT32 filepos; // file offset of the resource
+	UINT32 size; // size of the resource
+	char name[8]; // name of the resource
+} ATTRPACK filelump_t;
+#if defined(_MSC_VER)
+#pragma pack()
+#endif
+
+
 // ==============================================================
 //               WAD FILE STRUCTURE DEFINITIONS
 // ==============================================================
@@ -34,19 +50,13 @@ typedef struct
 	UINT32 infotableofs; // the 'directory' of resources
 } wadinfo_t;
 
-// a raw entry of the wad directory
-typedef struct
-{
-	UINT32 filepos; // file offset of the resource
-	UINT32 size; // size of the resource
-	char name[8]; // name of the resource
-} ATTRPACK filelump_t;
-
 // Available compression methods for lumps.
 typedef enum
 {
 	CM_NOCOMPRESSION,
+#ifdef HAVE_ZLIB
 	CM_DEFLATE,
+#endif
 	CM_LZF,
 	CM_UNSUPPORTED
 } compmethod;
@@ -59,7 +69,6 @@ typedef struct
 	char name[9]; // filelump_t name[]
 	char *name2; // Used by PK3s. Dynamically allocated name.
 	size_t size; // real (uncompressed) size
-	INT32 compressed; // i
 	compmethod compression; // lump compression method
 } lumpinfo_t;
 
@@ -67,7 +76,7 @@ typedef struct
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
-#define MAX_WADPATH 128
+#define MAX_WADPATH 512
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 
@@ -83,7 +92,8 @@ typedef enum restype
 	RET_WAD,
 	RET_SOC,
 	RET_LUA,
-	RET_PK3
+	RET_PK3,
+	RET_UNKNOWN,
 } restype_t;
 
 typedef struct wadfile_s
@@ -99,6 +109,7 @@ typedef struct wadfile_s
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
+
 	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
@@ -115,11 +126,11 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename);
+UINT16 W_InitFile(const char *filename, boolean mainfile);
 
 // W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
 // so that it stops with a message if a file was not found, but not if all is okay.
-INT32 W_InitMultipleFiles(char **filenames);
+INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
@@ -141,7 +152,9 @@ size_t W_LumpLength(lumpnum_t lumpnum);
 
 boolean W_IsLumpWad(lumpnum_t lumpnum); // for loading maps from WADs in PK3s
 
+#ifdef HAVE_ZLIB
 void zerr(int ret); // zlib error checking
+#endif
 
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset);
 size_t W_ReadLumpHeader(lumpnum_t lump, void *dest, size_t size, size_t offest); // read all or a part of a lump

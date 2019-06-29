@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1412,6 +1412,34 @@ static boolean PolyDisplace(line_t *line)
 	return EV_DoPolyObjDisplace(&pdd);
 }
 
+
+/** Similar to PolyDisplace().
+ */
+static boolean PolyRotDisplace(line_t *line)
+{
+	polyrotdisplacedata_t pdd;
+	fixed_t anginter, distinter;
+
+	pdd.polyObjNum = line->tag;
+	pdd.controlSector = line->frontsector;
+
+	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
+	// Use default values if not provided as fallback.
+	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
+	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
+	pdd.rotscale = FixedDiv(anginter, distinter);
+
+	// Same behavior as other rotators when carrying things.
+	if (line->flags & ML_NOCLIMB)
+		pdd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		pdd.turnobjs = 2;
+	else
+		pdd.turnobjs = 1;
+
+	return EV_DoPolyObjRotDisplace(&pdd);
+}
+
 #endif // ifdef POLYOBJECTS
 
 /** Changes a sector's tag.
@@ -2591,20 +2619,70 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 413: // Change music
 			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
+			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
-				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
+				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
+				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
+				INT32 position = (INT32)max(sides[line->sidenum[0]].midtexture, 0);
+				UINT32 prefadems = (UINT32)max(sides[line->sidenum[0]].textureoffset >> FRACBITS, 0);
+				UINT32 postfadems = (UINT32)max(sides[line->sidenum[0]].rowoffset >> FRACBITS, 0);
+				UINT8 fadetarget = (UINT8)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].textureoffset >> FRACBITS : 0, 0);
+				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : -1, -1);
 
-				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
-				mapmusname[6] = 0;
+				// Seek offset from current song position
+				if (line->flags & ML_EFFECT1)
+				{
+					// adjust for loop point if subtracting
+					if (position < 0 && S_GetMusicLength() &&
+						S_GetMusicPosition() > S_GetMusicLoopPoint() &&
+						S_GetMusicPosition() + position < S_GetMusicLoopPoint())
+						position = max(S_GetMusicLength() - (S_GetMusicLoopPoint() - (S_GetMusicPosition() + position)), 0);
+					else
+						position = max(S_GetMusicPosition() + position, 0);
+				}
 
-				mapmusflags = tracknum & MUSIC_TRACKMASK;
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusflags |= MUSIC_RELOADRESET;
+				// Fade current music to target volume (if music won't be changed)
+				if ((line->flags & ML_EFFECT2) && fadetarget && musicsame)
+				{
+					// 0 fadesource means fade from current volume.
+					// meaning that we can't specify volume 0 as the source volume -- this starts at 1.
+					if (!fadesource)
+						fadesource = -1;
 
-				mapmusposition = 0;
+					if (!postfadems)
+						S_SetInternalMusicVolume(fadetarget);
+					else
+						S_FadeMusicFromVolume(fadetarget, fadesource, postfadems);
 
-				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
+					if (position)
+						S_SetMusicPosition(position);
+				}
+				// Change the music and apply position/fade operations
+				else
+				{
+					strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+					mapmusname[6] = 0;
+
+					mapmusflags = tracknum & MUSIC_TRACKMASK;
+					if (!(line->flags & ML_BLOCKMONSTERS))
+						mapmusflags |= MUSIC_RELOADRESET;
+					if (line->flags & ML_BOUNCY)
+						mapmusflags |= MUSIC_FORCERESET;
+
+					mapmusposition = position;
+
+					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4), position,
+						!(line->flags & ML_EFFECT2) ? prefadems : 0,
+						!(line->flags & ML_EFFECT2) ? postfadems : 0);
+
+					if ((line->flags & ML_EFFECT2) && fadetarget)
+					{
+						if (!postfadems)
+							S_SetInternalMusicVolume(fadetarget);
+						else
+							S_FadeMusicFromVolume(fadetarget, fadesource, postfadems);
+					}
+				}
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
 				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
@@ -2892,7 +2970,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				mobj_t *altview;
 
-				if (!mo || !mo->player) // only players have views
+				if ((!mo || !mo->player) && !titlemapinaction) // only players have views, and title screens
 					return;
 
 				if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
@@ -2901,6 +2979,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				altview = P_GetObjectTypeInSectorNum(MT_ALTVIEWMAN, secnum);
 				if (!altview)
 					return;
+
+				// If titlemap, set the camera ref for title's thinker
+				// This is not revoked until overwritten; awayviewtics is ignored
+				if (titlemapinaction)
+				{
+					titlemapcameraref = altview;
+					return;
+				}
 
 				P_SetTarget(&mo->player->awayviewmobj, altview);
 				mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
@@ -3763,7 +3849,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 457: // Track mobj angle to point
 			if (mo)
 			{
-				INT32 failureangle = min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360) * ANG1;
+				INT32 failureangle = FixedAngle((min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360))*FRACUNIT);
 				INT32 failuredelay = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				INT32 failureexectag = line->sidenum[1] != 0xffff ?
 					(INT32)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
@@ -4428,7 +4514,7 @@ DoneSection2:
 					break;
 				}
 
-				player->mo->angle = lineangle;
+				player->mo->angle = player->drawangle = lineangle;
 
 				if (!demoplayback || P_AnalogMove(player))
 				{
@@ -5659,6 +5745,10 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	// Add slopes
 	ffloor->t_slope = &sec2->c_slope;
 	ffloor->b_slope = &sec2->f_slope;
+	// mark the target sector as having slopes, if the FOF has any of its own
+	// (this fixes FOF slopes glitching initially at level load in software mode)
+	if (sec2->hasslope)
+		sec->hasslope = true;
 #endif
 
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
@@ -7312,6 +7402,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 31: // Polyobj_Displace
 				PolyDisplace(&lines[i]);
+				break;
+
+			case 32: // Polyobj_RotDisplace
+				PolyRotDisplace(&lines[i]);
 				break;
 		}
 	}

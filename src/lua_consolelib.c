@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -63,7 +63,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_pop(gL, 1); // pop flags
 
 	// requires server/admin and the player is not one of them
-	if ((flags & 1) && playernum != serverplayer && playernum != adminplayer)
+	if ((flags & 1) && playernum != serverplayer && !IsPlayerAdmin(playernum))
 		goto deny;
 
 	lua_rawgeti(gL, -1, 1); // push function from command info table
@@ -141,7 +141,7 @@ void COM_Lua_f(void)
 		UINT8 argc;
 		lua_pop(gL, 1); // pop command info table
 
-		if (flags & 1 && !server && adminplayer != playernum) // flag 1: only server/admin can use this command.
+		if (flags & 1 && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;

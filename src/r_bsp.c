@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #include "g_game.h"
 #include "r_local.h"
 #include "r_state.h"
+#include "r_portal.h" // Add seg portals
 
 #include "r_splats.h"
 #include "p_local.h" // camera
@@ -26,11 +27,11 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
-boolean portalline; // is curline a portal seg?
 
 // very ugly realloc() of drawsegs at run-time, I upped it to 512
 // instead of 256.. and someone managed to send me a level with
 // 896 drawsegs! So too bad here's a limit removal a-la-Boom
+drawseg_t *curdrawsegs = NULL; /**< This is used to handle multiple lists for masked drawsegs. */
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
 
@@ -388,18 +389,18 @@ static void R_AddLine(seg_t *line)
 {
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
-	static sector_t tempsec; // ceiling/water hack
+	static sector_t tempsec;
 	boolean bothceilingssky = false, bothfloorssky = false;
+
+	portalline = false;
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
+	// big room fix
+	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
+	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
 	curline = line;
-	portalline = false;
-
-	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(line->v1->x, line->v1->y);
-	angle2 = R_PointToAngle(line->v2->x, line->v2->y);
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -459,7 +460,7 @@ static void R_AddLine(seg_t *line)
 				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
 			if (line2 >= 0) // found it!
 			{
-				R_AddPortal(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
+				Portal_Add2Lines(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
 				//return; // Don't fill in that space now!
 				goto clipsolid;
 			}
@@ -608,69 +609,35 @@ INT32 checkcoord[12][4] =
 	{2, 1, 3, 0}
 };
 
-static boolean R_CheckBBox(fixed_t *bspcoord)
+static boolean R_CheckBBox(const fixed_t *bspcoord)
 {
-	INT32 boxpos, sx1, sx2;
-	fixed_t px1, py1, px2, py2;
-	angle_t angle1, angle2, span, tspan;
+	angle_t angle1, angle2;
+	INT32 sx1, sx2, boxpos;
+	const INT32* check;
 	cliprange_t *start;
 
 	// Find the corners of the box that define the edges from current viewpoint.
-	if (viewx <= bspcoord[BOXLEFT])
-		boxpos = 0;
-	else if (viewx < bspcoord[BOXRIGHT])
-		boxpos = 1;
-	else
-		boxpos = 2;
-
-	if (viewy >= bspcoord[BOXTOP])
-		boxpos |= 0;
-	else if (viewy > bspcoord[BOXBOTTOM])
-		boxpos |= 1<<2;
-	else
-		boxpos |= 2<<2;
-
-	if (boxpos == 5)
+	if ((boxpos = (viewx <= bspcoord[BOXLEFT] ? 0 : viewx < bspcoord[BOXRIGHT] ? 1 : 2) + (viewy >= bspcoord[BOXTOP] ? 0 : viewy > bspcoord[BOXBOTTOM] ? 4 : 8)) == 5)
 		return true;
 
-	px1 = bspcoord[checkcoord[boxpos][0]];
-	py1 = bspcoord[checkcoord[boxpos][1]];
-	px2 = bspcoord[checkcoord[boxpos][2]];
-	py2 = bspcoord[checkcoord[boxpos][3]];
+	check = checkcoord[boxpos];
 
-	// check clip list for an open space
-	angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
-	angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	// big room fix
+	angle1 = R_PointToAngleEx(viewx, viewy, bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
+	angle2 = R_PointToAngleEx(viewx, viewy, bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
 
-	span = angle1 - angle2;
-
-	// Sitting on a line?
-	if (span >= ANGLE_180)
-		return true;
-
-	tspan = angle1 + clipangle;
-
-	if (tspan > doubleclipangle)
+	if ((signed)angle1 < (signed)angle2)
 	{
-		tspan -= doubleclipangle;
-
-		// Totally off the left edge?
-		if (tspan >= span)
-			return false;
-
-		angle1 = clipangle;
+		if ((angle1 >= ANGLE_180) && (angle1 < ANGLE_270))
+			angle1 = ANGLE_180-1;
+		else
+			angle2 = ANGLE_180;
 	}
-	tspan = clipangle - angle2;
-	if (tspan > doubleclipangle)
-	{
-		tspan -= doubleclipangle;
 
-		// Totally off the left edge?
-		if (tspan >= span)
-			return false;
-
-		angle2 = -(signed)clipangle;
-	}
+	if ((signed)angle2 >= (signed)clipangle) return false;
+	if ((signed)angle1 <= -(signed)clipangle) return false;
+	if ((signed)angle1 >= (signed)clipangle) angle1 = clipangle;
+	if ((signed)angle2 <= -(signed)clipangle) angle2 = 0-clipangle;
 
 	// Find the first clippost that touches the source post (adjacent pixels are touching).
 	angle1 = (angle1+ANGLE_90)>>ANGLETOFINESHIFT;
@@ -679,9 +646,7 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	sx2 = viewangletox[angle2];
 
 	// Does not cross a pixel.
-	if (sx1 == sx2)
-		return false;
-	sx2--;
+	if (sx1 >= sx2) return false;
 
 	start = solidsegs;
 	while (start->last < sx2)
@@ -1122,7 +1087,6 @@ static void R_Subsector(size_t num)
 				&& (viewz < polysec->floorheight))
 			{
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
 					polysec->lightlevel, polysec->floor_xoffs, polysec->floor_yoffs,
 					polysec->floorpic_angle-po->angle,
@@ -1152,7 +1116,6 @@ static void R_Subsector(size_t num)
 				&& (viewz > polysec->ceilingheight))
 			{
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
-				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL, po
@@ -1413,14 +1376,6 @@ void R_RenderBSPNode(INT32 bspnum)
 			return;
 
 		bspnum = bsp->children[side^1];
-	}
-
-	// PORTAL CULLING
-	if (portalcullsector) {
-		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
-		if (sect != portalcullsector)
-			return;
-		portalcullsector = NULL;
 	}
 
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);

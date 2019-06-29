@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -115,6 +115,9 @@ void A_CrushclawAim();
 void A_CrushclawLaunch();
 void A_VultureVtol();
 void A_VultureCheck();
+void A_VultureHover();
+void A_VultureBlast();
+void A_VultureFly();
 void A_SkimChase();
 void A_SkullAttack();
 void A_LobShot();
@@ -239,9 +242,32 @@ void A_WhoCaresIfYourSonIsABee();
 void A_ParentTriesToSleep();
 void A_CryingToMomma();
 void A_CheckFlags2();
+void A_Boss5FindWaypoint();
+void A_DoNPCSkid();
+void A_DoNPCPain();
+void A_PrepareRepeat();
+void A_Boss5ExtraRepeat();
+void A_Boss5Calm();
+void A_Boss5CheckOnGround();
+void A_Boss5CheckFalling();
+void A_Boss5PinchShot();
+void A_Boss5MakeItRain();
+void A_LookForBetter();
+void A_Boss5BombExplode();
+void A_DustDevilThink();
+void A_TNTExplode();
+void A_DebrisRandom();
+void A_TrainCameo();
+void A_TrainCameo2();
+void A_CanarivoreGas();
+void A_KillSegments();
+void A_SnapperSpawn();
+void A_SnapperThinker();
+void A_SaloonDoorSpawn();
+void A_MinecartSparkThink();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 256
+#define NUMMOBJFREESLOTS 512
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
 
@@ -279,9 +305,14 @@ typedef enum sprite
 	SPR_SPSH, // Egg Guard
 	SPR_ESHI, // Egg Guard's shield
 	SPR_GSNP, // Green Snapper
+	SPR_GSNL, // Green Snapper leg
+	SPR_GSNH, // Green Snapper head
 	SPR_MNUS, // Minus
+	SPR_MNUD, // Minus dirt
 	SPR_SSHL, // Spring Shell
 	SPR_UNID, // Unidus
+	SPR_CANA, // Canarivore
+	SPR_CANG, // Canarivore gas
 
 	// Generic Boss Items
 	SPR_JETF, // Boss jet fumes
@@ -306,7 +337,11 @@ typedef enum sprite
 	SPR_EFIR, // Boss 4 jet flame
 
 	// Boss 5 (Arid Canyon)
-	SPR_EGGQ,
+	SPR_FANG, // replaces EGGQ
+	SPR_FBOM,
+	SPR_FSGN,
+	SPR_BARX, // bomb explosion (also used by barrel)
+	SPR_BARD, // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	SPR_EGGR,
@@ -457,6 +492,22 @@ typedef enum sprite
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
 	SPR_CACT, // Cacti sprites
+	SPR_WWSG, // Caution Sign
+	SPR_WWS2, // Cacti Sign
+	SPR_WWS3, // Sharp Turn Sign
+	SPR_OILL, // Oil lamp
+	SPR_OILF, // Oil lamp flare
+	SPR_BARR, // TNT barrel
+	SPR_REMT, // TNT proximity shell
+	SPR_TAZD, // Dust devil
+	SPR_ADST, // Arid dust
+	SPR_MCRT, // Minecart
+	SPR_MCSP, // Minecart spark
+	SPR_NON2, // Saloon door thinker
+	SPR_SALD, // Saloon door
+	SPR_TRAE, // Train cameo locomotive
+	SPR_TRAI, // Train cameo wagon
+	SPR_STEA, // Train steam
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -649,6 +700,7 @@ typedef enum sprite
 	SPR_BOM3, // Boss Explosion 2
 	SPR_BOM4, // Underwater Explosion
 	SPR_BMNB, // Mine Explosion
+	SPR_WDDB, // Wood Debris
 
 	// Crumbly rocks
 	SPR_ROIA,
@@ -1107,15 +1159,10 @@ typedef enum state
 
 	// Vulture
 	S_VULTURE_STND,
-	S_VULTURE_VTOL1,
-	S_VULTURE_VTOL2,
-	S_VULTURE_VTOL3,
-	S_VULTURE_VTOL4,
+	S_VULTURE_DRIFT,
 	S_VULTURE_ZOOM1,
 	S_VULTURE_ZOOM2,
-	S_VULTURE_ZOOM3,
-	S_VULTURE_ZOOM4,
-	S_VULTURE_ZOOM5,
+	S_VULTURE_STUNNED,
 
 	// Pointy
 	S_POINTY1,
@@ -1166,15 +1213,31 @@ typedef enum state
 	S_EGGSHIELDBREAK,
 
 	// Green Snapper
+	S_SNAPPER_SPAWN,
+	S_SNAPPER_SPAWN2,
 	S_GSNAPPER_STND,
 	S_GSNAPPER1,
 	S_GSNAPPER2,
 	S_GSNAPPER3,
 	S_GSNAPPER4,
+	S_SNAPPER_XPLD,
+	S_SNAPPER_LEG,
+	S_SNAPPER_LEGRAISE,
+	S_SNAPPER_HEAD,
 
 	// Minus
+	S_MINUS_INIT,
 	S_MINUS_STND,
-	S_MINUS_DIGGING,
+	S_MINUS_DIGGING1,
+	S_MINUS_DIGGING2,
+	S_MINUS_DIGGING3,
+	S_MINUS_DIGGING4,
+	S_MINUS_BURST0,
+	S_MINUS_BURST1,
+	S_MINUS_BURST2,
+	S_MINUS_BURST3,
+	S_MINUS_BURST4,
+	S_MINUS_BURST5,
 	S_MINUS_POPUP,
 	S_MINUS_UPWARD1,
 	S_MINUS_UPWARD2,
@@ -1192,6 +1255,15 @@ typedef enum state
 	S_MINUS_DOWNWARD6,
 	S_MINUS_DOWNWARD7,
 	S_MINUS_DOWNWARD8,
+
+	// Minus dirt
+	S_MINUSDIRT1,
+	S_MINUSDIRT2,
+	S_MINUSDIRT3,
+	S_MINUSDIRT4,
+	S_MINUSDIRT5,
+	S_MINUSDIRT6,
+	S_MINUSDIRT7,
 
 	// Spring Shell
 	S_SSHELL_STND,
@@ -1219,6 +1291,28 @@ typedef enum state
 	S_UNIDUS_STND,
 	S_UNIDUS_RUN,
 	S_UNIDUS_BALL,
+
+	// Canarivore
+	S_CANARIVORE_LOOK,
+	S_CANARIVORE_AWAKEN1,
+	S_CANARIVORE_AWAKEN2,
+	S_CANARIVORE_AWAKEN3,
+	S_CANARIVORE_GAS1,
+	S_CANARIVORE_GAS2,
+	S_CANARIVORE_GAS3,
+	S_CANARIVORE_GAS4,
+	S_CANARIVORE_GAS5,
+	S_CANARIVORE_GASREPEAT,
+	S_CANARIVORE_CLOSE1,
+	S_CANARIVORE_CLOSE2,
+	S_CANARIVOREGAS_1,
+	S_CANARIVOREGAS_2,
+	S_CANARIVOREGAS_3,
+	S_CANARIVOREGAS_4,
+	S_CANARIVOREGAS_5,
+	S_CANARIVOREGAS_6,
+	S_CANARIVOREGAS_7,
+	S_CANARIVOREGAS_8,
 
 	// Boss Explosion
 	S_BOSSEXPLODE,
@@ -1441,6 +1535,96 @@ typedef enum state
 	// Boss 4 jet flame
 	S_JETFLAME1,
 	S_JETFLAME2,
+
+	// Boss 5
+	S_FANG_IDLE1,
+	S_FANG_IDLE2,
+	S_FANG_IDLE3,
+	S_FANG_IDLE4,
+	S_FANG_IDLE5,
+	S_FANG_IDLE6,
+	S_FANG_IDLE7,
+	S_FANG_IDLE8,
+	S_FANG_PAIN1,
+	S_FANG_PAIN2,
+	S_FANG_PATHINGSTART1,
+	S_FANG_PATHINGSTART2,
+	S_FANG_PATHING,
+	S_FANG_BOUNCE1,
+	S_FANG_BOUNCE2,
+	S_FANG_BOUNCE3,
+	S_FANG_BOUNCE4,
+	S_FANG_FALL1,
+	S_FANG_FALL2,
+	S_FANG_CHECKPATH1,
+	S_FANG_CHECKPATH2,
+	S_FANG_PATHINGCONT1,
+	S_FANG_PATHINGCONT2,
+	S_FANG_PATHINGCONT3,
+	S_FANG_SKID1,
+	S_FANG_SKID2,
+	S_FANG_SKID3,
+	S_FANG_CHOOSEATTACK,
+	S_FANG_FIRESTART1,
+	S_FANG_FIRESTART2,
+	S_FANG_FIRE1,
+	S_FANG_FIRE2,
+	S_FANG_FIRE3,
+	S_FANG_FIRE4,
+	S_FANG_FIREREPEAT,
+	S_FANG_LOBSHOT1,
+	S_FANG_LOBSHOT2,
+	S_FANG_WAIT1,
+	S_FANG_WAIT2,
+	S_FANG_WALLHIT,
+	S_FANG_PINCHPATHINGSTART1,
+	S_FANG_PINCHPATHINGSTART2,
+	S_FANG_PINCHPATHING,
+	S_FANG_PINCHBOUNCE1,
+	S_FANG_PINCHBOUNCE2,
+	S_FANG_PINCHBOUNCE3,
+	S_FANG_PINCHBOUNCE4,
+	S_FANG_PINCHFALL1,
+	S_FANG_PINCHFALL2,
+	S_FANG_PINCHSKID1,
+	S_FANG_PINCHSKID2,
+	S_FANG_PINCHLOBSHOT1,
+	S_FANG_PINCHLOBSHOT2,
+	S_FANG_PINCHLOBSHOT3,
+	S_FANG_PINCHLOBSHOT4,
+	S_FANG_DIE1,
+	S_FANG_DIE2,
+	S_FANG_DIE3,
+	S_FANG_DIE4,
+	S_FANG_DIE5,
+	S_FANG_DIE6,
+	S_FANG_DIE7,
+	S_FANG_DIE8,
+	S_FANG_FLEEPATHING1,
+	S_FANG_FLEEPATHING2,
+	S_FANG_FLEEBOUNCE1,
+	S_FANG_FLEEBOUNCE2,
+	S_FANG_KO,
+
+	S_FBOMB1,
+	S_FBOMB2,
+	S_FBOMB_EXPL1,
+	S_FBOMB_EXPL2,
+	S_FBOMB_EXPL3,
+	S_FBOMB_EXPL4,
+	S_FBOMB_EXPL5,
+	S_FBOMB_EXPL6,
+	S_TNTDUST_1,
+	S_TNTDUST_2,
+	S_TNTDUST_3,
+	S_TNTDUST_4,
+	S_TNTDUST_5,
+	S_TNTDUST_6,
+	S_TNTDUST_7,
+	S_TNTDUST_8,
+	S_FSGNA,
+	S_FSGNB,
+	S_FSGNC,
 
 	// Black Eggman (Boss 7)
 	S_BLACKEGG_STND,
@@ -2306,6 +2490,95 @@ typedef enum state
 	S_CACTI2,
 	S_CACTI3,
 	S_CACTI4,
+	S_CACTI5,
+	S_CACTI6,
+	S_CACTI7,
+	S_CACTI8,
+	S_CACTI9,
+
+	// Warning signs sprites
+	S_ARIDSIGN_CAUTION,
+	S_ARIDSIGN_CACTI,
+	S_ARIDSIGN_SHARPTURN,
+
+	// Oil lamp
+	S_OILLAMP,
+	S_OILLAMPFLARE,
+
+	// TNT barrel
+	S_TNTBARREL_STND1,
+	S_TNTBARREL_EXPL1,
+	S_TNTBARREL_EXPL2,
+	S_TNTBARREL_EXPL3,
+	S_TNTBARREL_EXPL4,
+	S_TNTBARREL_EXPL5,
+	S_TNTBARREL_EXPL6,
+	S_TNTBARREL_FLYING,
+
+	// TNT proximity shell
+	S_PROXIMITY_TNT,
+	S_PROXIMITY_TNT_TRIGGER1,
+	S_PROXIMITY_TNT_TRIGGER2,
+	S_PROXIMITY_TNT_TRIGGER3,
+	S_PROXIMITY_TNT_TRIGGER4,
+	S_PROXIMITY_TNT_TRIGGER5,
+	S_PROXIMITY_TNT_TRIGGER6,
+	S_PROXIMITY_TNT_TRIGGER7,
+	S_PROXIMITY_TNT_TRIGGER8,
+	S_PROXIMITY_TNT_TRIGGER9,
+	S_PROXIMITY_TNT_TRIGGER10,
+	S_PROXIMITY_TNT_TRIGGER11,
+	S_PROXIMITY_TNT_TRIGGER12,
+	S_PROXIMITY_TNT_TRIGGER13,
+	S_PROXIMITY_TNT_TRIGGER14,
+	S_PROXIMITY_TNT_TRIGGER15,
+	S_PROXIMITY_TNT_TRIGGER16,
+	S_PROXIMITY_TNT_TRIGGER17,
+	S_PROXIMITY_TNT_TRIGGER18,
+	S_PROXIMITY_TNT_TRIGGER19,
+	S_PROXIMITY_TNT_TRIGGER20,
+	S_PROXIMITY_TNT_TRIGGER21,
+	S_PROXIMITY_TNT_TRIGGER22,
+	S_PROXIMITY_TNT_TRIGGER23,
+
+	// Dust devil
+	S_DUSTDEVIL,
+	S_DUSTLAYER1,
+	S_DUSTLAYER2,
+	S_DUSTLAYER3,
+	S_DUSTLAYER4,
+	S_DUSTLAYER5,
+	S_ARIDDUST1,
+	S_ARIDDUST2,
+	S_ARIDDUST3,
+
+	// Minecart
+	S_MINECART_IDLE,
+	S_MINECART_DTH1,
+	S_MINECARTEND,
+	S_MINECARTSEG_FRONT,
+	S_MINECARTSEG_BACK,
+	S_MINECARTSEG_LEFT,
+	S_MINECARTSEG_RIGHT,
+	S_MINECARTSIDEMARK1,
+	S_MINECARTSIDEMARK2,
+	S_MINECARTSPARK,
+
+	// Saloon door
+	S_SALOONDOOR,
+	S_SALOONDOORTHINKER,
+
+	// Train cameo
+	S_TRAINCAMEOSPAWNER_1,
+	S_TRAINCAMEOSPAWNER_2,
+	S_TRAINCAMEOSPAWNER_3,
+	S_TRAINCAMEOSPAWNER_4,
+	S_TRAINCAMEOSPAWNER_5,
+	S_TRAINPUFFMAKER,
+
+	// Train
+	S_TRAINDUST,
+	S_TRAINSTEAM,
 
 	// Flame jet
 	S_FLAMEJETSTND,
@@ -3344,8 +3617,8 @@ typedef enum state
 	S_TOAD,
 
 	// Nights-specific stuff
-	S_NIGHTSDRONE1,
-	S_NIGHTSDRONE2,
+	S_NIGHTSDRONE_MAN1,
+	S_NIGHTSDRONE_MAN2,
 	S_NIGHTSDRONE_SPARKLING1,
 	S_NIGHTSDRONE_SPARKLING2,
 	S_NIGHTSDRONE_SPARKLING3,
@@ -3362,10 +3635,10 @@ typedef enum state
 	S_NIGHTSDRONE_SPARKLING14,
 	S_NIGHTSDRONE_SPARKLING15,
 	S_NIGHTSDRONE_SPARKLING16,
-	S_NIGHTSGOAL1,
-	S_NIGHTSGOAL2,
-	S_NIGHTSGOAL3,
-	S_NIGHTSGOAL4,
+	S_NIGHTSDRONE_GOAL1,
+	S_NIGHTSDRONE_GOAL2,
+	S_NIGHTSDRONE_GOAL3,
+	S_NIGHTSDRONE_GOAL4,
 
 	S_NIGHTSPARKLE1,
 	S_NIGHTSPARKLE2,
@@ -3629,6 +3902,8 @@ typedef enum state
 	S_DUST3,
 	S_DUST4,
 
+	S_WOODDEBRIS,
+
 	S_ROCKSPAWN,
 
 	S_ROCKCRUMBLEA,
@@ -3712,11 +3987,16 @@ typedef enum mobj_type
 	MT_EGGGUARD, // Egg Guard
 	MT_EGGSHIELD, // Egg Guard's shield
 	MT_GSNAPPER, // Green Snapper
+	MT_SNAPPER_LEG, // Green Snapper leg
+	MT_SNAPPER_HEAD, // Green Snapper head
 	MT_MINUS, // Minus
+	MT_MINUSDIRT, // Minus dirt
 	MT_SPRINGSHELL, // Spring Shell
 	MT_YELLOWSHELL, // Spring Shell (yellow)
 	MT_UNIDUS, // Unidus
 	MT_UNIBALL, // Unidus Ball
+	MT_CANARIVORE, // Canarivore
+	MT_CANARIVORE_GAS, // Canarivore gas
 
 	// Generic Boss Items
 	MT_BOSSEXPLODE,
@@ -3751,6 +4031,14 @@ typedef enum mobj_type
 	MT_EGGMOBILE4,
 	MT_EGGMOBILE4_MACE,
 	MT_JETFLAME,
+
+	// Boss 5
+	MT_FANG,
+	MT_FBOMB,
+	MT_TNTDUST, // also used by barrel
+	MT_FSGNA,
+	MT_FSGNB,
+	MT_FANGWAYPOINT,
 
 	// Black Eggman (Boss 7)
 	MT_BLACKEGGMAN,
@@ -3999,6 +4287,34 @@ typedef enum mobj_type
 	MT_CACTI2,
 	MT_CACTI3,
 	MT_CACTI4,
+	MT_CACTI5, // Harmful Cactus 1
+	MT_CACTI6, // Harmful Cactus 2
+	MT_CACTI7, // Harmful Cactus 3
+	MT_CACTI8, // Harmful Cactus 4
+	MT_CACTI9, // Harmful Cactus 5
+	MT_ARIDSIGN_CAUTION, // Caution Sign
+	MT_ARIDSIGN_CACTI, // Cacti Sign
+	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
+	MT_OILLAMP,
+	MT_TNTBARREL,
+	MT_PROXIMITYTNT,
+	MT_DUSTDEVIL,
+	MT_DUSTLAYER,
+	MT_ARIDDUST,
+	MT_MINECART,
+	MT_MINECARTSEG,
+	MT_MINECARTSPAWNER,
+	MT_MINECARTEND,
+	MT_MINECARTENDSOLID,
+	MT_MINECARTSIDEMARK,
+	MT_MINECARTSPARK,
+	MT_SALOONDOOR,
+	MT_SALOONDOORTHINKER,
+	MT_TRAINCAMEOSPAWNER,
+	MT_TRAINSEG,
+	MT_TRAINDUSTSPAWNER,
+	MT_TRAINSTEAMSPAWNER,
+	MT_MINECARTSWITCHPOINT,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,
@@ -4256,7 +4572,9 @@ typedef enum mobj_type
 	MT_AXISTRANSFER,
 	MT_AXISTRANSFERLINE,
 	MT_NIGHTSDRONE,
-	MT_NIGHTSGOAL,
+	MT_NIGHTSDRONE_MAN,
+	MT_NIGHTSDRONE_SPARKLING,
+	MT_NIGHTSDRONE_GOAL,
 	MT_NIGHTSPARKLE,
 	MT_NIGHTSLOOPHELPER,
 	MT_NIGHTSBUMPER, // NiGHTS Bumper
@@ -4273,6 +4591,7 @@ typedef enum mobj_type
 	MT_NIGHTSEXTRATIME,
 	MT_NIGHTSLINKFREEZE,
 	MT_EGGCAPSULE,
+	MT_IDEYAANCHOR,
 	MT_NIGHTOPIANHELPER, // the actual helper object that orbits you
 	MT_PIAN, // decorative singing friend
 	MT_SHLEEP, // almost-decorative sleeping enemy
@@ -4318,6 +4637,7 @@ typedef enum mobj_type
 	MT_EXPLODE, // Robot Explosion
 	MT_UWEXPLODE, // Underwater Explosion
 	MT_DUST,
+	MT_WOODDEBRIS,
 	MT_ROCKSPAWNER,
 	MT_FALLINGROCK,
 	MT_ROCKCRUMBLE1,

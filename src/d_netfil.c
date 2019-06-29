@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -87,7 +87,7 @@ static filetran_t transfer[MAXNETNODES];
 // Receiver structure
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
-char downloaddir[256] = "DOWNLOAD";
+char downloaddir[512] = "DOWNLOAD";
 
 #ifdef CLIENT_LOADINGSCREEN
 // for cl loading screen
@@ -324,10 +324,6 @@ INT32 CL_CheckFiles(void)
 	INT32 ret = 1;
 	size_t packetsize = 0;
 	size_t filestoget = 0;
-	serverinfo_pak *dummycheck = NULL;
-
-	// Shut the compiler up.
-	(void)dummycheck;
 
 //	if (M_CheckParm("-nofiles"))
 //		return 1;
@@ -371,8 +367,7 @@ INT32 CL_CheckFiles(void)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+	packetsize = packetsizetally;
 
 	for (i = 1; i < fileneedednum; i++)
 	{
@@ -396,7 +391,7 @@ INT32 CL_CheckFiles(void)
 		packetsize += nameonlylength(fileneeded[i].filename) + 22;
 
 		if ((numwadfiles+filestoget >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		|| (packetsize > MAXFILENEEDED*sizeof(UINT8)))
 			return 3;
 
 		filestoget++;
@@ -899,10 +894,11 @@ void nameonly(char *s)
 		{
 			ns = &(s[j+1]);
 			len = strlen(ns);
-			if (false)
-				M_Memcpy(s, ns, len+1);
-			else
-				memmove(s, ns, len+1);
+#if 0
+			M_Memcpy(s, ns, len+1);
+#else
+			memmove(s, ns, len+1);
+#endif
 			return;
 		}
 }

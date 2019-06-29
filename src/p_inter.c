@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -375,44 +375,82 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		/////ENEMIES & BOSSES!!/////////////////////////////////
 		////////////////////////////////////////////////////////
 
-		if (special->type == MT_BLACKEGGMAN)
+		switch (special->type)
 		{
-			P_DamageMobj(toucher, special, special, 1, 0); // ouch
-			return;
-		}
-
-		if (special->type == MT_BIGMINE)
-		{
-			special->momx = toucher->momx/3;
-			special->momy = toucher->momy/3;
-			special->momz = toucher->momz/3;
-			toucher->momx /= -8;
-			toucher->momy /= -8;
-			toucher->momz /= -8;
-			special->flags &= ~MF_SPECIAL;
-			if (special->info->activesound)
-				S_StartSound(special, special->info->activesound);
-			P_SetTarget(&special->tracer, toucher);
-			player->homing = 0;
-			return;
-		}
-
-		if (special->type == MT_GSNAPPER && !elementalpierce
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
-		&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
-			return; // Can only hit snapper from above
-
-		if (special->type == MT_SPINCUSHION
-		&& (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0))
-		{
-			if (player->pflags & PF_BOUNCING)
+			case MT_BLACKEGGMAN:
 			{
-				toucher->momz = -toucher->momz;
-				P_DoAbilityBounce(player, false);
+				P_DamageMobj(toucher, special, special, 1, 0); // ouch
 				return;
 			}
-			else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
-				return; // Cannot hit sharp from above
+			 case MT_BIGMINE:
+			{
+				special->momx = toucher->momx/3;
+				special->momy = toucher->momy/3;
+				special->momz = toucher->momz/3;
+				toucher->momx /= -8;
+				toucher->momy /= -8;
+				toucher->momz /= -8;
+				special->flags &= ~MF_SPECIAL;
+				if (special->info->activesound)
+					S_StartSound(special, special->info->activesound);
+				P_SetTarget(&special->tracer, toucher);
+				player->homing = 0;
+				return;
+			}
+			case MT_GSNAPPER:
+				if (!elementalpierce
+				&& toucher->z < special->z + special->height
+				&& toucher->z + toucher->height > special->z
+				&& P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+					return; // Can only hit snapper from above
+				break;
+
+			case MT_SPINCUSHION:
+				if (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0)
+				{
+					if (player->pflags & PF_BOUNCING)
+					{
+						toucher->momz = -toucher->momz;
+						P_DoAbilityBounce(player, false);
+						return;
+					}
+					else if (P_DamageMobj(toucher, special, special, 1, DMG_SPIKE))
+						return; // Cannot hit sharp from above
+				}
+				break;
+			case MT_FANG:
+				if (!player->powers[pw_flashing]
+				&& !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+				&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				{
+					if ((special->state == &states[S_FANG_BOUNCE3]
+					  || special->state == &states[S_FANG_BOUNCE4]
+					  || special->state == &states[S_FANG_PINCHBOUNCE3]
+					  || special->state == &states[S_FANG_PINCHBOUNCE4])
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > 0)
+					{
+						P_DamageMobj(toucher, special, special, 1, 0);
+						P_SetTarget(&special->tracer, toucher);
+
+						if (special->state == &states[S_FANG_PINCHBOUNCE3]
+						 || special->state == &states[S_FANG_PINCHBOUNCE4])
+							P_SetMobjState(special, S_FANG_PINCHPATHINGSTART2);
+						else
+						{
+							var1 = var2 = 4;
+							A_Boss5ExtraRepeat(special);
+							P_SetMobjState(special, S_FANG_PATHINGCONT2); //S_FANG_PATHINGCONT1 if you want him to drop a bomb on the player
+						}
+						if (special->eflags & MFE_VERTICALFLIP)
+							special->z = toucher->z - special->height;
+						else
+							special->z = toucher->z + toucher->height;
+						return;
+					}
+				}
+				break;
+			default:
+				break;
 		}
 
 		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
@@ -793,28 +831,76 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_SwitchSpheresBonusMode(false);
 				if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 					P_SetTarget(&special->tracer, toucher);
+				P_SetTarget(&player->drone, special); // Mark the player as 'center into the drone'
 				P_NightserizePlayer(player, special->health); // Transform!
 				if (!spec)
 				{
-					if (toucher->tracer) // Move the ideya over to the drone!
+					if (toucher->tracer) // Move the Ideya to an anchor!
 					{
-						mobj_t *hnext = special->hnext;
-						P_SetTarget(&special->hnext, toucher->tracer);
-						P_SetTarget(&special->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
-						P_SetTarget(&special->hnext->target, special);
+						mobj_t *orbittarget = special->target ? special->target : special;
+						mobj_t *hnext = orbittarget->hnext, *anchorpoint = NULL, *anchorpoint2 = NULL;
+						mobj_t *mo2;
+						thinker_t *th;
+
+						// The player might have two Ideyas: toucher->tracer and toucher->tracer->hnext
+						// so handle their anchorpoints accordingly.
+						// scan the thinkers to find the corresponding anchorpoint
+						for (th = thinkercap.next; th != &thinkercap; th = th->next)
+						{
+							if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+								continue;
+
+							mo2 = (mobj_t *)th;
+
+							if (mo2->type == MT_IDEYAANCHOR)
+							{
+								if (mo2->health == toucher->tracer->health) // do ideya numberes match?
+									anchorpoint = mo2;
+								else if (toucher->tracer->hnext && mo2->health == toucher->tracer->hnext->health)
+									anchorpoint2 = mo2;
+
+								if ((!toucher->tracer->hnext && anchorpoint)
+									|| (toucher->tracer->hnext && anchorpoint && anchorpoint2))
+									break;
+							}
+						}
+
+						if (anchorpoint)
+						{
+							toucher->tracer->flags |= MF_GRENADEBOUNCE; // custom radius factors
+							toucher->tracer->threshold = 8 << 20; // X factor 0, Y factor 0, Z factor 8
+						}
+
+						if (anchorpoint2)
+						{
+							toucher->tracer->hnext->flags |= MF_GRENADEBOUNCE; // custom radius factors
+							toucher->tracer->hnext->threshold = 8 << 20; // X factor 0, Y factor 0, Z factor 8
+						}
+
+						P_SetTarget(&orbittarget->hnext, toucher->tracer);
+						if (!orbittarget->hnext->hnext)
+							P_SetTarget(&orbittarget->hnext->hnext, hnext); // Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo.
+						else
+							P_SetTarget(&orbittarget->hnext->hnext->target, anchorpoint2 ? anchorpoint2 : orbittarget);
+						P_SetTarget(&orbittarget->hnext->target, anchorpoint ? anchorpoint : orbittarget);
 						P_SetTarget(&toucher->tracer, NULL);
+
 						if (hnext)
 						{
-							special->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
-							if (special->hnext->extravalue1 > hnext->extravalue1)
-								special->hnext->extravalue1 -= (72*ANG1)/special->hnext->extravalue1;
+							orbittarget->hnext->extravalue1 = (angle_t)(hnext->extravalue1 - 72*ANG1);
+							if (orbittarget->hnext->extravalue1 > hnext->extravalue1)
+								orbittarget->hnext->extravalue1 -= (72*ANG1)/orbittarget->hnext->extravalue1;
 						}
 					}
 					if (player->exiting) // ...then move it back?
 					{
-						mobj_t *hnext = special;
+						mobj_t *hnext = special->target ? special->target : special; // goalpost
 						while ((hnext = hnext->hnext))
+						{
+							hnext->flags &= ~MF_GRENADEBOUNCE;
+							hnext->threshold = 0;
 							P_SetTarget(&hnext->target, toucher);
+						}
 					}
 					return;
 				}
@@ -961,8 +1047,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
-			if (toucher->tracer)
-				return; // Don't have multiple ideya
+			if (toucher->tracer && toucher->tracer->health > 0)
+				return; // Don't have multiple ideya, unless it's the first one given (health = 0)
 
 			if (player->mare != special->threshold) // wrong mare
 				return;
@@ -1273,7 +1359,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->bot)
 					return;
 
-				junk.tag = 649;
+				junk.tag = LE_AXE;
 				EV_DoElevator(&junk, bridgeFall, false);
 
 				// scan the remaining thinkers to find koopa
@@ -1283,11 +1369,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						continue;
 
 					mo2 = (mobj_t *)th;
-					if (mo2->type == MT_KOOPA)
-					{
-						mo2->momz = 5*FRACUNIT;
-						break;
-					}
+
+					if (mo2->type != MT_KOOPA)
+						continue;
+
+					mo2->momz = 5*FRACUNIT;
+					break;
 				}
 			}
 			break;
@@ -1613,6 +1700,74 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 
+		case MT_CANARIVORE_GAS:
+			// if player and gas touch, attach gas to player (overriding any gas that already attached) and apply slowdown effect
+			special->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
+			P_UnsetThingPosition(special);
+			special->x = toucher->x - toucher->momx/2;
+			special->y = toucher->y - toucher->momy/2;
+			special->z = toucher->z - toucher->momz/2;
+			P_SetThingPosition(special);
+			toucher->momx = FixedMul(toucher->momx, 50*FRACUNIT/51);
+			toucher->momy = FixedMul(toucher->momy, 50*FRACUNIT/51);
+			special->momx = toucher->momx;
+			special->momy = toucher->momy;
+			special->momz = toucher->momz;
+			return;
+
+		case MT_MINECARTSPAWNER:
+			if (!special->fuse || player->powers[pw_carry] != CR_MINECART)
+			{
+				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+				P_SetTarget(&mcart->target, toucher);
+				mcart->angle = toucher->angle = player->drawangle = special->angle;
+				mcart->friction = FRACUNIT;
+
+				P_ResetPlayer(player);
+				player->pflags |= PF_JUMPDOWN;
+				player->powers[pw_carry] = CR_MINECART;
+				toucher->player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetTarget(&toucher->tracer, mcart);
+				toucher->momx = toucher->momy = toucher->momz = 0;
+
+				special->fuse = 3*TICRATE;
+				special->flags2 |= MF2_DONTDRAW;
+			}
+			return;
+
+		case MT_MINECARTEND:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				fixed_t maxz = max(toucher->z, special->z + 35*special->scale);
+
+				toucher->momx = toucher->tracer->momx/2;
+				toucher->momy = toucher->tracer->momy/2;
+				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
+				P_ResetPlayer(player);
+				player->pflags &= ~PF_APPLYAUTOBRAKE;
+				P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+				P_SetTarget(&toucher->tracer->target, NULL);
+				P_KillMobj(toucher->tracer, toucher, special, 0);
+				P_SetTarget(&toucher->tracer, NULL);
+				player->powers[pw_carry] = CR_NONE;
+				P_UnsetThingPosition(toucher);
+				toucher->x = special->x;
+				toucher->y = special->y;
+				toucher->z = maxz;
+				P_SetThingPosition(toucher);
+			}
+			return;
+
+		case MT_MINECARTSWITCHPOINT:
+			if (player->powers[pw_carry] == CR_MINECART && toucher->tracer && !P_MobjWasRemoved(toucher->tracer) && toucher->tracer->health)
+			{
+				mobjflag2_t destambush = special->flags2 & MF2_AMBUSH;
+				angle_t angdiff = toucher->tracer->angle - special->angle;
+				if (angdiff > ANGLE_90 && angdiff < ANGLE_270)
+					destambush ^= MF2_AMBUSH;
+				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
+			}
+			return;
 		default: // SOC or script pickup
 			if (player->bot)
 				return;
@@ -2460,6 +2615,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->fuse = TICRATE*2;
 			break;
 
+		case MT_MINECART:
+			A_Scream(target);
+			target->momx = target->momy = target->momz = 0;
+			if (target->target && target->target->health)
+				P_KillMobj(target->target, target, source, 0);
+			break;
+
 		case MT_PLAYER:
 			{
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
@@ -2708,8 +2870,18 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
 		{
-			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+#ifdef _WIN32
+				// win32 MIDI volume hack means we cannot fade down the music
+				&& S_MusicType() != MU_MID
+#endif
+			)
+			{
+				S_FadeMusic(0, 10*MUSICRATE);
+				S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+			}
+			else
+				S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 		}
 	}
 }
@@ -2864,6 +3036,9 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 
 	P_ResetPlayer(player);
 
+	if (!player->spectator)
+		player->mo->flags2 &= ~MF2_DONTDRAW;
+
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
 	if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
@@ -2892,7 +3067,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 }
 
-static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	fixed_t fallbackspeed;
 	angle_t ang;
@@ -3089,8 +3264,13 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (oldnightstime > 10*TICRATE
 		&& player->nightstime < 10*TICRATE)
 	{
-		//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		{
+			S_FadeMusic(0, 10*MUSICRATE);
+			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+		}
+		else
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 	}
 }
 
@@ -3286,12 +3466,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return true;
 			}
 		}
-		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] // ignore bouncing & such in invulnerability
-			|| player->powers[pw_super])
+		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
 		{
-			if (force || (inflictor && (inflictor->flags & MF_MISSILE)
-				&& (inflictor->flags2 & MF2_SUPERFIRE)
-				&& player->powers[pw_super]))
+			if (force
+			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
 #ifdef HAVE_BLUA
 				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
@@ -3299,8 +3477,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
-			else
-				return false;
+			return false;
 		}
 #ifdef HAVE_BLUA
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
@@ -3489,9 +3666,6 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		}
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mo->momz *= -1;
-
-		if (P_IsObjectOnGround(player->mo))
-			player->powers[pw_carry] = CR_NONE;
 	}
 
 	player->losstime += 10*TICRATE;
