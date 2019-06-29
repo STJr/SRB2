@@ -65,18 +65,18 @@ jingle_t jingleinfo[NUMJINGLES] = {
 	{""        , false}, // JT_NONE
 	{""        , false}, // JT_OTHER
 	{""        , false}, // JT_MASTER
-	{"xtlife"    , false},
-	{"shoes"  ,  true},
-	{"invinc"    , false},
-	{"minvnc"   , false},
-	{"drown"  , false},
-	{"supers"  ,  true},
-	{"gmover"  , false},
-	{"drown"  , false},  // JT_NIGHTSTIMEOUT
-	{"drown"  , false}   // JT_SSTIMEOUT
-	// {"lclear"  , false},
-	// {"racent"  ,  true},
-	// {"contsc"  ,  true}
+	{"_1up"    , false},
+	{"_shoes"  ,  true},
+	{"_inv"    , false},
+	{"_minv"   , false},
+	{"_drown"  , false},
+	{"_super"  ,  true},
+	{"_gover"  , false},
+	{"_ntime"  , false},  // JT_NIGHTSTIMEOUT
+	{"_drown"  , false}   // JT_SSTIMEOUT
+	// {"_clear"  , false},
+	// {"_inter"  ,  true},
+	// {"_conti"  ,  true}
 };
 
 //
