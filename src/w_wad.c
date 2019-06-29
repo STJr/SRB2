@@ -149,9 +149,15 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 {
 	FILE *handle;
 
-	strncpy(filenamebuf, *filename, MAX_WADPATH);
-	filenamebuf[MAX_WADPATH - 1] = '\0';
-	*filename = filenamebuf;
+	// Officially, strncpy should not have overlapping buffers, since W_VerifyNMUSlumps is called after this, and it
+	// changes filename to point at filenamebuf, it would technically be doing that. I doubt any issue will occur since
+	// they point to the same location, but it's better to be safe and this is a simple change.
+	if (filenamebuf != *filename)
+	{
+		strncpy(filenamebuf, *filename, MAX_WADPATH);
+		filenamebuf[MAX_WADPATH - 1] = '\0';
+		*filename = filenamebuf;
+	}
 
 	// open wad file
 	if ((handle = fopen(*filename, "rb")) == NULL)
@@ -334,7 +340,6 @@ static restype_t ResourceFileDetect (const char* filename)
 static lumpinfo_t* ResGetLumpsStandalone (FILE* handle, UINT16* numlumps, const char* lumpname)
 {
 	lumpinfo_t* lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
-	lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
 	lumpinfo->position = 0;
 	fseek(handle, 0, SEEK_END);
 	lumpinfo->size = ftell(handle);
@@ -566,14 +571,14 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		{
 			CONS_Alert(CONS_ERROR, "Failed to read central directory (%s)\n", strerror(ferror(handle)));
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			return NULL;
 		}
 		if (memcmp(zentry->signature, pat_central, 4))
 		{
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			return NULL;
 		}
 
@@ -586,7 +591,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		{
 			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", strerror(ferror(handle)));
 			Z_Free(lumpinfo);
-			free(zentry);
+			free(zentries);
 			free(fullname);
 			return NULL;
 		}
@@ -627,6 +632,8 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			break;
 		}
 	}
+
+	free(zentries);
 
 	*nlmp = numlumps;
 	return lumpinfo;
@@ -1327,8 +1334,9 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 				{
 					size = 0;
 					zerr(zErr);
-					(void)inflateEnd(&strm);
 				}
+
+				(void)inflateEnd(&strm);
 			}
 			else
 			{
@@ -1717,15 +1725,27 @@ int W_VerifyNMUSlumps(const char *filename)
 	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
 	{
-		{"D_", 2},
-		{"O_", 2},
-		{"DS", 2},
-		{"ENDOOM", 6},
-		{"PLAYPAL", 7},
-		{"COLORMAP", 8},
-		{"PAL", 3},
-		{"CLM", 3},
-		{"TRANS", 5},
+		{"D_", 2}, // MIDI music
+		{"O_", 2}, // Digital music
+		{"DS", 2}, // Sound effects
+
+		{"ENDOOM", 6}, // ENDOOM text lump
+
+		{"PLAYPAL", 7}, // Palette changes
+		{"PAL", 3}, // Palette changes
+		{"COLORMAP", 8}, // Colormap changes
+		{"CLM", 3}, // Colormap changes
+		{"TRANS", 5}, // Translucency map changes
+
+		{"LTFNT", 5}, // Level title font changes
+		{"TTL", 3}, // Act number changes
+		{"STCFN", 5}, // Console font changes
+		{"TNYFN", 5}, // Tiny console font changes
+		{"SBO", 3}, // Acceptable HUD changes (Score Time Rings)
+		{"RRINGS", 6}, // Rings HUD (not named as SBO)
+		{"YB_", 3}, // Intermission graphics, goes with the above
+		{"M_", 2}, // As does menu stuff
+
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

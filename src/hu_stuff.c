@@ -1072,7 +1072,9 @@ static INT16 typelines = 1; // number of drawfill lines we need when drawing the
 //
 boolean HU_Responder(event_t *ev)
 {
+#ifndef NONET
 	INT32 c=0;
+#endif
 
 	if (ev->type != ev_keydown)
 		return false;
@@ -1099,19 +1101,9 @@ boolean HU_Responder(event_t *ev)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
+#ifndef NONET
 	c = (INT32)ev->data1;
 
-	// capslock (now handled outside of chat on so that it works everytime......)
-	if (c && c == KEY_CAPSLOCK) // it's a toggle.
-	{
-		if (capslock)
-			capslock = false;
-		else
-			capslock = true;
-		return true;
-	}
-
-#ifndef NONET
 	if (!chat_on)
 	{
 		// enter chat mode
@@ -1952,19 +1944,17 @@ static void HU_DrawCEcho(void)
 
 static void HU_drawGametype(void)
 {
-	INT32 i = 0;
+	const char *strvalue = NULL;
 
-	for (i = 0; gametype_cons_t[i].strvalue; i++)
-	{
-		if (gametype_cons_t[i].value == gametype)
-		{
-			if (splitscreen)
-				V_DrawString(4, 184, 0, gametype_cons_t[i].strvalue);
-			else
-				V_DrawString(4, 192, 0, gametype_cons_t[i].strvalue);
-			return;
-		}
-	}
+	if (gametype < 0 || gametype >= NUMGAMETYPES)
+		return; // not a valid gametype???
+
+	strvalue = Gametype_Names[gametype];
+
+	if (splitscreen)
+		V_DrawString(4, 184, 0, strvalue);
+	else
+		V_DrawString(4, 192, 0, strvalue);
 }
 
 //

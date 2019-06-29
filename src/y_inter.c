@@ -696,7 +696,19 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+		{
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("lclear", false); // don't loop it
+		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -757,7 +769,17 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("lclear", false); // don't loop it
 			tallydonetic = 0;
 		}
 
