@@ -7332,6 +7332,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_ROCKCRUMBLE14:
 			case MT_ROCKCRUMBLE15:
 			case MT_ROCKCRUMBLE16:
+			case MT_WOODDEBRIS:
 				if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
 					&& mobj->state != &states[mobj->info->deathstate])
 				{
@@ -8523,7 +8524,6 @@ void P_MobjThinker(mobj_t *mobj)
 					momz = abs(mobj->momz);
 					if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
 						P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
-					mobj->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
 					mobj->flags2 |= MF2_AMBUSH;
 					break;
 				}

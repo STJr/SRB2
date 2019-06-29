@@ -1702,6 +1702,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		case MT_CANARIVORE_GAS:
 			// if player and gas touch, attach gas to player (overriding any gas that already attached) and apply slowdown effect
+			special->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
 			P_UnsetThingPosition(special);
 			special->x = toucher->x - toucher->momx/2;
 			special->y = toucher->y - toucher->momy/2;
