@@ -13015,7 +13015,14 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
 			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
 			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
+			P_UnsetThingPosition(nearby);
+			if (sector_list)
+			{
+				P_DelSeclist(sector_list);
+				sector_list = NULL;
+			}
 			nearby->flags = MF_NOBLOCKMAP|MF_MISSILE;
+			P_SetThingPosition(nearby);
 			P_SetMobjState(nearby, nearby->info->missilestate);
 		}
 	}
@@ -13059,8 +13066,14 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
-
+	P_UnsetThingPosition(actor);
+	if (sector_list)
+	{
+		P_DelSeclist(sector_list);
+		sector_list = NULL;
+	}
 	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	P_SetThingPosition(actor);
 	actor->flags2 = MF2_EXPLOSION;
 	if (actor->info->deathsound)
 		S_StartSound(actor, actor->info->deathsound);
