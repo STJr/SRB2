@@ -9624,7 +9624,7 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i, j, mrand;
+	INT32 i /*, j*/, mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
