@@ -1112,6 +1112,32 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_OPENMPT
+	size_t probesize;
+	int result;
+
+	if (len > openmpt_probe_file_header_get_recommended_size())
+		probesize = openmpt_probe_file_header_get_recommended_size();
+	else
+		probesize = len;
+
+	result = openmpt_probe_file_header(OPENMPT_PROBE_FILE_HEADER_FLAGS_DEFAULT, data, probesize, len, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	if (result == OPENMPT_PROBE_FILE_HEADER_RESULT_SUCCESS) // We only cared if it succeeded, continue on if not.
+	{
+		openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		if (!openmpt_mhandle)
+		{
+			mod_err = openmpt_module_error_get_last(openmpt_mhandle);
+			mod_err_str = openmpt_error_string(mod_err);
+			CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
+			return false;
+		}
+		else
+			return true;
+	}
+#endif	
+
 	rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
@@ -1123,39 +1149,6 @@ boolean I_LoadSong(char *data, size_t len)
 		return false;
 	}
 
-#ifdef HAVE_OPENMPT
-	switch(Mix_GetMusicType(music))
-	{
-		case MUS_MODPLUG:
-		case MUS_MOD:
-			openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-			if (!openmpt_mhandle)
-			{
-				mod_err = openmpt_module_error_get_last(openmpt_mhandle);
-				mod_err_str = openmpt_error_string(mod_err);
-				CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
-				Mix_FreeMusic(music);
-				music = NULL;
-				return false;
-			}
-			else
-			{
-				Mix_FreeMusic(music);
-				music = NULL;
-				return true;
-			}
-			break;
-		case MUS_WAV:
-		case MUS_MID:
-		case MUS_OGG:
-		case MUS_MP3:
-		case MUS_FLAC:
-			Mix_HookMusic(NULL, NULL);
-			break;
-		default:
-			break;
-	}
-#endif
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
