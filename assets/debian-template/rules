@@ -1,0 +1,129 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+#############################################################################
+#
+#     GNU Make Debian package makefile for SRB2-data
+#
+# Copyright (C) 1998-2011 by Callum Dickinson
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+# GNU General Public License for more details.
+#
+# This file most likely will not need to be modified to make
+# branches of SRB2 capable of making their own Debian packages,
+# instead look at the /debian/control file for configuration.
+#
+#############################################################################
+
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(DATADIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# user/group of to-be-installed files
+ROOT_USER  := 0
+ROOT_GROUP := 0
+
+MKDIR	:= mkdir -p
+INSTALL := install -o $(ROOT_USER) -g $(ROOT_GROUP) -m 644
+MV	:= mv
+RM	:= rm -rf
+DIR	:= $(shell pwd)
+
+PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
+ARCHIVEPATH := ${ASSET_ARCHIVE_PATH}
+ARCHIVEOPTIONALPATH := ${ASSET_ARCHIVE_OPTIONAL_PATH}
+GETOPTIONALFILES := ${ASSET_FILES_OPTIONAL_GET}
+
+DATADIR	:= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
+RESOURCEDIR := .
+STAGINGDIR := $(RESOURCEDIR)/installer
+WGET	:= wget -P $(RESOURCEDIR) -c -nc
+
+build:
+	$(MKDIR) $(DIR)/debian/tmp/$(DATADIR)
+	> $(DIR)/debian/source/include-binaries
+	# Copy data files to their install locations, and add data files to include-binaries
+	if [ ! -d $(STAGINGDIR) ]; then \
+		mkdir -p "$(STAGINGDIR)"; \
+		$(WGET) $(ARCHIVEPATH); \
+		7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEPATH))" -aos; \
+		if [ "$(GETOPTIONALFILES)" = "1" ]; then \
+			$(WGET) $(ARCHIVEOPTIONALPATH); \
+			7z x "$(RESOURCEDIR)/$(shell basename $(ARCHIVEOPTIONALPATH))" -aos; \
+		fi; \
+	fi
+	# Install asset directory and add asset file to include-binaries
+	cp -vr "$(STAGINGDIR)/." "$(DIR)/debian/tmp/$(DATADIR)"
+	find "$(STAGINGDIR)" >> $(DIR)/debian/source/include-binaries
+
+
+binary-indep:
+	# Generate install folder file
+	echo $(DATADIR) > $(DIR)/debian/$(PACKAGE).install
+
+binary-arch:
+	# only here to kill Lintian warning
+	echo "no need to do any arch-specific stuff"
+
+binary: binary-indep
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	# dh_installdocs
+	# dh_installexamples
+	dh_install --sourcedir=$(DIR)/debian/tmp
+	# dh_installmenu
+	# dh_installdebconf
+	# dh_installlogrotate
+	# dh_installemacsen
+	# dh_installpam
+	# dh_installmime
+	# dh_python
+	# dh_installinit
+	# dh_installcron
+	# dh_installinfo
+	# dh_installman
+	# dh_link
+	dh_compress
+	dh_fixperms
+	# dh_perl
+	# dh_makeshlibs
+	dh_installdeb
+	# -dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+clean:
+	$(RM) $(DIR)/debian/tmp/*; \
+	$(RM) $(DIR)/debian/$(PACKAGE).install; \
+	$(RM) $(DIR)/debian/files; \
+
+clean-all: clean
+	$(RM) $(RESOURCEDIR)/*.wad; \
+	$(RM) $(RESOURCEDIR)/*.dta; \
+	$(RM) $(RESOURCEDIR)/*.plr; \
+	$(RM) $(RESOURCEDIR)/*.wpn; \
+	$(RM) $(RESOURCEDIR)/*.srb; \
+	$(RM) $(RESOURCEDIR)/*.dll; \
+	$(RM) $(RESOURCEDIR)/*.txt; \
+	$(RM) $(DIR)/debian/source/include-binaries; \
+
+.PHONY: all clean binary binary-arch binary-indep build

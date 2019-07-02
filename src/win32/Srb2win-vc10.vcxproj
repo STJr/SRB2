@@ -91,6 +91,7 @@
     <Import Project="..\..\libs\FMOD.props" />
     <Import Project="..\..\libs\zlib.props" />
     <Import Project="..\..\libs\libpng.props" />
+    <Import Project="..\..\libs\libgme.props" />
     <Import Project="SRB2Win.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

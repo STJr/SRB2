@@ -15,6 +15,7 @@
 #include "g_game.h"
 #include "r_local.h"
 #include "r_state.h"
+#include "r_portal.h" // Add seg portals
 
 #include "r_splats.h"
 #include "p_local.h" // camera
@@ -26,11 +27,11 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
-boolean portalline; // is curline a portal seg?
 
 // very ugly realloc() of drawsegs at run-time, I upped it to 512
 // instead of 256.. and someone managed to send me a level with
 // 896 drawsegs! So too bad here's a limit removal a-la-Boom
+drawseg_t *curdrawsegs = NULL; /**< This is used to handle multiple lists for masked drawsegs. */
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
 
@@ -459,7 +460,7 @@ static void R_AddLine(seg_t *line)
 				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
 			if (line2 >= 0) // found it!
 			{
-				R_AddPortal(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
+				Portal_Add2Lines(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
 				//return; // Don't fill in that space now!
 				goto clipsolid;
 			}
@@ -1375,14 +1376,6 @@ void R_RenderBSPNode(INT32 bspnum)
 			return;
 
 		bspnum = bsp->children[side^1];
-	}
-
-	// PORTAL CULLING
-	if (portalcullsector) {
-		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
-		if (sect != portalcullsector)
-			return;
-		portalcullsector = NULL;
 	}
 
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);

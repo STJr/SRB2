@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
+# DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
+# Version change is fine.
 project(SRB2
-	VERSION 2.1.23
+	VERSION 2.1.24
 	LANGUAGES C)
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
@@ -92,8 +94,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Set EXE names so the assets CMakeLists can refer to its target
-set(SRB2_SDL2_EXE_NAME srb2)
-set(SRB2_WIN_EXE_NAME srb2dd)
+set(SRB2_SDL2_EXE_NAME srb2 CACHE STRING "Executable binary output name")
+set(SRB2_WIN_EXE_NAME srb2dd CACHE STRING "Executable binary output name for DirectDraw build")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
@@ -122,8 +124,8 @@ if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	set(CPACK_GENERATOR "DragNDrop")
 endif()
 
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2")
-set(CPACK_PACKAGE_VENDOR "Sonic Team Jr.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2" CACHE STRING "Program name for display purposes")
+set(CPACK_PACKAGE_VENDOR "Sonic Team Jr." CACHE STRING "Vendor name for display purposes")
 #set(CPACK_PACKAGE_DESCRIPTION_FILE )
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR ${SRB2_VERSION_MAJOR})
