@@ -6322,7 +6322,7 @@ void P_InitSpecials(void)
 
 static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
 {
-	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
+	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
 	{
 		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
@@ -6332,7 +6332,7 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 		sector->spawn_flr_yoffs = sector->floor_yoffs;
 	}
 
-	if (!(master->flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
+	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
 	{
 		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
@@ -6463,27 +6463,21 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment with arbitrary skin setups...
+		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment in netgames...
 		{
 			// set line specials to 0 here too, same reason as above
 			if (netgame || multiplayer)
 			{
-				// future: nonet flag?
+				if ((lines[i].flags & ML_NONET) == ML_NONET)
+				{
+					lines[i].special = 0;
+					continue;
+				}
 			}
 			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
 			{
 				lines[i].special = 0;
 				continue;
-			}
-			else
-			{
-				if ((players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
-				|| (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
-				|| (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX)))
-				{
-					lines[i].special = 0;
-					continue;
-				}
 			}
 		}
 
@@ -6530,13 +6524,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 #endif
 
 			case 7: // Flat alignment - redone by toast
-				if ((lines[i].flags & (ML_NOSONIC|ML_NOTAILS)) != (ML_NOSONIC|ML_NOTAILS)) // If you can do something...
+				if ((lines[i].flags & (ML_NETONLY|ML_NONET)) != (ML_NETONLY|ML_NONET)) // If you can do something...
 				{
 					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
 					fixed_t xoffs;
 					fixed_t yoffs;
 
-					if (lines[i].flags & ML_NOKNUX) // Set offset through x and y texture offsets if NOKNUX flag is set
+					if (lines[i].flags & ML_EFFECT6) // Set offset through x and y texture offsets if ML_EFFECT6 flag is set
 					{
 						xoffs = sides[lines[i].sidenum[0]].textureoffset;
 						yoffs = sides[lines[i].sidenum[0]].rowoffset;
@@ -9194,19 +9188,13 @@ static void P_SearchForDisableLinedefs(void)
 			// that P_InitTagLists literally just created!
 			lines[i].special = 0;
 
-			// Ability flags can disable disable linedefs now, lol
 			if (netgame || multiplayer)
 			{
-				// future: nonet flag?
+				if ((lines[i].flags & ML_NONET) == ML_NONET)
+					continue;
 			}
 			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
 				continue; // Net-only never triggers in single player
-			else if (players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
-				continue;
-			else if (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
-				continue;
-			else if (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX))
-				continue;
 
 			// Disable any linedef specials with our tag.
 			for (j = -1; (j = P_FindLineFromLineTag(&lines[i], j)) >= 0;)

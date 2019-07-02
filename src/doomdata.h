@@ -130,11 +130,9 @@ typedef struct
 #define ML_EFFECT4             512
 #define ML_EFFECT5            1024
 
-// New ones to disable lines for characters
-#define ML_NOSONIC           2048
-#define ML_NOTAILS           4096
-#define ML_NOKNUX            8192
-#define ML_NETONLY          14336 // all of the above
+#define ML_NETONLY           2048 // Apply effect only in netgames
+#define ML_NONET             4096 // Apply  effect only in single player games
+#define ML_EFFECT6           8192
 
 // Bounce off walls!
 #define ML_BOUNCY           16384
