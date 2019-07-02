@@ -2228,7 +2228,7 @@ static void P_LevelInitStuff(void)
 		}
 	}
 
-	countdown = countdown2 = 0;
+	countdown = countdown2 = exitfadestarted = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{

@@ -6559,7 +6559,7 @@ void P_RunOverlays(void)
 		{
 			angle_t viewingangle;
 
-			if (players[displayplayer].awayviewtics)
+			if (players[displayplayer].awayviewtics && players[displayplayer].awayviewmobj != NULL && !P_MobjWasRemoved(players[displayplayer].awayviewmobj))
 				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
 			else if (!camera.chase && players[displayplayer].mo)
 				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
@@ -9624,7 +9624,7 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i, mrand;
+	INT32 i /*, j*/, mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
