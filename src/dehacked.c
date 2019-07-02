@@ -6654,6 +6654,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_LOCKON1",
 	"S_LOCKON2",
+	"S_LOCKON3",
+	"S_LOCKON4",
+	"S_LOCKONINF1",
+	"S_LOCKONINF2",
+	"S_LOCKONINF3",
+	"S_LOCKONINF4",
 
 	// Tag Sign
 	"S_TTAG",
@@ -7732,6 +7738,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_DROWNNUMBERS", // Drowning Timer
 	"MT_GOTEMERALD", // Chaos Emerald (intangible)
 	"MT_LOCKON", // Target
+	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
 

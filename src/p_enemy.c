@@ -3167,8 +3167,12 @@ void A_Boss4Reverse(mobj_t *actor)
 	actor->reactiontime = 0;
 	if (actor->movedir == 1)
 		actor->movedir = 2;
-	else
+	else if (actor->movedir == 2)
 		actor->movedir = 1;
+	else if (actor->movedir == 4)
+		actor->movedir = 5;
+	else
+		actor->movedir = 4;
 }
 
 // Function: A_Boss4SpeedUp

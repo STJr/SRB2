@@ -1352,14 +1352,15 @@ state_t states[NUMSTATES] =
 	{SPR_EGGP,10,  2, {NULL},           0,          0, S_EGGMOBILE4_STND},   // S_EGGMOBILE4_RATK6
 	{SPR_EGGP, 0, 20, {A_Boss4Raise},   sfx_doord1, 0, S_EGGMOBILE4_RAISE2}, // S_EGGMOBILE4_RAISE1
 	{SPR_EGGP,13, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE3}, // S_EGGMOBILE4_RAISE2
-	{SPR_EGGP,14, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE4}, // S_EGGMOBILE4_RAISE3
+	{SPR_EGGP,14, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE2}, // S_EGGMOBILE4_RAISE3
 	{SPR_EGGP,13, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE5}, // S_EGGMOBILE4_RAISE4
 	{SPR_EGGP,14, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE6}, // S_EGGMOBILE4_RAISE5
 	{SPR_EGGP,13, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE7}, // S_EGGMOBILE4_RAISE6
 	{SPR_EGGP,14, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE8}, // S_EGGMOBILE4_RAISE7
 	{SPR_EGGP,13, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE9}, // S_EGGMOBILE4_RAISE8
 	{SPR_EGGP,14, 10, {NULL},           0,          0, S_EGGMOBILE4_RAISE10},// S_EGGMOBILE4_RAISE9
-	{SPR_EGGP,13, 10, {NULL},           0,          0, S_EGGMOBILE4_STND},   // S_EGGMOBILE4_RAISE10
+	// rename eventually
+	{SPR_EGGP,11,  0, {A_Boss4Reverse}, sfx_mswing, 0, S_EGGMOBILE4_PAIN},   // S_EGGMOBILE4_RAISE10
 	{SPR_EGGP,11, 24, {A_Pain},         0,          0, S_EGGMOBILE4_STND},   // S_EGGMOBILE4_PAIN
 	{SPR_EGGP,12,  8, {A_Fall},         0,          0, S_EGGMOBILE4_DIE2},   // S_EGGMOBILE4_DIE1
 	{SPR_EGGP,12,  8, {A_BossScream},   0,          0, S_EGGMOBILE4_DIE3},   // S_EGGMOBILE4_DIE2
@@ -3298,6 +3299,13 @@ state_t states[NUMSTATES] =
 
 	{SPR_LCKN,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON1
 	{SPR_LCKN, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON2
+	{SPR_LCKN, 2|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON3
+	{SPR_LCKN, 3|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON4
+
+	{SPR_LCKN,   FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF1
+	{SPR_LCKN, 1|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF2
+	{SPR_LCKN, 2|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF3
+	{SPR_LCKN, 3|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF4
 
 	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG
 
@@ -5577,7 +5585,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,          // seesound
 		0,                 // reactiontime
 		sfx_None,          // attacksound
-		S_EGGMOBILE4_PAIN, // painstate
+		S_EGGMOBILE4_RAISE10, // painstate
 		0,                 // painchance
 		sfx_dmpain,        // painsound
 		S_EGGMOBILE4_LATK1,// meleestate
@@ -16505,6 +16513,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	{           // MT_LOCKON
 		-1,             // doomednum
 		S_LOCKON1,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		111,            // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LOCKONINF
+		1126,           // doomednum
+		S_INVISIBLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound

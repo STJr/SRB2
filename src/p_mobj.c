@@ -4660,9 +4660,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 }
 
 // Move Boss4's sectors by delta.
-static boolean P_Boss4MoveCage(fixed_t delta)
+static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 {
-	const UINT16 tag = 65534;
+	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
 	INT32 snum;
 	sector_t *sector;
 	for (snum = sectors[tag%numsectors].firsttag; snum != -1; snum = sector->nexttag)
@@ -4682,7 +4682,7 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
+	fixed_t dist, bz = mobj->watertop+(8<<FRACBITS);
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 172*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 124*FRACUNIT, --s)
@@ -4692,26 +4692,44 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 }
 
 // Pull them closer.
-static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
+static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
-	while ((base = base->tracer))
+	fixed_t originx, originy, workx, worky, dx, dy, bz = mobj->watertop+(8<<FRACBITS);
+
+	if (mobj->spawnpoint)
 	{
-		for (seg = base, dist = 112*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 132*FRACUNIT, --s)
+		originx = mobj->spawnpoint->x << FRACBITS;
+		originy = mobj->spawnpoint->y << FRACBITS;
+	}
+	else
+	{
+		originx = mobj->x;
+		originy = mobj->y;
+	}
+
+	dz /= 9;
+	
+	while ((base = base->tracer)) // there are 10 per spoke, remember that
+	{
+		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
+		dy = (originy + P_ReturnThrustY(mobj, angle, (9*132)<<FRACBITS) - mobj->y)/9;
+		workx = mobj->x + P_ReturnThrustX(mobj, angle, (112)<<FRACBITS);
+		worky = mobj->y + P_ReturnThrustY(mobj, angle, (112)<<FRACBITS);
+		for (seg = base, s = 9; seg; seg = seg->hnext, --s)
 		{
-			seg->z = bz + FixedMul(fz, FixedDiv(s<<FRACBITS, 9<<FRACBITS));
-			P_TryMove(seg, mobj->x + P_ReturnThrustX(mobj, angle, dist), mobj->y + P_ReturnThrustY(mobj, angle, dist), true);
+			seg->z = bz + (dz*(9-s));
+			P_TryMove(seg, workx + (dx*s), worky + (dy*s), true);
 		}
 		angle += ANGLE_MAX/3;
 	}
 }
 
 // Destroy cage FOFs.
-static void P_Boss4DestroyCage(void)
+static void P_Boss4DestroyCage(mobj_t *mobj)
 {
-	const UINT16 tag = 65534;
+	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
 	INT32 snum, next;
 	size_t a;
 	sector_t *sector, *rsec;
@@ -4776,7 +4794,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 {
 	if ((statenum_t)(mobj->state-states) == mobj->info->spawnstate)
 	{
-		if (mobj->health > mobj->info->damage || mobj->movedir == 4)
+		if (mobj->flags2 & MF2_FRET && (mobj->health > mobj->info->damage || mobj->movedir == 4))
 			mobj->flags2 &= ~MF2_FRET;
 		mobj->reactiontime = 0; // Drop the cage immediately.
 	}
@@ -4786,7 +4804,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	{
 		if (mobj->tracer) // need to clean up!
 		{
-			P_Boss4DestroyCage(); // Just in case pinch phase was skipped.
+			P_Boss4DestroyCage(mobj); // Just in case pinch phase was skipped.
 			P_Boss4PopSpikeballs(mobj);
 		}
 		return;
@@ -4813,6 +4831,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj_t *seg, *base = mobj;
 			// First frame init, spawn all the things.
 			mobj->watertop = mobj->z;
+			mobj->flags2 |= MF2_STRONGBOX; // don't perform the linedef executor at start
 			z = mobj->z + mobj->height/2 - mobjinfo[MT_EGGMOBILE4_MACE].height/2;
 			for (arm = 0; arm <3 ; arm++)
 			{
@@ -4829,10 +4848,10 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			}
 			// Move the cage up to the sky.
 			mobj->movecount = 800*FRACUNIT;
-			if (!P_Boss4MoveCage(mobj->movecount))
+			if (!P_Boss4MoveCage(mobj, mobj->movecount))
 			{
 				mobj->movecount = 0;
-				mobj->threshold = 3*TICRATE;
+				//mobj->threshold = 3*TICRATE;
 				mobj->extravalue1 = 1;
 				mobj->movedir++; // We don't have a cage, just continue.
 			}
@@ -4846,13 +4865,18 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj->movecount += mobj->threshold;
 			if (mobj->movecount < 0)
 				mobj->movecount = 0;
-			P_Boss4MoveCage(mobj->movecount - oldz);
+			P_Boss4MoveCage(mobj, mobj->movecount - oldz);
 			P_Boss4MoveSpikeballs(mobj, 0, mobj->movecount);
 			if (mobj->movecount == 0)
 			{
-				mobj->threshold = 3*TICRATE;
+				//mobj->threshold = 3*TICRATE;
 				mobj->extravalue1 = 1;
-				P_LinedefExecute(LE_BOSS4DROP, mobj, NULL);
+				//P_LinedefExecute(LE_BOSS4DROP + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL); -- oh no you don't
+				S_StartSound(NULL, sfx_doorc2);
+				quake.intensity = 10<<FRACBITS;
+				quake.radius = 512<<FRACBITS;
+				quake.time = 20;
+				quake.epicenter = NULL;
 				mobj->movedir++; // Initialization complete, next phase!
 			}
 		}
@@ -4875,10 +4899,10 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj->momz = 0;
 			mobj->movedir++;
 		}
-		mobj->movecount += 400<<(FRACBITS>>1);
+		mobj->movecount -= 210<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
 		z = mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
-		if (z < 0) // We haven't risen high enough to pull the spikeballs along yet
+		if (z < (8<<FRACBITS)) // We haven't risen high enough to pull the spikeballs along yet
 			P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0); // So don't pull the spikeballs along yet.
 		else
 			P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), z);
@@ -4886,12 +4910,19 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	}
 	// Pinch phase!
 	case 4:
+	case 5:
 	{
+		fixed_t movespeed = 420<<(FRACBITS>>1);
+		movespeed += (420*(mobj->info->damage-mobj->health)<<(FRACBITS>>1));
+		if (mobj->movedir == 4)
+			mobj->movecount -= movespeed;
+		else
+			mobj->movecount += movespeed;
+
 		if (mobj->z < (mobj->watertop + ((512+128*(mobj->info->damage-mobj->health))<<FRACBITS)))
 			mobj->momz = 8*FRACUNIT;
 		else
 			mobj->momz = 0;
-		mobj->movecount += (800+800*(mobj->info->damage-mobj->health))<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
 		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
 
@@ -4917,10 +4948,20 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	if (mobj->reactiontime == 1)
 	{
 		fixed_t oldz = mobj->movefactor;
-		mobj->movefactor += 8*FRACUNIT;
-		if (mobj->movefactor > 128*FRACUNIT)
+		if (mobj->movefactor < 128*FRACUNIT)
+		{
+			mobj->movefactor += 8*FRACUNIT;
+			P_Boss4MoveCage(mobj, mobj->movefactor - oldz);
+			// 5 -> 2.5 second timer
+			mobj->threshold = 5*TICRATE-(TICRATE/2)*(mobj->info->spawnhealth-mobj->health);
+			if (mobj->threshold < 1)
+				mobj->threshold = 1;
+		}
+		else if (mobj->movefactor > 128*FRACUNIT)
+		{
 			mobj->movefactor = 128*FRACUNIT;
-		P_Boss4MoveCage(mobj->movefactor - oldz);
+			P_Boss4MoveCage(mobj, mobj->movefactor - oldz);
+		}
 	}
 	// Drop the cage!
 	else if (mobj->movefactor)
@@ -4929,24 +4970,32 @@ static void P_Boss4Thinker(mobj_t *mobj)
 		mobj->movefactor -= 4*FRACUNIT;
 		if (mobj->movefactor < 0)
 			mobj->movefactor = 0;
-		P_Boss4MoveCage(mobj->movefactor - oldz);
-		if (!mobj->movefactor)
+		P_Boss4MoveCage(mobj, mobj->movefactor - oldz);
+		if (mobj->flags2 & MF2_STRONGBOX)
+			mobj->flags2 &= ~MF2_STRONGBOX;
+		else if (!mobj->movefactor)
 		{
 			if (mobj->health <= mobj->info->damage)
 			{ // Proceed to pinch phase!
-				P_Boss4DestroyCage();
+				P_Boss4DestroyCage(mobj);
 				mobj->movedir = 3;
-				P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+				P_LinedefExecute(LE_PINCHPHASE + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
 				return;
 			}
-			P_LinedefExecute(LE_BOSS4DROP, mobj, NULL);
+			P_LinedefExecute(LE_BOSS4DROP - (mobj->info->spawnhealth-mobj->health) + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
+			S_StartSound(NULL, sfx_doorc2);
+			quake.intensity = 10<<FRACBITS;
+			quake.radius = 512<<FRACBITS;
+			quake.time = 20;
+			quake.epicenter = NULL;
 		}
 	}
 
 	{
 		fixed_t movespeed = 170<<(FRACBITS>>1);
-		if (mobj->reactiontime == 2)
-			movespeed *= 3;
+		movespeed += ((50*(mobj->info->spawnhealth-mobj->health))<<(FRACBITS>>1));
+		if (mobj->movefactor)
+			movespeed /= 2;
 		if (mobj->movedir == 2)
 			mobj->movecount -= movespeed;
 		else
@@ -4956,37 +5005,14 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->movefactor);
 
 	// Check for attacks, always tick the timer even while animating!!
-	if (!(mobj->flags2 & MF2_FRET) // but pause for pain so we don't interrupt pinch phase, eep!
-	&& mobj->threshold-- == 0)
+	if (mobj->threshold)
 	{
-		// 5 -> 2.5 second timer
-		mobj->threshold = 5*TICRATE-(TICRATE/2)*(mobj->info->spawnhealth-mobj->health);
-		if (mobj->threshold < 1)
-			mobj->threshold = 1;
-
-		if (mobj->extravalue1-- == 0)
-		{
-			P_SetMobjState(mobj, mobj->info->raisestate);
-			mobj->extravalue1 = 3;
-		}
-		else
+		if (!(mobj->flags2 & MF2_FRET) && !(--mobj->threshold)) // but pause for pain so we don't interrupt pinch phase, eep!
 		{
 			if (mobj->reactiontime == 1) // Cage is raised?
-				mobj->reactiontime = 0; // Drop it!
-			switch(P_RandomKey(10))
 			{
-				// Telegraph Right (Speed Up!!)
-				case 1:
-				case 3:
-				case 4:
-				case 5:
-				case 6:
-					P_SetMobjState(mobj, mobj->info->missilestate);
-					break;
-				// Telegraph Left (Reverse Direction)
-				default:
-					P_SetMobjState(mobj, mobj->info->meleestate);
-					break;
+				P_SetMobjState(mobj, mobj->info->spawnstate);
+				mobj->reactiontime = 0; // Drop it!
 			}
 		}
 	}
@@ -4998,13 +5024,13 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	// Map allows us to get killed despite cage being down?
 	if (mobj->health <= mobj->info->damage)
 	{ // Proceed to pinch phase!
-		P_Boss4DestroyCage();
+		P_Boss4DestroyCage(mobj);
 		// spawn jet's flame now you're flying upwards
 		// tracer is already used, so if this ever gets reached again we've got problems
 		var1 = 3;
 		A_BossJetFume(mobj);
 		mobj->movedir = 3;
-		P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+		P_LinedefExecute(LE_PINCHPHASE + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
 		return;
 	}
 
@@ -7183,6 +7209,17 @@ void P_MobjThinker(mobj_t *mobj)
 				else
 					mobj->z = mobj->target->z - FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale) - mobj->height;
 				break;
+			case MT_LOCKONINF:
+				if (!(mobj->flags2 & MF2_STRONGBOX))
+				{
+					mobj->threshold = mobj->z;
+					mobj->flags2 |= MF2_STRONGBOX;
+				}
+				if (!(mobj->eflags & MFE_VERTICALFLIP))
+					mobj->z = mobj->threshold + FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->scale);
+				else
+					mobj->z = mobj->threshold - FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->scale);
+				break;
 			case MT_DROWNNUMBERS:
 				if (!mobj->target)
 				{
@@ -9183,6 +9220,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	{
 		case MT_ALTVIEWMAN:
 			if (titlemapinaction) mobj->flags &= ~MF_NOTHINK;
+			break;
+		case MT_LOCKONINF:
+			P_SetScale(mobj, (mobj->destscale = 3*mobj->scale));
 			break;
 		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
 			mobj->fuse = mobj->info->painchance;
