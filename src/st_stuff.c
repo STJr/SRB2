@@ -2303,10 +2303,8 @@ static void ST_doItemFinderIconsAndSound(void)
 		return;
 
 	// Scan thinkers to find emblem mobj with these ids
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == MT_EMBLEM)

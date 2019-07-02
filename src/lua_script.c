@@ -420,9 +420,9 @@ void LUA_InvalidateLevel(void)
 	ffloor_t *rover = NULL;
 	if (!gL)
 		return;
-
-	for (th = thinkercap.next; th && th != &thinkercap; th = th->next)
-		LUA_InvalidateUserdata(th);
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		for (th = thlist[i].next; th && th != &thlist[i]; th = th->next)
+			LUA_InvalidateUserdata(th);
 
 	LUA_InvalidateMapthings();
 
@@ -1127,13 +1127,15 @@ void LUA_Archive(void)
 		ArchiveExtVars(&players[i], "player");
 	}
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-		{
-			// archive function will determine when to skip mobjs,
-			// and write mobjnum in otherwise.
-			ArchiveExtVars(th, "mobj");
-		}
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		for (th = thlist[i].next; th != &thlist[i]; th = th->next)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+			{
+				// archive function will determine when to skip mobjs,
+				// and write mobjnum in otherwise.
+				ArchiveExtVars(th, "mobj");
+			}
+
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
 	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
@@ -1161,9 +1163,10 @@ void LUA_UnArchive(void)
 
 	do {
 		mobjnum = READUINT32(save_p); // read a mobjnum
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker
-			&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
+		for (i = 0; i < NUM_THINKERLISTS; i++)
+			for (th = thlist[i].next; th != &thlist[i]; th = th->next)
+				if (th->function.acp1 == (actionf_p1)P_MobjThinker
+				&& ((mobj_t *)th)->mobjnum == mobjnum) // find matching mobj
 				UnArchiveExtVars(th); // apply variables
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
