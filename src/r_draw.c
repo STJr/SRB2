@@ -528,12 +528,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		|| color == SKINCOLOR_NONE)
 	{
 		if (skinnum == TC_ALLWHITE)
-			memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8**));
+			memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
 		else if (skinnum == TC_BLINK && color != SKINCOLOR_NONE)
-		{
-			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
-				dest_colormap[i] = Color_Index[color-1][3];
-		}
+			memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
 		else
 		{
 			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)

@@ -723,7 +723,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
-		if (vis->mobj->type == MT_CYBRAKDEMON)
+		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			dc_translation = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
