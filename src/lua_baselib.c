@@ -1235,8 +1235,8 @@ static int lib_pHomingAttack(lua_State *L)
 	INLEVEL
 	if (!source || !enemy)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, P_HomingAttack(source, enemy));
-	return 1;
+	P_HomingAttack(source, enemy);
+	return 0;
 }
 
 static int lib_pSuperReady(lua_State *L)

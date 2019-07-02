@@ -725,27 +725,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// vectorise metal - done in a special case as at this point neither has the right flags for touching
-	if (thing->type == MT_METALSONIC_BATTLE
-	&& (tmthing->flags & MF_MISSILE)
-	&& tmthing->target != thing
-	&& thing->state == &states[thing->info->spawnstate])
-	{
-		blockdist = thing->radius + tmthing->radius;
-
-		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
-			return true; // didn't hit it
-
-		if (tmthing->z > thing->z + thing->height)
-			return true; // overhead
-		if (tmthing->z + tmthing->height < thing->z)
-			return true; // underneath
-
-		thing->flags2 |= MF2_CLASSICPUSH;
-
-		return true;
-	}
-
 	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE|MF_SPRING)))
 		return true;
 

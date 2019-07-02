@@ -1747,23 +1747,20 @@ state_t states[NUMSTATES] =
 	{SPR_METL,  9,  2, {NULL}, 0, 0, S_METALSONIC_RUN1},  // S_METALSONIC_RUN4
 
 	{SPR_METL,  4, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_FLOAT
-	{SPR_METL, 12|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_METALSONIC_STUN}, // S_METALSONIC_VECTOR
-	{SPR_METL, 11, -1, {NULL},         0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_STUN
-	{SPR_METL, 13, 20, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_RAISE
+	{SPR_METL, 12, -1, {NULL},         0, 0, S_METALSONIC_STUN},  // S_METALSONIC_VECTOR
+	{SPR_METL,  0, -1, {NULL},         0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_STUN
+	{SPR_METL, 13, 40, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_RAISE
 	{SPR_METL, 14, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_GATHER
 	{SPR_METL, 15, -1, {NULL},         0, 0, S_METALSONIC_BOUNCE},// S_METALSONIC_DASH
 	{SPR_METL, 14, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_BOUNCE
 	{SPR_METL, 16, -1, {NULL},         0, 0, S_NULL},             // S_METALSONIC_BADBOUNCE
 	{SPR_METL, 13, -1, {NULL},         0, 0, S_METALSONIC_GATHER},// S_METALSONIC_SHOOT
 	{SPR_METL, 11, 40, {A_Pain},       0, 0, S_METALSONIC_FLOAT}, // S_METALSONIC_PAIN
-	{SPR_METL, 13,  8, {A_Fall},       0, 0, S_METALSONIC_DEATH2},// S_METALSONIC_DEATH1
-	{SPR_METL, 13,  8, {A_BossScream}, 0, 0, S_METALSONIC_DEATH3},// S_METALSONIC_DEATH2
-	{SPR_METL, 13, 0, {A_Repeat}, 11, S_METALSONIC_DEATH2, S_METALSONIC_DEATH4}, // S_METALSONIC_DEATH3
-	{SPR_METL, 13, -1, {A_BossDeath},  0, 0, S_NULL},             // S_METALSONIC_DEATH4
-	{SPR_METL, 11,  4, {NULL},         0, 0, S_METALSONIC_FLEE2}, // S_METALSONIC_FLEE1
-	{SPR_METL, 11,  4, {A_BossScream}, 0, 0, S_METALSONIC_FLEE3}, // S_METALSONIC_FLEE2
-	{SPR_METL, 11,  4, {NULL},         0, 0, S_METALSONIC_FLEE4}, // S_METALSONIC_FLEE3
-	{SPR_METL, 11,  4, {NULL},         0, 0, S_METALSONIC_FLEE1}, // S_METALSONIC_FLEE4
+	{SPR_METL, 11, -1, {A_BossDeath},  0, 0, S_NULL},             // S_METALSONIC_DEATH
+	{SPR_METL,  3,  4, {NULL},         0, 0, S_METALSONIC_FLEE2}, // S_METALSONIC_FLEE1
+	{SPR_METL,  4,  4, {A_BossScream}, 0, 0, S_METALSONIC_FLEE3}, // S_METALSONIC_FLEE2
+	{SPR_METL,  5,  4, {NULL},         0, 0, S_METALSONIC_FLEE4}, // S_METALSONIC_FLEE3
+	{SPR_METL,  4,  4, {NULL},         0, 0, S_METALSONIC_FLEE1}, // S_METALSONIC_FLEE4
 
 	{SPR_MSCF, FF_FULLBRIGHT|FF_TRANS30| 0, 1, {NULL}, 0, 0, S_MSSHIELD_F2},  // S_MSSHIELD_F1
 	{SPR_MSCF, FF_FULLBRIGHT|FF_TRANS30| 1, 1, {NULL}, 0, 0, S_MSSHIELD_F3},  // S_MSSHIELD_F2
@@ -6262,13 +6259,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_METALSONIC_DASH,  // seestate
 		sfx_s3k54,          // seesound
 		0,                  // reactiontime
-		sfx_bechrg,         // attacksound
+		sfx_trpowr,         // attacksound
 		S_METALSONIC_PAIN,  // painstate
 		S_METALSONIC_VECTOR,// painchance
 		sfx_dmpain,         // painsound
 		S_METALSONIC_BADBOUNCE, // meleestate
 		S_METALSONIC_SHOOT, // missilestate
-		S_METALSONIC_DEATH1,// deathstate
+		S_METALSONIC_DEATH, // deathstate
 		S_METALSONIC_FLEE1, // xdeathstate
 		sfx_s3k6e,          // deathsound
 		MT_ENERGYBALL,      // speed
@@ -6300,7 +6297,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		32*FRACUNIT,    // radius
-		52*FRACUNIT,    // height
+		64*FRACUNIT,    // height
 		0,              // display offset
 		0,              // mass
 		0,              // damage
@@ -9143,7 +9140,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ENERGYBALL1,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_bexpld,     // seesound
+		sfx_s3k54,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
