@@ -146,6 +146,7 @@ extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor
 
 extern tic_t countdowntimer;
 extern boolean countdowntimeup;
+extern boolean exitfadestarted;
 
 typedef struct
 {
@@ -313,6 +314,7 @@ typedef struct
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+	UINT16 startrings;      ///< Number of rings players start with.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
@@ -555,6 +557,8 @@ extern boolean precache;
 // wipegamestate can be set to -1
 //  to force a wipe on the next draw
 extern gamestate_t wipegamestate;
+extern INT16 wipetypepre;
+extern INT16 wipetypepost;
 
 // debug flag to cancel adaptiveness
 extern boolean singletics;

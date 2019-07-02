@@ -945,7 +945,7 @@ void P_ResetPlayer(player_t *player)
 {
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 
-	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_NIGHTSFALL || player->powers[pw_carry] == CR_BRAKGOOP))
+	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_NIGHTSFALL || player->powers[pw_carry] == CR_BRAKGOOP || player->powers[pw_carry] == CR_MINECART))
 		player->powers[pw_carry] = CR_NONE;
 
 	player->secondjump = 0;
@@ -9693,6 +9693,414 @@ void P_DoPityCheck(player_t *player)
 	}
 }
 
+static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *nz)
+{
+	sector_t *sec = R_PointInSubsector(x, y)->sector;
+
+	if ((sec->ceilingheight - sec->floorheight) < 64*FRACUNIT)
+		return NULL;
+
+	if (sec->ffloors)
+	{
+		ffloor_t *rover;
+		for (rover = sec->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			*nz = *rover->t_slope ? P_GetZAt(*rover->t_slope, x, y) : *rover->topheight;
+			if (abs(z - *nz) <= 56*FRACUNIT)
+			{
+				sec = &sectors[rover->secnum];
+				return sec;
+			}
+		}
+
+	}
+
+	*nz = sec->f_slope ? P_GetZAt(sec->f_slope, x, y) : sec->floorheight;
+	if (abs(z - *nz) > 56*FRACUNIT)
+		return NULL;
+
+	return sec;
+}
+
+static INT32 P_GetMinecartSpecialLine(sector_t *sec)
+{
+	INT32 line = -1;
+
+	if (!sec)
+		return line;
+
+	if (sec->tag != 0)
+		line = P_FindSpecialLineFromTag(16, sec->tag, -1);
+
+	// Also try for lines facing the sector itself, with tag 0.
+	{
+		UINT32 i;
+		for (i = 0; i < sec->linecount; i++)
+		{
+			line_t *li = sec->lines[i];
+			if (li->tag == 0 && li->special == 16 && li->frontsector == sec)
+				line = li - lines;
+		}
+	}
+
+	return line;
+}
+
+// Get an axis of a certain ID number
+static mobj_t *P_GetAxis(INT32 num)
+{
+	thinker_t *th;
+	mobj_t *mobj;
+
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		mobj = (mobj_t *)th;
+
+		// NiGHTS axes spawn before anything else. If this mobj doesn't have MF2_AXIS, it means we reached the axes' end.
+		if (!(mobj->flags2 & MF2_AXIS))
+			break;
+
+		// Skip if this axis isn't the one we want.
+		if (mobj->health != num)
+			continue;
+
+		return mobj;
+	}
+	CONS_Alert(CONS_WARNING, "P_GetAxis: Track segment %d is missing!\n", num);
+	return NULL;
+}
+
+// Auxiliary function. For a given position and axis, it calculates the nearest "valid" snap-on position.
+static void P_GetAxisPosition(fixed_t x, fixed_t y, mobj_t *amo, fixed_t *newx, fixed_t *newy, angle_t *targetangle, angle_t *grind)
+{
+	fixed_t ax = amo->x;
+	fixed_t ay = amo->y;
+	angle_t ang;
+	angle_t gr = 0;
+
+	if (amo->type == MT_AXISTRANSFERLINE)
+	{
+		ang = amo->angle;
+		// Extra security for cardinal directions.
+		if (ang == ANGLE_90 || ang == ANGLE_270) // Vertical lines
+			x = ax;
+		else if (ang == 0 || ang == ANGLE_180) // Horizontal lines
+			y = ay;
+		else // Diagonal lines
+		{
+			fixed_t distance = R_PointToDist2(ax, ay, x, y);
+			angle_t fad = ((R_PointToAngle2(ax, ay, x, y) - ang) >> ANGLETOFINESHIFT) & FINEMASK;
+			fixed_t cosine = FINECOSINE(fad);
+			angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+			distance = FixedMul(distance, cosine);
+			x = ax + FixedMul(distance, FINECOSINE(fa));
+			y = ay + FixedMul(distance, FINESINE(fa));
+		}
+	}
+	else // Keep minecart to circle
+	{
+		fixed_t rad = amo->radius;
+		fixed_t distfactor = FixedDiv(rad, R_PointToDist2(ax, ay, x, y));
+
+		gr = R_PointToAngle2(ax, ay, x, y);
+		ang = gr + ANGLE_90;
+		x = ax + FixedMul(x - ax, distfactor);
+		y = ay + FixedMul(y - ay, distfactor);
+	}
+
+	*newx = x;
+	*newy = y;
+	*targetangle = ang;
+	*grind = gr;
+}
+
+static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
+{
+	angle_t fa = (mo->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FixedMul(FINECOSINE(fa), mo->radius);
+	fixed_t s = FixedMul(FINESINE(fa), mo->radius);
+	mobj_t *spark;
+	SINT8 b1 = (leveltime & 1) ? 1 : -1;
+	SINT8 b2 = (leveltime & 2) ? 1 : -1;
+	fixed_t r1 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t r2 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t r3 = FRACUNIT*P_RandomRange(-1, 1);
+	fixed_t fm = (maindir >> ANGLETOFINESHIFT) & FINEMASK;
+
+	spark = P_SpawnMobj(mo->x - b2*s + b1*c, mo->y + b2*c + b1*s, mo->z, MT_MINECARTSPARK);
+	spark->momx = mo->momx + r1 + 8*FINECOSINE(fm);
+	spark->momy = mo->momy + r2 + 8*FINESINE(fm);
+	spark->momz = mo->momz + r3;
+
+	P_Thrust(spark, R_PointToAngle2(mo->x, mo->y, spark->x, spark->y), 8*FRACUNIT);
+	P_SetScale(spark, FRACUNIT/4);
+	spark->destscale = spark->scale;
+	spark->fuse = TICRATE/3;
+}
+
+// Performs a proximity check on a given direction looking for rails.
+static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t targetangle, fixed_t xcom, fixed_t ycom)
+{
+	INT16 interval = 16;
+	INT16 fwooffset = FixedHypot(mobj->momx, mobj->momy) >> FRACBITS;
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	UINT8 i;
+
+	for (i = 4; i <= 10; i++)
+	{
+		fixed_t nz;
+		INT32 lline;
+
+		x += interval*xcom*i + fwooffset*c*i;
+		y += interval*ycom*i + fwooffset*s*i;
+
+		lline = P_GetMinecartSpecialLine(P_GetMinecartSector(x, y, z, &nz));
+		if (lline != -1)
+		{
+			fixed_t nx, ny;
+			angle_t nang, dummy, angdiff;
+			mobj_t *mark;
+			mobj_t *snax = P_GetAxis(sides[lines[lline].sidenum[0]].textureoffset >> FRACBITS);
+			if (!snax)
+				return NULL;
+			P_GetAxisPosition(x, y, snax, &nx, &ny, &nang, &dummy);
+			angdiff = ((nang - targetangle) + ANG10/2) & ~ANGLE_180;
+			//Axes must be directly parallel or antiparallel, give or take 5 degrees.
+			if (angdiff < ANG10)
+			{
+				mark = P_SpawnMobj(nx, ny, nz, mobj->info->raisestate);
+				return mark;
+			}
+		}
+	}
+	return NULL;
+}
+
+static void P_ParabolicMove(mobj_t *mo, fixed_t x, fixed_t y, fixed_t z, fixed_t g, fixed_t speed)
+{
+	fixed_t dx = x - mo->x;
+	fixed_t dy = y - mo->y;
+	fixed_t dz = z - mo->z;
+	fixed_t dh = P_AproxDistance(dx, dy);
+	fixed_t c = FixedDiv(dx, dh);
+	fixed_t s = FixedDiv(dy, dh);
+	fixed_t fixConst = FixedDiv(speed, g);
+
+	mo->momx = FixedMul(c, speed);
+	mo->momy = FixedMul(s, speed);
+	mo->momz = FixedDiv(dh, 2*fixConst) + FixedDiv(dz, FixedDiv(dh, fixConst/2));
+}
+
+static void P_MinecartThink(player_t *player)
+{
+	mobj_t *minecart = player->mo->tracer;
+	angle_t fa;
+
+	if (!minecart || P_MobjWasRemoved(minecart) || !minecart->health)
+	{
+		// Minecart died on you, so kill yourself.
+		P_KillMobj(player->mo, NULL, NULL, 0);
+		return;
+	}
+
+	//Limit player's angle to a cone.
+#define MINECARTCONEMAX FixedAngle(20*FRACUNIT)
+	{
+		angle_t angdiff = player->mo->angle - minecart->angle;
+		if (angdiff < ANGLE_180 && angdiff > MINECARTCONEMAX)
+			player->mo->angle = minecart->angle + MINECARTCONEMAX;
+		else if (angdiff > ANGLE_180 && angdiff < InvAngle(MINECARTCONEMAX))
+			player->mo->angle = minecart->angle - MINECARTCONEMAX;
+
+		if (angdiff + minecart->angle != player->mo->angle && (!demoplayback || P_AnalogMove(player)))
+		{
+			if (player == &players[consoleplayer])
+				localangle = player->mo->angle;
+			else if (player == &players[secondarydisplayplayer])
+				localangle2 = player->mo->angle;
+		}
+	}
+
+	// Player holding jump?
+	if (!(player->cmd.buttons & BT_JUMP))
+		player->pflags &= ~PF_JUMPDOWN;
+
+	// Handle segments.
+	P_HandleMinecartSegments(minecart);
+
+	// Force 0 friction.
+	minecart->friction = FRACUNIT;
+
+	fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
+	{
+		P_KillMobj(minecart, NULL, NULL, 0);
+		return;
+	}
+
+	if (P_IsObjectOnGround(minecart))
+	{
+		sector_t *sec;
+		INT32 lnum;
+		fixed_t dummy;
+
+		// Just hit floor.
+		if (minecart->eflags & MFE_JUSTHITFLOOR)
+		{
+			S_StopSound(minecart);
+			S_StartSound(minecart, sfx_s3k96);
+		}
+
+		sec = P_GetMinecartSector(minecart->x, minecart->y, minecart->z, &dummy);
+
+		if (sec)
+			lnum = P_GetMinecartSpecialLine(sec);
+
+		// Update axis if the cart is standing on a rail.
+		if (sec && lnum != -1)
+		{
+			mobj_t *axis = P_GetAxis(sides[lines[lnum].sidenum[0]].textureoffset >> FRACBITS);
+			fixed_t newx, newy;
+			angle_t targetangle, grind;
+			angle_t prevangle, angdiff;
+			mobj_t *detleft = NULL;
+			mobj_t *detright = NULL;
+			mobj_t *sidelock = NULL;
+			boolean jumped = false;
+			fixed_t currentSpeed;
+
+			if (!axis)
+			{
+				P_KillMobj(minecart, NULL, NULL, 0);
+				return;
+			}
+
+			minecart->movefactor = 0;
+			P_ResetScore(player);
+			// Handle angle and position
+			P_GetAxisPosition(minecart->x, minecart->y, axis, &newx, &newy, &targetangle, &grind);
+			if (axis->type != MT_AXISTRANSFERLINE)
+				P_SpawnSparks(minecart, grind);
+			P_TryMove(minecart, newx, newy, true);
+
+			// Set angle based on target
+			prevangle = minecart->angle;
+			angdiff = targetangle - minecart->angle;
+			if (angdiff < ANGLE_90 + ANG2 || angdiff > ANGLE_270 - ANG2)
+				minecart->angle = targetangle;
+			else
+				minecart->angle = targetangle + ANGLE_180;
+			angdiff = (minecart->angle - prevangle);
+			if (angdiff && (!demoplayback || P_AnalogMove(player)))  // maintain relative angle on turns
+			{
+				player->mo->angle += angdiff;
+				if (player == &players[consoleplayer])
+					localangle += angdiff;
+				else if (player == &players[secondarydisplayplayer])
+					localangle2 += angdiff;
+			}
+
+			// Sideways detection
+			if (minecart->flags2 & MF2_AMBUSH)
+			{
+				angle_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
+				fixed_t c = FINECOSINE(fa2);
+				fixed_t s = FINESINE(fa2);
+
+				detleft = P_LookForRails(minecart, c, s, targetangle, -s, c);
+				detright = P_LookForRails(minecart, c, s, targetangle, s, -c);
+			}
+
+			// How fast are we going?
+			currentSpeed = FixedHypot(minecart->momx, minecart->momy);
+			angdiff = R_PointToAngle2(0, 0, minecart->momx, minecart->momy) - minecart->angle;
+			if (angdiff > ANGLE_90 && angdiff < ANGLE_270)
+				currentSpeed *= -1;
+
+			// Player-specific behavior.
+			if (detleft && player->cmd.sidemove < 0)
+				sidelock = detleft;
+			else if (detright && player->cmd.sidemove > 0)
+				sidelock = detright;
+
+			//if (player->cmd.buttons & BT_USE && currentSpeed > 4*FRACUNIT)
+			//	currentSpeed -= FRACUNIT/8;
+
+			// Jumping
+			if (sidelock || ((player->cmd.buttons & BT_JUMP) && !(player->pflags & PF_JUMPDOWN)))
+			{
+				player->pflags |= PF_JUMPDOWN;
+
+				if (minecart->eflags & MFE_ONGROUND)
+					minecart->eflags &= ~MFE_ONGROUND;
+				minecart->z += P_MobjFlip(minecart);
+				if (sidelock)
+					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, gravity, max(currentSpeed, 10 * FRACUNIT));
+				else
+					minecart->momz = 10 * FRACUNIT;
+
+				S_StartSound(minecart, sfx_s3k51);
+				jumped = true;
+			}
+
+			if (!jumped)
+			{
+				// Natural acceleration and boosters
+				if (currentSpeed < minecart->info->speed)
+					currentSpeed += FRACUNIT/4;
+
+				if (minecart->standingslope)
+				{
+					fixed_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
+					fixed_t front = P_GetZAt(minecart->standingslope, minecart->x, minecart->y);
+					fixed_t back = P_GetZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
+
+					if (abs(front - back) < 3*FRACUNIT)
+						currentSpeed += (back - front)/3;
+				}
+
+				// Go forward at our current speed
+				P_InstaThrust(minecart, minecart->angle, currentSpeed);
+
+				// On-track ka-klong sound FX.
+				minecart->movecount += abs(currentSpeed);
+				if (minecart->movecount > 128*FRACUNIT)
+				{
+					minecart->movecount %= 128*FRACUNIT;
+					S_StartSound(minecart, minecart->info->activesound);
+				}
+			}
+		}
+		else
+		{
+			minecart->movefactor++;
+			if ((P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
+			|| (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2)) // hit a wall
+			{
+				P_KillMobj(minecart, NULL, NULL, 0);
+				return;
+			}
+		}
+	}
+
+	P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+
+	// Move player to minecart.
+	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
+	if (player->powers[pw_carry] != CR_MINECART)
+		return;
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+	P_TryMove(player->mo, player->mo->x + minecart->momx, player->mo->y + minecart->momy, true);
+
+	if (player->powers[pw_flashing] == flashingtics)
+		player->powers[pw_flashing]--;
+}
+
 //
 // P_PlayerThink
 //
@@ -9761,14 +10169,8 @@ void P_PlayerThink(player_t *player)
 	if (player->flashcount)
 		player->flashcount--;
 
-	// Re-fixed by Jimita (11-12-2018)
-	if (player->awayviewtics)
-	{
+	if (player->awayviewtics && player->awayviewtics != -1)
 		player->awayviewtics--;
-		if (!player->awayviewtics)
-			player->awayviewtics = -1;
-		// The timer might've reached zero, but we'll run the remote view camera anyway by setting it to -1.
-	}
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
@@ -9840,6 +10242,44 @@ void P_PlayerThink(player_t *player)
 
 	if (player->exiting && countdown2)
 		player->exiting = 5;
+
+	// Same check as below, just at 1 second before
+	// so we can fade music
+	if (!exitfadestarted &&
+		player->exiting > 0 && player->exiting <= 1*TICRATE &&
+		(!multiplayer || gametype == GT_COOP ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
+			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
+		(gametype == GT_RACE || gametype == GT_COMPETITION ? countdown2 == 0 : true) && // don't fade on timeout
+		player->lives > 0 && // don't fade on game over (competition)
+		P_IsLocalPlayer(player))
+	{
+		if (cv_playersforexit.value)
+		{
+			INT32 i;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+
+				if (!players[i].exiting || players[i].exiting > 1*TICRATE)
+					break;
+			}
+
+			if (i == MAXPLAYERS)
+			{
+				exitfadestarted = true;
+				S_FadeOutStopMusic(1*MUSICRATE);
+			}
+		}
+		else
+		{
+			exitfadestarted = true;
+			S_FadeOutStopMusic(1*MUSICRATE);
+		}
+	}
 
 	if (player->exiting == 2 || countdown2 == 2)
 	{
@@ -9989,6 +10429,17 @@ void P_PlayerThink(player_t *player)
 	//  for a bit after a teleport.
 	if (player->mo->reactiontime)
 		player->mo->reactiontime--;
+	else if (player->powers[pw_carry] == CR_MINECART)
+	{
+		if (!P_AnalogMove(player))
+			player->mo->angle = (cmd->angleturn << 16 /* not FRACBITS */);
+
+		ticruned++;
+		if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
+			ticmiss++;
+
+		P_MinecartThink(player);
+	}
 	else if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_ZOOMTUBE))
 	{
 		if (player->powers[pw_carry] == CR_ROPEHANG)
@@ -10050,7 +10501,15 @@ void P_PlayerThink(player_t *player)
 			switch (player->powers[pw_carry])
 			{
 				case CR_PLAYER:
-					player->drawangle = (player->mo->tracer->player ? player->mo->tracer->player->drawangle : player->mo->tracer->angle);
+					if (player->mo->tracer->player)
+					{
+						player->drawangle = player->mo->tracer->player->drawangle;
+						break;
+					}
+					/* FALLTHRU */
+				case CR_MINECART:
+				case CR_GENERIC:
+					player->drawangle = player->mo->tracer->angle;
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
@@ -10737,9 +11196,6 @@ void P_PlayerAfterThink(player_t *player)
 				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
-
-	if (player->awayviewtics < 0)
-		player->awayviewtics = 0;
 
 	// spectator invisibility and nogravity.
 	if ((netgame || multiplayer) && player->spectator)

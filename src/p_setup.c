@@ -209,6 +209,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->startrings = 0;
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
@@ -2169,7 +2170,7 @@ static void P_LevelInitStuff(void)
 	tokenbits = 0;
 	runemeraldmanager = false;
 	emeraldspawndelay = 60*TICRATE;
-	nummaprings = 0;
+	nummaprings = mapheaderinfo[gamemap-1]->startrings;
 
 	// emerald hunt
 	hunt1 = hunt2 = hunt3 = NULL;
@@ -2221,7 +2222,7 @@ static void P_LevelInitStuff(void)
 		}
 	}
 
-	countdown = countdown2 = 0;
+	countdown = countdown2 = exitfadestarted = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2670,7 +2671,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	wipegamestate = -2;
+	wipegamestate = FORCEWIPEOFF;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2714,18 +2715,27 @@ boolean P_SetupLevel(boolean skipprecip)
 		// As oddly named as this is, this handles music only.
 		// We should be fine starting it here.
 		S_Start();
+	}
 
-		// Let's fade to black here
-		// But only if we didn't do the special stage wipe
-		if (rendermode != render_none && !ranspecialwipe)
-		{
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+	// Let's fade to black here
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !ranspecialwipe)
+	{
+		F_WipeStartScreen();
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-			F_WipeEndScreen();
-			F_RunWipe(wipedefs[wipe_level_toblack], false);
-		}
+		F_WipeEndScreen();
+		// for titlemap: run a specific wipe if specified
+		// needed for exiting time attack
+		if (wipetypepre != INT16_MAX)
+			F_RunWipe(
+				(wipetypepre >= 0 && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
+				false);
+		wipetypepre = -1;
+	}
 
+	if (!titlemapinaction)
+	{
 		if (ranspecialwipe == 2)
 		{
 			pausedelay = -3; // preticker plus one
@@ -3129,7 +3139,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		savedata.lives = 0;
 	}
 
-	skyVisible = skyVisible1 = skyVisible2 = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;

@@ -15,6 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
+#include "d_clisrv.h"
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
@@ -145,6 +146,7 @@ UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
+boolean exitfadestarted = false;
 
 cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
@@ -1847,7 +1849,9 @@ boolean G_Responder(event_t *ev)
 
 		if (F_CreditResponder(ev))
 		{
-			F_StartGameEvaluation();
+			// Skip credits for everyone
+			if (!netgame || server || IsPlayerAdmin(consoleplayer))
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return true;
 		}
 	}
@@ -2020,6 +2024,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
+			F_MenuPresTicker(run);
 			break;
 
 		case GS_INTRO:
@@ -2059,6 +2064,7 @@ void G_Ticker(boolean run)
 			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
+			F_MenuPresTicker(run);
 			F_TitleScreenTicker(run);
 			break;
 
@@ -2391,6 +2397,8 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		return;
 
 	P_SpawnPlayer(playernum);
+
+	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
@@ -2837,6 +2845,10 @@ void G_ExitLevel(void)
 
 		// Remove CEcho text on round end.
 		HU_ClearCEcho();
+	}
+	else if (gamestate == GS_CREDITS)
+	{
+		F_StartGameEvaluation();
 	}
 }
 
@@ -3863,7 +3875,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	{
 		// Clear a bunch of variables
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
-		countdown = countdown2 = 0;
+		countdown = countdown2 = exitfadestarted = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{

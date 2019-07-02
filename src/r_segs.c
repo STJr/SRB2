@@ -15,6 +15,7 @@
 #include "r_local.h"
 #include "r_sky.h"
 
+#include "r_portal.h"
 #include "r_splats.h"
 
 #include "w_wad.h"
@@ -877,8 +878,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (leftheight > pfloorleft && rightheight > pfloorright && i+1 < dc_numlights)
 			{
 				lightlist_t *nextlight = &frontsector->lightlist[i+1];
-				if (nextlight->slope ? P_GetZAt(nextlight->slope, ds->leftpos.x, ds->leftpos.y) : nextlight->height > pfloorleft
-				 && nextlight->slope ? P_GetZAt(nextlight->slope, ds->rightpos.x, ds->rightpos.y) : nextlight->height > pfloorright)
+				if ((nextlight->slope ? P_GetZAt(nextlight->slope, ds->leftpos.x, ds->leftpos.y) : nextlight->height) > pfloorleft
+				 && (nextlight->slope ? P_GetZAt(nextlight->slope, ds->rightpos.x, ds->rightpos.y) : nextlight->height) > pfloorright)
 					continue;
 			}
 
@@ -1737,6 +1738,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
+		size_t curpos = curdrawsegs - drawsegs;
 		size_t pos = ds_p - drawsegs;
 		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
 		if (firstseg)
@@ -1744,6 +1746,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
 		ds_p = drawsegs + pos;
 		maxdrawsegs = newmax;
+		curdrawsegs = drawsegs + curpos;
 		if (firstseg)
 			firstseg = drawsegs + (size_t)firstseg;
 	}

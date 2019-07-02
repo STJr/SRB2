@@ -24,6 +24,7 @@
 #include "i_video.h" // rendermode
 #include "r_things.h"
 #include "r_plane.h"
+#include "r_portal.h"
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
@@ -444,7 +445,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 //
 // GAME FUNCTIONS
 //
-static UINT32 visspritecount;
+UINT32 visspritecount;
 static UINT32 clippedvissprites;
 static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL};
 
@@ -1249,7 +1250,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
@@ -1351,8 +1352,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1517,23 +1518,13 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
 
 		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
 			return;
-	}
-
-	// okay, we can't return now except for vertical clipping... this is a hack, but weather isn't networked, so it should be ok
-	if (!(thing->precipflags & PCF_THUNK))
-	{
-		if (thing->precipflags & PCF_RAIN)
-			P_RainThinker(thing);
-		else
-			P_SnowThinker(thing);
-		thing->precipflags |= PCF_THUNK;
 	}
 
 
@@ -1544,7 +1535,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	if (thing->subsector->sector->cullheight)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
-			return;
+			goto weatherthink;
 	}
 
 	// store information in a vissprite
@@ -1569,8 +1560,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1604,6 +1595,17 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// Fullbright
 	vis->colormap = colormaps;
+
+weatherthink:
+	// okay... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 }
 
 // R_AddSprites
@@ -1668,7 +1670,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 				R_ProjectSprite(thing);
 	}
 
-	// Someone seriously wants infinite draw distance for precipitation?
+	// no, no infinite draw distance for precipitation. this option at zero is supposed to turn it off
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
@@ -1684,21 +1686,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 			R_ProjectPrecipitationSprite(precipthing);
 		}
 	}
-	else
-	{
-		// Draw everything in sector, no checks
-		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
-			if (!(precipthing->precipflags & PCF_INVISIBLE))
-				R_ProjectPrecipitationSprite(precipthing);
-	}
 }
 
 //
 // R_SortVisSprites
 //
-static vissprite_t vsprsortedhead;
-
-void R_SortVisSprites(void)
+static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 end)
 {
 	UINT32       i, linkedvissprites = 0;
 	vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
@@ -1707,20 +1700,17 @@ void R_SortVisSprites(void)
 	fixed_t      bestscale;
 	INT32        bestdispoffset;
 
-	if (!visspritecount)
-		return;
-
 	unsorted.next = unsorted.prev = &unsorted;
 
-	dsfirst = R_GetVisSprite(0);
+	dsfirst = R_GetVisSprite(start);
 
 	// The first's prev and last's next will be set to
 	// nonsense, but are fixed in a moment
-	for (i = 0, dsnext = dsfirst, ds = NULL; i < visspritecount; i++)
+	for (i = start, dsnext = dsfirst, ds = NULL; i < end; i++)
 	{
 		dsprev = ds;
 		ds = dsnext;
-		if (i < visspritecount - 1) dsnext = R_GetVisSprite(i + 1);
+		if (i < end - 1) dsnext = R_GetVisSprite(i + 1);
 
 		ds->next = dsnext;
 		ds->prev = dsprev;
@@ -1798,8 +1788,8 @@ void R_SortVisSprites(void)
 	}
 
 	// pull the vissprites out by scale
-	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-	for (i = 0; i < visspritecount-linkedvissprites; i++)
+	vsprsortedhead->next = vsprsortedhead->prev = vsprsortedhead;
+	for (i = start; i < end-linkedvissprites; i++)
 	{
 		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
@@ -1824,10 +1814,10 @@ void R_SortVisSprites(void)
 		}
 		best->next->prev = best->prev;
 		best->prev->next = best->next;
-		best->next = &vsprsortedhead;
-		best->prev = vsprsortedhead.prev;
-		vsprsortedhead.prev->next = best;
-		vsprsortedhead.prev = best;
+		best->next = vsprsortedhead;
+		best->prev = vsprsortedhead->prev;
+		vsprsortedhead->prev->next = best;
+		vsprsortedhead->prev = best;
 	}
 }
 
@@ -1837,28 +1827,28 @@ void R_SortVisSprites(void)
 static drawnode_t *R_CreateDrawNode(drawnode_t *link);
 
 static drawnode_t nodebankhead;
-static drawnode_t nodehead;
 
-static void R_CreateDrawNodes(void)
+static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean tempskip)
 {
 	drawnode_t *entry;
 	drawseg_t *ds;
 	INT32 i, p, best, x1, x2;
 	fixed_t bestdelta, delta;
 	vissprite_t *rover;
+	static vissprite_t vsprsortedhead;
 	drawnode_t *r2;
 	visplane_t *plane;
 	INT32 sintersect;
 	fixed_t scale = 0;
 
 	// Add the 3D floors, thicksides, and masked textures...
-	for (ds = ds_p; ds-- > drawsegs ;)
+	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
 		if (ds->numthicksides)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
-				entry = R_CreateDrawNode(&nodehead);
+				entry = R_CreateDrawNode(head);
 				entry->thickseg = ds;
 				entry->ffloor = ds->thicksides[i];
 			}
@@ -1873,7 +1863,7 @@ static void R_CreateDrawNodes(void)
 				;
 			else {
 				// Put it in!
-				entry = R_CreateDrawNode(&nodehead);
+				entry = R_CreateDrawNode(head);
 				entry->plane = plane;
 				entry->seg = ds;
 			}
@@ -1882,7 +1872,7 @@ static void R_CreateDrawNodes(void)
 #endif
 		if (ds->maskedtexturecol)
 		{
-			entry = R_CreateDrawNode(&nodehead);
+			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
 		if (ds->numffloorplanes)
@@ -1913,7 +1903,7 @@ static void R_CreateDrawNodes(void)
 				}
 				if (best != -1)
 				{
-					entry = R_CreateDrawNode(&nodehead);
+					entry = R_CreateDrawNode(head);
 					entry->plane = ds->ffloorplanes[best];
 					entry->seg = ds;
 					ds->ffloorplanes[best] = NULL;
@@ -1923,6 +1913,9 @@ static void R_CreateDrawNodes(void)
 			}
 		}
 	}
+
+	if (tempskip)
+		return;
 
 #ifdef POLYOBJECTS_PLANES
 	// find all the remaining polyobject planes and add them on the end of the list
@@ -1940,17 +1933,19 @@ static void R_CreateDrawNodes(void)
 			PolyObjects[i].visplane = NULL;
 			continue;
 		}
-		entry = R_CreateDrawNode(&nodehead);
+		entry = R_CreateDrawNode(head);
 		entry->plane = plane;
 		// note: no seg is set, for what should be obvious reasons
 		PolyObjects[i].visplane = NULL;
 	}
 #endif
 
-	if (visspritecount == 0)
+	// No vissprites in this mask?
+	if (mask->vissprites[1] - mask->vissprites[0] == 0)
 		return;
 
-	R_SortVisSprites();
+	R_SortVisSprites(&vsprsortedhead, mask->vissprites[0], mask->vissprites[1]);
+
 	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
 	{
 		if (rover->szt > vid.height || rover->sz < 0)
@@ -1958,7 +1953,7 @@ static void R_CreateDrawNodes(void)
 
 		sintersect = (rover->x1 + rover->x2) / 2;
 
-		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
+		for (r2 = head->next; r2 != head; r2 = r2->next)
 		{
 			if (r2->plane)
 			{
@@ -2097,9 +2092,9 @@ static void R_CreateDrawNodes(void)
 				}
 			}
 		}
-		if (r2 == &nodehead)
+		if (r2 == head)
 		{
-			entry = R_CreateDrawNode(&nodehead);
+			entry = R_CreateDrawNode(head);
 			entry->sprite = rover;
 		}
 	}
@@ -2141,25 +2136,24 @@ static void R_DoneWithNode(drawnode_t *node)
 	(node->prev = &nodebankhead)->next = node;
 }
 
-static void R_ClearDrawNodes(void)
+static void R_ClearDrawNodes(drawnode_t* head)
 {
 	drawnode_t *rover;
 	drawnode_t *next;
 
-	for (rover = nodehead.next; rover != &nodehead ;)
+	for (rover = head->next; rover != head;)
 	{
 		next = rover->next;
 		R_DoneWithNode(rover);
 		rover = next;
 	}
 
-	nodehead.next = nodehead.prev = &nodehead;
+	head->next = head->prev = head;
 }
 
 void R_InitDrawNodes(void)
 {
 	nodebankhead.next = nodebankhead.prev = &nodebankhead;
-	nodehead.next = nodehead.prev = &nodehead;
 }
 
 //
@@ -2185,7 +2179,7 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 
 // R_ClipSprites
 // Clips vissprites without drawing, so that portals can work. -Red
-void R_ClipSprites(void)
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 {
 	vissprite_t *spr;
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
@@ -2211,7 +2205,7 @@ void R_ClipSprites(void)
 		// and buggy, by going past LEFT end of array:
 
 		//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-		for (ds = ds_p; ds-- > drawsegs ;)
+		for (ds = ds_p; ds-- > dsstart;)
 		{
 			// determine if the drawseg obscures the sprite
 			if (ds->x1 > spr->x2 ||
@@ -2223,33 +2217,36 @@ void R_ClipSprites(void)
 				continue;
 			}
 
-			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
-				continue; // is a portal
+			if (ds->portalpass != 66)
+			{
+				if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+					continue; // is a portal
+
+				if (ds->scale1 > ds->scale2)
+				{
+					lowscale = ds->scale2;
+					scale = ds->scale1;
+				}
+				else
+				{
+					lowscale = ds->scale1;
+					scale = ds->scale2;
+				}
+
+				if (scale < spr->sortscale ||
+					(lowscale < spr->sortscale &&
+					 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
+				{
+					// masked mid texture?
+					/*if (ds->maskedtexturecol)
+						R_RenderMaskedSegRange (ds, r1, r2);*/
+					// seg is behind sprite
+					continue;
+				}
+			}
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
-
-			if (ds->scale1 > ds->scale2)
-			{
-				lowscale = ds->scale2;
-				scale = ds->scale1;
-			}
-			else
-			{
-				lowscale = ds->scale1;
-				scale = ds->scale2;
-			}
-
-			if (scale < spr->sortscale ||
-			    (lowscale < spr->sortscale &&
-			     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
-			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
-				// seg is behind sprite
-				continue;
-			}
 
 			// clip this piece of the sprite
 			silhouette = ds->silhouette;
@@ -2367,20 +2364,29 @@ void R_ClipSprites(void)
 				//Fab : 26-04-98: was -1, now clips against console bottom
 				spr->cliptop[x] = (INT16)con_clipviewtop;
 		}
+
+		if (portal)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->clipbot[x] > portal->floorclip[x - portal->start])
+					spr->clipbot[x] = portal->floorclip[x - portal->start];
+				if (spr->cliptop[x] < portal->ceilingclip[x - portal->start])
+					spr->cliptop[x] = portal->ceilingclip[x - portal->start];
+			}
+		}
 	}
 }
 
 //
 // R_DrawMasked
 //
-void R_DrawMasked(void)
+static void R_DrawMaskedList (drawnode_t* head)
 {
 	drawnode_t *r2;
 	drawnode_t *next;
 
-	R_CreateDrawNodes();
-
-	for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
+	for (r2 = head->next; r2 != head; r2 = r2->next)
 	{
 		if (r2->plane)
 		{
@@ -2432,7 +2438,38 @@ void R_DrawMasked(void)
 			r2 = next;
 		}
 	}
-	R_ClearDrawNodes();
+}
+
+void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
+{
+	drawnode_t heads[nummasks];	/**< Drawnode lists; as many as number of views/portals. */
+	INT8 i;
+
+	for (i = 0; i < nummasks; i++)
+	{
+		heads[i].next = heads[i].prev = &heads[i];
+
+		viewx = masks[i].viewx;
+		viewy = masks[i].viewy;
+		viewz = masks[i].viewz;
+		viewsector = masks[i].viewsector;
+
+		R_CreateDrawNodes(&masks[i], &heads[i], false);
+	}
+
+	//for (i = 0; i < nummasks; i++)
+	//	CONS_Printf("Mask no.%d:\ndrawsegs: %d\n vissprites: %d\n\n", i, masks[i].drawsegs[1] - masks[i].drawsegs[0], masks[i].vissprites[1] - masks[i].vissprites[0]);
+
+	for (; nummasks > 0; nummasks--)
+	{
+		viewx = masks[nummasks - 1].viewx;
+		viewy = masks[nummasks - 1].viewy;
+		viewz = masks[nummasks - 1].viewz;
+		viewsector = masks[nummasks - 1].viewsector;
+
+		R_DrawMaskedList(&heads[nummasks - 1]);
+		R_ClearDrawNodes(&heads[nummasks - 1]);
+	}
 }
 
 // ==========================================================================

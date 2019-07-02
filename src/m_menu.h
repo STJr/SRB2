@@ -22,6 +22,140 @@
 //
 // MENUS
 //
+
+// If menu hierarchies go deeper, change this up to 5.
+// Zero-based, inclusive.
+#define NUMMENULEVELS 3
+#define MENUBITS 6
+
+// Menu IDs sectioned by numeric places to signify hierarchy
+typedef enum
+{
+	MN_NONE,
+
+	MN_MAIN,
+
+	// Single Player
+	MN_SP_MAIN,
+
+	MN_SP_LOAD,
+	MN_SP_PLAYER,
+
+	MN_SP_LEVELSELECT,
+	MN_SP_LEVELSTATS,
+
+	MN_SP_TIMEATTACK,
+	MN_SP_TIMEATTACK_LEVELSELECT,
+	MN_SP_GUESTREPLAY,
+	MN_SP_REPLAY,
+	MN_SP_GHOST,
+
+	MN_SP_NIGHTSATTACK,
+	MN_SP_NIGHTS_LEVELSELECT,
+	MN_SP_NIGHTS_GUESTREPLAY,
+	MN_SP_NIGHTS_REPLAY,
+	MN_SP_NIGHTS_GHOST,
+
+	// Multiplayer
+	MN_MP_MAIN,
+	MN_MP_SPLITSCREEN, // SplitServer
+	MN_MP_SERVER,
+	MN_MP_CONNECT,
+	MN_MP_ROOM,
+	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+
+	// Options
+	MN_OP_MAIN,
+
+	MN_OP_P1CONTROLS,
+	MN_OP_CHANGECONTROLS, // OP_ChangeControlsDef shared with P2
+	MN_OP_P1MOUSE,
+	MN_OP_P1JOYSTICK,
+	MN_OP_JOYSTICKSET, // OP_JoystickSetDef shared with P2
+
+	MN_OP_P2CONTROLS,
+	MN_OP_P2MOUSE,
+	MN_OP_P2JOYSTICK,
+
+	MN_OP_VIDEO,
+	MN_OP_VIDEOMODE,
+	MN_OP_COLOR,
+	MN_OP_OPENGL,
+	MN_OP_OPENGL_LIGHTING,
+	MN_OP_OPENGL_FOG,
+	MN_OP_OPENGL_COLOR,
+
+	MN_OP_SOUND,
+
+	MN_OP_SERVER,
+	MN_OP_MONITORTOGGLE,
+
+	MN_OP_DATA,
+	MN_OP_ADDONS,
+	MN_OP_SCREENSHOTS,
+	MN_OP_ERASEDATA,
+
+	// Secrets
+	MN_SR_MAIN,
+	MN_SR_PANDORA,
+	MN_SR_LEVELSELECT,
+	MN_SR_UNLOCKCHECKLIST,
+	MN_SR_EMBLEMHINT,
+
+	// Addons (Part of MISC, but let's make it our own)
+	MN_AD_MAIN,
+
+	// MISC
+	// MN_MESSAGE,
+	// MN_SPAUSE,
+
+	// MN_MPAUSE,
+	// MN_SCRAMBLETEAM,
+	// MN_CHANGETEAM,
+	// MN_CHANGELEVEL,
+
+	// MN_MAPAUSE,
+	// MN_HELP,
+
+	MN_SPECIAL,
+	NUMMENUTYPES,
+} menutype_t; // up to 63; MN_SPECIAL = 53
+
+typedef struct
+{
+	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
+	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
+	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
+	INT32 titlescrollyspeed; // y scroll
+	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
+	boolean bghide; // for titlemaps, hide the background.
+
+	char musname[7]; ///< Music track to play. "" for no music.
+	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
+	boolean muslooping; ///< Loop the music
+	boolean musstop; ///< Don't play any music
+	boolean musignore; ///< Let the current music keep playing
+
+	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
+	boolean enterbubble; // run all entrance line execs after common ancestor and up to child. If false, only run the child's exec
+	boolean exitbubble; // run all exit line execs from child and up to before common ancestor. If false, only run the child's exec
+	INT32 entertag; // line exec to run on menu enter, if titlemap
+	INT32 exittag; // line exec to run on menu exit, if titlemap
+	INT16 enterwipe; // wipe type to run on menu enter, -1 means default
+	INT16 exitwipe; // wipe type to run on menu exit, -1 means default
+} menupres_t;
+
+extern menupres_t menupres[NUMMENUTYPES];
+extern UINT32 prevMenuId;
+extern UINT32 activeMenuId;
+
+void M_InitMenuPresTables(void);
+UINT8 M_GetYoungestChildMenu(void);
+void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping);
+void M_SetMenuCurBackground(const char *defaultname);
+void M_SetMenuCurFadeValue(UINT8 defaultvalue);
+void M_SetMenuCurHideTitlePics(void);
+
 // Called by main loop,
 // saves config file and calls I_Quit when user exits.
 // Even when the menu is not displayed,
@@ -156,6 +290,7 @@ typedef struct menuitem_s
 
 typedef struct menu_s
 {
+	UINT32         menuid;             // ID to encode menu type and hierarchy
 	const char    *menutitlepic;
 	INT16          numitems;           // # of menu items
 	struct menu_s *prevMenu;           // previous menu
@@ -262,8 +397,9 @@ void Screenshot_option_Onchange(void);
 void Addons_option_Onchange(void);
 
 // These defines make it a little easier to make menus
-#define DEFAULTMENUSTYLE(header, source, prev, x, y)\
+#define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
 {\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -274,8 +410,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define DEFAULTSCROLLMENUSTYLE(header, source, prev, x, y)\
+#define DEFAULTSCROLLMENUSTYLE(id, header, source, prev, x, y)\
 {\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -288,6 +425,7 @@ void Addons_option_Onchange(void);
 
 #define PAUSEMENUSTYLE(source, x, y)\
 {\
+	MN_SPECIAL,\
 	NULL,\
 	sizeof(source)/sizeof(menuitem_t),\
 	NULL,\
@@ -298,8 +436,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CENTERMENUSTYLE(header, source, prev, y)\
+#define CENTERMENUSTYLE(id, header, source, prev, y)\
 {\
+	id,\
 	header,\
 	sizeof(source)/sizeof(menuitem_t),\
 	prev,\
@@ -310,8 +449,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define MAPPLATTERMENUSTYLE(header, source)\
+#define MAPPLATTERMENUSTYLE(id, header, source)\
 {\
+	id,\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
 	&MainDef,\
@@ -322,8 +462,9 @@ void Addons_option_Onchange(void);
 	NULL\
 }
 
-#define CONTROLMENUSTYLE(source, prev)\
+#define CONTROLMENUSTYLE(id, source, prev)\
 {\
+	id,\
 	"M_CONTRO",\
 	sizeof (source)/sizeof (menuitem_t),\
 	prev,\
@@ -336,6 +477,7 @@ void Addons_option_Onchange(void);
 
 #define IMAGEDEF(source)\
 {\
+	MN_SPECIAL,\
 	NULL,\
 	sizeof (source)/sizeof (menuitem_t),\
 	NULL,\

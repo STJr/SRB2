@@ -72,6 +72,7 @@ static sfxenum_t get_sfx(const char *word);
 static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 #endif
 static hudnum_t get_huditem(const char *word);
+static menutype_t get_menutype(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
 #endif
@@ -1322,6 +1323,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_WIDEICON;
 			}
+			else if (fastcmp(word, "STARTRINGS"))
+				mapheaderinfo[num-1]->startrings = (UINT16)i;
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -1789,15 +1792,23 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
 				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY") ||
 					fastcmp(word2, "BLACK")) backcolor = 1;
-				else if (i == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
-				else if (i == 3 || fastcmp(word2, "RED")) backcolor = 3;
-				else if (i == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
-				else if (i == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
-				else if (i == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
-				else if (i == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
-				else if (i == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
-				else if (i == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
-				else if (i == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
+				else if (i == 2 || fastcmp(word2, "SEPIA")) backcolor = 2;
+				else if (i == 3 || fastcmp(word2, "BROWN")) backcolor = 3;
+				else if (i == 4 || fastcmp(word2, "PINK")) backcolor = 4;
+				else if (i == 5 || fastcmp(word2, "RASPBERRY")) backcolor = 5;
+				else if (i == 6 || fastcmp(word2, "RED")) backcolor = 6;
+				else if (i == 7 || fastcmp(word2, "CREAMSICLE")) backcolor = 7;
+				else if (i == 8 || fastcmp(word2, "ORANGE")) backcolor = 8;
+				else if (i == 9 || fastcmp(word2, "GOLD")) backcolor = 9;
+				else if (i == 10 || fastcmp(word2, "YELLOW")) backcolor = 10;
+				else if (i == 11 || fastcmp(word2, "EMERALD")) backcolor = 11;
+				else if (i == 12 || fastcmp(word2, "GREEN")) backcolor = 12;
+				else if (i == 13 || fastcmp(word2, "CYAN") || fastcmp(word2, "AQUA")) backcolor = 13;
+				else if (i == 14 || fastcmp(word2, "STEEL")) backcolor = 14;
+				else if (i == 15 || fastcmp(word2, "PERIWINKLE")) backcolor = 15;
+				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
+				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
+				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
@@ -1925,6 +1936,161 @@ static void readtextprompt(MYFILE *f, INT32 num)
 			}
 			else
 				deh_warning("Prompt %d: unknown word '%s', Page <num> expected.", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readmenu(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word = s;
+	char *word2;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
+			strupr(word);
+
+			// Now get the part after
+			word2 = (tmp += 2);
+			strupr(word2);
+
+			value = atoi(word2); // used for numerical settings
+
+			if (fastcmp(word, "BACKGROUNDNAME"))
+			{
+				strncpy(menupres[num].bgname, word2, 8);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDEBACKGROUND"))
+			{
+				menupres[num].bghide = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "BACKGROUNDCOLOR"))
+			{
+				menupres[num].bgcolor = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS") || fastcmp(word, "HIDEPICS"))
+			{
+				// true by default, except MM_MAIN
+				menupres[num].hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED")
+				|| fastcmp(word, "SCROLLSPEED") || fastcmp(word, "SCROLLXSPEED"))
+			{
+				menupres[num].titlescrollxspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLYSPEED") || fastcmp(word, "SCROLLYSPEED"))
+			{
+				menupres[num].titlescrollyspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "MUSIC"))
+			{
+				strncpy(menupres[num].musname, word2, 7);
+				menupres[num].musname[6] = 0;
+				titlechanged = true;
+			}
+#ifdef MUSICSLOT_COMPATIBILITY
+			else if (fastcmp(word, "MUSICSLOT"))
+			{
+				value = get_mus(word2, true);
+				if (value && value <= 1035)
+					snprintf(menupres[num].musname, 7, "%sM", G_BuildMapName(value));
+				else if (value && value <= 1050)
+					strncpy(menupres[num].musname, compat_special_music_slots[value - 1036], 7);
+				else
+					menupres[num].musname[0] = 0; // becomes empty string
+				menupres[num].musname[6] = 0;
+				titlechanged = true;
+			}
+#endif
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				menupres[num].mustrack = ((UINT16)value - 1);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "MUSICLOOP"))
+			{
+				// true by default except MM_MAIN
+				menupres[num].muslooping = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NOMUSIC"))
+			{
+				menupres[num].musstop = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "IGNOREMUSIC"))
+			{
+				menupres[num].musignore = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "FADESTRENGTH"))
+			{
+				// one-based, <= 0 means use default value. 1-32
+				menupres[num].fadestrength = get_number(word2)-1;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NOENTERBUBBLE"))
+			{
+				menupres[num].enterbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "NOEXITBUBBLE"))
+			{
+				menupres[num].exitbubble = !(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "ENTERTAG"))
+			{
+				menupres[num].entertag = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "EXITTAG"))
+			{
+				menupres[num].exittag = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "ENTERWIPE"))
+			{
+				menupres[num].enterwipe = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "EXITWIPE"))
+			{
+				menupres[num].exitwipe = get_number(word2);
+				titlechanged = true;
+			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -2109,6 +2275,9 @@ static actionpointer_t actionpointers[] =
 	{{A_CrushclawLaunch},        "A_CRUSHCLAWLAUNCH"},
 	{{A_VultureVtol},            "A_VULTUREVTOL"},
 	{{A_VultureCheck},           "A_VULTURECHECK"},
+	{{A_VultureHover},           "A_VULTUREHOVER"},
+	{{A_VultureBlast},           "A_VULTUREBLAST"},
+	{{A_VultureFly},             "A_VULTUREFLY"},
 	{{A_SkimChase},              "A_SKIMCHASE"},
 	{{A_1upThinker},             "A_1UPTHINKER"},
 	{{A_SkullAttack},            "A_SKULLATTACK"},
@@ -2225,8 +2394,30 @@ static actionpointer_t actionpointers[] =
 	{{A_ParentTriesToSleep},     "A_PARENTTRIESTOSLEEP"},
 	{{A_CryingToMomma},          "A_CRYINGTOMOMMA"},
 	{{A_CheckFlags2},            "A_CHECKFLAGS2"},
-
-	{{NULL},                   "NONE"},
+	{{A_Boss5FindWaypoint},      "A_BOSS5FINDWAYPOINT"},
+	{{A_DoNPCSkid},              "A_DONPCSKID"},
+	{{A_DoNPCPain},              "A_DONPCPAIN"},
+	{{A_PrepareRepeat},          "A_PREPAREREPEAT"},
+	{{A_Boss5ExtraRepeat},       "A_BOSS5EXTRAREPEAT"},
+	{{A_Boss5Calm},              "A_BOSS5CALM"},
+	{{A_Boss5CheckOnGround},     "A_BOSS5CHECKONGROUND"},
+	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
+	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
+	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
+	{{A_LookForBetter},          "A_LOOKFORBETTER"},
+	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
+	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
+	{{A_TNTExplode},             "A_TNTEXPLODE"},
+	{{A_DebrisRandom},           "A_DEBRISRANDOM"},
+	{{A_TrainCameo},             "A_TRAINCAMEO"},
+	{{A_TrainCameo2},            "A_TRAINCAMEO2"},
+	{{A_CanarivoreGas},          "A_CANARIVOREGAS"},
+	{{A_KillSegments},           "A_KILLSEGMENTS"},
+	{{A_SnapperSpawn},           "A_SNAPPERSPAWN"},
+	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
+	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
+	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
+	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
 	{{NULL},                   NULL},
@@ -3174,9 +3365,14 @@ static void readmaincfg(MYFILE *f)
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "TITLESCROLLSPEED"))
+			else if (fastcmp(word, "TITLESCROLLSPEED") || fastcmp(word, "TITLESCROLLXSPEED"))
 			{
-				titlescrollspeed = get_number(word2);
+				titlescrollxspeed = get_number(word2);
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLESCROLLYSPEED"))
+			{
+				titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
@@ -3724,6 +3920,19 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
+				else if (fastcmp(word, "MENU"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_menutype(word2); // find a huditem by name
+					if (i >= 1 && i < NUMMENUTYPES)
+						readmenu(f, i);
+					else
+					{
+						// zero-based, but let's start at 1
+						deh_warning("Menu number %d out of range (1 - %d)", i, NUMMENUTYPES-1);
+						ignorelines(f);
+					}
+				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
 					if (!mainfile && !gamedataadded)
@@ -4195,15 +4404,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Vulture
 	"S_VULTURE_STND",
-	"S_VULTURE_VTOL1",
-	"S_VULTURE_VTOL2",
-	"S_VULTURE_VTOL3",
-	"S_VULTURE_VTOL4",
+	"S_VULTURE_DRIFT",
 	"S_VULTURE_ZOOM1",
 	"S_VULTURE_ZOOM2",
-	"S_VULTURE_ZOOM3",
-	"S_VULTURE_ZOOM4",
-	"S_VULTURE_ZOOM5",
+	"S_VULTURE_STUNNED",
 
 	// Pointy
 	"S_POINTY1",
@@ -4254,15 +4458,31 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGSHIELDBREAK",
 
 	// Green Snapper
+	"S_SNAPPER_SPAWN",
+	"S_SNAPPER_SPAWN2",
 	"S_GSNAPPER_STND",
 	"S_GSNAPPER1",
 	"S_GSNAPPER2",
 	"S_GSNAPPER3",
 	"S_GSNAPPER4",
+	"S_SNAPPER_XPLD",
+	"S_SNAPPER_LEG",
+	"S_SNAPPER_LEGRAISE",
+	"S_SNAPPER_HEAD",
 
 	// Minus
+	"S_MINUS_INIT",
 	"S_MINUS_STND",
-	"S_MINUS_DIGGING",
+	"S_MINUS_DIGGING1",
+	"S_MINUS_DIGGING2",
+	"S_MINUS_DIGGING3",
+	"S_MINUS_DIGGING4",
+	"S_MINUS_BURST0",
+	"S_MINUS_BURST1",
+	"S_MINUS_BURST2",
+	"S_MINUS_BURST3",
+	"S_MINUS_BURST4",
+	"S_MINUS_BURST5",
 	"S_MINUS_POPUP",
 	"S_MINUS_UPWARD1",
 	"S_MINUS_UPWARD2",
@@ -4280,6 +4500,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MINUS_DOWNWARD6",
 	"S_MINUS_DOWNWARD7",
 	"S_MINUS_DOWNWARD8",
+
+	// Minus dirt
+	"S_MINUSDIRT1",
+	"S_MINUSDIRT2",
+	"S_MINUSDIRT3",
+	"S_MINUSDIRT4",
+	"S_MINUSDIRT5",
+	"S_MINUSDIRT6",
+	"S_MINUSDIRT7",
 
 	// Spring Shell
 	"S_SSHELL_STND",
@@ -4307,6 +4536,28 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_UNIDUS_STND",
 	"S_UNIDUS_RUN",
 	"S_UNIDUS_BALL",
+
+	// Canarivore
+	"S_CANARIVORE_LOOK",
+	"S_CANARIVORE_AWAKEN1",
+	"S_CANARIVORE_AWAKEN2",
+	"S_CANARIVORE_AWAKEN3",
+	"S_CANARIVORE_GAS1",
+	"S_CANARIVORE_GAS2",
+	"S_CANARIVORE_GAS3",
+	"S_CANARIVORE_GAS4",
+	"S_CANARIVORE_GAS5",
+	"S_CANARIVORE_GASREPEAT",
+	"S_CANARIVORE_CLOSE1",
+	"S_CANARIVORE_CLOSE2",
+	"S_CANARIVOREGAS_1",
+	"S_CANARIVOREGAS_2",
+	"S_CANARIVOREGAS_3",
+	"S_CANARIVOREGAS_4",
+	"S_CANARIVOREGAS_5",
+	"S_CANARIVOREGAS_6",
+	"S_CANARIVOREGAS_7",
+	"S_CANARIVOREGAS_8",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -4529,6 +4780,96 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Boss 4 jet flame
 	"S_JETFLAME1",
 	"S_JETFLAME2",
+
+	// Boss 5
+	"S_FANG_IDLE1",
+	"S_FANG_IDLE2",
+	"S_FANG_IDLE3",
+	"S_FANG_IDLE4",
+	"S_FANG_IDLE5",
+	"S_FANG_IDLE6",
+	"S_FANG_IDLE7",
+	"S_FANG_IDLE8",
+	"S_FANG_PAIN1",
+	"S_FANG_PAIN2",
+	"S_FANG_PATHINGSTART1",
+	"S_FANG_PATHINGSTART2",
+	"S_FANG_PATHING",
+	"S_FANG_BOUNCE1",
+	"S_FANG_BOUNCE2",
+	"S_FANG_BOUNCE3",
+	"S_FANG_BOUNCE4",
+	"S_FANG_FALL1",
+	"S_FANG_FALL2",
+	"S_FANG_CHECKPATH1",
+	"S_FANG_CHECKPATH2",
+	"S_FANG_PATHINGCONT1",
+	"S_FANG_PATHINGCONT2",
+	"S_FANG_PATHINGCONT3",
+	"S_FANG_SKID1",
+	"S_FANG_SKID2",
+	"S_FANG_SKID3",
+	"S_FANG_CHOOSEATTACK",
+	"S_FANG_FIRESTART1",
+	"S_FANG_FIRESTART2",
+	"S_FANG_FIRE1",
+	"S_FANG_FIRE2",
+	"S_FANG_FIRE3",
+	"S_FANG_FIRE4",
+	"S_FANG_FIREREPEAT",
+	"S_FANG_LOBSHOT1",
+	"S_FANG_LOBSHOT2",
+	"S_FANG_WAIT1",
+	"S_FANG_WAIT2",
+	"S_FANG_WALLHIT",
+	"S_FANG_PINCHPATHINGSTART1",
+	"S_FANG_PINCHPATHINGSTART2",
+	"S_FANG_PINCHPATHING",
+	"S_FANG_PINCHBOUNCE1",
+	"S_FANG_PINCHBOUNCE2",
+	"S_FANG_PINCHBOUNCE3",
+	"S_FANG_PINCHBOUNCE4",
+	"S_FANG_PINCHFALL1",
+	"S_FANG_PINCHFALL2",
+	"S_FANG_PINCHSKID1",
+	"S_FANG_PINCHSKID2",
+	"S_FANG_PINCHLOBSHOT1",
+	"S_FANG_PINCHLOBSHOT2",
+	"S_FANG_PINCHLOBSHOT3",
+	"S_FANG_PINCHLOBSHOT4",
+	"S_FANG_DIE1",
+	"S_FANG_DIE2",
+	"S_FANG_DIE3",
+	"S_FANG_DIE4",
+	"S_FANG_DIE5",
+	"S_FANG_DIE6",
+	"S_FANG_DIE7",
+	"S_FANG_DIE8",
+	"S_FANG_FLEEPATHING1",
+	"S_FANG_FLEEPATHING2",
+	"S_FANG_FLEEBOUNCE1",
+	"S_FANG_FLEEBOUNCE2",
+	"S_FANG_KO",
+
+	"S_FBOMB1",
+	"S_FBOMB2",
+	"S_FBOMB_EXPL1",
+	"S_FBOMB_EXPL2",
+	"S_FBOMB_EXPL3",
+	"S_FBOMB_EXPL4",
+	"S_FBOMB_EXPL5",
+	"S_FBOMB_EXPL6",
+	"S_TNTDUST_1",
+	"S_TNTDUST_2",
+	"S_TNTDUST_3",
+	"S_TNTDUST_4",
+	"S_TNTDUST_5",
+	"S_TNTDUST_6",
+	"S_TNTDUST_7",
+	"S_TNTDUST_8",
+	"S_FSGNA",
+	"S_FSGNB",
+	"S_FSGNC",
 
 	// Black Eggman (Boss 7)
 	"S_BLACKEGG_STND",
@@ -5394,6 +5735,95 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI2",
 	"S_CACTI3",
 	"S_CACTI4",
+	"S_CACTI5",
+	"S_CACTI6",
+	"S_CACTI7",
+	"S_CACTI8",
+	"S_CACTI9",
+
+	// Warning signs sprites
+	"S_ARIDSIGN_CAUTION",
+	"S_ARIDSIGN_CACTI",
+	"S_ARIDSIGN_SHARPTURN",
+
+	// Oil lamp
+	"S_OILLAMP",
+	"S_OILLAMPFLARE",
+
+	// TNT barrel
+	"S_TNTBARREL_STND1",
+	"S_TNTBARREL_EXPL1",
+	"S_TNTBARREL_EXPL2",
+	"S_TNTBARREL_EXPL3",
+	"S_TNTBARREL_EXPL4",
+	"S_TNTBARREL_EXPL5",
+	"S_TNTBARREL_EXPL6",
+	"S_TNTBARREL_FLYING",
+
+	// TNT proximity shell
+	"S_PROXIMITY_TNT",
+	"S_PROXIMITY_TNT_TRIGGER1",
+	"S_PROXIMITY_TNT_TRIGGER2",
+	"S_PROXIMITY_TNT_TRIGGER3",
+	"S_PROXIMITY_TNT_TRIGGER4",
+	"S_PROXIMITY_TNT_TRIGGER5",
+	"S_PROXIMITY_TNT_TRIGGER6",
+	"S_PROXIMITY_TNT_TRIGGER7",
+	"S_PROXIMITY_TNT_TRIGGER8",
+	"S_PROXIMITY_TNT_TRIGGER9",
+	"S_PROXIMITY_TNT_TRIGGER10",
+	"S_PROXIMITY_TNT_TRIGGER11",
+	"S_PROXIMITY_TNT_TRIGGER12",
+	"S_PROXIMITY_TNT_TRIGGER13",
+	"S_PROXIMITY_TNT_TRIGGER14",
+	"S_PROXIMITY_TNT_TRIGGER15",
+	"S_PROXIMITY_TNT_TRIGGER16",
+	"S_PROXIMITY_TNT_TRIGGER17",
+	"S_PROXIMITY_TNT_TRIGGER18",
+	"S_PROXIMITY_TNT_TRIGGER19",
+	"S_PROXIMITY_TNT_TRIGGER20",
+	"S_PROXIMITY_TNT_TRIGGER21",
+	"S_PROXIMITY_TNT_TRIGGER22",
+	"S_PROXIMITY_TNT_TRIGGER23",
+
+	// Dust devil
+	"S_DUSTDEVIL",
+	"S_DUSTLAYER1",
+	"S_DUSTLAYER2",
+	"S_DUSTLAYER3",
+	"S_DUSTLAYER4",
+	"S_DUSTLAYER5",
+	"S_ARIDDUST1",
+	"S_ARIDDUST2",
+	"S_ARIDDUST3",
+
+	// Minecart
+	"S_MINECART_IDLE",
+	"S_MINECART_DTH1",
+	"S_MINECARTEND",
+	"S_MINECARTSEG_FRONT",
+	"S_MINECARTSEG_BACK",
+	"S_MINECARTSEG_LEFT",
+	"S_MINECARTSEG_RIGHT",
+	"S_MINECARTSIDEMARK1",
+	"S_MINECARTSIDEMARK2",
+	"S_MINECARTSPARK",
+
+	// Saloon door
+	"S_SALOONDOOR",
+	"S_SALOONDOORTHINKER",
+
+	// Train cameo
+	"S_TRAINCAMEOSPAWNER_1",
+	"S_TRAINCAMEOSPAWNER_2",
+	"S_TRAINCAMEOSPAWNER_3",
+	"S_TRAINCAMEOSPAWNER_4",
+	"S_TRAINCAMEOSPAWNER_5",
+	"S_TRAINPUFFMAKER",
+
+	// Train
+	"S_TRAINDUST",
+	"S_TRAINSTEAM",
 
 	// Flame jet
 	"S_FLAMEJETSTND",
@@ -6717,6 +7147,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DUST3",
 	"S_DUST4",
 
+	"S_WOODDEBRIS",
+
 	"S_ROCKSPAWN",
 
 	"S_ROCKCRUMBLEA",
@@ -6780,11 +7212,16 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGGUARD", // Egg Guard
 	"MT_EGGSHIELD", // Egg Guard's shield
 	"MT_GSNAPPER", // Green Snapper
+	"MT_SNAPPER_LEG", // Green Snapper leg
+	"MT_SNAPPER_HEAD", // Green Snapper head
 	"MT_MINUS", // Minus
+	"MT_MINUSDIRT", // Minus dirt
 	"MT_SPRINGSHELL", // Spring Shell
 	"MT_YELLOWSHELL", // Spring Shell (yellow)
 	"MT_UNIDUS", // Unidus
 	"MT_UNIBALL", // Unidus Ball
+	"MT_CANARIVORE", // Canarivore
+	"MT_CANARIVORE_GAS", // Canarivore gas
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
@@ -6819,6 +7256,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGMOBILE4",
 	"MT_EGGMOBILE4_MACE",
 	"MT_JETFLAME",
+
+	// Boss 5
+	"MT_FANG",
+	"MT_FBOMB",
+	"MT_TNTDUST", // also used by barrel
+	"MT_FSGNA",
+	"MT_FSGNB",
+	"MT_FANGWAYPOINT",
 
 	// Black Eggman (Boss 7)
 	"MT_BLACKEGGMAN",
@@ -7067,6 +7512,34 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI2",
 	"MT_CACTI3",
 	"MT_CACTI4",
+	"MT_CACTI5",
+	"MT_CACTI6",
+	"MT_CACTI7",
+	"MT_CACTI8",
+	"MT_CACTI9",
+	"MT_ARIDSIGN_CAUTION",
+	"MT_ARIDSIGN_CACTI",
+	"MT_ARIDSIGN_SHARPTURN",
+	"MT_OILLAMP",
+	"MT_TNTBARREL",
+	"MT_PROXIMITYTNT",
+	"MT_DUSTDEVIL",
+	"MT_DUSTLAYER",
+	"MT_ARIDDUST",
+	"MT_MINECART",
+	"MT_MINECARTSEG",
+	"MT_MINECARTSPAWNER",
+	"MT_MINECARTEND",
+	"MT_MINECARTENDSOLID",
+	"MT_MINECARTSIDEMARK",
+	"MT_MINECARTSPARK",
+	"MT_SALOONDOOR",
+	"MT_SALOONDOORTHINKER",
+	"MT_TRAINCAMEOSPAWNER",
+	"MT_TRAINSEG",
+	"MT_TRAINDUSTSPAWNER",
+	"MT_TRAINSTEAMSPAWNER",
+	"MT_MINECARTSWITCHPOINT",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",
@@ -7389,6 +7862,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EXPLODE", // Robot Explosion
 	"MT_UWEXPLODE", // Underwater Explosion
 	"MT_DUST",
+	"MT_WOODDEBRIS",
 	"MT_ROCKSPAWNER",
 	"MT_FALLINGROCK",
 	"MT_ROCKCRUMBLE1",
@@ -7778,6 +8252,96 @@ static const char *const HUDITEMS_LIST[] = {
 	"LAP"
 };
 
+static const char *const MENUTYPES_LIST[] = {
+	"NONE",
+
+	"MAIN",
+
+	// Single Player
+	"SP_MAIN",
+
+	"SP_LOAD",
+	"SP_PLAYER",
+
+	"SP_LEVELSELECT",
+	"SP_LEVELSTATS",
+
+	"SP_TIMEATTACK",
+	"SP_TIMEATTACK_LEVELSELECT",
+	"SP_GUESTREPLAY",
+	"SP_REPLAY",
+	"SP_GHOST",
+
+	"SP_NIGHTSATTACK",
+	"SP_NIGHTS_LEVELSELECT",
+	"SP_NIGHTS_GUESTREPLAY",
+	"SP_NIGHTS_REPLAY",
+	"SP_NIGHTS_GHOST",
+
+	// Multiplayer
+	"MP_MAIN",
+	"MP_SPLITSCREEN", // SplitServer
+	"MP_SERVER",
+	"MP_CONNECT",
+	"MP_ROOM",
+	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+
+	// Options
+	"OP_MAIN",
+
+	"OP_P1CONTROLS",
+	"OP_CHANGECONTROLS", // OP_ChangeControlsDef shared with P2
+	"OP_P1MOUSE",
+	"OP_P1JOYSTICK",
+	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+
+	"OP_P2CONTROLS",
+	"OP_P2MOUSE",
+	"OP_P2JOYSTICK",
+
+	"OP_VIDEO",
+	"OP_VIDEOMODE",
+	"OP_COLOR",
+	"OP_OPENGL",
+	"OP_OPENGL_LIGHTING",
+	"OP_OPENGL_FOG",
+	"OP_OPENGL_COLOR",
+
+	"OP_SOUND",
+
+	"OP_SERVER",
+	"OP_MONITORTOGGLE",
+
+	"OP_DATA",
+	"OP_ADDONS",
+	"OP_SCREENSHOTS",
+	"OP_ERASEDATA",
+
+	// Secrets
+	"SR_MAIN",
+	"SR_PANDORA",
+	"SR_LEVELSELECT",
+	"SR_UNLOCKCHECKLIST",
+	"SR_EMBLEMHINT",
+
+	// Addons (Part of MISC, but let's make it our own)
+	"AD_MAIN",
+
+	// MISC
+	// "MESSAGE",
+	// "SPAUSE",
+
+	// "MPAUSE",
+	// "SCRAMBLETEAM",
+	// "CHANGETEAM",
+	// "CHANGELEVEL",
+
+	// "MAPAUSE",
+	// "HELP",
+
+	"SPECIAL"
+};
+
 struct {
 	const char *n;
 	// has to be able to hold both fixed_t and angle_t, so drastic measure!!
@@ -7827,6 +8391,14 @@ struct {
 	{"LE_BOSSDEAD",LE_BOSSDEAD}, // A boss in the map died (Chaos mode boss tally)
 	{"LE_BOSS4DROP",LE_BOSS4DROP}, // CEZ boss dropped its cage
 	{"LE_BRAKVILEATACK",LE_BRAKVILEATACK}, // Brak's doing his LOS attack, oh noes
+	{"LE_TURRET",LE_TURRET}, // THZ turret
+	{"LE_BRAKPLATFORM",LE_BRAKPLATFORM}, // v2.0 Black Eggman destroys platform
+	{"LE_CAPSULE2",LE_CAPSULE2}, // Egg Capsule
+	{"LE_CAPSULE1",LE_CAPSULE1}, // Egg Capsule
+	{"LE_CAPSULE0",LE_CAPSULE0}, // Egg Capsule
+	{"LE_KOOPA",LE_KOOPA}, // Distant cousin to Gay Bowser
+	{"LE_AXE",LE_AXE}, // MKB Axe object
+	{"LE_PARAMWIDTH",LE_PARAMWIDTH},  // If an object that calls LinedefExecute has a nonzero parameter value, this times the parameter will be subtracted. (Mostly for the purpose of coexisting bosses...)
 
 	/// \todo Get all this stuff into its own sections, maybe. Maybe.
 
@@ -7974,6 +8546,7 @@ struct {
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
+	{"CR_MINECART",CR_MINECART},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
@@ -8276,6 +8849,7 @@ struct {
 	{"V_6WIDTHSPACE",V_6WIDTHSPACE},
 	{"V_OLDSPACING",V_OLDSPACING},
 	{"V_MONOSPACE",V_MONOSPACE},
+
 	{"V_MAGENTAMAP",V_MAGENTAMAP},
 	{"V_YELLOWMAP",V_YELLOWMAP},
 	{"V_GREENMAP",V_GREENMAP},
@@ -8291,6 +8865,7 @@ struct {
 	{"V_BROWNMAP",V_BROWNMAP},
 	{"V_ROSYMAP",V_ROSYMAP},
 	{"V_INVERTMAP",V_INVERTMAP},
+
 	{"V_TRANSLUCENT",V_TRANSLUCENT},
 	{"V_10TRANS",V_10TRANS},
 	{"V_20TRANS",V_20TRANS},
@@ -8475,6 +9050,20 @@ static hudnum_t get_huditem(const char *word)
 			return i;
 	deh_warning("Couldn't find huditem named 'HUD_%s'",word);
 	return HUD_LIVES;
+}
+
+static menutype_t get_menutype(const char *word)
+{ // Returns the value of MN_ enumerations
+	menutype_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("MN_",word,3))
+		word += 3; // take off the MN_
+	for (i = 0; i < NUMMENUTYPES; i++)
+		if (fastcmp(word, MENUTYPES_LIST[i]))
+			return i;
+	deh_warning("Couldn't find menutype named 'MN_%s'",word);
+	return MN_NONE;
 }
 
 #ifndef HAVE_BLUA
@@ -8670,6 +9259,11 @@ static fixed_t find_const(const char **rword)
 #endif
 	else if (fastncmp("PW_",word,3)) {
 		r = get_power(word);
+		free(word);
+		return r;
+	}
+	else if (fastncmp("MN_",word,4)) {
+		r = get_menutype(word);
 		free(word);
 		return r;
 	}
@@ -9139,6 +9733,16 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("MN_",word,3)) {
+		p = word+3;
+		for (i = 0; i < NUMMENUTYPES; i++)
+			if (fastcmp(p, MENUTYPES_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (!mathlib && fastncmp("A_",word,2)) {

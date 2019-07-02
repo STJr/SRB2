@@ -2068,6 +2068,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))
 		lua_pushinteger(L, header->menuflags);
+	else if (fastcmp(field,"startrings"))
+		lua_pushinteger(L, header->startrings);
 	// TODO add support for reading numGradedMares and grades
 	else {
 		// Read custom vars now

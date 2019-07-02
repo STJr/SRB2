@@ -23,6 +23,8 @@
 #include "r_state.h"
 #include "r_splats.h" // faB(21jan):testing
 #include "r_sky.h"
+#include "r_portal.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -43,9 +45,8 @@
 //#define QUINCUNX
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
-#define MAXVISPLANES 512
 
-static visplane_t *visplanes[MAXVISPLANES];
+visplane_t *visplanes[MAXVISPLANES];
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -110,50 +111,6 @@ static fixed_t xoffs, yoffs;
 void R_InitPlanes(void)
 {
 	// FIXME: unused
-}
-
-// R_PortalStoreClipValues
-// Saves clipping values for later. -Red
-void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		*ceil = ceilingclip[start+i];
-		ceil++;
-		*floor = floorclip[start+i];
-		floor++;
-		*scale = frontscale[start+i];
-		scale++;
-	}
-}
-
-// R_PortalRestoreClipValues
-// Inverse of the above. Restores the old value!
-void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		ceilingclip[start+i] = *ceil;
-		ceil++;
-		floorclip[start+i] = *floor;
-		floor++;
-		frontscale[start+i] = *scale;
-		scale++;
-	}
-
-	// HACKS FOLLOW
-	for (i = 0; i < start; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-	for (i = end; i < vid.width; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
 }
 
 //
@@ -348,6 +305,23 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 }
 
+void R_ClearFFloorClips (void)
+{
+	INT32 i, p;
+
+	// opening / clipping determination
+	for (i = 0; i < viewwidth; i++)
+	{
+		for (p = 0; p < MAXFFLOORS; p++)
+		{
+			ffloor[p].f_clip[i] = (INT16)viewheight;
+			ffloor[p].c_clip[i] = -1;
+		}
+	}
+
+	numffloors = 0;
+}
+
 //
 // R_ClearPlanes
 // At begining of frame.
@@ -369,8 +343,6 @@ void R_ClearPlanes(void)
 			ffloor[p].c_clip[i] = -1;
 		}
 	}
-
-	numffloors = 0;
 
 	for (i = 0; i < MAXVISPLANES; i++)
 	for (*freehead = visplanes[i], visplanes[i] = NULL;
@@ -722,16 +694,6 @@ static void R_DrawSkyPlane(visplane_t *pl)
 {
 	INT32 x;
 	INT32 angle;
-
-	// If we're not supposed to draw the sky (e.g. for skyboxes), don't do anything!
-	// This probably utterly ruins sky rendering for FOFs and polyobjects, unfortunately
-	if (!viewsky)
-	{
-		// Mark that the sky was visible here for next tic
-		// (note: this is a hack and it sometimes can cause HOMs to appear for a tic IIRC)
-		skyVisible = true;
-		return;
-	}
 
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
