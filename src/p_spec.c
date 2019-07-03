@@ -36,6 +36,7 @@
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
 #include "f_finale.h" // control text prompt
+#include "r_things.h" // skins
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -2008,7 +2009,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckNightsTriggerLine(triggerline, actor))
 				return false;
 			break;
-
+		case 331: // continuous
+		case 332: // each time
+		case 333: // once
+			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -2141,6 +2147,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 326 // DeNightserize - Once
 	 || specialtype == 328 // Nights lap - Once
 	 || specialtype == 330 // Nights Bonus Time - Once
+	 || specialtype == 333 // Skin - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -2181,7 +2188,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 306 // Character ability - Each time
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || lines[masterline].special == 322) // Trigger on X calls - Each Time
+		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
+		 || lines[masterline].special == 332)// Skin - Each time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -7169,6 +7177,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 301:
 			case 310:
 			case 312:
+			case 332:
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				break;
@@ -7215,6 +7224,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 328:
 			case 329:
 			case 330:
+				break;
+
+			// Skin trigger executors
+			case 331:
+			case 333:
 				break;
 
 			case 399: // Linedef execute on map load
