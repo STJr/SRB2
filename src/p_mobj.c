@@ -9600,12 +9600,12 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i /*, j*/, mrand;
+	INT32 i, mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
 
-	if (dedicated || /*!cv_precipdensity*/!cv_drawdist_precip.value || curWeather == PRECIP_NONE)
+	if (dedicated || !(cv_drawdist_precip.value) || curWeather == PRECIP_NONE)
 		return;
 
 	// Use the blockmap to narrow down our placing patterns
@@ -9614,50 +9614,47 @@ void P_SpawnPrecipitation(void)
 		basex = bmaporgx + (i % bmapwidth) * MAPBLOCKSIZE;
 		basey = bmaporgy + (i / bmapwidth) * MAPBLOCKSIZE;
 
-		//for (j = 0; j < cv_precipdensity.value; ++j) -- density is 1 for us always
+		x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
+		y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
+
+		precipsector = R_IsPointInSubsector(x, y);
+
+		// No sector? Stop wasting time,
+		// move on to the next entry in the blockmap
+		if (!precipsector)
+			continue;
+
+		// Exists, but is too small for reasonable precipitation.
+		if (!(precipsector->sector->floorheight <= precipsector->sector->ceilingheight - (32<<FRACBITS)))
+			continue;
+
+		// Don't set height yet...
+		height = precipsector->sector->ceilingheight;
+
+		if (curWeather == PRECIP_SNOW)
 		{
-			x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
-			y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
-
-			precipsector = R_IsPointInSubsector(x, y);
-
-			// No sector? Stop wasting time,
-			// move on to the next entry in the blockmap
-			if (!precipsector)
-				break;
-
-			// Exists, but is too small for reasonable precipitation.
-			if (!(precipsector->sector->floorheight <= precipsector->sector->ceilingheight - (32<<FRACBITS)))
+			// Not in a sector with visible sky -- exception for NiGHTS.
+			if (!(maptol & TOL_NIGHTS) && precipsector->sector->ceilingpic != skyflatnum)
 				continue;
 
-			// Don't set height yet...
-			height = precipsector->sector->ceilingheight;
-
-			if (curWeather == PRECIP_SNOW)
-			{
-				// Not in a sector with visible sky -- exception for NiGHTS.
-				if (!(maptol & TOL_NIGHTS) && precipsector->sector->ceilingpic != skyflatnum)
-					continue;
-
-				rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
-				mrand = M_RandomByte();
-				if (mrand < 64)
-					P_SetPrecipMobjState(rainmo, S_SNOW3);
-				else if (mrand < 144)
-					P_SetPrecipMobjState(rainmo, S_SNOW2);
-			}
-			else // everything else.
-			{
-				// Not in a sector with visible sky.
-				if (precipsector->sector->ceilingpic != skyflatnum)
-					continue;
-
-				rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);
-			}
-
-			// Randomly assign a height, now that floorz is set.
-			rainmo->z = M_RandomRange(rainmo->floorz>>FRACBITS, rainmo->ceilingz>>FRACBITS)<<FRACBITS;
+			rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
+			mrand = M_RandomByte();
+			if (mrand < 64)
+				P_SetPrecipMobjState(rainmo, S_SNOW3);
+			else if (mrand < 144)
+				P_SetPrecipMobjState(rainmo, S_SNOW2);
 		}
+		else // everything else.
+		{
+			// Not in a sector with visible sky.
+			if (precipsector->sector->ceilingpic != skyflatnum)
+				continue;
+
+			rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);
+		}
+
+		// Randomly assign a height, now that floorz is set.
+		rainmo->z = M_RandomRange(rainmo->floorz>>FRACBITS, rainmo->ceilingz>>FRACBITS)<<FRACBITS;
 	}
 
 	if (curWeather == PRECIP_BLANK)
