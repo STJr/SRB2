@@ -3130,7 +3130,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	// no longer exists (can't collide with again)
 	rover->flags &= ~FF_EXISTS;
 	rover->master->frontsector->moved = true;
-	sec->moved = true;
+	P_RecalcPrecipInSector(sec);
 }
 
 // Used for bobbing platforms on the water
