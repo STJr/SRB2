@@ -836,7 +836,10 @@ static void COM_Add_f(void)
 		return;
 	}
 
-	CV_AddValue(cvar, atoi(COM_Argv(2)));
+	if (( cvar->flags & CV_FLOAT ))
+		CV_Set(cvar, va("%f", FIXED_TO_FLOAT (cvar->value) + atof(COM_Argv(2))));
+	else
+		CV_AddValue(cvar, atoi(COM_Argv(2)));
 }
 
 // =========================================================================
