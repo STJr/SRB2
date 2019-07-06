@@ -19984,7 +19984,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		255,            // painchance
+		0,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
