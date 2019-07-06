@@ -4663,6 +4663,9 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
 
+	// Bricks
+	MT_BRICKDEBRIS,
+
 #ifdef SEENAMES
 	MT_NAMECHECK,
 #endif
