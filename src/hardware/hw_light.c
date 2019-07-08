@@ -1362,12 +1362,8 @@ static void HWR_SearchLightsInMobjs(void)
 	//mobj_t *            mobj;
 
 	// search in the list of thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		// a mobj ?
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-			HWR_AddMobjLights((mobj_t *)th);
-	}
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		HWR_AddMobjLights((mobj_t *)th);
 }
 #endif
 

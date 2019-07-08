@@ -127,8 +127,6 @@ static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}
 // whether to use console background picture, or translucent mode
 static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-// \todo SRB2-CHAT 2.1 colors -- pending translation to 2.2 palette indexes
-#if 0
 static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{2, "Sepia"},
 												{3, "Brown"},		{4, "Pink"},		{5, "Raspberry"},
 												{6, "Red"},			{7, "Creamsicle"},	{8, "Orange"},
@@ -137,13 +135,7 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 												{15,"Periwinkle"},	{16,"Blue"},		{17,"Purple"},
 												{18,"Lavender"},
 												{0, NULL}};
-#else
-static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
-												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
-												{6, "Green"},	{7, "Blue"},	{8, "Purple"},
-												{9, "Magenta"},	{10, "Aqua"},
-												{0, NULL}};
-#endif
+
 
 consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
@@ -256,50 +248,30 @@ void CON_SetupBackColormapEx(INT32 color, boolean prompt)
 
 	shift = 6; // 12 colors -- shift of 7 means 6 colors
 
-	// \todo SRB2-CHAT colors, pending translation to 2.2 palette indexes
-#if 0
 	switch (color)
 	{
 		case 0:		palindex = 15; 	break; 	// White
-		case 1:		palindex = 31;	break; 	// Gray
-		case 2:		palindex = 47;	break;	// Sepia
-		case 3:		palindex = 63;	break; 	// Brown
-		case 4:		palindex = 150; shift = 7; 	break; 	// Pink
-		case 5:		palindex = 127; shift = 7;	break; 	// Raspberry
-		case 6:		palindex = 143;	break; 	// Red
-		case 7:		palindex = 86;	shift = 7;	break;	// Creamsicle
-		case 8:		palindex = 95;	break; 	// Orange
-		case 9:		palindex = 119; shift = 7;	break; 	// Gold
-		case 10:	palindex = 111;	break; 	// Yellow
-		case 11:	palindex = 191; shift = 7; 	break; 	// Emerald
-		case 12:	palindex = 175;	break; 	// Green
-		case 13:	palindex = 219;	break; 	// Cyan
-		case 14:	palindex = 207; shift = 7;	break; 	// Steel
-		case 15:	palindex = 230;	shift = 7; 	break; 	// Periwinkle
-		case 16:	palindex = 239;	break; 	// Blue
-		case 17:	palindex = 199; shift = 7; 	break; 	// Purple
-		case 18:	palindex = 255; shift = 7; 	break; 	// Lavender
+		case 1:		palindex = 31;	break; 	// Black
+		case 2:		palindex = 251;	break;	// Sepia
+		case 3:		palindex = 239;	break; 	// Brown
+		case 4:		palindex = 215; shift = 7; 	break; 	// Pink
+		case 5:		palindex = 37; shift = 7;	break; 	// Raspberry
+		case 6:		palindex = 47; shift = 7;	break; 	// Red
+		case 7:		palindex = 53;	shift = 7;	break;	// Creamsicle
+		case 8:		palindex = 63;	break; 	// Orange
+		case 9:		palindex = 56; shift = 7;	break; 	// Gold
+		case 10:	palindex = 79; shift = 7;	break; 	// Yellow
+		case 11:	palindex = 119; shift = 7; 	break; 	// Emerald
+		case 12:	palindex = 111;	break; 	// Green
+		case 13:	palindex = 136;	shift = 7; break; 	// Cyan
+		case 14:	palindex = 175; shift = 7;	break; 	// Steel
+		case 15:	palindex = 166;	shift = 7; 	break; 	// Periwinkle
+		case 16:	palindex = 159;	break; 	// Blue
+		case 17:	palindex = 187; shift = 7; 	break; 	// Purple
+		case 18:	palindex = 199; shift = 7; 	break; 	// Lavender
 		// Default green
-		default:	palindex = 175; break;
+		default:	palindex = 111; break;
 	}
-#else
-	switch (color)
-	{
-		case 0:		palindex = 15; 	break; // White
-		case 1:		palindex = 31;	break; // Gray
-		case 2:		palindex = 239;	break; // Brown
-		case 3:		palindex = 47;	break; // Red
-		case 4:		palindex = 63;	break; // Orange
-		case 5:		palindex = 79;	shift = 7;	break; // Yellow
-		case 6:		palindex = 111;	break; // Green
-		case 7:		palindex = 159;	break; // Blue
-		case 8:		palindex = 199;	shift = 7; break; // Purple
-		case 9:		palindex = 187;	break; // Magenta
-		case 10:	palindex = 139;	break; // Aqua
-		// Default green
-		default:	palindex = 175; color = 11; break;
-	}
-#endif
 
 	if (prompt)
 	{

@@ -97,11 +97,8 @@ void P_ClearStarPost(INT32 postnum)
 	mobj_t *mo2;
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type != MT_STARPOST)
@@ -126,11 +123,8 @@ void P_ResetStarposts(void)
 	thinker_t *th;
 	mobj_t *post;
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		post = (mobj_t *)th;
 
 		if (post->type == MT_STARPOST)
@@ -833,11 +827,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						// The player might have two Ideyas: toucher->tracer and toucher->tracer->hnext
 						// so handle their anchorpoints accordingly.
 						// scan the thinkers to find the corresponding anchorpoint
-						for (th = thinkercap.next; th != &thinkercap; th = th->next)
+						for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 						{
-							if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-								continue;
-
 							mo2 = (mobj_t *)th;
 
 							if (mo2->type == MT_IDEYAANCHOR)
@@ -927,11 +918,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				count = 1;
 
 				// scan the remaining thinkers
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2 == special)
@@ -977,11 +965,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				// Now we RE-scan all the thinkers to find close objects to pull
 				// in from the paraloop. Isn't this just so efficient?
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > gatherradius)
@@ -1351,11 +1336,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				EV_DoElevator(&junk, bridgeFall, false);
 
 				// scan the remaining thinkers to find koopa
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_KOOPA)
@@ -1451,11 +1433,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				thinker_t *th;
 				mobj_t *mo2;
 
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
-
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_STARPOST)
@@ -1690,6 +1669,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		case MT_CANARIVORE_GAS:
 			// if player and gas touch, attach gas to player (overriding any gas that already attached) and apply slowdown effect
+			special->flags |= MF_NOGRAVITY|MF_NOCLIPHEIGHT;
 			P_UnsetThingPosition(special);
 			special->x = toucher->x - toucher->momx/2;
 			special->y = toucher->y - toucher->momy/2;
@@ -2555,11 +2535,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 				// scan the thinkers to make sure all the old pinch dummies are gone on death
 				// this can happen if the boss was hurt earlier than expected
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-						continue;
-
 					mo = (mobj_t *)th;
 					if (mo->type == (mobjtype_t)target->info->mass && mo->tracer == target)
 					{

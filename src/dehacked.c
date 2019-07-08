@@ -1793,15 +1793,23 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
 				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY") ||
 					fastcmp(word2, "BLACK")) backcolor = 1;
-				else if (i == 2 || fastcmp(word2, "BROWN")) backcolor = 2;
-				else if (i == 3 || fastcmp(word2, "RED")) backcolor = 3;
-				else if (i == 4 || fastcmp(word2, "ORANGE")) backcolor = 4;
-				else if (i == 5 || fastcmp(word2, "YELLOW")) backcolor = 5;
-				else if (i == 6 || fastcmp(word2, "GREEN")) backcolor = 6;
-				else if (i == 7 || fastcmp(word2, "BLUE")) backcolor = 7;
-				else if (i == 8 || fastcmp(word2, "PURPLE")) backcolor = 8;
-				else if (i == 9 || fastcmp(word2, "MAGENTA")) backcolor = 9;
-				else if (i == 10 || fastcmp(word2, "AQUA")) backcolor = 10;
+				else if (i == 2 || fastcmp(word2, "SEPIA")) backcolor = 2;
+				else if (i == 3 || fastcmp(word2, "BROWN")) backcolor = 3;
+				else if (i == 4 || fastcmp(word2, "PINK")) backcolor = 4;
+				else if (i == 5 || fastcmp(word2, "RASPBERRY")) backcolor = 5;
+				else if (i == 6 || fastcmp(word2, "RED")) backcolor = 6;
+				else if (i == 7 || fastcmp(word2, "CREAMSICLE")) backcolor = 7;
+				else if (i == 8 || fastcmp(word2, "ORANGE")) backcolor = 8;
+				else if (i == 9 || fastcmp(word2, "GOLD")) backcolor = 9;
+				else if (i == 10 || fastcmp(word2, "YELLOW")) backcolor = 10;
+				else if (i == 11 || fastcmp(word2, "EMERALD")) backcolor = 11;
+				else if (i == 12 || fastcmp(word2, "GREEN")) backcolor = 12;
+				else if (i == 13 || fastcmp(word2, "CYAN") || fastcmp(word2, "AQUA")) backcolor = 13;
+				else if (i == 14 || fastcmp(word2, "STEEL")) backcolor = 14;
+				else if (i == 15 || fastcmp(word2, "PERIWINKLE")) backcolor = 15;
+				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
+				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
+				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
 				textprompts[num]->page[pagenum].backcolor = backcolor;
@@ -8766,10 +8774,8 @@ struct {
 #endif
 #ifdef ESLOPE
 	// Slope flags
-	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
-	{"SL_NODYNAMIC",SL_NODYNAMIC},      // Slope will never need to move during the level, so don't fuss with recalculating it
-	{"SL_ANCHORVERTEX",SL_ANCHORVERTEX},// Slope is using a Slope Vertex Thing to anchor its position
-	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
+	{"SL_NOPHYSICS",SL_NOPHYSICS},
+	{"SL_DYNAMIC",SL_DYNAMIC},
 #endif
 
 	// Angles
