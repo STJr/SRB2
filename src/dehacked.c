@@ -4750,15 +4750,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE4_RATK6",
 	"S_EGGMOBILE4_RAISE1",
 	"S_EGGMOBILE4_RAISE2",
-	"S_EGGMOBILE4_RAISE3",
-	"S_EGGMOBILE4_RAISE4",
-	"S_EGGMOBILE4_RAISE5",
-	"S_EGGMOBILE4_RAISE6",
-	"S_EGGMOBILE4_RAISE7",
-	"S_EGGMOBILE4_RAISE8",
-	"S_EGGMOBILE4_RAISE9",
-	"S_EGGMOBILE4_RAISE10",
-	"S_EGGMOBILE4_PAIN",
+	"S_EGGMOBILE4_PAIN1",
+	"S_EGGMOBILE4_PAIN2",
 	"S_EGGMOBILE4_DIE1",
 	"S_EGGMOBILE4_DIE2",
 	"S_EGGMOBILE4_DIE3",
@@ -4776,10 +4769,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE4_FLEE1",
 	"S_EGGMOBILE4_FLEE2",
 	"S_EGGMOBILE4_MACE",
+	"S_EGGMOBILE4_MACE_DIE1",
+	"S_EGGMOBILE4_MACE_DIE2",
+	"S_EGGMOBILE4_MACE_DIE3",
 
 	// Boss 4 jet flame
-	"S_JETFLAME1",
-	"S_JETFLAME2",
+	"S_JETFLAME",
+
+	// Boss 4 Spectator Eggrobo
+	"S_EGGROBO1_IDLE",
+	"S_EGGROBO1_BSLAP1",
+	"S_EGGROBO2_BSLAP2",
+	"S_EGGROBO1_PISSED",
+
+	// Boss 4 Spectator Eggrobo jet flame
+	"S_EGGROBOJET",
 
 	// Boss 5
 	"S_FANG_IDLE1",
@@ -7262,6 +7266,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGMOBILE4",
 	"MT_EGGMOBILE4_MACE",
 	"MT_JETFLAME",
+	"MT_EGGROBO1",
+	"MT_EGGROBO1JET",
 
 	// Boss 5
 	"MT_FANG",

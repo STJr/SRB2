@@ -202,6 +202,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
 	&lspr[REDBALL_L],   // SPR_EFIR
+	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
 	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
