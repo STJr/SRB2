@@ -6476,13 +6476,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			// set line specials to 0 here too, same reason as above
 			if (netgame || multiplayer)
 			{
-				if ((lines[i].flags & ML_NONET) == ML_NONET)
+				if (lines[i].flags & ML_NONET)
 				{
 					lines[i].special = 0;
 					continue;
 				}
 			}
-			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
+			else if (lines[i].flags & ML_NETONLY)
 			{
 				lines[i].special = 0;
 				continue;
@@ -9204,10 +9204,10 @@ static void P_SearchForDisableLinedefs(void)
 
 			if (netgame || multiplayer)
 			{
-				if ((lines[i].flags & ML_NONET) == ML_NONET)
+				if (lines[i].flags & ML_NONET)
 					continue;
 			}
-			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
+			else if (lines[i].flags & ML_NETONLY)
 				continue; // Net-only never triggers in single player
 
 			// Disable any linedef specials with our tag.
