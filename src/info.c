@@ -475,6 +475,9 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROIO",
 	"ROIP",
 
+	// Bricks
+	"BRIC",
+
 	// Gravity Well Objects
 	"GWLG",
 	"GWLR",
@@ -3860,6 +3863,8 @@ state_t states[NUMSTATES] =
 	{SPR_ROIN, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEN
 	{SPR_ROIO, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEO
 	{SPR_ROIP, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 4, 2, S_NULL}, // S_ROCKCRUMBLEP
+
+	{SPR_BRIC, FF_ANIMATE, -1, {A_DebrisRandom}, 7, 2, S_NULL}, // S_BRICKDEBRIS
 
 #ifdef SEENAMES
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL}, // S_NAMECHECK
@@ -19967,6 +19972,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_crumbl,     // activesound
 		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_SCENERY|MF_NOCLIPHEIGHT,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BRICKDEBRIS
+		-1,             // doomednum
+		S_BRICKDEBRIS, // spawnstate
+		1,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,     // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,            // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,     // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		100,           // mass
+		0,              // damage
+		sfx_None,     // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT|MF_SCENERY,  // flags
 		S_NULL          // raisestate
 	},
 

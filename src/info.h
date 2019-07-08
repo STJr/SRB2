@@ -720,6 +720,9 @@ typedef enum sprite
 	SPR_ROIO,
 	SPR_ROIP,
 
+	// Bricks
+	SPR_BRIC,
+
 	// Gravity Well Objects
 	SPR_GWLG,
 	SPR_GWLR,
@@ -3923,6 +3926,9 @@ typedef enum state
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
 
+	// Bricks
+	S_BRICKDEBRIS,
+
 #ifdef SEENAMES
 	S_NAMECHECK,
 #endif
@@ -4656,6 +4662,9 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE14,
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
+
+	// Bricks
+	MT_BRICKDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,
