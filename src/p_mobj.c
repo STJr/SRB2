@@ -4768,7 +4768,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	{
 		INT32 oldmovecount = mobj->movecount;
 		if (mobj->movedir == 3) // pinch start
-			movespeed = -210<<(FRACBITS>>1);
+			movespeed = -(210<<(FRACBITS>>1));
 		else if (mobj->movedir > 3) // pinch
 		{
 			movespeed = 420<<(FRACBITS>>1);
