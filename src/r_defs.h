@@ -237,46 +237,27 @@ typedef struct linechain_s
 // Slopes
 #ifdef ESLOPE
 typedef enum {
-	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
-	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
-	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
-	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
+	SL_DYNAMIC = 1<<1, /// This plane slope will be assigned a thinker to make it dynamic.
 } slopeflags_t;
 
 typedef struct pslope_s
 {
 	UINT16 id; // The number of the slope, mostly used for netgame syncing purposes
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 
-	// --- Information used in clipping/projection ---
-	// Origin vector for the plane
-	vector3_t o;
+	// The plane's definition.
+	vector3_t o;		/// Plane origin.
+	vector3_t normal;	/// Plane normal.
 
-	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
-	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
-	vector2_t d;
-
-	// The rate at which z changes based on distance from the origin plane.
-	fixed_t zdelta;
-
-	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
-	vector3_t normal;
-
-	// For comparing when a slope should be rendered
-	fixed_t lowz;
-	fixed_t highz;
+	vector2_t d;		/// Precomputed normalized projection of the normal over XY.
+	fixed_t zdelta;		/// Precomputed Z unit increase per XY unit.
 
 	// This values only check and must be updated if the slope itself is modified
-	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
-	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
-
-	struct line_s *sourceline; // The line that generated the slope
-	fixed_t extent; // Distance value used for recalculating zdelta
-	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
+	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
+	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
 
 	UINT8 flags; // Slope options
-	mapthing_t **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
-
-	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;
 #endif
 

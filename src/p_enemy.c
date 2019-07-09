@@ -3761,11 +3761,8 @@ void A_BossDeath(mobj_t *mo)
 
 	// scan the remaining thinkers to see
 	// if all bosses are dead
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 		if (mo2 != mo && (mo2->flags & MF_BOSS) && mo2->health > 0)
 			goto bossjustdie; // other boss not dead - just go straight to dying!
@@ -3862,11 +3859,8 @@ bossjustdie:
 
 			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
 			// scan the thinkers to find the runaway point
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-					continue;
-
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
@@ -6118,11 +6112,8 @@ void A_RingExplode(mobj_t *actor)
 
 	S_StartSound(actor, sfx_prloop);
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2 == actor) // Don't explode yourself! Endless loop!
@@ -7811,11 +7802,8 @@ void A_Boss3Path(mobj_t *actor)
 		// scan the thinkers
 		// to find a point that matches
 		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
 			mo2 = (mobj_t *)th;
 			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2->spawnpoint->angle == actor->threshold)
 			{
@@ -8204,11 +8192,8 @@ void A_FindTarget(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTarget called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8269,11 +8254,8 @@ void A_FindTracer(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTracer called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8832,11 +8814,8 @@ void A_RemoteAction(mobj_t *actor)
 		fixed_t dist1 = 0, dist2 = 0;
 
 		// scan the thinkers
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
 			mo2 = (mobj_t *)th;
 
 			if (mo2->type == (mobjtype_t)locvar1)
@@ -9098,11 +9077,8 @@ void A_SetObjectTypeState(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc2lw)
@@ -9736,11 +9712,8 @@ void A_CheckThingCount(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc1up)
@@ -13015,7 +12988,14 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
 			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
 			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
+			P_UnsetThingPosition(nearby);
+			if (sector_list)
+			{
+				P_DelSeclist(sector_list);
+				sector_list = NULL;
+			}
 			nearby->flags = MF_NOBLOCKMAP|MF_MISSILE;
+			P_SetThingPosition(nearby);
 			P_SetMobjState(nearby, nearby->info->missilestate);
 		}
 	}
@@ -13059,8 +13039,14 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
-
+	P_UnsetThingPosition(actor);
+	if (sector_list)
+	{
+		P_DelSeclist(sector_list);
+		sector_list = NULL;
+	}
 	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	P_SetThingPosition(actor);
 	actor->flags2 = MF2_EXPLOSION;
 	if (actor->info->deathsound)
 		S_StartSound(actor, actor->info->deathsound);
