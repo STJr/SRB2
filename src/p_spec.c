@@ -5621,26 +5621,26 @@ ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
 /** Adds a newly formed 3Dfloor structure to a sector's ffloors list.
   *
   * \param sec    Target sector.
-  * \param ffloor Newly formed 3Dfloor structure.
+  * \param fflr   Newly formed 3Dfloor structure.
   * \sa P_AddFakeFloor
   */
-static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *ffloor)
+static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *fflr)
 {
 	ffloor_t *rover;
 
 	if (!sec->ffloors)
 	{
-		sec->ffloors = ffloor;
-		ffloor->next = 0;
-		ffloor->prev = 0;
+		sec->ffloors = fflr;
+		fflr->next = 0;
+		fflr->prev = 0;
 		return;
 	}
 
 	for (rover = sec->ffloors; rover->next; rover = rover->next);
 
-	rover->next = ffloor;
-	ffloor->prev = rover;
-	ffloor->next = 0;
+	rover->next = fflr;
+	fflr->prev = rover;
+	fflr->next = 0;
 }
 
 /** Adds a 3Dfloor.
@@ -5655,7 +5655,7 @@ static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *ffloor)
   */
 static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, ffloortype_e flags, thinkerlist_t *secthinkers)
 {
-	ffloor_t *ffloor;
+	ffloor_t *fflr;
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
@@ -5665,8 +5665,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	if (sec == sec2)
 		return NULL; //Don't need a fake floor on a control sector.
-	if ((ffloor = (P_GetFFloorBySec(sec, sec2))))
-		return ffloor; // If this ffloor already exists, return it
+	if ((fflr = (P_GetFFloorBySec(sec, sec2))))
+		return fflr; // If this ffloor already exists, return it
 
 	if (sec2->ceilingheight < sec2->floorheight)
 	{
@@ -5705,27 +5705,27 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	}
 
 	// Add the floor
-	ffloor = Z_Calloc(sizeof (*ffloor), PU_LEVEL, NULL);
-	ffloor->secnum = sec2 - sectors;
-	ffloor->target = sec;
-	ffloor->bottomheight = &sec2->floorheight;
-	ffloor->bottompic = &sec2->floorpic;
-	ffloor->bottomxoffs = &sec2->floor_xoffs;
-	ffloor->bottomyoffs = &sec2->floor_yoffs;
-	ffloor->bottomangle = &sec2->floorpic_angle;
+	fflr = Z_Calloc(sizeof (*fflr), PU_LEVEL, NULL);
+	fflr->secnum = sec2 - sectors;
+	fflr->target = sec;
+	fflr->bottomheight = &sec2->floorheight;
+	fflr->bottompic = &sec2->floorpic;
+	fflr->bottomxoffs = &sec2->floor_xoffs;
+	fflr->bottomyoffs = &sec2->floor_yoffs;
+	fflr->bottomangle = &sec2->floorpic_angle;
 
 	// Add the ceiling
-	ffloor->topheight = &sec2->ceilingheight;
-	ffloor->toppic = &sec2->ceilingpic;
-	ffloor->toplightlevel = &sec2->lightlevel;
-	ffloor->topxoffs = &sec2->ceiling_xoffs;
-	ffloor->topyoffs = &sec2->ceiling_yoffs;
-	ffloor->topangle = &sec2->ceilingpic_angle;
+	fflr->topheight = &sec2->ceilingheight;
+	fflr->toppic = &sec2->ceilingpic;
+	fflr->toplightlevel = &sec2->lightlevel;
+	fflr->topxoffs = &sec2->ceiling_xoffs;
+	fflr->topyoffs = &sec2->ceiling_yoffs;
+	fflr->topangle = &sec2->ceilingpic_angle;
 
 #ifdef ESLOPE
 	// Add slopes
-	ffloor->t_slope = &sec2->c_slope;
-	ffloor->b_slope = &sec2->f_slope;
+	fflr->t_slope = &sec2->c_slope;
+	fflr->b_slope = &sec2->f_slope;
 	// mark the target sector as having slopes, if the FOF has any of its own
 	// (this fixes FOF slopes glitching initially at level load in software mode)
 	if (sec2->hasslope)
@@ -5738,10 +5738,10 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT2)) // Block all BUT player
 		flags &= ~FF_BLOCKPLAYER;
 
-	ffloor->spawnflags = ffloor->flags = flags;
-	ffloor->master = master;
-	ffloor->norender = INFTICS;
-	ffloor->fadingdata = NULL;
+	fflr->spawnflags = fflr->flags = flags;
+	fflr->master = master;
+	fflr->norender = INFTICS;
+	fflr->fadingdata = NULL;
 
 	// Scan the thinkers to check for special conditions applying to this FOF.
 	// If we have thinkers sorted by sector, just check the relevant ones;
@@ -5797,14 +5797,14 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (flags & FF_TRANSLUCENT)
 	{
 		if (sides[master->sidenum[0]].toptexture > 0)
-			ffloor->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
+			fflr->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
 		else
-			ffloor->alpha = 0x80;
+			fflr->alpha = 0x80;
 	}
 	else
-		ffloor->alpha = 0xff;
+		fflr->alpha = 0xff;
 
-	ffloor->spawnalpha = ffloor->alpha; // save for netgames
+	fflr->spawnalpha = fflr->alpha; // save for netgames
 
 	if (flags & FF_QUICKSAND)
 		CheckForQuicksand = true;
@@ -5828,9 +5828,9 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		CheckForFloatBob = true;
 	}
 
-	P_AddFFloorToList(sec, ffloor);
+	P_AddFFloorToList(sec, fflr);
 
-	return ffloor;
+	return fflr;
 }
 
 //
@@ -6141,7 +6141,7 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
+static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
 {
 	levelspecthink_t *eachtime;
 
@@ -6193,30 +6193,30 @@ void T_LaserFlash(laserthink_t *flash)
 	msecnode_t *node;
 	mobj_t *thing;
 	sector_t *sourcesec;
-	ffloor_t *ffloor = flash->ffloor;
+	ffloor_t *fflr = flash->ffloor;
 	sector_t *sector = flash->sector;
 	fixed_t top, bottom;
 
-	if (!ffloor || !(ffloor->flags & FF_EXISTS))
+	if (!fflr || !(fflr->flags & FF_EXISTS))
 		return;
 
 	if (leveltime & 2)
-		//ffloor->flags |= FF_RENDERALL;
-		ffloor->alpha = 0xB0;
+		//fflr->flags |= FF_RENDERALL;
+		fflr->alpha = 0xB0;
 	else
-		//ffloor->flags &= ~FF_RENDERALL;
-		ffloor->alpha = 0x90;
+		//fflr->flags &= ~FF_RENDERALL;
+		fflr->alpha = 0x90;
 
-	sourcesec = ffloor->master->frontsector; // Less to type!
+	sourcesec = fflr->master->frontsector; // Less to type!
 
 #ifdef ESLOPE
-	top = (*ffloor->t_slope) ? P_GetZAt(*ffloor->t_slope, sector->soundorg.x, sector->soundorg.y)
-			: *ffloor->topheight;
-	bottom = (*ffloor->b_slope) ? P_GetZAt(*ffloor->b_slope, sector->soundorg.x, sector->soundorg.y)
-			: *ffloor->bottomheight;
+	top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y)
+			: *fflr->topheight;
+	bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y)
+			: *fflr->bottomheight;
 	sector->soundorg.z = (top + bottom)/2;
 #else
-	sector->soundorg.z = (*ffloor->topheight + *ffloor->bottomheight)/2;
+	sector->soundorg.z = (*fflr->topheight + *fflr->bottomheight)/2;
 #endif
 	S_StartSound(&sector->soundorg, sfx_laser);
 
@@ -6225,7 +6225,7 @@ void T_LaserFlash(laserthink_t *flash)
 	{
 		thing = node->m_thing;
 
-		if ((ffloor->master->flags & ML_EFFECT1)
+		if ((fflr->master->flags & ML_EFFECT1)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
@@ -6249,7 +6249,7 @@ void T_LaserFlash(laserthink_t *flash)
 
 /** Adds a laser thinker to a 3Dfloor.
   *
-  * \param ffloor      3Dfloor to turn into a laser block.
+  * \param fflr      3Dfloor to turn into a laser block.
   * \param sector      Target sector.
   * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
   * \sa T_LaserFlash
@@ -6258,9 +6258,9 @@ void T_LaserFlash(laserthink_t *flash)
 static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers)
 {
 	laserthink_t *flash;
-	ffloor_t *ffloor = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
+	ffloor_t *fflr = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
 
-	if (!ffloor)
+	if (!fflr)
 		return;
 
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
@@ -6268,7 +6268,7 @@ static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *lin
 	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LaserFlash;
-	flash->ffloor = ffloor;
+	flash->ffloor = fflr;
 	flash->sector = sec; // For finding mobjs
 	flash->sec = sec2;
 	flash->sourceline = line;
@@ -8230,7 +8230,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->ffloornum = (UINT32)ffloornum;
 
 	d->alpha = d->sourcevalue = rover->alpha;
-	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // ffloor->alpha is 1-256
+	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // rover->alpha is 1-256
 
 	if (ticbased)
 	{

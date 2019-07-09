@@ -5918,9 +5918,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				break;
 
 			case 2:
+			{
 				// We're all charged and ready now! Unleash the fury!!
-				S_StopSound(mobj);
 				mobj_t *removemobj = mobj->tracer;
+				S_StopSound(mobj);
 				P_SetTarget(&mobj->tracer, mobj->hnext);
 				P_RemoveMobj(removemobj);
 				if (mobj->health <= mobj->info->damage)
@@ -5960,7 +5961,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					// looking for the number of things to fire? that's done in case 1 now
 				}
 				break;
-
+			}
 			case 3:
 				// Return to idle.
 				mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
@@ -9239,7 +9240,7 @@ void P_SceneryThinker(mobj_t *mobj)
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	const mobjinfo_t *info = &mobjinfo[type];
-	UINT8 sc = -1;
+	SINT8 sc = -1;
 	state_t *st;
 	mobj_t *mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
