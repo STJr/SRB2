@@ -1116,6 +1116,12 @@ boolean I_LoadSong(char *data, size_t len)
 	size_t probesize;
 	int result;
 
+	/*
+		If the size of the data to be checked is bigger than the recommended size (> 2048)
+		Let's just set the probe size to the recommended size
+		Otherwise let's give it the full data size
+	*/
+
 	if (len > openmpt_probe_file_header_get_recommended_size())
 		probesize = openmpt_probe_file_header_get_recommended_size();
 	else
@@ -1126,7 +1132,7 @@ boolean I_LoadSong(char *data, size_t len)
 	if (result == OPENMPT_PROBE_FILE_HEADER_RESULT_SUCCESS) // We only cared if it succeeded, continue on if not.
 	{
 		openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-		if (!openmpt_mhandle)
+		if (!openmpt_mhandle) // Failed to create module handle? Show error and return!
 		{
 			mod_err = openmpt_module_error_get_last(openmpt_mhandle);
 			mod_err_str = openmpt_error_string(mod_err);
@@ -1134,10 +1140,11 @@ boolean I_LoadSong(char *data, size_t len)
 			return false;
 		}
 		else
-			return true;
+			return true; // All good and we're ready for music playback!
 	}
-#endif	
+#endif
 
+	// Let's see if Mixer is able to load this.
 	rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
@@ -1148,7 +1155,6 @@ boolean I_LoadSong(char *data, size_t len)
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
 		return false;
 	}
-
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
