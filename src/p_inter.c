@@ -315,6 +315,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	// Can happen with a sliding player corpse.
 	if (toucher->health <= 0)
 		return;
+	if (special->health <= 0)
+		return;
 
 	if (heightcheck)
 	{
@@ -339,9 +341,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 		}
 	}
-
-	if (special->health <= 0)
-		return;
 
 	player = toucher->player;
 	I_Assert(player != NULL); // Only players can touch stuff!
@@ -1543,6 +1542,45 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					break;
 				}
 			}
+			return;
+
+		case MT_EGGROBO1:
+			if (special->state == &states[special->info->deathstate])
+				return;
+			if (P_PlayerInPain(player))
+				return;
+
+			P_SetMobjState(special, special->info->meleestate);
+			special->angle = special->movedir;
+			special->momx = special->momy = 0;
+
+			// Buenos Dias Mandy
+			P_SetPlayerMobjState(toucher, S_PLAY_STUN);
+			player->pflags &= ~PF_APPLYAUTOBRAKE;
+			player->drawangle = special->angle + ANGLE_180;
+			P_InstaThrust(toucher, special->angle, FixedMul(3*special->info->speed, special->scale/2));
+			toucher->z += P_MobjFlip(toucher);
+			if (toucher->eflags & MFE_UNDERWATER) // unlikely.
+				P_SetObjectMomZ(toucher, FixedDiv(10511*FRACUNIT,2600*FRACUNIT), false);
+			else
+				P_SetObjectMomZ(toucher, FixedDiv(69*FRACUNIT,10*FRACUNIT), false);
+			if (P_IsLocalPlayer(player))
+			{
+				quake.intensity = 9*FRACUNIT;
+				quake.time = TICRATE/2;
+				quake.epicenter = NULL;
+			}
+
+#if 0 // camera redirection - deemed unnecessary
+			toucher->angle = special->angle;
+			if (player == &players[consoleplayer])
+				localangle = toucher->angle;
+			else if (player == &players[secondarydisplayplayer])
+				localangle2 = toucher->angle;
+#endif
+
+			S_StartSound(toucher, special->info->attacksound); // home run
+
 			return;
 
 		case MT_BIGTUMBLEWEED:

@@ -848,6 +848,9 @@ boolean P_PlayerInPain(player_t *player)
 	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate] && player->powers[pw_flashing])
 		return true;
 
+	if (player->mo->state == &states[S_PLAY_STUN])
+		return true;
+
 	return false;
 }
 

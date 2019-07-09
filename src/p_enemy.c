@@ -3163,21 +3163,35 @@ void A_FocusTarget(mobj_t *actor)
 // Description: Reverse arms direction.
 //
 // var1 = sfx to play
-// var2 = unused
+// var2 = sfx to play in pinch
 //
 void A_Boss4Reverse(mobj_t *actor)
 {
 	sfxenum_t locvar1 = (sfxenum_t)var1;
+	sfxenum_t locvar2 = (sfxenum_t)var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss4Reverse", actor))
 		return;
 #endif
-	S_StartSound(NULL, locvar1);
 	actor->reactiontime = 0;
-	if (actor->movedir == 1)
-		actor->movedir = 2;
+	if (actor->movedir < 3)
+	{
+		S_StartSound(NULL, locvar1);
+		if (actor->movedir == 1)
+			actor->movedir = 2;
+		else
+			actor->movedir = 1;
+	}
 	else
-		actor->movedir = 1;
+	{
+		S_StartSound(NULL, locvar2);
+		if (actor->movedir == 4)
+			actor->movedir = 5;
+		else
+			actor->movedir = 4;
+		actor->angle += ANGLE_180;
+		actor->movefactor = -actor->movefactor;
+	}
 }
 
 // Function: A_Boss4SpeedUp
@@ -8685,8 +8699,8 @@ void A_BossJetFume(mobj_t *actor)
 	{
 		fixed_t jetx, jety, jetz;
 
-		jetx = actor->x + P_ReturnThrustX(actor, actor->angle, -FixedMul(60*FRACUNIT, actor->scale));
-		jety = actor->y + P_ReturnThrustY(actor, actor->angle, -FixedMul(60*FRACUNIT, actor->scale));
+		jetx = actor->x + P_ReturnThrustX(actor, actor->angle, -60*actor->scale);
+		jety = actor->y + P_ReturnThrustY(actor, actor->angle, -60*actor->scale);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			jetz = actor->z + actor->height - FixedMul(17*FRACUNIT + mobjinfo[MT_PROPELLER].height, actor->scale);
 		else
@@ -8719,7 +8733,7 @@ void A_BossJetFume(mobj_t *actor)
 		if (actor->eflags & MFE_VERTICALFLIP)
 			jetz = actor->z + actor->height + FixedMul(50*FRACUNIT - mobjinfo[MT_JETFLAME].height, actor->scale);
 		else
-			jetz = actor->z - FixedMul(50*FRACUNIT, actor->scale);
+			jetz = actor->z - 50*actor->scale;
 		filler = P_SpawnMobj(actor->x, actor->y, jetz, MT_JETFLAME);
 		P_SetTarget(&filler->target, actor);
 		// Boss 4 already uses its tracer for other things
@@ -8727,6 +8741,30 @@ void A_BossJetFume(mobj_t *actor)
 		P_SetScale(filler, filler->destscale);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			filler->flags2 |= MF2_OBJECTFLIP;
+	}
+	else if (locvar1 == 4) // Boss 4 Spectator Eggrobo jet flame
+	{
+		fixed_t jetx, jety, jetz, movefactor = 12;
+
+		jetz = actor->z;
+		if (actor->eflags & MFE_VERTICALFLIP)
+			jetz += (actor->height - FixedMul(mobjinfo[MT_EGGROBO1JET].height, actor->scale));
+
+		while (true)
+		{
+			jetx = actor->x + P_ReturnThrustX(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustX(actor, actor->angle, 19*actor->scale);
+			jety = actor->y + P_ReturnThrustY(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustY(actor, actor->angle, 19*actor->scale);
+			filler = P_SpawnMobj(jetx, jety, jetz, MT_EGGROBO1JET);
+			filler->movefactor = movefactor;
+			P_SetTarget(&filler->target, actor);
+			filler->destscale = actor->scale;
+			P_SetScale(filler, filler->destscale);
+			if (actor->eflags & MFE_VERTICALFLIP)
+				filler->flags2 |= MF2_OBJECTFLIP;
+			if (movefactor <= 0)
+				break;
+			movefactor = -movefactor;
+		}
 	}
 }
 
