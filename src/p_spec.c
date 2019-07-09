@@ -3389,7 +3389,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 							// if flags changed, reset sector's light list
 							if (rover->flags != oldflags)
+							{
 								sec->moved = true;
+								P_RecalcPrecipInSector(sec);
+							}
 						}
 					}
 
@@ -7878,6 +7881,7 @@ void T_Disappear(disappear_t *d)
 				}
 			}
 			sectors[s].moved = true;
+			P_RecalcPrecipInSector(&sectors[s]);
 		}
 
 		if (d->exists)

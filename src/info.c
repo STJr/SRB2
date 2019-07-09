@@ -3190,8 +3190,8 @@ state_t states[NUMSTATES] =
 	{SPR_SSWB, 1, 1, {NULL}, 0, 0, S_BHORIZ1},   // S_BHORIZ8
 
 	// Rain
-	{SPR_RAIN, FF_TRANS50, -1, {NULL}, 0, 0, S_NULL}, // S_RAIN1
-	{SPR_RAIN, FF_TRANS50, 1, {NULL}, 0, 0, S_RAIN1}, // S_RAINRETURN
+	{SPR_RAIN, FF_FULLBRIGHT|FF_TRANS50, -1, {NULL}, 0, 0, S_NULL}, // S_RAIN1
+	{SPR_RAIN, FF_FULLBRIGHT|FF_TRANS50, 1, {NULL}, 0, 0, S_RAIN1}, // S_RAINRETURN
 
 	// Snowflake
 	{SPR_SNO1, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SNOW1
@@ -16118,7 +16118,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		-24*FRACUNIT,   // speed
+		-72*FRACUNIT,   // speed
 		1*FRACUNIT,     // radius
 		8*FRACUNIT,     // height
 		0,              // display offset
