@@ -2538,13 +2538,20 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
 					mo = (mobj_t *)th;
-					if (mo->type == (mobjtype_t)target->info->mass && mo->tracer == target)
-					{
-						P_RemoveMobj(mo);
-						i++;
-					}
-					if (i == 2) // we've already removed 2 of these, let's stop now
+					if (mo->type != (mobjtype_t)target->info->mass)
+						continue;
+					if (mo->tracer != target)
+						continue;
+
+					P_KillMobj(mo, inflictor, source, damagetype);
+					mo->destscale = mo->scale/8;
+					mo->scalespeed = (mo->scale - mo->destscale)/(2*TICRATE);
+					mo->momz = mo->info->speed;
+					mo->angle = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
+					if (++i == 2) // we've already removed 2 of these, let's stop now
 						break;
+					else
+						S_StartSound(mo, mo->info->deathsound); // done once to prevent sound stacking
 				}
 			}
 			break;

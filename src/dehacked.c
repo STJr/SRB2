@@ -4667,6 +4667,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Boss 3
 	"S_EGGMOBILE3_STND",
+	"S_EGGMOBILE3_LAUGH1",
+	"S_EGGMOBILE3_LAUGH2",
+	"S_EGGMOBILE3_LAUGH3",
+	"S_EGGMOBILE3_LAUGH4",
+	"S_EGGMOBILE3_LAUGH5",
 	"S_EGGMOBILE3_ATK1",
 	"S_EGGMOBILE3_ATK2",
 	"S_EGGMOBILE3_ATK3A",
@@ -4675,11 +4680,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_ATK3D",
 	"S_EGGMOBILE3_ATK4",
 	"S_EGGMOBILE3_ATK5",
-	"S_EGGMOBILE3_LAUGH1",
-	"S_EGGMOBILE3_LAUGH2",
-	"S_EGGMOBILE3_LAUGH3",
-	"S_EGGMOBILE3_LAUGH4",
-	"S_EGGMOBILE3_LAUGH5",
 	"S_EGGMOBILE3_LAUGH6",
 	"S_EGGMOBILE3_LAUGH7",
 	"S_EGGMOBILE3_LAUGH8",
@@ -4732,8 +4732,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FAKEMOBILE_ATK3B",
 	"S_FAKEMOBILE_ATK3C",
 	"S_FAKEMOBILE_ATK3D",
-	"S_FAKEMOBILE_ATK4",
-	"S_FAKEMOBILE_ATK5",
+	"S_FAKEMOBILE_DIE1",
+	"S_FAKEMOBILE_DIE2",
 
 	// Boss 4
 	"S_EGGMOBILE4_STND",
@@ -7263,6 +7263,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGMOBILE3",
 	"MT_PROPELLER",
 	"MT_FAKEMOBILE",
+	"MT_SHOCK",
 
 	// Boss 4
 	"MT_EGGMOBILE4",
