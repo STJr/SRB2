@@ -7309,6 +7309,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_ROCKCRUMBLE15:
 			case MT_ROCKCRUMBLE16:
 			case MT_WOODDEBRIS:
+			case MT_BRICKDEBRIS:
 				if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
 					&& mobj->state != &states[mobj->info->deathstate])
 				{
