@@ -111,6 +111,8 @@ static UINT16 current_track;
 int mod_err = OPENMPT_ERROR_OK;
 static const char *mod_err_str;
 static UINT16 current_subsong;
+size_t probesize;
+int result;
 #endif
 
 static void var_cleanup(void)
@@ -1113,9 +1115,6 @@ boolean I_LoadSong(char *data, size_t len)
 #endif
 
 #ifdef HAVE_OPENMPT
-	size_t probesize;
-	int result;
-
 	/*
 		If the size of the data to be checked is bigger than the recommended size (> 2048)
 		Let's just set the probe size to the recommended size
