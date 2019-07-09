@@ -2348,7 +2348,7 @@ void A_VultureHover(mobj_t *actor)
 	fixed_t targetz;
 	fixed_t distdif;
 	fixed_t memz = actor->z;
-	INT8 i;
+	SINT8 i;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_VultureHover", actor))
