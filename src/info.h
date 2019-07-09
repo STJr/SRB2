@@ -628,6 +628,7 @@ typedef enum sprite
 	SPR_GFLG, // Got Flag sign
 
 	SPR_CORK,
+	SPR_LHRT,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -720,6 +721,9 @@ typedef enum sprite
 	SPR_ROIN,
 	SPR_ROIO,
 	SPR_ROIP,
+
+	// Bricks
+	SPR_BRIC,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -1892,7 +1896,10 @@ typedef enum state
 	S_METALSONIC_BADBOUNCE,
 	S_METALSONIC_SHOOT,
 	S_METALSONIC_PAIN,
-	S_METALSONIC_DEATH,
+	S_METALSONIC_DEATH1,
+	S_METALSONIC_DEATH2,
+	S_METALSONIC_DEATH3,
+	S_METALSONIC_DEATH4,
 	S_METALSONIC_FLEE1,
 	S_METALSONIC_FLEE2,
 	S_METALSONIC_FLEE3,
@@ -2930,6 +2937,12 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
+	S_PITY7,
+	S_PITY8,
+	S_PITY9,
+	S_PITY10,
+	S_PITY11,
+	S_PITY12,
 
 	S_FIRS1,
 	S_FIRS2,
@@ -3428,6 +3441,7 @@ typedef enum state
 	S_GOTFLAG,
 
 	S_CORK,
+	S_LHRT,
 
 	// Red Ring
 	S_RRNG1,
@@ -3933,6 +3947,9 @@ typedef enum state
 	S_ROCKCRUMBLEN,
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
+
+	// Bricks
+	S_BRICKDEBRIS,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4538,6 +4555,7 @@ typedef enum mobj_type
 	MT_MACHINEAMBIENCE,
 
 	MT_CORK,
+	MT_LHRT,
 
 	// Ring Weapons
 	MT_REDRING,
@@ -4670,6 +4688,9 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE14,
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
+
+	// Bricks
+	MT_BRICKDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

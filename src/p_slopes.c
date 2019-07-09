@@ -259,9 +259,9 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	boolean backceil   = (special == 711 || special == 712 || special == 703);
 
 	UINT8 flags = 0; // Slope flags
-	if (line->flags & ML_NOSONIC)
+	if (line->flags & ML_NETONLY)
 		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NOTAILS)
+	if (line->flags & ML_NONET)
 		flags |= SL_DYNAMIC;
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
@@ -468,9 +468,9 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 	UINT16 tag1, tag2, tag3;
 
 	UINT8 flags = 0;
-	if (line->flags & ML_NOSONIC)
+	if (line->flags & ML_NETONLY)
 		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NOTAILS)
+	if (line->flags & ML_NONET)
 		flags |= SL_DYNAMIC;
 
 	switch(line->special)
@@ -494,7 +494,7 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 		return;
 	}
 
-	if (line->flags & ML_NOKNUX)
+	if (line->flags & ML_EFFECT6)
 	{
 		tag1 = line->tag;
 		tag2 = side->textureoffset >> FRACBITS;

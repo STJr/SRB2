@@ -488,6 +488,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GFLG
 
 	&lspr[NOLIGHT],     // SPR_CORK
+	&lspr[NOLIGHT],     // SPR_LHRT
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG
@@ -580,6 +581,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIN
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
+
+	// Bricks
+	&lspr[NOLIGHT], // SPR_BRIC
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG

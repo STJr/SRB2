@@ -446,13 +446,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				break;
 		}
 
-		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
-		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super]
-		|| elementalpierce) // Do you possess the ability to subdue the object?
+		if (P_PlayerCanDamage(player, special)) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
@@ -467,18 +461,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				toucher->momx = -toucher->momx;
 				toucher->momy = -toucher->momy;
+				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
+					toucher->momz = -toucher->momz/2;
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
-		}
-		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
-		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
-		&& player->charability == CA_FLY
-		&& (player->powers[pw_tailsfly]
-		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with her propeller.
-		{
-			toucher->momz = -toucher->momz/2;
-
-			P_DamageMobj(special, toucher, toucher, 1, 0);
+			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+				P_TwinSpinRejuvenate(player, player->thokitem);
 		}
 		else
 			P_DamageMobj(toucher, special, special, 1, 0);
@@ -1836,6 +1824,10 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 
 	deadtarget = (player->mo->health <= 0);
 
+	// Don't log every hazard hit if they don't want us to.
+	if (!deadtarget && !cv_hazardlog.value)
+		return;
+
 	// Target's name
 	snprintf(targetname, sizeof(targetname), "%s%s%s",
 	         CTFTEAMCODE(player),
@@ -1939,7 +1931,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		switch (damagetype)
 		{
 			case DMG_WATER:
-				str = M_GetText("%s was %s by chemical water.\n");
+				str = M_GetText("%s was %s by dangerous water.\n");
 				break;
 			case DMG_FIRE:
 				str = M_GetText("%s was %s by molten lava.\n");
@@ -1985,10 +1977,6 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	}
 
 	if (!str) // Should not happen! Unless we missed catching something above.
-		return;
-
-	// Don't log every hazard hit if they don't want us to.
-	if (!deadtarget && !cv_hazardlog.value)
 		return;
 
 	if (deathonly)
@@ -2909,25 +2897,46 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	if (player->powers[pw_flashing] || player->powers[pw_invulnerability])
 		return false;
 
-	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
-		source && source->player && source->player->pflags & PF_TAGIT)))
-		return false;
-
 	// Don't allow any damage before the round starts.
 	if (leveltime <= hidetime * TICRATE)
 		return false;
+
+	// Ignore IT players shooting each other, unless friendlyfire is on.
+	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) &&
+		source && source->player && source->player->pflags & PF_TAGIT)))
+	{
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+		return false;
+	}
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
 	if (!(cv_friendlyfire.value || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
-		if (!(inflictor->flags & MF_FIRE))
+		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		{
+			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			{
+				P_SwitchShield(player, SH_PINK);
+				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+			}
+		}
+		else if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
 		if (inflictor->flags2 & MF2_BOUNCERING)
 			inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 		return false;
 	}
+
+	if (inflictor->type == MT_LHRT)
+		return false;
 
 	// The tag occurs so long as you aren't shooting another tagger with friendlyfire on.
 	if (source->player->pflags & PF_TAGIT && !(player->pflags & PF_TAGIT))
@@ -2995,7 +3004,17 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
 		if (!cv_friendlyfire.value && (G_PlatformGametype()))
+		{
+			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
+			{
+				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				{
+					P_SwitchShield(player, SH_PINK);
+					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+				}
+			}
 			return false;
+		}
 	}
 
 	// Tag handling
@@ -3009,7 +3028,15 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		// unless cv_friendlyfire is on.
 		if (!cv_friendlyfire.value && target->player->ctfteam == source->player->ctfteam)
 		{
-			if (!(inflictor->flags & MF_FIRE))
+			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+			{
+				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				{
+					P_SwitchShield(player, SH_PINK);
+					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
+				}
+			}
+			else if (!(inflictor->flags & MF_FIRE))
 				P_GivePlayerRings(target->player, 1);
 			if (inflictor->flags2 & MF2_BOUNCERING)
 				inflictor->fuse = 0; // bounce ring disappears at -1 not 0
@@ -3017,6 +3044,9 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 			return false;
 		}
 	}
+
+	if (inflictor->type == MT_LHRT)
+		return false;
 
 	// Add pity.
 	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
