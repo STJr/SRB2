@@ -1363,7 +1363,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				INT32 skinnum = TC_DEFAULT;
 				if ((spr->mobj->flags & (MF_ENEMY|MF_BOSS)) && (spr->mobj->flags2 & MF2_FRET) && !(spr->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 				{
-					if (spr->mobj->type == MT_CYBRAKDEMON)
+					if (spr->mobj->type == MT_CYBRAKDEMON || spr->mobj->colorized)
 						skinnum = TC_ALLWHITE;
 					else if (spr->mobj->type == MT_METALSONIC_BATTLE)
 						skinnum = TC_METALSONIC;

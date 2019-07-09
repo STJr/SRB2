@@ -4779,10 +4779,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							player->mo->momx /= 2;
 							player->mo->momy /= 2;
 						}
-						else if (player->charability == CA_HOMINGTHOK)
+						if (player->charability == CA_HOMINGTHOK)
 						{
-							player->mo->momx /= 3;
-							player->mo->momy /= 3;
+							player->mo->momx /= 2;
+							player->mo->momy /= 2;
 						}
 
 						if (player->charability == CA_HOMINGTHOK)
@@ -7884,7 +7884,7 @@ static void P_MovePlayer(player_t *player)
 				if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
 					&& (!(player->powers[pw_shield] & SH_NOSTACK) || !(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped/turning super
 				{
-					// Force shield activation
+					// Force stop
 					if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
 					{
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
@@ -7900,17 +7900,17 @@ static void P_MovePlayer(player_t *player)
 								if (P_SuperReady(player))
 									P_DoSuperTransformation(player, false);
 								break;
-							// Whirlwind/Thundercoin shield activation
+							// Whirlwind jump/Thunder jump
 							case SH_WHIRLWIND:
 							case SH_THUNDERCOIN:
 								P_DoJumpShield(player);
 								break;
-							// Armageddon shield activation
+							// Armageddon pow
 							case SH_ARMAGEDDON:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								P_BlackOw(player);
 								break;
-							// Attract shield activation
+							// Attraction blast
 							case SH_ATTRACT:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								player->homing = 2;
@@ -7926,7 +7926,7 @@ static void P_MovePlayer(player_t *player)
 								else
 									S_StartSound(player->mo, sfx_s3ka6);
 								break;
-							// Elemental/Bubblewrap shield activation
+							// Elemental stomp/Bubble bounce
 							case SH_ELEMENTAL:
 							case SH_BUBBLEWRAP:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
@@ -7940,7 +7940,7 @@ static void P_MovePlayer(player_t *player)
 									? sfx_s3k43
 									: sfx_s3k44);
 								break;
-							// Flame shield activation
+							// Flame burst
 							case SH_FLAMEAURA:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
@@ -7961,8 +7961,7 @@ static void P_MovePlayer(player_t *player)
 	{
 		if (player->homing && player->mo->tracer)
 		{
-			P_HomingAttack(player->mo, player->mo->tracer);
-			if (player->mo->tracer->health <= 0 || (player->mo->tracer->flags2 & MF2_FRET))
+			if (!P_HomingAttack(player->mo, player->mo->tracer))
 			{
 				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
 				if (player->mo->eflags & MFE_UNDERWATER)
@@ -7981,10 +7980,9 @@ static void P_MovePlayer(player_t *player)
 		if (player->homing && player->mo->tracer)
 		{
 			P_SpawnThokMobj(player);
-			P_HomingAttack(player->mo, player->mo->tracer);
 
 			// But if you don't, then stop homing.
-			if (player->mo->tracer->health <= 0 || (player->mo->tracer->flags2 & MF2_FRET))
+			if (!P_HomingAttack(player->mo, player->mo->tracer))
 			{
 				if (player->mo->eflags & MFE_UNDERWATER)
 					P_SetObjectMomZ(player->mo, FixedDiv(457*FRACUNIT,72*FRACUNIT), false);
@@ -8564,7 +8562,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
 		mo = (mobj_t *)think;
-		if (!(mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR|MF_SPRING)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+		if (!((mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (mo->flags & MF_SHOOTABLE)) || (mo->flags & MF_SPRING)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
 			continue; // not a valid target
 
 		if (mo->health <= 0) // dead
@@ -8574,9 +8572,6 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			continue;
 
 		if (mo->flags2 & MF2_FRET)
-			continue;
-
-		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && !(mo->flags & MF_SHOOTABLE)) // don't aim at something you can't shoot at anyway (see Egg Guard or Minus)
 			continue;
 
 		if (!nonenemies && mo->flags & (MF_MONITOR|MF_SPRING))
@@ -8632,17 +8627,23 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 	return closestmo;
 }
 
-void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
+boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 {
 	fixed_t zdist;
 	fixed_t dist;
 	fixed_t ns = 0;
 
 	if (!enemy)
-		return;
+		return false;
 
-	if (!(enemy->health))
-		return;
+	if (!enemy->health)
+		return false;
+
+	if (enemy->flags2 & MF2_FRET)
+		return false;
+
+	if (!(enemy->flags & (MF_SHOOTABLE|MF_SPRING)) == !(enemy->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+		return false;
 
 	// change angle
 	source->angle = R_PointToAngle2(source->x, source->y, enemy->x, enemy->y);
@@ -8685,6 +8686,8 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	source->momx = FixedMul(FixedDiv(enemy->x - source->x, dist), ns);
 	source->momy = FixedMul(FixedDiv(enemy->y - source->y, dist), ns);
 	source->momz = FixedMul(FixedDiv(zdist, dist), ns);
+
+	return true;
 }
 
 // Search for emeralds
