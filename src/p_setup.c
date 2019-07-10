@@ -1282,6 +1282,9 @@ static void P_LoadLineDefs2(void)
 		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		switch(ld->special)
 		{
+		case 331: // Trigger linedef executor: Skin - Continuous
+		case 332: // Trigger linedef executor: Skin - Each time
+		case 333: // Trigger linedef executor: Skin - Once
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
@@ -1492,6 +1495,9 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 			}
 
+			case 331: // Trigger linedef executor: Skin - Continuous
+			case 332: // Trigger linedef executor: Skin - Each time
+			case 333: // Trigger linedef executor: Skin - Once
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
 			{

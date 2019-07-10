@@ -137,7 +137,7 @@ sfxinfo_t S_sfx[NUMSFX] =
 
   // Game objects, etc
   {"appear", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Appearing platform"},
-  {"bkpoof", false,  70,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Armageddon explosion"},
+  {"bkpoof", false,  70,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Armageddon pow"},
   {"bnce1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"}, // Boing!
   {"bnce2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Scatter"}, // Boing!
   {"cannon", false,  64,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful shot"},
@@ -197,6 +197,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
   {"bowl",   false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bowling"},
   {"chuchu", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Train horn"},
+  {"bsnipe", false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Home-run smash"},
+  {"sprong", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power spring"},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},
@@ -303,7 +305,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k3e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flame Shield"},
   {"s3k3f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bubble Shield"},
   {"s3k40",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction blast"},
-  {"s3k41",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning Shield"},
+  {"s3k41",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thunder Shield"},
   {"s3k42",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Twinspin"},
   {"s3k43",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flame burst"},
   {"s3k44",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bubble bounce"},
@@ -334,7 +336,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k5d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy hit"},
   {"s3k5e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
   {"s3k5f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crusher stomp"},
-  {"s3k60",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying away"},
+  {"s3k60",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Accelerating"},
   {"s3k61",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drilling"},
   {"s3k62",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jump"},
   {"s3k63",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Starpost"},
@@ -430,8 +432,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kbcl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""}, // long version of previous
   {"s3kbds", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying fortress"},
   {"s3kbdl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying fortress"}, // ditto
-  {"s3kbes", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying away"},
-  {"s3kbel", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying away"}, // ditto
+  {"s3kbes", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying"},
+  {"s3kbel", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flying"}, // ditto
   {"s3kbfs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turbine"},
   {"s3kbfl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turbine"}, // ditto
   {"s3kc0s", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Turbine"},

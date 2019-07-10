@@ -95,6 +95,7 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *pinkshield;
 static patch_t *flameshield;
 static patch_t *bubbleshield;
 static patch_t *thundershield;
@@ -285,6 +286,7 @@ void ST_LoadGraphics(void)
 	watershield = W_CachePatchName("TVELICON", PU_HUDGFX);
 	bombshield = W_CachePatchName("TVARICON", PU_HUDGFX);
 	pityshield = W_CachePatchName("TVPIICON", PU_HUDGFX);
+	pinkshield = W_CachePatchName("TVPPICON", PU_HUDGFX);
 	flameshield = W_CachePatchName("TVFLICON", PU_HUDGFX);
 	bubbleshield = W_CachePatchName("TVBBICON", PU_HUDGFX);
 	thundershield = W_CachePatchName("TVZPICON", PU_HUDGFX);
@@ -1250,6 +1252,7 @@ static void ST_drawPowerupHUD(void)
 				case SH_ARMAGEDDON:  p = bombshield;    break;
 				case SH_ATTRACT:     p = ringshield;    break;
 				case SH_PITY:        p = pityshield;    break;
+				case SH_PINK:        p = pinkshield;    break;
 				case SH_FLAMEAURA:   p = flameshield;   break;
 				case SH_BUBBLEWRAP:  p = bubbleshield;  break;
 				case SH_THUNDERCOIN: p = thundershield; break;

@@ -202,6 +202,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
 	&lspr[REDBALL_L],   // SPR_EFIR
+	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
 	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
@@ -487,6 +488,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GFLG
 
 	&lspr[NOLIGHT],     // SPR_CORK
+	&lspr[NOLIGHT],     // SPR_LHRT
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG
@@ -579,6 +581,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIN
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
+
+	// Bricks
+	&lspr[NOLIGHT], // SPR_BRIC
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG

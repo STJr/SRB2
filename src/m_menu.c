@@ -2953,8 +2953,9 @@ boolean M_Responder(event_t *ev)
 					return true;
 				M_StartControlPanel();
 				M_Options(0);
-				currentMenu = &OP_SoundOptionsDef;
-				itemOn = 0;
+				// Uncomment the below if you want the menu to reset to the top each time like before. M_SetupNextMenu will fix it automatically.
+				//OP_SoundOptionsDef.lastOn = 0;
+				M_SetupNextMenu(&OP_SoundOptionsDef);
 				return true;
 
 			case KEY_F5: // Video Mode

@@ -1022,6 +1022,7 @@ static const char *credits[] = {
 	"",
 	"\1Boss Design",
 	"Ben \"Mystic\" Geyer",
+	"Vivian \"toaster\" Grannell",
 	"Thomas \"Shadow Hog\" Igoe",
 	"John \"JTE\" Muniz",
 	"Samuel \"Prime 2.0\" Peters",
