@@ -604,7 +604,7 @@ static void P_SlapStick(mobj_t *fang, mobj_t *pole)
 	P_SetTarget(&pole->tracer, NULL);
 }
 
-static void P_BarrelCollide(mobj_t *toucher, mobj_t *barrel)
+static void P_PlayerBarrelCollide(mobj_t *toucher, mobj_t *barrel)
 {
 	if (toucher->momz < 0)
 	{
@@ -628,14 +628,7 @@ static void P_BarrelCollide(mobj_t *toucher, mobj_t *barrel)
 			return;
 	}
 
-	if ((toucher->player->pflags & (PF_SPINNING|PF_GLIDING))
-		|| ((toucher->player->pflags & PF_JUMPED)
-			&& (!(toucher->player->pflags & PF_NOJUMPDAMAGE)
-				|| (toucher->player->charability == CA_TWINSPIN && toucher->player->panim == PA_ABILITY)))
-		|| (toucher->player->charability2 == CA2_MELEE && toucher->player->panim == PA_ABILITY2)
-		|| ((toucher->player->charflags & SF_STOMPDAMAGE || toucher->player->pflags & PF_BOUNCING)
-			&& (P_MobjFlip(toucher)*(toucher->z - (barrel->z + barrel->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-		|| (((toucher->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (toucher->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (toucher->player->pflags & PF_SHIELDABILITY)))
+	if (P_PlayerCanDamage(toucher->player, barrel))
 		P_DamageMobj(barrel, toucher, toucher, 1, 0);
 }
 
@@ -921,7 +914,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	if (thing->type == MT_TNTBARREL && tmthing->player)
-		P_BarrelCollide(tmthing, thing);
+		P_PlayerBarrelCollide(tmthing, thing);
 
 	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
 	{
