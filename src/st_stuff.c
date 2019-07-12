@@ -2308,27 +2308,31 @@ static void ST_doItemFinderIconsAndSound(void)
 	// Scan thinkers to find emblem mobj with these ids
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_EMBLEM)
+		if (mo2->type != MT_EMBLEM)
+			continue;
+
+		if (!(mo2->flags & MF_SPECIAL))
+			continue;
+
+		for (i = 0; i < stemblems; ++i)
 		{
-			if (!(mo2->flags & MF_SPECIAL))
-				continue;
-
-			for (i = 0; i < stemblems; ++i)
+			if (mo2->health == emblems[i] + 1)
 			{
-				if (mo2->health == emblems[i]+1)
-				{
-					soffset = (i * 20) - ((stemblems-1) * 10);
+				soffset = (i * 20) - ((stemblems - 1) * 10);
 
-					newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
-					if (newinterval && (!interval || newinterval < interval))
-						interval = newinterval;
+				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
+				if (newinterval && (!interval || newinterval < interval))
+					interval = newinterval;
 
-					break;
-				}
+				break;
 			}
 		}
+
 	}
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)

@@ -99,6 +99,9 @@ void P_ClearStarPost(INT32 postnum)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type != MT_STARPOST)
@@ -125,10 +128,15 @@ void P_ResetStarposts(void)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		post = (mobj_t *)th;
 
-		if (post->type == MT_STARPOST)
-			P_SetMobjState(post, post->info->spawnstate);
+		if (post->type != MT_STARPOST)
+			continue;
+
+		P_SetMobjState(post, post->info->spawnstate);
 	}
 }
 
@@ -828,19 +836,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						// scan the thinkers to find the corresponding anchorpoint
 						for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 						{
+							if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+								continue;
+
 							mo2 = (mobj_t *)th;
 
-							if (mo2->type == MT_IDEYAANCHOR)
-							{
-								if (mo2->health == toucher->tracer->health) // do ideya numberes match?
-									anchorpoint = mo2;
-								else if (toucher->tracer->hnext && mo2->health == toucher->tracer->hnext->health)
-									anchorpoint2 = mo2;
+							if (mo2->type != MT_IDEYAANCHOR)
+								continue;
 
-								if ((!toucher->tracer->hnext && anchorpoint)
-									|| (toucher->tracer->hnext && anchorpoint && anchorpoint2))
-									break;
-							}
+							if (mo2->health == toucher->tracer->health) // do ideya numberes match?
+								anchorpoint = mo2;
+							else if (toucher->tracer->hnext && mo2->health == toucher->tracer->hnext->health)
+								anchorpoint2 = mo2;
+
+							if ((!toucher->tracer->hnext && anchorpoint)
+								|| (toucher->tracer->hnext && anchorpoint && anchorpoint2))
+								break;
 						}
 
 						if (anchorpoint)
@@ -919,6 +930,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2 == special)
@@ -966,6 +980,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// in from the paraloop. Isn't this just so efficient?
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > gatherradius)
@@ -1337,6 +1354,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers to find koopa
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_KOOPA)
@@ -1434,6 +1454,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 
 					if (mo2->type != MT_STARPOST)
@@ -2572,9 +2595,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				UINT32 i = 0; // to check how many clones we've removed
 
 				// scan the thinkers to make sure all the old pinch dummies are gone on death
-				// this can happen if the boss was hurt earlier than expected
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo = (mobj_t *)th;
 					if (mo->type != (mobjtype_t)target->info->mass)
 						continue;

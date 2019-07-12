@@ -1367,7 +1367,8 @@ static void HWR_SearchLightsInMobjs(void)
 
 	// search in the list of thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-		HWR_AddMobjLights((mobj_t *)th);
+		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
+			HWR_AddMobjLights((mobj_t *)th);
 }
 #endif
 

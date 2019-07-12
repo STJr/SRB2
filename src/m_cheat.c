@@ -579,6 +579,9 @@ void Command_Teleport_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_STARPOST)
@@ -1068,10 +1071,14 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo = (mobj_t *)th;
 			// get offset from mt, which points to old mapthings, then add new location
-			if (mo->spawnpoint)
-				mo->spawnpoint = (mo->spawnpoint - mt) + mapthings;
+			if (!mo->spawnpoint)
+				continue;
+			mo->spawnpoint = (mo->spawnpoint - mt) + mapthings;
 		}
 	}
 
