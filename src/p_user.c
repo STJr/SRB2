@@ -3655,7 +3655,8 @@ static void P_DoTeeter(player_t *player)
 		if (teeter) // only bother with objects as a last resort if you were already teetering
 		{
 			mobj_t *oldtmthing = tmthing;
-			tmthing = teeterer = player->mo;
+			teeterer = player->mo;
+			P_SetTarget(&tmthing, teeterer);
 			teeterxl = teeterxh = player->mo->x;
 			teeteryl = teeteryh = player->mo->y;
 			couldteeter = false;
@@ -3669,7 +3670,7 @@ static void P_DoTeeter(player_t *player)
 				}
 teeterdone:
 			teeter = solidteeter;
-			tmthing = oldtmthing; // restore old tmthing, goodness knows what the game does with this before mobj thinkers
+			P_SetTarget(&tmthing, oldtmthing); // restore old tmthing, goodness knows what the game does with this before mobj thinkers
 		}
 	}
 	if (teeter)
