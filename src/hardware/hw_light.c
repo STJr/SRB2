@@ -1061,6 +1061,14 @@ void HWR_DrawCoronas(void)
 		if (!(p_lspr->type & CORONA_SPR))
 			continue;
 
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
+
 		transform(&cx,&cy,&cz);
 
 		// more realistique corona !
@@ -1154,22 +1162,25 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 		return;
 #endif
 
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+
 	// check if sprite contain dynamic light
 	p_lspr = t_lspr[spr->mobj->sprite];
-	if ((p_lspr->type&DYNLIGHT_SPR)
-	  && ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
-	  && (dynlights->nb < DL_MAX_LIGHT))
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
+	if (!(p_lspr->type & DYNLIGHT_SPR))
+		return;
+	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
+	  return;
 
-		P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
 
-		dynlights->p_lspr[dynlights->nb] = p_lspr;
+	P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
 
-		dynlights->nb++;
-	}
+	dynlights->p_lspr[dynlights->nb] = p_lspr;
+
+	dynlights->nb++;
 }
 
 static GLPatch_t lightmappatch;
@@ -1323,6 +1334,14 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 //			if (CircleTouchBBox(&p1, &p2, &LIGHT_POS(lightnum), DL_RADIUS(lightnum))==false)
 //				continue;
 
+			if (!dynlights->mo[lightnum])
+				continue;
+			if (P_MobjWasRemoved(dynlights->mo[lightnum]))
+			{
+				P_SetTarget(&dynlights->mo[lightnum], NULL);
+				continue;
+			}
+
 			count = sub->numlines;          // how many linedefs
 			line = &segs[sub->firstline];   // first line seg
 			while (count--)
@@ -1340,18 +1359,20 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 // --------------------------------------------------------------------------
 static void HWR_AddMobjLights(mobj_t *thing)
 {
-	if (t_lspr[thing->sprite]->type & CORONA_SPR)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+	if (!(t_lspr[thing->sprite]->type & CORONA_SPR))
+		return;
 
-		dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
 
-		dynlights->nb++;
-		if (dynlights->nb > DL_MAX_LIGHT)
-			dynlights->nb = DL_MAX_LIGHT;
-	}
+	P_SetTarget(&dynlights->mo[dynlights->nb], thing);
+
+	dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+
+	dynlights->nb++;
 }
 
 //Hurdler: The goal of this function is to walk through all the bsp starting
@@ -1402,8 +1423,6 @@ void HWR_CreateStaticLightmaps(int bspnum)
 	// Second: Build all lightmap for walls covered by lights
 	validcount++; // to be sure
 	HWR_ComputeLightMapsInBSPNode(bspnum, NULL);
-
-	HWR_ResetLights();
 #else
 	(void)bspnum;
 #endif
