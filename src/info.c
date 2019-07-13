@@ -7492,7 +7492,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_s3k64,      // painsound
-		S_NULL,         // meleestate
+		S_WALLSPIKE4,   // meleestate
 		S_NULL,         // missilestate
 		S_WALLSPIKED1,  // deathstate
 		S_WALLSPIKED2,  // xdeathstate
@@ -19642,7 +19642,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // display offset
 		100,            // mass
 		0,              // damage
-		sfx_None,       // activesound
+		sfx_wbreak,     // activesound
 		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
