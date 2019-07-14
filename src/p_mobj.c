@@ -4662,7 +4662,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 	}
 
 	dz /= 9;
-	
+
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
 		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
@@ -11964,6 +11964,15 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
 				mobj->angle += ANGLE_22h;
 
+			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
+			{
+				if (mthing->options & MTF_OBJECTFLIP)
+					mobj->z -= 16*FRACUNIT;
+				else
+					mobj->z += 16*FRACUNIT;
+			}
+
+
 			if (mobj->flags & MF_NIGHTSITEM)
 			{
 				// Spawn already displayed
@@ -11991,6 +12000,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+				mobj->flags |= MF_NOGRAVITY;
+
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
@@ -12570,9 +12582,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (mthing->options & MTF_AMBUSH) // Special flag for rings
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 24*FRACUNIT;
+				z -= 64*FRACUNIT;
 			else
-				z += 24*FRACUNIT;
+				z += 64*FRACUNIT;
 		}
 
 		mthing->z = (INT16)(z>>FRACBITS);
