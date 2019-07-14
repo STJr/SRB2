@@ -4662,7 +4662,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 	}
 
 	dz /= 9;
-	
+
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
 		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
@@ -9653,8 +9653,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			{
 				mobj_t *prev = mobj, *cur;
 				UINT8 i;
-				mobj->destscale <<= 2;
-				P_SetScale(mobj, mobj->destscale);
 				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
 				{
 					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
