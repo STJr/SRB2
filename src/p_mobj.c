@@ -8046,7 +8046,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->tracer->z += mobj->height;
 				}
 				break;
-			case MT_WAVINGFLAG:
+			case MT_WAVINGFLAG1:
+			case MT_WAVINGFLAG2:
 				{
 					fixed_t base = (leveltime<<(FRACBITS+1));
 					mobj_t *seg = mobj->tracer, *prev = mobj;
@@ -9649,13 +9650,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
-		case MT_WAVINGFLAG:
+		case MT_WAVINGFLAG1:
+		case MT_WAVINGFLAG2:
 			{
 				mobj_t *prev = mobj, *cur;
 				UINT8 i;
 				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
 				{
-					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
+					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, ((mobj->type == MT_WAVINGFLAG1) ? MT_WAVINGFLAGSEG1 : MT_WAVINGFLAGSEG2));;
 					P_SetTarget(&prev->tracer, cur);
 					cur->extravalue1 = i;
 					prev = cur;

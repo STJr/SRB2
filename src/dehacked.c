@@ -5708,7 +5708,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEHOLDER",
 	"S_FIRETORCH",
 	"S_WAVINGFLAG",
-	"S_WAVINGFLAGSEG",
+	"S_WAVINGFLAGSEG1",
+	"S_WAVINGFLAGSEG2",
 	"S_CRAWLASTATUE",
 	"S_FACESTABBERSTATUE",
 	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
@@ -7523,8 +7524,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANDLEPRICKET", // Candle pricket
 	"MT_FLAMEHOLDER", // Flame holder
 	"MT_FIRETORCH", // Fire torch
-	"MT_WAVINGFLAG", // Waving flag
-	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_WAVINGFLAG1", // Waving flag (red)
+	"MT_WAVINGFLAG2", // Waving flag (blue)
+	"MT_WAVINGFLAGSEG1", // Waving flag segment (red)
+	"MT_WAVINGFLAGSEG2", // Waving flag segment (blue)
 	"MT_CRAWLASTATUE", // Crawla statue
 	"MT_FACESTABBERSTATUE", // Facestabber statue
 	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
