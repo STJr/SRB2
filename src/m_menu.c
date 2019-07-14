@@ -2295,16 +2295,16 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 		curbgcolor = menupres[menutype].bgcolor;
 		return true;
 	}
-	else if (menupres[menutype].bgname[0] && (!menupres[menutype].bghide || !titlemapinaction))
+	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
+	{
+		curbghide = true;
+		return true;
+	}
+	else if (menupres[menutype].bgname[0])
 	{
 		strncpy(curbgname, menupres[menutype].bgname, 8);
 		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
-		return true;
-	}
-	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
-	{
-		curbghide = true;
 		return true;
 	}
 	else if (!level)
