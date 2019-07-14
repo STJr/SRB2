@@ -539,7 +539,7 @@ static int lib_pSpawnLockOn(lua_State *L)
 	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-		visual->target = lockon;
+		P_SetTarget(&visual->target, lockon);
 		visual->flags2 |= MF2_DONTDRAW;
 		P_SetMobjStateNF(visual, state);
 	}

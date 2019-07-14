@@ -476,7 +476,12 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"followitem"))
 		plr->followitem = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"followmobj"))
-		P_SetTarget(&plr->followmobj, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->followmobj, mo);
+	}
 	else if (fastcmp(field,"actionspd"))
 		plr->actionspd = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mindash"))
@@ -560,9 +565,19 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"old_angle_pos"))
 		plr->old_angle_pos = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"axis1"))
-		P_SetTarget(&plr->axis1, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis1, mo);
+	}
 	else if (fastcmp(field,"axis2"))
-		P_SetTarget(&plr->axis2, *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ)));
+	{
+		mobj_t *mo = NULL;
+		if (!lua_isnil(L, 3))
+			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		P_SetTarget(&plr->axis2, mo);
+	}
 	else if (fastcmp(field,"bumpertime"))
 		plr->bumpertime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"flyangle"))
