@@ -7492,7 +7492,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // painstate
 		0,              // painchance
 		sfx_s3k64,      // painsound
-		S_NULL,         // meleestate
+		S_WALLSPIKE4,   // meleestate
 		S_NULL,         // missilestate
 		S_WALLSPIKED1,  // deathstate
 		S_WALLSPIKED2,  // xdeathstate
