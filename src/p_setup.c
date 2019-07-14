@@ -2868,7 +2868,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -2904,7 +2907,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
