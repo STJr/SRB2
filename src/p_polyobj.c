@@ -1495,6 +1495,7 @@ void Polyobj_InitLevel(void)
 	mqueue_t    anchorqueue;
 	mobjqitem_t *qitem;
 	INT32 i, numAnchors = 0;
+	mobj_t *mo;
 
 	M_QueueInit(&spawnqueue);
 	M_QueueInit(&anchorqueue);
@@ -1513,7 +1514,7 @@ void Polyobj_InitLevel(void)
 		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
-		mobj_t *mo = (mobj_t *)th;
+		mo = (mobj_t *)th;
 
 		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
 			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
