@@ -1170,7 +1170,7 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 	if (!(p_lspr->type & DYNLIGHT_SPR))
 		return;
 	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
-	  return;
+		return;
 
 	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
 	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
