@@ -108,11 +108,11 @@ static UINT16 current_track;
 #endif
 
 #ifdef HAVE_OPENMPT
-int mod_err = OPENMPT_ERROR_OK;
+static int mod_err = OPENMPT_ERROR_OK;
 static const char *mod_err_str;
 static UINT16 current_subsong;
-size_t probesize;
-int result;
+static size_t probesize;
+static int result;
 #endif
 
 static void var_cleanup(void)
