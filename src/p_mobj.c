@@ -12582,9 +12582,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (mthing->options & MTF_AMBUSH) // Special flag for rings
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-				z -= 64*FRACUNIT;
+				z -= 24*FRACUNIT;
 			else
-				z += 64*FRACUNIT;
+				z += 24*FRACUNIT;
 		}
 
 		mthing->z = (INT16)(z>>FRACBITS);
