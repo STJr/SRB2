@@ -2247,6 +2247,8 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 	{
 		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 		menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
+		if (!menutype)
+			continue;
 		if (itfunc(menutype, i, &retval, &input, false))
 			break;
 	}
@@ -2300,7 +2302,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
 	}
-	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
+	else if (gamestate != GS_TIMEATTACK && menupres[menutype].bghide && titlemapinaction) // hide the background
 	{
 		curbghide = true;
 		return true;
@@ -2309,7 +2311,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	{
 		if (M_GetYoungestChildMenu() == MN_SP_PLAYER || !defaultname || !defaultname[0])
 			curbgcolor = 31;
-		else if (titlemapinaction) // hide the background by default in titlemap
+		else if (gamestate != GS_TIMEATTACK && titlemapinaction) // hide the background by default in titlemap
 			curbghide = true;
 		else
 		{
@@ -2469,7 +2471,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)

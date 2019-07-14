@@ -67,7 +67,7 @@ static INT32 menuanimtimer; // Title screen: background animation timing
 mobj_t *titlemapcameraref = NULL;
 
 // menu presentation state
-char curbgname[8];
+char curbgname[9];
 SINT8 curfadevalue;
 boolean curhidepics;
 INT32 curbgcolor;
