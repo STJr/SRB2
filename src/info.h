@@ -2458,7 +2458,8 @@ typedef enum state
 
 	S_CEZFLOWER,
 	S_CEZPOLE,
-	S_CEZBANNER,
+	S_CEZBANNER1,
+	S_CEZBANNER2,
 	S_PINETREE,
 	S_CEZBUSH1,
 	S_CEZBUSH2,
@@ -4296,8 +4297,10 @@ typedef enum mobj_type
 	MT_SMALLFIREBAR, // Small Firebar
 	MT_BIGFIREBAR, // Big Firebar
 	MT_CEZFLOWER, // Flower
-	MT_CEZPOLE, // Pole
-	MT_CEZBANNER, // Banner
+	MT_CEZPOLE1, // Pole (with red banner)
+	MT_CEZPOLE2, // Pole (with blue banner)
+	MT_CEZBANNER1, // Banner (red)
+	MT_CEZBANNER2, // Banner (blue)
 	MT_PINETREE, // Pine Tree
 	MT_CEZBUSH1, // Bush 1
 	MT_CEZBUSH2, // Bush 2

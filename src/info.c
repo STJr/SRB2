@@ -2322,9 +2322,10 @@ state_t states[NUMSTATES] =
 	{SPR_BFBR, FF_FULLBRIGHT|15,  1, {NULL},            0, 0, S_BIGFIREBAR1},  // S_BIGFIREBAR16
 
 	{SPR_FWR4, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CEZFLOWER
-	{SPR_BANR, 1, -1, {NULL}, 0, 0, S_NULL}, // S_CEZPOLE
+	{SPR_BANR, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CEZPOLE
 
-	{SPR_BANR, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_CEZBANNER
+	{SPR_BANR, FF_PAPERSPRITE|1, -1, {NULL}, 0, 0, S_NULL}, // S_CEZBANNER1
+	{SPR_BANR, FF_PAPERSPRITE|2, -1, {NULL}, 0, 0, S_NULL}, // S_CEZBANNER2
 
 	{SPR_PINE, 0, -1, {NULL}, 0, 0, S_NULL}, // S_PINETREE
 	{SPR_CEZB, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CEZBUSH1
@@ -11019,7 +11020,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_CEZPOLE
+	{           // MT_CEZPOLE1
 		1117,           // doomednum
 		S_CEZPOLE,      // spawnstate
 		1000,           // spawnhealth
@@ -11046,9 +11047,63 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_CEZBANNER
+	{           // MT_CEZPOLE2
+		1118,           // doomednum
+		S_CEZPOLE,      // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		40*FRACUNIT,    // radius
+		224*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CEZBANNER1
 		-1,             // doomednum
-		S_CEZBANNER,    // spawnstate
+		S_CEZBANNER1,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		40*FRACUNIT,    // radius
+		224*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CEZBANNER2
+		-1,             // doomednum
+		S_CEZBANNER2,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -11263,7 +11318,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_WAVINGFLAG1
-		1118,           // doomednum
+		1128,           // doomednum
 		S_WAVINGFLAG,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -11290,7 +11345,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_WAVINGFLAG2
-		1128,           // doomednum
+		1129,           // doomednum
 		S_WAVINGFLAG,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate

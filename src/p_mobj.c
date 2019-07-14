@@ -11737,13 +11737,14 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 		}
 		break;
-	case MT_CEZPOLE:
+	case MT_CEZPOLE1:
+	case MT_CEZPOLE2:
 		{ // Spawn the banner
 			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS);
 			P_SpawnMobjFromMobj(mobj,
 				P_ReturnThrustX(mobj, mobjangle, 4<<FRACBITS),
 				P_ReturnThrustY(mobj, mobjangle, 4<<FRACBITS),
-				0, MT_CEZBANNER)->angle = mobjangle + ANGLE_90;
+				0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2))->angle = mobjangle + ANGLE_90;
 		}
 			break;
 	case MT_HHZTREE_TOP:
