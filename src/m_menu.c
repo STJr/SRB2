@@ -2247,8 +2247,6 @@ static INT32 M_IterateMenuTree(menutree_iterator itfunc, void *input)
 	{
 		bitmask = ((1 << MENUBITS) - 1) << (MENUBITS*i);
 		menutype = (activeMenuId & bitmask) >> (MENUBITS*i);
-		if (!menutype)
-			continue;
 		if (itfunc(menutype, i, &retval, &input, false))
 			break;
 	}
@@ -2290,6 +2288,9 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].bgcolor >= 0)
 	{
 		curbgcolor = menupres[menutype].bgcolor;
@@ -2330,6 +2331,9 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].musname[0])
 	{
 		S_ChangeMusic(menupres[menutype].musname, menupres[menutype].mustrack, menupres[menutype].muslooping);
@@ -2354,6 +2358,9 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].fadestrength >= 0)
 	{
 		curfadevalue = (menupres[menutype].fadestrength % 32);
@@ -2369,6 +2376,9 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 	(void)input;
 	(void)retval;
 	(void)fromoldest;
+
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
 
 	if (menupres[menutype].hidetitlepics >= 0)
 	{
