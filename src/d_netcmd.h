@@ -125,8 +125,8 @@ typedef enum
 	XD_ADDPLAYER,   // 10
 	XD_TEAMCHANGE,  // 11
 	XD_CLEARSCORES, // 12
-	XD_LOGIN,       // 13
-	XD_VERIFIED,    // 14
+	// UNUSED          13 (Because I don't want to change these comments)
+	XD_VERIFIED = 14,//14
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
