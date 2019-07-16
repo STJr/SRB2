@@ -188,8 +188,6 @@ static void free_colorhash(struct color_hash *hash)
     }
 }
 
-#define EXTENDED_XPM_COLORS
-
 /*
  * convert colour spec to RGB (in 0xrrggbb format).
  * return 1 if successful.
