@@ -159,6 +159,7 @@ static INT32 vidm_previousmode;
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
+tic_t recfgtimer = 0;
 
 //
 // PROTOTYPES
@@ -1601,24 +1602,24 @@ menu_t SP_LevelStatsDef =
 
 menu_t SP_TimeAttackLevelSelectDef = MAPPLATTERMENUSTYLE(
 	MN_SP_MAIN + (MN_SP_TIMEATTACK << 6) + (MN_SP_TIMEATTACK_LEVELSELECT << 12),
-	"M_ATTACK", SP_TimeAttackLevelSelectMenu);
+	NULL, SP_TimeAttackLevelSelectMenu);
 
 static menu_t SP_TimeAttackDef =
 {
 	MN_SP_MAIN + (MN_SP_TIMEATTACK << 6),
-	"M_ATTACK",
+	NULL,
 	sizeof (SP_TimeAttackMenu)/sizeof (menuitem_t),
 	&MainDef,  // Doesn't matter.
 	SP_TimeAttackMenu,
 	M_DrawTimeAttackMenu,
-	32, 40,
+	32, 28,
 	0,
 	NULL
 };
 static menu_t SP_ReplayDef =
 {
 	MN_SP_MAIN + (MN_SP_TIMEATTACK << 6) + (MN_SP_REPLAY << 12),
-	"M_ATTACK",
+	NULL,
 	sizeof(SP_ReplayMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
 	SP_ReplayMenu,
@@ -1630,7 +1631,7 @@ static menu_t SP_ReplayDef =
 static menu_t SP_GuestReplayDef =
 {
 	MN_SP_MAIN + (MN_SP_TIMEATTACK << 6) + (MN_SP_GUESTREPLAY << 12),
-	"M_ATTACK",
+	NULL,
 	sizeof(SP_GuestReplayMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
 	SP_GuestReplayMenu,
@@ -1642,7 +1643,7 @@ static menu_t SP_GuestReplayDef =
 static menu_t SP_GhostDef =
 {
 	MN_SP_MAIN + (MN_SP_TIMEATTACK << 6) + (MN_SP_GHOST << 12),
-	"M_ATTACK",
+	NULL,
 	sizeof(SP_GhostMenu)/sizeof(menuitem_t),
 	&SP_TimeAttackDef,
 	SP_GhostMenu,
@@ -2467,16 +2468,16 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
+	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
 		return;
 
 	// Find current presentation values
-	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurHideTitlePics();
 
@@ -5043,6 +5044,10 @@ static void M_DrawLevelPlatterMenu(void)
 
 	if (gamestate == GS_TIMEATTACK)
 	{
+		curbgxspeed = 0;
+		curbgyspeed = 18;
+		curbghide = false;
+		strncpy(curbgname, "RECATTBG", 8);
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
@@ -8056,8 +8061,15 @@ void M_DrawTimeAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
+	patch_t *menufg;
 
+	curbgxspeed = 0;
+	curbgyspeed = 18;
+	curbghide = false;
+
+	strncpy(curbgname, "RECATTBG", 8);
 	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	menufg = W_CachePatchName("RECATFG", PU_CACHE);
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
@@ -8065,6 +8077,12 @@ void M_DrawTimeAttackMenu(void)
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
+
+	// Draw and animate foreground
+	V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, menufg, FRACUNIT);
+	V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, menufg, FRACUNIT);
+	recfgtimer++;
+	CONS_Printf("%d\n", recfgtimer);
 
 	M_DrawMenuTitle();
 
@@ -8130,7 +8148,7 @@ void M_DrawTimeAttackMenu(void)
 		lumpnum_t lumpnum;
 		char beststr[40];
 
-		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
+		M_DrawLevelPlatterHeader(24-lsheadingheight, cv_nextmap.string, true, false);
 
 		//  A 160x100 image of the level as entry MAPxxP
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
@@ -8140,17 +8158,17 @@ void M_DrawTimeAttackMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(208, 24+lsheadingheight/2, 0, PictureOfLevel);
 
-		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+		V_DrawString(104 - 72, lsheadingheight+8, 0, "* LEVEL RECORDS *");
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
 
-		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
-		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 32+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
+		V_DrawRightAlignedString(104+72, 32+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
 			sprintf(beststr, "(none)");
@@ -8159,16 +8177,16 @@ void M_DrawTimeAttackMenu(void)
 			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
 			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
 
-		V_DrawString(104-72, 58+lsheadingheight/2, V_YELLOWMAP, "TIME:");
-		V_DrawRightAlignedString(104+72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 40+lsheadingheight/2, V_YELLOWMAP, "TIME:");
+		V_DrawRightAlignedString(104+72, 40+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
 
-		V_DrawString(104-72, 68+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
-		V_DrawRightAlignedString(104+72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
+		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		// Draw record emblems.
 		em = M_GetLevelEmblems(cv_nextmap.value);
@@ -8176,9 +8194,9 @@ void M_DrawTimeAttackMenu(void)
 		{
 			switch (em->type)
 			{
-				case ET_SCORE: yHeight = 48; break;
-				case ET_TIME:  yHeight = 58; break;
-				case ET_RINGS: yHeight = 68; break;
+				case ET_SCORE: yHeight = 32; break;
+				case ET_TIME:  yHeight = 40; break;
+				case ET_RINGS: yHeight = 48; break;
 				default:
 					goto skipThisOne;
 			}
@@ -8208,6 +8226,10 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawString(x, y + SP_TimeAttackMenu[taplayer].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[taplayer].text);
 		V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0), y + SP_TimeAttackMenu[taplayer].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
 	}
+
+	// Draw press ESC to exit string on main record attack menu
+	if (currentMenu == &SP_TimeAttackDef)
+		V_DrawString(104-72, 170, V_TRANSLUCENT, M_GetText("Press ESC to exit"));
 }
 
 static void M_TimeAttackLevelSelect(INT32 choice)

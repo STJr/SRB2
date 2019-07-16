@@ -1420,12 +1420,12 @@ void F_InitMenuPresValues(void)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
+	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	// Find current presentation values
-	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurHideTitlePics();
 }
