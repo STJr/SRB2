@@ -2007,7 +2007,7 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 //
 // Handles player hitting floor surface.
 // Returns whether to clip momz.
-boolean P_PlayerHitFloor(player_t *player)
+boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 {
 	boolean clipmomz;
 
@@ -2015,92 +2015,96 @@ boolean P_PlayerHitFloor(player_t *player)
 
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
-		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+		if (dorollstuff)
 		{
-			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-			S_StartSound(player->mo, sfx_spin);
+			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			{
+				player->pflags |= PF_SPINNING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+				S_StartSound(player->mo, sfx_spin);
+			}
+			else
+				player->pflags &= ~PF_SPINNING;
 		}
-		else
+
+		if (player->pflags & PF_GLIDING) // ground gliding
 		{
-			player->pflags &= ~PF_SPINNING;
-
-			if (player->pflags & PF_GLIDING) // ground gliding
-			{
+			if (!player->skidtime)
 				player->skidtime = TICRATE;
-				player->mo->tics = -1;
-			}
-			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
+			player->mo->tics = -1;
+		}
+		else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
+		{
+			mobjtype_t type = player->revitem;
+			P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
+			player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+			S_StartSound(player->mo, sfx_s3k8b);
+			player->pflags |= PF_FULLSTASIS;
+
+			// hearticles
+			if (type)
 			{
-				mobjtype_t type = player->revitem;
-				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
-				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-				S_StartSound(player->mo, sfx_s3k8b);
-				player->pflags |= PF_FULLSTASIS;
-
-				// hearticles
-				if (type)
+				UINT8 i = 0;
+				angle_t throwang = -(2*ANG30);
+				fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
+				fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
+				fixed_t zo = 6*player->mo->scale;
+				fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
+				fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
+				fixed_t ev;
+				mobj_t *missile;
+				if (mu2 < mu)
+					mu2 = mu;
+				ev = (50*FRACUNIT - (mu/25))/50;
+				while (i < 5)
 				{
-					UINT8 i = 0;
-					angle_t throwang = -(2*ANG30);
-					fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
-					fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
-					fixed_t zo = 6*player->mo->scale;
-					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
-					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
-					fixed_t ev;
-					mobj_t *missile;
-					if (mu2 < mu)
-						mu2 = mu;
-					ev = (50*FRACUNIT - (mu/25))/50;
-					while (i < 5)
-					{
-						missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
-						P_SetTarget(&missile->target, player->mo);
-						missile->angle = throwang + player->drawangle;
-						P_Thrust(missile, player->drawangle + ANGLE_90,
-							P_ReturnThrustY(missile, throwang, mu)); // side to side component
-						P_Thrust(missile, player->drawangle, mu2); // forward component
-						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
-						missile->fuse = TICRATE/2;
-						missile->extravalue2 = ev;
+					missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
+					P_SetTarget(&missile->target, player->mo);
+					missile->angle = throwang + player->drawangle;
+					P_Thrust(missile, player->drawangle + ANGLE_90,
+						P_ReturnThrustY(missile, throwang, mu)); // side to side component
+					P_Thrust(missile, player->drawangle, mu2); // forward component
+					P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+					missile->fuse = TICRATE/2;
+					missile->extravalue2 = ev;
 
-						i++;
-						throwang += ANG30;
-					}
-					if (mobjinfo[type].seesound)
-						S_StartSound(missile, missile->info->seesound);
+					i++;
+					throwang += ANG30;
 				}
+				if (mobjinfo[type].seesound)
+					S_StartSound(missile, missile->info->seesound);
 			}
-			else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
+		}
+		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+			;
+		else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
 			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+		{
+			if (player->cmomx || player->cmomy)
 			{
-				if (player->cmomx || player->cmomy)
-				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-					else if ((player->rmomx || player->rmomy)
-					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-					else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
-						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				}
-				else
-				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-					else if ((player->mo->momx || player->mo->momy)
-					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-					else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
-						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				}
+				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+				else if ((player->rmomx || player->rmomy)
+				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+			}
+			else
+			{
+				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+				else if ((player->mo->momx || player->mo->momy)
+				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 			}
 		}
 
@@ -2537,7 +2541,7 @@ static void P_CheckQuicksand(player_t *player)
 					player->mo->z = ceilingheight - player->mo->height;
 
 				if (player->mo->momz <= 0)
-					P_PlayerHitFloor(player);
+					P_PlayerHitFloor(player, false);
 			}
 			else
 			{
@@ -2549,7 +2553,7 @@ static void P_CheckQuicksand(player_t *player)
 					player->mo->z = floorheight;
 
 				if (player->mo->momz >= 0)
-					P_PlayerHitFloor(player);
+					P_PlayerHitFloor(player, false);
 			}
 
 			friction = abs(rover->master->v1->y - rover->master->v2->y)>>6;

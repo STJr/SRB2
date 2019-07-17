@@ -3047,7 +3047,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 			}
 
-			clipmomz = P_PlayerHitFloor(mo->player);
+			clipmomz = P_PlayerHitFloor(mo->player, true);
 
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
