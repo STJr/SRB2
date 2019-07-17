@@ -2029,9 +2029,13 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 		if (player->pflags & PF_GLIDING) // ground gliding
 		{
-			if (!player->skidtime)
+			if (dorollstuff)
+			{
 				player->skidtime = TICRATE;
-			player->mo->tics = -1;
+				player->mo->tics = -1;
+			}
+			else
+				player->pflags &= ~PF_GLIDING;
 		}
 		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING)
 		{
