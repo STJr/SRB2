@@ -719,6 +719,8 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 		}
 	}
 
+	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
+
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
