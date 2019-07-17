@@ -2069,6 +2069,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 						P_ReturnThrustY(missile, throwang, mu)); // side to side component
 					P_Thrust(missile, player->drawangle, mu2); // forward component
 					P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+					missile->momz += player->mo->pmomz;
 					missile->fuse = TICRATE/2;
 					missile->extravalue2 = ev;
 
@@ -4418,6 +4419,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					{
 						player->mo->z += P_MobjFlip(player->mo);
 						P_SetObjectMomZ(player->mo, player->mindash, false);
+						if (P_MobjFlip(player->mo)*player->mo->pmomz > 0)
+							player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+						else
+							player->mo->pmomz = 0;
 						if (player->mo->eflags & MFE_UNDERWATER)
 							player->mo->momz >>= 1;
 #if 0
