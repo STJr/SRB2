@@ -3916,6 +3916,21 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				}
 			}
+		case 460: // Award rings
+		{
+			INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
+			INT16 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			if (mo && mo->player)
+			{
+				if (delay > 0)
+				{
+					if (!(leveltime % (delay*TICRATE)))
+						P_GivePlayerRings(mo->player, rings);
+				}
+				else
+					P_GivePlayerRings(mo->player, rings);
+			}
+		}
 			break;
 
 #ifdef POLYOBJECTS
