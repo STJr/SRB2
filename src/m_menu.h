@@ -123,7 +123,7 @@ typedef enum
 
 typedef struct
 {
-	char bgname[9]; // name for background gfx lump; lays over titlemap if this is set
+	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
 	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
 	INT32 titlescrollyspeed; // y scroll

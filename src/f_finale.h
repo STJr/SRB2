@@ -84,7 +84,7 @@ typedef enum
 
 extern UINT8 titlemapinaction;
 extern mobj_t *titlemapcameraref;
-extern char curbgname[9];
+extern char curbgname[8];
 extern SINT8 curfadevalue;
 extern boolean curhidepics;
 extern INT32 curbgcolor;
