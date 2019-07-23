@@ -2308,21 +2308,24 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].bgcolor >= 0)
 	{
 		curbgcolor = menupres[menutype].bgcolor;
 		return true;
 	}
-	else if (menupres[menutype].bgname[0] && (!menupres[menutype].bghide || !titlemapinaction))
+	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
+	{
+		curbghide = true;
+		return true;
+	}
+	else if (menupres[menutype].bgname[0])
 	{
 		strncpy(curbgname, menupres[menutype].bgname, 8);
 		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
-		return true;
-	}
-	else if (menupres[menutype].bghide && titlemapinaction) // hide the background
-	{
-		curbghide = true;
 		return true;
 	}
 	else if (!level)
@@ -2348,6 +2351,9 @@ static boolean MIT_ChangeMusic(UINT32 menutype, INT32 level, INT32 *retval, void
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].musname[0])
 	{
 		S_ChangeMusic(menupres[menutype].musname, menupres[menutype].mustrack, menupres[menutype].muslooping);
@@ -2372,6 +2378,9 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	(void)retval;
 	(void)fromoldest;
 
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
+
 	if (menupres[menutype].fadestrength >= 0)
 	{
 		curfadevalue = (menupres[menutype].fadestrength % 32);
@@ -2387,6 +2396,9 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 	(void)input;
 	(void)retval;
 	(void)fromoldest;
+
+	if (!menutype) // if there's nothing in this level, do nothing
+		return false;
 
 	if (menupres[menutype].hidetitlepics >= 0)
 	{
@@ -2489,7 +2501,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
-	curbghide = true;
+	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
@@ -8254,6 +8266,7 @@ static void M_TimeAttack(INT32 choice)
 	M_PatchSkinNameTable();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
+	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_TimeAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
@@ -8435,6 +8448,7 @@ static void M_NightsAttack(INT32 choice)
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	M_SetupNextMenu(&SP_NightsAttackDef);
+	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
