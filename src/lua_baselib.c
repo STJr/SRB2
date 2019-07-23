@@ -539,7 +539,8 @@ static int lib_pSpawnLockOn(lua_State *L)
 	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-		visual->target = lockon;
+		P_SetTarget(&visual->target, lockon);
+		visual->flags2 |= MF2_DONTDRAW;
 		P_SetMobjStateNF(visual, state);
 	}
 	return 0;
@@ -951,6 +952,21 @@ static int lib_pResetPlayer(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayerCanDamage(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD // was hud safe but then i added a lua hook
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!thing)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_PlayerCanDamage(player, thing));
+	return 1;
+}
+
+
 static int lib_pIsObjectInGoop(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1219,8 +1235,8 @@ static int lib_pHomingAttack(lua_State *L)
 	INLEVEL
 	if (!source || !enemy)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_HomingAttack(source, enemy);
-	return 0;
+	lua_pushboolean(L, P_HomingAttack(source, enemy));
+	return 1;
 }
 
 static int lib_pSuperReady(lua_State *L)
@@ -2774,6 +2790,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
+	{"P_PlayerCanDamage",lib_pPlayerCanDamage},
 	{"P_IsObjectInGoop",lib_pIsObjectInGoop},
 	{"P_IsObjectOnGround",lib_pIsObjectOnGround},
 	{"P_InSpaceSector",lib_pInSpaceSector},

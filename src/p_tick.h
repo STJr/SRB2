@@ -27,7 +27,7 @@ void Command_CountMobjs_f(void);
 void P_Ticker(boolean run);
 void P_PreTicker(INT32 frames);
 void P_DoTeamscrambling(void);
-void P_RemoveThinkerDelayed(void *pthinker); //killed
+void P_RemoveThinkerDelayed(thinker_t *thinker); //killed
 mobj_t *P_SetTarget(mobj_t **mo, mobj_t *target);   // killough 11/98
 
 #endif

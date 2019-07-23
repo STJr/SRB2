@@ -95,6 +95,7 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *pinkshield;
 static patch_t *flameshield;
 static patch_t *bubbleshield;
 static patch_t *thundershield;
@@ -285,6 +286,7 @@ void ST_LoadGraphics(void)
 	watershield = W_CachePatchName("TVELICON", PU_HUDGFX);
 	bombshield = W_CachePatchName("TVARICON", PU_HUDGFX);
 	pityshield = W_CachePatchName("TVPIICON", PU_HUDGFX);
+	pinkshield = W_CachePatchName("TVPPICON", PU_HUDGFX);
 	flameshield = W_CachePatchName("TVFLICON", PU_HUDGFX);
 	bubbleshield = W_CachePatchName("TVBBICON", PU_HUDGFX);
 	thundershield = W_CachePatchName("TVZPICON", PU_HUDGFX);
@@ -1250,6 +1252,7 @@ static void ST_drawPowerupHUD(void)
 				case SH_ARMAGEDDON:  p = bombshield;    break;
 				case SH_ATTRACT:     p = ringshield;    break;
 				case SH_PITY:        p = pityshield;    break;
+				case SH_PINK:        p = pinkshield;    break;
 				case SH_FLAMEAURA:   p = flameshield;   break;
 				case SH_BUBBLEWRAP:  p = bubbleshield;  break;
 				case SH_THUNDERCOIN: p = thundershield; break;
@@ -2303,31 +2306,33 @@ static void ST_doItemFinderIconsAndSound(void)
 		return;
 
 	// Scan thinkers to find emblem mobj with these ids
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
+
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_EMBLEM)
+		if (mo2->type != MT_EMBLEM)
+			continue;
+
+		if (!(mo2->flags & MF_SPECIAL))
+			continue;
+
+		for (i = 0; i < stemblems; ++i)
 		{
-			if (!(mo2->flags & MF_SPECIAL))
-				continue;
-
-			for (i = 0; i < stemblems; ++i)
+			if (mo2->health == emblems[i] + 1)
 			{
-				if (mo2->health == emblems[i]+1)
-				{
-					soffset = (i * 20) - ((stemblems-1) * 10);
+				soffset = (i * 20) - ((stemblems - 1) * 10);
 
-					newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
-					if (newinterval && (!interval || newinterval < interval))
-						interval = newinterval;
+				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
+				if (newinterval && (!interval || newinterval < interval))
+					interval = newinterval;
 
-					break;
-				}
+				break;
 			}
 		}
+
 	}
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)

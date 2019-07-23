@@ -61,15 +61,21 @@
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
-//
-// P_TICK
-//
-
-// both the head and tail of the thinker list
-extern thinker_t thinkercap;
+typedef enum
+{
+	THINK_POLYOBJ,
+	THINK_MAIN,
+	THINK_MOBJ,
+#ifdef ESLOPE
+	THINK_DYNSLOPE,
+#endif
+	THINK_PRECIP,
+	NUM_THINKERLISTS
+} thinklistnum_t; /**< Thinker lists. */
+extern thinker_t thlist[];
 
 void P_InitThinkers(void);
-void P_AddThinker(thinker_t *thinker);
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
 //
@@ -128,6 +134,7 @@ pflags_t P_GetJumpFlags(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
+boolean P_PlayerCanDamage(player_t *player, mobj_t *thing);
 boolean P_IsLocalPlayer(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
@@ -158,6 +165,7 @@ boolean P_AutoPause(void);
 void P_DoJumpShield(player_t *player);
 void P_DoBubbleBounce(player_t *player);
 void P_DoAbilityBounce(player_t *player, boolean changemomz);
+void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
 
@@ -174,7 +182,7 @@ void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
-void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
+boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
 #if 0

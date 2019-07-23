@@ -28,6 +28,7 @@
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_draw.h"
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -4666,6 +4667,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Boss 3
 	"S_EGGMOBILE3_STND",
+	"S_EGGMOBILE3_LAUGH1",
+	"S_EGGMOBILE3_LAUGH2",
+	"S_EGGMOBILE3_LAUGH3",
+	"S_EGGMOBILE3_LAUGH4",
+	"S_EGGMOBILE3_LAUGH5",
 	"S_EGGMOBILE3_ATK1",
 	"S_EGGMOBILE3_ATK2",
 	"S_EGGMOBILE3_ATK3A",
@@ -4674,11 +4680,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_ATK3D",
 	"S_EGGMOBILE3_ATK4",
 	"S_EGGMOBILE3_ATK5",
-	"S_EGGMOBILE3_LAUGH1",
-	"S_EGGMOBILE3_LAUGH2",
-	"S_EGGMOBILE3_LAUGH3",
-	"S_EGGMOBILE3_LAUGH4",
-	"S_EGGMOBILE3_LAUGH5",
 	"S_EGGMOBILE3_LAUGH6",
 	"S_EGGMOBILE3_LAUGH7",
 	"S_EGGMOBILE3_LAUGH8",
@@ -4731,8 +4732,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FAKEMOBILE_ATK3B",
 	"S_FAKEMOBILE_ATK3C",
 	"S_FAKEMOBILE_ATK3D",
-	"S_FAKEMOBILE_ATK4",
-	"S_FAKEMOBILE_ATK5",
+	"S_FAKEMOBILE_DIE1",
+	"S_FAKEMOBILE_DIE2",
 
 	// Boss 4
 	"S_EGGMOBILE4_STND",
@@ -4750,15 +4751,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE4_RATK6",
 	"S_EGGMOBILE4_RAISE1",
 	"S_EGGMOBILE4_RAISE2",
-	"S_EGGMOBILE4_RAISE3",
-	"S_EGGMOBILE4_RAISE4",
-	"S_EGGMOBILE4_RAISE5",
-	"S_EGGMOBILE4_RAISE6",
-	"S_EGGMOBILE4_RAISE7",
-	"S_EGGMOBILE4_RAISE8",
-	"S_EGGMOBILE4_RAISE9",
-	"S_EGGMOBILE4_RAISE10",
-	"S_EGGMOBILE4_PAIN",
+	"S_EGGMOBILE4_PAIN1",
+	"S_EGGMOBILE4_PAIN2",
 	"S_EGGMOBILE4_DIE1",
 	"S_EGGMOBILE4_DIE2",
 	"S_EGGMOBILE4_DIE3",
@@ -4776,10 +4770,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE4_FLEE1",
 	"S_EGGMOBILE4_FLEE2",
 	"S_EGGMOBILE4_MACE",
+	"S_EGGMOBILE4_MACE_DIE1",
+	"S_EGGMOBILE4_MACE_DIE2",
+	"S_EGGMOBILE4_MACE_DIE3",
 
 	// Boss 4 jet flame
-	"S_JETFLAME1",
-	"S_JETFLAME2",
+	"S_JETFLAME",
+
+	// Boss 4 Spectator Eggrobo
+	"S_EGGROBO1_IDLE",
+	"S_EGGROBO1_BSLAP1",
+	"S_EGGROBO2_BSLAP2",
+	"S_EGGROBO1_PISSED",
+
+	// Boss 4 Spectator Eggrobo jet flame
+	"S_EGGROBOJET",
 
 	// Boss 5
 	"S_FANG_IDLE1",
@@ -5132,7 +5137,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_METALSONIC_BADBOUNCE",
 	"S_METALSONIC_SHOOT",
 	"S_METALSONIC_PAIN",
-	"S_METALSONIC_DEATH",
+	"S_METALSONIC_DEATH1",
+	"S_METALSONIC_DEATH2",
+	"S_METALSONIC_DEATH3",
+	"S_METALSONIC_DEATH4",
 	"S_METALSONIC_FLEE1",
 	"S_METALSONIC_FLEE2",
 	"S_METALSONIC_FLEE3",
@@ -6170,6 +6178,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY4",
 	"S_PITY5",
 	"S_PITY6",
+	"S_PITY7",
+	"S_PITY8",
+	"S_PITY9",
+	"S_PITY10",
+	"S_PITY11",
+	"S_PITY12",
 
 	"S_FIRS1",
 	"S_FIRS2",
@@ -6654,6 +6668,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_LOCKON1",
 	"S_LOCKON2",
+	"S_LOCKON3",
+	"S_LOCKON4",
+	"S_LOCKONINF1",
+	"S_LOCKONINF2",
+	"S_LOCKONINF3",
+	"S_LOCKONINF4",
 
 	// Tag Sign
 	"S_TTAG",
@@ -6662,6 +6682,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GOTFLAG",
 
 	"S_CORK",
+	"S_LHRT",
 
 	// Red Ring
 	"S_RRNG1",
@@ -7167,6 +7188,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+	"S_BRICKDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -7251,11 +7273,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGMOBILE3",
 	"MT_PROPELLER",
 	"MT_FAKEMOBILE",
+	"MT_SHOCK",
 
 	// Boss 4
 	"MT_EGGMOBILE4",
 	"MT_EGGMOBILE4_MACE",
 	"MT_JETFLAME",
+	"MT_EGGROBO1",
+	"MT_EGGROBO1JET",
 
 	// Boss 5
 	"MT_FANG",
@@ -7732,6 +7757,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_DROWNNUMBERS", // Drowning Timer
 	"MT_GOTEMERALD", // Chaos Emerald (intangible)
 	"MT_LOCKON", // Target
+	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
 
@@ -7749,6 +7775,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MACHINEAMBIENCE",
 
 	"MT_CORK",
+	"MT_LHRT",
 
 	// Ring Weapons
 	"MT_REDRING",
@@ -7881,6 +7908,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+	"MT_BRICKDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
@@ -8521,6 +8549,7 @@ struct {
 	{"SH_PITY",SH_PITY},
 	{"SH_WHIRLWIND",SH_WHIRLWIND},
 	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
+	{"SH_PINK",SH_PINK},
 	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},
@@ -8764,10 +8793,8 @@ struct {
 #endif
 #ifdef ESLOPE
 	// Slope flags
-	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
-	{"SL_NODYNAMIC",SL_NODYNAMIC},      // Slope will never need to move during the level, so don't fuss with recalculating it
-	{"SL_ANCHORVERTEX",SL_ANCHORVERTEX},// Slope is using a Slope Vertex Thing to anchor its position
-	{"SL_VERTEXSLOPE",SL_VERTEXSLOPE},  // Slope is built from three Slope Vertex Things
+	{"SL_NOPHYSICS",SL_NOPHYSICS},
+	{"SL_DYNAMIC",SL_DYNAMIC},
 #endif
 
 	// Angles
@@ -8911,6 +8938,14 @@ struct {
 	{"KR_TIMEOUT",KR_TIMEOUT},
 	{"KR_BAN",KR_BAN},
 	{"KR_LEAVE",KR_LEAVE},
+
+	// translation colormaps
+	{"TC_DEFAULT",TC_DEFAULT},
+	{"TC_BOSS",TC_BOSS},
+	{"TC_METALSONIC",TC_METALSONIC},
+	{"TC_ALLWHITE",TC_ALLWHITE},
+	{"TC_RAINBOW",TC_RAINBOW},
+	{"TC_BLINK",TC_BLINK},
 #endif
 
 	{NULL,0}
@@ -9575,11 +9610,6 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (fastcmp(p, "NETONLY"))
-		{
-			lua_pushinteger(L, (lua_Integer)ML_NETONLY);
-			return 1;
-		}
 		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
 		return 0;
 	}
