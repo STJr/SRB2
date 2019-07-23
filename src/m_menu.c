@@ -1305,15 +1305,15 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
 
-	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
+	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
 
 #ifdef HAVE_OPENMPT
 	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
-	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145},
 #endif
 #ifdef HAVE_MIXERX
-	{IT_STRING 	  | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 163},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 163},
 #endif
 };
 
@@ -1914,7 +1914,7 @@ menu_t OP_SoundOptionsDef =
 	NULL
 };
 #ifdef HAVE_MIXERX
-menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
+menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
 #endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(

@@ -145,13 +145,13 @@ void I_UnloadSong(void)
 boolean I_PlaySong(boolean looping)
 {
 	(void)handle;
+	(void)looping;
+	return false;
 }
 
 void I_StopSong(void)
 {
 	(void)handle;
-	(void)looping;
-	return false;
 }
 
 void I_PauseSong(void)

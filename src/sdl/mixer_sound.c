@@ -1100,7 +1100,6 @@ boolean I_LoadSong(char *data, size_t len)
 	const char *key1 = "LOOP";
 	const char *key2 = "POINT=";
 	const char *key3 = "MS=";
-	const char *key4 = "LENGTHMS=";
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);

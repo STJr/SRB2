@@ -118,13 +118,6 @@ static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "N
 consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-#ifdef HAVE_MIXERX
-static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
-consvar_t cv_midiplayer = {"midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midisoundfontpath = {"midisoundfont", "sf2/8bit.sf2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_miditimiditypath = {"midisoundbank", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-
 #define S_MAX_VOLUME 127
 
 // when to clip out sounds
