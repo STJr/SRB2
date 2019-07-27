@@ -578,7 +578,8 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TALB",
 
 	"SIGN",
-	"LIFE"
+	"LIFE",
+	"XTRA",
 };
 playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
 
@@ -595,7 +596,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_DEAD, // SPR2_DRWN,
 	0, // SPR2_ROLL,
 	SPR2_SPNG, // SPR2_GASP,
-	0, // SPR2_JUMP, (conditional)
+	0, // SPR2_JUMP, (conditional, will never be referenced)
 	SPR2_FALL, // SPR2_SPNG,
 	SPR2_WALK, // SPR2_FALL,
 	0, // SPR2_EDGE,
@@ -605,7 +606,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	SPR2_SPNG, // SPR2_FLY ,
 	SPR2_FLY , // SPR2_SWIM,
-	0, // SPR2_TIRE, (conditional)
+	0, // SPR2_TIRE, (conditional, will never be referenced)
 
 	SPR2_FLY , // SPR2_GLID,
 	SPR2_CLMB, // SPR2_CLNG,
@@ -632,7 +633,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_NSTN, // SPR2_NPUL,
 	FF_SPR2SUPER|SPR2_ROLL, // SPR2_NATK,
 
-	0, // SPR2_NGT0, (should never be referenced)
+	0, // SPR2_NGT0, (will never be referenced unless skin 0 lacks this)
 	SPR2_NGT0, // SPR2_NGT1,
 	SPR2_NGT1, // SPR2_NGT2,
 	SPR2_NGT2, // SPR2_NGT3,
@@ -660,7 +661,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_NGTB, // SPR2_DRLB,
 	SPR2_NGTC, // SPR2_DRLC,
 
-	0, // SPR2_TAL0,
+	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,
 	SPR2_TAL1, // SPR2_TAL2,
 	SPR2_TAL2, // SPR2_TAL3,
@@ -675,6 +676,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	0, // SPR2_SIGN,
 	0, // SPR2_LIFE,
+	0, // SPR2_XTRA (should never be referenced)
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)

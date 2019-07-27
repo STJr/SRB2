@@ -1682,7 +1682,17 @@ void S_StopMusic(void)
 	if (cv_closedcaptioning.value)
 	{
 		if (closedcaptions[0].s-S_sfx == sfx_None)
-			closedcaptions[0].t = CAPTIONFADETICS;
+		{
+			if (gamestate != wipegamestate)
+			{
+				closedcaptions[0].c = NULL;
+				closedcaptions[0].s = NULL;
+				closedcaptions[0].t = 0;
+				closedcaptions[0].b = 0;
+			}
+			else
+				closedcaptions[0].t = CAPTIONFADETICS;
+		}
 	}
 }
 

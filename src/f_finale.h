@@ -46,6 +46,9 @@ void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
 void F_GameEvaluationTicker(void);
 
+void F_EndingTicker(void);
+void F_EndingDrawer(void);
+
 void F_CreditTicker(void);
 void F_CreditDrawer(void);
 
@@ -63,6 +66,7 @@ boolean F_GetPromptHideHud(fixed_t y);
 void F_StartGameEnd(void);
 void F_StartIntro(void);
 void F_StartTitleScreen(void);
+void F_StartEnding(void);
 void F_StartCredits(void);
 
 boolean F_ContinueResponder(event_t *event);
@@ -126,6 +130,7 @@ enum
 	wipe_evaluation_toblack,
 	wipe_gameend_toblack,
 	wipe_intro_toblack,
+	wipe_ending_toblack,
 	wipe_cutscene_toblack,
 
 	// custom intermissions
@@ -142,15 +147,16 @@ enum
 	wipe_evaluation_final,
 	wipe_gameend_final,
 	wipe_intro_final,
+	wipe_ending_final,
 	wipe_cutscene_final,
 
 	// custom intermissions
 	wipe_specinter_final,
 	wipe_multinter_final,
 
-	NUMWIPEDEFS
+	NUMWIPEDEFS,
+	WIPEFINALSHIFT = (wipe_level_final-wipe_level_toblack)
 };
-#define WIPEFINALSHIFT 13
 extern UINT8 wipedefs[NUMWIPEDEFS];
 
 #endif

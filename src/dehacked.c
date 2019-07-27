@@ -517,7 +517,9 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
+					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
@@ -1108,6 +1110,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				if      (fastcmp(word2, "TITLE"))      i = 1100;
 				else if (fastcmp(word2, "EVALUATION")) i = 1101;
 				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
 				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
@@ -9493,6 +9496,7 @@ static inline int lib_freeslot(lua_State *L)
 				{
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");

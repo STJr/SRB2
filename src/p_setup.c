@@ -3437,13 +3437,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_UnloadGraphics();
 	HU_LoadGraphics();
 	ST_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 
 	//
 	// look for skins
 	//
 	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
 	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// search for maps
