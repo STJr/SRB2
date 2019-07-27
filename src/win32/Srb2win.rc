@@ -1,6 +1,7 @@
 //Microsoft Developer Studio generated resource script.
 //
 #include "resource.h"
+#include "winver.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -62,9 +63,11 @@ END
 // Version
 //
 
+#include "../doomdef.h" // Needed for version string
+
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,9,0
- PRODUCTVERSION 1,0,9,0
+ FILEVERSION 2,2
+ PRODUCTVERSION 2,2
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -82,14 +85,14 @@ BEGIN
             VALUE "Comments", "Visit our web site at www.srb2.org for news and updates!\0"
             VALUE "CompanyName", "Sonic Team Junior\0"
             VALUE "FileDescription", "Sonic Robo Blast 2\0"
-            VALUE "FileVersion", "1, 09\0"
+            VALUE "FileVersion", "2.2\0"
             VALUE "InternalName", "srb2\0"
-            VALUE "LegalCopyright", "Copyright � 1998-2018 by Sonic Team Junior\0"
+            VALUE "LegalCopyright", "Copyright 1998-2019 by Sonic Team Junior\0"
             VALUE "LegalTrademarks", "Sonic the Hedgehog and related characters are trademarks of Sega.\0"
             VALUE "OriginalFilename", "srb2win.exe\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "Sonic Robo Blast 2\0"
-            VALUE "ProductVersion", "1, 09\0"
+            VALUE "ProductVersion", "2.2\0"
             VALUE "SpecialBuild", "\0"
         END
     END
