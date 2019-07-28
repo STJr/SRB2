@@ -34,7 +34,7 @@
  *
  * Besides the standard API, also provides
  *
- *     SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
+ *     SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
  *
  * that reads the image data from an XPM file included in the C source.
  *
@@ -48,7 +48,7 @@
 // SDLCALL terms removed from original SDL_image declarations
 int IMG_isXPM(SDL_RWops *src);
 SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src);
-SDL_Surface *IMG_ReadXPMFromArray(char **xpm);
+SDL_Surface *IMG_ReadXPMFromArray(const char **xpm);
 #define IMG_SetError    SDL_SetError
 #define IMG_GetError    SDL_GetError
 #endif
@@ -192,7 +192,7 @@ static void free_colorhash(struct color_hash *hash)
  * convert colour spec to RGB (in 0xrrggbb format).
  * return 1 if successful.
  */
-static int color_to_rgb(char *spec, int speclen, Uint32 *rgb)
+static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
 {
     /* poor man's rgb.txt */
     static struct { char *name; Uint32 rgb; } known[] = {
@@ -933,7 +933,7 @@ static char *error;
  * If len > 0, it's assumed to be at least len chars (for efficiency).
  * Return NULL and set error upon EOF or parse error.
  */
-static char *get_next_line(char ***lines, SDL_RWops *src, int len)
+static const char *get_next_line(const char ***lines, SDL_RWops *src, int len)
 {
     char *linebufnew;
 
@@ -1005,7 +1005,7 @@ do {                            \
 } while (0)
 
 /* read XPM from either array or RWops */
-static SDL_Surface *load_xpm(char **xpm, SDL_RWops *src)
+static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
 {
     Sint64 start = 0;
     SDL_Surface *image = NULL;
@@ -1017,8 +1017,8 @@ static SDL_Surface *load_xpm(char **xpm, SDL_RWops *src)
     struct color_hash *colors = NULL;
     SDL_Color *im_colors = NULL;
     char *keystrings = NULL, *nextkey;
-    char *line;
-    char ***xpmlines = NULL;
+    const char *line;
+    const char ***xpmlines = NULL;
     int pixels_len;
 
     error = NULL;
@@ -1085,7 +1085,7 @@ static SDL_Surface *load_xpm(char **xpm, SDL_RWops *src)
         goto done;
     }
     for (index = 0; index < ncolors; ++index ) {
-        char *p;
+        const char *p;
         line = get_next_line(xpmlines, src, 0);
         if (!line)
             goto done;
@@ -1095,7 +1095,7 @@ static SDL_Surface *load_xpm(char **xpm, SDL_RWops *src)
         /* parse a colour definition */
         for (;;) {
             char nametype;
-            char *colname;
+            const char *colname;
             Uint32 rgb, pixel;
 
             SKIPSPACE(p);
@@ -1188,7 +1188,7 @@ SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src)
     return load_xpm(NULL, src);
 }
 
-SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
+SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
 {
     if (!xpm) {
         IMG_SetError("array is NULL");
@@ -1212,7 +1212,7 @@ SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src)
     return(NULL);
 }
 
-SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
+SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
 {
     return NULL;
 }

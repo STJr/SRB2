@@ -1,5 +1,5 @@
 /* XPM */
-static char * SDL_icon_xpm[] = {
+static const char *SDL_icon_xpm[] = {
 "64 64 32 1",
 " 	c None",
 ".	c #000271",
