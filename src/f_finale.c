@@ -104,7 +104,7 @@ static patch_t *endfwrk[3]; // firework - replaced with skin when good ending
 static patch_t *endspkl[3]; // sparkle
 static patch_t *endglow[2]; // glow aura - replaced with black rock's midway through good ending
 static patch_t *endxpld[4]; // mini explosion
-static INT32 sparkloffs[8][3][2]; // seven emerald sparkles + eggrock explosions
+static INT32 sparkloffs[3][2]; // eggrock explosions/blackrock sparkles
 static INT32 sparklloop;
 
 //
@@ -985,6 +985,7 @@ static const char *credits[] = {
 	"\1Assistance",
 	"\"chi.miru\"", // helped port slope drawing code from ZDoom
 	"Andrew \"orospakr\" Clunis",
+	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
 	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
 	"Victor \"Steel Titanium\" Fuentes",
@@ -1004,8 +1005,9 @@ static const char *credits[] = {
 	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
 	"",
 	"\1Sprite Artists",
-	"Odi \"Iceman404\" Atunzu",
+	"\"Iceman404\"",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Sally \"TehRealSalt\" Cochenour",
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -1087,7 +1089,10 @@ static const char *credits[] = {
 	"Simon \"sirjuddington\" Judd", // SLADE developer
 	// Acknowledged here are the following:
 	// Minor merge request authors, see guideline above
-	// Golden - Expanded thin font
+	// - Golden - Expanded thin font
+	// Creators of small quantities of sprite/texture assets
+	// - Arietty - New Green Hill-styled textures
+	// - Scizor300 - the only other contributor to the 2.0 SRB2 Asset Pack
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
@@ -1279,8 +1284,7 @@ boolean F_CreditResponder(event_t *event)
 // ============
 //  EVALUATION
 // ============
-#define INTERVAL (360/7)
-#define TRANSLEVEL V_80TRANS
+#define SPARKLLOOPTIME 7 // must be odd
 
 void F_StartGameEvaluation(void)
 {
@@ -1309,6 +1313,7 @@ void F_StartGameEvaluation(void)
 	CON_ToggleOff();
 
 	finalecount = -1;
+	sparklloop = 0;
 }
 
 void F_GameEvaluationDrawer(void)
@@ -1373,7 +1378,24 @@ void F_GameEvaluationDrawer(void)
 			colormap[1] = R_GetTranslationColormap(TC_BLINK, SKINCOLOR_AQUA, GTC_CACHE);
 			V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, rockpat, colormap[1]);
 		}
-		if (!goodending)
+		if (goodending)
+		{
+			INT32 j = (sparklloop & 1) ? 2 : 3;
+			if (j > (finalecount/SPARKLLOOPTIME))
+				j = (finalecount/SPARKLLOOPTIME);
+			while (j)
+			{
+				if (j > 1 || sparklloop >= 2)
+				{
+					// if j == 0 - alternate between 0 and 1
+					//         1 -                   1 and 2
+					//         2 -                   2 and not rendered
+					V_DrawFixedPatch(x+sparkloffs[j-1][0], y+sparkloffs[j-1][1], FRACUNIT, 0, W_CachePatchName(va("ENDSPKL%.1d", (j - ((sparklloop & 1) ? 0 : 1))), PU_LEVEL), R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_AQUA, GTC_CACHE));
+				}
+				j--;
+			}
+		}
+		else
 		{
 			patch_t *eggrock = W_CachePatchName("ENDEGRK5", PU_LEVEL);
 			V_DrawFixedPatch(x, y, scale, 0, eggrock, colormap[0]);
@@ -1392,24 +1414,16 @@ void F_GameEvaluationDrawer(void)
 		fa = (FixedAngle(eemeralds_cur*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
 		x = (BASEVIDWIDTH<<(FRACBITS-1)) + (60*FINECOSINE(fa));
 		y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + (60*FINESINE(fa));
-		eemeralds_cur += INTERVAL;
+		eemeralds_cur += (360/7);
 		if (i & 1)
 			eemeralds_cur++;
 
 		patchname[4] = 'A'+(char)i;
-		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : TRANSLEVEL), W_CachePatchName(patchname, PU_LEVEL), NULL);
+		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_LEVEL), NULL);
 	}
 
 	if (finalecount >= 5*TICRATE)
 	{
-#if 0
-		if (drawemblem)
-			V_DrawScaledPatch(120, 192, 0, W_CachePatchName("NWNGA0", PU_CACHE));
-
-		if (drawchaosemblem)
-			V_DrawScaledPatch(200, 192, 0, W_CachePatchName("NWNGA0", PU_CACHE));
-#endif
-
 		V_DrawString(8, 16, V_YELLOWMAP, "Unlocked:");
 
 		if (!(netgame) && (!modifiedgame || savemoddata))
@@ -1438,16 +1452,33 @@ void F_GameEvaluationTicker(void)
 {
 	finalecount++;
 
-	if (sparklloop)
-		sparklloop--;
-
-	if (!goodending
-		&& (finalecount == (5*TICRATE)/2
-		|| finalecount == (7*TICRATE)/2
-		|| finalecount == ((7*TICRATE)/2)+5))
+	if (goodending)
 	{
-		S_StartSound(NULL, sfx_s3k5c);
-		sparklloop = 10;
+		if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
+		{
+			angle_t workingangle = FixedAngle((M_RandomKey(360))<<FRACBITS)>>ANGLETOFINESHIFT;
+			fixed_t workingradius = M_RandomKey(26);
+			sparkloffs[2][0] = sparkloffs[1][0];
+			sparkloffs[2][1] = sparkloffs[1][1];
+			sparkloffs[1][0] = sparkloffs[0][0];
+			sparkloffs[1][1] = sparkloffs[0][1];
+			sparkloffs[0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
+			sparkloffs[0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
+			sparklloop = 0;
+		}
+	}
+	else
+	{
+		if (sparklloop)
+			sparklloop--;
+
+		if (finalecount == (5*TICRATE)/2
+			|| finalecount == (7*TICRATE)/2
+			|| finalecount == ((7*TICRATE)/2)+5)
+		{
+			S_StartSound(NULL, sfx_s3k5c);
+			sparklloop = 10;
+		}
 	}
 
 	if (finalecount == 5*TICRATE)
@@ -1473,9 +1504,14 @@ void F_GameEvaluationTicker(void)
 		F_StartGameEnd();
 }
 
+#undef SPARKLLOOPTIME
+
 // ==========
 //   ENDING
 // ==========
+
+#define SPARKLLOOPTIME 15 // must be odd
+#define INFLECTIONPOINT (6*TICRATE)
 
 void F_StartEnding(void)
 {
@@ -1497,7 +1533,7 @@ void F_StartEnding(void)
 
 	finalecount = -10; // what? this totally isn't a hack. why are you asking?
 
-	memset(sparkloffs, 0, sizeof(INT32)*8*3*2);
+	memset(sparkloffs, 0, sizeof(INT32)*3*2);
 	sparklloop = 0;
 
 	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_LEVEL);
@@ -1558,9 +1594,6 @@ void F_StartEnding(void)
 	}
 }
 
-#define SPARKLLOOPTIME 15 // must be odd
-#define INFLECTIONPOINT (6*TICRATE)
-
 void F_EndingTicker(void)
 {
 	angle_t workingangle;
@@ -1585,23 +1618,10 @@ void F_EndingTicker(void)
 	if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
 	{
 		sparklloop = 0;
-		if (goodending)
-		{
-			UINT8 i;
-			for (i = 0; i < 7; ++i)
-			{
-				sparkloffs[i][2][0] = sparkloffs[i][1][0];
-				sparkloffs[i][2][1] = sparkloffs[i][1][1];
-				sparkloffs[i][1][0] = sparkloffs[i][0][0];
-				sparkloffs[i][1][1] = sparkloffs[i][0][1];
-				sparkloffs[i][0][0] = M_RandomRange(-11, 11)<<FRACBITS;
-				sparkloffs[i][0][1] = M_RandomRange(-19, 3)<<FRACBITS;
-			}
-		}
 		workingangle = FixedAngle((M_RandomRange(-170, 80))<<FRACBITS)>>ANGLETOFINESHIFT;
 		workingradius = M_RandomKey(26);
-		sparkloffs[7][0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
-		sparkloffs[7][0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
+		sparkloffs[0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
+		sparkloffs[0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
 	}
 
 	if (finalecount > INFLECTIONPOINT*2)
@@ -1668,7 +1688,7 @@ void F_EndingDrawer(void)
 		boolean borderstuff = false;
 		INT32 tweakx = 0, tweaky = 0;
 
-		if (parallaxticker < 75)
+		if (parallaxticker < 75) // f background's supposed to be visible
 		{
 			V_DrawFixedPatch(-(x/10), -(y/10), FRACUNIT, 0, endbgsp[0], NULL); // nebula
 			V_DrawFixedPatch(-(x/5),  -(y/5),  FRACUNIT, 0, endbgsp[1], NULL); // sun
@@ -1730,7 +1750,7 @@ void F_EndingDrawer(void)
 			j += tweaky<<2;
 		}
 
-		if (parallaxticker <= 70)
+		if (parallaxticker <= 70) // eggrock/blackrock
 		{
 			INT32 trans;
 			fixed_t scale = FRACUNIT;
@@ -1752,8 +1772,8 @@ void F_EndingDrawer(void)
 				doexplosions = true;
 				if (!sparklloop)
 				{
-					x += ((sparkloffs[7][0][0] < 30<<FRACBITS) ? FRACUNIT : -FRACUNIT);
-					y += ((sparkloffs[7][0][1] < 30<<FRACBITS) ? FRACUNIT : -FRACUNIT);
+					x += ((sparkloffs[0][0] < 30<<FRACBITS) ? FRACUNIT : -FRACUNIT);
+					y += ((sparkloffs[0][1] < 30<<FRACBITS) ? FRACUNIT : -FRACUNIT);
 				}
 			}
 
@@ -1811,7 +1831,7 @@ void F_EndingDrawer(void)
 				}
 			}
 		}
-		else
+		else // firework
 		{
 			fixed_t scale = FRACUNIT;
 			INT32 frame;
@@ -1836,6 +1856,7 @@ void F_EndingDrawer(void)
 				V_DrawFixedPatch(x, y, scale, 0, endfwrk[frame], colormap);
 		}
 
+		// explosions
 		if (sparklloop >= 3 && doexplosions)
 		{
 			INT32 boomtime = parallaxticker - sparklloop;
@@ -1843,10 +1864,11 @@ void F_EndingDrawer(void)
 			x = ((((BASEVIDWIDTH-82)/2)+11)<<FRACBITS) - ((boomtime*20)<<FRACBITS)/INFLECTIONPOINT;
 			y = ((((BASEVIDHEIGHT-82)/2)+12)<<FRACBITS) + ((boomtime*7)<<FRACBITS)/INFLECTIONPOINT;
 
-			V_DrawFixedPatch(x + sparkloffs[7][0][0], y + sparkloffs[7][0][1],
+			V_DrawFixedPatch(x + sparkloffs[0][0], y + sparkloffs[0][1],
 				FRACUNIT, 0, endxpld[sparklloop/4], NULL);
 		}
 
+		// initial fade
 		if (finalecount < 30)
 			V_DrawFadeFill(24, 24, BASEVIDWIDTH-48, BASEVIDHEIGHT-48, 0, 0, 30-finalecount);
 
@@ -1863,13 +1885,16 @@ void F_EndingDrawer(void)
 				V_DrawScaledPatch(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, (finalecount-INFLECTIONPOINT)<<V_ALPHASHIFT, endbrdr[1]);
 		}
 
+		// emeralds and emerald accessories
 		if (goodending && finalecount >= TICRATE && finalecount < INFLECTIONPOINT)
 		{
 			INT32 workingtime = finalecount - TICRATE;
-			fixed_t radius[4];
+			fixed_t radius = ((vid.width/vid.dupx)*(INFLECTIONPOINT - TICRATE - workingtime))/(INFLECTIONPOINT - TICRATE);
 			angle_t fa;
 			INT32 eemeralds_cur[4];
 			char patchname[7] = "CEMGx0";
+
+			radius <<= FRACBITS;
 
 			for (i = 0; i < 4; ++i)
 			{
@@ -1878,22 +1903,9 @@ void F_EndingDrawer(void)
 				else if (i)
 					workingtime -= SPARKLLOOPTIME;
 				eemeralds_cur[i] = workingtime % 360;
-				radius[i] = ((vid.width/vid.dupx)*(INFLECTIONPOINT - TICRATE - workingtime))/(INFLECTIONPOINT - TICRATE);
-				radius[i] <<= FRACBITS;
 			}
 
-			for (i = 0; i < 7; ++i)
-			{
-				fa = (FixedAngle(eemeralds_cur[0]*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-				x = (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius[0]);
-				y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius[0]);
-				eemeralds_cur[0] += INTERVAL;
-				if (i & 1)
-					eemeralds_cur[0]++;
-
-				patchname[4] = 'A'+(char)i;
-				V_DrawFixedPatch(x, y, FRACUNIT, 0, W_CachePatchName(patchname, PU_LEVEL), NULL);
-			}
+			// sparkles
 			for (i = 0; i < 7; ++i)
 			{
 				UINT8* colormap;
@@ -1928,9 +1940,9 @@ void F_EndingDrawer(void)
 				while (j)
 				{
 					fa = (FixedAngle(eemeralds_cur[j]*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-					x =  (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius[j]) + sparkloffs[i][j-1][0];
-					y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius[j]) + sparkloffs[i][j-1][1];
-					eemeralds_cur[j] += INTERVAL;
+					x =  (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius);
+					y = (BASEVIDHEIGHT<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius);
+					eemeralds_cur[j] += (360/7);
 					if (i & 1)
 						eemeralds_cur[j]++;
 
@@ -1941,6 +1953,20 @@ void F_EndingDrawer(void)
 
 					j--;
 				}
+			}
+
+			// ...then emeralds themselves
+			for (i = 0; i < 7; ++i)
+			{
+				fa = (FixedAngle(eemeralds_cur[0]*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+				x = (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius);
+				y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius);
+				eemeralds_cur[0] += (360/7);
+				if (i & 1)
+					eemeralds_cur[0]++;
+
+				patchname[4] = 'A'+(char)i;
+				V_DrawFixedPatch(x, y, FRACUNIT, 0, W_CachePatchName(patchname, PU_LEVEL), NULL);
 			}
 		} // if (goodending...
 	} // (finalecount > 20)
@@ -1988,6 +2014,9 @@ void F_EndingDrawer(void)
 		}
 	}
 }
+
+#undef SPARKLLOOPTIME
+#undef INFLECTIONPOINT
 
 // ==========
 //  GAME END
