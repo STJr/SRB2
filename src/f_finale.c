@@ -1407,16 +1407,14 @@ void F_GameEvaluationDrawer(void)
 		}
 	}
 
-	eemeralds_cur = finalecount % 360;
+	eemeralds_cur = (finalecount % 360)<<FRACBITS;
 
 	for (i = 0; i < 7; ++i)
 	{
-		fa = (FixedAngle(eemeralds_cur*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+		fa = (FixedAngle(eemeralds_cur)>>ANGLETOFINESHIFT) & FINEMASK;
 		x = (BASEVIDWIDTH<<(FRACBITS-1)) + (60*FINECOSINE(fa));
 		y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + (60*FINESINE(fa));
-		eemeralds_cur += (360/7);
-		if (i & 1)
-			eemeralds_cur++;
+		eemeralds_cur += (360<<FRACBITS)/7;
 
 		patchname[4] = 'A'+(char)i;
 		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_LEVEL), NULL);
@@ -1902,7 +1900,7 @@ void F_EndingDrawer(void)
 					workingtime -= sparklloop;
 				else if (i)
 					workingtime -= SPARKLLOOPTIME;
-				eemeralds_cur[i] = workingtime % 360;
+				eemeralds_cur[i] = (workingtime % 360)<<FRACBITS;
 			}
 
 			// sparkles
@@ -1939,12 +1937,10 @@ void F_EndingDrawer(void)
 				j = (sparklloop & 1) ? 2 : 3;
 				while (j)
 				{
-					fa = (FixedAngle(eemeralds_cur[j]*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+					fa = (FixedAngle(eemeralds_cur[j])>>ANGLETOFINESHIFT) & FINEMASK;
 					x =  (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius);
 					y = (BASEVIDHEIGHT<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius);
-					eemeralds_cur[j] += (360/7);
-					if (i & 1)
-						eemeralds_cur[j]++;
+					eemeralds_cur[j] += (360<<FRACBITS)/7;
 
 					// if j == 0 - alternate between 0 and 1
 					//         1 -                   1 and 2
@@ -1958,12 +1954,10 @@ void F_EndingDrawer(void)
 			// ...then emeralds themselves
 			for (i = 0; i < 7; ++i)
 			{
-				fa = (FixedAngle(eemeralds_cur[0]*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
+				fa = (FixedAngle(eemeralds_cur[0])>>ANGLETOFINESHIFT) & FINEMASK;
 				x = (BASEVIDWIDTH<<(FRACBITS-1)) + FixedMul(FINECOSINE(fa),radius);
 				y = ((BASEVIDHEIGHT+16)<<(FRACBITS-1)) + FixedMul(FINESINE(fa),radius);
-				eemeralds_cur[0] += (360/7);
-				if (i & 1)
-					eemeralds_cur[0]++;
+				eemeralds_cur[0] += (360<<FRACBITS)/7;
 
 				patchname[4] = 'A'+(char)i;
 				V_DrawFixedPatch(x, y, FRACUNIT, 0, W_CachePatchName(patchname, PU_LEVEL), NULL);
