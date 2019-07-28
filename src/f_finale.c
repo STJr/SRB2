@@ -1599,17 +1599,12 @@ void F_EndingTicker(void)
 
 	if (++finalecount == INFLECTIONPOINT && goodending) // time to swap some assets
 	{
-		Z_Free(endegrk[0]);
 		endegrk[0] = W_CachePatchName("ENDEGRK2", PU_LEVEL);
-		Z_Free(endegrk[1]);
 		endegrk[1] = W_CachePatchName("ENDEGRK3", PU_LEVEL);
 
-		Z_Free(endglow[0]);
 		endglow[0] = W_CachePatchName("ENDGLOW2", PU_LEVEL);
-		Z_Free(endglow[1]);
 		endglow[1] = W_CachePatchName("ENDGLOW3", PU_LEVEL);
 
-		Z_Free(endxpld[0]);
 		endxpld[0] = W_CachePatchName("ENDEGRK4", PU_LEVEL);
 	}
 

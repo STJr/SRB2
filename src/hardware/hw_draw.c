@@ -706,9 +706,6 @@ void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 ac
 
 	UINT8 perplayershuffle = 0;
 
-	if (w < 0 || h < 0)
-		return; // consistency w/ software
-
 //  3--2
 //  | /|
 //  |/ |
@@ -870,7 +867,6 @@ void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 ac
 		Surf.FlatColor.rgba = V_GetColor(actualcolor).rgba;
 		Surf.FlatColor.s.alpha = softwaretranstogl[strength];
 	}
-
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
 }
 
@@ -1092,9 +1088,6 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32
 
 	UINT8 perplayershuffle = 0;
 
-	if (w < 0 || h < 0)
-		return; // consistency w/ software
-
 //  3--2
 //  | /|
 //  |/ |
@@ -1262,9 +1255,6 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	float fx, fy, fw, fh;
 
 	UINT8 perplayershuffle = 0;
-
-	if (w < 0 || h < 0)
-		return; // consistency w/ software
 
 //  3--2
 //  | /|

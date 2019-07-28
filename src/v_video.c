@@ -996,12 +996,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
 			// if it's meant to cover the whole screen, black out the rest
-			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
-			{
-				column = (const column_t *)((const UINT8 *)(patch) + LONG(patch->columnofs[0]));
-				source = (const UINT8 *)(column) + 3;
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-			}
+			// no the patch is cropped do not do this ever
 
 			if (vid.width != BASEVIDWIDTH * dupx)
 			{
@@ -1581,7 +1576,6 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 	}
 #endif
 
-#if 0 // only if for use in-game, otherwise not worth the processor time
 	if (splitscreen && (c & V_PERPLAYER))
 	{
 		fixed_t adjusty = ((c & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
@@ -1649,7 +1643,6 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 			}
 		}
 	}
-#endif
 
 	if (!(c & V_NOSCALESTART))
 	{
