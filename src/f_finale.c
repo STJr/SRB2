@@ -707,7 +707,7 @@ static void F_IntroDrawScene(void)
 				y += (30*(FRACUNIT-scale));
 			}
 
-			rockpat = W_CachePatchName(va("ROID00%.2d", worktics % 35), PU_LEVEL);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (worktics % 35)), PU_LEVEL);
 			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(worktics & 1)), PU_LEVEL);
 
 			if (worktics >= 5)
@@ -1346,9 +1346,9 @@ void F_GameEvaluationDrawer(void)
 
 		if (goodending)
 		{
-			rockpat = W_CachePatchName(va("ROID00%.2d", finalecount % 35), PU_LEVEL);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (finalecount % 35)), PU_LEVEL);
 			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(finalecount & 1)), PU_LEVEL);
-			x -= 3<<FRACBITS;
+			x -= FRACUNIT;
 		}
 		else
 		{
@@ -1556,13 +1556,6 @@ void F_StartEnding(void)
 
 		endbrdr[0] = W_CachePatchName("ENDBRDR0", PU_LEVEL);
 	}
-
-#define colset(map, a, b, c) \
-	map[1] = (UINT8)a;\
-	map[3] = (UINT8)b;\
-	map[9] = (UINT8)c
-
-	colset(purplemap,  164, 165, 169);
 }
 
 #define SPARKLLOOPTIME 15 // must be odd
@@ -1615,8 +1608,6 @@ void F_EndingTicker(void)
 	{
 		F_StartCredits();
 		wipetypepre = INT16_MAX;
-		colset(purplemap,  160, 161, 163);
-#undef colset
 	}
 }
 
@@ -1628,7 +1619,7 @@ void F_EndingDrawer(void)
 	if (!goodending || finalecount < INFLECTIONPOINT)
 		rockpat = W_CachePatchName("ROID0000", PU_LEVEL);
 	else
-		rockpat = W_CachePatchName(va("ROID00%.2d", (finalecount - INFLECTIONPOINT)%35), PU_LEVEL);
+		rockpat = W_CachePatchName(va("ROID00%.2d", 34 - ((finalecount - INFLECTIONPOINT) % 35)), PU_LEVEL);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
@@ -1685,6 +1676,10 @@ void F_EndingDrawer(void)
 
 			if (goodending && parallaxticker > 0) // gunchedrock
 			{
+				INT32 scale = FRACUNIT + ((parallaxticker-10)<<7);
+				INT32 trans = parallaxticker>>2;
+				UINT8 *colormap = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_JET, GTC_CACHE);
+
 				if (parallaxticker < 10)
 				{
 					tweakx = parallaxticker<<FRACBITS;
@@ -1697,44 +1692,26 @@ void F_EndingDrawer(void)
 				}
 				i += tweakx;
 				j -= tweaky;
-#define TFTMOPTIMUSFADE
-				INT32 scale = FRACUNIT + ((parallaxticker-10)<<7);
-#ifdef TFTMOPTIMUSFADE
-				INT32 trans = parallaxticker>>2;
-				UINT8 *colormap = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_JET, GTC_CACHE);
-#endif
 
 				x <<= 1;
 				y <<= 1;
 
 				// center detritrus
-				V_DrawFixedPatch(i-x, j-y, FRACUNIT, 0, endegrk[0],
-#ifdef TFTMOPTIMUSFADE
-					colormap);
+				V_DrawFixedPatch(i-x, j-y, FRACUNIT, 0, endegrk[0], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch(i-x, j-y, FRACUNIT, trans<<V_ALPHASHIFT, endegrk[0],
-#endif
-						NULL);
+					V_DrawFixedPatch(i-x, j-y, FRACUNIT, trans<<V_ALPHASHIFT, endegrk[0], NULL);
 
 				 // ring detritrus
-				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y) - ((7<<FRACBITS)/2), scale, 0, endegrk[1],
-#ifdef TFTMOPTIMUSFADE
-					colormap);
+				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y) - ((7<<FRACBITS)/2), scale, 0, endegrk[1], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y), scale, trans<<V_ALPHASHIFT, endegrk[1],
-#endif
-						NULL);
+					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(2*x), (30*(FRACUNIT-scale))+j-(2*y), scale, trans<<V_ALPHASHIFT, endegrk[1], NULL);
 
 				scale += ((parallaxticker-10)<<7);
 
 				 // shard detritrus
-				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2) - ((7<<FRACBITS)/2), scale, 0, endxpld[0],
-#ifdef TFTMOPTIMUSFADE
-					colormap);
+				V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2) - ((7<<FRACBITS)/2), scale, 0, endxpld[0], colormap);
 				if (trans < 10)
-					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2), scale, trans<<V_ALPHASHIFT, endxpld[0],
-#endif
-						NULL);
+					V_DrawFixedPatch((30*(FRACUNIT-scale))+i-(x/2), (30*(FRACUNIT-scale))+j-(y/2), scale, trans<<V_ALPHASHIFT, endxpld[0], NULL);
 			}
 		}
 		else if (goodending)
@@ -1989,6 +1966,7 @@ void F_EndingDrawer(void)
 
 		if (trans != 10)
 		{
+			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
 			V_DrawString(40, ((finalecount == (2*INFLECTIONPOINT)-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= (2*INFLECTIONPOINT)-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
