@@ -12355,28 +12355,33 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= 5; r++)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= dist;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + dist*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += dist;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -12410,31 +12415,36 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 		fa = (closestangle >> ANGLETOFINESHIFT);
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= iterations; r++)
 		{
 			x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
 			y += FixedMul(64*FRACUNIT, FINESINE(fa));
 
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= 64*FRACUNIT;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += 64*FRACUNIT;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
