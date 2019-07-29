@@ -98,7 +98,6 @@ static int skin_get(lua_State *L)
 {
 	skin_t *skin = *((skin_t **)luaL_checkudata(L, 1, META_SKIN));
 	enum skin field = luaL_checkoption(L, 2, NULL, skin_opt);
-	INT32 i;
 
 	// skins are always valid, only added, never removed
 	I_Assert(skin != NULL);

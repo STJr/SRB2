@@ -152,7 +152,7 @@ cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
-boolean skipstats;
+UINT8 skipstats;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -2651,7 +2651,7 @@ void G_DoReborn(INT32 playernum)
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
-					skipstats = true;
+					skipstats = 2;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -3180,7 +3180,7 @@ void G_AfterIntermission(void)
 {
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking) // Start a custom cutscene.
+	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{

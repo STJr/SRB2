@@ -3126,7 +3126,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	skipstats = false;
+	skipstats = 0;
 
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;

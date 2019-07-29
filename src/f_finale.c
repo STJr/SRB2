@@ -110,7 +110,7 @@ static INT32 sparklloop;
 //
 // PROMPT STATE
 //
-static boolean promptactive = false;
+boolean promptactive = false;
 static mobj_t *promptmo;
 static INT16 promptpostexectag;
 static boolean promptblockcontrols;
@@ -1284,6 +1284,7 @@ boolean F_CreditResponder(event_t *event)
 // ============
 //  EVALUATION
 // ============
+
 #define SPARKLLOOPTIME 7 // must be odd
 
 void F_StartGameEvaluation(void)
@@ -1322,14 +1323,11 @@ void F_GameEvaluationDrawer(void)
 	angle_t fa;
 	INT32 eemeralds_cur;
 	char patchname[7] = "CEMGx0";
+	const char* endingtext = (goodending ? "CONGRATULATIONS!" : "TRY AGAIN...");
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Draw all the good crap here.
-	if (goodending)
-		V_DrawString(114, 16, 0, "GOT THEM ALL!");
-	else
-		V_DrawString(124, 16, 0, "TRY AGAIN!");
 
 	if (finalecount > 0)
 	{
@@ -1420,6 +1418,9 @@ void F_GameEvaluationDrawer(void)
 		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_LEVEL), NULL);
 	}
 
+	V_DrawCreditString((BASEVIDWIDTH - V_CreditStringWidth(endingtext))<<(FRACBITS-1), (BASEVIDHEIGHT-100)<<(FRACBITS-1), 0, endingtext);
+
+#if 0 // the following looks like hot garbage the more unlockables we add, and we now have a lot of unlockables
 	if (finalecount >= 5*TICRATE)
 	{
 		V_DrawString(8, 16, V_YELLOWMAP, "Unlocked:");
@@ -1444,28 +1445,18 @@ void F_GameEvaluationDrawer(void)
 		else
 			V_DrawString(8, 96, V_YELLOWMAP, "Prizes not\nawarded in\nmodified games!");
 	}
+#endif
 }
 
 void F_GameEvaluationTicker(void)
 {
-	finalecount++;
-
-	if (goodending)
+	if (++finalecount > 10*TICRATE)
 	{
-		if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
-		{
-			angle_t workingangle = FixedAngle((M_RandomKey(360))<<FRACBITS)>>ANGLETOFINESHIFT;
-			fixed_t workingradius = M_RandomKey(26);
-			sparkloffs[2][0] = sparkloffs[1][0];
-			sparkloffs[2][1] = sparkloffs[1][1];
-			sparkloffs[1][0] = sparkloffs[0][0];
-			sparkloffs[1][1] = sparkloffs[0][1];
-			sparkloffs[0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
-			sparkloffs[0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
-			sparklloop = 0;
-		}
+		F_StartGameEnd();
+		return;
 	}
-	else
+
+	if (!goodending)
 	{
 		if (sparklloop)
 			sparklloop--;
@@ -1478,10 +1469,31 @@ void F_GameEvaluationTicker(void)
 			sparklloop = 10;
 		}
 	}
+	else if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
+	{
+		angle_t workingangle = FixedAngle((M_RandomKey(360))<<FRACBITS)>>ANGLETOFINESHIFT;
+		fixed_t workingradius = M_RandomKey(26);
+
+		sparkloffs[2][0] = sparkloffs[1][0];
+		sparkloffs[2][1] = sparkloffs[1][1];
+		sparkloffs[1][0] = sparkloffs[0][0];
+		sparkloffs[1][1] = sparkloffs[0][1];
+
+		sparkloffs[0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
+		sparkloffs[0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
+		sparklloop = 0;
+	}
 
 	if (finalecount == 5*TICRATE)
 	{
-		if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+		if (netgame || multiplayer) // modify this when we finally allow unlocking stuff in 2P
+		{
+			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
+			HU_SetCEchoDuration(6);
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes only awarded in singleplayer!");
+			S_StartSound(NULL, sfx_s3k68);
+		}
+		else if (!modifiedgame || savemoddata)
 		{
 			++timesBeaten;
 
@@ -1496,10 +1508,14 @@ void F_GameEvaluationTicker(void)
 
 			G_SaveGameData();
 		}
+		else
+		{
+			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
+			HU_SetCEchoDuration(6);
+			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Prizes not awarded in modified games!");
+			S_StartSound(NULL, sfx_s3k68);
+		}
 	}
-
-	if (finalecount > 10*TICRATE)
-		F_StartGameEnd();
 }
 
 #undef SPARKLLOOPTIME
@@ -1508,8 +1524,8 @@ void F_GameEvaluationTicker(void)
 //   ENDING
 // ==========
 
-#define SPARKLLOOPTIME 15 // must be odd
 #define INFLECTIONPOINT (6*TICRATE)
+#define SPARKLLOOPTIME 15 // must be odd
 
 void F_StartEnding(void)
 {
@@ -1594,10 +1610,14 @@ void F_StartEnding(void)
 
 void F_EndingTicker(void)
 {
-	angle_t workingangle;
-	fixed_t workingradius;
+	if (++finalecount > INFLECTIONPOINT*2)
+	{
+		F_StartCredits();
+		wipetypepre = INT16_MAX;
+		return;
+	}
 
-	if (++finalecount == INFLECTIONPOINT && goodending) // time to swap some assets
+	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
 		endegrk[0] = W_CachePatchName("ENDEGRK2", PU_LEVEL);
 		endegrk[1] = W_CachePatchName("ENDEGRK3", PU_LEVEL);
@@ -1610,17 +1630,13 @@ void F_EndingTicker(void)
 
 	if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
 	{
-		sparklloop = 0;
-		workingangle = FixedAngle((M_RandomRange(-170, 80))<<FRACBITS)>>ANGLETOFINESHIFT;
-		workingradius = M_RandomKey(26);
+		angle_t workingangle = FixedAngle((M_RandomRange(-170, 80))<<FRACBITS)>>ANGLETOFINESHIFT;
+		fixed_t workingradius = M_RandomKey(26);
+
 		sparkloffs[0][0] = (30<<FRACBITS) + workingradius*FINECOSINE(workingangle);
 		sparkloffs[0][1] = (30<<FRACBITS) + workingradius*FINESINE(workingangle);
-	}
 
-	if (finalecount > INFLECTIONPOINT*2)
-	{
-		F_StartCredits();
-		wipetypepre = INT16_MAX;
+		sparklloop = 0;
 	}
 }
 
@@ -2005,7 +2021,6 @@ void F_EndingDrawer(void)
 }
 
 #undef SPARKLLOOPTIME
-#undef INFLECTIONPOINT
 
 // ==========
 //  GAME END

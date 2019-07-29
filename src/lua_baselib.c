@@ -2601,12 +2601,12 @@ static int lib_gSetCustomExitVars(lua_State *L)
 			nextmapoverride = (INT16)luaL_checknumber(L, 1);
 			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
 		}
-		skipstats = lua_optboolean(L, 1);
+		skipstats = luaL_optinteger(L, 2, 0);
 	}
 	else
 	{
 		nextmapoverride = 0;
-		skipstats = false;
+		skipstats = 0;
 	}
 	// ---
 

@@ -519,6 +519,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
 	INT32 sep, pitch, priority, cnum;
+	const sfxenum_t actual_id = sfx_id;
 	sfxinfo_t *sfx;
 
 	const mobj_t *origin = (const mobj_t *)origin_p;
@@ -657,7 +658,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 #endif
 
 		// Handle closed caption input.
-		S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+		S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
@@ -710,7 +711,7 @@ dontplay:
 #endif
 
 	// Handle closed caption input.
-	S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+	S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
