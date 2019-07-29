@@ -1988,8 +1988,10 @@ void GameMIDIMusic_OnChange(void)
 	}
 }
 
+#ifdef HAVE_OPENMPT
 void ModFilter_OnChange(void)
 {
 	if (openmpt_mhandle)
 		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 }
+#endif

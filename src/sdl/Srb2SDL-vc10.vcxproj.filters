@@ -453,6 +453,9 @@
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_portal.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
@@ -893,6 +896,10 @@
     </ClCompile>
     <ClCompile Include="..\hardware\hw_clip.c">
       <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\apng.c" />
+    <ClCompile Include="..\r_portal.c">
+      <Filter>R_Rend</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
