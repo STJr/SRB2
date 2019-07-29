@@ -104,6 +104,7 @@ static patch_t *endfwrk[3]; // firework - replaced with skin when good ending
 static patch_t *endspkl[3]; // sparkle
 static patch_t *endglow[2]; // glow aura - replaced with black rock's midway through good ending
 static patch_t *endxpld[4]; // mini explosion
+static patch_t *endescp[5]; // escape pod + flame
 static INT32 sparkloffs[3][2]; // eggrock explosions/blackrock sparkles
 static INT32 sparklloop;
 
@@ -1571,6 +1572,12 @@ void F_StartEnding(void)
 	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_LEVEL);
 	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_LEVEL);
 
+	endescp[0] = W_CachePatchName("ENDESCP0", PU_LEVEL);
+	endescp[1] = W_CachePatchName("ENDESCP1", PU_LEVEL);
+	endescp[2] = W_CachePatchName("ENDESCP2", PU_LEVEL);
+	endescp[3] = W_CachePatchName("ENDESCP3", PU_LEVEL);
+	endescp[4] = W_CachePatchName("ENDESCP4", PU_LEVEL);
+
 	// so we only need to check once
 	if ((goodending = ALL7EMERALDS(emeralds)))
 	{
@@ -1702,6 +1709,20 @@ void F_EndingDrawer(void)
 			V_DrawFixedPatch(-(x/10), -(y/10), FRACUNIT, 0, endbgsp[0], NULL); // nebula
 			V_DrawFixedPatch(-(x/5),  -(y/5),  FRACUNIT, 0, endbgsp[1], NULL); // sun
 			V_DrawFixedPatch(     0,  -(y/2),  FRACUNIT, 0, endbgsp[2], NULL); // planet
+
+			// player's escape pod
+			V_DrawFixedPatch((200<<FRACBITS)+(finalecount<<(FRACBITS-2)),
+				(100<<FRACBITS)+(finalecount<<(FRACBITS-2)),
+				FRACUNIT, 0, endescp[4], NULL);
+			if (parallaxticker > -19)
+			{
+				INT32 trans = (-parallaxticker)>>1;
+				if (trans < 0)
+					trans = 0;
+				V_DrawFixedPatch((200<<FRACBITS)+(finalecount<<(FRACBITS-2)),
+					(100<<FRACBITS)+(finalecount<<(FRACBITS-2)),
+					FRACUNIT, trans<<V_ALPHASHIFT, endescp[(finalecount/2)&3], NULL);
+			}
 
 			if (goodending && parallaxticker > 0) // gunchedrock
 			{
