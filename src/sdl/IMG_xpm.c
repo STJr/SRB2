@@ -88,8 +88,8 @@ struct color_hash {
     struct hash_entry **table;
     struct hash_entry *entries; /* array of all entries */
     struct hash_entry *next_free;
-    int size;
-    int maxnum;
+    size_t size;
+    size_t maxnum;
 };
 
 static int hash_key(const char *key, int cpp, int size)
@@ -103,9 +103,9 @@ static int hash_key(const char *key, int cpp, int size)
     return hash & (size - 1);
 }
 
-static struct color_hash *create_colorhash(int maxnum)
+static struct color_hash *create_colorhash(size_t maxnum)
 {
-    int bytes, s;
+    size_t bytes, s;
     struct color_hash *hash;
 
     /* we know how many entries we need, so we can allocate
@@ -164,7 +164,7 @@ static int add_colorhash(struct color_hash *hash,
 }
 
 /* fast lookup that works if cpp == 1 */
-#define QUICK_COLORHASH(hash, key) ((hash)->table[*(Uint8 *)(key)]->color)
+#define QUICK_COLORHASH(hash, key) ((hash)->table[*(const Uint8 *)(key)]->color)
 
 static Uint32 get_colorhash(struct color_hash *hash, const char *key, int cpp)
 {
@@ -909,7 +909,7 @@ static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
         *rgb = (Uint32)SDL_strtol(buf, NULL, 16);
         return 1;
     } else {
-        int i;
+        size_t i;
         for (i = 0; i < SDL_arraysize(known); i++) {
             if (SDL_strncasecmp(known[i].name, spec, speclen) == 0) {
                 *rgb = known[i].rgb;
@@ -1009,10 +1009,11 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
 {
     Sint64 start = 0;
     SDL_Surface *image = NULL;
-    int index;
+    size_t index;
     int x, y;
-    int w, h, ncolors, cpp;
-    int indexed;
+    int w, h, cpp;
+    size_t ncolors;
+    size_t indexed;
     Uint8 *dst;
     struct color_hash *colors = NULL;
     SDL_Color *im_colors = NULL;
@@ -1043,7 +1044,7 @@ static SDL_Surface *load_xpm(const char **xpm, SDL_RWops *src)
      * Right now we don't use the hotspots but it should be handled
      * one day.
      */
-    if (SDL_sscanf(line, "%d %d %d %d", &w, &h, &ncolors, &cpp) != 4
+    if (SDL_sscanf(line, "%d %d %lu %d", &w, &h, &ncolors, &cpp) != 4
        || w <= 0 || h <= 0 || ncolors <= 0 || cpp <= 0) {
         error = "Invalid format description";
         goto done;
