@@ -79,7 +79,7 @@ int IMG_isXPM(SDL_RWops *src)
 #define STARTING_HASH_SIZE 256
 
 struct hash_entry {
-    char *key;
+    const char *key;
     Uint32 color;
     struct hash_entry *next;
 };
@@ -152,7 +152,7 @@ static struct color_hash *create_colorhash(int maxnum)
 }
 
 static int add_colorhash(struct color_hash *hash,
-                         char *key, int cpp, Uint32 color)
+                         const char *key, int cpp, Uint32 color)
 {
     int index = hash_key(key, cpp, hash->size);
     struct hash_entry *e = hash->next_free++;
@@ -195,7 +195,7 @@ static void free_colorhash(struct color_hash *hash)
 static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
 {
     /* poor man's rgb.txt */
-    static struct { char *name; Uint32 rgb; } known[] = {
+    static struct { const char *name; Uint32 rgb; } known[] = {
         { "none",                 0xFFFFFFFF },
         { "black",                0x000000 },
         { "white",                0xFFFFFF },
@@ -926,7 +926,7 @@ static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
 
 static char *linebuf;
 static int buflen;
-static char *error;
+static const char *error;
 
 /*
  * Read next line from the source.
