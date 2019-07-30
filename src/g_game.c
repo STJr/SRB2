@@ -4366,7 +4366,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		ghostext.flags = 0;
 	}
 
-	if (ghost->player && ghost->player->followmobj)
+	if (ghost->player && ghost->player->followmobj) // bloats tails runs but what can ya do
 	{
 		INT16 temp;
 
@@ -4592,6 +4592,9 @@ void G_GhostTicker(void)
 				switch(g->color)
 				{
 				default:
+				case GHC_RETURNSKIN:
+					g->mo->skin = g->oldmo.skin;
+					// fallthru
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
@@ -4601,6 +4604,9 @@ void G_GhostTicker(void)
 					break;
 				case GHC_FIREFLOWER: // Fireflower
 					g->mo->color = SKINCOLOR_WHITE;
+					break;
+				case GHC_NIGHTSSKIN: // not actually a colour
+					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}

@@ -621,7 +621,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
 	player->mo->color = player->skincolor;
-	G_GhostAddColor(GHC_NORMAL);
+	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -739,6 +739,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 			player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+		G_GhostAddColor(GHC_NIGHTSSKIN);
 	}
 
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
