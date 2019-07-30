@@ -670,7 +670,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoMatchSuper(player);
 			}
 			else
+			{
 				emeralds |= special->info->speed;
+				stagefailed = false;
+			}
 
 			if (special->target && special->target->type == MT_EMERALDSPAWN)
 			{

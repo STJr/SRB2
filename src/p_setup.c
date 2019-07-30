@@ -2215,7 +2215,7 @@ static void P_LevelInitStuff(void)
 	ssspheres = timeinmap = 0;
 
 	// special stage
-	stagefailed = false;
+	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
