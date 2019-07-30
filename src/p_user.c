@@ -2056,7 +2056,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
 				fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
 				fixed_t ev;
-				mobj_t *missile;
+				mobj_t *missile = NULL;
 				if (mu2 < mu)
 					mu2 = mu;
 				ev = (50*FRACUNIT - (mu/25))/50;
@@ -2076,7 +2076,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					i++;
 					throwang += ANG30;
 				}
-				if (mobjinfo[type].seesound)
+				if (mobjinfo[type].seesound && missile)
 					S_StartSound(missile, missile->info->seesound);
 			}
 		}

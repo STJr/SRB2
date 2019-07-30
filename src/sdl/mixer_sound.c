@@ -117,7 +117,7 @@ static int result;
 
 static void var_cleanup(void)
 {
-	loop_point = song_length = 0.0f;
+	song_length = loop_point = 0.0f;
 	music_bytes = fading_source = fading_target =\
 	 fading_timer = fading_duration = 0;
 

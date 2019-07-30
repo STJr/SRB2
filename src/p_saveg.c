@@ -3408,7 +3408,7 @@ static void P_NetUnArchiveThinkers(void)
 	{
 		for (;;)
 		{
-			thinker_t* th;
+			thinker_t* th = NULL;
 			tclass = READUINT8(save_p);
 
 			if (tclass == tc_end)
