@@ -22,9 +22,6 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
-return luaL_error(L, "This function can only be used in a level!");
-
 static const char *const array_opt[] ={"iterate",NULL};
 
 enum mobj_e {

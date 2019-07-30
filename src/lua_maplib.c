@@ -29,9 +29,6 @@
 #include "fastcmp.h"
 #include "doomstat.h"
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
-return luaL_error(L, "This function can only be used in a level!");
-
 enum sector_e {
 	sector_valid = 0,
 	sector_floorheight,

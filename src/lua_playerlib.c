@@ -22,9 +22,6 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
-return luaL_error(L, "This function can only be used in a level!");
-
 static int lib_iteratePlayers(lua_State *L)
 {
 	INT32 i = -1;

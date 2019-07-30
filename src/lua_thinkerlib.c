@@ -16,9 +16,6 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
-return luaL_error(L, "This function can only be used in a level!");
-
 #define META_ITERATIONSTATE "iteration state"
 
 /*static const char *const iter_opt[] = {
