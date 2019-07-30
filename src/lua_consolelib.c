@@ -29,7 +29,7 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 #define NOHOOK if (!lua_lumploading)\
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 // for functions only allowed within a level
-#define INLEVEL if (gamestate != GS_LEVEL)\
+#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
 return luaL_error(L, "This function can only be used in a level!");
 
 static const char *cvname = NULL;

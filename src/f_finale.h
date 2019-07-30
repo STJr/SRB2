@@ -82,7 +82,6 @@ typedef enum
 
 // Current menu parameters
 
-extern UINT8 titlemapinaction;
 extern mobj_t *titlemapcameraref;
 extern char curbgname[8];
 extern SINT8 curfadevalue;

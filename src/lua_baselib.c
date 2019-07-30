@@ -33,7 +33,7 @@
 
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
-#define INLEVEL if (gamestate != GS_LEVEL)\
+#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
 return luaL_error(L, "This function can only be used in a level!");
 
 boolean luaL_checkboolean(lua_State *L, int narg) {

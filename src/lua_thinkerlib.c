@@ -16,6 +16,9 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
+#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
+return luaL_error(L, "This function can only be used in a level!");
+
 #define META_ITERATIONSTATE "iteration state"
 
 /*static const char *const iter_opt[] = {
@@ -56,8 +59,7 @@ static int lib_iterateThinkers(lua_State *L)
 	thinker_t *th = NULL, *next = NULL;
 	struct iterationState *it;
 
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 
 	it = luaL_checkudata(L, 1, META_ITERATIONSTATE);
 
@@ -112,8 +114,7 @@ static int lib_startIterate(lua_State *L)
 {
 	struct iterationState *it;
 
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 
 	lua_pushvalue(L, lua_upvalueindex(1));
 	it = lua_newuserdata(L, sizeof(struct iterationState));

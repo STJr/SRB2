@@ -29,6 +29,9 @@
 #include "fastcmp.h"
 #include "doomstat.h"
 
+#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
+return luaL_error(L, "This function can only be used in a level!");
+
 enum sector_e {
 	sector_valid = 0,
 	sector_floorheight,
@@ -333,8 +336,7 @@ static int lib_iterateSectorThinglist(lua_State *L)
 	mobj_t *state = NULL;
 	mobj_t *thing = NULL;
 
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sector.thinglist() directly, use it as 'for rover in sector.thinglist do <block> end'.");
@@ -369,8 +371,7 @@ static int lib_iterateSectorFFloors(lua_State *L)
 	ffloor_t *state = NULL;
 	ffloor_t *ffloor = NULL;
 
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sector.ffloors() directly, use it as 'for rover in sector.ffloors do <block> end'.");
@@ -1251,8 +1252,7 @@ static int bbox_get(lua_State *L)
 static int lib_iterateSectors(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sectors.iterate() directly, use it as 'for sector in sectors.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1270,8 +1270,7 @@ static int lib_iterateSectors(lua_State *L)
 static int lib_getSector(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1305,8 +1304,7 @@ static int lib_numsectors(lua_State *L)
 static int lib_iterateSubsectors(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call subsectors.iterate() directly, use it as 'for subsector in subsectors.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1324,8 +1322,7 @@ static int lib_iterateSubsectors(lua_State *L)
 static int lib_getSubsector(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1359,8 +1356,7 @@ static int lib_numsubsectors(lua_State *L)
 static int lib_iterateLines(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call lines.iterate() directly, use it as 'for line in lines.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1378,8 +1374,7 @@ static int lib_iterateLines(lua_State *L)
 static int lib_getLine(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1413,8 +1408,7 @@ static int lib_numlines(lua_State *L)
 static int lib_iterateSides(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sides.iterate() directly, use it as 'for side in sides.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1432,8 +1426,7 @@ static int lib_iterateSides(lua_State *L)
 static int lib_getSide(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1467,8 +1460,7 @@ static int lib_numsides(lua_State *L)
 static int lib_iterateVertexes(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call vertexes.iterate() directly, use it as 'for vertex in vertexes.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1486,8 +1478,7 @@ static int lib_iterateVertexes(lua_State *L)
 static int lib_getVertex(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1523,8 +1514,7 @@ static int lib_numvertexes(lua_State *L)
 static int lib_iterateSegs(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call segs.iterate() directly, use it as 'for seg in segs.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1542,8 +1532,7 @@ static int lib_iterateSegs(lua_State *L)
 static int lib_getSeg(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1577,8 +1566,7 @@ static int lib_numsegs(lua_State *L)
 static int lib_iterateNodes(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call nodes.iterate() directly, use it as 'for node in nodes.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1596,8 +1584,7 @@ static int lib_iterateNodes(lua_State *L)
 static int lib_getNode(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
