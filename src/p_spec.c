@@ -3554,6 +3554,29 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 449: // Enable bosses with parameter
+		{
+			INT32 bossid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+			if (bossid & ~15) // if any bits other than first 16 are set
+			{
+				CONS_Alert(CONS_WARNING,
+					M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+					line->tag);
+				break;
+			}
+			if (line->flags & ML_NOCLIMB)
+			{
+				bossdisabled |= (1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid disabled = %d", bossid);
+			}
+			else
+			{
+				bossdisabled &= ~(1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid enabled = %d", bossid);
+			}
+			break;
+		}
+
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
 			break;
@@ -6399,7 +6422,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
-	(void)fromnetsave;
+	//(void)fromnetsave; -- hooray, it's used!
+
+	if (!fromnetsave)
+		bossdisabled = 0;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -7288,6 +7314,26 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 430:
 			case 431:
 				break;
+
+			case 449: // Enable bosses with parameter
+			{
+				INT32 bossid = sides[*lines[i].sidenum].textureoffset>>FRACBITS;
+				if (bossid & ~15) // if any bits other than first 16 are set
+				{
+					CONS_Alert(CONS_WARNING,
+						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+						lines[i].tag);
+					break;
+				}
+				if (fromnetsave)
+					break;
+				if (!(lines[i].flags & ML_NOCLIMB))
+				{
+					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
+					CONS_Debug(DBG_GAMELOGIC, "Line type 449 spawn effect: bossid disabled = %d", bossid);
+				}
+				break;
+			}
 
 			// 500 is used for a scroller
 			// 501 is used for a scroller

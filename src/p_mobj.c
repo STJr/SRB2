@@ -5236,6 +5236,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		INT32 i;
 		boolean foundgoop = false;
 		INT32 closestNum;
+		UINT8 extrainfo = (mobj->spawnpoint ? mobj->spawnpoint->extrainfo : 0);
 
 		// Looks for players in goop. If you find one, try to jump on him.
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -5261,17 +5262,23 @@ static void P_Boss7Thinker(mobj_t *mobj)
 						continue;
 
 					mo2 = (mobj_t *)th;
-					if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint)
-					{
-						dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+					if (mo2->type != MT_BOSS3WAYPOINT)
+						continue;
+					if (!mo2->spawnpoint)
+						continue;
+					if (mo2->spawnpoint->extrainfo != extrainfo)
+						continue;
+					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
+						continue; // don't jump to center
 
-						if (closestNum == -1 || dist < closestdist)
-						{
-							closestNum = (mo2->spawnpoint->options & 7);
-							closestdist = dist;
-							foundgoop = true;
-						}
-					}
+					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+
+					if (!(closestNum == -1 || dist < closestdist))
+						continue;
+
+					closestNum = (mo2->spawnpoint->options & 7);
+					closestdist = dist;
+					foundgoop = true;
 				}
 				waypointNum = closestNum;
 				break;
@@ -5280,16 +5287,13 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		if (!foundgoop)
 		{
-			if (mobj->z > 1056*FRACUNIT)
-				waypointNum = 0;
-			else
+			// Don't jump to the center when health is low.
+			// Force the player to beat you with missiles.
+			if (mobj->z <= 1056*FRACUNIT || mobj->health <= mobj->info->damage)
 				waypointNum = 1 + P_RandomKey(4);
+			else
+				waypointNum = 0;
 		}
-
-		// Don't jump to the center when health is low.
-		// Force the player to beat you with missiles.
-		if (mobj->health <= mobj->info->damage && waypointNum == 0)
-			waypointNum = 1 + P_RandomKey(4);
 
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
 			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
@@ -5299,14 +5303,11 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			else
 				waypointNum--;
 
-			waypointNum %= 5;
-
-			if (waypointNum < 0)
-				waypointNum = 0;
+			if (mobj->health <= mobj->info->damage)
+				waypointNum = ((waypointNum + 3) % 4) + 1; // plus four to avoid modulo being negative, minus one to avoid waypoint #0
+			else
+				waypointNum = ((waypointNum + 5) % 5);
 		}
-
-		if (waypointNum == 0 && mobj->health <= mobj->info->damage)
-			waypointNum = 1 + (P_RandomFixed() & 1);
 
 		// scan the thinkers to find
 		// the waypoint to use
@@ -5316,11 +5317,17 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				continue;
 
 			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && (mo2->spawnpoint->options & 7) == waypointNum)
-			{
-				hitspot = mo2;
-				break;
-			}
+			if (mo2->type != MT_BOSS3WAYPOINT)
+				continue;
+			if (!mo2->spawnpoint)
+				continue;
+			if ((mo2->spawnpoint->options & 7) != waypointNum)
+				continue;
+			if (mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			hitspot = mo2;
+			break;
 		}
 
 		if (hitspot == NULL)
@@ -7667,6 +7674,9 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 	else if (mobj->flags & MF_BOSS)
 	{
+		if (mobj->spawnpoint && (mobj->spawnpoint->extrainfo < 16) && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
+			return;
+
 #ifdef HAVE_BLUA
 		if (LUAh_BossThinker(mobj))
 		{

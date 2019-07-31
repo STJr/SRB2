@@ -3990,6 +3990,7 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT32(save_p, leveltime);
 	WRITEUINT32(save_p, ssspheres);
 	WRITEINT16(save_p, lastmap);
+	WRITEUINT16(save_p, bossdisabled);
 
 	WRITEUINT16(save_p, emeralds);
 	WRITEUINT8(save_p, stagefailed);
@@ -4067,6 +4068,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	leveltime = READUINT32(save_p);
 	ssspheres = READUINT32(save_p);
 	lastmap = READINT16(save_p);
+	bossdisabled = READUINT16(save_p);
 
 	emeralds = READUINT16(save_p);
 	stagefailed = READUINT8(save_p);
