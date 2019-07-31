@@ -2418,7 +2418,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
-	{{A_ModuloToState},		     "A_ModuloToState"},
+	{{A_ModuloToState},     "A_MODULOTOSTATE"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
