@@ -265,6 +265,7 @@ void A_SnapperSpawn();
 void A_SnapperThinker();
 void A_SaloonDoorSpawn();
 void A_MinecartSparkThink();
+void A_ModuloToState();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -3893,18 +3894,6 @@ typedef enum state
 	S_SPRK2,
 	S_SPRK3,
 	S_SPRK4,
-	S_SPRK5,
-	S_SPRK6,
-	S_SPRK7,
-	S_SPRK8,
-	S_SPRK9,
-	S_SPRK10,
-	S_SPRK11,
-	S_SPRK12,
-	S_SPRK13,
-	S_SPRK14,
-	S_SPRK15,
-	S_SPRK16,
 
 	// Robot Explosion
 	S_XPLD_FLICKY,
