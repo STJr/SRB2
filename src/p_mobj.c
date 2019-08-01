@@ -7011,6 +7011,9 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
+	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && !(mobj->spawnpoint->extrainfo & ~15) && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
+		return;
+
 	// Remove dead target/tracer.
 	if (mobj->target && P_MobjWasRemoved(mobj->target))
 		P_SetTarget(&mobj->target, NULL);
@@ -7674,9 +7677,6 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 	else if (mobj->flags & MF_BOSS)
 	{
-		if (mobj->spawnpoint && (mobj->spawnpoint->extrainfo < 16) && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
-			return;
-
 #ifdef HAVE_BLUA
 		if (LUAh_BossThinker(mobj))
 		{
