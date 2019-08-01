@@ -11641,7 +11641,6 @@ void P_PlayerAfterThink(player_t *player)
 							player->followmobj->threshold = player->mo->z;
 							player->followmobj->movecount = player->panim;
 							player->followmobj->angle = horizangle;
-							player->followmobj->scale = player->mo->scale;
 							P_SetScale(player->followmobj, player->mo->scale);
 							player->followmobj->destscale = player->mo->destscale;
 							player->followmobj->radius = player->mo->radius;
