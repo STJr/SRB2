@@ -37,8 +37,6 @@ boolean LUA_CallAction(const char *action, mobj_t *actor);
 player_t *stplyr;
 INT32 var1;
 INT32 var2;
-INT32 Modulothing;
-
 //
 // P_NewChaseDir related LUT.
 //
@@ -295,7 +293,6 @@ void A_SnapperSpawn(mobj_t *actor);
 void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
 void A_MinecartSparkThink(mobj_t *actor);
-void A_ModuloToState(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -13650,25 +13647,4 @@ void A_MinecartSparkThink(mobj_t *actor)
 		P_SetScale(trail, trail->scale/4);
 		trail->destscale = trail->scale;
 	}
-}
-
-// Function: A_MinecartSparkThink
-//
-// Description: Modulo operation to state
-//
-// var1 = Modulo
-// var2 = State
-//
-void A_ModuloToState(mobj_t *actor)
-{
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ModuloToState", actor))
-		return;
-#endif
-
-	if ((Modulothing % locvar1 == 0))
-		P_SetMobjState(actor, (locvar2));
-	Modulothing = Modulothing + 1;
 }
