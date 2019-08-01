@@ -1808,7 +1808,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
-		tmceilingrover = NULL;
+		tmceilingrover = openceilingrover;
 #ifdef ESLOPE
 		tmceilingslope = opentopslope;
 #endif
@@ -1817,7 +1817,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
-		tmfloorrover = NULL;
+		tmfloorrover = openfloorrover;
 #ifdef ESLOPE
 		tmfloorslope = openbottomslope;
 #endif
