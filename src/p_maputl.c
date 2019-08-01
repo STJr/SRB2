@@ -784,7 +784,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 				opentopslope = ceilingslope;
 #endif
-				openceilingrover = floorrover;
+				openceilingrover = ceilingrover;
 			}
 
 			if (lowestfloor > lowfloor)
