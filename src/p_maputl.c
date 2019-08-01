@@ -311,6 +311,7 @@ fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 #ifdef ESLOPE
 pslope_t *opentopslope, *openbottomslope;
 #endif
+ffloor_t *openfloorrover, *openceilingrover;
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -517,6 +518,8 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
 
+	openfloorrover = openceilingrover = NULL;
+
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
@@ -641,6 +644,8 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			pslope_t *ceilingslope = opentopslope;
 			pslope_t *floorslope = openbottomslope;
 #endif
+			ffloor_t *floorrover = NULL;
+			ffloor_t *ceilingrover = NULL;
 
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
@@ -668,6 +673,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 						ceilingslope = *rover->b_slope;
 #endif
+						ceilingrover = rover;
 					}
 					else if (bottomheight < highestceiling)
 						highestceiling = bottomheight;
@@ -680,6 +686,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 						floorslope = *rover->t_slope;
 #endif
+						floorrover = rover;
 					}
 					else if (topheight > lowestfloor)
 						lowestfloor = topheight;
@@ -712,6 +719,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 						ceilingslope = *rover->b_slope;
 #endif
+						ceilingrover = rover;
 					}
 					else if (bottomheight < highestceiling)
 						highestceiling = bottomheight;
@@ -724,6 +732,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 						floorslope = *rover->t_slope;
 #endif
+						floorrover = rover;
 					}
 					else if (topheight > lowestfloor)
 						lowestfloor = topheight;
@@ -743,6 +752,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 					ceilingslope = NULL;
 #endif
+					ceilingrover = NULL;
 				}
 				else if (polysec->floorheight < highestceiling && delta1 >= delta2)
 					highestceiling = polysec->floorheight;
@@ -752,6 +762,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 					floorslope = NULL;
 #endif
+					floorrover = NULL;
 				}
 				else if (polysec->ceilingheight > lowestfloor && delta1 < delta2)
 					lowestfloor = polysec->ceilingheight;
@@ -765,6 +776,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 				openbottomslope = floorslope;
 #endif
+				openfloorrover = floorrover;
 			}
 
 			if (lowestceiling < opentop) {
@@ -772,6 +784,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #ifdef ESLOPE
 				opentopslope = ceilingslope;
 #endif
+				openceilingrover = floorrover;
 			}
 
 			if (lowestfloor > lowfloor)
