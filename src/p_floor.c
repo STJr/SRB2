@@ -1975,22 +1975,27 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	}
 	else // Not going anywhere, so look for players.
 	{
-		thinker_t *th;
-		mobj_t *mo;
-
 		if (!rover || (rover->flags & FF_EXISTS))
 		{
-			// scan the thinkers to find players!
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+			UINT8 i;
+			// scan the players to find victims!
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				mo = (mobj_t *)th;
-				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator
-				    && mo->z <= thwomp->sector->ceilingheight
-					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
-				{
-					thwomp->direction = -1;
-					break;
-				}
+				if (!playeringame[i])
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (!players[i].mo->health)
+					continue;
+				if (players[i].mo->z > thwomp->sector->ceilingheight)
+					continue;
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
+					continue;
+
+				thwomp->direction = -1;
+				break;
 			}
 		}
 

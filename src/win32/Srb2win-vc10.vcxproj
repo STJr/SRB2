@@ -293,6 +293,7 @@
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
     <ClCompile Include="..\r_plane.c" />
+    <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
     <ClCompile Include="..\r_sky.c" />
     <ClCompile Include="..\r_splats.c" />
@@ -443,6 +444,7 @@
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
     <ClInclude Include="..\r_plane.h" />
+    <ClInclude Include="..\r_portal.h" />
     <ClInclude Include="..\r_segs.h" />
     <ClInclude Include="..\r_sky.h" />
     <ClInclude Include="..\r_splats.h" />

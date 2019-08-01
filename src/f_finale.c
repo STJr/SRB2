@@ -1695,6 +1695,9 @@ void F_TitleScreenTicker(boolean run)
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 
 				if (!mo2)

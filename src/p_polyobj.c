@@ -1495,6 +1495,7 @@ void Polyobj_InitLevel(void)
 	mqueue_t    anchorqueue;
 	mobjqitem_t *qitem;
 	INT32 i, numAnchors = 0;
+	mobj_t *mo;
 
 	M_QueueInit(&spawnqueue);
 	M_QueueInit(&anchorqueue);
@@ -1510,7 +1511,10 @@ void Polyobj_InitLevel(void)
 	// the mobj_t pointers on a queue for use below.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		mobj_t *mo = (mobj_t *)th;
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		mo = (mobj_t *)th;
 
 		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
 			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
@@ -1815,6 +1819,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	// We redo this each tic to make savegame compatibility easier.
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
@@ -1893,28 +1900,31 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			// Find next waypoint
 			for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 			{
+				if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)wp;
 
 				if (mo2->type != MT_TUBEWAYPOINT)
 					continue;
 
-				if (mo2->threshold == th->sequence)
+				if (mo2->threshold != th->sequence)
+					continue;
+
+				if (th->direction == -1)
 				{
-					if (th->direction == -1)
+					if (mo2->health == target->health - 1)
 					{
-						if (mo2->health == target->health - 1)
-						{
-							waypoint = mo2;
-							break;
-						}
+						waypoint = mo2;
+						break;
 					}
-					else
+				}
+				else
+				{
+					if (mo2->health == target->health + 1)
 					{
-						if (mo2->health == target->health + 1)
-						{
-							waypoint = mo2;
-							break;
-						}
+						waypoint = mo2;
+						break;
 					}
 				}
 			}
@@ -1929,27 +1939,30 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
+					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)wp;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
 						continue;
 
-					if (mo2->threshold == th->sequence)
+					if (mo2->threshold != th->sequence)
+						continue;
+
+					if (th->direction == -1)
 					{
-						if (th->direction == -1)
+						if (waypoint == NULL)
+							waypoint = mo2;
+						else if (mo2->health > waypoint->health)
+							waypoint = mo2;
+					}
+					else
+					{
+						if (mo2->health == 0)
 						{
-							if (waypoint == NULL)
-								waypoint = mo2;
-							else if (mo2->health > waypoint->health)
-								waypoint = mo2;
-						}
-						else
-						{
-							if (mo2->health == 0)
-							{
-								waypoint = mo2;
-								break;
-							}
+							waypoint = mo2;
+							break;
 						}
 					}
 				}
@@ -1963,28 +1976,31 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 				{
+					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)wp;
 
 					if (mo2->type != MT_TUBEWAYPOINT)
 						continue;
 
-					if (mo2->threshold == th->sequence)
+					if (mo2->threshold != th->sequence)
+						continue;
+
+					if (th->direction == -1)
 					{
-						if (th->direction == -1)
+						if (mo2->health == target->health - 1)
 						{
-							if (mo2->health == target->health - 1)
-							{
-								waypoint = mo2;
-								break;
-							}
+							waypoint = mo2;
+							break;
 						}
-						else
+					}
+					else
+					{
+						if (mo2->health == target->health + 1)
 						{
-							if (mo2->health == target->health + 1)
-							{
-								waypoint = mo2;
-								break;
-							}
+							waypoint = mo2;
+							break;
 						}
 					}
 				}
@@ -2511,36 +2527,39 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// Find the first waypoint we need to use
 	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
 			continue;
 
-		if (mo2->threshold == th->sequence)
+		if (mo2->threshold != th->sequence)
+			continue;
+
+		if (th->direction == -1) // highest waypoint #
 		{
-			if (th->direction == -1) // highest waypoint #
+			if (mo2->health == 0)
+				last = mo2;
+			else
 			{
-				if (mo2->health == 0)
-					last = mo2;
-				else
-				{
-					if (first == NULL)
-						first = mo2;
-					else if (mo2->health > first->health)
-						first = mo2;
-				}
-			}
-			else // waypoint 0
-			{
-				if (mo2->health == 0)
+				if (first == NULL)
 					first = mo2;
-				else
-				{
-					if (last == NULL)
-						last = mo2;
-					else if (mo2->health > last->health)
-						last = mo2;
-				}
+				else if (mo2->health > first->health)
+					first = mo2;
+			}
+		}
+		else // waypoint 0
+		{
+			if (mo2->health == 0)
+				first = mo2;
+			else
+			{
+				if (last == NULL)
+					last = mo2;
+				else if (mo2->health > last->health)
+					last = mo2;
 			}
 		}
 	}
@@ -2579,28 +2598,31 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	target = first;
 	/*for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)wp;
 
 		if (mo2->type != MT_TUBEWAYPOINT)
 			continue;
 
-		if (mo2->threshold == th->sequence)
+		if (mo2->threshold != th->sequence)
+			continue;
+
+		if (th->direction == -1) // highest waypoint #
 		{
-			if (th->direction == -1) // highest waypoint #
+			if (mo2->health == first->health - 1)
 			{
-				if (mo2->health == first->health - 1)
-				{
-					target = mo2;
-					break;
-				}
+				target = mo2;
+				break;
 			}
-			else // waypoint 0
+		}
+		else // waypoint 0
+		{
+			if (mo2->health == first->health + 1)
 			{
-				if (mo2->health == first->health + 1)
-				{
-					target = mo2;
-					break;
-				}
+				target = mo2;
+				break;
 			}
 		}
 	}*/

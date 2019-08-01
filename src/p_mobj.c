@@ -716,6 +716,9 @@ void P_EmeraldManager(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)think;
 
 		if (mo->type == MT_EMERALDSPAWN)
@@ -3694,6 +3697,9 @@ void P_DestroyRobots(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo = (mobj_t *)think;
 		if (mo->health <= 0 || !(mo->flags & (MF_ENEMY|MF_BOSS)))
 			continue; // not a valid enemy
@@ -4426,6 +4432,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// this can happen if the boss was hurt earlier than expected
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != (mobjtype_t)mobj->info->mass)
 					continue;
@@ -4524,6 +4533,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// the number
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
@@ -4662,7 +4674,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 	}
 
 	dz /= 9;
-	
+
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
 		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
@@ -4832,8 +4844,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				P_SetTarget(&seg->target, mobj);
 				for (i = 0; i < 9; i++)
 				{
-					seg->hnext = P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE);
-					seg->hnext->hprev = seg;
+					P_SetTarget(&seg->hnext, P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE));
+					P_SetTarget(&seg->hnext->hprev, seg);
 					seg = seg->hnext;
 				}
 			}
@@ -5245,6 +5257,9 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				// Find waypoint he is closest to
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
 					mo2 = (mobj_t *)th;
 					if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint)
 					{
@@ -5297,6 +5312,9 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		// the waypoint to use
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && (mo2->spawnpoint->options & 7) == waypointNum)
 			{
@@ -5427,14 +5445,17 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// Build a hoop linked list of 'em!
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 			if (mo2->type == MT_BOSS9GATHERPOINT)
 			{
 				if (last)
-					last->hnext = mo2;
+					P_SetTarget(&last->hnext, mo2);
 				else
-					mobj->hnext = mo2;
-				mo2->hprev = last;
+					P_SetTarget(&mobj->hnext, mo2);
+				P_SetTarget(&mo2->hprev, last);
 				last = mo2;
 			}
 		}
@@ -6072,6 +6093,9 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	// scan the thinkers to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == MT_AXIS)
@@ -6841,12 +6865,14 @@ static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
 	for (mo = overlaycap; mo; mo = mo->hnext)
-		if (mo->hnext == thing)
-		{
-			P_SetTarget(&mo->hnext, thing->hnext);
-			P_SetTarget(&thing->hnext, NULL);
-			return;
-		}
+	{
+		if (mo->hnext != thing)
+			continue;
+
+		P_SetTarget(&mo->hnext, thing->hnext);
+		P_SetTarget(&thing->hnext, NULL);
+		return;
+	}
 }
 
 void A_BossDeath(mobj_t *mo);
@@ -8046,7 +8072,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->tracer->z += mobj->height;
 				}
 				break;
-			case MT_WAVINGFLAG:
+			case MT_WAVINGFLAG1:
+			case MT_WAVINGFLAG2:
 				{
 					fixed_t base = (leveltime<<(FRACBITS+1));
 					mobj_t *seg = mobj->tracer, *prev = mobj;
@@ -9649,15 +9676,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
-		case MT_WAVINGFLAG:
+		case MT_WAVINGFLAG1:
+		case MT_WAVINGFLAG2:
 			{
 				mobj_t *prev = mobj, *cur;
 				UINT8 i;
-				mobj->destscale <<= 2;
-				P_SetScale(mobj, mobj->destscale);
 				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
 				{
-					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
+					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, ((mobj->type == MT_WAVINGFLAG1) ? MT_WAVINGFLAGSEG1 : MT_WAVINGFLAGSEG2));;
 					P_SetTarget(&prev->tracer, cur);
 					cur->extravalue1 = i;
 					prev = cur;
@@ -9751,7 +9777,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->momx = 1; //stack hack
 			break;
 		case MT_MINECARTEND:
-			mobj->tracer = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID);
+			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));
 			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
 		default:
@@ -9960,37 +9986,28 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
 
-	// free block
 	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
-	if (mobj->flags & MF_NOTHINK && !mobj->thinker.next)
+#ifdef SCRAMBLE_REMOVED
+	// Invalidate mobj_t data to cause crashes if accessed!
+	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
+#endif
+
+	// free block
+	if (!mobj->thinker.next)
 	{ // Uh-oh, the mobj doesn't think, P_RemoveThinker would never go through!
+		INT32 prevreferences;
 		if (!mobj->thinker.references)
 		{
-#ifdef SCRAMBLE_REMOVED
-			// Invalidate mobj_t data to cause crashes if accessed!
-			memset(mobj, 0xff, sizeof(mobj_t));
-#endif
-			Z_Free(mobj); // No refrences? Can be removed immediately! :D
+			Z_Free(mobj); // No refrrences? Can be removed immediately! :D
+			return;
 		}
-		else
-		{ // Add thinker just to delay removing it until refrences are gone.
-			mobj->flags &= ~MF_NOTHINK;
-			P_AddThinker(THINK_MOBJ, (thinker_t *)mobj);
-#ifdef SCRAMBLE_REMOVED
-			// Invalidate mobj_t data to cause crashes if accessed!
-			memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-			P_RemoveThinker((thinker_t *)mobj);
-		}
+
+		prevreferences = mobj->thinker.references;
+		P_AddThinker(THINK_MOBJ, (thinker_t *)mobj);
+		mobj->thinker.references = prevreferences;
 	}
-	else
-	{
-#ifdef SCRAMBLE_REMOVED
-		// Invalidate mobj_t data to cause crashes if accessed!
-		memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-		P_RemoveThinker((thinker_t *)mobj);
-	}
+
+	P_RemoveThinker((thinker_t *)mobj);
 }
 
 // This does not need to be added to Lua.
@@ -11737,13 +11754,14 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 		}
 		break;
-	case MT_CEZPOLE:
+	case MT_CEZPOLE1:
+	case MT_CEZPOLE2:
 		{ // Spawn the banner
 			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS);
 			P_SpawnMobjFromMobj(mobj,
 				P_ReturnThrustX(mobj, mobjangle, 4<<FRACBITS),
 				P_ReturnThrustY(mobj, mobjangle, 4<<FRACBITS),
-				0, MT_CEZBANNER)->angle = mobjangle + ANGLE_90;
+				0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2))->angle = mobjangle + ANGLE_90;
 		}
 			break;
 	case MT_HHZTREE_TOP:
@@ -11821,6 +11839,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		// See if other starposts exist in this level that have the same value.
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 
 			if (mo2 == mobj)
@@ -12124,11 +12145,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			// Link all the sprites in the hoop together
 			if (nextmobj)
 			{
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 			}
 			else
-				mobj->hprev = mobj->hnext = NULL;
+				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
 
 			nextmobj = mobj;
 		}
@@ -12154,9 +12175,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			mobj->z -= mobj->height/2;
 
 			// Link all the collision sprites together.
-			mobj->hnext = NULL;
-			mobj->hprev = nextmobj;
-			mobj->hprev->hnext = mobj;
+			P_SetTarget(&mobj->hnext, NULL);
+			P_SetTarget(&mobj->hprev, nextmobj);
+			P_SetTarget(&mobj->hprev->hnext, mobj);
 
 			nextmobj = mobj;
 		}
@@ -12181,9 +12202,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			mobj->z -= mobj->height/2;
 
 			// Link all the collision sprites together.
-			mobj->hnext = NULL;
-			mobj->hprev = nextmobj;
-			mobj->hprev->hnext = mobj;
+			P_SetTarget(&mobj->hnext, NULL);
+			P_SetTarget(&mobj->hprev, nextmobj);
+			P_SetTarget(&mobj->hprev->hnext, mobj);
 
 			nextmobj = mobj;
 		}
@@ -12266,11 +12287,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 			// Link all the sprites in the hoop together
 			if (nextmobj)
 			{
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 			}
 			else
-				mobj->hprev = mobj->hnext = NULL;
+				P_SetTarget(&mobj->hprev, P_SetTarget(&mobj->hnext, NULL));
 
 			nextmobj = mobj;
 		}
@@ -12307,9 +12328,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 				mobj->z -= mobj->height/2;
 
 				// Link all the collision sprites together.
-				mobj->hnext = NULL;
-				mobj->hprev = nextmobj;
-				mobj->hprev->hnext = mobj;
+				P_SetTarget(&mobj->hnext, NULL);
+				P_SetTarget(&mobj->hprev, nextmobj);
+				P_SetTarget(&mobj->hprev->hnext, mobj);
 
 				nextmobj = mobj;
 			}
