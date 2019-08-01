@@ -4096,7 +4096,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	countdowntimer = (tic_t)READUINT32(save_p);
 	countdowntimeup = (boolean)READUINT8(save_p);
 
-	hidetime = READUINT32(save_p);;
+	hidetime = READUINT32(save_p);
 
 	// Is it paused?
 	if (READUINT8(save_p) == 0x2f)
