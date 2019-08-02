@@ -2037,47 +2037,50 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 			else
 				player->pflags &= ~PF_GLIDING;
 		}
-		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING)
+		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 		{
-			mobjtype_t type = player->revitem;
-			P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
-			player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-			S_StartSound(player->mo, sfx_s3k8b);
-			player->pflags |= PF_FULLSTASIS;
-
-			// hearticles
-			if (type)
+			if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 			{
-				UINT8 i = 0;
-				angle_t throwang = -(2*ANG30);
-				fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
-				fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
-				fixed_t zo = 6*player->mo->scale;
-				fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
-				fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
-				fixed_t ev;
-				mobj_t *missile = NULL;
-				if (mu2 < mu)
-					mu2 = mu;
-				ev = (50*FRACUNIT - (mu/25))/50;
-				while (i < 5)
-				{
-					missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
-					P_SetTarget(&missile->target, player->mo);
-					missile->angle = throwang + player->drawangle;
-					P_Thrust(missile, player->drawangle + ANGLE_90,
-						P_ReturnThrustY(missile, throwang, mu)); // side to side component
-					P_Thrust(missile, player->drawangle, mu2); // forward component
-					P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
-					missile->momz += player->mo->pmomz;
-					missile->fuse = TICRATE/2;
-					missile->extravalue2 = ev;
+				mobjtype_t type = player->revitem;
+				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
+				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+				S_StartSound(player->mo, sfx_s3k8b);
+				player->pflags |= PF_FULLSTASIS;
 
-					i++;
-					throwang += ANG30;
+				// hearticles
+				if (type)
+				{
+					UINT8 i = 0;
+					angle_t throwang = -(2*ANG30);
+					fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
+					fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
+					fixed_t zo = 6*player->mo->scale;
+					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
+					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
+					fixed_t ev;
+					mobj_t *missile = NULL;
+					if (mu2 < mu)
+						mu2 = mu;
+					ev = (50*FRACUNIT - (mu/25))/50;
+					while (i < 5)
+					{
+						missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
+						P_SetTarget(&missile->target, player->mo);
+						missile->angle = throwang + player->drawangle;
+						P_Thrust(missile, player->drawangle + ANGLE_90,
+							P_ReturnThrustY(missile, throwang, mu)); // side to side component
+						P_Thrust(missile, player->drawangle, mu2); // forward component
+						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+						missile->momz += player->mo->pmomz;
+						missile->fuse = TICRATE/2;
+						missile->extravalue2 = ev;
+
+						i++;
+						throwang += ANG30;
+					}
+					if (mobjinfo[type].seesound && missile)
+						S_StartSound(missile, missile->info->seesound);
 				}
-				if (mobjinfo[type].seesound && missile)
-					S_StartSound(missile, missile->info->seesound);
 			}
 		}
 		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
