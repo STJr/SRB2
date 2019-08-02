@@ -110,6 +110,7 @@ static patch_t *orngstat;
 static patch_t *redstat;
 static patch_t *yelstat;
 static patch_t *nbracket;
+static patch_t *nring;
 static patch_t *nhud[12];
 static patch_t *nsshud;
 static patch_t *nbon[12];
@@ -311,6 +312,7 @@ void ST_LoadGraphics(void)
 	redstat = W_CachePatchName("REDSTAT", PU_HUDGFX);
 	yelstat = W_CachePatchName("YELSTAT", PU_HUDGFX);
 	nbracket = W_CachePatchName("NBRACKET", PU_HUDGFX);
+	nring = W_CachePatchName("NRNG1", PU_HUDGFX);
 	for (i = 0; i < 12; ++i)
 	{
 		nhud[i] = W_CachePatchName(va("NHUD%d", i+1), PU_HUDGFX);
@@ -1545,7 +1547,7 @@ static void ST_drawNiGHTSLink(void)
 static void ST_drawNiGHTSHUD(void)
 {
 	INT32 origamount;
-	INT32 total_spherecount;
+	INT32 total_spherecount, total_ringcount;
 	const boolean oldspecialstage = (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS));
 
 	// Drill meter
@@ -1625,21 +1627,20 @@ static void ST_drawNiGHTSHUD(void)
 	if (G_IsSpecialStage(gamemap))
 	{
 		INT32 i;
-		total_spherecount = 0;
+		total_spherecount = total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].spheres)
-				total_spherecount += players[i].spheres;
+		{
+			if (!playeringame[i])
+				continue;
+			total_spherecount += players[i].spheres;
+			total_ringcount += players[i].rings;
+		}
 	}
 	else
-		total_spherecount = stplyr->spheres;
-
-	/*if (oldspecialstage)
 	{
-		if (total_spherecount < ssspheres)
-			total_spherecount = ssspheres - total_spherecount;
-		else
-			total_spherecount = 0;
-	}*/
+		total_spherecount = stplyr->spheres;
+		total_ringcount = stplyr->spheres;
+	}
 
 	if (stplyr->capsule)
 	{
@@ -1726,6 +1727,23 @@ static void ST_drawNiGHTSHUD(void)
 	}
 	else
 		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[8]);
+
+	if (oldspecialstage)
+	{
+		// invert for s3k style junk
+		total_spherecount = ssspheres - total_spherecount;
+		total_ringcount = nummaprings - total_ringcount;
+		if (total_spherecount < 0)
+			total_spherecount = 0;
+		if (total_ringcount < 0)
+			total_ringcount = 0;
+
+		// now rings! you know, for that perfect bonus.
+		V_DrawScaledPatch(272, 8, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, nbracket);
+		V_DrawScaledPatch(280, 16+1, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, nring);
+		V_DrawScaledPatch(280, 8+5, V_FLIP|V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, narrow[8]);
+		V_DrawTallNum(272, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, total_ringcount);
+	}
 
 	if (total_spherecount >= 100)
 		V_DrawTallNum((total_spherecount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_spherecount);
