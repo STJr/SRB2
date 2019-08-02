@@ -518,10 +518,7 @@ static inline void P_DoSpecialStageStuff(void)
 			}
 		}
 		else
-		{
 			sstimer = 0;
-			stagefailed = true;
-		}
 	}
 }
 

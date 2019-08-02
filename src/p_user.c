@@ -302,15 +302,39 @@ void P_GiveEmerald(boolean spawnObj)
 
 	S_StartSound(NULL, sfx_cgot); // Got the emerald!
 	emeralds |= (1 << em);
+	stagefailed = false;
 
-	if (spawnObj && playeringame[consoleplayer])
+	if (spawnObj)
 	{
 		// The Chaos Emerald begins to orbit us!
-		// Only give it to ONE person!
-		mobj_t *emmo = P_SpawnMobjFromMobj(players[consoleplayer].mo, 0, 0, players[consoleplayer].mo->height, MT_GOTEMERALD);
-		P_SetTarget(&emmo->target, players[consoleplayer].mo);
-		P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-		P_SetTarget(&players[consoleplayer].mo->tracer, emmo);
+		// Only visibly give it to ONE person!
+		UINT8 i, pnum = ((playeringame[consoleplayer]) && (!players[consoleplayer].spectator) && (players[consoleplayer].mo)) ? consoleplayer : 255;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			mobj_t *emmo;
+			if (!playeringame[i])
+				continue;
+			if (players[i].spectator)
+				continue;
+			if (!players[i].mo)
+				continue;
+
+			emmo = P_SpawnMobjFromMobj(players[i].mo, 0, 0, players[i].mo->height, MT_GOTEMERALD);
+			P_SetTarget(&emmo->target, players[i].mo);
+			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
+			P_SetTarget(&players[i].mo->tracer, emmo);
+
+			if (pnum == 255)
+			{
+				i = pnum;
+				continue;
+			}
+
+			if (i == pnum)
+				continue;
+
+			emmo->flags2 |= MF2_DONTDRAW;
+		}
 	}
 }
 
@@ -597,7 +621,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
 	player->mo->color = player->skincolor;
-	G_GhostAddColor(GHC_NORMAL);
+	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -615,7 +639,6 @@ static void P_DeNightserizePlayer(player_t *player)
 			if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				players[i].nightstime = 1; // force everyone else to fall too.
 		player->exiting = 3*TICRATE;
-		stagefailed = true; // NIGHT OVER
 
 		// If you screwed up, kiss your score and ring bonus goodbye.
 		// But only do this in special stage (and instakill!) In regular stages, wait til we hit the ground.
@@ -716,6 +739,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 			player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+		G_GhostAddColor(GHC_NIGHTSSKIN);
 	}
 
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
