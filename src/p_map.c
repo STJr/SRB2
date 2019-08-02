@@ -2089,6 +2089,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmfloorslope = NULL;
 #endif
+							tmfloorrover = NULL;
 						}
 
 						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2)) {
@@ -2096,6 +2097,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmceilingslope = NULL;
 #endif
+							tmceilingrover = NULL;
 						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -4079,6 +4081,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
 	msecnode_t *n;
+	size_t i;
 
 	nofit = false;
 	crushchange = crunch;
@@ -4093,9 +4096,57 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 
 	// First, let's see if anything will keep it from crushing.
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjTouchingPolyobj(po, mo))
+								continue;
+
+							if (!PIT_ChangeSector(mo, false))
+							{
+								nofit = true;
+								return nofit;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
@@ -4155,9 +4206,53 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	} while (n); // repeat from scratch until all things left are marked valid
 
 	// Nothing blocked us, so lets crush for real!
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjTouchingPolyobj(po, mo))
+								continue;
+
+							PIT_ChangeSector(mo, true);
+							return nofit;
+						}
+					}
+				}
+			}
+		}
+	}
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
