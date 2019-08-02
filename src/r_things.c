@@ -2446,8 +2446,10 @@ static void R_DrawMaskedList (drawnode_t* head)
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 {
-	drawnode_t heads[nummasks];	/**< Drawnode lists; as many as number of views/portals. */
+	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
 	SINT8 i;
+
+	heads = calloc(nummasks, sizeof(drawnode_t));
 
 	for (i = 0; i < nummasks; i++)
 	{
@@ -2474,6 +2476,8 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 		R_DrawMaskedList(&heads[nummasks - 1]);
 		R_ClearDrawNodes(&heads[nummasks - 1]);
 	}
+
+	free(heads);
 }
 
 // ==========================================================================

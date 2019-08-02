@@ -44,6 +44,9 @@ void Command_Numthinkers_f(void)
 	INT32 count = 0;
 	actionf_p1 action;
 	thinker_t *think;
+	thinklistnum_t start = 0;
+	thinklistnum_t end = NUM_THINKERLISTS - 1;
+	thinklistnum_t i;
 
 	if (gamestate != GS_LEVEL)
 	{
@@ -70,6 +73,7 @@ void Command_Numthinkers_f(void)
 	switch (num)
 	{
 		case 1:
+			start = end = THINK_MOBJ;
 			action = (actionf_p1)P_MobjThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_MobjThinker");
 			break;
@@ -82,14 +86,17 @@ void Command_Numthinkers_f(void)
 			CONS_Printf(M_GetText("Number of %s: "), "P_SnowThinker");
 			break;*/
 		case 2:
+			start = end = THINK_PRECIP;
 			action = (actionf_p1)P_NullPrecipThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_NullPrecipThinker");
 			break;
 		case 3:
+			start = end = THINK_MAIN;
 			action = (actionf_p1)T_Friction;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Friction");
 			break;
 		case 4:
+			start = end = THINK_MAIN;
 			action = (actionf_p1)T_Pusher;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Pusher");
 			break;
@@ -102,12 +109,15 @@ void Command_Numthinkers_f(void)
 			return;
 	}
 
-	for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
+	for (i = start; i <= end; i++)
 	{
-		if (think->function.acp1 != action)
-			continue;
+		for (think = thlist[i].next; think != &thlist[i]; think = think->next)
+		{
+			if (think->function.acp1 != action)
+				continue;
 
-		count++;
+			count++;
+		}
 	}
 
 	CONS_Printf("%d\n", count);
@@ -141,6 +151,9 @@ void Command_CountMobjs_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				if (((mobj_t *)th)->type == i)
 					count++;
 			}
@@ -158,6 +171,9 @@ void Command_CountMobjs_f(void)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			if (((mobj_t *)th)->type == i)
 				count++;
 		}
@@ -180,6 +196,10 @@ void P_InitThinkers(void)
 // Adds a new thinker at the end of the list.
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 {
+#ifdef PARANOIA
+	I_Assert(n >= 0 && n < NUM_THINKERLISTS);
+#endif
+
 	thlist[n].prev->next = thinker;
 	thinker->next = &thlist[n];
 	thinker->prev = thlist[n].prev;
@@ -206,22 +226,33 @@ static thinker_t *currentthinker;
 // remove it, and set currentthinker to one node preceeding it, so
 // that the next step in P_RunThinkers() will get its successor.
 //
-void P_RemoveThinkerDelayed(void *pthinker)
+void P_RemoveThinkerDelayed(thinker_t *thinker)
 {
-	thinker_t *thinker = pthinker;
-	if (!thinker->references)
+	thinker_t *next;
+#ifdef PARANOIA
+#define BEENAROUNDBIT (0x40000000) // has to be sufficiently high that it's unlikely to happen in regular gameplay. If you change this, pay attention to the bit pattern of INT32_MIN.
+	if (thinker->references & ~BEENAROUNDBIT)
 	{
-		{
-			/* Remove from main thinker list */
-			thinker_t *next = thinker->next;
-			/* Note that currentthinker is guaranteed to point to us,
-			 * and since we're freeing our memory, we had better change that. So
-			 * point it to thinker->prev, so the iterator will correctly move on to
-			 * thinker->prev->next = thinker->next */
-			(next->prev = currentthinker = thinker->prev)->next = next;
-		}
-		Z_Free(thinker);
+		if (thinker->references & BEENAROUNDBIT) // Usually gets cleared up in one frame; what's going on here, then?
+			CONS_Printf("Number of potentially faulty references: %d\n", (thinker->references & ~BEENAROUNDBIT));
+		thinker->references |= BEENAROUNDBIT;
+		return;
 	}
+#undef BEENAROUNDBIT
+#else
+	if (thinker->references)
+		return;
+#endif
+
+	/* Remove from main thinker list */
+	next = thinker->next;
+	/* Note that currentthinker is guaranteed to point to us,
+	* and since we're freeing our memory, we had better change that. So
+	* point it to thinker->prev, so the iterator will correctly move on to
+	* thinker->prev->next = thinker->next */
+	(next->prev = currentthinker = thinker->prev)->next = next;
+
+	Z_Free(thinker);
 }
 
 //
@@ -238,23 +269,10 @@ void P_RemoveThinkerDelayed(void *pthinker)
 //
 void P_RemoveThinker(thinker_t *thinker)
 {
-	thinker_t *next = thinker->next;
 #ifdef HAVE_BLUA
 	LUA_InvalidateUserdata(thinker);
 #endif
-	thinker->function.acp1 = P_RemoveThinkerDelayed;
-
-	if (currentthinker == thinker)
-		currentthinker = thinker->prev;
-
-	// Remove thinker from its current list.
-	(next->prev = thinker->prev)->next = next;
-
-	// Now add it to the limbo list
-	thlist[THINK_LIMBO].prev->next = thinker;
-	thinker->next = &thlist[THINK_LIMBO];
-	thinker->prev = thlist[THINK_LIMBO].prev;
-	thlist[THINK_LIMBO].prev = thinker;
+	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
 /*
@@ -307,8 +325,10 @@ static inline void P_RunThinkers(void)
 	{
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
-			if (currentthinker->function.acp1)
-				currentthinker->function.acp1(currentthinker);
+#ifdef PARANOIA
+			I_Assert(currentthinker->function.acp1 != NULL)
+#endif
+			currentthinker->function.acp1(currentthinker);
 		}
 	}
 

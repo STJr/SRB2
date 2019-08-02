@@ -274,10 +274,19 @@ static int mobj_get(lua_State *L)
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
 	case mobj_hnext:
+		if (mo->hnext && P_MobjWasRemoved(mo->hnext))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hnext, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hnext, META_MOBJ);
 		break;
 	case mobj_hprev:
-		// implimented differently from sprev and bprev because SSNTails.
+		if (mo->hprev && P_MobjWasRemoved(mo->hprev))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hprev, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hprev, META_MOBJ);
 		break;
 	case mobj_type:

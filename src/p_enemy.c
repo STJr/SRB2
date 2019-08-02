@@ -1391,7 +1391,7 @@ void A_StatueBurst(mobj_t *actor)
 		return;
 
 	new->angle = actor->angle;
-	new->target = actor->target;
+	P_SetTarget(&new->target, actor->target);
 	if (locvar2)
 		P_SetMobjState(new, (statenum_t)locvar2);
 	S_StartSound(new, new->info->attacksound);
@@ -2155,7 +2155,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		for (i = 0; (i < CSEGS); i++)
 		{
 			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
-			prevchain->target = newchain;
+			P_SetTarget(&prevchain->target, newchain);
 			prevchain = newchain;
 		}
 		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
@@ -3088,7 +3088,7 @@ void A_Boss1Laser(mobj_t *actor)
 	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
 	{
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
-		point->target = actor;
+		P_SetTarget(&point->target, actor);
 		point->destscale = 3*FRACUNIT;
 		point->scalespeed = FRACUNIT>>2;
 		point->fuse = TICRATE;
@@ -3488,9 +3488,11 @@ void A_1upThinker(mobj_t *actor)
 
 	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
-		if (actor->tracer) {
-			P_RemoveMobj(actor->tracer);
-			actor->tracer = NULL;
+		if (actor->tracer)
+		{
+			mobj_t *tracer = actor->tracer;
+			P_SetTarget(&actor->tracer, NULL);
+			P_RemoveMobj(tracer);
 		}
 		return;
 	}
@@ -3786,6 +3788,9 @@ void A_BossDeath(mobj_t *mo)
 	// if all bosses are dead
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 		if (mo2 != mo && (mo2->flags & MF_BOSS) && mo2->health > 0)
 			goto bossjustdie; // other boss not dead - just go straight to dying!
@@ -3884,6 +3889,9 @@ bossjustdie:
 			// scan the thinkers to find the runaway point
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
@@ -6137,6 +6145,9 @@ void A_RingExplode(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2 == actor) // Don't explode yourself! Endless loop!
@@ -7263,7 +7274,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
 		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
-		pogo->target = actor;
+		P_SetTarget(&pogo->target, actor);
 	}
 
 	actor->reactiontime = 1;
@@ -7835,6 +7846,9 @@ void A_Boss3Path(mobj_t *actor)
 			// the number
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
 				mo2 = (mobj_t *)th;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
@@ -8227,6 +8241,9 @@ void A_FindTarget(mobj_t *actor)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8289,6 +8306,9 @@ void A_FindTracer(mobj_t *actor)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)locvar1)
@@ -8873,6 +8893,9 @@ void A_RemoteAction(mobj_t *actor)
 		// scan the thinkers
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
 			mo2 = (mobj_t *)th;
 
 			if (mo2->type == (mobjtype_t)locvar1)
@@ -9136,6 +9159,9 @@ void A_SetObjectTypeState(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc2lw)
@@ -9771,6 +9797,9 @@ void A_CheckThingCount(mobj_t *actor)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
 		mo2 = (mobj_t *)th;
 
 		if (mo2->type == (mobjtype_t)loc1up)
@@ -13061,9 +13090,10 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 		if (barrel->target == nearby)
 		{
 			mobj_t *tar = barrel->target; // temporarily store barrel's target
-			barrel->target = NULL;
+			P_SetTarget(&barrel->target, NULL);
 			P_DamageMobj(nearby, barrel, NULL, 1, 0);
-			barrel->target = tar;
+			if (!P_MobjWasRemoved(barrel))
+				P_SetTarget(&barrel->target, tar);
 		}
 		else
 		{
@@ -13565,7 +13595,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 
 	//Back
 	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
@@ -13578,7 +13608,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 }
 
 // Function: A_MinecartSparkThink

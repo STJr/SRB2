@@ -1093,7 +1093,10 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 	{
 		P_SetTarget(&bnext, mobj->bnext); // We want to note our reference to bnext here incase it is MF_NOTHINK and gets removed!
 		if (!func(mobj))
+		{
+			P_SetTarget(&bnext, NULL);
 			return false;
+		}
 		if (P_MobjWasRemoved(tmthing) // func just popped our tmthing, cannot continue.
 		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
 		{
