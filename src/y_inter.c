@@ -1877,6 +1877,22 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 	data.coop.gotperfbonus = (bstruct->display ? 1 : 0);
 }
 
+static void Y_SetSpecialRingBonus(player_t *player, y_bonus_t *bstruct)
+{
+	INT32 i, sharedringtotal = 0;
+
+	(void)player;
+	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
+	bstruct->display = true;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i]) continue;
+		sharedringtotal += players[i].rings;
+	}
+	bstruct->points = max(0, (sharedringtotal) * 100);
+}
+
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
 bonus_f bonuses_list[6][4] = {
@@ -2001,7 +2017,7 @@ static void Y_AwardSpecialStageBonus(void)
 		}
 		else
 		{
-			Y_SetRingBonus(&players[i], &localbonuses[0]);
+			Y_SetSpecialRingBonus(&players[i], &localbonuses[0]);
 			Y_SetPerfectBonus(&players[i], &localbonuses[1]);
 		}
 		players[i].score += localbonuses[0].points;
