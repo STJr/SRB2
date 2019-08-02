@@ -11985,6 +11985,15 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
 				mobj->angle += ANGLE_22h;
 
+			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
+			{
+				if (mthing->options & MTF_OBJECTFLIP)
+					mobj->z -= 16*FRACUNIT;
+				else
+					mobj->z += 16*FRACUNIT;
+			}
+
+
 			if (mobj->flags & MF_NIGHTSITEM)
 			{
 				// Spawn already displayed
@@ -12012,6 +12021,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+				mobj->flags |= MF_NOGRAVITY;
+
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
