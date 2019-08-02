@@ -1617,12 +1617,8 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-#ifdef MANIASPHERES
 		ST_DrawTopLeftOverlayPatch(24, 16, (
-			(stplyr->bonustime && (leveltime & 4)) ? nssbon : nsshud));
-#else
-		ST_DrawTopLeftOverlayPatch(24, 16, (nsshud));
-#endif
+			(stplyr->bonustime && (leveltime & 4) && (states[S_BLUESPHEREBONUS].frame & FF_ANIMATE)) ? nssbon : nsshud));
 	else
 		ST_DrawTopLeftOverlayPatch(24, 16, *(((stplyr->bonustime) ? nbon : nhud)+((leveltime/2)%12)));
 
