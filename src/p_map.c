@@ -342,7 +342,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (horizspeed)
 		{
 			object->player->drawangle = spring->angle;
-			if (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0)
+			if (vertispeed || (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0))
 			{
 				object->angle = spring->angle;
 

@@ -3655,7 +3655,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 {
 	INT32 i;
 	mobj_t *mo;
-	angle_t fa;
+	angle_t fa, va;
 	fixed_t ns;
 	fixed_t z;
 	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
@@ -3676,6 +3676,11 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 	// Spill weapons first
 	P_PlayerWeaponPanelOrAmmoBurst(player);
+
+	if (abs(player->mo->momx) > player->mo->scale || abs(player->mo->momy) > player->mo->scale)
+		va = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0)>>ANGLETOFINESHIFT;
+	else
+		va = player->mo->angle>>ANGLETOFINESHIFT;
 
 	for (i = 0; i < num_rings; i++)
 	{
@@ -3698,7 +3703,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		P_SetScale(mo, player->mo->scale);
 
 		// Angle offset by player angle, then slightly offset by amount of rings
-		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT) - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
+		fa = ((i*FINEANGLES/16) + va - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.
