@@ -2820,7 +2820,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
 	boolean floormoved;
-	fixed_t oldfloorz = thing->floorz;
+	fixed_t oldfloorz = thing->floorz, oldz = thing->z;
 	ffloor_t *oldfloorrover = thing->floorrover;
 	ffloor_t *oldceilingrover = thing->ceilingrover;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
@@ -2877,6 +2877,12 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		}
 		else if (!onfloor && thing->z + thing->height > tmceilingz)
 			thing->z = thing->ceilingz - thing->height;
+	}
+
+	if (thing->z != oldz)
+	{
+		if (thing->player)
+			P_PlayerHitFloor(thing->player, false);
 	}
 
 	// debug: be sure it falls to the floor
