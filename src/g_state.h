@@ -27,12 +27,14 @@ typedef enum
 
 	GS_TITLESCREEN,     // title screen
 	GS_TIMEATTACK,      // time attack menu
+
 	GS_CREDITS,         // credit sequence
 	GS_EVALUATION,      // Evaluation at the end of a game.
-	GS_GAMEEND,         // game end sequence
+	GS_GAMEEND,         // game end sequence - "did you get all those chaos emeralds?"
 
 	// Hardcoded fades or other fading methods
 	GS_INTRO,           // introduction
+	GS_ENDING,          // currently shared between bad and good endings
 	GS_CUTSCENE,        // custom cutscene
 
 	// Not fadable

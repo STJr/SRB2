@@ -834,6 +834,7 @@ typedef enum playersprite
 
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon
+	SPR2_XTRA, // stuff that isn't in-game - keep this last in the list
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,

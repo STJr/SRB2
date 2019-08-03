@@ -486,7 +486,11 @@ void R_InitSprites(void)
 	// it can be is do before loading config for skin cvar possible value
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
+	{
 		R_AddSkins((UINT16)i);
+		R_PatchSkins((UINT16)i);
+	}
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// check if all sprites have frames
@@ -2507,6 +2511,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
+	if ((spr2 & ~FF_SPR2SUPER) >= free_spr2)
+		return 0;
+
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
@@ -2529,8 +2536,10 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
 		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
 
 		// Use the handy list, that's what it's there for!
 		default:
@@ -2540,6 +2549,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 		spr2 |= super;
 	}
+
+	if (i >= 32) // probably an infinite loop...
+		return 0;
 
 	return spr2;
 }
@@ -2560,9 +2572,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
-	strncpy(skin->charsel, "CHRSONIC", 9);
-	strncpy(skin->face, "MISSING", 8);
-	strncpy(skin->superface, "MISSING", 8);
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -2992,7 +3001,7 @@ void R_AddSkins(UINT16 wadnum)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname, superface;
+	boolean hudname, realname;
 
 	//
 	// search for all skin markers in pwad
@@ -3022,7 +3031,7 @@ void R_AddSkins(UINT16 wadnum)
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
-		hudname = realname = superface = false;
+		hudname = realname = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -3098,24 +3107,6 @@ void R_AddSkins(UINT16 wadnum)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
-			else if (!stricmp(stoken, "charsel"))
-			{
-				strupr(value);
-				strncpy(skin->charsel, value, sizeof skin->charsel);
-			}
-			else if (!stricmp(stoken, "face"))
-			{
-				strupr(value);
-				strncpy(skin->face, value, sizeof skin->face);
-				if (!superface)
-					strncpy(skin->superface, value, sizeof skin->superface);
-			}
-			else if (!stricmp(stoken, "superface"))
-			{
-				superface = true;
-				strupr(value);
-				strncpy(skin->superface, value, sizeof skin->superface);
-			}
 			else if (!stricmp(stoken, "availability"))
 			{
 				skin->availability = atoi(value);
@@ -3134,6 +3125,7 @@ next_token:
 
 		// Add sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(numskins); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
 
@@ -3143,9 +3135,6 @@ next_token:
 		skin_cons_t[numskins].value = numskins;
 		skin_cons_t[numskins].strvalue = skin->name;
 #endif
-
-		// add face graphics
-		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
@@ -3269,6 +3258,9 @@ next_token:
 
 		// Patch sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(skinnum); -- nah let's do this elsewhere
+
+		R_FlushTranslationColormapCache();
 
 		if (!skin->availability) // Safe to print...
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);

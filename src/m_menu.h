@@ -316,6 +316,7 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
+	patch_t *pic;
 	UINT8 prev;
 	UINT8 next;
 } description_t;

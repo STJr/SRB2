@@ -227,7 +227,7 @@ void ST_doPaletteStuff(void)
 
 void ST_UnloadGraphics(void)
 {
-	Z_FreeTags(PU_HUDGFX, PU_HUDGFX);
+	Z_FreeTag(PU_HUDGFX);
 }
 
 void ST_LoadGraphics(void)
@@ -343,10 +343,24 @@ void ST_LoadGraphics(void)
 }
 
 // made separate so that skins code can reload custom face graphics
-void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 skinnum)
+void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	faceprefix[skinnum] = W_CachePatchName(facestr, PU_HUDGFX);
-	superprefix[skinnum] = W_CachePatchName(superstr, PU_HUDGFX);
+	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
+	{
+		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spriteframe_t *sprframe = &sprdef->spriteframes[0];
+		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
+		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
+		{
+			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprframe = &sprdef->spriteframes[0];
+			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
+		}
+		else
+			superprefix[skinnum] = faceprefix[skinnum]; // not manually freed, okay to set to same pointer
+	}
+	else
+		faceprefix[skinnum] = superprefix[skinnum] = W_CachePatchName("MISSING", PU_HUDGFX); // ditto
 	facefreed[skinnum] = false;
 }
 
@@ -355,7 +369,7 @@ void ST_ReloadSkinFaceGraphics(void)
 	INT32 i;
 
 	for (i = 0; i < numskins; i++)
-		ST_LoadFaceGraphics(skins[i].face, skins[i].superface, i);
+		ST_LoadFaceGraphics(i);
 }
 
 static inline void ST_InitData(void)
