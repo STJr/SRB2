@@ -6422,10 +6422,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
-	//(void)fromnetsave; -- hooray, it's used!
+	(void)fromnetsave;
 
-	if (!fromnetsave)
-		bossdisabled = 0;
+	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
+	bossdisabled = 0;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -7325,8 +7325,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						lines[i].tag);
 					break;
 				}
-				if (fromnetsave)
-					break;
 				if (!(lines[i].flags & ML_NOCLIMB))
 				{
 					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
