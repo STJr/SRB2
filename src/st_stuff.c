@@ -1732,11 +1732,15 @@ static void ST_drawNiGHTSHUD(void)
 	{
 		// invert for s3k style junk
 		total_spherecount = ssspheres - total_spherecount;
-		total_ringcount = nummaprings - total_ringcount;
 		if (total_spherecount < 0)
 			total_spherecount = 0;
-		if (total_ringcount < 0)
-			total_ringcount = 0;
+
+		if (nummaprings > 0) // don't count down if there ISN'T a valid maximum number of rings, like sonic 3
+		{
+			total_ringcount = nummaprings - total_ringcount;
+			if (total_ringcount < 0)
+				total_ringcount = 0;
+		}
 
 		// now rings! you know, for that perfect bonus.
 		V_DrawScaledPatch(272, 8, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, nbracket);
