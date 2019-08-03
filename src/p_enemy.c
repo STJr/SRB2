@@ -3878,6 +3878,8 @@ bossjustdie:
 		}
 		default: //eggmobiles
 		{
+			UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
 			// Stop exploding and prepare to run.
 			P_SetMobjState(mo, mo->info->xdeathstate);
 			if (P_MobjWasRemoved(mo))
@@ -3895,6 +3897,9 @@ bossjustdie:
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
 					continue;
 
 				// If this one's further then the last one, don't go for it.
@@ -12303,6 +12308,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	//INT32 locvar2 = var2;
 	boolean avoidcenter;
 	UINT32 i;
+	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
 		return;
@@ -12312,16 +12318,34 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	if (locvar1 == 2) // look for the boss waypoint
 	{
-		for (i = 0; i < nummapthings; i++)
+		thinker_t *th;
+		mobj_t *mo2;
+		P_SetTarget(&actor->tracer, NULL);
+		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+		// scan the thinkers to find the runaway point
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (!mapthings[i].mobj)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_BOSSFLYPOINT)
 				continue;
-			P_SetTarget(&actor->tracer, mapthings[i].mobj);
-			break;
+
+			if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			// If this one's further then the last one, don't go for it.
+			if (actor->tracer &&
+				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
+				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
+					continue;
+
+			// Otherwise... Do!
+			P_SetTarget(&actor->tracer, mo2);
 		}
-		if (i == nummapthings)
+		if (!actor->tracer)
 			return; // no boss flypoints found
 	}
 	else if (locvar1 == 1) // always go to ambush-marked waypoint
@@ -12335,11 +12359,13 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
-			{
-				P_SetTarget(&actor->tracer, mapthings[i].mobj);
-				break;
-			}
+			if (mapthings[i].extrainfo != extrainfo)
+				continue;
+			if (!(mapthings[i].options & MTF_AMBUSH))
+				continue;
+
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
 		}
 
 		if (i == nummapthings)
@@ -12362,6 +12388,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -12417,6 +12445,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{

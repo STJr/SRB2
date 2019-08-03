@@ -804,7 +804,12 @@ static int mapthing_set(lua_State *L)
 	else if(fastcmp(field,"z"))
 		mt->z = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"extrainfo"))
-		mt->extrainfo = (UINT8)luaL_checkinteger(L, 3);
+	{
+		INT32 extrainfo = luaL_checkinteger(L, 3);
+		if (extrainfo & ~15)
+			return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
+		mt->extrainfo = (UINT8)extrainfo;
+	}
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
