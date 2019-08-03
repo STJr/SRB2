@@ -1198,6 +1198,9 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 	if (!md2 || !skin)
 		return 0;
 
+	if ((spr2 & ~FF_SPR2SUPER) >= free_spr2)
+		return 0;
+
 	while (!(md2->model->spr2frames[spr2*2 + 1])
 		&& spr2 != SPR2_STND
 		&& ++i != 32) // recursion limiter
@@ -1220,7 +1223,10 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
 		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
 			break;
 
 		// Use the handy list, that's what it's there for!
@@ -1231,6 +1237,9 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 
 		spr2 |= super;
 	}
+
+	if (i >= 32) // probably an infinite loop...
+		return 0;
 
 	return spr2;
 }
