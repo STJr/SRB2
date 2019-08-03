@@ -4601,7 +4601,10 @@ DoneSection2:
 			if (player->bot)
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+			{
 				player->nightstime = 6; // Just let P_Ticker take care of the rest.
+				return;
+			}
 
 			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 			{

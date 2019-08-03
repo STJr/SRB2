@@ -33,8 +33,6 @@
 
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
-#define INLEVEL if (gamestate != GS_LEVEL)\
-return luaL_error(L, "This function can only be used in a level!");
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
@@ -2047,12 +2045,22 @@ static int lib_pStartQuake(lua_State *L)
 
 static int lib_evCrumbleChain(lua_State *L)
 {
-	sector_t *sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
-	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	sector_t *sec = NULL;
+	ffloor_t *rover = NULL;
 	NOHUD
 	INLEVEL
-	if (!sec)
-		return LUA_ErrInvalid(L, "sector_t");
+	if (!lua_isnone(L, 2))
+	{
+		if (!lua_isnil(L, 1))
+		{
+			sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!sec)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	}
+	else
+		rover = *((ffloor_t **)luaL_checkudata(L, 1, META_FFLOOR));
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
 	EV_CrumbleChain(sec, rover);

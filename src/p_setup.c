@@ -859,12 +859,7 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt,
-#ifdef MANIASPHERES
-				true);
-#else
-				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
-#endif
+			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -877,11 +872,6 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 {
 	mobj_t *mo;
 	thinker_t *th;
-
-#ifndef MANIASPHERES
-	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
-		return;
-#endif
 
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -2215,7 +2205,7 @@ static void P_LevelInitStuff(void)
 	ssspheres = timeinmap = 0;
 
 	// special stage
-	stagefailed = false;
+	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 

@@ -140,7 +140,9 @@ typedef enum
 	GHC_NORMAL = 0,
 	GHC_SUPER,
 	GHC_FIREFLOWER,
-	GHC_INVINCIBLE
+	GHC_INVINCIBLE,
+	GHC_NIGHTSSKIN, // not actually a colour
+	GHC_RETURNSKIN // ditto
 } ghostcolor_t;
 
 // Record/playback tics
