@@ -3918,6 +3918,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 460: // Award rings
+			{
+				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				if (mo && mo->player)
+				{
+					if (delay <= 0 || !(leveltime % delay))
+						P_GivePlayerRings(mo->player, rings);
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
