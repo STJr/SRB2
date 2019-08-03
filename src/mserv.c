@@ -433,7 +433,10 @@ static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 		{
 			c = MS_SubConnect(ip_addr, str_port, async, aip->ai_addr, aip->ai_addrlen);
 			if (c == 0)
+			{
+				I_freeaddrinfo(ai);
 				return 0;
+			}
 		}
 		I_freeaddrinfo(ai);
 		return c;
