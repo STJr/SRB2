@@ -2610,6 +2610,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
+	modulothing = 0;
 
 	levelloading = true;
 

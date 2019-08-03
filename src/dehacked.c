@@ -2421,6 +2421,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
+	{{A_ModuloToState},          "A_MODULOTOSTATE"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -7133,7 +7134,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CRUMBLE2",
 
 	// Spark
-	"S_SPRK",
+	"S_SPRK1",
+	"S_SPRK2",
+	"S_SPRK3",
 
 	// Robot Explosion
 	"S_XPLD_FLICKY",

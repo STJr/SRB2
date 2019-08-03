@@ -3833,7 +3833,9 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 105, {A_Scream}, 0, 0, S_NULL}, // S_CRUMBLE2
 
 	// Spark
-	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|0, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK
+	{SPR_NULL, 0, 1, {A_ModuloToState}, 2, S_SPRK2, S_SPRK3},  // S_SPRK1
+	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|0, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK2
+	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|9, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK3
 
 	// Robot Explosion
 	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
@@ -5603,7 +5605,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		10*FRACUNIT,    // speed
@@ -6440,7 +6442,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		38*FRACUNIT,    // speed
@@ -6467,7 +6469,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		38*FRACUNIT,    // speed
@@ -6575,7 +6577,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		38*FRACUNIT,    // speed
@@ -6602,7 +6604,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		38*FRACUNIT,    // speed
@@ -6629,7 +6631,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
@@ -6710,7 +6712,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncitem,     // deathsound
 		1,              // speed
@@ -6737,7 +6739,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD1,       // speed
@@ -6763,7 +6765,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD2,       // speed
@@ -6789,7 +6791,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD3,       // speed
@@ -6815,7 +6817,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD4,       // speed
@@ -6841,7 +6843,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD5,       // speed
@@ -6867,7 +6869,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD6,       // speed
@@ -6893,7 +6895,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		EMERALD7,       // speed
@@ -6920,7 +6922,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		8,              // speed
@@ -6974,7 +6976,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cgot,       // deathsound
 		60*FRACUNIT,    // speed
@@ -17165,8 +17167,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
-		S_SPRK,        // xdeathstate
+		S_SPRK1,        // deathstate
+		S_SPRK1,        // xdeathstate
 		sfx_None,       // deathsound
 		60*FRACUNIT,    // speed
 		16*FRACUNIT,    // radius
@@ -17192,7 +17194,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17220,7 +17222,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17247,7 +17249,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17274,7 +17276,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17301,7 +17303,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17328,7 +17330,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17355,7 +17357,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17382,7 +17384,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17572,7 +17574,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17599,7 +17601,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17626,7 +17628,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -17653,7 +17655,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
@@ -18543,7 +18545,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_s3k33,      // painsound
 		S_RING,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncchip,     // deathsound
 		1,              // speed
@@ -18570,7 +18572,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncchip,     // deathsound
 		38*FRACUNIT,    // speed
@@ -18597,7 +18599,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_s3k33,      // painsound
 		S_RING,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncitem,     // deathsound
 		1,              // speed
@@ -18624,7 +18626,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncspec,     // deathsound
 		20*TICRATE,     // speed
@@ -18651,7 +18653,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncspec,     // deathsound
 		96*20,          // speed
@@ -18678,7 +18680,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncspec,     // deathsound
 		20*TICRATE,     // speed
@@ -18705,7 +18707,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncspec,     // deathsound
 		30*TICRATE,     // speed
@@ -18732,7 +18734,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_SPRK,        // deathstate
+		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_ncspec,     // deathsound
 		15*TICRATE,     // speed
@@ -19615,7 +19617,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_SPARK
 		-1,             // doomednum
-		S_SPRK,        // spawnstate
+		S_SPRK1,        // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound

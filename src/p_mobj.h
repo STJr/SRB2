@@ -464,6 +464,8 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
+extern INT32 modulothing;
+
 #define MAXHUNTEMERALDS 64
 extern mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 extern INT32 numhuntemeralds;
