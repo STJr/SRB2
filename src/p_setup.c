@@ -81,6 +81,10 @@
 #include "p_slopes.h"
 #endif
 
+// Game over stuff
+boolean gameovermus;
+INT32 fadetogameovermus;
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -2619,7 +2623,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-
+	gameovermus = false;
 	levelloading = true;
 
 	// This is needed. Don't touch.

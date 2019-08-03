@@ -31,6 +31,8 @@ extern char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 extern player_t players[MAXPLAYERS];
 extern boolean playeringame[MAXPLAYERS];
 
+extern boolean gameovermus;
+
 // ======================================
 // DEMO playback/recording related stuff.
 // ======================================

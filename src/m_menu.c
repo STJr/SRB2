@@ -2480,16 +2480,14 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
-	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
 	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
 		return;
 
-	// Find current presentation values
-	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurHideTitlePics();
 
@@ -4820,31 +4818,33 @@ static void M_HandleLevelPlatter(INT32 choice)
 			if (!(levellistmode == LLM_CREATESERVER && !lsrow))
 			{
 				ifselectvalnextmapnobrace(lscol)
-					lsoffs[0] = lsoffs[1] = 0;
-					S_StartSound(NULL,sfx_menu1);
-					if (gamestate == GS_TIMEATTACK)
-						M_SetupNextMenu(currentMenu->prevMenu);
-					else if (currentMenu == &MISC_ChangeLevelDef)
-					{
-						if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
-							M_SetupNextMenu(currentMenu->prevMenu);
-						else
-							M_ChangeLevel(0);
-						Z_Free(levelselect.rows);
-						levelselect.rows = NULL;
-					}
-					else
-						M_LevelSelectWarp(0);
-					Nextmap_OnChange();
-				}
-				else if (!lsoffs[0]) //  prevent sound spam
+				lsoffs[0] = lsoffs[1] = 0;
+				S_StartSound(NULL,sfx_menu1);
+
+				if (gamestate == GS_TIMEATTACK)
+					M_SetupNextMenu(currentMenu->prevMenu);
+				else if (currentMenu == &MISC_ChangeLevelDef)
 				{
-					lsoffs[0] = -8;
-					S_StartSound(NULL,sfx_s3kb2);
+					if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
+						M_SetupNextMenu(currentMenu->prevMenu);
+					else
+						M_ChangeLevel(0);
+					Z_Free(levelselect.rows);
+					levelselect.rows = NULL;
 				}
-				break;
+				else
+					M_LevelSelectWarp(0);
+				Nextmap_OnChange();
 			}
+		}
+			else if (!lsoffs[0])
+			{
+				lsoffs[0] = -8;
+				S_StartSound(NULL,sfx_s3kb2);
+			}
+			break;
 			/* FALLTHRU */
+
 		case KEY_RIGHTARROW:
 			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
@@ -4906,7 +4906,6 @@ static void M_HandleLevelPlatter(INT32 choice)
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;
-
 		default:
 			break;
 	}
@@ -5054,12 +5053,13 @@ static void M_DrawLevelPlatterMenu(void)
 	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
-	if (gamestate == GS_TIMEATTACK)
+	if (currentMenu->prevMenu == &SP_TimeAttackDef)
 	{
+		M_SetMenuCurBackground("RECATTBG");
+
 		curbgxspeed = 0;
 		curbgyspeed = 18;
-		curbghide = false;
-		strncpy(curbgname, "RECATTBG", 8);
+
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
@@ -5068,12 +5068,25 @@ static void M_DrawLevelPlatterMenu(void)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 
 		// Draw and animate foreground
-		if (!curbghide || !titlemapinaction)
+		if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
 		{
 			V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 			V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
+			V_DrawSciencePatch(102*FRACUNIT, 40*FINESINE((recfgtimer)*8)*FRACUNIT, 0, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 			recfgtimer++;
 		}
+	}
+
+	if (currentMenu->prevMenu == &SP_NightsAttackDef)
+	{
+		M_SetMenuCurBackground("SRB2BACK");
+
+		if (curbgcolor >= 0)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+		else if (!curbghide || !titlemapinaction)
+			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		if (curfadevalue)
+			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
 	// finds row at top of the screen
@@ -8082,11 +8095,11 @@ void M_DrawTimeAttackMenu(void)
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
 
+	M_SetMenuCurBackground("RECATTBG");
+
 	curbgxspeed = 0;
 	curbgyspeed = 18;
-	curbghide = false;
 
-	strncpy(curbgname, "RECATTBG", 8);
 	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
@@ -8097,10 +8110,11 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
 	// Draw and animate foreground
-	if (!curbghide || !titlemapinaction)
+	if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
 	{
 		V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 		V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
+		V_DrawSciencePatch(0, 40*FINESINE((recfgtimer)*8), 0, W_CachePatchName("CLOCK", PU_CACHE), FRACUNIT);
 		recfgtimer++;
 	}
 	M_DrawMenuTitle();
@@ -8290,6 +8304,8 @@ void M_DrawNightsAttackMenu(void)
 {
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
+
+	M_SetMenuCurBackground("SRB2BACK");
 
 	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
 

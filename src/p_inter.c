@@ -2445,7 +2445,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				boolean gameovermus = false;
+				gameovermus = false;
 				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
 				{
 					INT32 i;
@@ -2465,8 +2465,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 				if (gameovermus)
 				{
-					S_StopMusic(); // Stop the Music! Tails 03-14-2000
-					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
+					S_FadeOutStopMusic(1000); // Stop the Music! Tails 03-14-2000
 				}
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
