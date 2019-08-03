@@ -3916,13 +3916,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				}
 			}
+			break;
+
 		case 460: // Award rings
 			{
 				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				tic_t delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				if (mo && mo->player)
 				{
-					if (delay <= 0 || !(leveltime % (delay)))
+					if (delay <= 0 || !(leveltime % delay))
 						P_GivePlayerRings(mo->player, rings);
 				}
 			}
