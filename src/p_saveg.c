@@ -3999,6 +3999,7 @@ static void P_NetArchiveMisc(void)
 	WRITEINT32(save_p, sstimer);
 	WRITEUINT32(save_p, bluescore);
 	WRITEUINT32(save_p, redscore);
+	WRITEINT32(save_p, modulothing);
 
 	WRITEINT16(save_p, autobalance);
 	WRITEINT16(save_p, teamscramble);
@@ -4077,6 +4078,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	sstimer = READINT32(save_p);
 	bluescore = READUINT32(save_p);
 	redscore = READUINT32(save_p);
+	modulothing = READINT32(save_p);
 
 	autobalance = READINT16(save_p);
 	teamscramble = READINT16(save_p);
