@@ -36,6 +36,7 @@
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
 #include "f_finale.h" // control text prompt
+#include "r_things.h" // skins
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -98,7 +99,6 @@ typedef struct
 	thinker_t **thinkers;
 } thinkerlist_t;
 
-static void P_SearchForDisableLinedefs(void);
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
@@ -1644,7 +1644,7 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 	e->sector = sector;
 	e->timer = (line->backsector->ceilingheight>>FRACBITS)+(line->backsector->floorheight>>FRACBITS);
 	P_SetTarget(&e->caller, mobj); // Use P_SetTarget to make sure the mobj doesn't get freed while we're delaying.
-	P_AddThinker(&e->thinker);
+	P_AddThinker(THINK_MAIN, &e->thinker);
 }
 
 /** Used by P_RunTriggerLinedef to check a NiGHTS trigger linedef's conditions
@@ -2008,7 +2008,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckNightsTriggerLine(triggerline, actor))
 				return false;
 			break;
-
+		case 331: // continuous
+		case 332: // each time
+		case 333: // once
+			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -2141,6 +2146,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 326 // DeNightserize - Once
 	 || specialtype == 328 // Nights lap - Once
 	 || specialtype == 330 // Nights Bonus Time - Once
+	 || specialtype == 333 // Skin - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -2181,7 +2187,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 306 // Character ability - Each time
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || lines[masterline].special == 322) // Trigger on X calls - Each Time
+		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
+		 || lines[masterline].special == 332)// Skin - Each time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -2253,7 +2260,7 @@ void P_SwitchWeather(INT32 weathernum)
 		thinker_t *think;
 		precipmobj_t *precipmobj;
 
-		for (think = thinkercap.next; think != &thinkercap; think = think->next)
+		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -2269,7 +2276,7 @@ void P_SwitchWeather(INT32 weathernum)
 		precipmobj_t *precipmobj;
 		state_t *st;
 
-		for (think = thinkercap.next; think != &thinkercap; think = think->next)
+		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
 			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
@@ -3144,7 +3151,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				scroll_t *scroller;
 				thinker_t *th;
 
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)T_Scroll)
 						continue;
@@ -3382,7 +3389,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 							// if flags changed, reset sector's light list
 							if (rover->flags != oldflags)
+							{
 								sec->moved = true;
+								P_RecalcPrecipInSector(sec);
+							}
 						}
 					}
 
@@ -3543,6 +3553,29 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
 			}
 			break;
+
+		case 449: // Enable bosses with parameter
+		{
+			INT32 bossid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+			if (bossid & ~15) // if any bits other than first 16 are set
+			{
+				CONS_Alert(CONS_WARNING,
+					M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+					line->tag);
+				break;
+			}
+			if (line->flags & ML_NOCLIMB)
+			{
+				bossdisabled |= (1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid disabled = %d", bossid);
+			}
+			else
+			{
+				bossdisabled &= ~(1<<bossid);
+				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid enabled = %d", bossid);
+			}
+			break;
+		}
 
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
@@ -3908,6 +3941,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 460: // Award rings
+			{
+				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				if (mo && mo->player)
+				{
+					if (delay <= 0 || !(leveltime % delay))
+						P_GivePlayerRings(mo->player, rings);
+				}
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
@@ -3980,10 +4025,10 @@ void P_SetupSignExit(player_t *player)
 
 	// didn't find any signposts in the exit sector.
 	// spin all signposts in the level then.
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
 
 		thing = (mobj_t *)think;
 		if (thing->type != MT_SIGN)
@@ -4010,22 +4055,17 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 {
 	thinker_t *think;
 	mobj_t *mo;
-	INT32 specialnum = 0;
+	INT32 specialnum = (flag == MT_REDFLAG) ? 3 : 4;
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
 
 		mo = (mobj_t *)think;
 
 		if (mo->type != flag)
 			continue;
-
-		if (mo->type == MT_REDFLAG)
-			specialnum = 3;
-		else if (mo->type == MT_BLUEFLAG)
-			specialnum = 4;
 
 		if (GETSECSPECIAL(mo->subsector->sector->special, 4) == specialnum)
 			return true;
@@ -4041,9 +4081,11 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (GETSECSPECIAL(rover->master->frontsector->special, 4) != specialnum)
 					continue;
 
-				if (mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
-					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-					return true;
+				if (!(mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
+					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector)))
+					continue;
+
+				return true;
 			}
 		}
 	}
@@ -4445,14 +4487,14 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			// Find the center of the Eggtrap and release all the pretty animals!
 			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 					continue;
-
 				mo2 = (mobj_t *)th;
-				if (mo2->type == MT_EGGTRAP)
-					P_KillMobj(mo2, NULL, player->mo, 0);
+				if (mo2->type != MT_EGGTRAP)
+					continue;
+				P_KillMobj(mo2, NULL, player->mo, 0);
 			}
 
 			// clear the special so you can't push the button twice.
@@ -4594,7 +4636,10 @@ DoneSection2:
 			if (player->bot)
 				break;
 			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+			{
 				player->nightstime = 6; // Just let P_Ticker take care of the rest.
+				return;
+			}
 
 			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 			{
@@ -4617,7 +4662,7 @@ DoneSection2:
 						nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
 
 					if (lines[lineindex].flags & ML_NOCLIMB)
-						skipstats = true;
+						skipstats = 1;
 				}
 			}
 			break;
@@ -4751,19 +4796,22 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					mo2 = (mobj_t *)th;
 
-					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence
-						&& mo2->health == 0)
-					{
-						waypoint = mo2;
-						break;
-					}
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+					if (mo2->threshold != sequence)
+						continue;
+					if (mo2->health != 0)
+						continue;
+
+					waypoint = mo2;
+					break;
 				}
 
 				if (!waypoint)
@@ -4830,20 +4878,22 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the last waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					mo2 = (mobj_t *)th;
 
-					if (mo2->type == MT_TUBEWAYPOINT && mo2->threshold == sequence)
-					{
-						if (!waypoint)
-							waypoint = mo2;
-						else if (mo2->health > waypoint->health)
-							waypoint = mo2;
-					}
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+					if (mo2->threshold != sequence)
+						continue;
+
+					if (!waypoint)
+						waypoint = mo2;
+					else if (mo2->health > waypoint->health)
+						waypoint = mo2;
 				}
 
 				if (!waypoint)
@@ -4982,9 +5032,9 @@ DoneSection2:
 
 				// scan the thinkers
 				// to find the first waypoint
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -5020,9 +5070,9 @@ DoneSection2:
 				}
 
 				// Find waypoint before this one (waypointlow)
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -5047,9 +5097,9 @@ DoneSection2:
 				}
 
 				// Find waypoint after this one (waypointhigh)
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -5566,11 +5616,6 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
-#ifdef ESLOPE
-	// Dynamic slopeness
-	P_RunDynamicSlopes();
-#endif
-
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
 	{
@@ -5640,26 +5685,26 @@ ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
 /** Adds a newly formed 3Dfloor structure to a sector's ffloors list.
   *
   * \param sec    Target sector.
-  * \param ffloor Newly formed 3Dfloor structure.
+  * \param fflr   Newly formed 3Dfloor structure.
   * \sa P_AddFakeFloor
   */
-static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *ffloor)
+static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *fflr)
 {
 	ffloor_t *rover;
 
 	if (!sec->ffloors)
 	{
-		sec->ffloors = ffloor;
-		ffloor->next = 0;
-		ffloor->prev = 0;
+		sec->ffloors = fflr;
+		fflr->next = 0;
+		fflr->prev = 0;
 		return;
 	}
 
 	for (rover = sec->ffloors; rover->next; rover = rover->next);
 
-	rover->next = ffloor;
-	ffloor->prev = rover;
-	ffloor->next = 0;
+	rover->next = fflr;
+	fflr->prev = rover;
+	fflr->next = 0;
 }
 
 /** Adds a 3Dfloor.
@@ -5674,7 +5719,7 @@ static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *ffloor)
   */
 static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, ffloortype_e flags, thinkerlist_t *secthinkers)
 {
-	ffloor_t *ffloor;
+	ffloor_t *fflr;
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
@@ -5684,8 +5729,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	if (sec == sec2)
 		return NULL; //Don't need a fake floor on a control sector.
-	if ((ffloor = (P_GetFFloorBySec(sec, sec2))))
-		return ffloor; // If this ffloor already exists, return it
+	if ((fflr = (P_GetFFloorBySec(sec, sec2))))
+		return fflr; // If this ffloor already exists, return it
 
 	if (sec2->ceilingheight < sec2->floorheight)
 	{
@@ -5724,27 +5769,27 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	}
 
 	// Add the floor
-	ffloor = Z_Calloc(sizeof (*ffloor), PU_LEVEL, NULL);
-	ffloor->secnum = sec2 - sectors;
-	ffloor->target = sec;
-	ffloor->bottomheight = &sec2->floorheight;
-	ffloor->bottompic = &sec2->floorpic;
-	ffloor->bottomxoffs = &sec2->floor_xoffs;
-	ffloor->bottomyoffs = &sec2->floor_yoffs;
-	ffloor->bottomangle = &sec2->floorpic_angle;
+	fflr = Z_Calloc(sizeof (*fflr), PU_LEVEL, NULL);
+	fflr->secnum = sec2 - sectors;
+	fflr->target = sec;
+	fflr->bottomheight = &sec2->floorheight;
+	fflr->bottompic = &sec2->floorpic;
+	fflr->bottomxoffs = &sec2->floor_xoffs;
+	fflr->bottomyoffs = &sec2->floor_yoffs;
+	fflr->bottomangle = &sec2->floorpic_angle;
 
 	// Add the ceiling
-	ffloor->topheight = &sec2->ceilingheight;
-	ffloor->toppic = &sec2->ceilingpic;
-	ffloor->toplightlevel = &sec2->lightlevel;
-	ffloor->topxoffs = &sec2->ceiling_xoffs;
-	ffloor->topyoffs = &sec2->ceiling_yoffs;
-	ffloor->topangle = &sec2->ceilingpic_angle;
+	fflr->topheight = &sec2->ceilingheight;
+	fflr->toppic = &sec2->ceilingpic;
+	fflr->toplightlevel = &sec2->lightlevel;
+	fflr->topxoffs = &sec2->ceiling_xoffs;
+	fflr->topyoffs = &sec2->ceiling_yoffs;
+	fflr->topangle = &sec2->ceilingpic_angle;
 
 #ifdef ESLOPE
 	// Add slopes
-	ffloor->t_slope = &sec2->c_slope;
-	ffloor->b_slope = &sec2->f_slope;
+	fflr->t_slope = &sec2->c_slope;
+	fflr->b_slope = &sec2->f_slope;
 	// mark the target sector as having slopes, if the FOF has any of its own
 	// (this fixes FOF slopes glitching initially at level load in software mode)
 	if (sec2->hasslope)
@@ -5757,10 +5802,10 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT2)) // Block all BUT player
 		flags &= ~FF_BLOCKPLAYER;
 
-	ffloor->spawnflags = ffloor->flags = flags;
-	ffloor->master = master;
-	ffloor->norender = INFTICS;
-	ffloor->fadingdata = NULL;
+	fflr->spawnflags = fflr->flags = flags;
+	fflr->master = master;
+	fflr->norender = INFTICS;
+	fflr->fadingdata = NULL;
 
 	// Scan the thinkers to check for special conditions applying to this FOF.
 	// If we have thinkers sorted by sector, just check the relevant ones;
@@ -5770,7 +5815,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	// Just initialise both of these to placate the compiler.
 	i = 0;
-	th = thinkercap.next;
+	th = thlist[THINK_MAIN].next;
 
 	for(;;)
 	{
@@ -5780,7 +5825,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 				th = secthinkers[sec2num].thinkers[i];
 			else break;
 		}
-		else if (th == &thinkercap)
+		else if (th == &thlist[THINK_MAIN])
 			break;
 
 		// Should this FOF have spikeness?
@@ -5816,14 +5861,14 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (flags & FF_TRANSLUCENT)
 	{
 		if (sides[master->sidenum[0]].toptexture > 0)
-			ffloor->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
+			fflr->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
 		else
-			ffloor->alpha = 0x80;
+			fflr->alpha = 0x80;
 	}
 	else
-		ffloor->alpha = 0xff;
+		fflr->alpha = 0xff;
 
-	ffloor->spawnalpha = ffloor->alpha; // save for netgames
+	fflr->spawnalpha = fflr->alpha; // save for netgames
 
 	if (flags & FF_QUICKSAND)
 		CheckForQuicksand = true;
@@ -5847,9 +5892,9 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		CheckForFloatBob = true;
 	}
 
-	P_AddFFloorToList(sec, ffloor);
+	P_AddFFloorToList(sec, fflr);
 
-	return ffloor;
+	return fflr;
 }
 
 //
@@ -5870,7 +5915,7 @@ static void P_AddSpikeThinker(sector_t *sec, INT32 referrer)
 
 	// create and initialize new thinker
 	spikes = Z_Calloc(sizeof (*spikes), PU_LEVSPEC, NULL);
-	P_AddThinker(&spikes->thinker);
+	P_AddThinker(THINK_MAIN, &spikes->thinker);
 
 	spikes->thinker.function.acp1 = (actionf_p1)T_SpikeSector;
 
@@ -5892,7 +5937,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
 
 	// create and initialize new thinker
 	floater = Z_Calloc(sizeof (*floater), PU_LEVSPEC, NULL);
-	P_AddThinker(&floater->thinker);
+	P_AddThinker(THINK_MAIN, &floater->thinker);
 
 	floater->thinker.function.acp1 = (actionf_p1)T_FloatSector;
 
@@ -5916,7 +5961,7 @@ static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 
 	// create an initialize new thinker
 	bridge = Z_Calloc(sizeof (*bridge), PU_LEVSPEC, NULL);
-	P_AddThinker(&bridge->thinker);
+	P_AddThinker(THINK_MAIN, &bridge->thinker);
 
 	bridge->thinker.function.acp1 = (actionf_p1)T_BridgeThinker;
 
@@ -5952,7 +5997,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 
 	// create and initialize new displacement thinker
 	displace = Z_Calloc(sizeof (*displace), PU_LEVSPEC, NULL);
-	P_AddThinker(&displace->thinker);
+	P_AddThinker(THINK_MAIN, &displace->thinker);
 
 	displace->thinker.function.acp1 = (actionf_p1)T_PlaneDisplace;
 	displace->affectee = affectee;
@@ -5979,7 +6024,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 
 	// create and initialize new elevator thinker
 	block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
-	P_AddThinker(&block->thinker);
+	P_AddThinker(THINK_MAIN, &block->thinker);
 
 	block->thinker.function.acp1 = (actionf_p1)T_MarioBlockChecker;
 	block->sourceline = sourceline;
@@ -6008,7 +6053,7 @@ static void P_AddRaiseThinker(sector_t *sec, line_t *sourceline)
 	levelspecthink_t *raise;
 
 	raise = Z_Calloc(sizeof (*raise), PU_LEVSPEC, NULL);
-	P_AddThinker(&raise->thinker);
+	P_AddThinker(THINK_MAIN, &raise->thinker);
 
 	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
@@ -6047,7 +6092,7 @@ static void P_AddOldAirbob(sector_t *sec, line_t *sourceline, boolean noadjust)
 	levelspecthink_t *airbob;
 
 	airbob = Z_Calloc(sizeof (*airbob), PU_LEVSPEC, NULL);
-	P_AddThinker(&airbob->thinker);
+	P_AddThinker(THINK_MAIN, &airbob->thinker);
 
 	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
 
@@ -6108,7 +6153,7 @@ static inline void P_AddThwompThinker(sector_t *sec, sector_t *actionsector, lin
 
 	// create and initialize new elevator thinker
 	thwomp = Z_Calloc(sizeof (*thwomp), PU_LEVSPEC, NULL);
-	P_AddThinker(&thwomp->thinker);
+	P_AddThinker(THINK_MAIN, &thwomp->thinker);
 
 	thwomp->thinker.function.acp1 = (actionf_p1)T_ThwompSector;
 
@@ -6144,7 +6189,7 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
 
 	// create and initialize new thinker
 	nobaddies = Z_Calloc(sizeof (*nobaddies), PU_LEVSPEC, NULL);
-	P_AddThinker(&nobaddies->thinker);
+	P_AddThinker(THINK_MAIN, &nobaddies->thinker);
 
 	nobaddies->thinker.function.acp1 = (actionf_p1)T_NoEnemiesSector;
 
@@ -6160,13 +6205,13 @@ static inline void P_AddNoEnemiesThinker(sector_t *sec, line_t *sourceline)
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
+static void P_AddEachTimeThinker(sector_t *sec, line_t *sourceline)
 {
 	levelspecthink_t *eachtime;
 
 	// create and initialize new thinker
 	eachtime = Z_Calloc(sizeof (*eachtime), PU_LEVSPEC, NULL);
-	P_AddThinker(&eachtime->thinker);
+	P_AddThinker(THINK_MAIN, &eachtime->thinker);
 
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
@@ -6188,7 +6233,7 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(&elevator->thinker);
+	P_AddThinker(THINK_MAIN, &elevator->thinker);
 
 	elevator->thinker.function.acp1 = (actionf_p1)T_CameraScanner;
 	elevator->type = elevateBounce;
@@ -6212,30 +6257,30 @@ void T_LaserFlash(laserthink_t *flash)
 	msecnode_t *node;
 	mobj_t *thing;
 	sector_t *sourcesec;
-	ffloor_t *ffloor = flash->ffloor;
+	ffloor_t *fflr = flash->ffloor;
 	sector_t *sector = flash->sector;
 	fixed_t top, bottom;
 
-	if (!ffloor || !(ffloor->flags & FF_EXISTS))
+	if (!fflr || !(fflr->flags & FF_EXISTS))
 		return;
 
 	if (leveltime & 2)
-		//ffloor->flags |= FF_RENDERALL;
-		ffloor->alpha = 0xB0;
+		//fflr->flags |= FF_RENDERALL;
+		fflr->alpha = 0xB0;
 	else
-		//ffloor->flags &= ~FF_RENDERALL;
-		ffloor->alpha = 0x90;
+		//fflr->flags &= ~FF_RENDERALL;
+		fflr->alpha = 0x90;
 
-	sourcesec = ffloor->master->frontsector; // Less to type!
+	sourcesec = fflr->master->frontsector; // Less to type!
 
 #ifdef ESLOPE
-	top = (*ffloor->t_slope) ? P_GetZAt(*ffloor->t_slope, sector->soundorg.x, sector->soundorg.y)
-			: *ffloor->topheight;
-	bottom = (*ffloor->b_slope) ? P_GetZAt(*ffloor->b_slope, sector->soundorg.x, sector->soundorg.y)
-			: *ffloor->bottomheight;
+	top = (*fflr->t_slope) ? P_GetZAt(*fflr->t_slope, sector->soundorg.x, sector->soundorg.y)
+			: *fflr->topheight;
+	bottom = (*fflr->b_slope) ? P_GetZAt(*fflr->b_slope, sector->soundorg.x, sector->soundorg.y)
+			: *fflr->bottomheight;
 	sector->soundorg.z = (top + bottom)/2;
 #else
-	sector->soundorg.z = (*ffloor->topheight + *ffloor->bottomheight)/2;
+	sector->soundorg.z = (*fflr->topheight + *fflr->bottomheight)/2;
 #endif
 	S_StartSound(&sector->soundorg, sfx_laser);
 
@@ -6244,7 +6289,7 @@ void T_LaserFlash(laserthink_t *flash)
 	{
 		thing = node->m_thing;
 
-		if ((ffloor->master->flags & ML_EFFECT1)
+		if ((fflr->master->flags & ML_EFFECT1)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
@@ -6268,7 +6313,7 @@ void T_LaserFlash(laserthink_t *flash)
 
 /** Adds a laser thinker to a 3Dfloor.
   *
-  * \param ffloor      3Dfloor to turn into a laser block.
+  * \param fflr      3Dfloor to turn into a laser block.
   * \param sector      Target sector.
   * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
   * \sa T_LaserFlash
@@ -6277,17 +6322,17 @@ void T_LaserFlash(laserthink_t *flash)
 static inline void EV_AddLaserThinker(sector_t *sec, sector_t *sec2, line_t *line, thinkerlist_t *secthinkers)
 {
 	laserthink_t *flash;
-	ffloor_t *ffloor = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
+	ffloor_t *fflr = P_AddFakeFloor(sec, sec2, line, laserflags, secthinkers);
 
-	if (!ffloor)
+	if (!fflr)
 		return;
 
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LaserFlash;
-	flash->ffloor = ffloor;
+	flash->ffloor = fflr;
 	flash->sector = sec; // For finding mobjs
 	flash->sec = sec2;
 	flash->sourceline = line;
@@ -6351,7 +6396,7 @@ void P_InitSpecials(void)
 
 static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
 {
-	if (!(master->flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
+	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
 	{
 		sector->spawn_flrpic_angle = sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
@@ -6361,7 +6406,7 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 		sector->spawn_flr_yoffs = sector->floor_yoffs;
 	}
 
-	if (!(master->flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
+	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
 	{
 		sector->spawn_ceilpic_angle = sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
@@ -6393,6 +6438,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
+
+	// yep, we do this here - "bossdisabled" is considered an apparatus of specials.
+	bossdisabled = 0;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -6442,8 +6490,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		}
 	}
 
-	P_SearchForDisableLinedefs(); // Disable linedefs are now allowed to disable *any* line
-
 	P_SpawnScrollers(); // Add generalized scrollers
 	P_SpawnFriction();  // Friction model using linedefs
 	P_SpawnPushers();   // Pusher model using linedefs
@@ -6453,7 +6499,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	secthinkers = Z_Calloc(numsectors * sizeof(thinkerlist_t), PU_STATIC, NULL);
 
 	// Firstly, find out how many there are in each sector
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)T_SpikeSector)
 			secthinkers[((levelspecthink_t *)th)->sector - sectors].count++;
@@ -6473,7 +6519,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		}
 
 	// Finally, populate the lists.
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
 		size_t secnum = (size_t)-1;
 
@@ -6492,27 +6538,21 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment with arbitrary skin setups...
+		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment in netgames...
 		{
 			// set line specials to 0 here too, same reason as above
 			if (netgame || multiplayer)
 			{
-				// future: nonet flag?
-			}
-			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
-			{
-				lines[i].special = 0;
-				continue;
-			}
-			else
-			{
-				if ((players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
-				|| (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
-				|| (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX)))
+				if (lines[i].flags & ML_NONET)
 				{
 					lines[i].special = 0;
 					continue;
 				}
+			}
+			else if (lines[i].flags & ML_NETONLY)
+			{
+				lines[i].special = 0;
+				continue;
 			}
 		}
 
@@ -6552,20 +6592,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
 
-#ifdef PARANOIA
-			case 6: // Disable tags if level not cleared
-				I_Error("Failed to catch a disable linedef");
-				break;
-#endif
-
 			case 7: // Flat alignment - redone by toast
-				if ((lines[i].flags & (ML_NOSONIC|ML_NOTAILS)) != (ML_NOSONIC|ML_NOTAILS)) // If you can do something...
+				if ((lines[i].flags & (ML_NETONLY|ML_NONET)) != (ML_NETONLY|ML_NONET)) // If you can do something...
 				{
 					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
 					fixed_t xoffs;
 					fixed_t yoffs;
 
-					if (lines[i].flags & ML_NOKNUX) // Set offset through x and y texture offsets if NOKNUX flag is set
+					if (lines[i].flags & ML_EFFECT6) // Set offset through x and y texture offsets if ML_EFFECT6 flag is set
 					{
 						xoffs = sides[lines[i].sidenum[0]].textureoffset;
 						yoffs = sides[lines[i].sidenum[0]].rowoffset;
@@ -7204,6 +7238,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 301:
 			case 310:
 			case 312:
+			case 332:
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				P_AddEachTimeThinker(&sectors[sec], &lines[i]);
 				break;
@@ -7252,6 +7287,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 330:
 				break;
 
+			// Skin trigger executors
+			case 331:
+			case 333:
+				break;
+
 			case 399: // Linedef execute on map load
 				// This is handled in P_RunLevelLoadExecutors.
 				break;
@@ -7289,6 +7329,24 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 430:
 			case 431:
 				break;
+
+			case 449: // Enable bosses with parameter
+			{
+				INT32 bossid = sides[*lines[i].sidenum].textureoffset>>FRACBITS;
+				if (bossid & ~15) // if any bits other than first 16 are set
+				{
+					CONS_Alert(CONS_WARNING,
+						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
+						lines[i].tag);
+					break;
+				}
+				if (!(lines[i].flags & ML_NOCLIMB))
+				{
+					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
+					CONS_Debug(DBG_GAMELOGIC, "Line type 449 spawn effect: bossid disabled = %d", bossid);
+				}
+				break;
+			}
 
 			// 500 is used for a scroller
 			// 501 is used for a scroller
@@ -7367,14 +7425,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					sectors[s].extra_colormap = sectors[s].spawn_extra_colormap = sides[lines[i].sidenum[0]].colormap_data;
 				break;
-
-#ifdef ESLOPE // Slope copy specials. Handled here for sanity.
-			case 720:
-			case 721:
-			case 722:
-				P_CopySectorSlope(&lines[i]);
-				break;
-#endif
 
 			default:
 				break;
@@ -7735,7 +7785,7 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	if ((s->control = control) != -1)
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
-	P_AddThinker(&s->thinker);
+	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
 /** Initializes the scrollers.
@@ -7869,7 +7919,7 @@ static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t o
 	d->exists = true;
 	d->timer = 1;
 
-	P_AddThinker(&d->thinker);
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 /** Makes a FOF appear/disappear
@@ -7916,6 +7966,7 @@ void T_Disappear(disappear_t *d)
 				}
 			}
 			sectors[s].moved = true;
+			P_RecalcPrecipInSector(&sectors[s]);
 		}
 
 		if (d->exists)
@@ -8264,7 +8315,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->ffloornum = (UINT32)ffloornum;
 
 	d->alpha = d->sourcevalue = rover->alpha;
-	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // ffloor->alpha is 1-256
+	d->destvalue = max(1, min(256, relative ? rover->alpha + destvalue : destvalue)); // rover->alpha is 1-256
 
 	if (ticbased)
 	{
@@ -8358,7 +8409,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 				FixedFloor(FixedDiv(abs(d->destvalue - d->alpha), d->speed))/FRACUNIT);
 	}
 
-	P_AddThinker(&d->thinker);
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 /** Makes a FOF fade
@@ -8428,7 +8479,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 	}
 
 	sector->fadecolormapdata = d;
-	P_AddThinker(&d->thinker); // add thinker
+	P_AddThinker(THINK_MAIN, &d->thinker);
 }
 
 void T_FadeColormap(fadecolormap_t *d)
@@ -8547,7 +8598,7 @@ static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32
 	else
 		f->roverfriction = false;
 
-	P_AddThinker(&f->thinker);
+	P_AddThinker(THINK_MAIN, &f->thinker);
 }
 
 /** Applies friction to all things in a sector.
@@ -8713,7 +8764,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 		p->z = p->source->z;
 	}
 	p->affectee = affectee;
-	P_AddThinker(&p->thinker);
+	P_AddThinker(THINK_MAIN, &p->thinker);
 }
 
 
@@ -9214,40 +9265,4 @@ static void P_SpawnPushers(void)
 					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
-}
-
-static void P_SearchForDisableLinedefs(void)
-{
-	size_t i;
-	INT32 j;
-
-	// Look for disable linedefs
-	for (i = 0; i < numlines; i++)
-	{
-		if (lines[i].special == 6)
-		{
-			// Remove special
-			// Do *not* remove tag. That would mess with the tag lists
-			// that P_InitTagLists literally just created!
-			lines[i].special = 0;
-
-			// Ability flags can disable disable linedefs now, lol
-			if (netgame || multiplayer)
-			{
-				// future: nonet flag?
-			}
-			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
-				continue; // Net-only never triggers in single player
-			else if (players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
-				continue;
-			else if (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
-				continue;
-			else if (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX))
-				continue;
-
-			// Disable any linedef specials with our tag.
-			for (j = -1; (j = P_FindLineFromLineTag(&lines[i], j)) >= 0;)
-				lines[j].special = 0;
-		}
-	}
 }

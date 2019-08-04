@@ -486,7 +486,11 @@ void R_InitSprites(void)
 	// it can be is do before loading config for skin cvar possible value
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
+	{
 		R_AddSkins((UINT16)i);
+		R_PatchSkins((UINT16)i);
+	}
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// check if all sprites have frames
@@ -719,11 +723,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
-		if (vis->mobj->type == MT_CYBRAKDEMON)
+		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			dc_translation = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
@@ -734,7 +738,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	{
 		colfunc = transtransfunc;
 		dc_transmap = vis->transmap;
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -753,7 +759,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = transcolfunc;
 
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -2442,8 +2450,10 @@ static void R_DrawMaskedList (drawnode_t* head)
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 {
-	drawnode_t heads[nummasks];	/**< Drawnode lists; as many as number of views/portals. */
-	INT8 i;
+	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
+	SINT8 i;
+
+	heads = calloc(nummasks, sizeof(drawnode_t));
 
 	for (i = 0; i < nummasks; i++)
 	{
@@ -2470,6 +2480,8 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 		R_DrawMaskedList(&heads[nummasks - 1]);
 		R_ClearDrawNodes(&heads[nummasks - 1]);
 	}
+
+	free(heads);
 }
 
 // ==========================================================================
@@ -2499,6 +2511,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
+	if ((spr2 & ~FF_SPR2SUPER) >= free_spr2)
+		return 0;
+
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
@@ -2521,8 +2536,10 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
 		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
 
 		// Use the handy list, that's what it's there for!
 		default:
@@ -2532,6 +2549,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 		spr2 |= super;
 	}
+
+	if (i >= 32) // probably an infinite loop...
+		return 0;
 
 	return spr2;
 }
@@ -2552,9 +2572,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
-	strncpy(skin->charsel, "CHRSONIC", 9);
-	strncpy(skin->face, "MISSING", 8);
-	strncpy(skin->superface, "MISSING", 8);
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -2699,6 +2716,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
 		player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
 		player->followitem = skin->followitem;
+
+		if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
+			player->powers[pw_shield] &= SH_STACK;
 
 		player->actionspd = skin->actionspd;
 		player->mindash = skin->mindash;
@@ -2981,7 +3001,7 @@ void R_AddSkins(UINT16 wadnum)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname, superface;
+	boolean hudname, realname;
 
 	//
 	// search for all skin markers in pwad
@@ -3011,7 +3031,7 @@ void R_AddSkins(UINT16 wadnum)
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
-		hudname = realname = superface = false;
+		hudname = realname = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -3087,24 +3107,6 @@ void R_AddSkins(UINT16 wadnum)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
-			else if (!stricmp(stoken, "charsel"))
-			{
-				strupr(value);
-				strncpy(skin->charsel, value, sizeof skin->charsel);
-			}
-			else if (!stricmp(stoken, "face"))
-			{
-				strupr(value);
-				strncpy(skin->face, value, sizeof skin->face);
-				if (!superface)
-					strncpy(skin->superface, value, sizeof skin->superface);
-			}
-			else if (!stricmp(stoken, "superface"))
-			{
-				superface = true;
-				strupr(value);
-				strncpy(skin->superface, value, sizeof skin->superface);
-			}
 			else if (!stricmp(stoken, "availability"))
 			{
 				skin->availability = atoi(value);
@@ -3123,6 +3125,7 @@ next_token:
 
 		// Add sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(numskins); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
 
@@ -3132,9 +3135,6 @@ next_token:
 		skin_cons_t[numskins].value = numskins;
 		skin_cons_t[numskins].strvalue = skin->name;
 #endif
-
-		// add face graphics
-		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
@@ -3258,6 +3258,9 @@ next_token:
 
 		// Patch sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(skinnum); -- nah let's do this elsewhere
+
+		R_FlushTranslationColormapCache();
 
 		if (!skin->availability) // Safe to print...
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);

@@ -384,7 +384,7 @@ enum {
 	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
 	LE_BOSSDEAD        =    -4, // A boss in the map died (Chaos mode boss tally)
-	LE_BOSS4DROP       =    -5, // CEZ boss dropped its cage
+	LE_BOSS4DROP       =    -5, // CEZ boss dropped its cage (also subtract the number of hitpoints it's lost)
 	LE_BRAKVILEATACK   =    -6, // Brak's doing his LOS attack, oh noes
 	LE_TURRET          = 32000, // THZ turret
 	LE_BRAKPLATFORM    =  4200, // v2.0 Black Eggman destroys platform

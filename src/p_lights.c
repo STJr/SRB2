@@ -76,7 +76,7 @@ fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxse
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	flick = Z_Calloc(sizeof (*flick), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flick->thinker);
+	P_AddThinker(THINK_MAIN, &flick->thinker);
 
 	flick->thinker.function.acp1 = (actionf_p1)T_FireFlicker;
 	flick->sector = maxsector;
@@ -155,7 +155,7 @@ void P_SpawnLightningFlash(sector_t *sector)
 
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LightningFlash;
 	flash->sector = sector;
@@ -214,7 +214,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector,
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->sector = maxsector;
 	flash->darktime = darktime;
@@ -289,7 +289,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	g = Z_Calloc(sizeof (*g), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&g->thinker);
+	P_AddThinker(THINK_MAIN, &g->thinker);
 
 	g->sector = maxsector;
 	g->minlight = minsector->lightlevel;
@@ -349,7 +349,7 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
 	sector->lightingdata = ll; // set it to the lightlevel_t
 
-	P_AddThinker(&ll->thinker); // add thinker
+	P_AddThinker(THINK_MAIN, &ll->thinker); // add thinker
 
 	ll->sector = sector;
 	ll->sourcelevel = sector->lightlevel;

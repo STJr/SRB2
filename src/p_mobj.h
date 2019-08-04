@@ -371,6 +371,8 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 #endif
 
+	boolean colorized; // Whether the mobj uses the rainbow colormap
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 
@@ -468,4 +470,5 @@ extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
 extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
+extern UINT16 bossdisabled;
 #endif

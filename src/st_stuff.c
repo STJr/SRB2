@@ -95,6 +95,7 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *pinkshield;
 static patch_t *flameshield;
 static patch_t *bubbleshield;
 static patch_t *thundershield;
@@ -109,6 +110,7 @@ static patch_t *orngstat;
 static patch_t *redstat;
 static patch_t *yelstat;
 static patch_t *nbracket;
+static patch_t *nring;
 static patch_t *nhud[12];
 static patch_t *nsshud;
 static patch_t *nbon[12];
@@ -225,7 +227,7 @@ void ST_doPaletteStuff(void)
 
 void ST_UnloadGraphics(void)
 {
-	Z_FreeTags(PU_HUDGFX, PU_HUDGFX);
+	Z_FreeTag(PU_HUDGFX);
 }
 
 void ST_LoadGraphics(void)
@@ -285,6 +287,7 @@ void ST_LoadGraphics(void)
 	watershield = W_CachePatchName("TVELICON", PU_HUDGFX);
 	bombshield = W_CachePatchName("TVARICON", PU_HUDGFX);
 	pityshield = W_CachePatchName("TVPIICON", PU_HUDGFX);
+	pinkshield = W_CachePatchName("TVPPICON", PU_HUDGFX);
 	flameshield = W_CachePatchName("TVFLICON", PU_HUDGFX);
 	bubbleshield = W_CachePatchName("TVBBICON", PU_HUDGFX);
 	thundershield = W_CachePatchName("TVZPICON", PU_HUDGFX);
@@ -309,6 +312,7 @@ void ST_LoadGraphics(void)
 	redstat = W_CachePatchName("REDSTAT", PU_HUDGFX);
 	yelstat = W_CachePatchName("YELSTAT", PU_HUDGFX);
 	nbracket = W_CachePatchName("NBRACKET", PU_HUDGFX);
+	nring = W_CachePatchName("NRNG1", PU_HUDGFX);
 	for (i = 0; i < 12; ++i)
 	{
 		nhud[i] = W_CachePatchName(va("NHUD%d", i+1), PU_HUDGFX);
@@ -339,10 +343,24 @@ void ST_LoadGraphics(void)
 }
 
 // made separate so that skins code can reload custom face graphics
-void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 skinnum)
+void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	faceprefix[skinnum] = W_CachePatchName(facestr, PU_HUDGFX);
-	superprefix[skinnum] = W_CachePatchName(superstr, PU_HUDGFX);
+	if (skins[skinnum].sprites[SPR2_XTRA].numframes)
+	{
+		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spriteframe_t *sprframe = &sprdef->spriteframes[0];
+		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
+		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes)
+		{
+			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprframe = &sprdef->spriteframes[0];
+			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
+		}
+		else
+			superprefix[skinnum] = faceprefix[skinnum]; // not manually freed, okay to set to same pointer
+	}
+	else
+		faceprefix[skinnum] = superprefix[skinnum] = W_CachePatchName("MISSING", PU_HUDGFX); // ditto
 	facefreed[skinnum] = false;
 }
 
@@ -351,7 +369,7 @@ void ST_ReloadSkinFaceGraphics(void)
 	INT32 i;
 
 	for (i = 0; i < numskins; i++)
-		ST_LoadFaceGraphics(skins[i].face, skins[i].superface, i);
+		ST_LoadFaceGraphics(i);
 }
 
 static inline void ST_InitData(void)
@@ -1250,6 +1268,7 @@ static void ST_drawPowerupHUD(void)
 				case SH_ARMAGEDDON:  p = bombshield;    break;
 				case SH_ATTRACT:     p = ringshield;    break;
 				case SH_PITY:        p = pityshield;    break;
+				case SH_PINK:        p = pinkshield;    break;
 				case SH_FLAMEAURA:   p = flameshield;   break;
 				case SH_BUBBLEWRAP:  p = bubbleshield;  break;
 				case SH_THUNDERCOIN: p = thundershield; break;
@@ -1542,7 +1561,7 @@ static void ST_drawNiGHTSLink(void)
 static void ST_drawNiGHTSHUD(void)
 {
 	INT32 origamount;
-	INT32 total_spherecount;
+	INT32 total_spherecount, total_ringcount;
 	const boolean oldspecialstage = (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS));
 
 	// Drill meter
@@ -1614,33 +1633,28 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	ST_DrawTopLeftOverlayPatch(16, 8, nbracket);
 	if (G_IsSpecialStage(gamemap))
-#ifdef MANIASPHERES
 		ST_DrawTopLeftOverlayPatch(24, 16, (
-			(stplyr->bonustime && (leveltime & 4)) ? nssbon : nsshud));
-#else
-		ST_DrawTopLeftOverlayPatch(24, 16, (nsshud));
-#endif
+			(stplyr->bonustime && (leveltime & 4) && (states[S_BLUESPHEREBONUS].frame & FF_ANIMATE)) ? nssbon : nsshud));
 	else
 		ST_DrawTopLeftOverlayPatch(24, 16, *(((stplyr->bonustime) ? nbon : nhud)+((leveltime/2)%12)));
 
 	if (G_IsSpecialStage(gamemap))
 	{
 		INT32 i;
-		total_spherecount = 0;
+		total_spherecount = total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].spheres)
-				total_spherecount += players[i].spheres;
+		{
+			if (!playeringame[i])
+				continue;
+			total_spherecount += players[i].spheres;
+			total_ringcount += players[i].rings;
+		}
 	}
 	else
-		total_spherecount = stplyr->spheres;
-
-	/*if (oldspecialstage)
 	{
-		if (total_spherecount < ssspheres)
-			total_spherecount = ssspheres - total_spherecount;
-		else
-			total_spherecount = 0;
-	}*/
+		total_spherecount = stplyr->spheres;
+		total_ringcount = stplyr->spheres;
+	}
 
 	if (stplyr->capsule)
 	{
@@ -1727,6 +1741,27 @@ static void ST_drawNiGHTSHUD(void)
 	}
 	else
 		ST_DrawTopLeftOverlayPatch(40, 8 + 5, narrow[8]);
+
+	if (oldspecialstage)
+	{
+		// invert for s3k style junk
+		total_spherecount = ssspheres - total_spherecount;
+		if (total_spherecount < 0)
+			total_spherecount = 0;
+
+		if (nummaprings > 0) // don't count down if there ISN'T a valid maximum number of rings, like sonic 3
+		{
+			total_ringcount = nummaprings - total_ringcount;
+			if (total_ringcount < 0)
+				total_ringcount = 0;
+		}
+
+		// now rings! you know, for that perfect bonus.
+		V_DrawScaledPatch(272, 8, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, nbracket);
+		V_DrawScaledPatch(280, 16+1, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, nring);
+		V_DrawScaledPatch(280, 8+5, V_FLIP|V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, narrow[8]);
+		V_DrawTallNum(272, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS, total_ringcount);
+	}
 
 	if (total_spherecount >= 100)
 		V_DrawTallNum((total_spherecount >= 1000) ? 76 : 72, 8 + 11, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS, total_spherecount);
@@ -2303,31 +2338,33 @@ static void ST_doItemFinderIconsAndSound(void)
 		return;
 
 	// Scan thinkers to find emblem mobj with these ids
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
+
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_EMBLEM)
+		if (mo2->type != MT_EMBLEM)
+			continue;
+
+		if (!(mo2->flags & MF_SPECIAL))
+			continue;
+
+		for (i = 0; i < stemblems; ++i)
 		{
-			if (!(mo2->flags & MF_SPECIAL))
-				continue;
-
-			for (i = 0; i < stemblems; ++i)
+			if (mo2->health == emblems[i] + 1)
 			{
-				if (mo2->health == emblems[i]+1)
-				{
-					soffset = (i * 20) - ((stemblems-1) * 10);
+				soffset = (i * 20) - ((stemblems - 1) * 10);
 
-					newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
-					if (newinterval && (!interval || newinterval < interval))
-						interval = newinterval;
+				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
+				if (newinterval && (!interval || newinterval < interval))
+					interval = newinterval;
 
-					break;
-				}
+				break;
 			}
 		}
+
 	}
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
