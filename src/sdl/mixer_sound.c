@@ -158,14 +158,14 @@ static void MidiSoundfontPath_Onchange(void)
 
 	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
-		char *miditoken;
+		char *token;
 		char *source = strdup(cv_midisoundfontpath.string);
 		boolean proceed = true;
 		// check if file exists; menu calls this method at every keystroke
 
-		while ((miditoken = strtok_r(source, ";", &source)))
+		while ((token = strtok_r(source, ";", &source)))
 		{
-			SDL_RWops *rw = SDL_RWFromFile(miditoken, "r");
+			SDL_RWops *rw = SDL_RWFromFile(token, "r");
 			if (rw != NULL)
 				SDL_RWclose(rw);
 			else
