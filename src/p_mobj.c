@@ -9717,7 +9717,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_EGGROBO1:
 			mobj->movecount = P_RandomKey(13);
 			mobj->color = SKINCOLOR_RUBY + P_RandomKey(MAXSKINCOLORS - SKINCOLOR_RUBY);
-			// fall through
+			break;
 		case MT_HIVEELEMENTAL:
 			mobj->extravalue1 = 5;
 			break;
@@ -11117,7 +11117,7 @@ You should think about modifying the deathmatch starts to take full advantage of
 			mobj->color = SKINCOLOR_GOLD;
 			mobj->colorized = true;
 		}
-		// fall through
+		break;
 	case MT_EGGMOBILE3:
 		mobj->cusval = mthing->extrainfo;
 		break;
