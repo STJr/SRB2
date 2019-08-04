@@ -217,10 +217,6 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->muspos = 0;
 	mapheaderinfo[num]->musinterfadeout = 0;
 	mapheaderinfo[num]->musintername[0] = '\0';
-	mapheaderinfo[num]->muspostbossname[6] = 0;
-	mapheaderinfo[num]->muspostbosstrack = 0;
-	mapheaderinfo[num]->muspostbosspos = 0;
-	mapheaderinfo[num]->muspostbossfadein = 0;
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -2690,12 +2686,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		S_StartSound(NULL, sfx_s3kaf);
 
-		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (cv_resetmusic.value ||
-			strnicmp(S_MusicName(),
-				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
-			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
-
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
 
@@ -2703,7 +2693,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
 		nowtime = lastwipetic;
-
 		// Hold on white for extra effect.
 		while (nowtime < endtime)
 		{
@@ -2722,13 +2711,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_StopSounds();
 	S_ClearSfx();
 
-	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
-	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (cv_resetmusic.value ||
-		strnicmp(S_MusicName(),
-			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
-		S_FadeMusic(0, FixedMul(
-			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+	if (!titlemapinaction)
+	{
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
+		S_Start();
+	}
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
@@ -2768,11 +2756,6 @@ boolean P_SetupLevel(boolean skipprecip)
 			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
 			I_UpdateNoVsync();
 		}
-
-		// As oddly named as this is, this handles music only.
-		// We should be fine starting it here.
-		// Don't do this during titlemap, because the menu code handles music by itself.
-		S_Start();
 	}
 
 	levelfadecol = (ranspecialwipe) ? 0 : 31;

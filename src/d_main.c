@@ -113,7 +113,7 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-// These variables are in effect
+// These variables are only true if
 // whether the respective sound system is disabled
 // or they're init'ed, but the player just toggled them
 boolean midi_disabled = false;

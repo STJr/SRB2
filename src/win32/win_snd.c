@@ -842,7 +842,6 @@ boolean I_SetSongPosition(UINT32 position)
 		// Dummy out; this works for some MIDI, but not others.
 		// SDL does not support this for any MIDI.
 		return false;
-
 	e = FMOD_Channel_SetPosition(music_channel, position, FMOD_TIMEUNIT_MS);
 	if (e == FMOD_OK)
 		return true;
