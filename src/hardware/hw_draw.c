@@ -1080,7 +1080,7 @@ void HWR_drawAMline(const fline_t *fl, INT32 color)
 // -------------------+
 // HWR_DrawConsoleFill     : draw flat coloured transparent rectangle because that's cool, and hw sucks less than sw for that.
 // -------------------+
-void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color)
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32 actualcolor)
 {
 	FOutVector v[4];
 	FSurfaceInfo Surf;
@@ -1239,7 +1239,7 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color)
 	v[0].tow = v[1].tow = 0.0f;
 	v[2].tow = v[3].tow = 1.0f;
 
-	Surf.FlatColor.rgba = UINT2RGBA(color);
+	Surf.FlatColor.rgba = UINT2RGBA(actualcolor);
 	Surf.FlatColor.s.alpha = 0x80;
 
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
