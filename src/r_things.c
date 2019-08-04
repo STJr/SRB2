@@ -2540,6 +2540,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 					? player->charability
 					: skin->ability)
 					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			// fall through
 
 		// Use the handy list, that's what it's there for!
 		default:
