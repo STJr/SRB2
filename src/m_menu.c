@@ -1308,24 +1308,36 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
 
-#ifdef HAVE_OPENMPT
-	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
-	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145},
-#endif
-#ifdef HAVE_MIXERX
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 163},
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 133},
 #endif
 };
 
-#ifdef HAVE_MIXERX
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+
+#ifdef HAVE_OPENMPT
+#define OPENMPT_MENUOFFSET 32
+#else
+#define OPENMPT_MENUOFFSET 0
+#endif
+
 static menuitem_t OP_SoundAdvancedMenu[] =
 {
-	{IT_HEADER, NULL, "MIDI", NULL, 10},
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 10},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 22},
+#endif
 
-	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, 22},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, 32},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, 60}
+#ifdef HAVE_MIXERX
+	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+#endif
 };
+
+#undef OPENMPT_MENUOFFSET
+
 #endif
 
 static menuitem_t OP_DataOptionsMenu[] =
