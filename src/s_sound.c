@@ -108,7 +108,7 @@ consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusic = {"resetmusic", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // Sound system toggles, saved into the config
 consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -1911,7 +1911,8 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 
-	if (prefadems && S_MusicPlaying()) // queue music change for after fade // allow even if the music is the same
+	if (prefadems) // queue music change for after fade // allow even if the music is the same
+		// && S_MusicPlaying() // Let the delay happen even if we're not playing music
 	{
 		CONS_Debug(DBG_DETAILED, "Now fading out song %s\n", music_name);
 		S_QueueMusic(newmusic, mflags, looping, position, fadeinms);

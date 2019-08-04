@@ -1307,9 +1307,10 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 125}, // 62
 
 #if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 133},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 143},
 #endif
 };
 
