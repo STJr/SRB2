@@ -2168,6 +2168,7 @@ static void P_LevelInitStuff(void)
 
 	localaiming = 0;
 	localaiming2 = 0;
+	modulothing = 0;
 
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
@@ -2610,7 +2611,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	boolean loadedbm = false;
 	sector_t *ss;
 	boolean chase;
-	modulothing = 0;
 
 	levelloading = true;
 

@@ -4078,7 +4078,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 	sstimer = READINT32(save_p);
 	bluescore = READUINT32(save_p);
 	redscore = READUINT32(save_p);
-	modulothing = READUINT32(save_p);
+	modulothing = READINT32(save_p);
 
 	autobalance = READINT16(save_p);
 	teamscramble = READINT16(save_p);
