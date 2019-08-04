@@ -1531,6 +1531,18 @@ static boolean S_LoadMusic(const char *mname)
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
 
+#ifdef MUSSERV
+	if (msg_id != -1)
+	{
+		struct musmsg msg_buffer;
+
+		msg_buffer.msg_type = 6;
+		memset(msg_buffer.msg_text, 0, sizeof (msg_buffer.msg_text));
+		sprintf(msg_buffer.msg_text, "d_%s", mname);
+		msgsnd(msg_id, (struct msgbuf*)&msg_buffer, sizeof (msg_buffer.msg_text), IPC_NOWAIT);
+	}
+#endif
+
 	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
 		strncpy(music_name, mname, 7);
