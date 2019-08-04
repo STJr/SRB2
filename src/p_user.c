@@ -302,15 +302,39 @@ void P_GiveEmerald(boolean spawnObj)
 
 	S_StartSound(NULL, sfx_cgot); // Got the emerald!
 	emeralds |= (1 << em);
+	stagefailed = false;
 
-	if (spawnObj && playeringame[consoleplayer])
+	if (spawnObj)
 	{
 		// The Chaos Emerald begins to orbit us!
-		// Only give it to ONE person!
-		mobj_t *emmo = P_SpawnMobjFromMobj(players[consoleplayer].mo, 0, 0, players[consoleplayer].mo->height, MT_GOTEMERALD);
-		P_SetTarget(&emmo->target, players[consoleplayer].mo);
-		P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-		P_SetTarget(&players[consoleplayer].mo->tracer, emmo);
+		// Only visibly give it to ONE person!
+		UINT8 i, pnum = ((playeringame[consoleplayer]) && (!players[consoleplayer].spectator) && (players[consoleplayer].mo)) ? consoleplayer : 255;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			mobj_t *emmo;
+			if (!playeringame[i])
+				continue;
+			if (players[i].spectator)
+				continue;
+			if (!players[i].mo)
+				continue;
+
+			emmo = P_SpawnMobjFromMobj(players[i].mo, 0, 0, players[i].mo->height, MT_GOTEMERALD);
+			P_SetTarget(&emmo->target, players[i].mo);
+			P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
+			P_SetTarget(&players[i].mo->tracer, emmo);
+
+			if (pnum == 255)
+			{
+				i = pnum;
+				continue;
+			}
+
+			if (i == pnum)
+				continue;
+
+			emmo->flags2 |= MF2_DONTDRAW;
+		}
 	}
 }
 
@@ -597,7 +621,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
 	player->mo->color = player->skincolor;
-	G_GhostAddColor(GHC_NORMAL);
+	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -615,7 +639,6 @@ static void P_DeNightserizePlayer(player_t *player)
 			if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				players[i].nightstime = 1; // force everyone else to fall too.
 		player->exiting = 3*TICRATE;
-		stagefailed = true; // NIGHT OVER
 
 		// If you screwed up, kiss your score and ring bonus goodbye.
 		// But only do this in special stage (and instakill!) In regular stages, wait til we hit the ground.
@@ -716,6 +739,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 			player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
 		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+		G_GhostAddColor(GHC_NIGHTSSKIN);
 	}
 
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
@@ -2007,7 +2031,7 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 //
 // Handles player hitting floor surface.
 // Returns whether to clip momz.
-boolean P_PlayerHitFloor(player_t *player)
+boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 {
 	boolean clipmomz;
 
@@ -2015,22 +2039,31 @@ boolean P_PlayerHitFloor(player_t *player)
 
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
-		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+		if (dorollstuff)
 		{
-			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-			S_StartSound(player->mo, sfx_spin);
+			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			{
+				player->pflags |= PF_SPINNING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+				S_StartSound(player->mo, sfx_spin);
+			}
+			else
+				player->pflags &= ~PF_SPINNING;
 		}
-		else
-		{
-			player->pflags &= ~PF_SPINNING;
 
-			if (player->pflags & PF_GLIDING) // ground gliding
+		if (player->pflags & PF_GLIDING) // ground gliding
+		{
+			if (dorollstuff)
 			{
 				player->skidtime = TICRATE;
 				player->mo->tics = -1;
 			}
-			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
+			else
+				player->pflags &= ~PF_GLIDING;
+		}
+		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		{
+			if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 			{
 				mobjtype_t type = player->revitem;
 				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
@@ -2049,7 +2082,7 @@ boolean P_PlayerHitFloor(player_t *player)
 					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
 					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
 					fixed_t ev;
-					mobj_t *missile;
+					mobj_t *missile = NULL;
 					if (mu2 < mu)
 						mu2 = mu;
 					ev = (50*FRACUNIT - (mu/25))/50;
@@ -2062,45 +2095,48 @@ boolean P_PlayerHitFloor(player_t *player)
 							P_ReturnThrustY(missile, throwang, mu)); // side to side component
 						P_Thrust(missile, player->drawangle, mu2); // forward component
 						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+						missile->momz += player->mo->pmomz;
 						missile->fuse = TICRATE/2;
 						missile->extravalue2 = ev;
 
 						i++;
 						throwang += ANG30;
 					}
-					if (mobjinfo[type].seesound)
+					if (mobjinfo[type].seesound && missile)
 						S_StartSound(missile, missile->info->seesound);
 				}
 			}
-			else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
+		}
+		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+			;
+		else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
 			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+		{
+			if (player->cmomx || player->cmomy)
 			{
-				if (player->cmomx || player->cmomy)
-				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-					else if ((player->rmomx || player->rmomy)
-					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-					else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
-						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				}
-				else
-				{
-					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-					else if ((player->mo->momx || player->mo->momy)
-					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-					else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
-						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				}
+				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+				else if ((player->rmomx || player->rmomy)
+				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+			}
+			else
+			{
+				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+				else if ((player->mo->momx || player->mo->momy)
+				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
+					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 			}
 		}
 
@@ -2320,7 +2356,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					//if (metalrecording)
 					//	G_RecordBustup(rover);
 
-					EV_CrumbleChain(node->m_sector, rover);
+					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
 					if (rover->master->flags & ML_EFFECT5)
@@ -2537,7 +2573,7 @@ static void P_CheckQuicksand(player_t *player)
 					player->mo->z = ceilingheight - player->mo->height;
 
 				if (player->mo->momz <= 0)
-					P_PlayerHitFloor(player);
+					P_PlayerHitFloor(player, false);
 			}
 			else
 			{
@@ -2549,7 +2585,7 @@ static void P_CheckQuicksand(player_t *player)
 					player->mo->z = floorheight;
 
 				if (player->mo->momz >= 0)
-					P_PlayerHitFloor(player);
+					P_PlayerHitFloor(player, false);
 			}
 
 			friction = abs(rover->master->v1->y - rover->master->v2->y)>>6;
@@ -4410,6 +4446,10 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					{
 						player->mo->z += P_MobjFlip(player->mo);
 						P_SetObjectMomZ(player->mo, player->mindash, false);
+						if (P_MobjFlip(player->mo)*player->mo->pmomz > 0)
+							player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+						else
+							player->mo->pmomz = 0;
 						if (player->mo->eflags & MFE_UNDERWATER)
 							player->mo->momz >>= 1;
 #if 0
@@ -11641,7 +11681,6 @@ void P_PlayerAfterThink(player_t *player)
 							player->followmobj->threshold = player->mo->z;
 							player->followmobj->movecount = player->panim;
 							player->followmobj->angle = horizangle;
-							player->followmobj->scale = player->mo->scale;
 							P_SetScale(player->followmobj, player->mo->scale);
 							player->followmobj->destscale = player->mo->destscale;
 							player->followmobj->radius = player->mo->radius;

@@ -1784,7 +1784,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 							continue;
 					}
 
-					EV_CrumbleChain(node->m_sector, rover);
+					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
 					if (rover->master->flags & ML_EFFECT5)
@@ -3047,7 +3047,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 				}
 			}
 
-			clipmomz = P_PlayerHitFloor(mo->player);
+			clipmomz = P_PlayerHitFloor(mo->player, true);
 
 			if (!(mo->player->pflags & PF_SPINNING) && mo->player->powers[pw_carry] != CR_NIGHTSMODE)
 				mo->player->pflags &= ~PF_STARTDASH;
@@ -3129,7 +3129,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(node->m_sector, rover);
+								EV_CrumbleChain(NULL, rover); // node->m_sector
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}
@@ -4674,7 +4674,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 	}
 
 	dz /= 9;
-	
+
 	while ((base = base->tracer)) // there are 10 per spoke, remember that
 	{
 		dx = (originx + P_ReturnThrustX(mobj, angle, (9*132)<<FRACBITS) - mobj->x)/9;
@@ -5236,6 +5236,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		INT32 i;
 		boolean foundgoop = false;
 		INT32 closestNum;
+		UINT8 extrainfo = (mobj->spawnpoint ? mobj->spawnpoint->extrainfo : 0);
 
 		// Looks for players in goop. If you find one, try to jump on him.
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -5261,17 +5262,23 @@ static void P_Boss7Thinker(mobj_t *mobj)
 						continue;
 
 					mo2 = (mobj_t *)th;
-					if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint)
-					{
-						dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+					if (mo2->type != MT_BOSS3WAYPOINT)
+						continue;
+					if (!mo2->spawnpoint)
+						continue;
+					if (mo2->spawnpoint->extrainfo != extrainfo)
+						continue;
+					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
+						continue; // don't jump to center
 
-						if (closestNum == -1 || dist < closestdist)
-						{
-							closestNum = (mo2->spawnpoint->options & 7);
-							closestdist = dist;
-							foundgoop = true;
-						}
-					}
+					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+
+					if (!(closestNum == -1 || dist < closestdist))
+						continue;
+
+					closestNum = (mo2->spawnpoint->options & 7);
+					closestdist = dist;
+					foundgoop = true;
 				}
 				waypointNum = closestNum;
 				break;
@@ -5280,16 +5287,13 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		if (!foundgoop)
 		{
-			if (mobj->z > 1056*FRACUNIT)
-				waypointNum = 0;
-			else
+			// Don't jump to the center when health is low.
+			// Force the player to beat you with missiles.
+			if (mobj->z <= 1056*FRACUNIT || mobj->health <= mobj->info->damage)
 				waypointNum = 1 + P_RandomKey(4);
+			else
+				waypointNum = 0;
 		}
-
-		// Don't jump to the center when health is low.
-		// Force the player to beat you with missiles.
-		if (mobj->health <= mobj->info->damage && waypointNum == 0)
-			waypointNum = 1 + P_RandomKey(4);
 
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
 			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
@@ -5299,14 +5303,11 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			else
 				waypointNum--;
 
-			waypointNum %= 5;
-
-			if (waypointNum < 0)
-				waypointNum = 0;
+			if (mobj->health <= mobj->info->damage)
+				waypointNum = ((waypointNum + 3) % 4) + 1; // plus four to avoid modulo being negative, minus one to avoid waypoint #0
+			else
+				waypointNum = ((waypointNum + 5) % 5);
 		}
-
-		if (waypointNum == 0 && mobj->health <= mobj->info->damage)
-			waypointNum = 1 + (P_RandomFixed() & 1);
 
 		// scan the thinkers to find
 		// the waypoint to use
@@ -5316,11 +5317,17 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				continue;
 
 			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && (mo2->spawnpoint->options & 7) == waypointNum)
-			{
-				hitspot = mo2;
-				break;
-			}
+			if (mo2->type != MT_BOSS3WAYPOINT)
+				continue;
+			if (!mo2->spawnpoint)
+				continue;
+			if ((mo2->spawnpoint->options & 7) != waypointNum)
+				continue;
+			if (mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			hitspot = mo2;
+			break;
 		}
 
 		if (hitspot == NULL)
@@ -7004,6 +7011,9 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
+	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
+		return;
+
 	// Remove dead target/tracer.
 	if (mobj->target && P_MobjWasRemoved(mobj->target))
 		P_SetTarget(&mobj->target, NULL);
@@ -8072,7 +8082,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->tracer->z += mobj->height;
 				}
 				break;
-			case MT_WAVINGFLAG:
+			case MT_WAVINGFLAG1:
+			case MT_WAVINGFLAG2:
 				{
 					fixed_t base = (leveltime<<(FRACBITS+1));
 					mobj_t *seg = mobj->tracer, *prev = mobj;
@@ -9675,15 +9686,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BIGMINE:
 			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
 			break;
-		case MT_WAVINGFLAG:
+		case MT_WAVINGFLAG1:
+		case MT_WAVINGFLAG2:
 			{
 				mobj_t *prev = mobj, *cur;
 				UINT8 i;
-				mobj->destscale <<= 2;
-				P_SetScale(mobj, mobj->destscale);
 				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
 				{
-					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_WAVINGFLAGSEG);
+					cur = P_SpawnMobjFromMobj(mobj, 0, 0, 0, ((mobj->type == MT_WAVINGFLAG1) ? MT_WAVINGFLAGSEG1 : MT_WAVINGFLAGSEG2));;
 					P_SetTarget(&prev->tracer, cur);
 					cur->extravalue1 = i;
 					prev = cur;
@@ -11100,6 +11110,12 @@ You should think about modifying the deathmatch starts to take full advantage of
 		else
 			skyboxviewpnts[mthing->extrainfo] = mobj;
 		break;
+	case MT_EGGSTATUE:
+		if (tutorialmode != (mthing->options & MTF_OBJECTSPECIAL))
+		{
+			mobj->color = SKINCOLOR_GOLD;
+			mobj->colorized = true;
+		}
 	case MT_EGGMOBILE3:
 		mobj->cusval = mthing->extrainfo;
 		break;
@@ -11754,13 +11770,14 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			P_SpawnMobjFromMobj(mobj, -1*FRACUNIT, 0,          0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 		}
 		break;
-	case MT_CEZPOLE:
+	case MT_CEZPOLE1:
+	case MT_CEZPOLE2:
 		{ // Spawn the banner
 			angle_t mobjangle = FixedAngle(mthing->angle<<FRACBITS);
 			P_SpawnMobjFromMobj(mobj,
 				P_ReturnThrustX(mobj, mobjangle, 4<<FRACBITS),
 				P_ReturnThrustY(mobj, mobjangle, 4<<FRACBITS),
-				0, MT_CEZBANNER)->angle = mobjangle + ANGLE_90;
+				0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2))->angle = mobjangle + ANGLE_90;
 		}
 			break;
 	case MT_HHZTREE_TOP:
@@ -11984,6 +12001,15 @@ ML_EFFECT5 : Don't stop thinking when too far away
 			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
 				mobj->angle += ANGLE_22h;
 
+			if (i == MT_YELLOWHORIZ || i == MT_REDHORIZ || i == MT_BLUEHORIZ)
+			{
+				if (mthing->options & MTF_OBJECTFLIP)
+					mobj->z -= 16*FRACUNIT;
+				else
+					mobj->z += 16*FRACUNIT;
+			}
+
+
 			if (mobj->flags & MF_NIGHTSITEM)
 			{
 				// Spawn already displayed
@@ -12011,6 +12037,9 @@ ML_EFFECT5 : Don't stop thinking when too far away
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			if (i == MT_YELLOWDIAG || i == MT_REDDIAG)
+				mobj->flags |= MF_NOGRAVITY;
+
 			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
@@ -12354,28 +12383,33 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		if (nightsreplace)
 			ringthing = MT_NIGHTSSTAR;
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= 5; r++)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= dist;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + dist*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += dist;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -12409,31 +12443,36 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime)
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 		fa = (closestangle >> ANGLETOFINESHIFT);
 
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			z = (
+#ifdef ESLOPE
+				sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+				sec->ceilingheight) - mobjinfo[ringthing].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			}
+		else
+		{
+			z = (
+#ifdef ESLOPE
+				sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+				sec->floorheight);
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
+		}
+
 		for (r = 1; r <= iterations; r++)
 		{
 			x += FixedMul(64*FRACUNIT, FINECOSINE(fa));
 			y += FixedMul(64*FRACUNIT, FINESINE(fa));
 
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= 64*FRACUNIT;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += 64*FRACUNIT;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 

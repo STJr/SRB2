@@ -517,7 +517,9 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
+					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
@@ -1108,6 +1110,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				if      (fastcmp(word2, "TITLE"))      i = 1100;
 				else if (fastcmp(word2, "EVALUATION")) i = 1101;
 				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
 				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
@@ -5699,7 +5702,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_CEZFLOWER",
 	"S_CEZPOLE",
-	"S_CEZBANNER",
+	"S_CEZBANNER1",
+	"S_CEZBANNER2",
 	"S_PINETREE",
 	"S_CEZBUSH1",
 	"S_CEZBUSH2",
@@ -5708,7 +5712,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEHOLDER",
 	"S_FIRETORCH",
 	"S_WAVINGFLAG",
-	"S_WAVINGFLAGSEG",
+	"S_WAVINGFLAGSEG1",
+	"S_WAVINGFLAGSEG2",
 	"S_CRAWLASTATUE",
 	"S_FACESTABBERSTATUE",
 	"S_SUSPICIOUSFACESTABBERSTATUE_WAIT",
@@ -7514,8 +7519,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SMALLFIREBAR", // Small Firebar
 	"MT_BIGFIREBAR", // Big Firebar
 	"MT_CEZFLOWER", // Flower
-	"MT_CEZPOLE", // Pole
-	"MT_CEZBANNER", // Banner
+	"MT_CEZPOLE1", // Pole (with red banner)
+	"MT_CEZPOLE2", // Pole (with blue banner)
+	"MT_CEZBANNER1", // Banner (red)
+	"MT_CEZBANNER2", // Banner (blue)
 	"MT_PINETREE", // Pine Tree
 	"MT_CEZBUSH1", // Bush 1
 	"MT_CEZBUSH2", // Bush 2
@@ -7523,8 +7530,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CANDLEPRICKET", // Candle pricket
 	"MT_FLAMEHOLDER", // Flame holder
 	"MT_FIRETORCH", // Fire torch
-	"MT_WAVINGFLAG", // Waving flag
-	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_WAVINGFLAG1", // Waving flag (red)
+	"MT_WAVINGFLAG2", // Waving flag (blue)
+	"MT_WAVINGFLAGSEG1", // Waving flag segment (red)
+	"MT_WAVINGFLAGSEG2", // Waving flag segment (blue)
 	"MT_CRAWLASTATUE", // Crawla statue
 	"MT_FACESTABBERSTATUE", // Facestabber statue
 	"MT_SUSPICIOUSFACESTABBERSTATUE", // :eggthinking:
@@ -9493,6 +9502,7 @@ static inline int lib_freeslot(lua_State *L)
 				{
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");

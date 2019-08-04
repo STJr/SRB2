@@ -2830,8 +2830,8 @@ boolean M_Responder(event_t *ev)
 	void (*routine)(INT32 choice); // for some casting problem
 
 	if (dedicated || (demoplayback && titledemo)
-	|| gamestate == GS_INTRO || gamestate == GS_CUTSCENE || gamestate == GS_GAMEEND
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	|| gamestate == GS_INTRO || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
 	if (noFurtherInput)
@@ -3531,6 +3531,7 @@ void M_InitCharacterTables(void)
 		strcpy(description[i].picname, "");
 		strcpy(description[i].skinname, "");
 		description[i].prev = description[i].next = 0;
+		description[i].pic = NULL;
 	}
 }
 
@@ -7577,8 +7578,19 @@ static void M_SetupChoosePlayer(INT32 choice)
 				if (i == char_on)
 					allowed = true;
 
-				if (description[i].picname[0] == '\0')
-					strncpy(description[i].picname, skins[skinnum].charsel, 8);
+				if (!(description[i].picname[0]))
+				{
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 2)
+					{
+						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+						spriteframe_t *sprframe = &sprdef->spriteframes[1];
+						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+					}
+					else
+						description[i].pic = W_CachePatchName("MISSING", PU_CACHE);
+				}
+				else
+					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -7732,7 +7744,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
 		if (o < 32)
 		{
-			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
+			patch = description[prev].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
 			else
@@ -7743,7 +7755,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
 		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
 		{
-			patch = W_CachePatchName(description[next].picname, PU_CACHE);
+			patch = description[next].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
 			else
@@ -7752,7 +7764,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 	}
 
-	patch = W_CachePatchName(description[i].picname, PU_CACHE);
+	patch = description[i].pic;
 	if (o >= 0 && o <= 32)
 	{
 		if (SHORT(patch->width) >= 256)
@@ -8144,9 +8156,16 @@ void M_DrawTimeAttackMenu(void)
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
 	// Character face!
-	if (W_CheckNumForName(skins[cv_chooseskin.value-1].charsel) != LUMPERROR)
 	{
-		PictureOfUrFace = W_CachePatchName(skins[cv_chooseskin.value-1].charsel, PU_CACHE);
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= 2)
+		{
+			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
+			spriteframe_t *sprframe = &sprdef->spriteframes[1];
+			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		}
+		else
+			PictureOfUrFace = W_CachePatchName("MISSING", PU_CACHE);
+
 		if (PictureOfUrFace->width >= 256)
 			V_DrawTinyScaledPatch(224, 120, 0, PictureOfUrFace);
 		else

@@ -102,6 +102,7 @@ line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
+UINT16 bossdisabled;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -859,12 +860,7 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt,
-#ifdef MANIASPHERES
-				true);
-#else
-				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
-#endif
+			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -877,11 +873,6 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 {
 	mobj_t *mo;
 	thinker_t *th;
-
-#ifndef MANIASPHERES
-	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
-		return;
-#endif
 
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -2215,7 +2206,7 @@ static void P_LevelInitStuff(void)
 	ssspheres = timeinmap = 0;
 
 	// special stage
-	stagefailed = false;
+	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -3126,7 +3117,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	skipstats = false;
+	skipstats = 0;
 
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
@@ -3437,13 +3428,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_UnloadGraphics();
 	HU_LoadGraphics();
 	ST_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 
 	//
 	// look for skins
 	//
 	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
 	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// search for maps

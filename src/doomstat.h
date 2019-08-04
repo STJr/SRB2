@@ -234,7 +234,7 @@ extern textprompt_t *textprompts[MAX_PROMPTS];
 
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
-extern boolean skipstats;
+extern UINT8 skipstats;
 
 extern UINT32 ssspheres; //  Total # of spheres in a level
 
