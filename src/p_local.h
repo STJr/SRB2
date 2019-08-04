@@ -208,6 +208,47 @@ boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);
 void P_RestoreMultiMusic(player_t *player);
 
+/// ------------------------
+/// Jingle stuff
+/// ------------------------
+
+typedef enum
+{
+	JT_NONE,   // Null state
+	JT_OTHER,  // Other state
+	JT_MASTER, // Main level music
+	JT_1UP, // Extra life
+	JT_SHOES,  // Speed shoes
+	JT_INV, // Invincibility
+	JT_MINV, // Mario Invincibility
+	JT_DROWN,  // Drowning
+	JT_SUPER,  // Super Sonic
+	JT_GOVER, // Game Over
+	JT_NIGHTSTIMEOUT, // NiGHTS Time Out (10 seconds)
+	JT_SSTIMEOUT, // NiGHTS Special Stage Time Out (10 seconds)
+
+	// these are not jingles
+	// JT_LCLEAR, // Level Clear
+	// JT_RACENT, // Multiplayer Intermission
+	// JT_CONTSC, // Continue
+
+	NUMJINGLES
+} jingletype_t;
+
+typedef struct
+{
+	char musname[7];
+	boolean looping;
+} jingle_t;
+
+extern jingle_t jingleinfo[NUMJINGLES];
+
+#define JINGLEPOSTFADE 1000
+
+void P_PlayJingle(player_t *player, jingletype_t jingletype);
+boolean P_EvaluateMusicStatus(UINT16 status);
+void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
+
 //
 // P_MOBJ
 //

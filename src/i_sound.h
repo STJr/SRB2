@@ -31,7 +31,8 @@ typedef enum {
 	MU_FLAC,
 	MU_MODPLUG_UNUSED, // use MU_MOD instead
 	MU_GME,
-	MU_MOD_EX // libopenmpt
+	MU_MOD_EX, // libopenmpt
+	MU_MID_EX // Non-native MIDI
 } musictype_t;
 
 /**	\brief Sound subsystem runing and waiting

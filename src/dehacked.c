@@ -1172,6 +1172,15 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "MUSICINTER"))
 				deh_strlcpy(mapheaderinfo[num-1]->musintername, word2,
 					sizeof(mapheaderinfo[num-1]->musintername), va("Level header %d: intermission music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSS"))
+				deh_strlcpy(mapheaderinfo[num-1]->muspostbossname, word2,
+					sizeof(mapheaderinfo[num-1]->muspostbossname), va("Level header %d: post-boss music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSSTRACK"))
+				mapheaderinfo[num-1]->muspostbosstrack = ((UINT16)i - 1);
+			else if (fastcmp(word, "MUSICPOSTBOSSPOS"))
+				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
+				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -8695,6 +8704,23 @@ struct {
 	{"GT_TAG",GT_TAG},
 	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
 	{"GT_CTF",GT_CTF},
+
+	// Jingles (jingletype_t)
+	{"JT_NONE",JT_NONE},
+	{"JT_OTHER",JT_OTHER},
+	{"JT_MASTER",JT_MASTER},
+	{"JT_1UP",JT_1UP},
+	{"JT_SHOES",JT_SHOES},
+	{"JT_INV",JT_INV},
+	{"JT_MINV",JT_MINV},
+	{"JT_DROWN",JT_DROWN},
+	{"JT_SUPER",JT_SUPER},
+	{"JT_GOVER",JT_GOVER},
+	{"JT_NIGHTSTIMEOUT",JT_NIGHTSTIMEOUT},
+	{"JT_SSTIMEOUT",JT_SSTIMEOUT},
+	// {"JT_LCLEAR",JT_LCLEAR},
+	// {"JT_RACENT",JT_RACENT},
+	// {"JT_CONTSC",JT_CONTSC},
 
 	// Player state (playerstate_t)
 	{"PST_LIVE",PST_LIVE}, // Playing or camping.

@@ -4021,7 +4021,7 @@ msgid "Music lump is not MID music format\n"
 msgstr ""
 
 #: win32/win_snd.c:2126
-msgid "I_RegisterSong: StreamBufferSetup FAILED"
+msgid "I_LoadSong: StreamBufferSetup FAILED"
 msgstr ""
 
 #: win32/win_sys.c:894
