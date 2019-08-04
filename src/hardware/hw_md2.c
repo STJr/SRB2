@@ -1214,7 +1214,6 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 
 		switch(spr2)
 		{
-
 		// Normal special cases.
 		case SPR2_JUMP:
 			spr2 = ((player
@@ -1228,7 +1227,6 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 					: skin->ability)
 					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
 			break;
-
 		// Use the handy list, that's what it's there for!
 		default:
 			spr2 = spr2defaults[spr2];
