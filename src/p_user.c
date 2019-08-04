@@ -2204,7 +2204,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 		if (player->pflags & PF_SPINNING)
 		{
-			if (player->mo->state-states != S_PLAY_ROLL)
+			if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
 			{
 				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				S_StartSound(player->mo, sfx_spin);
