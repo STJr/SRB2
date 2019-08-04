@@ -2728,9 +2728,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (cv_resetmusic.value ||
+	if (!titlemapinaction && (cv_resetmusic.value ||
 		strnicmp(S_MusicName(),
-			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
+			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
 		S_FadeMusic(0, FixedMul(
 			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
 
@@ -2781,11 +2781,12 @@ boolean P_SetupLevel(boolean skipprecip)
 			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
 			I_UpdateNoVsync();
 		}
-	}
 
-	// As oddly named as this is, this handles music only.
-	// We should be fine starting it here.
-	S_Start();
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
+		// Don't do this during titlemap, because the menu code handles music by itself.
+		S_Start();
+	}
 
 	levelfadecol = (ranspecialwipe) ? 0 : 31;
 
