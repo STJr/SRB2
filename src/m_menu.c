@@ -159,7 +159,7 @@ static INT32 vidm_previousmode;
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
-INT32 recfgtimer = 0;
+tic_t recfgtimer = 0;
 
 //
 // PROTOTYPES
@@ -1710,7 +1710,7 @@ static menu_t SP_NightsGhostDef =
 menu_t SP_PlayerDef =
 {
 	MN_SP_MAIN + (MN_SP_LOAD << 6) + (MN_SP_PLAYER << 12),
-	"M_PICKP",
+	NULL,
 	sizeof (SP_PlayerMenu)/sizeof (menuitem_t),
 	&SP_MainDef,
 	SP_PlayerMenu,
@@ -5052,6 +5052,7 @@ static void M_DrawLevelPlatterMenu(void)
 	UINT8 iter = lsrow, sizeselect = (lswide(lsrow) ? 1 : 0);
 	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
+	angle_t fa;
 
 	if (currentMenu->prevMenu == &SP_TimeAttackDef)
 	{
@@ -5070,9 +5071,10 @@ static void M_DrawLevelPlatterMenu(void)
 		// Draw and animate foreground
 		if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
 		{
+			fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 			V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 			V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-			V_DrawSciencePatch(102*FRACUNIT, 40*FINESINE((recfgtimer)*8)*FRACUNIT, 0, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
+			V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
 			recfgtimer++;
 		}
 	}
@@ -7700,6 +7702,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	patch_t *patch;
 	INT32 i, o;
 	UINT8 prev, next;
+	UINT16 col;
+	skin_t *charskin = NULL;
 
 	// Black BG
 	if (curbgcolor >= 0)
@@ -7709,8 +7713,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
+	M_SetMenuCurBackground("CHARBG");
+
 	// Character select profile images!1
-	M_DrawTextBox(0, my, 16, 20);
+	//M_DrawTextBox(0, my, 16, 20);
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -7726,6 +7732,11 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 	else
 		i = char_on;
+
+	charskin = &skins[i];
+	col = (charskin->prefcolor - 1)*2;
+	col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+	V_DrawMappedPatch(0, 0, 0, W_CachePatchName("CHARBG", PU_CACHE), R_GetTranslationColormap(TC_DEFAULT, col, GTC_CACHE));
 
 	// Get prev character...
 	prev = description[i].prev;
@@ -7779,7 +7790,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	M_DrawMenuTitle();
 
 	// Character description
-	M_DrawTextBox(136, my, 21, 20);
+	//M_DrawTextBox(136, my, 21, 20);
 	V_DrawString(146, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
@@ -8094,6 +8105,7 @@ void M_DrawTimeAttackMenu(void)
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;
+	angle_t fa;
 
 	M_SetMenuCurBackground("RECATTBG");
 
@@ -8112,9 +8124,10 @@ void M_DrawTimeAttackMenu(void)
 	// Draw and animate foreground
 	if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
 	{
+		fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 		V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 		V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-		V_DrawSciencePatch(0, -(88<<FRACBITS) + FixedMul(88<<FRACBITS, (40*FINESINE((recfgtimer)*18<<FRACBITS))), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
+		V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
 		recfgtimer++;
 	}
 	M_DrawMenuTitle();

@@ -25,6 +25,7 @@
 // Object place
 #include "m_cheat.h"
 boolean gameovermus;
+INT32 fadetogameovermus;
 
 tic_t leveltime;
 
@@ -725,7 +726,12 @@ void P_Ticker(boolean run)
 
 	P_MapEnd();
 
-	if ((leveltime % (TICRATE * 2) == 0) && gameovermus)
+	if (fadetogameovermus > 0)
+		fadetogameovermus--;
+
+	CONS_Printf("%d\n", fadetogameovermus);
+
+	if (fadetogameovermus == 150 && gameovermus)
 		S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
 
 //	Z_CheckMemCleanup();

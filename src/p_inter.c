@@ -2464,9 +2464,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					gameovermus = true;
 
 				if (gameovermus)
-				{
-					S_FadeOutStopMusic(1000); // Stop the Music! Tails 03-14-2000
-				}
+					S_FadeOutStopMusic((fadetogameovermus = 250)); // Stop the Music! Tails 03-14-2000
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{

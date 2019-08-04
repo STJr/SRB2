@@ -2624,6 +2624,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	sector_t *ss;
 	boolean chase;
 	gameovermus = false;
+	fadetogameovermus = 0;
 	levelloading = true;
 
 	// This is needed. Don't touch.
