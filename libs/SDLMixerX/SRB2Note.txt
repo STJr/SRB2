@@ -1,0 +1,7 @@
+i686-w64-mingw32/bin/libfluidsynth-2.dll was grabbed from GZDoom v3.5.1, because this build does not have glib, gthread, or sndfile external dependencies.
+
+sdl_mixer_ext2.dll requires libgcc and libstdc++ external dependencies. While passing to the linker "-Bstatic -lgcc" works fine, adding "-lstdc++" to -Bstatic  generates linker errors. 
+
+Hence, libstdc++ needs to be bundled as DLL (and consequently, libgcc.)
+
+If you try to build yourself, make sure -lstdc++ does not follow -Bdynamic in the linker flags, because otherwise it will link to the DLL.

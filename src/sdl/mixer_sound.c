@@ -10,6 +10,7 @@
 /// \brief SDL Mixer interface for sound
 
 #include "../doomdef.h"
+#include "../doomstat.h" // menuactive
 
 #if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
@@ -28,7 +29,11 @@
 #pragma warning(default : 4214 4244)
 #endif
 
+#ifdef HAVE_MIXERX
+#include "SDL_mixer_ext.h"
+#else
 #include "SDL_mixer.h"
+#endif
 
 /* This is the version number macro for the current SDL_mixer version: */
 #ifndef SDL_MIXER_COMPILEDVERSION
@@ -101,6 +106,7 @@ static UINT32 fading_timer;
 static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
+static boolean fading_nocleanup;
 
 #ifdef HAVE_LIBGME
 static Music_Emu *gme;
@@ -115,6 +121,80 @@ static size_t probesize;
 static int result;
 #endif
 
+#ifdef HAVE_MIXERX
+static void Midiplayer_Onchange(void)
+{
+	boolean restart = false;
+
+	if (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX && I_SongType() != MU_MID)
+		return;
+
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+	{
+		if (Mix_SetMidiPlayer(cv_midiplayer.value)) // <> 0 means error
+			CONS_Alert(CONS_ERROR, "Midi player error: %s", Mix_GetError());
+		else
+			restart = true;
+	}
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
+			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+		else
+			restart = true;
+	}
+
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+
+	if (restart)
+		S_StartEx(true);
+}
+
+static void MidiSoundfontPath_Onchange(void)
+{
+	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
+		return;
+
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	{
+		char *token;
+		char *source = strdup(cv_midisoundfontpath.string);
+		boolean proceed = true;
+		// check if file exists; menu calls this method at every keystroke
+
+		while ((token = strtok_r(source, ";", &source)))
+		{
+			SDL_RWops *rw = SDL_RWFromFile(token, "r");
+			if (rw != NULL)
+				SDL_RWclose(rw);
+			else
+			{
+				proceed = false;
+				break;
+			}
+		}
+
+		free(source);
+
+		if (proceed)
+		{
+			if (!Mix_SetSoundFonts(cv_midisoundfontpath.string))
+				CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+			else
+				S_StartEx(true);
+		}
+	}
+}
+
+// make sure that s_sound.c does not already verify these
+// which happens when: defined(HAVE_MIXERX) && !defined(HAVE_MIXER)
+static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+consvar_t cv_midiplayer = {"midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midisoundfontpath = {"midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_miditimiditypath = {"midisoundbank", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
 static void var_cleanup(void)
 {
 	song_length = loop_point = 0.0f;
@@ -124,18 +204,24 @@ static void var_cleanup(void)
 	songpaused = is_looping =\
 	 is_fading = false;
 
-	fading_callback = NULL;
+	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
+	// song has stopped playing
+	if (!fading_nocleanup)
+		fading_callback = NULL;
+	else
+		fading_nocleanup = false; // use it once, set it back immediately
 
 	internal_volume = 100;
 }
-
 /// ------------------------
 /// Audio System
 /// ------------------------
 
 void I_StartupSound(void)
 {
-	I_Assert(!sound_started);
+	//I_Assert(!sound_started);
+	if (sound_started)
+		return;
 
 #ifdef _WIN32
 	// Force DirectSound instead of WASAPI
@@ -156,11 +242,18 @@ void I_StartupSound(void)
 		return;
 	}
 
+	fading_nocleanup = false;
+
 	var_cleanup();
 
 	music = NULL;
 	music_volume = sfx_volume = 0;
 
+#ifdef HAVE_MIXERX
+	Mix_SetMidiPlayer(cv_midiplayer.value);
+	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
 #endif
@@ -600,7 +693,15 @@ static void music_loop(void)
 		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	}
 	else
+	{
+		// HACK: Let fade timing proceed beyond the end of a
+		// non-looping song. This is a specific case where the timing
+		// should persist after stopping a song, so I don't believe
+		// this should apply every time the user stops a song.
+		// This is auto-unset in var_cleanup, called by I_StopSong
+		fading_nocleanup = true;
 		I_StopSong();
+	}
 }
 
 static UINT32 music_fade(UINT32 interval, void *param)
@@ -718,7 +819,14 @@ musictype_t I_SongType(void)
 	if (!music)
 		return MU_NONE;
 	else if (Mix_GetMusicType(music) == MUS_MID)
+	{
+#ifdef HAVE_MIXERX
+		if (Mix_GetMidiPlayer() != MIDI_Native)
+			return MU_MID_EX;
+		else
+#endif
 		return MU_MID;
+	}
 	else if (Mix_GetMusicType(music) == MUS_MOD || Mix_GetMusicType(music) == MUS_MODPLUG)
 		return MU_MOD;
 	else if (Mix_GetMusicType(music) == MUS_MP3 || Mix_GetMusicType(music) == MUS_MP3_MAD)
@@ -824,6 +932,11 @@ UINT32 I_GetSongLength(void)
 		return 0;
 	else
 	{
+#ifdef HAVE_MIXERX
+		double xlength = Mix_GetMusicTotalTime(music);
+		if (xlength >= 0)
+			return (UINT32)(xlength*1000);
+#endif
 		// VERY IMPORTANT to set your LENGTHMS= in your song files, folks!
 		// SDL mixer can't read music length itself.
 		length = (UINT32)(song_length*1000);
@@ -983,10 +1096,17 @@ UINT32 I_GetSongPosition(void)
 	if (!music || I_SongType() == MU_MID)
 		return 0;
 	else
+	{
+#ifdef HAVE_MIXERX
+		double xposition = Mix_GetMusicPosition(music);
+		if (xposition >= 0)
+			return (UINT32)(xposition*1000);
+#endif
 		return (UINT32)(music_bytes/44100.0L*1000.0L/4); //assume 44.1khz
 		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
 		// This is hardcoded in I_StartupSound. Other formats for factor:
 		// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4
+	}
 }
 
 /// ------------------------
@@ -1001,7 +1121,6 @@ boolean I_LoadSong(char *data, size_t len)
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
-
 	char *p = data;
 	SDL_RWops *rw;
 
@@ -1114,6 +1233,14 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_MIXERX
+	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
+		Mix_SetMidiPlayer(cv_midiplayer.value);
+	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
+
 #ifdef HAVE_OPENMPT
 	/*
 		If the size of the data to be checked is bigger than the recommended size (> 2048)
@@ -1145,7 +1272,6 @@ boolean I_LoadSong(char *data, size_t len)
 
 	// Let's see if Mixer is able to load this.
 	rw = SDL_RWFromMem(data, len);
-	if (rw != NULL)
 	{
 		music = Mix_LoadMUS_RW(rw, 1);
 	}
@@ -1250,7 +1376,7 @@ boolean I_PlaySong(boolean looping)
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
 	}
-	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID) && Mix_PlayMusic(music, looping ? -1 : 0) == -1) // if MOD, loop forever
+	else if ((I_SongType() == MU_MOD || I_SongType() == MU_MID || I_SongType() == MU_MID_EX) && Mix_PlayMusic(music, looping ? -1 : 0) == -1) // if MOD, loop forever
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
@@ -1260,10 +1386,10 @@ boolean I_PlaySong(boolean looping)
 
 	I_SetMusicVolume(music_volume);
 
-	if (I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if (I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX)
 		Mix_HookMusicFinished(music_loop); // don't bother counting if MOD
 
-	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
+	if(I_SongType() != MU_MOD && I_SongType() != MU_MID && I_SongType() != MU_MID_EX && !Mix_RegisterEffect(MIX_CHANNEL_POST, count_music_bytes, NULL, NULL))
 		CONS_Alert(CONS_WARNING, "Error registering SDL music position counter: %s\n", Mix_GetError());
 
 	return true;
@@ -1271,7 +1397,10 @@ boolean I_PlaySong(boolean looping)
 
 void I_StopSong(void)
 {
-	I_StopFadingSong();
+	// HACK: See music_loop on why we want fade timing to proceed
+	// after end of song
+	if (!fading_nocleanup)
+		I_StopFadingSong();
 
 #ifdef HAVE_LIBGME
 	if (gme)
@@ -1388,6 +1517,8 @@ boolean I_SetSongTrack(int track)
 		return false;
 	}
 #endif
+	if (I_SongType() == MU_MOD)
+		return !Mix_SetMusicPosition(track);
 	(void)track;
 	return false;
 }
@@ -1410,6 +1541,8 @@ void I_StopFadingSong(void)
 		SDL_RemoveTimer(fading_id);
 	is_fading = false;
 	fading_source = fading_target = fading_timer = fading_duration = fading_id = 0;
+	// don't unset fading_nocleanup here just yet; fading_callback is cleaned up
+	// in var_cleanup()
 }
 
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
