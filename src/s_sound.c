@@ -1732,8 +1732,19 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		else
 		{
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, 0, music_stack_fadein);
+
 			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
-				newpos = entry->position + (S_GetMusicLength() ? (UINT32)((float)(gametic - entry->tic)/(float)TICRATE*(float)MUSICRATE) : 0);
+			{
+				UINT32 poslapse = 0;
+
+				// To prevent the game from jumping past the end of the music, we need
+				// to check if we can get the song's length. Otherwise, if the lapsed resume time goes
+				// over a LOOPPOINT, mixer_sound.c will be unable to calculate the new resume position.
+				if (S_GetMusicLength())
+					poslapse = (UINT32)((float)(gametic - entry->tic)/(float)TICRATE*(float)MUSICRATE);
+
+				newpos = entry->position + poslapse;
+			}
 
 			// If the newly recalled music lumpnum does not match the lumpnum that we stored in stack,
 			// then discard the new position. That way, we will not recall an invalid position
