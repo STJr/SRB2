@@ -69,8 +69,6 @@
 # Addon for SDL:
 #     To Cross-Compile, add 'SDL_CONFIG=/usr/*/bin/sdl-config'
 #     Compile without SDL_Mixer, add 'NOMIXER=1'
-#     Compile without SDL_Mixer_X, add 'NOMIXERX=1' (Win32 only)
-#     Compile without GME, add 'NOGME=1'
 #     Compile without BSD API, add 'NONET=1'
 #     Compile without IPX/SPX, add 'NOIPX=1'
 #     Compile Mingw/SDL with S_DS3S, add 'DS3D=1'

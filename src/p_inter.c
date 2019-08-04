@@ -1700,10 +1700,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Eaten by player!
 			if ((!player->bot) && (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1))
-			{
-				player->powers[pw_underwater] = underwatertics + 1;
 				P_RestoreMusic(player);
-			}
 
 			if (player->powers[pw_underwater] < underwatertics + 1)
 				player->powers[pw_underwater] = underwatertics + 1;
@@ -2470,7 +2467,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					gameovermus = true;
 
 				if (gameovermus)
-					P_PlayJingle(target->player, JT_GOVER); // Yousa dead now, Okieday? Tails 03-14-2000
+				{
+					S_StopMusic(); // Stop the Music! Tails 03-14-2000
+					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
+				}
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
@@ -2918,7 +2918,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 				S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
 			}
 			else
-				P_PlayJingle(player, ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? JT_NIGHTSTIMEOUT : JT_SSTIMEOUT);
+				S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 		}
 	}
 }

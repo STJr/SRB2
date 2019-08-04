@@ -57,29 +57,6 @@ static void P_NukeAllPlayers(player_t *player);
 #endif
 
 //
-// Jingle stuff.
-//
-
-jingle_t jingleinfo[NUMJINGLES] = {
-	// {musname, looping, reset, nest}
-	{""        , false}, // JT_NONE
-	{""        , false}, // JT_OTHER
-	{""        , false}, // JT_MASTER
-	{"_1up"    , false},
-	{"_shoes"  ,  true},
-	{"_inv"    , false},
-	{"_minv"   , false},
-	{"_drown"  , false},
-	{"_super"  ,  true},
-	{"_gover"  , false},
-	{"_ntime"  , false},  // JT_NIGHTSTIMEOUT
-	{"_drown"  , false}   // JT_SSTIMEOUT
-	// {"_clear"  , false},
-	// {"_inter"  ,  true},
-	// {"_conti"  ,  true}
-};
-
-//
 // Movement.
 //
 
@@ -719,10 +696,7 @@ static void P_DeNightserizePlayer(player_t *player)
 			S_SetMusicPosition(0);
 	}
 	else
-	{
-		music_stack_fadein = 0; // HACK: Change fade-in for restore music
 		P_RestoreMusic(player);
-	}
 
 	P_RunDeNightserizeExecutors(player->mo);
 }
@@ -779,10 +753,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		S_SetInternalMusicVolume(100);
 	}
 	else
-	{
-		music_stack_fadein = 0; // HACK: Change fade-in for restore music
 		P_RestoreMusic(player);
-	}
 
 	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 
@@ -1248,7 +1219,10 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 {
 	player->powers[pw_super] = 1;
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
-		P_PlayJingle(player, JT_SUPER);
+	{
+		S_StopMusic();
+		S_ChangeMusicInternal("_super", true);
+	}
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
 
@@ -1414,114 +1388,13 @@ void P_PlayLivesJingle(player_t *player)
 	else
 	{
 		if (player)
-			player->powers[pw_extralife] = extralifetics + 1;
+			player->powers[pw_extralife] = extralifetics+1;
+		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
 		strlcpy(S_sfx[sfx_None].caption, "One-up", 7);
 		S_StartCaption(sfx_None, -1, extralifetics+1);
-		P_PlayJingle(player, JT_1UP);
+		S_ChangeMusicInternal("_1up", false);
 	}
 }
-
-void P_PlayJingle(player_t *player, jingletype_t jingletype)
-{
-	const char *musname = jingleinfo[jingletype].musname;
-	UINT16 musflags = 0;
-	boolean looping = jingleinfo[jingletype].looping;
-
-	char newmusic[7];
-	strncpy(newmusic, musname, 7);
-#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
- 	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
- 		return;
-#endif
-	newmusic[6] = 0;
-
-	P_PlayJingleMusic(player, newmusic, musflags, looping, jingletype);
-}
-
-//
-// P_PlayJingleMusic
-//
-void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status)
-{
-	// If gamestate != GS_LEVEL, always play the jingle (1-up intermission)
-	if (gamestate == GS_LEVEL && !P_IsLocalPlayer(player))
-		return;
-
-	S_RetainMusic(musname, musflags, looping, 0, status);
-	S_StopMusic();
-	S_ChangeMusicInternal(musname, looping);
-}
-
-boolean P_EvaluateMusicStatus(UINT16 status)
-{
-	// \todo lua hook
-	int i;
-	boolean result = false;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!P_IsLocalPlayer(&players[i]))
-			continue;
-
-		switch(status)
-		{
-			case JT_1UP: // Extra life
-				result = (players[i].powers[pw_extralife] > 1);
-				break;
-
-			case JT_SHOES:  // Speed shoes
-				if (players[i].powers[pw_sneakers] > 1 && !players[i].powers[pw_super])
-				{
-					//strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
-					//S_StartCaption(sfx_None, -1, players[i].powers[pw_sneakers]);
-					result = true;
-				}
-				else
-					result = false;
-				break;
-
-			case JT_INV: // Invincibility
-			case JT_MINV: // Mario Invincibility
-				if (players[i].powers[pw_invulnerability] > 1)
-				{
-					//strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
-					//S_StartCaption(sfx_None, -1, players[i].powers[pw_invulnerability]);
-					result = true;
-				}
-				else
-					result = false;
-				break;
-
-			case JT_DROWN:  // Drowning
-				result = (players[i].powers[pw_underwater] && players[i].powers[pw_underwater] <= 11*TICRATE + 1);
-				break;
-
-			case JT_SUPER:  // Super Sonic
-				result = (players[i].powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC));
-				break;
-
-			case JT_GOVER: // Game Over
-				result = (players[i].lives <= 0);
-				break;
-
-			case JT_NIGHTSTIMEOUT: // NiGHTS Time Out (10 seconds)
-			case JT_SSTIMEOUT:
-				result = (players[i].nightstime && players[i].nightstime <= 10*TICRATE);
-				break;
-
-			case JT_NONE:   // Null state
-			case JT_OTHER:  // Other state
-			case JT_MASTER: // Main level music
-			default:
-				result = true;
-		}
-
-		if (result)
-			break;
- 	}
-
-	return result;
- }
 
 //
 // P_RestoreMusic
@@ -1533,30 +1406,17 @@ void P_RestoreMusic(player_t *player)
 	if (!P_IsLocalPlayer(player)) // Only applies to a local player
 		return;
 
-	S_SpeedMusic(1.0f);
-
-	// Jingles have a priority in this order, so follow it
-	// and as a default case, go down the music stack.
-
-	// Extra life
 	if (player->powers[pw_extralife] > 1)
 		return;
-
-	// Super
-	else if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC)
-		&& !S_RecallMusic(JT_SUPER, false))
-		P_PlayJingle(player, JT_SUPER);
-
-	// Invulnerability
+	S_SpeedMusic(1.0f);
+	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
+		S_ChangeMusicInternal("_super", true);
 	else if (player->powers[pw_invulnerability] > 1)
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		if (!S_RecallMusic(JT_INV, false) && !S_RecallMusic(JT_MINV, false))
-			P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
+		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	}
-
-	// Shoes
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
@@ -1564,19 +1424,13 @@ void P_RestoreMusic(player_t *player)
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
-			if (!S_RecallMusic(JT_MASTER, true))
-				S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+			S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 		}
-		else if (!S_RecallMusic(JT_SHOES, false))
-			P_PlayJingle(player, JT_SHOES);
+		else
+			S_ChangeMusicInternal("_shoes", true);
 	}
-
-	// Default
-	else if (!S_RecallMusic(JT_NONE, false)) // go down the stack
-	{
-		CONS_Debug(DBG_BASIC, "Cannot find any music in resume stack!\n");
-	 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
- 	}
+	else
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
 
 //
@@ -1906,12 +1760,9 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 		if (shieldtype & SH_PROTECTWATER)
 		{
 			if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-			{
-				player->powers[pw_underwater] = 0;
 				P_RestoreMusic(player);
-			}
-			else
-				player->powers[pw_underwater] = 0;
+
+			player->powers[pw_underwater] = 0;
 
 			if (player->powers[pw_spacetime] > 1)
 			{
@@ -2752,6 +2603,10 @@ static void P_CheckQuicksand(player_t *player)
 //
 static void P_CheckSneakerAndLivesTimer(player_t *player)
 {
+	if ((player->powers[pw_underwater] <= 11*TICRATE + 1)
+	&& (player->powers[pw_underwater] > 1))
+		return; // don't restore music if drowning music is playing
+
 	if (player->powers[pw_extralife] == 1) // Extra Life!
 		P_RestoreMusic(player);
 
@@ -2819,16 +2674,16 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	if (!(player->mo->eflags & MFE_UNDERWATER) && player->powers[pw_underwater])
 	{
 		if (player->powers[pw_underwater] <= 12*TICRATE + 1)
-		{
-			player->powers[pw_underwater] = 0;
 			P_RestoreMusic(player);
-		}
-		else
-			player->powers[pw_underwater] = 0;
+
+		player->powers[pw_underwater] = 0;
 	}
 
 	if (player->powers[pw_spacetime] > 1 && !P_InSpaceSector(player->mo))
+	{
+		P_RestoreMusic(player);
 		player->powers[pw_spacetime] = 0;
+	}
 
 	// Underwater audio cues
 	if (P_IsLocalPlayer(player) && !player->bot)
@@ -2841,7 +2696,8 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		if (player->powers[pw_underwater] == 11*TICRATE + 1
 		&& player == &players[consoleplayer])
 		{
-			P_PlayJingle(player, JT_DROWN);
+			S_StopMusic();
+			S_ChangeMusicInternal("_drown", false);
 		}
 	}
 }
@@ -2887,6 +2743,10 @@ static void P_CheckInvincibilityTimer(player_t *player)
 			// If you had a shield, restore its visual significance
 			P_SpawnShieldOrb(player);
 		}
+
+		if ((player->powers[pw_underwater] <= 11*TICRATE + 1)
+		&& (player->powers[pw_underwater] > 1))
+			return; // don't restore music if drowning music is playing
 
 		if (!player->powers[pw_super] || (mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
 			P_RestoreMusic(player);
@@ -4101,8 +3961,6 @@ static void P_DoSuperStuff(player_t *player)
 		{
 			player->powers[pw_super] = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
 			P_RestoreMusic(player);
 			P_SpawnShieldOrb(player);
 
@@ -4184,8 +4042,6 @@ static void P_DoSuperStuff(player_t *player)
 			}
 
 			// Resume normal music if you're the console player
-			music_stack_noposition = true; // HACK: Do not reposition next music
-			music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
 			P_RestoreMusic(player);
 
 			// If you had a shield, restore its visual significance.
@@ -6754,7 +6610,7 @@ static void P_NiGHTSMovement(player_t *player)
 			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
 		}
 		else
-			P_PlayJingle(player, ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? JT_NIGHTSTIMEOUT : JT_SSTIMEOUT);
+			S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
 	}
 
 	if (player->mo->z < player->mo->floorz)
@@ -10640,7 +10496,7 @@ void P_PlayerThink(player_t *player)
 		// If 11 seconds are left on the timer,
 		// begin the drown music for countdown!
 		if (countdown == 11*TICRATE - 1 && P_IsLocalPlayer(player))
-			P_PlayJingle(player, JT_DROWN);
+			S_ChangeMusicInternal("_drown", false);
 
 		// If you've hit the countdown and you haven't made
 		//  it to the exit, you're a goner!
@@ -11129,12 +10985,9 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 	{
 		if (player->powers[pw_underwater] <= 12*TICRATE+1)
-		{
-			player->powers[pw_underwater] = 0;
 			P_RestoreMusic(player); //incase they were about to drown
-		}
-		else
-			player->powers[pw_underwater] = 0;
+
+		player->powers[pw_underwater] = 0;
 	}
 	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
 		player->powers[pw_underwater]--;
