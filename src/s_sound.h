@@ -40,6 +40,12 @@ extern consvar_t cv_gamesounds;
 extern consvar_t cv_modfilter;
 #endif
 
+#ifdef HAVE_MIXERX
+extern consvar_t cv_midiplayer;
+extern consvar_t cv_midisoundfontpath;
+extern consvar_t cv_miditimiditypath;
+#endif
+
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;
 #endif
@@ -121,7 +127,8 @@ void S_InitSfxChannels(INT32 sfxVolume);
 //
 void S_StopSounds(void);
 void S_ClearSfx(void);
-void S_Start(void);
+void S_StartEx(boolean reset);
+#define S_Start() S_StartEx(false)
 
 //
 // Basically a W_GetNumForName that adds "ds" at the beginning of the string. Returns a lumpnum.

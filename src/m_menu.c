@@ -292,6 +292,9 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef;
+#endif
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -1302,14 +1305,40 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
 
-	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
+	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
 
-#ifdef HAVE_OPENMPT
-	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
-	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 133},
 #endif
 };
+
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+
+#ifdef HAVE_OPENMPT
+#define OPENMPT_MENUOFFSET 32
+#else
+#define OPENMPT_MENUOFFSET 0
+#endif
+
+static menuitem_t OP_SoundAdvancedMenu[] =
+{
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 10},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 22},
+#endif
+
+#ifdef HAVE_MIXERX
+	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+#endif
+};
+
+#undef OPENMPT_MENUOFFSET
+
+#endif
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
@@ -1896,6 +1925,9 @@ menu_t OP_SoundOptionsDef =
 	0,
 	NULL
 };
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
+#endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SERVER << 6),

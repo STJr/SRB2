@@ -279,6 +279,11 @@ void S_RegisterSoundStuff(void)
 #ifdef HAVE_OPENMPT
 	CV_RegisterVar(&cv_modfilter);
 #endif
+#ifdef HAVE_MIXERX
+	CV_RegisterVar(&cv_midiplayer);
+	CV_RegisterVar(&cv_midisoundfontpath);
+	CV_RegisterVar(&cv_miditimiditypath);
+#endif
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
@@ -1363,21 +1368,21 @@ void S_InitSfxChannels(INT32 sfxVolume)
 #ifdef MUSICSLOT_COMPATIBILITY
 const char *compat_special_music_slots[16] =
 {
-	"titles", // 1036  title screen
-	"read_m", // 1037  intro
-	"lclear", // 1038  level clear
-	"invinc", // 1039  invincibility
-	"shoes",  // 1040  super sneakers
-	"minvnc", // 1041  Mario invincibility
-	"drown",  // 1042  drowning
-	"gmover", // 1043  game over
-	"xtlife", // 1044  extra life
-	"contsc", // 1045  continue screen
-	"supers", // 1046  Super Sonic
-	"chrsel", // 1047  character select
-	"credit", // 1048  credits
-	"racent", // 1049  Race Results
-	"stjr",   // 1050  Sonic Team Jr. Presents
+	"_title", // 1036  title screen
+	"_intro", // 1037  intro
+	"_clear", // 1038  level clear
+	"_inv", // 1039  invincibility
+	"_shoes",  // 1040  super sneakers
+	"_minv", // 1041  Mario invincibility
+	"_drown",  // 1042  drowning
+	"_gover", // 1043  game over
+	"_1up", // 1044  extra life
+	"_conti", // 1045  continue screen
+	"_super", // 1046  Super Sonic
+	"_chsel", // 1047  character select
+	"_creds", // 1048  credits
+	"_inter", // 1049  Race Results
+	"_stjr",   // 1050  Sonic Team Jr. Presents
 	""
 };
 #endif
@@ -1746,6 +1751,7 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	switch(I_SongType())
 	{
 		case MU_MID:
+		case MU_MID_EX:
 		//case MU_MOD:
 		//case MU_GME:
 			I_SetMusicVolume(seqvolume&31);
@@ -1792,7 +1798,7 @@ boolean S_FadeOutStopMusic(UINT32 ms)
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_Start(void)
+void S_StartEx(boolean reset)
 {
 	if (mapmusflags & MUSIC_RELOADRESET)
 	{
@@ -1802,7 +1808,7 @@ void S_Start(void)
 		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
-	if (cv_resetmusic.value)
+	if (cv_resetmusic.value || reset)
 		S_StopMusic();
 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 }
