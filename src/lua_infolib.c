@@ -207,7 +207,7 @@ static int lib_setSpr2default(lua_State *L)
 	else
 		return luaL_error(L, "spr2defaults[] invalid set");
 
-	if (j < 0 || j >= free_spr2)
+	if (j >= free_spr2)
 		return luaL_error(L, "spr2defaults[] set %d out of range (%d - %d)", j, 0, free_spr2-1);
 
 	spr2defaults[i] = j;

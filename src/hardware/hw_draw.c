@@ -1080,7 +1080,7 @@ void HWR_drawAMline(const fline_t *fl, INT32 color)
 // -------------------+
 // HWR_DrawConsoleFill     : draw flat coloured transparent rectangle because that's cool, and hw sucks less than sw for that.
 // -------------------+
-void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32 options)
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color)
 {
 	FOutVector v[4];
 	FSurfaceInfo Surf;
