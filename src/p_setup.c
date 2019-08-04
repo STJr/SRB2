@@ -2734,15 +2734,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		S_FadeMusic(0, FixedMul(
 			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
 
-	// todo old titlemap music fix, 255d5c6c9422d5934d9acfd2bc2767112ded8a9b
-	// may not be necessary for this branch
-	// if (!titlemapinaction)
-	// {
-	// 	// As oddly named as this is, this handles music only.
-	// 	// We should be fine starting it here.
-	// 	S_Start();
-	// }
-
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
 	if (rendermode != render_none && !ranspecialwipe)
