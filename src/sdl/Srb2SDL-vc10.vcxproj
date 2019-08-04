@@ -93,6 +93,8 @@
     <Import Project="..\..\libs\libpng.props" />
     <Import Project="..\..\libs\SDL2.props" />
     <Import Project="..\..\libs\SDL_mixer.props" />
+    <Import Project="..\..\libs\libgme.props" />
+    <Import Project="..\..\libs\libopenmpt.props" />
     <Import Project="Srb2SDL.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

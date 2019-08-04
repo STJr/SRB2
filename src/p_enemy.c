@@ -15,6 +15,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "s_sound.h"
@@ -22,6 +23,7 @@
 #include "m_misc.h"
 #include "r_things.h"
 #include "i_video.h"
+#include "z_zone.h"
 #include "lua_hook.h"
 
 #ifdef HW3SOUND
@@ -77,6 +79,9 @@ void A_CrushclawAim(mobj_t *actor);
 void A_CrushclawLaunch(mobj_t *actor);
 void A_VultureVtol(mobj_t *actor);
 void A_VultureCheck(mobj_t *actor);
+void A_VultureHover(mobj_t *actor);
+void A_VultureBlast(mobj_t *actor);
+void A_VultureFly(mobj_t *actor);
 void A_SkimChase(mobj_t *actor);
 void A_FaceTarget(mobj_t *actor);
 void A_FaceTracer(mobj_t *actor);
@@ -266,6 +271,29 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
 void A_ParentTriesToSleep(mobj_t *actor);
 void A_CryingToMomma(mobj_t *actor);
 void A_CheckFlags2(mobj_t *actor);
+void A_Boss5FindWaypoint(mobj_t *actor);
+void A_DoNPCSkid(mobj_t *actor);
+void A_DoNPCPain(mobj_t *actor);
+void A_PrepareRepeat(mobj_t *actor);
+void A_Boss5ExtraRepeat(mobj_t *actor);
+void A_Boss5Calm(mobj_t *actor);
+void A_Boss5CheckOnGround(mobj_t *actor);
+void A_Boss5CheckFalling(mobj_t *actor);
+void A_Boss5PinchShot(mobj_t *actor);
+void A_Boss5MakeItRain(mobj_t *actor);
+void A_LookForBetter(mobj_t *actor);
+void A_Boss5BombExplode(mobj_t *actor);
+void A_DustDevilThink(mobj_t *actor);
+void A_TNTExplode(mobj_t *actor);
+void A_DebrisRandom(mobj_t *actor);
+void A_TrainCameo(mobj_t *actor);
+void A_TrainCameo2(mobj_t *actor);
+void A_CanarivoreGas(mobj_t *actor);
+void A_KillSegments(mobj_t *actor);
+void A_SnapperSpawn(mobj_t *actor);
+void A_SnapperThinker(mobj_t *actor);
+void A_SaloonDoorSpawn(mobj_t *actor);
+void A_MinecartSparkThink(mobj_t *actor);
 //for p_enemy.c
 
 //
@@ -2281,6 +2309,222 @@ void A_VultureCheck(mobj_t *actor)
 	}
 }
 
+static void P_VultureHoverParticle(mobj_t *actor)
+{
+	fixed_t fdist = actor->z - P_FloorzAtPos(actor->x, actor->y, actor->z, actor->height);
+
+	if (fdist < 128*FRACUNIT)
+	{
+		mobj_t *dust;
+		UINT8 i;
+		angle_t angle = (leveltime % 2)*ANGLE_45/2;
+
+		for (i = 0; i <= 7; i++)
+		{
+			angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+			fixed_t px = actor->x + FixedMul(fdist + 64*FRACUNIT, FINECOSINE(fa));
+			fixed_t py = actor->y + FixedMul(fdist + 64*FRACUNIT, FINESINE(fa));
+			fixed_t pz = P_FloorzAtPos(px, py, actor->z, actor->height);
+
+			dust = P_SpawnMobj(px, py, pz, MT_ARIDDUST);
+			P_SetMobjState(dust, (statenum_t)(dust->state - states + P_RandomRange(0, 2)));
+			P_Thrust(dust, angle, FixedDiv(12*FRACUNIT, max(FRACUNIT, fdist/2)));
+			dust->momx += actor->momx;
+			dust->momy += actor->momy;
+			angle += ANGLE_45;
+		}
+	}
+}
+
+// Function: A_VultureHover
+//
+// Description: Vulture hovering and checking whether to attack.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureHover(mobj_t *actor)
+{
+	fixed_t targetz;
+	fixed_t distdif;
+	fixed_t memz = actor->z;
+	INT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureHover", actor))
+		return;
+#endif
+
+	if (!actor->target || P_MobjWasRemoved(actor->target))
+	{
+		P_SetMobjState(actor, actor->info->spawnstate);
+		return;
+	}
+
+	actor->flags |= MF_NOGRAVITY;
+
+	actor->momx -= actor->momx/24;
+	actor->momy -= actor->momy/24;
+
+	P_VultureHoverParticle(actor);
+
+	A_FaceTarget(actor);
+	targetz = actor->target->z + actor->target->height / 2;
+	for (i = -1; i <= 1; i++)
+	{
+		actor->z = targetz - i * 128 * FRACUNIT;
+		if (P_CheckSight(actor, actor->target))
+		{
+			targetz -= i * 128 * FRACUNIT;
+			break;
+		}
+	}
+	actor->z = memz;
+
+	distdif = (actor->z + actor->height/2) - targetz;
+
+	if (abs(actor->momz*16) > abs(distdif))
+		actor->momz -= actor->momz/16;
+	else if (distdif < 0)
+		actor->momz = min(actor->momz+FRACUNIT/8, actor->info->speed*FRACUNIT);
+	else
+		actor->momz = max(actor->momz-FRACUNIT/8, -actor->info->speed*FRACUNIT);
+
+	if (abs(distdif) < 128*FRACUNIT && abs(actor->momz) < FRACUNIT && P_CheckSight(actor, actor->target))
+	{
+		P_SetMobjState(actor, actor->info->missilestate);
+		actor->momx = 0;
+		actor->momy = 0;
+		actor->momz = 0;
+		actor->extravalue1 = 0;
+	}
+}
+
+// Function: A_VultureBlast
+//
+// Description: Vulture spawning a dust cloud.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureBlast(mobj_t *actor)
+{
+	mobj_t *dust;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureBlast", actor))
+		return;
+#endif
+
+	S_StartSound(actor, actor->info->attacksound);
+
+	for (i = 0; i <= 7; i++)
+	{
+		angle_t fa = ((i*(angle_t)ANGLE_45) >> ANGLETOFINESHIFT) & FINEMASK;
+		angle_t faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -FINESINE(faa)), actor->y + 48*FixedMul(FINECOSINE(fa), FINECOSINE(faa)), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
+
+		P_SetScale(dust, 4*FRACUNIT);
+		dust->destscale = FRACUNIT;
+		dust->scalespeed = 4*FRACUNIT/TICRATE;
+		dust->fuse = TICRATE;
+		dust->momx = FixedMul(FINECOSINE(fa), -FINESINE(faa))*3;
+		dust->momy = FixedMul(FINECOSINE(fa), FINECOSINE(faa))*3;
+		dust->momz = FINESINE(fa)*6;
+	}
+}
+
+// Function: A_VultureFly
+//
+// Description: Vulture charging towards target.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_VultureFly(mobj_t *actor)
+{
+	fixed_t speedmax = 18*FRACUNIT;
+	angle_t angledif = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) - actor->angle;
+	fixed_t dx = actor->target->x - actor->x;
+	fixed_t dy = actor->target->y - actor->y;
+	fixed_t dz = actor->target->z - actor->z;
+	fixed_t dxy = FixedHypot(dx, dy);
+	fixed_t dm;
+	mobj_t *dust;
+	fixed_t momm;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_VultureFly", actor))
+		return;
+#endif
+
+	if (leveltime % 4 == 0)
+		S_StartSound(actor, actor->info->activesound);
+
+	if (angledif > ANGLE_180)
+		angledif = InvAngle(angledif);
+
+	// Tweak the target height according to the position.
+	if (angledif < ANGLE_45) // Centered?
+	{
+		actor->reactiontime = actor->info->reactiontime;
+		if (dxy > 768*FRACUNIT)
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/8, 128*FRACUNIT), dz);
+	}
+	else
+	{
+		actor->reactiontime--;
+
+		if (angledif < ANGLE_90)
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/2, 192*FRACUNIT), dz);
+		else
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + 232*FRACUNIT, dz);
+	}
+
+	dm = FixedHypot(dz, dxy);
+
+	P_VultureHoverParticle(actor);
+
+	dust = P_SpawnMobj(actor->x + P_RandomFixed() - FRACUNIT/2, actor->y + P_RandomFixed() - FRACUNIT/2, actor->z + actor->height/2 + P_RandomFixed() - FRACUNIT/2, MT_PARTICLE);
+	P_SetScale(dust, 2*FRACUNIT);
+	dust->destscale = FRACUNIT/3;
+	dust->scalespeed = FRACUNIT/40;
+	dust->fuse = TICRATE*2;
+
+	actor->momx += FixedDiv(dx, dm)*2;
+	actor->momy += FixedDiv(dy, dm)*2;
+	actor->momz += FixedDiv(dz, dm)*2;
+
+	momm = FixedHypot(actor->momz, FixedHypot(actor->momx, actor->momy));
+
+	if (momm > speedmax/2 && actor->reactiontime == 0)
+	{
+		P_SetMobjState(actor, actor->info->seestate);
+		return;
+	}
+
+	//Hits a wall hard?
+	if (actor->extravalue1 - momm > 15*FRACUNIT)
+	{
+		actor->flags &= ~MF_NOGRAVITY;
+		P_SetMobjState(actor, actor->info->painstate);
+		S_StopSound(actor);
+		S_StartSound(actor, actor->info->painsound);
+		return;
+	}
+	actor->extravalue1 = momm;
+
+	if (momm > speedmax)
+	{
+		actor->momx = FixedMul(FixedDiv(actor->momx, momm), speedmax);
+		actor->momy = FixedMul(FixedDiv(actor->momy, momm), speedmax);
+		actor->momz = FixedMul(FixedDiv(actor->momz, momm), speedmax);
+	}
+
+	actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+}
+
 // Function: A_SkimChase
 //
 // Description: Thinker/Chase routine for Skims
@@ -3496,7 +3740,10 @@ void A_BossDeath(mobj_t *mo)
 		return;
 #endif
 
-	P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
+	if (mo->spawnpoint && mo->spawnpoint->extrainfo)
+		P_LinedefExecute(LE_BOSSDEAD+(mo->spawnpoint->extrainfo*LE_PARAMWIDTH), mo, NULL);
+	else
+		P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
 	mo->health = 0;
 
 	// Boss is dead (but not necessarily fleeing...)
@@ -3534,11 +3781,11 @@ void A_BossDeath(mobj_t *mo)
 	else
 	{
 		// Bring the egg trap up to the surface
-		junk.tag = 680;
+		junk.tag = LE_CAPSULE0;
 		EV_DoElevator(&junk, elevateHighest, false);
-		junk.tag = 681;
+		junk.tag = LE_CAPSULE1;
 		EV_DoElevator(&junk, elevateUp, false);
-		junk.tag = 682;
+		junk.tag = LE_CAPSULE2;
 		EV_DoElevator(&junk, elevateHighest, false);
 	}
 
@@ -3549,59 +3796,105 @@ bossjustdie:
 	else if (P_MobjWasRemoved(mo))
 		return;
 #endif
-	if (mo->type == MT_BLACKEGGMAN || mo->type == MT_CYBRAKDEMON)
+	switch (mo->type)
 	{
-		mo->flags |= MF_NOCLIP;
-		mo->flags &= ~MF_SPECIAL;
+		case MT_BLACKEGGMAN:
+		case MT_CYBRAKDEMON:
+		{
+			mo->flags |= MF_NOCLIP;
+			mo->flags &= ~MF_SPECIAL;
 
-		S_StartSound(NULL, sfx_befall);
-	}
-	else if (mo->type == MT_KOOPA)
-	{
-		junk.tag = 650;
-		EV_DoCeiling(&junk, raiseToHighest);
-		return;
-	}
-	else // eggmobiles
-	{
-		// Stop exploding and prepare to run.
-		P_SetMobjState(mo, mo->info->xdeathstate);
-		if (P_MobjWasRemoved(mo))
+			S_StartSound(NULL, sfx_befall);
+			break;
+		}
+		case MT_KOOPA:
+		{
+			junk.tag = LE_KOOPA;
+			EV_DoCeiling(&junk, raiseToHighest);
 			return;
-
-		P_SetTarget(&mo->target, NULL);
-
-		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
-		// scan the thinkers to find the runaway point
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		}
+		case MT_FANG:
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type == MT_BOSSFLYPOINT)
+			if (mo->tracer)
 			{
-				// If this one's closer then the last one, go for it.
-				if (!mo->target ||
-					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) <
-					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
-						P_SetTarget(&mo->target, mo2);
-				// Otherwise... Don't!
+				var1 = var2 = 0;
+				A_Boss5Jump(mo);
+				mo->momx = ((16 - 1)*mo->momx)/16;
+				mo->momy = ((16 - 1)*mo->momy)/16;
+				if (!(mo->flags2 & MF2_AMBUSH))
+				{
+					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
+					const fixed_t speed = 64*FRACUNIT;
+					mobj_t *pole = P_SpawnMobj(
+						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
+						mo->tracer->floorz + 4*FRACUNIT,
+						MT_FSGNB);
+					P_SetTarget(&pole->tracer, P_SpawnMobj(
+						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
+						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
+						pole->z + 256*FRACUNIT,
+						MT_FSGNA));
+					pole->angle = mo->tracer->angle;
+					pole->tracer->angle = pole->angle - ANGLE_90;
+					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
+					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+					pole->tracer->momx = pole->momx;
+					pole->tracer->momy = pole->momy;
+				}
 			}
+			else
+			{
+				P_SetObjectMomZ(mo, 10*FRACUNIT, false);
+				mo->flags |= MF_NOGRAVITY;
+			}
+			mo->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+			return;
 		}
-
-		mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
-		mo->flags |= MF_NOCLIPHEIGHT;
-
-		if (mo->target)
+		default: //eggmobiles
 		{
-			mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-			mo->flags2 |= MF2_BOSSFLEE;
-			mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			// Stop exploding and prepare to run.
+			P_SetMobjState(mo, mo->info->xdeathstate);
+			if (P_MobjWasRemoved(mo))
+				return;
+
+			P_SetTarget(&mo->target, NULL);
+
+			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+			// scan the thinkers to find the runaway point
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				// If this one's further then the last one, don't go for it.
+				if (mo->target &&
+					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
+					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
+						continue;
+
+				// Otherwise... Do!
+				P_SetTarget(&mo->target, mo2);
+			}
+
+			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
+			mo->flags |= MF_NOCLIPHEIGHT;
+
+			if (mo->target)
+			{
+				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
+				mo->flags2 |= MF2_BOSSFLEE;
+				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+			}
+			else
+				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+			break;
 		}
-		else
-			mo->momz = FixedMul(2*FRACUNIT, mo->scale);
 	}
 
 	if (mo->type == MT_EGGMOBILE2)
@@ -4863,56 +5156,111 @@ void A_ShootBullet(mobj_t *actor)
 		S_StartSound(actor, actor->info->attacksound);
 }
 
+static mobj_t *minus;
+
+static boolean PIT_MinusCarry(mobj_t *thing)
+{
+	if (minus->type == thing->type)
+		return true;
+
+	if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_ENEMY))
+		return true;
+
+	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius * 3)
+		return true;
+
+	if (abs(thing->z - minus->z) > minus->height)
+		return true;
+
+	P_SetTarget(&minus->tracer, thing);
+	minus->tracer->flags &= ~MF_PUSHABLE;
+
+	return true;
+}
+
 // Function: A_MinusDigging
 //
 // Description: Minus digging in the ground.
 //
-// var1 = unused
+// var1 = If 1, play digging sound.
 // var2 = unused
 //
 void A_MinusDigging(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	INT32 rad = 32;
+	angle_t fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t dis = actor->info->speed*4;
+	fixed_t x = FINECOSINE(fa)*dis + actor->x + FRACUNIT*P_RandomRange(-rad, rad);
+	fixed_t y = FINESINE(fa)*dis + actor->y + FRACUNIT*P_RandomRange(-rad, rad);
+	fixed_t mz = (actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz : actor->floorz;
+	mobj_t *par;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusDigging", actor))
 		return;
 #endif
-	actor->flags &= ~MF_SPECIAL;
-	actor->flags &= ~MF_SHOOTABLE;
 
 	if (!actor->target)
 	{
-		A_Look(actor);
+		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
 	}
 
-	if (actor->reactiontime)
+	par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+	if (actor->eflags & MFE_VERTICALFLIP)
+		par->eflags |= MFE_VERTICALFLIP;
+	P_TryMove(par, x, y, false);
+
+	// If close enough, prepare to attack
+	if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < actor->radius*2)
 	{
-		actor->reactiontime--;
+		P_SetMobjState(actor, actor->info->meleestate);
+		P_TryMove(actor, actor->target->x, actor->target->y, false);
+		S_StartSound(actor, actor->info->attacksound);
+
+		// Spawn growing dirt pile.
+		par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+		P_SetMobjState(par, actor->info->raisestate);
+		P_SetScale(par, actor->scale*2);
+		if (actor->eflags & MFE_VERTICALFLIP)
+			par->eflags |= MFE_VERTICALFLIP;
 		return;
 	}
-
-	// Dirt trail
-	P_SpawnGhostMobj(actor);
-
-	actor->flags |= MF_NOCLIPTHING;
-	var1 = 3;
-	A_Chase(actor);
-	actor->flags &= ~MF_NOCLIPTHING;
 
 	// Play digging sound
-	if (!(leveltime & 15))
-		S_StartSound(actor, actor->info->activesound);
+	if (locvar1 == 1)
+		A_PlayActiveSound(actor);
 
-	// If we're close enough to our target, pop out of the ground
-	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) < actor->radius
-		&& abs(actor->target->z - actor->z) < 2*actor->height)
-		P_SetMobjState(actor, actor->info->missilestate);
+	// Move
+	var1 = 3;
+	A_Chase(actor);
 
-	// Snap to ground
-	if (actor->eflags & MFE_VERTICALFLIP)
-		actor->z = actor->ceilingz - actor->height;
+	// Carry over shit, maybe
+	if (!actor->tracer)
+	{
+		fixed_t radius = 3*actor->radius;
+		fixed_t yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
+		fixed_t yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
+		fixed_t xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
+		fixed_t xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
+		fixed_t bx, by;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
+
+		minus = actor;
+
+		for (bx = xl; bx <= xh; bx++)
+			for (by = yl; by <= yh; by++)
+				P_BlockThingsIterator(bx, by, PIT_MinusCarry);
+	}
 	else
-		actor->z = actor->floorz;
+	{
+		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
+			actor->tracer->z = mz;
+		else
+			P_SetTarget(&actor->tracer, NULL);
+	}
 }
 
 // Function: A_MinusPopup
@@ -4924,45 +5272,56 @@ void A_MinusDigging(mobj_t *actor)
 //
 void A_MinusPopup(mobj_t *actor)
 {
+	INT32 num = 6;
+	angle_t ani = FixedAngle(FRACUNIT*360/num);
+	INT32 i;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusPopup", actor))
 		return;
 #endif
-	P_SetObjectMomZ(actor, 10*FRACUNIT, false);
 
-	actor->flags |= MF_SPECIAL;
-	actor->flags |= MF_SHOOTABLE;
+	if (actor->eflags & MFE_VERTICALFLIP)
+		actor->momz = -10*FRACUNIT;
+	else
+		actor->momz = 10*FRACUNIT;
 
-	// Sound for busting out of the ground.
-	S_StartSound(actor, actor->info->attacksound);
+	actor->flags |= MF_SPECIAL|MF_SHOOTABLE;
+	S_StartSound(actor, sfx_s3k82);
+	for (i = 1; i <= num; i++)
+	{
+		mobj_t *rock = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height/4, MT_ROCKCRUMBLE1);
+		P_Thrust(rock, ani*i, FRACUNIT);
+		rock->momz = 3*FRACUNIT;
+		P_SetScale(rock, FRACUNIT/3);
+	}
+	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
+	if (actor->tracer)
+		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
+
 }
 
 // Function: A_MinusCheck
 //
 // Description: If the minus hits the floor, dig back into the ground.
 //
-// var1 = unused
+// var1 = State to switch to (if 0, use seestate).
 // var2 = unused
 //
 void A_MinusCheck(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MinusCheck", actor))
 		return;
 #endif
-	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
-	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz))
-	{
-		actor->flags &= ~MF_SPECIAL;
-		actor->flags &= ~MF_SHOOTABLE;
-		actor->reactiontime = TICRATE;
-		P_SetMobjState(actor, actor->info->seestate);
-		return;
-	}
 
-	// 'Falling' animation
-	if (P_MobjFlip(actor)*actor->momz < 0 && actor->state < &states[actor->info->meleestate])
-		P_SetMobjState(actor, actor->info->meleestate);
+	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz) || (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
+	{
+		P_SetMobjState(actor, locvar1 ? (statenum_t)locvar1 : actor->info->seestate);
+		actor->flags = actor->info->flags;
+	}
 }
 
 // Function: A_ChickenCheck
@@ -5914,7 +6273,7 @@ void A_MixUp(mobj_t *actor)
 	else if (numplayers == 2) // Special case -- simple swap
 	{
 		fixed_t x, y, z;
-		angle_t angle;
+		angle_t angle, drawangle;
 		INT32 one = -1, two = 0; // default value 0 to make the compiler shut up
 
 		// Zoom tube stuff
@@ -5947,6 +6306,10 @@ void A_MixUp(mobj_t *actor)
 			}
 
 		//get this done first!
+		if (players[one].powers[pw_carry] == CR_MINECART && players[one].mo->tracer && !(P_MobjWasRemoved(players[one].mo->tracer)))
+			P_SetTarget(&players[one].mo->tracer->target, players[two].mo);
+		if (players[two].powers[pw_carry] == CR_MINECART && players[two].mo->tracer && !(P_MobjWasRemoved(players[two].mo->tracer)))
+			P_SetTarget(&players[two].mo->tracer->target, players[one].mo);
 		tempthing = players[one].mo->tracer;
 		P_SetTarget(&players[one].mo->tracer, players[two].mo->tracer);
 		P_SetTarget(&players[two].mo->tracer, tempthing);
@@ -5964,6 +6327,7 @@ void A_MixUp(mobj_t *actor)
 		y = players[one].mo->y;
 		z = players[one].mo->z;
 		angle = players[one].mo->angle;
+		drawangle = players[one].drawangle;
 
 		starpostx = players[one].starpostx;
 		starposty = players[one].starposty;
@@ -5979,9 +6343,13 @@ void A_MixUp(mobj_t *actor)
 				players[two].starpostnum, players[two].starposttime, players[two].starpostangle,
 				players[two].mo->flags2);
 
+		players[one].drawangle = players[two].drawangle;
+
 		P_MixUp(players[two].mo, x, y, z, angle, starpostx, starposty, starpostz,
 				starpostnum, starposttime, starpostangle,
 				mflags2);
+
+		players[two].drawangle = drawangle;
 
 		//carry set after mixup.  Stupid P_ResetPlayer() takes away some of the stuff we look for...
 		//but not all of it!  So we need to make sure they aren't set wrong or anything.
@@ -5994,7 +6362,7 @@ void A_MixUp(mobj_t *actor)
 	else
 	{
 		fixed_t position[MAXPLAYERS][3];
-		angle_t anglepos[MAXPLAYERS];
+		angle_t anglepos[MAXPLAYERS][2];
 		INT32 pindex[MAXPLAYERS], counter = 0, teleportfrom = 0;
 
 		// Zoom tube stuff
@@ -6013,7 +6381,7 @@ void A_MixUp(mobj_t *actor)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			position[i][0] = position[i][1] = position[i][2] = anglepos[i] = pindex[i] = -1;
+			position[i][0] = position[i][1] = position[i][2] = anglepos[i][0] = anglepos[i][1] = pindex[i] = -1;
 			teleported[i] = false;
 		}
 
@@ -6029,7 +6397,8 @@ void A_MixUp(mobj_t *actor)
 				position[counter][1] = players[i].mo->y;
 				position[counter][2] = players[i].mo->z;
 				pindex[counter] = i;
-				anglepos[counter] = players[i].mo->angle;
+				anglepos[counter][0] = players[i].mo->angle;
+				anglepos[counter][1] = players[i].drawangle;
 				players[i].mo->momx = players[i].mo->momy = players[i].mo->momz =
 					players[i].rmomx = players[i].rmomy = 1;
 				players[i].cmomx = players[i].cmomy = 0;
@@ -6081,13 +6450,17 @@ void A_MixUp(mobj_t *actor)
 				players[i].speed = transspeed[teleportfrom];
 				P_SetTarget(&players[i].mo->tracer, transtracer[teleportfrom]);
 
-				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom],
+				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom][0],
 					spposition[teleportfrom][0], spposition[teleportfrom][1], spposition[teleportfrom][2],
 					starpostnum[teleportfrom], starposttime[teleportfrom], starpostangle[teleportfrom],
 					flags2[teleportfrom]);
 
+				players[i].drawangle = anglepos[teleportfrom][1];
+
 				//...carry after.  same reasoning.
 				players[i].powers[pw_carry] = transcarry[teleportfrom];
+				if (transcarry[teleportfrom] == CR_MINECART && transtracer[teleportfrom] && !(P_MobjWasRemoved(transtracer[teleportfrom])))
+					P_SetTarget(&transtracer[teleportfrom]->target, players[i].mo);
 
 				teleported[i] = true;
 				counter++;
@@ -6332,7 +6705,10 @@ void A_Boss1Chase(mobj_t *actor)
 		}
 		else
 		{
-			P_LinedefExecute(LE_PINCHPHASE, actor, NULL);
+			if (actor->spawnpoint && actor->spawnpoint->extrainfo)
+				P_LinedefExecute(LE_PINCHPHASE+(actor->spawnpoint->extrainfo*LE_PARAMWIDTH), actor, NULL);
+			else
+				P_LinedefExecute(LE_PINCHPHASE, actor, NULL);
 			P_SetMobjState(actor, actor->info->raisestate);
 		}
 
@@ -7537,6 +7913,8 @@ void A_LinedefExecute(mobj_t *actor)
 
 	if (locvar2)
 		tagnum += locvar2*(AngleFixed(actor->angle)>>FRACBITS);
+	else if (actor->spawnpoint && actor->spawnpoint->extrainfo)
+		tagnum += (actor->spawnpoint->extrainfo*LE_PARAMWIDTH);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecute: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
 
@@ -11851,4 +12229,1349 @@ void A_CheckFlags2(mobj_t *actor)
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
+}
+
+// Function: A_Boss5FindWaypoint
+//
+// Description: Finds the next waypoint in sequence and sets it as its tracer.
+//
+// var1 = if 1, always go to ambush-marked waypoint. if 2, go to MT_BOSSFLYPOINT.
+// var2 = unused
+//
+void A_Boss5FindWaypoint(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	boolean avoidcenter;
+	UINT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
+		return;
+#endif
+
+	avoidcenter = !actor->tracer || (actor->health == actor->info->damage+1);
+
+	if (locvar1 == 2) // look for the boss waypoint
+	{
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+				continue;
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
+		}
+		if (i == nummapthings)
+			return; // no boss flypoints found
+	}
+	else if (locvar1 == 1) // always go to ambush-marked waypoint
+	{
+		if (avoidcenter)
+			goto nowaypoints; // if we can't go the center, why on earth are we doing this?
+
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				P_SetTarget(&actor->tracer, mapthings[i].mobj);
+				break;
+			}
+		}
+
+		if (i == nummapthings)
+			goto nowaypoints;
+	}
+	else // locvar1 == 0
+	{
+		fixed_t hackoffset = P_MobjFlip(actor)*56*FRACUNIT;
+		INT32 numwaypoints = 0;
+		mobj_t **waypoints;
+		INT32 key;
+
+		actor->z += hackoffset;
+
+		// first, count how many waypoints we have
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+				continue;
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
+			numwaypoints++;
+		}
+
+		// players also count as waypoints apparently
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				numwaypoints++;
+			}
+		}
+
+		if (!numwaypoints)
+		{
+			// restore z position
+			actor->z -= hackoffset;
+			goto nowaypoints; // no waypoints :(
+		}
+
+		// allocate the table and reset count to zero
+		waypoints = Z_Calloc(sizeof(*waypoints)*numwaypoints, PU_STATIC, NULL);
+		numwaypoints = 0;
+
+		// now find them again and add them to the table!
+		for (i = 0; i < nummapthings; i++)
+		{
+			if (!mapthings[i].mobj)
+				continue;
+			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
+				continue;
+			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].options & MTF_AMBUSH)
+			{
+				if (avoidcenter)
+					continue;
+			}
+			else if (mapthings[i].mobj->reactiontime > 0)
+			{
+				mapthings[i].mobj->reactiontime--;
+				continue;
+			}
+			if (!P_CheckSight(actor, mapthings[i].mobj))
+				continue;
+			waypoints[numwaypoints++] = mapthings[i].mobj;
+		}
+
+		if (actor->extravalue2 > 1)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (players[i].mo->health <= 0)
+					continue;
+				if (players[i].powers[pw_flashing])
+					continue;
+				if (actor->tracer == players[i].mo) // this was your tracer last time
+					continue;
+				if (!P_CheckSight(actor, players[i].mo))
+					continue;
+				waypoints[numwaypoints++] = players[i].mo;
+			}
+		}
+
+		// restore z position
+		actor->z -= hackoffset;
+
+		if (!numwaypoints)
+		{
+			Z_Free(waypoints); // free table
+			goto nowaypoints; // ???
+		}
+
+		key = P_RandomKey(numwaypoints);
+
+		P_SetTarget(&actor->tracer, waypoints[key]);
+		if (actor->tracer->type == MT_FANGWAYPOINT)
+			actor->tracer->reactiontime = numwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
+		Z_Free(waypoints); // free table
+	}
+
+	// now face the tracer you just set!
+	A_FaceTracer(actor);
+	return;
+
+nowaypoints:
+	// no waypoints at all, guess the mobj has to disappear
+	if (actor->health)
+		P_KillMobj(actor, NULL, NULL, 0);
+	else
+		P_RemoveMobj(actor);
+	return;
+}
+
+// Function: A_DoNPCSkid
+//
+// Description: Something that looks like a player is skidding.
+//
+// var1 = state to change to upon being slow enough
+// var2 = minimum speed
+//
+void A_DoNPCSkid(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x, y, z;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCSkid", actor))
+		return;
+#endif
+
+	x = actor->x;
+	y = actor->y;
+	z = actor->z;
+
+	if (!locvar2)
+		locvar2 = FRACUNIT/2;
+
+	if ((FixedHypot(actor->momx, actor->momy) < locvar2)
+	|| !P_TryMove(actor, actor->x + actor->momx, actor->y + actor->momy, false))
+	{
+		actor->momx = actor->momy = 0;
+		P_SetMobjState(actor, locvar1);
+		return;
+	}
+	else
+	{
+		actor->momx = (2*actor->momx)/3;
+		actor->momy = (2*actor->momy)/3;
+	}
+
+	P_TeleportMove(actor, x, y, z);
+
+	// Spawn a particle every 3 tics.
+	if (!(leveltime % 3))
+	{
+		mobj_t *particle = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_SPINDUST);
+		particle->tics = 10;
+
+		P_SetScale(particle, 2*actor->scale/3);
+		particle->destscale = actor->scale;
+		P_SetObjectMomZ(particle, FRACUNIT, false);
+	}
+}
+
+// Function: A_DoNPCPain
+//
+// Description: Something that looks like a player was hit, put them in pain.
+//
+// var1 = If zero, always fling the same amount.
+//        Otherwise, slowly reduce the vertical
+//        and horizontal speed to the base value
+//        multiplied by this the more damage is done.
+// var2 = If zero, use default fling values.
+//        Otherwise, vertical and horizontal speed
+//        will be multiplied by this.
+//
+void A_DoNPCPain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t vspeed = 0;
+	fixed_t hspeed = FixedMul(4*FRACUNIT, actor->scale);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DoNPCPain", actor))
+		return;
+#endif
+
+	actor->flags &= ~(MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT);
+
+	var1 = var2 = 0;
+	A_Pain(actor);
+
+	actor->z += P_MobjFlip(actor);
+
+	if (actor->eflags & MFE_UNDERWATER)
+		vspeed = FixedDiv(10511*FRACUNIT,2600*FRACUNIT);
+	else
+		vspeed = FixedDiv(69*FRACUNIT,10*FRACUNIT);
+
+	if (actor->target)
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x + actor->target->momx, actor->target->y + actor->target->momy);
+
+	if (locvar1)
+	{
+		if (!actor->info->spawnhealth)
+			return; // there's something very wrong here if you're using this action on something with no starting health
+		locvar1 += ((FRACUNIT - locvar1)/actor->info->spawnhealth)*actor->health;
+		hspeed = FixedMul(hspeed, locvar1);
+		vspeed = FixedMul(vspeed, locvar1);
+	}
+
+	if (locvar2)
+	{
+		hspeed = FixedMul(hspeed, locvar2);
+		vspeed = FixedMul(vspeed, locvar2);
+	}
+
+	P_SetObjectMomZ(actor, vspeed, false);
+	P_InstaThrust(actor, actor->angle, -hspeed);
+}
+
+// Function: A_PrepareRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = value to set extravalue2 to
+// var2 = unused
+//
+void A_PrepareRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_PrepareRepeat", actor))
+		return;
+#endif
+
+	actor->extravalue2 = locvar1;
+}
+
+// Function: A_Boss5ExtraRepeat
+//
+// Description: Simple way to prepare A_Repeat.
+//
+// var1 = maximum value to setextravalue2 to (normally)
+// var2 = pinch annoyance
+//
+void A_Boss5ExtraRepeat(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 calc;
+	INT32 locspawn;
+	INT32 lochealth;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5ExtraRepeat", actor))
+		return;
+#endif
+
+	if (actor->extravalue2 > 0 && !(actor->flags2 & MF2_FRET))
+		return;
+
+	locspawn = actor->info->spawnhealth - actor->info->damage;
+	lochealth = actor->health - actor->info->damage;
+
+	if (locspawn <= 0 || lochealth <= 0)
+		calc = locvar1;
+	else
+		calc = (locvar1*(locspawn - lochealth))/locspawn;
+
+	if (calc > 2)
+		actor->extravalue2 = 1 + calc/2 + P_RandomKey(calc/2);
+	else
+		actor->extravalue2 = 1 + calc;
+
+	if (lochealth <= 0)
+		actor->extravalue2 += locvar2;
+}
+
+// Function: A_Boss5Calm
+//
+// Description: Simple way to disable MF2_FRET (and enable MF_SHOOTABLE the first time it's called)
+//
+// var1 = unused
+// var2 = unused
+//
+void A_Boss5Calm(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5Calm", actor))
+		return;
+#endif
+	actor->flags |= MF_SHOOTABLE;
+	actor->flags2 &= ~MF2_FRET;
+}
+
+// Function: A_Boss5CheckOnGround
+//
+// Description: Ground checker.
+//
+// var1 = state to change to upon hitting ground.
+// var2 = state to change to upon hitting ground if health == pinchhealth, assuming it exists
+//
+void A_Boss5CheckOnGround(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckOnGround", actor))
+		return;
+#endif
+
+	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| (actor->eflags & MFE_VERTICALFLIP && actor->z + actor->height >= actor->ceilingz))
+	{
+		if (locvar2 && (!actor->health || (actor->health == actor->info->damage && !(actor->flags2 & MF2_STRONGBOX))))
+			P_SetMobjState(actor, locvar2);
+		else
+			P_SetMobjState(actor, locvar1);
+	}
+
+	if (actor->tracer && P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y) < 2*actor->radius)
+	{
+		actor->momx = (4*actor->momx)/5;
+		actor->momy = (4*actor->momy)/5;
+	}
+}
+
+// Function: A_Boss5CheckFalling
+//
+// Description: Falling checker.
+//
+// var1 = state to change to when hitting ground.
+// var2 = state to change to when falling.
+//
+void A_Boss5CheckFalling(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5CheckFalling", actor))
+		return;
+#endif
+
+	if (actor->health && actor->extravalue2 > 1)
+	{
+		var1 = locvar1;
+		var2 = 0;
+		A_Boss5CheckOnGround(actor);
+		return;
+	}
+
+	if (P_MobjFlip(actor)*actor->momz <= 0)
+		P_SetMobjState(actor, locvar2);
+}
+
+// Function: A_Boss5PinchShot
+//
+// Description: Fires a missile directly upwards if in pinch.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5PinchShot(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t zoffset;
+	mobj_t *missile;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5PinchShot", actor))
+		return;
+#endif
+
+	if (actor->health > actor->info->damage)
+		return;
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		zoffset = actor->z + actor->height - FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+	else
+		zoffset = actor->z + FixedMul((48 + locvar2)*FRACUNIT, actor->scale);
+
+	missile = P_SpawnPointMissile(actor, actor->x, actor->y, zoffset, locvar1,
+										actor->x, actor->y, zoffset);
+
+	if (!missile)
+		return;
+
+	missile->momx = missile->momy = 0;
+	missile->momz = P_MobjFlip(actor)*missile->info->speed/2;
+}
+
+// Function: A_Boss5MakeItRain
+//
+// Description: Pinch crisis.
+//
+// var1 = object # to shoot
+// var2 = height offset (from default of +48 FU)
+//
+void A_Boss5MakeItRain(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT32 offset = (48 + locvar2)<<16; // upper 16 bits, not fixed_t!
+	INT32 i;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5MakeItRain", actor))
+		return;
+#endif
+
+	actor->flags2 |= MF2_STRONGBOX;
+
+	var1 = locvar1;
+	var2 = offset + 90;
+	A_TrapShot(actor);
+
+	for (i = 0; i < 8; i++)
+	{
+		actor->angle += ANGLE_45;
+
+		var1 = locvar1;
+		var2 = offset + (i & 1) ? 80 : 85;
+		A_TrapShot(actor);
+	}
+
+	actor->extravalue2 = 0;
+}
+
+// Function: A_LookForBetter
+//
+// Description: A_Look, except it finds a better target in multiplayer, and doesn't lose the target in singleplayer.
+//
+// var1 lower 16 bits = 0 - looks only in front, 1 - looks all around
+// var1 upper 16 bits = distance limit
+// var2 = unused
+//
+void A_LookForBetter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LookForBetter", actor))
+		return;
+#endif
+
+	P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale));
+	A_FaceTarget(actor);
+}
+
+/* * Spawns a dust ring.
+  *	The dust ring behaves slightly randomly so it doesn't look too uniform.
+  *
+  * \param mobjtype Thing type to make a ring of.
+  * \param div Amount of things to spawn on the ring.
+  * \param x Center X coordinates.
+  * \param y Center Y coordinates.
+  * \param z Center Z coordinates.
+  * \param radius Radius.
+  * \param speed Additional thrust on particles.
+  * \param initscale Initial scale when spawning.
+  * \param scale "Default" scale.
+  */
+static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t speed, fixed_t initscale, fixed_t scale)
+{
+	angle_t ang = FixedAngle(FixedDiv(360*FRACUNIT, div*FRACUNIT));  //(ANGLE_180/div)*2;
+	UINT32 i;
+
+	// it turned out the radius was effectively nullified thanks to errors in the original script
+	// BUT people preferred how it looked before I "fixed" it, so I got rid of the radius calculations altogether
+	// this was a bit of a mess to sort out, but at least it's probably somewhat fine now?
+	// -- Monster Iestyn (21/05/19)
+	(void)radius;
+
+	for (i = 0; i < div; i++)
+	{
+		mobj_t *dust = P_SpawnMobj(
+			x, //+ FixedMul(radius, FINECOSINE((ang*i) >> ANGLETOFINESHIFT)),
+			y, //+ FixedMul(radius, FINESINE((ang*i) >> ANGLETOFINESHIFT)),
+			z,
+			mobjtype
+			);
+
+		dust->angle = ang*i + ANGLE_90;
+		P_SetScale(dust, FixedMul(initscale, scale));
+		dust->destscale = FixedMul(4*FRACUNIT + P_RandomFixed(), scale);
+		dust->scalespeed = scale/24;
+		P_Thrust(dust, ang*i, speed + FixedMul(P_RandomFixed(), scale));
+		dust->momz = P_SignedRandom()*scale/64;
+	}
+}
+
+// Function: A_Boss5BombExplode
+//
+// Description: Boss 5's bomb exploding.
+//
+// var1 = Thing type to spawn as dust
+// var2 = unused
+//
+void A_Boss5BombExplode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5BombExplode", actor))
+		return;
+#endif
+
+	// The original Lua script did not use |= to add flags but just set these flags exactly apparently?
+	// (I may modify this later)
+	// -- Monster Iestyn (21/05/19)
+	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	actor->flags2 = MF2_EXPLOSION;
+
+	if (actor->target)
+		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
+
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, FRACUNIT, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, FRACUNIT, actor->scale);
+	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
+	// the above does not exist, so we set the quake values directly instead
+	quake.intensity = 9*actor->scale;
+	quake.time = TICRATE/6;
+	// the following quake values have no effect atm? ah well, may as well set them anyway
+	{
+		mappoint_t q_epicenter = {actor->x, actor->y, actor->z};
+		quake.epicenter = &q_epicenter;
+	}
+	quake.radius = 20*actor->radius;
+}
+
+static mobj_t *dustdevil;
+
+static boolean PIT_DustDevilLaunch(mobj_t *thing)
+{
+	player_t *player = thing->player;
+
+	if (!player)
+		return true;
+
+	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
+		return true;
+
+	if (thing->z + thing->height >= dustdevil->z && dustdevil->z + dustdevil->height >= thing->z) {
+		fixed_t pos = thing->z - dustdevil->z;
+		fixed_t thrust = max(FixedDiv(pos, dustdevil->height) * 20, 8 * FRACUNIT);
+		angle_t fa = R_PointToAngle2(thing->x, thing->y, dustdevil->x, dustdevil->y) >> ANGLETOFINESHIFT;
+		fixed_t c = FINECOSINE(fa);
+		fixed_t s = FINESINE(fa);
+		fixed_t thresh = dustdevil->scale * 20;
+
+		//Player in the swirl part.
+		if (dustdevil->height - pos > thresh)
+		{
+			fixed_t dist = FixedHypot(thing->x - dustdevil->x, thing->y - dustdevil->y);
+			fixed_t dragamount = 6 * FRACUNIT;
+			fixed_t x, y;
+
+			if (player->powers[pw_nocontrol] == 0)
+				A_PlayActiveSound(dustdevil);
+			player->powers[pw_nocontrol] = 2;
+			player->drawangle += ANG20;
+			P_SetPlayerMobjState(thing, S_PLAY_PAIN);
+
+			if (dist > dragamount)
+			{
+				x = thing->x + FixedMul(c, dragamount);
+				y = thing->y + FixedMul(s, dragamount);
+			}
+			else
+			{
+				x = dustdevil->x;
+				y = dustdevil->y;
+			}
+			P_TryMove(thing, x - thing->momx, y - thing->momy, true);
+		}
+		else
+		{ //Player on the top of the tornado.
+			thing->z = dustdevil->z + dustdevil->height;
+			thrust = 20 * FRACUNIT;
+			player->powers[pw_nocontrol] = 0;
+			S_StartSound(thing, sfx_wdjump);
+			P_SetPlayerMobjState(thing, S_PLAY_FALL);
+			player->pflags &= ~PF_JUMPED;
+		}
+
+		thing->momz = thrust;
+	}
+
+	return true;
+}
+
+// Function: A_DustDevilThink
+//
+// Description: Thinker for the dust devil.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_DustDevilThink(mobj_t *actor)
+{
+	fixed_t scale = actor->scale;
+	mobj_t *layer = actor->tracer;
+	INT32 bx, by, xl, xh, yl, yh;
+	fixed_t radius = actor->radius;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DustDevilThink", actor))
+		return;
+#endif
+
+	//Chained thinker for the spiralling dust column.
+	while (layer && !P_MobjWasRemoved(layer)) {
+		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
+		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
+		layer->scale = scale;
+		layer->angle += ANG10 / 2;
+		layer->momx = actor->momx;
+		layer->momy = actor->momy;
+		layer = layer->tracer;
+	}
+
+	//Spawn random dust around the column on the base.
+	if (P_IsObjectOnGround(actor)) {
+		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
+		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
+		P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
+		dust->destscale = scale * 3;
+		P_SetScale(dust, dust->destscale);
+	}
+
+	actor->extravalue1++;
+	if (actor->extravalue1 == 12) {
+		size_t i = 0;
+		actor->extravalue1 = 0;
+
+		//Create a set of items for the rising dust column
+		for (; i <= 3; i++) {
+			fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
+			fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
+			fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
+			fixed_t pz = actor->z;
+
+			layer = P_SpawnMobj(px, py, pz, MT_DUSTLAYER);
+			layer->momz = 5 * scale;
+			layer->angle = ANGLE_90 + ANGLE_90*i;
+			layer->extravalue1 = TICRATE * 3;
+
+			//Chain them
+			P_SetTarget(&layer->tracer, actor->tracer);
+			P_SetTarget(&actor->tracer, layer);
+		}
+	}
+
+	//The physics are handled here.
+	yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
+	yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
+	xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
+	xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
+
+	dustdevil = actor;
+
+	for (bx = xl; bx <= xh; bx++)
+		for (by = yl; by <= yh; by++)
+			P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
+
+	//Whirlwind sound effect.
+	if (leveltime % 70 == 0)
+		S_StartSound(actor, sfx_s3kcel);
+}
+
+// stuff used by A_TNTExplode
+static mobj_t *barrel;
+static fixed_t exploderadius;
+static fixed_t explodethrust;
+
+static boolean PIT_TNTExplode(mobj_t *nearby)
+{
+	fixed_t dx, dy, dz;
+	fixed_t dm;
+
+	if (nearby == barrel)
+		return true;
+
+	dx = nearby->x - barrel->x;
+	dy = nearby->y - barrel->y;
+	dz = nearby->z - barrel->z + (nearby->height - barrel->height/2)/2;
+	dm = P_AproxDistance(P_AproxDistance(dx, dy), dz);
+
+	if (dm >= exploderadius || !P_CheckSight(barrel, nearby)) // out of range or not visible
+		return true;
+
+	if (barrel->type == nearby->type) // nearby is also a barrel
+	{
+		if (nearby->state == &states[nearby->info->spawnstate])
+		{
+			if (barrel->info->attacksound)
+				S_StartSound(nearby, barrel->info->attacksound);
+			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
+			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
+			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
+			nearby->flags = MF_NOBLOCKMAP|MF_MISSILE;
+			P_SetMobjState(nearby, nearby->info->missilestate);
+		}
+	}
+	else
+	{
+		if (barrel->target == nearby)
+		{
+			mobj_t *tar = barrel->target; // temporarily store barrel's target
+			barrel->target = NULL;
+			P_DamageMobj(nearby, barrel, NULL, 1, 0);
+			barrel->target = tar;
+		}
+		else
+		{
+			P_DamageMobj(nearby,
+				(barrel->target) ? barrel->target : barrel,
+				(barrel->target) ? barrel->target : barrel,
+				1, 0);
+		}
+	}
+
+	return true;
+}
+
+// Function: A_TNTExplode
+//
+// Description: Creates a TNT explosion. Used by TNT barrels and the like.
+//
+// var1 = Thing type to spawn as dust.
+// var2 = unused
+//
+void A_TNTExplode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+	INT32 x, y;
+	INT32 xl, xh, yl, yh;
+	static mappoint_t epicenter = {0,0,0};
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TNTExplode", actor))
+		return;
+#endif
+
+	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	actor->flags2 = MF2_EXPLOSION;
+	if (actor->info->deathsound)
+		S_StartSound(actor, actor->info->deathsound);
+
+	explodethrust = 32*FRACUNIT;
+	exploderadius = 256*FRACUNIT;
+
+	xl = (unsigned)(actor->x - exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(actor->x + exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(actor->y - exploderadius - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(actor->y + exploderadius - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
+
+	barrel = actor;
+
+	for (x = xl; x <= xh; x++)
+		for (y = yl; y <= yh; y++)
+			P_BlockThingsIterator(x, y, PIT_TNTExplode);
+
+	// cause a quake -- P_StartQuake does not exist yet
+	epicenter.x = actor->x;
+	epicenter.y = actor->y;
+	epicenter.z = actor->z;
+	quake.intensity = 9*FRACUNIT;
+	quake.time = TICRATE/6;
+	quake.epicenter = &epicenter;
+	quake.radius = 512*FRACUNIT;
+
+	if (locvar1)
+	{
+		P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 64, 0, FRACUNIT, actor->scale);
+		P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 96, FRACUNIT, FRACUNIT, actor->scale);
+	}
+
+	actor->destscale *= 4;
+}
+
+// Function: A_DebrisRandom
+//
+// Description: Randomizes debris frame and movement.
+//
+// var1 = Frame range.
+// var2 = unused
+//
+void A_DebrisRandom(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_DebrisRandom", actor))
+		return;
+#endif
+
+	actor->frame |= P_RandomRange(0, locvar1);
+	var1 = 0;
+	var2 = 359;
+	A_ChangeAngleAbsolute(actor);
+	P_Thrust(actor, actor->angle, FRACUNIT * 2);
+}
+
+static mobj_t *P_TrainSeg(mobj_t *src, fixed_t x, fixed_t y, fixed_t z, angle_t ang, spritenum_t spr, UINT32 frame)
+{
+	mobj_t *s = P_SpawnMobj(x, y, z, MT_TRAINSEG);
+	s->fuse = 16*TICRATE;
+	s->sprite = spr;
+	s->frame = frame|FF_PAPERSPRITE;
+	s->angle = ang;
+	P_Thrust(s, src->angle, 7*FRACUNIT);
+	return s;
+}
+
+// Function: A_TrainCameo
+//
+// Description: Sets up train cameo locomotive.
+//
+// var1 = Train width.
+// var2 = Train length.
+//
+void A_TrainCameo(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	angle_t ang = actor->angle;
+	mobj_t *m;
+	spritenum_t spr = SPR_TRAE;
+	fixed_t span = locvar1*FRACUNIT;
+	fixed_t len = locvar2*FRACUNIT;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TrainCameo", actor))
+		return;
+#endif
+
+	//Spawn sides.
+	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
+	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+
+	//Center.
+	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+
+	//Front and back.
+	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+
+	//Smoke spawner.
+	m = P_TrainSeg(actor, x - (20 * FRACUNIT), y, z + (30 * FRACUNIT), ang + ANGLE_90, spr, 0);
+	P_SetMobjState(m, S_TRAINPUFFMAKER);
+}
+
+// Function: A_TrainCameo2
+//
+// Description: Sets up train cameo wagon.
+//
+// var1 = Train width.
+// var2 = Train length.
+//
+void A_TrainCameo2(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	angle_t ang = actor->angle;
+	spritenum_t spr = SPR_TRAI;
+	fixed_t span = locvar1*FRACUNIT;
+	fixed_t len = locvar2*FRACUNIT;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_TrainCameo2", actor))
+		return;
+#endif
+
+	//Spawn sides.
+	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
+	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+
+	//Center.
+	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+
+	//Front and back.
+	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+}
+
+// Function: A_CanarivoreGas
+//
+// Description: Releases gas clouds. Used by the Canarivore.
+//
+// var1 = Mobj type.
+// var2 = Unused
+//
+void A_CanarivoreGas(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CanarivoreGas", actor))
+		return;
+#endif
+
+	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z + actor->height / 5, 18, 0, FRACUNIT/10, actor->scale);
+	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z + actor->height / 5, 28, FRACUNIT, FRACUNIT/10, actor->scale);
+}
+
+//
+// Function: A_KillSegments
+//
+// Description: Causes segments attached via tracer chain to be killed.
+//
+// var1 = Fuse (if 0, default to TICRATE/2).
+// var2 = Unused
+//
+void A_KillSegments(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	mobj_t *seg = actor->tracer;
+	INT32 fuse = locvar1 ? locvar1 : TICRATE/2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_KillSegments", actor))
+		return;
+#endif
+
+	while (seg)
+	{
+		mobj_t *kseg = seg;
+		seg = seg->tracer;
+
+		kseg->flags = MF_NOBLOCKMAP|MF_BOUNCE;
+		kseg->flags2 = 0;
+		kseg->fuse = fuse;
+		P_Thrust(kseg, R_PointToAngle2(actor->x, actor->y, kseg->x, kseg->y), 3*actor->scale);
+		kseg->momz = 3*actor->scale;
+	}
+}
+
+static void P_SnapperLegPlace(mobj_t *mo)
+{
+	mobj_t *seg = mo->tracer;
+	fixed_t x0 = mo->x;
+	fixed_t y0 = mo->y;
+	angle_t a = mo->angle;
+	angle_t fa = (a >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	fixed_t x, y;
+	INT32 o1, o2;
+	INT32 woffset = mo->extravalue1;
+	INT32 side = mo->extravalue2;
+	INT32 alt;
+
+	// Move head first.
+	fixed_t rad = mo->radius;
+	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
+
+	P_TeleportMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, mo->z + mo->height/3);
+	seg->angle = a;
+
+	// Move as many legs as available.
+	seg = seg->tracer;
+	do
+	{
+		o1 = seg->extravalue1;
+		o2 = seg->extravalue2;
+		alt = seg->cusval;
+
+		if (alt == 1)
+			o2 += woffset;
+		else
+			o2 -= woffset;
+
+		if (alt != side)
+		{
+			x = c*o2 + s*o1;
+			y = s*o2 - c*o1;
+			P_TryMove(seg, x0 + x, y0 + y, true);
+			P_SetMobjState(seg, seg->info->raisestate);
+		}
+		else
+			P_SetMobjState(seg, seg->info->spawnstate);
+
+		seg->angle = R_PointToAngle2(x0, y0, seg->x, seg->y);
+
+		seg = seg->tracer;
+	} while (seg);
+}
+
+//
+// Function: A_SnapperSpawn
+//
+// Description: Sets up Green Snapper legs and head.
+//
+// var1 = Leg mobj type.
+// var2 = Head mobj type.
+//
+void A_SnapperSpawn(mobj_t *actor)
+{
+	mobjtype_t legtype = (mobjtype_t)var1;
+	mobjtype_t headtype = (mobjtype_t)var2;
+	mobj_t *ptr = actor;
+	INT32 i;
+	mobj_t *seg;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SnapperSpawn", actor))
+		return;
+#endif
+
+	// It spawns 1 head.
+	seg = P_SpawnMobj(actor->x, actor->y, actor->z, headtype);
+	P_SetTarget(&ptr->tracer, seg);
+	ptr = seg;
+
+	// It spawns 4 legs which will be handled in the thinker function.
+	for (i = 1; i <= 4; i++)
+	{
+		seg = P_SpawnMobj(actor->x, actor->y, actor->z, legtype);
+		P_SetTarget(&ptr->tracer, seg);
+		ptr = seg;
+
+		// The legs' base offsets are stored as extravalues, as relative coordinates in xy space.
+		seg->extravalue1 = 28;
+		seg->extravalue2 = 28;
+		if (i % 2)
+			seg->extravalue1 = -seg->extravalue1;
+
+		if ((i/2) % 2)
+			seg->extravalue2 = -seg->extravalue2;
+
+		// Alternating motion stuff.
+		seg->cusval = ((i + 1)/2) % 2;
+	}
+
+	actor->extravalue1 = 0;
+	actor->extravalue2 = 0;
+	P_SnapperLegPlace(actor);
+}
+
+//
+// Function: A_SnapperThinker
+//
+// Description: Thinker for Green Snapper.
+//
+// var1 = Unused
+// var2 = Unused
+//
+void A_SnapperThinker(mobj_t *actor)
+{
+	fixed_t x0 = actor->x;
+	fixed_t y0 = actor->y;
+	fixed_t xs, ys;
+	fixed_t x1, y1;
+	fixed_t dist;
+	boolean chasing;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SnapperThinker", actor))
+		return;
+#endif
+
+	// We make a check just in case there's no spawnpoint.
+	if (actor->spawnpoint)
+	{
+		xs = actor->spawnpoint->x*FRACUNIT;
+		ys = actor->spawnpoint->y*FRACUNIT;
+	}
+	else
+	{
+		xs = x0;
+		ys = y0;
+	}
+
+	// Look for nearby, valid players to chase angrily at.
+	if ((actor->target || P_LookForPlayers(actor, true, false, 1024*FRACUNIT))
+		&& P_AproxDistance(actor->target->x - xs, actor->target->y - ys) < 2048*FRACUNIT
+		&& abs(actor->target->z - actor->z) < 80*FRACUNIT
+		&& P_CheckSight(actor, actor->target))
+	{
+		chasing = true;
+		x1 = actor->target->x;
+		y1 = actor->target->y;
+	}
+	else
+	{
+		chasing = false;
+		x1 = xs;
+		y1 = ys;
+	}
+
+	dist = P_AproxDistance(x1 - x0, y1 - y0);
+
+	// The snapper either chases what it considers to be a nearby player, or instead decides to go back to its spawnpoint.
+	if (chasing || dist > 32*FRACUNIT)
+	{
+		INT32 speed = actor->info->speed + actor->info->reactiontime - actor->reactiontime;
+
+		angle_t maxang = FixedAngle(speed*FRACUNIT/2);
+		angle_t ang = actor->angle;
+		angle_t realang = R_PointToAngle2(x0, y0, x1, y1);
+		angle_t dif = realang - ang;
+		angle_t fa;
+		fixed_t c, s;
+
+		if (dif < ANGLE_180 && dif > maxang)
+			actor->angle += maxang;
+		else if (dif >= ANGLE_180 && dif < InvAngle(maxang))
+			actor->angle -= maxang;
+		else
+			actor->angle = realang;
+
+		fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+		c = FINECOSINE(fa);
+		s = FINESINE(fa);
+
+		P_TryMove(actor, actor->x + c*speed, actor->y + s*speed, false);
+
+		// The snapper spawns dust if going fast!
+		if (actor->reactiontime < 4)
+		{
+			mobj_t *dust = P_SpawnMobj(x0, y0, actor->z, MT_SPINDUST);
+			P_Thrust(dust, ang + ANGLE_180 + FixedAngle(P_RandomRange(-20, 20)*FRACUNIT), speed*FRACUNIT);
+		}
+
+		if (actor->extravalue2 == 0)
+		{
+			if (actor->extravalue1 > 16)
+			{
+				A_PlayActiveSound(actor);
+				actor->extravalue2 = 1;
+
+				// If the snapper is chasing, accelerate; otherwise, decelerate.
+				if (chasing)
+					actor->reactiontime = max(0, actor->reactiontime - 1);
+				else
+					actor->reactiontime = min(actor->info->reactiontime, actor->reactiontime + 1);
+			}
+			else
+				actor->extravalue1 += speed;
+		}
+		else
+		{
+			if (actor->extravalue1 < -16)
+			{
+				A_PlayActiveSound(actor);
+				actor->extravalue2 = 0;
+
+				// If the snapper is chasing, accelerate; otherwise, decelerate.
+				if (chasing)
+					actor->reactiontime = max(0, actor->reactiontime - 1);
+				else
+					actor->reactiontime = min(actor->info->reactiontime, actor->reactiontime + 1);
+			}
+			else
+				actor->extravalue1 -= speed;
+		}
+	}
+
+	P_SnapperLegPlace(actor);
+}
+
+// Function: A_SaloonDoorSpawn
+//
+// Description: Spawns a saloon door.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_SaloonDoorSpawn(mobj_t *actor)
+{
+	angle_t ang = actor->angle;
+	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	INT32 d = 48;
+	fixed_t x = actor->x;
+	fixed_t y = actor->y;
+	fixed_t z = actor->z;
+	mobj_t *door;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SaloonDoorSpawn", actor))
+		return;
+#endif
+
+	//Front
+	door = P_SpawnMobj(x + c*d, y + s*d, z, MT_SALOONDOOR);
+	door->angle = ang + ANGLE_180;
+
+	// Origin angle
+	door->extravalue1 = AngleFixed(door->angle);
+
+	// Angular speed
+	door->extravalue2 = 0;
+
+	// Origin door
+	door->tracer = actor;
+
+	//Back
+	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
+	door->angle = ang;
+
+	// Origin angle
+	door->extravalue1 = AngleFixed(door->angle);
+
+	// Angular speed
+	door->extravalue2 = 0;
+
+	// Origin door
+	door->tracer = actor;
+}
+
+// Function: A_MinecartSparkThink
+//
+// Description: Thinker for the minecart spark.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_MinecartSparkThink(mobj_t *actor)
+{
+	fixed_t dx = actor->momx;
+	fixed_t dy = actor->momy;
+	fixed_t dz, dm;
+	UINT8 i;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MinecartSparkThink", actor))
+		return;
+#endif
+
+	if (actor->momz == 0 && P_IsObjectOnGround(actor))
+		actor->momz = P_RandomRange(2, 4)*FRACUNIT;
+
+	dz = actor->momz;
+	dm = FixedHypot(FixedHypot(dx, dy), dz);
+	dx = FixedDiv(dx, dm);
+	dy = FixedDiv(dy, dm);
+	dz = FixedDiv(dz, dm);
+
+	for (i = 1; i <= 8; i++)
+	{
+		mobj_t *trail = P_SpawnMobj(actor->x - dx*i, actor->y - dy*i, actor->z - dz*i, MT_PARTICLE);
+		trail->tics = 2;
+		trail->sprite = actor->sprite;
+		P_SetScale(trail, trail->scale/4);
+		trail->destscale = trail->scale;
+	}
 }

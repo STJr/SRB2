@@ -551,6 +551,44 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 }
 
+// Boss 5 post-defeat comedy
+static void P_SlapStick(mobj_t *fang, mobj_t *pole)
+{
+	fixed_t momx1, momx2, momy1, momy2;
+
+#define dist 3
+	momx1 = pole->momx/dist;
+	momy1 = pole->momy/dist;
+	momx2 = fang->momx/dist;
+	momy2 = fang->momy/dist;
+
+	pole->tracer->momx = momx1 + (dist-1)*momx2;
+	pole->tracer->momy = momy1 + (dist-1)*momy2;
+	fang->momx = (dist-1)*momx1 + momx2;
+	fang->momy = (dist-1)*momy1 + momy2;
+#undef dist
+
+	P_SetMobjState(pole, pole->info->deathstate);
+
+	P_SetObjectMomZ(pole->tracer, 6*FRACUNIT, false);
+	pole->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
+	pole->tracer->movedir = ANGLE_67h;
+	if ((R_PointToAngle(fang->x - pole->tracer->x, fang->y - pole->tracer->y) - pole->angle) > ANGLE_180)
+		pole->tracer->movedir = InvAngle(pole->tracer->movedir);
+
+	P_SetObjectMomZ(fang, 14*FRACUNIT, false);
+	fang->flags |= MF_NOGRAVITY|MF_NOCLIP;
+	P_SetMobjState(fang, fang->info->xdeathstate);
+
+	pole->tracer->tics = pole->tics = fang->tics;
+
+	var1 = var2 = 0;
+	A_Scream(pole->tracer);
+	S_StartSound(fang, sfx_altdi1);
+
+	P_SetTarget(&pole->tracer, NULL);
+}
+
 //
 // PIT_CheckThing
 //
@@ -779,6 +817,97 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // force no collide
 	}
 #endif
+
+	if (tmthing->type == MT_MINECART)
+	{
+		//height check
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !(thing->health))
+			return true;
+
+		if (thing->type == MT_TNTBARREL)
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+		else if ((thing->flags & MF_MONITOR) || (thing->flags & MF_ENEMY))
+		{
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			if (tmthing->momz*P_MobjFlip(tmthing) < 0)
+				tmthing->momz = abs(tmthing->momz)*P_MobjFlip(tmthing);
+		}
+	}
+
+	if (thing->type == MT_SALOONDOOR && tmthing->player)
+	{
+		if (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer) && tmthing->tracer->health)
+		{
+			fixed_t dx = tmthing->tracer->momx;
+			fixed_t dy = tmthing->tracer->momy;
+			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
+			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
+			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
+			S_StartSound(tmthing, thing->info->activesound);
+			thing->extravalue2 += 2*FixedMul(s, dm)/3;
+			return true;
+		}
+	}
+
+	if (thing->type == MT_TNTBARREL && tmthing->player)
+	{
+		if (tmthing->momz < 0)
+		{
+			if (tmthing->z + tmthing->momz > thing->z + thing->height)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z > thing->z + thing->height)
+				return true;
+		}
+
+		if (tmthing->momz > 0)
+		{
+			if (tmthing->z + tmthing->height + tmthing->momz < thing->z)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z + tmthing->height < thing->z)
+				return true;
+		}
+
+		if ((tmthing->player->pflags & (PF_SPINNING | PF_GLIDING))
+			|| ((tmthing->player->pflags & PF_JUMPED)
+				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
+					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
+				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height / 2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+			|| (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)))
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+	}
+
+	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
+	{
+		fixed_t dx = thing->x - tmthing->x;
+		fixed_t dy = thing->y - tmthing->y;
+		fixed_t dz = thing->z - tmthing->z;
+		fixed_t dm = FixedHypot(dz, FixedHypot(dx, dy));
+		thing->momx += FixedDiv(dx, dm);
+		thing->momy += FixedDiv(dy, dm);
+		thing->momz += FixedDiv(dz, dm);
+	}
+
+	if (tmthing->type == MT_FANG && thing->type == MT_FSGNB)
+	{
+		if (thing->z > tmthing->z + tmthing->height)
+			return true; // overhead
+		if (thing->z + thing->height < tmthing->z)
+			return true; // underneath
+		if (!thing->tracer)
+			return true;
+		P_SlapStick(tmthing, thing);
+		// no return value was used in the original prototype script at this point,
+		// so I'm assuming we fall back on the solid code to determine how it all ends?
+		// -- Monster Iestyn
+	}
 
 	// Billiards mines!
 	if (thing->type == MT_BIGMINE)
@@ -1343,7 +1472,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
-		else if (thing->flags & MF_SPRING)
+		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
@@ -3807,6 +3936,8 @@ static boolean nofit;
 static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 {
 	mobj_t *killer = NULL;
+	//If a thing is both pushable and vulnerable, it doesn't block the crusher because it gets killed.
+	boolean immunepushable = ((thing->flags & (MF_PUSHABLE | MF_SHOOTABLE)) == MF_PUSHABLE);
 
 	if (P_ThingHeightClip(thing))
 	{
@@ -3825,7 +3956,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 	// just be blocked by another object - check if it's really a ceiling!
 	if (thing->z + thing->height > thing->ceilingz && thing->z <= thing->ceilingz)
 	{
-		if (thing->flags & MF_PUSHABLE && thing->z + thing->height > thing->subsector->sector->ceilingheight)
+		if (immunepushable && thing->z + thing->height > thing->subsector->sector->ceilingheight)
 		{
 			//Thing is a pushable and blocks the moving ceiling
 			nofit = true;
@@ -3833,7 +3964,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		}
 
 		//Check FOFs in the sector
-		if (thing->subsector->sector->ffloors && (realcrush || thing->flags & MF_PUSHABLE))
+		if (thing->subsector->sector->ffloors && (realcrush || immunepushable))
 		{
 			ffloor_t *rover;
 			fixed_t topheight, bottomheight;
@@ -3860,7 +3991,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 				delta2 = thingtop - (bottomheight + topheight)/2;
 				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
 				{
-					if (thing->flags & MF_PUSHABLE)
+					if (immunepushable)
 					{
 						//FOF is blocked by pushable
 						nofit = true;

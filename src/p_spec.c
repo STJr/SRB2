@@ -1412,6 +1412,34 @@ static boolean PolyDisplace(line_t *line)
 	return EV_DoPolyObjDisplace(&pdd);
 }
 
+
+/** Similar to PolyDisplace().
+ */
+static boolean PolyRotDisplace(line_t *line)
+{
+	polyrotdisplacedata_t pdd;
+	fixed_t anginter, distinter;
+
+	pdd.polyObjNum = line->tag;
+	pdd.controlSector = line->frontsector;
+
+	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
+	// Use default values if not provided as fallback.
+	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
+	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
+	pdd.rotscale = FixedDiv(anginter, distinter);
+
+	// Same behavior as other rotators when carrying things.
+	if (line->flags & ML_NOCLIMB)
+		pdd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		pdd.turnobjs = 2;
+	else
+		pdd.turnobjs = 1;
+
+	return EV_DoPolyObjRotDisplace(&pdd);
+}
+
 #endif // ifdef POLYOBJECTS
 
 /** Changes a sector's tag.
@@ -2591,7 +2619,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 413: // Change music
 			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
+			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
 				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
 				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
@@ -2942,7 +2970,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				mobj_t *altview;
 
-				if (!mo || !mo->player) // only players have views
+				if ((!mo || !mo->player) && !titlemapinaction) // only players have views, and title screens
 					return;
 
 				if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
@@ -2951,6 +2979,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				altview = P_GetObjectTypeInSectorNum(MT_ALTVIEWMAN, secnum);
 				if (!altview)
 					return;
+
+				// If titlemap, set the camera ref for title's thinker
+				// This is not revoked until overwritten; awayviewtics is ignored
+				if (titlemapinaction)
+				{
+					titlemapcameraref = altview;
+					return;
+				}
 
 				P_SetTarget(&mo->player->awayviewmobj, altview);
 				mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
@@ -4478,7 +4514,7 @@ DoneSection2:
 					break;
 				}
 
-				player->mo->angle = lineangle;
+				player->mo->angle = player->drawangle = lineangle;
 
 				if (!demoplayback || P_AnalogMove(player))
 				{
@@ -5709,6 +5745,10 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	// Add slopes
 	ffloor->t_slope = &sec2->c_slope;
 	ffloor->b_slope = &sec2->f_slope;
+	// mark the target sector as having slopes, if the FOF has any of its own
+	// (this fixes FOF slopes glitching initially at level load in software mode)
+	if (sec2->hasslope)
+		sec->hasslope = true;
 #endif
 
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
@@ -7362,6 +7402,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 31: // Polyobj_Displace
 				PolyDisplace(&lines[i]);
+				break;
+
+			case 32: // Polyobj_RotDisplace
+				PolyRotDisplace(&lines[i]);
 				break;
 		}
 	}

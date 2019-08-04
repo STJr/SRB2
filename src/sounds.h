@@ -42,7 +42,7 @@ typedef enum
 } skinsound_t;
 
 // free sfx for S_AddSoundFx()
-#define NUMSFXFREESLOTS 800 // Matches SOC Editor.
+#define NUMSFXFREESLOTS 1600 // Matches SOC Editor.
 #define NUMSKINSFXSLOTS (MAXSKINS*NUMSKINSOUNDS)
 
 //
@@ -261,6 +261,8 @@ typedef enum
 	sfx_boingf,
 	sfx_corkp,
 	sfx_corkh,
+	sfx_bowl,
+	sfx_chuchu,
 
 	// Menu, interface
 	sfx_chchng,

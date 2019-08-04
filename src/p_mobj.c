@@ -2580,9 +2580,9 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	if (!mo->player && P_CheckDeathPitCollide(mo))
 	{
-		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS)
+		if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 		{
-			// Kill enemies and bosses that fall into death pits.
+			// Kill enemies, bosses and minecarts that fall into death pits.
 			if (mo->health)
 			{
 				P_KillMobj(mo, NULL, NULL, 0);
@@ -4101,17 +4101,18 @@ void P_RainThinker(precipmobj_t *mobj)
 	}
 
 	// adjust height
-	if ((mobj->z += mobj->momz) <= mobj->floorz)
+	if ((mobj->z += mobj->momz) > mobj->floorz)
+		return;
+
+	// no splashes on sky or bottomless pits
+	if (mobj->precipflags & PCF_PIT)
 	{
-		// no splashes on sky or bottomless pits
-		if (mobj->precipflags & PCF_PIT)
-			mobj->z = mobj->ceilingz;
-		else
-		{
-			mobj->z = mobj->floorz;
-			P_SetPrecipMobjState(mobj, S_SPLASH1);
-		}
+		mobj->z = mobj->ceilingz;
+		return;
 	}
+
+	mobj->z = mobj->floorz;
+	P_SetPrecipMobjState(mobj, S_SPLASH1);
 }
 
 static void P_RingThinker(mobj_t *mobj)
@@ -5011,6 +5012,47 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	if (!mobj->target || !mobj->target->health)
 		P_SupermanLook4Players(mobj);
 	A_FaceTarget(mobj);
+}
+
+//
+// AI for the fifth boss.
+//
+static void P_Boss5Thinker(mobj_t *mobj)
+{
+	if (!mobj->health)
+	{
+		if (mobj->state == &states[mobj->info->xdeathstate])
+			mobj->momz -= (2*FRACUNIT)/3;
+		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
+			mobj->flags &= ~MF_NOCLIP;
+	}
+	else
+	{
+		if (mobj->flags2 & MF2_FRET && (leveltime & 1)
+		&& mobj->state != &states[S_FANG_PAIN1] && mobj->state != &states[S_FANG_PAIN2])
+			mobj->flags2 |= MF2_DONTDRAW;
+		else
+			mobj->flags2 &= ~MF2_DONTDRAW;
+	}
+
+	if (mobj->state == &states[S_FANG_BOUNCE3]
+	||  mobj->state == &states[S_FANG_BOUNCE4]
+	||  mobj->state == &states[S_FANG_PINCHBOUNCE3]
+	||  mobj->state == &states[S_FANG_PINCHBOUNCE4])
+	{
+		if (P_MobjFlip(mobj)*mobj->momz > 0
+		&& abs(mobj->momx) < FRACUNIT/2 && abs(mobj->momy) < FRACUNIT/2
+		&& !P_IsObjectOnGround(mobj))
+		{
+			mobj_t *prevtarget = mobj->target;
+			P_SetTarget(&mobj->target, NULL);
+			var1 = var2 = 0;
+			A_DoNPCPain(mobj);
+			P_SetTarget(&mobj->target, prevtarget);
+			P_SetMobjState(mobj, S_FANG_WALLHIT);
+			mobj->extravalue2++;
+		}
+	}
 }
 
 //
@@ -6200,17 +6242,18 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	boolean dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
 
-	INT32 rot = (baserot &= FINEMASK);
-	INT32 prevrot = (baseprevrot &= FINEMASK);
-
-	INT32 lastthreshold = FINEMASK; // needs to never be equal at start of loop
+	INT32 lastthreshold = -1; // needs to never be equal at start of loop
 	fixed_t lastfriction = INT32_MIN; // ditto; almost certainly never, but...
 
-	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] = pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+	INT32 rot;
+	INT32 prevrot;
+
+	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] =\
+	 pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
 
 	while (mobj)
 	{
-		if (!mobj->health)
+		if (P_MobjWasRemoved(mobj) || !mobj->health)
 		{
 			mobj = mobj->hnext;
 			continue;
@@ -6686,6 +6729,67 @@ static void P_KoopaThinker(mobj_t *koopa)
 	}
 }
 
+// Spawns and chains the minecart sides.
+static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
+{
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	mobj_t *prevseg = mobj;
+	mobj_t *seg;
+	UINT8 i;
+
+	for (i = 0; i < 4; i++)
+	{
+		seg = P_SpawnMobj(x, y, z, MT_MINECARTSEG);
+		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
+		if (i >= 2)
+			seg->extravalue1 = (i == 2) ? -18 : 18;
+		else
+		{
+			seg->extravalue2 = (i == 0) ? 24 : -24;
+			seg->cusval = -90;
+		}
+		if (!mode)
+			seg->frame &= ~FF_ANIMATE;
+		P_SetTarget(&prevseg->tracer, seg);
+		prevseg = seg;
+	}
+}
+
+// Updates the chained segments.
+static void P_UpdateMinecartSegments(mobj_t *mobj)
+{
+	mobj_t *seg = mobj->tracer;
+	fixed_t x = mobj->x;
+	fixed_t y = mobj->y;
+	fixed_t z = mobj->z;
+	angle_t ang = mobj->angle;
+	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t c = FINECOSINE(fa);
+	fixed_t s = FINESINE(fa);
+	INT32 dx, dy;
+	INT32 sang;
+
+	while (seg)
+	{
+		dx = seg->extravalue1;
+		dy = seg->extravalue2;
+		sang = seg->cusval;
+		P_TeleportMove(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
+		seg->angle = ang + FixedAngle(FRACUNIT*sang);
+		seg->flags2 = (seg->flags2 & ~MF2_DONTDRAW) | (mobj->flags2 & MF2_DONTDRAW);
+		seg = seg->tracer;
+	}
+}
+
+void P_HandleMinecartSegments(mobj_t *mobj)
+{
+	if (!mobj->tracer)
+		P_SpawnMinecartSegments(mobj, (mobj->type == MT_MINECART));
+	P_UpdateMinecartSegments(mobj);
+}
+
 //
 // P_MobjThinker
 //
@@ -6797,10 +6901,67 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FIREBARPOINT:
 			case MT_CUSTOMMACEPOINT:
 			case MT_HIDDEN_SLING:
-				// The following was pretty good, but liked breaking whenever mobj->lastlook changed.
-				//P_MaceRotate(mobj, ((leveltime + 1) * mobj->lastlook), (leveltime * mobj->lastlook));
-				P_MaceRotate(mobj, mobj->movedir + mobj->lastlook, mobj->movedir);
-				mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+				{
+					angle_t oldmovedir = mobj->movedir;
+
+					// Always update movedir to prevent desyncing (in the traditional sense, not the netplay sense).
+					mobj->movedir = (mobj->movedir + mobj->lastlook) & FINEMASK;
+
+					// If too far away and not deliberately spitting in the face of optimisation, don't think!
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP))
+					{
+						UINT8 i;
+						// Quick! Look through players! Don't move unless a player is relatively close by.
+						// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
+						for (i = 0; i < MAXPLAYERS; ++i)
+							if (playeringame[i] && players[i].mo
+							 && P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200<<FRACBITS))
+								break; // Stop looking.
+						if (i == MAXPLAYERS)
+						{
+							if (!(mobj->flags2 & MF2_BEYONDTHEGRAVE))
+							{
+								mobj_t *ref = mobj;
+
+								// stop/hide all your babies
+								while ((ref = ref->hnext))
+								{
+									ref->eflags = (((ref->flags & MF_NOTHINK) ? 0 : 1)
+										| ((ref->flags & MF_NOCLIPTHING) ? 0 : 2)
+										| ((ref->flags2 & MF2_DONTDRAW) ? 0 : 4)); // oh my god this is nasty.
+									ref->flags |= MF_NOTHINK|MF_NOCLIPTHING;
+									ref->flags2 |= MF2_DONTDRAW;
+									ref->momx = ref->momy = ref->momz = 0;
+								}
+
+								mobj->flags2 |= MF2_BEYONDTHEGRAVE;
+							}
+
+							break; // don't make bubble!
+						}
+						else if (mobj->flags2 & MF2_BEYONDTHEGRAVE)
+						{
+							mobj_t *ref = mobj;
+
+							// start/show all your babies
+							while ((ref = ref->hnext))
+							{
+								if (ref->eflags & 1)
+									ref->flags &= ~MF_NOTHINK;
+								if (ref->eflags & 2)
+									ref->flags &= ~MF_NOCLIPTHING;
+								if (ref->eflags & 4)
+									ref->flags2 &= ~MF2_DONTDRAW;
+								ref->eflags = 0; // le sign
+							}
+
+							mobj->flags2 &= ~MF2_BEYONDTHEGRAVE;
+						}
+					}
+
+					// Okay, time to MOVE
+					P_MaceRotate(mobj, mobj->movedir, oldmovedir);
+				}
 				break;
 			case MT_HOOP:
 				if (mobj->fuse > 1)
@@ -7171,6 +7332,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_ROCKCRUMBLE14:
 			case MT_ROCKCRUMBLE15:
 			case MT_ROCKCRUMBLE16:
+			case MT_WOODDEBRIS:
 				if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
 					&& mobj->state != &states[mobj->info->deathstate])
 				{
@@ -7230,6 +7392,10 @@ void P_MobjThinker(mobj_t *mobj)
 
 					mobj->angle += (angle_t)mobj->movecount;
 				}
+				break;
+			case MT_FSGNA:
+				if (mobj->movedir)
+					mobj->angle += mobj->movedir;
 				break;
 			default:
 				if (mobj->fuse)
@@ -7320,6 +7486,9 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_EGGMOBILE4:
 				P_Boss4Thinker(mobj);
 				break;
+			case MT_FANG:
+				P_Boss5Thinker(mobj);
+				break;
 			case MT_BLACKEGGMAN:
 				P_Boss7Thinker(mobj);
 				break;
@@ -7396,37 +7565,34 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_PLAYER:
 			/// \todo Have the player's dead body completely finish its animation even if they've already respawned.
-			if (!(mobj->flags2 & MF2_DONTDRAW))
-			{
-				if (!mobj->fuse)
-				{ // Go away.
-					/// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
-					mobj->momz = 0;
-					if (mobj->player)
-						mobj->flags2 |= MF2_DONTDRAW;
-					else // safe to remove, nobody's going to complain!
-					{
-						P_RemoveMobj(mobj);
-						return;
-					}
-				}
-				else // Apply gravity to fall downwards.
+			if (!mobj->fuse)
+			{ // Go away.
+			  /// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
+				mobj->momz = 0;
+				if (mobj->player)
+					mobj->flags2 |= MF2_DONTDRAW;
+				else // safe to remove, nobody's going to complain!
 				{
-					if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
-					{
-							fixed_t r = mobj->radius>>FRACBITS;
-							mobj_t *explosion = P_SpawnMobj(
-								mobj->x + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->y + (P_RandomRange(r, -r)<<FRACBITS),
-								mobj->z + (P_RandomKey(mobj->height>>FRACBITS)<<FRACBITS),
-								MT_BOSSEXPLODE);
-							S_StartSound(explosion, sfx_cybdth);
-					}
-					if (mobj->movedir == DMG_DROWNED)
-						P_SetObjectMomZ(mobj, -FRACUNIT/2, true); // slower fall from drowning
-					else
-						P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+					P_RemoveMobj(mobj);
+					return;
 				}
+			}
+			else // Apply gravity to fall downwards.
+			{
+				if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
+				{
+					fixed_t r = mobj->radius >> FRACBITS;
+					mobj_t *explosion = P_SpawnMobj(
+						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
+						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
+						MT_BOSSEXPLODE);
+					S_StartSound(explosion, sfx_cybdth);
+				}
+				if (mobj->movedir == DMG_DROWNED)
+					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning
+				else
+					P_SetObjectMomZ(mobj, -2 * FRACUNIT / 3, true);
 			}
 			break;
 		default:
@@ -8306,6 +8472,113 @@ void P_MobjThinker(mobj_t *mobj)
 							mobj->flags2 |= MF2_DONTDRAW;
 					}
 				break;
+			case MT_TRAINDUSTSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *traindust = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_PARTICLE);
+					traindust->flags = MF_SCENERY;
+					P_SetMobjState(traindust, S_TRAINDUST);
+					traindust->frame = P_RandomRange(0, 8) | FF_TRANS90;
+					traindust->angle = mobj->angle;
+					traindust->tics = TICRATE * 4;
+					traindust->destscale = FRACUNIT * 64;
+					traindust->scalespeed = FRACUNIT / 24;
+					P_SetScale(traindust, FRACUNIT * 6);
+				}
+				break;
+			case MT_TRAINSTEAMSPAWNER:
+				if (leveltime % 5 == 0) {
+					mobj_t *steam = P_SpawnMobj(mobj->x + FRACUNIT*P_SignedRandom() / 2, mobj->y + FRACUNIT*P_SignedRandom() / 2, mobj->z, MT_PARTICLE);
+					P_SetMobjState(steam, S_TRAINSTEAM);
+					steam->frame = P_RandomRange(0, 1) | FF_TRANS90;
+					steam->tics = TICRATE * 8;
+					steam->destscale = FRACUNIT * 64;
+					steam->scalespeed = FRACUNIT / 8;
+					P_SetScale(steam, FRACUNIT * 16);
+					steam->momx = P_SignedRandom() * 32;
+					steam->momy = -64 * FRACUNIT;
+					steam->momz = 2 * FRACUNIT;
+				}
+				break;
+			case MT_CANARIVORE_GAS:
+				{
+					fixed_t momz;
+
+					if (mobj->flags2 & MF2_AMBUSH)
+					{
+						mobj->momx = FixedMul(mobj->momx, 50 * FRACUNIT / 51);
+						mobj->momy = FixedMul(mobj->momy, 50 * FRACUNIT / 51);
+						break;
+					}
+
+					if (mobj->eflags & MFE_VERTICALFLIP)
+					{
+						if ((mobj->z + mobj->height + mobj->momz) <= mobj->ceilingz)
+							break;
+					}
+					else
+					{
+						if ((mobj->z + mobj->momz) >= mobj->floorz)
+							break;
+					}
+
+					momz = abs(mobj->momz);
+					if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
+						P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
+					mobj->flags2 |= MF2_AMBUSH;
+					break;
+				}
+			case MT_SALOONDOOR:
+				{
+					fixed_t x = mobj->tracer->x;
+					fixed_t y = mobj->tracer->y;
+					fixed_t z = mobj->tracer->z;
+					angle_t oang = FixedAngle(mobj->extravalue1);
+					angle_t fa = (oang >> ANGLETOFINESHIFT) & FINEMASK;
+					fixed_t c0 = -96*FINECOSINE(fa);
+					fixed_t s0 = -96*FINESINE(fa);
+					angle_t fma;
+					fixed_t c, s;
+					angle_t angdiff;
+
+					// Adjust angular speed
+					fixed_t da = AngleFixed(mobj->angle - oang);
+					if (da > 180*FRACUNIT)
+						da -= 360*FRACUNIT;
+					mobj->extravalue2 = 8*(mobj->extravalue2 - da/32)/9;
+
+					// Update angle
+					mobj->angle += FixedAngle(mobj->extravalue2);
+
+					angdiff = mobj->angle - FixedAngle(mobj->extravalue1);
+					if (angdiff > (ANGLE_90 - ANG2) && angdiff < ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_90 - ANG2);
+						mobj->extravalue2 /= 2;
+					}
+					else if (angdiff < (ANGLE_270 + ANG2) && angdiff >= ANGLE_180)
+					{
+						mobj->angle = FixedAngle(mobj->extravalue1) + (ANGLE_270 + ANG2);
+						mobj->extravalue2 /= 2;
+					}
+
+					// Update position
+					fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
+					c = 48*FINECOSINE(fma);
+					s = 48*FINESINE(fma);
+					P_TeleportMove(mobj, x + c0 + c, y + s0 + s, z);
+					break;
+				}
+			case MT_MINECARTSPAWNER:
+				P_HandleMinecartSegments(mobj);
+				if (!mobj->fuse || mobj->fuse > TICRATE)
+					break;
+				if (mobj->fuse == 2)
+				{
+					mobj->fuse = 0;
+					break;
+				}
+				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -8382,6 +8655,10 @@ void P_MobjThinker(mobj_t *mobj)
 	// Check fuse
 	if (mobj->fuse)
 	{
+
+		if (mobj->type == MT_SNAPPER_HEAD || mobj->type == MT_SNAPPER_LEG || mobj->type == MT_MINECARTSEG)
+			mobj->flags2 ^= MF2_DONTDRAW;
+
 		mobj->fuse--;
 		if (!mobj->fuse)
 		{
@@ -8682,6 +8959,16 @@ void P_PushableThinker(mobj_t *mobj)
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+
+	if (mobj->type == MT_MINECART && mobj->health)
+	{
+		// If player is ded, remove this minecart
+		if (!mobj->target || P_MobjWasRemoved(mobj->target) || !mobj->target->health || !mobj->target->player || mobj->target->player->powers[pw_carry] != CR_MINECART)
+		{
+			P_KillMobj(mobj, NULL, NULL, 0);
+			return;
+		}
+	}
 
 	if (mobj->fuse == 1) // it would explode in the MobjThinker code
 	{
@@ -9042,6 +9329,27 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_NIGHTSSTAR:
 			if (nummaprings >= 0)
 				nummaprings++;
+			break;
+		case MT_CORK:
+			mobj->flags2 |= MF2_SUPERFIRE;
+			break;
+		case MT_FBOMB:
+			mobj->flags2 |= MF2_EXPLOSION;
+			break;
+		case MT_OILLAMP:
+			{
+				mobj_t* overlay = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_OVERLAY);
+				P_SetTarget(&overlay->target, mobj);
+				P_SetMobjState(overlay, S_OILLAMPFLARE);
+				break;
+			}
+		case MT_TNTBARREL:
+			mobj->momx = 1; //stack hack
+			break;
+		case MT_MINECARTEND:
+			mobj->tracer = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID);
+			mobj->tracer->angle = mobj->angle + ANGLE_90;
+			break;
 		default:
 			break;
 	}
@@ -9316,12 +9624,12 @@ consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, 
 
 void P_SpawnPrecipitation(void)
 {
-	INT32 i, j, mrand;
+	INT32 i, mrand;
 	fixed_t basex, basey, x, y, height;
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
 
-	if (dedicated || !cv_precipdensity.value || curWeather == PRECIP_NONE)
+	if (dedicated || /*!cv_precipdensity*/!cv_drawdist_precip.value || curWeather == PRECIP_NONE)
 		return;
 
 	// Use the blockmap to narrow down our placing patterns
@@ -9330,7 +9638,7 @@ void P_SpawnPrecipitation(void)
 		basex = bmaporgx + (i % bmapwidth) * MAPBLOCKSIZE;
 		basey = bmaporgy + (i / bmapwidth) * MAPBLOCKSIZE;
 
-		for (j = 0; j < cv_precipdensity.value; ++j)
+		//for (j = 0; j < cv_precipdensity.value; ++j) -- density is 1 for us always
 		{
 			x = basex + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
 			y = basey + ((M_RandomKey(MAPBLOCKUNITS<<3)<<FRACBITS)>>3);
@@ -10484,8 +10792,9 @@ ML_NOCLIMB :
 	anything else - no functionality
 ML_EFFECT1 : Swings instead of spins
 ML_EFFECT2 : Linktype is replaced with macetype for all spokes not ending in chains (inverted for MT_FIREBARPOINT)
-ML_EFFECT3 : Spawn a bonus macetype at the hinge point
+ML_EFFECT3 : Spawn a bonus linktype at the hinge point
 ML_EFFECT4 : Don't clip inside the ground
+ML_EFFECT5 : Don't stop thinking when too far away
 */
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
@@ -10610,6 +10919,10 @@ ML_EFFECT4 : Don't clip inside the ground
 		}
 		else
 			mmin = mnumspokes;
+
+		// If over distance away, don't move UNLESS this flag is applied
+		if (lines[line].flags & ML_EFFECT5)
+			mobj->flags2 |= MF2_BOSSNOTRAP;
 
 		// Make the links the same type as the end - repeated below
 		if ((mobj->type != MT_CHAINPOINT) && (((lines[line].flags & ML_EFFECT2) == ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or

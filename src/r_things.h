@@ -16,6 +16,7 @@
 
 #include "sounds.h"
 #include "r_plane.h"
+#include "r_portal.h"
 
 // "Left" and "Right" character symbols for additional rotation functionality
 #define ROT_L ('L' - '0')
@@ -45,7 +46,6 @@ extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
-void R_SortVisSprites(void);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -55,8 +55,21 @@ void R_AddSpriteDefs(UINT16 wadnum);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(void);
-void R_DrawMasked(void);
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+
+/** Used to count the amount of masked elements
+ * per portal to later group them in separate
+ * drawnode lists.
+ */
+typedef struct
+{
+	size_t drawsegs[2];
+	size_t vissprites[2];
+	fixed_t viewx, viewy, viewz;			/**< View z stored at the time of the BSP traversal for the view/portal. Masked sorting/drawing needs it. */
+	sector_t* viewsector;
+} maskcount_t;
+
+void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
 // -----------
 // SKINS STUFF
@@ -207,6 +220,7 @@ typedef struct drawnode_s
 
 extern INT32 numskins;
 extern skin_t skins[MAXSKINS];
+extern UINT32 visspritecount;
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002

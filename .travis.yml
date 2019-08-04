@@ -1,57 +1,323 @@
+# Travis-CI Config
+#
+# You may use the Deployer to upload packages and builds to external servers.
+# See deployer/travis/deployer_defaults.sh for environment variables to configure.
+
 language: c
 sudo: required
 dist: trusty
 
 matrix:
     include:
+################################
+# Test Buildbots
+# Deployer does not operate on these. See Deployer Buildbots, below.
+# These bots are disabled when a deployment is triggered by 'deployer' branch name AND DPL_TERMINATE_TESTS=1.
+# These bots remain enabled when a deployment is triggered by release tag.
+################################
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.4
           compiler: gcc-4.4
           env: GCC44=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.6
           compiler: gcc-4.6
           env: GCC46=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:stjr/srb2'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
+              - libopenmpt-dev
               - p7zip-full
               - gcc-4.7
           compiler: gcc-4.7
           env: GCC47=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #gcc-4.7
         - os: linux
           compiler: gcc
           env: GCC48=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
           addons:
             apt:
               sources:
               - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          env: GCC48=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - gcc-7
+          compiler: gcc-7
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough" GCC72=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - gcc-8
+          compiler: gcc-8
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow -Wno-error=format-truncation" GCC81=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
+        - os: linux
+          compiler: clang
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #clang version 3.5.0 (tags/RELEASE_350/final)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.5
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - clang-3.5
+          compiler: clang-3.5
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #Ubuntu clang version 3.5.0-4ubuntu2~trusty2 (tags/RELEASE_350/final) (based on LLVM 3.5.0)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.6
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - clang-3.6
+          compiler: clang-3.6
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #Ubuntu clang version 3.6.2-svn240577-1~exp1 (branches/release_36) (based on LLVM 3.6.2)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.7
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - clang-3.7
+          compiler: clang-3.7
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #Ubuntu clang version 3.7.1-svn253571-1~exp1 (branches/release_37) (based on LLVM 3.7.1)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.8
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - clang-3.8
+          compiler: clang-3.8
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.9
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:stjr/srb2'
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - libopenmpt-dev
+              - p7zip-full
+              - clang-3.9
+          compiler: clang-3.9
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #clang version 3.9.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-4.0
+#              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - libopenmpt-dev
+#              - p7zip-full
+#              - clang-4.0
+#          compiler: clang-4.0
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #clang version 4.0.X
+#        - os: linux
+#          addons:
+#            apt:
+#              sources:
+#              - llvm-toolchain-precise-5.0
+#              - ubuntu-toolchain-r-test
+#              - sourceline: 'ppa:stjr/srb2'
+#              packages:
+#              - libsdl2-mixer-dev
+#              - libpng-dev
+#              - libgl1-mesa-dev
+#              - libgme-dev
+#              - libopenmpt-dev
+#              - p7zip-full
+#              - clang-5.0
+#          compiler: clang-5.0
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #clang version 5.0.X
+#        - os: osx
+#          osx_image: beta-xcode6.1
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
+#        - os: osx
+#          osx_image: beta-xcode6.2
+#          compiler: gcc
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
+##        - os: osx
+##          osx_image: beta-xcode6.3
+##          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+##          #I think xcode.6.3 VM is broken, it does not boot
+#        - os: osx
+#          osx_image: xcode6.4
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
+#        - os: osx
+#          osx_image: xcode7
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 7.0.0 (clang-700.0.72)
+#        - os: osx
+#          osx_image: xcode7.1
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 7.0.0 (clang-700.1.76)
+#        - os: osx
+#          osx_image: xcode7.2
+#          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+#          #Apple LLVM version 7.0.2 (clang-700.1.81)
+#        - os: osx
+#          osx_image: xcode7.3
+#          #Apple LLVM version 7.3.0 (clang-703.0.31)
+#        - os: osx
+#          osx_image: xcode7.3
+#          #Apple LLVM version 7.3.0 (clang-703.0.31)
+        - os: osx
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #Default: macOS 10.13 and Xcode 9.4.1
+
+
+################################
+# Deployer Buildbots - OSX
+################################
+        - os: osx
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=osx
+          - _DPL_FTP_TARGET=1
+          - _DPL_PACKAGE_BINARY=1
+          #Apple LLVM version 7.3.0 (clang-703.0.31)
+
+
+################################
+# Deployer Buildbots - Linux assets
+# Set DPL_TERMINATE_ASSETS to disable all of these
+# List Ubuntu LTS next, newest to oldest
+# Then list non-LTS, newest to oldest
+################################
+        - os: linux
+          addons:
+            apt:
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -60,170 +326,251 @@ matrix:
               - p7zip-full
               - gcc-4.8
           compiler: gcc-4.8
-          env: GCC48=1
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_ASSETS) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=bionic-asset
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - _DPL_PACKAGE_MAIN=0
+          - _DPL_PACKAGE_ASSET=1
+          - PACKAGE_DISTRO=bionic
+          #- PACKAGE_SUBVERSION=~18.04bionic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+
+        ################################
+        # The below asset bots produce packages that occupy too much space.
+        # It would be nice if the asset files were not included in the source package itself,
+        # so these can deploy to each Ubuntu target without manual intervention.
+        #
+        # Currently, to get around Launchpad's space limitation,
+        # copy the packages from *one* bot and the space usage is not increased.
+        ################################
+        # - os: linux
+        #   addons:
+        #     apt:
+        #       packages:
+        #       - libsdl2-mixer-dev
+        #       - libpng-dev
+        #       - libgl1-mesa-dev
+        #       - libgme-dev
+        #       - p7zip-full
+        #       - gcc-4.8
+        #   compiler: gcc-4.8
+        #   dist: trusty
+        #   if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+        #       AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+        #       AND env(DPL_TERMINATE_ASSETS) != "1"
+        #   env:
+        #   - _DPL_JOB_ENABLED=1
+        #   - _DPL_JOB_NAME=trusty-asset
+        #   - _DPL_DPUT_TARGET=1
+        #   - _DPL_PACKAGE_SOURCE=1
+        #   - _DPL_PACKAGE_MAIN=0
+        #   - _DPL_PACKAGE_ASSET=1
+        #   - PACKAGE_DISTRO=trusty
+        #   #- PACKAGE_SUBVERSION=~14.04trusty
+        #   #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        # - os: linux
+        #   addons:
+        #     apt:
+        #       packages:
+        #       - libsdl2-mixer-dev
+        #       - libpng-dev
+        #       - libgl1-mesa-dev
+        #       - libgme-dev
+        #       - p7zip-full
+        #       - gcc-4.8
+        #   compiler: gcc-4.8
+        #   dist: xenial
+        #   if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+        #       AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+        #       AND env(DPL_TERMINATE_ASSETS) != "1"
+        #   env:
+        #   - _DPL_JOB_ENABLED=1
+        #   - _DPL_JOB_NAME=disco-asset
+        #   - _DPL_DPUT_TARGET=1
+        #   - _DPL_PACKAGE_SOURCE=1
+        #   - _DPL_PACKAGE_MAIN=0
+        #   - _DPL_PACKAGE_ASSET=1
+        #   - PACKAGE_DISTRO=disco
+        #   #- PACKAGE_SUBVERSION=~19.04disco
+        #   #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        # - os: linux
+        #   addons:
+        #     apt:
+        #       packages:
+        #       - libsdl2-mixer-dev
+        #       - libpng-dev
+        #       - libgl1-mesa-dev
+        #       - libgme-dev
+        #       - p7zip-full
+        #       - gcc-4.8
+        #   compiler: gcc-4.8
+        #   dist: xenial
+        #   if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+        #       AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+        #       AND env(DPL_TERMINATE_ASSETS) != "1"
+        #   env:
+        #   - _DPL_JOB_ENABLED=1
+        #   - _DPL_JOB_NAME=cosmic-asset
+        #   - _DPL_DPUT_TARGET=1
+        #   - _DPL_PACKAGE_SOURCE=1
+        #   - _DPL_PACKAGE_MAIN=0
+        #   - _DPL_PACKAGE_ASSET=1
+        #   - PACKAGE_DISTRO=cosmic
+        #   #- PACKAGE_SUBVERSION=~18.10cosmic
+        #   #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        # - os: linux
+        #   addons:
+        #     apt:
+        #       packages:
+        #       - libsdl2-mixer-dev
+        #       - libpng-dev
+        #       - libgl1-mesa-dev
+        #       - libgme-dev
+        #       - p7zip-full
+        #       - gcc-4.8
+        #   compiler: gcc-4.8
+        #   dist: xenial
+        #   if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+        #       AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+        #       AND env(DPL_TERMINATE_ASSETS) != "1"
+        #   env:
+        #   - _DPL_JOB_ENABLED=1
+        #   - _DPL_JOB_NAME=xenial-asset
+        #   - _DPL_DPUT_TARGET=1
+        #   - _DPL_PACKAGE_SOURCE=1
+        #   - _DPL_PACKAGE_MAIN=0
+        #   - _DPL_PACKAGE_ASSET=1
+        #   - PACKAGE_DISTRO=xenial
+        #   #- PACKAGE_SUBVERSION=~16.04xenial
+        #   #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+
+
+################################
+# Deployer Buildbots - Linux binaries
+# List Ubuntu LTS, newest to oldest
+# Then list non-LTS, newest to oldest
+################################
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=bionic
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=bionic
+          - PACKAGE_SUBVERSION=~18.04bionic
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
-              sources:
-              - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - gcc-7
-          compiler: gcc-7
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough" GCC72=1
-          #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: trusty
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=trusty
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=trusty
+          - PACKAGE_SUBVERSION=~14.04trusty
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
-              sources:
-              - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - gcc-8
-          compiler: gcc-8
-          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough -Wno-implicit-fallthrough -Wno-error=format-overflow" GCC81=1
-          #gcc-8 (Ubuntu 7.2.0-1ubuntu1~14.04) 8.1.0
-        - os: linux
-          compiler: clang
-          #clang version 3.5.0 (tags/RELEASE_350/final)
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - llvm-toolchain-precise-3.5
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - clang-3.5
-          compiler: clang-3.5
-          #Ubuntu clang version 3.5.0-4ubuntu2~trusty2 (tags/RELEASE_350/final) (based on LLVM 3.5.0)
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=disco
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=disco
+          - PACKAGE_SUBVERSION=~19.04disco
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
-              sources:
-              - llvm-toolchain-precise-3.6
-              - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - clang-3.6
-          compiler: clang-3.6
-          #Ubuntu clang version 3.6.2-svn240577-1~exp1 (branches/release_36) (based on LLVM 3.6.2)
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=cosmic
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=cosmic
+          - PACKAGE_SUBVERSION=~18.10cosmic
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
           addons:
             apt:
-              sources:
-              - llvm-toolchain-precise-3.7
-              - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-              - clang-3.7
-          compiler: clang-3.7
-          #Ubuntu clang version 3.7.1-svn253571-1~exp1 (branches/release_37) (based on LLVM 3.7.1)
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - llvm-toolchain-precise-3.8
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - clang-3.8
-          compiler: clang-3.8
-          #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
-        - os: linux
-          addons:
-            apt:
-              sources:
-              - llvm-toolchain-precise-3.9
-              - ubuntu-toolchain-r-test
-              packages:
-              - libsdl2-mixer-dev
-              - libpng-dev
-              - libgl1-mesa-dev
-              - libgme-dev
-              - p7zip-full
-              - clang-3.9
-          compiler: clang-3.9
-          #clang version 3.9.X
-#        - os: linux
-#          addons:
-#            apt:
-#              sources:
-#              - llvm-toolchain-precise-4.0
-#              - ubuntu-toolchain-r-test
-#              packages:
-#              - libsdl2-mixer-dev
-#              - libpng-dev
-#              - libgl1-mesa-dev
-#              - libgme-dev
-#              - p7zip-full
-#              - clang-4.0
-#          compiler: clang-4.0
-#          #clang version 4.0.X
-#        - os: linux
-#          addons:
-#            apt:
-#              sources:
-#              - llvm-toolchain-precise-5.0
-#              - ubuntu-toolchain-r-test
-#              packages:
-#              - libsdl2-mixer-dev
-#              - libpng-dev
-#              - libgl1-mesa-dev
-#              - libgme-dev
-#              - p7zip-full
-#              - clang-5.0
-#          compiler: clang-5.0
-#          #clang version 5.0.X
-#        - os: osx
-#          osx_image: beta-xcode6.1
-#          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
-#        - os: osx
-#          osx_image: beta-xcode6.2
-#          compiler: gcc
-#          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
-##        - os: osx
-##          osx_image: beta-xcode6.3
-##          #I think xcode.6.3 VM is broken, it does not boot
-#        - os: osx
-#          osx_image: xcode6.4
-#          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
-#        - os: osx
-#          osx_image: xcode7
-#          #Apple LLVM version 7.0.0 (clang-700.0.72)
-#        - os: osx
-#          osx_image: xcode7.1
-#          #Apple LLVM version 7.0.0 (clang-700.1.76)
-#        - os: osx
-#          osx_image: xcode7.2
-#          #Apple LLVM version 7.0.2 (clang-700.1.81)
-        - os: osx
-          osx_image: xcode7.3
-          #Apple LLVM version 7.3.0 (clang-703.0.31)
+              - gcc-4.8
+          compiler: gcc-4.8
+          dist: xenial
+          if: env(DPL_ENABLED) = "1" AND (env(_DPL_JOB_ENABLED) = "1" OR env(DPL_JOB_ENABLE_ALL) = "1")
+              AND (branch =~ /^.*deployer.*$/ OR (tag IS present AND env(DPL_TAG_ENABLED) = "1"))
+              AND env(DPL_TERMINATE_MAIN) != "1"
+          env:
+          - _DPL_JOB_ENABLED=1
+          - _DPL_JOB_NAME=xenial
+          - _DPL_DPUT_TARGET=1
+          - _DPL_PACKAGE_SOURCE=1
+          - PACKAGE_DISTRO=xenial
+          - PACKAGE_SUBVERSION=~16.04xenial
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
     allow_failures:
       - compiler: clang-3.5
       - compiler: clang-3.6
@@ -233,36 +580,147 @@ matrix:
       - compiler: clang-4.0
       - compiler: clang-5.0
 
+
 cache:
   apt: true
   ccache: true
   directories:
   - $HOME/srb2_cache
 
+
 addons:
   apt:
+    sources:
+    - sourceline: 'ppa:stjr/srb2'
     packages:
     - libsdl2-mixer-dev
     - libpng-dev
     - libgl1-mesa-dev
     - libgme-dev
+    - zlib1g-dev
+    - libopenmpt-dev
     - p7zip-full
+  homebrew:
+    taps:
+    - mazmazz/srb2
+    packages:
+    - sdl2_mixer
+    - game-music-emu
+    - p7zip
+    - libopenmpt
+    - cmake
+    update: true
 
-before_script:
-  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
-  - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
-  - mkdir build
-  - cd build
-  - export CFLAGS="-Wall -W -Werror $WFLAGS"
-  - export CCACHE_COMPRESS=true
-  - cmake .. -DCMAKE_BUILD_TYPE=Release
+
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2 sdl2_mixer game-music-emu p7zip; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake||true; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.6.dmg; hdiutil attach SDL2-2.0.6.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
+  # Initialize Deployer defaults
+  - . ./deployer/travis/deployer_defaults.sh
+
+  # Initialize Deployer; check if Deployer is enabled
+  # This needs to be run in the current shell so that $__DPL_ACTIVE is set for this session
+  - . ./deployer/travis/deployer.sh
+
+  # Also check if we should now terminate -- see `deployer.sh` for conditions.
+  # This should never happen on non-release buildbots when Deployer is not triggered.
+  - if [[ "$__DPL_TRY_TERMINATE_EARLY" == "1" ]]; then
+      if [[ "$__DPL_ACTIVE" != "1" ]]; then
+        echo "Exiting early because this job is not deploying.";
+        exit;
+      fi;
+    fi
+
+  # If we're triggered by release tag, force ASSET_FILES_OPTIONAL_GET=1
+  - if [[ "$__DPL_TAG_ELIGIBLE" = "1" ]]; then
+      ASSET_FILES_OPTIONAL_GET=1;
+    fi;
+
+
+install:
+  # Install OS X library dependencies via Homebrew
+  # Do this differently for release buildbots:
+  #     * `brew install --build-bottle` builds libraries for x86_64's lowest common denominator CPU, core2
+  #     * `sdl2_mixer` requires options from the formula tap https://github.com/mazmazz/homebrew-srb2
+  #     * `brew postinstall` runs post-install scripts after building a bottle
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      if [[ "$__DPL_ACTIVE" == "1" ]]; then
+        brew install --build-bottle sdl2 game-music-emu;
+        brew install --build-bottle mazmazz/srb2/sdl2_mixer --with-flac --with-mpg123;
+        brew postinstall sdl2 game-music-emu mazmazz/srb2/sdl2_mixer;
+      fi;
+    fi
   - mkdir -p $HOME/srb2_cache
 
-script: make -k
+
+before_script:
+  # OLDPWD is root repo folder
+  - OLDPWD=$PWD
+  - __ASSET_DIRECTORY="$OLDPWD/assets/installer"
+  - mkdir -p "$__ASSET_DIRECTORY"
+  - cd "$HOME/srb2_cache"
+
+  # Get stat command so we know what the cached archive date is.
+  # stat is different for OSX
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      STATCMD="stat -f %m";
+    else
+      STATCMD="stat -c %y";
+    fi
+
+  # Get asset files (required for MD5)
+  # See `deployer_defaults.sh` for asset download path
+  - if [[ "$ASSET_ARCHIVE_PATH" != "" ]]; then
+      if [ -f "$(basename $ASSET_ARCHIVE_PATH)" ]; then
+        echo "$(basename $ASSET_ARCHIVE_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_PATH))";
+      fi;
+      wget --verbose --server-response -N "$ASSET_ARCHIVE_PATH";
+      7z x "$(basename $ASSET_ARCHIVE_PATH)" -o"$__ASSET_DIRECTORY" -aos;
+    fi;
+
+  # Get optional files too
+  - if [[ "$__DPL_ACTIVE" == "1" ]] && [[ "$ASSET_FILES_OPTIONAL_GET" == "1" ]] && [[ "$ASSET_ARCHIVE_OPTIONAL_PATH" != "" ]]; then
+      if [ -f "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" ]; then
+        echo "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH) cache date -- $($STATCMD $(basename $ASSET_ARCHIVE_OPTIONAL_PATH))";
+      fi;
+      wget --verbose --server-response -N "$ASSET_ARCHIVE_OPTIONAL_PATH";
+      7z x "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" -o"$__ASSET_DIRECTORY" -aos;
+    fi;
+
+  # Go back to root repo folder
+  - cd "$OLDPWD"
+
+  # Prepare CMake asset lists
+  - SRB2_ASSET_HASHED=$(echo ${ASSET_FILES_HASHED// /\;})
+  - SRB2_ASSET_DOCS=$(echo ${ASSET_FILES_DOCS// /\;})
+  - SRB2_ASSET_DIRECTORY="$__ASSET_DIRECTORY"
+
+  # Prepare CMake
+  - mkdir build
+  - cd build
+  - mkdir package
+  - export CFLAGS="-Wall -W -Werror $WFLAGS"
+  - export CCACHE_COMPRESS=true
+  # If OS X, set -march=core2 to build compatible binaries with old Macs
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      export CFLAGS="${CFLAGS} -march=core2";
+    fi;
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+      -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
+      -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
+      -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
+      -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
+      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}"
+
+script:
+  # Build our Makefile from Cmake!
+  - if [[ "$__DPL_ACTIVE" == "1" ]]; then
+      . ../deployer/travis/deployer_build.sh;
+    else
+      make -k;
+    fi;
+
+after_success:
+  # Run the upload scripts
+  # These do nothing if Deployer is not triggered
+  - . ../deployer/travis/deployer_ftp.sh
+  - . ../deployer/travis/deployer_dput.sh

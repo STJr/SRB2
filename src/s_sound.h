@@ -20,6 +20,11 @@
 #include "command.h"
 #include "tables.h" // angle_t
 
+#ifdef HAVE_OPENMPT
+#include "libopenmpt/libopenmpt.h"
+openmpt_module *openmpt_mhandle;
+#endif
+
 // mask used to indicate sound origin is player item pickup
 #define PICKUP_SOUND 0x8000
 
@@ -30,6 +35,10 @@ extern consvar_t cv_resetmusic;
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+
+#ifdef HAVE_OPENMPT
+extern consvar_t cv_modfilter;
+#endif
 
 #ifdef SNDSERV
 extern consvar_t sndserver_cmd, sndserver_arg;

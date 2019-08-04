@@ -405,3 +405,21 @@ tic_t F_GetWipeLength(UINT8 wipetype)
 	return --wipeframe;
 #endif
 }
+
+boolean F_WipeExists(UINT8 wipetype)
+{
+#ifdef NOWIPE
+	return false;
+#else
+	static char lumpname[10] = "FADEmm00";
+	lumpnum_t lumpnum;
+
+	if (wipetype > 99)
+		return false;
+
+	sprintf(&lumpname[4], "%.2hu00", (UINT16)wipetype);
+
+	lumpnum = W_CheckNumForName(lumpname);
+	return !(lumpnum == LUMPERROR);
+#endif
+}
