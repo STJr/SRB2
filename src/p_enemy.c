@@ -3815,6 +3815,24 @@ void A_BossDeath(mobj_t *mo)
 		EV_DoElevator(&junk, elevateUp, false);
 		junk.tag = LE_CAPSULE2;
 		EV_DoElevator(&junk, elevateHighest, false);
+
+		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
+			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
+		{
+			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
+			// So just park ourselves in the mapmus variables.
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+
+			// don't change if we're in another tune
+			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
+			if (!changed)
+				S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2),
+					mapheaderinfo[gamemap-1]->muspostbossfadein);
+		}
 	}
 
 bossjustdie:
@@ -4107,12 +4125,11 @@ void A_Invincibility(mobj_t *actor)
 
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
-		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
@@ -4146,10 +4163,7 @@ void A_SuperSneakers(mobj_t *actor)
 		if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
 			S_SpeedMusic(1.4f);
 		else
-		{
-			S_StopMusic();
-			S_ChangeMusicInternal("_shoes", false);
-		}
+			P_PlayJingle(player, JT_SHOES);
 		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
 		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
