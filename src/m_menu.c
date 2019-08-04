@@ -159,7 +159,7 @@ static INT32 vidm_previousmode;
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
-tic_t recfgtimer = 0;
+INT32 recfgtimer = 0;
 
 //
 // PROTOTYPES
@@ -8114,7 +8114,7 @@ void M_DrawTimeAttackMenu(void)
 	{
 		V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 		V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-		V_DrawSciencePatch(0, 40*FINESINE((recfgtimer)*8), 0, W_CachePatchName("CLOCK", PU_CACHE), FRACUNIT);
+		V_DrawSciencePatch(0, -(88<<FRACBITS) + FixedMul(88<<FRACBITS, (40*FINESINE((recfgtimer)*18<<FRACBITS))), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
 		recfgtimer++;
 	}
 	M_DrawMenuTitle();
