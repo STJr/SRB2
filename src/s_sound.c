@@ -519,6 +519,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
 	INT32 sep, pitch, priority, cnum;
+	const sfxenum_t actual_id = sfx_id;
 	sfxinfo_t *sfx;
 
 	const mobj_t *origin = (const mobj_t *)origin_p;
@@ -657,7 +658,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 #endif
 
 		// Handle closed caption input.
-		S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+		S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
@@ -710,7 +711,7 @@ dontplay:
 #endif
 
 	// Handle closed caption input.
-	S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+	S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
@@ -1938,7 +1939,17 @@ void S_StopMusic(void)
 	if (cv_closedcaptioning.value)
 	{
 		if (closedcaptions[0].s-S_sfx == sfx_None)
-			closedcaptions[0].t = CAPTIONFADETICS;
+		{
+			if (gamestate != wipegamestate)
+			{
+				closedcaptions[0].c = NULL;
+				closedcaptions[0].s = NULL;
+				closedcaptions[0].t = 0;
+				closedcaptions[0].b = 0;
+			}
+			else
+				closedcaptions[0].t = CAPTIONFADETICS;
+		}
 	}
 }
 
@@ -2253,8 +2264,10 @@ void GameMIDIMusic_OnChange(void)
 	}
 }
 
+#ifdef HAVE_OPENMPT
 void ModFilter_OnChange(void)
 {
 	if (openmpt_mhandle)
 		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
 }
+#endif

@@ -109,14 +109,16 @@ static UINT16 current_track;
 #endif
 
 #ifdef HAVE_OPENMPT
-int mod_err = OPENMPT_ERROR_OK;
+static int mod_err = OPENMPT_ERROR_OK;
 static const char *mod_err_str;
 static UINT16 current_subsong;
+static size_t probesize;
+static int result;
 #endif
 
 static void var_cleanup(void)
 {
-	loop_point = song_length = 0.0f;
+	song_length = loop_point = 0.0f;
 	music_bytes = fading_source = fading_target =\
 	 fading_timer = fading_duration = 0;
 
@@ -396,7 +398,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 					gme_track_info(emu, &info, 0);
 
 					len = (info->play_length * 441 / 10) << 2;
-					mem = malloc(len);
+					mem = Z_Malloc(len, PU_SOUND, 0);
 					gme_play(emu, len >> 1, mem);
 					gme_free_info(info);
 					gme_delete(emu);
@@ -469,7 +471,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		gme_track_info(emu, &info, 0);
 
 		len = (info->play_length * 441 / 10) << 2;
-		mem = malloc(len);
+		mem = Z_Malloc(len, PU_SOUND, 0);
 		gme_play(emu, len >> 1, mem);
 		gme_free_info(info);
 		gme_delete(emu);
@@ -1128,6 +1130,36 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 #endif
 
+#ifdef HAVE_OPENMPT
+	/*
+		If the size of the data to be checked is bigger than the recommended size (> 2048)
+		Let's just set the probe size to the recommended size
+		Otherwise let's give it the full data size
+	*/
+
+	if (len > openmpt_probe_file_header_get_recommended_size())
+		probesize = openmpt_probe_file_header_get_recommended_size();
+	else
+		probesize = len;
+
+	result = openmpt_probe_file_header(OPENMPT_PROBE_FILE_HEADER_FLAGS_DEFAULT, data, probesize, len, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	if (result == OPENMPT_PROBE_FILE_HEADER_RESULT_SUCCESS) // We only cared if it succeeded, continue on if not.
+	{
+		openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		if (!openmpt_mhandle) // Failed to create module handle? Show error and return!
+		{
+			mod_err = openmpt_module_error_get_last(openmpt_mhandle);
+			mod_err_str = openmpt_error_string(mod_err);
+			CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
+			return false;
+		}
+		else
+			return true; // All good and we're ready for music playback!
+	}
+#endif
+
+	// Let's see if Mixer is able to load this.
 	rw = SDL_RWFromMem(data, len);
 	if (rw != NULL)
 	{
@@ -1138,40 +1170,6 @@ boolean I_LoadSong(char *data, size_t len)
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
 		return false;
 	}
-
-#ifdef HAVE_OPENMPT
-	switch(Mix_GetMusicType(music))
-	{
-		case MUS_MODPLUG:
-		case MUS_MOD:
-			openmpt_mhandle = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-			if (!openmpt_mhandle)
-			{
-				mod_err = openmpt_module_error_get_last(openmpt_mhandle);
-				mod_err_str = openmpt_error_string(mod_err);
-				CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
-				Mix_FreeMusic(music);
-				music = NULL;
-				return false;
-			}
-			else
-			{
-				Mix_FreeMusic(music);
-				music = NULL;
-				return true;
-			}
-			break;
-		case MUS_WAV:
-		case MUS_MID:
-		case MUS_OGG:
-		case MUS_MP3:
-		case MUS_FLAC:
-			Mix_HookMusic(NULL, NULL);
-			break;
-		default:
-			break;
-	}
-#endif
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;

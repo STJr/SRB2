@@ -146,16 +146,6 @@ FUNCINLINE static ATTRINLINE void Polyobj_vecSub2(vertex_t *dst, vertex_t *v1, v
 	dst->y = v1->y - v2->y;
 }
 
-// Add the polyobject's thinker to the thinker list
-// Unlike P_AddThinker, this adds it to the front of the list instead of the back, so that carrying physics can work right. -Red
-FUNCINLINE static ATTRINLINE void PolyObj_AddThinker(thinker_t *th)
-{
-	thinkercap.next->prev = th;
-	th->next = thinkercap.next;
-	th->prev = &thinkercap;
-	thinkercap.next = th;
-}
-
 //
 // P_PointInsidePolyobj
 //
@@ -1505,6 +1495,7 @@ void Polyobj_InitLevel(void)
 	mqueue_t    anchorqueue;
 	mobjqitem_t *qitem;
 	INT32 i, numAnchors = 0;
+	mobj_t *mo;
 
 	M_QueueInit(&spawnqueue);
 	M_QueueInit(&anchorqueue);
@@ -1518,31 +1509,31 @@ void Polyobj_InitLevel(void)
 
 	// run down the thinker list, count the number of spawn points, and save
 	// the mobj_t pointers on a queue for use below.
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		mo = (mobj_t *)th;
+
+		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
+			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
 		{
-			mobj_t *mo = (mobj_t *)th;
+			++numPolyObjects;
 
-			if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
-				mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
-			{
-				++numPolyObjects;
+			qitem = malloc(sizeof(mobjqitem_t));
+			memset(qitem, 0, sizeof(mobjqitem_t));
+			qitem->mo = mo;
+			M_QueueInsert(&(qitem->mqitem), &spawnqueue);
+		}
+		else if (mo->info->doomednum == POLYOBJ_ANCHOR_DOOMEDNUM)
+		{
+			++numAnchors;
 
-				qitem = malloc(sizeof(mobjqitem_t));
-				memset(qitem, 0, sizeof(mobjqitem_t));
-				qitem->mo = mo;
-				M_QueueInsert(&(qitem->mqitem), &spawnqueue);
-			}
-			else if (mo->info->doomednum == POLYOBJ_ANCHOR_DOOMEDNUM)
-			{
-				++numAnchors;
-
-				qitem = malloc(sizeof(mobjqitem_t));
-				memset(qitem, 0, sizeof(mobjqitem_t));
-				qitem->mo = mo;
-				M_QueueInsert(&(qitem->mqitem), &anchorqueue);
-			}
+			qitem = malloc(sizeof(mobjqitem_t));
+			memset(qitem, 0, sizeof(mobjqitem_t));
+			qitem->mo = mo;
+			M_QueueInsert(&(qitem->mqitem), &anchorqueue);
 		}
 	}
 
@@ -1657,7 +1648,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotate: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -1742,7 +1733,7 @@ void T_PolyObjMove(polymove_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjMove: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -1815,7 +1806,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjWaypoint: thinker with invalid id %d removed.", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -1826,9 +1817,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 
 	// Find out target first.
 	// We redo this each tic to make savegame compatibility easier.
-	for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
+	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)wp;
@@ -1882,7 +1873,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		po->lines[0]->backsector->floorheight = target->z - amtz;
 		po->lines[0]->backsector->ceilingheight = target->z + amtz;
 		// Sal: Remember to check your sectors!
-		P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+		// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
+		//  updating objects in the front one too just added teleporting to ground bugs
 		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 		// Apply action to mirroring polyobjects as well
 		start = 0;
@@ -1896,7 +1888,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			po->lines[0]->backsector->floorheight += diffz; // move up/down by same amount as the parent did
 			po->lines[0]->backsector->ceilingheight += diffz;
 			// Sal: Remember to check your sectors!
-			P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+			// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
+			//  updating objects in the front one too just added teleporting to ground bugs
 			P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 		}
 
@@ -1907,9 +1900,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 			CONS_Debug(DBG_POLYOBJ, "Looking for next waypoint...\n");
 
 			// Find next waypoint
-			for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
+			for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 			{
-				if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+				if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 					continue;
 
 				mo2 = (mobj_t *)wp;
@@ -1917,8 +1910,85 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 				if (mo2->type != MT_TUBEWAYPOINT)
 					continue;
 
-				if (mo2->threshold == th->sequence)
+				if (mo2->threshold != th->sequence)
+					continue;
+
+				if (th->direction == -1)
 				{
+					if (mo2->health == target->health - 1)
+					{
+						waypoint = mo2;
+						break;
+					}
+				}
+				else
+				{
+					if (mo2->health == target->health + 1)
+					{
+						waypoint = mo2;
+						break;
+					}
+				}
+			}
+
+			if (!waypoint && th->wrap) // If specified, wrap waypoints
+			{
+				if (!th->continuous)
+				{
+					th->wrap = 0;
+					th->stophere = true;
+				}
+
+				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
+				{
+					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
+					mo2 = (mobj_t *)wp;
+
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+
+					if (mo2->threshold != th->sequence)
+						continue;
+
+					if (th->direction == -1)
+					{
+						if (waypoint == NULL)
+							waypoint = mo2;
+						else if (mo2->health > waypoint->health)
+							waypoint = mo2;
+					}
+					else
+					{
+						if (mo2->health == 0)
+						{
+							waypoint = mo2;
+							break;
+						}
+					}
+				}
+			}
+			else if (!waypoint && th->comeback) // Come back to the start
+			{
+				th->direction = -th->direction;
+
+				if (!th->continuous)
+					th->comeback = false;
+
+				for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
+				{
+					if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+						continue;
+
+					mo2 = (mobj_t *)wp;
+
+					if (mo2->type != MT_TUBEWAYPOINT)
+						continue;
+
+					if (mo2->threshold != th->sequence)
+						continue;
+
 					if (th->direction == -1)
 					{
 						if (mo2->health == target->health - 1)
@@ -1933,83 +2003,6 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 						{
 							waypoint = mo2;
 							break;
-						}
-					}
-				}
-			}
-
-			if (!waypoint && th->wrap) // If specified, wrap waypoints
-			{
-				if (!th->continuous)
-				{
-					th->wrap = 0;
-					th->stophere = true;
-				}
-
-				for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
-				{
-					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-						continue;
-
-					mo2 = (mobj_t *)wp;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold == th->sequence)
-					{
-						if (th->direction == -1)
-						{
-							if (waypoint == NULL)
-								waypoint = mo2;
-							else if (mo2->health > waypoint->health)
-								waypoint = mo2;
-						}
-						else
-						{
-							if (mo2->health == 0)
-							{
-								waypoint = mo2;
-								break;
-							}
-						}
-					}
-				}
-			}
-			else if (!waypoint && th->comeback) // Come back to the start
-			{
-				th->direction = -th->direction;
-
-				if (!th->continuous)
-					th->comeback = false;
-
-				for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
-				{
-					if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
-						continue;
-
-					mo2 = (mobj_t *)wp;
-
-					if (mo2->type != MT_TUBEWAYPOINT)
-						continue;
-
-					if (mo2->threshold == th->sequence)
-					{
-						if (th->direction == -1)
-						{
-							if (mo2->health == target->health - 1)
-							{
-								waypoint = mo2;
-								break;
-							}
-						}
-						else
-						{
-							if (mo2->health == target->health + 1)
-							{
-								waypoint = mo2;
-								break;
-							}
 						}
 					}
 				}
@@ -2059,8 +2052,9 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	po->lines[0]->backsector->floorheight += momz;
 	po->lines[0]->backsector->ceilingheight += momz;
 	// Sal: Remember to check your sectors!
-	P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage)); // frontsector is NEEDED for crushing
-	P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage)); // backsector may not be necessary, but just in case
+	// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
+	//  updating objects in the front one too just added teleporting to ground bugs
+	P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 
 	// Apply action to mirroring polyobjects as well
 	start = 0;
@@ -2074,7 +2068,8 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		po->lines[0]->backsector->floorheight += momz;
 		po->lines[0]->backsector->ceilingheight += momz;
 		// Sal: Remember to check your sectors!
-		P_CheckSector(po->lines[0]->frontsector, (boolean)(po->damage));
+		// Monster Iestyn: we only need to bother with the back sector, now that P_CheckSector automatically checks the blockmap
+		//  updating objects in the front one too just added teleporting to ground bugs
 		P_CheckSector(po->lines[0]->backsector, (boolean)(po->damage));
 	}
 }
@@ -2089,7 +2084,7 @@ void T_PolyDoorSlide(polyslidedoor_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSlide: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2194,7 +2189,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyDoorSwing: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2293,7 +2288,7 @@ void T_PolyObjDisplace(polydisplace_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2333,7 +2328,7 @@ void T_PolyObjRotDisplace(polyrotdisplace_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjRotDisplace: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2390,7 +2385,7 @@ INT32 EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotate_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotate;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2455,7 +2450,7 @@ INT32 EV_DoPolyObjMove(polymovedata_t *pmdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjMove;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2516,7 +2511,7 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polywaypoint_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjWaypoint;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2534,9 +2529,9 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 	th->stophere = false;
 
 	// Find the first waypoint we need to use
-	for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
+	for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)wp;
@@ -2544,31 +2539,31 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		if (mo2->type != MT_TUBEWAYPOINT)
 			continue;
 
-		if (mo2->threshold == th->sequence)
+		if (mo2->threshold != th->sequence)
+			continue;
+
+		if (th->direction == -1) // highest waypoint #
 		{
-			if (th->direction == -1) // highest waypoint #
+			if (mo2->health == 0)
+				last = mo2;
+			else
 			{
-				if (mo2->health == 0)
-					last = mo2;
-				else
-				{
-					if (first == NULL)
-						first = mo2;
-					else if (mo2->health > first->health)
-						first = mo2;
-				}
-			}
-			else // waypoint 0
-			{
-				if (mo2->health == 0)
+				if (first == NULL)
 					first = mo2;
-				else
-				{
-					if (last == NULL)
-						last = mo2;
-					else if (mo2->health > last->health)
-						last = mo2;
-				}
+				else if (mo2->health > first->health)
+					first = mo2;
+			}
+		}
+		else // waypoint 0
+		{
+			if (mo2->health == 0)
+				first = mo2;
+			else
+			{
+				if (last == NULL)
+					last = mo2;
+				else if (mo2->health > last->health)
+					last = mo2;
 			}
 		}
 	}
@@ -2605,9 +2600,9 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// Find the actual target movement waypoint
 	target = first;
-	/*for (wp = thinkercap.next; wp != &thinkercap; wp = wp->next)
+	/*for (wp = thlist[THINK_MOBJ].next; wp != &thlist[THINK_MOBJ]; wp = wp->next)
 	{
-		if (wp->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+		if (wp->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)wp;
@@ -2615,23 +2610,23 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		if (mo2->type != MT_TUBEWAYPOINT)
 			continue;
 
-		if (mo2->threshold == th->sequence)
+		if (mo2->threshold != th->sequence)
+			continue;
+
+		if (th->direction == -1) // highest waypoint #
 		{
-			if (th->direction == -1) // highest waypoint #
+			if (mo2->health == first->health - 1)
 			{
-				if (mo2->health == first->health - 1)
-				{
-					target = mo2;
-					break;
-				}
+				target = mo2;
+				break;
 			}
-			else // waypoint 0
+		}
+		else // waypoint 0
+		{
+			if (mo2->health == first->health + 1)
 			{
-				if (mo2->health == first->health + 1)
-				{
-					target = mo2;
-					break;
-				}
+				target = mo2;
+				break;
 			}
 		}
 	}*/
@@ -2662,7 +2657,7 @@ static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
 	// allocate and add a new slide door thinker
 	th = Z_Malloc(sizeof(polyslidedoor_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSlide;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
 	po->thinker = &th->thinker;
@@ -2710,7 +2705,7 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 	// allocate and add a new swing door thinker
 	th = Z_Malloc(sizeof(polyswingdoor_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSwing;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
 	po->thinker = &th->thinker;
@@ -2792,7 +2787,7 @@ INT32 EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polydisplace_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjDisplace;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2838,7 +2833,7 @@ INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotDisplace;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2875,7 +2870,7 @@ void T_PolyObjFlag(polymove_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFlag: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -2939,7 +2934,7 @@ INT32 EV_DoPolyObjFlag(line_t *pfdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFlag;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields
@@ -2978,7 +2973,7 @@ void T_PolyObjFade(polyfade_t *th)
 #else
 	{
 		CONS_Debug(DBG_POLYOBJ, "T_PolyObjFade: thinker with invalid id %d removed.\n", th->polyObjNum);
-		P_RemoveThinkerDelayed(&th->thinker);
+		P_RemoveThinker(&th->thinker);
 		return;
 	}
 #endif
@@ -3089,7 +3084,7 @@ INT32 EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
 	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
-	PolyObj_AddThinker(&th->thinker);
+	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
 	// set fields

@@ -1391,7 +1391,7 @@ void A_StatueBurst(mobj_t *actor)
 		return;
 
 	new->angle = actor->angle;
-	new->target = actor->target;
+	P_SetTarget(&new->target, actor->target);
 	if (locvar2)
 		P_SetMobjState(new, (statenum_t)locvar2);
 	S_StartSound(new, new->info->attacksound);
@@ -2155,7 +2155,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		for (i = 0; (i < CSEGS); i++)
 		{
 			mobj_t *newchain = P_SpawnMobjFromMobj(actor, 0, 0, 0, actor->info->raisestate);
-			prevchain->target = newchain;
+			P_SetTarget(&prevchain->target, newchain);
 			prevchain = newchain;
 		}
 		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
@@ -2348,7 +2348,7 @@ void A_VultureHover(mobj_t *actor)
 	fixed_t targetz;
 	fixed_t distdif;
 	fixed_t memz = actor->z;
-	INT8 i;
+	SINT8 i;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_VultureHover", actor))
@@ -2411,6 +2411,8 @@ void A_VultureBlast(mobj_t *actor)
 {
 	mobj_t *dust;
 	UINT8 i;
+	angle_t faa;
+	fixed_t faacos, faasin;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_VultureBlast", actor))
@@ -2419,18 +2421,21 @@ void A_VultureBlast(mobj_t *actor)
 
 	S_StartSound(actor, actor->info->attacksound);
 
+	faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
+	faacos = FINECOSINE(faa);
+	faasin = FINESINE(faa);
+
 	for (i = 0; i <= 7; i++)
 	{
 		angle_t fa = ((i*(angle_t)ANGLE_45) >> ANGLETOFINESHIFT) & FINEMASK;
-		angle_t faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
-		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -FINESINE(faa)), actor->y + 48*FixedMul(FINECOSINE(fa), FINECOSINE(faa)), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
+		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -faasin), actor->y + 48*FixedMul(FINECOSINE(fa), faacos), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
 
 		P_SetScale(dust, 4*FRACUNIT);
 		dust->destscale = FRACUNIT;
 		dust->scalespeed = 4*FRACUNIT/TICRATE;
 		dust->fuse = TICRATE;
-		dust->momx = FixedMul(FINECOSINE(fa), -FINESINE(faa))*3;
-		dust->momy = FixedMul(FINECOSINE(fa), FINECOSINE(faa))*3;
+		dust->momx = FixedMul(FINECOSINE(fa), -faasin)*3;
+		dust->momy = FixedMul(FINECOSINE(fa), faacos)*3;
 		dust->momz = FINESINE(fa)*6;
 	}
 }
@@ -2858,6 +2863,7 @@ void A_BossFireShot(mobj_t *actor)
 	fixed_t x, y, z;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	mobj_t *missile;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_BossFireShot", actor))
@@ -2925,7 +2931,10 @@ void A_BossFireShot(mobj_t *actor)
 			break;
 	}
 
-	P_SpawnXYZMissile(actor, actor->target, locvar1, x, y, z);
+	missile = P_SpawnXYZMissile(actor, actor->target, locvar1, x, y, z);
+
+	if (missile && actor->tracer && (actor->tracer->flags & MF_BOSS)) // Don't harm your papa.
+		P_SetTarget(&missile->target, actor->tracer);
 }
 
 // Function: A_Boss7FireMissiles
@@ -3079,7 +3088,7 @@ void A_Boss1Laser(mobj_t *actor)
 	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
 	{
 		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
-		point->target = actor;
+		P_SetTarget(&point->target, actor);
 		point->destscale = 3*FRACUNIT;
 		point->scalespeed = FRACUNIT>>2;
 		point->fuse = TICRATE;
@@ -3154,21 +3163,35 @@ void A_FocusTarget(mobj_t *actor)
 // Description: Reverse arms direction.
 //
 // var1 = sfx to play
-// var2 = unused
+// var2 = sfx to play in pinch
 //
 void A_Boss4Reverse(mobj_t *actor)
 {
 	sfxenum_t locvar1 = (sfxenum_t)var1;
+	sfxenum_t locvar2 = (sfxenum_t)var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss4Reverse", actor))
 		return;
 #endif
-	S_StartSound(NULL, locvar1);
 	actor->reactiontime = 0;
-	if (actor->movedir == 1)
-		actor->movedir = 2;
+	if (actor->movedir < 3)
+	{
+		S_StartSound(NULL, locvar1);
+		if (actor->movedir == 1)
+			actor->movedir = 2;
+		else
+			actor->movedir = 1;
+	}
 	else
-		actor->movedir = 1;
+	{
+		S_StartSound(NULL, locvar2);
+		if (actor->movedir == 4)
+			actor->movedir = 5;
+		else
+			actor->movedir = 4;
+		actor->angle += ANGLE_180;
+		actor->movefactor = -actor->movefactor;
+	}
 }
 
 // Function: A_Boss4SpeedUp
@@ -3465,9 +3488,11 @@ void A_1upThinker(mobj_t *actor)
 
 	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
-		if (actor->tracer) {
-			P_RemoveMobj(actor->tracer);
-			actor->tracer = NULL;
+		if (actor->tracer)
+		{
+			mobj_t *tracer = actor->tracer;
+			P_SetTarget(&actor->tracer, NULL);
+			P_RemoveMobj(tracer);
 		}
 		return;
 	}
@@ -3761,9 +3786,9 @@ void A_BossDeath(mobj_t *mo)
 
 	// scan the remaining thinkers to see
 	// if all bosses are dead
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -3853,6 +3878,8 @@ bossjustdie:
 		}
 		default: //eggmobiles
 		{
+			UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
 			// Stop exploding and prepare to run.
 			P_SetMobjState(mo, mo->info->xdeathstate);
 			if (P_MobjWasRemoved(mo))
@@ -3862,14 +3889,17 @@ bossjustdie:
 
 			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
 			// scan the thinkers to find the runaway point
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 					continue;
 
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
 					continue;
 
 				// If this one's further then the last one, don't go for it.
@@ -6114,9 +6144,9 @@ void A_RingExplode(mobj_t *actor)
 
 	S_StartSound(actor, sfx_prloop);
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -6626,6 +6656,9 @@ void A_RecyclePowers(mobj_t *actor)
 		//1.1: weapon rings too
 		players[recv_pl].ringweapons = weapons[send_pl];
 		players[recv_pl].currentweapon = weaponheld[send_pl];
+
+		if (((players[recv_pl].powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (players[recv_pl].revitem == MT_LHRT || players[recv_pl].spinitem == MT_LHRT || players[recv_pl].thokitem == MT_LHRT)) // Healers can't keep their buff.
+			players[recv_pl].powers[pw_shield] &= SH_STACK;
 
 		P_SpawnShieldOrb(&players[recv_pl]);
 		if (P_IsLocalPlayer(&players[recv_pl]))
@@ -7242,7 +7275,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
 		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
-		pogo->target = actor;
+		P_SetTarget(&pogo->target, actor);
 	}
 
 	actor->reactiontime = 1;
@@ -7758,9 +7791,11 @@ void A_Boss3TakeDamage(mobj_t *actor)
 		return;
 #endif
 	actor->movecount = var1;
+	actor->movefactor = -512*FRACUNIT;
 
-	if (actor->target && actor->target->spawnpoint)
-		actor->threshold = actor->target->spawnpoint->extrainfo;
+	/*if (actor->target && actor->target->spawnpoint)
+		actor->threshold = actor->target->spawnpoint->extrainfo;*/
+
 }
 
 // Function: A_Boss3Path
@@ -7797,24 +7832,34 @@ void A_Boss3Path(mobj_t *actor)
 	}
 	else if (actor->threshold >= 0) // Traveling mode
 	{
-		thinker_t *th;
-		mobj_t *mo2;
-		fixed_t dist, dist2;
+		fixed_t dist = 0;
 		fixed_t speed;
 
-		P_SetTarget(&actor->target, NULL);
-
-		// scan the thinkers
-		// to find a point that matches
-		// the number
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		if (!(actor->flags2 & MF2_STRONGBOX))
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
+			thinker_t *th;
+			mobj_t *mo2;
 
-			mo2 = (mobj_t *)th;
-			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2->spawnpoint->angle == actor->threshold)
+			P_SetTarget(&actor->target, NULL);
+
+			// scan the thinkers
+			// to find a point that matches
+			// the number
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					continue;
+
+				mo2 = (mobj_t *)th;
+				if (mo2->type != MT_BOSS3WAYPOINT)
+					continue;
+				if (!mo2->spawnpoint)
+					continue;
+				if (mo2->spawnpoint->angle != actor->threshold)
+					continue;
+				if (mo2->spawnpoint->extrainfo != actor->cusval)
+					continue;
+
 				P_SetTarget(&actor->target, mo2);
 				break;
 			}
@@ -7822,14 +7867,9 @@ void A_Boss3Path(mobj_t *actor)
 
 		if (!actor->target) // Should NEVER happen
 		{
-			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy was unable to find specified waypoint: %d\n", actor->threshold);
+			CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy was unable to find specified waypoint: %d, %d\n", actor->threshold, actor->cusval);
 			return;
 		}
-
-		dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z - actor->z);
-
-		if (dist < 1)
-			dist = 1;
 
 		if (actor->tracer && ((actor->tracer->movedir)
 		|| (actor->tracer->health <= actor->tracer->info->damage)))
@@ -7837,52 +7877,52 @@ void A_Boss3Path(mobj_t *actor)
 		else
 			speed = actor->info->speed;
 
-		actor->momx = FixedMul(FixedDiv(actor->target->x - actor->x, dist), speed);
-		actor->momy = FixedMul(FixedDiv(actor->target->y - actor->y, dist), speed);
-		actor->momz = FixedMul(FixedDiv(actor->target->z - actor->z, dist), speed);
+		if (actor->target->x == actor->x && actor->target->y == actor->y)
+		{
+			dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z + actor->movefactor - actor->z);
 
-		if (actor->momx != 0 || actor->momy != 0)
-			actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+			if (dist < 1)
+				dist = 1;
 
-		dist2 = P_AproxDistance(P_AproxDistance(actor->target->x - (actor->x + actor->momx), actor->target->y - (actor->y + actor->momy)), actor->target->z - (actor->z + actor->momz));
+			actor->momx = FixedMul(FixedDiv(actor->target->x - actor->x, dist), speed);
+			actor->momy = FixedMul(FixedDiv(actor->target->y - actor->y, dist), speed);
+			actor->momz = FixedMul(FixedDiv(actor->target->z + actor->movefactor - actor->z, dist), speed);
 
-		if (dist2 < 1)
-			dist2 = 1;
+			if (actor->momx != 0 || actor->momy != 0)
+				actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy);
+		}
 
-		if ((dist >> FRACBITS) <= (dist2 >> FRACBITS))
+		if (dist <= speed)
 		{
 			// If further away, set XYZ of mobj to waypoint location
 			P_UnsetThingPosition(actor);
 			actor->x = actor->target->x;
 			actor->y = actor->target->y;
-			actor->z = actor->target->z;
+			actor->z = actor->target->z + actor->movefactor;
 			actor->momx = actor->momy = actor->momz = 0;
 			P_SetThingPosition(actor);
 
-			if (actor->threshold == 0)
+			if (!actor->movefactor) // firing mode
+			{
+				actor->movecount |= 2;
+				actor->movefactor = -512*FRACUNIT;
+				actor->flags2 &= ~MF2_STRONGBOX;
+			}
+			else if (!(actor->flags2 & MF2_STRONGBOX)) // just spawned or going down
+			{
+				actor->flags2 |= MF2_STRONGBOX;
+				actor->movefactor = -512*FRACUNIT;
+			}
+			else if (!(actor->flags2 & MF2_AMBUSH)) // just shifted tube
+			{
+				actor->flags2 |= MF2_AMBUSH;
+				actor->movefactor = 0;
+			}
+			else // just hit the bottom of your tube
 			{
 				P_RemoveMobj(actor); // Cycle completed. Dummy removed.
 				return;
 			}
-
-			// Set to next waypoint in sequence
-			if (actor->target->spawnpoint)
-			{
-				// From the center point, choose one of the five paths
-				if (actor->target->spawnpoint->angle == 0)
-				{
-					P_RemoveMobj(actor); // Cycle completed. Dummy removed.
-					return;
-				}
-				else
-					actor->threshold = actor->target->spawnpoint->extrainfo;
-
-				// If the deaf flag is set, go into firing mode
-				if (actor->target->spawnpoint->options & MTF_AMBUSH)
-					actor->movecount |= 2;
-			}
-			else // This should never happen, as well
-				CONS_Debug(DBG_GAMELOGIC, "Error: Boss 3 Dummy waypoint has no spawnpoint associated with it.\n");
 		}
 	}
 }
@@ -8200,9 +8240,9 @@ void A_FindTarget(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTarget called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -8265,9 +8305,9 @@ void A_FindTracer(mobj_t *actor)
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTracer called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
 	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -8680,8 +8720,8 @@ void A_BossJetFume(mobj_t *actor)
 	{
 		fixed_t jetx, jety, jetz;
 
-		jetx = actor->x + P_ReturnThrustX(actor, actor->angle, -FixedMul(60*FRACUNIT, actor->scale));
-		jety = actor->y + P_ReturnThrustY(actor, actor->angle, -FixedMul(60*FRACUNIT, actor->scale));
+		jetx = actor->x + P_ReturnThrustX(actor, actor->angle, -60*actor->scale);
+		jety = actor->y + P_ReturnThrustY(actor, actor->angle, -60*actor->scale);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			jetz = actor->z + actor->height - FixedMul(17*FRACUNIT + mobjinfo[MT_PROPELLER].height, actor->scale);
 		else
@@ -8714,7 +8754,7 @@ void A_BossJetFume(mobj_t *actor)
 		if (actor->eflags & MFE_VERTICALFLIP)
 			jetz = actor->z + actor->height + FixedMul(50*FRACUNIT - mobjinfo[MT_JETFLAME].height, actor->scale);
 		else
-			jetz = actor->z - FixedMul(50*FRACUNIT, actor->scale);
+			jetz = actor->z - 50*actor->scale;
 		filler = P_SpawnMobj(actor->x, actor->y, jetz, MT_JETFLAME);
 		P_SetTarget(&filler->target, actor);
 		// Boss 4 already uses its tracer for other things
@@ -8722,6 +8762,30 @@ void A_BossJetFume(mobj_t *actor)
 		P_SetScale(filler, filler->destscale);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			filler->flags2 |= MF2_OBJECTFLIP;
+	}
+	else if (locvar1 == 4) // Boss 4 Spectator Eggrobo jet flame
+	{
+		fixed_t jetx, jety, jetz, movefactor = 12;
+
+		jetz = actor->z;
+		if (actor->eflags & MFE_VERTICALFLIP)
+			jetz += (actor->height - FixedMul(mobjinfo[MT_EGGROBO1JET].height, actor->scale));
+
+		while (true)
+		{
+			jetx = actor->x + P_ReturnThrustX(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustX(actor, actor->angle, 19*actor->scale);
+			jety = actor->y + P_ReturnThrustY(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustY(actor, actor->angle, 19*actor->scale);
+			filler = P_SpawnMobj(jetx, jety, jetz, MT_EGGROBO1JET);
+			filler->movefactor = movefactor;
+			P_SetTarget(&filler->target, actor);
+			filler->destscale = actor->scale;
+			P_SetScale(filler, filler->destscale);
+			if (actor->eflags & MFE_VERTICALFLIP)
+				filler->flags2 |= MF2_OBJECTFLIP;
+			if (movefactor <= 0)
+				break;
+			movefactor = -movefactor;
+		}
 	}
 }
 
@@ -8828,9 +8892,9 @@ void A_RemoteAction(mobj_t *actor)
 		fixed_t dist1 = 0, dist2 = 0;
 
 		// scan the thinkers
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -9094,9 +9158,9 @@ void A_SetObjectTypeState(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -9732,9 +9796,9 @@ void A_CheckThingCount(mobj_t *actor)
 		return;
 #endif
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -12240,6 +12304,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	//INT32 locvar2 = var2;
 	boolean avoidcenter;
 	UINT32 i;
+	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
 		return;
@@ -12249,16 +12314,34 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	if (locvar1 == 2) // look for the boss waypoint
 	{
-		for (i = 0; i < nummapthings; i++)
+		thinker_t *th;
+		mobj_t *mo2;
+		P_SetTarget(&actor->tracer, NULL);
+		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+		// scan the thinkers to find the runaway point
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (!mapthings[i].mobj)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_BOSSFLYPOINT)
 				continue;
-			P_SetTarget(&actor->tracer, mapthings[i].mobj);
-			break;
+
+			if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			// If this one's further then the last one, don't go for it.
+			if (actor->tracer &&
+				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
+				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
+					continue;
+
+			// Otherwise... Do!
+			P_SetTarget(&actor->tracer, mo2);
 		}
-		if (i == nummapthings)
+		if (!actor->tracer)
 			return; // no boss flypoints found
 	}
 	else if (locvar1 == 1) // always go to ambush-marked waypoint
@@ -12272,11 +12355,13 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
-			{
-				P_SetTarget(&actor->tracer, mapthings[i].mobj);
-				break;
-			}
+			if (mapthings[i].extrainfo != extrainfo)
+				continue;
+			if (!(mapthings[i].options & MTF_AMBUSH))
+				continue;
+
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
 		}
 
 		if (i == nummapthings)
@@ -12299,6 +12384,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -12354,6 +12441,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -13011,7 +13100,14 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
 			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
 			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
+			P_UnsetThingPosition(nearby);
+			if (sector_list)
+			{
+				P_DelSeclist(sector_list);
+				sector_list = NULL;
+			}
 			nearby->flags = MF_NOBLOCKMAP|MF_MISSILE;
+			P_SetThingPosition(nearby);
 			P_SetMobjState(nearby, nearby->info->missilestate);
 		}
 	}
@@ -13020,9 +13116,10 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 		if (barrel->target == nearby)
 		{
 			mobj_t *tar = barrel->target; // temporarily store barrel's target
-			barrel->target = NULL;
+			P_SetTarget(&barrel->target, NULL);
 			P_DamageMobj(nearby, barrel, NULL, 1, 0);
-			barrel->target = tar;
+			if (!P_MobjWasRemoved(barrel))
+				P_SetTarget(&barrel->target, tar);
 		}
 		else
 		{
@@ -13055,8 +13152,14 @@ void A_TNTExplode(mobj_t *actor)
 	if (LUA_CallAction("A_TNTExplode", actor))
 		return;
 #endif
-
+	P_UnsetThingPosition(actor);
+	if (sector_list)
+	{
+		P_DelSeclist(sector_list);
+		sector_list = NULL;
+	}
 	actor->flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP;
+	P_SetThingPosition(actor);
 	actor->flags2 = MF2_EXPLOSION;
 	if (actor->info->deathsound)
 		S_StartSound(actor, actor->info->deathsound);
@@ -13518,7 +13621,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 
 	//Back
 	door = P_SpawnMobj(x - c*d, y - s*d, z, MT_SALOONDOOR);
@@ -13531,7 +13634,7 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 	door->extravalue2 = 0;
 
 	// Origin door
-	door->tracer = actor;
+	P_SetTarget(&door->tracer, actor);
 }
 
 // Function: A_MinecartSparkThink

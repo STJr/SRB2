@@ -102,6 +102,7 @@ line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
 INT32 numstarposts;
+UINT16 bossdisabled;
 boolean levelloading;
 UINT8 levelfadecol;
 
@@ -815,9 +816,9 @@ void P_ReloadRings(void)
 	mapthing_t *mt = mapthings;
 
 	// scan the thinkers to find rings/spheres/hoops to unset
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -859,12 +860,7 @@ void P_ReloadRings(void)
 			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
 				->sector->floorheight>>FRACBITS);
 
-			P_SpawnHoopsAndRings(mt,
-#ifdef MANIASPHERES
-				true);
-#else
-				!G_IsSpecialStage(gamemap)); // prevent flashing spheres in special stages
-#endif
+			P_SpawnHoopsAndRings(mt, true);
 		}
 	}
 	for (i = 0; i < numHoops; i++)
@@ -878,15 +874,10 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	mobj_t *mo;
 	thinker_t *th;
 
-#ifndef MANIASPHERES
-	if (G_IsSpecialStage(gamemap)) // prevent flashing spheres in special stages
-		return;
-#endif
-
 	// scan the thinkers to find spheres to switch
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -1288,6 +1279,9 @@ static void P_LoadLineDefs2(void)
 		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		switch(ld->special)
 		{
+		case 331: // Trigger linedef executor: Skin - Continuous
+		case 332: // Trigger linedef executor: Skin - Each time
+		case 333: // Trigger linedef executor: Skin - Once
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
@@ -1498,6 +1492,9 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 			}
 
+			case 331: // Trigger linedef executor: Skin - Continuous
+			case 332: // Trigger linedef executor: Skin - Each time
+			case 333: // Trigger linedef executor: Skin - Once
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
 			{
@@ -2209,7 +2206,7 @@ static void P_LevelInitStuff(void)
 	ssspheres = timeinmap = 0;
 
 	// special stage
-	stagefailed = false;
+	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -2284,7 +2281,6 @@ static void P_LevelInitStuff(void)
 void P_LoadThingsOnly(void)
 {
 	// Search through all the thinkers.
-	mobj_t *mo;
 	thinker_t *think;
 	INT32 i, viewid = -1, centerid = -1; // for skyboxes
 
@@ -2299,15 +2295,11 @@ void P_LoadThingsOnly(void)
 		}
 
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue; // not a mobj thinker
-
-		mo = (mobj_t *)think;
-
-		if (mo)
-			P_RemoveMobj(mo);
+		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+		P_RemoveMobj((mobj_t *)think);
 	}
 
 	P_LevelInitStuff();
@@ -2867,7 +2859,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -2903,7 +2898,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		// reset the player starts
 		for (i = 0; i < MAXPLAYERS; i++)
-			playerstarts[i] = NULL;
+			playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+		for (i = 0; i < MAX_DM_STARTS; i++)
+			deathmatchstarts[i] = NULL;
 
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
@@ -2921,7 +2919,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_InitSpecials();
 
 #ifdef ESLOPE
-	P_ResetDynamicSlopes();
+	P_ResetDynamicSlopes(fromnetsave);
 #endif
 
 	P_LoadThings(loademblems);
@@ -3119,7 +3117,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	skipstats = false;
+	skipstats = 0;
 
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
@@ -3430,13 +3428,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	ST_UnloadGraphics();
 	HU_LoadGraphics();
 	ST_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 
 	//
 	// look for skins
 	//
 	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
 	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// search for maps

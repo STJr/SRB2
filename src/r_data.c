@@ -2275,8 +2275,8 @@ void R_PrecacheLevel(void)
 	spritepresent = calloc(numsprites, sizeof (*spritepresent));
 	if (spritepresent == NULL) I_Error("%s: Out of memory looking up sprites", "R_PrecacheLevel");
 
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
 			spritepresent[((mobj_t *)th)->sprite] = 1;
 
 	spritememory = 0;
