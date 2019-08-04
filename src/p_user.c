@@ -717,6 +717,15 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 		player->oldscale = player->mo->scale;
+
+		if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		{
+			player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+				player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
+			player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+			G_GhostAddColor(GHC_NIGHTSSKIN);
+		}
 	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
@@ -733,15 +742,6 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	player->mo->flags |= MF_NOGRAVITY;
 
-	if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
-	{
-		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
-		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-			player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
-		player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
-		G_GhostAddColor(GHC_NIGHTSSKIN);
-	}
-
 	player->nightstime = player->startedtime = player->lapstartedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
@@ -754,8 +754,6 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 	else
 		P_RestoreMusic(player);
-
-	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
 	{
@@ -869,15 +867,20 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	// force NiGHTS to face forward or backward
 	if (player->mo->target)
-		player->mo->angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y) // player->angle_pos, won't be set on first instance
+	{
+		player->angle_pos = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
+		player->drawangle = player->mo->angle = player->angle_pos
 			+ ((player->mo->target->flags2 & MF2_AMBUSH) ? // if axis is invert, take the opposite right angle
-				(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
-				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));
+				-ANGLE_90 : ANGLE_90); // flyangle is always 0 here, below is kept for posterity
+				/*(player->flyangle > 90 && player->flyangle < 270 ? ANGLE_90 : -ANGLE_90)
+				: (player->flyangle > 90 && player->flyangle < 270 ? -ANGLE_90 : ANGLE_90));*/
+	}
 
 	// Do this before setting CR_NIGHTSMODE so we can tell if player was non-NiGHTS
 	P_RunNightserizeExecutors(player->mo);
 
 	player->powers[pw_carry] = CR_NIGHTSMODE;
+	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS1);
 }
 
 pflags_t P_GetJumpFlags(player_t *player)
@@ -2037,21 +2040,28 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 	I_Assert(player->mo != NULL);
 
+	if (player->powers[pw_carry] == CR_NIGHTSMODE)
+		return true;
+
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
-			{
 				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				S_StartSound(player->mo, sfx_spin);
-			}
 			else
 				player->pflags &= ~PF_SPINNING;
 		}
 
-		if (player->pflags & PF_GLIDING) // ground gliding
+		if (player->pflags & PF_SPINNING)
+		{
+			if (player->mo->state-states != S_PLAY_ROLL)
+			{
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+				S_StartSound(player->mo, sfx_spin);
+			}
+		}
+		else if (player->pflags & PF_GLIDING) // ground gliding
 		{
 			if (dorollstuff)
 			{
@@ -2109,8 +2119,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		}
 		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 			;
-		else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
-			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+		else if (player->pflags & PF_JUMPED || player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
 		{
 			if (player->cmomx || player->cmomy)
 			{
@@ -6987,7 +6996,10 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 
 	if (player->mo->momx || player->mo->momy)
+	{
 		player->mo->angle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+		player->drawangle = player->mo->angle;
+	}
 
 	if (still)
 	{
@@ -10775,12 +10787,12 @@ void P_PlayerThink(player_t *player)
 	{
 		// Directionchar!
 		// Camera angle stuff.
-		if (player->exiting) // no control, no modification
+		if (player->exiting // no control, no modification
+		|| player->powers[pw_carry] == CR_NIGHTSMODE)
 			;
 		else if (!(player->pflags & PF_DIRECTIONCHAR)
 		|| (player->climbing // stuff where the direction is forced at all times
 		|| (player->pflags & PF_GLIDING))
-		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
 		|| (P_AnalogMove(player) || twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 		|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 			player->drawangle = player->mo->angle;
