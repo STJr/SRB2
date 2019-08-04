@@ -10512,7 +10512,8 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	else
 		p->viewz = p->mo->z + p->viewheight;
 
-	P_SetPlayerMobjState(p->mo, S_PLAY_STND);
+	if (p->powers[pw_carry] != CR_NIGHTSMODE)
+		P_SetPlayerMobjState(p->mo, S_PLAY_STND);
 	p->pflags &= ~PF_SPINNING;
 
 	if (playernum == consoleplayer)
