@@ -193,6 +193,7 @@ typedef struct musicstack_s
 	UINT32 position;
 	tic_t tic;
 	UINT16 status;
+	lumpnum_t mlumpnum;
 
     struct musicstack_s *prev;
     struct musicstack_s *next;

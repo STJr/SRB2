@@ -62,6 +62,8 @@ static void GameDigiMusic_OnChange(void);
 
 static void ModFilter_OnChange(void);
 
+static lumpnum_t S_GetMusicLumpNum(const char *mname);
+
 // commands for music and sound servers
 #ifdef MUSSERV
 consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1584,6 +1586,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 		music_stacks->position = (status == JT_MASTER ? position : S_GetMusicPosition());
 		music_stacks->tic = gametic;
 		music_stacks->status = JT_MASTER;
+		music_stacks->mlumpnum = S_GetMusicLumpNum(music_stacks->musname);
 
 		if (status == JT_MASTER)
 			return; // we just added the user's entry here
@@ -1601,6 +1604,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	new_mst->position = position;
 	new_mst->tic = gametic;
 	new_mst->status = status;
+	new_mst->mlumpnum = S_GetMusicLumpNum(new_mst->musname);
 
 	mst->next = new_mst;
 	new_mst->prev = mst;
@@ -1707,6 +1711,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		entry->position = mapmusposition;
 		entry->tic = gametic;
 		entry->status = JT_MASTER;
+		entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
 	}
 
 	if (entry->status == JT_MASTER)
@@ -1730,7 +1735,10 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
 				newpos = entry->position + (S_GetMusicLength() ? (UINT32)((float)(gametic - entry->tic)/(float)TICRATE*(float)MUSICRATE) : 0);
 
-			if (newpos > 0 && S_MusicPlaying())
+			// If the newly recalled music lumpnum does not match the lumpnum that we stored in stack,
+			// then discard the new position. That way, we will not recall an invalid position
+			// when the music is replaced or digital/MIDI is toggled.
+			if (newpos > 0 && S_MusicPlaying() && S_GetMusicLumpNum(entry->musname) == entry->mlumpnum)
 				S_SetMusicPosition(newpos);
 			else
 			{
@@ -1751,6 +1759,29 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 /// Music Playback
 /// ------------------------
 
+static lumpnum_t S_GetMusicLumpNum(const char *mname)
+{
+	if (!S_DigMusicDisabled() && S_DigExists(mname))
+		return W_GetNumForName(va("o_%s", mname));
+	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
+		return W_GetNumForName(va("d_%s", mname));
+	else if (S_DigMusicDisabled() && S_DigExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
+		return LUMPERROR;
+	}
+	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
+		return LUMPERROR;
+	}
+	else
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mname);
+		return LUMPERROR;
+	}
+}
+
 static boolean S_LoadMusic(const char *mname)
 {
 	lumpnum_t mlumpnum;
@@ -1759,25 +1790,10 @@ static boolean S_LoadMusic(const char *mname)
 	if (S_MusicDisabled())
 		return false;
 
-	if (!S_DigMusicDisabled() && S_DigExists(mname))
-		mlumpnum = W_GetNumForName(va("o_%s", mname));
-	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
-		mlumpnum = W_GetNumForName(va("d_%s", mname));
-	else if (S_DigMusicDisabled() && S_DigExists(mname))
-	{
-		CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
+	mlumpnum = S_GetMusicLumpNum(mname);
+
+	if (mlumpnum == LUMPERROR)
 		return false;
-	}
-	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
-	{
-		CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
-		return false;
-	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mname);
-		return false;
-	}
 
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
