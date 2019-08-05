@@ -860,13 +860,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		GLPatch_t *gpatch;
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
-<<<<<<< HEAD
 		//mdlframe_t *next = NULL;
 		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
-=======
-		md2_frame_t *curr, *next = NULL;
-		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
->>>>>>> origin/master
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		float finalscale;
@@ -955,17 +950,10 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			tics = spr->mobj->anim_duration;
 		}
 
-<<<<<<< HEAD
-		//FIXME: this is not yet correct
-		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
-
-#ifdef USE_MODEL_NEXTFRAME
-		if (cv_grmdls.value == 1 && tics <= durs)
-=======
 #define INTERPOLERATION_LIMIT TICRATE/4
 
+#if 0
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
->>>>>>> origin/master
 		{
 			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
 			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
@@ -979,13 +967,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
 			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 			{
-<<<<<<< HEAD
-				nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-				if (nextFrame >= spr->mobj->state->var1)
-					nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
-				nextFrame %= md2->model->meshes[0].numFrames;
-				//next = &md2->model->meshes[0].frames[nextFrame];
-=======
 				if (durs > INTERPOLERATION_LIMIT)
 					durs = INTERPOLERATION_LIMIT;
 
@@ -999,46 +980,38 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
 						next = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
 				}
->>>>>>> origin/master
 			}
 		}
 		else
+#endif
 		{
 			//FIXME: this is not yet correct
-			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-			buff = md2->model->glCommandBuffer;
-			curr = &md2->model->frames[frame];
-			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
-			{
-				if (durs > INTERPOLERATION_LIMIT)
-					durs = INTERPOLERATION_LIMIT;
+			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 
+#ifdef USE_MODEL_NEXTFRAME
+			if (cv_grmdls.value == 1 && tics <= durs)
+			{
 				// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 				if (spr->mobj->frame & FF_ANIMATE)
 				{
-<<<<<<< HEAD
-					nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+					if (nextFrame >= spr->mobj->state->var1)
+						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
+					nextFrame %= md2->model->meshes[0].numFrames;
 					//next = &md2->model->meshes[0].frames[nextFrame];
-=======
-					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					if (nextframe >= (UINT32)spr->mobj->state->var1)
-						nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
-					nextframe %= md2->model->header.numFrames;
-					next = &md2->model->frames[nextframe];
->>>>>>> origin/master
 				}
 				else
 				{
-					if (spr->mobj->state->nextstate != S_NULL
-					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite)
+					if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
+						&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
 					{
-						const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-						next = &md2->model->frames[nextframe];
+						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+						//next = &md2->model->meshes[0].frames[nextFrame];
 					}
 				}
 			}
-		}
 #endif
+		}
 
 #undef INTERPOLERATION_LIMIT
 
@@ -1046,13 +1019,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
-		if (flip)
+		if (spr->mobj->eflags & MFE_VERTICALFLIP)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
+			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
 		else
 			sprdef = &sprites[spr->mobj->sprite];
 
@@ -1060,7 +1033,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sprframe->rotate)
 		{
-			const fixed_t anglef = AngleFixed((spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle));
+			fixed_t anglef = AngleFixed(spr->mobj->angle);
+
+			if (spr->mobj->player)
+				anglef = AngleFixed(spr->mobj->player->frameangle);
+			else
+				anglef = AngleFixed(spr->mobj->angle);
+
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
