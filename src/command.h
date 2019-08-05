@@ -140,6 +140,9 @@ void CV_ToggleExecVersion(boolean enable);
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);
 
+// returns a console variable by name
+consvar_t *CV_FindVar(const char *name);
+
 // sets changed to 0 for every console variable
 void CV_ClearChangedFlags(void);
 
