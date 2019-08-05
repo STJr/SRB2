@@ -113,7 +113,7 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-// These variables are only true if
+// These variables are in effect
 // whether the respective sound system is disabled
 // or they're init'ed, but the player just toggled them
 boolean midi_disabled = false;
@@ -308,6 +308,12 @@ static void D_Display(void)
 			F_IntroDrawer();
 			if (wipegamestate == (gamestate_t)-1)
 				wipe = true;
+			break;
+
+		case GS_ENDING:
+			F_EndingDrawer();
+			HU_Erase();
+			HU_Drawer();
 			break;
 
 		case GS_CUTSCENE:

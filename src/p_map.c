@@ -135,6 +135,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
 	boolean final = false;
+	UINT8 strong = 0;
 
 	// Object was already sprung this tic
 	if (object->eflags & MFE_SPRUNG)
@@ -147,6 +148,14 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	// "Even in Death" is a song from Volume 8, not a command.
 	if (!spring->health || !object->health)
 		return false;
+
+	if (object->player)
+	{
+		if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+			strong = 1;
+		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
+			strong = 2;
+	}
 
 	if (spring->info->painchance == -1) // Pinball bumper mode.
 	{
@@ -187,6 +196,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (object->player)
 		{
 			fixed_t playervelocity;
+
+			if (strong)
+				vertispeed <<= 1;
 
 			if (!(object->player->pflags & PF_THOKKED) && !(object->player->homing)
 			&& ((playervelocity = FixedDiv(9*FixedHypot(object->player->speed, object->momz), 10<<FRACBITS)) > vertispeed))
@@ -260,11 +272,8 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
-	if (object->player
-	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
-	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
+	if (strong)
 	{
-		S_StartSound(object, sfx_s3k8b);
 		if (horizspeed)
 			horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
 		if (vertispeed)
@@ -333,7 +342,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (horizspeed)
 		{
 			object->player->drawangle = spring->angle;
-			if (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0)
+			if (vertispeed || (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0))
 			{
 				object->angle = spring->angle;
 
@@ -398,6 +407,12 @@ springstate:
 				P_SetMobjState(P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE), mobjinfo[MT_SCORE].spawnstate+11);
 			P_AddPlayerScore(object->player, 10);
 			spring->reactiontime--;
+		}
+
+		if (strong)
+		{
+			P_TwinSpinRejuvenate(object->player, (strong == 1 ? object->player->thokitem : object->player->revitem));
+			S_StartSound(object, sfx_sprong); // strong spring. sprong.
 		}
 	}
 
@@ -707,6 +722,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->health = 0;
 			P_KillMobj(thing, tmthing, tmthing, 0);
 		}
+		return true;
+	}
+
+	// vectorise metal - done in a special case as at this point neither has the right flags for touching
+	if (thing->type == MT_METALSONIC_BATTLE
+	&& (tmthing->flags & MF_MISSILE)
+	&& tmthing->target != thing
+	&& thing->state == &states[thing->info->spawnstate])
+	{
+		blockdist = thing->radius + tmthing->radius;
+
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+
+		if (tmthing->z > thing->z + thing->height)
+			return true; // overhead
+		if (tmthing->z + tmthing->height < thing->z)
+			return true; // underneath
+
+		thing->flags2 |= MF2_CLASSICPUSH;
+
 		return true;
 	}
 
@@ -1153,7 +1189,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial for shell
 		{
 			UINT8 damagetype = tmthing->info->mass;
 			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
@@ -1482,51 +1518,45 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 		// Monitor?
 		else if (thing->flags & MF_MONITOR
-		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2)))
+		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2))
+		&& (!(thing->flags & MF_SOLID) || P_PlayerCanDamage(tmthing->player, thing)))
 		{
-			// 0 = none, 1 = elemental pierce, 2 = bubble bounce
-			UINT8 elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)
-			? (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
-			: 0);
-			if (!(thing->flags & MF_SOLID)
-			|| tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-			|| ((tmthing->player->pflags & PF_JUMPED)
-				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
-				|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
-			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
-				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
-			|| elementalpierce)
+			if (thing->z - thing->scale <= tmthing->z + tmthing->height
+			&& thing->z + thing->height + thing->scale >= tmthing->z)
 			{
-				if (thing->z - thing->scale <= tmthing->z + tmthing->height
-				&& thing->z + thing->height + thing->scale >= tmthing->z)
+				player_t *player = tmthing->player;
+				// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+				UINT8 elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
+				? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+				: 0);
+				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
+				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
+				fixed_t *z = &tmthing->z; // aau.
+				// Going down? Then bounce back up.
+				if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
+				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+				&& (elementalpierce != 1)) // you're not piercing through the monitor...
 				{
-					player_t *player = tmthing->player;
-					SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
-					fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
-					fixed_t *z = &tmthing->z; // aau.
-					// Going down? Then bounce back up.
-					if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
-					&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-					&& (elementalpierce != 1)) // you're not piercing through the monitor...
+					if (elementalpierce == 2)
+						P_DoBubbleBounce(player);
+					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
-						if (elementalpierce == 2)
-							P_DoBubbleBounce(player);
-						else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-							*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+							P_TwinSpinRejuvenate(player, player->thokitem);
 					}
-					if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
-					{
-						if (player->pflags & PF_BOUNCING)
-							P_DoAbilityBounce(player, false);
-						return false;
-					}
-					else
-						*z -= *momz; // to ensure proper collision.
 				}
-
-				return true;
+				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+				{
+					if (player->pflags & PF_BOUNCING)
+						P_DoAbilityBounce(player, false);
+					return false;
+				}
+				else
+					*z -= *momz; // to ensure proper collision.
 			}
+
+			return true;
 		}
 	}
 
@@ -1778,7 +1808,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
-		tmceilingrover = NULL;
+		tmceilingrover = openceilingrover;
 #ifdef ESLOPE
 		tmceilingslope = opentopslope;
 #endif
@@ -1787,7 +1817,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
-		tmfloorrover = NULL;
+		tmfloorrover = openfloorrover;
 #ifdef ESLOPE
 		tmfloorslope = openbottomslope;
 #endif
@@ -2059,6 +2089,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmfloorslope = NULL;
 #endif
+							tmfloorrover = NULL;
 						}
 
 						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2)) {
@@ -2066,6 +2097,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmceilingslope = NULL;
 #endif
+							tmceilingrover = NULL;
 						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -2790,7 +2822,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
 	boolean floormoved;
-	fixed_t oldfloorz = thing->floorz;
+	fixed_t oldfloorz = thing->floorz, oldz = thing->z;
 	ffloor_t *oldfloorrover = thing->floorrover;
 	ffloor_t *oldceilingrover = thing->ceilingrover;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
@@ -2847,6 +2879,12 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		}
 		else if (!onfloor && thing->z + thing->height > tmceilingz)
 			thing->z = thing->ceilingz - thing->height;
+	}
+
+	if (thing->z != oldz)
+	{
+		if (thing->player)
+			P_PlayerHitFloor(thing->player, false);
 	}
 
 	// debug: be sure it falls to the floor
@@ -4003,7 +4041,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 						thinker_t *think;
 						elevator_t *crumbler;
 
-						for (think = thinkercap.next; think != &thinkercap; think = think->next)
+						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 						{
 							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
 								continue;
@@ -4049,6 +4087,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
 	msecnode_t *n;
+	size_t i;
 
 	nofit = false;
 	crushchange = crunch;
@@ -4063,9 +4102,57 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 
 	// First, let's see if anything will keep it from crushing.
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjTouchingPolyobj(po, mo))
+								continue;
+
+							if (!PIT_ChangeSector(mo, false))
+							{
+								nofit = true;
+								return nofit;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
@@ -4125,9 +4212,53 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	} while (n); // repeat from scratch until all things left are marked valid
 
 	// Nothing blocked us, so lets crush for real!
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjTouchingPolyobj(po, mo))
+								continue;
+
+							PIT_ChangeSector(mo, true);
+							return nofit;
+						}
+					}
+				}
+			}
+		}
+	}
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{

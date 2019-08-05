@@ -57,6 +57,8 @@ extern INT16 rw_maximums[NUM_WEAPONS];
 extern INT32 pausedelay;
 extern boolean pausebreakkey;
 
+extern boolean promptactive;
+
 // used in game menu
 extern consvar_t cv_tutorialprompt;
 extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
@@ -141,7 +143,9 @@ typedef enum
 	GHC_NORMAL = 0,
 	GHC_SUPER,
 	GHC_FIREFLOWER,
-	GHC_INVINCIBLE
+	GHC_INVINCIBLE,
+	GHC_NIGHTSSKIN, // not actually a colour
+	GHC_RETURNSKIN // ditto
 } ghostcolor_t;
 
 // Record/playback tics

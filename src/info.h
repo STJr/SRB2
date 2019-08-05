@@ -265,6 +265,7 @@ void A_SnapperSpawn();
 void A_SnapperThinker();
 void A_SaloonDoorSpawn();
 void A_MinecartSparkThink();
+void A_ModuloToState();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -335,6 +336,7 @@ typedef enum sprite
 	// Boss 4 (Castle Eggman)
 	SPR_EGGP,
 	SPR_EFIR, // Boss 4 jet flame
+	SPR_EGR1, // Boss 4 Spectator Eggrobo
 
 	// Boss 5 (Arid Canyon)
 	SPR_FANG, // replaces EGGQ
@@ -627,6 +629,7 @@ typedef enum sprite
 	SPR_GFLG, // Got Flag sign
 
 	SPR_CORK,
+	SPR_LHRT,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -719,6 +722,9 @@ typedef enum sprite
 	SPR_ROIN,
 	SPR_ROIO,
 	SPR_ROIP,
+
+	// Bricks
+	SPR_BRIC,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -829,6 +835,7 @@ typedef enum playersprite
 
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon
+	SPR2_XTRA, // stuff that isn't in-game - keep this last in the list
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,
@@ -1421,6 +1428,11 @@ typedef enum state
 
 	// Boss 3
 	S_EGGMOBILE3_STND,
+	S_EGGMOBILE3_LAUGH1,
+	S_EGGMOBILE3_LAUGH2,
+	S_EGGMOBILE3_LAUGH3,
+	S_EGGMOBILE3_LAUGH4,
+	S_EGGMOBILE3_LAUGH5,
 	S_EGGMOBILE3_ATK1,
 	S_EGGMOBILE3_ATK2,
 	S_EGGMOBILE3_ATK3A,
@@ -1429,11 +1441,6 @@ typedef enum state
 	S_EGGMOBILE3_ATK3D,
 	S_EGGMOBILE3_ATK4,
 	S_EGGMOBILE3_ATK5,
-	S_EGGMOBILE3_LAUGH1,
-	S_EGGMOBILE3_LAUGH2,
-	S_EGGMOBILE3_LAUGH3,
-	S_EGGMOBILE3_LAUGH4,
-	S_EGGMOBILE3_LAUGH5,
 	S_EGGMOBILE3_LAUGH6,
 	S_EGGMOBILE3_LAUGH7,
 	S_EGGMOBILE3_LAUGH8,
@@ -1486,8 +1493,8 @@ typedef enum state
 	S_FAKEMOBILE_ATK3B,
 	S_FAKEMOBILE_ATK3C,
 	S_FAKEMOBILE_ATK3D,
-	S_FAKEMOBILE_ATK4,
-	S_FAKEMOBILE_ATK5,
+	S_FAKEMOBILE_DIE1,
+	S_FAKEMOBILE_DIE2,
 
 	// Boss 4
 	S_EGGMOBILE4_STND,
@@ -1505,15 +1512,8 @@ typedef enum state
 	S_EGGMOBILE4_RATK6,
 	S_EGGMOBILE4_RAISE1,
 	S_EGGMOBILE4_RAISE2,
-	S_EGGMOBILE4_RAISE3,
-	S_EGGMOBILE4_RAISE4,
-	S_EGGMOBILE4_RAISE5,
-	S_EGGMOBILE4_RAISE6,
-	S_EGGMOBILE4_RAISE7,
-	S_EGGMOBILE4_RAISE8,
-	S_EGGMOBILE4_RAISE9,
-	S_EGGMOBILE4_RAISE10,
-	S_EGGMOBILE4_PAIN,
+	S_EGGMOBILE4_PAIN1,
+	S_EGGMOBILE4_PAIN2,
 	S_EGGMOBILE4_DIE1,
 	S_EGGMOBILE4_DIE2,
 	S_EGGMOBILE4_DIE3,
@@ -1531,10 +1531,21 @@ typedef enum state
 	S_EGGMOBILE4_FLEE1,
 	S_EGGMOBILE4_FLEE2,
 	S_EGGMOBILE4_MACE,
+	S_EGGMOBILE4_MACE_DIE1,
+	S_EGGMOBILE4_MACE_DIE2,
+	S_EGGMOBILE4_MACE_DIE3,
 
 	// Boss 4 jet flame
-	S_JETFLAME1,
-	S_JETFLAME2,
+	S_JETFLAME,
+
+	// Boss 4 Spectator Eggrobo
+	S_EGGROBO1_STND,
+	S_EGGROBO1_BSLAP1,
+	S_EGGROBO1_BSLAP2,
+	S_EGGROBO1_PISSED,
+
+	// Boss 4 Spectator Eggrobo jet flame
+	S_EGGROBOJET,
 
 	// Boss 5
 	S_FANG_IDLE1,
@@ -1887,7 +1898,10 @@ typedef enum state
 	S_METALSONIC_BADBOUNCE,
 	S_METALSONIC_SHOOT,
 	S_METALSONIC_PAIN,
-	S_METALSONIC_DEATH,
+	S_METALSONIC_DEATH1,
+	S_METALSONIC_DEATH2,
+	S_METALSONIC_DEATH3,
+	S_METALSONIC_DEATH4,
 	S_METALSONIC_FLEE1,
 	S_METALSONIC_FLEE2,
 	S_METALSONIC_FLEE3,
@@ -2446,7 +2460,8 @@ typedef enum state
 
 	S_CEZFLOWER,
 	S_CEZPOLE,
-	S_CEZBANNER,
+	S_CEZBANNER1,
+	S_CEZBANNER2,
 	S_PINETREE,
 	S_CEZBUSH1,
 	S_CEZBUSH2,
@@ -2455,7 +2470,8 @@ typedef enum state
 	S_FLAMEHOLDER,
 	S_FIRETORCH,
 	S_WAVINGFLAG,
-	S_WAVINGFLAGSEG,
+	S_WAVINGFLAGSEG1,
+	S_WAVINGFLAGSEG2,
 	S_CRAWLASTATUE,
 	S_FACESTABBERSTATUE,
 	S_SUSPICIOUSFACESTABBERSTATUE_WAIT,
@@ -2925,6 +2941,12 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
+	S_PITY7,
+	S_PITY8,
+	S_PITY9,
+	S_PITY10,
+	S_PITY11,
+	S_PITY12,
 
 	S_FIRS1,
 	S_FIRS2,
@@ -3409,6 +3431,12 @@ typedef enum state
 
 	S_LOCKON1,
 	S_LOCKON2,
+	S_LOCKON3,
+	S_LOCKON4,
+	S_LOCKONINF1,
+	S_LOCKONINF2,
+	S_LOCKONINF3,
+	S_LOCKONINF4,
 
 	// Tag Sign
 	S_TTAG,
@@ -3417,6 +3445,7 @@ typedef enum state
 	S_GOTFLAG,
 
 	S_CORK,
+	S_LHRT,
 
 	// Red Ring
 	S_RRNG1,
@@ -3865,19 +3894,6 @@ typedef enum state
 	S_SPRK1,
 	S_SPRK2,
 	S_SPRK3,
-	S_SPRK4,
-	S_SPRK5,
-	S_SPRK6,
-	S_SPRK7,
-	S_SPRK8,
-	S_SPRK9,
-	S_SPRK10,
-	S_SPRK11,
-	S_SPRK12,
-	S_SPRK13,
-	S_SPRK14,
-	S_SPRK15,
-	S_SPRK16,
 
 	// Robot Explosion
 	S_XPLD_FLICKY,
@@ -3922,6 +3938,9 @@ typedef enum state
 	S_ROCKCRUMBLEN,
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
+
+	// Bricks
+	S_BRICKDEBRIS,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4026,11 +4045,14 @@ typedef enum mobj_type
 	MT_EGGMOBILE3,
 	MT_PROPELLER,
 	MT_FAKEMOBILE,
+	MT_SHOCK,
 
 	// Boss 4
 	MT_EGGMOBILE4,
 	MT_EGGMOBILE4_MACE,
 	MT_JETFLAME,
+	MT_EGGROBO1,
+	MT_EGGROBO1JET,
 
 	// Boss 5
 	MT_FANG,
@@ -4264,8 +4286,10 @@ typedef enum mobj_type
 	MT_SMALLFIREBAR, // Small Firebar
 	MT_BIGFIREBAR, // Big Firebar
 	MT_CEZFLOWER, // Flower
-	MT_CEZPOLE, // Pole
-	MT_CEZBANNER, // Banner
+	MT_CEZPOLE1, // Pole (with red banner)
+	MT_CEZPOLE2, // Pole (with blue banner)
+	MT_CEZBANNER1, // Banner (red)
+	MT_CEZBANNER2, // Banner (blue)
 	MT_PINETREE, // Pine Tree
 	MT_CEZBUSH1, // Bush 1
 	MT_CEZBUSH2, // Bush 2
@@ -4273,8 +4297,10 @@ typedef enum mobj_type
 	MT_CANDLEPRICKET, // Candle pricket
 	MT_FLAMEHOLDER, // Flame holder
 	MT_FIRETORCH, // Fire torch
-	MT_WAVINGFLAG, // Waving flag
-	MT_WAVINGFLAGSEG, // Waving flag segment
+	MT_WAVINGFLAG1, // Waving flag (red)
+	MT_WAVINGFLAG2, // Waving flag (blue)
+	MT_WAVINGFLAGSEG1, // Waving flag segment (red)
+	MT_WAVINGFLAGSEG2, // Waving flag segment (blue)
 	MT_CRAWLASTATUE, // Crawla statue
 	MT_FACESTABBERSTATUE, // Facestabber statue
 	MT_SUSPICIOUSFACESTABBERSTATUE, // :eggthinking:
@@ -4507,6 +4533,7 @@ typedef enum mobj_type
 	MT_DROWNNUMBERS, // Drowning Timer
 	MT_GOTEMERALD, // Chaos Emerald (intangible)
 	MT_LOCKON, // Target
+	MT_LOCKONINF, // In-level Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
 
@@ -4524,6 +4551,7 @@ typedef enum mobj_type
 	MT_MACHINEAMBIENCE,
 
 	MT_CORK,
+	MT_LHRT,
 
 	// Ring Weapons
 	MT_REDRING,
@@ -4656,6 +4684,9 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE14,
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
+
+	// Bricks
+	MT_BRICKDEBRIS,
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

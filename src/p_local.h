@@ -61,15 +61,21 @@
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
-//
-// P_TICK
-//
-
-// both the head and tail of the thinker list
-extern thinker_t thinkercap;
+typedef enum
+{
+	THINK_POLYOBJ,
+	THINK_MAIN,
+	THINK_MOBJ,
+#ifdef ESLOPE
+	THINK_DYNSLOPE,
+#endif
+	THINK_PRECIP,
+	NUM_THINKERLISTS
+} thinklistnum_t; /**< Thinker lists. */
+extern thinker_t thlist[];
 
 void P_InitThinkers(void);
-void P_AddThinker(thinker_t *thinker);
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
 //
@@ -128,6 +134,7 @@ pflags_t P_GetJumpFlags(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
+boolean P_PlayerCanDamage(player_t *player, mobj_t *thing);
 boolean P_IsLocalPlayer(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
@@ -135,7 +142,7 @@ boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
-boolean P_PlayerHitFloor(player_t *player);
+boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
@@ -158,6 +165,7 @@ boolean P_AutoPause(void);
 void P_DoJumpShield(player_t *player);
 void P_DoBubbleBounce(player_t *player);
 void P_DoAbilityBounce(player_t *player, boolean changemomz);
+void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
 
@@ -174,7 +182,7 @@ void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
-void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
+boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
 #if 0
@@ -199,6 +207,47 @@ void P_PlayLivesJingle(player_t *player);
 boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);
 void P_RestoreMultiMusic(player_t *player);
+
+/// ------------------------
+/// Jingle stuff
+/// ------------------------
+
+typedef enum
+{
+	JT_NONE,   // Null state
+	JT_OTHER,  // Other state
+	JT_MASTER, // Main level music
+	JT_1UP, // Extra life
+	JT_SHOES,  // Speed shoes
+	JT_INV, // Invincibility
+	JT_MINV, // Mario Invincibility
+	JT_DROWN,  // Drowning
+	JT_SUPER,  // Super Sonic
+	JT_GOVER, // Game Over
+	JT_NIGHTSTIMEOUT, // NiGHTS Time Out (10 seconds)
+	JT_SSTIMEOUT, // NiGHTS Special Stage Time Out (10 seconds)
+
+	// these are not jingles
+	// JT_LCLEAR, // Level Clear
+	// JT_RACENT, // Multiplayer Intermission
+	// JT_CONTSC, // Continue
+
+	NUMJINGLES
+} jingletype_t;
+
+typedef struct
+{
+	char musname[7];
+	boolean looping;
+} jingle_t;
+
+extern jingle_t jingleinfo[NUMJINGLES];
+
+#define JINGLEPOSTFADE 1000
+
+void P_PlayJingle(player_t *player, jingletype_t jingletype);
+boolean P_EvaluateMusicStatus(UINT16 status);
+void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
 
 //
 // P_MOBJ

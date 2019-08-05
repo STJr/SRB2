@@ -33,8 +33,6 @@
 
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
-#define INLEVEL if (gamestate != GS_LEVEL)\
-return luaL_error(L, "This function can only be used in a level!");
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
@@ -539,7 +537,8 @@ static int lib_pSpawnLockOn(lua_State *L)
 	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-		visual->target = lockon;
+		P_SetTarget(&visual->target, lockon);
+		visual->flags2 |= MF2_DONTDRAW;
 		P_SetMobjStateNF(visual, state);
 	}
 	return 0;
@@ -951,6 +950,21 @@ static int lib_pResetPlayer(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayerCanDamage(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD // was hud safe but then i added a lua hook
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!thing)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_PlayerCanDamage(player, thing));
+	return 1;
+}
+
+
 static int lib_pIsObjectInGoop(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1219,8 +1233,8 @@ static int lib_pHomingAttack(lua_State *L)
 	INLEVEL
 	if (!source || !enemy)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_HomingAttack(source, enemy);
-	return 0;
+	lua_pushboolean(L, P_HomingAttack(source, enemy));
+	return 1;
 }
 
 static int lib_pSuperReady(lua_State *L)
@@ -2031,12 +2045,22 @@ static int lib_pStartQuake(lua_State *L)
 
 static int lib_evCrumbleChain(lua_State *L)
 {
-	sector_t *sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
-	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	sector_t *sec = NULL;
+	ffloor_t *rover = NULL;
 	NOHUD
 	INLEVEL
-	if (!sec)
-		return LUA_ErrInvalid(L, "sector_t");
+	if (!lua_isnone(L, 2))
+	{
+		if (!lua_isnil(L, 1))
+		{
+			sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!sec)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	}
+	else
+		rover = *((ffloor_t **)luaL_checkudata(L, 1, META_FFLOOR));
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
 	EV_CrumbleChain(sec, rover);
@@ -2585,12 +2609,12 @@ static int lib_gSetCustomExitVars(lua_State *L)
 			nextmapoverride = (INT16)luaL_checknumber(L, 1);
 			lua_remove(L, 1); // remove nextmapoverride; skipstats now 1 if available
 		}
-		skipstats = lua_optboolean(L, 1);
+		skipstats = luaL_optinteger(L, 2, 0);
 	}
 	else
 	{
 		nextmapoverride = 0;
-		skipstats = false;
+		skipstats = 0;
 	}
 	// ---
 
@@ -2774,6 +2798,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
+	{"P_PlayerCanDamage",lib_pPlayerCanDamage},
 	{"P_IsObjectInGoop",lib_pIsObjectInGoop},
 	{"P_IsObjectOnGround",lib_pIsObjectOnGround},
 	{"P_InSpaceSector",lib_pInSpaceSector},

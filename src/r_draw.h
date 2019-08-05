@@ -105,6 +105,8 @@ extern lumpnum_t viewborderlump[8];
 #define TC_BOSS       -2
 #define TC_METALSONIC -3 // For Metal Sonic battle
 #define TC_ALLWHITE   -4 // For Cy-Brak-demon
+#define TC_RAINBOW    -5 // For single colour
+#define TC_BLINK      -6 // For item blinking, according to kart
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);

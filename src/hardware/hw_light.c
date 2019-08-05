@@ -202,6 +202,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
 	&lspr[REDBALL_L],   // SPR_EFIR
+	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
 	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
@@ -487,6 +488,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GFLG
 
 	&lspr[NOLIGHT],     // SPR_CORK
+	&lspr[NOLIGHT],     // SPR_LHRT
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG
@@ -579,6 +581,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIN
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
+
+	// Bricks
+	&lspr[NOLIGHT], // SPR_BRIC
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
@@ -799,6 +804,14 @@ void HWR_WallLighting(FOutVector *wlVerts)
 		FSurfaceInfo    Surf;
 		float           dist_p2d, d[4], s;
 
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
+
 		// check bounding box first
 		if (SphereTouchBBox3D(&wlVerts[2], &wlVerts[0], &LIGHT_POS(j), DL_RADIUS(j))==false)
 			continue;
@@ -849,8 +862,6 @@ void HWR_WallLighting(FOutVector *wlVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
-		if (!dynlights->mo[j]->state)
-			return;
 		// next state is null so fade out with alpha
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
 			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -880,6 +891,14 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 	{
 		FSurfaceInfo    Surf;
 		float           dist_p2d, s;
+
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
 
 		// BP: The kickass Optimization: check if light touch bounding box
 		if (SphereTouchBBox3D(&p1, &p2, &dynlights->position[j], DL_RADIUS(j))==false)
@@ -912,8 +931,6 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
-		if (!dynlights->mo[j]->state)
-			return;
 		// next state is null so fade out with alpha
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
 			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -1044,6 +1061,14 @@ void HWR_DrawCoronas(void)
 		if (!(p_lspr->type & CORONA_SPR))
 			continue;
 
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
+
 		transform(&cx,&cy,&cz);
 
 		// more realistique corona !
@@ -1105,7 +1130,8 @@ void HWR_DrawCoronas(void)
 // --------------------------------------------------------------------------
 void HWR_ResetLights(void)
 {
-	dynlights->nb = 0;
+	while (dynlights->nb)
+		P_SetTarget(&dynlights->mo[--dynlights->nb], NULL);
 }
 
 // --------------------------------------------------------------------------
@@ -1136,24 +1162,25 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 		return;
 #endif
 
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+
 	// check if sprite contain dynamic light
 	p_lspr = t_lspr[spr->mobj->sprite];
-	if ((p_lspr->type&DYNLIGHT_SPR)
-	  && ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
-	  && (dynlights->nb < DL_MAX_LIGHT)
+	if (!(p_lspr->type & DYNLIGHT_SPR))
+		return;
+	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
+		return;
 
-	  && spr->mobj->state)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
 
-		P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
+	P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
 
-		dynlights->p_lspr[dynlights->nb] = p_lspr;
+	dynlights->p_lspr[dynlights->nb] = p_lspr;
 
-		dynlights->nb++;
-	}
+	dynlights->nb++;
 }
 
 static GLPatch_t lightmappatch;
@@ -1307,6 +1334,14 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 //			if (CircleTouchBBox(&p1, &p2, &LIGHT_POS(lightnum), DL_RADIUS(lightnum))==false)
 //				continue;
 
+			if (!dynlights->mo[lightnum])
+				continue;
+			if (P_MobjWasRemoved(dynlights->mo[lightnum]))
+			{
+				P_SetTarget(&dynlights->mo[lightnum], NULL);
+				continue;
+			}
+
 			count = sub->numlines;          // how many linedefs
 			line = &segs[sub->firstline];   // first line seg
 			while (count--)
@@ -1324,18 +1359,20 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 // --------------------------------------------------------------------------
 static void HWR_AddMobjLights(mobj_t *thing)
 {
-	if (t_lspr[thing->sprite]->type & CORONA_SPR)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+	if (!(t_lspr[thing->sprite]->type & CORONA_SPR))
+		return;
 
-		dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
 
-		dynlights->nb++;
-		if (dynlights->nb > DL_MAX_LIGHT)
-			dynlights->nb = DL_MAX_LIGHT;
-	}
+	P_SetTarget(&dynlights->mo[dynlights->nb], thing);
+
+	dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+
+	dynlights->nb++;
 }
 
 //Hurdler: The goal of this function is to walk through all the bsp starting
@@ -1361,12 +1398,9 @@ static void HWR_SearchLightsInMobjs(void)
 	//mobj_t *            mobj;
 
 	// search in the list of thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		// a mobj ?
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
 			HWR_AddMobjLights((mobj_t *)th);
-	}
 }
 #endif
 
@@ -1378,7 +1412,7 @@ void HWR_CreateStaticLightmaps(int bspnum)
 #ifdef STATICLIGHT
 	CONS_Debug(DBG_RENDER, "HWR_CreateStaticLightmaps\n");
 
-	dynlights->nb = 0;
+	HWR_ResetLights();
 
 	// First: Searching for lights
 	// BP: if i was you, I will make it in create mobj since mobj can be create
@@ -1389,8 +1423,6 @@ void HWR_CreateStaticLightmaps(int bspnum)
 	// Second: Build all lightmap for walls covered by lights
 	validcount++; // to be sure
 	HWR_ComputeLightMapsInBSPNode(bspnum, NULL);
-
-	dynlights->nb = 0;
 #else
 	(void)bspnum;
 #endif
