@@ -34,6 +34,7 @@
 #include "hw_drv.h"
 #include "hw_light.h"
 #include "hw_md2.h"
+#include "../d_main.h"
 #include "../r_bsp.h"
 #include "../r_main.h"
 #include "../m_misc.h"
@@ -831,6 +832,7 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	run?
 	*/
 
+#if 0
 static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
 {
 	UINT8 super = 0, i = 0;
@@ -881,6 +883,7 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 
 	return spr2;
 }
+#endif
 
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
@@ -1106,7 +1109,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				else
 				{
 					if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-						&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+						&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_WAIT) && spr->mobj->state == &states[S_PLAY_STND]))
 					{
 						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
 						//next = &md2->model->meshes[0].frames[nextFrame];
@@ -1128,7 +1131,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
+			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
 		else
 			sprdef = &sprites[spr->mobj->sprite];
 
@@ -1139,7 +1142,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			fixed_t anglef = AngleFixed(spr->mobj->angle);
 
 			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->frameangle);
+				anglef = AngleFixed(spr->mobj->player->drawangle);
 			else
 				anglef = AngleFixed(spr->mobj->angle);
 
