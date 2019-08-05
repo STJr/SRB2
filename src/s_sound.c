@@ -108,7 +108,9 @@ consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_resetmusic = {"resetmusic", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_resetmusic = {"resetmusic", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusicbyheader = {"resetmusicbyheader", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // Sound system toggles, saved into the config
 consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -275,6 +277,7 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
+	CV_RegisterVar(&cv_resetmusicbyheader);
 	CV_RegisterVar(&cv_gamesounds);
 	CV_RegisterVar(&cv_gamedigimusic);
 	CV_RegisterVar(&cv_gamemidimusic);
@@ -2096,7 +2099,7 @@ void S_StartEx(boolean reset)
 		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
 
-	if (cv_resetmusic.value || reset)
+	if (RESETMUSIC || reset)
 		S_StopMusic();
 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 

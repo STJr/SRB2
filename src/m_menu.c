@@ -1322,6 +1322,12 @@ static menuitem_t OP_SoundOptionsMenu[] =
 #define OPENMPT_MENUOFFSET 0
 #endif
 
+#ifdef HAVE_MIXERX
+#define MIXERX_MENUOFFSET 81
+#else
+#define MIXERX_MENUOFFSET 0
+#endif
+
 static menuitem_t OP_SoundAdvancedMenu[] =
 {
 #ifdef HAVE_OPENMPT
@@ -1333,12 +1339,15 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
 	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61},
 #endif
+
+	{IT_HEADER, NULL, "Miscellaneous", NULL, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "Let Levels Force Reset Music", &cv_resetmusicbyheader, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+22},
 };
 
 #undef OPENMPT_MENUOFFSET
-
+#undef MIXERX_MENUOFFSET
 #endif
 
 static menuitem_t OP_DataOptionsMenu[] =
