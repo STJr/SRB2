@@ -519,7 +519,20 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(back != NULL);
 
 	openfloorrover = openceilingrover = NULL;
-
+#ifdef POLYOBJECTS
+	if (linedef->polyobj)
+	{
+		// set these defaults so that polyobjects don't interfere with collision above or below them
+		opentop = INT32_MAX;
+		openbottom = INT32_MIN;
+		highceiling = INT32_MIN;
+		lowfloor = INT32_MAX;
+#ifdef ESLOPE
+		opentopslope = openbottomslope = NULL;
+#endif
+	}
+	else
+#endif
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
