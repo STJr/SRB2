@@ -197,7 +197,7 @@ void P_InitThinkers(void)
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 {
 #ifdef PARANOIA
-	I_Assert(n >= 0 && n < NUM_THINKERLISTS);
+	I_Assert(n < NUM_THINKERLISTS);
 #endif
 
 	thlist[n].prev->next = thinker;
@@ -326,7 +326,7 @@ static inline void P_RunThinkers(void)
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
-			I_Assert(currentthinker->function.acp1 != NULL)
+			I_Assert(currentthinker->function.acp1 != NULL);
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
