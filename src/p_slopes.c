@@ -717,7 +717,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 
 	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
-			thing->momz = -P_MobjFlip(thing);
+			//thing->momz = -P_MobjFlip(thing);
 			thing->standingslope = slope;
 		}
 		return;
@@ -732,7 +732,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
 		thing->momx = mom.x;
 		thing->momy = mom.y;
-		thing->momz = -P_MobjFlip(thing);
+		//thing->momz = -P_MobjFlip(thing);
 
 		thing->standingslope = slope;
 	}

@@ -4730,6 +4730,7 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 		return;
 	if (changemomz)
 	{
+		fixed_t minmomz;
 		prevmomz = player->mo->momz;
 		if (P_MobjFlip(player->mo)*prevmomz < 0)
 			prevmomz = 0;
@@ -4737,7 +4738,8 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 			prevmomz /= 2;
 		P_DoJump(player, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
-		player->mo->momz = (FixedMul(player->mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
+		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
+		player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
 	}
 	S_StartSound(player->mo, sfx_boingf);
 	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
