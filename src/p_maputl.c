@@ -500,19 +500,8 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		return;
 	}
 
-	// Treat polyobjects kind of like 3D Floors
-#ifdef POLYOBJECTS
-	if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT))
-	{
-		front = linedef->frontsector;
-		back = linedef->frontsector;
-	}
-	else
-#endif
-	{
-		front = linedef->frontsector;
-		back = linedef->backsector;
-	}
+	front = linedef->frontsector;
+	back = linedef->backsector;
 
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
@@ -636,13 +625,46 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				}
 			}
 		}
-
-		// Check for fake floors in the sector.
-		if (front->ffloors || back->ffloors
 #ifdef POLYOBJECTS
-		    || linedef->polyobj
+		if (linedef->polyobj)
+		{
+			// Treat polyobj's backsector like a 3D Floor
+			if (linedef->polyobj->flags & POF_TESTHEIGHT)
+			{
+				const sector_t *polysec = linedef->backsector;
+				fixed_t polytop, polybottom;
+				fixed_t delta1, delta2;
+
+				if (linedef->polyobj->flags & POF_CLIPPLANES)
+				{
+					polytop = polysec->ceilingheight;
+					polybottom = polysec->floorheight;
+				}
+				else
+				{
+					polytop = INT32_MAX;
+					polybottom = INT32_MIN;
+				}
+
+				delta1 = abs(mobj->z - (polybottom + ((polytop - polybottom)/2)));
+				delta2 = abs(thingtop - (polybottom + ((polytop - polybottom)/2)));
+
+				if (polybottom < opentop && delta1 >= delta2)
+					opentop = polybottom;
+				else if (polybottom < highceiling && delta1 >= delta2)
+					highceiling = polybottom;
+
+				if (polytop > openbottom && delta1 < delta2)
+					openbottom = polytop;
+				else if (polytop > lowfloor && delta1 < delta2)
+					lowfloor = polytop;
+			}
+			// otherwise don't do anything special, pretend there's nothing else there
+		}
+		else
 #endif
-		   )
+		// Check for fake floors in the sector.
+		if (front->ffloors || back->ffloors)
 		{
 			ffloor_t *rover;
 
@@ -744,33 +766,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				}
 			}
 
-#ifdef POLYOBJECTS
-			// Treat polyobj's backsector like a 3D Floor
-			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT))
-			{
-				const sector_t *polysec = linedef->backsector;
-
-				delta1 = abs(mobj->z - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
-				delta2 = abs(thingtop - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
-				if (polysec->floorheight < lowestceiling && delta1 >= delta2) {
-					lowestceiling = polysec->floorheight;
-#ifdef ESLOPE
-					ceilingslope = NULL;
-#endif
-				}
-				else if (polysec->floorheight < highestceiling && delta1 >= delta2)
-					highestceiling = polysec->floorheight;
-
-				if (polysec->ceilingheight > highestfloor && delta1 < delta2) {
-					highestfloor = polysec->ceilingheight;
-#ifdef ESLOPE
-					floorslope = NULL;
-#endif
-				}
-				else if (polysec->ceilingheight > lowestfloor && delta1 < delta2)
-					lowestfloor = polysec->ceilingheight;
-			}
-#endif
 			if (highestceiling < highceiling)
 				highceiling = highestceiling;
 
