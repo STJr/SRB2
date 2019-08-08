@@ -419,10 +419,6 @@ void P_CameraLineOpening(line_t *linedef)
 		if (front->ffloors || back->ffloors)
 		{
 			ffloor_t *rover;
-			fixed_t highestceiling = highceiling;
-			fixed_t lowestceiling = opentop;
-			fixed_t highestfloor = openbottom;
-			fixed_t lowestfloor = lowfloor;
 			fixed_t delta1, delta2;
 
 			// Check for frontsector's fake floors
@@ -438,15 +434,15 @@ void P_CameraLineOpening(line_t *linedef)
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-					if (bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = bottomheight;
-					else if (bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = bottomheight;
+					if (bottomheight < opentop && delta1 >= delta2)
+						opentop = bottomheight;
+					else if (bottomheight < highceiling && delta1 >= delta2)
+						highceiling = bottomheight;
 
-					if (topheight > highestfloor && delta1 < delta2)
-						highestfloor = topheight;
-					else if (topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = topheight;
+					if (topheight > openbottom && delta1 < delta2)
+						openbottom = topheight;
+					else if (topheight > lowfloor && delta1 < delta2)
+						lowfloor = topheight;
 				}
 
 			// Check for backsectors fake floors
@@ -462,28 +458,16 @@ void P_CameraLineOpening(line_t *linedef)
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-					if (bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = bottomheight;
-					else if (bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = bottomheight;
+					if (bottomheight < opentop && delta1 >= delta2)
+						opentop = bottomheight;
+					else if (bottomheight < highceiling && delta1 >= delta2)
+						highceiling = bottomheight;
 
-					if (topheight > highestfloor && delta1 < delta2)
-						highestfloor = topheight;
-					else if (topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = topheight;
+					if (topheight > openbottom && delta1 < delta2)
+						openbottom = topheight;
+					else if (topheight > lowfloor && delta1 < delta2)
+						lowfloor = topheight;
 				}
-
-			if (highestceiling < highceiling)
-				highceiling = highestceiling;
-
-			if (highestfloor > openbottom)
-				openbottom = highestfloor;
-
-			if (lowestceiling < opentop)
-				opentop = lowestceiling;
-
-			if (lowestfloor > lowfloor)
-				lowfloor = lowestfloor;
 		}
 		openrange = opentop - openbottom;
 		return;
@@ -669,18 +653,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		if (front->ffloors || back->ffloors)
 		{
 			ffloor_t *rover;
-
-			fixed_t highestceiling = highceiling;
-			fixed_t lowestceiling = opentop;
-			fixed_t highestfloor = openbottom;
-			fixed_t lowestfloor = lowfloor;
 			fixed_t delta1, delta2;
-#ifdef ESLOPE
-			pslope_t *ceilingslope = opentopslope;
-			pslope_t *floorslope = openbottomslope;
-#endif
-			ffloor_t *floorrover = NULL;
-			ffloor_t *ceilingrover = NULL;
 
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
@@ -703,28 +676,28 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (bottomheight < lowestceiling) {
-						lowestceiling = bottomheight;
+					if (bottomheight < opentop) {
+						opentop = bottomheight;
 #ifdef ESLOPE
-						ceilingslope = *rover->b_slope;
+						opentopslope = *rover->b_slope;
 #endif
-						ceilingrover = rover;
+						openceilingrover = rover;
 					}
-					else if (bottomheight < highestceiling)
-						highestceiling = bottomheight;
+					else if (bottomheight < highceiling)
+						highceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (topheight > highestfloor) {
-						highestfloor = topheight;
+					if (topheight > openbottom) {
+						openbottom = topheight;
 #ifdef ESLOPE
-						floorslope = *rover->t_slope;
+						openbottomslope = *rover->t_slope;
 #endif
-						floorrover = rover;
+						openfloorrover = rover;
 					}
-					else if (topheight > lowestfloor)
-						lowestfloor = topheight;
+					else if (topheight > lowfloor)
+						lowfloor = topheight;
 				}
 			}
 
@@ -749,52 +722,30 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (bottomheight < lowestceiling) {
-						lowestceiling = bottomheight;
+					if (bottomheight < opentop) {
+						opentop = bottomheight;
 #ifdef ESLOPE
-						ceilingslope = *rover->b_slope;
+						opentopslope = *rover->b_slope;
 #endif
-						ceilingrover = rover;
+						openceilingrover = rover;
 					}
-					else if (bottomheight < highestceiling)
-						highestceiling = bottomheight;
+					else if (bottomheight < highceiling)
+						highceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (topheight > highestfloor) {
-						highestfloor = topheight;
+					if (topheight > openbottom) {
+						openbottom = topheight;
 #ifdef ESLOPE
-						floorslope = *rover->t_slope;
+						openbottomslope = *rover->t_slope;
 #endif
-						floorrover = rover;
+						openfloorrover = rover;
 					}
-					else if (topheight > lowestfloor)
-						lowestfloor = topheight;
+					else if (topheight > lowfloor)
+						lowfloor = topheight;
 				}
 			}
-
-			if (highestceiling < highceiling)
-				highceiling = highestceiling;
-
-			if (highestfloor > openbottom) {
-				openbottom = highestfloor;
-#ifdef ESLOPE
-				openbottomslope = floorslope;
-#endif
-				openfloorrover = floorrover;
-			}
-
-			if (lowestceiling < opentop) {
-				opentop = lowestceiling;
-#ifdef ESLOPE
-				opentopslope = ceilingslope;
-#endif
-				openceilingrover = ceilingrover;
-			}
-
-			if (lowestfloor > lowfloor)
-				lowfloor = lowestfloor;
 		}
 	}
 
