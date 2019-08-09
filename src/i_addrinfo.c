@@ -68,10 +68,10 @@ static int inet_aton(const char *cp, struct in_addr *addr)
 
 #ifdef USE_WINSOCK2
 static HMODULE ipv6dll = NULL;
-typedef int (WSAAPI *p_getaddrinfo) (const char *node, const char *service,
-                              const struct my_addrinfo *hints,
-                              struct my_addrinfo **res);
-typedef void (WSAAPI *p_freeaddrinfo) (struct my_addrinfo *res);
+typedef int (WSAAPI *p_getaddrinfo) (const char *, const char *,
+                                     const struct my_addrinfo *,
+                                     struct my_addrinfo **);
+typedef void (WSAAPI *p_freeaddrinfo) (struct my_addrinfo *);
 
 static p_getaddrinfo WS_getaddrinfo = NULL;
 static p_freeaddrinfo WS_freeaddrinfo = NULL;
@@ -80,10 +80,10 @@ static HMODULE WS_getfunctions(HMODULE tmp)
 {
 	if (tmp != NULL)
 	{
-		WS_getaddrinfo = (p_getaddrinfo)GetProcAddress(tmp, "getaddrinfo");
+		WS_getaddrinfo = (p_getaddrinfo)(LPVOID)GetProcAddress(tmp, "getaddrinfo");
 		if (WS_getaddrinfo == NULL)
 			return NULL;
-		WS_freeaddrinfo = (p_freeaddrinfo)GetProcAddress(tmp, "freeaddrinfo");
+		WS_freeaddrinfo = (p_freeaddrinfo)(LPVOID)GetProcAddress(tmp, "freeaddrinfo");
 		if (WS_freeaddrinfo == NULL)
 		{
 			WS_getaddrinfo = NULL;
