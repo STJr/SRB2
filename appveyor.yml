@@ -92,8 +92,8 @@ before_build:
 - ccache -V
 - ccache -s
 - if [%NOUPX%] == [1] ( set "NOUPX=NOUPX=1" ) else ( set "NOUPX=" )
-- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC91=1 NOOBJDUMP=1 %NOUPX%"
-- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1" ) else ( set "MINGW_FLAGS=MINGW=1" )
+- set "SRB2_MFLAGS=-C src WARNINGMODE=1 CCACHE=1 GCC73=1 NOOBJDUMP=1 %NOUPX%"
+- if [%X86_64%] == [1] ( set "MINGW_FLAGS=MINGW64=1 X86_64=1 GCC91=1" ) else ( set "MINGW_FLAGS=MINGW=1" )
 - set "SRB2_MFLAGS=%SRB2_MFLAGS% %MINGW_FLAGS% %CONFIGURATION%=1"
 
 build_script:
