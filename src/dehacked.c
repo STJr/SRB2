@@ -1186,9 +1186,9 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			{
 				i = get_mus(word2, true);
 				if (i && i <= 1035)
-					snprintf(mapheaderinfo[num-1]->musname, 6, "%sM", G_BuildMapName(i));
+					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
 				else if (i && i <= 1050)
-					strncpy(mapheaderinfo[num-1]->musname, compat_special_music_slots[i - 1036], 6);
+					strncpy(mapheaderinfo[num-1]->musname, compat_special_music_slots[i - 1036], 7);
 				else
 					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
 				mapheaderinfo[num-1]->musname[6] = 0;
@@ -1213,7 +1213,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKYNUM"))
 				mapheaderinfo[num-1]->skynum = (INT16)i;
 			else if (fastcmp(word, "INTERSCREEN"))
-				strncpy(mapheaderinfo[num-1]->interscreen, word2, 7);
+				strncpy(mapheaderinfo[num-1]->interscreen, word2, 8);
 			else if (fastcmp(word, "PRECUTSCENENUM"))
 				mapheaderinfo[num-1]->precutscenenum = (UINT8)i;
 			else if (fastcmp(word, "CUTSCENENUM"))
@@ -3101,7 +3101,7 @@ static void readmaincfg(MYFILE *f)
 
 				// Also save a time attack folder
 				filenamelen = strlen(gamedatafilename)-4;  // Strip off the extension
-				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)-1));
+				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
 				strcpy(savegamename, timeattackfolder);

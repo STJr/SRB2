@@ -469,7 +469,7 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 		// Increase the size to make room for the new animation definition
 		maxanims++;
 		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-		strncpy(animdefs[i].startname, animdefsToken, 8);
+		strncpy(animdefs[i].startname, animdefsToken, 9);
 	}
 
 	// animdefs[i].startname is now set to animdefsToken either way.
