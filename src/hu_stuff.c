@@ -3072,7 +3072,7 @@ void HU_DoCEcho(const char *msg)
 {
 	I_OutputMsg("%s\n", msg); // print to log
 
-	strncpy(cechotext, msg, sizeof(cechotext));
+	strncpy(cechotext, msg, sizeof(cechotext)-1);
 	strncat(cechotext, "\\", sizeof(cechotext) - strlen(cechotext) - 1);
 	cechotext[sizeof(cechotext) - 1] = '\0';
 	cechotimer = cechoduration;

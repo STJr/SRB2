@@ -196,7 +196,7 @@ static void LoadPalette(const char *lumpname)
 const char *R_GetPalname(UINT16 num)
 {
 	static char palname[9];
-	char newpal[9] = "PLAYPAL";
+	char newpal[9] = "PLAYPAL\0";
 
 	if (num > 0 && num <= 10000)
 		snprintf(newpal, 8, "PAL%04u", num-1);
