@@ -2194,13 +2194,10 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
-		if (dorollstuff)
-		{
-			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
-				player->pflags |= PF_SPINNING;
-			else
-				player->pflags &= ~PF_SPINNING;
-		}
+		if (dorollstuff && (player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			player->pflags |= PF_SPINNING;
+		else if (!(player->pflags & PF_STARTDASH))
+			player->pflags &= ~PF_SPINNING;
 
 		if (player->pflags & PF_SPINNING)
 		{
@@ -2268,7 +2265,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		}
 		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 			;
-		else if (player->pflags & PF_JUMPED || player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+		else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
 		{
 			if (player->cmomx || player->cmomy)
 			{
