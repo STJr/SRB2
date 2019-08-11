@@ -2194,10 +2194,13 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
-		if (dorollstuff && (player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
-			player->pflags |= PF_SPINNING;
-		else if (!(player->pflags & PF_STARTDASH))
-			player->pflags &= ~PF_SPINNING;
+		if (dorollstuff)
+		{
+			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+				player->pflags |= PF_SPINNING;
+			else if (!(player->pflags & PF_STARTDASH))
+				player->pflags &= ~PF_SPINNING;
+		}
 
 		if (player->pflags & PF_SPINNING)
 		{
