@@ -2217,7 +2217,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				player->skidtime = TICRATE;
 				player->mo->tics = -1;
 			}
-			else
+			else if (!player->skidtime)
 				player->pflags &= ~PF_GLIDING;
 		}
 		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
