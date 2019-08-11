@@ -98,8 +98,8 @@ static INT32 current_track;
 
 static void var_cleanup(void)
 {
-	loop_point = song_length =\
-	 music_bytes = fading_source = fading_target =\
+	song_length = loop_point = 0.0f;
+	music_bytes = fading_source = fading_target =\
 	 fading_timer = fading_duration = 0;
 
 	songpaused = is_looping =\
@@ -362,7 +362,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 					gme_track_info(emu, &info, 0);
 
 					len = (info->play_length * 441 / 10) << 2;
-					mem = malloc(len);
+					mem = Z_Malloc(len, PU_SOUND, 0);
 					gme_play(emu, len >> 1, mem);
 					gme_free_info(info);
 					gme_delete(emu);
@@ -435,7 +435,7 @@ void *I_GetSfx(sfxinfo_t *sfx)
 		gme_track_info(emu, &info, 0);
 
 		len = (info->play_length * 441 / 10) << 2;
-		mem = malloc(len);
+		mem = Z_Malloc(len, PU_SOUND, 0);
 		gme_play(emu, len >> 1, mem);
 		gme_free_info(info);
 		gme_delete(emu);
@@ -569,7 +569,7 @@ static void music_loop(void)
 	{
 		Mix_PlayMusic(music, 0);
 		Mix_SetMusicPosition(loop_point);
-		music_bytes = loop_point*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPosition)
+		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	}
 	else
 		I_StopSong();
@@ -843,7 +843,7 @@ boolean I_SetSongPosition(UINT32 position)
 
 		Mix_RewindMusic(); // needed for mp3
 		if(Mix_SetMusicPosition((float)(position/1000.0L)) == 0)
-			music_bytes = position/1000.0L*44100.0L*4; //assume 44.1khz, 4-byte length (see I_GetSongPosition)
+			music_bytes = (UINT32)(position/1000.0L*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 		else
 			// NOTE: This block fires on incorrect song format,
 			// NOT if position input is greater than song length.
@@ -887,7 +887,7 @@ UINT32 I_GetSongPosition(void)
 	if (!music || I_SongType() == MU_MID)
 		return 0;
 	else
-		return music_bytes/44100.0L*1000.0L/4; //assume 44.1khz
+		return (UINT32)(music_bytes/44100.0L*1000.0L/4); //assume 44.1khz
 		// 4 = byte length for 16-bit samples (AUDIO_S16SYS), stereo (2-channel)
 		// This is hardcoded in I_StartupSound. Other formats for factor:
 		// 8M: 1 | 8S: 2 | 16M: 2 | 16S: 4

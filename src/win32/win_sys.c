@@ -3395,7 +3395,7 @@ BOOL LoadDirectInput(VOID)
 	DInputDLL = LoadLibraryA("DINPUT.DLL");
 	if (DInputDLL == NULL)
 		return false;
-	pfnDirectInputCreateA = (DICreateA)GetProcAddress(DInputDLL, "DirectInputCreateA");
+	pfnDirectInputCreateA = (DICreateA)(LPVOID)GetProcAddress(DInputDLL, "DirectInputCreateA");
 	if (pfnDirectInputCreateA == NULL)
 		return false;
 	return true;
@@ -3529,7 +3529,7 @@ void I_GetDiskFreeSpace(INT64* freespace)
 
 	if (!testwin95)
 	{
-		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
+		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
 		testwin95 = true;
 	}
 	if (pfnGetDiskFreeSpaceEx)
@@ -3615,7 +3615,7 @@ const CPUInfoFlags *I_CPUInfo(void)
 {
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
-	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
 
 	ZeroMemory(&WIN_CPUInfo,sizeof (WIN_CPUInfo));
 	if (pfnCPUID)
@@ -3658,9 +3658,9 @@ static p_SetProcessAffinityMask pfnSetProcessAffinityMask = NULL;
 static inline VOID GetAffinityFuncs(VOID)
 {
 	HMODULE h = GetModuleHandleA("kernel32.dll");
-	pfnGetCurrentProcess = (p_GetCurrentProcess)GetProcAddress(h, "GetCurrentProcess");
-	pfnGetProcessAffinityMask = (p_GetProcessAffinityMask)GetProcAddress(h, "GetProcessAffinityMask");
-	pfnSetProcessAffinityMask = (p_SetProcessAffinityMask)GetProcAddress(h, "SetProcessAffinityMask");
+	pfnGetCurrentProcess = (p_GetCurrentProcess)(LPVOID)GetProcAddress(h, "GetCurrentProcess");
+	pfnGetProcessAffinityMask = (p_GetProcessAffinityMask)(LPVOID)GetProcAddress(h, "GetProcessAffinityMask");
+	pfnSetProcessAffinityMask = (p_SetProcessAffinityMask)(LPVOID)GetProcAddress(h, "SetProcessAffinityMask");
 }
 
 static void CPUAffinity_OnChange(void)
