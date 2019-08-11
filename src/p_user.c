@@ -6509,12 +6509,12 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					player->capsule->health = sphereresult;
 			}
 
-			// Spawn a 'pop' for every 5 tics
-			if (!((tictimer - firstpoptic) % 5))
+			// Spawn a 'pop' for every 2 tics
+			if (!((tictimer - firstpoptic) % 2))
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
-				MT_BOSSEXPLODE),sfx_cybdth);
+				MT_SONIC3KBOSSEXPLODE),sfx_cybdth);
 		}
 		else
 		{

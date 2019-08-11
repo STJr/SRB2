@@ -3349,7 +3349,7 @@ void A_BossZoom(mobj_t *actor)
 // var1:
 //		0 - Use movecount to spawn explosions evenly
 //		1 - Use P_Random to spawn explosions at complete random
-// var2 = Object to spawn. Default is MT_BOSSEXPLODE.
+// var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
 void A_BossScream(mobj_t *actor)
 {
@@ -3381,7 +3381,7 @@ void A_BossScream(mobj_t *actor)
 
 	// Determine what mobj to spawn. If undefined or invalid, use MT_BOSSEXPLODE as default.
 	if (locvar2 <= 0 || locvar2 >= NUMMOBJTYPES)
-		explodetype = MT_BOSSEXPLODE;
+		explodetype = MT_SONIC3KBOSSEXPLODE; //MT_BOSSEXPLODE; -- piss to you, sonic 2
 	else
 		explodetype = (mobjtype_t)locvar2;
 
@@ -3948,14 +3948,24 @@ bossjustdie:
 			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
 			mo->flags |= MF_NOCLIPHEIGHT;
 
+			mo->movedir = 0;
+			mo->extravalue1 = 35;
+			mo->flags2 |= MF2_BOSSFLEE;
+			mo->momz = 2*mo->scale;
+
 			if (mo->target)
 			{
-				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-				mo->flags2 |= MF2_BOSSFLEE;
-				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+				angle_t diff = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y) - mo->angle;
+				if (diff)
+				{
+					if (diff > ANGLE_180)
+						diff = InvAngle(InvAngle(diff)/mo->extravalue1);
+					else
+						diff /= mo->extravalue1;
+					mo->movedir = diff;
+				}
 			}
-			else
-				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+
 			break;
 		}
 	}
@@ -12004,7 +12014,7 @@ void A_MineExplode(mobj_t *actor)
 	{
 #define dist 64
 		UINT8 i;
-		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_BOSSEXPLODE);
+		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
 		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
 		P_SpawnMobj(actor->x, actor->y, actor->z, type);
 		for (i = 0; i < 16; i++)
