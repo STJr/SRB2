@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,7 +42,7 @@ typedef enum
 } skinsound_t;
 
 // free sfx for S_AddSoundFx()
-#define NUMSFXFREESLOTS 800 // Matches SOC Editor.
+#define NUMSFXFREESLOTS 1600 // Matches SOC Editor.
 #define NUMSKINSFXSLOTS (MAXSKINS*NUMSKINSOUNDS)
 
 //
@@ -142,6 +142,8 @@ typedef enum
 	sfx_steam1,
 	sfx_steam2,
 	sfx_wbreak,
+	sfx_ambmac,
+	sfx_spsmsh,
 
 	sfx_rainin,
 	sfx_litng1,
@@ -252,11 +254,17 @@ typedef enum
 	sfx_trpowr,
 	sfx_turhit,
 	sfx_wdjump,
+	sfx_shrpsp,
+	sfx_shrpgo,
 	sfx_mswarp,
 	sfx_mspogo,
 	sfx_boingf,
 	sfx_corkp,
 	sfx_corkh,
+	sfx_bowl,
+	sfx_chuchu,
+	sfx_bsnipe,
+	sfx_sprong,
 
 	// Menu, interface
 	sfx_chchng,
@@ -276,6 +284,7 @@ typedef enum
 	sfx_xideya, // Xmas
 	sfx_nbmper,
 	sfx_nxbump, // Xmas
+	sfx_ncchip,
 	sfx_ncitem,
 	sfx_nxitem, // Xmas
 	sfx_ngdone,
@@ -290,7 +299,15 @@ typedef enum
 	sfx_hoop3,
 	sfx_hidden,
 	sfx_prloop,
-	sfx_timeup, // Was gonna be played when less than ten seconds are on the clock; uncomment uses of this to see it in-context
+	sfx_timeup,
+	sfx_ngjump,
+	sfx_peww,
+
+	// Halloween
+	sfx_lntsit,
+	sfx_lntdie,
+	sfx_pumpkn,
+	sfx_ghosty,
 
 	// Mario
 	sfx_koopfr,

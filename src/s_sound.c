@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,11 @@ extern INT32 msg_id;
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
 #include "fastcmp.h"
+#include "m_misc.h" // for tunes command
+
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+#include "lua_hook.h" // MusicChange hook
+#endif
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -47,6 +52,17 @@ static INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, I
 
 CV_PossibleValue_t soundvolume_cons_t[] = {{0, "MIN"}, {31, "MAX"}, {0, NULL}};
 static void SetChannelsNum(void);
+static void Command_Tunes_f(void);
+static void Command_RestartAudio_f(void);
+
+// Sound system toggles
+static void GameMIDIMusic_OnChange(void);
+static void GameSounds_OnChange(void);
+static void GameDigiMusic_OnChange(void);
+
+static void ModFilter_OnChange(void);
+
+static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
 // commands for music and sound servers
 #ifdef MUSSERV
@@ -75,7 +91,7 @@ consvar_t stereoreverse = {"stereoreverse", "Off", CV_SAVE, CV_OnOff, NULL, 0, N
 static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = {"soundvolume", "31", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_soundvolume = {"soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -92,6 +108,17 @@ consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_
 consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
 
 static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusic = {"resetmusic", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// Sound system toggles, saved into the config
+consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+#ifdef HAVE_OPENMPT
+static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
+consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
+#endif
 
 #define S_MAX_VOLUME 127
 
@@ -230,7 +257,7 @@ void S_RegisterSoundStuff(void)
 {
 	if (dedicated)
 	{
-		nosound = true;
+		sound_disabled = true;
 		return;
 	}
 
@@ -247,6 +274,21 @@ void S_RegisterSoundStuff(void)
 #endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
+	CV_RegisterVar(&cv_resetmusic);
+	CV_RegisterVar(&cv_gamesounds);
+	CV_RegisterVar(&cv_gamedigimusic);
+	CV_RegisterVar(&cv_gamemidimusic);
+#ifdef HAVE_OPENMPT
+	CV_RegisterVar(&cv_modfilter);
+#endif
+#ifdef HAVE_MIXERX
+	CV_RegisterVar(&cv_midiplayer);
+	CV_RegisterVar(&cv_midisoundfontpath);
+	CV_RegisterVar(&cv_miditimiditypath);
+#endif
+
+	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
@@ -484,6 +526,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
 	INT32 sep, pitch, priority, cnum;
+	const sfxenum_t actual_id = sfx_id;
 	sfxinfo_t *sfx;
 
 	const mobj_t *origin = (const mobj_t *)origin_p;
@@ -494,7 +537,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 	mobj_t *listenmobj = players[displayplayer].mo;
 	mobj_t *listenmobj2 = NULL;
 
-	if (sound_disabled || !sound_started || nosound)
+	if (sound_disabled || !sound_started)
 		return;
 
 	// Don't want a sound? Okay then...
@@ -622,11 +665,11 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 #endif
 
 		// Handle closed caption input.
-		S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+		S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
-		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
+		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 	}
 
 dontplay:
@@ -675,11 +718,11 @@ dontplay:
 #endif
 
 	// Handle closed caption input.
-	S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
+	S_StartCaption(actual_id, cnum, MAXCAPTIONTICS);
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
-	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
+	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 }
 
 void S_StartSound(const void *origin, sfxenum_t sfx_id)
@@ -824,7 +867,7 @@ void S_UpdateSounds(void)
 		goto notinlevel;
 	}
 
-	if (dedicated || nosound)
+	if (dedicated || sound_disabled)
 		return;
 
 	if (players[displayplayer].awayviewtics)
@@ -1283,6 +1326,43 @@ void S_StartSoundName(void *mo, const char *soundname)
 	S_StartSound(mo, soundnum);
 }
 
+//
+// Initializes sound stuff, including volume
+// Sets channels, SFX volume,
+//  allocates channel buffer, sets S_sfx lookup.
+//
+void S_InitSfxChannels(INT32 sfxVolume)
+{
+	INT32 i;
+
+	if (dedicated)
+		return;
+
+	S_SetSfxVolume(sfxVolume);
+
+	SetChannelsNum();
+
+	// Note that sounds have not been cached (yet).
+	for (i = 1; i < NUMSFX; i++)
+	{
+		S_sfx[i].usefulness = -1; // for I_GetSfx()
+		S_sfx[i].lumpnum = LUMPERROR;
+	}
+
+	// precache sounds if requested by cmdline, or precachesound var true
+	if (!sound_disabled && (M_CheckParm("-precachesound") || precachesound.value))
+	{
+		// Initialize external data (all sounds) at start, keep static.
+		CONS_Printf(M_GetText("Loading sounds... "));
+
+		for (i = 1; i < NUMSFX; i++)
+			if (S_sfx[i].name)
+				S_sfx[i].data = I_GetSfx(&S_sfx[i]);
+
+		CONS_Printf(M_GetText(" pre-cached all sound data\n"));
+	}
+}
+
 /// ------------------------
 /// Music
 /// ------------------------
@@ -1290,50 +1370,449 @@ void S_StartSoundName(void *mo, const char *soundname)
 #ifdef MUSICSLOT_COMPATIBILITY
 const char *compat_special_music_slots[16] =
 {
-	"titles", // 1036  title screen
-	"read_m", // 1037  intro
-	"lclear", // 1038  level clear
-	"invinc", // 1039  invincibility
-	"shoes",  // 1040  super sneakers
-	"minvnc", // 1041  Mario invincibility
-	"drown",  // 1042  drowning
-	"gmover", // 1043  game over
-	"xtlife", // 1044  extra life
-	"contsc", // 1045  continue screen
-	"supers", // 1046  Super Sonic
-	"chrsel", // 1047  character select
-	"credit", // 1048  credits
-	"racent", // 1049  Race Results
-	"stjr",   // 1050  Sonic Team Jr. Presents
+	"_title", // 1036  title screen
+	"_intro", // 1037  intro
+	"_clear", // 1038  level clear
+	"_inv", // 1039  invincibility
+	"_shoes",  // 1040  super sneakers
+	"_minv", // 1041  Mario invincibility
+	"_drown",  // 1042  drowning
+	"_gover", // 1043  game over
+	"_1up", // 1044  extra life
+	"_conti", // 1045  continue screen
+	"_super", // 1046  Super Sonic
+	"_chsel", // 1047  character select
+	"_creds", // 1048  credits
+	"_inter", // 1049  Race Results
+	"_stjr",   // 1050  Sonic Team Jr. Presents
 	""
 };
 #endif
 
-#define music_playing (music_name[0]) // String is empty if no music is playing
-
 static char      music_name[7]; // up to 6-character name
-static lumpnum_t music_lumpnum; // lump number of music (used??)
-static void     *music_data;    // music raw data
-static INT32     music_handle;  // once registered, the handle for the music
+static void      *music_data;
+static UINT16    music_flags;
+static boolean   music_looping;
 
-static boolean mus_paused     = 0;  // whether songs are mus_paused
+static char      queue_name[7];
+static UINT16    queue_flags;
+static boolean   queue_looping;
+static UINT32    queue_position;
+static UINT32    queue_fadeinms;
 
-static boolean S_MIDIMusic(const char *mname, boolean looping)
+static tic_t     pause_starttic;
+
+/// ------------------------
+/// Music Status
+/// ------------------------
+
+boolean S_DigMusicDisabled(void)
+{
+	return digital_disabled;
+}
+
+boolean S_MIDIMusicDisabled(void)
+{
+	return midi_disabled;
+}
+
+boolean S_MusicDisabled(void)
+{
+	return (midi_disabled && digital_disabled);
+}
+
+boolean S_MusicPlaying(void)
+{
+	return I_SongPlaying();
+}
+
+boolean S_MusicPaused(void)
+{
+	return I_SongPaused();
+}
+
+musictype_t S_MusicType(void)
+{
+	return I_SongType();
+}
+
+const char *S_MusicName(void)
+{
+	return music_name;
+}
+
+boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
+{
+	if (!I_SongPlaying())
+		return false;
+
+	strncpy(mname, music_name, 7);
+	mname[6] = 0;
+	*mflags = music_flags;
+	*looping = music_looping;
+
+	return (boolean)mname[0];
+}
+
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
+{
+	return (
+		(checkDigi ? W_CheckNumForName(va("O_%s", mname)) != LUMPERROR : false)
+		|| (checkMIDI ? W_CheckNumForName(va("D_%s", mname)) != LUMPERROR : false)
+	);
+}
+
+/// ------------------------
+/// Music Effects
+/// ------------------------
+
+boolean S_SpeedMusic(float speed)
+{
+	return I_SetSongSpeed(speed);
+}
+
+/// ------------------------
+/// Music Seeking
+/// ------------------------
+
+UINT32 S_GetMusicLength(void)
+{
+	return I_GetSongLength();
+}
+
+boolean S_SetMusicLoopPoint(UINT32 looppoint)
+{
+	return I_SetSongLoopPoint(looppoint);
+}
+
+UINT32 S_GetMusicLoopPoint(void)
+{
+	return I_GetSongLoopPoint();
+}
+
+boolean S_SetMusicPosition(UINT32 position)
+{
+	return I_SetSongPosition(position);
+}
+
+UINT32 S_GetMusicPosition(void)
+{
+	return I_GetSongPosition();
+}
+
+/// ------------------------
+/// Music Stacking (Jingles)
+/// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
+/// ------------------------
+
+static musicstack_t *music_stacks = NULL;
+static musicstack_t *last_music_stack = NULL;
+
+void S_SetStackAdjustmentStart(void)
+{
+	if (!pause_starttic)
+		pause_starttic = gametic;
+}
+
+void S_AdjustMusicStackTics(void)
+{
+	if (pause_starttic)
+	{
+		musicstack_t *mst;
+		for (mst = music_stacks; mst; mst = mst->next)
+			mst->tic += gametic - pause_starttic;
+		pause_starttic = 0;
+	}
+}
+
+static void S_ResetMusicStack(void)
+{
+	musicstack_t *mst, *mst_next;
+	for (mst = music_stacks; mst; mst = mst_next)
+	{
+		mst_next = mst->next;
+		Z_Free(mst);
+	}
+	music_stacks = last_music_stack = NULL;
+}
+
+static void S_RemoveMusicStackEntry(musicstack_t *entry)
+{
+	musicstack_t *mst;
+	for (mst = music_stacks; mst; mst = mst->next)
+	{
+		if (mst == entry)
+		{
+			// Remove ourselves from the chain and link
+			// prev and next together
+
+			if (mst->prev)
+				mst->prev->next = mst->next;
+			else
+				music_stacks = mst->next;
+
+			if (mst->next)
+				mst->next->prev = mst->prev;
+			else
+				last_music_stack = mst->prev;
+
+			break;
+		}
+	}
+	Z_Free(entry);
+}
+
+static void S_RemoveMusicStackEntryByStatus(UINT16 status)
+{
+	musicstack_t *mst, *mst_next;
+
+	if (!status)
+		return;
+
+	for (mst = music_stacks; mst; mst = mst_next)
+	{
+		mst_next = mst->next;
+		if (mst->status == status)
+			S_RemoveMusicStackEntry(mst);
+	}
+}
+
+static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status)
+{
+	musicstack_t *mst, *new_mst;
+
+	// if the first entry is empty, force master onto it
+	if (!music_stacks)
+	{
+		music_stacks = Z_Calloc(sizeof (*mst), PU_MUSIC, NULL);
+		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : mapmusname), 7);
+		music_stacks->musflags = (status == JT_MASTER ? mflags : mapmusflags);
+		music_stacks->looping = (status == JT_MASTER ? looping : true);
+		music_stacks->position = (status == JT_MASTER ? position : S_GetMusicPosition());
+		music_stacks->tic = gametic;
+		music_stacks->status = JT_MASTER;
+		music_stacks->mlumpnum = S_GetMusicLumpNum(music_stacks->musname);
+
+		if (status == JT_MASTER)
+			return; // we just added the user's entry here
+	}
+
+	// look for an empty slot to park ourselves
+	for (mst = music_stacks; mst->next; mst = mst->next);
+
+	// create our new entry
+	new_mst = Z_Calloc(sizeof (*new_mst), PU_MUSIC, NULL);
+	strncpy(new_mst->musname, mname, 7);
+	new_mst->musname[6] = 0;
+	new_mst->musflags = mflags;
+	new_mst->looping = looping;
+	new_mst->position = position;
+	new_mst->tic = gametic;
+	new_mst->status = status;
+	new_mst->mlumpnum = S_GetMusicLumpNum(new_mst->musname);
+
+	mst->next = new_mst;
+	new_mst->prev = mst;
+	new_mst->next = NULL;
+	last_music_stack = new_mst;
+}
+
+static musicstack_t *S_GetMusicStackEntry(UINT16 status, boolean fromfirst, INT16 startindex)
+{
+	musicstack_t *mst, *start_mst = NULL, *mst_next;
+
+	// if the first entry is empty, force master onto it
+	// fixes a memory corruption bug
+	if (!music_stacks && status != JT_MASTER)
+		S_AddMusicStackEntry(mapmusname, mapmusflags, true, S_GetMusicPosition(), JT_MASTER);
+
+	if (startindex >= 0)
+	{
+		INT16 i = 0;
+		for (mst = music_stacks; mst && i <= startindex; mst = mst->next, i++)
+			start_mst = mst;
+	}
+	else
+		start_mst = (fromfirst ? music_stacks : last_music_stack);
+
+	for (mst = start_mst; mst; mst = mst_next)
+	{
+		mst_next = (fromfirst ? mst->next : mst->prev);
+
+		if (!status || mst->status == status)
+		{
+			if (P_EvaluateMusicStatus(mst->status))
+			{
+				if (!S_MusicExists(mst->musname, !midi_disabled, !digital_disabled)) // paranoia
+					S_RemoveMusicStackEntry(mst); // then continue
+				else
+					return mst;
+			}
+			else
+				S_RemoveMusicStackEntry(mst); // then continue
+		}
+	}
+
+	return NULL;
+}
+
+void S_RetainMusic(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status)
+{
+	musicstack_t *mst;
+
+	if (!status) // we use this as a null indicator, don't push
+	{
+		CONS_Alert(CONS_ERROR, "Music stack entry must have a nonzero status.\n");
+		return;
+	}
+	else if (status == JT_MASTER) // enforce only one JT_MASTER
+	{
+		for (mst = music_stacks; mst; mst = mst->next)
+		{
+			if (mst->status == JT_MASTER)
+			{
+				CONS_Alert(CONS_ERROR, "Music stack can only have one JT_MASTER entry.\n");
+				return;
+			}
+		}
+	}
+	else // remove any existing status
+		S_RemoveMusicStackEntryByStatus(status);
+
+	S_AddMusicStackEntry(mname, mflags, looping, position, status);
+}
+
+boolean S_RecallMusic(UINT16 status, boolean fromfirst)
+{
+	UINT32 newpos = 0;
+	boolean mapmuschanged = false;
+	musicstack_t *result;
+	musicstack_t *entry = Z_Calloc(sizeof (*result), PU_MUSIC, NULL);
+
+	if (status)
+		result = S_GetMusicStackEntry(status, fromfirst, -1);
+	else
+		result = S_GetMusicStackEntry(JT_NONE, false, -1);
+
+	if (result && !S_MusicExists(result->musname, !midi_disabled, !digital_disabled))
+	{
+		Z_Free(entry);
+		return false; // music doesn't exist, so don't do anything
+	}
+
+	// make a copy of result, since we make modifications to our copy
+	if (result)
+	{
+		*entry = *result;
+		strncpy(entry->musname, result->musname, 7);
+	}
+
+	// no result, just grab mapmusname
+	if (!result || !entry->musname[0] || ((status == JT_MASTER || (music_stacks ? !music_stacks->status : false)) && !entry->status))
+	{
+		strncpy(entry->musname, mapmusname, 7);
+		entry->musflags = mapmusflags;
+		entry->looping = true;
+		entry->position = mapmusposition;
+		entry->tic = gametic;
+		entry->status = JT_MASTER;
+		entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
+	}
+
+	if (entry->status == JT_MASTER)
+	{
+		mapmuschanged = strnicmp(entry->musname, mapmusname, 7);
+		S_ResetMusicStack();
+	}
+	else if (!entry->status)
+	{
+		Z_Free(entry);
+		return false;
+	}
+
+	if (!mapmuschanged && strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	{
+		if (music_stack_fadeout)
+			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
+		else
+		{
+			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, 0, music_stack_fadein);
+
+			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
+			{
+				UINT32 poslapse = 0;
+
+				// To prevent the game from jumping past the end of the music, we need
+				// to check if we can get the song's length. Otherwise, if the lapsed resume time goes
+				// over a LOOPPOINT, mixer_sound.c will be unable to calculate the new resume position.
+				if (S_GetMusicLength())
+					poslapse = (UINT32)((float)(gametic - entry->tic)/(float)TICRATE*(float)MUSICRATE);
+
+				newpos = entry->position + poslapse;
+			}
+
+			// If the newly recalled music lumpnum does not match the lumpnum that we stored in stack,
+			// then discard the new position. That way, we will not recall an invalid position
+			// when the music is replaced or digital/MIDI is toggled.
+			if (newpos > 0 && S_MusicPlaying() && S_GetMusicLumpNum(entry->musname) == entry->mlumpnum)
+				S_SetMusicPosition(newpos);
+			else
+			{
+				S_StopFadingMusic();
+				S_SetInternalMusicVolume(100);
+			}
+		}
+		music_stack_noposition = false;
+		music_stack_fadeout = 0;
+		music_stack_fadein = JINGLEPOSTFADE;
+	}
+
+	Z_Free(entry);
+	return true;
+}
+
+/// ------------------------
+/// Music Playback
+/// ------------------------
+
+static lumpnum_t S_GetMusicLumpNum(const char *mname)
+{
+	if (!S_DigMusicDisabled() && S_DigExists(mname))
+		return W_GetNumForName(va("o_%s", mname));
+	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
+		return W_GetNumForName(va("d_%s", mname));
+	else if (S_DigMusicDisabled() && S_DigExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
+		return LUMPERROR;
+	}
+	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
+	{
+		CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
+		return LUMPERROR;
+	}
+	else
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mname);
+		return LUMPERROR;
+	}
+}
+
+static boolean S_LoadMusic(const char *mname)
 {
 	lumpnum_t mlumpnum;
 	void *mdata;
-	INT32 mhandle;
 
-	if (nomidimusic || music_disabled)
-		return false; // didn't search.
-
-	if (W_CheckNumForName(va("d_%s", mname)) == LUMPERROR)
+	if (S_MusicDisabled())
 		return false;
-	mlumpnum = W_GetNumForName(va("d_%s", mname));
+
+	mlumpnum = S_GetMusicLumpNum(mname);
+
+	if (mlumpnum == LUMPERROR)
+		return false;
 
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
-	mhandle = I_RegisterSong(mdata, W_LumpLength(mlumpnum));
 
 #ifdef MUSSERV
 	if (msg_id != -1)
@@ -1347,186 +1826,164 @@ static boolean S_MIDIMusic(const char *mname, boolean looping)
 	}
 #endif
 
-	// play it
-	if (!I_PlaySong(mhandle, looping))
-		return false;
-
-	strncpy(music_name, mname, 7);
-	music_name[6] = 0;
-	music_lumpnum = mlumpnum;
-	music_data = mdata;
-	music_handle = mhandle;
-	return true;
-}
-
-static boolean S_DigMusic(const char *mname, boolean looping)
-{
-	if (nodigimusic || digital_disabled)
-		return false; // try midi
-
-	if (!I_StartDigSong(mname, looping))
-		return false;
-
-	strncpy(music_name, mname, 7);
-	music_name[6] = 0;
-	music_lumpnum = LUMPERROR;
-	music_data = NULL;
-	music_handle = 0;
-	return true;
-}
-
-void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
-{
-	if ((nomidimusic || music_disabled) && (nodigimusic || digital_disabled))
-		return;
-
-	// No Music (empty string)
-	if (mmusic[0] == 0)
+	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
-		S_StopMusic();
-		return;
+		strncpy(music_name, mname, 7);
+		music_name[6] = 0;
+		music_data = mdata;
+		return true;
 	}
-
-	if (strncmp(music_name, mmusic, 6))
-	{
-		S_StopMusic(); // shutdown old music
-		if (!S_DigMusic(mmusic, looping) && !S_MIDIMusic(mmusic, looping))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Music lump %.6s not found!\n"), mmusic);
-			return;
-		}
-	}
-	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+	else
+		return false;
 }
 
-boolean S_SpeedMusic(float speed)
+static void S_UnloadMusic(void)
 {
-	return I_SetSongSpeed(speed);
-}
-
-void S_StopMusic(void)
-{
-	if (!music_playing)
-		return;
-
-	if (mus_paused)
-		I_ResumeSong(music_handle);
-
-	if (!nodigimusic)
-		I_StopDigSong();
-
-	S_SpeedMusic(1.0f);
-	I_StopSong(music_handle);
-	I_UnRegisterSong(music_handle);
+	I_UnloadSong();
 
 #ifndef HAVE_SDL //SDL uses RWOPS
 	Z_ChangeTag(music_data, PU_CACHE);
 #endif
-
 	music_data = NULL;
+
 	music_name[0] = 0;
+	music_flags = 0;
+	music_looping = false;
+}
+
+static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
+{
+	if (S_MusicDisabled())
+		return false;
+
+	if ((!fadeinms && !I_PlaySong(looping)) ||
+		(fadeinms && !I_FadeInPlaySong(fadeinms, looping)))
+	{
+		S_UnloadMusic();
+		return false;
+	}
+
+	S_InitMusicVolume(); // switch between digi and sequence volume
+	return true;
+}
+
+static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 fadeinms)
+{
+	strncpy(queue_name, mmusic, 7);
+	queue_flags = mflags;
+	queue_looping = looping;
+	queue_position = position;
+	queue_fadeinms = fadeinms;
+}
+
+static void S_ClearQueue(void)
+{
+	queue_name[0] = queue_flags = queue_looping = queue_position = queue_fadeinms = 0;
+}
+
+static void S_ChangeMusicToQueue(void)
+{
+	S_ChangeMusicEx(queue_name, queue_flags, queue_looping, queue_position, 0, queue_fadeinms);
+	S_ClearQueue();
+}
+
+void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
+{
+	char newmusic[7];
+
+	if (S_MusicDisabled())
+		return;
+
+	strncpy(newmusic, mmusic, 7);
+#if defined(HAVE_BLUA) && defined(HAVE_LUA_MUSICPLUS)
+	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+		return;
+#endif
+	newmusic[6] = 0;
+
+ 	// No Music (empty string)
+	if (newmusic[0] == 0)
+ 	{
+		if (prefadems)
+			I_FadeSong(0, prefadems, &S_StopMusic);
+		else
+			S_StopMusic();
+		return;
+	}
+
+	if (prefadems) // queue music change for after fade // allow even if the music is the same
+		// && S_MusicPlaying() // Let the delay happen even if we're not playing music
+	{
+		CONS_Debug(DBG_DETAILED, "Now fading out song %s\n", music_name);
+		S_QueueMusic(newmusic, mflags, looping, position, fadeinms);
+		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
+		return;
+	}
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+ 	{
+		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
+
+		S_StopMusic();
+
+		if (!S_LoadMusic(newmusic))
+		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded!\n", newmusic);
+			return;
+		}
+
+		music_flags = mflags;
+		music_looping = looping;
+
+		if (!S_PlayMusic(looping, fadeinms))
+ 		{
+			CONS_Alert(CONS_ERROR, "Music %.6s could not be played!\n", newmusic);
+			return;
+		}
+
+		if (position)
+			I_SetSongPosition(position);
+
+		I_SetSongTrack(mflags & MUSIC_TRACKMASK);
+	}
+	else if (fadeinms) // let fades happen with same music
+	{
+		I_SetSongPosition(position);
+		I_FadeSong(100, fadeinms, NULL);
+ 	}
+	else // reset volume to 100 with same music
+	{
+		I_StopFadingSong();
+		I_FadeSong(100, 500, NULL);
+	}
+}
+
+void S_StopMusic(void)
+{
+	if (!I_SongPlaying())
+		return;
+
+	if (I_SongPaused())
+		I_ResumeSong();
+
+	S_SpeedMusic(1.0f);
+	I_StopSong();
+	S_UnloadMusic(); // for now, stopping also means you unload the song
 
 	if (cv_closedcaptioning.value)
 	{
 		if (closedcaptions[0].s-S_sfx == sfx_None)
-			closedcaptions[0].t = CAPTIONFADETICS;
+		{
+			if (gamestate != wipegamestate)
+			{
+				closedcaptions[0].c = NULL;
+				closedcaptions[0].s = NULL;
+				closedcaptions[0].t = 0;
+				closedcaptions[0].b = 0;
+			}
+			else
+				closedcaptions[0].t = CAPTIONFADETICS;
+		}
 	}
-}
-
-void S_SetDigMusicVolume(INT32 volume)
-{
-	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
-
-	CV_SetValue(&cv_digmusicvolume, volume&31);
-	actualdigmusicvolume = cv_digmusicvolume.value;   //check for change of var
-
-#ifdef DJGPPDOS
-	I_SetDigMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
-#endif
-	I_SetDigMusicVolume(volume&31);
-}
-
-void S_SetMIDIMusicVolume(INT32 volume)
-{
-	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "musicvolume should be between 0-31\n");
-
-	CV_SetValue(&cv_midimusicvolume, volume&0x1f);
-	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
-
-#ifdef DJGPPDOS
-	I_SetMIDIMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
-#endif
-	I_SetMIDIMusicVolume(volume&0x1f);
-}
-
-/// ------------------------
-/// Init & Others
-/// ------------------------
-
-//
-// Initializes sound stuff, including volume
-// Sets channels, SFX and music volume,
-//  allocates channel buffer, sets S_sfx lookup.
-//
-void S_Init(INT32 sfxVolume, INT32 digMusicVolume, INT32 midiMusicVolume)
-{
-	INT32 i;
-
-	if (dedicated)
-		return;
-
-	S_SetSfxVolume(sfxVolume);
-	S_SetDigMusicVolume(digMusicVolume);
-	S_SetMIDIMusicVolume(midiMusicVolume);
-
-	SetChannelsNum();
-
-	// no sounds are playing, and they are not mus_paused
-	mus_paused = 0;
-
-	// Note that sounds have not been cached (yet).
-	for (i = 1; i < NUMSFX; i++)
-	{
-		S_sfx[i].usefulness = -1; // for I_GetSfx()
-		S_sfx[i].lumpnum = LUMPERROR;
-	}
-
-	// precache sounds if requested by cmdline, or precachesound var true
-	if (!nosound && (M_CheckParm("-precachesound") || precachesound.value))
-	{
-		// Initialize external data (all sounds) at start, keep static.
-		CONS_Printf(M_GetText("Loading sounds... "));
-
-		for (i = 1; i < NUMSFX; i++)
-			if (S_sfx[i].name)
-				S_sfx[i].data = I_GetSfx(&S_sfx[i]);
-
-		CONS_Printf(M_GetText(" pre-cached all sound data\n"));
-	}
-}
-
-
-//
-// Per level startup code.
-// Kills playing sounds at start of level,
-//  determines music if any, changes music.
-//
-void S_Start(void)
-{
-	if (mapmusflags & MUSIC_RELOADRESET)
-	{
-		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-		mapmusname[6] = 0;
-		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-	}
-
-	mus_paused = 0;
-
-	if (cv_resetmusic.value)
-		S_StopMusic();
-	S_ChangeMusic(mapmusname, mapmusflags, true);
 }
 
 //
@@ -1534,14 +1991,8 @@ void S_Start(void)
 //
 void S_PauseAudio(void)
 {
-	if (!nodigimusic)
-		I_PauseSong(0);
-
-	if (music_playing && !mus_paused)
-	{
-		I_PauseSong(music_handle);
-		mus_paused = true;
-	}
+	if (I_SongPlaying() && !I_SongPaused())
+		I_PauseSong();
 
 	// pause cd music
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
@@ -1549,19 +2000,308 @@ void S_PauseAudio(void)
 #else
 	I_StopCD();
 #endif
+
+	S_SetStackAdjustmentStart();
 }
 
 void S_ResumeAudio(void)
 {
-	if (!nodigimusic)
-		I_ResumeSong(0);
-	else
-	if (music_playing && mus_paused)
-	{
-		I_ResumeSong(music_handle);
-		mus_paused = false;
-	}
+	if (I_SongPlaying() && I_SongPaused())
+		I_ResumeSong();
 
 	// resume cd music
 	I_ResumeCD();
+
+	S_AdjustMusicStackTics();
 }
+
+void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
+{
+	if (digvolume < 0)
+		digvolume = cv_digmusicvolume.value;
+	if (seqvolume < 0)
+		seqvolume = cv_midimusicvolume.value;
+
+	if (digvolume < 0 || digvolume > 31)
+		CONS_Alert(CONS_WARNING, "digmusicvolume should be between 0-31\n");
+	CV_SetValue(&cv_digmusicvolume, digvolume&31);
+	actualdigmusicvolume = cv_digmusicvolume.value;   //check for change of var
+
+	if (seqvolume < 0 || seqvolume > 31)
+		CONS_Alert(CONS_WARNING, "midimusicvolume should be between 0-31\n");
+	CV_SetValue(&cv_midimusicvolume, seqvolume&31);
+	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
+
+#ifdef DJGPPDOS
+	digvolume = seqvolume = 31;
+#endif
+
+	switch(I_SongType())
+	{
+		case MU_MID:
+		case MU_MID_EX:
+		//case MU_MOD:
+		//case MU_GME:
+			I_SetMusicVolume(seqvolume&31);
+			break;
+		default:
+			I_SetMusicVolume(digvolume&31);
+			break;
+	}
+}
+
+/// ------------------------
+/// Music Fading
+/// ------------------------
+
+void S_SetInternalMusicVolume(INT32 volume)
+{
+	I_SetInternalMusicVolume(min(max(volume, 0), 100));
+}
+
+void S_StopFadingMusic(void)
+{
+	I_StopFadingSong();
+}
+
+boolean S_FadeMusicFromVolume(UINT8 target_volume, INT16 source_volume, UINT32 ms)
+{
+	if (source_volume < 0)
+		return I_FadeSong(target_volume, ms, NULL);
+	else
+		return I_FadeSongFromVolume(target_volume, source_volume, ms, NULL);
+}
+
+boolean S_FadeOutStopMusic(UINT32 ms)
+{
+	return I_FadeSong(0, ms, &S_StopMusic);
+}
+
+/// ------------------------
+/// Init & Others
+/// ------------------------
+
+//
+// Per level startup code.
+// Kills playing sounds at start of level,
+//  determines music if any, changes music.
+//
+void S_StartEx(boolean reset)
+{
+	if (mapmusflags & MUSIC_RELOADRESET)
+	{
+		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+		mapmusname[6] = 0;
+		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
+	}
+
+	if (cv_resetmusic.value || reset)
+		S_StopMusic();
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+
+	S_ResetMusicStack();
+	music_stack_noposition = false;
+	music_stack_fadeout = 0;
+	music_stack_fadein = JINGLEPOSTFADE;
+}
+
+static void Command_Tunes_f(void)
+{
+	const char *tunearg;
+	UINT16 tunenum, track = 0;
+	UINT32 position = 0;
+	const size_t argc = COM_Argc();
+
+	if (argc < 2) //tunes slot ...
+	{
+		CONS_Printf("tunes <name/num> [track] [speed] [position] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
+		return;
+	}
+
+	tunearg = COM_Argv(1);
+	tunenum = (UINT16)atoi(tunearg);
+	track = 0;
+
+	if (!strcasecmp(tunearg, "-show"))
+	{
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
+		return;
+	}
+	if (!strcasecmp(tunearg, "-none"))
+	{
+		S_StopMusic();
+		return;
+	}
+	else if (!strcasecmp(tunearg, "-default"))
+	{
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
+		return;
+	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
+
+	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
+
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
+	else
+		strncpy(mapmusname, tunearg, 7);
+
+	if (argc > 4)
+		position = (UINT32)atoi(COM_Argv(4));
+
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+	mapmusposition = position;
+
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+
+	if (argc > 3)
+	{
+		float speed = (float)atof(COM_Argv(3));
+		if (speed > 0.0f)
+			S_SpeedMusic(speed);
+	}
+}
+
+static void Command_RestartAudio_f(void)
+{
+	S_StopMusic();
+	S_StopSounds();
+	I_ShutdownMusic();
+	I_ShutdownSound();
+	I_StartupSound();
+	I_InitMusic();
+
+// These must be called or no sound and music until manually set.
+
+	I_SetSfxVolume(cv_soundvolume.value);
+	S_SetMusicVolume(cv_digmusicvolume.value, cv_midimusicvolume.value);
+	if (Playing()) // Gotta make sure the player is in a level
+		P_RestoreMusic(&players[consoleplayer]);
+}
+
+void GameSounds_OnChange(void)
+{
+	if (M_CheckParm("-nosound"))
+		return;
+
+	if (sound_disabled)
+	{
+		sound_disabled = false;
+		S_InitSfxChannels(cv_soundvolume.value);
+		S_StartSound(NULL, sfx_strpst);
+	}
+	else
+	{
+		sound_disabled = true;
+		S_StopSounds();
+	}
+}
+
+void GameDigiMusic_OnChange(void)
+{
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nodigmusic"))
+		return;
+
+	if (digital_disabled)
+	{
+		digital_disabled = false;
+		I_InitMusic();
+		S_StopMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
+	}
+	else
+	{
+		digital_disabled = true;
+		if (S_MusicType() != MU_MID)
+		{
+			if (midi_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
+	}
+}
+
+void GameMIDIMusic_OnChange(void)
+{
+	if (M_CheckParm("-nomusic"))
+		return;
+	else if (M_CheckParm("-nomidimusic"))
+		return;
+
+	if (midi_disabled)
+	{
+		midi_disabled = false;
+		I_InitMusic();
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
+	}
+	else
+	{
+		midi_disabled = true;
+		if (S_MusicType() == MU_MID)
+		{
+			if (digital_disabled)
+				S_StopMusic();
+			else
+			{
+				char mmusic[7];
+				UINT16 mflags;
+				boolean looping;
+
+				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
+				{
+					S_StopMusic();
+					S_ChangeMusic(mmusic, mflags, looping);
+				}
+				else
+					S_StopMusic();
+			}
+		}
+	}
+}
+
+#ifdef HAVE_OPENMPT
+void ModFilter_OnChange(void)
+{
+	if (openmpt_mhandle)
+		openmpt_module_set_render_param(openmpt_mhandle, OPENMPT_MODULE_RENDER_INTERPOLATIONFILTER_LENGTH, cv_modfilter.value);
+}
+#endif

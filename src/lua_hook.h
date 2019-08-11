@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -48,12 +48,14 @@ enum hook {
 	hook_MobjMoveBlocked,
 	hook_MapThingSpawn,
 	hook_FollowMobj,
+	hook_PlayerCanDamage,
+	hook_PlayerQuit,
 
 	hook_MAX // last hook
 };
 extern const char *const hookNames[];
 
-void LUAh_MapChange(void); // Hook for map change (before load)
+void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)
@@ -86,6 +88,8 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 #define LUAh_ShieldSpecial(player) LUAh_PlayerHook(player, hook_ShieldSpecial) // Hook for shield abilities
 #define LUAh_MobjMoveBlocked(mo) LUAh_MobjHook(mo, hook_MobjMoveBlocked) // Hook for P_XYMovement (when movement is blocked)
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
-boolean LUAh_FollowMobj(player_t *player, mobj_t *mo); // Hook for P_PlayerAfterThink Smiles mobj-following
+boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
+UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
+void LUAh_PlayerQuit(player_t *plr, int reason); // Hook for player quitting
 
 #endif

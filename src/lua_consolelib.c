@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,9 +28,6 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 // for functions not allowed in hooks or coroutines (supercedes above)
 #define NOHOOK if (!lua_lumploading)\
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
-// for functions only allowed within a level
-#define INLEVEL if (gamestate != GS_LEVEL)\
-return luaL_error(L, "This function can only be used in a level!");
 
 static const char *cvname = NULL;
 
@@ -63,7 +60,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_pop(gL, 1); // pop flags
 
 	// requires server/admin and the player is not one of them
-	if ((flags & 1) && playernum != serverplayer && playernum != adminplayer)
+	if ((flags & 1) && playernum != serverplayer && !IsPlayerAdmin(playernum))
 		goto deny;
 
 	lua_rawgeti(gL, -1, 1); // push function from command info table
@@ -85,7 +82,9 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	lua_settop(gL, 0); // clear stack
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
 	{
@@ -139,7 +138,7 @@ void COM_Lua_f(void)
 		UINT8 argc;
 		lua_pop(gL, 1); // pop command info table
 
-		if (flags & 1 && !server && adminplayer != playernum) // flag 1: only server/admin can use this command.
+		if (flags & 1 && !server && !IsPlayerAdmin(playernum)) // flag 1: only server/admin can use this command.
 		{
 			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 			return;

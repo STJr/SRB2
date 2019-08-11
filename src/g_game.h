@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -53,11 +53,17 @@ extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
 extern tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 extern INT16 rw_maximums[NUM_WEAPONS];
+extern INT32 pausedelay;
+extern boolean pausebreakkey;
+
+extern boolean promptactive;
 
 // used in game menu
+extern consvar_t cv_tutorialprompt;
+extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
 extern consvar_t cv_crosshair, cv_crosshair2;
-extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_mousemove;
-extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_mousemove2;
+extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
+extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
 extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 extern consvar_t cv_directionchar, cv_directionchar2;
@@ -136,7 +142,9 @@ typedef enum
 	GHC_NORMAL = 0,
 	GHC_SUPER,
 	GHC_FIREFLOWER,
-	GHC_INVINCIBLE
+	GHC_INVINCIBLE,
+	GHC_NIGHTSSKIN, // not actually a colour
+	GHC_RETURNSKIN // ditto
 } ghostcolor_t;
 
 // Record/playback tics

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -93,11 +93,23 @@ typedef enum
 	gc_jump,
 	gc_console,
 	gc_pause,
+	gc_systemmenu,
+	gc_screenshot,
+	gc_recordgif,
+	gc_viewpoint,
 	gc_custom1, // Lua scriptable
 	gc_custom2, // Lua scriptable
 	gc_custom3, // Lua scriptable
 	num_gamecontrols
 } gamecontrols_e;
+
+typedef enum
+{
+	gcs_custom,
+	gcs_fps,
+	gcs_platform,
+	num_gamecontrolschemes
+} gamecontrolschemes_e;
 
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
@@ -116,8 +128,30 @@ extern UINT8 gamekeydown[NUMINPUTS];
 // two key codes (or virtual key) per game control
 extern INT32 gamecontrol[num_gamecontrols][2];
 extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
+extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
+
+#define num_gcl_tutorial_check 6
+#define num_gcl_tutorial_used 8
+#define num_gcl_tutorial_full 13
+#define num_gcl_movement 4
+#define num_gcl_camera 2
+#define num_gcl_movement_camera 6
+#define num_gcl_jump 1
+#define num_gcl_use 1
+#define num_gcl_jump_use 2
+
+extern const INT32 gcl_tutorial_check[num_gcl_tutorial_check];
+extern const INT32 gcl_tutorial_used[num_gcl_tutorial_used];
+extern const INT32 gcl_tutorial_full[num_gcl_tutorial_full];
+extern const INT32 gcl_movement[num_gcl_movement];
+extern const INT32 gcl_camera[num_gcl_camera];
+extern const INT32 gcl_movement_camera[num_gcl_movement_camera];
+extern const INT32 gcl_jump[num_gcl_jump];
+extern const INT32 gcl_use[num_gcl_use];
+extern const INT32 gcl_jump_use[num_gcl_jump_use];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not
@@ -131,10 +165,13 @@ INT32 G_KeyStringtoNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
+void G_ClearAllControlKeys(void);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
-void G_Controldefault(void);
-void G_SaveKeySetting(FILE *f);
-void G_CheckDoubleUsage(INT32 keynum);
+void G_DefineDefaultControls(void);
+INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
+void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
 
 #endif

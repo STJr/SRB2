@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
+#include "d_clisrv.h"
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
@@ -71,6 +72,7 @@ static void G_DoWorldDone(void);
 
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
+UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
 INT16 maptol;
@@ -116,33 +118,41 @@ INT32 secondarydisplayplayer; // for splitscreen
 
 tic_t gametic;
 tic_t levelstarttic; // gametic at level start
-UINT32 totalrings; // for intermission
+UINT32 ssspheres; // old special stage
 INT16 lastmap; // last level you were at (returning from special stages)
 tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 
 INT16 spstage_start;
-INT16 sstage_start;
-INT16 sstage_end;
+INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 INT16 titlemap = 0;
 boolean hidetitlepics = false;
 INT16 bootmap; //bootmap for loading a map on startup
 
+INT16 tutorialmap = 0; // map to load for tutorial
+boolean tutorialmode = false; // are we in a tutorial right now?
+INT32 tutorialgcs = gcs_custom; // which control scheme is loaded?
+INT32 tutorialusemouse = 0; // store cv_usemouse user value
+INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
+INT32 tutorialmousemove = 0; // store cv_mousemove user value
+INT32 tutorialanalog = 0; // store cv_analog user value
+
 boolean looptitle = false;
-boolean useNightsSS = false;
 
 UINT8 skincolor_redteam = SKINCOLOR_RED;
 UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT8 skincolor_redring = SKINCOLOR_RED;
-UINT8 skincolor_bluering = SKINCOLOR_AZURE;
+UINT8 skincolor_redring = SKINCOLOR_SALMON;
+UINT8 skincolor_bluering = SKINCOLOR_CORNFLOWER;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
+boolean exitfadestarted = false;
 
 cutscene_t *cutscenes[128];
+textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
-boolean skipstats;
+UINT8 skipstats;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -203,6 +213,7 @@ UINT16 tailsflytics = 8*TICRATE;
 UINT16 underwatertics = 30*TICRATE;
 UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
+UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
@@ -317,22 +328,57 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 "More Axis Sets"
 #endif
 
+// don't mind me putting these here, I was lazy to figure out where else I could put those without blowing up the compiler.
+
+// it automatically becomes compact with 20+ players, but if you like it, I guess you can turn that on!
+consvar_t cv_compactscoreboard= {"compactscoreboard", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// chat timer thingy
+static CV_PossibleValue_t chattime_cons_t[] = {{5, "MIN"}, {999, "MAX"}, {0, NULL}};
+consvar_t cv_chattime = {"chattime", "8", CV_SAVE, chattime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// chatwidth
+static CV_PossibleValue_t chatwidth_cons_t[] = {{64, "MIN"}, {150, "MAX"}, {0, NULL}};
+consvar_t cv_chatwidth = {"chatwidth", "128", CV_SAVE, chatwidth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// chatheight
+static CV_PossibleValue_t chatheight_cons_t[] = {{6, "MIN"}, {22, "MAX"}, {0, NULL}};
+consvar_t cv_chatheight= {"chatheight", "8", CV_SAVE, chatheight_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// chat notifications (do you want to hear beeps? I'd understand if you didn't.)
+consvar_t cv_chatnotifications= {"chatnotifications", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// chat spam protection (why would you want to disable that???)
+consvar_t cv_chatspamprotection= {"chatspamprotection", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// minichat text background
+consvar_t cv_chatbacktint = {"chatbacktint", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// old shit console chat. (mostly exists for stuff like terminal, not because I cared if anyone liked the old chat.)
+static CV_PossibleValue_t consolechat_cons_t[] = {{0, "Window"}, {1, "Console"}, {2, "Window (Hidden)"}, {0, NULL}};
+consvar_t cv_consolechat = {"chatmode", "Window", CV_SAVE, consolechat_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+
 consvar_t cv_crosshair = {"crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_crosshair2 = {"crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_invertmouse = {"invertmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_alwaysfreelook = {"alwaysmlook", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_invertmouse2 = {"invertmouse2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_alwaysfreelook2 = {"alwaysmlook2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mousemove = {"mousemove", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mousemove2 = {"mousemove2", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_analog = {"analog", "Off", CV_CALL, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_analog2 = {"analog2", "Off", CV_CALL, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog = {"useranalog", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_useranalog2 = {"useranalog2", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_alwaysfreelook2 = {"alwaysmlook2", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_chasefreelook = {"chasemlook", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_chasefreelook2 = {"chasemlook2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousemove = {"mousemove", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mousemove2 = {"mousemove2", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
+// previously "analog", "analog2", "useranalog", and "useranalog2", invalidating 2.1-era copies of config.cfg
+// changed because it'd be nice to see people try out our actually good controls with gamepads now autobrake exists
+consvar_t cv_analog = {"sessionanalog", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_analog2 = {"sessionanalog2", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_useranalog = {"configanalog", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_useranalog2 = {"configanalog2", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // deez New User eXperiences
+static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
 consvar_t cv_directionchar = {"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -352,23 +398,23 @@ typedef enum
 	AXISFIRENORMAL,
 } axis_input_e;
 
-consvar_t cv_turnaxis = {"joyaxis_turn", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_turnaxis = {"joyaxis_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_moveaxis = {"joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_sideaxis = {"joyaxis_side", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_lookaxis = {"joyaxis_look", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_fireaxis = {"joyaxis_fire", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_firenaxis = {"joyaxis_firenormal", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sideaxis = {"joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_lookaxis = {"joyaxis_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_jumpaxis = {"joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_spinaxis = {"joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_fireaxis = {"joyaxis_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_firenaxis = {"joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_turnaxis2 = {"joyaxis2_turn", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_turnaxis2 = {"joyaxis2_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_moveaxis2 = {"joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_sideaxis2 = {"joyaxis2_side", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_lookaxis2 = {"joyaxis2_look", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_fireaxis2 = {"joyaxis2_fire", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sideaxis2 = {"joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_lookaxis2 = {"joyaxis2_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_jumpaxis2 = {"joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #if MAXPLAYERS > 32
 #error "please update player_name table using the new value for MAXPLAYERS"
@@ -873,22 +919,25 @@ static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
-	INT32 tspeed, forward, side, axis, i;
+	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[consoleplayer];
 	camera_t *thiscam = &camera;
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
 	static boolean resetdown; // don't cam reset every frame
+	static boolean joyaiming; // check the last frame's value if we need to reset the camera
 
 	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
 
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && player->playerstate == PST_REBORN))
+	// ...OR if we're blindfolded. No looking into the floor.
+	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK)
+	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{
 		cmd->angleturn = (INT16)(localangle >> 16);
 		cmd->aiming = G_ClipAimingPitch(&localaiming);
@@ -903,9 +952,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	movefkey = PLAYER1INPUTDOWN(gc_forward);
 	movebkey = PLAYER1INPUTDOWN(gc_backward);
 
-	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^ cv_alwaysfreelook.value;
+	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
+		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
 	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
+
+	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
+
+	// Reset the vertical look if we're no longer joyaiming
+	if (!thisjoyaiming && joyaiming)
+		localaiming = 0;
+	joyaiming = thisjoyaiming;
 
 	axis = JoyAxis(AXISTURN);
 	if (gamepadjoystickmove && axis != 0)
@@ -991,9 +1048,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = JoyAxis(AXISMOVE);
-	if (movefkey || (gamepadjoystickmove && axis < 0))
+	altaxis = JoyAxis(AXISLOOK);
+	if (movefkey || (gamepadjoystickmove && axis < 0)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
+			&& (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (movebkey || (gamepadjoystickmove && axis > 0))
+	if (movebkey || (gamepadjoystickmove && axis > 0)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
+			&& (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1081,25 +1143,28 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		}
 
 		axis = JoyAxis(AXISLOOK);
-		if (analogjoystickmove && axis != 0 && cv_lookaxis.value != 0)
+		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis.value != 0)
 			localaiming += (axis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis.value == 0 && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
 			localaiming = 0;
 
-		if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			localaiming += KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
+			if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			{
+				localaiming += KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			{
+				localaiming -= KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER1INPUTDOWN(gc_centerview))
+				localaiming = 0;
 		}
-		else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
-		{
-			localaiming -= KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
-		}
-		else if (PLAYER1INPUTDOWN(gc_centerview))
-			localaiming = 0;
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
@@ -1180,16 +1245,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
-	INT32 tspeed, forward, side, axis, i;
+	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove;
+	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[secondarydisplayplayer];
 	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
 	static boolean resetdown; // don't cam reset every frame
+	static boolean joyaiming; // check the last frame's value if we need to reset the camera
 
 	G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 
@@ -1210,9 +1276,17 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	movefkey = PLAYER2INPUTDOWN(gc_forward);
 	movebkey = PLAYER2INPUTDOWN(gc_backward);
 
-	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^ cv_alwaysfreelook2.value;
+	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
+		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
 	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
 	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
+
+	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
+
+	// Reset the vertical look if we're no longer joyaiming
+	if (!thisjoyaiming && joyaiming)
+		localaiming2 = 0;
+	joyaiming = thisjoyaiming;
 
 	axis = Joy2Axis(AXISTURN);
 	if (gamepadjoystickmove && axis != 0)
@@ -1298,9 +1372,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// forward with key or button
 	axis = Joy2Axis(AXISMOVE);
-	if (movefkey || (gamepadjoystickmove && axis < 0))
+	altaxis = Joy2Axis(AXISLOOK);
+	if (movefkey || (gamepadjoystickmove && axis < 0)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
+			&& (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (movebkey || (gamepadjoystickmove && axis > 0))
+	if (movebkey || (gamepadjoystickmove && axis > 0)
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
+			&& (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
@@ -1385,25 +1464,28 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		}
 
 		axis = Joy2Axis(AXISLOOK);
-		if (analogjoystickmove && axis != 0 && cv_lookaxis2.value != 0)
+		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis2.value != 0)
 			localaiming2 += (axis<<16) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis2.value == 0 && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
 			localaiming2 = 0;
 
-		if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			localaiming2 += KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
+			if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			{
+				localaiming2 += KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			{
+				localaiming2 -= KB_LOOKSPEED * screen_invert;
+				keyboard_look = true;
+			}
+			else if (PLAYER2INPUTDOWN(gc_centerview))
+				localaiming2 = 0;
 		}
-		else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
-		{
-			localaiming2 -= KB_LOOKSPEED * screen_invert;
-			keyboard_look = true;
-		}
-		else if (PLAYER2INPUTDOWN(gc_centerview))
-			localaiming2 = 0;
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
@@ -1521,11 +1603,6 @@ static void Analog_OnChange(void)
 		return;
 	}
 
-	if (cv_analog.value)
-		players[consoleplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[consoleplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref();
 }
 
@@ -1541,51 +1618,26 @@ static void Analog2_OnChange(void)
 		return;
 	}
 
-	if (cv_analog2.value)
-		players[secondarydisplayplayer].pflags |= PF_ANALOGMODE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_ANALOGMODE;
-
 	SendWeaponPref2();
 }
 
 static void DirectionChar_OnChange(void)
 {
-	if (cv_directionchar.value)
-		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref();
 }
 
 static void DirectionChar2_OnChange(void)
 {
-	if (cv_directionchar2.value)
-		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
-
 	SendWeaponPref2();
 }
 
 static void AutoBrake_OnChange(void)
 {
-	if (cv_autobrake.value)
-		players[consoleplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref();
 }
 
 static void AutoBrake2_OnChange(void)
 {
-	if (cv_autobrake2.value)
-		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
-	else
-		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
-
 	SendWeaponPref2();
 }
 
@@ -1670,7 +1722,8 @@ void G_DoLoadLevel(boolean resetplayer)
 	CON_ClearHUD();
 }
 
-static INT32 pausedelay = 0;
+INT32 pausedelay = 0;
+boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
 //
@@ -1680,7 +1733,8 @@ static INT32 camtoggledelay, camtoggledelay2 = 0;
 boolean G_Responder(event_t *ev)
 {
 	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown && ev->data1 == KEY_F12)
+	if (gamestate == GS_LEVEL && ev->type == ev_keydown
+		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
 	{
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
@@ -1788,14 +1842,16 @@ boolean G_Responder(event_t *ev)
 			return true;
 		}
 	}
-	else if (gamestate == GS_CREDITS)
+	else if (gamestate == GS_CREDITS || gamestate == GS_ENDING) // todo: keep ending here?
 	{
 		if (HU_Responder(ev))
 			return true; // chat ate the event
 
 		if (F_CreditResponder(ev))
 		{
-			F_StartGameEvaluation();
+			// Skip credits for everyone
+			if (!netgame || server || IsPlayerAdmin(consoleplayer))
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return true;
 		}
 	}
@@ -1818,19 +1874,35 @@ boolean G_Responder(event_t *ev)
 	{
 		case ev_keydown:
 			if (ev->data1 == gamecontrol[gc_pause][0]
-				|| ev->data1 == gamecontrol[gc_pause][1])
+				|| ev->data1 == gamecontrol[gc_pause][1]
+				|| ev->data1 == KEY_PAUSE)
 			{
-				if (!pausedelay)
+				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					// don't let busy scripts prevent pausing
-					pausedelay = NEWTICRATE/7;
+					pausebreakkey = (ev->data1 == KEY_PAUSE);
+					if (menuactive || pausedelay < 0 || leveltime < 2)
+						return true;
 
-					// command will handle all the checks for us
-					COM_ImmedExecute("pause");
-					return true;
+					if (pausedelay < 1+(NEWTICRATE/2))
+						pausedelay = 1+(NEWTICRATE/2);
+					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
+					{
+						G_SetRetryFlag();
+						return true;
+					}
+					pausedelay++; // counteract subsequent subtraction this frame
 				}
 				else
-					pausedelay = NEWTICRATE/7;
+				{
+					INT32 oldpausedelay = pausedelay;
+					pausedelay = (NEWTICRATE/7);
+					if (!oldpausedelay)
+					{
+						// command will handle all the checks for us
+						COM_ImmedExecute("pause");
+						return true;
+					}
+				}
 			}
 			if (ev->data1 == gamecontrol[gc_camtoggle][0]
 				|| ev->data1 == gamecontrol[gc_camtoggle][1])
@@ -1890,11 +1962,19 @@ void G_Ticker(boolean run)
 		{
 			G_ClearRetryFlag();
 
-			// Costs a life to retry ... unless the player in question is dead already.
-			if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE)
-				players[consoleplayer].lives -= 1;
+			if (modeattacking)
+			{
+				pausedelay = INT32_MIN;
+				M_ModeAttackRetry(0);
+			}
+			else
+			{
+				// Costs a life to retry ... unless the player in question is dead already.
+				if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
+					players[consoleplayer].lives -= 1;
 
-			G_DoReborn(consoleplayer);
+				G_DoReborn(consoleplayer);
+			}
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -1932,6 +2012,7 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker();
+			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 			break;
@@ -1943,11 +2024,18 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
+			F_MenuPresTicker(run);
 			break;
 
 		case GS_INTRO:
 			if (run)
 				F_IntroTicker();
+			break;
+
+		case GS_ENDING:
+			if (run)
+				F_EndingTicker();
+			HU_Ticker();
 			break;
 
 		case GS_CUTSCENE:
@@ -1982,6 +2070,7 @@ void G_Ticker(boolean run)
 			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
+			F_MenuPresTicker(run);
 			F_TitleScreenTicker(run);
 			break;
 
@@ -1992,8 +2081,13 @@ void G_Ticker(boolean run)
 
 	if (run)
 	{
-		if (pausedelay)
-			pausedelay--;
+		if (pausedelay && pausedelay != INT32_MIN)
+		{
+			if (pausedelay > 0)
+				pausedelay--;
+			else
+				pausedelay++;
+		}
 
 		if (camtoggledelay)
 			camtoggledelay--;
@@ -2199,7 +2293,7 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->rings = 0; // 0 rings
+	p->rings = p->spheres = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
@@ -2211,9 +2305,14 @@ void G_PlayerReborn(INT32 player)
 		{
 			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
 			mapmusname[6] = 0;
-			mapmusflags = mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK;
+			mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+			mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 		}
-		S_ChangeMusic(mapmusname, mapmusflags, true);
+
+		// This is in S_Start, but this was not here previously.
+		// if (cv_resetmusic.value)
+		// 	S_StopMusic();
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
 
 	if (gametype == GT_COOP)
@@ -2229,6 +2328,8 @@ void G_PlayerReborn(INT32 player)
 
 	if (p->mare == 255)
 		p->mare = 0;
+
+	p->marelap = p->marebonuslap = 0;
 
 	// Check to make sure their color didn't change somehow...
 	if (G_GametypeHasTeams())
@@ -2302,6 +2403,8 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		return;
 
 	P_SpawnPlayer(playernum);
+
+	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
@@ -2468,9 +2571,9 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 	I_Assert((oldmo != NULL) && (newmo != NULL));
 
 	// scan all thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -2548,7 +2651,7 @@ void G_DoReborn(INT32 playernum)
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
-					skipstats = true;
+					skipstats = 2;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -2653,7 +2756,7 @@ void G_DoReborn(INT32 playernum)
 		else
 		{
 #ifdef HAVE_BLUA
-			LUAh_MapChange();
+			LUAh_MapChange(gamemap);
 #endif
 			G_DoLoadLevel(true);
 			return;
@@ -2752,6 +2855,14 @@ void G_ExitLevel(void)
 		// Remove CEcho text on round end.
 		HU_ClearCEcho();
 	}
+	else if (gamestate == GS_ENDING)
+	{
+		F_StartCredits();
+	}
+	else if (gamestate == GS_CREDITS)
+	{
+		F_StartGameEvaluation();
+	}
 }
 
 // See also the enum GameType in doomstat.h
@@ -2794,7 +2905,11 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 //
 boolean G_IsSpecialStage(INT32 mapnum)
 {
-	if (gametype == GT_COOP && modeattacking != ATTACKING_RECORD && mapnum >= sstage_start && mapnum <= sstage_end)
+	if (gametype != GT_COOP || modeattacking == ATTACKING_RECORD)
+		return false;
+	if (mapnum >= sstage_start && mapnum <= sstage_end)
+		return true;
+	if (mapnum >= smpstage_start && mapnum <= smpstage_end)
 		return true;
 
 	return false;
@@ -2933,6 +3048,9 @@ static void G_DoCompleted(void)
 
 	tokenlist = 0; // Reset the list
 
+	if (modeattacking && pausedelay)
+		pausedelay = 0;
+
 	gameaction = ga_nothing;
 
 	if (metalplayback)
@@ -3008,7 +3126,7 @@ static void G_DoCompleted(void)
 		nextmap = cm;
 	}
 
-	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1102-1)
+	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
 		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
 	// wrap around in race
@@ -3019,21 +3137,14 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		if (!(emeralds & EMERALD1))
-			nextmap = (INT16)(sstage_start - 1); // Special Stage 1
-		else if (!(emeralds & EMERALD2))
-			nextmap = (INT16)(sstage_start); // Special Stage 2
-		else if (!(emeralds & EMERALD3))
-			nextmap = (INT16)(sstage_start + 1); // Special Stage 3
-		else if (!(emeralds & EMERALD4))
-			nextmap = (INT16)(sstage_start + 2); // Special Stage 4
-		else if (!(emeralds & EMERALD5))
-			nextmap = (INT16)(sstage_start + 3); // Special Stage 5
-		else if (!(emeralds & EMERALD6))
-			nextmap = (INT16)(sstage_start + 4); // Special Stage 6
-		else if (!(emeralds & EMERALD7))
-			nextmap = (INT16)(sstage_start + 5); // Special Stage 7
-		else
+		for (i = 0; i < 7; i++)
+			if (!(emeralds & (1<<i)))
+			{
+				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+				break;
+			}
+
+		if (i == 7)
 			gottoken = false;
 	}
 
@@ -3069,7 +3180,7 @@ void G_AfterIntermission(void)
 {
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking) // Start a custom cutscene.
+	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3181,6 +3292,11 @@ void G_EndGame(void)
 	// Only do evaluation and credits in coop games.
 	if (gametype == GT_COOP)
 	{
+		if (nextmap == 1103-1) // end game with ending
+		{
+			F_StartEnding();
+			return;
+		}
 		if (nextmap == 1102-1) // end game with credits
 		{
 			F_StartCredits();
@@ -3205,9 +3321,9 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = 50;
-	sstage_end = 57; // 8 special stages in vanilla SRB2
-	useNightsSS = false; //true;
+	sstage_start = smpstage_start = 50;
+	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
+	sstage_end++; // plus one weirdo
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
@@ -3599,7 +3715,7 @@ void G_SaveGame(UINT32 slot)
 	backup = va("%s",savename);
 
 	// save during evaluation or credits? game's over, folks!
-	if (gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	if (gamestate == GS_ENDING || gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		gamecomplete = true;
 
 	gameaction = ga_nothing;
@@ -3777,7 +3893,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	{
 		// Clear a bunch of variables
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
-		countdown = countdown2 = 0;
+		countdown = countdown2 = exitfadestarted = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -3813,7 +3929,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		unlocktriggers = 0;
 
 		// clear itemfinder, just in case
-		CV_StealthSetValue(&cv_itemfinder, 0);
+		if (!dedicated)	// except in dedicated servers, where it is not registered and can actually I_Error debug builds
+			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
 	// internal game map
@@ -4264,7 +4381,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		ghostext.flags = 0;
 	}
 
-	if (ghost->player && ghost->player->followmobj)
+	if (ghost->player && ghost->player->followmobj) // bloats tails runs but what can ya do
 	{
 		INT16 temp;
 
@@ -4365,16 +4482,15 @@ void G_ConsGhostTic(void)
 				demo_p += sizeof(angle_t); // angle, unnecessary for cons.
 
 				mobj = NULL;
-				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 					mobj = (mobj_t *)th;
 					if (mobj->type == (mobjtype_t)type && mobj->x == x && mobj->y == y && mobj->z == z)
 						break;
-					mobj = NULL; // wasn't this one, keep searching.
 				}
-				if (mobj && mobj->health != health) // Wasn't damaged?! This is desync! Fix it!
+				if (th != &thlist[THINK_MOBJ] && mobj->health != health) // Wasn't damaged?! This is desync! Fix it!
 				{
 					if (demosynced)
 						CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
@@ -4491,6 +4607,9 @@ void G_GhostTicker(void)
 				switch(g->color)
 				{
 				default:
+				case GHC_RETURNSKIN:
+					g->mo->skin = g->oldmo.skin;
+					// fallthru
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
@@ -4500,6 +4619,9 @@ void G_GhostTicker(void)
 					break;
 				case GHC_FIREFLOWER: // Fireflower
 					g->mo->color = SKINCOLOR_WHITE;
+					break;
+				case GHC_NIGHTSSKIN: // not actually a colour
+					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -4666,6 +4788,7 @@ void G_GhostTicker(void)
 				p->next = g->next;
 			else
 				ghosts = g->next;
+			Z_Free(g);
 			continue;
 		}
 		p = g;
@@ -5445,7 +5568,7 @@ void G_DoPlayDemo(char *defdemoname)
 	SetPlayerSkin(0, skin);
 
 #ifdef HAVE_BLUA
-	LUAh_MapChange();
+	LUAh_MapChange(gamemap);
 #endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
@@ -5666,29 +5789,28 @@ void G_AddGhost(char *defdemoname)
 	mthing = playerstarts[0];
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
-		fixed_t x,y,z;
-		sector_t *sector;
-		x = mthing->x << FRACBITS;
-		y = mthing->y << FRACBITS;
-		sector = R_PointInSubsector(x, y)->sector;
+		fixed_t z,f,c;
+		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		f = gh->mo->floorz;
+		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			z = c;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z < sector->floorheight)
-				z = sector->floorheight;
+			if (z < f)
+				z = f;
 		}
 		else
 		{
-			z = sector->floorheight;
+			z = f;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-				z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			if (z > c)
+				z = c;
 		}
-		gh->mo = P_SpawnMobj(x, y, z, MT_GHOST);
-		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
+		gh->mo->z = z;
 	}
 
 	gh->oldmo.x = gh->mo->x;
@@ -5761,9 +5883,9 @@ void G_DoPlayMetal(void)
 		metalbuffer = metal_p = W_CacheLumpNum(l, PU_STATIC);
 
 	// find metal sonic
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -5772,7 +5894,7 @@ void G_DoPlayMetal(void)
 
 		break;
 	}
-	if (!mo)
+	if (th == &thlist[THINK_MOBJ])
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Failed to find bot entity.\n"));
 		Z_Free(metalbuffer);
@@ -5887,8 +6009,14 @@ boolean G_CheckDemoStatus(void)
 {
 	boolean saved;
 
-	if(ghosts) // ... ... ...
-		ghosts = NULL; // :)
+	while (ghosts)
+	{
+		demoghost *next = ghosts->next;
+		Z_Free(ghosts);
+		ghosts = next;
+	}
+	ghosts = NULL;
+
 
 	// DO NOT end metal sonic demos here
 

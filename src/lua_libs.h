@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,6 +41,11 @@ extern lua_State *gL;
 #ifdef HAVE_LUA_SEGS
 #define META_SEG "SEG_T*"
 #define META_NODE "NODE_T*"
+#endif
+#ifdef ESLOPE
+#define META_SLOPE "PSLOPE_T*"
+#define META_VECTOR2 "VECTOR2_T"
+#define META_VECTOR3 "VECTOR3_T"
 #endif
 #define META_MAPHEADER "MAPHEADER_T*"
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,7 +33,9 @@
 */
 fixed_t FixedMul(fixed_t a, fixed_t b)
 {
-	return (fixed_t)((((INT64)a * b) ) / FRACUNIT);
+	// Need to cast to unsigned before shifting to avoid undefined behaviour
+	// for negative integers
+	return (fixed_t)(((UINT64)((INT64)a * b)) >> FRACBITS);
 }
 
 #endif //__USE_C_FIXEDMUL__
@@ -430,7 +432,7 @@ vector3_t *FV3_Cross(const vector3_t *a_1, const vector3_t *a_2, vector3_t *a_o)
 //
 vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vector3_t *out)
 {
-	// Determine t (the length of the vector from ‘Line[0]’ to ‘p’)
+	// Determine t (the length of the vector from ï¿½Line[0]ï¿½ to ï¿½pï¿½)
 	vector3_t c, V;
 	fixed_t t, d = 0;
 	FV3_SubEx(p, &Line[0], &c);
@@ -440,7 +442,7 @@ vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vec
 	d = FV3_Distance(&Line[0], &Line[1]);
 	t = FV3_Dot(&V, &c);
 
-	// Check to see if ‘t’ is beyond the extents of the line segment
+	// Check to see if ï¿½tï¿½ is beyond the extents of the line segment
 	if (t < 0)
 	{
 		return FV3_Copy(out, &Line[0]);
@@ -450,7 +452,7 @@ vector3_t *FV3_ClosestPointOnLine(const vector3_t *Line, const vector3_t *p, vec
 		return FV3_Copy(out, &Line[1]);
 	}
 
-	// Return the point between ‘Line[0]’ and ‘Line[1]’
+	// Return the point between ï¿½Line[0]ï¿½ and ï¿½Line[1]ï¿½
 	FV3_Mul(&V, t);
 
 	return FV3_AddEx(&Line[0], &V, out);

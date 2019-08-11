@@ -93,6 +93,9 @@
     <ClCompile Include="..\hardware\hw_cache.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\hw_draw.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -450,6 +453,13 @@
     <ClCompile Include="..\string.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\apng.c" />
+    <ClCompile Include="..\r_portal.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="afxres.h">
@@ -472,6 +482,9 @@
     </ClInclude>
     <ClInclude Include="win_main.h">
       <Filter>Win32app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hw_data.h">
       <Filter>Hw_Hardware</Filter>
@@ -844,6 +857,13 @@
     </ClInclude>
     <ClInclude Include="..\fastcmp.h">
       <Filter>O_Other</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\apng.h" />
+    <ClInclude Include="..\r_portal.h">
+      <Filter>R_Rend</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

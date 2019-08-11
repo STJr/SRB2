@@ -3624,7 +3624,7 @@ msgid "another castle!"
 msgstr ""
 
 #: st_stuff.c:2328 st_stuff.c:2334 st_stuff.c:2356
-msgid "Press F12 to watch another player."
+msgid "Press Viewpoint Key to watch a player."
 msgstr ""
 
 #: st_stuff.c:2333
@@ -3825,7 +3825,7 @@ msgid "Music lump is not MID music format\n"
 msgstr ""
 
 #: win32/win_snd.c:2128
-msgid "I_RegisterSong: StreamBufferSetup FAILED"
+msgid "I_LoadSong: StreamBufferSetup FAILED"
 msgstr ""
 
 #: win32/win_sys.c:892

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -105,6 +105,8 @@ extern lumpnum_t viewborderlump[8];
 #define TC_BOSS       -2
 #define TC_METALSONIC -3 // For Metal Sonic battle
 #define TC_ALLWHITE   -4 // For Cy-Brak-demon
+#define TC_RAINBOW    -5 // For single colour
+#define TC_BLINK      -6 // For item blinking, according to kart
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);

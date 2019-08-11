@@ -306,9 +306,14 @@ closedir (DIR * dirp)
 }
 #endif
 
-static CV_PossibleValue_t addons_cons_t[] = {{0, "SRB2 Folder"}, /*{1, "HOME"}, {2, "SRB2 Folder"},*/ {3, "CUSTOM"}, {0, NULL}};
-consvar_t cv_addons_option = {"addons_option", "SRB2 Folder", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_addons_folder = {"addons_folder", "./", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
+#if 1
+												{1, "HOME"}, {2, "SRB2"},
+#endif
+													{3, "CUSTOM"}, {0, NULL}};
+
+consvar_t cv_addons_option = {"addons_option", "Default", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_addons_folder = {"addons_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t addons_md5_cons_t[] = {{0, "Name"}, {1, "Contents"}, {0, NULL}};
 consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -326,10 +331,11 @@ size_t menudepthleft = menudepth;
 
 char menusearch[MAXSTRINGLENGTH+1];
 
-char **dirmenu;
-size_t sizedirmenu;
+char **dirmenu, **coredirmenu; // core only local for this file
+size_t sizedirmenu, sizecoredirmenu; // ditto
 size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
+char *refreshdirname = NULL;
 
 size_t packetsizetally = 0;
 size_t mainwadstally = 0;
@@ -362,9 +368,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		return FS_NOTFOUND;
 	}
 
-	if (searchpath[searchpathindex[depthleft]-2] != '/')
+	if (searchpath[searchpathindex[depthleft]-2] != PATHSEP[0])
 	{
-		searchpath[searchpathindex[depthleft]-1] = '/';
+		searchpath[searchpathindex[depthleft]-1] = PATHSEP[0];
 		searchpath[searchpathindex[depthleft]] = 0;
 	}
 	else
@@ -406,7 +412,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 					depthleft++;
 			}
 
-			searchpath[searchpathindex[depthleft]-1]='/';
+			searchpath[searchpathindex[depthleft]-1]=PATHSEP[0];
 			searchpath[searchpathindex[depthleft]]=0;
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
@@ -439,39 +445,173 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return retval;
 }
 
-char exttable[NUM_EXT_TABLE][5] = {
-	".txt", ".cfg", // exec
-	".wad", ".pk3", ".soc", ".lua"}; // addfile
+char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) plus 3 (null terminator, stop, and length including previous two)
+	"\5.txt", "\5.cfg", // exec
+	"\5.wad",
+#ifdef USE_KART
+	"\6.kart",
+#endif
+	"\5.pk3", "\5.soc", "\5.lua"}; // addfile
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
 
-static boolean filemenusearch(char *haystack, char *needle)
+static boolean filemenucmp(char *haystack, char *needle)
 {
 	static char localhaystack[128];
 	strlcpy(localhaystack, haystack, 128);
 	if (!cv_addons_search_case.value)
 		strupr(localhaystack);
-	return ((cv_addons_search_type.value)
-		? (strstr(localhaystack, needle) != 0)
-		: (!strncmp(localhaystack, needle, menusearch[0])));
+	if (cv_addons_search_type.value)
+		return (strstr(localhaystack, needle) != 0);
+	return (!strncmp(localhaystack, needle, menusearch[0]));
 }
 
-#define searchdir if (menusearch[0] && !filemenusearch(dent->d_name, localmenusearch))\
-					{\
-						rejected++;\
-						continue;\
-					}\
+void closefilemenu(boolean validsize)
+{
+	// search
+	if (dirmenu)
+	{
+		if (dirmenu != coredirmenu)
+		{
+			if (dirmenu[0] && ((UINT8)(dirmenu[0][DIR_TYPE]) == EXT_NORESULTS))
+			{
+				Z_Free(dirmenu[0]);
+				dirmenu[0] = NULL;
+			}
+			Z_Free(dirmenu);
+		}
+		dirmenu = NULL;
+		sizedirmenu = 0;
+	}
+
+	if (coredirmenu)
+	{
+		// core
+		if (validsize)
+		{
+			for (; sizecoredirmenu > 0; sizecoredirmenu--)
+			{
+				Z_Free(coredirmenu[sizecoredirmenu-1]);
+				coredirmenu[sizecoredirmenu-1] = NULL;
+			}
+		}
+		else
+			sizecoredirmenu = 0;
+
+		Z_Free(coredirmenu);
+		coredirmenu = NULL;
+	}
+
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	refreshdirname = NULL;
+}
+
+void searchfilemenu(char *tempname)
+{
+	size_t i, first;
+	char localmenusearch[MAXSTRINGLENGTH] = "";
+
+	if (dirmenu)
+	{
+		if (dirmenu != coredirmenu)
+		{
+			if (dirmenu[0] && ((UINT8)(dirmenu[0][DIR_TYPE]) == EXT_NORESULTS))
+			{
+				Z_Free(dirmenu[0]);
+				dirmenu[0] = NULL;
+			}
+			//Z_Free(dirmenu); -- Z_Realloc later tho...
+		}
+		else
+			dirmenu = NULL;
+	}
+
+	first = (((UINT8)(coredirmenu[0][DIR_TYPE]) == EXT_UP) ? 1 : 0); // skip UP...
+
+	if (!menusearch[0])
+	{
+		if (dirmenu)
+			Z_Free(dirmenu);
+		dirmenu = coredirmenu;
+		sizedirmenu = sizecoredirmenu;
+
+		if (tempname)
+		{
+			for (i = first; i < sizedirmenu; i++)
+			{
+				if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
+				{
+					dir_on[menudepthleft] = i;
+					break;
+				}
+			}
+
+			if (i == sizedirmenu)
+				dir_on[menudepthleft] = first;
+
+			Z_Free(tempname);
+		}
+
+		return;
+	}
+
+	strcpy(localmenusearch, menusearch+1);
+	if (!cv_addons_search_case.value)
+		strupr(localmenusearch);
+
+	sizedirmenu = 0;
+	for (i = first; i < sizecoredirmenu; i++)
+	{
+		if (filemenucmp(coredirmenu[i]+DIR_STRING, localmenusearch))
+			sizedirmenu++;
+	}
+
+	if (!sizedirmenu) // no results...
+	{
+		if ((!(dirmenu = Z_Realloc(dirmenu, sizeof(char *), PU_STATIC, NULL)))
+			|| !(dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS))))
+				I_Error("searchfilemenu(): could not create \"No results...\".");
+		sizedirmenu = 1;
+		dir_on[menudepthleft] = 0;
+		if (tempname)
+			Z_Free(tempname);
+		return;
+	}
+
+	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+		I_Error("searchfilemenu(): could not reallocate dirmenu.");
+
+	sizedirmenu = 0;
+	for (i = first; i < sizecoredirmenu; i++)
+	{
+		if (filemenucmp(coredirmenu[i]+DIR_STRING, localmenusearch))
+		{
+			if (tempname && !strcmp(coredirmenu[i]+DIR_STRING, tempname))
+			{
+				dir_on[menudepthleft] = sizedirmenu;
+				Z_Free(tempname);
+				tempname = NULL;
+			}
+			dirmenu[sizedirmenu++] = coredirmenu[i]; // pointer reuse
+		}
+	}
+
+	if (tempname)
+	{
+		dir_on[menudepthleft] = 0; //first; -- can't be first, causes problems
+		Z_Free(tempname);
+	}
+}
 
 boolean preparefilemenu(boolean samedepth)
 {
 	DIR *dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
-	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
+	size_t pos = 0, folderpos = 0, numfolders = 0;
 	char *tempname = NULL;
-	boolean noresults = false;
-	char localmenusearch[MAXSTRINGLENGTH] = "";
 
 	if (samedepth)
 	{
@@ -481,20 +621,16 @@ boolean preparefilemenu(boolean samedepth)
 	else
 		menusearch[0] = menusearch[1] = 0; // clear search
 
-	for (; sizedirmenu > 0; sizedirmenu--) // clear out existing items
+	if (!(dirhandle = opendir(menupath))) // get directory
 	{
-		Z_Free(dirmenu[sizedirmenu-1]);
-		dirmenu[sizedirmenu-1] = NULL;
+		closefilemenu(true);
+		return false;
 	}
 
-	if (!(dirhandle = opendir(menupath))) // get directory
-		return false;
-
-	if (menusearch[0])
+	for (; sizecoredirmenu > 0; sizecoredirmenu--) // clear out existing items
 	{
-		strcpy(localmenusearch, menusearch+1);
-		if (!cv_addons_search_case.value)
-			strupr(localmenusearch);
+		Z_Free(coredirmenu[sizecoredirmenu-1]);
+		coredirmenu[sizecoredirmenu-1] = NULL;
 	}
 
 	while (true)
@@ -523,46 +659,45 @@ boolean preparefilemenu(boolean samedepth)
 					size_t len = strlen(dent->d_name)+1;
 					UINT8 ext;
 					for (ext = 0; ext < NUM_EXT_TABLE; ext++)
-						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
+						if (!strcasecmp(exttable[ext]+1, dent->d_name+len-(exttable[ext][0]))) break; // extension comparison
 					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				}
-				searchdir;
 			}
 			else // directory
-			{
-				searchdir;
 				numfolders++;
-			}
-			sizedirmenu++;
+
+			sizecoredirmenu++;
 		}
 	}
 
-	if (!rejected && !sizedirmenu)
+	if (!sizecoredirmenu)
 	{
+		closedir(dirhandle);
+		closefilemenu(false);
 		if (tempname)
 			Z_Free(tempname);
-		closedir(dirhandle);
 		return false;
 	}
 
-	if (((noresults = (menusearch[0] && !sizedirmenu)))
-		|| (!menusearch[0] && menudepthleft != menudepth-1)) // Make room for UP... or search entry
+	if (menudepthleft != menudepth-1) // Make room for UP...
 	{
-		sizedirmenu++;
+		sizecoredirmenu++;
 		numfolders++;
 		folderpos++;
 	}
 
-	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+	if (dirmenu && dirmenu == coredirmenu)
+		dirmenu = NULL;
+
+	if (!(coredirmenu = Z_Realloc(coredirmenu, sizecoredirmenu*sizeof(char *), PU_STATIC, NULL)))
 	{
 		closedir(dirhandle); // just in case
-		I_Error("Ran out of memory whilst preparing add-ons menu");
+		I_Error("preparefilemenu(): could not reallocate coredirmenu.");
 	}
 
-	rejected = 0;
 	rewinddir(dirhandle);
 
-	while ((pos+folderpos) < sizedirmenu)
+	while ((pos+folderpos) < sizecoredirmenu)
 	{
 		menupath[menupathindex[menudepthleft]] = 0;
 		dent = readdir(dirhandle);
@@ -588,13 +723,11 @@ boolean preparefilemenu(boolean samedepth)
 
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
-				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
+				if (!((numfolders+pos) < sizecoredirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
-					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
+					if (!strcasecmp(exttable[ext]+1, dent->d_name+len-(exttable[ext][0]))) break; // extension comparison
 				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
-
-				searchdir;
 
 				if (ext >= EXT_LOADSTART)
 				{
@@ -628,61 +761,43 @@ boolean preparefilemenu(boolean samedepth)
 				folder = 0;
 			}
 			else // directory
-			{
-				searchdir;
 				len += (folder = 1);
-			}
 
 			if (len > 255)
 				len = 255;
 
 			if (!(temp = Z_Malloc((len+DIR_STRING+folder) * sizeof (char), PU_STATIC, NULL)))
-				I_Error("Ran out of memory whilst preparing add-ons menu");
+				I_Error("preparefilemenu(): could not create file entry.");
 			temp[DIR_TYPE] = ext;
 			temp[DIR_LEN] = (UINT8)(len);
 			strlcpy(temp+DIR_STRING, dent->d_name, len);
 			if (folder)
 			{
-				strcpy(temp+len, "/");
-				dirmenu[folderpos++] = temp;
+				strcpy(temp+len, PATHSEP);
+				coredirmenu[folderpos++] = temp;
 			}
 			else
-				dirmenu[numfolders + pos++] = temp;
+				coredirmenu[numfolders + pos++] = temp;
 		}
 	}
 
 	closedir(dirhandle);
 
-	if (noresults) // no results
-		dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
-	else if (!menusearch[0] &&menudepthleft != menudepth-1) // now for UP... entry
-		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
+	if ((menudepthleft != menudepth-1) // now for UP... entry
+		&& !(coredirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP))))
+			I_Error("preparefilemenu(): could not create \"UP...\".");
 
 	menupath[menupathindex[menudepthleft]] = 0;
-	sizedirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
+	sizecoredirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
 
-	if (tempname)
-	{
-		size_t i;
-		for (i = 0; i < sizedirmenu; i++)
-		{
-			if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
-			{
-				dir_on[menudepthleft] = i;
-				break;
-			}
-		}
-		Z_Free(tempname);
-	}
-
-	if (!sizedirmenu)
+	if (!sizecoredirmenu)
 	{
 		dir_on[menudepthleft] = 0;
-		Z_Free(dirmenu);
+		closefilemenu(false);
 		return false;
 	}
-	else if (dir_on[menudepthleft] >= sizedirmenu)
-		dir_on[menudepthleft] = sizedirmenu-1;
+
+	searchfilemenu(tempname);
 
 	return true;
 }

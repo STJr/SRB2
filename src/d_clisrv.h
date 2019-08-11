@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -164,7 +164,8 @@ typedef struct
 	UINT16 powers[NUMPOWERS];
 
 	// Score is resynched in the confirm resync packet
-	INT32 rings;
+	INT16 rings;
+	INT16 spheres;
 	SINT8 lives;
 	SINT8 continues;
 	UINT8 scoreadd;
@@ -290,7 +291,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
-	SINT8 adminplayer; // Needs to be signed
+	SINT8 adminplayers[MAXPLAYERS]; // Needs to be signed
 
 	char server_context[8]; // Unique context id, generated at server startup.
 
@@ -438,9 +439,9 @@ extern doomdata_t *netbuffer;
 
 extern consvar_t cv_playbackspeed;
 
-#define BASEPACKETSIZE ((size_t)&(((doomdata_t *)0)->u))
-#define FILETXHEADER ((size_t)((filetx_pak *)0)->data)
-#define BASESERVERTICSSIZE ((size_t)&(((doomdata_t *)0)->u.serverpak.cmds[0]))
+#define BASEPACKETSIZE      offsetof(doomdata_t, u)
+#define FILETXHEADER        offsetof(filetx_pak, data)
+#define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
 #define KICK_MSG_GO_AWAY     1
 #define KICK_MSG_CON_FAIL    2
@@ -452,6 +453,17 @@ extern consvar_t cv_playbackspeed;
 #endif
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
+
+typedef enum
+{
+	KR_KICK          = 1, //Kicked by server
+	KR_PINGLIMIT     = 2, //Broke Ping Limit
+	KR_SYNCH         = 3, //Synch Failure
+	KR_TIMEOUT       = 4, //Connection Timeout
+	KR_BAN           = 5, //Banned by server
+	KR_LEAVE         = 6, //Quit the game
+
+} kickreason_t;
 
 extern boolean server;
 #define client (!server)

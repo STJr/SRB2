@@ -62,7 +62,7 @@ static dynlights_t *dynlights = &view_dynlights[0];
 light_t lspr[NUMLIGHTS] =
 {
 	// type       offset x,   y  coronas color, c_size,light color,l_radius, sqr radius computed at init
-	// UNDEFINED: 0
+	// NOLIGHT: 0
 	{ UNDEFINED_SPR,  0.0f,   0.0f, 0x00000000,  24.0f, 0x00000000,   0.0f, 0.0f},
 	// weapons
 	// RINGSPARK_L
@@ -151,10 +151,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_POSS
 	&lspr[NOLIGHT],     // SPR_SPOS
 	&lspr[NOLIGHT],     // SPR_FISH
-	&lspr[NOLIGHT],     // SPR_BUZZ Graue 03-10-2004
-	&lspr[NOLIGHT],     // SPR_RBUZ Graue 03-10-2004
+	&lspr[NOLIGHT],     // SPR_BUZZ
+	&lspr[NOLIGHT],     // SPR_RBUZ
 	&lspr[NOLIGHT],     // SPR_JETB
-	&lspr[NOLIGHT],     // SPR_JETW
 	&lspr[NOLIGHT],     // SPR_JETG
 	&lspr[NOLIGHT],     // SPR_CCOM
 	&lspr[NOLIGHT],     // SPR_DETN
@@ -162,19 +161,25 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TRET
 	&lspr[NOLIGHT],     // SPR_TURR
 	&lspr[NOLIGHT],     // SPR_SHRP
+	&lspr[NOLIGHT],     // SPR_CRAB
 	&lspr[NOLIGHT],     // SPR_JJAW
 	&lspr[NOLIGHT],     // SPR_SNLR
 	&lspr[NOLIGHT],     // SPR_VLTR
 	&lspr[NOLIGHT],     // SPR_PNTY
 	&lspr[NOLIGHT],     // SPR_ARCH
 	&lspr[NOLIGHT],     // SPR_CBFS
+	&lspr[JETLIGHT_L],  // SPR_STAB
 	&lspr[NOLIGHT],     // SPR_SPSH
 	&lspr[NOLIGHT],     // SPR_ESHI
 	&lspr[NOLIGHT],     // SPR_GSNP
+	&lspr[NOLIGHT],     // SPR_GSNL
+	&lspr[NOLIGHT],     // SPR_GSNH
 	&lspr[NOLIGHT],     // SPR_MNUS
+	&lspr[NOLIGHT],     // SPR_MNUD
 	&lspr[NOLIGHT],     // SPR_SSHL
 	&lspr[NOLIGHT],     // SPR_UNID
-	&lspr[NOLIGHT],     // SPR_BBUZ
+	&lspr[NOLIGHT],     // SPR_CANA
+	&lspr[NOLIGHT],     // SPR_CANG
 
 	// Generic Boos Items
 	&lspr[JETLIGHT_L],     // SPR_JETF // Boss jet fumes
@@ -197,9 +202,14 @@ light_t *t_lspr[NUMSPRITES] =
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP
 	&lspr[REDBALL_L],   // SPR_EFIR
+	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
-	&lspr[NOLIGHT],     // SPR_EGGQ
+	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
+	&lspr[NOLIGHT],     //SPR_FBOM
+	&lspr[NOLIGHT],     //SPR_FSGN
+	&lspr[REDBALL_L],   //SPR_BARX // bomb explosion (also used by barrel)
+	&lspr[NOLIGHT],     //SPR_BARD // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	&lspr[NOLIGHT],     // SPR_EEGR
@@ -227,18 +237,18 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RING
 	&lspr[NOLIGHT],     // SPR_TRNG
 	&lspr[NOLIGHT],     // SPR_TOKE
-	&lspr[REDBALL_L],     // SPR_RFLG
-	&lspr[BLUEBALL_L],     // SPR_BFLG
-	&lspr[NOLIGHT],     // SPR_NWNG
+	&lspr[REDBALL_L],   // SPR_RFLG
+	&lspr[BLUEBALL_L],  // SPR_BFLG
+	&lspr[NOLIGHT],     // SPR_SPHR
+	&lspr[NOLIGHT],     // SPR_NCHP
+	&lspr[NOLIGHT],     // SPR_NSTR
 	&lspr[NOLIGHT],     // SPR_EMBM
 	&lspr[NOLIGHT],     // SPR_CEMG
-	&lspr[NOLIGHT],     // SPR_EMER
+	&lspr[NOLIGHT],     // SPR_SHRD
 
 	// Interactive Objects
-	&lspr[NOLIGHT],     // SPR_FANS
 	&lspr[NOLIGHT],     // SPR_BBLS
 	&lspr[NOLIGHT],     // SPR_SIGN
-	&lspr[NOLIGHT],     // SPR_STEM
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
 	&lspr[NOLIGHT],     // SPR_USPK
@@ -294,17 +304,19 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FWR4
 	&lspr[NOLIGHT],     // SPR_BUS1
 	&lspr[NOLIGHT],     // SPR_BUS2
+	&lspr[NOLIGHT],     // SPR_BUS3
 	// Trees (both GFZ and misc)
 	&lspr[NOLIGHT],     // SPR_TRE1
 	&lspr[NOLIGHT],     // SPR_TRE2
 	&lspr[NOLIGHT],     // SPR_TRE3
 	&lspr[NOLIGHT],     // SPR_TRE4
 	&lspr[NOLIGHT],     // SPR_TRE5
+	&lspr[NOLIGHT],     // SPR_TRE6
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
 	&lspr[NOLIGHT],     // SPR_FWR5
-	&lspr[REDBALL_L],     // SPR_ALRM
+	&lspr[REDBALL_L],   // SPR_ALRM
 
 	// Deep Sea Scenery
 	&lspr[NOLIGHT],     // SPR_GARG
@@ -327,11 +339,36 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_RSPB
 	&lspr[REDBALL_L],   // SPR_SFBR
 	&lspr[REDBALL_L],   // SPR_BFBR
+	&lspr[NOLIGHT],     // SPR_BANR
+	&lspr[NOLIGHT],     // SPR_PINE
+	&lspr[NOLIGHT],     // SPR_CEZB
+	&lspr[REDBALL_L],   // SPR_CNDL
+	&lspr[NOLIGHT],     // SPR_FLMH
+	&lspr[REDBALL_L],   // SPR_CTRC
+	&lspr[NOLIGHT],     // SPR_CFLG
+	&lspr[NOLIGHT],     // SPR_CSTA
+	&lspr[NOLIGHT],     // SPR_CBBS
 
 	// Arid Canyon Scenery
 	&lspr[NOLIGHT],     // SPR_BTBL
 	&lspr[NOLIGHT],     // SPR_STBL
 	&lspr[NOLIGHT],     // SPR_CACT
+	&lspr[NOLIGHT],     // SPR_WWSG
+	&lspr[NOLIGHT],     // SPR_WWS2
+	&lspr[NOLIGHT],     // SPR_WWS3
+	&lspr[NOLIGHT],     // SPR_OILL
+	&lspr[NOLIGHT],     // SPR_OILF
+	&lspr[NOLIGHT],     // SPR_BARR
+	&lspr[NOLIGHT],     // SPR_REMT
+	&lspr[NOLIGHT],     // SPR_TAZD
+	&lspr[NOLIGHT],     // SPR_ADST
+	&lspr[NOLIGHT],     // SPR_MCRT
+	&lspr[NOLIGHT],     // SPR_MCSP
+	&lspr[NOLIGHT],     // SPR_NON2
+	&lspr[NOLIGHT],     // SPR_SALD
+	&lspr[NOLIGHT],     // SPR_TRAE
+	&lspr[NOLIGHT],     // SPR_TRAI
+	&lspr[NOLIGHT],     // SPR_STEA
 
 	// Red Volcano Scenery
 	&lspr[REDBALL_L],   // SPR_FLME
@@ -347,12 +384,25 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS3
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
+	&lspr[NOLIGHT],     // SPR_FHZI
+
+	// Halloween Scenery
+	&lspr[RINGLIGHT_L], // SPR_PUMK
+	&lspr[NOLIGHT],     // SPR_HHPL
+	&lspr[NOLIGHT],     // SPR_SHRM
+	&lspr[NOLIGHT],     // SPR_HHZM
 
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1
 	&lspr[NOLIGHT],     // SPR_BSZ2
 	&lspr[NOLIGHT],     // SPR_BSZ3
-	&lspr[NOLIGHT],     // SPR_BSZ4
+	//&lspr[NOLIGHT],     -- SPR_BSZ4
+	&lspr[NOLIGHT],     // SPR_BST1
+	&lspr[NOLIGHT],     // SPR_BST2
+	&lspr[NOLIGHT],     // SPR_BST3
+	&lspr[NOLIGHT],     // SPR_BST4
+	&lspr[NOLIGHT],     // SPR_BST5
+	&lspr[NOLIGHT],     // SPR_BST6
 	&lspr[NOLIGHT],     // SPR_BSZ5
 	&lspr[NOLIGHT],     // SPR_BSZ6
 	&lspr[NOLIGHT],     // SPR_BSZ7
@@ -375,8 +425,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FIRS
 	&lspr[NOLIGHT],     // SPR_BUBS
 	&lspr[NOLIGHT],     // SPR_ZAPS
-	&lspr[INVINCIBLE_L],     // SPR_IVSP
-	&lspr[SUPERSPARK_L],     // SPR_SSPK
+	&lspr[INVINCIBLE_L], // SPR_IVSP
+	&lspr[SUPERSPARK_L], // SPR_SSPK
 
 	&lspr[NOLIGHT],     // SPR_GOAL
 
@@ -398,13 +448,20 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FL14
 	&lspr[NOLIGHT],     // SPR_FL15
 	&lspr[NOLIGHT],     // SPR_FL16
+	&lspr[NOLIGHT],     // SPR_FS01
+	&lspr[NOLIGHT],     // SPR_FS02
 
 	// Springs
+	&lspr[NOLIGHT],     // SPR_FANS
+	&lspr[NOLIGHT],     // SPR_STEM
+	&lspr[NOLIGHT],     // SPR_BUMP
+	&lspr[NOLIGHT],     // SPR_BLON
 	&lspr[NOLIGHT],     // SPR_SPRY
 	&lspr[NOLIGHT],     // SPR_SPRR
-	&lspr[NOLIGHT],     // SPR_SPRB Graue
+	&lspr[NOLIGHT],     // SPR_SPRB
 	&lspr[NOLIGHT],     // SPR_YSPR
 	&lspr[NOLIGHT],     // SPR_RSPR
+	&lspr[NOLIGHT],     // SPR_BSPR
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
@@ -420,7 +477,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_DUST
 	&lspr[NOLIGHT],     // SPR_FPRT
 	&lspr[SUPERSPARK_L], // SPR_TFOG
-	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
+	&lspr[NIGHTSLIGHT_L], // SPR_SEED
 	&lspr[NOLIGHT],     // SPR_PRTL
 
 	// Game Indicators
@@ -431,6 +488,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GFLG
 
 	&lspr[NOLIGHT],     // SPR_CORK
+	&lspr[NOLIGHT],     // SPR_LHRT
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG
@@ -459,25 +517,43 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GOOM
 	&lspr[NOLIGHT],     // SPR_BGOM
 	&lspr[REDBALL_L],     // SPR_FFWR
-	&lspr[SMALLREDBALL_L],     // SPR_FBLL
+	&lspr[SMALLREDBALL_L], // SPR_FBLL
 	&lspr[NOLIGHT],     // SPR_SHLL
-	&lspr[REDBALL_L],     // SPR_PUMA
+	&lspr[REDBALL_L],   // SPR_PUMA
 	&lspr[NOLIGHT],     // SPR_HAMM
 	&lspr[NOLIGHT],     // SPR_KOOP
-	&lspr[REDBALL_L],     // SPR_BFLM
+	&lspr[REDBALL_L],   // SPR_BFLM
 	&lspr[NOLIGHT],     // SPR_MAXE
 	&lspr[NOLIGHT],     // SPR_MUS1
 	&lspr[NOLIGHT],     // SPR_MUS2
 	&lspr[NOLIGHT],     // SPR_TOAD
 
 	// NiGHTS Stuff
-	&lspr[SUPERSONIC_L],     // SPR_NDRN // NiGHTS drone
+	&lspr[SUPERSONIC_L], // SPR_NDRN // NiGHTS drone
 	&lspr[NOLIGHT],     // SPR_NSPK
 	&lspr[NOLIGHT],     // SPR_NBMP
 	&lspr[NOLIGHT],     // SPR_HOOP
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
+	&lspr[INVINCIBLE_L], // SPR_IDYA
+	&lspr[NOLIGHT],     // SPR_NTPN
+	&lspr[NOLIGHT],     // SPR_SHLP
+
+	// Secret badniks and hazards, shhhh
+	&lspr[NOLIGHT],     // SPR_PENG
+	&lspr[NOLIGHT],     // SPR_POPH,
+	&lspr[NOLIGHT],     // SPR_HIVE
+	&lspr[NOLIGHT],     // SPR_BUMB,
+	&lspr[NOLIGHT],     // SPR_BBUZ
+	&lspr[NOLIGHT],     // SPR_FMCE,
+	&lspr[NOLIGHT],     // SPR_HMCE,
+	&lspr[NOLIGHT],     // SPR_CACO,
+	&lspr[BLUEBALL_L],  // SPR_BAL2,
+	&lspr[NOLIGHT],     // SPR_SBOB,
+	&lspr[BLUEBALL_L],  // SPR_SBFL,
+	&lspr[BLUEBALL_L],  // SPR_SBSK,
+	&lspr[NOLIGHT],     // SPR_BATT,
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK
@@ -485,6 +561,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SUPERSPARK_L], // SPR_BOM2
 	&lspr[SUPERSPARK_L], // SPR_BOM3
 	&lspr[NOLIGHT],      // SPR_BOM4
+	&lspr[REDBALL_L],    // SPR_BMNB
+	&lspr[NOLIGHT],      // SPR_WDDB
 
 	// Crumbly rocks
 	&lspr[NOLIGHT],     // SPR_ROIA
@@ -504,8 +582,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ROIO
 	&lspr[NOLIGHT],     // SPR_ROIP
 
-	// Blue Spheres
-	&lspr[NOLIGHT],     // SPR_BBAL
+	// Bricks
+	&lspr[NOLIGHT], // SPR_BRIC
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
@@ -726,6 +804,14 @@ void HWR_WallLighting(FOutVector *wlVerts)
 		FSurfaceInfo    Surf;
 		float           dist_p2d, d[4], s;
 
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
+
 		// check bounding box first
 		if (SphereTouchBBox3D(&wlVerts[2], &wlVerts[0], &LIGHT_POS(j), DL_RADIUS(j))==false)
 			continue;
@@ -776,8 +862,6 @@ void HWR_WallLighting(FOutVector *wlVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
-		if (!dynlights->mo[j]->state)
-			return;
 		// next state is null so fade out with alpha
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
 			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -807,6 +891,14 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 	{
 		FSurfaceInfo    Surf;
 		float           dist_p2d, s;
+
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
 
 		// BP: The kickass Optimization: check if light touch bounding box
 		if (SphereTouchBBox3D(&p1, &p2, &dynlights->position[j], DL_RADIUS(j))==false)
@@ -839,8 +931,6 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
-		if (!dynlights->mo[j]->state)
-			return;
 		// next state is null so fade out with alpha
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
 			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -971,6 +1061,14 @@ void HWR_DrawCoronas(void)
 		if (!(p_lspr->type & CORONA_SPR))
 			continue;
 
+		if (!dynlights->mo[j])
+			continue;
+		if (P_MobjWasRemoved(dynlights->mo[j]))
+		{
+			P_SetTarget(&dynlights->mo[j], NULL);
+			continue;
+		}
+
 		transform(&cx,&cy,&cz);
 
 		// more realistique corona !
@@ -1032,7 +1130,8 @@ void HWR_DrawCoronas(void)
 // --------------------------------------------------------------------------
 void HWR_ResetLights(void)
 {
-	dynlights->nb = 0;
+	while (dynlights->nb)
+		P_SetTarget(&dynlights->mo[--dynlights->nb], NULL);
 }
 
 // --------------------------------------------------------------------------
@@ -1063,24 +1162,25 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 		return;
 #endif
 
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+
 	// check if sprite contain dynamic light
 	p_lspr = t_lspr[spr->mobj->sprite];
-	if ((p_lspr->type&DYNLIGHT_SPR)
-	  && ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
-	  && (dynlights->nb < DL_MAX_LIGHT)
+	if (!(p_lspr->type & DYNLIGHT_SPR))
+		return;
+	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
+		return;
 
-	  && spr->mobj->state)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(spr->mobj->z)+FIXED_TO_FLOAT(spr->mobj->height>>1)+p_lspr->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(spr->mobj->y);
 
-		P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
+	P_SetTarget(&dynlights->mo[dynlights->nb], spr->mobj);
 
-		dynlights->p_lspr[dynlights->nb] = p_lspr;
+	dynlights->p_lspr[dynlights->nb] = p_lspr;
 
-		dynlights->nb++;
-	}
+	dynlights->nb++;
 }
 
 static GLPatch_t lightmappatch;
@@ -1234,6 +1334,14 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 //			if (CircleTouchBBox(&p1, &p2, &LIGHT_POS(lightnum), DL_RADIUS(lightnum))==false)
 //				continue;
 
+			if (!dynlights->mo[lightnum])
+				continue;
+			if (P_MobjWasRemoved(dynlights->mo[lightnum]))
+			{
+				P_SetTarget(&dynlights->mo[lightnum], NULL);
+				continue;
+			}
+
 			count = sub->numlines;          // how many linedefs
 			line = &segs[sub->firstline];   // first line seg
 			while (count--)
@@ -1251,18 +1359,20 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 // --------------------------------------------------------------------------
 static void HWR_AddMobjLights(mobj_t *thing)
 {
-	if (t_lspr[thing->sprite]->type & CORONA_SPR)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
+	if (dynlights->nb >= DL_MAX_LIGHT)
+		return;
+	if (!(t_lspr[thing->sprite]->type & CORONA_SPR))
+		return;
 
-		dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
+	LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
+	LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
 
-		dynlights->nb++;
-		if (dynlights->nb > DL_MAX_LIGHT)
-			dynlights->nb = DL_MAX_LIGHT;
-	}
+	P_SetTarget(&dynlights->mo[dynlights->nb], thing);
+
+	dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+
+	dynlights->nb++;
 }
 
 //Hurdler: The goal of this function is to walk through all the bsp starting
@@ -1288,12 +1398,9 @@ static void HWR_SearchLightsInMobjs(void)
 	//mobj_t *            mobj;
 
 	// search in the list of thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		// a mobj ?
-		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
 			HWR_AddMobjLights((mobj_t *)th);
-	}
 }
 #endif
 
@@ -1305,7 +1412,7 @@ void HWR_CreateStaticLightmaps(int bspnum)
 #ifdef STATICLIGHT
 	CONS_Debug(DBG_RENDER, "HWR_CreateStaticLightmaps\n");
 
-	dynlights->nb = 0;
+	HWR_ResetLights();
 
 	// First: Searching for lights
 	// BP: if i was you, I will make it in create mobj since mobj can be create
@@ -1316,8 +1423,6 @@ void HWR_CreateStaticLightmaps(int bspnum)
 	// Second: Build all lightmap for walls covered by lights
 	validcount++; // to be sure
 	HWR_ComputeLightMapsInBSPNode(bspnum, NULL);
-
-	dynlights->nb = 0;
 #else
 	(void)bspnum;
 #endif

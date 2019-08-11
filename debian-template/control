@@ -1,0 +1,49 @@
+# SRB2 Debian package control file.
+
+Source: ${PACKAGE_NAME}
+Section: games
+Priority: extra
+Maintainer: ${PACKAGE_GROUP_NAME_EMAIL}
+Build-Depends: debhelper (>= 7.0.50~),
+ libsdl2-dev,
+ libsdl2-mixer-dev,
+ libpng-dev | libpng16-dev | libpng12-dev (>= 1.2.7),
+ zlib1g-dev,
+ libgme-dev,
+ libglu1-dev | libglu-dev,
+ libosmesa6-dev | libgl-dev,
+ nasm [i386]
+Standards-Version: 3.8.4
+Homepage: ${PACKAGE_WEBSITE}
+
+Package: ${PACKAGE_NAME}
+Architecture: any
+Depends: ${SHLIBS_DEPENDS}, ${MISC_DEPENDS},
+ ${PACKAGE_NAME}-data (>> ${PACKAGE_ASSET_MINVERSION}), ${PACKAGE_NAME}-data (<< ${PACKAGE_ASSET_MAXVERSION}),
+ libsdl2-2.0-0,
+ libsdl2-mixer-2.0-0,
+ zlib1g,
+ libgme0,
+ libpng | libpng16-16 | libpng12-0
+Description: A cross-platform 3D Sonic fangame
+ Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
+ fangame built using a modified version of the Doom Legacy
+ port of Doom. SRB2 is closely inspired by the original
+ Sonic games from the Sega Genesis, and attempts to recreate
+ the design in 3D. It features tons of levels, enemies, speed,
+ and quite a lot of the fun that the original Sonic games provided.
+
+
+Package: ${PACKAGE_NAME}-dbg
+Architecture: any
+# FIXME: should be Depends: ${SHLIBS_DEPENDS}, ${MISC_DEPENDS}, srb2-data (= 2.1.14), srb2 but dh_shlibdeps is being an asshat
+Depends: libc6, ${MISC_DEPENDS}, ${PACKAGE_NAME}-data (>> ${PACKAGE_ASSET_MINVERSION}), ${PACKAGE_NAME}-data (<< ${PACKAGE_ASSET_MAXVERSION}), ${PACKAGE_NAME}
+Description: A cross-platform 3D Sonic fangame
+ Sonic Robo Blast 2 is a 3D open-source Sonic the Hedgehog
+ fangame built using a modified version of the Doom Legacy
+ port of Doom. SRB2 is closely inspired by the original
+ Sonic games from the Sega Genesis, and attempts to recreate
+ the design in 3D. It features tons of levels, enemies, speed,
+ and quite a lot of the fun that the original Sonic games provided.
+ This is a debug binary; its symbols will be loaded by gdb
+ when the user starts the game with gdb for debugging.

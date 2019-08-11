@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2016 by Sonic Team Junior.
+// Copyright (C) 2014-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,9 +27,6 @@ enum skin {
 	skin_flags,
 	skin_realname,
 	skin_hudname,
-	skin_charsel,
-	skin_face,
-	skin_superface,
 	skin_ability,
 	skin_ability2,
 	skin_thokitem,
@@ -66,9 +63,6 @@ static const char *const skin_opt[] = {
 	"flags",
 	"realname",
 	"hudname",
-	"charsel",
-	"face",
-	"superface",
 	"ability",
 	"ability2",
 	"thokitem",
@@ -104,7 +98,6 @@ static int skin_get(lua_State *L)
 {
 	skin_t *skin = *((skin_t **)luaL_checkudata(L, 1, META_SKIN));
 	enum skin field = luaL_checkoption(L, 2, NULL, skin_opt);
-	INT32 i;
 
 	// skins are always valid, only added, never removed
 	I_Assert(skin != NULL);
@@ -130,24 +123,6 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_hudname:
 		lua_pushstring(L, skin->hudname);
-		break;
-	case skin_charsel:
-		for (i = 0; i < 8; i++)
-			if (!skin->charsel[i])
-				break;
-		lua_pushlstring(L, skin->charsel, i);
-		break;
-	case skin_face:
-		for (i = 0; i < 8; i++)
-			if (!skin->face[i])
-				break;
-		lua_pushlstring(L, skin->face, i);
-		break;
-	case skin_superface:
-		for (i = 0; i < 8; i++)
-			if (!skin->superface[i])
-				break;
-		lua_pushlstring(L, skin->superface, i);
 		break;
 	case skin_ability:
 		lua_pushinteger(L, skin->ability);

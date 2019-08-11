@@ -1,8 +1,10 @@
 // Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2018 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,6 +41,10 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
+#elif 1
+#define LOAD_XPM //I want XPM!
+#include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
+#define HAVE_IMAGE //I have SDL_Image, sortof
 #endif
 
 #ifdef HAVE_IMAGE
@@ -58,7 +64,6 @@
 #include "../m_menu.h"
 #include "../d_main.h"
 #include "../s_sound.h"
-#include "../i_sound.h"  // midi pause/unpause
 #include "../i_joy.h"
 #include "../st_stuff.h"
 #include "../g_game.h"
@@ -194,7 +199,10 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowPosition(window,
+				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window)),
+				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetWindowDisplayIndex(window))
+			);
 		}
 	}
 	else
@@ -351,6 +359,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 
 static void SDLdoUngrabMouse(void)
 {
+	SDL_ShowCursor(SDL_ENABLE);
 	SDL_SetWindowGrab(window, SDL_FALSE);
 	wrapmouseok = SDL_FALSE;
 	SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -360,6 +369,7 @@ void SDLforceUngrabMouse(void)
 {
 	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO && window != NULL)
 	{
+		SDL_ShowCursor(SDL_ENABLE);
 		SDL_SetWindowGrab(window, SDL_FALSE);
 		wrapmouseok = SDL_FALSE;
 		SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -562,7 +572,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(0); //resume it
+			S_ResumeAudio(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -574,7 +584,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		I_PauseSong(0);
+		S_PauseAudio();
 
 		if (!disable_mouse)
 		{
@@ -657,6 +667,14 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 	event_t event;
 
 	SDL_memset(&event, 0, sizeof(event_t));
+
+	// Ignore the event if the mouse is not actually focused on the window.
+	// This can happen if you used the mouse to restore keyboard focus;
+	// this apparently makes a mouse button down event but not a mouse button up event,
+	// resulting in whatever key was pressed down getting "stuck" if we don't ignore it.
+	// -- Monster Iestyn (28/05/18)
+	if (SDL_GetMouseFocus() != window)
+		return;
 
 	/// \todo inputEvent.button.which
 	if (USE_MOUSEINPUT)
@@ -753,6 +771,33 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	D_PostEvent(&event);
 }
 
+#if 0
+static void Impl_HandleJoystickHatEvent(SDL_JoyHatEvent evt)
+{
+	event_t event;
+	SDL_JoystickID joyid[2];
+
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
+
+	if (evt.hat >= JOYHATS)
+		return; // ignore hats with too high an index
+
+	if (evt.which == joyid[0])
+	{
+		event.data1 = KEY_HAT1 + (evt.hat*4);
+	}
+	else if (evt.which == joyid[1])
+	{
+		event.data1 = KEY_2HAT1 + (evt.hat*4);
+	}
+	else return;
+
+	// NOTE: UNFINISHED
+}
+#endif
+
 static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 {
 	event_t event;
@@ -789,6 +834,8 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 	SDLJoyRemap(&event);
 	if (event.type != ev_console) D_PostEvent(&event);
 }
+
+
 
 void I_GetEvent(void)
 {
@@ -830,6 +877,11 @@ void I_GetEvent(void)
 			case SDL_JOYAXISMOTION:
 				Impl_HandleJoystickAxisEvent(evt.jaxis);
 				break;
+#if 0
+			case SDL_JOYHATMOTION:
+				Impl_HandleJoystickHatEvent(evt.jhat)
+				break;
+#endif
 			case SDL_JOYBUTTONUP:
 			case SDL_JOYBUTTONDOWN:
 				Impl_HandleJoystickButtonEvent(evt.jbutton, evt.type);
@@ -884,6 +936,8 @@ void I_StartupMouse(void)
 //
 void I_OsPolling(void)
 {
+	SDL_Keymod mod;
+
 	if (consolevent)
 		I_GetConsoleEvents();
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
@@ -896,6 +950,18 @@ void I_OsPolling(void)
 	I_GetMouseEvents();
 
 	I_GetEvent();
+
+	mod = SDL_GetModState();
+	/* Handle here so that our state is always synched with the system. */
+	shiftdown = ctrldown = altdown = 0;
+	capslock = false;
+	if (mod & KMOD_LSHIFT) shiftdown |= 1;
+	if (mod & KMOD_RSHIFT) shiftdown |= 2;
+	if (mod & KMOD_LCTRL)   ctrldown |= 1;
+	if (mod & KMOD_RCTRL)   ctrldown |= 2;
+	if (mod & KMOD_LALT)     altdown |= 1;
+	if (mod & KMOD_RALT)     altdown |= 2;
+	if (mod & KMOD_CAPS) capslock = true;
 }
 
 //
@@ -929,6 +995,7 @@ void I_UpdateNoBlit(void)
 // from PrBoom's src/SDL/i_video.c
 static inline boolean I_SkipFrame(void)
 {
+#if 0
 	static boolean skip = false;
 
 	if (rendermode != render_soft)
@@ -948,6 +1015,8 @@ static inline boolean I_SkipFrame(void)
 		default:
 			return false;
 	}
+#endif
+	return false;
 }
 
 //
@@ -1045,7 +1114,7 @@ void I_SetPalette(RGBA_t *palette)
 }
 
 // return number of fullscreen + X11 modes
-FUNCMATH INT32 VID_NumModes(void)
+INT32 VID_NumModes(void)
 {
 	if (USE_FULLSCREEN && numVidModes != -1)
 		return numVidModes - firstEntry;
@@ -1053,7 +1122,7 @@ FUNCMATH INT32 VID_NumModes(void)
 		return MAXWINMODES;
 }
 
-FUNCMATH const char *VID_GetModeName(INT32 modeNum)
+const char *VID_GetModeName(INT32 modeNum)
 {
 #if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
@@ -1083,7 +1152,7 @@ FUNCMATH const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-FUNCMATH INT32 VID_GetModeForSize(INT32 w, INT32 h)
+INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	int i;
 	for (i = 0; i < MAXWINMODES; i++)
@@ -1446,6 +1515,7 @@ void I_StartupGraphics(void)
 #ifdef SHUFFLE
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 #endif
+		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
 		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
@@ -1505,8 +1575,17 @@ void I_StartupGraphics(void)
 	realheight = (Uint16)vid.height;
 
 	VID_Command_Info_f();
-	if (!disable_mouse) SDL_ShowCursor(SDL_DISABLE);
 	SDLdoUngrabMouse();
+
+	SDL_RaiseWindow(window);
+
+	if (mousegrabok && !disable_mouse)
+	{
+		SDL_ShowCursor(SDL_DISABLE);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+		wrapmouseok = SDL_TRUE;
+		SDL_SetWindowGrab(window, SDL_TRUE);
+	}
 
 	graphics_started = true;
 }

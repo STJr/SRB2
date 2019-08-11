@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -311,6 +311,7 @@ fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 #ifdef ESLOPE
 pslope_t *opentopslope, *openbottomslope;
 #endif
+ffloor_t *openfloorrover, *openceilingrover;
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -418,10 +419,6 @@ void P_CameraLineOpening(line_t *linedef)
 		if (front->ffloors || back->ffloors)
 		{
 			ffloor_t *rover;
-			fixed_t highestceiling = highceiling;
-			fixed_t lowestceiling = opentop;
-			fixed_t highestfloor = openbottom;
-			fixed_t lowestfloor = lowfloor;
 			fixed_t delta1, delta2;
 
 			// Check for frontsector's fake floors
@@ -437,15 +434,15 @@ void P_CameraLineOpening(line_t *linedef)
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-					if (bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = bottomheight;
-					else if (bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = bottomheight;
+					if (bottomheight < opentop && delta1 >= delta2)
+						opentop = bottomheight;
+					else if (bottomheight < highceiling && delta1 >= delta2)
+						highceiling = bottomheight;
 
-					if (topheight > highestfloor && delta1 < delta2)
-						highestfloor = topheight;
-					else if (topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = topheight;
+					if (topheight > openbottom && delta1 < delta2)
+						openbottom = topheight;
+					else if (topheight > lowfloor && delta1 < delta2)
+						lowfloor = topheight;
 				}
 
 			// Check for backsectors fake floors
@@ -461,28 +458,16 @@ void P_CameraLineOpening(line_t *linedef)
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-					if (bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = bottomheight;
-					else if (bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = bottomheight;
+					if (bottomheight < opentop && delta1 >= delta2)
+						opentop = bottomheight;
+					else if (bottomheight < highceiling && delta1 >= delta2)
+						highceiling = bottomheight;
 
-					if (topheight > highestfloor && delta1 < delta2)
-						highestfloor = topheight;
-					else if (topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = topheight;
+					if (topheight > openbottom && delta1 < delta2)
+						openbottom = topheight;
+					else if (topheight > lowfloor && delta1 < delta2)
+						lowfloor = topheight;
 				}
-
-			if (highestceiling < highceiling)
-				highceiling = highestceiling;
-
-			if (highestfloor > openbottom)
-				openbottom = highestfloor;
-
-			if (lowestceiling < opentop)
-				opentop = lowestceiling;
-
-			if (lowestfloor > lowfloor)
-				lowfloor = lowestfloor;
 		}
 		openrange = opentop - openbottom;
 		return;
@@ -500,23 +485,27 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		return;
 	}
 
-	// Treat polyobjects kind of like 3D Floors
-#ifdef POLYOBJECTS
-	if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT))
-	{
-		front = linedef->frontsector;
-		back = linedef->frontsector;
-	}
-	else
-#endif
-	{
-		front = linedef->frontsector;
-		back = linedef->backsector;
-	}
+	front = linedef->frontsector;
+	back = linedef->backsector;
 
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
 
+	openfloorrover = openceilingrover = NULL;
+#ifdef POLYOBJECTS
+	if (linedef->polyobj)
+	{
+		// set these defaults so that polyobjects don't interfere with collision above or below them
+		opentop = INT32_MAX;
+		openbottom = INT32_MIN;
+		highceiling = INT32_MIN;
+		lowfloor = INT32_MAX;
+#ifdef ESLOPE
+		opentopslope = openbottomslope = NULL;
+#endif
+	}
+	else
+#endif
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
@@ -622,25 +611,49 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				}
 			}
 		}
-
-		// Check for fake floors in the sector.
-		if (front->ffloors || back->ffloors
 #ifdef POLYOBJECTS
-		    || linedef->polyobj
+		if (linedef->polyobj)
+		{
+			// Treat polyobj's backsector like a 3D Floor
+			if (linedef->polyobj->flags & POF_TESTHEIGHT)
+			{
+				const sector_t *polysec = linedef->backsector;
+				fixed_t polytop, polybottom;
+				fixed_t delta1, delta2;
+
+				if (linedef->polyobj->flags & POF_CLIPPLANES)
+				{
+					polytop = polysec->ceilingheight;
+					polybottom = polysec->floorheight;
+				}
+				else
+				{
+					polytop = INT32_MAX;
+					polybottom = INT32_MIN;
+				}
+
+				delta1 = abs(mobj->z - (polybottom + ((polytop - polybottom)/2)));
+				delta2 = abs(thingtop - (polybottom + ((polytop - polybottom)/2)));
+
+				if (polybottom < opentop && delta1 >= delta2)
+					opentop = polybottom;
+				else if (polybottom < highceiling && delta1 >= delta2)
+					highceiling = polybottom;
+
+				if (polytop > openbottom && delta1 < delta2)
+					openbottom = polytop;
+				else if (polytop > lowfloor && delta1 < delta2)
+					lowfloor = polytop;
+			}
+			// otherwise don't do anything special, pretend there's nothing else there
+		}
+		else
 #endif
-		   )
+		// Check for fake floors in the sector.
+		if (front->ffloors || back->ffloors)
 		{
 			ffloor_t *rover;
-
-			fixed_t highestceiling = highceiling;
-			fixed_t lowestceiling = opentop;
-			fixed_t highestfloor = openbottom;
-			fixed_t lowestfloor = lowfloor;
 			fixed_t delta1, delta2;
-#ifdef ESLOPE
-			pslope_t *ceilingslope = opentopslope;
-			pslope_t *floorslope = openbottomslope;
-#endif
 
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
@@ -663,26 +676,28 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (bottomheight < lowestceiling) {
-						lowestceiling = bottomheight;
+					if (bottomheight < opentop) {
+						opentop = bottomheight;
 #ifdef ESLOPE
-						ceilingslope = *rover->b_slope;
+						opentopslope = *rover->b_slope;
 #endif
+						openceilingrover = rover;
 					}
-					else if (bottomheight < highestceiling)
-						highestceiling = bottomheight;
+					else if (bottomheight < highceiling)
+						highceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (topheight > highestfloor) {
-						highestfloor = topheight;
+					if (topheight > openbottom) {
+						openbottom = topheight;
 #ifdef ESLOPE
-						floorslope = *rover->t_slope;
+						openbottomslope = *rover->t_slope;
 #endif
+						openfloorrover = rover;
 					}
-					else if (topheight > lowestfloor)
-						lowestfloor = topheight;
+					else if (topheight > lowfloor)
+						lowfloor = topheight;
 				}
 			}
 
@@ -707,75 +722,30 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (bottomheight < lowestceiling) {
-						lowestceiling = bottomheight;
+					if (bottomheight < opentop) {
+						opentop = bottomheight;
 #ifdef ESLOPE
-						ceilingslope = *rover->b_slope;
+						opentopslope = *rover->b_slope;
 #endif
+						openceilingrover = rover;
 					}
-					else if (bottomheight < highestceiling)
-						highestceiling = bottomheight;
+					else if (bottomheight < highceiling)
+						highceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (topheight > highestfloor) {
-						highestfloor = topheight;
+					if (topheight > openbottom) {
+						openbottom = topheight;
 #ifdef ESLOPE
-						floorslope = *rover->t_slope;
+						openbottomslope = *rover->t_slope;
 #endif
+						openfloorrover = rover;
 					}
-					else if (topheight > lowestfloor)
-						lowestfloor = topheight;
+					else if (topheight > lowfloor)
+						lowfloor = topheight;
 				}
 			}
-
-#ifdef POLYOBJECTS
-			// Treat polyobj's backsector like a 3D Floor
-			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT))
-			{
-				const sector_t *polysec = linedef->backsector;
-
-				delta1 = abs(mobj->z - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
-				delta2 = abs(thingtop - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
-				if (polysec->floorheight < lowestceiling && delta1 >= delta2) {
-					lowestceiling = polysec->floorheight;
-#ifdef ESLOPE
-					ceilingslope = NULL;
-#endif
-				}
-				else if (polysec->floorheight < highestceiling && delta1 >= delta2)
-					highestceiling = polysec->floorheight;
-
-				if (polysec->ceilingheight > highestfloor && delta1 < delta2) {
-					highestfloor = polysec->ceilingheight;
-#ifdef ESLOPE
-					floorslope = NULL;
-#endif
-				}
-				else if (polysec->ceilingheight > lowestfloor && delta1 < delta2)
-					lowestfloor = polysec->ceilingheight;
-			}
-#endif
-			if (highestceiling < highceiling)
-				highceiling = highestceiling;
-
-			if (highestfloor > openbottom) {
-				openbottom = highestfloor;
-#ifdef ESLOPE
-				openbottomslope = floorslope;
-#endif
-			}
-
-			if (lowestceiling < opentop) {
-				opentop = lowestceiling;
-#ifdef ESLOPE
-				opentopslope = ceilingslope;
-#endif
-			}
-
-			if (lowestfloor > lowfloor)
-				lowfloor = lowestfloor;
 		}
 	}
 
@@ -1093,7 +1063,10 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 	{
 		P_SetTarget(&bnext, mobj->bnext); // We want to note our reference to bnext here incase it is MF_NOTHINK and gets removed!
 		if (!func(mobj))
+		{
+			P_SetTarget(&bnext, NULL);
 			return false;
+		}
 		if (P_MobjWasRemoved(tmthing) // func just popped our tmthing, cannot continue.
 		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
 		{

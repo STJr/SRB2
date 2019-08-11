@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 	0,  // wipe_evaluation_toblack
 	0,  // wipe_gameend_toblack
 	99, // wipe_intro_toblack (hardcoded)
+	0,  // wipe_ending_toblack
 	99, // wipe_cutscene_toblack (hardcoded)
 
 	0,  // wipe_specinter_toblack
@@ -69,6 +70,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 	0,  // wipe_evaluation_final
 	0,  // wipe_gameend_final
 	99, // wipe_intro_final (hardcoded)
+	0,  // wipe_ending_final
 	99, // wipe_cutscene_final (hardcoded)
 
 	0,  // wipe_specinter_final
@@ -376,5 +378,50 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			M_SaveFrame();
 	}
 	WipeInAction = false;
+#endif
+}
+
+/** Returns tic length of wipe
+  * One lump equals one tic
+  */
+tic_t F_GetWipeLength(UINT8 wipetype)
+{
+#ifdef NOWIPE
+	return 0;
+#else
+	static char lumpname[10] = "FADEmmss";
+	lumpnum_t lumpnum;
+	UINT8 wipeframe;
+
+	if (wipetype > 99)
+		return 0;
+
+	for (wipeframe = 0; wipeframe < 100; wipeframe++)
+	{
+		sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipetype, (UINT16)wipeframe);
+
+		lumpnum = W_CheckNumForName(lumpname);
+		if (lumpnum == LUMPERROR)
+			return --wipeframe;
+	}
+	return --wipeframe;
+#endif
+}
+
+boolean F_WipeExists(UINT8 wipetype)
+{
+#ifdef NOWIPE
+	return false;
+#else
+	static char lumpname[10] = "FADEmm00";
+	lumpnum_t lumpnum;
+
+	if (wipetype > 99)
+		return false;
+
+	sprintf(&lumpname[4], "%.2hu00", (UINT16)wipetype);
+
+	lumpnum = W_CheckNumForName(lumpname);
+	return !(lumpnum == LUMPERROR);
 #endif
 }

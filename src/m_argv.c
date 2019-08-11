@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,10 @@ INT32 myargc;
 /**	\brief string table
 */
 char **myargv;
+
+/** \brief did we alloc myargv ourselves?
+*/
+boolean myargmalloc = false;
 
 /**	\brief founded the parm
 */
@@ -171,6 +175,7 @@ void M_FindResponseFile(void)
 				free(file);
 				I_Error("Not enough memory to read response file");
 			}
+			myargmalloc = true; // mark as having been allocated by us
 			memset(myargv, 0, sizeof (char *) * MAXARGVS);
 			myargv[0] = firstargv;
 
@@ -193,14 +198,12 @@ void M_FindResponseFile(void)
 					k++;
 			} while (k < size);
 
-			free(file);
-
 			for (k = 0; k < pindex; k++)
 				myargv[indexinfile++] = moreargs[k];
 			myargc = indexinfile;
 
 			// display arguments
-			CONS_Printf(M_GetText("%d command-line args:\n"), myargc);
+			CONS_Printf(M_GetText("%d command-line args:\n"), myargc-1); // -1 so @ don't actually get counted for
 			for (k = 1; k < myargc; k++)
 				CONS_Printf("%s\n", myargv[k]);
 

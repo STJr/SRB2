@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -719,6 +719,8 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 		}
 	}
 
+	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
+
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
@@ -815,6 +817,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		{
 			bouncer->sector->ceilingheight = actionsector->ceilingheight;
 			bouncer->sector->floorheight = bouncer->sector->ceilingheight - (halfheight*2);
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
 			P_RecalcPrecipInSector(actionsector);
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
@@ -829,6 +833,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		{
 			bouncer->sector->ceilingheight = floorheight + (halfheight << 1);
 			bouncer->sector->floorheight = floorheight;
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
 			P_RecalcPrecipInSector(actionsector);
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
@@ -845,9 +851,9 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		}
 
 		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->ceilingheight -
-			70*FRACUNIT, 0, 1, -1); // move floor
+			70*FRACUNIT, 0, 1, -1); // move ceiling
 		T_MovePlane(bouncer->sector, bouncer->speed/2, bouncer->sector->floorheight - 70*FRACUNIT,
-			0, 0, -1); // move ceiling
+			0, 0, -1); // move floor
 
 		bouncer->sector->floorspeed = -bouncer->speed/2;
 		bouncer->sector->ceilspeed = 42;
@@ -897,6 +903,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 		{
 			bouncer->sector->floorheight = bouncer->floorwasheight;
 			bouncer->sector->ceilingheight = bouncer->ceilingwasheight;
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->ceilingheight, 0, 1, -1); // update things on ceiling
+			T_MovePlane(bouncer->sector, 0, bouncer->sector->floorheight, 0, 0, -1); // update things on floor
 			bouncer->sector->ceilingdata = NULL;
 			bouncer->sector->floordata = NULL;
 			bouncer->sector->floorspeed = 0;
@@ -1839,6 +1847,7 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 #define ceilingwasheight vars[5]
 	fixed_t thwompx, thwompy;
 	sector_t *actionsector;
+	ffloor_t *rover = NULL;
 	INT32 secnum;
 
 	// If you just crashed down, wait a second before coming back up.
@@ -1853,7 +1862,16 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	secnum = P_FindSectorFromTag((INT16)thwomp->vars[0], -1);
 
 	if (secnum > 0)
+	{
 		actionsector = &sectors[secnum];
+
+		// Look for thwomp FFloor
+		for (rover = actionsector->ffloors; rover; rover = rover->next)
+		{
+			if (rover->master == thwomp->sourceline)
+				break;
+		}
+	}
 	else
 		return; // Bad bad bad!
 
@@ -1942,10 +1960,13 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 		{
 			mobj_t *mp = (void *)&actionsector->soundorg;
 
-			if (thwomp->sourceline->flags & ML_EFFECT4)
-				S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
-			else
-				S_StartSound(mp, sfx_thwomp);
+			if (!rover || (rover->flags & FF_EXISTS))
+			{
+				if (thwomp->sourceline->flags & ML_EFFECT4)
+					S_StartSound(mp, sides[thwomp->sourceline->sidenum[0]].textureoffset>>FRACBITS);
+				else
+					S_StartSound(mp, sfx_thwomp);
+			}
 
 			thwomp->direction = 1; // start heading back up
 			thwomp->distance = TICRATE; // but only after a small delay
@@ -1956,19 +1977,25 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	}
 	else // Not going anywhere, so look for players.
 	{
-		thinker_t *th;
-		mobj_t *mo;
-
-		// scan the thinkers to find players!
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		if (!rover || (rover->flags & FF_EXISTS))
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo = (mobj_t *)th;
-			if (mo->type == MT_PLAYER && mo->health && mo->z <= thwomp->sector->ceilingheight
-				&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
+			UINT8 i;
+			// scan the players to find victims!
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
+				if (!playeringame[i])
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (!players[i].mo->health)
+					continue;
+				if (players[i].mo->z > thwomp->sector->ceilingheight)
+					continue;
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
+					continue;
+
 				thwomp->direction = -1;
 				break;
 			}
@@ -2144,6 +2171,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
 	msecnode_t *node;
+	ffloor_t *rover;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2190,6 +2218,19 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
+
+				// Find the FOF corresponding to the control linedef
+				for (rover = targetsec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master == sec->lines[i])
+						break;
+				}
+
+				if (!rover) // This should be impossible, but don't complain if it is the case somehow
+					continue;
+
+				if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					continue;
 
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
@@ -2664,7 +2705,7 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 		// new floor thinker
 		rtn = 1;
 		dofloor = Z_Calloc(sizeof (*dofloor), PU_LEVSPEC, NULL);
-		P_AddThinker(&dofloor->thinker);
+		P_AddThinker(THINK_MAIN, &dofloor->thinker);
 
 		// make sure another floor thinker won't get started over this one
 		sec->floordata = dofloor;
@@ -2885,7 +2926,7 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 		// create and initialize new elevator thinker
 		rtn = 1;
 		elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-		P_AddThinker(&elevator->thinker);
+		P_AddThinker(THINK_MAIN, &elevator->thinker);
 		sec->floordata = elevator;
 		sec->ceilingdata = elevator;
 		elevator->thinker.function.acp1 = (actionf_p1)T_MoveElevator;
@@ -2990,20 +3031,40 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 {
-	size_t i;
-	size_t leftmostvertex = 0, rightmostvertex = 0;
-	size_t topmostvertex = 0, bottommostvertex = 0;
-	fixed_t leftx, rightx;
-	fixed_t topy, bottomy;
-	fixed_t topz, bottomz;
-	fixed_t widthfactor = FRACUNIT, heightfactor = FRACUNIT;
-	fixed_t a, b, c;
-	mobjtype_t type = MT_ROCKCRUMBLE1;
-	fixed_t spacing = (32<<FRACBITS);
-	tic_t lifetime = 3*TICRATE;
-	INT16 flags = 0;
+	size_t i, leftmostvertex, rightmostvertex, topmostvertex, bottommostvertex;
+	fixed_t leftx, rightx, topy, bottomy, topz, bottomz, widthfactor, heightfactor, a, b, c, spacing;
+	mobjtype_t type;
+	tic_t lifetime;
+	INT16 flags;
 
-#define controlsec rover->master->frontsector
+	sector_t *controlsec = rover->master->frontsector;
+
+	if (sec == NULL)
+	{
+		if (controlsec->numattached)
+		{
+			for (i = 0; i < controlsec->numattached; i++)
+			{
+				sec = &sectors[controlsec->attached[i]];
+				if (!sec->ffloors)
+					continue;
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector == controlsec)
+						EV_CrumbleChain(sec, rover);
+				}
+			}
+		}
+		return;
+	}
+
+	leftmostvertex = rightmostvertex = topmostvertex = bottommostvertex = 0;
+	widthfactor = heightfactor = FRACUNIT;
+	spacing = (32<<FRACBITS);
+	type = MT_ROCKCRUMBLE1;
+	lifetime = 3*TICRATE;
+	flags = 0;
 
 	if (controlsec->tag != 0)
 	{
@@ -3096,7 +3157,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	// no longer exists (can't collide with again)
 	rover->flags &= ~FF_EXISTS;
 	rover->master->frontsector->moved = true;
-	sec->moved = true;
+	P_RecalcPrecipInSector(sec);
 }
 
 // Used for bobbing platforms on the water
@@ -3112,7 +3173,7 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 		return 0;
 
 	bouncer = Z_Calloc(sizeof (*bouncer), PU_LEVSPEC, NULL);
-	P_AddThinker(&bouncer->thinker);
+	P_AddThinker(THINK_MAIN, &bouncer->thinker);
 	sec->ceilingdata = bouncer;
 	bouncer->thinker.function.acp1 = (actionf_p1)T_BounceCheese;
 
@@ -3146,7 +3207,7 @@ INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, bool
 
 	// create and initialize new thinker
 	faller = Z_Calloc(sizeof (*faller), PU_LEVSPEC, NULL);
-	P_AddThinker(&faller->thinker);
+	P_AddThinker(THINK_MAIN, &faller->thinker);
 	faller->thinker.function.acp1 = (actionf_p1)T_ContinuousFalling;
 
 	// set up the fields
@@ -3195,7 +3256,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(&elevator->thinker);
+	P_AddThinker(THINK_MAIN, &elevator->thinker);
 	elevator->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
 
 	// Does this crumbler return?
@@ -3274,7 +3335,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		// create and initialize new elevator thinker
 
 		block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
-		P_AddThinker(&block->thinker);
+		P_AddThinker(THINK_MAIN, &block->thinker);
 		roversec->floordata = block;
 		roversec->ceilingdata = block;
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
@@ -3304,7 +3365,7 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
 			P_DamageMobj(thing, puncher, puncher, 1, 0);
-		else if (thing->type == MT_RING || thing->type == MT_COIN)
+		else if (thing->type == MT_RING || thing->type == MT_COIN || thing->type == MT_TOKEN)
 		{
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);
 			P_TouchSpecialThing(thing, puncher, false);

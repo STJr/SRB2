@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,11 +69,7 @@ consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, N
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#ifdef DIRECTFULLSCREEN
-static FUNCMATH void SCR_ChangeFullscreen (void);
-#else
 static void SCR_ChangeFullscreen (void);
-#endif
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
@@ -285,7 +281,10 @@ void SCR_Recalc(void)
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
 
 #ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	// 13/11/18:
+	// The above is no longer necessary, since we want OpenGL to be just like software now
+	// -- Monster Iestyn
 #endif
 		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
 
@@ -310,14 +309,6 @@ void SCR_Recalc(void)
 	// be calculated next time the automap is activated.
 	if (automapactive)
 		AM_Stop();
-
-	// r_plane stuff: visplanes, openings, floorclip, ceilingclip, spanstart,
-	//                spanstop, yslope, distscale, cachedheight, cacheddistance,
-	//                cachedxstep, cachedystep
-	//             -> allocated at the maximum vidsize, static.
-
-	// r_main: xtoviewangle, allocated at the maximum size.
-	// r_things: negonearray, screenheightarray allocated max. size.
 
 	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();
@@ -414,7 +405,7 @@ void SCR_DisplayTicRate(void)
 	tic_t ontic = I_GetTime();
 	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
-	INT32 offs = (cv_debug ? 8 : 0);
+	const INT32 h = vid.height-(8*vid.dupy);
 
 	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % TICRATE] = false;
@@ -428,9 +419,9 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-((24+(6*offs))*vid.dupx), vid.height-((16-offs)*vid.dupy),
-		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-(40*vid.dupx), vid.height-(8*vid.dupy),
+	V_DrawString(vid.width-(72*vid.dupx), h,
+		V_YELLOWMAP|V_NOSCALESTART, "FPS:");
+	V_DrawString(vid.width-(40*vid.dupx), h,
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
@@ -440,6 +431,23 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
+	INT32 basey = BASEVIDHEIGHT;
+
+	if (gamestate != wipegamestate)
+		return;
+
+	if (gamestate == GS_LEVEL)
+	{
+		if (promptactive)
+			basey -= 28;
+		else if (splitscreen)
+			basey -= 8;
+		else if ((modeattacking == ATTACKING_NIGHTS)
+		|| (!(maptol & TOL_NIGHTS)
+		&& ((cv_powerupdisplay.value == 2) // "Always"
+		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
+			basey -= 16;
+	}
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
@@ -455,9 +463,8 @@ void SCR_ClosedCaptions(void)
 		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
 			continue;
 
-		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
-		y = vid.height-((i + 2)*10*vid.dupy);
-		dot = ' ';
+		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
+		y = basey-((i + 2)*10);
 
 		if (closedcaptions[i].b)
 			y -= (closedcaptions[i].b--)*vid.dupy;
@@ -469,8 +476,10 @@ void SCR_ClosedCaptions(void)
 			dot = '\x19';
 		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
 			dot = '\x1E';
+		else
+			dot = ' ';
 
-		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }

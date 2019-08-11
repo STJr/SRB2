@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -50,18 +50,25 @@ typedef struct
 typedef UINT8 lighttable_t;
 
 // ExtraColormap type. Use for extra_colormaps from now on.
-typedef struct
+typedef struct extracolormap_s
 {
-	UINT16 maskcolor, fadecolor;
-	double maskamt;
-	UINT16 fadestart, fadeend;
-	INT32 fog;
+	UINT8 fadestart, fadeend;
+	UINT8 fog; // categorical value, not boolean
 
-	// rgba is used in hw mode for colored sector lighting
+	// store rgba values in combined bitwise
+	// also used in OpenGL instead lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef EXTRACOLORMAPLUMPS
+	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
+	char lumpname[9]; // for netsyncing
+#endif
+
+	struct extracolormap_s *next;
+	struct extracolormap_s *prev;
 } extracolormap_t;
 
 //
@@ -177,6 +184,8 @@ typedef struct ffloor_s
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
 	INT32 spawnalpha; // alpha the 3D floor spawned with
+
+	void *fadingdata; // fading FOF thinker
 } ffloor_t;
 
 
@@ -187,7 +196,7 @@ typedef struct lightlist_s
 {
 	fixed_t height;
 	INT16 *lightlevel;
-	extracolormap_t *extra_colormap;
+	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
 #ifdef ESLOPE
@@ -228,46 +237,27 @@ typedef struct linechain_s
 // Slopes
 #ifdef ESLOPE
 typedef enum {
-	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
-	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
-	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
-	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
+	SL_DYNAMIC = 1<<1, /// This plane slope will be assigned a thinker to make it dynamic.
 } slopeflags_t;
 
 typedef struct pslope_s
 {
 	UINT16 id; // The number of the slope, mostly used for netgame syncing purposes
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 
-	// --- Information used in clipping/projection ---
-	// Origin vector for the plane
-	vector3_t o;
+	// The plane's definition.
+	vector3_t o;		/// Plane origin.
+	vector3_t normal;	/// Plane normal.
 
-	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
-	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
-	vector2_t d;
-
-	// The rate at which z changes based on distance from the origin plane.
-	fixed_t zdelta;
-
-	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
-	vector3_t normal;
-
-	// For comparing when a slope should be rendered
-	fixed_t lowz;
-	fixed_t highz;
+	vector2_t d;		/// Precomputed normalized projection of the normal over XY.
+	fixed_t zdelta;		/// Precomputed Z unit increase per XY unit.
 
 	// This values only check and must be updated if the slope itself is modified
-	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
-	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
-
-	struct line_s *sourceline; // The line that generated the slope
-	fixed_t extent; // Distance value used for recalculating zdelta
-	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
+	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
+	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
 
 	UINT8 flags; // Slope options
-	mapthing_t **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
-
-	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;
 #endif
 
@@ -308,6 +298,7 @@ typedef struct sector_s
 	void *floordata; // floor move thinker
 	void *ceilingdata; // ceiling move thinker
 	void *lightingdata; // lighting change thinker
+	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
 	fixed_t floor_xoffs, floor_yoffs;
@@ -322,8 +313,6 @@ typedef struct sector_s
 
 	INT32 floorlightsec, ceilinglightsec;
 	INT32 crumblestate; // used for crumbling and bobbing
-
-	INT32 bottommap, midmap, topmap; // dynamic colormaps
 
 	// list of mobjs that are at least partially in the sector
 	// thinglist is a subset of touching_thinglist
@@ -383,6 +372,9 @@ typedef struct sector_s
 	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
 
+	// for fade thinker
+	INT16 spawn_lightlevel;
+
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
@@ -393,6 +385,9 @@ typedef struct sector_s
 	// flag angles sector spawned with (via linedef type 7)
 	angle_t spawn_flrpic_angle;
 	angle_t spawn_ceilpic_angle;
+
+	// colormap structure
+	extracolormap_t *spawn_extra_colormap;
 } sector_t;
 
 //
@@ -468,6 +463,8 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
+
+	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
 //
@@ -573,6 +570,7 @@ typedef struct seg_s
 	sector_t *frontsector;
 	sector_t *backsector;
 
+	fixed_t length;	// precalculated seg length
 #ifdef HWRENDER
 	// new pointers so that AdjustSegs doesn't mess with v1/v2
 	void *pv1; // polyvertex_t

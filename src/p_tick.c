@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,8 +35,8 @@ tic_t leveltime;
 // but the first element must be thinker_t.
 //
 
-// Both the head and tail of the thinker list.
-thinker_t thinkercap;
+// The entries will behave like both the head and tail of the lists.
+thinker_t thlist[NUM_THINKERLISTS];
 
 void Command_Numthinkers_f(void)
 {
@@ -44,6 +44,9 @@ void Command_Numthinkers_f(void)
 	INT32 count = 0;
 	actionf_p1 action;
 	thinker_t *think;
+	thinklistnum_t start = 0;
+	thinklistnum_t end = NUM_THINKERLISTS - 1;
+	thinklistnum_t i;
 
 	if (gamestate != GS_LEVEL)
 	{
@@ -56,12 +59,12 @@ void Command_Numthinkers_f(void)
 		CONS_Printf(M_GetText("numthinkers <#>: Count number of thinkers\n"));
 		CONS_Printf(
 			"\t1: P_MobjThinker\n"
-			"\t2: P_RainThinker\n"
-			"\t3: P_SnowThinker\n"
-			"\t4: P_NullPrecipThinker\n"
-			"\t5: T_Friction\n"
-			"\t6: T_Pusher\n"
-			"\t7: P_RemoveThinkerDelayed\n");
+			/*"\t2: P_RainThinker\n"
+			"\t3: P_SnowThinker\n"*/
+			"\t2: P_NullPrecipThinker\n"
+			"\t3: T_Friction\n"
+			"\t4: T_Pusher\n"
+			"\t5: P_RemoveThinkerDelayed\n");
 		return;
 	}
 
@@ -70,30 +73,34 @@ void Command_Numthinkers_f(void)
 	switch (num)
 	{
 		case 1:
+			start = end = THINK_MOBJ;
 			action = (actionf_p1)P_MobjThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_MobjThinker");
 			break;
-		case 2:
+		/*case 2:
 			action = (actionf_p1)P_RainThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RainThinker");
 			break;
 		case 3:
 			action = (actionf_p1)P_SnowThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_SnowThinker");
-			break;
-		case 4:
+			break;*/
+		case 2:
+			start = end = THINK_PRECIP;
 			action = (actionf_p1)P_NullPrecipThinker;
 			CONS_Printf(M_GetText("Number of %s: "), "P_NullPrecipThinker");
 			break;
-		case 5:
+		case 3:
+			start = end = THINK_MAIN;
 			action = (actionf_p1)T_Friction;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Friction");
 			break;
-		case 6:
+		case 4:
+			start = end = THINK_MAIN;
 			action = (actionf_p1)T_Pusher;
 			CONS_Printf(M_GetText("Number of %s: "), "T_Pusher");
 			break;
-		case 7:
+		case 5:
 			action = (actionf_p1)P_RemoveThinkerDelayed;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RemoveThinkerDelayed");
 			break;
@@ -102,12 +109,15 @@ void Command_Numthinkers_f(void)
 			return;
 	}
 
-	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	for (i = start; i <= end; i++)
 	{
-		if (think->function.acp1 != action)
-			continue;
+		for (think = thlist[i].next; think != &thlist[i]; think = think->next)
+		{
+			if (think->function.acp1 != action)
+				continue;
 
-		count++;
+			count++;
+		}
 	}
 
 	CONS_Printf("%d\n", count);
@@ -139,9 +149,9 @@ void Command_CountMobjs_f(void)
 
 			count = 0;
 
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 					continue;
 
 				if (((mobj_t *)th)->type == i)
@@ -159,9 +169,9 @@ void Command_CountMobjs_f(void)
 	{
 		count = 0;
 
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
 
 			if (((mobj_t *)th)->type == i)
@@ -178,19 +188,22 @@ void Command_CountMobjs_f(void)
 //
 void P_InitThinkers(void)
 {
-	thinkercap.prev = thinkercap.next = &thinkercap;
+	UINT8 i;
+	for (i = 0; i < NUM_THINKERLISTS; i++)
+		thlist[i].prev = thlist[i].next = &thlist[i];
 }
 
-//
-// P_AddThinker
 // Adds a new thinker at the end of the list.
-//
-void P_AddThinker(thinker_t *thinker)
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 {
-	thinkercap.prev->next = thinker;
-	thinker->next = &thinkercap;
-	thinker->prev = thinkercap.prev;
-	thinkercap.prev = thinker;
+#ifdef PARANOIA
+	I_Assert(n < NUM_THINKERLISTS);
+#endif
+
+	thlist[n].prev->next = thinker;
+	thinker->next = &thlist[n];
+	thinker->prev = thlist[n].prev;
+	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
 }
@@ -213,22 +226,33 @@ static thinker_t *currentthinker;
 // remove it, and set currentthinker to one node preceeding it, so
 // that the next step in P_RunThinkers() will get its successor.
 //
-void P_RemoveThinkerDelayed(void *pthinker)
+void P_RemoveThinkerDelayed(thinker_t *thinker)
 {
-	thinker_t *thinker = pthinker;
-	if (!thinker->references)
+	thinker_t *next;
+#ifdef PARANOIA
+#define BEENAROUNDBIT (0x40000000) // has to be sufficiently high that it's unlikely to happen in regular gameplay. If you change this, pay attention to the bit pattern of INT32_MIN.
+	if (thinker->references & ~BEENAROUNDBIT)
 	{
-		{
-			/* Remove from main thinker list */
-			thinker_t *next = thinker->next;
-			/* Note that currentthinker is guaranteed to point to us,
-			 * and since we're freeing our memory, we had better change that. So
-			 * point it to thinker->prev, so the iterator will correctly move on to
-			 * thinker->prev->next = thinker->next */
-			(next->prev = currentthinker = thinker->prev)->next = next;
-		}
-		Z_Free(thinker);
+		if (thinker->references & BEENAROUNDBIT) // Usually gets cleared up in one frame; what's going on here, then?
+			CONS_Printf("Number of potentially faulty references: %d\n", (thinker->references & ~BEENAROUNDBIT));
+		thinker->references |= BEENAROUNDBIT;
+		return;
 	}
+#undef BEENAROUNDBIT
+#else
+	if (thinker->references)
+		return;
+#endif
+
+	/* Remove from main thinker list */
+	next = thinker->next;
+	/* Note that currentthinker is guaranteed to point to us,
+	* and since we're freeing our memory, we had better change that. So
+	* point it to thinker->prev, so the iterator will correctly move on to
+	* thinker->prev->next = thinker->next */
+	(next->prev = currentthinker = thinker->prev)->next = next;
+
+	Z_Free(thinker);
 }
 
 //
@@ -248,7 +272,7 @@ void P_RemoveThinker(thinker_t *thinker)
 #ifdef HAVE_BLUA
 	LUA_InvalidateUserdata(thinker);
 #endif
-	thinker->function.acp1 = P_RemoveThinkerDelayed;
+	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
 /*
@@ -296,11 +320,18 @@ if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its count
 //
 static inline void P_RunThinkers(void)
 {
-	for (currentthinker = thinkercap.next; currentthinker != &thinkercap; currentthinker = currentthinker->next)
+	size_t i;
+	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		if (currentthinker->function.acp1)
+		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
+		{
+#ifdef PARANOIA
+			I_Assert(currentthinker->function.acp1 != NULL);
+#endif
 			currentthinker->function.acp1(currentthinker);
+		}
 	}
+
 }
 
 //
@@ -424,7 +455,7 @@ void P_DoTeamscrambling(void)
 
 static inline void P_DoSpecialStageStuff(void)
 {
-	boolean inwater = false;
+	boolean stillalive = false;
 	INT32 i;
 
 	// Can't drown in a special stage
@@ -436,69 +467,58 @@ static inline void P_DoSpecialStageStuff(void)
 		players[i].powers[pw_underwater] = players[i].powers[pw_spacetime] = 0;
 	}
 
-	if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
-		S_SpeedMusic(1.4f);
+	//if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+		//S_SpeedMusic(1.4f);
 
-	if (sstimer < 7 && sstimer > 0) // The special stage time is up!
+	if (sstimer && !objectplacing)
 	{
-		sstimer = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-			{
-				players[i].exiting = (14*TICRATE)/5 + 1;
-				players[i].pflags &= ~PF_GLIDING;
-			}
-
-			if (i == consoleplayer)
-				S_StartSound(NULL, sfx_lose);
-		}
-
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
-			S_SpeedMusic(1.0f);
-
-		stagefailed = true;
-	}
-
-	if (sstimer > 1) // As long as time isn't up...
-	{
-		UINT32 ssrings = 0;
+		UINT16 countspheres = 0;
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				ssrings += players[i].rings;
+				tic_t oldnightstime = players[i].nightstime;
+				countspheres += players[i].spheres;
 
 				// If in water, deplete timer 6x as fast.
-				if ((players[i].mo->eflags & MFE_TOUCHWATER)
-					|| (players[i].mo->eflags & MFE_UNDERWATER))
-					inwater = true;
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+					players[i].nightstime -= 5;
+				if (--players[i].nightstime > 6)
+				{
+					if (P_IsLocalPlayer(&players[i]) && oldnightstime > 10*TICRATE && players[i].nightstime <= 10*TICRATE)
+						S_ChangeMusicInternal("_drown", false);
+					stillalive = true;
+				}
+				else if (!players[i].exiting)
+				{
+					players[i].exiting = (14*TICRATE)/5 + 1;
+					players[i].pflags &= ~(PF_GLIDING|PF_BOUNCING);
+					players[i].nightstime = 0;
+					if (P_IsLocalPlayer(&players[i]))
+						S_StartSound(NULL, sfx_s3k66);
+				}
 			}
 
-		if (ssrings >= totalrings && totalrings > 0)
+		if (stillalive)
 		{
-			// Halt all the players
-			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i])
-				{
-					players[i].mo->momx = players[i].mo->momy = 0;
-					players[i].exiting = (14*TICRATE)/5 + 1;
-				}
+			if (countspheres >= ssspheres)
+			{
+				// Halt all the players
+				for (i = 0; i < MAXPLAYERS; i++)
+					if (playeringame[i])
+					{
+						players[i].mo->momx = players[i].mo->momy = 0;
+						players[i].exiting = (14*TICRATE)/5 + 1;
+					}
 
+				sstimer = 0;
+				P_GiveEmerald(true);
+				P_RestoreMusic(&players[consoleplayer]);
+			}
+		}
+		else
 			sstimer = 0;
-
-			P_GiveEmerald(true);
-		}
-
-		// Decrement the timer
-		if (!objectplacing)
-		{
-			if (inwater)
-				sstimer -= 6;
-			else
-				sstimer--;
-		}
 	}
 }
 
@@ -581,13 +601,20 @@ void P_Ticker(boolean run)
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			P_MapEnd();
+			S_SetStackAdjustmentStart();
 			return;
 		}
 	}
 
 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
+	{
+		S_SetStackAdjustmentStart();
 		return;
+	}
+
+	if (!S_MusicPaused())
+		S_AdjustMusicStackTics();
 
 	postimgtype = postimgtype2 = postimg_none;
 
@@ -606,9 +633,10 @@ void P_Ticker(boolean run)
 	}
 
 	// Keep track of how long they've been playing!
-	totalplaytime++;
+	if (!demoplayback) // Don't increment if a demo is playing.
+		totalplaytime++;
 
-	if (!useNightsSS && G_IsSpecialStage(gamemap))
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();
 
 	if (runemeraldmanager)

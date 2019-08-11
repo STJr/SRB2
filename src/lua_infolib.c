@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -102,7 +102,7 @@ static int lib_sprnamelen(lua_State *L)
 // push sprite name
 static int lib_getSpr2name(lua_State *L)
 {
-	UINT32 i;
+	playersprite_t i;
 
 	lua_remove(L, 1); // don't care about spr2names[] dummy userdata.
 
@@ -129,7 +129,7 @@ static int lib_getSpr2name(lua_State *L)
 
 static int lib_getSpr2default(lua_State *L)
 {
-	UINT32 i;
+	playersprite_t i;
 
 	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
 
@@ -154,8 +154,20 @@ static int lib_getSpr2default(lua_State *L)
 
 static int lib_setSpr2default(lua_State *L)
 {
-	UINT32 i;
+	playersprite_t i;
 	UINT8 j = 0;
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");
+
+// todo: maybe allow setting below first freeslot..? step 1 is toggling this, step 2 is testing to see whether it's net-safe
+#ifdef SETALLSPR2DEFAULTS
+#define FIRSTMODIFY 0
+#else
+#define FIRSTMODIFY SPR2_FIRSTFREESLOT
+	if (free_spr2 == SPR2_FIRSTFREESLOT)
+		return luaL_error(L, "You can only modify the spr2defaults[] entries of sprite2 freeslots, and none are currently added.");
+#endif
 
 	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
 
@@ -175,8 +187,9 @@ static int lib_setSpr2default(lua_State *L)
 	else
 		return luaL_error(L, "spr2defaults[] invalid index");
 
-	if (i < SPR2_FIRSTFREESLOT || i >= free_spr2)
-		return luaL_error(L, "spr2defaults[] index %d out of range (%d - %d)", i, SPR2_FIRSTFREESLOT, free_spr2-1);
+	if (i < FIRSTMODIFY || i >= free_spr2)
+		return luaL_error(L, "spr2defaults[] index %d out of range (%d - %d)", i, FIRSTMODIFY, free_spr2-1);
+#undef FIRSTMODIFY
 
 	if (lua_isnumber(L, 2))
 		j = lua_tonumber(L, 2);
@@ -189,11 +202,13 @@ static int lib_setSpr2default(lua_State *L)
 				break;
 		}
 		if (j == free_spr2)
-			return luaL_error(L, "spr2defaults[] invalid index");
+			return luaL_error(L, "spr2defaults[] invalid set");
 	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid set");
 
 	if (j >= free_spr2)
-		j = 0; // return luaL_error(L, "spr2defaults[] set %d out of range (%d - %d)", j, 0, free_spr2-1);
+		return luaL_error(L, "spr2defaults[] set %d out of range (%d - %d)", j, 0, free_spr2-1);
 
 	spr2defaults[i] = j;
 	return 0;

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2016 by Sonic Team Junior.
+// Copyright (C) 2012-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,6 +40,8 @@ enum mobj_e {
 	mobj_subsector,
 	mobj_floorz,
 	mobj_ceilingz,
+	mobj_floorrover,
+	mobj_ceilingrover,
 	mobj_radius,
 	mobj_height,
 	mobj_momx,
@@ -81,7 +83,11 @@ enum mobj_e {
 	mobj_extravalue1,
 	mobj_extravalue2,
 	mobj_cusval,
-	mobj_cvmem
+	mobj_cvmem,
+#ifdef ESLOPE
+	mobj_standingslope,
+#endif
+	mobj_colorized
 };
 
 static const char *const mobj_opt[] = {
@@ -100,6 +106,8 @@ static const char *const mobj_opt[] = {
 	"subsector",
 	"floorz",
 	"ceilingz",
+	"floorrover",
+	"ceilingrover",
 	"radius",
 	"height",
 	"momx",
@@ -142,6 +150,10 @@ static const char *const mobj_opt[] = {
 	"extravalue2",
 	"cusval",
 	"cvmem",
+#ifdef ESLOPE
+	"standingslope",
+#endif
+	"colorized",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
@@ -208,6 +220,12 @@ static int mobj_get(lua_State *L)
 	case mobj_ceilingz:
 		lua_pushfixed(L, mo->ceilingz);
 		break;
+	case mobj_floorrover:
+		LUA_PushUserdata(L, mo->floorrover, META_FFLOOR);
+		break;
+	case mobj_ceilingrover:
+		LUA_PushUserdata(L, mo->ceilingrover, META_FFLOOR);
+		break;
 	case mobj_radius:
 		lua_pushfixed(L, mo->radius);
 		break;
@@ -256,10 +274,19 @@ static int mobj_get(lua_State *L)
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
 	case mobj_hnext:
+		if (mo->hnext && P_MobjWasRemoved(mo->hnext))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hnext, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hnext, META_MOBJ);
 		break;
 	case mobj_hprev:
-		// implimented differently from sprev and bprev because SSNTails.
+		if (mo->hprev && P_MobjWasRemoved(mo->hprev))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->hprev, NULL);
+			return 0;
+		}
 		LUA_PushUserdata(L, mo->hprev, META_MOBJ);
 		break;
 	case mobj_type:
@@ -348,6 +375,14 @@ static int mobj_get(lua_State *L)
 	case mobj_cvmem:
 		lua_pushinteger(L, mo->cvmem);
 		break;
+#ifdef ESLOPE
+	case mobj_standingslope:
+		LUA_PushUserdata(L, mo->standingslope, META_SLOPE);
+		break;
+#endif
+	case mobj_colorized:
+		lua_pushboolean(L, mo->colorized);
+		break;
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -396,6 +431,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -430,6 +467,10 @@ static int mobj_set(lua_State *L)
 		return NOSETPOS;
 	case mobj_ceilingz:
 		return NOSETPOS;
+	case mobj_floorrover:
+		return NOSET;
+	case mobj_ceilingrover:
+		return NOSET;
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
@@ -439,6 +480,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -451,6 +494,8 @@ static int mobj_set(lua_State *L)
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
+		mo->floorrover = tmfloorrover;
+		mo->ceilingrover = tmceilingrover;
 		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
@@ -530,10 +575,22 @@ static int mobj_set(lua_State *L)
 	case mobj_bprev:
 		return UNIMPLEMENTED;
 	case mobj_hnext:
-		mo->hnext = luaL_checkudata(L, 3, META_MOBJ);
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->hnext, NULL);
+		else
+		{
+			mobj_t *hnext = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->hnext, hnext);
+		}
 		break;
 	case mobj_hprev:
-		mo->hprev = luaL_checkudata(L, 3, META_MOBJ);
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->hprev, NULL);
+		else
+		{
+			mobj_t *hprev = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->hprev, hprev);
+		}
 		break;
 	case mobj_type: // yeah sure, we'll let you change the mobj's type.
 	{
@@ -643,6 +700,13 @@ static int mobj_set(lua_State *L)
 	case mobj_cvmem:
 		mo->cvmem = luaL_checkinteger(L, 3);
 		break;
+#ifdef ESLOPE
+	case mobj_standingslope:
+		return NOSET;
+#endif
+	case mobj_colorized:
+		mo->colorized = luaL_checkboolean(L, 3);
+		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -740,7 +804,12 @@ static int mapthing_set(lua_State *L)
 	else if(fastcmp(field,"z"))
 		mt->z = (INT16)luaL_checkinteger(L, 3);
 	else if(fastcmp(field,"extrainfo"))
-		mt->extrainfo = (UINT8)luaL_checkinteger(L, 3);
+	{
+		INT32 extrainfo = luaL_checkinteger(L, 3);
+		if (extrainfo & ~15)
+			return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
+		mt->extrainfo = (UINT8)extrainfo;
+	}
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
@@ -752,8 +821,7 @@ static int mapthing_set(lua_State *L)
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
+	INLEVEL
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call mapthings.iterate() directly, use it as 'for mapthing in mapthings.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -771,8 +839,7 @@ static int lib_iterateMapthings(lua_State *L)
 static int lib_getMapthing(lua_State *L)
 {
 	int field;
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "You cannot access this outside of a level!");
+	INLEVEL
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))

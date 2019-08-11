@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,15 @@ unsigned SlopeDiv(unsigned num, unsigned den)
 	if (den < 512)
 		return SLOPERANGE;
 	ans = (num<<3) / (den>>8);
+	return ans <= SLOPERANGE ? ans : SLOPERANGE;
+}
+
+UINT64 SlopeDivEx(unsigned int num, unsigned int den)
+{
+	UINT64 ans;
+	if (den < 512)
+		return SLOPERANGE;
+	ans = ((UINT64)num<<3)/(den>>8);
 	return ans <= SLOPERANGE ? ans : SLOPERANGE;
 }
 

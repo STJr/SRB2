@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,7 +47,7 @@ typedef struct
 
 extern INT32 fileneedednum;
 extern fileneeded_t fileneeded[MAX_WADFILES];
-extern char downloaddir[256];
+extern char downloaddir[512];
 
 #ifdef CLIENT_LOADINGSCREEN
 extern INT32 lastfilenum;

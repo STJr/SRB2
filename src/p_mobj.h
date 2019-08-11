@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -175,8 +175,8 @@ typedef enum
 	MF2_SCATTER        = 1<<8,  // Thrown ring has scatter properties
 	MF2_BEYONDTHEGRAVE = 1<<9,  // Source of this missile has died and has since respawned.
 	MF2_SLIDEPUSH      = 1<<10, // MF_PUSHABLE that pushes continuously.
-	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative Z.
-	MF2_STANDONME      = 1<<12, // While not pushable, stand on me anyway.
+	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative momz.
+	MF2_INVERTAIMABLE  = 1<<12, // Flips whether it's targetable by A_LookForEnemies (enemies no, decoys yes)
 	MF2_INFLOAT        = 1<<13, // Floating to a height for a move, don't auto float to target's height.
 	MF2_DEBRIS         = 1<<14, // Splash ring from explosion ring
 	MF2_NIGHTSPULL     = 1<<15, // Attracted from a paraloop
@@ -194,7 +194,6 @@ typedef enum
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
 	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
-	MF2_MACEROTATE     = 1<<30, // Thinker calls P_MaceRotate around tracer
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -240,6 +239,9 @@ typedef enum
 	MFE_SPRUNG            = 1<<8,
 	// Platform movement
 	MFE_APPLYPMOMZ        = 1<<9,
+	// Compute and trigger on mobj angle relative to tracer
+	// See Linedef Exec 457 (Track mobj angle to point)
+	MFE_TRACERANGLE       = 1<<10,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -255,6 +257,10 @@ typedef enum {
 	PCF_FOF = 4,
 	// Above MOVING FOF (this means we need to keep floorz up to date...)
 	PCF_MOVINGFOF = 8,
+	// Is rain.
+	PCF_RAIN = 16,
+	// Ran the thinker this tic.
+	PCF_THUNK = 32,
 } precipflag_t;
 // Map Object definition.
 typedef struct mobj_s
@@ -283,6 +289,8 @@ typedef struct mobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius;
@@ -315,7 +323,7 @@ typedef struct mobj_s
 	mobjtype_t type;
 	const mobjinfo_t *info; // &mobjinfo[mobj->type]
 
-	INT32 health; // for player this is rings + 1
+	INT32 health; // for player this is rings + 1 -- no it isn't, not any more!!
 
 	// Movement direction, movement generation (zig-zagging).
 	angle_t movedir; // dirtype_t 0-7; also used by Deton for up/down angle
@@ -363,6 +371,8 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 #endif
 
+	boolean colorized; // Whether the mobj uses the rainbow colormap
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 
@@ -389,6 +399,7 @@ typedef struct precipmobj_s
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -398,6 +409,8 @@ typedef struct precipmobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius; // Fixed at 2*FRACUNIT
@@ -436,7 +449,7 @@ void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
 void P_SpawnMapThing(mapthing_t *mthing);
-void P_SpawnHoopsAndRings(mapthing_t *mthing);
+void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);
@@ -445,11 +458,13 @@ boolean P_SupermanLook4Players(mobj_t *actor);
 void P_DestroyRobots(void);
 void P_SnowThinker(precipmobj_t *mobj);
 void P_RainThinker(precipmobj_t *mobj);
-FUNCMATH void P_NullPrecipThinker(precipmobj_t *mobj);
+void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
 void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
 void P_EmeraldManager(void);
+
+extern INT32 modulothing;
 
 #define MAXHUNTEMERALDS 64
 extern mapthing_t *huntemeralds[MAXHUNTEMERALDS];
@@ -457,4 +472,5 @@ extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
 extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
+extern UINT16 bossdisabled;
 #endif

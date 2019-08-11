@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,7 @@
 #include "i_video.h" // rendermode
 #include "r_things.h"
 #include "r_plane.h"
+#include "r_portal.h"
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
@@ -380,10 +381,9 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	char wadname[MAX_WADPATH];
 
 	// Find the sprites section in this resource file.
-	if (wadfiles[wadnum]->type == RET_PK3)
-		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
-	else
+	switch (wadfiles[wadnum]->type)
 	{
+	case RET_WAD:
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
 		if (start == INT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
@@ -391,20 +391,22 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			start = 0; //let say S_START is lump 0
 		else
 			start++;   // just after S_START
+
+		end = W_CheckNumForNamePwad("S_END",wadnum,start);
+		if (end == INT16_MAX)
+			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
+		break;
+	case RET_PK3:
+		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
+		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
+		break;
+	default:
+		return;
 	}
 
 	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
 	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
 		return;
-
-	if (wadfiles[wadnum]->type == RET_PK3)
-		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
-	else
-	{
-		end = W_CheckNumForNamePwad("S_END",wadnum,start);
-		if (end == INT16_MAX)
-			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
-	}
 
 	if (end == INT16_MAX)
 	{
@@ -443,7 +445,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 //
 // GAME FUNCTIONS
 //
-static UINT32 visspritecount;
+UINT32 visspritecount;
 static UINT32 clippedvissprites;
 static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL};
 
@@ -484,7 +486,11 @@ void R_InitSprites(void)
 	// it can be is do before loading config for skin cvar possible value
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
+	{
 		R_AddSkins((UINT16)i);
+		R_PatchSkins((UINT16)i);
+	}
+	ST_ReloadSkinFaceGraphics();
 
 	//
 	// check if all sprites have frames
@@ -717,11 +723,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
-		if (vis->mobj->type == MT_CYBRAKDEMON)
+		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			dc_translation = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
@@ -732,7 +738,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	{
 		colfunc = transtransfunc;
 		dc_transmap = vis->transmap;
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -751,7 +759,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = transcolfunc;
 
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+			dc_translation = R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -981,9 +991,10 @@ static void R_SplitSprite(vissprite_t *sprite)
 			else
 				spritelights = scalelight[lightnum];
 
-			newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
+			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
-			if (!((newsprite->cut & SC_FULLBRIGHT) && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
+			if (!((newsprite->cut & SC_FULLBRIGHT)
+				&& (!newsprite->extra_colormap || !(newsprite->extra_colormap->fog & 1))))
 			{
 				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
@@ -1247,7 +1258,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
@@ -1349,8 +1360,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1359,7 +1370,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = cut;
 	if (thing->subsector->sector->numlights)
-		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
+		vis->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
 	else
 		vis->extra_colormap = thing->subsector->sector->extra_colormap;
 
@@ -1403,7 +1414,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->cut |= SC_FULLBRIGHT;
 
 	if (vis->cut & SC_FULLBRIGHT
-		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
+		&& (!vis->extra_colormap || !(vis->extra_colormap->fog & 1)))
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
@@ -1515,7 +1526,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender && portalclipline)
 	{
 		if (x2 < portalclipstart || x1 > portalclipend)
 			return;
@@ -1524,6 +1535,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 			return;
 	}
 
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	gzt = thing->z + spritecachedinfo[lump].topoffset;
 	gz = gzt - spritecachedinfo[lump].height;
@@ -1531,7 +1543,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	if (thing->subsector->sector->cullheight)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
-			return;
+			goto weatherthink;
 	}
 
 	// store information in a vissprite
@@ -1556,8 +1568,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (vis->x1 < portalclipstart)
 			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x2 >= portalclipend)
+			vis->x2 = portalclipend-1;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1591,6 +1603,17 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// Fullbright
 	vis->colormap = colormaps;
+
+weatherthink:
+	// okay... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 }
 
 // R_AddSprites
@@ -1641,8 +1664,10 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectSprite(thing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectSprite(thing);
 		}
 	}
 	else
@@ -1653,7 +1678,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 				R_ProjectSprite(thing);
 	}
 
-	// Someone seriously wants infinite draw distance for precipitation?
+	// no, no infinite draw distance for precipitation. this option at zero is supposed to turn it off
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
@@ -1663,25 +1688,18 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 
 			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
-			if (approx_dist <= limit_dist)
-				R_ProjectPrecipitationSprite(precipthing);
+			if (approx_dist > limit_dist)
+				continue;
+
+			R_ProjectPrecipitationSprite(precipthing);
 		}
-	}
-	else
-	{
-		// Draw everything in sector, no checks
-		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
-			if (!(precipthing->precipflags & PCF_INVISIBLE))
-				R_ProjectPrecipitationSprite(precipthing);
 	}
 }
 
 //
 // R_SortVisSprites
 //
-static vissprite_t vsprsortedhead;
-
-void R_SortVisSprites(void)
+static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 end)
 {
 	UINT32       i, linkedvissprites = 0;
 	vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
@@ -1690,20 +1708,17 @@ void R_SortVisSprites(void)
 	fixed_t      bestscale;
 	INT32        bestdispoffset;
 
-	if (!visspritecount)
-		return;
-
 	unsorted.next = unsorted.prev = &unsorted;
 
-	dsfirst = R_GetVisSprite(0);
+	dsfirst = R_GetVisSprite(start);
 
 	// The first's prev and last's next will be set to
 	// nonsense, but are fixed in a moment
-	for (i = 0, dsnext = dsfirst, ds = NULL; i < visspritecount; i++)
+	for (i = start, dsnext = dsfirst, ds = NULL; i < end; i++)
 	{
 		dsprev = ds;
 		ds = dsnext;
-		if (i < visspritecount - 1) dsnext = R_GetVisSprite(i + 1);
+		if (i < end - 1) dsnext = R_GetVisSprite(i + 1);
 
 		ds->next = dsnext;
 		ds->prev = dsprev;
@@ -1781,8 +1796,8 @@ void R_SortVisSprites(void)
 	}
 
 	// pull the vissprites out by scale
-	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-	for (i = 0; i < visspritecount-linkedvissprites; i++)
+	vsprsortedhead->next = vsprsortedhead->prev = vsprsortedhead;
+	for (i = start; i < end-linkedvissprites; i++)
 	{
 		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
@@ -1807,10 +1822,10 @@ void R_SortVisSprites(void)
 		}
 		best->next->prev = best->prev;
 		best->prev->next = best->next;
-		best->next = &vsprsortedhead;
-		best->prev = vsprsortedhead.prev;
-		vsprsortedhead.prev->next = best;
-		vsprsortedhead.prev = best;
+		best->next = vsprsortedhead;
+		best->prev = vsprsortedhead->prev;
+		vsprsortedhead->prev->next = best;
+		vsprsortedhead->prev = best;
 	}
 }
 
@@ -1820,28 +1835,28 @@ void R_SortVisSprites(void)
 static drawnode_t *R_CreateDrawNode(drawnode_t *link);
 
 static drawnode_t nodebankhead;
-static drawnode_t nodehead;
 
-static void R_CreateDrawNodes(void)
+static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean tempskip)
 {
 	drawnode_t *entry;
 	drawseg_t *ds;
 	INT32 i, p, best, x1, x2;
 	fixed_t bestdelta, delta;
 	vissprite_t *rover;
+	static vissprite_t vsprsortedhead;
 	drawnode_t *r2;
 	visplane_t *plane;
 	INT32 sintersect;
 	fixed_t scale = 0;
 
 	// Add the 3D floors, thicksides, and masked textures...
-	for (ds = ds_p; ds-- > drawsegs ;)
+	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
 		if (ds->numthicksides)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
-				entry = R_CreateDrawNode(&nodehead);
+				entry = R_CreateDrawNode(head);
 				entry->thickseg = ds;
 				entry->ffloor = ds->thicksides[i];
 			}
@@ -1852,11 +1867,11 @@ static void R_CreateDrawNodes(void)
 			plane = ds->curline->polyseg->visplane;
 			R_PlaneBounds(plane);
 
-			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+			if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 				;
 			else {
 				// Put it in!
-				entry = R_CreateDrawNode(&nodehead);
+				entry = R_CreateDrawNode(head);
 				entry->plane = plane;
 				entry->seg = ds;
 			}
@@ -1865,7 +1880,7 @@ static void R_CreateDrawNodes(void)
 #endif
 		if (ds->maskedtexturecol)
 		{
-			entry = R_CreateDrawNode(&nodehead);
+			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
 		if (ds->numffloorplanes)
@@ -1881,7 +1896,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
+					if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1896,7 +1911,7 @@ static void R_CreateDrawNodes(void)
 				}
 				if (best != -1)
 				{
-					entry = R_CreateDrawNode(&nodehead);
+					entry = R_CreateDrawNode(head);
 					entry->plane = ds->ffloorplanes[best];
 					entry->seg = ds;
 					ds->ffloorplanes[best] = NULL;
@@ -1906,6 +1921,9 @@ static void R_CreateDrawNodes(void)
 			}
 		}
 	}
+
+	if (tempskip)
+		return;
 
 #ifdef POLYOBJECTS_PLANES
 	// find all the remaining polyobject planes and add them on the end of the list
@@ -1918,22 +1936,24 @@ static void R_CreateDrawNodes(void)
 		plane = PolyObjects[i].visplane;
 		R_PlaneBounds(plane);
 
-		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 		{
 			PolyObjects[i].visplane = NULL;
 			continue;
 		}
-		entry = R_CreateDrawNode(&nodehead);
+		entry = R_CreateDrawNode(head);
 		entry->plane = plane;
 		// note: no seg is set, for what should be obvious reasons
 		PolyObjects[i].visplane = NULL;
 	}
 #endif
 
-	if (visspritecount == 0)
+	// No vissprites in this mask?
+	if (mask->vissprites[1] - mask->vissprites[0] == 0)
 		return;
 
-	R_SortVisSprites();
+	R_SortVisSprites(&vsprsortedhead, mask->vissprites[0], mask->vissprites[1]);
+
 	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
 	{
 		if (rover->szt > vid.height || rover->sz < 0)
@@ -1941,7 +1961,7 @@ static void R_CreateDrawNodes(void)
 
 		sintersect = (rover->x1 + rover->x2) / 2;
 
-		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
+		for (r2 = head->next; r2 != head; r2 = r2->next)
 		{
 			if (r2->plane)
 			{
@@ -2080,9 +2100,9 @@ static void R_CreateDrawNodes(void)
 				}
 			}
 		}
-		if (r2 == &nodehead)
+		if (r2 == head)
 		{
-			entry = R_CreateDrawNode(&nodehead);
+			entry = R_CreateDrawNode(head);
 			entry->sprite = rover;
 		}
 	}
@@ -2124,25 +2144,24 @@ static void R_DoneWithNode(drawnode_t *node)
 	(node->prev = &nodebankhead)->next = node;
 }
 
-static void R_ClearDrawNodes(void)
+static void R_ClearDrawNodes(drawnode_t* head)
 {
 	drawnode_t *rover;
 	drawnode_t *next;
 
-	for (rover = nodehead.next; rover != &nodehead ;)
+	for (rover = head->next; rover != head;)
 	{
 		next = rover->next;
 		R_DoneWithNode(rover);
 		rover = next;
 	}
 
-	nodehead.next = nodehead.prev = &nodehead;
+	head->next = head->prev = head;
 }
 
 void R_InitDrawNodes(void)
 {
 	nodebankhead.next = nodebankhead.prev = &nodebankhead;
-	nodehead.next = nodehead.prev = &nodehead;
 }
 
 //
@@ -2168,7 +2187,7 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 
 // R_ClipSprites
 // Clips vissprites without drawing, so that portals can work. -Red
-void R_ClipSprites(void)
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 {
 	vissprite_t *spr;
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
@@ -2194,7 +2213,7 @@ void R_ClipSprites(void)
 		// and buggy, by going past LEFT end of array:
 
 		//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-		for (ds = ds_p; ds-- > drawsegs ;)
+		for (ds = ds_p; ds-- > dsstart;)
 		{
 			// determine if the drawseg obscures the sprite
 			if (ds->x1 > spr->x2 ||
@@ -2206,33 +2225,36 @@ void R_ClipSprites(void)
 				continue;
 			}
 
-			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
-				continue; // is a portal
+			if (ds->portalpass != 66)
+			{
+				if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+					continue; // is a portal
+
+				if (ds->scale1 > ds->scale2)
+				{
+					lowscale = ds->scale2;
+					scale = ds->scale1;
+				}
+				else
+				{
+					lowscale = ds->scale1;
+					scale = ds->scale2;
+				}
+
+				if (scale < spr->sortscale ||
+					(lowscale < spr->sortscale &&
+					 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
+				{
+					// masked mid texture?
+					/*if (ds->maskedtexturecol)
+						R_RenderMaskedSegRange (ds, r1, r2);*/
+					// seg is behind sprite
+					continue;
+				}
+			}
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
-
-			if (ds->scale1 > ds->scale2)
-			{
-				lowscale = ds->scale2;
-				scale = ds->scale1;
-			}
-			else
-			{
-				lowscale = ds->scale1;
-				scale = ds->scale2;
-			}
-
-			if (scale < spr->sortscale ||
-			    (lowscale < spr->sortscale &&
-			     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
-			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
-				// seg is behind sprite
-				continue;
-			}
 
 			// clip this piece of the sprite
 			silhouette = ds->silhouette;
@@ -2350,20 +2372,29 @@ void R_ClipSprites(void)
 				//Fab : 26-04-98: was -1, now clips against console bottom
 				spr->cliptop[x] = (INT16)con_clipviewtop;
 		}
+
+		if (portal)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->clipbot[x] > portal->floorclip[x - portal->start])
+					spr->clipbot[x] = portal->floorclip[x - portal->start];
+				if (spr->cliptop[x] < portal->ceilingclip[x - portal->start])
+					spr->cliptop[x] = portal->ceilingclip[x - portal->start];
+			}
+		}
 	}
 }
 
 //
 // R_DrawMasked
 //
-void R_DrawMasked(void)
+static void R_DrawMaskedList (drawnode_t* head)
 {
 	drawnode_t *r2;
 	drawnode_t *next;
 
-	R_CreateDrawNodes();
-
-	for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
+	for (r2 = head->next; r2 != head; r2 = r2->next)
 	{
 		if (r2->plane)
 		{
@@ -2415,7 +2446,42 @@ void R_DrawMasked(void)
 			r2 = next;
 		}
 	}
-	R_ClearDrawNodes();
+}
+
+void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
+{
+	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
+	SINT8 i;
+
+	heads = calloc(nummasks, sizeof(drawnode_t));
+
+	for (i = 0; i < nummasks; i++)
+	{
+		heads[i].next = heads[i].prev = &heads[i];
+
+		viewx = masks[i].viewx;
+		viewy = masks[i].viewy;
+		viewz = masks[i].viewz;
+		viewsector = masks[i].viewsector;
+
+		R_CreateDrawNodes(&masks[i], &heads[i], false);
+	}
+
+	//for (i = 0; i < nummasks; i++)
+	//	CONS_Printf("Mask no.%d:\ndrawsegs: %d\n vissprites: %d\n\n", i, masks[i].drawsegs[1] - masks[i].drawsegs[0], masks[i].vissprites[1] - masks[i].vissprites[0]);
+
+	for (; nummasks > 0; nummasks--)
+	{
+		viewx = masks[nummasks - 1].viewx;
+		viewy = masks[nummasks - 1].viewy;
+		viewz = masks[nummasks - 1].viewz;
+		viewsector = masks[nummasks - 1].viewsector;
+
+		R_DrawMaskedList(&heads[nummasks - 1]);
+		R_ClearDrawNodes(&heads[nummasks - 1]);
+	}
+
+	free(heads);
 }
 
 // ==========================================================================
@@ -2425,7 +2491,7 @@ void R_DrawMasked(void)
 // ==========================================================================
 
 INT32 numskins = 0;
-skin_t skins[MAXSKINS+1];
+skin_t skins[MAXSKINS];
 // FIXTHIS: don't work because it must be inistilised before the config load
 //#define SKINVALUES
 #ifdef SKINVALUES
@@ -2445,6 +2511,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
+	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
+		return 0;
+
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
@@ -2458,7 +2527,6 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 		switch(spr2)
 		{
-
 		// Normal special cases.
 		case SPR2_JUMP:
 			spr2 = ((player
@@ -2467,9 +2535,11 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
 		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
 			break;
-
 		// Use the handy list, that's what it's there for!
 		default:
 			spr2 = spr2defaults[spr2];
@@ -2478,6 +2548,9 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 		spr2 |= super;
 	}
+
+	if (i >= 32) // probably an infinite loop...
+		return 0;
 
 	return spr2;
 }
@@ -2497,14 +2570,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->flags = 0;
 
 	strcpy(skin->realname, "Someone");
-#ifdef SKINNAMEPADDING
-	strcpy(skin->hudname, "  ???");
-#else
 	strcpy(skin->hudname, "???");
-#endif
-	strncpy(skin->charsel, "CHRSONIC", 8);
-	strncpy(skin->face, "MISSING", 8);
-	strncpy(skin->superface, "MISSING", 8);
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -2619,7 +2685,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin '%s' not found.\n"), skinname);
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
 	SetPlayerSkinByNum(playernum, 0);
@@ -2650,6 +2716,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
 		player->followitem = skin->followitem;
 
+		if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
+			player->powers[pw_shield] &= SH_STACK;
+
 		player->actionspd = skin->actionspd;
 		player->mindash = skin->mindash;
 		player->maxdash = skin->maxdash;
@@ -2677,7 +2746,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		if (player->followmobj)
 		{
 			P_RemoveMobj(player->followmobj);
-			player->followmobj = NULL;
+			P_SetTarget(&player->followmobj, NULL);
 		}
 
 		if (player->mo)
@@ -2703,7 +2772,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
-	else if(server || adminplayer == consoleplayer)
+	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
@@ -2733,11 +2802,7 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-#ifdef SKINNAMEPADDING
-#define HUDNAMEWRITE(value) snprintf(skin->hudname, sizeof(skin->hudname), "%5s", value)
-#else
 #define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
-#endif
 
 // turn _ into spaces and . into katana dot
 #define SYMBOLCONVERT(name) for (value = name; *value; value++)\
@@ -2935,7 +3000,7 @@ void R_AddSkins(UINT16 wadnum)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname, superface;
+	boolean hudname, realname;
 
 	//
 	// search for all skin markers in pwad
@@ -2946,7 +3011,7 @@ void R_AddSkins(UINT16 wadnum)
 		// advance by default
 		lastlump = lump + 1;
 
-		if (numskins > MAXSKINS)
+		if (numskins >= MAXSKINS)
 		{
 			CONS_Debug(DBG_RENDER, "ignored skin (%d skins maximum)\n", MAXSKINS);
 			continue; // so we know how many skins couldn't be added
@@ -2965,7 +3030,7 @@ void R_AddSkins(UINT16 wadnum)
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
-		hudname = realname = superface = false;
+		hudname = realname = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -3041,24 +3106,6 @@ void R_AddSkins(UINT16 wadnum)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
-			else if (!stricmp(stoken, "charsel"))
-			{
-				strupr(value);
-				strncpy(skin->charsel, value, sizeof skin->charsel);
-			}
-			else if (!stricmp(stoken, "face"))
-			{
-				strupr(value);
-				strncpy(skin->face, value, sizeof skin->face);
-				if (!superface)
-					strncpy(skin->superface, value, sizeof skin->superface);
-			}
-			else if (!stricmp(stoken, "superface"))
-			{
-				superface = true;
-				strupr(value);
-				strncpy(skin->superface, value, sizeof skin->superface);
-			}
 			else if (!stricmp(stoken, "availability"))
 			{
 				skin->availability = atoi(value);
@@ -3077,6 +3124,7 @@ next_token:
 
 		// Add sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(numskins); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
 
@@ -3086,9 +3134,6 @@ next_token:
 		skin_cons_t[numskins].value = numskins;
 		skin_cons_t[numskins].strvalue = skin->name;
 #endif
-
-		// add face graphics
-		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
@@ -3212,6 +3257,9 @@ next_token:
 
 		// Patch sprites
 		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		//ST_LoadFaceGraphics(skinnum); -- nah let's do this elsewhere
+
+		R_FlushTranslationColormapCache();
 
 		if (!skin->availability) // Safe to print...
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);

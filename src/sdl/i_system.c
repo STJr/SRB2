@@ -1,8 +1,11 @@
 // Emacs style mode select   -*- C++ -*-
+//
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2014-2018 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -124,7 +127,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include "macosx/mac_resources.h"
 #endif
 
-// Locations for searching the srb2.srb
+#ifndef errno
+#include <errno.h>
+#endif
+
+// Locations for searching the srb2.pk3
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
@@ -143,7 +150,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 /**	\brief WAD file to look for
 */
 #define WADKEYWORD1 "srb2.pk3"
-#define WADKEYWORD2 "srb2.wad"
 /**	\brief holds wad path
 */
 static char returnWadPath[256];
@@ -887,8 +893,8 @@ void I_GetJoystickEvents(void)
 	UINT64 joyhats = 0;
 #if 0
 	UINT64 joybuttons = 0;
-#endif
 	Sint16 axisx, axisy;
+#endif
 
 	if (!joystick_started) return;
 
@@ -956,6 +962,7 @@ void I_GetJoystickEvents(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick;
 
@@ -1006,6 +1013,7 @@ void I_GetJoystickEvents(void)
 		}
 		D_PostEvent(&event);
 	}
+#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1150,6 +1158,7 @@ static void I_ShutdownJoystick2(void)
 		D_PostEvent(&event);
 	}
 
+	joystick2_started = 0;
 	JoyReset(&JoyInfo2);
 	if (!joystick_started && !joystick2_started && SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
@@ -1168,8 +1177,8 @@ void I_GetJoystick2Events(void)
 	UINT64 joyhats = 0;
 #if 0
 	INT64 joybuttons = 0;
-#endif
 	INT32 axisx, axisy;
+#endif
 
 	if (!joystick2_started)
 		return;
@@ -1239,6 +1248,7 @@ void I_GetJoystick2Events(void)
 		}
 	}
 
+#if 0
 	// send joystick axis positions
 	event.type = ev_joystick2;
 
@@ -1289,7 +1299,7 @@ void I_GetJoystick2Events(void)
 		}
 		D_PostEvent(&event);
 	}
-
+#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1391,7 +1401,13 @@ static int joy_open2(const char *fname)
 void I_InitJoystick(void)
 {
 	I_ShutdownJoystick();
-	SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-noxinput"))
+		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-nohidapi"))
+		SDL_SetHintWithPriority("SDL_JOYSTICK_HIDAPI", "0", SDL_HINT_OVERRIDE);
+
 	if (!strcmp(cv_usejoystick.string, "0") || M_CheckParm("-nojoy"))
 		return;
 	if (joy_open(cv_usejoystick.string) != -1)
@@ -1407,7 +1423,13 @@ void I_InitJoystick(void)
 void I_InitJoystick2(void)
 {
 	I_ShutdownJoystick2();
-	SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-noxinput"))
+		SDL_SetHintWithPriority("SDL_XINPUT_ENABLED", "0", SDL_HINT_OVERRIDE);
+
+	if (M_CheckParm("-nohidapi"))
+		SDL_SetHintWithPriority("SDL_JOYSTICK_HIDAPI", "0", SDL_HINT_OVERRIDE);
+
 	if (!strcmp(cv_usejoystick2.string, "0") || M_CheckParm("-nojoy"))
 		return;
 	if (joy_open2(cv_usejoystick2.string) != -1)
@@ -1445,18 +1467,28 @@ INT32 I_NumJoys(void)
 	return numjoy;
 }
 
+static char joyname[255]; // MAX_PATH; joystick name is straight from the driver
+
 const char *I_GetJoyName(INT32 joyindex)
 {
-	const char *joyname = "NA";
+	const char *tempname = NULL;
 	joyindex--; //SDL's Joystick System starts at 0, not 1
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != -1)
-			joyname = SDL_JoystickNameForIndex(joyindex);
+		{
+			tempname = SDL_JoystickNameForIndex(joyindex);
+			if (tempname)
+				strncpy(joyname, tempname, 254);
+		}
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
 	else
-		joyname = SDL_JoystickNameForIndex(joyindex);
+	{
+		tempname = SDL_JoystickNameForIndex(joyindex);
+		if (tempname)
+			strncpy(joyname, tempname, 254);
+	}
 	return joyname;
 }
 
@@ -1679,7 +1711,7 @@ static void I_ShutdownMouse2(void)
 	EscapeCommFunction(mouse2filehandle, CLRRTS);
 
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT |
-	          PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	CloseHandle(mouse2filehandle);
 
@@ -1872,11 +1904,11 @@ void I_StartupMouse2(void)
 	{
 		// COM file handle
 		mouse2filehandle = CreateFileA(cv_mouse2port.string, GENERIC_READ | GENERIC_WRITE,
-		                               0,                     // exclusive access
-		                               NULL,                  // no security attrs
-		                               OPEN_EXISTING,
-		                               FILE_ATTRIBUTE_NORMAL,
-		                               NULL);
+									   0,                     // exclusive access
+									   NULL,                  // no security attrs
+									   OPEN_EXISTING,
+									   FILE_ATTRIBUTE_NORMAL,
+									   NULL);
 		if (mouse2filehandle == INVALID_HANDLE_VALUE)
 		{
 			INT32 e = GetLastError();
@@ -1896,7 +1928,7 @@ void I_StartupMouse2(void)
 
 	// purge buffers
 	PurgeComm(mouse2filehandle, PURGE_TXABORT | PURGE_RXABORT
-	          | PURGE_TXCLEAR | PURGE_RXCLEAR);
+			  | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	// setup port to 1200 7N1
 	dcb.DCBlength = sizeof (DCB);
@@ -1922,14 +1954,14 @@ void I_StartupMouse2(void)
 //
 // I_Tactile
 //
-FUNCMATH void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
+void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
 	(void)FFEffect;
 }
 
-FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
+void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
@@ -1940,7 +1972,7 @@ FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 */
 static ticcmd_t emptycmd;
 
-FUNCMATH ticcmd_t *I_BaseTiccmd(void)
+ticcmd_t *I_BaseTiccmd(void)
 {
 	return &emptycmd;
 }
@@ -1949,7 +1981,7 @@ FUNCMATH ticcmd_t *I_BaseTiccmd(void)
 */
 static ticcmd_t emptycmd2;
 
-FUNCMATH ticcmd_t *I_BaseTiccmd2(void)
+ticcmd_t *I_BaseTiccmd2(void)
 {
 	return &emptycmd2;
 }
@@ -2010,7 +2042,7 @@ static void I_ShutdownTimer(void)
 	pfntimeGetTime = NULL;
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeEndPeriod");
+		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeEndPeriod");
 		if (pfntimeEndPeriod)
 			pfntimeEndPeriod(1);
 		FreeLibrary(winmm);
@@ -2024,8 +2056,8 @@ static void I_ShutdownTimer(void)
 //
 tic_t I_GetTime (void)
 {
-	static Uint32 basetime = 0;
-	       Uint32 ticks = SDL_GetTicks();
+	static Uint64 basetime = 0;
+		   Uint64 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
@@ -2043,7 +2075,7 @@ tic_t I_GetTime (void)
 //
 //I_StartupTimer
 //
-FUNCMATH void I_StartupTimer(void)
+void I_StartupTimer(void)
 {
 #ifdef _WIN32
 	// for win2k time bug
@@ -2055,10 +2087,10 @@ FUNCMATH void I_StartupTimer(void)
 	winmm = LoadLibraryA("winmm.dll");
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeBeginPeriod");
+		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeBeginPeriod");
 		if (pfntimeBeginPeriod)
 			pfntimeBeginPeriod(1);
-		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
+		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
 #endif
@@ -2090,7 +2122,6 @@ INT32 I_StartupSystem(void)
 #endif
 	return 0;
 }
-
 
 //
 // I_Quit
@@ -2132,6 +2163,8 @@ void I_Quit(void)
 		printf("\r");
 		ShowEndTxt();
 	}
+	if (myargmalloc)
+		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
 	exit(0);
@@ -2143,11 +2176,11 @@ void I_WaitVBL(INT32 count)
 	SDL_Delay(count);
 }
 
-FUNCMATH void I_BeginRead(void)
+void I_BeginRead(void)
 {
 }
 
-FUNCMATH void I_EndRead(void)
+void I_EndRead(void)
 {
 }
 
@@ -2356,7 +2389,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 	if (!testwin95)
 	{
-		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
+		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
 		testwin95 = true;
 	}
 	if (pfnGetDiskFreeSpaceEx)
@@ -2370,7 +2403,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	{
 		DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters, TotalNumberOfClusters;
 		GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
-		                 &NumberOfFreeClusters, &TotalNumberOfClusters);
+						 &NumberOfFreeClusters, &TotalNumberOfClusters);
 		*freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
 	}
 #else // Dummy for platform independent; 1GB should be enough
@@ -2380,7 +2413,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 char *I_GetUserName(void)
 {
-	static char username[MAXPLAYERNAME];
+	static char username[MAXPLAYERNAME+1];
 	char *p;
 #ifdef _WIN32
 	DWORD i = MAXPLAYERNAME;
@@ -2511,14 +2544,6 @@ static boolean isWadPathOk(const char *path)
 		return true;
 	}
 
-	sprintf(wad3path, pandf, path, WADKEYWORD2);
-
-	if (FIL_ReadFileOK(wad3path))
-	{
-		free(wad3path);
-		return true;
-	}
-
 	free(wad3path);
 	return false;
 }
@@ -2536,7 +2561,7 @@ static void pathonly(char *s)
 		}
 }
 
-/**	\brief	search for srb2.srb in the given path
+/**	\brief	search for srb2.pk3 in the given path
 
 	\param	searchDir	starting path
 
@@ -2557,19 +2582,12 @@ static const char *searchWad(const char *searchDir)
 		return tempsw;
 	}
 
-	strcpy(tempsw, WADKEYWORD2);
-	fstemp = filesearch(tempsw, searchDir, NULL, true, 20);
-	if (fstemp == FS_FOUND)
-	{
-		pathonly(tempsw);
-		return tempsw;
-	}
 	return NULL;
 }
 
-/**	\brief go through all possible paths and look for srb2.srb
+/**	\brief go through all possible paths and look for srb2.pk3
 
-  \return path to srb2.srb if any
+  \return path to srb2.pk3 if any
 */
 static const char *locateWad(void)
 {
@@ -2592,22 +2610,22 @@ static const char *locateWad(void)
 
 #ifdef CMAKECONFIG
 #ifndef NDEBUG
-    I_OutputMsg(","CMAKE_ASSETS_DIR);
-    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	I_OutputMsg(","CMAKE_ASSETS_DIR);
+	strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 #endif
 
 #ifdef __APPLE__
-    OSX_GetResourcesPath(returnWadPath);
-    I_OutputMsg(",%s", returnWadPath);
-    if (isWadPathOk(returnWadPath))
-    {
-        return returnWadPath;
-    }
+	OSX_GetResourcesPath(returnWadPath);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
 #endif
 
 	// examine default dirs
@@ -2698,7 +2716,7 @@ const char *I_LocateWad(void)
 
 	if (waddir)
 	{
-		// change to the directory where we found srb2.srb
+		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
 		SetCurrentDirectoryA(waddir);
 #else
@@ -2709,10 +2727,33 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#if defined(LINUX) || defined(LINUX64)
+#ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
+#define MEMAVAILABLE "MemAvailable:"
 #define MEMFREE "MemFree:"
+#define CACHED "Cached:"
+#define BUFFERS "Buffers:"
+#define SHMEM "Shmem:"
+
+/* Parse the contents of /proc/meminfo (in buf), return value of "name"
+ * (example: MemTotal) */
+static long get_entry(const char* name, const char* buf)
+{
+	long val;
+	char* hit = strstr(buf, name);
+	if (hit == NULL) {
+		return -1;
+	}
+
+	errno = 0;
+	val = strtol(hit + strlen(name), NULL, 10);
+	if (errno != 0) {
+		CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
+		return -1;
+	}
+	return val;
+}
 #endif
 
 // quick fix for compil
@@ -2729,20 +2770,23 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	};
 	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
 	{
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_nlist(kd, namelist) != 0)
 	{
 		kvm_close (kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
 		sizeof (sum)) != sizeof (sum))
 	{
 		kvm_close(kd);
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 	kvm_close(kd);
@@ -2763,7 +2807,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (LINUX) || defined (LINUX64)
+#elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2771,6 +2815,11 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	UINT32 totalKBytes;
 	INT32 n;
 	INT32 meminfo_fd = -1;
+	long Cached;
+	long MemFree;
+	long Buffers;
+	long Shmem;
+	long MemAvailable = -1;
 
 	meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
 	n = read(meminfo_fd, buf, 1023);
@@ -2779,30 +2828,45 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (n < 0)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	buf[n] = '\0';
-	if (NULL == (memTag = strstr(buf, MEMTOTAL)))
+	if ((memTag = strstr(buf, MEMTOTAL)) == NULL)
 	{
 		// Error
-		*total = 0L;
+		if (total)
+			*total = 0L;
 		return 0;
 	}
 
 	memTag += sizeof (MEMTOTAL);
 	totalKBytes = atoi(memTag);
 
-	if (NULL == (memTag = strstr(buf, MEMFREE)))
+	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
 	{
-		// Error
-		*total = 0L;
-		return 0;
-	}
+		Cached = get_entry(CACHED, buf);
+		MemFree = get_entry(MEMFREE, buf);
+		Buffers = get_entry(BUFFERS, buf);
+		Shmem = get_entry(SHMEM, buf);
+		MemAvailable = Cached + MemFree + Buffers - Shmem;
 
-	memTag += sizeof (MEMFREE);
-	freeKBytes = atoi(memTag);
+		if (MemAvailable == -1)
+		{
+			// Error
+			if (total)
+				*total = 0L;
+			return 0;
+		}
+		freeKBytes = MemAvailable;
+	}
+	else
+	{
+		memTag += sizeof (MEMAVAILABLE);
+		freeKBytes = atoi(memTag);
+	}
 
 	if (total)
 		*total = totalKBytes << 10;
@@ -2812,7 +2876,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 48<<20;
 	return 48<<20;
-#endif /* LINUX */
+#endif
 }
 
 const CPUInfoFlags *I_CPUInfo(void)
@@ -2820,7 +2884,7 @@ const CPUInfoFlags *I_CPUInfo(void)
 #if defined (_WIN32)
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
-	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
 
 	ZeroMemory(&WIN_CPUInfo,sizeof (WIN_CPUInfo));
 	if (pfnCPUID)
@@ -2879,5 +2943,5 @@ const CPUInfoFlags *I_CPUInfo(void)
 }
 
 // note CPUAFFINITY code used to reside here
-FUNCMATH void I_RegisterSysCommands(void) {}
+void I_RegisterSysCommands(void) {}
 #endif

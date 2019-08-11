@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@ void Command_CountMobjs_f(void);
 void P_Ticker(boolean run);
 void P_PreTicker(INT32 frames);
 void P_DoTeamscrambling(void);
-void P_RemoveThinkerDelayed(void *pthinker); //killed
+void P_RemoveThinkerDelayed(thinker_t *thinker); //killed
 mobj_t *P_SetTarget(mobj_t **mo, mobj_t *target);   // killough 11/98
 
 #endif

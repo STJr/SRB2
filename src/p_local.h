@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,9 +39,6 @@
 // Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
 #define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
 
-// player radius used only in am_map.c
-#define PLAYERRADIUS (16*FRACUNIT)
-
 // MAXRADIUS is for precalculated sector block boxes
 // the spider demon is larger,
 // but we do not have any moving sectors nearby
@@ -64,15 +61,21 @@
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
-//
-// P_TICK
-//
-
-// both the head and tail of the thinker list
-extern thinker_t thinkercap;
+typedef enum
+{
+	THINK_POLYOBJ,
+	THINK_MAIN,
+	THINK_MOBJ,
+#ifdef ESLOPE
+	THINK_DYNSLOPE,
+#endif
+	THINK_PRECIP,
+	NUM_THINKERLISTS
+} thinklistnum_t; /**< Thinker lists. */
+extern thinker_t thlist[];
 
 void P_InitThinkers(void);
-void P_AddThinker(thinker_t *thinker);
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
 //
@@ -131,6 +134,7 @@ pflags_t P_GetJumpFlags(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
+boolean P_PlayerCanDamage(player_t *player, mobj_t *thing);
 boolean P_IsLocalPlayer(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
@@ -138,7 +142,7 @@ boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
-boolean P_PlayerHitFloor(player_t *player);
+boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
@@ -146,6 +150,7 @@ void P_SpawnShieldOrb(player_t *player);
 void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
+void P_GivePlayerSpheres(player_t *player, INT32 num_spheres);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
@@ -160,6 +165,7 @@ boolean P_AutoPause(void);
 void P_DoJumpShield(player_t *player);
 void P_DoBubbleBounce(player_t *player);
 void P_DoAbilityBounce(player_t *player, boolean changemomz);
+void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
 
@@ -176,7 +182,7 @@ void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
-void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
+boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
 #if 0
@@ -201,6 +207,47 @@ void P_PlayLivesJingle(player_t *player);
 boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);
 void P_RestoreMultiMusic(player_t *player);
+
+/// ------------------------
+/// Jingle stuff
+/// ------------------------
+
+typedef enum
+{
+	JT_NONE,   // Null state
+	JT_OTHER,  // Other state
+	JT_MASTER, // Main level music
+	JT_1UP, // Extra life
+	JT_SHOES,  // Speed shoes
+	JT_INV, // Invincibility
+	JT_MINV, // Mario Invincibility
+	JT_DROWN,  // Drowning
+	JT_SUPER,  // Super Sonic
+	JT_GOVER, // Game Over
+	JT_NIGHTSTIMEOUT, // NiGHTS Time Out (10 seconds)
+	JT_SSTIMEOUT, // NiGHTS Special Stage Time Out (10 seconds)
+
+	// these are not jingles
+	// JT_LCLEAR, // Level Clear
+	// JT_RACENT, // Multiplayer Intermission
+	// JT_CONTSC, // Continue
+
+	NUMJINGLES
+} jingletype_t;
+
+typedef struct
+{
+	char musname[7];
+	boolean looping;
+} jingle_t;
+
+extern jingle_t jingleinfo[NUMJINGLES];
+
+#define JINGLEPOSTFADE 1000
+
+void P_PlayJingle(player_t *player, jingletype_t jingletype);
+boolean P_EvaluateMusicStatus(UINT16 status);
+void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
 
 //
 // P_MOBJ
@@ -231,6 +278,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
 void P_RunOverlays(void);
+void P_HandleMinecartSegments(mobj_t *mobj);
 void P_MobjThinker(mobj_t *mobj);
 boolean P_RailThinker(mobj_t *mobj);
 void P_PushableThinker(mobj_t *mobj);
@@ -256,6 +304,7 @@ fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, f
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
+void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype);
 
 mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type);
 
@@ -279,6 +328,8 @@ void P_Attract(mobj_t *source, mobj_t *enemy, boolean nightsgrab);
 mobj_t *P_GetClosestAxis(mobj_t *source);
 
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover);
+
+void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot);
 
 void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 #define PAL_WHITE    1
@@ -307,6 +358,8 @@ void P_NewChaseDir(mobj_t *actor);
 boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed_t dist);
 
 mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers);
+void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo);
+#define P_IsFlickyCenter(type) (type > MT_FLICKY_01 && type < MT_SEED && (type - MT_FLICKY_01) % 2 ? 1 : 0)
 void P_InternalFlickyBubble(mobj_t *actor);
 void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fixed_t chasez);
 void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angle);
@@ -320,6 +373,7 @@ void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angl
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
+extern ffloor_t *tmfloorrover, *tmceilingrover;
 extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;
@@ -360,7 +414,7 @@ void P_DelPrecipSeclist(mprecipsecnode_t *node);
 void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y);
 void P_Initsecnode(void);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
@@ -410,6 +464,8 @@ typedef struct BasicFF_s
 #define DMG_DEATHPIT   0x80+3
 #define DMG_CRUSHED    0x80+4
 #define DMG_SPECTATOR  0x80+5
+// Masks
+#define DMG_CANHURTSELF 0x40 // Flag - can hurt self/team indirectly, such as through mines
 #define DMG_DEATHMASK  DMG_INSTAKILL // if bit 7 is set, this is a death type instead of a damage type
 
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period);

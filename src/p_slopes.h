@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2016 by Sonic Team Junior.
+// Copyright (C) 2015-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,13 +13,17 @@
 #ifndef P_SLOPES_H__
 #define P_SLOPES_H__
 
+#include "m_fixed.h" // Vectors
+
 #ifdef ESLOPE
-void P_ResetDynamicSlopes(void);
-void P_RunDynamicSlopes(void);
-// P_SpawnSlope_Line
-// Creates one or more slopes based on the given line type and front/back
-// sectors.
-void P_SpawnSlope_Line(int linenum);
+
+extern pslope_t *slopelist;
+extern UINT16 slopecount;
+
+void P_LinkSlopeThinkers (void);
+
+void P_CalculateSlopeNormal(pslope_t *slope);
+void P_ResetDynamicSlopes(const UINT32 fromsave);
 
 //
 // P_CopySectorSlope
@@ -41,7 +45,34 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope);
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
 void P_ButteredSlope(mobj_t *mo);
 
-#endif
 
-// EOF
+/// Dynamic plane type enum for the thinker. Will have a different functionality depending on this.
+typedef enum {
+	DP_FRONTFLOOR,
+	DP_FRONTCEIL,
+	DP_BACKFLOOR,
+	DP_BACKCEIL,
+	DP_VERTEX
+} dynplanetype_t;
+
+/// Permit slopes to be dynamically altered through a thinker.
+typedef struct
+{
+	thinker_t thinker;
+
+	pslope_t* slope;
+	dynplanetype_t type;
+
+	// Used by line slopes.
+	line_t* sourceline;
+	fixed_t extent;
+
+	// Used by mapthing vertex slopes.
+	INT16 tags[3];
+	vector3_t vex[3];
+} dynplanethink_t;
+
+void T_DynamicSlopeLine (dynplanethink_t* th);
+void T_DynamicSlopeVert (dynplanethink_t* th);
 #endif // #ifdef ESLOPE
+#endif // #ifndef P_SLOPES_H__

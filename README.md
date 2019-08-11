@@ -12,8 +12,7 @@
 - SDL2-Mixer (Linux/OS X only)
 - libupnp (Linux/OS X only)
 - libgme (Linux/OS X only)
-
-Warning: 64-bit builds are not netgame compatible with 32-bit builds. Use at your own risk.
+- libopenmpt (Linux/OS X only)
 
 ## Compiling
 

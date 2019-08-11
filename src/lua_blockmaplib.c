@@ -54,10 +54,12 @@ static UINT8 lib_searchBlockmap_Objects(lua_State *L, INT32 x, INT32 y, mobj_t *
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			blockfuncerror = true;
+			P_SetTarget(&bnext, NULL);
 			return 0; // *shrugs*
 		}
 		if (!lua_isnil(gL, -1))
 		{ // if nil, continue
+			P_SetTarget(&bnext, NULL);
 			if (lua_toboolean(gL, -1))
 				return 2; // stop whole search
 			else
@@ -185,9 +187,6 @@ static int lib_searchBlockmap(lua_State *L)
 	boolean retval = true;
 	UINT8 funcret = 0;
 	blockmap_func searchFunc;
-
-	if (gamestate != GS_LEVEL)
-		return luaL_error(L, "This function can only be used in a level!");
 
 	lua_remove(L, 1); // remove searchtype, stack is now function, mobj, [x1, x2, y1, y2]
 	luaL_checktype(L, 1, LUA_TFUNCTION);

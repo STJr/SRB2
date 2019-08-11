@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -87,7 +87,7 @@ static filetran_t transfer[MAXNETNODES];
 // Receiver structure
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
-char downloaddir[256] = "DOWNLOAD";
+char downloaddir[512] = "DOWNLOAD";
 
 #ifdef CLIENT_LOADINGSCREEN
 // for cl loading screen
@@ -324,16 +324,12 @@ INT32 CL_CheckFiles(void)
 	INT32 ret = 1;
 	size_t packetsize = 0;
 	size_t filestoget = 0;
-	serverinfo_pak *dummycheck = NULL;
-
-	// Shut the compiler up.
-	(void)dummycheck;
 
 //	if (M_CheckParm("-nofiles"))
 //		return 1;
 
 	// the first is the iwad (the main wad file)
-	// we don't care if it's called srb2.srb or srb2.wad.
+	// we don't care if it's called srb2.pk3 or not.
 	// Never download the IWAD, just assume it's there and identical
 	fileneeded[0].status = FS_OPEN;
 
@@ -371,8 +367,7 @@ INT32 CL_CheckFiles(void)
 	}
 
 	// See W_LoadWadFile in w_wad.c
-	for (i = 0; i < numwadfiles; i++)
-		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+	packetsize = packetsizetally;
 
 	for (i = 1; i < fileneedednum; i++)
 	{
@@ -396,7 +391,7 @@ INT32 CL_CheckFiles(void)
 		packetsize += nameonlylength(fileneeded[i].filename) + 22;
 
 		if ((numwadfiles+filestoget >= MAX_WADFILES)
-		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		|| (packetsize > MAXFILENEEDED*sizeof(UINT8)))
 			return 3;
 
 		filestoget++;
@@ -423,7 +418,7 @@ void CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename, NULL);
+			P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 		}
@@ -754,6 +749,7 @@ void Got_Filetxpak(void)
 	static INT32 filetime = 0;
 
 	if (!(strcmp(filename, "srb2.pk3")
+		&& strcmp(filename, "srb2.srb")
 		&& strcmp(filename, "srb2.wad")
 		&& strcmp(filename, "zones.dta")
 		&& strcmp(filename, "player.dta")
@@ -898,10 +894,11 @@ void nameonly(char *s)
 		{
 			ns = &(s[j+1]);
 			len = strlen(ns);
-			if (false)
-				M_Memcpy(s, ns, len+1);
-			else
-				memmove(s, ns, len+1);
+#if 0
+			M_Memcpy(s, ns, len+1);
+#else
+			memmove(s, ns, len+1);
+#endif
 			return;
 		}
 }
@@ -949,15 +946,37 @@ filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 	return FS_FOUND; // will never happen, but makes the compiler shut up
 }
 
+// Rewritten by Monster Iestyn to be less stupid
+// Note: if completepath is true, "filename" is modified, but only if FS_FOUND is going to be returned
+// (Don't worry about WinCE's version of filesearch, nobody cares about that OS anymore)
 filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean completepath)
 {
-	filestatus_t homecheck = filesearch(filename, srb2home, wantedmd5sum, false, 10);
-	if (homecheck == FS_FOUND)
-		return filesearch(filename, srb2home, wantedmd5sum, completepath, 10);
+	filestatus_t homecheck; // store result of last file search
+	boolean badmd5 = false; // store whether md5 was bad from either of the first two searches (if nothing was found in the third)
 
-	homecheck = filesearch(filename, srb2path, wantedmd5sum, false, 10);
-	if (homecheck == FS_FOUND)
-		return filesearch(filename, srb2path, wantedmd5sum, completepath, 10);
+	// first, check SRB2's "home" directory
+	homecheck = filesearch(filename, srb2home, wantedmd5sum, completepath, 10);
 
-	return filesearch(filename, ".", wantedmd5sum, completepath, 10);
+	if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+		return FS_FOUND;
+	else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+		badmd5 = true;
+	// if not found at all, just move on without doing anything
+
+	// next, check SRB2's "path" directory
+	homecheck = filesearch(filename, srb2path, wantedmd5sum, completepath, 10);
+
+	if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+		return FS_FOUND;
+	else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+		badmd5 = true;
+	// if not found at all, just move on without doing anything
+
+	// finally check "." directory
+	homecheck = filesearch(filename, ".", wantedmd5sum, completepath, 10);
+
+	if (homecheck != FS_NOTFOUND) // if not found this time, fall back on the below return statement
+		return homecheck; // otherwise return the result we got
+
+	return (badmd5 ? FS_MD5SUMBAD : FS_NOTFOUND); // md5 sum bad or file not found
 }

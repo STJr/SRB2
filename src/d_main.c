@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -71,6 +71,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "g_input.h" // tutorial mode control scheming
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -112,13 +113,10 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-boolean nomidimusic = false, nosound = false;
-boolean nodigimusic = false; // No fmod-based music
-
-// These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
+// These variables are in effect
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
+boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
 
@@ -154,41 +152,16 @@ void D_PostEvent(const event_t *ev)
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
 // just for lock this function
-#ifndef DOXYGEN
+#if defined (PC_DOS) && !defined (DOXYGEN)
 void D_PostEvent_end(void) {};
 #endif
 
 // modifier keys
+// Now handled in I_OsPolling
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
-//
-// D_ModifierKeyResponder
-// Sets global shift/ctrl/alt variables, never actually eats events
-//
-static inline void D_ModifierKeyResponder(event_t *ev)
-{
-	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
-	{
-		case KEY_LSHIFT: shiftdown |= 0x1; return;
-		case KEY_RSHIFT: shiftdown |= 0x2; return;
-		case KEY_LCTRL: ctrldown |= 0x1; return;
-		case KEY_RCTRL: ctrldown |= 0x2; return;
-		case KEY_LALT: altdown |= 0x1; return;
-		case KEY_RALT: altdown |= 0x2; return;
-		default: return;
-	}
-	else if (ev->type == ev_keyup) switch (ev->data1)
-	{
-		case KEY_LSHIFT: shiftdown &= ~0x1; return;
-		case KEY_RSHIFT: shiftdown &= ~0x2; return;
-		case KEY_LCTRL: ctrldown &= ~0x1; return;
-		case KEY_RCTRL: ctrldown &= ~0x2; return;
-		case KEY_LALT: altdown &= ~0x1; return;
-		case KEY_RALT: altdown &= ~0x2; return;
-		default: return;
-	}
-}
+boolean capslock = 0;	// gee i wonder what this does.
 
 //
 // D_ProcessEvents
@@ -201,9 +174,6 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
-
-		// Set global shift/ctrl/alt down variables
-		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -235,6 +205,9 @@ void D_ProcessEvents(void)
 // wipegamestate can be set to -1 to force a wipe on the next draw
 // added comment : there is a wipe eatch change of the gamestate
 gamestate_t wipegamestate = GS_LEVEL;
+// -1: Default; 0-n: Wipe index; INT16_MAX: do not wipe
+INT16 wipetypepre = -1;
+INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
@@ -268,7 +241,7 @@ static void D_Display(void)
 
 	// save the current screen if about to wipe
 	wipe = (gamestate != wipegamestate);
-	if (wipe)
+	if (wipe && wipetypepre != INT16_MAX)
 	{
 		// set for all later
 		wipedefindex = gamestate; // wipe_xxx_toblack
@@ -280,27 +253,37 @@ static void D_Display(void)
 				wipedefindex = wipe_multinter_toblack;
 		}
 
+		if (wipetypepre < 0 || !F_WipeExists(wipetypepre))
+			wipetypepre = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
-			 && wipedefs[wipedefindex] != UINT8_MAX)
+			if ((wipegamestate == (gamestate_t)FORCEWIPE ||
+			        (wipegamestate != (gamestate_t)FORCEWIPEOFF
+						&& !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
+					) // fades to black on its own timing, always
+			 && wipetypepre != UINT8_MAX)
 			{
 				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
-				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+				F_RunWipe(wipetypepre, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 			}
 
 			F_WipeStartScreen();
 		}
+
+		wipetypepre = -1;
 	}
+	else
+		wipetypepre = -1;
 
 	// do buffered drawing
 	switch (gamestate)
 	{
 		case GS_TITLESCREEN:
-			if (!titlemapinaction) {
+			if (!titlemapinaction || !curbghide) {
 				F_TitleScreenDrawer();
 				break;
 			}
@@ -309,8 +292,7 @@ static void D_Display(void)
 			if (!gametic)
 				break;
 			HU_Erase();
-			if (automapactive)
-				AM_Drawer();
+			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
@@ -326,6 +308,12 @@ static void D_Display(void)
 			F_IntroDrawer();
 			if (wipegamestate == (gamestate_t)-1)
 				wipe = true;
+			break;
+
+		case GS_ENDING:
+			F_EndingDrawer();
+			HU_Erase();
+			HU_Drawer();
 			break;
 
 		case GS_CUTSCENE:
@@ -361,88 +349,96 @@ static void D_Display(void)
 			break;
 	}
 
-	// clean up border stuff
-	// see if the border needs to be initially drawn
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+	// STUPID race condition...
+	if (wipegamestate == GS_INTRO && gamestate == GS_TITLESCREEN)
+		wipegamestate = FORCEWIPEOFF;
+	else
 	{
-		// draw the view directly
+		wipegamestate = gamestate;
 
-		if (!automapactive && !dedicated && cv_renderview.value)
+		// clean up border stuff
+		// see if the border needs to be initially drawn
+		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide))
 		{
-			if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-			{
-				topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-				objectsdrawn = 0;
-#ifdef HWRENDER
-				if (rendermode != render_soft)
-					HWR_RenderPlayerView(0, &players[displayplayer]);
-				else
-#endif
-				if (rendermode != render_none)
-					R_RenderPlayerView(&players[displayplayer]);
-			}
+			// draw the view directly
 
-			// render the second screen
-			if (splitscreen && players[secondarydisplayplayer].mo)
+			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-#ifdef HWRENDER
-				if (rendermode != render_soft)
-					HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-				else
-#endif
-				if (rendermode != render_none)
+				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
-					viewwindowy = vid.height / 2;
-					M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					objectsdrawn = 0;
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(0, &players[displayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+						R_RenderPlayerView(&players[displayplayer]);
+				}
 
-					R_RenderPlayerView(&players[secondarydisplayplayer]);
+				// render the second screen
+				if (splitscreen && players[secondarydisplayplayer].mo)
+				{
+	#ifdef HWRENDER
+					if (rendermode != render_soft)
+						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+					else
+	#endif
+					if (rendermode != render_none)
+					{
+						viewwindowy = vid.height / 2;
+						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
-					viewwindowy = 0;
-					M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+
+						R_RenderPlayerView(&players[secondarydisplayplayer]);
+
+						viewwindowy = 0;
+						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+					}
+				}
+
+				// Image postprocessing effect
+				if (rendermode == render_soft)
+				{
+					if (postimgtype)
+						V_DoPostProcessor(0, postimgtype, postimgparam);
+					if (postimgtype2)
+						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
 			}
 
-			// Image postprocessing effect
-			if (rendermode == render_soft)
+			if (lastdraw)
 			{
-				if (postimgtype)
-					V_DoPostProcessor(0, postimgtype, postimgparam);
-				if (postimgtype2)
-					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+				if (rendermode == render_soft)
+				{
+					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+					usebuffer = true;
+				}
+				lastdraw = false;
 			}
-		}
 
-		if (lastdraw)
-		{
-			if (rendermode == render_soft)
+			if (gamestate == GS_LEVEL)
 			{
-				VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-				usebuffer = true;
+				ST_Drawer();
+				F_TextPromptDrawer();
+				HU_Drawer();
 			}
-			lastdraw = false;
+			else
+				F_TitleScreenDrawer();
 		}
-
-		if (gamestate == GS_LEVEL)
-		{
-			ST_Drawer();
-			HU_Drawer();
-		}
-		else
-			F_TitleScreenDrawer();
 	}
 
 	// change gamma if needed
 	// (GS_LEVEL handles this already due to level-specific palettes)
-	if (forcerefresh && gamestate != GS_LEVEL)
+	if (forcerefresh && !(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
 		V_SetPalette(0);
-
-	wipegamestate = gamestate;
 
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
 	{
+#if 0
 		INT32 py;
 		patch_t *patch;
 		if (automapactive)
@@ -451,6 +447,11 @@ static void D_Display(void)
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_CACHE);
 		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+#else
+		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
+		V_DrawCenteredString(BASEVIDWIDTH/2, y - (4), V_YELLOWMAP, "Game Paused");
+#endif
 	}
 
 	// vid size change is now finished if it was on...
@@ -466,18 +467,25 @@ static void D_Display(void)
 	//
 	// wipe update
 	//
-	if (wipe)
+	if (wipe && wipetypepost != INT16_MAX)
 	{
 		// note: moved up here because NetUpdate does input changes
 		// and input during wipe tends to mess things up
 		wipedefindex += WIPEFINALSHIFT;
 
+		if (wipetypepost < 0 || !F_WipeExists(wipetypepost))
+			wipetypepost = wipedefs[wipedefindex];
+
 		if (rendermode != render_none)
 		{
 			F_WipeEndScreen();
-			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+			F_RunWipe(wipetypepost, gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN);
 		}
+
+		wipetypepost = -1;
 	}
+	else
+		wipetypepost = -1;
 
 	NetUpdate(); // send out any new accumulation
 
@@ -730,17 +738,27 @@ void D_StartTitle(void)
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
+	F_InitMenuPresValues();
 	F_StartTitleScreen();
-	CON_ToggleOff();
+
+	currentMenu = &MainDef; // reset the current menu ID
 
 	// Reset the palette
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_SetPaletteColor(0);
-	else
-#endif
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	// The title screen is obviously not a tutorial! (Unless I'm mistaken)
+	if (tutorialmode && tutorialgcs)
+	{
+		G_CopyControls(gamecontrol, gamecontroldefault[gcs_custom], gcl_tutorial_full, num_gcl_tutorial_full); // using gcs_custom as temp storage
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		M_StartMessage("Do you want to \x82save the recommended \x82movement controls?\x80\n\nPress 'Y' or 'Enter' to confirm\nPress 'N' or any key to keep \nyour current controls",
+			M_TutorialSaveControlResponse, MM_YESNO);
+	}
+	tutorialmode = false;
 }
 
 //
@@ -774,21 +792,17 @@ static inline void D_CleanFile(void)
 	}
 }
 
-#ifndef _MAX_PATH
-#define _MAX_PATH MAX_WADPATH
-#endif
-
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
 
 static void IdentifyVersion(void)
 {
-	char *srb2wad1, *srb2wad2;
+	char *srb2wad;
 	const char *srb2waddir = NULL;
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	// change to the directory where 'srb2.srb' is found
+	// change to the directory where 'srb2.pk3' is found
 	srb2waddir = I_LocateWad();
 #endif
 
@@ -813,31 +827,24 @@ static void IdentifyVersion(void)
 		srb2waddir = I_GetWadDir();
 #endif
 	// Commercial.
-	srb2wad1 = malloc(strlen(srb2waddir)+1+8+1);
-	srb2wad2 = malloc(strlen(srb2waddir)+1+8+1);
-	if (srb2wad1 == NULL && srb2wad2 == NULL)
+	srb2wad = malloc(strlen(srb2waddir)+1+8+1);
+	if (srb2wad == NULL)
 		I_Error("No more free memory to look in %s", srb2waddir);
-	if (srb2wad1 != NULL)
-		sprintf(srb2wad1, pandf, srb2waddir, "srb2.pk3");
-	if (srb2wad2 != NULL)
-		sprintf(srb2wad2, pandf, srb2waddir, "srb2.wad");
+	else
+		sprintf(srb2wad, pandf, srb2waddir, "srb2.pk3");
 
 	// will be overwritten in case of -cdrom or unix/win home
 	snprintf(configfile, sizeof configfile, "%s" PATHSEP CONFIGFILENAME, srb2waddir);
 	configfile[sizeof configfile - 1] = '\0';
 
 	// Load the IWAD
-	if (srb2wad2 != NULL && FIL_ReadFileOK(srb2wad2))
-		D_AddFile(srb2wad2);
-	else if (srb2wad1 != NULL && FIL_ReadFileOK(srb2wad1))
-		D_AddFile(srb2wad1);
+	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
+		D_AddFile(srb2wad);
 	else
-		I_Error("SRB2.SRB/SRB2.WAD not found! Expected in %s, ss files: %s and %s\n", srb2waddir, srb2wad1, srb2wad2);
+		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
-	if (srb2wad1)
-		free(srb2wad1);
-	if (srb2wad2)
-		free(srb2wad2);
+	if (srb2wad)
+		free(srb2wad);
 
 	// if you change the ordering of this or add/remove a file, be sure to update the md5
 	// checking in D_SRB2Main
@@ -850,30 +857,25 @@ static void IdentifyVersion(void)
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
-		const char *musicfile = "music.dta";
-		const char *musicpath = va(pandf,srb2waddir,musicfile);
-		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
-		if (ms == 1)
-			D_AddFile(musicpath);
-		else if (ms == 0)
-			I_Error("File %s has been modified with non-music lumps",musicfile);
-	}
-#endif
+#define MUSICTEST(str) \
+		{\
+			const char *musicpath = va(pandf,srb2waddir,str);\
+			int ms = W_VerifyNMUSlumps(musicpath); \
+			if (ms == 1) \
+				D_AddFile(musicpath); \
+			else if (ms == 0) \
+				I_Error("File "str" has been modified with non-music/sound lumps"); \
+		}
 
-#ifdef DEVELOP // This section can be deleted when music_new is merged with music.dta
-	{
-		const char *musicfile = "music_new.dta";
-		const char *musicpath = va(pandf,srb2waddir,musicfile);
-		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
-		if (ms == 1)
-			D_AddFile(musicpath);
-		else if (ms == 0)
-			I_Error("File %s has been modified with non-music lumps",musicfile);
+		MUSICTEST("music.dta")
+#ifdef DEVELOP // remove when music_new.dta is merged into music.dta
+		MUSICTEST("music_new.dta")
+#endif
 	}
 #endif
 }
@@ -945,6 +947,20 @@ void D_SRB2Main(void)
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
+
+	// Print GPL notice for our console users (Linux)
+	CONS_Printf(
+	"\n\nSonic Robo Blast 2\n"
+	"Copyright (C) 1998-2018 by Sonic Team Junior\n\n"
+	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
+	"This is free software, and you are welcome to redistribute it\n"
+	"and/or modify it under the terms of the GNU General Public License\n"
+	"as published by the Free Software Foundation; either version 2 of\n"
+	"the License, or (at your option) any later version.\n"
+	"See the 'LICENSE.txt' file for details.\n\n"
+	"Sonic the Hedgehog and related characters are trademarks of SEGA.\n"
+	"We do not claim ownership of SEGA's intellectual property used\n"
+	"in this program.\n\n");
 
 	// keep error messages until the final flush(stderr)
 #if !defined (PC_DOS) && !defined(NOTERMIOS)
@@ -1044,19 +1060,10 @@ void D_SRB2Main(void)
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
-	else
-	{
-		size_t z;
-		char junkpw[25];
-		for (z = 0; z < 24; z++)
-			junkpw[z] = (char)(rand() & 64)+32;
-		junkpw[24] = '\0';
-		D_SetPassword(junkpw);
-	}
 
 	// add any files specified on the command line with -file wadfile
 	// to the wad list
-	if (!(M_CheckParm("-connect")))
+	if (!(M_CheckParm("-connect") && !M_CheckParm("-server")))
 	{
 		if (M_CheckParm("-file"))
 		{
@@ -1107,6 +1114,13 @@ void D_SRB2Main(void)
 	// adapt tables to SRB2's needs, including extra slots for dehacked file support
 	P_PatchInfoTables();
 
+	// initiate menu metadata before SOCcing them
+	M_InitMenuPresTables();
+
+	// init title screen display params
+	if (M_CheckParm("-connect"))
+		F_InitMenuPresValues();
+
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
@@ -1116,12 +1130,39 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup default unlockable conditions
-	M_SetupDefaultConditionSets();
+	// Setup character tables
+	// Have to be done here before files are loaded
+	M_InitCharacterTables();
+
+	mainwads = 0;
+
+#ifndef DEVELOP // md5s last updated 12/14/14
+
+	// Check MD5s of autoloaded files
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_SRB2_PK3); // srb2.pk3
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PLAYER_DTA); // player.dta
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
+#endif
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	//mainwads++; // neither does music_new.dta
+#else
+
+	mainwads++;	// srb2.pk3
+	mainwads++; // zones.dta
+	mainwads++; // player.dta
+#ifdef USE_PATCH_DTA
+	mainwads++; // patch.dta
+#endif
+	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	//mainwads++; // neither does music_new.dta
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	if (!W_InitMultipleFiles(startupwadfiles))
+	if (!W_InitMultipleFiles(startupwadfiles, mainwads))
 #ifdef _DEBUG
 		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
 #else
@@ -1129,27 +1170,9 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#ifndef DEVELOP // md5s last updated 12/14/14
-
-	// Check MD5s of autoloaded files
-	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
-	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
-	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-#ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(3, ASSET_HASH_PATCH_DTA); // patch.dta
-#endif
-
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
 
-	mainwads = 3; // there are 3 wads not to unload
-#ifdef USE_PATCH_DTA
-	++mainwads; // patch.dta adds one more
-#endif
-#ifdef DEVELOP
-	++mainwads; // music_new, too
-#endif
+	mainwadstally = packetsizetally;
 
 	mainwadstally = packetsizetally;
 
@@ -1211,21 +1234,29 @@ void D_SRB2Main(void)
 	R_Init();
 
 	// setting up sound
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	if (dedicated)
+	{
+		sound_disabled = true;
+		midi_disabled = digital_disabled = true;
+	}
+	else
+	{
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
+	}
 	if (M_CheckParm("-nosound"))
-		nosound = true;
+		sound_disabled = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		nomidimusic = nodigimusic = true;
+		midi_disabled = digital_disabled = true;
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			nomidimusic = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
-			nodigimusic = true; // WARNING: DOS version initmusic in I_StartupSound
+			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
@@ -1323,7 +1354,7 @@ void D_SRB2Main(void)
 		}
 	}
 
-	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
+	if (autostart || netgame)
 	{
 		gameaction = ga_nothing;
 
@@ -1357,8 +1388,7 @@ void D_SRB2Main(void)
 			}
 		}
 
-		if (server && !M_CheckParm("+map") && !M_CheckParm("+connect")
-			&& !M_CheckParm("-connect"))
+		if (server && !M_CheckParm("+map"))
 		{
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
@@ -1377,12 +1407,13 @@ void D_SRB2Main(void)
 	}
 	else if (M_CheckParm("-skipintro"))
 	{
-		CON_ToggleOff();
-		CON_ClearHUD();
+		F_InitMenuPresValues();
 		F_StartTitleScreen();
 	}
 	else
 		F_StartIntro(); // Tails 03-03-2002
+
+	CON_ToggleOff();
 
 	if (dedicated && server)
 	{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -409,7 +409,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 		// new door thinker
 		rtn = 1;
 		ceiling = Z_Calloc(sizeof (*ceiling), PU_LEVSPEC, NULL);
-		P_AddThinker(&ceiling->thinker);
+		P_AddThinker(THINK_MAIN, &ceiling->thinker);
 		sec->ceilingdata = ceiling;
 		ceiling->thinker.function.acp1 = (actionf_p1)T_MoveCeiling;
 		ceiling->sector = sec;
@@ -629,7 +629,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 		// new door thinker
 		rtn = 1;
 		ceiling = Z_Calloc(sizeof (*ceiling), PU_LEVSPEC, NULL);
-		P_AddThinker(&ceiling->thinker);
+		P_AddThinker(THINK_MAIN, &ceiling->thinker);
 		sec->ceilingdata = ceiling;
 		ceiling->thinker.function.acp1 = (actionf_p1)T_CrushCeiling;
 		ceiling->sector = sec;

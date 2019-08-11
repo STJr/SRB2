@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,12 +27,14 @@ typedef enum
 
 	GS_TITLESCREEN,     // title screen
 	GS_TIMEATTACK,      // time attack menu
+
 	GS_CREDITS,         // credit sequence
 	GS_EVALUATION,      // Evaluation at the end of a game.
-	GS_GAMEEND,         // game end sequence
+	GS_GAMEEND,         // game end sequence - "did you get all those chaos emeralds?"
 
 	// Hardcoded fades or other fading methods
 	GS_INTRO,           // introduction
+	GS_ENDING,          // currently shared between bad and good endings
 	GS_CUTSCENE,        // custom cutscene
 
 	// Not fadable
@@ -50,6 +52,7 @@ typedef enum
 } gameaction_t;
 
 extern gamestate_t gamestate;
+extern UINT8 titlemapinaction;
 extern UINT8 ultimatemode; // was sk_insane
 extern gameaction_t gameaction;
 

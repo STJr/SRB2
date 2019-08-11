@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2016 by Sonic Team Junior.
+// Copyright (C) 2006-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -207,6 +207,31 @@ typedef struct polydisplace_s
 	fixed_t oldHeights;
 } polydisplace_t;
 
+typedef struct polyrotdisplace_s
+{
+	thinker_t thinker; // must be first
+
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t rotscale;
+	UINT8 turnobjs;
+	fixed_t oldHeights;
+} polyrotdisplace_t;
+
+typedef struct polyfade_s
+{
+	thinker_t thinker; // must be first
+
+	INT32 polyObjNum;
+	INT32 sourcevalue;
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	boolean ticbased;
+	INT32 duration;
+	INT32 timer;
+} polyfade_t;
+
 //
 // Line Activation Data Structures
 //
@@ -266,6 +291,24 @@ typedef struct polydisplacedata_s
 	fixed_t dy;
 } polydisplacedata_t;
 
+typedef struct polyrotdisplacedata_s
+{
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t rotscale;
+	UINT8 turnobjs;
+} polyrotdisplacedata_t;
+
+typedef struct polyfadedata_s
+{
+	INT32 polyObjNum;
+	INT32 destvalue;
+	boolean docollision;
+	boolean doghostfade;
+	boolean ticbased;
+	INT32 speed;
+} polyfadedata_t;
+
 //
 // Functions
 //
@@ -286,14 +329,18 @@ void T_PolyObjWaypoint (polywaypoint_t *);
 void T_PolyDoorSlide(polyslidedoor_t *);
 void T_PolyDoorSwing(polyswingdoor_t *);
 void T_PolyObjDisplace  (polydisplace_t *);
+void T_PolyObjRotDisplace  (polyrotdisplace_t *);
 void T_PolyObjFlag  (polymove_t *);
+void T_PolyObjFade  (polyfade_t *);
 
 INT32 EV_DoPolyDoor(polydoordata_t *);
 INT32 EV_DoPolyObjMove(polymovedata_t *);
 INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *);
 INT32 EV_DoPolyObjRotate(polyrotdata_t *);
 INT32 EV_DoPolyObjDisplace(polydisplacedata_t *);
+INT32 EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *);
 INT32 EV_DoPolyObjFlag(struct line_s *);
+INT32 EV_DoPolyObjFade(polyfadedata_t *);
 
 
 //

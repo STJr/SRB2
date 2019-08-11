@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2016 by Sonic Team Junior.
+// Copyright (C) 2011-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -275,8 +275,7 @@ void B_RespawnBot(INT32 playernum)
 	player->accelstart = sonic->player->accelstart;
 	player->thrustfactor = sonic->player->thrustfactor;
 	player->normalspeed = sonic->player->normalspeed;
-	player->pflags |= PF_AUTOBRAKE;
-	player->pflags &= ~PF_DIRECTIONCHAR;
+	player->pflags |= PF_AUTOBRAKE|(sonic->player->pflags & PF_DIRECTIONCHAR);
 
 	P_TeleportMove(tails, x, y, z);
 	if (player->charability == CA_FLY)

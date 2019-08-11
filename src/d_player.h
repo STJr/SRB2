@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -196,6 +196,7 @@ typedef enum
 	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
+	SH_PINK, // PITY IN PINK!
 
 	// Normal shields that use flags
 	SH_ATTRACT = SH_PITY|SH_PROTECTELECTRIC,
@@ -232,7 +233,8 @@ typedef enum
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
-	CR_MACESPIN
+	CR_MACESPIN,
+	CR_MINECART
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -324,7 +326,8 @@ typedef struct player_s
 	angle_t drawangle;
 
 	// player's ring count
-	INT32 rings;
+	INT16 rings;
+	INT16 spheres;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
@@ -381,7 +384,7 @@ typedef struct player_s
 	fixed_t height; // Bounding box changes.
 	fixed_t spinheight;
 
-	SINT8 lives;
+	SINT8 lives; // number of lives - if == INFLIVES, the player has infinite lives
 	SINT8 continues; // continues that player has acquired
 
 	SINT8 xtralife; // Ring Extra Life counter
@@ -454,16 +457,28 @@ typedef struct player_s
 	UINT8 drilldelay;
 	boolean bonustime; // Capsule destroyed, now it's bonus time!
 	mobj_t *capsule; // Go inside the capsule
+	mobj_t *drone; // Move center to the drone
+	fixed_t oldscale; // Pre-Nightserize scale
 	UINT8 mare; // Current mare
+	UINT8 marelap; // Current mare lap
+	UINT8 marebonuslap; // Current mare lap starting from bonus time
 
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
 	tic_t finishedtime; // Time it took you to finish the mare (used for display)
-	INT16 finishedrings; // The rings you had left upon finishing the mare
+	tic_t lapbegunat; // Leveltime when lap begun
+	tic_t lapstartedtime; // Time which you started this lap with.
+	INT16 finishedspheres; // The spheres you had left upon finishing the mare
+	INT16 finishedrings; // The rings/stars you had left upon finishing the mare
 	UINT32 marescore; // score for this nights stage
 	UINT32 lastmarescore; // score for the last mare
+	UINT32 totalmarescore; // score for all mares
 	UINT8 lastmare; // previous mare
+	UINT8 lastmarelap; // previous mare lap
+	UINT8 lastmarebonuslap; // previous mare bonus lap
+	UINT8 totalmarelap; // total mare lap
+	UINT8 totalmarebonuslap; // total mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
 	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks
@@ -488,5 +503,8 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+// Value for infinite lives
+#define INFLIVES 0x7F
 
 #endif
