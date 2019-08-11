@@ -1180,8 +1180,11 @@ void I_FinishUpdate(void)
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
 
-	if (cv_ticrate.value)
-		SCR_DisplayTicRate();
+	if (st_overlay)
+	{
+		if (cv_ticrate.value)
+			SCR_DisplayTicRate();
+	}
 
 	if (rendermode == render_soft && screens[0])
 	{
