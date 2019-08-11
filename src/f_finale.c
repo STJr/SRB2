@@ -46,7 +46,7 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollxspeed = 80;
+INT32 titlescrollxspeed = 20;
 INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 

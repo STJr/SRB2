@@ -97,7 +97,7 @@ boolean runemeraldmanager = false;
 UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
-UINT8  numDemos      = 3;
+UINT8  numDemos      = 0;
 UINT32 demoDelayTime = 15*TICRATE;
 UINT32 demoIdleTime  = 3*TICRATE;
 
