@@ -10391,7 +10391,7 @@ static void P_MinecartThink(player_t *player)
 	if (P_IsObjectOnGround(minecart))
 	{
 		sector_t *sec;
-		INT32 lnum;
+		INT32 lnum = -1;
 		fixed_t dummy;
 
 		// Just hit floor.
