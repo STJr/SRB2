@@ -4258,7 +4258,7 @@ static void P_GenericBossThinker(mobj_t *mobj)
 // AI for the first boss.
 static void P_Boss1Thinker(mobj_t *mobj)
 {
-	if (mobj->flags2 & MF2_FRET && (statenum_t)(mobj->state-states) < mobj->info->painstate) {
+	if (mobj->flags2 & MF2_FRET && mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1) {
 		mobj->flags2 &= ~(MF2_FRET|MF2_SKULLFLY);
 		mobj->momx = mobj->momy = mobj->momz = 0;
 	}
