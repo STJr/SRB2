@@ -527,12 +527,18 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	{
 		switch (skinnum)
 		{
-			case TC_RAINBOW:
-				R_RainbowColormap(dest_colormap, color);
-				return;
 			case TC_ALLWHITE:
 				memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
 				return;
+			case TC_RAINBOW:
+				if (color >= MAXTRANSLATIONS)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					R_RainbowColormap(dest_colormap, color);
+					return;
+				}
+				break;
 			case TC_BLINK:
 				if (color >= MAXTRANSLATIONS)
 					I_Error("Invalid skin color #%hu.", (UINT16)color);
@@ -541,21 +547,20 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 					memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
 					return;
 				}
-				/* FALLTHRU */
-			case TC_BOSS:
-			case TC_METALSONIC:
+				break;
 			default:
-				for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
-					dest_colormap[i] = (UINT8)i;
-
-				// White!
-				if (skinnum == TC_BOSS)
-					dest_colormap[31] = 0;
-				else if (skinnum == TC_METALSONIC)
-					dest_colormap[159] = 0;
-
-				return;
+				break;
 		}
+
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
+
+		// White!
+		if (skinnum == TC_BOSS)
+			dest_colormap[31] = 0;
+		else if (skinnum == TC_METALSONIC)
+			dest_colormap[159] = 0;
+		return;
 	}
 	else if (color == SKINCOLOR_NONE)
 	{
