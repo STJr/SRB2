@@ -6980,8 +6980,8 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = (charskin->prefcolor - 1)*2;
-					col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+					col = charskin->prefcolor - 1;
+					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);
