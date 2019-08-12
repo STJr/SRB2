@@ -523,33 +523,44 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	INT32 i, starttranscolor, skinramplength;
 
 	// Handle a couple of simple special cases
-	if (skinnum == TC_BOSS
-		|| skinnum == TC_ALLWHITE
-		|| skinnum == TC_METALSONIC
-		|| skinnum == TC_BLINK
-		|| color == SKINCOLOR_NONE)
+	if (skinnum < TC_DEFAULT)
 	{
-		if (skinnum == TC_ALLWHITE)
-			memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
-		else if (skinnum == TC_BLINK && color != SKINCOLOR_NONE)
-			memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
-		else
+		switch (skinnum)
 		{
-			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
-				dest_colormap[i] = (UINT8)i;
+			case TC_RAINBOW:
+				R_RainbowColormap(dest_colormap, color);
+				return;
+			case TC_ALLWHITE:
+				memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
+				return;
+			case TC_BLINK:
+				if (color >= MAXTRANSLATIONS)
+					I_Error("Invalid skin color #%hu.", (UINT16)color);
+				if (color != SKINCOLOR_NONE)
+				{
+					memset(dest_colormap, Color_Index[color-1][3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
+					return;
+				}
+				/* FALLTHRU */
+			case TC_BOSS:
+			case TC_METALSONIC:
+			default:
+				for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+					dest_colormap[i] = (UINT8)i;
+
+				// White!
+				if (skinnum == TC_BOSS)
+					dest_colormap[31] = 0;
+				else if (skinnum == TC_METALSONIC)
+					dest_colormap[159] = 0;
+
+				return;
 		}
-
-		// White!
-		if (skinnum == TC_BOSS)
-			dest_colormap[31] = 0;
-		else if (skinnum == TC_METALSONIC)
-			dest_colormap[159] = 0;
-
-		return;
 	}
-	else if (skinnum == TC_RAINBOW)
+	else if (color == SKINCOLOR_NONE)
 	{
-		R_RainbowColormap(dest_colormap, color);
+		for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+			dest_colormap[i] = (UINT8)i;
 		return;
 	}
 
@@ -557,6 +568,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		I_Error("Invalid skin color #%hu.", (UINT16)color);
 
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
+
+	if (starttranscolor >= NUM_PALETTE_ENTRIES)
+		I_Error("Invalid startcolor #%d.", starttranscolor);
 
 	// Fill in the entries of the palette that are fixed
 	for (i = 0; i < starttranscolor; i++)
@@ -570,7 +584,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		skinramplength = 16;
 	}
 	else
-		skinramplength = i - NUM_PALETTE_ENTRIES;
+		skinramplength = i - NUM_PALETTE_ENTRIES; // shouldn't this be NUM_PALETTE_ENTRIES - starttranscolor?
 
 	// Build the translated ramp
 	for (i = 0; i < skinramplength; i++)
@@ -592,13 +606,16 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags)
 	INT32 skintableindex;
 
 	// Adjust if we want the default colormap
-	if (skinnum == TC_DEFAULT) skintableindex = DEFAULT_TT_CACHE_INDEX;
-	else if (skinnum == TC_BOSS) skintableindex = BOSS_TT_CACHE_INDEX;
-	else if (skinnum == TC_METALSONIC) skintableindex = METALSONIC_TT_CACHE_INDEX;
-	else if (skinnum == TC_ALLWHITE) skintableindex = ALLWHITE_TT_CACHE_INDEX;
-	else if (skinnum == TC_RAINBOW) skintableindex = RAINBOW_TT_CACHE_INDEX;
-	else if (skinnum == TC_BLINK) skintableindex = BLINK_TT_CACHE_INDEX;
-	else skintableindex = skinnum;
+	switch (skinnum)
+	{
+		case TC_DEFAULT:    skintableindex = DEFAULT_TT_CACHE_INDEX; break;
+		case TC_BOSS:       skintableindex = BOSS_TT_CACHE_INDEX; break;
+		case TC_METALSONIC: skintableindex = METALSONIC_TT_CACHE_INDEX; break;
+		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
+		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
+		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
+		     default:       skintableindex = skinnum; break;
+	}
 
 	if (flags & GTC_CACHE)
 	{
