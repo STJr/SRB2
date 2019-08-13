@@ -7852,7 +7852,7 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
 						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
 						MT_SONIC3KBOSSEXPLODE);
-					S_StartSound(explosion, sfx_cybdth);
+					S_StartSound(explosion, sfx_s3kb4);
 				}
 				if (mobj->movedir == DMG_DROWNED)
 					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning

@@ -6514,7 +6514,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
-				MT_SONIC3KBOSSEXPLODE),sfx_cybdth);
+				MT_SONIC3KBOSSEXPLODE),sfx_s3kb4);
 		}
 		else
 		{

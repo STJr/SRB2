@@ -4592,7 +4592,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FACESTABBER_CHARGE1, // missilestate
 		S_FACESTABBER_DIE1, // deathstate
 		S_NULL,         // xdeathstate
-		sfx_cybdth,     // deathsound
+		sfx_s3kb4,      // deathsound
 		3,              // speed
 		32*FRACUNIT,    // radius
 		72*FRACUNIT,    // height
@@ -5159,7 +5159,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE_RATK1, // missilestate
 		S_EGGMOBILE_DIE1,  // deathstate
 		S_EGGMOBILE_FLEE1, // xdeathstate
-		sfx_cybdth,        // deathsound
+		sfx_s3kb4,         // deathsound
 		4,                 // speed
 		24*FRACUNIT,       // radius
 		76*FRACUNIT,       // height
@@ -5294,7 +5294,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		(statenum_t)MT_EGGMOBILE2_POGO, // missilestate
 		S_EGGMOBILE2_DIE1, // deathstate
 		S_EGGMOBILE2_FLEE1,// xdeathstate
-		sfx_cybdth,        // deathsound
+		sfx_s3kb4,         // deathsound
 		2*FRACUNIT,        // speed
 		24*FRACUNIT,       // radius
 		76*FRACUNIT,       // height
@@ -5483,7 +5483,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE3_LAUGH1,// missilestate
 		S_EGGMOBILE3_DIE1,  // deathstate
 		S_EGGMOBILE3_FLEE1, // xdeathstate
-		sfx_cybdth,         // deathsound
+		sfx_s3kb4,          // deathsound
 		8*FRACUNIT,         // speed
 		32*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
@@ -5591,7 +5591,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE4_RATK1,// missilestate
 		S_EGGMOBILE4_DIE1, // deathstate
 		S_EGGMOBILE4_FLEE1,// xdeathstate
-		sfx_cybdth,        // deathsound
+		sfx_s3kb4,         // deathsound
 		0,                 // speed
 		24*FRACUNIT,       // radius
 		76*FRACUNIT,       // height
@@ -6320,7 +6320,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_METALSONIC_SHOOT, // missilestate
 		S_METALSONIC_DEATH1,// deathstate
 		S_METALSONIC_FLEE1, // xdeathstate
-		sfx_s3k6e,          // deathsound
+		sfx_s3kb4,          // deathsound
 		MT_ENERGYBALL,      // speed
 		16*FRACUNIT,        // radius
 		48*FRACUNIT,        // height
@@ -6507,7 +6507,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_BOSSEXPLODE,  // deathstate
+		S_SONIC3KBOSSEXPLOSION1, // deathstate
 		S_NULL,         // xdeathstate
 		sfx_cybdth,     // deathsound
 		38*FRACUNIT,    // speed
@@ -18936,7 +18936,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_HIVEELEMENTAL_DIE1, // deathstate
 		S_NULL,         // xdeathstate
-		sfx_cybdth,     // deathsound
+		sfx_s3kb4,      // deathsound
 		6*FRACUNIT,     // speed
 		30*FRACUNIT,    // radius
 		80*FRACUNIT,    // height
