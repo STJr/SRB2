@@ -70,7 +70,6 @@ mobj_t *titlemapcameraref = NULL;
 // menu presentation state
 char curbgname[9];
 SINT8 curfadevalue;
-boolean curhidepics;
 INT32 curbgcolor;
 INT32 curbgxspeed;
 INT32 curbgyspeed;
@@ -80,6 +79,30 @@ static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
 static UINT32 demoIdleLeft;
 
+// customizable title screen graphics
+
+ttmode_enum ttmode = TTMODE_OLD;
+UINT8 ttscale = 1; // FRACUNIT / ttscale
+INT32 ttcounterset = -1;
+// ttmode user vars
+char ttname[9];
+INT16 ttx = 0;
+INT16 tty = 0;
+INT16 ttloop = 0;
+UINT16 tttics = 1;
+
+boolean curhidepics;
+ttmode_enum curttmode;
+UINT8 curttscale;
+INT32 curttcounterset;
+// ttmode user vars
+char curttname[9];
+INT16 curttx;
+INT16 curtty;
+INT16 curttloop;
+UINT16 curtttics;
+
+// ttmode old
 static patch_t *ttbanner; // white banner with "robo blast" and "2"
 static patch_t *ttwing; // wing background
 static patch_t *ttsonic; // "SONIC"
@@ -95,6 +118,16 @@ static patch_t *ttspop4;
 static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
+
+// ttmode alacroix
+static patch_t *ttribb[TTMAX_ALACROIX];
+static patch_t *ttsntx[TTMAX_ALACROIX];
+static patch_t *ttrobo[TTMAX_ALACROIX];
+static patch_t *tttwot[TTMAX_ALACROIX];
+static patch_t *ttembl[TTMAX_ALACROIX];
+
+// ttmode user
+static patch_t *ttuser[TTMAX_USER];
 
 static boolean goodending;
 static patch_t *endbrdr[2]; // border - blue, white, pink - where have i seen those colours before?
@@ -2095,16 +2128,25 @@ void F_InitMenuPresValues(void)
 	// Set defaults for presentation values
 	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
-	curhidepics = hidetitlepics;
 	curbgcolor = -1;
 	curbgxspeed = titlescrollxspeed;
 	curbgyspeed = titlescrollyspeed;
 	curbghide = true;
+	
+	curhidepics = hidetitlepics;
+	curttmode = ttmode;
+	curttscale = ttscale;
+	curttcounterset = ttcounterset;
+	strncpy(curttname, ttname, 9);
+	curttx = ttx;
+	curtty = tty;
+	curttloop = ttloop;
+	curtttics = tttics;
 
 	// Find current presentation values
 	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
-	M_SetMenuCurHideTitlePics();
+	M_SetMenuCurTitlePics();
 }
 
 //
@@ -2255,27 +2297,88 @@ void F_StartTitleScreen(void)
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
 
-	ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-	ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-	ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-	ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-	ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-	ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-	ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-	ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-	ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-	ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-	ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-	ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-	ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-	ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-	ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+#define LOADTTGFX(arr, name, maxf) \
+lumpnum = W_CheckNumForName(name); \
+if (lumpnum != LUMPERROR) \
+{ \
+	arr[0] = W_CachePatchName(name, PU_LEVEL); \
+	arr[min(1, maxf-1)] = 0; \
+} \
+else if (strlen(name) <= 6) \
+{ \
+	fixed_t cnt = strlen(name); \
+	strncpy(lumpname, name, 7); \
+	for (i = 0; i < maxf-1; i++) \
+	{ \
+		sprintf(&lumpname[cnt], "%.2hu", (UINT16)(i+1)); \
+		lumpname[8] = 0; \
+		lumpnum = W_CheckNumForName(lumpname); \
+		if (lumpnum != LUMPERROR) \
+			arr[i] = W_CachePatchName(lumpname, PU_LEVEL); \
+		else \
+			break; \
+	} \
+	arr[min(i, maxf-1)] = 0; \
+} \
+else \
+	arr[0] = 0;
+
+	switch(curttmode)
+	{
+		case TTMODE_OLD:
+		case TTMODE_NONE:
+			ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
+			ttwing = W_CachePatchName("TTWING", PU_LEVEL);
+			ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
+			ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
+			ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
+			ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
+			ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
+			ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
+			ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
+			ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
+			ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
+			ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
+			ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
+			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
+			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+			break;
+		
+		case TTMODE_ALACROIX:
+		{
+			UINT16 i;
+			lumpnum_t lumpnum;
+			char lumpname[9];
+
+			finalecount -= 3; // hack so that frames don't advance during the entry wipe
+
+			LOADTTGFX(ttembl, "TTEMBL", TTMAX_ALACROIX)
+			LOADTTGFX(ttribb, "TTRIBB", TTMAX_ALACROIX)
+			LOADTTGFX(ttsntx, "TTSNTX", TTMAX_ALACROIX)
+			LOADTTGFX(ttrobo, "TTROBO", TTMAX_ALACROIX)
+			LOADTTGFX(tttwot, "TTTWOT", TTMAX_ALACROIX)
+			break;
+		}
+
+		case TTMODE_USER:
+		{
+			UINT16 i;
+			lumpnum_t lumpnum;
+			char lumpname[9];
+
+			LOADTTGFX(ttuser, curttname, TTMAX_USER)
+			break;
+		}
+	}
+
+#undef LOADTTGFX
 }
 
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
 	boolean hidepics;
+	fixed_t sc = FRACUNIT / max(1, curttscale);
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
@@ -2287,7 +2390,7 @@ void F_TitleScreenDrawer(void)
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
-	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
+	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 		return;
 
 	// rei|miru: use title pics?
@@ -2299,42 +2402,104 @@ void F_TitleScreenDrawer(void)
 		return;
 #endif
 
-	V_DrawScaledPatch(30, 14, 0, ttwing);
-
-	if (finalecount < 57)
+	switch(curttmode)
 	{
-		if (finalecount == 35)
-			V_DrawScaledPatch(115, 15, 0, ttspop1);
-		else if (finalecount == 36)
-			V_DrawScaledPatch(114, 15, 0,ttspop2);
-		else if (finalecount == 37)
-			V_DrawScaledPatch(113, 15, 0,ttspop3);
-		else if (finalecount == 38)
-			V_DrawScaledPatch(112, 15, 0,ttspop4);
-		else if (finalecount == 39)
-			V_DrawScaledPatch(111, 15, 0,ttspop5);
-		else if (finalecount == 40)
-			V_DrawScaledPatch(110, 15, 0, ttspop6);
-		else if (finalecount >= 41 && finalecount <= 44)
-			V_DrawScaledPatch(109, 15, 0, ttspop7);
-		else if (finalecount >= 45 && finalecount <= 48)
-			V_DrawScaledPatch(108, 12, 0, ttsprep1);
-		else if (finalecount >= 49 && finalecount <= 52)
-			V_DrawScaledPatch(107, 9, 0, ttsprep2);
-		else if (finalecount >= 53 && finalecount <= 56)
-			V_DrawScaledPatch(106, 6, 0, ttswip1);
-		V_DrawScaledPatch(93, 106, 0, ttsonic);
-	}
-	else
-	{
-		V_DrawScaledPatch(93, 106, 0,ttsonic);
-		if (finalecount/5 & 1)
-			V_DrawScaledPatch(100, 3, 0,ttswave1);
-		else
-			V_DrawScaledPatch(100,3, 0,ttswave2);
-	}
+		case TTMODE_OLD:
+		case TTMODE_NONE:
+			V_DrawSciencePatch(30<<FRACBITS, 14<<FRACBITS, 0, ttwing, sc);
 
-	V_DrawScaledPatch(48, 142, 0,ttbanner);
+			if (finalecount < 57)
+			{
+				if (finalecount == 35)
+					V_DrawSciencePatch(115<<FRACBITS, 15<<FRACBITS, 0, ttspop1, sc);
+				else if (finalecount == 36)
+					V_DrawSciencePatch(114<<FRACBITS, 15<<FRACBITS, 0,ttspop2, sc);
+				else if (finalecount == 37)
+					V_DrawSciencePatch(113<<FRACBITS, 15<<FRACBITS, 0,ttspop3, sc);
+				else if (finalecount == 38)
+					V_DrawSciencePatch(112<<FRACBITS, 15<<FRACBITS, 0,ttspop4, sc);
+				else if (finalecount == 39)
+					V_DrawSciencePatch(111<<FRACBITS, 15<<FRACBITS, 0,ttspop5, sc);
+				else if (finalecount == 40)
+					V_DrawSciencePatch(110<<FRACBITS, 15<<FRACBITS, 0, ttspop6, sc);
+				else if (finalecount >= 41 && finalecount <= 44)
+					V_DrawSciencePatch(109<<FRACBITS, 15<<FRACBITS, 0, ttspop7, sc);
+				else if (finalecount >= 45 && finalecount <= 48)
+					V_DrawSciencePatch(108<<FRACBITS, 12<<FRACBITS, 0, ttsprep1, sc);
+				else if (finalecount >= 49 && finalecount <= 52)
+					V_DrawSciencePatch(107<<FRACBITS, 9<<FRACBITS, 0, ttsprep2, sc);
+				else if (finalecount >= 53 && finalecount <= 56)
+					V_DrawSciencePatch(106<<FRACBITS, 6<<FRACBITS, 0, ttswip1, sc);
+				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0, ttsonic, sc);
+			}
+			else
+			{
+				V_DrawSciencePatch(93<<FRACBITS, 106<<FRACBITS, 0,ttsonic, sc);
+				if (finalecount/5 & 1)
+					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,ttswave1, sc);
+				else
+					V_DrawSciencePatch(100<<FRACBITS, 3<<FRACBITS, 0,ttswave2, sc);
+			}
+
+			V_DrawSciencePatch(48<<FRACBITS, 142<<FRACBITS, 0,ttbanner, sc);
+			break;
+
+		case TTMODE_ALACROIX:
+			/*
+				ALICE ANIMATION CODE GOES HERE
+			 */
+
+			// Start at black background, then at 32 tics, white flash to title background
+			if (max(0, finalecount) <= 31)
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			else if (max(0, finalecount) > 31 && 41-finalecount > 0 && 41-finalecount < 10)
+				V_DrawFadeScreen(0, 41-finalecount);
+
+			// Draw emblem
+			V_DrawSciencePatch(52<<FRACBITS, 22<<FRACBITS, 0, ttembl[0], sc);
+
+			// Ribbon unfurls, revealing SONIC text, from frame 0 to frame 24. SONIC text is pre-baked into ribbon graphic.
+			V_DrawSciencePatch(50<<FRACBITS, 84<<FRACBITS, 0, ttribb[min(max(0, finalecount), 24)], sc);
+			
+			// Animate SONIC text after ribbon fully reveals it, at frame 10
+			if(max(0, finalecount) > 9)
+			{
+				// Fade value for ROBO BLAST
+				INT32 fadeval = 0;
+
+				// Draw SONIC text
+				V_DrawSciencePatch(94<<FRACBITS, 88<<FRACBITS, 0, ttsntx[min(finalecount-10, 39)], sc);
+
+				// Draw ROBO BLAST 2, and fade them in.
+				if (finalecount < 20)
+				{
+					UINT8 fadecounter = 20-finalecount;
+					switch(fadecounter)
+					{
+						case 10: fadeval = V_90TRANS; break;
+						case 9: fadeval = V_80TRANS; break;
+						case 8: fadeval = V_70TRANS; break;
+						case 7: fadeval = V_60TRANS; break;
+						case 6: fadeval = V_TRANSLUCENT; break;
+						case 5: fadeval = V_40TRANS; break;
+						case 4: fadeval = V_30TRANS; break;
+						case 3: fadeval = V_20TRANS; break;
+						case 2: fadeval = V_10TRANS; break;
+					}
+				}
+				V_DrawSciencePatch(88<<FRACBITS, 125<<FRACBITS, fadeval, ttrobo[0], sc);
+				V_DrawSciencePatch(110<<FRACBITS, 112<<FRACBITS, fadeval, tttwot[min(finalecount-10, 21)], sc);
+			}
+			
+			break;
+
+		case TTMODE_USER:
+			/*
+			 * USER DEFINED ANIMATION CODE GOES HERE
+			 */
+			//V_DrawSciencePatch(curttx<<FRACBITS, curtty<<FRACBITS, 0, ttuser[0], sc);
+			break;
+	}
 
 #ifdef HAVE_BLUA
 luahook:
