@@ -578,7 +578,8 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TALB",
 
 	"SIGN",
-	"LIFE"
+	"LIFE",
+	"XTRA",
 };
 playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
 
@@ -595,7 +596,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_DEAD, // SPR2_DRWN,
 	0, // SPR2_ROLL,
 	SPR2_SPNG, // SPR2_GASP,
-	0, // SPR2_JUMP, (conditional)
+	0, // SPR2_JUMP, (conditional, will never be referenced)
 	SPR2_FALL, // SPR2_SPNG,
 	SPR2_WALK, // SPR2_FALL,
 	0, // SPR2_EDGE,
@@ -605,7 +606,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	SPR2_SPNG, // SPR2_FLY ,
 	SPR2_FLY , // SPR2_SWIM,
-	0, // SPR2_TIRE, (conditional)
+	0, // SPR2_TIRE, (conditional, will never be referenced)
 
 	SPR2_FLY , // SPR2_GLID,
 	SPR2_CLMB, // SPR2_CLNG,
@@ -632,7 +633,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_NSTN, // SPR2_NPUL,
 	FF_SPR2SUPER|SPR2_ROLL, // SPR2_NATK,
 
-	0, // SPR2_NGT0, (should never be referenced)
+	0, // SPR2_NGT0, (will never be referenced unless skin 0 lacks this)
 	SPR2_NGT0, // SPR2_NGT1,
 	SPR2_NGT1, // SPR2_NGT2,
 	SPR2_NGT2, // SPR2_NGT3,
@@ -660,7 +661,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_NGTB, // SPR2_DRLB,
 	SPR2_NGTC, // SPR2_DRLC,
 
-	0, // SPR2_TAL0,
+	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,
 	SPR2_TAL1, // SPR2_TAL2,
 	SPR2_TAL2, // SPR2_TAL3,
@@ -675,6 +676,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	0, // SPR2_SIGN,
 	0, // SPR2_LIFE,
+	0, // SPR2_XTRA (should never be referenced)
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -1791,7 +1793,11 @@ state_t states[NUMSTATES] =
 
 	// Blue Sphere for special stages
 	{SPR_SPHR, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_BLUESPHERE
-	{SPR_SPHR, FF_FULLBRIGHT|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 1, 4, S_NULL}, // S_BLUESPHEREBONUS
+	{SPR_SPHR, FF_FULLBRIGHT
+#ifdef MANIASPHERES
+							|FF_ANIMATE|FF_RANDOMANIM
+#endif
+													, -1, {NULL}, 1, 4, S_NULL}, // S_BLUESPHEREBONUS
 	{SPR_SPHR, 0, 20, {NULL}, 0, 0, S_NULL}, // S_BLUESPHERESPARK
 
 	// Bomb Sphere
@@ -3827,22 +3833,9 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 105, {A_Scream}, 0, 0, S_NULL}, // S_CRUMBLE2
 
 	// Spark
-	{SPR_SPRK, FF_TRANS40  , 1, {NULL}, 0, 0, S_SPRK2},  // S_SPRK1
-	{SPR_SPRK, FF_TRANS50|1, 1, {NULL}, 0, 0, S_SPRK3},  // S_SPRK2
-	{SPR_SPRK, FF_TRANS50|2, 1, {NULL}, 0, 0, S_SPRK4},  // S_SPRK3
-	{SPR_SPRK, FF_TRANS50|3, 1, {NULL}, 0, 0, S_SPRK5},  // S_SPRK4
-	{SPR_SPRK, FF_TRANS60  , 1, {NULL}, 0, 0, S_SPRK6},  // S_SPRK5
-	{SPR_SPRK, FF_TRANS60|1, 1, {NULL}, 0, 0, S_SPRK7},  // S_SPRK6
-	{SPR_SPRK, FF_TRANS60|2, 1, {NULL}, 0, 0, S_SPRK8},  // S_SPRK7
-	{SPR_SPRK, FF_TRANS70|3, 1, {NULL}, 0, 0, S_SPRK9},  // S_SPRK8
-	{SPR_SPRK, FF_TRANS70  , 1, {NULL}, 0, 0, S_SPRK10}, // S_SPRK9
-	{SPR_SPRK, FF_TRANS70|1, 1, {NULL}, 0, 0, S_SPRK11}, // S_SPRK10
-	{SPR_SPRK, FF_TRANS80|2, 1, {NULL}, 0, 0, S_SPRK12}, // S_SPRK11
-	{SPR_SPRK, FF_TRANS80|3, 1, {NULL}, 0, 0, S_SPRK13}, // S_SPRK12
-	{SPR_SPRK, FF_TRANS80  , 1, {NULL}, 0, 0, S_SPRK14}, // S_SPRK13
-	{SPR_SPRK, FF_TRANS90|1, 1, {NULL}, 0, 0, S_SPRK15}, // S_SPRK14
-	{SPR_SPRK, FF_TRANS90|2, 1, {NULL}, 0, 0, S_SPRK16}, // S_SPRK15
-	{SPR_SPRK, FF_TRANS90|3, 1, {NULL}, 0, 0, S_NULL},   // S_SPRK16
+	{SPR_NULL, 0, 1, {A_ModuloToState}, 2, S_SPRK2, S_SPRK3},  // S_SPRK1
+	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|0, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK2
+	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|9, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK3
 
 	// Robot Explosion
 	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY

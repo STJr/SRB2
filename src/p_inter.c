@@ -670,7 +670,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoMatchSuper(player);
 			}
 			else
+			{
 				emeralds |= special->info->speed;
+				stagefailed = false;
+			}
 
 			if (special->target && special->target->type == MT_EMERALDSPAWN)
 			{
@@ -1697,7 +1700,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Eaten by player!
 			if ((!player->bot) && (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1))
+			{
+				player->powers[pw_underwater] = underwatertics + 1;
 				P_RestoreMusic(player);
+			}
 
 			if (player->powers[pw_underwater] < underwatertics + 1)
 				player->powers[pw_underwater] = underwatertics + 1;
@@ -2464,7 +2470,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					gameovermus = true;
 
 				if (gameovermus)
-					S_FadeOutStopMusic((fadetogameovermus = 250)); // Stop the Music! Tails 03-14-2000
+					P_PlayJingle(target->player, JT_GOVER); // Yousa dead now, Okieday? Tails 03-14-2000
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
@@ -2912,7 +2918,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 				S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
 			}
 			else
-				S_ChangeMusicInternal((((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? "_ntime" : "_drown"), false);
+				P_PlayJingle(player, ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap)) ? JT_NIGHTSTIMEOUT : JT_SSTIMEOUT);
 		}
 	}
 }
@@ -3649,7 +3655,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 {
 	INT32 i;
 	mobj_t *mo;
-	angle_t fa;
+	angle_t fa, va;
 	fixed_t ns;
 	fixed_t z;
 	boolean nightsreplace = ((maptol & TOL_NIGHTS) && !G_IsSpecialStage(gamemap));
@@ -3670,6 +3676,11 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 	// Spill weapons first
 	P_PlayerWeaponPanelOrAmmoBurst(player);
+
+	if (abs(player->mo->momx) > player->mo->scale || abs(player->mo->momy) > player->mo->scale)
+		va = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0)>>ANGLETOFINESHIFT;
+	else
+		va = player->mo->angle>>ANGLETOFINESHIFT;
 
 	for (i = 0; i < num_rings; i++)
 	{
@@ -3692,7 +3703,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		P_SetScale(mo, player->mo->scale);
 
 		// Angle offset by player angle, then slightly offset by amount of rings
-		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT) - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
+		fa = ((i*FINEANGLES/16) + va - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.

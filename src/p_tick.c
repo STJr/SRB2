@@ -520,10 +520,7 @@ static inline void P_DoSpecialStageStuff(void)
 			}
 		}
 		else
-		{
 			sstimer = 0;
-			stagefailed = true;
-		}
 	}
 }
 
@@ -606,13 +603,20 @@ void P_Ticker(boolean run)
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			P_MapEnd();
+			S_SetStackAdjustmentStart();
 			return;
 		}
 	}
 
 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
+	{
+		S_SetStackAdjustmentStart();
 		return;
+	}
+
+	if (!S_MusicPaused())
+		S_AdjustMusicStackTics();
 
 	postimgtype = postimgtype2 = postimg_none;
 
@@ -725,14 +729,6 @@ void P_Ticker(boolean run)
 	}
 
 	P_MapEnd();
-
-	if (fadetogameovermus > 0)
-		fadetogameovermus--;
-
-	CONS_Printf("%d\n", fadetogameovermus);
-
-	if (fadetogameovermus == 150 && gameovermus)
-		S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
 
 //	Z_CheckMemCleanup();
 }

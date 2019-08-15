@@ -550,6 +550,7 @@ void I_ResumeSong (INT32 handle)
 	songpaused = false;
 }
 
+
 void I_SetMusicVolume(INT32 volume)
 {
 	if (midi_disabled)

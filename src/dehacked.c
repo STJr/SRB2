@@ -517,7 +517,9 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
+					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
@@ -1108,6 +1110,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				if      (fastcmp(word2, "TITLE"))      i = 1100;
 				else if (fastcmp(word2, "EVALUATION")) i = 1101;
 				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
 				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
@@ -1169,6 +1172,15 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "MUSICINTER"))
 				deh_strlcpy(mapheaderinfo[num-1]->musintername, word2,
 					sizeof(mapheaderinfo[num-1]->musintername), va("Level header %d: intermission music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSS"))
+				deh_strlcpy(mapheaderinfo[num-1]->muspostbossname, word2,
+					sizeof(mapheaderinfo[num-1]->muspostbossname), va("Level header %d: post-boss music", num));
+			else if (fastcmp(word, "MUSICPOSTBOSSTRACK"))
+				mapheaderinfo[num-1]->muspostbosstrack = ((UINT16)i - 1);
+			else if (fastcmp(word, "MUSICPOSTBOSSPOS"))
+				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
+			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
+				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -2418,6 +2430,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SnapperThinker},         "A_SNAPPERTHINKER"},
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
+	{{A_ModuloToState},          "A_MODULOTOSTATE"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -7133,19 +7146,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPRK1",
 	"S_SPRK2",
 	"S_SPRK3",
-	"S_SPRK4",
-	"S_SPRK5",
-	"S_SPRK6",
-	"S_SPRK7",
-	"S_SPRK8",
-	"S_SPRK9",
-	"S_SPRK10",
-	"S_SPRK11",
-	"S_SPRK12",
-	"S_SPRK13",
-	"S_SPRK14",
-	"S_SPRK15",
-	"S_SPRK16",
 
 	// Robot Explosion
 	"S_XPLD_FLICKY",
@@ -8693,6 +8693,23 @@ struct {
 	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
 	{"GT_CTF",GT_CTF},
 
+	// Jingles (jingletype_t)
+	{"JT_NONE",JT_NONE},
+	{"JT_OTHER",JT_OTHER},
+	{"JT_MASTER",JT_MASTER},
+	{"JT_1UP",JT_1UP},
+	{"JT_SHOES",JT_SHOES},
+	{"JT_INV",JT_INV},
+	{"JT_MINV",JT_MINV},
+	{"JT_DROWN",JT_DROWN},
+	{"JT_SUPER",JT_SUPER},
+	{"JT_GOVER",JT_GOVER},
+	{"JT_NIGHTSTIMEOUT",JT_NIGHTSTIMEOUT},
+	{"JT_SSTIMEOUT",JT_SSTIMEOUT},
+	// {"JT_LCLEAR",JT_LCLEAR},
+	// {"JT_RACENT",JT_RACENT},
+	// {"JT_CONTSC",JT_CONTSC},
+
 	// Player state (playerstate_t)
 	{"PST_LIVE",PST_LIVE}, // Playing or camping.
 	{"PST_DEAD",PST_DEAD}, // Dead on the ground, view follows killer.
@@ -9499,6 +9516,7 @@ static inline int lib_freeslot(lua_State *L)
 				{
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
+					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");

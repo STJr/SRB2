@@ -37,6 +37,7 @@ boolean LUA_CallAction(const char *action, mobj_t *actor);
 player_t *stplyr;
 INT32 var1;
 INT32 var2;
+INT32 modulothing;
 
 //
 // P_NewChaseDir related LUT.
@@ -294,6 +295,8 @@ void A_SnapperSpawn(mobj_t *actor);
 void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
 void A_MinecartSparkThink(mobj_t *actor);
+void A_ModuloToState(mobj_t *actor);
+
 //for p_enemy.c
 
 //
@@ -3812,6 +3815,24 @@ void A_BossDeath(mobj_t *mo)
 		EV_DoElevator(&junk, elevateUp, false);
 		junk.tag = LE_CAPSULE2;
 		EV_DoElevator(&junk, elevateHighest, false);
+
+		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
+			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
+		{
+			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
+			// So just park ourselves in the mapmus variables.
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+			mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+
+			// don't change if we're in another tune
+			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
+			if (!changed)
+				S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2),
+					mapheaderinfo[gamemap-1]->muspostbossfadein);
+		}
 	}
 
 bossjustdie:
@@ -3878,6 +3899,8 @@ bossjustdie:
 		}
 		default: //eggmobiles
 		{
+			UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
 			// Stop exploding and prepare to run.
 			P_SetMobjState(mo, mo->info->xdeathstate);
 			if (P_MobjWasRemoved(mo))
@@ -3895,6 +3918,9 @@ bossjustdie:
 				mo2 = (mobj_t *)th;
 
 				if (mo2->type != MT_BOSSFLYPOINT)
+					continue;
+
+				if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
 					continue;
 
 				// If this one's further then the last one, don't go for it.
@@ -4099,12 +4125,11 @@ void A_Invincibility(mobj_t *actor)
 
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
-		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
@@ -4138,10 +4163,7 @@ void A_SuperSneakers(mobj_t *actor)
 		if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
 			S_SpeedMusic(1.4f);
 		else
-		{
-			S_StopMusic();
-			S_ChangeMusicInternal("_shoes", false);
-		}
+			P_PlayJingle(player, JT_SHOES);
 		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
 		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
@@ -12303,6 +12325,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	//INT32 locvar2 = var2;
 	boolean avoidcenter;
 	UINT32 i;
+	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss5FindWaypoint", actor))
 		return;
@@ -12312,16 +12335,34 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	if (locvar1 == 2) // look for the boss waypoint
 	{
-		for (i = 0; i < nummapthings; i++)
+		thinker_t *th;
+		mobj_t *mo2;
+		P_SetTarget(&actor->tracer, NULL);
+		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
+		// scan the thinkers to find the runaway point
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (!mapthings[i].mobj)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-			if (mapthings[i].mobj->type != MT_BOSSFLYPOINT)
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_BOSSFLYPOINT)
 				continue;
-			P_SetTarget(&actor->tracer, mapthings[i].mobj);
-			break;
+
+			if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
+				continue;
+
+			// If this one's further then the last one, don't go for it.
+			if (actor->tracer &&
+				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
+				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
+					continue;
+
+			// Otherwise... Do!
+			P_SetTarget(&actor->tracer, mo2);
 		}
-		if (i == nummapthings)
+		if (!actor->tracer)
 			return; // no boss flypoints found
 	}
 	else if (locvar1 == 1) // always go to ambush-marked waypoint
@@ -12335,11 +12376,13 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
-			{
-				P_SetTarget(&actor->tracer, mapthings[i].mobj);
-				break;
-			}
+			if (mapthings[i].extrainfo != extrainfo)
+				continue;
+			if (!(mapthings[i].options & MTF_AMBUSH))
+				continue;
+
+			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			break;
 		}
 
 		if (i == nummapthings)
@@ -12362,6 +12405,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -12417,6 +12462,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
+				continue;
+			if (mapthings[i].extrainfo != extrainfo)
 				continue;
 			if (mapthings[i].options & MTF_AMBUSH)
 			{
@@ -13647,4 +13694,25 @@ void A_MinecartSparkThink(mobj_t *actor)
 		P_SetScale(trail, trail->scale/4);
 		trail->destscale = trail->scale;
 	}
+}
+
+// Function: A_ModuloToState
+//
+// Description: Modulo operation to state
+//
+// var1 = Modulo
+// var2 = State
+//
+void A_ModuloToState(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ModuloToState", actor))
+		return;
+#endif
+
+	if ((modulothing % locvar1 == 0))
+		P_SetMobjState(actor, (locvar2));
+	modulothing++;
 }

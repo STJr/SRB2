@@ -152,7 +152,7 @@ cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
-boolean skipstats;
+UINT8 skipstats;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -1842,7 +1842,7 @@ boolean G_Responder(event_t *ev)
 			return true;
 		}
 	}
-	else if (gamestate == GS_CREDITS)
+	else if (gamestate == GS_CREDITS || gamestate == GS_ENDING) // todo: keep ending here?
 	{
 		if (HU_Responder(ev))
 			return true; // chat ate the event
@@ -2030,6 +2030,12 @@ void G_Ticker(boolean run)
 		case GS_INTRO:
 			if (run)
 				F_IntroTicker();
+			break;
+
+		case GS_ENDING:
+			if (run)
+				F_EndingTicker();
+			HU_Ticker();
 			break;
 
 		case GS_CUTSCENE:
@@ -2645,7 +2651,7 @@ void G_DoReborn(INT32 playernum)
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
-					skipstats = true;
+					skipstats = 2;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -2848,6 +2854,10 @@ void G_ExitLevel(void)
 
 		// Remove CEcho text on round end.
 		HU_ClearCEcho();
+	}
+	else if (gamestate == GS_ENDING)
+	{
+		F_StartCredits();
 	}
 	else if (gamestate == GS_CREDITS)
 	{
@@ -3116,7 +3126,7 @@ static void G_DoCompleted(void)
 		nextmap = cm;
 	}
 
-	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1102-1)
+	if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
 		I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
 	// wrap around in race
@@ -3170,7 +3180,7 @@ void G_AfterIntermission(void)
 {
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking) // Start a custom cutscene.
+	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
 	else
 	{
@@ -3282,6 +3292,11 @@ void G_EndGame(void)
 	// Only do evaluation and credits in coop games.
 	if (gametype == GT_COOP)
 	{
+		if (nextmap == 1103-1) // end game with ending
+		{
+			F_StartEnding();
+			return;
+		}
 		if (nextmap == 1102-1) // end game with credits
 		{
 			F_StartCredits();
@@ -3700,7 +3715,7 @@ void G_SaveGame(UINT32 slot)
 	backup = va("%s",savename);
 
 	// save during evaluation or credits? game's over, folks!
-	if (gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	if (gamestate == GS_ENDING || gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		gamecomplete = true;
 
 	gameaction = ga_nothing;
@@ -4366,7 +4381,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		ghostext.flags = 0;
 	}
 
-	if (ghost->player && ghost->player->followmobj)
+	if (ghost->player && ghost->player->followmobj) // bloats tails runs but what can ya do
 	{
 		INT16 temp;
 
@@ -4592,6 +4607,9 @@ void G_GhostTicker(void)
 				switch(g->color)
 				{
 				default:
+				case GHC_RETURNSKIN:
+					g->mo->skin = g->oldmo.skin;
+					// fallthru
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
@@ -4601,6 +4619,9 @@ void G_GhostTicker(void)
 					break;
 				case GHC_FIREFLOWER: // Fireflower
 					g->mo->color = SKINCOLOR_WHITE;
+					break;
+				case GHC_NIGHTSSKIN: // not actually a colour
+					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}

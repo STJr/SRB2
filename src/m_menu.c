@@ -293,6 +293,9 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef;
+#endif
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -1303,14 +1306,41 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 73}, // 36
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 83}, // 41
 
-	{IT_HEADER, NULL, "Advanced", NULL, 103}, // 50
+	{IT_HEADER, NULL, "Accessibility", NULL, 103}, // 50
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 125}, // 62
 
-#ifdef HAVE_OPENMPT
-	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 133},
-	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 145}
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 143},
 #endif
 };
+
+#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+
+#ifdef HAVE_OPENMPT
+#define OPENMPT_MENUOFFSET 32
+#else
+#define OPENMPT_MENUOFFSET 0
+#endif
+
+static menuitem_t OP_SoundAdvancedMenu[] =
+{
+#ifdef HAVE_OPENMPT
+	{IT_HEADER, NULL, "OpenMPT Settings", NULL, 10},
+	{IT_STRING | IT_CVAR, NULL, "Instrument Filter", &cv_modfilter, 22},
+#endif
+
+#ifdef HAVE_MIXERX
+	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+#endif
+};
+
+#undef OPENMPT_MENUOFFSET
+
+#endif
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
@@ -1897,6 +1927,9 @@ menu_t OP_SoundOptionsDef =
 	0,
 	NULL
 };
+#ifdef HAVE_MIXERX
+menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(MN_OP_MAIN + (MN_OP_SOUND << 6), "M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
+#endif
 
 menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_SERVER << 6),
@@ -2809,8 +2842,8 @@ boolean M_Responder(event_t *ev)
 	void (*routine)(INT32 choice); // for some casting problem
 
 	if (dedicated || (demoplayback && titledemo)
-	|| gamestate == GS_INTRO || gamestate == GS_CUTSCENE || gamestate == GS_GAMEEND
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	|| gamestate == GS_INTRO || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
 	if (noFurtherInput)
@@ -3510,6 +3543,7 @@ void M_InitCharacterTables(void)
 		strcpy(description[i].picname, "");
 		strcpy(description[i].skinname, "");
 		description[i].prev = description[i].next = 0;
+		description[i].pic = NULL;
 	}
 }
 
@@ -7585,8 +7619,19 @@ static void M_SetupChoosePlayer(INT32 choice)
 				if (i == char_on)
 					allowed = true;
 
-				if (description[i].picname[0] == '\0')
-					strncpy(description[i].picname, skins[skinnum].charsel, 8);
+				if (!(description[i].picname[0]))
+				{
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 2)
+					{
+						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+						spriteframe_t *sprframe = &sprdef->spriteframes[1];
+						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+					}
+					else
+						description[i].pic = W_CachePatchName("MISSING", PU_CACHE);
+				}
+				else
+					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -7703,6 +7748,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 i, o;
 	UINT8 prev, next;
 	UINT16 col;
+	UINT8 *colormap = NULL;
 	skin_t *charskin = NULL;
 
 	// Black BG
@@ -7734,9 +7780,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		i = char_on;
 
 	charskin = &skins[i];
-	col = (charskin->prefcolor - 1)*2;
-	col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
-	V_DrawMappedPatch(0, 0, 0, W_CachePatchName("CHARBG", PU_CACHE), R_GetTranslationColormap(TC_DEFAULT, col, GTC_CACHE));
+	col = SKINCOLOR_GREEN;
+	//col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+	colormap = R_GetTranslationColormap(i, col, 0);
+	V_DrawMappedPatch(0, 0, 0, W_CachePatchName("CHARBG", PU_CACHE), colormap);
 
 	// Get prev character...
 	prev = description[i].prev;
@@ -7749,7 +7796,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
 		if (o < 32)
 		{
-			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
+			patch = description[prev].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
 			else
@@ -7760,7 +7807,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
 		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
 		{
-			patch = W_CachePatchName(description[next].picname, PU_CACHE);
+			patch = description[next].pic;
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
 			else
@@ -7769,7 +7816,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 	}
 
-	patch = W_CachePatchName(description[i].picname, PU_CACHE);
+	patch = description[i].pic;
 	if (o >= 0 && o <= 32)
 	{
 		if (SHORT(patch->width) >= 256)
@@ -8176,9 +8223,16 @@ void M_DrawTimeAttackMenu(void)
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
 	// Character face!
-	if (W_CheckNumForName(skins[cv_chooseskin.value-1].charsel) != LUMPERROR)
 	{
-		PictureOfUrFace = W_CachePatchName(skins[cv_chooseskin.value-1].charsel, PU_CACHE);
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= 2)
+		{
+			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
+			spriteframe_t *sprframe = &sprdef->spriteframes[1];
+			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		}
+		else
+			PictureOfUrFace = W_CachePatchName("MISSING", PU_CACHE);
+
 		if (PictureOfUrFace->width >= 256)
 			V_DrawTinyScaledPatch(224, 120, 0, PictureOfUrFace);
 		else
