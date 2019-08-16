@@ -3394,7 +3394,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 						{
 							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 
-							if (!P_MobjTouchingPolyobj(po, mo))
+							if (!P_MobjInsidePolyobj(po, mo))
 								continue;
 
 							if (!PIT_ChangeSector(mo, false))
@@ -3504,7 +3504,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 						{
 							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 
-							if (!P_MobjTouchingPolyobj(po, mo))
+							if (!P_MobjInsidePolyobj(po, mo))
 								continue;
 
 							PIT_ChangeSector(mo, true);
