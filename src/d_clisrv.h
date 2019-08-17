@@ -70,6 +70,9 @@ typedef enum
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 	PT_RESYNCHING,    // Packet sent to resync players.
 	                  // Blocks game advance until synched.
+
+	PT_LOGIN,         // Login attempt from the client.
+
 #ifdef NEWPING
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
 #endif
@@ -398,6 +401,7 @@ typedef struct
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
 		clientconfig_pak clientcfg;         //         136 bytes
+		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes
 		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
 		askinfo_pak askinfo;                //          61 bytes
@@ -526,5 +530,10 @@ void D_ResetTiccmds(void);
 tic_t GetLag(INT32 node);
 UINT8 GetFreeXCmdSize(void);
 
+void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
+
 extern UINT8 hu_resynching;
+
+extern UINT8 adminpassmd5[16];
+extern boolean adminpasswordset;
 #endif
