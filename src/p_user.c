@@ -8818,6 +8818,9 @@ void P_PlayerThink(player_t *player)
 	if (player->exiting && countdown2)
 		player->exiting = 5;
 
+	// The following code is disabled for now as this causes the game to freeze sometimes
+	// Monster Iestyn -- 16/08/19
+#if 0
 	// Same check as below, just at 1 second before
 	// so we can fade music
 	if (!exitfadestarted &&
@@ -8855,6 +8858,7 @@ void P_PlayerThink(player_t *player)
 			S_FadeOutStopMusic(1*MUSICRATE);
 		}
 	}
+#endif
 
 	if (player->exiting == 2 || countdown2 == 2)
 	{
