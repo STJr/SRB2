@@ -117,7 +117,7 @@ static UINT8 resynch_local_inprogress = false; // WE are desynched and getting p
 static UINT8 player_joining = false;
 UINT8 hu_resynching = 0;
 
-UINT8 adminpassmd5[MD5_LEN];
+UINT8 adminpassmd5[16];
 boolean adminpasswordset = false;
 
 // Client specific
@@ -3764,7 +3764,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 	XBOXSTATIC INT32 netconsole;
 	XBOXSTATIC tic_t realend, realstart;
 	XBOXSTATIC UINT8 *pak, *txtpak, numtxtpak;
-	XBOXSTATIC UINT8 finalmd5[MD5_LEN];/* Well, it's the cool thing to do? */
+	XBOXSTATIC UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
 FILESTAMP
 
 	txtpak = NULL;
@@ -3969,7 +3969,7 @@ FILESTAMP
 				break;
 
 #ifndef NOMD5
-			if (doomcom->datalength < MD5_LEN)/* ignore partial sends */
+			if (doomcom->datalength < 16)/* ignore partial sends */
 				break;
 
 			if (!adminpasswordset)
@@ -3979,9 +3979,9 @@ FILESTAMP
 			}
 
 			// Do the final pass to compare with the sent md5
-			D_MD5PasswordPass(adminpassmd5, MD5_LEN, va("PNUM%02d", netconsole), &finalmd5);
+			D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
 
-			if (!memcmp(netbuffer->u.md5sum, finalmd5, MD5_LEN))
+			if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
 			{
 				CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
 				COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately

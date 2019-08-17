@@ -2710,12 +2710,12 @@ static void Command_Login_f(void)
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &netbuffer->u.md5sum);
 
 	// Do the final pass to get the comparison the server will come up with
-	D_MD5PasswordPass(netbuffer->u.md5sum, MD5_LEN, va("PNUM%02d", consoleplayer), &netbuffer->u.md5sum);
+	D_MD5PasswordPass(netbuffer->u.md5sum, 16, va("PNUM%02d", consoleplayer), &netbuffer->u.md5sum);
 
 	CONS_Printf(M_GetText("Sending login... (Notice only given if password is correct.)\n"));
 
 	netbuffer->packettype = PT_LOGIN;
-	HSendPacket(servernode, true, 0, MD5_LEN);
+	HSendPacket(servernode, true, 0, 16);
 #endif
 }
 
