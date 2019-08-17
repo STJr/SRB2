@@ -3964,7 +3964,6 @@ FILESTAMP
 			}
 			break;
 		case PT_LOGIN:
-			CONS_Printf("I received LOGIN\n");
 			if (client)
 				break;
 
