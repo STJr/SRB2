@@ -2511,7 +2511,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	if (!skin)
 		return 0;
 
-	if ((spr2 & ~FF_SPR2SUPER) >= free_spr2)
+	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
 	while (!(skin->sprites[spr2].numframes)
