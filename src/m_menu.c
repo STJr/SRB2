@@ -2250,8 +2250,10 @@ void M_InitMenuPresTables(void)
 		{
 			menupres[i].muslooping = true;
 		}
-		if (i == MN_SP_TIMEATTACK || i == MN_SP_NIGHTSATTACK)
-			strncpy(menupres[i].musname, "_inter", 7);
+		if (i == MN_SP_TIMEATTACK)
+			strncpy(menupres[i].musname, "recatk", 7);
+		else if (i == MN_SP_NIGHTSATTACK)
+			strncpy(menupres[i].musname, "nitatk", 7);
 		else if (i == MN_SP_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 	}
@@ -8278,7 +8280,7 @@ void M_DrawTimeAttackMenu(void)
 	curbgxspeed = 0;
 	curbgyspeed = 18;
 
-	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("recatk", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
@@ -8293,7 +8295,7 @@ void M_DrawTimeAttackMenu(void)
 		fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 		V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
 		V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-		V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
+		V_DrawSciencePatch(120<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
 		recfgtimer++;
 	}
 	M_DrawMenuTitle();
@@ -8493,7 +8495,7 @@ void M_DrawNightsAttackMenu(void)
 
 	M_SetMenuCurBackground("SRB2BACK");
 
-	M_ChangeMenuMusic("_inter", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("nitatk", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
