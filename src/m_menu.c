@@ -159,7 +159,14 @@ static INT32 vidm_previousmode;
 static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
-tic_t recfgtimer = 0;
+
+// new menus
+static tic_t charseltimer = 0;
+static tic_t charselscrollx = 0;
+static tic_t recfgtimer = 0;
+
+#define charscrollamt 128*FRACUNIT
+#define charselfadescrollamt 128*FRACUNIT
 
 //
 // PROTOTYPES
@@ -7186,6 +7193,9 @@ skiplife:
 			}
 		}
 	}
+
+	if (currentMenu == &SP_LoadDef && (charseltimer > 0))
+		M_DrawSetupChoosePlayerMenu();
 }
 
 static void M_DrawLoad(void)
@@ -7657,6 +7667,10 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 		M_ChangeMenuMusic("_chsel", true);
 
+	charseltimer = 0;
+	charselscrollx = charselfadescrollamt;
+	//wipegamestate = -1;
+
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
 	if (!allowed)
@@ -7684,6 +7698,12 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 	boolean exitmenu = false;  // exit to previous menu
 	INT32 selectval;
 
+	// How do I detect key hold events?
+	if (char_scroll)
+		return;
+	else if (charselscrollx)
+		return;
+
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -7691,7 +7711,7 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 			{
 				S_StartSound(NULL,sfx_s3kb7);
 				char_on = selectval;
-				char_scroll = -128*FRACUNIT;
+				char_scroll = -charscrollamt;
 				Z_Free(char_notes);
 				char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
 			}
@@ -7707,7 +7727,7 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 			{
 				S_StartSound(NULL,sfx_s3kb7);
 				char_on = selectval;
-				char_scroll = 128*FRACUNIT;
+				char_scroll = charscrollamt;
 				Z_Free(char_notes);
 				char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
 			}
@@ -7733,6 +7753,9 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 
 	if (exitmenu)
 	{
+		// Is this a hack?
+		charselscrollx = charselfadescrollamt;
+		charseltimer = TICRATE/4;
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else
@@ -7741,25 +7764,38 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 }
 
 // Draw the choose player setup menu, had some fun with player anim
+static INT32 getskinfromdescription(INT32 desc)
+{
+	char *and = strchr(description[desc].skinname, '&');
+	if (and)
+	{
+		char firstskin[SKINNAMESIZE];
+		strncpy(firstskin, description[desc].skinname, and - (description[desc].skinname));
+		return R_SkinAvailable(firstskin);
+	}
+	return R_SkinAvailable(description[desc].skinname);
+}
+
 static void M_DrawSetupChoosePlayerMenu(void)
 {
-	const INT32 my = 24;
-	patch_t *patch;
-	INT32 i, o;
-	UINT8 prev, next;
+	const INT32 my = 16;
+	//patch_t *patch;
+	INT32 i;
+	//UINT8 prev, next;
 	UINT16 col;
 	UINT8 *colormap = NULL;
-	skin_t *charskin = NULL;
+	skin_t *charskin = &skins[0];
+	INT32 skinnum = 0;
+	INT32 fade = FixedInt(FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT))), fade2;
+	INT32 xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselscrollx, charselfadescrollamt)));
+	boolean thismenu = (currentMenu == &SP_PlayerDef);
 
-	// Black BG
-	if (curbgcolor >= 0)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
-	else if (!curbghide || !titlemapinaction)
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
-	if (curfadevalue)
-		V_DrawFadeScreen(0xFF00, curfadevalue);
+	if (!thismenu)
+		xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselfadescrollamt-charselscrollx, charselfadescrollamt)));
 
-	M_SetMenuCurBackground("CHARBG");
+	fade2 = fade<<V_ALPHASHIFT;
+	if (fade > 9)
+		fade2 = 0;
 
 	// Character select profile images!1
 	//M_DrawTextBox(0, my, 16, 20);
@@ -7769,7 +7805,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else // close enough.
 		char_scroll = 0; // just be exact now.
 
-	o = (char_scroll >> FRACBITS) + 16;
+	if (abs(charselscrollx) > FRACUNIT)
+		charselscrollx -= (charselscrollx>>2);
+	else // close enough.
+		charselscrollx = 0; // just be exact now.
+
+	/*o = (char_scroll >> FRACBITS) + 16;
 
 	if (o < 0) // A little hacky...
 	{
@@ -7777,18 +7818,57 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		o += 128;
 	}
 	else
-		i = char_on;
+		i = char_on;*/
 
-	charskin = &skins[i];
-	col = SKINCOLOR_GREEN;
-	//col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
-	colormap = R_GetTranslationColormap(i, col, 0);
-	V_DrawMappedPatch(0, 0, 0, W_CachePatchName("CHARBG", PU_CACHE), colormap);
+	skinnum = getskinfromdescription(char_on);
+	if (skinnum != -1)
+		charskin = &skins[skinnum];
 
-	// Get prev character...
-	prev = description[i].prev;
+	col = Color_Opposite[(charskin->prefcolor - 1)*2];
+	colormap = R_GetTranslationColormap(skinnum, col, 0);
 
-	if (prev != i) // If there's more than one character available...
+	// Yes.
+	if (thismenu)
+	{
+		M_DrawLoadGameData();
+		charseltimer++;
+	}
+	else if (charseltimer > 0)
+		charseltimer--;
+
+	// CHARBG
+	// 101
+	if (fade > 0)
+	{
+		if (fade > 9)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, colormap[101]);
+		else
+			V_DrawFadeScreen(colormap[101], fade);
+	}
+	// 106
+	if (thismenu)
+	{
+		INT32 sw = (BASEVIDWIDTH * vid.dupx);
+		INT32 bw = (vid.width - sw) / 2;
+		col = colormap[106];
+		if (bw)
+		{
+			V_DrawFill(0, 0, bw, vid.height, V_NOSCALESTART|col);
+			V_DrawFill(bw+sw, 0, bw, vid.height, V_NOSCALESTART|col);
+		}
+	}
+	for (i = -12; i < (BASEVIDHEIGHT/32) + 12; i++)
+	{
+		INT32 oy = (i*32), y;
+		if (!thismenu)
+			break;
+		y = oy - (32 - (charseltimer%32));
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, W_CachePatchName("CHARBG", PU_CACHE), colormap);
+		y = oy - (32 + (charseltimer%32));
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, W_CachePatchName("CHARFG", PU_CACHE), colormap);
+	}
+
+	/*if (prev != i) // If there's more than one character available...
 	{
 		// Let's get the next character now.
 		next = description[i].next;
@@ -7831,14 +7911,50 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		else
 			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height) - (o-32));
 	}
-	W_UnlockCachedPatch(patch);
+	W_UnlockCachedPatch(patch);*/
+
+	// Needs to be character select pictures instead of a tall image
+	V_DrawScaledPatch(8-xsh, my - ((128 * char_on) - 16) - FixedInt(char_scroll), 0, W_CachePatchName("ROULETTE", PU_CACHE));
+
+	{
+		INT32 ox = 32, x, y;
+		INT32 oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
+		patch_t *curpatch, *prevpatch, *nextpatch;
+
+		// Needs to be SPR2 bullshit
+		// Or even better, make a font for it
+		const char *patchformat = "CHRNME%02d";
+
+		curpatch = W_CachePatchName(va(patchformat, char_on), PU_CACHE);
+		prevpatch = W_CachePatchName(va(patchformat, char_on-1), PU_CACHE);
+		nextpatch = W_CachePatchName(va(patchformat, char_on+1), PU_CACHE);
+		y = my + (128 + 16);
+
+		if (!xsh)
+		{
+			// prev
+			txsh = oxsh;
+			x = ox - txsh - 128;
+			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, prevpatch);
+
+			// next
+			txsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv((128*FRACUNIT) - char_scroll, 128*FRACUNIT)));
+			x = ox + txsh;
+			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, nextpatch);
+		}
+
+		// cur
+		txsh = oxsh;
+		x = ox - txsh;
+		V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, curpatch);
+	}
 
 	// draw title (or big pic)
-	M_DrawMenuTitle();
+	//M_DrawMenuTitle();
 
 	// Character description
 	//M_DrawTextBox(136, my, 21, 20);
-	V_DrawString(146, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+	V_DrawString(146+xsh, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
 // Chose the player you want to use Tails 03-02-2002
@@ -7854,6 +7970,9 @@ static void M_ChoosePlayer(INT32 choice)
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = 0; // finish scrolling the menu
 		M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
+		// Is this a hack?
+		charselscrollx = 0;
+		charseltimer = 0;
 	}
 	M_ClearMenus(true);
 
