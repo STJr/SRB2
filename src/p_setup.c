@@ -2311,7 +2311,7 @@ static void P_LevelInitStuff(void)
 			players[i].lives = cv_startinglives.value;
 		}
 
-		players[i].realtime = countdown = countdown2 = 0;
+		players[i].realtime = countdown = countdown2 = exitfadestarted = 0;
 
 		players[i].gotcontinue = false;
 
