@@ -6706,6 +6706,11 @@ static void P_NiGHTSMovement(player_t *player)
 	INT32 i;
 	statenum_t flystate;
 	UINT16 visangle;
+#ifdef ROTSPRITE
+	angle_t rollangle = 0;
+	UINT8 turningstate = 0;
+	UINT8 turndiff = 24;
+#endif
 
 	player->pflags &= ~PF_DRILLING;
 
@@ -6890,6 +6895,9 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 		return;
 	}
 
@@ -6904,6 +6912,9 @@ static void P_NiGHTSMovement(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
 
 		player->mo->flags |= MF_NOCLIPHEIGHT;
+#ifdef ROTSPRITE
+		player->mo->rollangle = 0;
+#endif
 
 		return;
 	}
@@ -7176,6 +7187,7 @@ static void P_NiGHTSMovement(player_t *player)
 		flystate = (P_IsObjectOnGround(player->mo)) ? S_PLAY_NIGHTS_STAND : S_PLAY_NIGHTS_FLOAT;
 	else
 	{
+#ifndef ROTSPRITE
 		visangle = ((player->anotherflyangle + 7) % 360)/15;
 		if (visangle > 18) // Over 270 degrees.
 			visangle = 30 - visangle;
@@ -7192,14 +7204,54 @@ static void P_NiGHTSMovement(player_t *player)
 				visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
 		}
 
-		flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_FLY0-C - the *2 is to skip over drill states
+		flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_NIGHTS_FLY0-C - the *2 is to skip over drill states
 
 		if (player->pflags & PF_DRILLING)
 			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
+#else
+		angle_t a = R_PointToAngle(player->mo->x, player->mo->y) - player->mo->angle;
+		visangle = (player->flyangle % 360);
+
+		flystate = S_PLAY_NIGHTS_FLY0;
+		if (player->pflags & PF_DRILLING)
+			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
+		else
+		{
+			if ((visangle >= (90-turndiff) && visangle <= (90+turndiff))
+			|| (visangle >= (270-turndiff) && visangle <= (270+turndiff)))
+			{
+				turningstate = 3;
+				flystate = S_PLAY_NIGHTS_DRILL0;
+			}
+		}
+
+		if (player->flyangle >= 90 && player->flyangle <= 270)
+		{
+			if (player->flyangle == 270 && (a < ANGLE_180))
+				;
+			else if (player->flyangle == 90 && (a < ANGLE_180))
+				;
+			else
+				visangle += 180;
+		}
+
+		rollangle = FixedAngle(visangle*FRACUNIT);
+#endif // ROTSPRITE
 	}
 
 	if (player->mo->state != &states[flystate])
 		P_SetPlayerMobjState(player->mo, flystate);
+
+#ifdef ROTSPRITE
+	player->mo->rollangle = rollangle;
+	if (turningstate)
+	{
+		player->mo->frame = turningstate;
+		player->mo->tics = -1;
+	}
+	else if (player->mo->tics == -1)
+		player->mo->tics = states[flystate].tics;
+#endif // ROTSPRITE
 
 	if (player == &players[consoleplayer])
 		localangle = player->mo->angle;

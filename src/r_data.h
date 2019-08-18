@@ -77,12 +77,19 @@ void R_CheckTextureCache(INT32 tex);
 
 // Retrieve column data for span blitting.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-
 UINT8 *R_GetFlat(lumpnum_t flatnum);
+
+#ifdef ROTSPRITE
+boolean R_CheckIfPatch(lumpnum_t lump);
+void R_PatchToFlat(patch_t *patch, UINT16 *raw, boolean flip);
+patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size);
+#endif
 
 // I/O, setting up the stuff.
 void R_InitData(void);
 void R_PrecacheLevel(void);
+
+extern size_t flatmemory, spritememory, texturememory;
 
 // Retrieval.
 // Floor/ceiling opaque texture tiles,

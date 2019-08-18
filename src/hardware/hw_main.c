@@ -4332,7 +4332,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	if (hires)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
@@ -4688,7 +4688,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	//          sure to do it the right way. So actually, we keep normal sprite
 	//          in memory and we add the md2 model if it exists for that sprite
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 #ifdef ALAM_LIGHTING
 	if (!(spr->mobj->flags2 & MF2_DEBRIS) && (spr->mobj->sprite != SPR_PLAY ||
@@ -4833,7 +4833,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 		return;
 
 	// cache sprite graphics
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
 	// create the sprite billboard
 	//
@@ -5477,10 +5477,22 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 	float z1, z2;
 
+	fixed_t spr_width, spr_height;
+	fixed_t spr_offset, spr_topoffset;
+#ifdef ROTSPRITE
+	patch_t *rotsprite = NULL;
+	angle_t arollangle;
+	UINT32 rollangle;
+#endif
+
 	if (!thing)
 		return;
-	else
-		this_scale = FIXED_TO_FLOAT(thing->scale);
+
+#ifdef ROTSPRITE
+	arollangle = thing->rollangle;
+	rollangle = AngleFixed(arollangle)>>FRACBITS;
+#endif
+	this_scale = FIXED_TO_FLOAT(thing->scale);
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(thing->x) - gr_viewx;
@@ -5573,6 +5585,30 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
+	spr_width = spritecachedinfo[lumpoff].width;
+	spr_height = spritecachedinfo[lumpoff].height;
+	spr_offset = spritecachedinfo[lumpoff].offset;
+	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
+
+#ifdef ROTSPRITE
+	if (rollangle > 0)
+	{
+		if (!sprframe->rotsprite.cached[rot])
+			R_CacheRotSprite(sprframe, rot, flip);
+		rollangle /= ROTANGDIFF;
+		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		if (rotsprite != NULL)
+		{
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+	}
+#endif
+
 	if (papersprite)
 	{
 		rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle)>>ANGLETOFINESHIFT));
@@ -5586,13 +5622,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (flip)
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
 	}
 
 	// test if too close
@@ -5614,13 +5650,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (vflip)
 	{
-		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
-		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gzt = gz + FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
-		gz = gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spr_topoffset) * this_scale;
+		gz = gzt - FIXED_TO_FLOAT(spr_height) * this_scale;
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -5653,7 +5689,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+#ifdef ROTSPRITE
+	if (rotsprite)
+		vis->gpatch = (GLPatch_t *)rotsprite;
+	else
+#endif
+		vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
@@ -5779,7 +5821,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 

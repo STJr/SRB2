@@ -489,6 +489,8 @@ extern INT32 cv_debug;
 // Misc stuff for later...
 // =======================
 
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+
 // Modifier key variables, accessible anywhere
 extern UINT8 shiftdown, ctrldown, altdown;
 extern boolean capslock;
@@ -615,5 +617,10 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	SRB2CB port.
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
+
+/// Sprite rotation
+#define ROTSPRITE
+#define ROTANGLES 24	// Needs to be a divisor of 360 (45, 60, 90, 120...)
+#define ROTANGDIFF (360 / ROTANGLES)
 
 #endif // __DOOMDEF__

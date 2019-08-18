@@ -540,9 +540,10 @@ levelflat_t *levelflats;
 size_t P_PrecacheLevelFlats(void)
 {
 	lumpnum_t lump;
-	size_t i, flatmemory = 0;
+	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
+	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
 		lump = levelflats[i].lumpnum;

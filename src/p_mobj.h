@@ -277,6 +277,9 @@ typedef struct mobj_s
 
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
+#ifdef ROTSPRITE
+	angle_t rollangle;
+#endif
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -397,6 +400,9 @@ typedef struct precipmobj_s
 
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
+#ifdef ROTSPRITE
+	angle_t rollangle;
+#endif
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites

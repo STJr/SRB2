@@ -1636,7 +1636,18 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, INT32 duration,
 	if (flipped)
 		scaley = -scaley;
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
-	pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
+
+#ifdef ROTSPRITE
+	// rotsprite
+	if (pos->roll)
+	{
+		pglTranslatef(pos->centerx, pos->centery, 0);
+		pglRotatef(pos->anglex, 1.0f, 0.0f, 0.0f);
+		pglTranslatef(-pos->centerx, -pos->centery, 0);
+	}
+	else
+#endif
+		pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
 
 	val = *gl_cmd_buffer++;
 

@@ -1401,7 +1401,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 		{
 			// Sprite
-			gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+			gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 
@@ -1503,7 +1503,22 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
-		p.anglex = 0.0f;
+
+		// rotsprite
+#ifdef ROTSPRITE
+		if (spr->mobj->rollangle)
+		{
+			// do i have to support ROTANGLES here??????
+			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
+			p.anglex = FIXED_TO_FLOAT(anglef);
+			// pivot
+			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
+			p.centery = FIXED_TO_FLOAT(spr->mobj->height/2);
+			p.roll = true;
+		}
+		else
+#endif
+			p.anglex = 0.0f;
 
 		color[0] = Surf.FlatColor.s.red;
 		color[1] = Surf.FlatColor.s.green;

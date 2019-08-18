@@ -83,6 +83,7 @@ struct GLPatch_s
 	float               max_s,max_t;
 	UINT16              wadnum;      // the software patch lump num for when the hardware patch
 	UINT16              lumpnum;     // was flushed, and we need to re-create it
+	void                *rawpatch;   // :^)
 	GLMipmap_t          mipmap;
 };
 typedef struct GLPatch_s GLPatch_t;

@@ -114,7 +114,7 @@ sprcache_t *spritecachedinfo;
 lighttable_t *colormaps;
 
 // for debugging/info purposes
-static size_t flatmemory, spritememory, texturememory;
+size_t flatmemory, spritememory, texturememory;
 
 // highcolor stuff
 INT16 color8to16[256]; // remap color index to highcolor rgb value
@@ -2306,3 +2306,211 @@ void R_PrecacheLevel(void)
 			"texturememory: %s k\n"
 			"spritememory:  %s k\n", sizeu1(flatmemory>>10), sizeu2(texturememory>>10), sizeu3(spritememory>>10));
 }
+
+#ifdef ROTSPRITE
+// https://github.com/coelckers/prboom-plus/blob/master/prboom2/src/r_patch.c#L350
+boolean R_CheckIfPatch(lumpnum_t lump)
+{
+	size_t size;
+	INT16 width, height;
+	patch_t *patch;
+	boolean result;
+
+	size = W_LumpLength(lump);
+
+	// minimum length of a valid Doom patch
+	if (size < 13)
+		return false;
+
+	patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+
+	width = SHORT(patch->width);
+	height = SHORT(patch->height);
+
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
+
+	if (result)
+	{
+		// The dimensions seem like they might be valid for a patch, so
+		// check the column directory for extra security. All columns
+		// must begin after the column directory, and none of them must
+		// point past the end of the patch.
+		INT16 x;
+
+		for (x = 0; x < width; x++)
+		{
+			UINT32 ofs = LONG(patch->columnofs[x]);
+
+			// Need one byte for an empty column (but there's patches that don't know that!)
+			if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)size)
+			{
+				result = false;
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
+// https://github.com/Jimita/SRB2/blob/flats-png/src/r_data.c#L2157
+void R_PatchToFlat(patch_t *patch, UINT16 *raw, boolean flip)
+{
+	fixed_t col, ofs;
+	column_t *column;
+	UINT16 *desttop, *dest, *deststop;
+	UINT8 *source;
+
+	desttop = raw;
+	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
+
+	#define DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS \
+	{ \
+		INT32 topdelta, prevdelta = -1; \
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col])); \
+		while (column->topdelta != 0xff) \
+		{ \
+			topdelta = column->topdelta; \
+			if (topdelta <= prevdelta) \
+				topdelta += prevdelta; \
+			prevdelta = topdelta; \
+			dest = desttop + (topdelta * SHORT(patch->width)); \
+			source = (UINT8 *)(column) + 3; \
+			for (ofs = 0; dest < deststop && ofs < column->length; ofs++) \
+			{ \
+				*dest = source[ofs]; \
+				dest += SHORT(patch->width); \
+			} \
+			column = (column_t *)((UINT8 *)column + column->length + 4); \
+		} \
+	}
+
+	if (!flip)
+	{
+		for (col = 0; col < SHORT(patch->width); col++, desttop++)
+			DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS
+	}
+	else
+	{
+		// flipped
+		for (col = SHORT(patch->width)-1; col >= 0; col--, desttop++)
+			DEAR_GOD_FORGIVE_ME_FOR_MY_MACROS
+	}
+}
+
+// https://github.com/Jimita/SRB2/blob/flats-png/src/r_data.c#L1970
+static UINT8 imgbuf[1<<26];
+patch_t *R_FlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, size_t *size)
+{
+	UINT32 x, y;
+	UINT8 *img;
+	UINT8 *imgptr = imgbuf;
+	UINT8 *colpointers, *startofspan;
+
+	#define WRITE8(buf, a) ({*buf = (a); buf++;})
+	#define WRITE16(buf, a) ({*buf = (a)&255; buf++; *buf = (a)>>8; buf++;})
+	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
+
+	if (!raw)
+		return NULL;
+
+	// Write image size and offset
+	WRITE16(imgptr, width);
+	WRITE16(imgptr, height);
+	// no offsets
+	WRITE16(imgptr, 0);
+	WRITE16(imgptr, 0);
+
+	// Leave placeholder to column pointers
+	colpointers = imgptr;
+	imgptr += width*4;
+
+	// Write columns
+	for (x = 0; x < width; x++)
+	{
+		int lastStartY = 0;
+		int spanSize = 0;
+		startofspan = NULL;
+
+		//printf("%d ", x);
+		// Write column pointer (@TODO may be wrong)
+		WRITE32(colpointers, imgptr - imgbuf);
+
+		// Write pixels
+		for (y = 0; y < height; y++)
+		{
+			UINT16 pixel = raw[((y * width) + x)];
+			UINT8 paletteIndex = (pixel & 0xFF);
+			UINT8 opaque = (pixel != 0xFF00); // If 1, we have a pixel
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITE8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
+
+			// Start new column if we need to
+			if (!startofspan || spanSize == 255)
+			{
+				int writeY = y;
+
+				// If we reached the span size limit, finish the previous span
+				if (startofspan)
+					WRITE8(imgptr, 0);
+
+				if (y > 254)
+				{
+					// Make sure we're aligned to 254
+					if (lastStartY < 254)
+					{
+						WRITE8(imgptr, 254);
+						WRITE8(imgptr, 0);
+						imgptr += 2;
+						lastStartY = 254;
+					}
+
+					// Write stopgap empty spans if needed
+					writeY = y - lastStartY;
+
+					while (writeY > 254)
+					{
+						WRITE8(imgptr, 254);
+						WRITE8(imgptr, 0);
+						imgptr += 2;
+						writeY -= 254;
+					}
+				}
+
+				startofspan = imgptr;
+				WRITE8(imgptr, writeY);///@TODO calculate starting y pos
+				imgptr += 2;
+				spanSize = 0;
+
+				lastStartY = y;
+			}
+
+			// Write the pixel
+			WRITE8(imgptr, paletteIndex);
+			spanSize++;
+			startofspan[1] = spanSize;
+		}
+
+		if (startofspan)
+			WRITE8(imgptr, 0);
+
+		WRITE8(imgptr, 0xFF);
+	}
+
+	#undef WRITE8
+	#undef WRITE16
+	#undef WRITE32
+
+	*size = imgptr-imgbuf;
+	img = malloc(*size);
+	memcpy(img, imgbuf, *size);
+	return (patch_t *)img;
+}
+#endif

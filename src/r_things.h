@@ -17,6 +17,7 @@
 #include "sounds.h"
 #include "r_plane.h"
 #include "r_portal.h"
+#include "r_defs.h"
 
 // "Left" and "Right" character symbols for additional rotation functionality
 #define ROT_L ('L' - '0')
@@ -50,6 +51,10 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
+
+#ifdef ROTSPRITE
+void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip);
+#endif
 
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
@@ -176,7 +181,7 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	fixed_t texturemid;
-	lumpnum_t patch;
+	patch_t *patch;
 
 	lighttable_t *colormap; // for color translation and shadow draw
 	                        // maxbright frames as well
