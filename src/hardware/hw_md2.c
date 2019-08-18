@@ -1198,7 +1198,7 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 	if (!md2 || !skin)
 		return 0;
 
-	if ((spr2 & ~FF_SPR2SUPER) >= free_spr2)
+	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
 		return 0;
 
 	while (!(md2->model->spr2frames[spr2*2 + 1])

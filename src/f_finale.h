@@ -87,7 +87,7 @@ typedef enum
 // Current menu parameters
 
 extern mobj_t *titlemapcameraref;
-extern char curbgname[8];
+extern char curbgname[9];
 extern SINT8 curfadevalue;
 extern boolean curhidepics;
 extern INT32 curbgcolor;
