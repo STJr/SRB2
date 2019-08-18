@@ -7529,6 +7529,9 @@ static void M_HandleLoadSave(INT32 choice)
 	}
 	if (exitmenu)
 	{
+		// Is this a hack?
+		charselscrollx = 0;
+		charseltimer = 0;
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else
@@ -7936,7 +7939,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			// prev
 			txsh = oxsh;
-			x = ox - txsh - 128;
+			x = ox - txsh - (128*2);
 			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, prevpatch);
 
 			// next
