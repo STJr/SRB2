@@ -5090,12 +5090,31 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 	}
 }
 
+static void M_DrawRecordAttackBackground(void)
+{
+	patch_t *fg = W_CachePatchName("RECATFG", PU_CACHE);
+	angle_t fa;
+
+	INT32 i;
+	INT32 height = (fg->height/2);
+	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
+	{
+		INT32 y = ((i*height) - (height - ((recfgtimer*2)%height)));
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT/2, V_SNAPTOLEFT, fg, NULL);
+		V_DrawFixedPatch(BASEVIDWIDTH<<FRACBITS, y<<FRACBITS, FRACUNIT/2, V_SNAPTORIGHT|V_FLIP, fg, NULL);
+	}
+
+	fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+	V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
+
+	recfgtimer++;
+}
+
 static void M_DrawLevelPlatterMenu(void)
 {
 	UINT8 iter = lsrow, sizeselect = (lswide(lsrow) ? 1 : 0);
 	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
-	angle_t fa;
 
 	if (currentMenu->prevMenu == &SP_TimeAttackDef)
 	{
@@ -5113,13 +5132,7 @@ static void M_DrawLevelPlatterMenu(void)
 
 		// Draw and animate foreground
 		if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
-		{
-			fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-			V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-			V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-			V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
-			recfgtimer++;
-		}
+			M_DrawRecordAttackBackground();
 	}
 
 	if (currentMenu->prevMenu == &SP_NightsAttackDef)
@@ -7794,6 +7807,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 fade = FixedInt(FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT))), fade2;
 	INT32 xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselscrollx, charselfadescrollamt)));
 	boolean thismenu = (currentMenu == &SP_PlayerDef);
+	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
+	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
+	INT32 bgheight = charbg->height;
+	INT32 fgheight = charfg->height;
 
 	if (!thismenu)
 		xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselfadescrollamt-charselscrollx, charselfadescrollamt)));
@@ -7862,15 +7879,21 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			V_DrawFill(bw+sw, 0, bw, vid.height, V_NOSCALESTART|col);
 		}
 	}
-	for (i = -12; i < (BASEVIDHEIGHT/32) + 12; i++)
+
+	if (thismenu)
 	{
-		INT32 oy = (i*32), y;
-		if (!thismenu)
-			break;
-		y = oy - (32 - (charseltimer%32));
-		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, W_CachePatchName("CHARBG", PU_CACHE), colormap);
-		y = oy - (32 + (charseltimer%32));
-		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, W_CachePatchName("CHARFG", PU_CACHE), colormap);
+		for (i = -12; i < (BASEVIDHEIGHT/bgheight) + 12; i++)
+		{
+			INT32 oy = (i*bgheight), y;
+			y = oy - (bgheight - (charseltimer%bgheight));
+			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, charbg, colormap);
+		}
+		for (i = -12; i < (BASEVIDHEIGHT/fgheight) + 12; i++)
+		{
+			INT32 oy = (i*fgheight), y;
+			y = oy - (fgheight + (charseltimer%fgheight));
+			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, charfg, colormap);
+		}
 	}
 
 	/*if (prev != i) // If there's more than one character available...
@@ -8275,8 +8298,7 @@ void M_DrawTimeAttackMenu(void)
 {
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
-	patch_t *PictureOfUrFace;
-	angle_t fa;
+	patch_t *PictureOfUrFace;	// my WHAT
 
 	M_SetMenuCurBackground("RECATTBG");
 
@@ -8294,13 +8316,7 @@ void M_DrawTimeAttackMenu(void)
 
 	// Draw and animate foreground
 	if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
-	{
-		fa = (FixedAngle(((recfgtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-		V_DrawSciencePatch(0, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTOLEFT, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-		V_DrawSciencePatch(320<<FRACBITS, -(130<<FRACBITS) + FixedMul(130<<FRACBITS, FixedDiv(recfgtimer%70, 70)), V_SNAPTOTOP|V_SNAPTORIGHT|V_FLIP, W_CachePatchName("RECATFG", PU_CACHE), FRACUNIT);
-		V_DrawSciencePatch(120<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
-		recfgtimer++;
-	}
+		M_DrawRecordAttackBackground();
 	M_DrawMenuTitle();
 
 	// draw menu (everything else goes on top of it)
