@@ -3418,6 +3418,7 @@ void M_ClearMenus(boolean callexitmenufunc)
 	if (currentMenu == &MessageDef) // Oh sod off!
 		currentMenu = &MainDef; // Not like it matters
 	menuactive = false;
+	hidetitlemap = false;
 }
 
 //
@@ -3456,6 +3457,8 @@ void M_SetupNextMenu(menu_t *menudef)
 			}
 		}
 	}
+
+	hidetitlemap = false;
 }
 
 //
@@ -7714,10 +7717,6 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 		M_ChangeMenuMusic("_chsel", true);
 
-	charseltimer = 0;
-	charselscrollx = charselfadescrollamt;
-	//wipegamestate = -1;
-
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
 	if (!allowed)
@@ -7730,7 +7729,12 @@ static void M_SetupChoosePlayer(INT32 choice)
 				char_on = description[char_on].next;
 		}
 	}
-	char_scroll = 0; // finish scrolling the menu
+
+	// finish scrolling the menu
+	char_scroll = 0;
+	charseltimer = 0;
+	charselscrollx = charselfadescrollamt;
+
 	Z_Free(char_notes);
 	char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
 }
@@ -7880,7 +7884,17 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Yes.
 	if (thismenu)
 	{
-		M_DrawLoadGameData();
+		if (charselscrollx)
+		{
+			// Don't hide the title map yet
+			hidetitlemap = false;
+			M_DrawLoadGameData();
+		}
+		else
+		{
+			// Okay, fine, now you can
+			hidetitlemap = true;
+		}
 		charseltimer++;
 	}
 	else if (charseltimer > 0)

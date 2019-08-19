@@ -75,6 +75,7 @@ INT32 curbgcolor;
 INT32 curbgxspeed;
 INT32 curbgyspeed;
 boolean curbghide;
+boolean hidetitlemap;		// WARNING: set to false by M_SetupNextMenu and M_ClearMenus
 
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
