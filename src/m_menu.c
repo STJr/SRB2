@@ -7840,7 +7840,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
 
-	INT32 fade = 0, fade2 = 0;
+	INT32 fade = 0;
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
 	INT32 bgheight = charbg->height;
@@ -7860,17 +7860,11 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// No fade for this frame
 	if (charseltimer >= TICRATE)
-	{
 		fade = 10;
-		fade2 = 0;
-	}
 	// Fading in, or out
 	// Calculate the fade amount (0-9)
 	else
-	{
 		fade = FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT)) >> FRACBITS;
-		fade2 = (fade <= 9) ? fade<<V_ALPHASHIFT : 0;
-	}
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -7946,13 +7940,13 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		{
 			INT32 oy = (i*bgheight), y;
 			y = oy - (bgheight - (charseltimer%bgheight));
-			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, charbg, colormap);
+			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charbg, colormap);
 		}
 		for (i = -12; i < (BASEVIDHEIGHT/fgheight) + 12; i++)
 		{
 			INT32 oy = (i*fgheight), y;
 			y = oy - (fgheight + (charseltimer%fgheight));
-			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, fade2<<V_ALPHASHIFT, charfg, colormap);
+			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charfg, colormap);
 		}
 	}
 
@@ -7990,21 +7984,21 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			{
 				// Why does this work?
 				x = (ox - txsh) - BASEVIDWIDTH;
-				V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, prevpatch);
+				V_DrawScaledPatch(x-xsh, y, 0, prevpatch);
 			}
 			// next
 			else if (nextpatch && char_scroll > 0)
 			{
 				x = (ox - txsh) + BASEVIDWIDTH;
 				if (x < BASEVIDWIDTH)
-					V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, nextpatch);
+					V_DrawScaledPatch(x-xsh, y, 0, nextpatch);
 			}
 		}
 
 		// cur
 		x = ox - txsh;
 		if (curpatch)
-			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, curpatch);
+			V_DrawScaledPatch(x-xsh, y, 0, curpatch);
 	}
 }
 
