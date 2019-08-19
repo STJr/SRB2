@@ -7660,6 +7660,20 @@ static void M_SetupChoosePlayer(INT32 choice)
 				}
 				else
 					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
+
+				if (!(description[i].nametag[0]))
+				{
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 6)
+					{
+						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+						spriteframe_t *sprframe = &sprdef->spriteframes[5];
+						description[i].namepic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+					}
+					else
+						description[i].namepic = W_CachePatchName("MISSING", PU_CACHE);
+				}
+				else
+					description[i].namepic = W_CachePatchName(description[i].nametag, PU_CACHE);
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -7796,21 +7810,23 @@ static INT32 getskinfromdescription(INT32 desc)
 
 static void M_DrawSetupChoosePlayerMenu(void)
 {
+	boolean thismenu = (currentMenu == &SP_PlayerDef);
+
+	INT32 xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselscrollx, charselfadescrollamt)));
 	const INT32 my = 16;
-	//patch_t *patch;
-	INT32 i;
-	//UINT8 prev, next;
-	UINT16 col;
-	UINT8 *colormap = NULL;
+
 	skin_t *charskin = &skins[0];
 	INT32 skinnum = 0;
+	UINT16 col;
+	UINT8 *colormap = NULL;
+	INT32 prev = -1, next = -1;
+
 	INT32 fade = FixedInt(FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT))), fade2;
-	INT32 xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselscrollx, charselfadescrollamt)));
-	boolean thismenu = (currentMenu == &SP_PlayerDef);
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
 	INT32 bgheight = charbg->height;
 	INT32 fgheight = charfg->height;
+	INT32 i;
 
 	if (!thismenu)
 		xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselfadescrollamt-charselscrollx, charselfadescrollamt)));
@@ -7818,9 +7834,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	fade2 = fade<<V_ALPHASHIFT;
 	if (fade > 9)
 		fade2 = 0;
-
-	// Character select profile images!1
-	//M_DrawTextBox(0, my, 16, 20);
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -7832,19 +7845,19 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else // close enough.
 		charselscrollx = 0; // just be exact now.
 
-	/*o = (char_scroll >> FRACBITS) + 16;
-
-	if (o < 0) // A little hacky...
-	{
-		i = description[char_on].prev;
-		o += 128;
-	}
-	else
-		i = char_on;*/
-
 	skinnum = getskinfromdescription(char_on);
 	if (skinnum != -1)
 		charskin = &skins[skinnum];
+
+	// Get prev character...
+	prev = description[char_on].prev;
+	// If there's more than one character available...
+	if (prev != char_on)
+		// Let's get the next character now.
+		next = description[char_on].next;
+	else
+		// No there isn't.
+		prev = -1;
 
 	col = Color_Opposite[(charskin->prefcolor - 1)*2];
 	colormap = R_GetTranslationColormap(skinnum, col, 0);
@@ -7896,93 +7909,55 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 	}
 
-	/*if (prev != i) // If there's more than one character available...
+	// Character select pictures
+	V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll), 0, description[char_on].pic);
+	if (prev != -1)
+		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) - 144, 0, description[prev].pic);
+	if (next != -1)
+		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) + 144, 0, description[next].pic);
+
+	// Character description
+	V_DrawString(146+xsh, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+
+	// Name tags!
 	{
-		// Let's get the next character now.
-		next = description[i].next;
-
-		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
-		if (o < 32)
-		{
-			patch = description[prev].pic;
-			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
-			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
-			W_UnlockCachedPatch(patch);
-		}
-
-		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
-		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
-		{
-			patch = description[next].pic;
-			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), 2*o);
-			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
-			W_UnlockCachedPatch(patch);
-		}
-	}
-
-	patch = description[i].pic;
-	if (o >= 0 && o <= 32)
-	{
-		if (SHORT(patch->width) >= 256)
-			V_DrawSmallScaledPatch(8, my + 40 - o, 0, patch);
-		else
-			V_DrawScaledPatch(8, my + 40 - o, 0, patch);
-	}
-	else
-	{
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height) - 2*(o-32));
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height) - (o-32));
-	}
-	W_UnlockCachedPatch(patch);*/
-
-	// Needs to be character select pictures instead of a tall image
-	V_DrawScaledPatch(8-xsh, my - ((128 * char_on) - 16) - FixedInt(char_scroll), 0, W_CachePatchName("ROULETTE", PU_CACHE));
-
-	{
-		INT32 ox = 32, x, y;
+		INT32 ox, x, y;
 		INT32 oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
-		patch_t *curpatch, *prevpatch, *nextpatch;
+		patch_t *curpatch = NULL, *prevpatch = NULL, *nextpatch = NULL;
 
-		// Needs to be SPR2 bullshit
-		// Or even better, make a font for it
-		const char *patchformat = "CHRNME%02d";
+		// Name tag patches
+		curpatch = description[char_on].namepic;
+		if (prev != -1) prevpatch = description[prev].namepic;
+		if (next != -1) nextpatch = description[next].namepic;
 
-		curpatch = W_CachePatchName(va(patchformat, char_on), PU_CACHE);
-		prevpatch = W_CachePatchName(va(patchformat, char_on-1), PU_CACHE);
-		nextpatch = W_CachePatchName(va(patchformat, char_on+1), PU_CACHE);
-		y = my + (128 + 16);
+		txsh = oxsh;
+		ox = (8-xsh) + (description[char_on].pic)->width/2;
+		ox -= (curpatch->width/2);
+		y = my + 144;
 
-		if (!xsh)
+		if (char_scroll && (!xsh))
 		{
 			// prev
-			txsh = oxsh;
-			x = ox - txsh - (128*2);
-			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, prevpatch);
-
+			if (prevpatch && char_scroll < 0)
+			{
+				// Why does this work?
+				x = (ox - txsh) - BASEVIDWIDTH;
+				V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, prevpatch);
+			}
 			// next
-			txsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv((128*FRACUNIT) - char_scroll, 128*FRACUNIT)));
-			x = ox + txsh;
-			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, nextpatch);
+			else if (nextpatch && char_scroll > 0)
+			{
+				x = (ox - txsh) + BASEVIDWIDTH;
+				if (x < BASEVIDWIDTH)
+					V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, nextpatch);
+			}
 		}
 
 		// cur
-		txsh = oxsh;
 		x = ox - txsh;
-		V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, curpatch);
+		if (curpatch)
+			V_DrawScaledPatch(x-xsh, y, fade2<<V_ALPHASHIFT, curpatch);
 	}
-
-	// draw title (or big pic)
-	//M_DrawMenuTitle();
-
-	// Character description
-	//M_DrawTextBox(136, my, 21, 20);
-	V_DrawString(146+xsh, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
 // Chose the player you want to use Tails 03-02-2002

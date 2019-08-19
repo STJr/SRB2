@@ -313,7 +313,9 @@ static boolean findFreeSlot(INT32 *num)
 	if (*num >= MAXSKINS)
 		return false;
 
-	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
+	description[*num].picname[0] = '\0';
+	description[*num].nametag[0] = '\0';
 
 	// Found one! ^_^
 	return (description[*num].used = true);
@@ -399,6 +401,13 @@ static void readPlayer(MYFILE *f, INT32 num)
 					goto done;
 
 				strncpy(description[num].picname, word2, 8);
+			}
+			else if (fastcmp(word, "NAMETAG"))
+			{
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+					goto done;
+
+				strncpy(description[num].nametag, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
