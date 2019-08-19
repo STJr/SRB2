@@ -7831,7 +7831,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	boolean thismenu = (currentMenu == &SP_PlayerDef);
 
-	INT32 xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselscrollx, charselfadescrollamt)));
+	INT32 xsh = 0;
 	const INT32 my = 16;
 
 	skin_t *charskin = &skins[0];
@@ -7840,19 +7840,37 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
 
-	INT32 fade = FixedInt(FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT))), fade2;
+	INT32 fade = 0, fade2 = 0;
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
 	INT32 bgheight = charbg->height;
 	INT32 fgheight = charfg->height;
 	INT32 i;
 
+	// Fading out from menu
 	if (!thismenu)
-		xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(charselfadescrollamt-charselscrollx, charselfadescrollamt)));
+		xsh = (charselfadescrollamt-charselscrollx);
+	// Fading in to menu
+	else if (charselscrollx)
+		xsh = charselscrollx;
 
-	fade2 = fade<<V_ALPHASHIFT;
-	if (fade > 9)
+	// Calculate x-shift value
+	if (xsh)
+		xsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(xsh, charselfadescrollamt)));
+
+	// No fade for this frame
+	if (charseltimer >= TICRATE)
+	{
+		fade = 10;
 		fade2 = 0;
+	}
+	// Fading in, or out
+	// Calculate the fade amount (0-9)
+	else
+	{
+		fade = FixedMul(10*FRACUNIT, FixedDiv((charseltimer*4) * FRACUNIT, TICRATE * FRACUNIT)) >> FRACBITS;
+		fade2 = (fade <= 9) ? fade<<V_ALPHASHIFT : 0;
+	}
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
