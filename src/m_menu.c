@@ -5100,7 +5100,7 @@ static void M_DrawRecordAttackBackground(void)
 	angle_t fa;
 
 	INT32 i;
-	INT32 height = (fg->height/2);
+	INT32 height = (SHORT(fg->height)/2);
 	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
 	{
 		INT32 y = ((i*height) - (height - ((recfgtimer*2)%height)));
@@ -7815,6 +7815,11 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 }
 
 // Draw the choose player setup menu, had some fun with player anim
+#define CHOOSEPLAYER_USECHARCOLOUR
+#define CHOOSEPLAYER_OPPOSITECOLOUR
+//#define CHOOSEPLAYER_DRAWHEADER
+
+#ifdef CHOOSEPLAYER_USECHARCOLOUR
 static INT32 getskinfromdescription(INT32 desc)
 {
 	char *and = strchr(description[desc].skinname, '&');
@@ -7826,6 +7831,7 @@ static INT32 getskinfromdescription(INT32 desc)
 	}
 	return R_SkinAvailable(description[desc].skinname);
 }
+#endif // CHOOSEPLAYER_USECHARCOLOUR
 
 static void M_DrawSetupChoosePlayerMenu(void)
 {
@@ -7834,17 +7840,19 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 xsh = 0;
 	const INT32 my = 16;
 
+#ifdef CHOOSEPLAYER_USECHARCOLOUR
 	skin_t *charskin = &skins[0];
 	INT32 skinnum = 0;
-	UINT16 col;
+#endif // CHOOSEPLAYER_USECHARCOLOUR
+	UINT8 col;
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
 
 	INT32 fade = 0;
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_CACHE);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_CACHE);
-	INT32 bgheight = charbg->height;
-	INT32 fgheight = charfg->height;
+	INT16 bgheight = SHORT(charbg->height);
+	INT16 fgheight = SHORT(charfg->height);
 	INT32 i;
 
 	// Fading out from menu
@@ -7876,10 +7884,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	else // close enough.
 		charselscrollx = 0; // just be exact now.
 
-	skinnum = getskinfromdescription(char_on);
-	if (skinnum != -1)
-		charskin = &skins[skinnum];
-
 	// Get prev character...
 	prev = description[char_on].prev;
 	// If there's more than one character available...
@@ -7890,8 +7894,25 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// No there isn't.
 		prev = -1;
 
-	col = Color_Opposite[(charskin->prefcolor - 1)*2];
+#ifdef CHOOSEPLAYER_USECHARCOLOUR
+	// Find skin number from description[]
+	skinnum = getskinfromdescription(char_on);
+	if (skinnum != -1)
+		charskin = &skins[skinnum];
+
+	// Use the character's skincolour
+	col = charskin->prefcolor;
+#ifdef CHOOSEPLAYER_OPPOSITECOLOUR
+	// Use the OPPOSITE of the character's skincolour
+	col = Color_Opposite[(col - 1)*2];
+#endif // CHOOSEPLAYER_OPPOSITECOLOUR
+
+	// Make the translation colourmap
 	colormap = R_GetTranslationColormap(skinnum, col, 0);
+#else
+	// Dark blue translation colourmap
+	colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_COBALT, 0);
+#endif // CHOOSEPLAYER_USECHARCOLOUR
 
 	// Yes.
 	if (thismenu)
@@ -7972,9 +7993,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		if (next != -1) nextpatch = description[next].namepic;
 
 		txsh = oxsh;
-		ox = (8-xsh) + (description[char_on].charpic)->width/2;
+		ox = (8-xsh) + SHORT((description[char_on].charpic)->width)/2;
 		if (curpatch)
-			ox -= (curpatch->width/2);
+			ox -= (SHORT(curpatch->width)/2);
 		y = my + 144;
 
 		if (char_scroll && (!xsh))
@@ -8000,6 +8021,16 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		if (curpatch)
 			V_DrawScaledPatch(x-xsh, y, 0, curpatch);
 	}
+
+	// Menu header
+#ifdef CHOOSEPLAYER_DRAWHEADER
+	{
+		patch_t *header = W_CachePatchName("M_PICKP", PU_CACHE);
+		INT32 xtitle = 146;
+		INT32 ytitle = (35 - SHORT(header->height))/2;
+		V_DrawFixedPatch((xtitle+xsh)<<FRACBITS, ytitle<<FRACBITS, FRACUNIT/2, 0, header, NULL);
+	}
+#endif // CHOOSEPLAYER_DRAWHEADER
 }
 
 // Chose the player you want to use Tails 03-02-2002
