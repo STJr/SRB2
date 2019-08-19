@@ -842,6 +842,12 @@ typedef enum playersprite
 	NUMPLAYERSPRITES
 } playersprite_t;
 
+// SPR2_XTRA
+#define XTRA_LIFEPIC	0		// Life icon patch
+#define XTRA_CHARSEL	1		// Character select picture
+#define XTRA_NAMETAG	2		// Character select nametag
+#define XTRA_ENDING		3		// Ending finale patches
+
 typedef enum state
 {
 	S_NULL,

@@ -1584,15 +1584,15 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 5)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= (XTRA_ENDING+2)+1)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
-			sprframe = &sprdef->spriteframes[2];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[3];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
 			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[4];
+			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
 			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		}
 		else // eh, yknow what? too lazy to put MISSINGs here. eggman wins if you don't give your character an ending firework display.

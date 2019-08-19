@@ -3552,7 +3552,8 @@ void M_InitCharacterTables(void)
 		strcpy(description[i].picname, "");
 		strcpy(description[i].skinname, "");
 		description[i].prev = description[i].next = 0;
-		description[i].pic = NULL;
+		description[i].charpic = NULL;
+		description[i].namepic = NULL;
 	}
 }
 
@@ -7630,6 +7631,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	{
 		if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 		{
+			char *botskin = strchr(description[i].skinname, '&');
 			name = strtok(Z_StrDup(description[i].skinname), "&");
 			skinnum = R_SkinAvailable(name);
 			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
@@ -7649,31 +7651,44 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 				if (!(description[i].picname[0]))
 				{
-					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 2)
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
 					{
 						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-						spriteframe_t *sprframe = &sprdef->spriteframes[1];
-						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+						spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
+						description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 					}
 					else
-						description[i].pic = W_CachePatchName("MISSING", PU_CACHE);
+						description[i].charpic = W_CachePatchName("MISSING", PU_CACHE);
 				}
 				else
-					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
+					description[i].charpic = W_CachePatchName(description[i].picname, PU_CACHE);
 
-				if (!(description[i].nametag[0]))
+				if (!(description[i].nametag[0]) && (!botskin))
 				{
-					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 6)
+					if (skins[skinnum].sprites[SPR2_XTRA].numframes >= XTRA_NAMETAG+1)
 					{
 						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
-						spriteframe_t *sprframe = &sprdef->spriteframes[5];
+						spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_NAMETAG];
 						description[i].namepic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 					}
 					else
-						description[i].namepic = W_CachePatchName("MISSING", PU_CACHE);
+					{
+						// If no name tag patch was provided,
+						// the character select screen
+						// will simply not draw anything.
+						description[i].namepic = NULL;
+					}
 				}
 				else
-					description[i].namepic = W_CachePatchName(description[i].nametag, PU_CACHE);
+				{
+					const char *nametag = description[i].nametag;
+					// If no name tag patch was provided,
+					// the character select screen
+					// will simply not draw anything.
+					description[i].namepic = NULL;
+					if (W_LumpExists(nametag))
+						description[i].namepic = W_CachePatchName(nametag, PU_CACHE);
+				}
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -7910,11 +7925,11 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	// Character select pictures
-	V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll), 0, description[char_on].pic);
+	V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll), 0, description[char_on].charpic);
 	if (prev != -1)
-		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) - 144, 0, description[prev].pic);
+		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) - 144, 0, description[prev].charpic);
 	if (next != -1)
-		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) + 144, 0, description[next].pic);
+		V_DrawScaledPatch(8-xsh, (my+16) - FixedInt(char_scroll) + 144, 0, description[next].charpic);
 
 	// Character description
 	V_DrawString(146+xsh, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
@@ -7931,8 +7946,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		if (next != -1) nextpatch = description[next].namepic;
 
 		txsh = oxsh;
-		ox = (8-xsh) + (description[char_on].pic)->width/2;
-		ox -= (curpatch->width/2);
+		ox = (8-xsh) + (description[char_on].charpic)->width/2;
+		if (curpatch)
+			ox -= (curpatch->width/2);
 		y = my + 144;
 
 		if (char_scroll && (!xsh))

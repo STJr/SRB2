@@ -402,7 +402,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				strncpy(description[num].picname, word2, 8);
 			}
-			else if (fastcmp(word, "NAMETAG"))
+			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
 			{
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
