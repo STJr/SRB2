@@ -5135,7 +5135,7 @@ static void M_DrawLevelPlatterMenu(void)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 
 		// Draw and animate foreground
-		if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
+		if (!curbghide && stricmp("RECATTBG", curbgname) < 0)
 			M_DrawRecordAttackBackground();
 	}
 
@@ -8363,7 +8363,7 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
 	// Draw and animate foreground
-	if ((!curbghide || !titlemapinaction) && !stricmp("RECATTBG", curbgname))
+	if (!curbghide && stricmp("RECATTBG", curbgname) < 0)
 		M_DrawRecordAttackBackground();
 	M_DrawMenuTitle();
 
