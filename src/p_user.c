@@ -2198,7 +2198,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_THOKKED) && (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
 				player->pflags |= PF_SPINNING;
-			else
+			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
 		}
 
@@ -2217,7 +2217,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				player->skidtime = TICRATE;
 				player->mo->tics = -1;
 			}
-			else
+			else if (!player->skidtime)
 				player->pflags &= ~PF_GLIDING;
 		}
 		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
@@ -2268,7 +2268,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		}
 		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
 			;
-		else if (player->pflags & PF_JUMPED || player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+		else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
 		{
 			if (player->cmomx || player->cmomy)
 			{
