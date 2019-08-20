@@ -42,6 +42,7 @@
 #include "lzf.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "md5.h"
 
 #ifdef CLIENT_LOADINGSCREEN
 // cl loading screen
@@ -109,6 +110,9 @@ static UINT8 resynch_inprogress[MAXNETNODES];
 static UINT8 resynch_local_inprogress = false; // WE are desynched and getting packets to fix it.
 static UINT8 player_joining = false;
 UINT8 hu_resynching = 0;
+
+UINT8 adminpassmd5[16];
+boolean adminpasswordset = false;
 
 // Client specific
 static ticcmd_t localcmds;
@@ -3784,6 +3788,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 	INT32 netconsole;
 	tic_t realend, realstart;
 	UINT8 *pak, *txtpak, numtxtpak;
+	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
 
 	txtpak = NULL;
 
@@ -3980,6 +3985,32 @@ static void HandlePacketFromPlayer(SINT8 node)
 				M_Memcpy(&textcmd[textcmd[0]+1], netbuffer->u.textcmd+1, netbuffer->u.textcmd[0]);
 				textcmd[0] += (UINT8)netbuffer->u.textcmd[0];
 			}
+			break;
+		case PT_LOGIN:
+			if (client)
+				break;
+
+#ifndef NOMD5
+			if (doomcom->datalength < 16)/* ignore partial sends */
+				break;
+
+			if (!adminpasswordset)
+			{
+				CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
+				break;
+			}
+
+			// Do the final pass to compare with the sent md5
+			D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
+
+			if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+			{
+				CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
+				COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+			}
+			else
+				CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
+#endif
 			break;
 		case PT_NODETIMEOUT:
 		case PT_CLIENTQUIT:
@@ -4857,4 +4888,30 @@ INT32 D_NumPlayers(void)
 tic_t GetLag(INT32 node)
 {
 	return gametic - nettics[node];
+}
+
+void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
+{
+#ifdef NOMD5
+	(void)buffer;
+	(void)len;
+	(void)salt;
+	memset(dest, 0, 16);
+#else
+	char tmpbuf[256];
+	const size_t sl = strlen(salt);
+
+	if (len > 256-sl)
+		len = 256-sl;
+
+	memcpy(tmpbuf, buffer, len);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
+	len += strlen(salt);
+	if (len < 256)
+		memset(&tmpbuf[len],0,256-len);
+
+	// Yes, we intentionally md5 the ENTIRE buffer regardless of size...
+	md5_buffer(tmpbuf, 256, dest);
+#endif
 }

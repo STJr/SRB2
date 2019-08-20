@@ -4898,12 +4898,12 @@ void A_SignPlayer(mobj_t *actor)
 		of in the name. If you have a better idea, feel free
 		to let me know. ~toast 2016/07/20
 		*/
-		actor->frame += (15 - Color_Opposite[(Color_Opposite[(skin->prefoppositecolor - 1)*2] - 1)*2 + 1]);
+		actor->frame += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
 	}
 	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
 	{
-		actor->color = Color_Opposite[(actor->target->player->skincolor - 1)*2];
-		actor->frame += (15 - Color_Opposite[(actor->target->player->skincolor - 1)*2 + 1]);
+		actor->color = Color_Opposite[actor->target->player->skincolor - 1][0];
+		actor->frame += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
 	}
 
 	if (skin->sprites[SPR2_SIGN].numframes)
