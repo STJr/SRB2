@@ -5094,9 +5094,10 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 }
 
 // new menus
-static void M_DrawRecordAttackBackground(void)
+static void M_DrawRecordAttackForeground(void)
 {
 	patch_t *fg = W_CachePatchName("RECATKFG", PU_CACHE);
+	patch_t *clock = W_CachePatchName("RECCLOCK", PU_CACHE);
 	angle_t fa;
 
 	INT32 i;
@@ -5109,9 +5110,14 @@ static void M_DrawRecordAttackBackground(void)
 	}
 
 	fa = (FixedAngle(((recatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-	V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, W_CachePatchName("RECCLOCK", PU_CACHE), FRACUNIT);
+	V_DrawSciencePatch(160<<FRACBITS, (80<<FRACBITS) + (4*FINESINE(fa)), 0, clock, FRACUNIT);
 
+	// Increment timer.
 	recatkdrawtimer++;
+
+	// Unlock cached patches.
+	W_UnlockCachedPatch(fg);
+	W_UnlockCachedPatch(clock);
 }
 
 // NiGHTS Attack background.
@@ -5271,7 +5277,17 @@ static void M_DrawNightsAttackBackground(void)
 		}
 	}
 
+	// Increment timer.
 	ntsatkdrawtimer++;
+
+	// Unlock cached patches.
+	W_UnlockCachedPatch(backtopfg);
+	W_UnlockCachedPatch(fronttopfg);
+
+	W_UnlockCachedPatch(backbottomfg);
+	W_UnlockCachedPatch(frontbottomfg);
+
+	W_UnlockCachedPatch(topborder);
 }
 
 // NiGHTS Attack floating Super Sonic.
@@ -5295,6 +5311,7 @@ static void M_DrawNightsAttackSuperSonic(void)
 	// Cache and draw patch.
 	supersonic_patch = W_CachePatchName(va(supersonic, timer+1), PU_CACHE);
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, supersonic_patch, colormap);
+
 	// Unlock cached patch.
 	W_UnlockCachedPatch(supersonic_patch);
 }
@@ -5315,17 +5332,15 @@ static void M_DrawLevelPlatterMenu(void)
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
+		{
 			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+			// Draw and animate foreground
+			if (!strncmp("RECATKBG", curbgname, 8))
+				M_DrawRecordAttackForeground();
+		}
+
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
-
-		// Draw and animate foreground
-<<<<<<< HEAD
-		if ((!curbghide || !titlemapinaction) && !stricmp("RECATKBG", curbgname))
-=======
-		if (!curbghide && stricmp("RECATTBG", curbgname) < 0)
->>>>>>> 15b363773fbaeeb8e7c7ca032c48eb5072ea34d2
-			M_DrawRecordAttackBackground();
 	}
 
 	if (currentMenu->prevMenu == &SP_NightsAttackDef)
@@ -5548,7 +5563,14 @@ static void M_DrawMessageMenu(void)
 			if (levellistmode == LLM_NIGHTSATTACK)
 				M_DrawNightsAttackMountains();
 			else
+			{
 				F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+				// Draw and animate foreground here, if desired.
+				// Check if (curbgname == "RECATKBG"), and if true,
+				// call the M_DrawRecordAttackForeground function.
+				// String check generally done with a strncmp.
+				// Can also draw the clock here.
+			}
 		}
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
@@ -8572,17 +8594,15 @@ void M_DrawTimeAttackMenu(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction)
+	{
 		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		// Draw and animate foreground
+		if (!strncmp("RECATKBG", curbgname, 8))
+			M_DrawRecordAttackForeground();
+	}
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
-	// Draw and animate foreground
-<<<<<<< HEAD
-	if ((!curbghide || !titlemapinaction) && !stricmp("RECATKBG", curbgname))
-=======
-	if (!curbghide && stricmp("RECATTBG", curbgname) < 0)
->>>>>>> 15b363773fbaeeb8e7c7ca032c48eb5072ea34d2
-		M_DrawRecordAttackBackground();
 	M_DrawMenuTitle();
 
 	// draw menu (everything else goes on top of it)
