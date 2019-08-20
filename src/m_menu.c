@@ -8083,7 +8083,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	col = charskin->prefcolor;
 #ifdef CHOOSEPLAYER_OPPOSITECOLOUR
 	// Use the OPPOSITE of the character's skincolour
-	col = Color_Opposite[(col - 1)*2];
+	col = Color_Opposite[col - 1][0];
 #endif // CHOOSEPLAYER_OPPOSITECOLOUR
 
 	// Make the translation colourmap
