@@ -5565,11 +5565,8 @@ static void M_DrawMessageMenu(void)
 			else
 			{
 				F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
-				// Draw and animate foreground here, if desired.
-				// Check if (curbgname == "RECATKBG"), and if true,
-				// call the M_DrawRecordAttackForeground function.
-				// String check generally done with a strncmp.
-				// Can also draw the clock here.
+				if (!strncmp("RECATKBG", curbgname, 8))
+					M_DrawRecordAttackForeground();
 			}
 		}
 		if (curfadevalue)
