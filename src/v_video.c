@@ -2184,7 +2184,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 			w = SHORT(hu_font[c]->width) * dupx;
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -2298,7 +2298,7 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 			w = SHORT(hu_font[c]->width) * dupx / 2;
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -2403,7 +2403,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 			w = (SHORT(tny_font[c]->width) * dupx);
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;
@@ -2501,7 +2501,7 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 			w = SHORT(hu_font[c]->width) * dupx;
 
 		if ((cx>>FRACBITS) > scrwidth)
-			break;
+			continue;
 		if ((cx>>FRACBITS)+left + w < 0) //left boundary check
 		{
 			cx += w<<FRACBITS;
@@ -2613,7 +2613,7 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 
 		w = SHORT(cred_font[c]->width) * dupx;
 		if ((cx>>FRACBITS) > scrwidth)
-			break;
+			continue;
 
 		V_DrawSciencePatch(cx, cy, option, cred_font[c], FRACUNIT);
 		cx += w<<FRACBITS;
@@ -2695,7 +2695,7 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		w = SHORT(lt_font[c]->width) * dupx;
 
 		if (cx > scrwidth)
-			break;
+			continue;
 		if (cx+left + w < 0) //left boundary check
 		{
 			cx += w;

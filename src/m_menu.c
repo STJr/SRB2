@@ -8147,72 +8147,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	// Character description
-	// No, I can't use strtok.
-	// Put two line break characters next to each other to see why.
 	{
-		char *text = char_notes;
-		char *first_token = text;
-		char *last_token = strchr(text, '\n');
 		INT32 x = 146;
 		INT32 y = my + 9;
-		INT32 flags = V_ALLOWLOWERCASE;
+		INT32 flags = V_ALLOWLOWERCASE|V_RETURN8;
 
-		// No line breaks?
-		// Draw entire string
-		if (!last_token)
-			V_DrawString(x, y, flags, char_notes);
-		// Split string by the line break character
-		else
-		{
-			char *string = NULL;
-			INT32 len;
-			while (true)
-			{
-				// There are still lines left do draw
-				if (last_token)
-				{
-					size_t shift = 0;
-					// Free this line
-					if (string)
-						Z_Free(string);
-					// Find string length, do a malloc...
-					len = (last_token-first_token)+1;
-					string = ZZ_Alloc(len);
-					// Copy the line
-					strncpy(string, first_token, len-1);
-					string[len-1] = '\0';
-					// Don't leave a line break character
-					// at the start of the string!
-					if ((strlen(string) >= 2) && (string[0] == '\n') && (string[1] != '\n'))
-						shift++;
-					// Then draw it
-					V_DrawString(x, y, flags, string+shift);
-				}
-				// No line break character was found
-				else
-				{
-					// Don't leave a line break character
-					// at the start of the string!
-					if ((strlen(first_token) >= 2) && (first_token[0] == '\n') && (first_token[1] != '\n'))
-						first_token++;
-					V_DrawString(x, y, flags, first_token);
-					break;
-				}
-
-				// Next line
-				y += 8;	// V_RETURN8
-				if ((last_token-text)+1 >= strlen(text))
-					last_token = NULL;
-				else
-				{
-					first_token = last_token;
-					last_token = strchr(first_token+1, '\n');
-				}
-			}
-			// Free this line
-			if (string)
-				Z_Free(string);
-		}
+		V_DrawString(x, y, flags, char_notes);
 	}
 
 	// Name tags!
