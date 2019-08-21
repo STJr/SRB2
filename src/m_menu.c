@@ -5261,7 +5261,9 @@ static void M_DrawNightsAttackBackground(void)
 		if (border_height > 0)
 		{
 			// top border
-			y = border_height - ((topborderheight-5) * vid.dupy);
+			INT16 yoffset = SHORT(topborder->topoffset);
+			y = border_height - ((topborderheight - yoffset) * vid.dupy);
+			y += (yoffset * dupy);
 			for (i = 0; i < (vid.height/border_height) + 1; i++)
 			{
 				for (j = 0; j < (vid.width/topborderwidth); j++)
