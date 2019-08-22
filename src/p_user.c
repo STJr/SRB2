@@ -11233,6 +11233,16 @@ void P_PlayerThink(player_t *player)
 
 				if (!currentlyonground)
 					acceleration /= 2;
+				// fake skidding! see P_SkidStuff for reference on conditionals
+				else if (!player->skidtime && !(player->mo->eflags & MFE_GOOWATER) && !(player->pflags & (PF_JUMPED|PF_SPINNING|PF_SLIDING)) && !(player->charflags & SF_NOSKID) && P_AproxDistance(player->mo->momx, player->mo->momy) >= FixedMul(player->runspeed/2, player->mo->scale))
+				{
+					if (player->mo->state-states != S_PLAY_SKID)
+						P_SetPlayerMobjState(player->mo, S_PLAY_SKID);
+					player->mo->tics = player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+
+					if (P_IsLocalPlayer(player)) // the sound happens way more frequently now, so give co-op players' ears a brake...
+						S_StartSound(player->mo, sfx_skid);
+				}
 
 				if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
 					acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
