@@ -1149,6 +1149,9 @@ void ST_drawLevelTitle(tic_t titletime)
 	INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
 	INT32 lvlttly, zoney, lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
+	patch_t *tzigzag = W_CachePatchName("TCARDFG1", PU_CACHE);
+	INT32 i;
+	INT32 height = (SHORT(tzigzag->height));
 
 	if (!(titletime > 2 && titletime-3 < 110))
 		return;
@@ -1225,6 +1228,13 @@ void ST_drawLevelTitle(tic_t titletime)
 
 	if (lvlttly+48 < 200)
 		V_DrawCenteredString(subttlxpos, lvlttly+48, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
+
+	for (i = -8; i < (BASEVIDHEIGHT/height) + 8; i++)
+	{
+		INT32 y = ((i*height) + (height - ((titletime)%height)));
+		//CONS_Printf("%d\n", y);
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, V_SNAPTOLEFT|V_PERPLAYER, tzigzag, NULL);
+	}
 }
 
 static void ST_drawPowerupHUD(void)
