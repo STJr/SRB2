@@ -1043,7 +1043,7 @@ static int lib_getluabanks(lua_State *L)
 		return luaL_error(L, "luabanks[] invalid index");
 
 	if (i >= NUM_LUABANKS)
-		luaL_error(L, "luabanks[] index %d out of range (%d - %d)", i, 0, NUM_LUABANKS);
+		luaL_error(L, "luabanks[] index %d out of range (%d - %d)", i, 0, NUM_LUABANKS-1);
 
 	lua_pushinteger(L, luabanks[i]);
 	return 1;
