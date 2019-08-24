@@ -634,7 +634,8 @@ static int power_get(lua_State *L)
 }
 
 // powers, p, value -> powers[p] = value
-static int power_set(lua_State *L){
+static int power_set(lua_State *L)
+{
 
 	UINT16 *powers = *((UINT16 **)luaL_checkudata(L, 1, META_POWERS));
 	powertype_t p = luaL_checkinteger(L, 2);
