@@ -18,6 +18,7 @@
 #include "p_mobj.h"
 #include "p_local.h"
 #include "z_zone.h"
+#include "doomstat.h" // luabanks[]
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -146,7 +147,7 @@ static int lib_getSpr2default(lua_State *L)
 		return luaL_error(L, "spr2defaults[] invalid index");
 
 	if (i >= free_spr2)
-		return 0;
+		return luaL_error(L, "spr2defaults[] index %d out of range (%d - %d)", i, 0, free_spr2-1);
 
 	lua_pushinteger(L, spr2defaults[i]);
 	return 1;
@@ -1026,6 +1027,61 @@ static int sfxinfo_num(lua_State *L)
 	return 1;
 }
 
+//////////////
+// LUABANKS //
+//////////////
+
+static int lib_getluabanks(lua_State *L)
+{
+	UINT8 i;
+
+	lua_remove(L, 1); // don't care about luabanks[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else
+		return luaL_error(L, "luabanks[] invalid index");
+
+	if (i >= NUM_LUABANKS)
+		luaL_error(L, "luabanks[] index %d out of range (%d - %d)", i, 0, NUM_LUABANKS);
+
+	lua_pushinteger(L, luabanks[i]);
+	return 1;
+}
+
+static int lib_setluabanks(lua_State *L)
+{
+	UINT8 i;
+	INT32 j = 0;
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter luabanks[] in HUD rendering code!");
+
+	lua_remove(L, 1); // don't care about luabanks[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else
+		return luaL_error(L, "luabanks[] invalid index");
+
+	if (i >= NUM_LUABANKS)
+		luaL_error(L, "luabanks[] index %d out of range (%d - %d)", i, 0, NUM_LUABANKS-1);
+
+	if (lua_isnumber(L, 2))
+		j = lua_tonumber(L, 2);
+	else
+		return luaL_error(L, "luabanks[] invalid set");
+
+	luabanks[i] = j;
+	return 0;
+}
+
+static int lib_luabankslen(lua_State *L)
+{
+	lua_pushinteger(L, NUM_LUABANKS);
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -1147,6 +1203,18 @@ int LUA_InfoLib(lua_State *L)
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "S_sfx");
 	lua_setglobal(L, "sfxinfo");
+
+	luaL_newmetatable(L, META_LUABANKS);
+		lua_pushcfunction(L, lib_getluabanks);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lib_setluabanks);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, lib_luabankslen);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	return 0;
 }
 

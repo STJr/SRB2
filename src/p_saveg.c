@@ -4109,12 +4109,54 @@ static inline boolean P_NetUnArchiveMisc(void)
 	return true;
 }
 
+static inline void P_ArchiveLuabanksAndConsistency(void)
+{
+	UINT8 i, banksinuse = NUM_LUABANKS;
+
+	while (banksinuse && !luabanks[banksinuse-1])
+		banksinuse--; // get the last used bank
+
+	if (banksinuse)
+	{
+		WRITEUINT8(save_p, 0xb7); // luabanks marker
+		WRITEUINT8(save_p, banksinuse);
+		for (i = 0; i < banksinuse; i++)
+			WRITEINT32(save_p, luabanks[i]);
+	}
+
+	WRITEUINT8(save_p, 0x1d); // consistency marker
+}
+
+static inline boolean P_UnArchiveLuabanksAndConsistency(void)
+{
+	switch (READUINT8(save_p))
+	{
+		case 0xb7:
+			{
+				UINT8 i, banksinuse = READUINT8(save_p);
+				if (banksinuse > NUM_LUABANKS)
+					return false;
+				for (i = 0; i < banksinuse; i++)
+					luabanks[i] = READINT32(save_p);
+				if (READUINT8(save_p) != 0x1d)
+					return false;
+			}
+		case 0x1d:
+			break;
+		default:
+			return false;
+	}
+
+	return true;
+}
+
 void P_SaveGame(void)
 {
 	P_ArchiveMisc();
 	P_ArchivePlayer();
 
-	WRITEUINT8(save_p, 0x1d); // consistency marker
+	// yes, even in non HAVE_BLUA
+	P_ArchiveLuabanksAndConsistency();
 }
 
 void P_SaveNetGame(void)
@@ -4153,7 +4195,7 @@ void P_SaveNetGame(void)
 	LUA_Archive();
 #endif
 
-	WRITEUINT8(save_p, 0x1d); // consistency marker
+	P_ArchiveLuabanksAndConsistency();
 }
 
 boolean P_LoadGame(INT16 mapoverride)
@@ -4165,8 +4207,7 @@ boolean P_LoadGame(INT16 mapoverride)
 	P_UnArchiveSPGame(mapoverride);
 	P_UnArchivePlayer();
 
-	// Savegame end marker
-	if (READUINT8(save_p) != 0x1d)
+	if (!P_UnArchiveLuabanksAndConsistency())
 		return false;
 
 	// Only do this after confirming savegame is ok
@@ -4207,5 +4248,5 @@ boolean P_LoadNetGame(void)
 	// precipitation when loading a netgame save. Instead, precip has to be spawned here.
 	// This is done in P_NetUnArchiveSpecials now.
 
-	return READUINT8(save_p) == 0x1d;
+	return P_UnArchiveLuabanksAndConsistency();
 }
