@@ -303,6 +303,8 @@ static int lib_cvRegisterVar(lua_State *L)
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("CV_RegisterVar") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
 
+	memset(cvar, 0x00, sizeof(consvar_t)); // zero everything by default
+
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
 		// stack: cvar table, cvar userdata, key/index, value
@@ -389,6 +391,13 @@ static int lib_cvRegisterVar(lua_State *L)
 
 #undef FIELDERROR
 #undef TYPEERROR
+
+	if (!cvar->name)
+		return luaL_error(L, M_GetText("Variable has no name!\n"));
+	if ((cvar->flags & CV_NOINIT) && !(cvar->flags & CV_CALL))
+		return luaL_error(L, M_GetText("Variable %s has CV_NOINIT without CV_CALL\n"), cvar->name);
+	if ((cvar->flags & CV_CALL) && !cvar->func)
+		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function\n"), cvar->name);
 
 	// stack: cvar table, cvar userdata
 	lua_getfield(L, LUA_REGISTRYINDEX, "CV_Vars");
