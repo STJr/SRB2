@@ -13751,17 +13751,28 @@ void A_ModuloToState(mobj_t *actor)
 //
 void A_LavafallRocks(mobj_t *actor)
 {
+	UINT8 i;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_LavafallRocks", actor))
 		return;
 #endif
 
-	angle_t fa = (FixedAngle(P_RandomKey(360) << FRACBITS) >> ANGLETOFINESHIFT) & FINEMASK;
-	fixed_t offset = P_RandomRange(4, 12) << FRACBITS;
-	fixed_t xoffs = FixedMul(FINECOSINE(fa), actor->radius + offset);
-	fixed_t yoffs = FixedMul(FINESINE(fa), actor->radius + offset);
-	mobj_t *particle = P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
-	P_SetMobjState(particle, S_LAVAFALLROCK1 + P_RandomRange(0, 3));
+	// Don't spawn rocks unless a player is relatively close by.
+	for (i = 0; i < MAXPLAYERS; ++i)
+		if (playeringame[i] && players[i].mo
+			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600 << FRACBITS))
+			break; // Stop looking.
+
+	if (i < MAXPLAYERS)
+	{
+		angle_t fa = (FixedAngle(P_RandomKey(360) << FRACBITS) >> ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t offset = P_RandomRange(4, 12) << FRACBITS;
+		fixed_t xoffs = FixedMul(FINECOSINE(fa), actor->radius + offset);
+		fixed_t yoffs = FixedMul(FINESINE(fa), actor->radius + offset);
+		mobj_t *particle = P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
+		P_SetMobjState(particle, S_LAVAFALLROCK1 + P_RandomRange(0, 3));
+	}
 }
 
 // Function: A_LavafallLava
