@@ -2431,6 +2431,9 @@ static actionpointer_t actionpointers[] =
 	{{A_SaloonDoorSpawn},        "A_SALOONDOORSPAWN"},
 	{{A_MinecartSparkThink},     "A_MINECARTSPARKTHINK"},
 	{{A_ModuloToState},          "A_MODULOTOSTATE"},
+	{{A_LavafallRocks},          "A_LAVAFALLROCKS"},
+	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
+	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -5824,6 +5827,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
 
+	// Lavafall
+	"S_LAVAFALL_DORMANT",
+	"S_LAVAFALL_TELL",
+	"S_LAVAFALL_SHOOT",
+	"S_LAVAFALL_LAVA1",
+	"S_LAVAFALL_LAVA2",
+	"S_LAVAFALL_LAVA3",
+	"S_LAVAFALLROCK1",
+	"S_LAVAFALLROCK2",
+	"S_LAVAFALLROCK3",
+	"S_LAVAFALLROCK4",
+
 	// RVZ scenery
 	"S_BIGFERNLEAF",
 	"S_BIGFERN1",
@@ -7547,6 +7562,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FJSPINAXISB", // Clockwise
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
+
+	"MT_LAVAFALL",
+	"MT_LAVAFALL_LAVA",
+	"MT_LAVAFALLROCK",
 
 	"MT_BIGFERNLEAF",
 	"MT_BIGFERN",

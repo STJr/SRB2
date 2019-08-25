@@ -9008,6 +9008,10 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				mobj->flags2 ^= MF2_DONTDRAW;
 				break;
+			case MT_LAVAFALLROCK:
+				if (P_IsObjectOnGround(mobj))
+					P_RemoveMobj(mobj);
+				break;
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -9222,6 +9226,27 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					break;
 				case MT_NIGHTSCORE:
 					P_RemoveMobj(mobj);
+					return;
+				case MT_LAVAFALL:
+					if (mobj->state - states == S_LAVAFALL_DORMANT)
+					{
+						mobj->fuse = 30;
+						P_SetMobjState(mobj, S_LAVAFALL_TELL);
+						S_StartSound(mobj, mobj->info->seesound);
+					}
+					else if (mobj->state - states == S_LAVAFALL_TELL)
+					{
+						mobj->fuse = 40;
+						P_SetMobjState(mobj, S_LAVAFALL_SHOOT);
+						S_StopSound(mobj);
+						S_StartSound(mobj, mobj->info->attacksound);
+					}
+					else
+					{
+						mobj->fuse = 30;
+						P_SetMobjState(mobj, S_LAVAFALL_DORMANT);
+						S_StopSound(mobj);
+					}
 					return;
 				case MT_PLAYER:
 					break; // don't remove
@@ -11830,6 +11855,14 @@ ML_EFFECT5 : Don't stop thinking when too far away
 	case MT_SMASHINGSPIKEBALL:
 		if (mthing->angle > 0)
 			mobj->tics += mthing->angle;
+		break;
+	case MT_LAVAFALL:
+		mobj->fuse = 30 + mthing->angle;
+		if (mthing->options & MTF_AMBUSH)
+		{
+			P_SetScale(mobj, 2*mobj->scale);
+			mobj->destscale = mobj->scale;
+		}
 		break;
 	default:
 		break;

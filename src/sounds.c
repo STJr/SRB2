@@ -199,6 +199,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"chuchu", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Train horn"},
   {"bsnipe", false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Home-run smash"},
   {"sprong", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Power spring"},
+  {"lvfal1",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rumble"},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},

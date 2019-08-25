@@ -268,6 +268,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	// Red Volcano Scenery
 	"FLME", // Flame jet
 	"DFLM", // Blade's flame
+	"LFAL", // Lavafall
 	"JPLA", // Jungle palm
 	"TFLO", // Torch flower
 	"WVIN", // Wall vines
@@ -2455,6 +2456,18 @@ state_t states[NUMSTATES] =
 	{SPR_DFLM, FF_FULLBRIGHT|FF_TRANS40, 1, {A_MoveRelative}, 0, 5, S_FLAMEJETFLAMEB2}, // S_FLAMEJETFLAMEB1
 	{SPR_DFLM, FF_FULLBRIGHT|FF_TRANS40, 1, {A_MoveRelative}, 0, 7, S_FLAMEJETFLAMEB3}, // S_FLAMEJETFLAMEB2
 	{SPR_DFLM, FF_FULLBRIGHT|FF_TRANS40|FF_ANIMATE, (12*7), {NULL}, 7, 12, S_NULL},  // S_FLAMEJETFLAMEB3
+
+	// Lavafall
+	{SPR_LFAL, 5, 1, {NULL}, 0, 0, S_LAVAFALL_DORMANT}, // S_LAVAFALL_DORMANT
+	{SPR_LFAL, 6|FF_ANIMATE, 4, {A_LavafallRocks}, 2, 2, S_LAVAFALL_TELL}, // S_LAVAFALL_TELL
+	{SPR_LFAL, 9|FF_FULLBRIGHT|FF_ANIMATE, 2, {A_LavafallLava}, 2, 1, S_LAVAFALL_SHOOT}, // S_LAVAFALL_SHOOT
+	{SPR_LFAL, FF_FULLBRIGHT, 1, {A_FallingLavaCheck}, 0, 0, S_LAVAFALL_LAVA2}, // S_LAVAFALL_LAVA1
+	{SPR_LFAL, FF_FULLBRIGHT, 1, {A_FallingLavaCheck}, 0, 0, S_LAVAFALL_LAVA1}, // S_LAVAFALL_LAVA2
+	{SPR_LFAL, 2|FF_FULLBRIGHT|FF_ANIMATE, 9, {NULL}, 3, 3, S_NULL}, // S_LAVAFALL_LAVA3
+	{SPR_LFAL, 11, 3, {NULL}, 0, 0, S_LAVAFALLROCK2}, // S_LAVAFALLROCK1
+	{SPR_LFAL, 12, 3, {NULL}, 0, 0, S_LAVAFALLROCK3}, // S_LAVAFALLROCK2
+	{SPR_LFAL, 13, 3, {NULL}, 0, 0, S_LAVAFALLROCK4}, // S_LAVAFALLROCK3
+	{SPR_LFAL, 14, 3, {NULL}, 0, 0, S_LAVAFALLROCK1}, // S_LAVAFALLROCK4
 
 	// RVZ scenery
 	{SPR_JPLA, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_BIGFERNLEAF
@@ -12572,6 +12585,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_MISSILE|MF_FIRE|MF_NOBLOCKMAP|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LAVAFALL
+		1304,           // doomednum
+		S_LAVAFALL_DORMANT, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_lvfal1,     // seesound
+		8,              // reactiontime
+		sfx_s3kd5l,     // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		30*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_SPAWNCEILING, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LAVAFALL_LAVA
+		-1,             // doomednum
+		S_LAVAFALL_LAVA1, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_LAVAFALL_LAVA3, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		30*FRACUNIT,    // radius
+		48*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_PAIN|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_LAVAFALLROCK
+		-1,             // doomednum
+		S_LAVAFALLROCK1, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		8*FRACUNIT,     // radius
+		8*FRACUNIT,     // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP,  // flags
 		S_NULL          // raisestate
 	},
 

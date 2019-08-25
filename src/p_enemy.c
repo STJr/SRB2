@@ -296,6 +296,9 @@ void A_SnapperThinker(mobj_t *actor);
 void A_SaloonDoorSpawn(mobj_t *actor);
 void A_MinecartSparkThink(mobj_t *actor);
 void A_ModuloToState(mobj_t *actor);
+void A_LavafallRocks(mobj_t *actor);
+void A_LavafallLava(mobj_t *actor);
+void A_FallingLavaCheck(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -13737,4 +13740,70 @@ void A_ModuloToState(mobj_t *actor)
 	if ((modulothing % locvar1 == 0))
 		P_SetMobjState(actor, (locvar2));
 	modulothing++;
+}
+
+// Function: A_LavafallRocks
+//
+// Description: Spawn random rock particles.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LavafallRocks(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LavafallRocks", actor))
+		return;
+#endif
+
+	angle_t fa = (FixedAngle(P_RandomKey(360) << FRACBITS) >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t offset = P_RandomRange(4, 12) << FRACBITS;
+	fixed_t xoffs = FixedMul(FINECOSINE(fa), actor->radius + offset);
+	fixed_t yoffs = FixedMul(FINESINE(fa), actor->radius + offset);
+	mobj_t *particle = P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
+	P_SetMobjState(particle, S_LAVAFALLROCK1 + P_RandomRange(0, 3));
+}
+
+// Function: A_LavafallLava
+//
+// Description: Spawn lava from lavafall.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_LavafallLava(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_LavafallLava", actor))
+		return;
+#endif
+
+	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
+		return;
+
+	mobj_t *lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
+	lavafall->momz = -25*FRACUNIT;
+}
+
+// Function: A_FallingLavaCheck
+//
+// Description: If actor hits the ground or a water surface, enter the death animation.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FallingLavaCheck(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FallingLavaCheck", actor))
+		return;
+#endif
+
+	if (actor->eflags & MFE_TOUCHWATER || P_IsObjectOnGround(actor))
+	{
+		actor->flags = MF_NOGRAVITY|MF_NOCLIPTHING;
+		actor->momz = 0;
+		actor->z = actor->watertop;
+		P_SetMobjState(actor, actor->info->deathstate);
+	}
 }

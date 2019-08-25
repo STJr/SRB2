@@ -266,6 +266,9 @@ void A_SnapperThinker();
 void A_SaloonDoorSpawn();
 void A_MinecartSparkThink();
 void A_ModuloToState();
+void A_LavafallRocks();
+void A_LavafallLava();
+void A_FallingLavaCheck();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -514,6 +517,7 @@ typedef enum sprite
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
 	SPR_DFLM, // Blade's flame
+	SPR_LFAL, // Lavafall
 	SPR_JPLA, // Jungle palm
 	SPR_TFLO, // Torch flower
 	SPR_WVIN, // Wall vines
@@ -2575,6 +2579,18 @@ typedef enum state
 	S_FLAMEJETFLAMEB2,
 	S_FLAMEJETFLAMEB3,
 
+	// Lavafall
+	S_LAVAFALL_DORMANT,
+	S_LAVAFALL_TELL,
+	S_LAVAFALL_SHOOT,
+	S_LAVAFALL_LAVA1,
+	S_LAVAFALL_LAVA2,
+	S_LAVAFALL_LAVA3,
+	S_LAVAFALLROCK1,
+	S_LAVAFALLROCK2,
+	S_LAVAFALLROCK3,
+	S_LAVAFALLROCK4,
+
 	// RVZ scenery
 	S_BIGFERNLEAF,
 	S_BIGFERN1,
@@ -4320,6 +4336,10 @@ typedef enum mobj_type
 	MT_FJSPINAXISB, // Clockwise
 
 	MT_FLAMEJETFLAMEB, // Blade's flame
+
+	MT_LAVAFALL,
+	MT_LAVAFALL_LAVA,
+	MT_LAVAFALLROCK,
 
 	MT_BIGFERNLEAF,
 	MT_BIGFERN,
