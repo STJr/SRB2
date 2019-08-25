@@ -12603,7 +12603,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_BIGFERN
-		1307,           // doomednum
+		1306,           // doomednum
 		S_BIGFERN1,     // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -12630,7 +12630,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_JUNGLEPALM
-		1308,           // doomednum
+		1307,           // doomednum
 		S_JUNGLEPALM,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -12657,7 +12657,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_TORCHFLOWER
-		1309,           // doomednum
+		1308,           // doomednum
 		S_TORCHFLOWER,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -12684,7 +12684,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_WALLVINE_LONG
-		1310,           // doomednum
+		1309,           // doomednum
 		S_WALLVINE_LONG, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
@@ -12711,7 +12711,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_WALLVINE_SHORT
-		1311,           // doomednum
+		1310,           // doomednum
 		S_WALLVINE_SHORT, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
