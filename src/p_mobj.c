@@ -9800,6 +9800,25 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			P_SetTarget(&mobj->tracer, P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_MINECARTENDSOLID));
 			mobj->tracer->angle = mobj->angle + ANGLE_90;
 			break;
+		case MT_BIGFERN:
+			{
+				UINT8 i;
+				for (i = 0; i < 8; i++)
+				{
+					UINT8 j = (i + 2) % 8;
+					fixed_t xoffs = (j % 4) ? FRACUNIT : 0;
+					fixed_t yoffs = (i % 4) ? FRACUNIT : 0;
+					mobj_t *leaf = P_SpawnMobjFromMobj(mobj, (j > 3) ? -xoffs : xoffs, (i > 3) ? -yoffs : yoffs, 0, MT_BIGFERNLEAF);
+					leaf->angle = (angle_t)i * ANGLE_45;
+				}
+				break;
+			}
+		case MT_TORCHFLOWER:
+			{
+				mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
+				P_SetTarget(&mobj->target, fire);
+				break;
+			}
 		default:
 			break;
 	}

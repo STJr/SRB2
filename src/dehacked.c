@@ -5824,6 +5824,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
 
+	// RVZ scenery
+	"S_BIGFERNLEAF",
+	"S_BIGFERN1",
+	"S_BIGFERN2",
+	"S_JUNGLEPALM",
+	"S_TORCHFLOWER",
+	"S_WALLVINE_LONG",
+	"S_WALLVINE_SHORT",
+
 	// Trapgoyles
 	"S_TRAPGOYLE",
 	"S_TRAPGOYLE_CHECK",
@@ -7538,6 +7547,13 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FJSPINAXISB", // Clockwise
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
+
+	"MT_BIGFERNLEAF",
+	"MT_BIGFERN",
+	"MT_JUNGLEPALM",
+	"MT_TORCHFLOWER",
+	"MT_WALLVINE_LONG",
+	"MT_WALLVINE_SHORT",
 
 	// Dark City Scenery
 

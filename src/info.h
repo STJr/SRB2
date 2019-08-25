@@ -514,6 +514,9 @@ typedef enum sprite
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
 	SPR_DFLM, // Blade's flame
+	SPR_JPLA, // Jungle palm
+	SPR_TFLO, // Torch flower
+	SPR_WVIN, // Wall vines
 
 	// Dark City Scenery
 
@@ -2572,6 +2575,15 @@ typedef enum state
 	S_FLAMEJETFLAMEB2,
 	S_FLAMEJETFLAMEB3,
 
+	// RVZ scenery
+	S_BIGFERNLEAF,
+	S_BIGFERN1,
+	S_BIGFERN2,
+	S_JUNGLEPALM,
+	S_TORCHFLOWER,
+	S_WALLVINE_LONG,
+	S_WALLVINE_SHORT,
+
 	// Trapgoyles
 	S_TRAPGOYLE,
 	S_TRAPGOYLE_CHECK,
@@ -4308,6 +4320,13 @@ typedef enum mobj_type
 	MT_FJSPINAXISB, // Clockwise
 
 	MT_FLAMEJETFLAMEB, // Blade's flame
+
+	MT_BIGFERNLEAF,
+	MT_BIGFERN,
+	MT_JUNGLEPALM,
+	MT_TORCHFLOWER,
+	MT_WALLVINE_LONG,
+	MT_WALLVINE_SHORT,
 
 	// Dark City Scenery
 

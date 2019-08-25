@@ -373,6 +373,9 @@ light_t *t_lspr[NUMSPRITES] =
 	// Red Volcano Scenery
 	&lspr[REDBALL_L],   // SPR_FLME
 	&lspr[REDBALL_L],   // SPR_DFLM
+	&lspr[NOLIGHT],     // SPR_JPLA
+	&lspr[NOLIGHT],     // SPR_TFLO
+	&lspr[NOLIGHT],     // SPR_WVIN
 
 	// Dark City Scenery
 
