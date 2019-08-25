@@ -13782,7 +13782,7 @@ void A_LavafallLava(mobj_t *actor)
 		return;
 
 	mobj_t *lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
-	lavafall->momz = -25*FRACUNIT;
+	lavafall->momz = -P_MobjFlip(actor)*25*FRACUNIT;
 }
 
 // Function: A_FallingLavaCheck
