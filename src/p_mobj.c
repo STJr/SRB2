@@ -4236,12 +4236,7 @@ static void P_GenericBossThinker(mobj_t *mobj)
 	if (!mobj->target || !(mobj->target->flags & MF_SHOOTABLE))
 	{
 		if (mobj->health <= 0)
-		{
-			// look for a new target
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -4263,7 +4258,7 @@ static void P_GenericBossThinker(mobj_t *mobj)
 // AI for the first boss.
 static void P_Boss1Thinker(mobj_t *mobj)
 {
-	if (mobj->flags2 & MF2_FRET && (statenum_t)(mobj->state-states) == mobj->info->spawnstate) {
+	if (mobj->flags2 & MF2_FRET && mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1) {
 		mobj->flags2 &= ~(MF2_FRET|MF2_SKULLFLY);
 		mobj->momx = mobj->momy = mobj->momz = 0;
 	}
@@ -4281,11 +4276,7 @@ static void P_Boss1Thinker(mobj_t *mobj)
 			return; // It's okay, then.
 
 		if (mobj->health <= 0)
-		{
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -4332,12 +4323,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 	if (mobj->health <= mobj->info->damage && (!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
 		if (mobj->health <= 0)
-		{
-			// look for a new target
-			if (P_BossTargetPlayer(mobj, false) && mobj->info->mass) // Bid farewell!
-				S_StartSound(mobj, mobj->info->mass);
 			return;
-		}
 
 		// look for a new target
 		if (P_BossTargetPlayer(mobj, false) && mobj->info->seesound)
@@ -7107,6 +7093,11 @@ void P_MobjThinker(mobj_t *mobj)
 
 		switch (mobj->type)
 		{
+			case MT_BOSSTANK1:
+			case MT_BOSSTANK2:
+			case MT_BOSSSPIGOT:
+				mobj->flags2 ^= MF2_DONTDRAW;
+				break;
 			case MT_MACEPOINT:
 			case MT_CHAINMACEPOINT:
 			case MT_SPRINGBALLPOINT:
@@ -7730,7 +7721,25 @@ void P_MobjThinker(mobj_t *mobj)
 				break;
 		}
 		if (mobj->flags2 & MF2_BOSSFLEE)
-			P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
+		{
+			if (mobj->extravalue1)
+			{
+				if (!(--mobj->extravalue1))
+				{
+					if (mobj->target)
+					{
+						mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, P_AproxDistance(mobj->x-mobj->target->x,mobj->y-mobj->target->y)), mobj->scale<<1);
+						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+					}
+					else
+						mobj->momz = 8*mobj->scale;
+				}
+				else
+					mobj->angle += mobj->movedir;
+			}
+			else if (mobj->target)
+				P_InstaThrust(mobj, mobj->angle, FixedMul(12*FRACUNIT, mobj->scale));
+		}
 	}
 	else if (mobj->health <= 0) // Dead things think differently than the living.
 		switch (mobj->type)
@@ -7842,8 +7851,8 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->x + (P_RandomRange(r, -r) << FRACBITS),
 						mobj->y + (P_RandomRange(r, -r) << FRACBITS),
 						mobj->z + (P_RandomKey(mobj->height >> FRACBITS) << FRACBITS),
-						MT_BOSSEXPLODE);
-					S_StartSound(explosion, sfx_cybdth);
+						MT_SONIC3KBOSSEXPLODE);
+					S_StartSound(explosion, sfx_s3kb4);
 				}
 				if (mobj->movedir == DMG_DROWNED)
 					P_SetObjectMomZ(mobj, -FRACUNIT / 2, true); // slower fall from drowning

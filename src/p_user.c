@@ -1051,6 +1051,8 @@ void P_ResetPlayer(player_t *player)
 //
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 {
+	fixed_t bottomheight, topheight;
+
 	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
 		return false;
 
@@ -1090,13 +1092,26 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 		return true;
 
 	// From the top/bottom.
-	if (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0)
+	bottomheight = player->mo->z;
+	topheight = player->mo->z + player->mo->height;
+
+	if (player->mo->eflags & MFE_VERTICALFLIP)
 	{
-		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
+		fixed_t swap = bottomheight;
+		bottomheight = topheight;
+		topheight = swap;
+	}
+
+	if (P_MobjFlip(player->mo)*(bottomheight - (thing->z + thing->height/2)) > 0)
+	{
+		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) < 0))
 			return true;
 	}
-	else if (player->charability == CA_FLY && player->panim == PA_ABILITY)
-		return true;
+	else if (P_MobjFlip(player->mo)*(topheight - (thing->z + thing->height/2)) < 0)
+	{
+		if (player->charability == CA_FLY && player->panim == PA_ABILITY && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
+			return true;
+	}
 
 	// Shield stomp.
 	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
@@ -6509,12 +6524,12 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					player->capsule->health = sphereresult;
 			}
 
-			// Spawn a 'pop' for every 5 tics
-			if (!((tictimer - firstpoptic) % 5))
+			// Spawn a 'pop' for every 2 tics
+			if (!((tictimer - firstpoptic) % 2))
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
-				MT_BOSSEXPLODE),sfx_cybdth);
+				MT_SONIC3KBOSSEXPLODE),sfx_s3kb4);
 		}
 		else
 		{
