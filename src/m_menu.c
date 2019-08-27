@@ -948,7 +948,7 @@ enum
 
 static menuitem_t MP_RoomMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "<Offline Mode>", M_ChooseRoom,   9},
+	{IT_STRING | IT_CALL, NULL, "<Private Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  27},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  36},
@@ -8872,7 +8872,7 @@ static void M_DrawConnectMenu(void)
 	// Room name
 	if (ms_RoomId < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
-		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Offline Mode>");
+		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Private Mode>");
 	else
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9022,7 +9022,14 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	M_SetupNextMenu(&MP_ConnectDef);
+	if (ms_RoomId < 0)
+	{
+		M_RoomMenu(0); // Select a room instead of staring at an empty list
+		// This prevents us from returning to the modified game alert.
+		currentMenu->prevMenu = &MP_MainDef;
+	}
+	else
+		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
 	M_Refresh(0);
 }
@@ -9081,7 +9088,16 @@ static void M_ChooseRoom(INT32 choice)
 	}
 
 	serverlistpage = 0;
-	M_SetupNextMenu(currentMenu->prevMenu);
+	/*
+	We were on the Multiplayer menu? That means that we must have been trying to
+	view the server browser, but we hadn't selected a room yet. So we need to go
+	to the browser next, not back there.
+	*/
+	if (currentMenu->prevMenu == &MP_MainDef)
+		M_SetupNextMenu(&MP_ConnectDef);
+	else
+		M_SetupNextMenu(currentMenu->prevMenu);
+
 	if (currentMenu == &MP_ConnectDef)
 		M_Refresh(0);
 }
@@ -9140,7 +9156,7 @@ static void M_DrawServerMenu(void)
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
-			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
+			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Private Mode>");
 		else
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
