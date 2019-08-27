@@ -2524,6 +2524,12 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 	}
 }
 
+void V_DrawRightAlignedStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_StringWidth(string, option)<<FRACBITS;
+	V_DrawStringAtFixed(x, y, option, string);
+}
+
 // Draws a small string at a fixed_t location.
 void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 {

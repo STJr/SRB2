@@ -113,6 +113,7 @@ enum align {
 	align_center,
 	align_right,
 	align_fixed,
+	align_fixedright,
 	align_small,
 	align_smallfixed,
 	align_smallcenter,
@@ -127,6 +128,7 @@ static const char *const align_opt[] = {
 	"center",
 	"right",
 	"fixed",
+	"fixed-right",
 	"small",
 	"small-fixed",
 	"small-center",
@@ -736,6 +738,9 @@ static int libd_drawString(lua_State *L)
 		break;
 	case align_fixed:
 		V_DrawStringAtFixed(x, y, flags, str);
+		break;
+	case align_fixedright:
+		V_DrawRightAlignedStringAtFixed(x, y, flags, str);
 		break;
 	// hu_font, 0.5x scale
 	case align_small:
