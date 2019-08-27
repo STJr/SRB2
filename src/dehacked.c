@@ -5834,10 +5834,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LAVAFALL_LAVA1",
 	"S_LAVAFALL_LAVA2",
 	"S_LAVAFALL_LAVA3",
-	"S_LAVAFALLROCK1",
-	"S_LAVAFALLROCK2",
-	"S_LAVAFALLROCK3",
-	"S_LAVAFALLROCK4",
+	"S_LAVAFALLROCK",
 
 	// RVZ scenery
 	"S_BIGFERNLEAF",

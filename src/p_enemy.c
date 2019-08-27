@@ -13770,8 +13770,7 @@ void A_LavafallRocks(mobj_t *actor)
 		fixed_t offset = P_RandomRange(4, 12) << FRACBITS;
 		fixed_t xoffs = FixedMul(FINECOSINE(fa), actor->radius + offset);
 		fixed_t yoffs = FixedMul(FINESINE(fa), actor->radius + offset);
-		mobj_t *particle = P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
-		P_SetMobjState(particle, S_LAVAFALLROCK1 + P_RandomRange(0, 3));
+		P_SpawnMobjFromMobj(actor, xoffs, yoffs, 0, MT_LAVAFALLROCK);
 	}
 }
 
