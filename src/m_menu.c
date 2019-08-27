@@ -9247,7 +9247,7 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[16];
+static char setupm_ip[28];
 
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
@@ -9273,12 +9273,12 @@ static void M_DrawMPMainMenu(void)
 	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
 
 	// draw name string
-	V_DrawString(x+8,y+12, V_MONOSPACE, setupm_ip);
+	V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, setupm_ip);
 
 	// draw text cursor for name
 	if (itemOn == 2 //0
 	    && skullAnimCounter < 4)   //blink cursor
-		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_MONOSPACE),y+12,'_',false);
+		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_ALLOWLOWERCASE),y+12,'_',false);
 }
 
 // Tails 11-19-2002
@@ -9349,10 +9349,11 @@ static void M_HandleConnectIP(INT32 choice)
 
 		default:
 			l = strlen(setupm_ip);
-			if (l >= 16-1)
+			if (l >= 28-1)
 				break;
 
-			if (choice == 46 || (choice >= 48 && choice <= 57)) // Rudimentary number and period enforcing
+			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
+			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;
