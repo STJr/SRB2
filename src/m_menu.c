@@ -884,12 +884,12 @@ static menuitem_t MP_SplitServerMenu[] =
 
 static menuitem_t MP_MainMenu[] =
 {
-	{IT_HEADER, NULL, "Host a game", NULL, 0},
-	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      12},
-	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 22},
-	{IT_HEADER, NULL, "Join a game", NULL, 40},
-	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenu,          52},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      62},
+	{IT_HEADER, NULL, "Join a game", NULL, 0},
+	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenu,          12},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      22},
+	{IT_HEADER, NULL, "Host a game", NULL, 54},
+	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      66},
+	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 76},
 	{IT_HEADER, NULL, "Player setup", NULL, 94},
 	{IT_STRING|IT_CALL,       NULL, "Player 1...",           M_SetupMultiPlayer,    106},
 	{IT_STRING|IT_CALL,       NULL, "Player 2... ",          M_SetupMultiPlayer2,   116},
@@ -9259,20 +9259,16 @@ static void M_DrawMPMainMenu(void)
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
-#if MAXPLAYERS == 32
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+12,
-		((itemOn == 1) ? V_YELLOWMAP : 0), "(2-32 players)");
-#else
-Update the maxplayers label...
-#endif
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+66,
+		((itemOn == 4) ? V_YELLOWMAP : 0), va("(2-%d players)", MAXPLAYERS));
 
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+22,
-		((itemOn == 2) ? V_YELLOWMAP : 0), "(2 players)");
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+76,
+		((itemOn == 5) ? V_YELLOWMAP : 0), "(2 players)");
 
 	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
 		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
 
-	y += 62;
+	y += 22;
 
 	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
 
@@ -9280,7 +9276,7 @@ Update the maxplayers label...
 	V_DrawString(x+8,y+12, V_MONOSPACE, setupm_ip);
 
 	// draw text cursor for name
-	if (itemOn == 5 //0
+	if (itemOn == 2 //0
 	    && skullAnimCounter < 4)   //blink cursor
 		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_MONOSPACE),y+12,'_',false);
 }
