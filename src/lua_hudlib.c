@@ -119,6 +119,7 @@ enum align {
 	align_smallfixed,
 	align_smallcenter,
 	align_smallright,
+	align_smallthin,
 	align_thin,
 	align_thinfixed,
 	align_thincenter,
@@ -135,6 +136,7 @@ static const char *const align_opt[] = {
 	"small-fixed",
 	"small-center",
 	"small-right",
+	"small-thin",
 	"thin",
 	"thin-fixed",
 	"thin-center",
@@ -759,6 +761,9 @@ static int libd_drawString(lua_State *L)
 		break;
 	case align_smallright:
 		V_DrawRightAlignedSmallString(x, y, flags, str);
+		break;
+	case align_smallthin:
+		V_DrawSmallThinString(x, y, flags, str);
 		break;
 	// tny_font
 	case align_thin:
