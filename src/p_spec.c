@@ -3953,6 +3953,27 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 461: // Spawns an object on the map based on texture offsets
+			{
+				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+
+				fixed_t x, y, z;
+				x = sides[line->sidenum[0]].textureoffset;
+				y = sides[line->sidenum[0]].rowoffset;
+				z = line->frontsector->floorheight;
+
+				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
+				{
+					x = P_RandomRange(sides[line->sidenum[0]].textureoffset, sides[line->sidenum[1]].textureoffset);
+					y = P_RandomRange(sides[line->sidenum[0]].rowoffset, sides[line->sidenum[1]].rowoffset);
+					z = P_RandomRange(line->frontsector->floorheight, line->frontsector->ceilingheight);
+				}
+
+				CONS_Printf("mobjtype_t: %d\n", type);
+				P_SpawnMobj(x, y, z, type);
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
