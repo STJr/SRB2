@@ -11576,9 +11576,21 @@ void P_PlayerAfterThink(player_t *player)
 #endif
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
+	{
 		thiscam = &camera2;
+		if (P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+cv_cam2_dist.value)*2))
+		{
+			P_ResetCamera(player, thiscam);
+		}
+	}
 	else if (player == &players[displayplayer])
+	{
 		thiscam = &camera;
+		if (P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+cv_cam_dist.value)*2))
+		{
+			P_ResetCamera(player, thiscam);
+		}
+	}
 
 	if (player->playerstate == PST_DEAD)
 	{
