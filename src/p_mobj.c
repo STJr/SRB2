@@ -9313,6 +9313,9 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					return;
 				case MT_PYREFLY:
+					if (mobj->health <= 0)
+						break;
+
 					mobj->extravalue2 = (mobj->extravalue2 + 1) % 3;
 					if (mobj->extravalue2 == 0)
 					{
