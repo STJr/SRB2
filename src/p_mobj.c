@@ -9029,6 +9029,12 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->extravalue1 = (mobj->extravalue1 + 3) % 360;
 					mobj->z += FINESINE(((mobj->extravalue1*ANG1) >> ANGLETOFINESHIFT) & FINEMASK);
 
+					if (!(mobj->flags2 & MF2_AMBUSH))
+						P_LookForPlayers(mobj, true, false, 1500*FRACUNIT);
+
+					if (!mobj->target)
+						break;
+
 					if (mobj->extravalue2 == 1)
 						P_PyreFlyBurn(mobj, 0, 20, MT_SMOKE, 4*FRACUNIT);
 					else if (mobj->extravalue2 == 2)
@@ -9038,12 +9044,6 @@ void P_MobjThinker(mobj_t *mobj)
 						P_PyreFlyBurn(mobj, P_RandomRange(0, fireradius)*FRACUNIT, 20, MT_FLAMEPARTICLE, 4*FRACUNIT);
 						P_PyreFlyBurn(mobj, fireradius*FRACUNIT, 40, MT_PYREFLY_FIRE, 0);
 					}
-
-					if (!(mobj->flags2 & MF2_AMBUSH))
-						P_LookForPlayers(mobj, true, false, 1500*FRACUNIT);
-
-					if (!mobj->target)
-						break;
 
 					hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
