@@ -949,7 +949,7 @@ enum
 
 static menuitem_t MP_RoomMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "<Private Mode>", M_ChooseRoom,   9},
+	{IT_STRING | IT_CALL, NULL, "<Unlisted Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  27},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  36},
@@ -8873,7 +8873,7 @@ static void M_DrawConnectMenu(void)
 	// Room name
 	if (ms_RoomId < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
-		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Private Mode>");
+		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9171,7 +9171,7 @@ static void M_DrawServerMenu(void)
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
-			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Private Mode>");
+			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
