@@ -6986,6 +6986,16 @@ void P_HandleMinecartSegments(mobj_t *mobj)
 	P_UpdateMinecartSegments(mobj);
 }
 
+static void P_PyreFlyBurn(mobj_t *mobj, fixed_t hoffs, INT16 vrange, mobjtype_t mobjtype, fixed_t momz)
+{
+	angle_t fa = (FixedAngle(P_RandomKey(360)*FRACUNIT) >> ANGLETOFINESHIFT) & FINEMASK;
+	fixed_t xoffs = FixedMul(FINECOSINE(fa), mobj->radius + hoffs);
+	fixed_t yoffs = FixedMul(FINESINE(fa), mobj->radius + hoffs);
+	fixed_t zoffs = P_RandomRange(-vrange, vrange)*FRACUNIT;
+	mobj_t *particle = P_SpawnMobjFromMobj(mobj, xoffs, yoffs, zoffs, mobjtype);
+	particle->momz = momz;
+}
+
 //
 // P_MobjThinker
 //
@@ -9012,6 +9022,60 @@ void P_MobjThinker(mobj_t *mobj)
 				if (P_IsObjectOnGround(mobj))
 					P_RemoveMobj(mobj);
 				break;
+			case MT_PYREFLY:
+				{
+					fixed_t hdist;
+
+					mobj->extravalue1 = (mobj->extravalue1 + 3) % 360;
+					mobj->z += FINESINE(((mobj->extravalue1*ANG1) >> ANGLETOFINESHIFT) & FINEMASK);
+
+					if (mobj->extravalue2 == 1)
+						P_PyreFlyBurn(mobj, 0, 20, MT_SMOKE, 4*FRACUNIT);
+					else if (mobj->extravalue2 == 2)
+					{
+						INT32 fireradius = min(100 - mobj->fuse, 52);
+						mobj->frame |= FF_FULLBRIGHT;
+						P_PyreFlyBurn(mobj, P_RandomRange(0, fireradius)*FRACUNIT, 20, MT_FLAMEPARTICLE, 4*FRACUNIT);
+						P_PyreFlyBurn(mobj, fireradius*FRACUNIT, 40, MT_PYREFLY_FIRE, 0);
+					}
+
+					if (!(mobj->flags2 & MF2_AMBUSH))
+						P_LookForPlayers(mobj, true, false, 1500*FRACUNIT);
+
+					if (!mobj->target)
+						break;
+
+					hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+
+					if (!(mobj->flags2 & MF2_AMBUSH) && hdist <= 450*FRACUNIT)
+						mobj->flags2 |= MF2_AMBUSH;
+
+					if (!(mobj->flags2 & MF2_AMBUSH))
+						break;
+
+					if (hdist < 1000*FRACUNIT)
+					{
+						fixed_t dist = P_AproxDistance(hdist, mobj->target->z - mobj->z);
+						P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
+						//aim for player z position; if too close to floor, aim just above them
+						if (mobj->z - mobj->floorz >= 80*FRACUNIT)
+							mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, dist), 2*FRACUNIT);
+						else
+							mobj->momz = FixedMul(FixedDiv((mobj->target->z + 70*FRACUNIT) - mobj->z, dist), 2*FRACUNIT);
+					}
+					else
+					{
+						mobj->momx = 0;
+						mobj->momy = 0;
+						mobj->momz = 0;
+						if (hdist >= 1500*FRACUNIT)
+						{
+							mobj->flags2 &= ~MF2_AMBUSH;
+							P_SetTarget(&mobj->target, NULL);
+						}
+					}
+					break;
+				}
 			case MT_SPINFIRE:
 				if (mobj->flags & MF_NOGRAVITY)
 				{
@@ -9246,6 +9310,26 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 						mobj->fuse = 30;
 						P_SetMobjState(mobj, S_LAVAFALL_DORMANT);
 						S_StopSound(mobj);
+					}
+					return;
+				case MT_PYREFLY:
+					mobj->extravalue2 = (mobj->extravalue2 + 1) % 3;
+					if (mobj->extravalue2 == 0)
+					{
+						mobj->fuse = 100;
+						S_StopSound(mobj);
+						S_StartSound(mobj, sfx_s3k8c);
+					}
+					else if (mobj->extravalue2 == 1)
+					{
+						mobj->fuse = 50;
+						S_StartSound(mobj, sfx_s3ka3);
+					}
+					else
+					{
+						mobj->fuse = 100;
+						S_StopSound(mobj);
+						S_StartSound(mobj, sfx_s3kc2l);
 					}
 					return;
 				case MT_PLAYER:
@@ -9844,6 +9928,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 				P_SetTarget(&mobj->target, fire);
 				break;
 			}
+		case MT_PYREFLY:
+			mobj->extravalue1 = (FixedHypot(mobj->x, mobj->y)/FRACUNIT) % 360;
+			mobj->extravalue2 = 0;
+			mobj->fuse = 100;
+			break;
 		default:
 			break;
 	}
@@ -11862,6 +11951,15 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		{
 			P_SetScale(mobj, 2*mobj->scale);
 			mobj->destscale = mobj->scale;
+		}
+		break;
+	case MT_PYREFLY:
+		//start on fire if Ambush flag is set, otherwise behave normally
+		if (mthing->options & MTF_AMBUSH)
+		{
+			mobj->extravalue2 = 2;
+			S_StartSound(mobj, sfx_s3kd3l);
+			mthing->options &= ~MTF_AMBUSH; //Prevent MF2_AMBUSH from being set, since we use it for chasing
 		}
 		break;
 	default:

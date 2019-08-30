@@ -299,6 +299,7 @@ void A_ModuloToState(mobj_t *actor);
 void A_LavafallRocks(mobj_t *actor);
 void A_LavafallLava(mobj_t *actor);
 void A_FallingLavaCheck(mobj_t *actor);
+void A_FireShrink(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -13816,4 +13817,25 @@ void A_FallingLavaCheck(mobj_t *actor)
 		actor->z = actor->watertop;
 		P_SetMobjState(actor, actor->info->deathstate);
 	}
+}
+
+// Function: A_FireShrink
+//
+// Description: Shrink the actor down to the specified scale at the specified speed.
+//
+// var1 = Scale to shrink to
+// var2 = Shrinking speed
+//
+void A_FireShrink(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FireShrink", actor))
+		return;
+#endif
+
+	actor->destscale = locvar1;
+	actor->scalespeed = FRACUNIT/locvar2;
 }

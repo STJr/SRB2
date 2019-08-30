@@ -68,6 +68,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"UNID", // Unidus
 	"CANA", // Canarivore
 	"CANG", // Canarivore gas
+	"PYRE", // Pyre Fly
 
 	// Generic Boss Items
 	"JETF", // Boss jet fumes
@@ -1171,6 +1172,11 @@ state_t states[NUMSTATES] =
 	{SPR_CANG, 0|FF_TRANS70, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_7}, // S_CANARIVOREGAS_6
 	{SPR_CANG, 0|FF_TRANS80, 10,        {NULL},            0, 0,       S_CANARIVOREGAS_8}, // S_CANARIVOREGAS_7
 	{SPR_CANG, 0|FF_TRANS90, 10,        {NULL},            0, 0,       S_NULL},            // S_CANARIVOREGAS_8
+
+	// Pyre Fly
+	{SPR_PYRE, FF_ANIMATE, 8, {NULL}, 4, 2, S_PYREFLY_FLY}, // S_PYREFLY_FLY
+	{SPR_FLAM, FF_FULLBRIGHT, 10, {NULL}, 0, 0, S_PYREFIRE2}, // S_PYREFIRE1
+	{SPR_FLAM, 1|FF_FULLBRIGHT, 10, {A_FireShrink}, 0, 16, S_NULL}, // S_PYREFIRE2
 
 	// Boss Explosion
 	{SPR_BOM2, FF_FULLBRIGHT|FF_ANIMATE, (5*7), {NULL}, 6, 5, S_NULL}, // S_BOSSEXPLODE
@@ -5001,6 +5007,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOCLIP|MF_SPECIAL, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PYREFLY
+		136,            // doomednum
+		S_PYREFLY_FLY,  // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD_FLICKY,  // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		1,              // speed
+		24*FRACUNIT,    // radius
+		34*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_SLIDEME, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PYREFLY_FIRE
+		-1,             // doomednum
+		S_PYREFIRE1,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		24*FRACUNIT,    // radius
+		34*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_FIRE|MF_PAIN, // flags
 		S_NULL          // raisestate
 	},
 

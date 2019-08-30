@@ -2434,6 +2434,7 @@ static actionpointer_t actionpointers[] =
 	{{A_LavafallRocks},          "A_LAVAFALLROCKS"},
 	{{A_LavafallLava},           "A_LAVAFALLLAVA"},
 	{{A_FallingLavaCheck},       "A_FALLINGLAVACHECK"},
+	{{A_FireShrink},             "A_FIRESHRINK"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -4575,6 +4576,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CANARIVOREGAS_6",
 	"S_CANARIVOREGAS_7",
 	"S_CANARIVOREGAS_8",
+
+	// Pyre Fly
+	"S_PYREFLY_FLY",
+	"S_PYREFIRE1",
+	"S_PYREFIRE2",
 
 	// Boss Explosion
 	"S_BOSSEXPLODE",
@@ -7224,6 +7230,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_UNIBALL", // Unidus Ball
 	"MT_CANARIVORE", // Canarivore
 	"MT_CANARIVORE_GAS", // Canarivore gas
+	"MT_PYREFLY", // Pyre Fly
+	"MT_PYREFLY_FIRE", // Pyre Fly fire
 
 	// Generic Boss Items
 	"MT_BOSSEXPLODE",
