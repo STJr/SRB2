@@ -4359,12 +4359,6 @@ static void P_Boss3Thinker(mobj_t *mobj)
 	if (mobj->flags2 & MF2_FRET)
 		mobj->movedir = 1;
 
-	if (!mobj->tracer)
-	{
-		var1 = 1;
-		A_BossJetFume(mobj);
-	}
-
 	if (mobj->health <= 0)
 		return;
 	/*
@@ -4493,7 +4487,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			if (mobj->health <= mobj->info->damage) // pinch phase
 				mobj->movecount--; // limited number of shots before diving again
 			if (mobj->movecount)
-				P_SetMobjState(mobj, mobj->info->missilestate);
+				P_SetMobjState(mobj, mobj->info->missilestate+1);
 		}
 	}
 	else if (mobj->threshold >= 0) // Traveling mode
@@ -4592,6 +4586,15 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					ang += (ANGLE_MAX/64);
 				}
 				S_StartSound(mobj, sfx_fizzle);
+
+				// look for a new target
+				P_BossTargetPlayer(mobj, false);
+
+				if (mobj->target && mobj->target->player)
+				{
+					A_FaceTarget(mobj);
+					P_SetMobjState(mobj, mobj->info->missilestate);
+				}
 			}
 			else if (mobj->flags2 & (MF2_STRONGBOX|MF2_CLASSICPUSH)) // just hit the bottom of your tube
 			{
@@ -5527,8 +5530,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				mobj->tracer->destscale = FRACUNIT + (4*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
 				P_SetScale(mobj->tracer, mobj->tracer->destscale);
 			}
-			else
-				mobj->tracer->frame &= ~FF_TRANSMASK; // this causes a flicker but honestly i like it this way
+
 			P_TeleportMove(mobj->tracer, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->tracer->height/2);
 			mobj->tracer->momx = mobj->momx;
 			mobj->tracer->momy = mobj->momy;
@@ -5645,12 +5647,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 				if (mobj->health > mobj->info->damage)
 				{
-					P_SetScale(missile, FRACUNIT/2);
+					P_SetScale(missile, FRACUNIT/3);
 					missile->color = SKINCOLOR_GOLD; // sonic cd electric power
 				}
 				else
 				{
-					P_SetScale(missile, FRACUNIT/4);
+					P_SetScale(missile, FRACUNIT/5);
 					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
 				}
 				missile->destscale = missile->scale*2;
@@ -5940,9 +5942,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					P_SetTarget(&mobj->tracer, shield);
 					P_SetTarget(&shield->target, mobj);
 					shield->height -= 20*FRACUNIT; // different offset...
-					shield->color = SKINCOLOR_MAGENTA;
-					shield->colorized = true;
-					P_SetMobjState(shield, S_FIRS1);
+					P_SetMobjState(shield, S_MSSHIELD_F2);
 					//P_LinedefExecute(LE_PINCHPHASE, mobj, NULL); -- why does this happen twice? see case 2...
 				}
 				mobj->fuse = 4*TICRATE;
@@ -7093,9 +7093,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 		switch (mobj->type)
 		{
-			case MT_BOSSTANK1:
-			case MT_BOSSTANK2:
-			case MT_BOSSSPIGOT:
+			case MT_BOSSJUNK:
 				mobj->flags2 ^= MF2_DONTDRAW;
 				break;
 			case MT_MACEPOINT:
@@ -7681,12 +7679,22 @@ void P_MobjThinker(mobj_t *mobj)
 		switch (mobj->type)
 		{
 			case MT_EGGMOBILE:
-				if (mobj->health < mobj->info->damage+1 && leveltime & 1 && mobj->health > 0)
-					P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SMOKE);
+				if (mobj->health < mobj->info->damage+1 && leveltime & 2)
+				{
+					fixed_t rad = mobj->radius>>FRACBITS;
+					fixed_t hei = mobj->height>>FRACBITS;
+					mobj_t *particle = P_SpawnMobjFromMobj(mobj,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(hei/2, hei)<<FRACBITS,
+						MT_SMOKE);
+					P_SetObjectMomZ(particle, 2<<FRACBITS, false);
+					particle->momz += mobj->momz;
+				}
 				if (mobj->flags2 & MF2_SKULLFLY)
 #if 1
 					P_SpawnGhostMobj(mobj);
-#else
+#else // all the way back from final demo... MT_THOK isn't even the same size anymore!
 				{
 					mobj_t *spawnmobj;
 					spawnmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->info->painchance);
@@ -7697,12 +7705,48 @@ void P_MobjThinker(mobj_t *mobj)
 				P_Boss1Thinker(mobj);
 				break;
 			case MT_EGGMOBILE2:
+				if (mobj->health < mobj->info->damage+1 && leveltime & 2)
+				{
+					fixed_t rad = mobj->radius>>FRACBITS;
+					fixed_t hei = mobj->height>>FRACBITS;
+					mobj_t *particle = P_SpawnMobjFromMobj(mobj,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(hei/2, hei)<<FRACBITS,
+						MT_SMOKE);
+					P_SetObjectMomZ(particle, 2<<FRACBITS, false);
+					particle->momz += mobj->momz;
+				}
 				P_Boss2Thinker(mobj);
 				break;
 			case MT_EGGMOBILE3:
+				if (mobj->health < mobj->info->damage+1 && leveltime & 2)
+				{
+					fixed_t rad = mobj->radius>>FRACBITS;
+					fixed_t hei = mobj->height>>FRACBITS;
+					mobj_t *particle = P_SpawnMobjFromMobj(mobj,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(hei/2, hei)<<FRACBITS,
+						MT_SMOKE);
+					P_SetObjectMomZ(particle, 2<<FRACBITS, false);
+					particle->momz += mobj->momz;
+				}
 				P_Boss3Thinker(mobj);
 				break;
 			case MT_EGGMOBILE4:
+				if (mobj->health < mobj->info->damage+1 && leveltime & 2)
+				{
+					fixed_t rad = mobj->radius>>FRACBITS;
+					fixed_t hei = mobj->height>>FRACBITS;
+					mobj_t *particle = P_SpawnMobjFromMobj(mobj,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(rad, -rad)<<FRACBITS,
+						P_RandomRange(hei/2, hei)<<FRACBITS,
+						MT_SMOKE);
+					P_SetObjectMomZ(particle, 2<<FRACBITS, false);
+					particle->momz += mobj->momz;
+				}
 				P_Boss4Thinker(mobj);
 				break;
 			case MT_FANG:
@@ -8316,30 +8360,6 @@ void P_MobjThinker(mobj_t *mobj)
 						P_SetThingPosition(mobj);
 					}
 					mobj->fuse++;
-				}
-				break;
-			case MT_PROPELLER:
-				{
-					fixed_t jetx, jety;
-
-					if (!mobj->target // if you have no target
-					|| (!(mobj->target->flags & MF_BOSS) && mobj->target->health <= 0)) // or your target isn't a boss and it's popped now
-					{ // then remove yourself as well!
-						P_RemoveMobj(mobj);
-						return;
-					}
-
-					jetx = mobj->target->x + P_ReturnThrustX(mobj->target, mobj->target->angle, FixedMul(-60*FRACUNIT, mobj->target->scale));
-					jety = mobj->target->y + P_ReturnThrustY(mobj->target, mobj->target->angle, FixedMul(-60*FRACUNIT, mobj->target->scale));
-
-					P_UnsetThingPosition(mobj);
-					mobj->x = jetx;
-					mobj->y = jety;
-					mobj->z = mobj->target->z + FixedMul(17*FRACUNIT, mobj->target->scale);
-					mobj->angle = mobj->target->angle - ANGLE_180;
-					mobj->floorz = mobj->z;
-					mobj->ceilingz = mobj->z+mobj->height;
-					P_SetThingPosition(mobj);
 				}
 				break;
 			case MT_JETFLAME:
@@ -9038,9 +9058,9 @@ void P_MobjThinker(mobj_t *mobj)
 	{
 		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
-			var1 = mobj->state->var1;
-			var2 = mobj->state->var2;
-			mobj->state->action.acp1(mobj);
+			/*var1 = mobj->state->var1;
+			var2 = mobj->state->var2 & 65535;
+			mobj->state->action.acp1(mobj);*/
 		}
 		else if (leveltime & 1) // Fire mode
 		{

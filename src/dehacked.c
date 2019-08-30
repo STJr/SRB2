@@ -4585,10 +4585,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SONIC3KBOSSEXPLOSION6",
 
 	"S_JETFUME1",
-	"S_JETFUME2",
 
 	// Boss 1
 	"S_EGGMOBILE_STND",
+	"S_EGGMOBILE_ROFL",
 	"S_EGGMOBILE_LATK1",
 	"S_EGGMOBILE_LATK2",
 	"S_EGGMOBILE_LATK3",
@@ -4598,7 +4598,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_LATK7",
 	"S_EGGMOBILE_LATK8",
 	"S_EGGMOBILE_LATK9",
-	"S_EGGMOBILE_LATK10",
 	"S_EGGMOBILE_RATK1",
 	"S_EGGMOBILE_RATK2",
 	"S_EGGMOBILE_RATK3",
@@ -4608,7 +4607,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_RATK7",
 	"S_EGGMOBILE_RATK8",
 	"S_EGGMOBILE_RATK9",
-	"S_EGGMOBILE_RATK10",
 	"S_EGGMOBILE_PANIC1",
 	"S_EGGMOBILE_PANIC2",
 	"S_EGGMOBILE_PANIC3",
@@ -4616,6 +4614,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_PANIC5",
 	"S_EGGMOBILE_PANIC6",
 	"S_EGGMOBILE_PANIC7",
+	"S_EGGMOBILE_PANIC8",
+	"S_EGGMOBILE_PANIC9",
+	"S_EGGMOBILE_PANIC10",
+	"S_EGGMOBILE_PANIC11",
+	"S_EGGMOBILE_PANIC12",
+	"S_EGGMOBILE_PANIC13",
+	"S_EGGMOBILE_PANIC14",
+	"S_EGGMOBILE_PANIC15",
 	"S_EGGMOBILE_PAIN",
 	"S_EGGMOBILE_PAIN2",
 	"S_EGGMOBILE_DIE1",
@@ -4626,6 +4632,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_FLEE2",
 	"S_EGGMOBILE_BALL",
 	"S_EGGMOBILE_TARGET",
+	"S_BOSSEGLZ1",
+	"S_BOSSEGLZ2",
 
 	// Boss 2
 	"S_EGGMOBILE2_STND",
@@ -4657,11 +4665,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Boss 3
 	"S_EGGMOBILE3_STND",
-	"S_EGGMOBILE3_LAUGH1",
-	"S_EGGMOBILE3_LAUGH2",
-	"S_EGGMOBILE3_LAUGH3",
-	"S_EGGMOBILE3_LAUGH4",
-	"S_EGGMOBILE3_LAUGH5",
+	"S_EGGMOBILE3_SHOCK",
 	"S_EGGMOBILE3_ATK1",
 	"S_EGGMOBILE3_ATK2",
 	"S_EGGMOBILE3_ATK3A",
@@ -4670,21 +4674,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_ATK3D",
 	"S_EGGMOBILE3_ATK4",
 	"S_EGGMOBILE3_ATK5",
-	"S_EGGMOBILE3_LAUGH6",
-	"S_EGGMOBILE3_LAUGH7",
-	"S_EGGMOBILE3_LAUGH8",
-	"S_EGGMOBILE3_LAUGH9",
-	"S_EGGMOBILE3_LAUGH10",
-	"S_EGGMOBILE3_LAUGH11",
-	"S_EGGMOBILE3_LAUGH12",
-	"S_EGGMOBILE3_LAUGH13",
-	"S_EGGMOBILE3_LAUGH14",
-	"S_EGGMOBILE3_LAUGH15",
-	"S_EGGMOBILE3_LAUGH16",
-	"S_EGGMOBILE3_LAUGH17",
-	"S_EGGMOBILE3_LAUGH18",
-	"S_EGGMOBILE3_LAUGH19",
-	"S_EGGMOBILE3_LAUGH20",
+	"S_EGGMOBILE3_ROFL",
 	"S_EGGMOBILE3_PAIN",
 	"S_EGGMOBILE3_PAIN2",
 	"S_EGGMOBILE3_DIE1",
@@ -4693,15 +4683,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_DIE4",
 	"S_EGGMOBILE3_FLEE1",
 	"S_EGGMOBILE3_FLEE2",
-
-	// Boss 3 Propeller
-	"S_PROPELLER1",
-	"S_PROPELLER2",
-	"S_PROPELLER3",
-	"S_PROPELLER4",
-	"S_PROPELLER5",
-	"S_PROPELLER6",
-	"S_PROPELLER7",
 
 	// Boss 3 pinch
 	"S_FAKEMOBILE_INIT",
@@ -4714,6 +4695,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FAKEMOBILE_ATK3D",
 	"S_FAKEMOBILE_DIE1",
 	"S_FAKEMOBILE_DIE2",
+
+	"S_BOSSSEBH1",
+	"S_BOSSSEBH2",
 
 	// Boss 4
 	"S_EGGMOBILE4_STND",
@@ -5118,16 +5102,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_MSSHIELD_F1",
 	"S_MSSHIELD_F2",
-	"S_MSSHIELD_F3",
-	"S_MSSHIELD_F4",
-	"S_MSSHIELD_F5",
-	"S_MSSHIELD_F6",
-	"S_MSSHIELD_F7",
-	"S_MSSHIELD_F8",
-	"S_MSSHIELD_F9",
-	"S_MSSHIELD_F10",
-	"S_MSSHIELD_F11",
-	"S_MSSHIELD_F12",
 
 	// Ring
 	"S_RING",
@@ -7211,6 +7185,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGTRAP",
 	"MT_BOSS3WAYPOINT",
 	"MT_BOSS9GATHERPOINT",
+	"MT_BOSSJUNK",
 
 	// Boss 1
 	"MT_EGGMOBILE",
@@ -7222,15 +7197,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Boss 2
 	"MT_EGGMOBILE2",
 	"MT_EGGMOBILE2_POGO",
-	"MT_BOSSTANK1",
-	"MT_BOSSTANK2",
-	"MT_BOSSSPIGOT",
 	"MT_GOOP",
 	"MT_GOOPTRAIL",
 
 	// Boss 3
 	"MT_EGGMOBILE3",
-	"MT_PROPELLER",
 	"MT_FAKEMOBILE",
 	"MT_SHOCK",
 
