@@ -3964,13 +3964,24 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
 				{
-					x = P_RandomRange(sides[line->sidenum[0]].textureoffset, sides[line->sidenum[1]].textureoffset);
-					y = P_RandomRange(sides[line->sidenum[0]].rowoffset, sides[line->sidenum[1]].rowoffset);
-					z = P_RandomRange(line->frontsector->floorheight, line->frontsector->ceilingheight);
+					if (line->sidenum[1] != 0xffff) // Make sure the linedef has a back side
+					{
+						x = P_RandomRange(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[1]].textureoffset>>FRACBITS)<<FRACBITS;
+						y = P_RandomRange(sides[line->sidenum[0]].rowoffset>>FRACBITS, sides[line->sidenum[1]].rowoffset>>FRACBITS)<<FRACBITS;
+						z = P_RandomRange(line->frontsector->floorheight>>FRACBITS, line->frontsector->ceilingheight>>FRACBITS)<<FRACBITS;
+					}
+					else
+					{
+						CONS_Alert(CONS_WARNING,"Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", line->special);
+						break;
+					}
 				}
 
-				CONS_Printf("mobjtype_t: %d\n", type);
-				P_SpawnMobj(x, y, z, type);
+				mobj_t *mobj = P_SpawnMobj(x, y, z, type);
+				if (mobj)
+					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
+				else
+					CONS_Alert(CONS_ERROR,"Linedef Type %d - Spawn Object: Object did not spawn!\n", line->special);
 			}
 			break;
 
