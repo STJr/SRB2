@@ -3901,6 +3901,33 @@ static void P_SetWeaponDelay(player_t *player, INT32 delay)
 }
 
 //
+// P_DrainWeaponAmmo
+//
+// Reduces rings and weapon ammo. Also penalizes the player
+// for using weapon rings with no normal rings! >:V
+//
+static void P_DrainWeaponAmmo (player_t *player, INT32 power)
+{
+	player->powers[power]--;
+
+	if (player->rings < 1)
+	{
+		player->ammoremovalweapon = player->currentweapon;
+		player->ammoremovaltimer  = ammoremovaltics;
+
+		if (player->powers[power] > 0) // can't take a ring that doesn't exist
+		{
+			player->powers[power]--;
+			player->ammoremoval = 2;
+		}
+		else
+			player->ammoremoval = 1;
+	}
+	else
+		player->rings--;
+}
+
+//
 // P_DoFiring()
 //
 // Handles firing ring weapons and Mario fireballs.
@@ -3938,22 +3965,12 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 	player->pflags |= PF_ATTACKDOWN;
 
-#define TAKE_AMMO(player, power) \
-		player->powers[power]--; \
-		if (player->rings < 1) \
-		{ \
-			if (player->powers[power] > 0) \
-				player->powers[power]--; \
-		} \
-		else \
-			player->rings--;
-
 	if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
 		goto firenormal; //code repetition sucks.
 	// Bounce ring
 	else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
 	{
-		TAKE_AMMO(player, pw_bouncering);
+		P_DrainWeaponAmmo(player, pw_bouncering);
 		P_SetWeaponDelay(player, TICRATE/4);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
@@ -3964,7 +3981,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Rail ring
 	else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
 	{
-		TAKE_AMMO(player, pw_railring);
+		P_DrainWeaponAmmo(player, pw_railring);
 		P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
@@ -3975,7 +3992,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Automatic
 	else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
 	{
-		TAKE_AMMO(player, pw_automaticring);
+		P_DrainWeaponAmmo(player, pw_automaticring);
 		player->pflags &= ~PF_ATTACKDOWN;
 		P_SetWeaponDelay(player, 2);
 
@@ -3984,7 +4001,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Explosion
 	else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
 	{
-		TAKE_AMMO(player, pw_explosionring);
+		P_DrainWeaponAmmo(player, pw_explosionring);
 		P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
@@ -3992,7 +4009,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Grenade
 	else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
 	{
-		TAKE_AMMO(player, pw_grenadering);
+		P_DrainWeaponAmmo(player, pw_grenadering);
 		P_SetWeaponDelay(player, TICRATE/3);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
@@ -4011,7 +4028,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		angle_t shotangle = player->mo->angle;
 		angle_t oldaiming = player->aiming;
 
-		TAKE_AMMO(player, pw_scatterring);
+		P_DrainWeaponAmmo(player, pw_scatterring);
 		P_SetWeaponDelay(player, (2*TICRATE)/3);
 
 		// Center
@@ -4072,8 +4089,6 @@ firenormal:
 			player->rings--;
 		}
 	}
-
-	#undef TAKE_AMMO
 
 	if (mo)
 	{
@@ -11341,6 +11356,12 @@ void P_PlayerThink(player_t *player)
 
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
+
+	if (player->ammoremovaltimer)
+	{
+		if (--player->ammoremovaltimer == 0)
+			player->ammoremoval = 0;
+	}
 
 	// Strength counts up to diminish fade.
 	if (player->powers[pw_sneakers] && player->powers[pw_sneakers] < UINT16_MAX)
