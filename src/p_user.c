@@ -9570,7 +9570,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
 
-	if ((thiscam == &camera && cv_cam_orbit.value) || (thiscam == &camera2 && cv_cam2_orbit.value))
+	if ((thiscam == &camera && cv_cam_orbit.value) || (thiscam == &camera2 && cv_cam2_orbit.value)) //Sev here, I'm guessing this is where orbital cam lives
 	{
 		distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
 		distz = -FixedMul(dist, FINESINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
@@ -9583,6 +9583,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	x = mo->x - FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
 	y = mo->y - FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
+
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE) && !(player->exiting)) //Which is why I'm slapping my cam reset code in here too
+	{
+		if ((P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+camdist)*2)) || (abs(thiscam->z - player->mo->z) > ((player->speed+camdist)*2)))
+			P_ResetCamera(player, thiscam);
+	}
 
 #if 0
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
@@ -9934,6 +9940,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
+
 }
 
 boolean P_SpectatorJoinGame(player_t *player)
@@ -11591,21 +11598,9 @@ void P_PlayerAfterThink(player_t *player)
 #endif
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
-	{
 		thiscam = &camera2;
-		if ((P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+cv_cam2_dist.value)*2)) || (abs(thiscam->z - player->mo->z) > ((player->speed+cv_cam2_dist.value)*2)))
-		{
-			P_ResetCamera(player, thiscam);
-		}
-	}
 	else if (player == &players[displayplayer])
-	{
 		thiscam = &camera;
-		if ((P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+cv_cam_dist.value)*2)) || (abs(thiscam->z - player->mo->z) > ((player->speed+cv_cam_dist.value)*2)))
-		{
-			P_ResetCamera(player, thiscam);
-		}
-	}
 
 	if (player->playerstate == PST_DEAD)
 	{
