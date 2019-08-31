@@ -9029,7 +9029,7 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->extravalue1 = (mobj->extravalue1 + 3) % 360;
 					mobj->z += FINESINE(((mobj->extravalue1*ANG1) >> ANGLETOFINESHIFT) & FINEMASK);
 
-					if (!(mobj->flags2 & MF2_AMBUSH))
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP))
 						P_LookForPlayers(mobj, true, false, 1500*FRACUNIT);
 
 					if (!mobj->target)
@@ -9047,10 +9047,10 @@ void P_MobjThinker(mobj_t *mobj)
 
 					hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
-					if (!(mobj->flags2 & MF2_AMBUSH) && hdist <= 450*FRACUNIT)
-						mobj->flags2 |= MF2_AMBUSH;
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP) && hdist <= 450*FRACUNIT)
+						mobj->flags2 |= MF2_BOSSNOTRAP;
 
-					if (!(mobj->flags2 & MF2_AMBUSH))
+					if (!(mobj->flags2 & MF2_BOSSNOTRAP))
 						break;
 
 					if (hdist < 1000*FRACUNIT)
@@ -9070,7 +9070,7 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->momz = 0;
 						if (hdist >= 1500*FRACUNIT)
 						{
-							mobj->flags2 &= ~MF2_AMBUSH;
+							mobj->flags2 &= ~MF2_BOSSNOTRAP;
 							P_SetTarget(&mobj->target, NULL);
 						}
 					}
@@ -11962,7 +11962,6 @@ ML_EFFECT5 : Don't stop thinking when too far away
 		{
 			mobj->extravalue2 = 2;
 			S_StartSound(mobj, sfx_s3kd3l);
-			mthing->options &= ~MTF_AMBUSH; //Prevent MF2_AMBUSH from being set, since we use it for chasing
 		}
 		break;
 	default:
