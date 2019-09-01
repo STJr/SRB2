@@ -8425,6 +8425,17 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					else
 					{
+
+						fixed_t basex = mobj->cusval, basey = mobj->cvmem;
+
+						if (mobj->spawnpoint && mobj->spawnpoint->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
+						{
+							angle_t sideang = mobj->movedir + ((mobj->spawnpoint->options & MTF_AMBUSH) ? ANGLE_90 : -ANGLE_90);
+							fixed_t oscillate = FixedMul(FINESINE(((leveltime*ANG1)>>(ANGLETOFINESHIFT+2)) & FINEMASK), 250*mobj->scale);
+							basex += P_ReturnThrustX(mobj, sideang, oscillate);
+							basey += P_ReturnThrustY(mobj, sideang, oscillate);
+						}
+
 						mobj->z = mobj->threshold + FixedMul(FINESINE(((leveltime + mobj->movecount)*ANG2>>(ANGLETOFINESHIFT-2)) & FINEMASK), 8*mobj->scale);
 						if (mobj->state != &states[mobj->info->meleestate])
 						{
@@ -8453,8 +8464,8 @@ void P_MobjThinker(mobj_t *mobj)
 									if (players[i].mo->z + players[i].mo->height < mobj->z - 8*mobj->scale)
 										continue;
 									compdist = P_AproxDistance(
-										players[i].mo->x + players[i].mo->momx - mobj->cusval,
-										players[i].mo->y + players[i].mo->momy - mobj->cvmem);
+										players[i].mo->x + players[i].mo->momx - basex,
+										players[i].mo->y + players[i].mo->momy - basey);
 									if (compdist >= dist)
 										continue;
 									dist = compdist;
@@ -8468,14 +8479,14 @@ void P_MobjThinker(mobj_t *mobj)
 									mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
 									if (P_AproxDistance(
-										mobj->x - mobj->cusval,
-										mobj->y - mobj->cvmem)
+										mobj->x - basex,
+										mobj->y - basey)
 										< mobj->scale)
 										S_StartSound(mobj, mobj->info->seesound);
 
 									P_TeleportMove(mobj,
-										(15*(mobj->x>>4)) + (mobj->cusval>>4) + P_ReturnThrustX(mobj, mobj->angle, SPECTATORRADIUS>>4),
-										(15*(mobj->y>>4)) + (mobj->cvmem>>4) + P_ReturnThrustY(mobj, mobj->angle, SPECTATORRADIUS>>4),
+										(15*(mobj->x>>4)) + (basex>>4) + P_ReturnThrustX(mobj, mobj->angle, SPECTATORRADIUS>>4),
+										(15*(mobj->y>>4)) + (basey>>4) + P_ReturnThrustY(mobj, mobj->angle, SPECTATORRADIUS>>4),
 										mobj->z);
 								}
 								else
@@ -8498,18 +8509,12 @@ void P_MobjThinker(mobj_t *mobj)
 
 							if (!didmove)
 							{
-								if (P_AproxDistance(
-										mobj->x - mobj->cusval,
-										mobj->y - mobj->cvmem)
-										< mobj->scale)
-									P_TeleportMove(mobj,
-										mobj->cusval,
-										mobj->cvmem,
-										mobj->z);
+								if (P_AproxDistance(mobj->x - basex, mobj->y - basey) < mobj->scale)
+									P_TeleportMove(mobj, basex, basey, mobj->z);
 								else
 									P_TeleportMove(mobj,
-										(15*(mobj->x>>4)) + (mobj->cusval>>4),
-										(15*(mobj->y>>4)) + (mobj->cvmem>>4),
+										(15*(mobj->x>>4)) + (basex>>4),
+										(15*(mobj->y>>4)) + (basey>>4),
 										mobj->z);
 							}
 						}
