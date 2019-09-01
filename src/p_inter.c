@@ -3500,7 +3500,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (G_IsSpecialStage(gamemap))
+		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
@@ -3524,10 +3524,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
-		{
 			P_KillPlayer(player, source, damage);
-			player->rings = player->spheres = 0;
-		}
 		else if (metalrecording)
 		{
 			if (!inflictor)

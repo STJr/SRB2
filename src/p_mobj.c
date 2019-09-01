@@ -10397,7 +10397,7 @@ void P_SpawnPlayer(INT32 playernum)
 		&& ((leveltime > 0
 		&& ((G_IsSpecialStage(gamemap) && (maptol & TOL_NIGHTS)) // late join special stage
 		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
-		|| (((cv_cooplives.value == 1) || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
+		|| (!P_GetLives(p) && p->lives <= 0))); // game over and can't redistribute lives
 	}
 	else
 	{
@@ -10464,7 +10464,6 @@ void P_SpawnPlayer(INT32 playernum)
 	P_SetupStateAnimation(mobj, mobj->state);
 
 	mobj->health = 1;
-	p->rings = p->spheres = 0;
 	p->playerstate = PST_LIVE;
 
 	p->bonustime = false;

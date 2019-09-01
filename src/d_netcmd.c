@@ -2706,14 +2706,6 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		}
 	}
 
-	// Clear player score and rings if a spectator.
-	if (players[playernum].spectator)
-	{
-		players[playernum].score = players[playernum].rings = 0;
-		if (players[playernum].mo)
-			players[playernum].mo->health = 1;
-	}
-
 	// In tag, check to see if you still have a game.
 	if (G_TagGametype())
 		P_CheckSurvivors();
@@ -3600,7 +3592,7 @@ static void CoopLives_OnChange(void)
 	{
 		case 0:
 			CONS_Printf(M_GetText("Players can now respawn indefinitely.\n"));
-			return;
+			break;
 		case 1:
 			CONS_Printf(M_GetText("Lives are now per-player.\n"));
 			return;

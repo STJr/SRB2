@@ -215,7 +215,7 @@ UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
 UINT16 nightslinktics = 2*TICRATE;
 
-INT32 gameovertics = 15*TICRATE;
+INT32 gameovertics = 10*TICRATE;
 
 UINT8 ammoremovaltics = 2*TICRATE;
 
@@ -2145,6 +2145,8 @@ void G_PlayerReborn(INT32 player)
 	boolean outofcoop;
 	INT16 bot;
 	SINT8 pity;
+	INT16 rings;
+	INT16 spheres;
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2199,6 +2201,17 @@ void G_PlayerReborn(INT32 player)
 	bot = players[player].bot;
 	pity = players[player].pity;
 
+	if (!G_IsSpecialStage(gamemap))
+	{
+		rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
+		spheres = 0;
+	}
+	else
+	{
+		rings = players[player].rings;
+		spheres = players[player].spheres;
+	}
+
 	p = &players[player];
 	memset(p, 0, sizeof (*p));
 
@@ -2252,6 +2265,8 @@ void G_PlayerReborn(INT32 player)
 	if (bot)
 		p->bot = 1; // reset to AI-controlled
 	p->pity = pity;
+	p->rings = rings;
+	p->spheres = spheres;
 
 	// Don't do anything immediately
 	p->pflags |= PF_USEDOWN;
@@ -2259,7 +2274,6 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->rings = p->spheres = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
@@ -2369,8 +2383,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 		return;
 
 	P_SpawnPlayer(playernum);
-
-	players[playernum].rings = mapheaderinfo[gamemap-1]->startrings;
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{

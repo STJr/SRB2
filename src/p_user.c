@@ -9027,18 +9027,21 @@ boolean P_GetLives(player_t *player)
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
 	if (!(netgame || multiplayer)
 	|| (gametype != GT_COOP)
-	|| (cv_cooplives.value == 1)
 	|| (player->lives == INFLIVES))
-		return true;
-
-	if ((cv_cooplives.value == 2 || cv_cooplives.value == 0) && player->lives > 0)
 		return true;
 
 	if (cv_cooplives.value == 0) // infinite lives
 	{
-		player->lives++;
+		if (player->lives < 1)
+			player->lives = 1;
 		return true;
 	}
+
+	if ((cv_cooplives.value == 2 || cv_cooplives.value == 1) && player->lives > 0)
+		return true;
+
+	if (cv_cooplives.value == 1)
+		return false;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -9146,7 +9149,7 @@ static void P_DeathThink(player_t *player)
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
-		if (player->deadtimer > TICRATE && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && player->continues > 0)
+		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && player->continues > 0)
 			G_UseContinue();
 		else if (player->deadtimer >= gameovertics)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
@@ -9170,12 +9173,12 @@ static void P_DeathThink(player_t *player)
 	// Force respawn if idle for more than 30 seconds in shooter modes.
 	if (player->deadtimer > 30*TICRATE && !G_PlatformGametype())
 		player->playerstate = PST_REBORN;
-	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
+	else if ((player->lives > 0 || j != MAXPLAYERS) && !(G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
 	{
 		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
 			P_ConsiderAllGone();
-			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
+			if ((player->deadtimer > TICRATE<<1) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
 			{
 				//player->spectator = true;
 				player->outofcoop = true;
@@ -9191,15 +9194,10 @@ static void P_DeathThink(player_t *player)
 					player->playerstate = PST_REBORN;
 				else switch(gametype) {
 					case GT_COOP:
-						if (player->deadtimer > TICRATE)
-							player->playerstate = PST_REBORN;
-						break;
 					case GT_COMPETITION:
+					case GT_RACE:
 						if (player->deadtimer > TICRATE)
 							player->playerstate = PST_REBORN;
-						break;
-					case GT_RACE:
-						player->playerstate = PST_REBORN;
 						break;
 					default:
 						if (player->deadtimer > cv_respawntime.value*TICRATE)
@@ -9209,7 +9207,7 @@ static void P_DeathThink(player_t *player)
 			}
 
 			// Single player auto respawn
-			if (!(netgame || multiplayer) && player->deadtimer > 5*TICRATE)
+			if (!(netgame || multiplayer) && player->deadtimer > TICRATE<<1)
 				player->playerstate = PST_REBORN;
 		}
 	}
@@ -11011,8 +11009,6 @@ void P_PlayerThink(player_t *player)
 	{
 		if (gametype != GT_COOP)
 			player->score = 0;
-		player->mo->health = 1;
-		player->rings = player->spheres = 0;
 	}
 	else if ((netgame || multiplayer) && player->lives <= 0 && gametype != GT_COOP)
 	{

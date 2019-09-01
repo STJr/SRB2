@@ -66,8 +66,6 @@ patch_t *sboperiod; // Period for time centiseconds
 patch_t *livesback; // Lives icon background
 static patch_t *nrec_timer; // Timer for NiGHTS records
 static patch_t *sborings;
-static patch_t *sboover;
-static patch_t *timeover;
 static patch_t *stlivex;
 static patch_t *sboredrings;
 static patch_t *sboredtime;
@@ -253,8 +251,6 @@ void ST_LoadGraphics(void)
 	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
 	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
 
-	sboover = W_CachePatchName("SBOOVER", PU_HUDGFX);
-	timeover = W_CachePatchName("TIMEOVER", PU_HUDGFX);
 	stlivex = W_CachePatchName("STLIVEX", PU_HUDGFX);
 	livesback = W_CachePatchName("STLIVEBK", PU_HUDGFX);
 	nrec_timer = W_CachePatchName("NGRTIMER", PU_HUDGFX); // Timer for NiGHTS
@@ -768,7 +764,12 @@ static inline void ST_drawRings(void)
 
 	ST_DrawPatchFromHud(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
-	ringnum = ((objectplacing) ? op_currentdoomednum : max(stplyr->rings, 0));
+	if (objectplacing)
+		ringnum = op_currentdoomednum;
+	else if (stplyr->rings < 0 || stplyr->spectator || stplyr->playerstate == PST_REBORN)
+		ringnum = 0;
+	else
+		ringnum = stplyr->rings;
 
 	if (cv_timetic.value == 2) // Yes, even in modeattacking
 		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, V_PERPLAYER|((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
@@ -877,6 +878,8 @@ static void ST_drawLivesArea(void)
 				'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
 		else
 		{
+			if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)))
+				livescount++;
 			if (livescount > 99)
 				livescount = 99;
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
@@ -1960,7 +1963,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 
 static void ST_drawMatchHUD(void)
 {
-	char penaltystr[5];
+	char penaltystr[7];
 	const INT32 y = 176; // HUD_LIVES
 	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 
@@ -2409,25 +2412,20 @@ static void ST_overlayDrawer(void)
 		}
 	}
 
-	// GAME OVER pic
+	// GAME OVER hud
 	if ((gametype == GT_COOP)
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value == 0))
 	;
 	else if (G_GametypeUsesLives() && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
 	{
-		patch_t *p;
-
-		if (countdown == 1)
-			p = timeover;
-		else
-			p = sboover;
+		INT32 i = MAXPLAYERS;
+		INT32 deadtimer = stplyr->spectator ? TICRATE : (stplyr->deadtimer-(TICRATE<<1));
 
 		if ((gametype == GT_COOP)
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value != 1))
 		{
-			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i])
@@ -2437,15 +2435,21 @@ static void ST_overlayDrawer(void)
 					continue;
 
 				if (players[i].lives > 0)
-				{
-					p = NULL;
 					break;
-				}
 			}
 		}
 
-		if (p)
-			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, BASEVIDHEIGHT/2 - (SHORT(p->height)/2), V_PERPLAYER|(stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
+		if (i == MAXPLAYERS && deadtimer >= 0)
+		{
+			const char *first = (countdown == 1) ? "TIME" : "GAME";
+			const char *second = "OVER";
+			INT32 w1 = V_LevelNameWidth(first), w2 = (w1 + 16 + V_LevelNameWidth(second))>>1;
+			INT32 lvlttlx1 = min(6*deadtimer, BASEVIDWIDTH/2), lvlttlx2 = BASEVIDWIDTH - lvlttlx1;
+			UINT32 flags = V_PERPLAYER|(stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS);
+
+			V_DrawLevelTitle(lvlttlx1 - w2, (BASEVIDHEIGHT-16)>>1, flags, first);
+			V_DrawLevelTitle(lvlttlx2 + w1 + 16 - w2, (BASEVIDHEIGHT-16)>>1, flags, "OVER");
+		}
 	}
 
 	if (G_GametypeHasTeams())
