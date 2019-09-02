@@ -46,7 +46,7 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollxspeed = 80;
+INT32 titlescrollxspeed = 20;
 INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 
@@ -68,7 +68,7 @@ static INT32 menuanimtimer; // Title screen: background animation timing
 mobj_t *titlemapcameraref = NULL;
 
 // menu presentation state
-char curbgname[8];
+char curbgname[9];
 SINT8 curfadevalue;
 boolean curhidepics;
 INT32 curbgcolor;
@@ -2093,7 +2093,7 @@ void F_InitMenuPresValues(void)
 	activeMenuId = MainDef.menuid;
 
 	// Set defaults for presentation values
-	strncpy(curbgname, "TITLESKY", 8);
+	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;

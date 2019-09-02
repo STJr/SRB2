@@ -3096,7 +3096,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				if (line->flags & ML_NOCLIMB)
 					mo->flags2 &= ~MF2_TWOD;
@@ -3122,7 +3122,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 434: // Custom Power
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
 
@@ -3205,7 +3205,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 437: // Disable Player Controls
-			if (mo->player)
+			if (mo && mo->player)
 			{
 				UINT16 fractime = (UINT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 				if (fractime < 1)

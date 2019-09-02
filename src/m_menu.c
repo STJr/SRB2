@@ -1309,12 +1309,12 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 115}, // 56
 	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 125}, // 62
 
-#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+#ifdef HAVE_MIXERX
 	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 143},
 #endif
 };
 
-#if defined(HAVE_OPENMPT) || defined(HAVE_MIXERX)
+#ifdef HAVE_MIXERX
 
 #ifdef HAVE_OPENMPT
 #define OPENMPT_MENUOFFSET 32
@@ -2336,7 +2336,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 	}
 	else if (menupres[menutype].bgname[0])
 	{
-		strncpy(curbgname, menupres[menutype].bgname, 8);
+		strncpy(curbgname, menupres[menutype].bgname, 9);
 		curbgxspeed = menupres[menutype].titlescrollxspeed != INT32_MAX ? menupres[menutype].titlescrollxspeed : titlescrollxspeed;
 		curbgyspeed = menupres[menutype].titlescrollyspeed != INT32_MAX ? menupres[menutype].titlescrollyspeed : titlescrollyspeed;
 		return true;
@@ -2349,7 +2349,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 			curbghide = true;
 		else
 		{
-			strncpy(curbgname, defaultname, 8);
+			strncpy(curbgname, defaultname, 9);
 			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
 			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
 		}
@@ -2508,7 +2508,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	activeMenuId = newMenu ? newMenu->menuid : 0;
 
 	// Set defaults for presentation values
-	strncpy(curbgname, "TITLESKY", 8);
+	strncpy(curbgname, "TITLESKY", 9);
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
@@ -6980,8 +6980,8 @@ static void M_DrawLoadGameData(void)
 					col = 134;
 				else
 				{
-					col = (charskin->prefcolor - 1)*2;
-					col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+					col = charskin->prefcolor - 1;
+					col = Color_Index[Color_Opposite[col][0]-1][Color_Opposite[col][1]];
 				}
 
 				V_DrawFill(x+6, y+64, 72, 50, col);

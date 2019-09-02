@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 # DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
 # Version change is fine.
 project(SRB2
-	VERSION 2.1.24
+	VERSION 2.1.25
 	LANGUAGES C)
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})

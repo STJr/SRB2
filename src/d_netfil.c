@@ -745,8 +745,11 @@ void Got_Filetxpak(void)
 {
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
 	fileneeded_t *file = &fileneeded[filenum];
-	char *filename = file->filename;
+	char *filename;
 	static INT32 filetime = 0;
+
+	filename = va("%s", file->filename);
+	nameonly(filename);
 
 	if (!(strcmp(filename, "srb2.pk3")
 		&& strcmp(filename, "srb2.srb")
@@ -757,6 +760,8 @@ void Got_Filetxpak(void)
 		&& strcmp(filename, "music.dta")
 		))
 		I_Error("Tried to download \"%s\"", filename);
+
+	filename = file->filename;
 
 	if (filenum >= fileneedednum)
 	{

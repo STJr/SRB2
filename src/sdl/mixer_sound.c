@@ -163,7 +163,10 @@ static void MidiSoundfontPath_Onchange(void)
 		boolean proceed = true;
 		// check if file exists; menu calls this method at every keystroke
 
-		while ((miditoken = strtok_r(source, ";", &source)))
+		// get first token
+		miditoken = strtok(source, ";");
+
+		while (miditoken != NULL)
 		{
 			SDL_RWops *rw = SDL_RWFromFile(miditoken, "r");
 			if (rw != NULL)
@@ -173,6 +176,7 @@ static void MidiSoundfontPath_Onchange(void)
 				proceed = false;
 				break;
 			}
+			miditoken = strtok(NULL, ";");
 		}
 
 		free(source);
