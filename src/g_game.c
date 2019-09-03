@@ -217,6 +217,8 @@ UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
+UINT8 ammoremovaltics = 2*TICRATE;
+
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 
@@ -416,49 +418,13 @@ consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#if MAXPLAYERS > 32
-#error "please update player_name table using the new value for MAXPLAYERS"
-#endif
-
 #ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
 #endif
 
-char player_names[MAXPLAYERS][MAXPLAYERNAME+1] =
-{
-	"Player 1",
-	"Player 2",
-	"Player 3",
-	"Player 4",
-	"Player 5",
-	"Player 6",
-	"Player 7",
-	"Player 8",
-	"Player 9",
-	"Player 10",
-	"Player 11",
-	"Player 12",
-	"Player 13",
-	"Player 14",
-	"Player 15",
-	"Player 16",
-	"Player 17",
-	"Player 18",
-	"Player 19",
-	"Player 20",
-	"Player 21",
-	"Player 22",
-	"Player 23",
-	"Player 24",
-	"Player 25",
-	"Player 26",
-	"Player 27",
-	"Player 28",
-	"Player 29",
-	"Player 30",
-	"Player 31",
-	"Player 32"
-};
+// now automatically allocated in D_RegisterClientCommands
+// so that it doesn't have to be updated depending on the value of MAXPLAYERS
+char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 INT16 rw_maximums[NUM_WEAPONS] =
 {
@@ -3321,9 +3287,11 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
+	sstage_start = 50;
+	sstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
+	smpstage_start = 60;
+	smpstage_end = 66; // 7 multiplayer special stages too
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();

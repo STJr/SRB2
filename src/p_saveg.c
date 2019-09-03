@@ -125,6 +125,10 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].currentweapon);
 		WRITEINT32(save_p, players[i].ringweapons);
 
+		WRITEUINT16(save_p, players[i].ammoremoval);
+		WRITEUINT32(save_p, players[i].ammoremovaltimer);
+		WRITEINT32(save_p, players[i].ammoremovaltimer);
+
 		for (j = 0; j < NUMPOWERS; j++)
 			WRITEUINT16(save_p, players[i].powers[j]);
 
@@ -328,6 +332,10 @@ static void P_NetUnArchivePlayers(void)
 		players[i].pity = READSINT8(save_p);
 		players[i].currentweapon = READINT32(save_p);
 		players[i].ringweapons = READINT32(save_p);
+
+		players[i].ammoremoval = READUINT16(save_p);
+		players[i].ammoremovaltimer = READUINT32(save_p);
+		players[i].ammoremovalweapon = READINT32(save_p);
 
 		for (j = 0; j < NUMPOWERS; j++)
 			players[i].powers[j] = READUINT16(save_p);

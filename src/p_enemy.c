@@ -3007,6 +3007,8 @@ void A_Boss7FireMissiles(mobj_t *actor)
 // var2:
 //		0 - Boss 1 Left side
 //		1 - Boss 1 Right side
+//		2 - Triple laser
+//		>3 - Boss 1 Middle
 //
 void A_Boss1Laser(mobj_t *actor)
 {
@@ -3042,6 +3044,15 @@ void A_Boss1Laser(mobj_t *actor)
 			else
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
+		case 2:
+			var2 = 3; // Fire middle laser
+			A_Boss1Laser(actor);
+			var2 = 0; // Fire left laser
+			A_Boss1Laser(actor);
+			var2 = 1; // Fire right laser
+			A_Boss1Laser(actor);
+			return;
+			break;
 		default:
 			x = actor->x;
 			y = actor->y;
@@ -3049,7 +3060,7 @@ void A_Boss1Laser(mobj_t *actor)
 			break;
 	}
 
-	if (!(actor->flags2 & MF2_FIRING))
+	if (!(actor->flags2 & MF2_FIRING) && actor->tics > 1)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
@@ -3071,6 +3082,7 @@ void A_Boss1Laser(mobj_t *actor)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
 	else
 		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
+
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
@@ -3342,7 +3354,7 @@ void A_BossZoom(mobj_t *actor)
 // var1:
 //		0 - Use movecount to spawn explosions evenly
 //		1 - Use P_Random to spawn explosions at complete random
-// var2 = Object to spawn. Default is MT_BOSSEXPLODE.
+// var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
 void A_BossScream(mobj_t *actor)
 {
@@ -3374,7 +3386,7 @@ void A_BossScream(mobj_t *actor)
 
 	// Determine what mobj to spawn. If undefined or invalid, use MT_BOSSEXPLODE as default.
 	if (locvar2 <= 0 || locvar2 >= NUMMOBJTYPES)
-		explodetype = MT_BOSSEXPLODE;
+		explodetype = MT_SONIC3KBOSSEXPLODE; //MT_BOSSEXPLODE; -- piss to you, sonic 2
 	else
 		explodetype = (mobjtype_t)locvar2;
 
@@ -3941,14 +3953,24 @@ bossjustdie:
 			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
 			mo->flags |= MF_NOCLIPHEIGHT;
 
+			mo->movedir = 0;
+			mo->extravalue1 = 35;
+			mo->flags2 |= MF2_BOSSFLEE;
+			mo->momz = 2*mo->scale;
+
 			if (mo->target)
 			{
-				mo->angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
-				mo->flags2 |= MF2_BOSSFLEE;
-				mo->momz = FixedMul(FixedDiv(mo->target->z - mo->z, P_AproxDistance(mo->x-mo->target->x,mo->y-mo->target->y)), FixedMul(2*FRACUNIT, mo->scale));
+				angle_t diff = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y) - mo->angle;
+				if (diff)
+				{
+					if (diff > ANGLE_180)
+						diff = InvAngle(InvAngle(diff)/mo->extravalue1);
+					else
+						diff /= mo->extravalue1;
+					mo->movedir = diff;
+				}
 			}
-			else
-				mo->momz = FixedMul(2*FRACUNIT, mo->scale);
+
 			break;
 		}
 	}
@@ -4903,12 +4925,12 @@ void A_SignPlayer(mobj_t *actor)
 		of in the name. If you have a better idea, feel free
 		to let me know. ~toast 2016/07/20
 		*/
-		actor->frame += (15 - Color_Opposite[(Color_Opposite[(skin->prefoppositecolor - 1)*2] - 1)*2 + 1]);
+		actor->frame += (15 - Color_Opposite[Color_Opposite[skin->prefoppositecolor - 1][0] - 1][1]);
 	}
 	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
 	{
-		actor->color = Color_Opposite[(actor->target->player->skincolor - 1)*2];
-		actor->frame += (15 - Color_Opposite[(actor->target->player->skincolor - 1)*2 + 1]);
+		actor->color = Color_Opposite[actor->target->player->skincolor - 1][0];
+		actor->frame += (15 - Color_Opposite[actor->target->player->skincolor - 1][1]);
 	}
 
 	if (skin->sprites[SPR2_SIGN].numframes)
@@ -12096,7 +12118,7 @@ void A_MineExplode(mobj_t *actor)
 	{
 #define dist 64
 		UINT8 i;
-		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_BOSSEXPLODE);
+		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
 		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
 		P_SpawnMobj(actor->x, actor->y, actor->z, type);
 		for (i = 0; i < 16; i++)
