@@ -333,6 +333,10 @@ typedef struct player_s
 	INT32 currentweapon; // current weapon selected.
 	INT32 ringweapons; // weapons currently obtained.
 
+	UINT16 ammoremoval; // amount of ammo removed for the current weapon.
+	tic_t  ammoremovaltimer; // flashing counter for ammo used.
+	INT32  ammoremovalweapon; // weapon from which the ammo was removed.
+
 	// Power ups. invinc and invis are tic counters.
 	UINT16 powers[NUMPOWERS];
 

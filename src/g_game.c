@@ -217,6 +217,8 @@ UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
+UINT8 ammoremovaltics = 2*TICRATE;
+
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 

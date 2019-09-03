@@ -3356,6 +3356,10 @@ static void readmaincfg(MYFILE *f)
 			{
 				gameovertics = get_number(word2);
 			}
+			else if (fastcmp(word, "AMMOREMOVALTICS"))
+			{
+				ammoremovaltics = get_number(word2);
+			}
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
 				introtoplay = (UINT8)get_number(word2);
