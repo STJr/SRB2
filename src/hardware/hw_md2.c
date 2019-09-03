@@ -160,7 +160,7 @@ static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 #endif
 	png_FILE_p png_FILE;
 	//Filename checking fixed ~Monster Iestyn and Golden
-	char *pngfilename = va("%s"PATHSEP"mdls"PATHSEP"%s", srb2home, filename);
+	char *pngfilename = va("%s"PATHSEP"models"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pngfilename, ".png");
 	png_FILE = fopen(pngfilename, "rb");
@@ -289,7 +289,7 @@ static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 	INT32 ch, rep;
 	FILE *file;
 	//Filename checking fixed ~Monster Iestyn and Golden
-	char *pcxfilename = va("%s"PATHSEP"mdls"PATHSEP"%s", srb2home, filename);
+	char *pcxfilename = va("%s"PATHSEP"models"PATHSEP"%s", srb2home, filename);
 
 	FIL_ForceExtension(pcxfilename, ".pcx");
 	file = fopen(pcxfilename, "rb");
@@ -478,13 +478,13 @@ void HWR_InitMD2(void)
 		md2_models[i].error = false;
 	}
 
-	// read the mdls.dat file
+	// read the models.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("%s %s\n", M_GetText("Error while loading mdls.dat:"), strerror(errno));
+		CONS_Printf("%s %s\n", M_GetText("Error while loading models.dat:"), strerror(errno));
 		nomd2s = true;
 		return;
 	}
@@ -492,7 +492,7 @@ void HWR_InitMD2(void)
 	{
 		if (stricmp(name, "PLAY") == 0)
 		{
-			CONS_Printf("MD2 for sprite PLAY detected in mdls.dat, use a player skin instead!\n");
+			CONS_Printf("MD2 for sprite PLAY detected in models.dat, use a player skin instead!\n");
 			continue;
 		}
 
@@ -526,7 +526,7 @@ void HWR_InitMD2(void)
 			}
 		}
 		// no sprite/player skin name found?!?
-		CONS_Printf("Unknown sprite/player skin %s detected in mdls.dat\n", name);
+		CONS_Printf("Unknown sprite/player skin %s detected in models.dat\n", name);
 md2found:
 		// move on to next line...
 		continue;
@@ -545,13 +545,13 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 
 	CONS_Printf("AddPlayerMD2()...\n");
 
-	// read the mdls.dat file
+	// read the models.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("Error while loading mdls.dat\n");
+		CONS_Printf("Error while loading models.dat\n");
 		nomd2s = true;
 		return;
 	}
@@ -580,7 +580,7 @@ playermd2found:
 void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startup
 {
 	FILE *f;
-	// name[18] is used to check for names in the mdls.dat file that match with sprites or player skins
+	// name[18] is used to check for names in the models.dat file that match with sprites or player skins
 	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
 	char name[18], filename[32];
 	float scale, offset;
@@ -591,13 +591,13 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 	if (spritenum == SPR_PLAY) // Handled already NEWMD2: Per sprite, per-skin check
 		return;
 
-	// Read the mdls.dat file
+	// Read the models.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "mdls.dat"), "rt");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
 
 	if (!f)
 	{
-		CONS_Printf("Error while loading mdls.dat\n");
+		CONS_Printf("Error while loading models.dat\n");
 		nomd2s = true;
 		return;
 	}
@@ -832,58 +832,25 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	run?
 	*/
 
-#if 0
-static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+static UINT32 HWR_GetModelSprite2(mobj_t *mobj)
 {
-	UINT8 super = 0, i = 0;
-
-	if (!md2 || !skin)
-		return 0;
-
-	if ((unsigned)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
-
-	while (!(md2->model->spr2frames[spr2*2 + 1])
-		&& spr2 != SPR2_STND
-		&& ++i != 32) // recursion limiter
+	UINT8 spr2 = 0;
+	UINT32 frame = 0;
+	spritedef_t *sprdef;
+	while (spr2 != mobj->sprite2)
 	{
-		if (spr2 & FF_SPR2SUPER)
-		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
-			continue;
-		}
-
-		switch(spr2)
-		{
-		// Normal special cases.
-		case SPR2_JUMP:
-			spr2 = ((player
-					? player->charflags
-					: skin->flags)
-					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
-			break;
-		case SPR2_TIRE:
-			spr2 = ((player
-					? player->charability
-					: skin->ability)
-					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
-		// Use the handy list, that's what it's there for!
-		default:
-			spr2 = spr2defaults[spr2];
-			break;
-		}
-
-		spr2 |= super;
+		sprdef = &((skin_t *)mobj->skin)->sprites[spr2];
+		frame += sprdef->numframes;
+		spr2++;
 	}
-
-	if (i >= 32) // probably an infinite loop...
-		return 0;
-
-	return spr2;
+	return frame;
 }
-#endif
+
+static boolean HWR_CanInterpolateModel(mobj_t *mobj)
+{
+	return (!(mobj->state->nextstate == S_PLAY_WAIT && mobj->state == &states[S_PLAY_STND]))
+	&& (mobj->state != &states[S_PLAY_ROLL]);
+}
 
 #define NORMALFOG 0x00000000
 #define FADEFOG 0x19000000
@@ -898,7 +865,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	md2_t *md2;
 	UINT8 color[4];
 
-	if (!cv_grmdls.value)
+	if (!cv_grmodels.value)
 		return;
 
 	if (spr->precip)
@@ -978,7 +945,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		if (!md2->model)
 		{
 			//CONS_Debug(DBG_RENDER, "Loading model... (%s)", sprnames[spr->mobj->sprite]);
-			sprintf(filename, "mdls/%s", md2->filename);
+			sprintf(filename, "models/%s", md2->filename);
 			md2->model = md2_readModel(filename);
 
 			if (md2->model)
@@ -1056,46 +1023,28 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			tics = spr->mobj->anim_duration;
 		}
 
-#define INTERPOLERATION_LIMIT TICRATE/4
-
-#if 0
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
-		{
-			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
-			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
-			if (mod > ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
-				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
-			//FIXME: this is not yet correct
-			frame = (spr->mobj->frame & FF_FRAMEMASK);
-			if (frame >= mod)
-				frame = 0;
-			buff = md2->model->glCommandBuffer;
-			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
-			if (cv_grmd2.value == 1 && tics <= durs && tics <= INTERPOLERATION_LIMIT)
-			{
-				if (durs > INTERPOLERATION_LIMIT)
-					durs = INTERPOLERATION_LIMIT;
-
-				if (spr->mobj->frame & FF_ANIMATE
-					|| (spr->mobj->state->nextstate != S_NULL
-					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite
-					&& (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) == spr->mobj->sprite2))
-				{
-					if (++frame >= mod)
-						frame = 0;
-					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
-						next = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
-				}
-			}
-		}
-		else
-#endif
-		{
-			//FIXME: this is not yet correct
-			frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+		//FIXME: this is not yet correct
+		frame = (spr->mobj->frame & FF_FRAMEMASK);
+		if (spr->mobj->sprite2)
+			frame = HWR_GetModelSprite2(spr->mobj) + frame;
+		frame %= md2->model->meshes[0].numFrames;
 
 #ifdef USE_MODEL_NEXTFRAME
-			if (cv_grmdls.value == 1 && tics <= durs)
+		if (cv_grmodels.value == 1 && tics <= durs)
+		{
+			if (spr->mobj->sprite2)
+			{
+				if (HWR_CanInterpolateModel(spr->mobj))
+				{
+					UINT32 framecount = (&((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2])->numframes;
+					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+					if (nextFrame >= framecount)
+						nextFrame = 0;
+					nextFrame = HWR_GetModelSprite2(spr->mobj) + nextFrame;
+					nextFrame %= md2->model->meshes[0].numFrames;
+				}
+			}
+			else
 			{
 				// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 				if (spr->mobj->frame & FF_ANIMATE)
@@ -1116,10 +1065,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					}
 				}
 			}
-#endif
 		}
-
-#undef INTERPOLERATION_LIMIT
+#endif
 
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
