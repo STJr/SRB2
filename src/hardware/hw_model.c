@@ -254,22 +254,22 @@ void LoadModelSprite2(model_t *model)
 	{
 		char prefix[6];
 		char name[5];
-		char framechar[3];
+		char framechar[4];
 		UINT8 frame = 0;
 		UINT8 spr2idx;
 
 		memset(&prefix, 0x00, 6);
 		memset(&name, 0x00, 5);
-		memset(&framechar, 0x00, 3);
+		memset(&framechar, 0x00, 4);
 
-		if (strlen(framename) >= 8)
+		if (strlen(framename) >= 9)
 		{
 			char *modelframename = framename;
 			memcpy(&prefix, modelframename, 5);
 			modelframename += 5;
 			memcpy(&name, modelframename, 4);
 			modelframename += 4;
-			memcpy(&framechar, modelframename, 2);
+			memcpy(&framechar, modelframename, 3);
 			frame = atoi(framechar);
 
 			if ((!memcmp(prefix, "SPR2_", 5)) || (!memcmp(prefix, "SUPER", 5)))
