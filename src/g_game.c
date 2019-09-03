@@ -217,6 +217,8 @@ UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
+UINT8 ammoremovaltics = 2*TICRATE;
+
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 
@@ -3285,9 +3287,11 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
+	sstage_start = 50;
+	sstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
+	smpstage_start = 60;
+	smpstage_end = 66; // 7 multiplayer special stages too
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();

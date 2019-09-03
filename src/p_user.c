@@ -1051,6 +1051,8 @@ void P_ResetPlayer(player_t *player)
 //
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 {
+	fixed_t bottomheight, topheight;
+
 	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
 		return false;
 
@@ -1090,13 +1092,26 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 		return true;
 
 	// From the top/bottom.
-	if (P_MobjFlip(player->mo)*(player->mo->z - (thing->z + thing->height/2)) > 0)
+	bottomheight = player->mo->z;
+	topheight = player->mo->z + player->mo->height;
+
+	if (player->mo->eflags & MFE_VERTICALFLIP)
 	{
-		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*player->mo->momz < 0))
+		fixed_t swap = bottomheight;
+		bottomheight = topheight;
+		topheight = swap;
+	}
+
+	if (P_MobjFlip(player->mo)*(bottomheight - (thing->z + thing->height/2)) > 0)
+	{
+		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) < 0))
 			return true;
 	}
-	else if (player->charability == CA_FLY && player->panim == PA_ABILITY)
-		return true;
+	else if (P_MobjFlip(player->mo)*(topheight - (thing->z + thing->height/2)) < 0)
+	{
+		if (player->charability == CA_FLY && player->panim == PA_ABILITY && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
+			return true;
+	}
 
 	// Shield stomp.
 	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
@@ -3886,6 +3901,33 @@ static void P_SetWeaponDelay(player_t *player, INT32 delay)
 }
 
 //
+// P_DrainWeaponAmmo
+//
+// Reduces rings and weapon ammo. Also penalizes the player
+// for using weapon rings with no normal rings! >:V
+//
+static void P_DrainWeaponAmmo (player_t *player, INT32 power)
+{
+	player->powers[power]--;
+
+	if (player->rings < 1)
+	{
+		player->ammoremovalweapon = player->currentweapon;
+		player->ammoremovaltimer  = ammoremovaltics;
+
+		if (player->powers[power] > 0) // can't take a ring that doesn't exist
+		{
+			player->powers[power]--;
+			player->ammoremoval = 2;
+		}
+		else
+			player->ammoremoval = 1;
+	}
+	else
+		player->rings--;
+}
+
+//
 // P_DoFiring()
 //
 // Handles firing ring weapons and Mario fireballs.
@@ -3923,22 +3965,12 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 	player->pflags |= PF_ATTACKDOWN;
 
-#define TAKE_AMMO(player, power) \
-		player->powers[power]--; \
-		if (player->rings < 1) \
-		{ \
-			if (player->powers[power] > 0) \
-				player->powers[power]--; \
-		} \
-		else \
-			player->rings--;
-
 	if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
 		goto firenormal; //code repetition sucks.
 	// Bounce ring
 	else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
 	{
-		TAKE_AMMO(player, pw_bouncering);
+		P_DrainWeaponAmmo(player, pw_bouncering);
 		P_SetWeaponDelay(player, TICRATE/4);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
@@ -3949,7 +3981,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Rail ring
 	else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
 	{
-		TAKE_AMMO(player, pw_railring);
+		P_DrainWeaponAmmo(player, pw_railring);
 		P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
@@ -3960,7 +3992,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Automatic
 	else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
 	{
-		TAKE_AMMO(player, pw_automaticring);
+		P_DrainWeaponAmmo(player, pw_automaticring);
 		player->pflags &= ~PF_ATTACKDOWN;
 		P_SetWeaponDelay(player, 2);
 
@@ -3969,7 +4001,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Explosion
 	else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
 	{
-		TAKE_AMMO(player, pw_explosionring);
+		P_DrainWeaponAmmo(player, pw_explosionring);
 		P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
@@ -3977,7 +4009,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	// Grenade
 	else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
 	{
-		TAKE_AMMO(player, pw_grenadering);
+		P_DrainWeaponAmmo(player, pw_grenadering);
 		P_SetWeaponDelay(player, TICRATE/3);
 
 		mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
@@ -3996,7 +4028,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		angle_t shotangle = player->mo->angle;
 		angle_t oldaiming = player->aiming;
 
-		TAKE_AMMO(player, pw_scatterring);
+		P_DrainWeaponAmmo(player, pw_scatterring);
 		P_SetWeaponDelay(player, (2*TICRATE)/3);
 
 		// Center
@@ -4057,8 +4089,6 @@ firenormal:
 			player->rings--;
 		}
 	}
-
-	#undef TAKE_AMMO
 
 	if (mo)
 	{
@@ -6509,12 +6539,12 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					player->capsule->health = sphereresult;
 			}
 
-			// Spawn a 'pop' for every 5 tics
-			if (!((tictimer - firstpoptic) % 5))
+			// Spawn a 'pop' for every 2 tics
+			if (!((tictimer - firstpoptic) % 2))
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
-				MT_BOSSEXPLODE),sfx_cybdth);
+				MT_SONIC3KBOSSEXPLODE),sfx_s3kb4);
 		}
 		else
 		{
@@ -11233,6 +11263,16 @@ void P_PlayerThink(player_t *player)
 
 				if (!currentlyonground)
 					acceleration /= 2;
+				// fake skidding! see P_SkidStuff for reference on conditionals
+				else if (!player->skidtime && !(player->mo->eflags & MFE_GOOWATER) && !(player->pflags & (PF_JUMPED|PF_SPINNING|PF_SLIDING)) && !(player->charflags & SF_NOSKID) && P_AproxDistance(player->mo->momx, player->mo->momy) >= FixedMul(player->runspeed/2, player->mo->scale))
+				{
+					if (player->mo->state-states != S_PLAY_SKID)
+						P_SetPlayerMobjState(player->mo, S_PLAY_SKID);
+					player->mo->tics = player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+
+					if (P_IsLocalPlayer(player)) // the sound happens way more frequently now, so give co-op players' ears a brake...
+						S_StartSound(player->mo, sfx_skid);
+				}
 
 				if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
 					acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
@@ -11316,6 +11356,12 @@ void P_PlayerThink(player_t *player)
 
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
+
+	if (player->ammoremovaltimer)
+	{
+		if (--player->ammoremovaltimer == 0)
+			player->ammoremoval = 0;
+	}
 
 	// Strength counts up to diminish fade.
 	if (player->powers[pw_sneakers] && player->powers[pw_sneakers] < UINT16_MAX)

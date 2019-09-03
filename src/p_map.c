@@ -285,6 +285,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (spring->info->painchance != 2)
 	{
+		if (object->player)
+			object->player->pflags &= ~PF_APPLYAUTOBRAKE;
+
 		if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 		{
 			object->momx = object->momy = 0;

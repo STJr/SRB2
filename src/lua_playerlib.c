@@ -136,6 +136,12 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->currentweapon);
 	else if (fastcmp(field,"ringweapons"))
 		lua_pushinteger(L, plr->ringweapons);
+	else if (fastcmp(field,"ammoremoval"))
+		lua_pushinteger(L, plr->ammoremoval);
+	else if (fastcmp(field,"ammoremovaltimer"))
+		lua_pushinteger(L, plr->ammoremovaltimer);
+	else if (fastcmp(field,"ammoremovalweapon"))
+		lua_pushinteger(L, plr->ammoremovalweapon);
 	else if (fastcmp(field,"powers"))
 		LUA_PushUserdata(L, plr->powers, META_POWERS);
 	else if (fastcmp(field,"pflags"))
@@ -428,6 +434,12 @@ static int player_set(lua_State *L)
 		plr->currentweapon = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"ringweapons"))
 		plr->ringweapons = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremoval"))
+		plr->ammoremoval = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremovaltimer"))
+		plr->ammoremovaltimer = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"ammoremovalweapon"))
+		plr->ammoremovalweapon = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"powers"))
 		return NOSET;
 	else if (fastcmp(field,"pflags"))
