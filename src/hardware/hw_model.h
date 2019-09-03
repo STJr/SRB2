@@ -73,6 +73,12 @@ typedef struct tag_s
 //	matrix_t transform;
 } tag_t;
 
+typedef struct
+{
+	INT32 frames[256];
+	INT32 superframes[256];
+} modelspr2frames_t;
+
 typedef struct model_s
 {
 	int maxNumFrames;
@@ -86,15 +92,21 @@ typedef struct model_s
 
 	char *mdlFilename;
 	boolean unloaded;
+
+	modelspr2frames_t *spr2frames;
+	char *framenames;
 } model_t;
 
 extern int numModels;
 extern model_t *modelHead;
 
+void HWR_ReloadModels(void);
+
 tag_t *GetTagByName(model_t *model, char *name, int frame);
 model_t *LoadModel(const char *filename, int ztag);
 void UnloadModel(model_t *model);
 void Optimize(model_t *model);
+void LoadModelSprite2(model_t *model);
 void GenerateVertexNormals(model_t *model);
 void GeneratePolygonNormals(model_t *model, int ztag);
 void CreateVBOTiny(mesh_t *mesh, tinyframe_t *frame);

@@ -810,7 +810,8 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	Z_ChangeTag(newmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
-
+#define NORMALFOG 0x00000000
+#define FADEFOG 0x19000000
 
 // -----------------+
 // HWR_DrawMD2      : Draw MD2
@@ -832,28 +833,12 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	run?
 	*/
 
-static UINT32 HWR_GetModelSprite2(mobj_t *mobj)
-{
-	UINT8 spr2 = 0;
-	UINT32 frame = 0;
-	spritedef_t *sprdef;
-	while (spr2 != mobj->sprite2)
-	{
-		sprdef = &((skin_t *)mobj->skin)->sprites[spr2];
-		frame += sprdef->numframes;
-		spr2++;
-	}
-	return frame;
-}
-
 static boolean HWR_CanInterpolateModel(mobj_t *mobj)
 {
-	return (!(mobj->state->nextstate == S_PLAY_WAIT && mobj->state == &states[S_PLAY_STND]))
+	return (!(mobj->state->nextstate == S_PLAY_WAIT && mobj->state == &states[S_PLAY_STND] && !(mobj->sprite2 & FF_SPR2SUPER)))
 	&& (mobj->state != &states[S_PLAY_ROLL]);
 }
 
-#define NORMALFOG 0x00000000
-#define FADEFOG 0x19000000
 void HWR_DrawMD2(gr_vissprite_t *spr)
 {
 	FSurfaceInfo Surf;
@@ -861,6 +846,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
+	UINT8 spr2 = 0;
 	FTransform p;
 	md2_t *md2;
 	UINT8 color[4];
@@ -1024,10 +1010,17 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		}
 
 		//FIXME: this is not yet correct
-		frame = (spr->mobj->frame & FF_FRAMEMASK);
 		if (spr->mobj->sprite2)
-			frame = HWR_GetModelSprite2(spr->mobj) + frame;
-		frame %= md2->model->meshes[0].numFrames;
+		{
+			spr2 = (spr->mobj->sprite2 & ~FF_SPR2SUPER);
+			frame = (spr->mobj->frame & FF_FRAMEMASK);
+			if (spr->mobj->sprite2 & FF_SPR2SUPER)
+				frame = md2->model->spr2frames[spr2].superframes[frame];
+			else
+				frame = md2->model->spr2frames[spr2].frames[frame];
+		}
+		else
+			frame = (spr->mobj->frame & FF_FRAMEMASK);
 
 #ifdef USE_MODEL_NEXTFRAME
 		if (cv_grmodels.value == 1 && tics <= durs)
@@ -1040,8 +1033,10 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= framecount)
 						nextFrame = 0;
-					nextFrame = HWR_GetModelSprite2(spr->mobj) + nextFrame;
-					nextFrame %= md2->model->meshes[0].numFrames;
+					if (spr->mobj->sprite2 & FF_SPR2SUPER)
+						nextFrame = md2->model->spr2frames[spr2].superframes[nextFrame];
+					else
+						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
 				}
 			}
 			else
@@ -1052,7 +1047,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= spr->mobj->state->var1)
 						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK);
-					nextFrame %= md2->model->meshes[0].numFrames;
 					//next = &md2->model->meshes[0].frames[nextFrame];
 				}
 				else
@@ -1060,7 +1054,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
 						&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_WAIT) && spr->mobj->state == &states[S_PLAY_STND]))
 					{
-						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->meshes[0].numFrames;
+						nextFrame = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK);
 						//next = &md2->model->meshes[0].frames[nextFrame];
 					}
 				}

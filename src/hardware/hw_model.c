@@ -7,11 +7,14 @@
 	the licensing is for Sonic Robo Blast 2.
 */
 
-#include "../z_zone.h"
 #include "../doomdef.h"
+#include "../doomtype.h"
+#include "../info.h"
+#include "../z_zone.h"
 #include "hw_model.h"
 #include "hw_md2load.h"
 #include "hw_md3load.h"
+#include "hw_md2.h"
 #include "u_list.h"
 #include <string.h>
 
@@ -195,6 +198,7 @@ model_t *LoadModel(const char *filename, int ztag)
 
 	Optimize(model);
 	GeneratePolygonNormals(model, ztag);
+	LoadModelSprite2(model);
 
 	// Default material properties
 	for (i = 0 ; i < model->numMaterials; i++)
@@ -216,6 +220,84 @@ model_t *LoadModel(const char *filename, int ztag)
 	}
 
 	return model;
+}
+
+void HWR_ReloadModels(void)
+{
+	size_t i;
+	INT32 s;
+
+	for (s = 0; s < MAXSKINS; s++)
+	{
+		if (md2_playermodels[s].model)
+			LoadModelSprite2(md2_playermodels[s].model);
+	}
+
+	for (i = 0; i < NUMSPRITES; i++)
+	{
+		if (md2_models[i].model)
+			LoadModelSprite2(md2_models[i].model);
+	}
+}
+
+void LoadModelSprite2(model_t *model)
+{
+	INT32 i;
+	modelspr2frames_t *spr2frames = NULL;
+	INT32 numframes = model->meshes[0].numFrames;
+	char *framename = model->framenames;
+
+	if (!framename)
+		return;
+
+	for (i = 0; i < numframes; i++)
+	{
+		char prefix[6];
+		char name[5];
+		char framechar[3];
+		UINT8 frame = 0;
+		UINT8 spr2idx;
+
+		memset(&prefix, 0x00, 6);
+		memset(&name, 0x00, 5);
+		memset(&framechar, 0x00, 3);
+
+		if (strlen(framename) >= 8)
+		{
+			char *modelframename = framename;
+			memcpy(&prefix, modelframename, 5);
+			modelframename += 5;
+			memcpy(&name, modelframename, 4);
+			modelframename += 4;
+			memcpy(&framechar, modelframename, 2);
+			frame = atoi(framechar);
+
+			if ((!memcmp(prefix, "SPR2_", 5)) || (!memcmp(prefix, "SUPER", 5)))
+			{
+				spr2idx = 0;
+				while (spr2idx < NUMPLAYERSPRITES)
+				{
+					if (!memcmp(spr2names[spr2idx], name, 4))
+					{
+						if (!spr2frames)
+							spr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES, PU_STATIC, NULL);
+						if (!memcmp(prefix, "SUPER", 5))
+							spr2frames[spr2idx].superframes[frame] = i;
+						else
+							spr2frames[spr2idx].frames[frame] = i;
+						break;
+					}
+					spr2idx++;
+				}
+			}
+		}
+
+		framename += 16;
+	}
+
+	if (model->spr2frames)
+		Z_Free(model->spr2frames);
+	model->spr2frames = spr2frames;
 }
 
 //

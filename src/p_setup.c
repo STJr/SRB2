@@ -75,6 +75,7 @@
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
 #endif
 
 #ifdef ESLOPE
@@ -3478,6 +3479,10 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
+
+#ifdef HWRENDER
+	HWR_ReloadModels();
+#endif // HWRENDER
 
 	// reload status bar (warning should have valid player!)
 	if (gamestate == GS_LEVEL)
