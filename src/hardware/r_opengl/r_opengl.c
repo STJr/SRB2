@@ -1649,26 +1649,15 @@ static void RenderDomeForReal(INT32 skytexture)
 
 EXPORT void HWRAPI(RenderSkyDome) (INT32 tex, INT32 texture_width, INT32 texture_height, FTransform transform)
 {
-	GLint shading_mode = GL_FLAT;
-	pglGetIntegerv(GL_SHADE_MODEL, &shading_mode);
-	pglShadeModel(GL_SMOOTH);
-
-	pglDepthMask(false);
-	pglDisable(GL_DEPTH_TEST);
-	pglDisable(GL_ALPHA_TEST);
-
-	SetBlend(PF_Translucent|PF_Clip|PF_NoZClip|PF_NoDepthTest|PF_Modulated);
+	SetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
+	SetTransform(&transform);
 
 	texw = texture_width;
 	texh = texture_height;
-	SetTransform(&transform);
 	RenderDomeForReal(tex);
 
-	pglEnable(GL_ALPHA_TEST);
-	pglEnable(GL_DEPTH_TEST);
-	pglDepthMask(true);
-
-	pglShadeModel(shading_mode);
+	// HWR_DrawSkyBackground left no blend flags after rendering the sky
+	SetBlend(0);
 }
 
 // ==========================================================================
