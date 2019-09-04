@@ -1456,7 +1456,7 @@ typedef struct
 static int rows, columns;
 static boolean yflip;
 static int texw, texh;
-static float yAdd;
+static float yMult, yAdd;
 static boolean foglayer;
 static float delta = 0.0f;
 static int gl_sky_detail = 16;
@@ -1487,29 +1487,23 @@ static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
 
 	if (!foglayer)
 	{
+		boolean flip = yflip;
 		vbo->r = 255;
 		vbo->g = 255;
 		vbo->b = 255;
 		vbo->a = (r == 0 ? 0 : 255);
 
+		// Flip Y coordinate anyway for the top part of the hemisphere
+		if (r <= 1)
+			flip = !flip;
+
 		// And the texture coordinates.
-		if (!yflip)	// Flipped Y is for the lower hemisphere.
-		{
-			vbo->u = (-timesRepeat * c / (float)columns);
-			vbo->v = (r / (float)rows) * 1.f + yAdd;
-		}
+		vbo->u = (-timesRepeat * c / (float)columns);
+		if (!flip)	// Flipped Y is for the lower hemisphere.
+			vbo->v = (r / (float)rows) * 1.f * yMult + yAdd;
 		else
-		{
-			vbo->u = (-timesRepeat * c / (float)columns);
-			vbo->v = ((rows-r)/(float)rows) * 1.f + yAdd;
-		}
-
-		//if (SkyBox.wall.flag == GLDWF_SKYFLIP)
-		//	vbo->u = -vbo->u;
+			vbo->v = ((rows-r)/(float)rows) * 1.f * yMult + yAdd;
 	}
-
-	if (r != 4)
-		y += FRACUNIT * 300;
 
 	// And finally the vertex.
 	vbo->x = (float)x/(float)MAP_SCALE;
@@ -1550,7 +1544,8 @@ static void gld_BuildSky(int row_count, int col_count)
 
 	memset(&SkyColor, 0xFF, sizeof(SkyColor));
 
-	for (yflip = 0; yflip < 2; yflip++)
+	// Why not?
+	for (yflip = false; yflip <= true; yflip++)
 	{
 		vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_FAN;
 		vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
@@ -1559,6 +1554,7 @@ static void gld_BuildSky(int row_count, int col_count)
 		vbo->loopcount++;
 
 		yAdd = 0.5f;
+		yMult = 1.0f;
 		/*if (yflip == 0)
 			SkyColor = &sky->CeilingSkyColor[vbo_idx];
 		else
@@ -1584,7 +1580,7 @@ static void gld_BuildSky(int row_count, int col_count)
 			vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_STRIP;
 			vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
 			vbo->loops[vbo->loopcount].vertexcount = 2 * col_count + 2;
-			vbo->loops[vbo->loopcount].use_texture = true;
+			vbo->loops[vbo->loopcount].use_texture = true; //(r > 1) ? true : false;
 			vbo->loopcount++;
 
 			for (c = 0; c <= col_count; c++)
@@ -1617,7 +1613,6 @@ static void RenderDomeForReal(INT32 skytexture)
 
 	for (j = 0; j < 2; j++)
 	{
-		//gld_EnableTexture2D(GL_TEXTURE0_ARB, j != 0);
 		for (i = 0; i < vbo->loopcount; i++)
 		{
 			GLSkyLoopDef *loop = &vbo->loops[i];
