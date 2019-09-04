@@ -224,19 +224,11 @@ model_t *LoadModel(const char *filename, int ztag)
 
 void HWR_ReloadModels(void)
 {
-	size_t i;
 	INT32 s;
-
 	for (s = 0; s < MAXSKINS; s++)
 	{
 		if (md2_playermodels[s].model)
 			LoadModelSprite2(md2_playermodels[s].model);
-	}
-
-	for (i = 0; i < NUMSPRITES; i++)
-	{
-		if (md2_models[i].model)
-			LoadModelSprite2(md2_models[i].model);
 	}
 }
 

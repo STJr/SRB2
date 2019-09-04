@@ -1010,7 +1010,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		}
 
 		//FIXME: this is not yet correct
-		if (spr->mobj->sprite2)
+		if (spr->mobj->sprite2 && md2->model->spr2frames)
 		{
 			spr2 = (spr->mobj->sprite2 & ~FF_SPR2SUPER);
 			frame = (spr->mobj->frame & FF_FRAMEMASK);
@@ -1025,7 +1025,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 #ifdef USE_MODEL_NEXTFRAME
 		if (cv_grmodels.value == 1 && tics <= durs)
 		{
-			if (spr->mobj->sprite2)
+			if (spr->mobj->sprite2 && md2->model->spr2frames)
 			{
 				if (HWR_CanInterpolateModel(spr->mobj))
 				{
