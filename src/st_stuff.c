@@ -66,6 +66,9 @@ patch_t *sboperiod; // Period for time centiseconds
 patch_t *livesback; // Lives icon background
 static patch_t *nrec_timer; // Timer for NiGHTS records
 static patch_t *sborings;
+static patch_t *slidgame;
+static patch_t *slidtime;
+static patch_t *slidover;
 static patch_t *stlivex;
 static patch_t *sboredrings;
 static patch_t *sboredtime;
@@ -250,6 +253,10 @@ void ST_LoadGraphics(void)
 	sboredtime = W_CachePatchName("STTRTIME", PU_HUDGFX);
 	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
 	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
+
+	slidgame = W_CachePatchName("SLIDGAME", PU_HUDGFX);
+	slidtime = W_CachePatchName("SLIDTIME", PU_HUDGFX);
+	slidover = W_CachePatchName("SLIDOVER", PU_HUDGFX);
 
 	stlivex = W_CachePatchName("STLIVEX", PU_HUDGFX);
 	livesback = W_CachePatchName("STLIVEBK", PU_HUDGFX);
@@ -2417,7 +2424,7 @@ static void ST_overlayDrawer(void)
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value == 0))
 	;
-	else if (G_GametypeUsesLives() && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
+	else if ((G_GametypeUsesLives() || gametype == GT_RACE) && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
 	{
 		INT32 i = MAXPLAYERS;
 		INT32 deadtimer = stplyr->spectator ? TICRATE : (stplyr->deadtimer-(TICRATE<<1));
@@ -2441,14 +2448,11 @@ static void ST_overlayDrawer(void)
 
 		if (i == MAXPLAYERS && deadtimer >= 0)
 		{
-			const char *first = (countdown == 1) ? "TIME" : "GAME";
-			const char *second = "OVER";
-			INT32 w1 = V_LevelNameWidth(first), w2 = (w1 + 16 + V_LevelNameWidth(second))>>1;
-			INT32 lvlttlx1 = min(6*deadtimer, BASEVIDWIDTH/2), lvlttlx2 = BASEVIDWIDTH - lvlttlx1;
+			INT32 lvlttlx = min(6*deadtimer, BASEVIDWIDTH/2);
 			UINT32 flags = V_PERPLAYER|(stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS);
 
-			V_DrawLevelTitle(lvlttlx1 - w2, (BASEVIDHEIGHT-16)>>1, flags, first);
-			V_DrawLevelTitle(lvlttlx2 + w1 + 16 - w2, (BASEVIDHEIGHT-16)>>1, flags, "OVER");
+			V_DrawScaledPatch(lvlttlx - 8, BASEVIDHEIGHT/2, flags, (countdown == 1 ? slidtime : slidgame));
+			V_DrawScaledPatch(BASEVIDWIDTH + 8 - lvlttlx, BASEVIDHEIGHT/2, flags, slidover);
 		}
 	}
 
