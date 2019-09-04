@@ -2039,7 +2039,68 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(va("Lap:""\x82 %u/%d", stplyr->laps+1, cv_numlaps.value))
 	}
 
-	if (!stplyr->spectator && stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
+	if (gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
+	{
+		if (!splitscreen && !donef12)
+		{
+			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+			donef12 = true;
+		}
+	}
+	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) // Death overrides spectator text.
+	{
+		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
+
+		if (respawntime > 0 && !stplyr->spectator)
+			textHUDdraw(va(M_GetText("Respawn in %d..."), respawntime))
+		else
+			textHUDdraw(M_GetText("\x82""JUMP:""\x80 Respawn"))
+	}
+	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
+	{
+		if (!splitscreen && !donef12)
+		{
+			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+			donef12 = true;
+		}
+
+		textHUDdraw(M_GetText("\x82""JUMP:""\x80 Rise"))
+		textHUDdraw(M_GetText("\x82""SPIN:""\x80 Lower"))
+
+		if (G_IsSpecialStage(gamemap))
+			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
+		else if (gametype == GT_COOP)
+		{
+			if (stplyr->lives <= 0
+			&& cv_cooplives.value == 2
+			&& (netgame || multiplayer))
+			{
+				INT32 i;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i])
+						continue;
+
+					if (&players[i] == stplyr)
+						continue;
+
+					if (players[i].lives > 1)
+						break;
+					}
+
+				if (i != MAXPLAYERS)
+					textHUDdraw(M_GetText("You'll steal a life on respawn..."))
+				else
+					textHUDdraw(M_GetText("Wait to respawn..."))
+			}
+			else
+				textHUDdraw(M_GetText("Wait to respawn..."))
+		}
+		else
+			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
+	}
+
+	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting && cv_playersforexit.value)
 	{
 		INT32 i, total = 0, exiting = 0;
 
@@ -2074,68 +2135,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(va(M_GetText("%d player%s remaining"), total, ((total == 1) ? "" : "s")))
 		}
 	}
-	else if (gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
-	{
-		if (!splitscreen && !donef12)
-		{
-			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
-			donef12 = true;
-		}
-	}
-	else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
-	{
-		INT32 respawntime = cv_respawntime.value - stplyr->deadtimer/TICRATE;
-
-		if (respawntime > 0 && !stplyr->spectator)
-			textHUDdraw(va(M_GetText("Respawn in %d..."), respawntime))
-		else
-			textHUDdraw(M_GetText("\x82""JUMP:""\x80 Respawn"))
-	}
-	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
-	{
-		if (!splitscreen && !donef12)
-		{
-			textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
-			donef12 = true;
-		}
-
-		textHUDdraw(M_GetText("\x82""JUMP:""\x80 Rise"))
-		textHUDdraw(M_GetText("\x82""SPIN:""\x80 Lower"))
-
-		if (G_IsSpecialStage(gamemap) && (maptol & TOL_NIGHTS))
-			textHUDdraw(M_GetText("\x82""Wait for the stage to end..."))
-		else if (gametype == GT_COOP)
-		{
-			if (stplyr->lives <= 0
-			&& cv_cooplives.value == 2
-			&& (netgame || multiplayer))
-			{
-				INT32 i;
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i])
-						continue;
-
-					if (&players[i] == stplyr)
-						continue;
-
-					if (players[i].lives > 1)
-						break;
-					}
-
-				if (i != MAXPLAYERS)
-					textHUDdraw(M_GetText("You'll steal a life on respawn..."))
-				else
-					textHUDdraw(M_GetText("Wait to respawn..."))
-			}
-			else
-				textHUDdraw(M_GetText("Wait to respawn..."))
-		}
-		else
-			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
-	}
-
-	if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
+	else if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))
 	{
 		if (leveltime < hidetime * TICRATE)
 		{

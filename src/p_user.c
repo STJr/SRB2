@@ -9173,7 +9173,7 @@ static void P_DeathThink(player_t *player)
 	// Force respawn if idle for more than 30 seconds in shooter modes.
 	if (player->deadtimer > 30*TICRATE && !G_PlatformGametype())
 		player->playerstate = PST_REBORN;
-	else if ((player->lives > 0 || j != MAXPLAYERS) && !(G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
+	else if ((player->lives > 0 || j != MAXPLAYERS) && !(!(netgame || multiplayer) && G_IsSpecialStage(gamemap))) // Don't allow "click to respawn" in special stages!
 	{
 		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
