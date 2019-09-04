@@ -199,6 +199,8 @@ model_t *LoadModel(const char *filename, int ztag)
 	Optimize(model);
 	GeneratePolygonNormals(model, ztag);
 	LoadModelSprite2(model);
+	if (!model->spr2frames)
+		LoadModelInterpolationSettings(model);
 
 	// Default material properties
 	for (i = 0 ; i < model->numMaterials; i++)
@@ -224,12 +226,59 @@ model_t *LoadModel(const char *filename, int ztag)
 
 void HWR_ReloadModels(void)
 {
+	size_t i;
 	INT32 s;
+
 	for (s = 0; s < MAXSKINS; s++)
 	{
 		if (md2_playermodels[s].model)
 			LoadModelSprite2(md2_playermodels[s].model);
 	}
+
+	for (i = 0; i < NUMSPRITES; i++)
+	{
+		if (md2_models[i].model)
+			LoadModelInterpolationSettings(md2_models[i].model);
+	}
+}
+
+void LoadModelInterpolationSettings(model_t *model)
+{
+	INT32 i;
+	INT32 numframes = model->meshes[0].numFrames;
+	char *framename = model->framenames;
+
+	if (!framename)
+		return;
+
+	#define GET_OFFSET \
+		memcpy(&interpolation_flag, framename + offset, 2); \
+		model->interpolate[i] = (!memcmp(interpolation_flag, MODEL_INTERPOLATION_FLAG, 2));
+
+	for (i = 0; i < numframes; i++)
+	{
+		int offset = (strlen(framename) - 4);
+		char interpolation_flag[3];
+		memset(&interpolation_flag, 0x00, 3);
+
+		// find the +i on the frame name
+		// ANIM+i00
+		// so the offset is (frame name length - 4)
+		GET_OFFSET;
+
+		// maybe the frame had three digits?
+		// ANIM+i000
+		// so the offset is (frame name length - 5)
+		if (!model->interpolate[i])
+		{
+			offset--;
+			GET_OFFSET;
+		}
+
+		framename += 16;
+	}
+
+	#undef GET_OFFSET
 }
 
 void LoadModelSprite2(model_t *model)
@@ -246,12 +295,15 @@ void LoadModelSprite2(model_t *model)
 	{
 		char prefix[6];
 		char name[5];
+		char interpolation_flag[3];
 		char framechar[4];
 		UINT8 frame = 0;
 		UINT8 spr2idx;
+		boolean interpolate = false;
 
 		memset(&prefix, 0x00, 6);
 		memset(&name, 0x00, 5);
+		memset(&interpolation_flag, 0x00, 3);
 		memset(&framechar, 0x00, 4);
 
 		if (strlen(framename) >= 9)
@@ -261,6 +313,13 @@ void LoadModelSprite2(model_t *model)
 			modelframename += 5;
 			memcpy(&name, modelframename, 4);
 			modelframename += 4;
+			// Oh look
+			memcpy(&interpolation_flag, modelframename, 2);
+			if (!memcmp(interpolation_flag, MODEL_INTERPOLATION_FLAG, 2))
+			{
+				interpolate = true;
+				modelframename += 2;
+			}
 			memcpy(&framechar, modelframename, 3);
 			frame = atoi(framechar);
 
@@ -277,6 +336,7 @@ void LoadModelSprite2(model_t *model)
 							spr2frames[spr2idx].superframes[frame] = i;
 						else
 							spr2frames[spr2idx].frames[frame] = i;
+						spr2frames[spr2idx].interpolate = interpolate;
 						break;
 					}
 					spr2idx++;

@@ -833,10 +833,14 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 	run?
 	*/
 
-static boolean HWR_CanInterpolateModel(mobj_t *mobj)
+static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	return (!(mobj->state->nextstate == S_PLAY_WAIT && mobj->state == &states[S_PLAY_STND] && !(mobj->sprite2 & FF_SPR2SUPER)))
-	&& (mobj->state != &states[S_PLAY_ROLL]);
+	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
+}
+
+static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
+{
+	return spr2frame->interpolate;
 }
 
 void HWR_DrawMD2(gr_vissprite_t *spr)
@@ -1027,7 +1031,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		{
 			if (spr->mobj->sprite2 && md2->model->spr2frames)
 			{
-				if (HWR_CanInterpolateModel(spr->mobj))
+				if (HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2]))
 				{
 					UINT32 framecount = (&((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2])->numframes;
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
@@ -1039,7 +1043,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
 				}
 			}
-			else
+			else if (HWR_CanInterpolateModel(spr->mobj, md2->model))
 			{
 				// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
 				if (spr->mobj->frame & FF_ANIMATE)
