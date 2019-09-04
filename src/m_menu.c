@@ -4510,6 +4510,9 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			if (mapheaderinfo[mapnum]->menuflags & LF2_HIDEINMENU)
 				return false;
 
+			if (G_IsSpecialStage(mapnum+1))
+				return false;
+
 			if (gt == GT_COOP && (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
 				return true;
 
