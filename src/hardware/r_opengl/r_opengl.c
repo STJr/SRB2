@@ -1597,8 +1597,7 @@ static void RenderDomeForReal(INT32 skytexture)
 	int i, j;
 	GLSkyVBO *vbo = &sky_vbo;
 
-	//pglRotatef(-180.0f + sky->x_offset, 0.f, 1.f, 0.f);
-	pglRotatef(-180.0f, 0.f, 1.f, 0.f);
+	pglRotatef(270.f, 0.f, 1.f, 0.f);
 
 	rows = 4;
 	columns = 4 * gl_sky_detail;
