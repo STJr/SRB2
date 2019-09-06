@@ -4886,56 +4886,185 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 //
 static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 {
-	mobj_t *lockon = NULL;
+	mobj_t *lockonthok = NULL, *lockonshield = NULL, *visual = NULL;
 
 	if (player->pflags & PF_JUMPSTASIS)
 		return;
 
-	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)))
+	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY)) && (lockonthok = P_LookForEnemies(player, true, false)))
 	{
 		if (P_IsLocalPlayer(player)) // Only display it on your own view.
 		{
-			mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-			P_SetTarget(&visual->target, lockon);
+			visual = P_SpawnMobj(lockonthok->x, lockonthok->y, lockonthok->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+			P_SetTarget(&visual->target, lockonthok);
 		}
 	}
 
-	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPDOWN) && !player->exiting && !P_PlayerInPain(player))
+	//////////////////
+	//SHIELD ACTIVES//
+	//& SUPER FLOAT!//
+	//////////////////
+
+	if ((player->pflags & PF_JUMPED) && !player->exiting && !P_PlayerInPain(player))
 	{
-		if (player->mo->tracer && player->powers[pw_carry] == CR_MACESPIN)
-		{}
-		else if (onground || player->climbing || (player->mo->tracer && player->powers[pw_carry]))
-		{}
-		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND
-		&& !(player->pflags & PF_JUMPED)
-		&& !(player->pflags & PF_USEDOWN))
-			P_DoJumpShield(player);
-		else if (!(player->pflags & PF_SLIDING) && ((gametype != GT_CTF) || (!player->gotflag)))
+		if (onground || player->climbing || player->powers[pw_carry])
+			;
+		else if (gametype == GT_CTF && player->gotflag)
+			;
+		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
+			;
+		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_USEDOWN)
+			&& ((!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX)))) // thokked is optional if you're bubblewrapped
 		{
+			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+			{
+				if ((lockonshield = P_LookForEnemies(player, false, false)))
+				{
+					if (P_IsLocalPlayer(player)) // Only display it on your own view.
+					{
+						boolean dovis = true;
+						if (lockonshield == lockonthok)
+						{
+							if (leveltime & 2)
+								dovis = false;
+							else if (visual)
+								P_RemoveMobj(visual);
+						}
+						if (dovis)
+						{
+							visual = P_SpawnMobj(lockonshield->x, lockonshield->y, lockonshield->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+							P_SetTarget(&visual->target, lockonshield);
+							P_SetMobjStateNF(visual, visual->info->spawnstate+1);
+						}
+					}
+				}
+			}
+			if (cmd->buttons & BT_USE // Spin button effects
+	#ifdef HAVE_BLUA
+			&& !LUAh_ShieldSpecial(player)
+	#endif
+				)
+			{
+				// Force stop
+				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
+				{
+					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+					player->mo->momx = player->mo->momy = player->mo->momz = 0;
+					S_StartSound(player->mo, sfx_ngskid);
+				}
+				else
+				{
+					switch (player->powers[pw_shield] & SH_NOSTACK)
+					{
+						// Whirlwind jump/Thunder jump
+						case SH_WHIRLWIND:
+						case SH_THUNDERCOIN:
+							P_DoJumpShield(player);
+							break;
+						// Armageddon pow
+						case SH_ARMAGEDDON:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							P_BlackOw(player);
+							break;
+						// Attraction blast
+						case SH_ATTRACT:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							player->homing = 2;
+							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
+							if (lockonshield)
+								{
+									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonshield->x, lockonshield->y);
+										player->pflags &= ~PF_NOJUMPDAMAGE;
+										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+										S_StartSound(player->mo, sfx_s3k40);
+										player->homing = 3*TICRATE;
+								}
+								else
+									S_StartSound(player->mo, sfx_s3ka6);
+								break;
+							// Elemental stomp/Bubble bounce
+							case SH_ELEMENTAL:
+							case SH_BUBBLEWRAP:
+								{
+									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
+									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+									if (elem)
+									{
+										player->pflags |= PF_NOJUMPDAMAGE;
+										P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+										S_StartSound(player->mo, sfx_s3k43);
+									}
+									else
+									{
+										player->pflags &= ~PF_NOJUMPDAMAGE;
+										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+										S_StartSound(player->mo, sfx_s3k44);
+									}
+									player->secondjump = 0;
+									player->mo->momx = player->mo->momy = 0;
+									P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
+									break;
+								}
+							// Flame burst
+							case SH_FLAMEAURA:
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
+								player->drawangle = player->mo->angle;
+								S_StartSound(player->mo, sfx_s3k43);
+							default:
+								break;
+					}
+				}
+			}
+		}
+		else if ((cmd->buttons & BT_USE))
+		{
+			if (!(player->pflags & PF_USEDOWN) && P_SuperReady(player))
+			{
+				// If you can turn super and aren't already,
+				// and you don't have a shield, do it!
+				P_DoSuperTransformation(player, false);
+			}
+			else
 #ifdef HAVE_BLUA
 			if (!LUAh_JumpSpinSpecial(player))
 #endif
 			switch (player->charability)
 			{
-				case CA_TELEKINESIS:
-					if (player->pflags & PF_JUMPED)
+				case CA_THOK:
+					if (player->powers[pw_super]) // Super Sonic float
 					{
-						if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
+						if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
+						&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 						{
-							P_Telekinesis(player,
-								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
-								FixedMul(384*FRACUNIT, player->mo->scale));
+							if (player->panim != PA_RUN && player->panim != PA_WALK)
+							{
+								if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+								else
+									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+							}
+
+							player->mo->momz = 0;
+							player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
 						}
 					}
 					break;
-				case CA_AIRDRILL:
-					if (player->pflags & PF_JUMPED)
+				case CA_TELEKINESIS:
+					if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
 					{
-						if (player->pflags & PF_THOKKED) // speed up falling down
-						{
-							if (player->secondjump < 42)
-								player->secondjump ++;
-						}
+						P_Telekinesis(player,
+							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
+							FixedMul(384*FRACUNIT, player->mo->scale));
+					}
+					break;
+				case CA_TWINSPIN:
+					if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
+					{
+						player->pflags |= PF_THOKKED;
+						S_StartSound(player->mo, sfx_s3k42);
+						player->mo->frame = 0;
+						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
 					}
 					break;
 				default:
@@ -4948,6 +5077,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		if (player->pflags & PF_JUMPED)
 		{
+			if (cmd->buttons & BT_USE && player->secondjump < 42) // speed up falling down
+				player->secondjump++;
+
 			if (player->flyangle > 0 && player->pflags & PF_THOKKED)
 			{
 				player->flyangle--;
@@ -4965,6 +5097,11 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			}
 		}
 	}
+
+	///////////////
+	// CHARACTER //
+	// ABILITIES!//
+	///////////////
 
 	if (cmd->buttons & BT_JUMP && !player->exiting && !P_PlayerInPain(player))
 	{
@@ -5035,7 +5172,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
-						player->drawangle = player->mo->angle;
 
 						if (maptol & TOL_2D)
 						{
@@ -5050,11 +5186,11 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK)
 						{
-							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
-							if (lockon)
+							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonthok));
+							if (lockonthok)
 							{
 								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonthok->x, lockonthok->y);
 								player->homing = 3*TICRATE;
 							}
 							else
@@ -5065,6 +5201,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							}
 							player->pflags &= ~PF_NOJUMPDAMAGE;
 						}
+
+						player->drawangle = player->mo->angle;
 
 						if (player->mo->info->attacksound && !player->spectator)
 							S_StartSound(player->mo, player->mo->info->attacksound); // Play the THOK sound
@@ -5212,6 +5350,60 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			P_DoJumpShield(player);
 	}
 
+	// HOMING option.
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT // Sonic 3D Blast.
+	&& player->pflags & PF_SHIELDABILITY)
+	{
+		if (player->homing && player->mo->tracer)
+		{
+			if (!P_HomingAttack(player->mo, player->mo->tracer))
+			{
+				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
+				if (player->mo->eflags & MFE_UNDERWATER)
+					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
+				player->homing = 0;
+			}
+		}
+
+		// If you're not jumping, then you obviously wouldn't be homing.
+		if (!(player->pflags & PF_JUMPED))
+			player->homing = 0;
+	}
+	else if (player->charability == CA_HOMINGTHOK) // Sonic Adventure.
+	{
+		// If you've got a target, chase after it!
+		if (player->homing && player->mo->tracer)
+		{
+			P_SpawnThokMobj(player);
+
+			// But if you don't, then stop homing.
+			if (!P_HomingAttack(player->mo, player->mo->tracer))
+			{
+				if (player->mo->eflags & MFE_UNDERWATER)
+					P_SetObjectMomZ(player->mo, FixedDiv(457*FRACUNIT,72*FRACUNIT), false);
+				else
+					P_SetObjectMomZ(player->mo, 10*FRACUNIT, false);
+
+				player->mo->momx = player->mo->momy = player->homing = 0;
+
+				if (player->mo->tracer->flags2 & MF2_FRET)
+					P_InstaThrust(player->mo, player->mo->angle, -(player->speed>>3));
+
+				if (!(player->mo->tracer->flags & MF_BOSS))
+					player->pflags &= ~PF_THOKKED;
+
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
+				player->pflags |= PF_NOJUMPDAMAGE;
+			}
+		}
+
+		// If you're not jumping, then you obviously wouldn't be homing.
+		if (!(player->pflags & PF_JUMPED))
+			player->homing = 0;
+	}
+	else
+		player->homing = 0;
+
 	if (cmd->buttons & BT_JUMP)
 	{
 		player->pflags |= PF_JUMPDOWN;
@@ -5238,7 +5430,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_JUMPDOWN;
 
 		// Repeat abilities, but not double jump!
-		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
+		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP && player->charability != CA_AIRDRILL)
 		{
 			if (player->charflags & SF_MULTIABILITY)
 			{
@@ -8000,7 +8192,7 @@ static void P_MovePlayer(player_t *player)
 				S_StartSound(player->mo, sfx_putput);
 
 			// Descend
-			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting)
+			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
 					P_SetObjectMomZ(player->mo, -actionspd/2, true);
 
@@ -8117,178 +8309,6 @@ static void P_MovePlayer(player_t *player)
 			localangle2 = player->mo->angle;
 	}
 
-	//////////////////
-	//SHIELD ACTIVES//
-	//& SUPER FLOAT!//
-	//////////////////
-
-	if (player->pflags & PF_JUMPED && !player->exiting && player->mo->health)
-	{
-		mobj_t *lockon = NULL;
-		if (!player->powers[pw_super] && player->powers[pw_shield] == SH_ATTRACT && !(player->pflags & PF_THOKKED))
-		{
-			if ((lockon = P_LookForEnemies(player, false, false)))
-			{
-				if (P_IsLocalPlayer(player)) // Only display it on your own view.
-				{
-					mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-					P_SetTarget(&visual->target, lockon);
-					P_SetMobjStateNF(visual, visual->info->spawnstate+1);
-				}
-			}
-		}
-		if (cmd->buttons & BT_USE) // Spin button effects
-		{
-			if (player->powers[pw_super]) // Super can't use shield actives, only passives
-			{
-				if ((player->charability == CA_THOK) // Super Sonic float
-				&& (player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
-				&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
-				{
-					if (player->panim != PA_RUN && player->panim != PA_WALK)
-					{
-						if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
-						else
-							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
-					}
-
-					player->mo->momz = 0;
-					player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
-				}
-			}
-			else
-#ifdef HAVE_BLUA
-			if (!LUAh_ShieldSpecial(player))
-#endif
-			{
-				if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
-					&& (!(player->powers[pw_shield] & SH_NOSTACK) || !(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped/turning super
-				{
-					// Force stop
-					if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
-					{
-						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-						player->mo->momx = player->mo->momy = player->mo->momz = 0;
-						S_StartSound(player->mo, sfx_ngskid);
-					}
-					else
-					{
-						switch (player->powers[pw_shield] & SH_NOSTACK)
-						{
-							// Super!
-							case SH_NONE:
-								if (P_SuperReady(player))
-									P_DoSuperTransformation(player, false);
-								break;
-							// Whirlwind jump/Thunder jump
-							case SH_WHIRLWIND:
-							case SH_THUNDERCOIN:
-								P_DoJumpShield(player);
-								break;
-							// Armageddon pow
-							case SH_ARMAGEDDON:
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								P_BlackOw(player);
-								break;
-							// Attraction blast
-							case SH_ATTRACT:
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								player->homing = 2;
-								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
-								if (lockon)
-								{
-									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
-									player->pflags &= ~PF_NOJUMPDAMAGE;
-									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-									S_StartSound(player->mo, sfx_s3k40);
-									player->homing = 3*TICRATE;
-								}
-								else
-									S_StartSound(player->mo, sfx_s3ka6);
-								break;
-							// Elemental stomp/Bubble bounce
-							case SH_ELEMENTAL:
-							case SH_BUBBLEWRAP:
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								player->pflags &= ~PF_NOJUMPDAMAGE;
-								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-								player->secondjump = 0;
-								player->mo->momx = player->mo->momy = 0;
-								P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
-								S_StartSound(player->mo,
-									((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-									? sfx_s3k43
-									: sfx_s3k44);
-								break;
-							// Flame burst
-							case SH_FLAMEAURA:
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
-								player->drawangle = player->mo->angle;
-								S_StartSound(player->mo, sfx_s3k43);
-							default:
-								break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// HOMING option.
-	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT // Sonic 3D Blast.
-	&& player->pflags & PF_SHIELDABILITY)
-	{
-		if (player->homing && player->mo->tracer)
-		{
-			if (!P_HomingAttack(player->mo, player->mo->tracer))
-			{
-				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
-				if (player->mo->eflags & MFE_UNDERWATER)
-					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
-				player->homing = 0;
-			}
-		}
-
-		// If you're not jumping, then you obviously wouldn't be homing.
-		if (!(player->pflags & PF_JUMPED))
-			player->homing = 0;
-	}
-	else if (player->charability == CA_HOMINGTHOK) // Sonic Adventure.
-	{
-		// If you've got a target, chase after it!
-		if (player->homing && player->mo->tracer)
-		{
-			P_SpawnThokMobj(player);
-
-			// But if you don't, then stop homing.
-			if (!P_HomingAttack(player->mo, player->mo->tracer))
-			{
-				if (player->mo->eflags & MFE_UNDERWATER)
-					P_SetObjectMomZ(player->mo, FixedDiv(457*FRACUNIT,72*FRACUNIT), false);
-				else
-					P_SetObjectMomZ(player->mo, 10*FRACUNIT, false);
-
-				player->mo->momx = player->mo->momy = player->homing = 0;
-
-				if (player->mo->tracer->flags2 & MF2_FRET)
-					P_InstaThrust(player->mo, player->mo->angle, -(player->speed>>3));
-
-				if (!(player->mo->tracer->flags & MF_BOSS))
-					player->pflags &= ~PF_THOKKED;
-
-				// P_SetPlayerMobjState(player->mo, S_PLAY_SPRING); -- Speed didn't like it, RIP
-			}
-		}
-
-		// If you're not jumping, then you obviously wouldn't be homing.
-		if (!(player->pflags & PF_JUMPED))
-			player->homing = 0;
-	}
-	else
-		player->homing = 0;
-
 	if (player->climbing == 1)
 		P_DoClimbing(player);
 
@@ -8332,7 +8352,7 @@ static void P_MovePlayer(player_t *player)
 
 		// Less height while spinning. Good for spinning under things...?
 		if ((player->mo->state == &states[player->mo->info->painstate])
-		|| ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE && player->charflags & SF_NOJUMPSPIN))
+		|| ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE))
 		|| (player->pflags & PF_SPINNING)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))

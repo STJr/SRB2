@@ -1583,6 +1583,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// Buenos Dias Mandy
 			P_SetPlayerMobjState(toucher, S_PLAY_STUN);
 			player->pflags &= ~PF_APPLYAUTOBRAKE;
+			P_ResetPlayer(player);
 			player->drawangle = special->angle + ANGLE_180;
 			P_InstaThrust(toucher, special->angle, FixedMul(3*special->info->speed, special->scale/2));
 			toucher->z += P_MobjFlip(toucher);
