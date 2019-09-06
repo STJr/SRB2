@@ -2469,8 +2469,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				else if (P_IsLocalPlayer(target->player))
 					gameovermus = true;
 
-				if (gameovermus)
-					P_PlayJingle(target->player, JT_GOVER); // Yousa dead now, Okieday? Tails 03-14-2000
+				if (gameovermus) // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicEx("_gover", 0, 0, 0, (2*MUSICRATE) - (MUSICRATE/25), 0); // 1.96 seconds
+					//P_PlayJingle(target->player, JT_GOVER); // can't be used because incompatible with track fadeout
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
