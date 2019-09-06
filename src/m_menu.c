@@ -167,6 +167,8 @@ static tic_t charseltimer = 0;
 static fixed_t char_scroll = 0;
 #define charscrollamt 128*FRACUNIT
 
+static tic_t keydown = 0;
+
 //
 // PROTOTYPES
 //
@@ -2864,6 +2866,7 @@ boolean M_Responder(event_t *ev)
 	{
 		if (ev->type == ev_keydown)
 		{
+			keydown++;
 			ch = ev->data1;
 
 			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
@@ -2970,6 +2973,8 @@ boolean M_Responder(event_t *ev)
 				pmousex = lastx += 30;
 			}
 		}
+		else if (ev->type == ev_keyup) // Preserve event for other responders
+			keydown = 0;
 	}
 	else if (ev->type == ev_keydown) // Preserve event for other responders
 		ch = ev->data1;
@@ -7959,8 +7964,7 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 	boolean exitmenu = false;  // exit to previous menu
 	INT32 selectval;
 
-	// How do I detect key hold events?
-	if (char_scroll)
+	if (keydown > 1)
 		return;
 
 	switch (choice)
