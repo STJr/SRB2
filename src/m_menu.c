@@ -8026,11 +8026,8 @@ static void M_HandleChoosePlayerMenu(INT32 choice)
 }
 
 // Draw the choose player setup menu, had some fun with player anim
-#define CHOOSEPLAYER_USECHARCOLOUR
-#define CHOOSEPLAYER_OPPOSITECOLOUR
 //#define CHOOSEPLAYER_DRAWHEADER
 
-#ifdef CHOOSEPLAYER_USECHARCOLOUR
 static INT32 getskinfromdescription(INT32 desc)
 {
 	char *and = strchr(description[desc].skinname, '&');
@@ -8042,18 +8039,13 @@ static INT32 getskinfromdescription(INT32 desc)
 	}
 	return R_SkinAvailable(description[desc].skinname);
 }
-#endif // CHOOSEPLAYER_USECHARCOLOUR
 
 static void M_DrawSetupChoosePlayerMenu(void)
 {
-	boolean thismenu = (currentMenu == &SP_PlayerDef);
-
 	const INT32 my = 16;
 
-#ifdef CHOOSEPLAYER_USECHARCOLOUR
 	skin_t *charskin = &skins[0];
 	INT32 skinnum = 0;
-#endif // CHOOSEPLAYER_USECHARCOLOUR
 	UINT8 col;
 	UINT8 *colormap = NULL;
 	INT32 prev = -1, next = -1;
@@ -8079,41 +8071,23 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// No there isn't.
 		prev = -1;
 
-#ifdef CHOOSEPLAYER_USECHARCOLOUR
 	// Find skin number from description[]
 	skinnum = getskinfromdescription(char_on);
 	if (skinnum != -1)
 		charskin = &skins[skinnum];
 
-	// Use the character's skincolour
-	col = charskin->prefcolor;
-#ifdef CHOOSEPLAYER_OPPOSITECOLOUR
-	// Use the OPPOSITE of the character's skincolour
-	col = Color_Opposite[col - 1][0];
-#endif // CHOOSEPLAYER_OPPOSITECOLOUR
+	// Use the opposite of the character's skincolor
+	col = Color_Opposite[charskin->prefcolor - 1][0];
 
-	// Make the translation colourmap
+	// Make the translation colormap
 	colormap = R_GetTranslationColormap(skinnum, col, 0);
-#else
-	// Dark blue translation colourmap
-	colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_COBALT, 0);
-#endif // CHOOSEPLAYER_USECHARCOLOUR
 
-	// Yes.
-	if (thismenu)
-	{
-		// Don't render the title map.
-		hidetitlemap = true;
-		charseltimer++;
-	}
-	else if (charseltimer > 0)
-		charseltimer--;
+	// Don't render the title map
+	hidetitlemap = true;
+	charseltimer++;
 
-	// CHARBG
-	// 101
+	// Background and borders
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, colormap[101]);
-	// 106
-	if (thismenu)
 	{
 		INT32 sw = (BASEVIDWIDTH * vid.dupx);
 		INT32 bw = (vid.width - sw) / 2;
@@ -8125,23 +8099,21 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 	}
 
-	if (thismenu)
+	// Foreground
+	for (i = -12; i < (BASEVIDHEIGHT/bgheight) + 12; i++)
 	{
-		for (i = -12; i < (BASEVIDHEIGHT/bgheight) + 12; i++)
-		{
-			INT32 oy = (i*bgheight), y;
-			y = oy - (bgheight - (charseltimer%bgheight));
-			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charbg, colormap);
-		}
-		for (i = -12; i < (BASEVIDHEIGHT/fgheight) + 12; i++)
-		{
-			INT32 oy = (i*fgheight), y;
-			y = oy - (fgheight + (charseltimer%fgheight));
-			V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charfg, colormap);
-		}
+		INT32 oy = (i*bgheight), y;
+		y = oy - (bgheight - (charseltimer%bgheight));
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charbg, colormap);
+	}
+	for (i = -12; i < (BASEVIDHEIGHT/fgheight) + 12; i++)
+	{
+		INT32 oy = (i*fgheight), y;
+		y = oy - (fgheight + (charseltimer%fgheight));
+		V_DrawFixedPatch(0, y<<FRACBITS, FRACUNIT, 0, charfg, colormap);
 	}
 
-	// Character select pictures
+	// Character pictures
 	{
 		INT32 x = 8;
 		INT32 y = (my+16) - FixedInt(char_scroll);
@@ -8157,11 +8129,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		INT32 x = 146;
 		INT32 y = my + 9;
 		INT32 flags = V_ALLOWLOWERCASE|V_RETURN8;
-
 		V_DrawString(x, y, flags, char_notes);
 	}
 
-	// Name tags!
+	// Name tags
 	{
 		INT32 ox, x, y;
 		INT32 oxsh = FixedInt(FixedMul(BASEVIDWIDTH*FRACUNIT, FixedDiv(char_scroll, 128*FRACUNIT))), txsh;
