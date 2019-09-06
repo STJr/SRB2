@@ -726,8 +726,8 @@ void R_DrawTiltedSpan_8(void)
 
 		if (!ds_powersoftwo)
 		{
-			fixed_t x = ((u-viewx) >> FRACBITS);
-			fixed_t y = ((v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -780,8 +780,8 @@ void R_DrawTiltedSpan_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -813,8 +813,8 @@ void R_DrawTiltedSpan_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -851,8 +851,8 @@ void R_DrawTiltedSpan_8(void)
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				if (!ds_powersoftwo)
 				{
-					fixed_t x = ((u-viewx) >> FRACBITS);
-					fixed_t y = ((v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
@@ -929,8 +929,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		if (!ds_powersoftwo)
 		{
-			fixed_t x = ((u-viewx) >> FRACBITS);
-			fixed_t y = ((v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -983,8 +983,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1016,8 +1016,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1054,8 +1054,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				if (!ds_powersoftwo)
 				{
-					fixed_t x = ((u-viewx) >> FRACBITS);
-					fixed_t y = ((v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
@@ -1132,8 +1132,8 @@ void R_DrawTiltedSplat_8(void)
 
 		if (!ds_powersoftwo)
 		{
-			fixed_t x = ((u-viewx) >> FRACBITS);
-			fixed_t y = ((v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -1190,8 +1190,8 @@ void R_DrawTiltedSplat_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1225,8 +1225,8 @@ void R_DrawTiltedSplat_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			if (!ds_powersoftwo)
 			{
-				fixed_t x = ((u-viewx) >> FRACBITS);
-				fixed_t y = ((v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1266,8 +1266,8 @@ void R_DrawTiltedSplat_8(void)
 				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (!ds_powersoftwo)
 				{
-					fixed_t x = ((u-viewx) >> FRACBITS);
-					fixed_t y = ((v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
