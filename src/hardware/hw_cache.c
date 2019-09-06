@@ -664,8 +664,10 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	{
 		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+#ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+#endif
 		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
 		                     texture, patch,
@@ -892,8 +894,10 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
 	size_t lumplength = W_LumpLength(flatlumpnum);
+#ifndef NO_PNG_LUMPS
 	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
 		patch = R_PNGToPatch((UINT8 *)patch, lumplength);
+#endif
 
 	grMipmap->width  = (UINT16)SHORT(patch->width);
 	grMipmap->height = (UINT16)SHORT(patch->height);

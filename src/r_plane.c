@@ -963,12 +963,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 	// Check if the flat is actually a wall texture.
 	if (levelflat->texturenum != 0 && levelflat->texturenum != -1)
 		flat = R_GetPatchFlat(levelflat, true, false);
-	// Maybe it's just a patch, then?
-	else if (R_CheckIfPatch(levelflat->lumpnum))
-		flat = R_GetPatchFlat(levelflat, false, false);
+#ifndef NO_PNG_LUMPS
 	// Maybe it's a PNG?!
 	else if (R_IsLumpPNG(ds_source, size))
 		flat = R_GetPatchFlat(levelflat, false, true);
+#endif
+	// Maybe it's just a patch, then?
+	else if (R_CheckIfPatch(levelflat->lumpnum))
+		flat = R_GetPatchFlat(levelflat, false, false);
 	// It's a raw flat.
 	else
 	{

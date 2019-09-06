@@ -376,8 +376,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+#endif
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
@@ -468,8 +470,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+#endif
 
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
@@ -734,6 +738,8 @@ void R_LoadTextures(void)
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
 			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
 			{
 				INT16 width, height;
@@ -742,6 +748,7 @@ void R_LoadTextures(void)
 				texture->height = height;
 			}
 			else
+#endif
 			{
 				texture->width = SHORT(patchlump->width);
 				texture->height = SHORT(patchlump->height);
