@@ -1010,8 +1010,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (ds_powersoftwo)
 		{
-
-		}
 			if (hack)
 			{
 				/*
