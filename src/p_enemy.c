@@ -4149,9 +4149,9 @@ void A_Invincibility(mobj_t *actor)
 	{
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
