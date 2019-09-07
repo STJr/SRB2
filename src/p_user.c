@@ -8863,7 +8863,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 // Looks for something you can hit - Used for homing attack
 // If nonenemies is true, includes monitors and springs!
 // If bullet is true, you can look up and the distance is further,
-// but your total angle span you can look is limited to compensate.
+// but your total angle span you can look is limited to compensate. (Also, allows monitors.)
 //
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 {
@@ -8873,6 +8873,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 	const fixed_t maxdist = FixedMul((bullet ? RING_DIST*2 : RING_DIST), player->mo->scale);
 	const angle_t span = (bullet ? ANG30 : ANGLE_90);
 	fixed_t dist, closestdist = 0;
+	const mobjflag_t nonenemiesdisregard = (bullet ? 0 : MF_MONITOR)|MF_SPRING;
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
@@ -8892,7 +8893,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 		if (mo->flags2 & MF2_FRET)
 			continue;
 
-		if (!nonenemies && mo->flags & (MF_MONITOR|MF_SPRING))
+		if (!nonenemies && mo->flags & nonenemiesdisregard)
 			continue;
 
 		if (!bullet && mo->type == MT_DETON) // Don't be STUPID, Sonic!
@@ -11772,7 +11773,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					if ((tails->z + tails->height + player->mo->height + FixedMul(FRACUNIT, player->mo->scale)) <= tails->ceilingz
 						&& (tails->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
-						player->mo->z = tails->z + tails->height + FixedMul(FRACUNIT, player->mo->scale);
+						player->mo->z = tails->z + tails->height + 12*player->mo->scale;
 					else
 						player->powers[pw_carry] = CR_NONE;
 				}
@@ -11780,7 +11781,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					if ((tails->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale)) >= tails->floorz
 						&& !(tails->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
-						player->mo->z = tails->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
+						player->mo->z = tails->z - player->mo->height - 12*player->mo->scale;
 					else
 						player->powers[pw_carry] = CR_NONE;
 				}
@@ -11789,7 +11790,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->powers[pw_carry] = CR_NONE;
 				else
 				{
-					P_TryMove(player->mo, tails->x, tails->y, true);
+					P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
