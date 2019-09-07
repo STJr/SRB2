@@ -2848,6 +2848,12 @@ void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *str
 	}
 }
 
+void V_DrawRightAlignedThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= V_ThinStringWidth(string, option)<<FRACBITS;
+	V_DrawThinStringAtFixed(x, y, option, string);
+}
+
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 {
