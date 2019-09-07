@@ -2511,7 +2511,7 @@ static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
 	png_ioread *f = png_get_io_ptr(png_ptr);
 	if (length > (f->bufsize - f->current_pos))
-		png_error(png_ptr, "read error in read_data_memory (loadpng)");
+		png_error(png_ptr, "PNG_IOReader: buffer overrun");
 	memcpy(data, f->buffer + f->current_pos, length);
 	f->current_pos += length;
 }
@@ -2573,11 +2573,10 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// png_source is array which have png data
+	// set our own read_function
 	png_io.buffer = (png_bytep)png;
 	png_io.bufsize = size;
 	png_io.current_pos = 0;
-	// set our own read_function
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
@@ -2631,7 +2630,7 @@ static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 	png_uint_32 width = *w, height = *h;
 
 	if (!row_pointers)
-		return NULL;
+		I_Error("PNG_RawConvert: conversion failed");
 
 	// Convert the image to 8bpp
 	flat = Z_Malloc(width * height, PU_LEVEL, NULL);
@@ -2674,7 +2673,7 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
 
 	if (!raw)
-		return NULL;
+		I_Error("R_PNGToPatch: conversion failed");
 
 	// Write image size and offset
 	WRITE16(imgptr, width);
@@ -2762,6 +2761,9 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 	size = imgptr-imgbuf;
 	img = malloc(size);
 	memcpy(img, imgbuf, size);
+
+	Z_Free(raw);
+
 	return (patch_t *)img;
 }
 
@@ -2809,11 +2811,10 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// png_source is array which have png data
+	// set our own read_function
 	png_io.buffer = (png_bytep)png;
 	png_io.bufsize = size;
 	png_io.current_pos = 0;
-	// set our own read_function
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
