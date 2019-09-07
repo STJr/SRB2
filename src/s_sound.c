@@ -1783,12 +1783,12 @@ static lumpnum_t S_GetMusicLumpNum(const char *mname)
 		return W_GetNumForName(va("d_%s", mname));
 	else if (S_DigMusicDisabled() && S_DigExists(mname))
 	{
-		CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
+		//CONS_Alert(CONS_NOTICE, "Digital music is disabled!\n");
 		return LUMPERROR;
 	}
 	else if (S_MIDIMusicDisabled() && S_MIDIExists(mname))
 	{
-		CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
+		//CONS_Alert(CONS_NOTICE, "MIDI music is disabled!\n");
 		return LUMPERROR;
 	}
 	else
