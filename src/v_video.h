@@ -225,6 +225,7 @@ void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *st
 
 // draw a string using the tny_font at fixed_t coordinates
 void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
+void V_DrawCenteredThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
 void V_DrawRightAlignedThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
 
 // Draw tall nums, used for menu, HUD, intermission

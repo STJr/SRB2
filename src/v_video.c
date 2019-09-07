@@ -2848,6 +2848,12 @@ void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *str
 	}
 }
 
+void V_DrawCenteredThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
+{
+	x -= (V_ThinStringWidth(string, option) / 2)<<FRACBITS;
+	V_DrawThinStringAtFixed(x, y, option, string);
+}
+
 void V_DrawRightAlignedThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 {
 	x -= V_ThinStringWidth(string, option)<<FRACBITS;
