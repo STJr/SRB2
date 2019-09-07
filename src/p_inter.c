@@ -1427,6 +1427,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starposty = player->mo->y>>FRACBITS;
 						players[i].starpostz = special->z>>FRACBITS;
 						players[i].starpostangle = special->angle;
+						players[i].starpostscale = player->mo->destscale;
+						if (special->flags2 & MF2_OBJECTFLIP)
+						{
+							players[i].starpostscale *= -1;
+							players[i].starpostz += (special->height - P_GetPlayerHeight(player))>>FRACBITS;
+						}
 						players[i].starpostnum = special->health;
 
 						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
@@ -1443,6 +1449,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				player->starposty = toucher->y>>FRACBITS;
 				player->starpostz = special->z>>FRACBITS;
 				player->starpostangle = special->angle;
+				player->starpostscale = player->mo->destscale;
+				if (special->flags2 & MF2_OBJECTFLIP)
+				{
+					player->starpostscale *= -1;
+					player->starpostz += (special->height - P_GetPlayerHeight(player))>>FRACBITS;
+				}
 				player->starpostnum = special->health;
 				S_StartSound(toucher, special->info->painsound);
 			}

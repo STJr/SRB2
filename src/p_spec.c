@@ -4942,7 +4942,7 @@ DoneSection2:
 						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
 
 					// Reset starposts (checkpoints) info
-					player->starpostangle = player->starposttime = player->starpostnum = 0;
+					player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
 					player->starpostx = player->starposty = player->starpostz = 0;
 					P_ResetStarposts();
 
