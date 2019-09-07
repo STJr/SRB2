@@ -2957,6 +2957,17 @@ static void readunlockable(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static const char NIGHTSGRADE_LIST[] = {
+	'F', // GRADE_F
+	'E', // GRADE_E
+	'D', // GRADE_D
+	'C', // GRADE_C
+	'B', // GRADE_B
+	'A', // GRADE_A
+	'S', // GRADE_S
+	'\0'
+};
+
 #define PARAMCHECK(n) do { if (!params[n]) { deh_warning("Too few parameters, need %d", n); return; }} while (0)
 static void readcondition(UINT8 set, UINT32 id, char *word2)
 {
@@ -3058,7 +3069,21 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		PARAMCHECK(2); // one optional one
 
 		ty = UC_NIGHTSSCORE + offset;
-		re = atoi(params[2 + !!(params[3])]);
+		i = (params[3] ? 3 : 2);
+		if (fastncmp("GRADE_",params[i],6))
+		{
+			char *p = params[i]+6;
+			for (re = 0; NIGHTSGRADE_LIST[re]; re++)
+				if (*p == NIGHTSGRADE_LIST[re])
+					break;
+			if (!NIGHTSGRADE_LIST[re])
+			{
+				deh_warning("Invalid NiGHTS grade %s\n", params[i]);
+				return;
+			}
+		}
+		else
+			re = atoi(params[i]);
 
 		// Convert to map number if it appears to be one
 		if (params[1][0] >= 'A' && params[1][0] <= 'Z')
@@ -8474,15 +8499,6 @@ struct {
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
 	{"LF2_WIDEICON",LF2_WIDEICON},
 
-	// NiGHTS grades
-	{"GRADE_F",GRADE_F},
-	{"GRADE_E",GRADE_E},
-	{"GRADE_D",GRADE_D},
-	{"GRADE_C",GRADE_C},
-	{"GRADE_B",GRADE_B},
-	{"GRADE_A",GRADE_A},
-	{"GRADE_S",GRADE_S},
-
 	// Emeralds
 	{"EMERALD1",EMERALD1},
 	{"EMERALD2",EMERALD2},
@@ -9304,6 +9320,19 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return 0;
 	}
+	else if (fastncmp("GRADE_",word,6))
+	{
+		char *p = word+6;
+		for (i = 0; NIGHTSGRADE_LIST[i]; i++)
+			if (*p == NIGHTSGRADE_LIST[i])
+			{
+				free(word);
+				return i;
+			}
+		const_warning("NiGHTS grade",word);
+		free(word);
+		return 0;
+	}
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
 			free(word);
@@ -9750,6 +9779,18 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("GRADE_",word,6))
+	{
+		p = word+6;
+		for (i = 0; NIGHTSGRADE_LIST[i]; i++)
+			if (*p == NIGHTSGRADE_LIST[i])
+			{
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MN_",word,3)) {
