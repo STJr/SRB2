@@ -1010,6 +1010,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (ds_powersoftwo)
 		{
+			// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+			fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 			if (hack)
 			{
 				/*
