@@ -758,18 +758,8 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 			{
 				levelflat->flatpatch = R_PNGToFlat(levelflat, ds_source, W_LumpLength(levelflat->lumpnum));
 				levelflat->topoffset = levelflat->leftoffset = 0;
-				if (levelflat->flatpatch == NULL)
-				{
-					lumpnum_t redflr = W_CheckNumForName("REDFLR");
-					levelflat->flatpatch = (UINT8 *)W_CacheLumpNum(redflr, PU_CACHE);
-					R_CheckFlatLength(W_LumpLength(redflr));
-					R_CheckPowersOfTwo();
-				}
-				else
-				{
-					ds_flatwidth = levelflat->width;
-					ds_flatheight = levelflat->height;
-				}
+				ds_flatwidth = levelflat->width;
+				ds_flatheight = levelflat->height;
 			}
 			else
 #endif
