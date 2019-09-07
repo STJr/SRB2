@@ -754,7 +754,6 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 		{
 			patch = (patch_t *)ds_source;
 #ifndef NO_PNG_LUMPS
-#ifdef HAVE_PNG
 			if (ispng)
 			{
 				levelflat->flatpatch = R_PNGToFlat(levelflat, ds_source, W_LumpLength(levelflat->lumpnum));
@@ -773,7 +772,6 @@ static UINT8 *R_GetPatchFlat(levelflat_t *levelflat, boolean leveltexture, boole
 				}
 			}
 			else
-#endif
 #endif
 			{
 				levelflat->width = ds_flatwidth = SHORT(patch->width);

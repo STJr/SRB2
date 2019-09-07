@@ -376,9 +376,13 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+		{
 			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			goto multipatch;
+		}
 #endif
 
 		// Check the patch for holes.
@@ -436,6 +440,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	}
 
 	// multi-patch textures (or 'composite')
+#ifndef NO_PNG_LUMPS
+	multipatch:
+#endif
 	texture->holes = false;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
@@ -2441,7 +2448,6 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 			{
 				result = false;
 				break;
-
 			}
 		}
 	}
@@ -2475,8 +2481,7 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 			source = (UINT8 *)(column) + 3;
 			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
 			{
-				if (source[ofs] != TRANSPARENTPIXEL)
-					*dest = source[ofs];
+				*dest = source[ofs];
 				dest += SHORT(patch->width);
 			}
 			column = (column_t *)((UINT8 *)column + column->length + 4);
@@ -2637,40 +2642,13 @@ static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 		for (x = 0; x < width; x++)
 		{
 			png_bytep px = &(row[x * 4]);
-			flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
+			if ((UINT8)px[3])
+				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
 		}
 	}
 	free(row_pointers);
 
 	return flat;
-}
-
-// Get the alpha mask of the image.
-static UINT8 *PNG_GetAlphaMask(UINT8 *png, size_t size)
-{
-	UINT8 *mask;
-	png_uint_32 x, y;
-	UINT16 width, height;
-	png_bytep *row_pointers = PNG_Read(png, &width, &height, size);
-
-	if (!row_pointers)
-		return NULL;
-
-	// Convert the image to 8bpp
-	mask = Z_Malloc(width * height, PU_LEVEL, NULL);
-	memset(mask, 0, width * height);
-	for (y = 0; y < height; y++)
-	{
-		png_bytep row = row_pointers[y];
-		for (x = 0; x < width; x++)
-		{
-			png_bytep px = &(row[x * 4]);
-			mask[((y * width) + x)] = (UINT8)px[3];
-		}
-	}
-	free(row_pointers);
-
-	return mask;
 }
 
 // Convert a PNG to a flat.
@@ -2680,13 +2658,11 @@ UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
 }
 
 // Convert a PNG to a patch.
-// This is adapted from the "kartmaker" utility
 static unsigned char imgbuf[1<<26];
 patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 {
 	UINT16 width, height;
 	UINT8 *raw = PNG_RawConvert(png, &width, &height, size);
-	UINT8 *alphamask = PNG_GetAlphaMask(png, size);
 
 	UINT32 x, y;
 	UINT8 *img;
@@ -2726,16 +2702,6 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 		for (y = 0; y < height; y++)
 		{
 			UINT8 paletteIndex = raw[((y * width) + x)];
-			UINT8 opaque = alphamask[((y * width) + x)]; // If 1, we have a pixel
-
-			// End span if we have a transparent pixel
-			if (!opaque)
-			{
-				if (startofspan)
-					WRITE8(imgptr, 0);
-				startofspan = NULL;
-				continue;
-			}
 
 			// Start new column if we need to
 			if (!startofspan || spanSize == 255)

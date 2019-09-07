@@ -892,8 +892,10 @@ lumpnum_t gr_patchflat;
 
 static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
+	UINT8 *flat;
 	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
 	size_t lumplength = W_LumpLength(flatlumpnum);
+
 #ifndef NO_PNG_LUMPS
 	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
 		patch = R_PNGToPatch((UINT8 *)patch, lumplength);
@@ -902,7 +904,10 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 	grMipmap->width  = (UINT16)SHORT(patch->width);
 	grMipmap->height = (UINT16)SHORT(patch->height);
 
-	R_PatchToFlat(patch, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_PatchToFlat(patch, flat);
 }
 
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
@@ -980,6 +985,8 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 
 static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
+	UINT8 *flat;
+
 	// setup the texture info
 #ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
@@ -992,7 +999,10 @@ static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 	grMipmap->width  = (UINT16)textures[texturenum]->width;
 	grMipmap->height = (UINT16)textures[texturenum]->height;
 
-	R_TextureToFlat(texturenum, Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data));
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_TextureToFlat(texturenum, flat);
 }
 
 void HWR_GetTextureFlat(INT32 texturenum)
