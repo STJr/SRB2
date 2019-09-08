@@ -1584,15 +1584,15 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 5)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 7)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
-			sprframe = &sprdef->spriteframes[2];
-			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[3];
-			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 			sprframe = &sprdef->spriteframes[4];
+			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			sprframe = &sprdef->spriteframes[5];
+			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			sprframe = &sprdef->spriteframes[6];
 			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
