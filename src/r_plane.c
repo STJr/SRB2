@@ -16,19 +16,26 @@
 #include "doomdef.h"
 #include "console.h"
 #include "g_game.h"
+#include "p_setup.h" // levelflats
+#include "p_slopes.h"
 #include "r_data.h"
 #include "r_local.h"
 #include "r_state.h"
 #include "r_splats.h" // faB(21jan):testing
 #include "r_sky.h"
+#include "r_portal.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_tick.h"
 
-#include "p_setup.h" // levelflats
-
-#include "p_slopes.h"
+#ifdef TIMING
+#include "p5prof.h"
+	INT64 mycount;
+	INT64 mytotal = 0;
+	UINT32 nombre = 100000;
+#endif
 
 //
 // opening
@@ -37,13 +44,9 @@
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
 
-// good night sweet prince
-#define SHITPLANESPARENCY
-
 //SoM: 3/23/2000: Use Boom visplane hashing.
-#define MAXVISPLANES 512
 
-static visplane_t *visplanes[MAXVISPLANES];
+visplane_t *visplanes[MAXVISPLANES];
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -51,7 +54,7 @@ visplane_t *floorplane;
 visplane_t *ceilingplane;
 static visplane_t *currentplane;
 
-planemgr_t ffloor[MAXFFLOORS];
+visffloor_t ffloor[MAXFFLOORS];
 INT32 numffloors;
 
 //SoM: 3/23/2000: Boom visplane hashing routine.
@@ -89,10 +92,9 @@ static fixed_t planeheight;
 //                (this is to calculate yslopes only when really needed)
 //                (when mouselookin', yslope is moving into yslopetab)
 //                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*8];
+fixed_t yslopetab[MAXVIDHEIGHT*16];
 fixed_t *yslope;
 
-fixed_t distscale[MAXVIDWIDTH];
 fixed_t basexscale, baseyscale;
 
 fixed_t cachedheight[MAXVIDHEIGHT];
@@ -111,87 +113,24 @@ void R_InitPlanes(void)
 	// FIXME: unused
 }
 
-// R_PortalStoreClipValues
-// Saves clipping values for later. -Red
-void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		*ceil = ceilingclip[start+i];
-		ceil++;
-		*floor = floorclip[start+i];
-		floor++;
-		*scale = frontscale[start+i];
-		scale++;
-	}
-}
-
-// R_PortalRestoreClipValues
-// Inverse of the above. Restores the old value!
-void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
-{
-	INT32 i;
-	for (i = 0; i < end-start; i++)
-	{
-		ceilingclip[start+i] = *ceil;
-		ceil++;
-		floorclip[start+i] = *floor;
-		floor++;
-		frontscale[start+i] = *scale;
-		scale++;
-	}
-
-	// HACKS FOLLOW
-	for (i = 0; i < start; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-	for (i = end; i < vid.width; i++)
-	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
-	}
-}
-
-
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-         INT64 mycount;
-         INT64 mytotal = 0;
-         UINT32 nombre = 100000;
-#endif
-//profile stuff ---------------------------------------------------------
-
-
 //
 // R_MapPlane
 //
 // Uses global vars:
-//  planeheight
-//  ds_source
 //  basexscale
 //  baseyscale
+//  centerx
 //  viewx
 //  viewy
-//  xoffs
-//  yoffs
-//  planeangle
-//
-// BASIC PRIMITIVE
-//
+//  viewsin
+//  viewcos
+//  viewheight
+
 #ifndef NOWATER
 static INT32 bgofs;
 static INT32 wtofs=0;
 static INT32 waterofs;
 static boolean itswater;
-#endif
-
-#ifdef __mips__
-//#define NOWATER
 #endif
 
 #ifndef NOWATER
@@ -275,8 +214,8 @@ static void R_DrawTranslucentWaterSpan_8(void)
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
-	angle_t angle;
-	fixed_t distance, length;
+	angle_t angle, planecos, planesin;
+	fixed_t distance, span;
 	size_t pindex;
 
 #ifdef RANGECHECK
@@ -287,12 +226,22 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// from r_splats's R_RenderFloorSplat
 	if (x1 >= vid.width) x1 = vid.width - 1;
 
+	angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+	planecos = FINECOSINE(angle);
+	planesin = FINESINE(angle);
+
 	if (planeheight != cachedheight[y])
 	{
 		cachedheight[y] = planeheight;
 		distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 		ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
 		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+
+		if ((span = abs(centery-y)))
+		{
+			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
+			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
+		}
 	}
 	else
 	{
@@ -301,13 +250,8 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
-	length = FixedMul (distance,distscale[x1]);
-	angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-	/// \note Wouldn't it be faster just to add viewx and viewy
-	// to the plane's x/yoffs anyway??
-
-	ds_xfrac = FixedMul(FINECOSINE(angle), length) + xoffs;
-	ds_yfrac = yoffs - FixedMul(FINESINE(angle), length);
+	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
 #ifndef NOWATER
 	if (itswater)
@@ -315,8 +259,9 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
 		// ripples da water texture
 		bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 
-		angle = (angle + 2048) & 8191;  //90�
+		angle = (angle + 2048) & 8191;  // 90 degrees
 		ds_xfrac += FixedMul(FINECOSINE(angle), (bgofs<<FRACBITS));
 		ds_yfrac += FixedMul(FINESINE(angle), (bgofs<<FRACBITS));
 
@@ -328,7 +273,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 
 	pindex = distance >> LIGHTZSHIFT;
-
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
@@ -361,12 +305,27 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 }
 
+void R_ClearFFloorClips (void)
+{
+	INT32 i, p;
+
+	// opening / clipping determination
+	for (i = 0; i < viewwidth; i++)
+	{
+		for (p = 0; p < MAXFFLOORS; p++)
+		{
+			ffloor[p].f_clip[i] = (INT16)viewheight;
+			ffloor[p].c_clip[i] = -1;
+		}
+	}
+
+	numffloors = 0;
+}
+
 //
 // R_ClearPlanes
 // At begining of frame.
 //
-// NOTE: Uses con_clipviewtop, so that when console is on,
-//       we don't draw the part of the view hidden under the console.
 void R_ClearPlanes(void)
 {
 	INT32 i, p;
@@ -376,16 +335,14 @@ void R_ClearPlanes(void)
 	for (i = 0; i < viewwidth; i++)
 	{
 		floorclip[i] = (INT16)viewheight;
-		ceilingclip[i] = (INT16)con_clipviewtop;
+		ceilingclip[i] = -1;
 		frontscale[i] = INT32_MAX;
 		for (p = 0; p < MAXFFLOORS; p++)
 		{
 			ffloor[p].f_clip[i] = (INT16)viewheight;
-			ffloor[p].c_clip[i] = (INT16)con_clipviewtop;
+			ffloor[p].c_clip[i] = -1;
 		}
 	}
-
-	numffloors = 0;
 
 	for (i = 0; i < MAXVISPLANES; i++)
 	for (*freehead = visplanes[i], visplanes[i] = NULL;
@@ -448,18 +405,36 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 	if (slope); else // Don't mess with this right now if a slope is involved
 #endif
-	if (plangle != 0)
-	{
-		// Add the view offset, rotated by the plane angle.
-		angle_t angle = plangle>>ANGLETOFINESHIFT;
-		xoff += FixedMul(viewx,FINECOSINE(angle))-FixedMul(viewy,FINESINE(angle));
-		yoff += -FixedMul(viewx,FINESINE(angle))-FixedMul(viewy,FINECOSINE(angle));
-	}
-	else
 	{
 		xoff += viewx;
 		yoff -= viewy;
+		if (plangle != 0)
+		{
+			// Add the view offset, rotated by the plane angle.
+			fixed_t cosinecomponent = FINECOSINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t sinecomponent = FINESINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t oldxoff = xoff;
+			xoff = FixedMul(xoff,cosinecomponent)+FixedMul(yoff,sinecomponent);
+			yoff = -FixedMul(oldxoff,sinecomponent)+FixedMul(yoff,cosinecomponent);
+		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	if (polyobj)
+	{
+		if (polyobj->angle != 0)
+		{
+			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
+			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
+			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+		}
+		else
+		{
+			xoff -= polyobj->centerPt.x;
+			yoff += polyobj->centerPt.y;
+		}
+	}
+#endif
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -486,6 +461,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& !pfloor && !check->ffloor
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
+			&& check->plangle == plangle
 #ifdef ESLOPE
 			&& check->slope == slope
 #endif
@@ -609,7 +585,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 // overlap.
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 {
-	INT32 unionl, unionh;
+//	INT32 unionl, unionh;
 //	INT32 x;
 
 #ifdef POLYOBJECTS_PLANES
@@ -618,6 +594,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 		return;
 #endif
 
+	if (pl->minx > start) pl->minx = start;
+	if (pl->maxx < stop)  pl->maxx = stop;
+/*
 	if (start < pl->minx)
 	{
 		unionl = start;
@@ -635,15 +614,16 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 	{
 		unionh = pl->maxx;
 	}
-/*
 	for (x = start; x <= stop; x++)
 		if (pl->top[x] != 0xffff || pl->bottom[x] != 0x0000)
 			break;
 
 	if (x <= stop)
 		I_Error("R_ExpandPlane: planes in same subsector overlap?!\nminx: %d, maxx: %d, start: %d, stop: %d\n", pl->minx, pl->maxx, start, stop);
-*/
+
 	pl->minx = unionl, pl->maxx = unionh;
+*/
+
 }
 
 //
@@ -678,10 +658,10 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	INT32 x;
-	INT32 angle;
 	INT32 i;
 
+	// Note: are these two lines really needed?
+	// R_DrawSinglePlane and R_DrawSkyPlane do span/column drawer resets themselves anyway
 	spanfunc = basespanfunc;
 	wallcolfunc = walldrawerfunc;
 
@@ -689,44 +669,6 @@ void R_DrawPlanes(void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			// sky flat
-			if (pl->picnum == skyflatnum)
-			{
-				if (!viewsky)
-				{
-					skyVisible = true;
-					continue;
-				}
-
-				// use correct aspect ratio scale
-				dc_iscale = skyscale;
-
-				// Sky is always drawn full bright,
-				//  i.e. colormaps[0] is used.
-				// Because of this hack, sky is not affected
-				//  by INVUL inverse mapping.
-				dc_colormap = colormaps;
-				dc_texturemid = skytexturemid;
-				dc_texheight = textureheight[skytexture]
-					>>FRACBITS;
-				for (x = pl->minx; x <= pl->maxx; x++)
-				{
-					dc_yl = pl->top[x];
-					dc_yh = pl->bottom[x];
-
-					if (dc_yl <= dc_yh)
-					{
-						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
-						dc_x = x;
-						dc_source =
-							R_GetColumn(skytexture,
-								angle);
-						wallcolfunc();
-					}
-				}
-				continue;
-			}
-
 			if (pl->ffloor != NULL
 #ifdef POLYOBJECTS_PLANES
 			|| pl->polyobj != NULL
@@ -743,6 +685,49 @@ void R_DrawPlanes(void)
 #endif
 }
 
+// R_DrawSkyPlane
+//
+// Draws the sky within the plane's top/bottom bounds
+// Note: this uses column drawers instead of span drawers, since the sky is always a texture
+//
+static void R_DrawSkyPlane(visplane_t *pl)
+{
+	INT32 x;
+	INT32 angle;
+
+	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
+	// (that is, unless we'll need to switch drawers in future for some reason)
+	wallcolfunc = walldrawerfunc;
+
+	// use correct aspect ratio scale
+	dc_iscale = skyscale;
+
+	// Sky is always drawn full bright,
+	//  i.e. colormaps[0] is used.
+	// Because of this hack, sky is not affected
+	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
+	dc_colormap = colormaps;
+	dc_texturemid = skytexturemid;
+	dc_texheight = textureheight[skytexture]
+		>>FRACBITS;
+	for (x = pl->minx; x <= pl->maxx; x++)
+	{
+		dc_yl = pl->top[x];
+		dc_yh = pl->bottom[x];
+
+		if (dc_yl <= dc_yh)
+		{
+			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
+			dc_x = x;
+			dc_source =
+				R_GetColumn(texturetranslation[skytexture],
+					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
+			wallcolfunc();
+		}
+	}
+}
+
 void R_DrawSinglePlane(visplane_t *pl)
 {
 	INT32 light = 0;
@@ -753,6 +738,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (!(pl->minx <= pl->maxx))
 		return;
+
+	// sky flat
+	if (pl->picnum == skyflatnum)
+	{
+		R_DrawSkyPlane(pl);
+		return;
+	}
 
 #ifndef NOWATER
 	itswater = false;
@@ -771,11 +763,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
-#ifdef SHITPLANESPARENCY
-		if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
-#else
 		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
@@ -829,11 +817,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
-#ifdef SHITPLANESPARENCY
-			if (spanfunc == splatfunc || (pl->extra_colormap && pl->extra_colormap->fog))
-#else
 			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			else
 				light = LIGHTLEVELS-1;
@@ -961,19 +945,57 @@ void R_DrawSinglePlane(visplane_t *pl)
 		floatv3_t p, m, n;
 		float ang;
 		float vx, vy, vz;
-		float fudge;
 		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 		// use this as a temp var to store P_GetZAt's return value each time
 		fixed_t temp;
-
-		xoffs &= ((1 << (32-nflatshiftup))-1);
-		yoffs &= ((1 << (32-nflatshiftup))-1);
-
-		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+		const float fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+
+		angle_t hack = (pl->plangle & (ANGLE_90-1));
+
+		yoffs *= 1;
+
+		if (hack)
+		{
+			/*
+			Essentially: We can't & the components along the regular axes when the plane is rotated.
+			This is because the distance on each regular axis in order to loop is different.
+			We rotate them, & the components, add them together, & them again, and then rotate them back.
+			These three seperate & operations are done per axis in order to prevent overflows.
+			toast 10/04/17
+			*/
+			const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
+			const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
+
+			const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
+
+			fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
+			fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
+
+			temp = ox & modmask;
+			oy &= modmask;
+			ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+			oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+
+			temp = xoffs;
+			xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
+			yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
+
+			temp = xoffs & modmask;
+			yoffs &= modmask;
+			xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+			yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+
+			xoffs -= (pl->slope->o.x - ox);
+			yoffs += (pl->slope->o.y + oy);
+		}
+		else
+		{
+			xoffs &= ((1 << (32-nflatshiftup))-1);
+			yoffs &= ((1 << (32-nflatshiftup))-1);
+			xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		}
 
 		xoffs = (fixed_t)(xoffs*fudge);
 		yoffs = (fixed_t)(yoffs/fudge);

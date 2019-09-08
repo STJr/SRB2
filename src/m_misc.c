@@ -30,6 +30,7 @@
 #include "g_game.h"
 #include "m_misc.h"
 #include "hu_stuff.h"
+#include "st_stuff.h"
 #include "v_video.h"
 #include "z_zone.h"
 #include "g_input.h"
@@ -57,11 +58,11 @@ typedef off_t off64_t;
 #endif
 #endif
 
-#if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3))
+#if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3)) && (__GNUC__ < 8)
 #define PRIdS "u"
 #elif defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (_PSP) || defined (_arch_dreamcast) || defined (DJGPP) || defined (_WII) || defined (_NDS) || defined (_PS3)
+#elif defined (DJGPP)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
@@ -70,10 +71,8 @@ typedef off_t off64_t;
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
-#ifndef _WII
 #ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
-#endif
 #endif
 #endif
 
@@ -93,7 +92,8 @@ typedef off_t off64_t;
  #ifdef PNG_WRITE_SUPPORTED
   #define USE_PNG // Only actually use PNG if write is supported.
   #if defined (PNG_WRITE_APNG_SUPPORTED) //|| !defined(PNG_STATIC)
-   #define USE_APNG
+    #include "apng.h"
+    #define USE_APNG
   #endif
   // See hardware/hw_draw.c for a similar check to this one.
  #endif
@@ -102,6 +102,8 @@ typedef off_t off64_t;
 static CV_PossibleValue_t screenshot_cons_t[] = {{0, "Default"}, {1, "HOME"}, {2, "SRB2"}, {3, "CUSTOM"}, {0, NULL}};
 consvar_t cv_screenshot_option = {"screenshot_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Screenshot_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_screenshot_folder = {"screenshot_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
@@ -192,7 +194,7 @@ INT32 M_MapNumber(char first, char second)
 // ==========================================================================
 
 // some libcs has no access function, make our own
-#if defined (_WIN32_WCE) || defined (_XBOX) || defined (_WII) || defined (_PS3)
+#if defined (_WIN32_WCE)
 int access(const char *path, int amode)
 {
 	int accesshandle = -1;
@@ -442,8 +444,13 @@ void Command_LoadConfig_f(void)
 	strcpy(configfile, COM_Argv(1));
 	FIL_ForceExtension(configfile, ".cfg");
 
+	// load default control
+	G_ClearAllControlKeys();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], NULL, 0);
+	G_CopyControls(gamecontrolbis, gamecontrolbisdefault[gcs_fps], NULL, 0);
+
 	// temporarily reset execversion to default
-	cv_execversion.flags &= ~CV_HIDEN;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -451,8 +458,8 @@ void Command_LoadConfig_f(void)
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 }
 
 /** Saves the current configuration and loads another.
@@ -487,14 +494,16 @@ void M_FirstLoadConfig(void)
 	}
 
 	// load default control
-	G_Controldefault();
+	G_DefineDefaultControls();
+	G_CopyControls(gamecontrol, gamecontroldefault[gcs_fps], NULL, 0);
+	G_CopyControls(gamecontrolbis, gamecontrolbisdefault[gcs_fps], NULL, 0);
 
 	// register execversion here before we load any configs
 	CV_RegisterVar(&cv_execversion);
 
 	// temporarily reset execversion to default
 	// we shouldn't need to do this, but JUST in case...
-	cv_execversion.flags &= ~CV_HIDEN;
+	CV_ToggleExecVersion(true);
 	COM_BufInsertText(va("%s \"%s\"\n", cv_execversion.name, cv_execversion.defaultvalue));
 	CV_InitFilterVar();
 
@@ -503,8 +512,8 @@ void M_FirstLoadConfig(void)
 	// no COM_BufExecute() needed; that does it right away
 
 	// don't filter anymore vars and don't let this convsvar be changed
-	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, MODVERSION));
-	cv_execversion.flags |= CV_HIDEN;
+	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
+	CV_ToggleExecVersion(false);
 
 	// make sure I_Quit() will write back the correct config
 	// (do not write back the config if it crash before)
@@ -518,6 +527,7 @@ void M_FirstLoadConfig(void)
 void M_SaveConfig(const char *filename)
 {
 	FILE *f;
+	char *filepath;
 
 	// make sure not to write back the config until it's been correctly loaded
 	if (!gameconfig_loaded)
@@ -532,13 +542,20 @@ void M_SaveConfig(const char *filename)
 			return;
 		}
 
-		f = fopen(filename, "w");
+		// append srb2home to beginning of filename
+		// but check if srb2home isn't already there, first
+		if (!strstr(filename, srb2home))
+			filepath = va(pandf,srb2home, filename);
+		else
+			filepath = Z_StrDup(filename);
+
+		f = fopen(filepath, "w");
 		// change it only if valid
 		if (f)
-			strcpy(configfile, filename);
+			strcpy(configfile, filepath);
 		else
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filename);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't save game config file %s\n"), filepath);
 			return;
 		}
 	}
@@ -562,17 +579,54 @@ void M_SaveConfig(const char *filename)
 	fprintf(f, "// SRB2 configuration file.\n");
 
 	// print execversion FIRST, because subsequent consvars need to be filtered
-	// always print current MODVERSION
-	fprintf(f, "%s \"%d\"\n", cv_execversion.name, MODVERSION);
+	// always print current EXECVERSION
+	fprintf(f, "%s \"%d\"\n", cv_execversion.name, EXECVERSION);
 
 	// FIXME: save key aliases if ever implemented..
 
-	CV_SaveVariables(f);
-	if (!dedicated) G_SaveKeySetting(f);
+	if (tutorialmode && tutorialgcs)
+	{
+		CV_SetValue(&cv_usemouse, tutorialusemouse);
+		CV_SetValue(&cv_alwaysfreelook, tutorialfreelook);
+		CV_SetValue(&cv_mousemove, tutorialmousemove);
+		CV_SetValue(&cv_analog, tutorialanalog);
+		CV_SaveVariables(f);
+		CV_Set(&cv_usemouse, cv_usemouse.defaultvalue);
+		CV_Set(&cv_alwaysfreelook, cv_alwaysfreelook.defaultvalue);
+		CV_Set(&cv_mousemove, cv_mousemove.defaultvalue);
+		CV_Set(&cv_analog, cv_analog.defaultvalue);
+	}
+	else
+		CV_SaveVariables(f);
+
+	if (!dedicated)
+	{
+		if (tutorialmode && tutorialgcs)
+			G_SaveKeySetting(f, gamecontroldefault[gcs_custom], gamecontrolbis); // using gcs_custom as temp storage
+		else
+			G_SaveKeySetting(f, gamecontrol, gamecontrolbis);
+	}
 
 	fclose(f);
 }
 
+// ==========================================================================
+//                              SCREENSHOTS
+// ==========================================================================
+static UINT8 screenshot_palette[768];
+static void M_CreateScreenShotPalette(void)
+{
+	size_t i, j;
+	for (i = 0, j = 0; i < 768; i += 3, j++)
+	{
+		RGBA_t locpal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette[(max(st_palette,0)*256)+j]
+		: pMasterPalette[(max(st_palette,0)*256)+j]);
+		screenshot_palette[i] = locpal.s.red;
+		screenshot_palette[i+1] = locpal.s.green;
+		screenshot_palette[i+2] = locpal.s.blue;
+	}
+}
 
 #if NUMSCREENS > 2
 static const char *Newsnapshotfile(const char *pathname, const char *ext)
@@ -780,13 +834,13 @@ static inline void M_PNGImage(png_structp png_ptr, png_infop png_info_ptr, PNG_C
 #ifdef USE_APNG
 static png_structp apng_ptr = NULL;
 static png_infop   apng_info_ptr = NULL;
+static apng_infop  apng_ainfo_ptr = NULL;
 static png_FILE_p  apng_FILE = NULL;
 static png_uint_32 apng_frames = 0;
-static png_byte    acTL_cn[5] = { 97,  99,  84,  76, '\0'};
 #ifdef PNG_STATIC // Win32 build have static libpng
-#define apng_set_acTL png_set_acTL
-#define apng_write_frame_head png_write_frame_head
-#define apng_write_frame_tail png_write_frame_tail
+#define aPNG_set_acTL png_set_acTL
+#define aPNG_write_frame_head png_write_frame_head
+#define aPNG_write_frame_tail png_write_frame_tail
 #else // outside libpng may not have apng support
 
 #ifndef PNG_WRITE_APNG_SUPPORTED // libpng header may not have apng patch
@@ -823,20 +877,20 @@ static png_byte    acTL_cn[5] = { 97,  99,  84,  76, '\0'};
 #endif
 
 #endif
-typedef PNG_EXPORT(png_uint_32, (*P_png_set_acTL)) PNGARG((png_structp png_ptr,
-   png_infop info_ptr, png_uint_32 num_frames, png_uint_32 num_plays));
-typedef PNG_EXPORT (void, (*P_png_write_frame_head)) PNGARG((png_structp png_ptr,
+typedef png_uint_32 (*P_png_set_acTL) (png_structp png_ptr,
+   png_infop info_ptr, png_uint_32 num_frames, png_uint_32 num_plays);
+typedef void (*P_png_write_frame_head) (png_structp png_ptr,
    png_infop info_ptr, png_bytepp row_pointers,
    png_uint_32 width, png_uint_32 height,
    png_uint_32 x_offset, png_uint_32 y_offset,
    png_uint_16 delay_num, png_uint_16 delay_den, png_byte dispose_op,
-   png_byte blend_op));
+   png_byte blend_op);
 
-typedef PNG_EXPORT (void, (*P_png_write_frame_tail)) PNGARG((png_structp png_ptr,
-   png_infop info_ptr));
-static P_png_set_acTL apng_set_acTL = NULL;
-static P_png_write_frame_head apng_write_frame_head = NULL;
-static P_png_write_frame_tail apng_write_frame_tail = NULL;
+typedef void (*P_png_write_frame_tail) (png_structp png_ptr,
+   png_infop info_ptr);
+static P_png_set_acTL aPNG_set_acTL = NULL;
+static P_png_write_frame_head aPNG_write_frame_head = NULL;
+static P_png_write_frame_tail aPNG_write_frame_tail = NULL;
 #endif
 
 static inline boolean M_PNGLib(void)
@@ -845,7 +899,7 @@ static inline boolean M_PNGLib(void)
 	return true;
 #else
 	static void *pnglib = NULL;
-	if (apng_set_acTL && apng_write_frame_head && apng_write_frame_tail)
+	if (aPNG_set_acTL && aPNG_write_frame_head && aPNG_write_frame_tail)
 		return true;
 	if (pnglib)
 		return false;
@@ -865,16 +919,16 @@ static inline boolean M_PNGLib(void)
 	if (!pnglib)
 		return false;
 #ifdef HAVE_SDL
-	apng_set_acTL = hwSym("png_set_acTL", pnglib);
-	apng_write_frame_head = hwSym("png_write_frame_head", pnglib);
-	apng_write_frame_tail = hwSym("png_write_frame_tail", pnglib);
+	aPNG_set_acTL = hwSym("png_set_acTL", pnglib);
+	aPNG_write_frame_head = hwSym("png_write_frame_head", pnglib);
+	aPNG_write_frame_tail = hwSym("png_write_frame_tail", pnglib);
 #endif
 #ifdef _WIN32
-	apng_set_acTL = GetProcAddress("png_set_acTL", pnglib);
-	apng_write_frame_head = GetProcAddress("png_write_frame_head", pnglib);
-	apng_write_frame_tail = GetProcAddress("png_write_frame_tail", pnglib);
+	aPNG_set_acTL = GetProcAddress("png_set_acTL", pnglib);
+	aPNG_write_frame_head = GetProcAddress("png_write_frame_head", pnglib);
+	aPNG_write_frame_tail = GetProcAddress("png_write_frame_tail", pnglib);
 #endif
-	return (apng_set_acTL && apng_write_frame_head && apng_write_frame_tail);
+	return (aPNG_set_acTL && aPNG_write_frame_head && aPNG_write_frame_tail);
 #endif
 }
 
@@ -888,11 +942,6 @@ static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep pn
 
 	apng_frames++;
 
-#ifndef PNG_STATIC
-	if (apng_set_acTL)
-#endif
-		apng_set_acTL(apng_ptr, apng_info_ptr, apng_frames, 0);
-
 	for (y = 0; y < height; y++)
 	{
 		row_pointers[y] = png_buf;
@@ -900,9 +949,9 @@ static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep pn
 	}
 
 #ifndef PNG_STATIC
-	if (apng_write_frame_head)
+	if (aPNG_write_frame_head)
 #endif
-		apng_write_frame_head(apng_ptr, apng_info_ptr, row_pointers,
+		aPNG_write_frame_head(apng_ptr, apng_info_ptr, row_pointers,
 			vid.width, /* width */
 			height,    /* height */
 			0,         /* x offset */
@@ -915,57 +964,21 @@ static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep pn
 	png_write_image(png_ptr, row_pointers);
 
 #ifndef PNG_STATIC
-	if (apng_write_frame_tail)
+	if (aPNG_write_frame_tail)
 #endif
-		apng_write_frame_tail(apng_ptr, apng_info_ptr);
+		aPNG_write_frame_tail(apng_ptr, apng_info_ptr);
 
 	png_free(png_ptr, (png_voidp)row_pointers);
 }
 
-static inline boolean M_PNGfind_acTL(void)
+static void M_PNGfix_acTL(png_structp png_ptr, png_infop png_info_ptr,
+		apng_infop png_ainfo_ptr)
 {
-	png_byte cn[8]; // 4 bytes for len then 4 byes for name
-	long endpos = ftell(apng_FILE); // not the real end of file, just what of libpng wrote
-	for (fseek(apng_FILE, 0, SEEK_SET); // let go to the start of the file
-	     ftell(apng_FILE)+12 < endpos;  // let not go over the file bound
-	     fseek(apng_FILE, 1, SEEK_CUR)  //  we went 8 steps back and now we go 1 step forward
-	    )
-	{
-		if (fread(cn, sizeof(cn), 1, apng_FILE) != 1) // read 8 bytes
-			return false; // failed to read data
-		if (fseek(apng_FILE, -8, SEEK_CUR) != 0) //rewind 8 bytes
-			return false; // failed to rewird
-		if (!png_memcmp(cn+4, acTL_cn, 4)) //cmp for chuck header
-			return true; // found it
-	}
-	return false; // acTL chuck not found
-}
-
-static void M_PNGfix_acTL(png_structp png_ptr, png_infop png_info_ptr)
-{
-	png_byte data[16];
-	long oldpos;
-
-#ifndef PNG_STATIC
-	if (apng_set_acTL)
-#endif
-		apng_set_acTL(png_ptr, png_info_ptr, apng_frames, 0);
+	apng_set_acTL(png_ptr, png_info_ptr, png_ainfo_ptr, apng_frames, 0);
 
 #ifndef NO_PNG_DEBUG
 	png_debug(1, "in png_write_acTL\n");
 #endif
-
-	png_ptr->num_frames_to_write = apng_frames;
-
-	png_save_uint_32(data, apng_frames);
-	png_save_uint_32(data + 4, 0);
-
-	oldpos = ftell(apng_FILE);
-
-	if (M_PNGfind_acTL())
-		png_write_chunk(png_ptr, (png_bytep)acTL_cn, data, (png_size_t)8);
-
-	fseek(apng_FILE, oldpos, SEEK_SET);
 }
 
 static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
@@ -997,6 +1010,16 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 		return false;
 	}
 
+	apng_ainfo_ptr = apng_create_info_struct(apng_ptr);
+	if (!apng_ainfo_ptr)
+	{
+		CONS_Debug(DBG_RENDER, "M_StartMovie: Error on allocate for apng\n");
+		png_destroy_write_struct(&apng_ptr, &apng_info_ptr);
+		fclose(apng_FILE);
+		remove(filename);
+		return false;
+	}
+
 	png_init_io(apng_ptr, apng_FILE);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
@@ -1014,12 +1037,11 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 
 	M_PNGText(apng_ptr, apng_info_ptr, true);
 
-#ifndef PNG_STATIC
-	if (apng_set_acTL)
-#endif
-		apng_set_acTL(apng_ptr, apng_info_ptr, PNG_UINT_31_MAX, 0);
+	apng_set_set_acTL_fn(apng_ptr, apng_ainfo_ptr, aPNG_set_acTL);
 
-	png_write_info(apng_ptr, apng_info_ptr);
+	apng_set_acTL(apng_ptr, apng_info_ptr, apng_ainfo_ptr, PNG_UINT_31_MAX, 0);
+
+	apng_write_info(apng_ptr, apng_info_ptr, apng_ainfo_ptr);
 
 	apng_frames = 0;
 
@@ -1035,6 +1057,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 {
 #ifdef USE_APNG
+	UINT8 *palette = NULL;
 	const char *freename = NULL;
 	boolean ret = false;
 
@@ -1051,9 +1074,12 @@ static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 	}
 
 	if (rendermode == render_soft)
-		ret = M_SetupaPNG(va(pandf,pathname,freename), W_CacheLumpName(GetPalette(), PU_CACHE));
-	else
-		ret = M_SetupaPNG(va(pandf,pathname,freename), NULL);
+	{
+		M_CreateScreenShotPalette();
+		palette = screenshot_palette;
+	}
+
+	ret = M_SetupaPNG(va(pandf,pathname,freename), palette);
 
 	if (!ret)
 	{
@@ -1222,8 +1248,8 @@ void M_StopMovie(void)
 
 			if (apng_frames)
 			{
-				M_PNGfix_acTL(apng_ptr, apng_info_ptr);
-				png_write_end(apng_ptr, apng_info_ptr);
+				M_PNGfix_acTL(apng_ptr, apng_info_ptr, apng_ainfo_ptr);
+				apng_write_end(apng_ptr, apng_info_ptr, apng_ainfo_ptr);
 			}
 
 			png_destroy_write_struct(&apng_ptr, &apng_info_ptr);
@@ -1256,7 +1282,7 @@ void M_StopMovie(void)
   * \param data     The image data.
   * \param width    Width of the picture.
   * \param height   Height of the picture.
-  * \param palette  Palette of image data
+  * \param palette  Palette of image data.
   *  \note if palette is NULL, BGR888 format
   */
 boolean M_SavePNG(const char *filename, void *data, int width, int height, const UINT8 *palette)
@@ -1278,8 +1304,7 @@ boolean M_SavePNG(const char *filename, void *data, int width, int height, const
 		return false;
 	}
 
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL,
-	 PNG_error, PNG_warn);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 	{
 		CONS_Debug(DBG_RENDER, "M_SavePNG: Error on initialize libpng\n");
@@ -1373,7 +1398,7 @@ typedef struct
   * \param palette  Palette of image data
   */
 #if NUMSCREENS > 2
-static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *palette)
+static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *pal)
 {
 	int i;
 	size_t length;
@@ -1414,8 +1439,16 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 
 	// write the palette
 	*pack++ = 0x0c; // palette ID byte
-	for (i = 0; i < 768; i++)
-		*pack++ = *palette++;
+
+	// write color table
+	{
+		for (i = 0; i < 256; i++)
+		{
+			*pack++ = *pal; pal++;
+			*pack++ = *pal; pal++;
+			*pack++ = *pal; pal++;
+		}
+	}
 
 	// write output file
 	length = pack - (UINT8 *)pcx;
@@ -1433,9 +1466,8 @@ void M_ScreenShot(void)
 }
 
 /** Takes a screenshot.
-  * The screenshot is saved as "srb2xxxx.pcx" (or "srb2xxxx.tga" in hardware
-  * rendermode) where xxxx is the lowest four-digit number for which a file
-  * does not already exist.
+  * The screenshot is saved as "srb2xxxx.png" where xxxx is the lowest
+  * four-digit number for which a file does not already exist.
   *
   * \sa HWR_ScreenShot
   */
@@ -1449,6 +1481,10 @@ void M_DoScreenShot(void)
 	// Don't take multiple screenshots, obviously
 	takescreenshot = false;
 
+	// how does one take a screenshot without a render system?
+	if (rendermode == render_none)
+		return;
+
 	if (cv_screenshot_option.value == 0)
 		pathname = usehome ? srb2home : srb2path;
 	else if (cv_screenshot_option.value == 1)
@@ -1459,16 +1495,13 @@ void M_DoScreenShot(void)
 		pathname = cv_screenshot_folder.string;
 
 #ifdef USE_PNG
-	if (rendermode != render_none)
-		freename = Newsnapshotfile(pathname,"png");
+	freename = Newsnapshotfile(pathname,"png");
 #else
 	if (rendermode == render_soft)
 		freename = Newsnapshotfile(pathname,"pcx");
-	else if (rendermode != render_none)
+	else if (rendermode == render_opengl)
 		freename = Newsnapshotfile(pathname,"tga");
 #endif
-	else
-		I_Error("Can't take a screenshot without a render system");
 
 	if (rendermode == render_soft)
 	{
@@ -1482,18 +1515,16 @@ void M_DoScreenShot(void)
 
 	// save the pcx file
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (rendermode == render_opengl)
 		ret = HWR_Screenshot(va(pandf,pathname,freename));
 	else
 #endif
-	if (rendermode != render_none)
 	{
+		M_CreateScreenShotPalette();
 #ifdef USE_PNG
-		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, screenshot_palette);
 #else
-		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height, screenshot_palette);
 #endif
 	}
 
@@ -1501,14 +1532,14 @@ failure:
 	if (ret)
 	{
 		if (moviemode != MM_SCREENSHOT)
-			CONS_Printf(M_GetText("screen shot %s saved in %s\n"), freename, pathname);
+			CONS_Printf(M_GetText("Screen shot %s saved in %s\n"), freename, pathname);
 	}
 	else
 	{
 		if (freename)
-			CONS_Printf(M_GetText("Couldn't create screen shot %s in %s\n"), freename, pathname);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't create screen shot %s in %s\n"), freename, pathname);
 		else
-			CONS_Printf(M_GetText("Couldn't create screen shot (all 10000 slots used!) in %s\n"), pathname);
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't create screen shot in %s (all 10000 slots used!)\n"), pathname);
 
 		if (moviemode == MM_SCREENSHOT)
 			M_StopMovie();
@@ -1523,6 +1554,10 @@ boolean M_ScreenshotResponder(event_t *ev)
 		return false;
 
 	ch = ev->data1;
+
+	if (ch >= KEY_MOUSE1 && menuactive) // If it's not a keyboard key, then don't allow it in the menus!
+		return false;
+
 	if (ch == KEY_F8 || ch == gamecontrol[gc_screenshot][0] || ch == gamecontrol[gc_screenshot][1]) // remappable F8
 		M_ScreenShot();
 	else if (ch == KEY_F9 || ch == gamecontrol[gc_recordgif][0] || ch == gamecontrol[gc_recordgif][1]) // remappable F9
@@ -1661,6 +1696,11 @@ INT32 axtoi(const char *hexStg)
 	return intValue;
 }
 
+// Token parser variables
+
+static UINT32 oldendPos = 0; // old value of endPos, used by M_UnGetToken
+static UINT32 endPos = 0; // now external to M_GetToken, but still static
+
 /** Token parser for TEXTURES, ANIMDEFS, and potentially other lumps later down the line.
   * Was originally R_GetTexturesToken when I was coding up the TEXTURES parser, until I realized I needed it for ANIMDEFS too.
   * Parses up to the next whitespace character or comma. When finding the start of the next token, whitespace is skipped.
@@ -1675,7 +1715,7 @@ char *M_GetToken(const char *inputString)
 {
 	static const char *stringToUse = NULL; // Populated if inputString != NULL; used otherwise
 	static UINT32 startPos = 0;
-	static UINT32 endPos = 0;
+//	static UINT32 endPos = 0;
 	static UINT32 stringLength = 0;
 	static UINT8 inComment = 0; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
 	char *texturesToken = NULL;
@@ -1685,12 +1725,12 @@ char *M_GetToken(const char *inputString)
 	{
 		stringToUse = inputString;
 		startPos = 0;
-		endPos = 0;
+		oldendPos = endPos = 0;
 		stringLength = strlen(inputString);
 	}
 	else
 	{
-		startPos = endPos;
+		startPos = oldendPos = endPos;
 	}
 	if (stringToUse == NULL)
 		return NULL;
@@ -1819,6 +1859,16 @@ char *M_GetToken(const char *inputString)
 	// Make the final character NUL.
 	texturesToken[texturesTokenLength] = '\0';
 	return texturesToken;
+}
+
+/** Undoes the last M_GetToken call
+  * The current position along the string being parsed is reset to the last saved position.
+  * This exists mostly because of R_ParseTexture/R_ParsePatch honestly, but could be useful elsewhere?
+  * -Monster Iestyn (22/10/16)
+ */
+void M_UnGetToken(void)
+{
+	endPos = oldendPos;
 }
 
 /** Count bits in a number.

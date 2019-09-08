@@ -81,20 +81,9 @@ static int lib_finecosine(lua_State *L)
 
 static int lib_finetangent(lua_State *L)
 {
-	// 2.1.15 ONLY HACK: optional boolean argument, only add ANGLE_90 if true
-	boolean newtan = lua_optboolean(L, 2);
-
-	if (newtan)
-	{
-		// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
-		// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
-		lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
-	}
-	else
-	{
-		LUA_Deprecated(L, "tan(angle)", "tan(angle, true)");
-		lua_pushfixed(L, FINETANGENT((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & 4095));
-	}
+	// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
+	// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
+	lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
 	return 1;
 }
 
@@ -184,15 +173,15 @@ static int lib_all7emeralds(lua_State *L)
 	return 1;
 }
 
-// Whee, special Lua-exclusive function for making use of Color_Opposite[] without needing *2 or +1
-// Returns both color and frame numbers!
+// Whee, special Lua-exclusive function for making use of Color_Opposite[]
+// Returns both color and signpost shade numbers!
 static int lib_coloropposite(lua_State *L)
 {
 	UINT8 colornum = (UINT8)luaL_checkinteger(L, 1);
-	if (colornum >= MAXSKINCOLORS)
-		return luaL_error(L, "skincolor %d out of range (0 - %d).", colornum, MAXSKINCOLORS-1);
-	lua_pushinteger(L, Color_Opposite[colornum*2]); // push color
-	lua_pushinteger(L, Color_Opposite[colornum*2+1]); // push frame
+	if (!colornum || colornum >= MAXSKINCOLORS)
+		return luaL_error(L, "skincolor %d out of range (1 - %d).", colornum, MAXSKINCOLORS-1);
+	lua_pushinteger(L, Color_Opposite[colornum-1][0]); // push color
+	lua_pushinteger(L, Color_Opposite[colornum-1][1]); // push sign shade index, 0-15
 	return 2;
 }
 

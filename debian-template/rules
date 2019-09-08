@@ -1,0 +1,172 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+#############################################################################
+#
+#     GNU Make Debian package makefile for SRB2
+#
+# Copyright (C) 1998-2010 by Callum Dickinson
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+# GNU General Public License for more details.
+#
+# This file most likely will not need to be modified to make
+# branches of SRB2 capable of making their own Debian packages,
+# instead look at the /debian/control file for configuration.
+#
+#############################################################################
+
+#############################################################################
+#
+# !!!!!!!!!! DEPLOYER NOTE !!!!!!!!!!
+#
+# Variables to be templated are curly-braced ${PACKAGE_INSTALL_PATH}
+# Variables used by the rules script are parenthese'd $(PKGDIR)
+# See [repo-root]/debian_template.sh
+#
+#############################################################################
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# user/group of to-be-installed files
+ROOT_USER  := 0
+ROOT_GROUP := 0
+
+# determine cross-compile (may need some work)
+CROSS_COMPILE_BUILD    := $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+CROSS_COMPILE_HOST     := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+CROSS_COMPILE 	       := $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "$(CROSS_COMPILE_HOST)")
+
+MKDIR = mkdir -p
+MAKE = make
+INSTALL = install -o $(ROOT_USER) -g $(ROOT_GROUP) -m 644
+MV	= mv
+RM	= rm -rf
+STRIPARGS = --strip-unneeded
+ifdef CROSS_COMPILE
+STRIP = $(CROSS_COMPILE_HOST)-strip $(STRIPARGS)
+else
+STRIP = strip $(STRIPARGS)
+endif
+DIR	:= $(shell pwd)
+
+# FIXME: hate hate hate head/tail hack :(
+CONTROLF = $(DIR)/debian/control
+PACKAGE  = ${PACKAGE_NAME}
+DBGPKG   = ${PACKAGE}-dbg
+TITLE	= ${PROGRAM_NAME}
+SECTION = Games/Action
+EXENAME = ${PROGRAM_FILENAME}
+DBGNAME	= debug/$(EXENAME)
+
+PKGDIR	= $(shell echo "${PACKAGE_INSTALL_PATH}" | sed -e 's/^\///')
+DBGDIR	= usr/lib/debug/$(PKGDIR)
+LINKDIR = $(shell echo "${PACKAGE_LINK_PATH}" | sed -e 's/^\///')
+PIXMAPS_DIR = usr/share/pixmaps
+DESKTOP_DIR = usr/share/applications
+PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
+OS	= LINUX=1
+NONX86	= $(shell test "`echo $(CROSS_COMPILE_HOST) | grep 'i[3-6]86'`" || echo "NONX86=1")
+MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) NOOBJDUMP=1 # SDL_PKGCONFIG=sdl2 PNG_PKGCONFIG=libpng
+MENUFILE1 = ?package($(PACKAGE)):needs="X11" section="$(SECTION)"
+MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
+BINDIR :=  $(DIR)/bin/Linux/Release
+
+# FIXME pkg-config dir hacks
+# Launchpad doesn't need this; it actually makes i386 builds fail due to cross-compile
+# export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
+LDFLAGS += "-Wl,-rpath=/usr/lib/$(CROSS_COMPILE_HOST)"
+
+# Some libgme-dev packages don't use pkg-config yet, so include the linker flag ourselves
+PKG_CONFIG?=pkg-config
+LIBGME_PKGCONFIG?=libgme
+LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
+
+ifeq ($(LIBGME_LDFLAGS),)
+MAKEARGS += LIBGME_LDFLAGS=-lgme
+endif
+
+build:
+	$(MKDIR) $(BINDIR)/debug
+	$(MAKE) -C $(DIR)/src $(MAKEARGS)
+	$(STRIP) $(BINDIR)/$(EXENAME)
+
+binary-indep:
+	# only here to kill Lintian warning
+	echo "no need to do any arch-independent stuff"
+
+binary-arch:
+	# create ddirs
+	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(DBGDIR)
+	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(DESKTOP_DIR)
+	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(PIXMAPS_DIR)
+	# install main binaries
+	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
+	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
+	# Install desktop file and banner image
+	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps/${PROGRAM_FILENAME}.png
+	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications/${PROGRAM_FILENAME}.desktop
+	# add compiled binaries to include-binaries
+	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
+	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
+	# Generate install folder files
+	echo $(PKGDIR) > $(DIR)/debian/$(PACKAGE).install
+	echo $(DESKTOP_DIR) >> $(DIR)/debian/$(PACKAGE).install
+	echo $(PIXMAPS_DIR) >> $(DIR)/debian/$(PACKAGE).install
+	echo $(DBGDIR) > $(DIR)/debian/$(DBGPKG).install
+# Launchpad only calls binary-arch, so just move everything up
+#binary: binary-arch
+	# Generate .desktop specifications
+	echo "`echo '$(MENUFILE1)\\'`" > $(DIR)/debian/menu
+	echo " `echo '$(MENUFILE2)'`" >> $(DIR)/debian/menu
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs
+	# dh_installexamples
+	dh_install --sourcedir=$(DIR)/debian/tmp
+	dh_installmenu
+	# dh_installdebconf
+	# dh_installlogrotate
+	# dh_installemacsen
+	# dh_installpam
+	# dh_installmime
+	# dh_python
+	# dh_installinit
+	# dh_installcron
+	# dh_installinfo
+	# dh_installman
+	dh_link $(PKGDIR)/$(EXENAME) $(LINKDIR)/$(EXENAME)
+	dh_compress
+	dh_fixperms
+	# dh_perl
+	# dh_makeshlibs
+	dh_installdeb
+	-dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-arch
+
+clean:
+	$(MAKE) -C $(DIR)/src $(MAKEARGS) clean cleandep
+	$(RM) $(BINDIR)/*
+	$(RM) $(DIR)/debian/$(PACKAGE)/*
+	$(RM) $(DIR)/debian/$(DBGPKG)/*
+	$(RM) $(DIR)/debian/tmp/*
+	$(RM) $(DIR)/debian/$(PACKAGE).install
+	$(RM) $(DIR)/debian/$(DBGPKG).install
+	$(RM) $(DIR)/debian/menu
+	$(RM) $(DIR)/debian/files
+	$(RM) $(DIR)/debian/source/include-binaries
+
+.PHONY: all clean binary binary-indep build

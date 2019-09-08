@@ -323,7 +323,7 @@ static inline boolean I_SkipFrame(void)
 			if (!paused)
 				return false;
 			/* FALLTHRU */
-		case GS_TIMEATTACK:
+		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
 #ifndef CLIENT_LOADINGSCREEN
 		case GS_WAITINGPLAYERS:
 #endif
@@ -362,6 +362,10 @@ void I_FinishUpdate(void)
 
 	if (I_SkipFrame())
 		return;
+
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
 
 	// display a graph of ticrate
 	if (cv_ticrate.value)
@@ -996,7 +1000,7 @@ static INT32 WINAPI VID_SetDirectDrawMode(viddef_t *lvid, vmode_t *currentmode)
 	// but rather render to memory bitmap buffer
 	lvid->direct = NULL;
 
-	if (!cv_stretch.value && (float)vid.width/vid.height != ((float)BASEVIDWIDTH/BASEVIDHEIGHT))
+	if (!cv_stretch.value && fabsf((float)vid.width/vid.height - ((float)BASEVIDWIDTH/BASEVIDHEIGHT)) > 1.0E-36f)
 		vid.height = (int)(vid.width * ((float)BASEVIDHEIGHT/BASEVIDWIDTH));// Adjust the height to match
 
 	return 1;

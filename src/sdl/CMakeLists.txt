@@ -70,6 +70,8 @@ if(${SDL2_FOUND})
 	set(SRB2_SDL2_TOTAL_SOURCES
 		${SRB2_CORE_SOURCES}
 		${SRB2_CORE_HEADERS}
+		${SRB2_PNG_SOURCES}
+		${SRB2_PNG_HEADERS}
 		${SRB2_CORE_RENDER_SOURCES}
 		${SRB2_CORE_GAME_SOURCES}
 		${SRB2_LUA_SOURCES}
@@ -80,7 +82,8 @@ if(${SDL2_FOUND})
 		${SRB2_SDL2_HEADERS}
 	)
 
-	source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS})
+	source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS}
+		${SRB2_PNG_SOURCES} ${SRB2_PNG_HEADERS})
 	source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
 	source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})
 	source_group("Assembly" FILES ${SRB2_ASM_SOURCES} ${SRB2_NASM_SOURCES})
@@ -146,16 +149,18 @@ if(${SDL2_FOUND})
 			SDL2
 			SDL2_mixer
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
 		)
-		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "Sonic Robo Blast 2")
+		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 	else()
 		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_LIBRARIES}
 			${SDL2_MIXER_LIBRARIES}
 			${GME_LIBRARIES}
+			${OPENMPT_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -235,6 +240,7 @@ if(${SDL2_FOUND})
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
 		${GME_INCLUDE_DIRS}
+		${OPENMPT_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
@@ -278,29 +284,33 @@ if(${SDL2_FOUND})
 				if (${CMAKE_GENERATOR} STREQUAL "MinGW Makefiles")
 					if(${SRB2_SYSTEM_BITS} EQUAL 64)
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				else()
 					if(${SRB2_SYSTEM_BITS} EQUAL 64)
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/x86_64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/x86_64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
-							HINTS ${CMAKE_SOURCE_DIR}/Bin/Resources/i686
+							HINTS ${CMAKE_SOURCE_DIR}/libs/dll-binaries/i686
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
+							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
 						)
 					endif()
 				endif()
@@ -321,6 +331,9 @@ if(${SDL2_FOUND})
 		if(${SRB2_CONFIG_HAVE_GME})
 			getwinlib(libgme "libgme.dll")
 		endif()
+		if(${SRB2_CONFIG_HAVE_OPENMPT})
+			getwinlib(libopenmpt "libopenmpt.dll")
+		endif()
 
 		install(PROGRAMS
 			${win_extra_dll_list}
@@ -334,10 +347,19 @@ if(${SDL2_FOUND})
 
 
 	# Mac bundle fixup
+	# HACK: THIS IS IMPORTANT! See the escaped \${CMAKE_INSTALL_PREFIX}? This
+	# makes it so that var is evaluated LATER during cpack, not right now!
+	# This fixes the quirk where the bundled libraries don't land in the final package
+	# https://cmake.org/pipermail/cmake/2011-March/043532.html
+	#
+	# HOWEVER: ${CPACK_PACKAGE_DESCRIPTION_SUMMARY} is NOT escaped, because that var
+	# is only available to us at this step. Read the link: ${CMAKE_INSTALL_PREFIX} at
+	# this current step points to the CMAKE build folder, NOT the folder that CPACK uses.
+	# Therefore, it makes sense to escape that var, but not the other.
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		install(CODE "
 			include(BundleUtilities)
-			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"
+			fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/${CPACK_PACKAGE_DESCRIPTION_SUMMARY}.app\"
 				\"\"
 				/Library/Frameworks
 			)"

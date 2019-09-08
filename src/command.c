@@ -32,6 +32,7 @@
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"
+#include "d_netfil.h" // findfile
 
 //========
 // protos.
@@ -49,6 +50,7 @@ static void COM_Wait_f(void);
 static void COM_Help_f(void);
 static void COM_Toggle_f(void);
 
+static void CV_EnforceExecVersion(void);
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 static consvar_t *CV_FindVar(const char *name);
@@ -63,10 +65,11 @@ CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
-// Filter consvars by MODVERSION
+// Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
-consvar_t cv_execversion = {"execversion","25",0,CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+static boolean execversion_enabled = false;
+consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -145,6 +148,20 @@ void COM_BufInsertText(const char *ptext)
 	}
 }
 
+/** Progress the wait timer and flush waiting console commands when ready.
+  */
+void
+COM_BufTicker(void)
+{
+	if (com_wait)
+	{
+		com_wait--;
+		return;
+	}
+
+	COM_BufExecute();
+}
+
 /** Flushes (executes) console commands in the buffer.
   */
 void COM_BufExecute(void)
@@ -153,12 +170,6 @@ void COM_BufExecute(void)
 	char *ptext;
 	char line[1024] = "";
 	INT32 quotes;
-
-	if (com_wait)
-	{
-		com_wait--;
-		return;
-	}
 
 	while (com_text.cursize)
 	{
@@ -511,7 +522,6 @@ static void COM_ExecuteString(char *ptext)
 	{
 		if (!stricmp(com_argv[0], cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
-			recursion = 0;
 			cmd->function();
 			return;
 		}
@@ -523,18 +533,16 @@ static void COM_ExecuteString(char *ptext)
 		if (!stricmp(com_argv[0], a->name))
 		{
 			if (recursion > MAX_ALIAS_RECURSION)
-			{
 				CONS_Alert(CONS_WARNING, M_GetText("Alias recursion cycle detected!\n"));
-				recursion = 0;
-				return;
+			else
+			{ // Monster Iestyn: keep track of how many levels of recursion we're in
+				recursion++;
+				COM_BufInsertText(a->value);
+				recursion--;
 			}
-			recursion++;
-			COM_BufInsertText(a->value);
 			return;
 		}
 	}
-
-	recursion = 0;
 
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
@@ -641,6 +649,7 @@ static void COM_CEchoDuration_f(void)
 static void COM_Exec_f(void)
 {
 	UINT8 *buf = NULL;
+	char filename[256];
 
 	if (COM_Argc() < 2 || COM_Argc() > 3)
 	{
@@ -649,13 +658,23 @@ static void COM_Exec_f(void)
 	}
 
 	// load file
+	// Try with Argv passed verbatim first, for back compat
 	FIL_ReadFile(COM_Argv(1), &buf);
 
 	if (!buf)
 	{
-		if (!COM_CheckParm("-noerror"))
-			CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
-		return;
+		// Now try by searching the file path
+		// filename is modified with the full found path
+		strcpy(filename, COM_Argv(1));
+		if (findfile(filename, NULL, true) != FS_NOTFOUND)
+			FIL_ReadFile(filename, &buf);
+
+		if (!buf)
+		{
+			if (!COM_CheckParm("-noerror"))
+				CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
+			return;
+		}
 	}
 
 	if (!COM_CheckParm("-silent"))
@@ -1090,7 +1109,7 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 		if (var->flags & CV_FLOAT)
 		{
 			double d = atof(valstr);
-			if (!d && valstr[0] != '0')
+			if (fpclassify(d) == FP_ZERO && valstr[0] != '0')
 				v = INT32_MIN;
 			else
 				v = (INT32)(d * FRACUNIT);
@@ -1185,7 +1204,16 @@ found:
 		var->value = (INT32)(d * FRACUNIT);
 	}
 	else
-		var->value = atoi(var->string);
+	{
+		if (var == &cv_forceskin)
+		{
+			var->value = R_SkinAvailable(var->string);
+			if (!R_SkinUsable(-1, var->value))
+				var->value = -1;
+		}
+		else
+			var->value = atoi(var->string);
+	}
 
 finish:
 	// See the note above.
@@ -1251,7 +1279,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 
 		if (server)
 		{
-			XBOXSTATIC UINT8 buf[2];
+			UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
 			buf[1] = KICK_MSG_CON_FAIL;
@@ -1270,9 +1298,6 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
 		return;
 	}
-#if 0 //defined (GP2X) || defined (PSP)
-	CONS_Printf("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue);
-#endif
 	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
 
 	Setvalue(cvar, svalue, stealth);
@@ -1371,12 +1396,22 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		XBOXSTATIC UINT8 buf[128];
+		UINT8 buf[128];
 		UINT8 *p = buf;
 		if (!(server || (IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
 			return;
+		}
+
+		if (var == &cv_forceskin)
+		{
+			INT32 skin = R_SkinAvailable(value);
+			if ((stricmp(value, "None")) && ((skin == -1) || !R_SkinUsable(-1, skin)))
+			{
+				CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+				return;
+			}
 		}
 
 		// Only add to netcmd buffer if in a netgame, otherwise, just change it.
@@ -1412,6 +1447,30 @@ void CV_StealthSet(consvar_t *var, const char *value)
 	CV_SetCVar(var, value, true);
 }
 
+/** Sets a numeric value to a variable, sometimes calling its callback
+  * function.
+  *
+  * \param var   The variable.
+  * \param value The numeric value, converted to a string before setting.
+  * \param stealth Do we call the callback function or not?
+  */
+static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
+{
+	char val[32];
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		if ((value < 0) || (value >= numskins))
+			sprintf(val, "None");
+		else
+			sprintf(val, "%s", skins[value].name);
+	}
+	else
+		sprintf(val, "%d", value);
+
+	CV_SetCVar(var, val, stealth);
+}
+
 /** Sets a numeric value to a variable without calling its callback
   * function.
   *
@@ -1421,10 +1480,7 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 void CV_StealthSetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, true);
+	CV_SetValueMaybeStealth(var, value, true);
 }
 
 // New wrapper for what used to be CV_Set()
@@ -1442,10 +1498,7 @@ void CV_Set(consvar_t *var, const char *value)
   */
 void CV_SetValue(consvar_t *var, INT32 value)
 {
-	char val[32];
-
-	sprintf(val, "%d", value);
-	CV_SetCVar(var, val, false);
+	CV_SetValueMaybeStealth(var, value, false);
 }
 
 /** Adds a value to a console variable.
@@ -1465,7 +1518,23 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 	// count pointlimit better
 	if (var == &cv_pointlimit && (gametype == GT_MATCH))
 		increment *= 50;
-	newvalue = var->value + increment;
+
+	if (var == &cv_forceskin) // Special handling.
+	{
+		INT32 oldvalue = var->value;
+		newvalue = oldvalue;
+		do
+		{
+			newvalue += increment;
+			if (newvalue < -1)
+				newvalue = (numskins - 1);
+			else if (newvalue >= numskins)
+				newvalue = -1;
+		} while ((oldvalue != newvalue)
+				&& !(R_SkinUsable(-1, newvalue)));
+	}
+	else
+		newvalue = var->value + increment;
 
 	if (var->PossibleValue)
 	{
@@ -1535,34 +1604,27 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			if (var == &cv_chooseskin)
 			{
 				// Special case for the chooseskin variable, used only directly from the menu
-				if (increment > 0) // Going up!
+				newvalue = var->value - 1;
+				do
 				{
-					newvalue = var->value - 1;
-					do
+					if (increment > 0) // Going up!
 					{
 						newvalue++;
 						if (newvalue == MAXSKINS)
 							newvalue = 0;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
-				else if (increment < 0) // Going down!
-				{
-					newvalue = var->value - 1;
-					do
+					}
+					else if (increment < 0) // Going down!
 					{
 						newvalue--;
 						if (newvalue == -1)
 							newvalue = MAXSKINS-1;
-					} while (var->PossibleValue[newvalue].strvalue == NULL);
-					var->value = newvalue + 1;
-					var->string = var->PossibleValue[newvalue].strvalue;
-					var->func();
-					return;
-				}
+					}
+				} while (var->PossibleValue[newvalue].strvalue == NULL);
+
+				var->value = newvalue + 1;
+				var->string = var->PossibleValue[newvalue].strvalue;
+				var->func();
+				return;
 			}
 #ifdef PARANOIA
 			if (currentindice == -1)
@@ -1586,14 +1648,24 @@ void CV_InitFilterVar(void)
 	joyaxis_count = joyaxis2_count = 0;
 }
 
+void CV_ToggleExecVersion(boolean enable)
+{
+	execversion_enabled = enable;
+}
+
+static void CV_EnforceExecVersion(void)
+{
+	if (!execversion_enabled)
+		CV_StealthSetValue(&cv_execversion, EXECVERSION);
+}
+
 static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 {
 	// If ALL axis settings are previous defaults, set them to the new defaults
-	// MODVERSION < 26 (2.1.21)
+	// EXECVERSION < 26 (2.1.21)
 
 	if (joyaxis_default)
 	{
-#if !defined (_WII) && !defined  (WMINPUT)
 		if (!stricmp(v->name, "joyaxis_turn"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1603,7 +1675,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "X-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#if !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_move"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1612,8 +1683,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Y-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
-#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_side"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1622,8 +1691,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Z-Axis")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
-#if !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis_look"))
 		{
 			if (joyaxis_count > 6) return false;
@@ -1632,7 +1699,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
 		if (!stricmp(v->name, "joyaxis_fire")
 			|| !stricmp(v->name, "joyaxis_firenormal"))
 		{
@@ -1642,7 +1708,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis_count++;
 			else joyaxis_default = false;
 		}
-#endif
 		// reset all axis settings to defaults
 		if (joyaxis_count == 6)
 		{
@@ -1659,7 +1724,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 	if (joyaxis2_default)
 	{
-#if !defined (_WII) && !defined  (WMINPUT)
 		if (!stricmp(v->name, "joyaxis2_turn"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1669,7 +1733,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "X-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-// #if !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_move"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1678,8 +1741,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Y-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-// #endif
-#if !defined (_arch_dreamcast) && !defined (_XBOX) && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_side"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1688,8 +1749,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "Z-Axis")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
-#if !defined (_XBOX) // && !defined (PSP)
 		if (!stricmp(v->name, "joyaxis2_look"))
 		{
 			if (joyaxis2_count > 6) return false;
@@ -1698,7 +1757,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
 		if (!stricmp(v->name, "joyaxis2_fire")
 			|| !stricmp(v->name, "joyaxis2_firenormal"))
 		{
@@ -1708,7 +1766,6 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 			if (!stricmp(valstr, "None")) joyaxis2_count++;
 			else joyaxis2_default = false;
 		}
-#endif
 
 		// reset all axis settings to defaults
 		if (joyaxis2_count == 6)
@@ -1737,8 +1794,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 	if (!(v->flags & CV_SAVE))
 		return true;
 
-	// We go by MODVERSION here
-	if (cv_execversion.value < 26) // 26 = 2.1.21
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 26) // 26 = 2.1.21
 	{
 		// MOUSE SETTINGS
 		// alwaysfreelook split between first and third person (chasefreelook)

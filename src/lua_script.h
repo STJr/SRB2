@@ -15,6 +15,7 @@
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
+#include "g_state.h"
 
 #include "blua/lua.h"
 #include "blua/lualib.h"
@@ -37,6 +38,8 @@
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
 #endif
+
+extern boolean lua_lumploading; // is LUA_LoadLump being called?
 
 void LUA_LoadLump(UINT16 wad, UINT16 lump);
 #ifdef LUA_ALLOW_BYTECODE
@@ -91,5 +94,11 @@ void COM_Lua_f(void);
 		CONS_Alert(CONS_WARNING,"%s\n", warningmsg);\
 	}\
 }
+
+// uncomment if you want seg_t/node_t in Lua
+// #define HAVE_LUA_SEGS
+
+#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
+return luaL_error(L, "This can only be used in a level!");
 
 #endif

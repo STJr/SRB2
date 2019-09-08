@@ -45,6 +45,9 @@ void COM_ImmedExecute(const char *ptext);
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);
 
+// As above; and progress the wait timer.
+void COM_BufTicker(void);
+
 // setup command buffer, at game tartup
 void COM_Init(void);
 
@@ -130,6 +133,7 @@ extern CV_PossibleValue_t CV_Natural[];
 extern consvar_t cv_execversion;
 
 void CV_InitFilterVar(void);
+void CV_ToggleExecVersion(boolean enable);
 
 // register a variable for use at the console
 void CV_RegisterVar(consvar_t *variable);

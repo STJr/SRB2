@@ -70,15 +70,15 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		patch_t *ttlnum; // act number being displayed
+		INT32 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
 
 	struct
 	{
-		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
-		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
+		char passed1[29];             // KNUCKLES GOT     / CRAWLA HONCHO
+		char passed2[17];             // A CHAOS EMERALD? / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
 		INT32 passedx1;
@@ -86,8 +86,8 @@ typedef union
 		INT32 passedx3;
 		INT32 passedx4;
 
-		y_bonus_t bonus;
-		patch_t *bonuspatch;
+		y_bonus_t bonuses[2];
+		patch_t *bonuspatches[2];
 
 		patch_t *pscore; // SCORE
 		UINT32 score; // fake score
@@ -147,6 +147,7 @@ static boolean useinterpic;
 static INT32 timer;
 
 static INT32 intertic;
+static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
@@ -160,18 +161,50 @@ static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
 
 // Stuff copy+pasted from st_stuff.c
-static INT32 SCX(INT32 x)
-{
-	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
-}
-static INT32 SCY(INT32 z)
-{
-	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
-}
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, p)
 
-#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n)
-#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n, q)
-#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, p)
+static void Y_IntermissionTokenDrawer(void)
+{
+	INT32 y, offs, lowy, calc;
+	UINT32 tokencount;
+	INT16 temp;
+	UINT8 em;
+
+	offs = 0;
+	lowy = BASEVIDHEIGHT - 32 - 8;
+	temp = SHORT(tokenicon->height)/2;
+
+	em = 0;
+	while (emeralds & (1 << em))
+		if (++em == 7)
+			return;
+
+	if (tallydonetic != -1)
+	{
+		offs = (intertic - tallydonetic)*2;
+		if (offs > 10)
+			offs = 8;
+	}
+
+	V_DrawSmallScaledPatch(32, lowy-1, 0, emeraldpics[2][em]); // coinbox
+
+	y = (lowy + offs + 1) - (temp + (token + 1)*8);
+
+	for (tokencount = token; tokencount; tokencount--)
+	{
+		if (y >= -temp)
+			V_DrawSmallScaledPatch(32, y, 0, tokenicon);
+		y += 8;
+	}
+
+	y += (offs*(temp - 1)/8);
+	calc = (lowy - y)*2;
+
+	if (calc > 0)
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, SHORT(tokenicon->width), calc);
+}
 
 //
 // Y_IntermissionDrawer
@@ -217,31 +250,37 @@ void Y_IntermissionDrawer(void)
 	{
 		INT32 bonusy;
 
-		// draw score
-		ST_DrawPatchFromHud(HUD_SCORE, sboscore);
-		ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
 
-		// draw time
-		ST_DrawPatchFromHud(HUD_TIME, sbotime);
-		if (cv_timetic.value == 1)
-			ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
-		else
+		if (!splitscreen)
 		{
-			INT32 seconds, minutes, tictrn;
+			// draw score
+			ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+			ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
 
-			seconds = G_TicsToSeconds(data.coop.tics);
-			minutes = G_TicsToMinutes(data.coop.tics, true);
-			tictrn  = G_TicsToCentiseconds(data.coop.tics);
-
-			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
-			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
-			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
-
-			// we should show centiseconds on the intermission screen too, if the conditions are right.
-			if (modeattacking || cv_timetic.value == 2)
+			// draw time
+			ST_DrawPatchFromHud(HUD_TIME, sbotime);
+			if (cv_timetic.value == 1)
+				ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
+			else
 			{
-				ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
-				ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
+				INT32 seconds, minutes, tictrn;
+
+				seconds = G_TicsToSeconds(data.coop.tics);
+				minutes = G_TicsToMinutes(data.coop.tics, true);
+				tictrn  = G_TicsToCentiseconds(data.coop.tics);
+
+				ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
+				ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
+				ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
+
+				// we should show centiseconds on the intermission screen too, if the conditions are right.
+				if (modeattacking || cv_timetic.value == 2)
+				{
+					ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
+					ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
+				}
 			}
 		}
 
@@ -249,8 +288,8 @@ void Y_IntermissionDrawer(void)
 		V_DrawLevelTitle(data.coop.passedx1, 49, 0, data.coop.passed1);
 		V_DrawLevelTitle(data.coop.passedx2, 49+V_LevelNameHeight(data.coop.passed2)+2, 0, data.coop.passed2);
 
-		if (mapheaderinfo[gamemap-1]->actnum)
-			V_DrawScaledPatch(244, 57, 0, data.coop.ttlnum);
+		if (data.coop.actnum)
+			V_DrawLevelActNum(244, 57, 0, data.coop.actnum);
 
 		bonusy = 150;
 		// Total
@@ -276,86 +315,195 @@ void Y_IntermissionDrawer(void)
 		INT32 xoffset1 = 0; // Line 1 x offset
 		INT32 xoffset2 = 0; // Line 2 x offset
 		INT32 xoffset3 = 0; // Line 3 x offset
+		INT32 xoffset4 = 0; // Line 4 x offset
+		INT32 xoffset5 = 0; // Line 5 x offset
+		INT32 xoffset6 = 0; // Line 6 x offset
 		UINT8 drawsection = 0;
 
-		// draw the header
-		if (intertic <= TICRATE)
-			animatetic = 0;
-		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
-			animatetic = intertic;
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
 
-		if (animatetic)
+		// draw the header
+		if (intertic <= 2*TICRATE)
+			animatetic = 0;
+		else if (!animatetic && data.spec.bonuses[0].points == 0 && data.spec.bonuses[1].points == 0 && data.spec.passed3[0] != '\0')
+			animatetic = intertic + TICRATE;
+
+		if (animatetic && (tic_t)intertic >= animatetic)
 		{
+			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
-			if (animatetimer <= 8)
+			if (animatetimer <= 16)
 			{
-				xoffset1 = -(animatetimer     * 40);
-				xoffset2 = -((animatetimer-2) * 40);
+				xoffset1 = -(animatetimer      * scradjust);
+				xoffset2 = -((animatetimer- 2) * scradjust);
+				xoffset3 = -((animatetimer- 4) * scradjust);
+				xoffset4 = -((animatetimer- 6) * scradjust);
+				xoffset5 = -((animatetimer- 8) * scradjust);
+				xoffset6 = -((animatetimer-10) * scradjust);
 				if (xoffset2 > 0) xoffset2 = 0;
+				if (xoffset3 > 0) xoffset3 = 0;
+				if (xoffset4 > 0) xoffset4 = 0;
+				if (xoffset5 > 0) xoffset5 = 0;
+				if (xoffset6 > 0) xoffset6 = 0;
 			}
-			else if (animatetimer <= 19)
+			else if (animatetimer < 34)
 			{
 				drawsection = 1;
-				xoffset1 = (16-animatetimer) * 40;
-				xoffset2 = (18-animatetimer) * 40;
-				xoffset3 = (20-animatetimer) * 40;
+				xoffset1 = (24-animatetimer) * scradjust;
+				xoffset2 = (26-animatetimer) * scradjust;
+				xoffset3 = (28-animatetimer) * scradjust;
+				xoffset4 = (30-animatetimer) * scradjust;
+				xoffset5 = (32-animatetimer) * scradjust;
+				xoffset6 = (34-animatetimer) * scradjust;
 				if (xoffset1 < 0) xoffset1 = 0;
 				if (xoffset2 < 0) xoffset2 = 0;
+				if (xoffset3 < 0) xoffset3 = 0;
+				if (xoffset4 < 0) xoffset4 = 0;
+				if (xoffset5 < 0) xoffset5 = 0;
 			}
 			else
+			{
 				drawsection = 1;
+				if (animatetimer == 32)
+					S_StartSound(NULL, sfx_s3k68);
+			}
 		}
 
 		if (drawsection == 1)
 		{
+			const char *ringtext = "\x82" "50 RINGS, NO SHIELD";
+			const char *tut1text = "\x82" "PRESS " "\x80" "SPIN";
+			const char *tut2text = "\x82" "MID-" "\x80" "JUMP";
 			ttheight = 16;
 			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
 			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
 			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
 			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
-		}
-		else if (data.spec.passed1[0] != '\0')
-		{
-			ttheight = 24;
-			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
-			ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
-			V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
+
+			ttheight = 108;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset4 - (V_LevelNameWidth(ringtext)/2), ttheight, 0, ringtext);
+			ttheight += V_LevelNameHeight(ringtext) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset5 - (V_LevelNameWidth(tut1text)/2), ttheight, 0, tut1text);
+			ttheight += V_LevelNameHeight(tut1text) + 2;
+			V_DrawLevelTitle(BASEVIDWIDTH/2 + xoffset6 - (V_LevelNameWidth(tut2text)/2), ttheight, 0, tut2text);
 		}
 		else
 		{
-			ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
-			V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
-		}
-
-		// draw the emeralds
-		if (intertic & 1)
-		{
-			INT32 emeraldx = 80;
-			for (i = 0; i < 7; ++i)
+			INT32 yoffset = 0;
+			if (data.spec.passed1[0] != '\0')
 			{
-				if (emeralds & (1 << i))
-					V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[i]);
-				emeraldx += 24;
+				ttheight = 24;
+				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+				ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
+				V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
+			}
+			else
+			{
+				ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
+				V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
+			}
+
+			V_DrawScaledPatch(152 + xoffset3, 108, 0, data.spec.bonuspatches[0]);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset3 - 68, 109, 0, data.spec.bonuses[0].points);
+			if (data.spec.bonuses[1].display)
+			{
+				V_DrawScaledPatch(152 + xoffset4, 124, 0, data.spec.bonuspatches[1]);
+				V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125, 0, data.spec.bonuses[1].points);
+				yoffset = 16;
+				// hack; pass the buck along...
+				xoffset4 = xoffset5;
+				xoffset5 = xoffset6;
+			}
+			V_DrawScaledPatch(152 + xoffset4, 124+yoffset, 0, data.spec.pscore);
+			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
+
+			// Draw continues!
+			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			{
+				UINT8 continues = data.spec.continues & 0x7F;
+
+				V_DrawScaledPatch(152 + xoffset5, 150+yoffset, 0, data.spec.pcontinues);
+				for (i = 0; i < continues; ++i)
+				{
+					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
+						break;
+					V_DrawContinueIcon(246 + xoffset5 - (i*12), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+				}
 			}
 		}
 
-		V_DrawScaledPatch(152, 108, 0, data.spec.bonuspatch);
-		V_DrawTallNum(BASEVIDWIDTH - 68, 109, 0, data.spec.bonus.points);
-		V_DrawScaledPatch(152, 124, 0, data.spec.pscore);
-		V_DrawTallNum(BASEVIDWIDTH - 68, 125, 0, data.spec.score);
-
-		// Draw continues!
-		if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+		// draw the emeralds
+		//if (intertic & 1)
 		{
-			UINT8 continues = data.spec.continues & 0x7F;
+			boolean drawthistic = !(ALL7EMERALDS(emeralds) && (intertic & 1));
+			INT32 emeraldx = 152 - 3*28;
+			INT32 em = P_GetNextEmerald();
 
-			V_DrawScaledPatch(152, 150, 0, data.spec.pcontinues);
-			for (i = 0; i < continues; ++i)
+			if (em == 7)
 			{
-				if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
-					break;
-				V_DrawContinueIcon(246 - (i*12), 162, 0, *data.spec.playerchar, *data.spec.playercolor);
+				if (!stagefailed)
+				{
+					fixed_t adjust = 2*(FINESINE(FixedAngle((intertic + 1)<<(FRACBITS-4)) & FINEMASK));
+					V_DrawFixedPatch(152<<FRACBITS, (74<<FRACBITS) - adjust, FRACUNIT, 0, emeraldpics[0][em], NULL);
+				}
+			}
+			else if (em < 7)
+			{
+				static UINT8 emeraldbounces = 0;
+				static INT32 emeraldmomy = 20;
+				static INT32 emeraldy = -40;
+
+				if (drawthistic)
+					for (i = 0; i < 7; ++i)
+					{
+						if ((i != em) && (emeralds & (1 << i)))
+							V_DrawScaledPatch(emeraldx, 74, 0, emeraldpics[0][i]);
+						emeraldx += 28;
+					}
+
+				emeraldx = 152 + (em-3)*28;
+
+				if (intertic <= 1)
+				{
+					emeraldbounces = 0;
+					emeraldmomy = 20;
+					emeraldy = -40;
+				}
+				else
+				{
+					if (!stagefailed)
+					{
+						if (emeraldbounces < 3)
+						{
+							emeraldmomy += 1;
+							emeraldy += emeraldmomy;
+							if (emeraldy > 74)
+							{
+								S_StartSound(NULL, sfx_tink); // tink
+								emeraldbounces++;
+								emeraldmomy = -(emeraldmomy/2);
+								emeraldy = 74;
+							}
+						}
+					}
+					else
+					{
+						emeraldmomy += 1;
+						emeraldy += emeraldmomy;
+						emeraldx += intertic - 6;
+						if (emeraldbounces < 1 && emeraldy > 74)
+						{
+							S_StartSound(NULL, sfx_shldls); // nope
+							emeraldbounces++;
+							emeraldmomy = -(emeraldmomy/2);
+							emeraldy = 74;
+						}
+					}
+					if (drawthistic)
+						V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
+				}
 			}
 		}
 	}
@@ -434,7 +582,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152, y, 0, va("%i", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime,
@@ -452,7 +600,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152+BASEVIDWIDTH/2, y, 0, va("%u", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime, "%i:%02i.%02i", G_TicsToMinutes(data.match.scores[i], true),
@@ -602,7 +750,7 @@ void Y_IntermissionDrawer(void)
 				// already constrained to 8 characters
 				V_DrawString(x+36, y, V_ALLOWLOWERCASE, data.competition.name[i]);
 
-				if (players[data.competition.num[i]].pflags & PF_TIMEOVER)
+				if (players[data.competition.num[i]].pflags & PF_GAMETYPEOVER)
 					snprintf(sstrtime, sizeof sstrtime, "Time Over");
 				else if (players[data.competition.num[i]].lives <= 0)
 					snprintf(sstrtime, sizeof sstrtime, "Game Over");
@@ -696,7 +844,20 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+		{
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
+			tallydonetic = -1;
+		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -720,20 +881,23 @@ void Y_Ticker(void)
 				data.coop.total += data.coop.bonuses[i].points;
 				data.coop.bonuses[i].points = 0;
 			}
+			if (data.coop.score > MAXSCORE)
+				data.coop.score = MAXSCORE;
 			if (data.coop.bonuses[i].points > 0)
 				anybonuses = true;
 		}
 
 		if (!anybonuses)
 		{
+			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
-					S_StartSound(NULL, sfx_ncitem);
+					S_StartSound(NULL, sfx_s3k68);
 
 				G_SaveGameData();
 			}
@@ -752,55 +916,80 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
-		boolean skip = false;
-		static INT32 tallydonetic = 0;
+		boolean skip = false, super = false, anybonuses = false;
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("lclear", false); // don't loop it
-			tallydonetic = 0;
+			if (mapheaderinfo[gamemap-1]->musinterfadeout
+#ifdef _WIN32
+				// can't fade midi due to win32 volume hack
+				&& S_MusicType() != MU_MID
+#endif
+			)
+				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+			else
+				S_ChangeMusicInternal("_clear", false); // don't loop it
+			tallydonetic = -1;
 		}
 
-		if (intertic < TICRATE) // one second pause before tally begins
+		if (intertic < 2*TICRATE) // TWO second pause before tally begins, thank you mazmazz
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
-				skip = true;
+			if (playeringame[i])
+			{
+				if (players[i].cmd.buttons & BT_USE)
+					skip = true;
+				if (players[i].charflags & SF_SUPER)
+					super = true;
+			}
 
-		if (tallydonetic != 0)
+		if (tallydonetic != -1 && ((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds))))
 		{
-			if (intertic > tallydonetic)
+			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_flgcap); // cha-ching!
+				if (data.spec.continues & 0x80)
+					S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
+
 			}
 			return;
 		}
 
-		// ring bonus counts down by 222 each tic
-		data.spec.bonus.points -= 222;
-		data.spec.score += 222;
-		if (data.spec.bonus.points < 0 || skip == true) // went too far
+		// bonuses count down by 222 each tic
+		for (i = 0; i < 2; ++i)
 		{
-			data.spec.score += data.spec.bonus.points;
-			data.spec.bonus.points = 0;
+			if (!data.spec.bonuses[i].points)
+				continue;
+
+			data.spec.bonuses[i].points -= 222;
+			data.spec.score += 222;
+			if (data.spec.bonuses[i].points < 0 || skip == true) // too far?
+			{
+				data.spec.score += data.spec.bonuses[i].points;
+				data.spec.bonuses[i].points = 0;
+			}
+			if (data.spec.score > MAXSCORE)
+				data.spec.score = MAXSCORE;
+			if (data.spec.bonuses[i].points > 0)
+				anybonuses = true;
 		}
 
-		if (!data.spec.bonus.points)
+		if (!anybonuses)
 		{
-			if (data.spec.continues & 0x80) // don't set endtic yet!
-				tallydonetic = intertic + (3*TICRATE)/2;
-			else // okay we're good.
+			tallydonetic = intertic;
+			if (!((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds)))) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
-			S_StartSound(NULL, sfx_chchng); // cha-ching!
+			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
-					S_StartSound(NULL, sfx_ncitem);
+					S_StartSound(NULL, sfx_s3k68);
 
 				G_SaveGameData();
 			}
@@ -818,7 +1007,7 @@ void Y_Ticker(void)
 	else if (intertype == int_match || intertype == int_ctf || intertype == int_teammatch) // match
 	{
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("racent", true); // loop it
+			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// If a player has left or joined, recalculate scores.
 		if (data.match.numplayers != D_NumPlayers())
@@ -827,7 +1016,7 @@ void Y_Ticker(void)
 	else if (intertype == int_race || intertype == int_classicrace) // race
 	{
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("racent", true); // loop it
+			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}
@@ -856,13 +1045,13 @@ static void Y_UpdateRecordReplays(void)
 	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
 		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
 
-	if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
+		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
 
 	// Save demo!
 	bestdemo[255] = '\0';
 	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].health-1));
+	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
 	G_CheckDemoStatus();
 
 	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
@@ -872,14 +1061,14 @@ static void Y_UpdateRecordReplays(void)
 		I_Error("Out of memory for replay filepath\n");
 
 	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, cv_chooseskin.string);
+	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
 
 	if (FIL_FileExists(lastdemo))
 	{
 		UINT8 *buf;
 		size_t len = FIL_ReadFile(lastdemo, &buf);
 
-		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, cv_chooseskin.string);
+		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
 		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
 		{ // Better time, save this demo.
 			if (FIL_FileExists(bestdemo))
@@ -888,7 +1077,7 @@ static void Y_UpdateRecordReplays(void)
 			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
 		}
 
-		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, cv_chooseskin.string);
+		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
 		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
 		{ // Better score, save this demo.
 			if (FIL_FileExists(bestdemo))
@@ -897,7 +1086,7 @@ static void Y_UpdateRecordReplays(void)
 			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
 		}
 
-		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, cv_chooseskin.string);
+		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
 		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
 		{ // Better rings, save this demo.
 			if (FIL_FileExists(bestdemo))
@@ -917,8 +1106,7 @@ static void Y_UpdateRecordReplays(void)
 		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 
 	// Update timeattack menu's replay availability.
-	CV_AddValue(&cv_nextmap, 1);
-	CV_AddValue(&cv_nextmap, -1);
+	Nextmap_OnChange();
 }
 
 //
@@ -929,6 +1117,7 @@ static void Y_UpdateRecordReplays(void)
 void Y_StartIntermission(void)
 {
 	INT32 i;
+	UINT8 completionEmblems = M_CompletionEmblems();
 
 	intertic = -1;
 
@@ -1026,6 +1215,9 @@ void Y_StartIntermission(void)
 
 				if (modeattacking == ATTACKING_RECORD)
 					Y_UpdateRecordReplays();
+
+				if (completionEmblems)
+					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
 			}
 
 			for (i = 0; i < 4; ++i)
@@ -1033,11 +1225,7 @@ void Y_StartIntermission(void)
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_STATIC);
 
 			// get act number
-			if (mapheaderinfo[prevmap]->actnum)
-				data.coop.ttlnum = W_CachePatchName(va("TTL%.2d", mapheaderinfo[prevmap]->actnum),
-					PU_STATIC);
-			else
-				data.coop.ttlnum = W_CachePatchName("TTL01", PU_STATIC);
+			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
 			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
@@ -1126,12 +1314,18 @@ void Y_StartIntermission(void)
 			{
 				if (!stagefailed)
 					mapvisited[gamemap-1] |= MV_BEATEN;
+
+				// all emeralds/ultimate/perfect emblems won't be possible in ss, oh well?
+				if (completionEmblems)
+					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
 			}
 
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
-			data.spec.bonuspatch = W_CachePatchName(data.spec.bonus.patch, PU_STATIC);
+			for (i = 0; i < 2; ++i)
+				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_STATIC);
+
 			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_STATIC);
 			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_STATIC);
 
@@ -1183,7 +1377,7 @@ void Y_StartIntermission(void)
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "GOT THEM ALL!");
 
-				if (skins[players[consoleplayer].skin].flags & SF_SUPER)
+				if (players[consoleplayer].charflags & SF_SUPER)
 				{
 					strcpy(data.spec.passed3, "CAN NOW BECOME");
 					snprintf(data.spec.passed4,
@@ -1204,6 +1398,11 @@ void Y_StartIntermission(void)
 				else
 					strcpy(data.spec.passed1, "YOU GOT");
 				strcpy(data.spec.passed2, "A CHAOS EMERALD");
+				if (P_GetNextEmerald() > 6)
+				{
+					data.spec.passed2[15] = '?';
+					data.spec.passed2[16] = '\0';
+				}
 			}
 			data.spec.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed1))/2;
 			data.spec.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed2))/2;
@@ -1456,7 +1655,7 @@ static void Y_CalculateCompetitionWinners(void)
 			bestat[j] = true;
 
 		times[i]    = players[i].realtime;
-		rings[i]    = (UINT32)max(players[i].health-1, 0);
+		rings[i]    = (UINT32)max(players[i].rings, 0);
 		maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
 		scores[i]   = (UINT32)min(players[i].score, 99999990);
@@ -1471,7 +1670,7 @@ static void Y_CalculateCompetitionWinners(void)
 			else
 				bestat[0] = false;
 
-			if (max(players[i].health-1, 0) >= max(players[j].health-1, 0))
+			if (max(players[i].rings, 0) >= max(players[j].rings, 0))
 				points[i]++;
 			else
 				bestat[1] = false;
@@ -1571,8 +1770,7 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 
 	// calculate time bonus
 	secs = player->realtime / TICRATE;
-	if      (secs <  30) /*   :30 */ bonus = 100000;
-	else if (secs <  45) /*   :45 */ bonus = 50000;
+	if      (secs <  30) /*   :30 */ bonus = 50000;
 	else if (secs <  60) /*  1:00 */ bonus = 10000;
 	else if (secs <  90) /*  1:30 */ bonus = 5000;
 	else if (secs < 120) /*  2:00 */ bonus = 4000;
@@ -1595,7 +1793,27 @@ static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 {
 	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
 	bstruct->display = true;
-	bstruct->points = max(0, (player->health-1) * 100);
+	bstruct->points = max(0, (player->rings) * 100);
+}
+
+//
+// Y_SetNightsBonus
+//
+static void Y_SetNightsBonus(player_t *player, y_bonus_t *bstruct)
+{
+	strncpy(bstruct->patch, "YB_NIGHT", sizeof(bstruct->patch));
+	bstruct->display = true;
+	bstruct->points = player->totalmarescore;
+}
+
+//
+// Y_SetLapBonus
+//
+static void Y_SetLapBonus(player_t *player, y_bonus_t *bstruct)
+{
+	strncpy(bstruct->patch, "YB_LAP", sizeof(bstruct->patch));
+	bstruct->display = true;
+	bstruct->points = max(0, player->totalmarebonuslap * 1000);
 }
 
 //
@@ -1637,29 +1855,47 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 	memset(bstruct, 0, sizeof(y_bonus_t));
 	strncpy(bstruct->patch, "YB_PERFE", sizeof(bstruct->patch));
 
-	if (data.coop.gotperfbonus == -1)
+	if (intertype != int_coop || data.coop.gotperfbonus == -1)
 	{
 		INT32 sharedringtotal = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i]) continue;
-			sharedringtotal += players[i].health - 1;
+			sharedringtotal += players[i].rings;
 		}
-		if (!sharedringtotal || sharedringtotal < nummaprings)
-			data.coop.gotperfbonus = 0;
+		if (!sharedringtotal || nummaprings == -1 || sharedringtotal < nummaprings)
+			bstruct->display = false;
 		else
-			data.coop.gotperfbonus = 1;
+		{
+			bstruct->display = true;
+			bstruct->points = 50000;
+		}
 	}
-	if (!data.coop.gotperfbonus)
+	if (intertype != int_coop)
 		return;
 
+	data.coop.gotperfbonus = (bstruct->display ? 1 : 0);
+}
+
+static void Y_SetSpecialRingBonus(player_t *player, y_bonus_t *bstruct)
+{
+	INT32 i, sharedringtotal = 0;
+
+	(void)player;
+	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
 	bstruct->display = true;
-	bstruct->points = 50000;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i]) continue;
+		sharedringtotal += players[i].rings;
+	}
+	bstruct->points = max(0, (sharedringtotal) * 100);
 }
 
 // This list can be extended in the future with SOC/Lua, perhaps.
 typedef void (*bonus_f)(player_t *, y_bonus_t *);
-bonus_f bonuses_list[4][4] = {
+bonus_f bonuses_list[6][4] = {
 	{
 		Y_SetNullBonus,
 		Y_SetNullBonus,
@@ -1683,6 +1919,18 @@ bonus_f bonuses_list[4][4] = {
 		Y_SetGuardBonus,
 		Y_SetRingBonus,
 		Y_SetPerfectBonus,
+	},
+	{
+		Y_SetNullBonus,
+		Y_SetNightsBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
+	},
+	{
+		Y_SetNullBonus,
+		Y_SetLinkBonus,
+		Y_SetLapBonus,
+		Y_SetNullBonus,
 	},
 };
 
@@ -1718,15 +1966,19 @@ static void Y_AwardCoopBonuses(void)
 		{
 			(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
 			players[i].score += localbonuses[j].points;
+			if (players[i].score > MAXSCORE)
+				players[i].score = MAXSCORE;
 		}
 
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+		ptlives = min(
+			(INT32)((!ultimatemode && !modeattacking && players[i].lives != INFLIVES) ? max((INT32)((players[i].score/50000) - (oldscore/50000)), (INT32)0) : 0),
+			(INT32)(mapheaderinfo[prevmap]->maxbonuslives < 0 ? INT32_MAX : mapheaderinfo[prevmap]->maxbonuslives));
 		if (ptlives)
 			P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = ptlives;
+			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -1743,34 +1995,46 @@ static void Y_AwardCoopBonuses(void)
 static void Y_AwardSpecialStageBonus(void)
 {
 	INT32 i, oldscore, ptlives;
-	y_bonus_t localbonus;
+	y_bonus_t localbonuses[2];
 
 	data.spec.score = players[consoleplayer].score;
-	memset(&data.spec.bonus, 0, sizeof(data.spec.bonus));
-	data.spec.bonuspatch = NULL;
+	memset(data.spec.bonuses, 0, sizeof(data.spec.bonuses));
+	memset(data.spec.bonuspatches, 0, sizeof(data.coop.bonuspatches));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		oldscore = players[i].score;
 
 		if (!playeringame[i] || players[i].lives < 1) // not active or game over
-			Y_SetNullBonus(&players[i], &localbonus);
-		else if (useNightsSS) // Link instead of Score
-			Y_SetLinkBonus(&players[i], &localbonus);
+		{
+			Y_SetNullBonus(&players[i], &localbonuses[0]);
+			Y_SetNullBonus(&players[i], &localbonuses[1]);
+		}
+		else if (maptol & TOL_NIGHTS) // NiGHTS bonus score instead of Rings
+		{
+			Y_SetNightsBonus(&players[i], &localbonuses[0]);
+			Y_SetNullBonus(&players[i], &localbonuses[1]);
+		}
 		else
-			Y_SetRingBonus(&players[i], &localbonus);
-		players[i].score += localbonus.points;
+		{
+			Y_SetSpecialRingBonus(&players[i], &localbonuses[0]);
+			Y_SetPerfectBonus(&players[i], &localbonuses[1]);
+		}
+		players[i].score += localbonuses[0].points;
+		players[i].score += localbonuses[1].points;
+		if (players[i].score > MAXSCORE)
+			players[i].score = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
-		ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
-		if (ptlives)
-			P_GivePlayerLives(&players[i], ptlives);
+		ptlives = min(
+			(INT32)((!ultimatemode && !modeattacking && players[i].lives != INFLIVES) ? max((INT32)((players[i].score/50000) - (oldscore/50000)), (INT32)0) : 0),
+			(INT32)(mapheaderinfo[prevmap]->maxbonuslives < 0 ? INT32_MAX : mapheaderinfo[prevmap]->maxbonuslives));
+		P_GivePlayerLives(&players[i], ptlives);
 
 		if (i == consoleplayer)
 		{
-			M_Memcpy(&data.spec.bonus, &localbonus, sizeof(data.spec.bonus));
-
-			data.spec.gotlife = ptlives;
+			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			M_Memcpy(&data.spec.bonuses, &localbonuses, sizeof(data.spec.bonuses));
 
 			// Continues related
 			data.spec.continues = min(players[i].continues, 8);
@@ -1835,7 +2099,6 @@ static void Y_UnloadData(void)
 	{
 		case int_coop:
 			// unload the coop and single player patches
-			UNLOAD(data.coop.ttlnum);
 			UNLOAD(data.coop.bonuspatches[3]);
 			UNLOAD(data.coop.bonuspatches[2]);
 			UNLOAD(data.coop.bonuspatches[1]);
@@ -1846,7 +2109,8 @@ static void Y_UnloadData(void)
 			// unload the special stage patches
 			//UNLOAD(data.spec.cemerald);
 			//UNLOAD(data.spec.nowsuper);
-			UNLOAD(data.spec.bonuspatch);
+			UNLOAD(data.spec.bonuspatches[1]);
+			UNLOAD(data.spec.bonuspatches[0]);
 			UNLOAD(data.spec.pscore);
 			UNLOAD(data.spec.pcontinues);
 			break;

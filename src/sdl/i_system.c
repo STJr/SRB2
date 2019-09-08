@@ -131,7 +131,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #endif
 
-// Locations for searching the srb2.srb
+// Locations for searching the srb2.pk3
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
 #define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
@@ -149,8 +149,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 /**	\brief WAD file to look for
 */
-#define WADKEYWORD1 "srb2.srb"
-#define WADKEYWORD2 "srb2.wad"
+#define WADKEYWORD1 "srb2.pk3"
 /**	\brief holds wad path
 */
 static char returnWadPath[256];
@@ -677,7 +676,7 @@ void I_StartupKeyboard (void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	XBOXSTATIC char txt[8192];
+	char txt[8192];
 	va_list  argptr;
 
 	va_start(argptr,fmt);
@@ -1036,7 +1035,7 @@ void I_GetJoystickEvents(void)
 
 
 */
-static int joy_open(int joyindex)
+static int joy_open2(int joyindex)
 {
 	SDL_Joystick *newdev = NULL;
 	int num_joy = 0;
@@ -1070,48 +1069,48 @@ static int joy_open(int joyindex)
 	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
 	// 5. Plug Controller B   -> Index 0 opened
 	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
-	if (JoyInfo.dev)
+	if (JoyInfo2.dev)
 	{
-		if (JoyInfo.dev == newdev // same device, nothing to do
-			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo.dev))) // we failed, but already have a working device
+		if (JoyInfo2.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo2.dev))) // we failed, but already have a working device
 			return JoyInfo.axises;
 		// Else, we're changing devices, so send neutral joy events
-		CONS_Debug(DBG_GAMELOGIC, "Joystick1 device is changing; resetting events...\n");
-		I_ShutdownJoystick();
+		CONS_Debug(DBG_GAMELOGIC, "Joystick2 device is changing; resetting events...\n");
+		I_ShutdownJoystick2();
 	}
 
-	JoyInfo.dev = newdev;
+	JoyInfo2.dev = newdev;
 
-	if (JoyInfo.dev == NULL)
+	if (JoyInfo2.dev == NULL)
 	{
-		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: Couldn't open device - %s\n"), SDL_GetError());
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: %s\n"), SDL_JoystickName(JoyInfo.dev));
-		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
-		if (JoyInfo.axises > JOYAXISSET*2)
-			JoyInfo.axises = JOYAXISSET*2;
-	/*		if (joyaxes<2)
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
+		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
+		if (JoyInfo2.axises > JOYAXISSET*2)
+			JoyInfo2.axises = JOYAXISSET*2;
+/*		if (joyaxes<2)
 		{
 			I_OutputMsg("Not enought axes?\n");
 			return 0;
 		}*/
 
-		JoyInfo.buttons = SDL_JoystickNumButtons(JoyInfo.dev);
-		if (JoyInfo.buttons > JOYBUTTONS)
-			JoyInfo.buttons = JOYBUTTONS;
+		JoyInfo2.buttons = SDL_JoystickNumButtons(JoyInfo2.dev);
+		if (JoyInfo2.buttons > JOYBUTTONS)
+			JoyInfo2.buttons = JOYBUTTONS;
 
-		JoyInfo.hats = SDL_JoystickNumHats(JoyInfo.dev);
-		if (JoyInfo.hats > JOYHATS)
-			JoyInfo.hats = JOYHATS;
+		JoyInfo2.hats = SDL_JoystickNumHats(JoyInfo2.dev);
+		if (JoyInfo2.hats > JOYHATS)
+			JoyInfo2.hats = JOYHATS;
 
-		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
+		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo.dev), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo2.dev), "pad");
 
-		return JoyInfo.axises;
+		return JoyInfo2.axises;
 	}
 }
 
@@ -2066,7 +2065,7 @@ static void I_ShutdownTimer(void)
 	pfntimeGetTime = NULL;
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeEndPeriod");
+		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeEndPeriod");
 		if (pfntimeEndPeriod)
 			pfntimeEndPeriod(1);
 		FreeLibrary(winmm);
@@ -2080,8 +2079,8 @@ static void I_ShutdownTimer(void)
 //
 tic_t I_GetTime (void)
 {
-	static Uint32 basetime = 0;
-		   Uint32 ticks = SDL_GetTicks();
+	static Uint64 basetime = 0;
+		   Uint64 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
@@ -2111,10 +2110,10 @@ void I_StartupTimer(void)
 	winmm = LoadLibraryA("winmm.dll");
 	if (winmm)
 	{
-		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)GetProcAddress(winmm, "timeBeginPeriod");
+		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeBeginPeriod");
 		if (pfntimeBeginPeriod)
 			pfntimeBeginPeriod(1);
-		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
+		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
 #endif
@@ -2413,7 +2412,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 	if (!testwin95)
 	{
-		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
+		pfnGetDiskFreeSpaceEx = (p_GetDiskFreeSpaceExA)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetDiskFreeSpaceExA");
 		testwin95 = true;
 	}
 	if (pfnGetDiskFreeSpaceEx)
@@ -2437,7 +2436,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 
 char *I_GetUserName(void)
 {
-	static char username[MAXPLAYERNAME];
+	static char username[MAXPLAYERNAME+1];
 	char *p;
 #ifdef _WIN32
 	DWORD i = MAXPLAYERNAME;
@@ -2474,7 +2473,7 @@ char *I_GetUserName(void)
 INT32 I_mkdir(const char *dirname, INT32 unixright)
 {
 //[segabor]
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__) || defined (__OS2__)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__)
 	return mkdir(dirname, unixright);
 #elif defined (_WIN32)
 	UNREFERENCED_PARAMETER(unixright); /// \todo should implement ntright under nt...
@@ -2568,14 +2567,6 @@ static boolean isWadPathOk(const char *path)
 		return true;
 	}
 
-	sprintf(wad3path, pandf, path, WADKEYWORD2);
-
-	if (FIL_ReadFileOK(wad3path))
-	{
-		free(wad3path);
-		return true;
-	}
-
 	free(wad3path);
 	return false;
 }
@@ -2593,7 +2584,7 @@ static void pathonly(char *s)
 		}
 }
 
-/**	\brief	search for srb2.srb in the given path
+/**	\brief	search for srb2.pk3 in the given path
 
 	\param	searchDir	starting path
 
@@ -2614,19 +2605,12 @@ static const char *searchWad(const char *searchDir)
 		return tempsw;
 	}
 
-	strcpy(tempsw, WADKEYWORD2);
-	fstemp = filesearch(tempsw, searchDir, NULL, true, 20);
-	if (fstemp == FS_FOUND)
-	{
-		pathonly(tempsw);
-		return tempsw;
-	}
 	return NULL;
 }
 
-/**	\brief go through all possible paths and look for srb2.srb
+/**	\brief go through all possible paths and look for srb2.pk3
 
-  \return path to srb2.srb if any
+  \return path to srb2.pk3 if any
 */
 static const char *locateWad(void)
 {
@@ -2755,7 +2739,7 @@ const char *I_LocateWad(void)
 
 	if (waddir)
 	{
-		// change to the directory where we found srb2.srb
+		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
 		SetCurrentDirectoryA(waddir);
 #else
@@ -2846,16 +2830,6 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = (UINT32)info.dwTotalPhys;
 	return (UINT32)info.dwAvailPhys;
-#elif defined (__OS2__)
-	UINT32 pr_arena;
-
-	if (total)
-		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
-							(PVOID) total, sizeof (UINT32));
-	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
-				(PVOID) &pr_arena, sizeof (UINT32));
-
-	return pr_arena;
 #elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
@@ -2933,7 +2907,7 @@ const CPUInfoFlags *I_CPUInfo(void)
 #if defined (_WIN32)
 	static CPUInfoFlags WIN_CPUInfo;
 	SYSTEM_INFO SI;
-	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+	p_IsProcessorFeaturePresent pfnCPUID = (p_IsProcessorFeaturePresent)(LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
 
 	ZeroMemory(&WIN_CPUInfo,sizeof (WIN_CPUInfo));
 	if (pfnCPUID)

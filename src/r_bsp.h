@@ -29,6 +29,7 @@ extern boolean portalline; // is curline a portal seg?
 
 extern INT32 checkcoord[12][4];
 
+extern drawseg_t *curdrawsegs;
 extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;
 extern INT32 doorclosed;
@@ -38,7 +39,6 @@ void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
-void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2);
 
 #ifdef POLYOBJECTS
 void R_SortPolyObjects(subsector_t *sub);

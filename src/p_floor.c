@@ -13,7 +13,11 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "m_random.h"
 #include "p_local.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -715,6 +719,8 @@ void T_ContinuousFalling(levelspecthink_t *faller)
 		}
 	}
 
+	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
+
 	faller->sector->floorspeed = faller->speed*faller->direction;
 	faller->sector->ceilspeed = 42;
 	faller->sector->moved = true;
@@ -1149,6 +1155,7 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->sector->ceilingdata = NULL;
 		block->sector->floorspeed = 0;
 		block->sector->ceilspeed = 0;
+		block->direction = 0;
 	}
 
 	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
@@ -1228,9 +1235,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (dothepain)
 		{
-			mobj_t *killer = P_SpawnMobj(thing->x, thing->y, thing->z, MT_NULL);
-			killer->threshold = 43; // Special flag that it was spikes which hurt you.
-			P_DamageMobj(thing, killer, killer, 1);
+			P_DamageMobj(thing, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		}
 	}
@@ -1754,16 +1759,20 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		{
 		case MT_NULL:
 		case MT_UNKNOWN:
+		case MT_TAILSOVERLAY:
 		case MT_THOK:
 		case MT_GHOST:
 		case MT_OVERLAY:
 		case MT_EMERALDSPAWN:
-		case MT_GREENORB:
-		case MT_YELLOWORB:
-		case MT_BLUEORB:
-		case MT_BLACKORB:
-		case MT_WHITEORB:
-		case MT_PITYORB:
+		case MT_ELEMENTAL_ORB:
+		case MT_ATTRACT_ORB:
+		case MT_FORCE_ORB:
+		case MT_ARMAGEDDON_ORB:
+		case MT_WHIRLWIND_ORB:
+		case MT_PITY_ORB:
+		case MT_FLAMEAURA_ORB:
+		case MT_BUBBLEWRAP_ORB:
+		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
 		case MT_RAIN:
@@ -1778,9 +1787,9 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_SCORE:
 		case MT_DROWNNUMBERS:
 		case MT_GOTEMERALD:
+		case MT_LOCKON:
 		case MT_TAG:
 		case MT_GOTFLAG:
-		case MT_GOTFLAG2:
 		case MT_HOOP:
 		case MT_HOOPCOLLIDE:
 		case MT_NIGHTSCORE:
@@ -1792,8 +1801,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 			break;
 		}
 		// Ignore popped monitors, too.
-		if (node->m_thing->flags & MF_MONITOR
-		&& node->m_thing->threshold == 68)
+		if (node->m_thing->health == 0 // this only really applies for monitors
+		|| (!(node->m_thing->flags & MF_MONITOR) && (mobjinfo[node->m_thing->type].flags & MF_MONITOR))) // gold monitor support
 			continue;
 		// Okay, we found something valid.
 		if (!thing // take either the first thing
@@ -1807,10 +1816,24 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
+	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
+		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+	{
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
+		}
+	}
 	else
+	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
+		}
+	}
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
@@ -1954,25 +1977,27 @@ void T_ThwompSector(levelspecthink_t *thwomp)
 	}
 	else // Not going anywhere, so look for players.
 	{
-		thinker_t *th;
-		mobj_t *mo;
-
 		if (!rover || (rover->flags & FF_EXISTS))
 		{
-			// scan the thinkers to find players!
-			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			UINT8 i;
+			// scan the players to find victims!
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				if (!playeringame[i])
+					continue;
+				if (players[i].spectator)
+					continue;
+				if (!players[i].mo)
+					continue;
+				if (!players[i].mo->health)
+					continue;
+				if (players[i].mo->z > thwomp->sector->ceilingheight)
+					continue;
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96 * FRACUNIT)
 					continue;
 
-				mo = (mobj_t *)th;
-				if (mo->type == MT_PLAYER && mo->health && mo->player && !mo->player->spectator
-				    && mo->z <= thwomp->sector->ceilingheight
-					&& P_AproxDistance(thwompx - mo->x, thwompy - mo->y) <= 96*FRACUNIT)
-				{
-					thwomp->direction = -1;
-					break;
-				}
+				thwomp->direction = -1;
+				break;
 			}
 		}
 
@@ -1998,51 +2023,71 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 {
 	size_t i;
 	fixed_t upperbound, lowerbound;
-	INT32 s;
-	sector_t *checksector;
+	sector_t *sec = NULL;
+	sector_t *targetsec = NULL;
+	INT32 secnum = -1;
 	msecnode_t *node;
 	mobj_t *thing;
-	boolean exists = false;
+	boolean FOFsector = false;
 
-	for (i = 0; i < nobaddies->sector->linecount; i++)
+	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
 	{
-		if (nobaddies->sector->lines[i]->special == 223)
+		sec = &sectors[secnum];
+
+		FOFsector = false;
+
+		// Check the lines of this sector, to see if it is a FOF control sector.
+		for (i = 0; i < sec->linecount; i++)
 		{
+			INT32 targetsecnum = -1;
 
-			upperbound = nobaddies->sector->ceilingheight;
-			lowerbound = nobaddies->sector->floorheight;
+			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
+				continue;
 
-			for (s = -1; (s = P_FindSectorFromLineTag(nobaddies->sector->lines[i], s)) >= 0 ;)
+			FOFsector = true;
+
+			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
-				checksector = &sectors[s];
+				targetsec = &sectors[targetsecnum];
 
-				node = checksector->touching_thinglist; // things touching this sector
+				upperbound = targetsec->ceilingheight;
+				lowerbound = targetsec->floorheight;
+				node = targetsec->touching_thinglist; // things touching this sector
 				while (node)
 				{
 					thing = node->m_thing;
 
 					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-						&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-					{
-						exists = true;
-						goto foundenemy;
-					}
+					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+						return;
 
 					node = node->m_thinglist_next;
 				}
 			}
 		}
+
+		if (!FOFsector)
+		{
+			upperbound = sec->ceilingheight;
+			lowerbound = sec->floorheight;
+			node = sec->touching_thinglist; // things touching this sector
+			while (node)
+			{
+				thing = node->m_thing;
+
+				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
+				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+					return;
+
+				node = node->m_thinglist_next;
+			}
+		}
 	}
-foundenemy:
-	if (exists)
-		return;
 
-	s = P_AproxDistance(nobaddies->sourceline->dx, nobaddies->sourceline->dy)>>FRACBITS;
+	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
 
-	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", s);
-
-	// Otherwise, run the linedef exec and terminate this thinker
-	P_LinedefExecute((INT16)s, NULL, NULL);
+	// No enemies found, run the linedef exec and terminate this thinker
+	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
 }
 
@@ -2605,6 +2650,35 @@ void T_CameraScanner(elevator_t *elevator)
 	}
 }
 
+void T_PlaneDisplace(planedisplace_t *pd)
+{
+	sector_t *control, *target;
+	INT32 direction;
+	fixed_t diff;
+
+	control = &sectors[pd->control];
+	target = &sectors[pd->affectee];
+
+	if (control->floorheight == pd->last_height)
+		return; // no change, no movement
+
+	direction = (control->floorheight > pd->last_height) ? 1 : -1;
+	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
+
+	if (pd->reverse) // reverse direction?
+	{
+		direction *= -1;
+		diff *= -1;
+	}
+
+	if (pd->type == pd_floor || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
+	if (pd->type == pd_ceiling || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, 0, 1, direction); // move ceiling
+
+	pd->last_height = control->floorheight;
+}
+
 //
 // EV_DoFloor
 //
@@ -2631,7 +2705,7 @@ INT32 EV_DoFloor(line_t *line, floor_e floortype)
 		// new floor thinker
 		rtn = 1;
 		dofloor = Z_Calloc(sizeof (*dofloor), PU_LEVSPEC, NULL);
-		P_AddThinker(&dofloor->thinker);
+		P_AddThinker(THINK_MAIN, &dofloor->thinker);
 
 		// make sure another floor thinker won't get started over this one
 		sec->floordata = dofloor;
@@ -2852,7 +2926,7 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 		// create and initialize new elevator thinker
 		rtn = 1;
 		elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-		P_AddThinker(&elevator->thinker);
+		P_AddThinker(THINK_MAIN, &elevator->thinker);
 		sec->floordata = elevator;
 		sec->ceilingdata = elevator;
 		elevator->thinker.function.acp1 = (actionf_p1)T_MoveElevator;
@@ -2957,23 +3031,66 @@ INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 {
-	size_t i;
-	size_t leftmostvertex = 0, rightmostvertex = 0;
-	size_t topmostvertex = 0, bottommostvertex = 0;
-	fixed_t leftx, rightx;
-	fixed_t topy, bottomy;
-	fixed_t topz;
-	fixed_t a, b, c;
-	mobjtype_t type = MT_ROCKCRUMBLE1;
+	size_t i, leftmostvertex, rightmostvertex, topmostvertex, bottommostvertex;
+	fixed_t leftx, rightx, topy, bottomy, topz, bottomz, widthfactor, heightfactor, a, b, c, spacing;
+	mobjtype_t type;
+	tic_t lifetime;
+	INT16 flags;
 
-	// If the control sector has a special
-	// of Section3:7-15, use the custom debris.
-	if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
-		type = MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7);
+	sector_t *controlsec = rover->master->frontsector;
+
+	if (sec == NULL)
+	{
+		if (controlsec->numattached)
+		{
+			for (i = 0; i < controlsec->numattached; i++)
+			{
+				sec = &sectors[controlsec->attached[i]];
+				if (!sec->ffloors)
+					continue;
+
+				for (rover = sec->ffloors; rover; rover = rover->next)
+				{
+					if (rover->master->frontsector == controlsec)
+						EV_CrumbleChain(sec, rover);
+				}
+			}
+		}
+		return;
+	}
+
+	leftmostvertex = rightmostvertex = topmostvertex = bottommostvertex = 0;
+	widthfactor = heightfactor = FRACUNIT;
+	spacing = (32<<FRACBITS);
+	type = MT_ROCKCRUMBLE1;
+	lifetime = 3*TICRATE;
+	flags = 0;
+
+	if (controlsec->tag != 0)
+	{
+		INT32 tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		if (tagline != -1)
+		{
+			if (sides[lines[tagline].sidenum[0]].toptexture)
+				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
+			if (sides[lines[tagline].sidenum[0]].textureoffset)
+				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
+			if (sides[lines[tagline].sidenum[0]].rowoffset)
+			{
+				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
+					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+				else
+					lifetime = 0;
+			}
+			flags = lines[tagline].flags;
+		}
+	}
+
+#undef controlsec
 
 	// soundorg z height never gets set normally, so MEH.
 	sec->soundorg.z = sec->floorheight;
-	S_StartSound(&sec->soundorg, sfx_crumbl);
+	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
 
 	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
@@ -2992,23 +3109,46 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			bottommostvertex = i;
 	}
 
-	leftx = sec->lines[leftmostvertex]->v1->x+(16<<FRACBITS);
+	leftx = sec->lines[leftmostvertex]->v1->x+(spacing>>1);
 	rightx = sec->lines[rightmostvertex]->v1->x;
-	topy = sec->lines[topmostvertex]->v1->y-(16<<FRACBITS);
+	topy = sec->lines[topmostvertex]->v1->y-(spacing>>1);
 	bottomy = sec->lines[bottommostvertex]->v1->y;
-	topz = *rover->topheight-(16<<FRACBITS);
 
-	for (a = leftx; a < rightx; a += (32<<FRACBITS))
+	topz = *rover->topheight-(spacing>>1);
+	bottomz = *rover->bottomheight;
+
+	if (flags & ML_EFFECT1)
 	{
-		for (b = topy; b > bottomy; b -= (32<<FRACBITS))
+		widthfactor = (rightx + topy - leftx - bottomy)>>3;
+		heightfactor = (topz - *rover->bottomheight)>>2;
+	}
+
+	for (a = leftx; a < rightx; a += spacing)
+	{
+		for (b = topy; b > bottomy; b -= spacing)
 		{
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-				for (c = topz; c > *rover->bottomheight; c -= (32<<FRACBITS))
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+				if (*rover->b_slope)
+					bottomz = P_GetZAt(*rover->b_slope, a, b);
+#endif
+
+				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
-					spawned->fuse = 3*TICRATE;
+					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+
+					if (flags & ML_EFFECT1)
+					{
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
+					}
+
+					spawned->fuse = lifetime;
 				}
 			}
 		}
@@ -3017,7 +3157,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	// no longer exists (can't collide with again)
 	rover->flags &= ~FF_EXISTS;
 	rover->master->frontsector->moved = true;
-	sec->moved = true;
+	P_RecalcPrecipInSector(sec);
 }
 
 // Used for bobbing platforms on the water
@@ -3033,7 +3173,7 @@ INT32 EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 		return 0;
 
 	bouncer = Z_Calloc(sizeof (*bouncer), PU_LEVSPEC, NULL);
-	P_AddThinker(&bouncer->thinker);
+	P_AddThinker(THINK_MAIN, &bouncer->thinker);
 	sec->ceilingdata = bouncer;
 	bouncer->thinker.function.acp1 = (actionf_p1)T_BounceCheese;
 
@@ -3067,7 +3207,7 @@ INT32 EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, bool
 
 	// create and initialize new thinker
 	faller = Z_Calloc(sizeof (*faller), PU_LEVSPEC, NULL);
-	P_AddThinker(&faller->thinker);
+	P_AddThinker(THINK_MAIN, &faller->thinker);
 	faller->thinker.function.acp1 = (actionf_p1)T_ContinuousFalling;
 
 	// set up the fields
@@ -3116,7 +3256,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(&elevator->thinker);
+	P_AddThinker(THINK_MAIN, &elevator->thinker);
 	elevator->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
 
 	// Does this crumbler return?
@@ -3168,8 +3308,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	return 1;
 }
 
-INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mobj_t *puncher)
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
+	sector_t *roversec = rover->master->frontsector;
+	fixed_t topheight = *rover->topheight;
 	levelspecthink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
@@ -3177,11 +3319,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 	I_Assert(puncher != NULL);
 	I_Assert(puncher->player != NULL);
 
-	if (sec->floordata || sec->ceilingdata)
+	if (roversec->floordata || roversec->ceilingdata)
 		return 0;
 
+	if (!(rover->flags & FF_SOLID))
+		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+
 	// Find an item to pop out!
-	thing = SearchMarioNode(sec->touching_thinglist);
+	thing = SearchMarioNode(roversec->touching_thinglist);
 
 	// Found something!
 	if (thing)
@@ -3190,14 +3335,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		// create and initialize new elevator thinker
 
 		block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
-		P_AddThinker(&block->thinker);
-		sec->floordata = block;
-		sec->ceilingdata = block;
+		P_AddThinker(THINK_MAIN, &block->thinker);
+		roversec->floordata = block;
+		roversec->ceilingdata = block;
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
-		block->sector = sec;
-		block->vars[0] = roversector->tag; // actionsector
+		block->sector = roversec;
+		block->vars[0] = sector->tag; // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed
 		block->vars[2] = 1; // Up // direction
 		block->vars[3] = block->sector->floorheight; // floorwasheight
@@ -3213,14 +3358,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = roversector->soundorg.x;
-		thing->y = roversector->soundorg.y;
+		thing->x = sector->soundorg.x;
+		thing->y = sector->soundorg.y;
 		thing->z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, puncher, puncher, 1);
-		else if (thing->type == MT_RING || thing->type == MT_COIN)
+			P_DamageMobj(thing, puncher, puncher, 1, 0);
+		else if (thing->type == MT_RING || thing->type == MT_COIN || thing->type == MT_TOKEN)
 		{
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);
 			P_TouchSpecialThing(thing, puncher, false);
@@ -3229,27 +3374,19 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 		else
 		{
-			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
-			{
-				mobj_t *tokenobj = P_SpawnMobj(roversector->soundorg.x, roversector->soundorg.y, topheight, MT_TOKEN);
-				P_SetTarget(&thing->tracer, tokenobj);
-				P_SetTarget(&tokenobj->target, thing);
-				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);
-			}
-
 			// "Powerup rise" sound
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}
 
-		if (itsamonitor)
+		if (itsamonitor && thing)
 		{
-			P_UnsetThingPosition(tmthing);
-			tmthing->x = oldx;
-			tmthing->y = oldy;
-			tmthing->z = oldz;
-			tmthing->momx = 1;
-			tmthing->momy = 1;
-			P_SetThingPosition(tmthing);
+			P_UnsetThingPosition(thing);
+			thing->x = oldx;
+			thing->y = oldy;
+			thing->z = oldz;
+			thing->momx = 1;
+			thing->momy = 1;
+			P_SetThingPosition(thing);
 		}
 	}
 	else

@@ -42,13 +42,13 @@ void ST_UnloadGraphics(void);
 void ST_LoadGraphics(void);
 
 // face load graphics, called when skin changes
-void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 playernum);
+void ST_LoadFaceGraphics(INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
-#ifdef DELFILE
-void ST_UnLoadFaceGraphics(INT32 skinnum);
-#endif
 
 void ST_doPaletteStuff(void);
+
+// level title draw
+void ST_drawLevelTitle(tic_t titletime);
 
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);
@@ -58,6 +58,7 @@ boolean ST_SameTeam(player_t *a, player_t *b);
 //--------------------
 
 extern boolean st_overlay; // sb overlay on or off when fullscreen
+extern INT32 st_palette; // 0 is default, any others are special palettes.
 
 extern lumpnum_t st_borderpatchnum;
 // patches, also used in intermission
@@ -75,37 +76,28 @@ extern patch_t *ngradeletters[7];
   */
 typedef struct
 {
-	INT32 x, y;
+	INT32 x, y, f;
 } hudinfo_t;
 
 typedef enum
 {
-	HUD_LIVESNAME,
-	HUD_LIVESPIC,
-	HUD_LIVESNUM,
-	HUD_LIVESX,
+	HUD_LIVES,
 
 	HUD_RINGS,
-	HUD_RINGSSPLIT,
 	HUD_RINGSNUM,
-	HUD_RINGSNUMSPLIT,
+	HUD_RINGSNUMTICS,
 
 	HUD_SCORE,
 	HUD_SCORENUM,
 
 	HUD_TIME,
-	HUD_TIMESPLIT,
 	HUD_MINUTES,
-	HUD_MINUTESSPLIT,
 	HUD_TIMECOLON,
-	HUD_TIMECOLONSPLIT,
 	HUD_SECONDS,
-	HUD_SECONDSSPLIT,
 	HUD_TIMETICCOLON,
 	HUD_TICS,
 
 	HUD_SS_TOTALRINGS,
-	HUD_SS_TOTALRINGS_SPLIT,
 
 	HUD_GETRINGS,
 	HUD_GETRINGSNUM,
@@ -113,8 +105,7 @@ typedef enum
 	HUD_TIMELEFTNUM,
 	HUD_TIMEUP,
 	HUD_HUNTPICS,
-	HUD_GRAVBOOTSICO,
-	HUD_LAP,
+	HUD_POWERUPS,
 
 	NUMHUDITEMS
 } hudnum_t;

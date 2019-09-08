@@ -70,6 +70,9 @@ typedef enum
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 	PT_RESYNCHING,    // Packet sent to resync players.
 	                  // Blocks game advance until synched.
+
+	PT_LOGIN,         // Login attempt from the client.
+
 #ifdef NEWPING
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
 #endif
@@ -136,6 +139,7 @@ typedef struct
 	fixed_t flagz[2];
 
 	UINT32 ingame;  // Spectator bit for each player
+	UINT32 outofcoop;  // outofcoop bit for each player
 	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
 
 	// Resynch game scores and the like all at once
@@ -160,10 +164,14 @@ typedef struct
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
+	UINT16 ammoremoval;
+	tic_t ammoremovaltimer;
+	INT32 ammoremovalweapon;
 	UINT16 powers[NUMPOWERS];
 
 	// Score is resynched in the confirm resync packet
-	INT32 health;
+	INT16 rings;
+	INT16 spheres;
 	SINT8 lives;
 	SINT8 continues;
 	UINT8 scoreadd;
@@ -172,8 +180,11 @@ typedef struct
 
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	fixed_t normalspeed;
 	fixed_t runspeed;
 	UINT8 thrustfactor;
@@ -185,13 +196,15 @@ typedef struct
 	UINT32 thokitem; // mobjtype_t
 	UINT32 spinitem; // mobjtype_t
 	UINT32 revitem; // mobjtype_t
+	UINT32 followitem; // mobjtype_t
 	fixed_t actionspd;
 	fixed_t mindash;
 	fixed_t maxdash;
 	fixed_t jumpfactor;
+	fixed_t playerheight;
+	fixed_t playerspinheight;
 
 	fixed_t speed;
-	UINT8 jumping;
 	UINT8 secondjump;
 	UINT8 fly1;
 	tic_t glidetime;
@@ -199,6 +212,7 @@ typedef struct
 	INT32 deadtimer;
 	tic_t exiting;
 	UINT8 homing;
+	tic_t dashmode;
 	tic_t skidtime;
 	fixed_t cmomx;
 	fixed_t cmomy;
@@ -217,7 +231,6 @@ typedef struct
 
 	INT32 maxlink;
 	fixed_t dashspeed;
-	INT32 dashtime;
 	angle_t angle_pos;
 	angle_t old_angle_pos;
 	tic_t bumpertime;
@@ -240,6 +253,7 @@ typedef struct
 	//player->mo stuff
 	UINT8 hasmo; // Boolean
 
+	INT32 health;
 	angle_t angle;
 	fixed_t x;
 	fixed_t y;
@@ -279,6 +293,7 @@ typedef struct
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
 	UINT8 playercolor[MAXPLAYERS];
+	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
@@ -309,6 +324,7 @@ typedef struct
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
+#define MAXFILENEEDED 915
 // This packet is too large
 typedef struct
 {
@@ -330,7 +346,7 @@ typedef struct
 	unsigned char mapmd5[16];
 	UINT8 actnum;
 	UINT8 iszone;
-	UINT8 fileneeded[915]; // is filled with writexxx (byteptr.h)
+	UINT8 fileneeded[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK serverinfo_pak;
 
 typedef struct
@@ -397,6 +413,7 @@ typedef struct
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
 		clientconfig_pak clientcfg;         //         136 bytes
+		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes
 		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
 		askinfo_pak askinfo;                //          61 bytes
@@ -429,9 +446,9 @@ extern doomdata_t *netbuffer;
 
 extern consvar_t cv_playbackspeed;
 
-#define BASEPACKETSIZE ((size_t)&(((doomdata_t *)0)->u))
-#define FILETXHEADER ((size_t)((filetx_pak *)0)->data)
-#define BASESERVERTICSSIZE ((size_t)&(((doomdata_t *)0)->u.serverpak.cmds[0]))
+#define BASEPACKETSIZE      offsetof(doomdata_t, u)
+#define FILETXHEADER        offsetof(filetx_pak, data)
+#define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
 #define KICK_MSG_GO_AWAY     1
 #define KICK_MSG_CON_FAIL    2
@@ -525,5 +542,10 @@ void D_ResetTiccmds(void);
 tic_t GetLag(INT32 node);
 UINT8 GetFreeXCmdSize(void);
 
+void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
+
 extern UINT8 hu_resynching;
+
+extern UINT8 adminpassmd5[16];
+extern boolean adminpasswordset;
 #endif

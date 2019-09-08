@@ -17,18 +17,20 @@
 #ifndef __DOOMTYPE__
 #define __DOOMTYPE__
 
-#if (defined (_WIN32) && !defined (_XBOX)) || (defined (_WIN32_WCE) && !defined (__GNUC__))
+#ifdef _WIN32
 //#define WIN32_LEAN_AND_MEAN
 #define RPC_NO_WINDOWS_H
 #include <windows.h>
 #endif
 
-#ifdef _NDS
-#include <nds.h>
-#endif
-
 /* 7.18.1.1  Exact-width integer types */
 #ifdef _MSC_VER
+// libopenmpt.h will include stdint.h later;
+// include it now so that INT8_MAX etc. don't get redefined
+#ifdef HAVE_OPENMPT
+#include <stdint.h>
+#endif
+
 #define UINT8 unsigned __int8
 #define SINT8 signed __int8
 
@@ -52,19 +54,6 @@ typedef long ssize_t;
 		#define PDWORD_PTR PDWORD
 	#endif
 #endif
-#elif defined (_arch_dreamcast) // KOS Dreamcast
-#include <arch/types.h>
-
-#define UINT8 unsigned char
-#define SINT8 signed char
-
-#define UINT16 uint16
-#define INT16 int16
-
-#define INT32 int
-#define UINT32 unsigned int
-#define INT64  int64
-#define UINT64 uint64
 #elif defined (__DJGPP__)
 #define UINT8 unsigned char
 #define SINT8 signed char
@@ -100,14 +89,12 @@ typedef long ssize_t;
 
 /* Strings and some misc platform specific stuff */
 
-#if defined (_MSC_VER) || defined (__OS2__)
-	// Microsoft VisualC++
 #ifdef _MSC_VER
+	// Microsoft VisualC++
 #if (_MSC_VER <= 1800) // MSVC 2013 and back
 	#define snprintf                _snprintf
 #if (_MSC_VER <= 1200) // MSVC 6.0 and back
 	#define vsnprintf               _vsnprintf
-#endif
 #endif
 #endif
 	#define strncasecmp             strnicmp
@@ -121,22 +108,11 @@ typedef long ssize_t;
 	#define strncasecmp             strnicmp
 	#define strcasecmp              strcmpi
 #endif
-#ifdef _PSP
-	#include <malloc.h>
-#elif (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 	#undef stricmp
 	#define stricmp(x,y) strcasecmp(x,y)
 	#undef strnicmp
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
-#endif
-#ifdef _WIN32_WCE
-#ifndef __GNUC__
-	#define stricmp(x,y)            _stricmp(x,y)
-	#define strnicmp                _strnicmp
-#endif
-	#define strdup                  _strdup
-	#define strupr                  _strupr
-	#define strlwr                  _strlwr
 #endif
 
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
@@ -157,7 +133,7 @@ typedef long ssize_t;
 	#endif
 #endif //macintosh
 
-#if defined (PC_DOS) || defined (_WIN32) || defined (_WII) || defined (_PSP) || defined (_arch_dreamcast) || defined (__HAIKU__) || defined(_NDS)  || defined(_PS3)
+#if defined (PC_DOS) || defined (_WIN32) || defined (__HAIKU__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 
@@ -191,21 +167,17 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	//faB: clean that up !!
 	#if defined( _MSC_VER)  && (_MSC_VER >= 1800) // MSVC 2013 and forward
 		#include "stdbool.h"
-	#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+	#elif defined (_WIN32)
 		#define false   FALSE           // use windows types
 		#define true    TRUE
 		#define boolean BOOL
-	#elif defined(_NDS)
-		#define boolean bool
-	#elif defined(_PS3) // defined(__GNUC__)?
-		#include <stdbool.h>  //_bool_true_false_are_defined?
-		#define boolean bool
 	#else
 		typedef enum {false, true} boolean;
 	#endif
 #endif // __BYTEBOOL__
 
 /* 7.18.2.1  Limits of exact-width integer types */
+
 #ifndef INT8_MIN
 #define INT8_MIN (-128)
 #endif
@@ -298,12 +270,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	#endif
 
 	#define ATTRUNUSED __attribute__((unused))
-
-	// Xbox-only macros
-	#ifdef _XBOX
-		#define FILESTAMP I_OutputMsg("%s:%d\n",__FILE__,__LINE__);
-		#define XBOXSTATIC static
-	#endif
 #elif defined (_MSC_VER)
 	#define ATTRNORETURN __declspec(noreturn)
 	#define ATTRINLINE __forceinline
@@ -356,12 +322,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 #ifndef ATTRNOINLINE
 #define ATTRNOINLINE
-#endif
-#ifndef XBOXSTATIC
-#define XBOXSTATIC
-#endif
-#ifndef FILESTAMP
-#define FILESTAMP
 #endif
 
 /* Miscellaneous types that don't fit anywhere else (Can this be changed?) */

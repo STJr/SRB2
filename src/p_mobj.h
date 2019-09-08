@@ -107,8 +107,8 @@ typedef enum
 	MF_NOSECTOR         = 1<<3,
 	// Don't use the blocklinks (inert but displayable)
 	MF_NOBLOCKMAP       = 1<<4,
-	// Not to be activated by sound, deaf monster.
-	MF_AMBUSH           = 1<<5,
+	// Thin, paper-like collision bound (for visual equivalent, see FF_PAPERSPRITE)
+	MF_PAPERCOLLISION            = 1<<5,
 	// You can push this object. It can activate switches and things by pushing it on top.
 	MF_PUSHABLE         = 1<<6,
 	// Object is a boss.
@@ -151,10 +151,9 @@ typedef enum
 	MF_PAIN             = 1<<24,
 	// This mobj will stick to any surface or solid object it touches.
 	MF_STICKY           = 1<<25,
-	// NiGHTS hidden item.  Goes to seestate and turns MF_SPECIAL when paralooped.
+	// NiGHTS hidden item. Goes to seestate and turns MF_SPECIAL when paralooped.
 	MF_NIGHTSITEM       = 1<<26,
 	// for chase camera, don't be blocked by things (partial clipping)
-	// (need comma at end of this for SOC editor)
 	MF_NOCLIPTHING      = 1<<27,
 	// Missile bounces like a grenade.
 	MF_GRENADEBOUNCE    = 1<<28,
@@ -175,24 +174,26 @@ typedef enum
 	MF2_EXPLOSION      = 1<<7,  // Thrown ring has explosive properties
 	MF2_SCATTER        = 1<<8,  // Thrown ring has scatter properties
 	MF2_BEYONDTHEGRAVE = 1<<9,  // Source of this missile has died and has since respawned.
-	MF2_PUSHED         = 1<<10, // Mobj was already pushed this tic
-	MF2_SLIDEPUSH      = 1<<11, // MF_PUSHABLE that pushes continuously.
-	MF2_CLASSICPUSH    = 1<<12, // Drops straight down when object has negative Z.
-	MF2_STANDONME      = 1<<13, // While not pushable, stand on me anyway.
-	MF2_INFLOAT        = 1<<14, // Floating to a height for a move, don't auto float to target's height.
-	MF2_DEBRIS         = 1<<15, // Splash ring from explosion ring
-	MF2_NIGHTSPULL     = 1<<16, // Attracted from a paraloop
-	MF2_JUSTATTACKED   = 1<<17, // can be pushed by other moving mobjs
-	MF2_FIRING         = 1<<18, // turret fire
-	MF2_SUPERFIRE      = 1<<19, // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
-	MF2_SHADOW         = 1<<20, // Fuzzy draw, makes targeting harder.
-	MF2_STRONGBOX      = 1<<21, // Flag used for "strong" random monitors.
-	MF2_OBJECTFLIP     = 1<<22, // Flag for objects that always have flipped gravity.
-	MF2_SKULLFLY       = 1<<23, // Special handling: skull in flight.
-	MF2_FRET           = 1<<24, // Flashing from a previous hit
-	MF2_BOSSNOTRAP     = 1<<25, // No Egg Trap after boss
-	MF2_BOSSFLEE       = 1<<26, // Boss is fleeing!
-	MF2_BOSSDEAD       = 1<<27, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	MF2_SLIDEPUSH      = 1<<10, // MF_PUSHABLE that pushes continuously.
+	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative momz.
+	MF2_INVERTAIMABLE  = 1<<12, // Flips whether it's targetable by A_LookForEnemies (enemies no, decoys yes)
+	MF2_INFLOAT        = 1<<13, // Floating to a height for a move, don't auto float to target's height.
+	MF2_DEBRIS         = 1<<14, // Splash ring from explosion ring
+	MF2_NIGHTSPULL     = 1<<15, // Attracted from a paraloop
+	MF2_JUSTATTACKED   = 1<<16, // can be pushed by other moving mobjs
+	MF2_FIRING         = 1<<17, // turret fire
+	MF2_SUPERFIRE      = 1<<18, // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
+	MF2_SHADOW         = 1<<19, // Fuzzy draw, makes targeting harder.
+	MF2_STRONGBOX      = 1<<20, // Flag used for "strong" random monitors.
+	MF2_OBJECTFLIP     = 1<<21, // Flag for objects that always have flipped gravity.
+	MF2_SKULLFLY       = 1<<22, // Special handling: skull in flight.
+	MF2_FRET           = 1<<23, // Flashing from a previous hit
+	MF2_BOSSNOTRAP     = 1<<24, // No Egg Trap after boss
+	MF2_BOSSFLEE       = 1<<25, // Boss is fleeing!
+	MF2_BOSSDEAD       = 1<<26, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
+	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -232,11 +233,15 @@ typedef enum
 	MFE_VERTICALFLIP      = 1<<5,
 	// Goo water
 	MFE_GOOWATER          = 1<<6,
-	// free: to and including 1<<7
+	// Mobj was already pushed this tic
+	MFE_PUSHED            = 1<<7,
 	// Mobj was already sprung this tic
 	MFE_SPRUNG            = 1<<8,
 	// Platform movement
 	MFE_APPLYPMOMZ        = 1<<9,
+	// Compute and trigger on mobj angle relative to tracer
+	// See Linedef Exec 457 (Track mobj angle to point)
+	MFE_TRACERANGLE       = 1<<10,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -274,6 +279,7 @@ typedef struct mobj_s
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -283,6 +289,8 @@ typedef struct mobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius;
@@ -315,7 +323,7 @@ typedef struct mobj_s
 	mobjtype_t type;
 	const mobjinfo_t *info; // &mobjinfo[mobj->type]
 
-	INT32 health; // for player this is rings + 1
+	INT32 health; // for player this is rings + 1 -- no it isn't, not any more!!
 
 	// Movement direction, movement generation (zig-zagging).
 	angle_t movedir; // dirtype_t 0-7; also used by Deton for up/down angle
@@ -363,6 +371,8 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 #endif
 
+	boolean colorized; // Whether the mobj uses the rainbow colormap
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 
@@ -389,6 +399,7 @@ typedef struct precipmobj_s
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -398,6 +409,8 @@ typedef struct precipmobj_s
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
+	struct ffloor_s *floorrover; // FOF referred by floorz
+	struct ffloor_s *ceilingrover; // FOF referred by ceilingz
 
 	// For movement checking.
 	fixed_t radius; // Fixed at 2*FRACUNIT
@@ -436,7 +449,7 @@ void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
 void P_SpawnMapThing(mapthing_t *mthing);
-void P_SpawnHoopsAndRings(mapthing_t *mthing);
+void P_SpawnHoopsAndRings(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);
@@ -451,9 +464,13 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
+extern INT32 modulothing;
+
 #define MAXHUNTEMERALDS 64
 extern mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
+extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
+extern UINT16 bossdisabled;
 #endif

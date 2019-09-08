@@ -28,7 +28,7 @@ void cht_Init(void);
 void Command_ObjectPlace_f(void);
 void Command_Writethings_f(void);
 
-extern consvar_t cv_opflags, cv_mapthingnum, cv_speed;
+extern consvar_t cv_opflags, cv_ophoopflags, cv_mapthingnum, cv_speed;
 //extern consvar_t cv_snapto, cv_grid;
 
 extern boolean objectplacing;
@@ -64,6 +64,7 @@ void Command_Teleport_f(void);
 void Command_RTeleport_f(void);
 void Command_Skynum_f(void);
 void Command_Weather_f(void);
+void Command_Toggletwod_f(void);
 #ifdef _DEBUG
 void Command_CauseCfail_f(void);
 #endif

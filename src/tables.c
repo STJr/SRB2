@@ -37,6 +37,15 @@ unsigned SlopeDiv(unsigned num, unsigned den)
 	return ans <= SLOPERANGE ? ans : SLOPERANGE;
 }
 
+UINT64 SlopeDivEx(unsigned int num, unsigned int den)
+{
+	UINT64 ans;
+	if (den < 512)
+		return SLOPERANGE;
+	ans = ((UINT64)num<<3)/(den>>8);
+	return ans <= SLOPERANGE ? ans : SLOPERANGE;
+}
+
 fixed_t AngleFixed(angle_t af)
 {
 	angle_t wa = ANGLE_180;
@@ -159,12 +168,10 @@ angle_t FixedAngle(fixed_t fa)
 }
 
 
-#if !(defined _NDS) || !(defined NONET)
 #include "t_ftan.c"
 
 #include "t_fsin.c"
 fixed_t *finecosine = &finesine[FINEANGLES/4];
-#endif
 
 #include "t_tan2a.c"
 

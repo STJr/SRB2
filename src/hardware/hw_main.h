@@ -31,28 +31,30 @@
 void HWR_Startup(void);
 void HWR_Shutdown(void);
 
-void HWR_clearAutomap(void);
 void HWR_drawAMline(const fline_t *fl, INT32 color);
-void HWR_FadeScreenMenuBack(UINT32 color, INT32 height);
+void HWR_FadeScreenMenuBack(UINT16 color, UINT8 strength);
 void HWR_DrawConsoleBack(UINT32 color, INT32 height);
+void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight);
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player);
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player);
 void HWR_DrawViewBorder(INT32 clearlines);
 void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum);
-UINT8 *HWR_GetScreenshot(void);
-boolean HWR_Screenshot(const char *lbmname);
 void HWR_InitTextureMapping(void);
 void HWR_SetViewSize(void);
 void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option);
 void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, const UINT8 *colormap);
 void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
-void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option, fixed_t scale, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
-void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
+void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
 void HWR_PrepLevelCache(size_t pnumtextures);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
+void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 actualcolor, UINT8 strength);
+void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32 actualcolor);	// Lat: separate flags from color since color needs to be an uint to work right.
 void HWR_DrawPic(INT32 x,INT32 y,lumpnum_t lumpnum);
+
+UINT8 *HWR_GetScreenshot(void);
+boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
 void HWR_CorrectSWTricks(void);
@@ -95,6 +97,7 @@ extern consvar_t cv_grcorrecttricks;
 extern consvar_t cv_voodoocompatibility;
 extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
+extern consvar_t cv_grspritebillboarding;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 
@@ -103,14 +106,5 @@ extern float gr_viewwindowx, gr_basewindowcentery;
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
 extern FTransform atransform;
-
-typedef struct
-{
-	wallVert3D    floorVerts[4];
-	FSurfaceInfo  Surf;
-	INT32           texnum;
-	INT32           blend;
-	INT32           drawcount;
-} floorinfo_t;
 
 #endif

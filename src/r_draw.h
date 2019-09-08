@@ -105,12 +105,15 @@ extern lumpnum_t viewborderlump[8];
 #define TC_BOSS       -2
 #define TC_METALSONIC -3 // For Metal Sonic battle
 #define TC_ALLWHITE   -4 // For Cy-Brak-demon
+#define TC_RAINBOW    -5 // For single colour
+#define TC_BLINK      -6 // For item blinking, according to kart
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags);
 void R_FlushTranslationColormapCache(void);
 UINT8 R_GetColorByName(const char *name);
+UINT8 R_GetSuperColorByName(const char *name);
 
 // Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);

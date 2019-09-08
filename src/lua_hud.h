@@ -24,7 +24,7 @@ enum hud {
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,
-	hud_nightsrings,
+	hud_nightsspheres,
 	hud_nightsscore,
 	hud_nightstime,
 	hud_nightsrecords,
@@ -42,3 +42,4 @@ boolean LUA_HudEnabled(enum hud option);
 
 void LUAh_GameHUD(player_t *stplyr);
 void LUAh_ScoresHUD(void);
+void LUAh_TitleHUD(void);

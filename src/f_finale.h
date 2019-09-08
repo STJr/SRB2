@@ -17,6 +17,7 @@
 
 #include "doomtype.h"
 #include "d_event.h"
+#include "p_mobj.h"
 
 //
 // FINALE
@@ -33,15 +34,20 @@ void F_IntroTicker(void);
 void F_TitleScreenTicker(boolean run);
 void F_CutsceneTicker(void);
 void F_TitleDemoTicker(void);
+void F_TextPromptTicker(void);
 
 // Called by main loop.
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
+void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
 void F_GameEvaluationTicker(void);
+
+void F_EndingTicker(void);
+void F_EndingDrawer(void);
 
 void F_CreditTicker(void);
 void F_CreditDrawer(void);
@@ -50,9 +56,17 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 void F_CutsceneDrawer(void);
 void F_EndCutScene(void);
 
+void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime);
+void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
+void F_TextPromptDrawer(void);
+void F_EndTextPrompt(boolean forceexec, boolean noexec);
+boolean F_GetPromptHideHudAll(void);
+boolean F_GetPromptHideHud(fixed_t y);
+
 void F_StartGameEnd(void);
 void F_StartIntro(void);
 void F_StartTitleScreen(void);
+void F_StartEnding(void);
 void F_StartCredits(void);
 
 boolean F_ContinueResponder(event_t *event);
@@ -60,17 +74,47 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
-extern INT32 titlescrollspeed;
+extern INT32 titlescrollxspeed;
+extern INT32 titlescrollyspeed;
+
+typedef enum
+{
+	TITLEMAP_OFF = 0,
+	TITLEMAP_LOADING,
+	TITLEMAP_RUNNING
+} titlemap_enum;
+
+// Current menu parameters
+
+extern mobj_t *titlemapcameraref;
+extern char curbgname[9];
+extern SINT8 curfadevalue;
+extern boolean curhidepics;
+extern INT32 curbgcolor;
+extern INT32 curbgxspeed;
+extern INT32 curbgyspeed;
+extern boolean curbghide;
+
+#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
+
+void F_InitMenuPresValues(void);
+void F_MenuPresTicker(boolean run);
 
 //
 // WIPE
 //
+// HACK for menu fading while titlemapinaction; skips the level check
+#define FORCEWIPE -3
+#define FORCEWIPEOFF -2
+
 extern boolean WipeInAction;
 extern INT32 lastwipetic;
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+tic_t F_GetWipeLength(UINT8 wipetype);
+boolean F_WipeExists(UINT8 wipetype);
 
 enum
 {
@@ -85,6 +129,7 @@ enum
 	wipe_evaluation_toblack,
 	wipe_gameend_toblack,
 	wipe_intro_toblack,
+	wipe_ending_toblack,
 	wipe_cutscene_toblack,
 
 	// custom intermissions
@@ -101,15 +146,16 @@ enum
 	wipe_evaluation_final,
 	wipe_gameend_final,
 	wipe_intro_final,
+	wipe_ending_final,
 	wipe_cutscene_final,
 
 	// custom intermissions
 	wipe_specinter_final,
 	wipe_multinter_final,
 
-	NUMWIPEDEFS
+	NUMWIPEDEFS,
+	WIPEFINALSHIFT = (wipe_level_final-wipe_level_toblack)
 };
-#define WIPEFINALSHIFT 13
 extern UINT8 wipedefs[NUMWIPEDEFS];
 
 #endif

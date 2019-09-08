@@ -123,6 +123,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_sky.c
 	r_splats.c
 	r_things.c
+	r_portal.c
 
 	r_bsp.h
 	r_data.h
@@ -136,6 +137,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_splats.h
 	r_state.h
 	r_things.h
+	r_portal.h
 )
 
 set(SRB2_CORE_GAME_SOURCES
@@ -218,6 +220,8 @@ set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
 	"Enable zlib support.")
 set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support.")
+set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
+	"Enable OpenMPT support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
@@ -230,7 +234,7 @@ set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 ### use internal libraries?
 if(${CMAKE_SYSTEM} MATCHES "Windows") ###set on Windows only
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
-	"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME).")
+	"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME, OpenMPT).")
 endif()
 
 if(${SRB2_CONFIG_HAVE_BLUA})
@@ -340,6 +344,26 @@ if(${SRB2_CONFIG_HAVE_GME})
 	endif()
 endif()
 
+if(${SRB2_CONFIG_HAVE_OPENMPT})
+	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+		set(OPENMPT_FOUND ON)
+		set(OPENMPT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/inc)
+        if(${SRB2_SYSTEM_BITS} EQUAL 64)
+			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86_64/mingw -lopenmpt")
+		else() # 32-bit
+			set(OPENMPT_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libopenmpt/lib/x86/mingw -lopenmpt")
+		endif()
+	else()
+		find_package(OPENMPT)
+	endif()
+	if(${OPENMPT_FOUND})
+		set(SRB2_HAVE_OPENMPT ON)
+		add_definitions(-DHAVE_OPENMPT)
+	else()
+		message(WARNING "You have specified that OpenMPT is available but it was not found.")
+	endif()
+endif()
+
 if(${SRB2_CONFIG_HAVE_ZLIB})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 		set(ZLIB_FOUND ON)
@@ -377,6 +401,12 @@ if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
 			set(SRB2_HAVE_PNG ON)
 			add_definitions(-DHAVE_PNG)
 			add_definitions(-D_LARGEFILE64_SOURCE)
+			set(SRB2_PNG_SOURCES apng.c)
+			set(SRB2_PNG_HEADERS apng.h)
+			prepend_sources(SRB2_PNG_SOURCES)
+			prepend_sources(SRB2_PNG_HEADERS)
+			source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS}
+				${SRB2_PNG_SOURCES} ${SRB2_PNG_HEADERS})
 		else()
 			message(WARNING "You have specified that PNG is available but it was not found. SRB2 may not compile correctly.")
 		endif()

@@ -23,7 +23,7 @@
   *
   * \param sector The sector to remove effects from.
   */
-static void P_RemoveLighting(sector_t *sector)
+void P_RemoveLighting(sector_t *sector)
 {
 	if (sector->lightingdata)
 	{
@@ -76,7 +76,7 @@ fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxse
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	flick = Z_Calloc(sizeof (*flick), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flick->thinker);
+	P_AddThinker(THINK_MAIN, &flick->thinker);
 
 	flick->thinker.function.acp1 = (actionf_p1)T_FireFlicker;
 	flick->sector = maxsector;
@@ -155,7 +155,7 @@ void P_SpawnLightningFlash(sector_t *sector)
 
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->thinker.function.acp1 = (actionf_p1)T_LightningFlash;
 	flash->sector = sector;
@@ -214,7 +214,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector,
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&flash->thinker);
+	P_AddThinker(THINK_MAIN, &flash->thinker);
 
 	flash->sector = maxsector;
 	flash->darktime = darktime;
@@ -289,7 +289,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
 	P_RemoveLighting(maxsector); // out with the old, in with the new
 	g = Z_Calloc(sizeof (*g), PU_LEVSPEC, NULL);
 
-	P_AddThinker(&g->thinker);
+	P_AddThinker(THINK_MAIN, &g->thinker);
 
 	g->sector = maxsector;
 	g->minlight = minsector->lightlevel;
@@ -322,39 +322,70 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
 	return g;
 }
 
-/** Fades all the lights in sectors with a particular tag to a new
+/** Fades all the lights in specified sector to a new
   * value.
   *
-  * \param tag       Tag to look for sectors by.
+  * \param sector    Target sector
   * \param destvalue The final light value in these sectors.
-  * \param speed     Speed of the fade; the change to the ligh
+  * \param speed     If tic-based: total duration of effect.
+  *                  If speed-based: Speed of the fade; the change to the ligh
   *                  level in each sector per tic.
-  * \todo Calculate speed better so that it is possible to specify
-  *       the time for completion of the fade, and all lights fade
-  *       in this time regardless of initial values.
+  * \param ticbased  Use a specific duration for the fade, defined by speed
   * \sa T_LightFade
   */
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
+void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased)
+{
+	lightlevel_t *ll;
+
+	P_RemoveLighting(sector); // remove the old lighting effect first
+
+	if ((ticbased && !speed) || sector->lightlevel == destvalue) // set immediately
+	{
+		sector->lightlevel = destvalue;
+		return;
+	}
+
+	ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
+	ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
+	sector->lightingdata = ll; // set it to the lightlevel_t
+
+	P_AddThinker(THINK_MAIN, &ll->thinker); // add thinker
+
+	ll->sector = sector;
+	ll->sourcelevel = sector->lightlevel;
+	ll->destlevel = destvalue;
+
+	ll->fixedcurlevel = sector->lightlevel<<FRACBITS;
+
+	if (ticbased)
+	{
+		// Speed means duration.
+		ll->timer = abs(speed);
+		ll->fixedpertic = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS);
+	}
+	else
+	{
+		// Speed means increment per tic (literally speed).
+		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
+		ll->fixedpertic = speed<<FRACBITS;
+	}
+}
+
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
 {
 	INT32 i;
-	lightlevel_t *ll;
-	sector_t *sector;
-
 	// search all sectors for ones with tag
 	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0 ;)
 	{
-		sector = &sectors[i];
-
-		P_RemoveLighting(sector); // remove the old lighting effect first
-		ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
-		ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
-		sector->lightingdata = ll; // set it to the lightlevel_t
-
-		P_AddThinker(&ll->thinker); // add thinker
-
-		ll->sector = sector;
-		ll->destlevel = destvalue;
-		ll->speed = speed;
+		if (!force && ticbased // always let speed fader execute
+			&& sectors[i].lightingdata
+			&& ((lightlevel_t*)sectors[i].lightingdata)->thinker.function.acp1 == (actionf_p1)T_LightFade)
+			// && ((lightlevel_t*)sectors[i].lightingdata)->timer > 2)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Line type 420 Executor: Fade light thinker already exists, timer: %d\n", ((lightlevel_t*)sectors[i].lightingdata)->timer);
+			continue;
+		}
+		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased);
 	}
 }
 
@@ -365,30 +396,13 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed)
   */
 void T_LightFade(lightlevel_t *ll)
 {
-	if (ll->sector->lightlevel < ll->destlevel)
+	if (--ll->timer <= 0)
 	{
-		// increase the lightlevel
-		if (ll->sector->lightlevel + ll->speed >= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
-
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel + (INT16)ll->speed); // move lightlevel
+		ll->sector->lightlevel = ll->destlevel; // set to dest lightlevel
+		P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
+		return;
 	}
-	else
-	{
-		// decrease lightlevel
-		if (ll->sector->lightlevel - ll->speed <= ll->destlevel)
-		{
-			// stop changing light level
-			ll->sector->lightlevel = (INT16)ll->destlevel; // set to dest lightlevel
 
-			P_RemoveLighting(ll->sector); // clear lightingdata, remove thinker
-		}
-		else
-			ll->sector->lightlevel = (INT16)(ll->sector->lightlevel - (INT16)ll->speed); // move lightlevel
-	}
+	ll->fixedcurlevel = ll->fixedcurlevel + ll->fixedpertic;
+	ll->sector->lightlevel = (ll->fixedcurlevel)>>FRACBITS;
 }

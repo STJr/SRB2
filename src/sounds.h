@@ -42,7 +42,7 @@ typedef enum
 } skinsound_t;
 
 // free sfx for S_AddSoundFx()
-#define NUMSFXFREESLOTS 800 // Matches SOC Editor.
+#define NUMSFXFREESLOTS 1600 // Matches SOC Editor.
 #define NUMSKINSFXSLOTS (MAXSKINS*NUMSKINSOUNDS)
 
 //
@@ -84,6 +84,9 @@ struct sfxinfo_struct
 
 	// lump number of sfx
 	lumpnum_t lumpnum;
+
+	// closed caption info/wiki table bait
+	char caption[32];
 };
 
 // the complete set of sound effects
@@ -139,6 +142,8 @@ typedef enum
 	sfx_steam1,
 	sfx_steam2,
 	sfx_wbreak,
+	sfx_ambmac,
+	sfx_spsmsh,
 
 	sfx_rainin,
 	sfx_litng1,
@@ -210,7 +215,7 @@ typedef enum
 	sfx_drown,
 	sfx_fizzle,
 	sfx_gbeep,
-	sfx_gclose,
+	sfx_wepfir,
 	sfx_ghit,
 	sfx_gloop,
 	sfx_gspray,
@@ -222,12 +227,18 @@ typedef enum
 	sfx_lvpass,
 	sfx_mindig,
 	sfx_mixup,
+	sfx_monton,
 	sfx_pogo,
 	sfx_pop,
 	sfx_rail1,
 	sfx_rail2,
 	sfx_rlaunc,
 	sfx_shield,
+	sfx_wirlsg,
+	sfx_forcsg,
+	sfx_elemsg,
+	sfx_armasg,
+	sfx_attrsg,
 	sfx_shldls,
 	sfx_spdpad,
 	sfx_spkdth,
@@ -243,8 +254,17 @@ typedef enum
 	sfx_trpowr,
 	sfx_turhit,
 	sfx_wdjump,
+	sfx_shrpsp,
+	sfx_shrpgo,
 	sfx_mswarp,
 	sfx_mspogo,
+	sfx_boingf,
+	sfx_corkp,
+	sfx_corkh,
+	sfx_bowl,
+	sfx_chuchu,
+	sfx_bsnipe,
+	sfx_sprong,
 
 	// Menu, interface
 	sfx_chchng,
@@ -264,6 +284,7 @@ typedef enum
 	sfx_xideya, // Xmas
 	sfx_nbmper,
 	sfx_nxbump, // Xmas
+	sfx_ncchip,
 	sfx_ncitem,
 	sfx_nxitem, // Xmas
 	sfx_ngdone,
@@ -278,7 +299,15 @@ typedef enum
 	sfx_hoop3,
 	sfx_hidden,
 	sfx_prloop,
-	sfx_timeup, // Was gonna be played when less than ten seconds are on the clock; uncomment uses of this to see it in-context
+	sfx_timeup,
+	sfx_ngjump,
+	sfx_peww,
+
+	// Halloween
+	sfx_lntsit,
+	sfx_lntdie,
+	sfx_pumpkn,
+	sfx_ghosty,
 
 	// Mario
 	sfx_koopfr,

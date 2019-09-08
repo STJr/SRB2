@@ -52,6 +52,7 @@ fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
 mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+ffloor_t *tmfloorrover, *tmceilingrover;
 #ifdef ESLOPE
 pslope_t *tmfloorslope, *tmceilingslope;
 #endif
@@ -101,6 +102,8 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 	return true;
 }
@@ -109,68 +112,216 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================
 
+// P_DoSpring
+//
+// MF_SPRING does some weird, mildly hacky stuff sometimes.
+//   mass = vertical speed
+//   damage = horizontal speed
+//   raisestate = state to change spring to on collision
+//   reactiontime = number of times it can give 10 points (0 is standard)
+//   painchance = spring mode:
+//       0 = standard vanilla spring behaviour
+//     Positive spring modes are minor variants of vanilla spring behaviour.
+//       1 = launch players in jump
+//       2 = don't modify player at all, just add momentum
+//     Negative spring modes are mildly-related gimmicks with customisation.
+//      -1 = pinball bumper
+//     Any other spring mode defaults to standard vanilla spring behaviour,
+//     ****** but forward compatibility is not guaranteed for these. ******
+//
+
 boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
-	INT32 pflags;
-	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
+	boolean final = false;
+	UINT8 strong = 0;
 
-	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
+	// Object was already sprung this tic
+	if (object->eflags & MFE_SPRUNG)
 		return false;
 
 	// Spectators don't trigger springs.
 	if (object->player && object->player->spectator)
 		return false;
 
-	if (object->player && (object->player->pflags & PF_NIGHTSMODE))
+	// "Even in Death" is a song from Volume 8, not a command.
+	if (!spring->health || !object->health)
+		return false;
+
+	if (object->player)
+	{
+		if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+			strong = 1;
+		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
+			strong = 2;
+	}
+
+	if (spring->info->painchance == -1) // Pinball bumper mode.
+	{
+		// The first of the entirely different spring modes!
+		// Some of the attributes mean different things here.
+		//   mass = default strength (can be controlled by mapthing's spawnangle)
+		//   damage = unused
+		angle_t horizangle, vertiangle;
+
+		if (!vertispeed)
+			return false;
+
+		if (object->player && object->player->homing) // Sonic Heroes and Shadow the Hedgehog are the only games to contain homing-attackable bumpers!
+		{
+			horizangle = 0;
+			vertiangle = ((object->eflags & MFE_VERTICALFLIP) ? ANGLE_270 : ANGLE_90) >> ANGLETOFINESHIFT;
+			object->player->pflags &= ~PF_THOKKED;
+			if (spring->eflags & MFE_VERTICALFLIP)
+				object->z = spring->z - object->height - 1;
+			else
+				object->z = spring->z + spring->height + 1;
+		}
+		else
+		{
+			horizangle = R_PointToAngle2(spring->x, spring->y, object->x, object->y);
+			vertiangle = (R_PointToAngle2(
+							0,
+							spring->z + spring->height/2,
+							FixedHypot(object->x - spring->x, object->y - spring->y),
+							object->z + object->height/2)
+								>> ANGLETOFINESHIFT) & FINEMASK;
+		}
+
+		if (spring->spawnpoint && spring->spawnpoint->angle > 0)
+			vertispeed = (spring->spawnpoint->angle<<(FRACBITS-1))/5;
+		vertispeed = FixedMul(vertispeed, FixedMul(object->scale, spring->scale));
+
+		if (object->player)
+		{
+			fixed_t playervelocity;
+
+			if (strong)
+				vertispeed <<= 1;
+
+			if (!(object->player->pflags & PF_THOKKED) && !(object->player->homing)
+			&& ((playervelocity = FixedDiv(9*FixedHypot(object->player->speed, object->momz), 10<<FRACBITS)) > vertispeed))
+				vertispeed = playervelocity;
+
+			if (object->player->powers[pw_carry] == CR_NIGHTSMODE) // THIS has NiGHTS support, at least...
+			{
+				angle_t nightsangle = 0;
+
+				if (object->player->bumpertime >= TICRATE/4)
+					return false;
+
+				if ((object->player->pflags & PF_TRANSFERTOCLOSEST) && object->player->axis1 && object->player->axis2)
+				{
+					nightsangle = R_PointToAngle2(object->player->axis1->x, object->player->axis1->y, object->player->axis2->x, object->player->axis2->y);
+					nightsangle += ANGLE_90;
+				}
+				else if (object->target)
+				{
+					if (object->target->flags2 & MF2_AMBUSH)
+						nightsangle = R_PointToAngle2(object->target->x, object->target->y, object->x, object->y);
+					else
+						nightsangle = R_PointToAngle2(object->x, object->y, object->target->x, object->target->y);
+				}
+
+				object->player->flyangle = AngleFixed(R_PointToAngle2(
+					0,
+					spring->z + spring->height/2,
+					FixedMul(
+						FINESINE(((nightsangle - horizangle) >> ANGLETOFINESHIFT) & FINEMASK),
+						FixedHypot(object->x - spring->x, object->y - spring->y)),
+					object->z + object->height/2))>>FRACBITS;
+
+				object->player->bumpertime = TICRATE/2;
+			}
+			else
+			{
+				INT32 pflags = object->player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // Not identical to below...
+				UINT8 secondjump = object->player->secondjump;
+				if (object->player->pflags & PF_GLIDING)
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_ResetPlayer(object->player);
+				object->player->pflags |= pflags;
+				object->player->secondjump = secondjump;
+			}
+		}
+
+		if (!P_IsObjectOnGround(object)) // prevents uncurling when spinning due to "landing"
+			object->momz = FixedMul(vertispeed, FINESINE(vertiangle));
+		P_InstaThrust(object, horizangle, FixedMul(vertispeed, FINECOSINE(vertiangle)));
+
+		object->eflags |= MFE_SPRUNG; // apply this flag asap!
+
+		goto springstate;
+	}
+
+	// Does nothing?
+	if (!vertispeed && !horizspeed)
+		return false;
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
+#endif
+
+	if (spring->eflags & MFE_VERTICALFLIP)
+		vertispeed *= -1;
+
+	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
 		return false;
 	}
 
-#ifdef ESLOPE
-	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
-#endif
-
-	object->eflags |= MFE_SPRUNG; // apply this flag asap!
-	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
-
-	if (horizspeed && vertispeed) // Mimic SA
+	if (strong)
 	{
-		object->momx = object->momy = 0;
-		P_TryMove(object, spring->x, spring->y, true);
+		if (horizspeed)
+			horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
+		if (vertispeed)
+			vertispeed = FixedMul(vertispeed, (6*FRACUNIT)/5); // aprox square root of above
 	}
 
-	if (spring->eflags & MFE_VERTICALFLIP)
-		vertispeed *= -1;
+	object->eflags |= MFE_SPRUNG; // apply this flag asap!
+	spring->flags &= ~(MF_SPRING|MF_SPECIAL); // De-solidify
 
-	if (vertispeed > 0)
-		object->z = spring->z + spring->height + 1;
-	else if (vertispeed < 0)
-		object->z = spring->z - object->height - 1;
-	else
+	if (spring->info->painchance != 2)
 	{
-		// Horizontal springs teleport you in FRONT of them.
-		object->momx = object->momy = 0;
+		if (object->player)
+			object->player->pflags &= ~PF_APPLYAUTOBRAKE;
 
-		// Overestimate the distance to position you at
-		offx = P_ReturnThrustX(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
-		offy = P_ReturnThrustY(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
+		if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
+		{
+			object->momx = object->momy = 0;
+			P_TryMove(object, spring->x, spring->y, true);
+		}
 
-		// Make it square by clipping
-		if (offx > (spring->radius + object->radius + 1))
-			offx = spring->radius + object->radius + 1;
-		else if (offx < -(spring->radius + object->radius + 1))
-			offx = -(spring->radius + object->radius + 1);
+		if (vertispeed > 0)
+			object->z = spring->z + spring->height + 1;
+		else if (vertispeed < 0)
+			object->z = spring->z - object->height - 1;
+		else
+		{
+			fixed_t offx, offy;
+			// Horizontal springs teleport you in FRONT of them.
+			object->momx = object->momy = 0;
 
-		if (offy > (spring->radius + object->radius + 1))
-			offy = spring->radius + object->radius + 1;
-		else if (offy < -(spring->radius + object->radius + 1))
-			offy = -(spring->radius + object->radius + 1);
+			// Overestimate the distance to position you at
+			offx = P_ReturnThrustX(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
+			offy = P_ReturnThrustY(spring, spring->angle, (spring->radius + object->radius + 1) * 2);
 
-		// Set position!
-		P_TryMove(object, spring->x + offx, spring->y + offy, true);
+			// Make it square by clipping
+			if (offx > (spring->radius + object->radius + 1))
+				offx = spring->radius + object->radius + 1;
+			else if (offx < -(spring->radius + object->radius + 1))
+				offx = -(spring->radius + object->radius + 1);
+
+			if (offy > (spring->radius + object->radius + 1))
+				offy = spring->radius + object->radius + 1;
+			else if (offy < -(spring->radius + object->radius + 1))
+				offy = -(spring->radius + object->radius + 1);
+
+			// Set position!
+			P_TryMove(object, spring->x + offx, spring->y + offy, true);
+		}
 	}
 
 	if (vertispeed)
@@ -180,50 +331,95 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		P_InstaThrustEvenIn2D(object, spring->angle, FixedMul(horizspeed,FixedSqrt(FixedMul(object->scale, spring->scale))));
 
 	// Re-solidify
-	spring->flags |= (spring->info->flags & (MF_SPECIAL|MF_SOLID));
-
-	P_SetMobjState(spring, spring->info->raisestate);
+	spring->flags |= (spring->info->flags & (MF_SPRING|MF_SPECIAL));
 
 	if (object->player)
 	{
+		INT32 pflags;
+		UINT8 secondjump;
+		boolean washoming;
+
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
 
-		if (horizspeed && object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0)
+		if (horizspeed)
 		{
-			object->angle = spring->angle;
-
-			if (!demoplayback || P_AnalogMove(object->player))
+			object->player->drawangle = spring->angle;
+			if (vertispeed || (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0))
 			{
-				if (object->player == &players[consoleplayer])
-					localangle = spring->angle;
-				else if (object->player == &players[secondarydisplayplayer])
-					localangle2 = spring->angle;
+				object->angle = spring->angle;
+
+				if (!demoplayback || P_AnalogMove(object->player))
+				{
+					if (object->player == &players[consoleplayer])
+						localangle = spring->angle;
+					else if (object->player == &players[secondarydisplayplayer])
+						localangle2 = spring->angle;
+				}
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
+		pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // I still need these.
+		secondjump = object->player->secondjump;
+		washoming = object->player->homing;
+		if (object->player->pflags & PF_GLIDING)
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		P_ResetPlayer(object->player);
 
-		if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
-		else if (P_MobjFlip(object)*vertispeed < 0)
-			P_SetPlayerMobjState(object, S_PLAY_FALL1);
-		else // horizontal spring
+		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
 		{
-			if (pflags & (PF_JUMPED|PF_SPINNING) && object->player->panim == PA_ROLL)
-				object->player->pflags = pflags;
+			object->player->pflags |= P_GetJumpFlags(object->player);
+			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+		}
+		else if ((spring->info->painchance == 2) || (pflags & PF_BOUNCING)) // Adding momentum only.
+		{
+			object->player->pflags |= (pflags &~ PF_STARTJUMP);
+			object->player->secondjump = secondjump;
+			if (washoming)
+				object->player->pflags &= ~PF_THOKKED;
+		}
+		else if (!vertispeed)
+		{
+			if (pflags & (PF_JUMPED|PF_SPINNING))
+			{
+				object->player->pflags |= pflags;
+				object->player->secondjump = secondjump;
+			}
 			else
-				P_SetPlayerMobjState(object, S_PLAY_RUN1);
+				P_SetPlayerMobjState(object, S_PLAY_WALK);
+		}
+		else if (P_MobjFlip(object)*vertispeed > 0)
+			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+		else
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
+	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // And again.
+#endif
+
+	final = true;
+
+springstate:
+	if ((statenum_t)(spring->state-states) < spring->info->raisestate)
+	{
+		P_SetMobjState(spring, spring->info->raisestate);
+		if (object->player && spring->reactiontime && !(spring->info->flags & MF_ENEMY))
+		{
+			if (object->player->powers[pw_carry] != CR_NIGHTSMODE) // don't make graphic in NiGHTS
+				P_SetMobjState(P_SpawnMobj(spring->x, spring->y, spring->z + (spring->height/2), MT_SCORE), mobjinfo[MT_SCORE].spawnstate+11);
+			P_AddPlayerScore(object->player, 10);
+			spring->reactiontime--;
 		}
 
-		if (spring->info->painchance)
+		if (strong)
 		{
-			object->player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(object, S_PLAY_ATK1);
+			P_TwinSpinRejuvenate(object->player, (strong == 1 ? object->player->thokitem : object->player->revitem));
+			S_StartSound(object, sfx_sprong); // strong spring. sprong.
 		}
 	}
-	return true;
+
+	return final;
 }
 
 static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
@@ -274,7 +470,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		case MT_STEAM: // Steam
@@ -289,7 +485,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -302,23 +498,21 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	INT32 p;
 	fixed_t zdist; // z distance between the two players' bottoms
 
-	if ((tails->pflags & PF_CARRIED) && tails->mo->tracer == sonic->mo)
+	if (tails->powers[pw_carry])
 		return;
-	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
+	if (sonic->powers[pw_carry])
 		return;
 
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && (tails->mo->state >= &states[S_PLAY_SPC1] && tails->mo->state <= &states[S_PLAY_SPC4])))
+	if (tails->spectator)
+		return;
+	if (sonic->spectator)
+		return;
+
+	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
 	if (tails->bot == 1)
 		return;
-
-	if (sonic->pflags & PF_NIGHTSMODE)
-		return;
-
-	if (sonic->mo->tracer && sonic->mo->tracer->type == MT_TUBEWAYPOINT
-	&& !(sonic->pflags & PF_ROPEHANG))
-		return; // don't steal players from zoomtubes!
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
@@ -334,48 +528,83 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	// Search in case another player is already being carried by this fox.
 	for (p = 0; p < MAXPLAYERS; p++)
 		if (playeringame[p] && players[p].mo
-		&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tails->mo)
+		&& players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == tails->mo)
 			return;
+
+	// Why block opposing teams from tailsflying each other?
+	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
+	/*
+	if (gametype == GT_RACE || gametype == GT_COMPETITION
+		|| (netgame && (tails->spectator || sonic->spectator))
+		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
+		|| (gametype == GT_MATCH)
+		|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
+		return; */
 
 	if (tails->mo->eflags & MFE_VERTICALFLIP)
 		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
 	else
 		zdist = tails->mo->z - sonic->mo->z;
 
-	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
+	if (zdist <= sonic->mo->height + sonic->mo->scale // FixedMul(FRACUNIT, sonic->mo->scale), but scale == FRACUNIT by default
 		&& zdist > sonic->mo->height*2/3
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
-	// Why block opposing teams from tailsflying each other?
-		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-		/*
-		if (gametype == GT_RACE || gametype == GT_COMPETITION
-			|| (netgame && (tails->spectator || sonic->spectator))
-			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
-			|| (gametype == GT_MATCH)
-			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
-			sonic->pflags &= ~PF_CARRIED; */
-		if (tails->spectator || sonic->spectator)
-			sonic->pflags &= ~PF_CARRIED;
-		else
-		{
-			if (sonic-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, false);
-			P_ResetPlayer(sonic);
-			P_SetTarget(&sonic->mo->tracer, tails->mo);
-			sonic->pflags |= PF_CARRIED;
-			S_StartSound(sonic->mo, sfx_s3k4a);
-			P_UnsetThingPosition(sonic->mo);
-			sonic->mo->x = tails->mo->x;
-			sonic->mo->y = tails->mo->y;
-			P_SetThingPosition(sonic->mo);
-		}
+		if (sonic-players == consoleplayer && botingame)
+			CV_SetValue(&cv_analog2, false);
+		P_ResetPlayer(sonic);
+		P_SetTarget(&sonic->mo->tracer, tails->mo);
+		sonic->powers[pw_carry] = CR_PLAYER;
+		S_StartSound(sonic->mo, sfx_s3k4a);
+		P_UnsetThingPosition(sonic->mo);
+		sonic->mo->x = tails->mo->x;
+		sonic->mo->y = tails->mo->y;
+		P_SetThingPosition(sonic->mo);
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		sonic->pflags &= ~PF_CARRIED;
+		P_SetTarget(&sonic->mo->tracer, NULL);
+		sonic->powers[pw_carry] = CR_NONE;
 	}
+}
+
+// Boss 5 post-defeat comedy
+static void P_SlapStick(mobj_t *fang, mobj_t *pole)
+{
+	fixed_t momx1, momx2, momy1, momy2;
+
+#define dist 3
+	momx1 = pole->momx/dist;
+	momy1 = pole->momy/dist;
+	momx2 = fang->momx/dist;
+	momy2 = fang->momy/dist;
+
+	pole->tracer->momx = momx1 + (dist-1)*momx2;
+	pole->tracer->momy = momy1 + (dist-1)*momy2;
+	fang->momx = (dist-1)*momx1 + momx2;
+	fang->momy = (dist-1)*momy1 + momy2;
+#undef dist
+
+	P_SetMobjState(pole, pole->info->deathstate);
+
+	P_SetObjectMomZ(pole->tracer, 6*FRACUNIT, false);
+	pole->tracer->flags &= ~(MF_NOGRAVITY|MF_NOCLIP);
+	pole->tracer->movedir = ANGLE_67h;
+	if ((R_PointToAngle(fang->x - pole->tracer->x, fang->y - pole->tracer->y) - pole->angle) > ANGLE_180)
+		pole->tracer->movedir = InvAngle(pole->tracer->movedir);
+
+	P_SetObjectMomZ(fang, 14*FRACUNIT, false);
+	fang->flags |= MF_NOGRAVITY|MF_NOCLIP;
+	P_SetMobjState(fang, fang->info->xdeathstate);
+
+	pole->tracer->tics = pole->tics = fang->tics;
+
+	var1 = var2 = 0;
+	A_Scream(pole->tracer);
+	S_StartSound(fang, sfx_altdi1);
+
+	P_SetTarget(&pole->tracer, NULL);
 }
 
 //
@@ -384,7 +613,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 static boolean PIT_CheckThing(mobj_t *thing)
 {
 	fixed_t blockdist;
-	boolean iwassprung = false;
 
 	// don't clip against self
 	if (thing == tmthing)
@@ -429,7 +657,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
-	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS) || thing->type == MT_SPIKE))
+	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS)
+	|| (thing->type == MT_SPIKE
+	|| thing->type == MT_WALLSPIKE)))
 	{
 		if ((thing->flags & (MF_ENEMY|MF_BOSS)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
 			return true;
@@ -441,33 +671,170 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->type == MT_SPIKE)
+		if (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			mobjtype_t type = thing->type;
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing);
+				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		else
 		{
 			thing->health = 0;
-			P_KillMobj(thing, tmthing, tmthing);
+			P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		return true;
 	}
 
-	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)))
+	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	if ((tmthing->player)
+		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (thing->flags & (MF_MONITOR)
+		|| (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)))
+	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
+	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
+		&& (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE))))
+	{
+		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
+			return true;
+		blockdist = thing->radius + tmthing->radius;
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+		// see if it went over / under
+		if (tmthing->z > thing->z + thing->height)
+			return true; // overhead
+		if (tmthing->z + tmthing->height < thing->z)
+			return true; // underneath
+		if (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)
+		{
+			mobjtype_t type = thing->type;
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
+			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
+				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		else
+		{
+			thing->health = 0;
+			P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		return true;
+	}
+
+	// vectorise metal - done in a special case as at this point neither has the right flags for touching
+	if (thing->type == MT_METALSONIC_BATTLE
+	&& (tmthing->flags & MF_MISSILE)
+	&& tmthing->target != thing
+	&& thing->state == &states[thing->info->spawnstate])
+	{
+		blockdist = thing->radius + tmthing->radius;
+
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+
+		if (tmthing->z > thing->z + thing->height)
+			return true; // overhead
+		if (tmthing->z + tmthing->height < thing->z)
+			return true; // underneath
+
+		thing->flags2 |= MF2_CLASSICPUSH;
+
+		return true;
+	}
+
+	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE|MF_SPRING)))
 		return true;
 
 	// Don't collide with your buddies while NiGHTS-flying.
 	if (tmthing->player && thing->player && (maptol & TOL_NIGHTS)
-		&& ((tmthing->player->pflags & PF_NIGHTSMODE) || (thing->player->pflags & PF_NIGHTSMODE)))
+		&& ((tmthing->player->powers[pw_carry] == CR_NIGHTSMODE) || (thing->player->powers[pw_carry] == CR_NIGHTSMODE)))
 		return true;
 
 	blockdist = thing->radius + tmthing->radius;
 
 	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
 		return true; // didn't hit it
+
+	if (thing->flags & MF_PAPERCOLLISION) // CAUTION! Very easy to get stuck inside MF_SOLID objects. Giving the player MF_PAPERCOLLISION is a bad idea unless you know what you're doing.
+	{
+		fixed_t cosradius, sinradius;
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		cosradius = FixedMul(thing->radius, FINECOSINE(thing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(thing->radius, FINESINE(thing->angle>>ANGLETOFINESHIFT));
+
+		v1.x = thing->x - cosradius;
+		v1.y = thing->y - sinradius;
+		v2.x = thing->x + cosradius;
+		v2.y = thing->y + sinradius;
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = 2*cosradius; // v2.x - v1.x;
+		junk.dy = 2*sinradius; // v2.y - v1.y;
+
+		if (tmthing->flags & MF_PAPERCOLLISION) // more strenuous checking to prevent clipping issues
+		{
+			INT32 check1, check2, check3, check4;
+			fixed_t tmcosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+			fixed_t tmsinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+			if (abs(thing->x - tmx) >= (abs(tmcosradius) + abs(cosradius)) || abs(thing->y - tmy) >= (abs(tmsinradius) + abs(sinradius)))
+				return true; // didn't hit it
+			check1 = P_PointOnLineSide(tmx - tmcosradius, tmy - tmsinradius, &junk);
+			check2 = P_PointOnLineSide(tmx + tmcosradius, tmy + tmsinradius, &junk);
+			check3 = P_PointOnLineSide(tmx + tmthing->momx - tmcosradius, tmy + tmthing->momy - tmsinradius, &junk);
+			check4 = P_PointOnLineSide(tmx + tmthing->momx + tmcosradius, tmy + tmthing->momy + tmsinradius, &junk);
+			if ((check1 == check2) && (check2 == check3) && (check3 == check4))
+				return true; // the line doesn't cross between collider's start or end
+		}
+		else
+		{
+			if (abs(thing->x - tmx) >= (tmthing->radius + abs(cosradius)) || abs(thing->y - tmy) >= (tmthing->radius + abs(sinradius)))
+				return true; // didn't hit it
+			if ((P_PointOnLineSide(tmx - tmthing->radius, tmy - tmthing->radius, &junk)
+			== P_PointOnLineSide(tmx + tmthing->radius, tmy + tmthing->radius, &junk))
+			&& (P_PointOnLineSide(tmx + tmthing->radius, tmy - tmthing->radius, &junk)
+			== P_PointOnLineSide(tmx - tmthing->radius, tmy + tmthing->radius, &junk)))
+				return true; // the line doesn't cross between either pair of opposite corners
+		}
+	}
+	else if (tmthing->flags & MF_PAPERCOLLISION)
+	{
+		fixed_t tmcosradius, tmsinradius;
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		tmcosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		tmsinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+
+		if (abs(thing->x - tmx) >= (thing->radius + abs(tmcosradius)) || abs(thing->y - tmy) >= (thing->radius + abs(tmsinradius)))
+			return true; // didn't hit it
+
+		v1.x = tmx - tmcosradius;
+		v1.y = tmy - tmsinradius;
+		v2.x = tmx + tmcosradius;
+		v2.y = tmy + tmsinradius;
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = 2*tmcosradius; // v2.x - v1.x;
+		junk.dy = 2*tmsinradius; // v2.y - v1.y;
+
+		// no need to check whether other thing has MF_PAPERCOLLISION, since would fall under other condition
+		if ((P_PointOnLineSide(thing->x - thing->radius, thing->y - thing->radius, &junk)
+		== P_PointOnLineSide(thing->x + thing->radius, thing->y + thing->radius, &junk))
+		&& (P_PointOnLineSide(thing->x + thing->radius, thing->y - thing->radius, &junk)
+		== P_PointOnLineSide(thing->x - thing->radius, thing->y + thing->radius, &junk)))
+			return true; // the line doesn't cross between either pair of opposite corners
+	}
 
 #ifdef HAVE_BLUA
 	{
@@ -490,6 +857,145 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (tmthing->type == MT_MINECART)
+	{
+		//height check
+		if (tmthing->z > thing->z + thing->height || thing->z > tmthing->z + tmthing->height || !(thing->health))
+			return true;
+
+		if (thing->type == MT_TNTBARREL)
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+		else if ((thing->flags & MF_MONITOR) || (thing->flags & MF_ENEMY))
+		{
+			P_KillMobj(thing, tmthing, tmthing->target, 0);
+			if (tmthing->momz*P_MobjFlip(tmthing) < 0)
+				tmthing->momz = abs(tmthing->momz)*P_MobjFlip(tmthing);
+		}
+	}
+
+	if (thing->type == MT_SALOONDOOR && tmthing->player)
+	{
+		if (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer) && tmthing->tracer->health)
+		{
+			fixed_t dx = tmthing->tracer->momx;
+			fixed_t dy = tmthing->tracer->momy;
+			fixed_t dm = min(FixedHypot(dx, dy), 16*FRACUNIT);
+			angle_t ang = R_PointToAngle2(0, 0, dx, dy) - thing->angle;
+			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
+			S_StartSound(tmthing, thing->info->activesound);
+			thing->extravalue2 += 2*FixedMul(s, dm)/3;
+			return true;
+		}
+	}
+
+	if (thing->type == MT_TNTBARREL && tmthing->player)
+	{
+		if (tmthing->momz < 0)
+		{
+			if (tmthing->z + tmthing->momz > thing->z + thing->height)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z > thing->z + thing->height)
+				return true;
+		}
+
+		if (tmthing->momz > 0)
+		{
+			if (tmthing->z + tmthing->height + tmthing->momz < thing->z)
+				return true;
+		}
+		else
+		{
+			if (tmthing->z + tmthing->height < thing->z)
+				return true;
+		}
+
+		if ((tmthing->player->pflags & (PF_SPINNING | PF_GLIDING))
+			|| ((tmthing->player->pflags & PF_JUMPED)
+				&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
+					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+			|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
+				&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height / 2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+			|| (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)))
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+	}
+
+	if (thing->type == MT_VULTURE && tmthing->type == MT_VULTURE)
+	{
+		fixed_t dx = thing->x - tmthing->x;
+		fixed_t dy = thing->y - tmthing->y;
+		fixed_t dz = thing->z - tmthing->z;
+		fixed_t dm = FixedHypot(dz, FixedHypot(dx, dy));
+		thing->momx += FixedDiv(dx, dm);
+		thing->momy += FixedDiv(dy, dm);
+		thing->momz += FixedDiv(dz, dm);
+	}
+
+	if (tmthing->type == MT_FANG && thing->type == MT_FSGNB)
+	{
+		if (thing->z > tmthing->z + tmthing->height)
+			return true; // overhead
+		if (thing->z + thing->height < tmthing->z)
+			return true; // underneath
+		if (!thing->tracer)
+			return true;
+		P_SlapStick(tmthing, thing);
+		// no return value was used in the original prototype script at this point,
+		// so I'm assuming we fall back on the solid code to determine how it all ends?
+		// -- Monster Iestyn
+	}
+
+	// Billiards mines!
+	if (thing->type == MT_BIGMINE)
+	{
+		if (tmthing->type == MT_BIGMINE)
+		{
+			if (!tmthing->momx && !tmthing->momy)
+				return true;
+			if ((statenum_t)(thing->state-states) >= thing->info->meleestate)
+				return true;
+			if (thing->z > tmthing->z + tmthing->height)
+				return true; // overhead
+			if (thing->z + thing->height < tmthing->z)
+				return true; // underneath
+
+			thing->momx = tmthing->momx/3;
+			thing->momy = tmthing->momy/3;
+			thing->momz = tmthing->momz/3;
+			tmthing->momx /= -8;
+			tmthing->momy /= -8;
+			tmthing->momz /= -8;
+			if (thing->info->activesound)
+				S_StartSound(thing, thing->info->activesound);
+			P_SetMobjState(thing, thing->info->meleestate);
+			P_SetTarget(&thing->tracer, tmthing->tracer);
+			return true;
+		}
+		else if (tmthing->type == MT_CRUSHCLAW)
+		{
+			if (tmthing->extravalue1 <= 0)
+				return true;
+			if ((statenum_t)(thing->state-states) >= thing->info->meleestate)
+				return true;
+			if (thing->z > tmthing->z + tmthing->height)
+				return true; // overhead
+			if (thing->z + thing->height < tmthing->z)
+				return true; // underneath
+
+			thing->momx = P_ReturnThrustX(tmthing, tmthing->angle, 2*tmthing->extravalue1*tmthing->scale/3);
+			thing->momy = P_ReturnThrustY(tmthing, tmthing->angle, 2*tmthing->extravalue1*tmthing->scale/3);
+			if (thing->info->activesound)
+				S_StartSound(thing, thing->info->activesound);
+			P_SetMobjState(thing, thing->info->meleestate);
+			if (tmthing->tracer)
+				P_SetTarget(&thing->tracer, tmthing->tracer->target);
+			return false;
+		}
+	}
+
 	// When solid spikes move, assume they just popped up and teleport things on top of them to hurt.
 	if (tmthing->type == MT_SPIKE && tmthing->flags & MF_SOLID)
 	{
@@ -503,30 +1009,42 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		return true;
 	}
 
-	if (thing->flags & MF_PAIN)
+	if (thing->flags & MF_PAIN && tmthing->player)
 	{ // Player touches painful thing sitting on the floor
 		// see if it went over / under
 		if (thing->z > tmthing->z + tmthing->height)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (tmthing->player && tmthing->flags & MF_SHOOTABLE && thing->health > 0)
-			P_DamageMobj(tmthing, thing, thing, 1);
+		if (tmthing->flags & MF_SHOOTABLE && thing->health > 0)
+		{
+			UINT8 damagetype = (thing->info->mass & 0xFF);
+			if (!damagetype && thing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			if (P_DamageMobj(tmthing, thing, thing, 1, damagetype) && (damagetype = (thing->info->mass>>8)))
+				S_StartSound(thing, damagetype);
+		}
 		return true;
 	}
-	else if (tmthing->flags & MF_PAIN)
+	else if (tmthing->flags & MF_PAIN && thing->player)
 	{ // Painful thing splats player in the face
 		// see if it went over / under
 		if (tmthing->z > thing->z + thing->height)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->player && thing->flags & MF_SHOOTABLE && tmthing->health > 0)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+		if (thing->flags & MF_SHOOTABLE && tmthing->health > 0)
+		{
+			UINT8 damagetype = (tmthing->info->mass & 0xFF);
+			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			if (P_DamageMobj(thing, tmthing, tmthing, 1, damagetype) && (damagetype = (tmthing->info->mass>>8)))
+				S_StartSound(tmthing, damagetype);
+		}
 		return true;
 	}
 
@@ -572,6 +1090,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (tmz > thzh - sprarea && tmz < thzh) // Don't damage people springing up / down
 			return true;
 	}
+
 	// missiles can hit other things
 	if (tmthing->flags & MF_MISSILE || tmthing->type == MT_SHELL)
 	{
@@ -621,42 +1140,21 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (tmthing->flags & MF_MISSILE && thing->player && tmthing->target && tmthing->target->player
 		&& thing->player->ctfteam == tmthing->target->player->ctfteam
-		&& thing->player->pflags & PF_CARRIED && thing->tracer == tmthing->target)
+		&& thing->player->powers[pw_carry] == CR_PLAYER && thing->tracer == tmthing->target)
 			return true; // Don't give rings to your carry player by accident.
 
 		if (thing->type == MT_EGGSHIELD)
 		{
-			fixed_t touchx, touchy;
-			angle_t angle;
+			angle_t angle = (R_PointToAngle2(thing->x, thing->y, tmthing->x - tmthing->momx, tmthing->y - tmthing->momy) - thing->angle) - ANGLE_90;
 
-			if (P_AproxDistance(tmthing->x-thing->x, tmthing->y-thing->y) >
-				P_AproxDistance((tmthing->x-tmthing->momx)-thing->x, (tmthing->y-tmthing->momy)-thing->y))
-			{
-				touchx = tmthing->x + tmthing->momx;
-				touchy = tmthing->y + tmthing->momy;
-			}
-			else
-			{
-				touchx = tmthing->x;
-				touchy = tmthing->y;
-			}
-
-			angle = R_PointToAngle2(thing->x, thing->y, touchx, touchy) - thing->angle;
-
-			if (!(angle > ANGLE_90 && angle < ANGLE_270)) // hit front of shield, didn't destroy it
-				return false;
-			else // hit shield from behind, shield is destroyed!
-			{
-				P_KillMobj(thing, tmthing, tmthing);
-				return false;
-			}
+			if (angle < ANGLE_180) // hit shield from behind, shield is destroyed!
+				P_KillMobj(thing, tmthing, tmthing, 0);
+			return false;
 		}
 
-		if (tmthing->type == MT_SHELL && tmthing->threshold > TICRATE)
-			return true;
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player
 			&& (thing->player->pflags & PF_JUMPED)
 			&& !thing->player->powers[pw_flashing]
@@ -664,8 +1162,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& tmthing->target != thing)
 		{
 			// Hop on the missile for a ride!
-			thing->player->pflags |= PF_ITEMHANG;
-			thing->player->pflags &= ~PF_JUMPED;
+			thing->player->powers[pw_carry] = CR_GENERIC;
+			thing->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 			P_SetTarget(&thing->tracer, tmthing);
 			P_SetTarget(&tmthing->target, thing); // Set owner to the player
 			P_SetTarget(&tmthing->tracer, NULL); // Disable homing-ness
@@ -683,7 +1181,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			return true;
 		}
-		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->pflags & PF_ITEMHANG) || (thing->player->pflags & PF_JUMPED)))
+		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->powers[pw_carry] == CR_GENERIC) || (thing->player->pflags & PF_JUMPED)))
 		{
 			// Ignore
 		}
@@ -694,8 +1192,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else
-			P_DamageMobj(thing, tmthing, tmthing->target, 1);
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial for shell
+		{
+			UINT8 damagetype = tmthing->info->mass;
+			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			P_DamageMobj(thing, tmthing, tmthing->target, 1, damagetype);
+		}
 
 		// don't traverse any more
 
@@ -765,24 +1268,37 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		P_SetTarget(&thing->target, tmthing);
 	}
 
-	// Respawn rings and items
+	// NiGHTS lap logic
 	if ((tmthing->type == MT_NIGHTSDRONE || thing->type == MT_NIGHTSDRONE)
 	 && (tmthing->player || thing->player))
 	{
 		mobj_t *droneobj = (tmthing->type == MT_NIGHTSDRONE) ? tmthing : thing;
 		player_t *pl = (droneobj == thing) ? tmthing->player : thing->player;
 
-		// Must be in bonus time, and must be NiGHTS, must wait about a second
+		// Must be NiGHTS, must wait about a second
 		// must be flying in the SAME DIRECTION as the last time you came through.
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
-		if (pl->bonustime && (pl->pflags & PF_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
+		if ((pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
 		   !(pl->flyangle > 90 &&   pl->flyangle < 270)
 		^ (droneobj->extravalue1 > 90 && droneobj->extravalue1 < 270)
 		))
 		{
-			// Reload all the fancy ring stuff!
-			P_ReloadRings();
+			pl->marelap++;
+			pl->totalmarelap++;
+			pl->lapbegunat = leveltime;
+			pl->lapstartedtime = pl->nightstime;
+
+			if (pl->bonustime)
+			{
+				pl->marebonuslap++;
+				pl->totalmarebonuslap++;
+
+				// Respawn rings and items
+				P_ReloadRings();
+			}
+
+			P_RunNightsLapExecutors(pl->mo);
 		}
 		droneobj->extravalue1 = pl->flyangle;
 		droneobj->extravalue2 = (INT32)leveltime + TICRATE;
@@ -808,24 +1324,77 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->eflags & MFE_VERTICALFLIP)
 		{
 			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
-			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
-				P_DamageMobj(thing, tmthing, tmthing, 1);
+			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+			&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && thing->eflags & MFE_VERTICALFLIP))
+				P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		}
 		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
-		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+		&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && !(thing->eflags & MFE_VERTICALFLIP)))
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 	}
 	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
 	{
 		if (thing->eflags & MFE_VERTICALFLIP)
 		{
 			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
-			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale))
-				P_DamageMobj(tmthing, thing, thing, 1);
+			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
+			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
 		}
 		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
-		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale))
-			P_DamageMobj(tmthing, thing, thing, 1);
+		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
+		&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
+			P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+	}
+
+	if (tmthing->type == MT_WALLSPIKE && tmthing->flags & MF_SOLID && thing->player) // wall spike impales player
+	{
+		fixed_t bottomz, topz;
+		bottomz = tmthing->z;
+		topz = tmthing->z + tmthing->height;
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, tmthing->scale);
+		else
+			topz += FixedMul(FRACUNIT, tmthing->scale);
+
+		if (thing->z + thing->height > bottomz // above bottom
+		&&  thing->z < topz) // below top
+		// don't check angle, the player was clearly in the way in this case
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+	}
+	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
+	{
+		fixed_t bottomz, topz;
+		angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
+
+		if (P_PlayerInPain(tmthing->player) && (tmthing->momx || tmthing->momy))
+		{
+			angle_t playerangle = R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle;
+			if (playerangle > ANGLE_180)
+				playerangle = InvAngle(playerangle);
+			if (playerangle < ANGLE_90)
+				return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
+		}
+
+		bottomz = thing->z;
+		topz = thing->z + thing->height;
+
+		if (thing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, thing->scale);
+		else
+			topz += FixedMul(FRACUNIT, thing->scale);
+
+		if (tmthing->z + tmthing->height > bottomz // above bottom
+		&&  tmthing->z < topz // below top
+		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
+		{ // use base as a reference point to determine what angle you touched the spike at
+			touchangle = thing->angle - touchangle;
+			if (touchangle > ANGLE_180)
+				touchangle = InvAngle(touchangle);
+			if (touchangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+		}
 	}
 
 	if (thing->flags & MF_PUSHABLE)
@@ -837,13 +1406,26 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (tmthing->flags & MF_PUSHABLE)
 	{
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		{
 			P_DoFanAndGasJet(thing, tmthing);
+			return true;
+		}
 		else if (thing->flags & MF_SPRING)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				iwassprung = P_DoSpring(thing, tmthing);
+				if (P_DoSpring(thing, tmthing))
+					return false;
+			return true;
 		}
+	}
+
+	// thanks to sal for solidenemies dot lua
+	if (thing->flags & (MF_ENEMY|MF_BOSS) && tmthing->flags & (MF_ENEMY|MF_BOSS))
+	{
+		if ((thing->z + thing->height >= tmthing->z)
+		&& (tmthing->z + tmthing->height >= thing->z))
+			return false;
 	}
 
 	// Damage other players when invincible
@@ -853,12 +1435,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (G_RingSlingerGametype() && (!G_GametypeHasTeams() || tmthing->player->ctfteam != thing->player->ctfteam))
 		{
-			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super])
+			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super] || (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (tmthing->player->pflags & PF_SHIELDABILITY)))
 				&& !thing->player->powers[pw_super])
-				P_DamageMobj(thing, tmthing, tmthing, 1);
-			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super])
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super] || (((thing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (thing->player->pflags & PF_SHIELDABILITY)))
 				&& !tmthing->player->powers[pw_super])
-				P_DamageMobj(tmthing, thing, thing, 1);
+				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
 
 		// If players are using touch tag, seekers damage hiders.
@@ -866,9 +1448,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			((thing->player->pflags & PF_TAGIT) != (tmthing->player->pflags & PF_TAGIT)))
 		{
 			if ((tmthing->player->pflags & PF_TAGIT) && !(thing->player->pflags & PF_TAGIT))
-				P_DamageMobj(thing, tmthing, tmthing, 1);
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 			else if ((thing->player->pflags & PF_TAGIT) && !(tmthing->player->pflags & PF_TAGIT))
-				P_DamageMobj(tmthing, thing, tmthing, 1);
+				P_DamageMobj(tmthing, thing, tmthing, 1, 0);
 		}
 	}
 
@@ -884,7 +1466,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		thing->player->pflags &= ~PF_CARRIED;
+		if (thing->player->powers[pw_carry] == CR_PLAYER)
+		{
+			P_SetTarget(&thing->tracer, NULL);
+			thing->player->powers[pw_carry] = CR_NONE;
+		}
 	}
 
 	if (thing->player)
@@ -906,7 +1492,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				// Objects kill you if it falls from above.
 				if (thing != tmthing->target)
-					P_DamageMobj(thing, tmthing, tmthing->target, 10000);
+					P_DamageMobj(thing, tmthing, tmthing->target, 1, DMG_CRUSHED);
 
 				tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
 				// The tmthing->target allows the pusher of the object
@@ -925,44 +1511,60 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
-		else if (thing->flags & MF_SPRING)
+		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				iwassprung = P_DoSpring(thing, tmthing);
+				if (P_DoSpring(thing, tmthing))
+					return false;
+			return true;
 		}
-		// Are you touching the side of the object you're interacting with?
-		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
-			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
+		// Monitor?
+		else if (thing->flags & MF_MONITOR
+		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2))
+		&& (!(thing->flags & MF_SOLID) || P_PlayerCanDamage(tmthing->player, thing)))
 		{
-			if (thing->flags & MF_MONITOR
-				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+			if (thing->z - thing->scale <= tmthing->z + tmthing->height
+			&& thing->z + thing->height + thing->scale >= tmthing->z)
 			{
+				player_t *player = tmthing->player;
+				// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+				UINT8 elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
+				? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+				: 0);
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
-				P_DamageMobj(thing, tmthing, tmthing, 1); // break the monitor
+				fixed_t *z = &tmthing->z; // aau.
 				// Going down? Then bounce back up.
-				if ((P_MobjWasRemoved(thing) // Monitor was removed
-					|| !thing->health) // or otherwise popped
-				&& (flipval*(*momz) < 0)) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
-				return false;
+				if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
+				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				{
+					if (elementalpierce == 2)
+						P_DoBubbleBounce(player);
+					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+					{
+						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+							P_TwinSpinRejuvenate(player, player->thokitem);
+					}
+				}
+				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+				{
+					if (player->pflags & PF_BOUNCING)
+						P_DoAbilityBounce(player, false);
+					return false;
+				}
+				else
+					*z -= *momz; // to ensure proper collision.
 			}
+
+			return true;
 		}
 	}
 
-	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
-	{
-		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
-			return false; // "cancel" P_TryMove via blocking so you keep your current position
-	}
-	else if (tmthing->flags & MF_SPRING && (thing->player || thing->flags & MF_PUSHABLE))
-		; // Fix a few nasty spring-jumping bugs that happen sometimes.
-	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
-	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
-	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
-		;
+	if ((!tmthing->player) && (thing->player))
+		; // no solid thing should ever be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
@@ -980,6 +1582,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z + thing->height > tmfloorz)
 				{
 					tmfloorz = thing->z + thing->height;
+					tmfloorrover = NULL;
 #ifdef ESLOPE
 					tmfloorslope = NULL;
 #endif
@@ -989,16 +1592,18 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
-			if (thing->flags & MF_SPRING)
-				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			else if (tmthing->player && tmthing->z + tmthing->height > topz
+			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
+					return false;
+
 				tmfloorz = tmceilingz = topz; // block while in air
+				tmceilingrover = NULL;
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1007,6 +1612,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
+				tmceilingrover = NULL;
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1023,6 +1629,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z < tmceilingz)
 				{
 					tmceilingz = thing->z;
+					tmceilingrover = NULL;
 #ifdef ESLOPE
 					tmceilingslope = NULL;
 #endif
@@ -1032,16 +1639,18 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
-			if (thing->flags & MF_SPRING)
-				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			else if (tmthing->player && tmthing->z < topz
+			if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
+					return false;
+
 				tmfloorz = tmceilingz = topz; // block while in air
+				tmfloorrover = NULL;
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif
@@ -1050,6 +1659,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
+				tmfloorrover = NULL;
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif
@@ -1138,6 +1748,32 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
 
+	if (tmthing->flags & MF_PAPERCOLLISION) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
+	{
+		fixed_t cosradius, sinradius;
+		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+		if (P_PointOnLineSide(tmx - cosradius, tmy - sinradius, ld)
+		== P_PointOnLineSide(tmx + cosradius, tmy + sinradius, ld))
+			return true; // the line doesn't cross between collider's start or end
+#ifdef PAPER_COLLISIONCORRECTION
+		{
+			fixed_t dist;
+			vertex_t result;
+			angle_t langle;
+			P_ClosestPointOnLine(tmx, tmy, ld, &result);
+			langle = R_PointToAngle2(ld->v1->x, ld->v1->y, ld->v2->x, ld->v2->y);
+			langle += ANGLE_90*(P_PointOnLineSide(tmx, tmy, ld) ? -1 : 1);
+			dist = abs(FixedMul(tmthing->radius, FINECOSINE((tmthing->angle - langle)>>ANGLETOFINESHIFT)));
+			cosradius = FixedMul(dist, FINECOSINE(langle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(dist, FINESINE(langle>>ANGLETOFINESHIFT));
+			tmthing->flags |= MF_NOCLIP;
+			P_TeleportMove(tmthing, result.x + cosradius - tmthing->momx, result.y + sinradius - tmthing->momy, tmthing->z);
+			tmthing->flags &= ~MF_NOCLIP;
+		}
+#endif
+	}
+
 	// A line has been hit
 
 	// The moving thing's destination position will cross
@@ -1175,6 +1811,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+		tmceilingrover = openceilingrover;
 #ifdef ESLOPE
 		tmceilingslope = opentopslope;
 #endif
@@ -1183,6 +1820,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+		tmfloorrover = openfloorrover;
 #ifdef ESLOPE
 		tmfloorslope = openbottomslope;
 #endif
@@ -1264,6 +1902,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// will adjust them.
 	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->floorheight;
 	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
+	tmfloorrover = NULL;
+	tmceilingrover = NULL;
 #ifdef ESLOPE
 	tmfloorslope = newsubsec->sector->f_slope;
 	tmceilingslope = newsubsec->sector->c_slope;
@@ -1307,6 +1947,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 					{
 						if (tmfloorz < topheight - sinklevel) {
 							tmfloorz = topheight - sinklevel;
+							tmfloorrover = rover;
 #ifdef ESLOPE
 							tmfloorslope = *rover->t_slope;
 #endif
@@ -1316,6 +1957,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 					{
 						if (tmceilingz > bottomheight + sinklevel) {
 							tmceilingz = bottomheight + sinklevel;
+							tmceilingrover = rover;
 #ifdef ESLOPE
 							tmceilingslope = *rover->b_slope;
 #endif
@@ -1330,7 +1972,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
 			else if (!((rover->flags & FF_BLOCKPLAYER && thing->player)
-				|| (rover->flags & FF_BLOCKOTHERS && !thing->player)
+			    || (rover->flags & FF_BLOCKOTHERS && !thing->player)
 				|| rover->flags & FF_QUICKSAND))
 				continue;
 
@@ -1340,6 +1982,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				{
 					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
+						tmfloorrover = rover;
 #ifdef ESLOPE
 						tmfloorslope = NULL;
 #endif
@@ -1358,6 +2001,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				&& !(rover->flags & FF_REVERSEPLATFORM))
 			{
 				tmfloorz = tmdropoffz = topheight;
+				tmfloorrover = rover;
 #ifdef ESLOPE
 				tmfloorslope = *rover->t_slope;
 #endif
@@ -1367,6 +2011,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				&& !(thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE)))
 			{
 				tmceilingz = tmdrpoffceilz = bottomheight;
+				tmceilingrover = rover;
 #ifdef ESLOPE
 				tmceilingslope = *rover->b_slope;
 #endif
@@ -1447,6 +2092,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmfloorslope = NULL;
 #endif
+							tmfloorrover = NULL;
 						}
 
 						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2)) {
@@ -1454,6 +2100,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 #ifdef ESLOPE
 							tmceilingslope = NULL;
 #endif
+							tmceilingrover = NULL;
 						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -1851,6 +2498,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		mobj_t *oldthing = tmthing;
 		line_t *oldceilline = ceilingline;
 		line_t *oldblockline = blockingline;
+		ffloor_t *oldflrrover = tmfloorrover;
+		ffloor_t *oldceilrover = tmceilingrover;
 #ifdef ESLOPE
 		pslope_t *oldfslope = tmfloorslope;
 		pslope_t *oldcslope = tmceilingslope;
@@ -1867,6 +2516,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		P_SetTarget(&tmthing, oldthing);
 		ceilingline = oldceilline;
 		blockingline = oldblockline;
+		tmfloorrover = oldflrrover;
+		tmceilingrover = oldceilrover;
 #ifdef ESLOPE
 		tmfloorslope = oldfslope;
 		tmceilingslope = oldcslope;
@@ -1936,7 +2587,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
-				if (thing->state == &states[S_PLAY_SPRING]
+				if (thing->player->panim == PA_SPRING
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
 			}
@@ -1977,6 +2628,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #ifdef ESLOPE
@@ -1984,6 +2636,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					else if (tmceilingslope && tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->ceilingrover = tmceilingrover;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 #endif
@@ -1991,6 +2644,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #ifdef ESLOPE
@@ -1998,6 +2652,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				else if (tmfloorslope && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 #endif
@@ -2061,6 +2716,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 #ifdef ESLOPE
 	if (!(thing->flags & MF_NOCLIPHEIGHT))
@@ -2141,6 +2798,8 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 	thing->x = x;
 	thing->y = y;
 
@@ -2166,8 +2825,11 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
 	boolean floormoved;
-	fixed_t oldfloorz = thing->floorz;
+	fixed_t oldfloorz = thing->floorz, oldz = thing->z;
+	ffloor_t *oldfloorrover = thing->floorrover;
+	ffloor_t *oldceilingrover = thing->ceilingrover;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
+	ffloor_t *rover = NULL;
 
 	if (thing->flags & MF_NOCLIPHEIGHT)
 		return true;
@@ -2182,6 +2844,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+	thing->floorrover = tmfloorrover;
+	thing->ceilingrover = tmceilingrover;
 
 	// Ugly hack?!?! As long as just ceilingz is the lowest,
 	// you'll still get crushed, right?
@@ -2190,16 +2854,23 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
 	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
-		if (thing->eflags & MFE_VERTICALFLIP)
-			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
-		else
-			thing->pmomz = thing->floorz - thing->z;
-		thing->eflags |= MFE_APPLYPMOMZ;
+		rover = (thing->eflags & MFE_VERTICALFLIP) ? oldceilingrover : oldfloorrover;
 
-		if (thing->eflags & MFE_VERTICALFLIP)
-			thing->z = thing->ceilingz - thing->height;
-		else
-			thing->z = thing->floorz;
+		// Match the Thing's old floorz to an FOF and check for FF_EXISTS
+		// If ~FF_EXISTS, don't set mobj Z.
+		if (!rover || ((rover->flags & FF_EXISTS) && (rover->flags & FF_SOLID)))
+		{
+			if (thing->eflags & MFE_VERTICALFLIP)
+				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
+			else
+				thing->pmomz = thing->floorz - thing->z;
+			thing->eflags |= MFE_APPLYPMOMZ;
+
+			if (thing->eflags & MFE_VERTICALFLIP)
+				thing->z = thing->ceilingz - thing->height;
+			else
+				thing->z = thing->floorz;
+		}
 	}
 	else if (!tmfloorthing)
 	{
@@ -2211,6 +2882,12 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		}
 		else if (!onfloor && thing->z + thing->height > tmceilingz)
 			thing->z = thing->ceilingz - thing->height;
+	}
+
+	if (thing->z != oldz)
+	{
+		if (thing->player)
+			P_PlayerHitFloor(thing->player, !onfloor);
 	}
 
 	// debug: be sure it falls to the floor
@@ -2677,7 +3354,7 @@ isblocking:
 					slidemo->player->climbing = 5;
 				}
 
-				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_THOKKED);
+				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
 				slidemo->player->glidetime = 0;
 				slidemo->player->secondjump = 0;
 
@@ -2823,11 +3500,85 @@ void P_SlideMove(mobj_t *mo)
 	INT16 hitcount = 0;
 	boolean success = false;
 
+	boolean papercol = false;
+	vertex_t v1, v2; // fake vertexes
+	line_t junk; // fake linedef
+
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
 		// Don't mess with your momentum if it's a pushable object. Pushables do their own crazy things already.
 		if (tmhitthing->flags & MF_PUSHABLE)
 			return;
+
+		if (tmhitthing->flags & MF_PAPERCOLLISION)
+		{
+			fixed_t cosradius, sinradius, num, den;
+
+			// trace along the three leading corners
+			if (mo->momx > 0)
+			{
+				leadx = mo->x + mo->radius;
+				trailx = mo->x - mo->radius;
+			}
+			else
+			{
+				leadx = mo->x - mo->radius;
+				trailx = mo->x + mo->radius;
+			}
+
+			if (mo->momy > 0)
+			{
+				leady = mo->y + mo->radius;
+				traily = mo->y - mo->radius;
+			}
+			else
+			{
+				leady = mo->y - mo->radius;
+				traily = mo->y + mo->radius;
+			}
+
+			papercol = true;
+			slidemo = mo;
+			bestslideline = &junk;
+
+			cosradius = FixedMul(tmhitthing->radius, FINECOSINE(tmhitthing->angle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(tmhitthing->radius, FINESINE(tmhitthing->angle>>ANGLETOFINESHIFT));
+
+			v1.x = tmhitthing->x - cosradius;
+			v1.y = tmhitthing->y - sinradius;
+			v2.x = tmhitthing->x + cosradius;
+			v2.y = tmhitthing->y + sinradius;
+
+			junk.v1 = &v1;
+			junk.v2 = &v2;
+			junk.dx = 2*cosradius; // v2.x - v1.x;
+			junk.dy = 2*sinradius; // v2.y - v1.y;
+
+			junk.slopetype = !cosradius ? ST_VERTICAL : !sinradius ? ST_HORIZONTAL :
+			((sinradius > 0) == (cosradius > 0)) ? ST_POSITIVE : ST_NEGATIVE;
+
+			bestslidefrac = FRACUNIT+1;
+
+			den = FixedMul(junk.dy>>8, mo->momx) - FixedMul(junk.dx>>8, mo->momy);
+
+			if (!den)
+				bestslidefrac = 0;
+			else
+			{
+				fixed_t frac;
+#define P_PaperTraverse(startx, starty) \
+				num = FixedMul((v1.x - leadx)>>8, junk.dy) + FixedMul((leady - v1.y)>>8, junk.dx); \
+				frac = FixedDiv(num, den); \
+				if (frac < bestslidefrac) \
+					bestslidefrac = frac
+				P_PaperTraverse(leadx, leady);
+				P_PaperTraverse(trailx, leady);
+				P_PaperTraverse(leadx, traily);
+#undef dowork
+			}
+
+			goto papercollision;
+		}
 
 		// Thankfully box collisions are a lot simpler than arbitrary lines. There's only four possible cases.
 		if (mo->y + mo->radius <= tmhitthing->y - tmhitthing->radius)
@@ -2859,7 +3610,7 @@ void P_SlideMove(mobj_t *mo)
 	bestslideline = NULL;
 
 retry:
-	if (++hitcount == 3)
+	if ((++hitcount == 3) || papercol)
 		goto stairstep; // don't loop forever
 
 	// trace along the three leading corners
@@ -2901,6 +3652,7 @@ retry:
 		return;
 	}
 
+papercollision:
 	// move up to the wall
 	if (bestslidefrac == FRACUNIT+1)
 	{
@@ -3128,6 +3880,7 @@ bounceback:
 static fixed_t bombdamage;
 static mobj_t *bombsource;
 static mobj_t *bombspot;
+static UINT8 bombdamagetype;
 
 //
 // PIT_RadiusAttack
@@ -3138,17 +3891,13 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 {
 	fixed_t dx, dy, dz, dist;
 
-	if (thing == bombspot // ignore the bomb itself (Deton fix)
-	|| (bombsource && thing->type == bombsource->type)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
+	if (thing == bombspot) // ignore the bomb itself (Deton fix)
 		return true;
 
-	if (!(thing->flags & MF_SHOOTABLE))
+	if ((thing->flags & (MF_MONITOR|MF_SHOOTABLE)) != MF_SHOOTABLE)
 		return true;
 
-	if (thing->flags & MF_BOSS)
-		return true;
-
-	if (thing->flags & MF_MONITOR)
+	 if (bombsource && thing->type == bombsource->type && !(bombdamagetype & DMG_CANHURTSELF)) // ignore the type of guys who dropped the bomb (Jetty-Syn Bomber or Skim can bomb eachother, but not themselves.)
 		return true;
 
 	dx = abs(thing->x - bombspot->x);
@@ -3172,7 +3921,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 
 	if (P_CheckSight(thing, bombspot))
 	{	// must be in direct path
-		P_DamageMobj(thing, bombspot, bombsource, 1); // Tails 01-11-2001
+		P_DamageMobj(thing, bombspot, bombsource, 1, bombdamagetype); // Tails 01-11-2001
 	}
 
 	return true;
@@ -3182,7 +3931,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype)
 {
 	INT32 x, y;
 	INT32 xl, xh, yl, yh;
@@ -3199,6 +3948,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	bombspot = spot;
 	bombsource = source;
 	bombdamage = FixedMul(damagedist, spot->scale);
+	bombdamagetype = damagetype;
 
 	for (y = yl; y <= yh; y++)
 		for (x = xl; x <= xh; x++)
@@ -3227,6 +3977,8 @@ static boolean nofit;
 static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 {
 	mobj_t *killer = NULL;
+	//If a thing is both pushable and vulnerable, it doesn't block the crusher because it gets killed.
+	boolean immunepushable = ((thing->flags & (MF_PUSHABLE | MF_SHOOTABLE)) == MF_PUSHABLE);
 
 	if (P_ThingHeightClip(thing))
 	{
@@ -3245,7 +3997,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 	// just be blocked by another object - check if it's really a ceiling!
 	if (thing->z + thing->height > thing->ceilingz && thing->z <= thing->ceilingz)
 	{
-		if (thing->flags & MF_PUSHABLE && thing->z + thing->height > thing->subsector->sector->ceilingheight)
+		if (immunepushable && thing->z + thing->height > thing->subsector->sector->ceilingheight)
 		{
 			//Thing is a pushable and blocks the moving ceiling
 			nofit = true;
@@ -3253,7 +4005,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		}
 
 		//Check FOFs in the sector
-		if (thing->subsector->sector->ffloors && (realcrush || thing->flags & MF_PUSHABLE))
+		if (thing->subsector->sector->ffloors && (realcrush || immunepushable))
 		{
 			ffloor_t *rover;
 			fixed_t topheight, bottomheight;
@@ -3280,7 +4032,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 				delta2 = thingtop - (bottomheight + topheight)/2;
 				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
 				{
-					if (thing->flags & MF_PUSHABLE)
+					if (immunepushable)
 					{
 						//FOF is blocked by pushable
 						nofit = true;
@@ -3292,7 +4044,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 						thinker_t *think;
 						elevator_t *crumbler;
 
-						for (think = thinkercap.next; think != &thinkercap; think = think->next)
+						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 						{
 							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
 								continue;
@@ -3318,22 +4070,15 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		{
 			// Crush the object
 			if (netgame && thing->player && thing->player->spectator)
-				P_DamageMobj(thing, NULL, NULL, 42000); // Respawn crushed spectators
+				P_DamageMobj(thing, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
 			else
-			{
-				if (!killer)
-				{
-					//Nobody is responsible for crushing the object, so give a generic crush message
-					killer = P_SpawnMobj(thing->x, thing->y, thing->z, MT_NULL);
-					killer->threshold = 44; // Special flag for crushing
-				}
-				P_DamageMobj(thing, killer, killer, 10000);
-			}
+				P_DamageMobj(thing, killer, killer, 1, DMG_CRUSHED);
+			return true;
 		}
 	}
 
 	if (realcrush && crushchange)
-		P_DamageMobj(thing, NULL, NULL, 1);
+		P_DamageMobj(thing, NULL, NULL, 1, 0);
 
 	// keep checking (crush other things)
 	return true;
@@ -3345,6 +4090,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
 	msecnode_t *n;
+	size_t i;
 
 	nofit = false;
 	crushchange = crunch;
@@ -3359,9 +4105,57 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 
 	// First, let's see if anything will keep it from crushing.
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjInsidePolyobj(po, mo))
+								continue;
+
+							if (!PIT_ChangeSector(mo, false))
+							{
+								nofit = true;
+								return nofit;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{
@@ -3421,9 +4215,53 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	} while (n); // repeat from scratch until all things left are marked valid
 
 	// Nothing blocked us, so lets crush for real!
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjInsidePolyobj(po, mo))
+								continue;
+
+							PIT_ChangeSector(mo, true);
+							return nofit;
+						}
+					}
+				}
+			}
+		}
+	}
 	if (sector->numattached)
 	{
-		size_t i;
 		sector_t *sec;
 		for (i = 0; i < sector->numattached; i++)
 		{

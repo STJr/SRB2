@@ -31,6 +31,7 @@ enum sfxinfo_read {
 	sfxinfor_singular,
 	sfxinfor_priority,
 	sfxinfor_flags, // "pitch"
+	sfxinfor_caption,
 	sfxinfor_skinsound
 };
 const char *const sfxinfo_ropt[] = {
@@ -38,18 +39,21 @@ const char *const sfxinfo_ropt[] = {
 	"singular",
 	"priority",
 	"flags",
+	"caption",
 	"skinsound",
 	NULL};
 
 enum sfxinfo_write {
 	sfxinfow_singular = 0,
 	sfxinfow_priority,
-	sfxinfow_flags // "pitch"
+	sfxinfow_flags, // "pitch"
+	sfxinfow_caption
 };
 const char *const sfxinfo_wopt[] = {
 	"singular",
 	"priority",
 	"flags",
+	"caption",
 	NULL};
 
 //
@@ -88,6 +92,131 @@ static int lib_getSprname(lua_State *L)
 static int lib_sprnamelen(lua_State *L)
 {
 	lua_pushinteger(L, NUMSPRITES);
+	return 1;
+}
+
+//
+// Player Sprite Names
+//
+
+// push sprite name
+static int lib_getSpr2name(lua_State *L)
+{
+	playersprite_t i;
+
+	lua_remove(L, 1); // don't care about spr2names[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+	{
+		i = lua_tonumber(L, 1);
+		if (i >= free_spr2)
+			return 0;
+		lua_pushlstring(L, spr2names[i], 4);
+		return 1;
+	}
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < free_spr2; i++)
+			if (fastcmp(name, spr2names[i]))
+			{
+				lua_pushinteger(L, i);
+				return 1;
+			}
+	}
+	return 0;
+}
+
+static int lib_getSpr2default(lua_State *L)
+{
+	playersprite_t i;
+
+	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < free_spr2; i++)
+			if (fastcmp(name, spr2names[i]))
+				break;
+	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid index");
+
+	if (i >= free_spr2)
+		return 0;
+
+	lua_pushinteger(L, spr2defaults[i]);
+	return 1;
+}
+
+static int lib_setSpr2default(lua_State *L)
+{
+	playersprite_t i;
+	UINT8 j = 0;
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");
+
+// todo: maybe allow setting below first freeslot..? step 1 is toggling this, step 2 is testing to see whether it's net-safe
+#ifdef SETALLSPR2DEFAULTS
+#define FIRSTMODIFY 0
+#else
+#define FIRSTMODIFY SPR2_FIRSTFREESLOT
+	if (free_spr2 == SPR2_FIRSTFREESLOT)
+		return luaL_error(L, "You can only modify the spr2defaults[] entries of sprite2 freeslots, and none are currently added.");
+#endif
+
+	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < free_spr2; i++)
+		{
+			if (fastcmp(name, spr2names[i]))
+				break;
+		}
+		if (i == free_spr2)
+			return luaL_error(L, "spr2defaults[] invalid index");
+	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid index");
+
+	if (i < FIRSTMODIFY || i >= free_spr2)
+		return luaL_error(L, "spr2defaults[] index %d out of range (%d - %d)", i, FIRSTMODIFY, free_spr2-1);
+#undef FIRSTMODIFY
+
+	if (lua_isnumber(L, 2))
+		j = lua_tonumber(L, 2);
+	else if (lua_isstring(L, 2))
+	{
+		const char *name = lua_tostring(L, 2);
+		for (j = 0; j < free_spr2; j++)
+		{
+			if (fastcmp(name, spr2names[j]))
+				break;
+		}
+		if (j == free_spr2)
+			return luaL_error(L, "spr2defaults[] invalid set");
+	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid set");
+
+	if (j >= free_spr2)
+		return luaL_error(L, "spr2defaults[] set %d out of range (%d - %d)", j, 0, free_spr2-1);
+
+	spr2defaults[i] = j;
+	return 0;
+}
+
+static int lib_spr2namelen(lua_State *L)
+{
+	lua_pushinteger(L, free_spr2);
 	return 1;
 }
 
@@ -202,6 +331,18 @@ static int lib_setState(lua_State *L)
 			case LUA_TSTRING: // It's a string, expect the name of a built-in action
 				LUA_SetActionByName(state, lua_tostring(L, 3));
 				break;
+			case LUA_TUSERDATA: // It's a userdata, expect META_ACTION of a built-in action
+			{
+				actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
+
+				if (!action)
+					return luaL_error(L, "not a valid action?");
+
+				state->action = *action;
+				state->action.acv = action->acv;
+				state->action.acp1 = action->acp1;
+				break;
+			}
 			case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 				lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
 				I_Assert(lua_istable(L, -1));
@@ -351,9 +492,8 @@ static int state_get(lua_State *L)
 			return 0; // Just what is this??
 		// get the function from the global
 		// because the metatable will trigger.
-		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a new C closure if not.
-		lua_pushstring(L, name); // push the name we found.
-		return 2; // return both the function and its name, in case somebody wanted to do a comparison by name or something?
+		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a META_ACTION userdata if not.
+		return 1; // return just the function
 	} else if (fastcmp(field,"var1"))
 		number = st->var1;
 	else if (fastcmp(field,"var2"))
@@ -397,6 +537,18 @@ static int state_set(lua_State *L)
 		case LUA_TSTRING: // It's a string, expect the name of a built-in action
 			LUA_SetActionByName(st, lua_tostring(L, 3));
 			break;
+		case LUA_TUSERDATA: // It's a userdata, expect META_ACTION of a built-in action
+		{
+			actionf_t *action = *((actionf_t **)luaL_checkudata(L, 3, META_ACTION));
+
+			if (!action)
+				return luaL_error(L, "not a valid action?");
+
+			st->action = *action;
+			st->action.acv = action->acv;
+			st->action.acp1 = action->acp1;
+			break;
+		}
 		case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
 			lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
 			I_Assert(lua_istable(L, -1));
@@ -731,8 +883,8 @@ static int lib_getSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
-	if (i >= NUMSFX)
-		return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
+	if (i == 0 || i >= NUMSFX)
+		return luaL_error(L, "sfxinfo[] index %d out of range (1 - %d)", i, NUMSFX-1);
 	LUA_PushUserdata(L, &S_sfx[i], META_SFXINFO);
 	return 1;
 }
@@ -745,9 +897,9 @@ static int lib_setSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 	{
 		UINT32 i = luaL_checkinteger(L, 1);
-		if (i >= NUMSFX)
-			return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
-		info = &S_sfx[i]; // get the mobjinfo to assign to.
+		if (i == 0 || i >= NUMSFX)
+			return luaL_error(L, "sfxinfo[] index %d out of range (1 - %d)", i, NUMSFX-1);
+		info = &S_sfx[i]; // get the sfxinfo to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
@@ -775,6 +927,9 @@ static int lib_setSfxInfo(lua_State *L)
 			break;
 		case sfxinfow_flags:
 			info->pitch = (INT32)luaL_checkinteger(L, 3);
+			break;
+		case sfxinfow_caption:
+			strlcpy(info->caption, luaL_checkstring(L, 3), sizeof(info->caption));
 			break;
 		default:
 			break;
@@ -813,11 +968,14 @@ static int sfxinfo_get(lua_State *L)
 	case sfxinfor_flags:
 		lua_pushinteger(L, sfx->pitch);
 		return 1;
+	case sfxinfor_caption:
+		lua_pushstring(L, sfx->caption);
+		return 1;
 	case sfxinfor_skinsound:
 		lua_pushinteger(L, sfx->skinsound);
 		return 1;
 	default:
-		return luaL_error(L, "impossible error");
+		return luaL_error(L, "Field does not exist in sfxinfo_t");
 	}
 	return 0;
 }
@@ -848,8 +1006,11 @@ static int sfxinfo_set(lua_State *L)
 	case sfxinfow_flags:
 		sfx->pitch = luaL_checkinteger(L, 1);
 		break;
+	case sfxinfow_caption:
+		strlcpy(sfx->caption, luaL_checkstring(L, 1), sizeof(sfx->caption));
+		break;
 	default:
-		return luaL_error(L, "impossible error");
+		return luaL_error(L, "Field does not exist in sfxinfo_t");
 	}
 	return 0;
 }
@@ -922,6 +1083,29 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "sprnames");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSpr2name);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_spr2namelen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "spr2names");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSpr2default);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setSpr2default);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_spr2namelen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "spr2defaults");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

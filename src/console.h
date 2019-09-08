@@ -13,11 +13,7 @@
 #include "d_event.h"
 #include "command.h"
 
-#ifdef _WII
-void CON_InitWii(void);
-#else
 void CON_Init(void);
-#endif
 
 boolean CON_Responder(event_t *ev);
 
@@ -38,11 +34,13 @@ extern UINT32 con_scalefactor; // console text scale factor
 
 extern consvar_t cons_backcolor;
 
-extern UINT8 *yellowmap, *purplemap, *lgreenmap, *bluemap, *graymap, *redmap, *orangemap;
+extern UINT8 *yellowmap, *magentamap, *lgreenmap, *bluemap, *graymap, *redmap, *orangemap, *skymap, *purplemap, *aquamap, *peridotmap, *azuremap, *brownmap, *rosymap, *invertmap;
 
 // Console bg color (auto updated to match)
 extern UINT8 *consolebgmap;
+extern UINT8 *promptbgmap;
 
+void CON_SetupBackColormapEx(INT32 color, boolean prompt);
 void CON_SetupBackColormap(void);
 void CON_ClearHUD(void); // clear heads up messages
 

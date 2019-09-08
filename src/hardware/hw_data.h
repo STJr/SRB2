@@ -20,7 +20,7 @@
 #ifndef _HWR_DATA_
 #define _HWR_DATA_
 
-#if defined (_WIN32) && !defined (__CYGWIN__) && !defined (_XBOX)
+#if defined (_WIN32) && !defined (__CYGWIN__)
 //#define WIN32_LEAN_AND_MEAN
 #define RPC_NO_WINDOWS_H
 #include <windows.h>

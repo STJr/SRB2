@@ -294,6 +294,9 @@
     <ClInclude Include="..\lua_script.h">
       <Filter>LUA</Filter>
     </ClInclude>
+    <ClInclude Include="..\apng.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\md5.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
@@ -446,6 +449,12 @@
     </ClInclude>
     <ClInclude Include="sdlmain.h">
       <Filter>SDLApp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hardware\hw_clip.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_portal.h">
+      <Filter>R_Rend</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -884,6 +893,13 @@
     </ClCompile>
     <ClCompile Include="SDL_main\SDL_windows_main.c">
       <Filter>SDLApp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\hw_clip.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\apng.c" />
+    <ClCompile Include="..\r_portal.c">
+      <Filter>R_Rend</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

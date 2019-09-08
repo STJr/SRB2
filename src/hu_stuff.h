@@ -21,7 +21,7 @@
 //------------------------------------
 //           heads up font
 //------------------------------------
-#define HU_FONTSTART '\x1F' // the first font character
+#define HU_FONTSTART '\x16' // the first font character
 #define HU_FONTEND '~'
 
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
@@ -57,23 +57,36 @@ typedef struct
 //           chat stuff
 //------------------------------------
 #define HU_MAXMSGLEN 224
+#define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
+#ifdef NETSPLITSCREEN
+#define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640)
+#else
+#define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640 || splitscreen)
+#endif
+#define CHAT_MUTE (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
+#define OLD_MUTE (OLDCHAT && cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
+
+// some functions
+void HU_AddChatText(const char *text, boolean playsound);
+
+// set true when entering a chat message
+extern boolean chat_on;
 
 extern patch_t *hu_font[HU_FONTSIZE], *tny_font[HU_FONTSIZE];
 extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
-extern patch_t *emeraldpics[7];
-extern patch_t *tinyemeraldpics[7];
+extern patch_t *ttlnum[20];
+extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;
 extern patch_t *bflagico;
 extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
-
-// set true when entering a chat message
-extern boolean chat_on;
+extern patch_t *tallinfin;
+extern patch_t *tokenicon;
 
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;
@@ -87,12 +100,12 @@ void HU_LoadGraphics(void);
 void HU_Start(void);
 
 boolean HU_Responder(event_t *ev);
-
 void HU_Ticker(void);
 void HU_Drawer(void);
 char HU_dequeueChatChar(void);
 void HU_Erase(void);
 void HU_clearChatChars(void);
+void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext);	// Lat': Ping drawer for scoreboard.
 void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer);
 void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);

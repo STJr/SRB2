@@ -30,7 +30,9 @@ typedef enum {
 	MU_MP3_MAD_UNUSED, // use MU_MP3 instead
 	MU_FLAC,
 	MU_MODPLUG_UNUSED, // use MU_MOD instead
-	MU_GME
+	MU_GME,
+	MU_MOD_EX, // libopenmpt
+	MU_MID_EX // Non-native MIDI
 } musictype_t;
 
 /**	\brief Sound subsystem runing and waiting
@@ -147,6 +149,18 @@ boolean I_SongPaused(void);
 boolean I_SetSongSpeed(float speed);
 
 /// ------------------------
+//  MUSIC SEEKING
+/// ------------------------
+
+UINT32 I_GetSongLength(void);
+
+boolean I_SetSongLoopPoint(UINT32 looppoint);
+UINT32 I_GetSongLoopPoint(void);
+
+boolean I_SetSongPosition(UINT32 position);
+UINT32 I_GetSongPosition(void);
+
+/// ------------------------
 //  MUSIC PLAYBACK
 /// ------------------------
 
@@ -215,6 +229,17 @@ void I_ResumeSong(void);
 void I_SetMusicVolume(UINT8 volume);
 
 boolean I_SetSongTrack(INT32 track);
+
+/// ------------------------
+/// MUSIC FADING
+/// ------------------------
+
+void I_SetInternalMusicVolume(UINT8 volume);
+void I_StopFadingSong(void);
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void));
+boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void));
+boolean I_FadeOutStopSong(UINT32 ms);
+boolean I_FadeInPlaySong(UINT32 ms, boolean looping);
 
 /// ------------------------
 //  CD MUSIC I/O

@@ -43,6 +43,7 @@
 		1E44AF0D0B67CDE900BAD059 /* m_fixed.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AEFE0B67CDE900BAD059 /* m_fixed.c */; };
 		1E44AF0F0B67CDE900BAD059 /* m_menu.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF000B67CDE900BAD059 /* m_menu.c */; };
 		1E44AF110B67CDE900BAD059 /* m_misc.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF020B67CDE900BAD059 /* m_misc.c */; };
+		1E44AF110B67CDE900BAD059 /* apng.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF020B67CDE900BAD059 /* apng.c */; };
 		1E44AF130B67CDE900BAD059 /* m_random.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF040B67CDE900BAD059 /* m_random.c */; };
 		1E44AF1A0B67CE2A00BAD059 /* info.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF180B67CE2A00BAD059 /* info.c */; };
 		1E44AF1E0B67CE3600BAD059 /* md5.c in Sources */ = {isa = PBXBuildFile; fileRef = 1E44AF1C0B67CE3600BAD059 /* md5.c */; };
@@ -253,7 +254,9 @@
 		1E44AF000B67CDE900BAD059 /* m_menu.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = m_menu.c; path = ../../m_menu.c; sourceTree = SOURCE_ROOT; };
 		1E44AF010B67CDE900BAD059 /* m_menu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = m_menu.h; path = ../../m_menu.h; sourceTree = SOURCE_ROOT; };
 		1E44AF020B67CDE900BAD059 /* m_misc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = m_misc.c; path = ../../m_misc.c; sourceTree = SOURCE_ROOT; };
+		1E44AF020B67CDE900BAD059 /* apng.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = apng.c; path = ../../m_misc.c; sourceTree = SOURCE_ROOT; };
 		1E44AF030B67CDE900BAD059 /* m_misc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = m_misc.h; path = ../../m_misc.h; sourceTree = SOURCE_ROOT; };
+		1E44AF020B67CDE900BAD059 /* apng.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = apng.h; path = ../../m_misc.c; sourceTree = SOURCE_ROOT; };
 		1E44AF040B67CDE900BAD059 /* m_random.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = m_random.c; path = ../../m_random.c; sourceTree = SOURCE_ROOT; };
 		1E44AF050B67CDE900BAD059 /* m_random.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = m_random.h; path = ../../m_random.h; sourceTree = SOURCE_ROOT; };
 		1E44AF060B67CDE900BAD059 /* m_swap.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = m_swap.h; path = ../../m_swap.h; sourceTree = SOURCE_ROOT; };
@@ -679,6 +682,8 @@
 				1E44AEFF0B67CDE900BAD059 /* m_fixed.h */,
 				1E44AF020B67CDE900BAD059 /* m_misc.c */,
 				1E44AF030B67CDE900BAD059 /* m_misc.h */,
+				1E44AF020B67CDE900BAD059 /* apng.c */,
+				1E44AF030B67CDE900BAD059 /* apng.h */,
 				676BB51C0E0DE06100C95963 /* m_queue.c */,
 				676BB51D0E0DE06100C95963 /* m_queue.h */,
 				1E44AF040B67CDE900BAD059 /* m_random.c */,
@@ -1214,7 +1219,7 @@
 		C01FCF4B08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 2.1.21;
+				CURRENT_PROJECT_VERSION = 2.1.25;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					NORMALSRB2,
@@ -1226,7 +1231,7 @@
 		C01FCF4C08A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 2.1.21;
+				CURRENT_PROJECT_VERSION = 2.1.25;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (

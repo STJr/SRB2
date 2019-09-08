@@ -27,8 +27,12 @@
 
 extern UINT8 *screens[5];
 
-extern const UINT8 gammatable[5][256];
-extern consvar_t cv_ticrate, cv_usegamma, cv_allcaps, cv_constextsize;
+extern consvar_t cv_ticrate, cv_constextsize,\
+cv_globalgamma, cv_globalsaturation, \
+cv_rhue, cv_yhue, cv_ghue, cv_chue, cv_bhue, cv_mhue,\
+cv_rgamma, cv_ygamma, cv_ggamma, cv_cgamma, cv_bgamma, cv_mgamma, \
+cv_rsaturation, cv_ysaturation, cv_gsaturation, cv_csaturation, cv_bsaturation, cv_msaturation,\
+cv_allcaps;
 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
@@ -42,6 +46,7 @@ const char *R_GetPalname(UINT16 num);
 const char *GetPalette(void);
 
 extern RGBA_t *pLocalPalette;
+extern RGBA_t *pMasterPalette;
 
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])
@@ -69,13 +74,21 @@ extern RGBA_t *pLocalPalette;
 #define V_CHARCOLORSHIFT     12
 #define V_CHARCOLORMASK      0x0000F000
 // for simplicity's sake, shortcuts to specific colors
-#define V_PURPLEMAP          0x00001000
+#define V_MAGENTAMAP         0x00001000
 #define V_YELLOWMAP          0x00002000
 #define V_GREENMAP           0x00003000
 #define V_BLUEMAP            0x00004000
 #define V_REDMAP             0x00005000
 #define V_GRAYMAP            0x00006000
 #define V_ORANGEMAP          0x00007000
+#define V_SKYMAP             0x00008000
+#define V_PURPLEMAP          0x00009000
+#define V_AQUAMAP            0x0000A000
+#define V_PERIDOTMAP         0x0000B000
+#define V_AZUREMAP           0x0000C000
+#define V_BROWNMAP           0x0000D000
+#define V_ROSYMAP            0x0000E000
+#define V_INVERTMAP          0x0000F000
 
 // use bits 17-20 for alpha transparency
 #define V_ALPHASHIFT         16
@@ -108,8 +121,8 @@ extern RGBA_t *pLocalPalette;
 #define V_WRAPX              0x10000000 // Don't clamp texture on X (for HW mode)
 #define V_WRAPY              0x20000000 // Don't clamp texture on Y (for HW mode)
 
-#define V_NOSCALESTART       0x40000000  // don't scale x, y, start coords
-#define V_SPLITSCREEN        0x80000000
+#define V_NOSCALESTART       0x40000000 // don't scale x, y, start coords
+#define V_PERPLAYER          0x80000000 // automatically adjust coordinates/scaling for splitscreen mode
 
 // defines for old functions
 #define V_DrawPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s|V_NOSCALESTART|V_NOSCALEPATCH, p, NULL)
@@ -139,21 +152,30 @@ void V_DrawScaledPic (INT32 px1, INT32 py1, INT32 scrn, INT32 lumpnum);
 
 // fill a box with a single color
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
+void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 // fill a box with a flat as a pattern
 void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 
 // fade down the screen buffer before drawing the menu over
-void V_DrawFadeScreen(void);
+void V_DrawFadeScreen(UINT16 color, UINT8 strength);
+// available to lua over my dead body, which will probably happen in this heat
+void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, UINT8 strength);
 
 void V_DrawFadeConsBack(INT32 plines);
+void V_DrawPromptBack(INT32 boxheight, INT32 color);
 
 // draw a single character
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);
+// draw a single character, but for the chat
+void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap);
+
+UINT8 *V_GetStringColormap(INT32 colorflags);
 
 void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string);
 
 // wordwrap a string using the hu_font
 char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
+UINT8 *V_GetStringColormap(INT32 colorflags);
 
 // draw a string using the hu_font
 void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string);
@@ -173,10 +195,12 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 // Draw tall nums, used for menu, HUD, intermission
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
+void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 
 // Find string width from lt_font chars
 INT32 V_LevelNameWidth(const char *string);
 INT32 V_LevelNameHeight(const char *string);
+INT32 V_LevelActNumWidth(INT32 num); // act number width
 
 void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string);
 INT32 V_CreditStringWidth(const char *string);
