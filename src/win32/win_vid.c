@@ -939,6 +939,11 @@ INT32 VID_SetMode(INT32 modenum)
 	return 1;
 }
 
+void VID_CheckRenderer(void)
+{
+	// ..............
+}
+
 // ========================================================================
 // Free the video buffer of the last video mode,
 // allocate a new buffer for the video mode to set.

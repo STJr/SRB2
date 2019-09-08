@@ -51,6 +51,11 @@ INT32 VID_SetMode(INT32 modenum)
   return 0;
 }
 
+void VID_CheckRenderer(void)
+{
+	// ..............
+}
+
 const char *VID_GetModeName(INT32 modenum)
 {
   return "A320x240";

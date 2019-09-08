@@ -466,16 +466,16 @@ static void F_IntroDrawScene(void)
 	// DRAW A FULL PIC INSTEAD OF FLAT!
 	if (intro_scenenum == 0);
 	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
+		background = W_CachePatchName("INTRO1", PU_PATCH);
 	else if (intro_scenenum == 2)
 	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
+		background = W_CachePatchName("INTRO2", PU_PATCH);
 		highres = true;
 	}
 	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
+		background = W_CachePatchName("INTRO3", PU_PATCH);
 	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
+		background = W_CachePatchName("INTRO4", PU_PATCH);
 	else if (intro_scenenum == 5)
 	{
 		if (intro_curtime >= 5*TICRATE)
@@ -734,7 +734,7 @@ static void F_IntroDrawScene(void)
 		if (roidtics >= 0)
 		{
 			V_DrawScaledPatch(roidtics, 24, 0,
-				(patch = W_CachePatchName(va("ROID00%.2d", intro_curtime%35), PU_CACHE)));
+				(patch = W_CachePatchName(va("ROID00%.2d", intro_curtime%35), PU_PATCH)));
 			W_UnlockCachedPatch(patch);
 		}
 	}
@@ -1359,7 +1359,6 @@ void F_GameEvaluationDrawer(void)
 
 			if (ALL7EMERALDS(emeralds))
 				++timesBeatenWithEmeralds;
-
 			if (ultimatemode)
 				++timesBeatenUltimate;
 
@@ -1447,10 +1446,28 @@ void F_GameEndTicker(void)
 		D_StartTitle();
 }
 
-
 // ==============
 //  TITLE SCREEN
 // ==============
+static void F_CacheTitleScreen(void)
+{
+	ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
+	ttwing = W_CachePatchName("TTWING", PU_LEVEL);
+	ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
+	ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
+	ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
+	ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
+	ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
+	ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
+	ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
+	ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
+	ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
+	ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
+	ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
+	ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
+	ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+}
+
 void F_StartTitleScreen(void)
 {
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
@@ -1469,21 +1486,7 @@ void F_StartTitleScreen(void)
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
 
-	ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-	ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-	ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-	ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-	ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-	ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-	ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-	ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-	ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-	ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-	ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-	ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-	ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-	ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-	ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+	F_CacheTitleScreen();
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -1491,6 +1494,9 @@ void F_TitleScreenDrawer(void)
 {
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
+
+	if (needpatchrecache)
+		F_CacheTitleScreen();
 
 	// Draw that sky!
 	F_SkyScroll(titlescrollspeed);

@@ -1350,7 +1350,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 		{
 			// Sprite
-			gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+			gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 

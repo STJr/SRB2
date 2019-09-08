@@ -96,5 +96,7 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3);
 const char *R_ColormapNameForNum(INT32 num);
 
 extern INT32 numtextures;
+extern boolean needpatchflush;
+extern boolean needpatchrecache;
 
 #endif

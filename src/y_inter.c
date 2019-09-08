@@ -1051,8 +1051,8 @@ void Y_StartIntermission(void)
 			}
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_STATIC);
-			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_STATIC);
+				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
 			if (mapheaderinfo[prevmap]->actnum)
@@ -1062,13 +1062,13 @@ void Y_StartIntermission(void)
 				data.coop.ttlnum = W_CachePatchName("TTL01", PU_STATIC);
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
-			bgpatch = W_CachePatchName("INTERSCR", PU_STATIC);
+			widebgpatch = W_CachePatchName("INTERSCW", PU_PATCH);
+			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 				usebuffer = false;
 			}
@@ -1153,17 +1153,17 @@ void Y_StartIntermission(void)
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
-			data.spec.bonuspatch = W_CachePatchName(data.spec.bonus.patch, PU_STATIC);
-			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_STATIC);
-			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_STATIC);
+			data.spec.bonuspatch = W_CachePatchName(data.spec.bonus.patch, PU_PATCH);
+			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
+			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
 			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_STATIC);
+			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 			}
 			else
@@ -1175,14 +1175,14 @@ void Y_StartIntermission(void)
 			// get special stage specific patches
 /*			if (!stagefailed && ALL7EMERALDS(emeralds))
 			{
-				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_PATCH);
 				data.spec.headx = 70;
 				data.spec.nowsuper = players[consoleplayer].skin
 					? NULL : W_CachePatchName("NOWSUPER", PU_STATIC);
 			}
 			else
 			{
-				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_PATCH);
 				data.spec.headx = 48;
 				data.spec.nowsuper = NULL;
 			} */
@@ -1255,9 +1255,9 @@ void Y_StartIntermission(void)
 
 			// get RESULT header
 			data.match.result =
-				W_CachePatchName("RESULT", PU_STATIC);
+				W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1283,9 +1283,9 @@ void Y_StartIntermission(void)
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
 			// get RESULT header
-			data.match.result = W_CachePatchName("RESULT", PU_STATIC);
+			data.match.result = W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1322,7 +1322,7 @@ void Y_StartIntermission(void)
 				data.match.blueflag = bmatcico;
 			}
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1348,7 +1348,7 @@ void Y_StartIntermission(void)
 			data.competition.levelstring[sizeof data.competition.levelstring - 1] = '\0';
 
 			// get background tile
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;

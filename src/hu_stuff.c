@@ -1993,6 +1993,9 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
+
 #ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)

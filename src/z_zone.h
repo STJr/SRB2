@@ -39,6 +39,7 @@
 #define PU_SOUND               11 // static while playing
 #define PU_MUSIC               12 // static while playing
 #define PU_HUDGFX              13 // static until WAD added
+#define PU_PATCH               14 // static until renderer change
 
 #define PU_HWRPATCHINFO        21 // Hardware GLPatch_t struct for OpenGL texture cache
 #define PU_HWRPATCHCOLMIPMAP   22 // Hardware GLMipmap_t struct colromap variation of patch

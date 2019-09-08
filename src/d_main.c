@@ -227,6 +227,7 @@ gamestate_t wipegamestate = GS_LEVEL;
 
 static void D_Display(void)
 {
+	INT32 setrenderstillneeded = setrenderneeded;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -237,15 +238,19 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
+	// stop movie if needs to change renderer
+	if (setrenderneeded && (moviemode != MM_OFF))
+		M_StopMovie();
+
 	// check for change of screen size (video mode)
-	if (setmodeneeded && !wipe)
+	if ((setmodeneeded || setrenderneeded) && !wipe)
 		SCR_SetMode(); // change video mode
 
-	if (vid.recalc)
+	if (vid.recalc || setrenderstillneeded)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
 
 	// change the view size if needed
-	if (setsizeneeded)
+	if (setsizeneeded || setrenderstillneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
@@ -426,7 +431,7 @@ static void D_Display(void)
 			py = 4;
 		else
 			py = viewwindowy + 4;
-		patch = W_CachePatchName("M_PAUSE", PU_CACHE);
+		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
 		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
 	}
 
@@ -489,6 +494,12 @@ static void D_Display(void)
 
 		I_FinishUpdate(); // page flip or blit buffer
 	}
+
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
+
+	needpatchflush = false;
+	needpatchrecache = false;
 }
 
 // =========================================================================
