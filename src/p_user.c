@@ -1431,11 +1431,11 @@ void P_PlayLivesJingle(player_t *player)
 		S_StartSound(NULL, sfx_marioa);
 	else
 	{
+		P_PlayJingle(player, JT_1UP);
 		if (player)
 			player->powers[pw_extralife] = extralifetics + 1;
 		strlcpy(S_sfx[sfx_None].caption, "One-up", 7);
 		S_StartCaption(sfx_None, -1, extralifetics+1);
-		P_PlayJingle(player, JT_1UP);
 	}
 }
 

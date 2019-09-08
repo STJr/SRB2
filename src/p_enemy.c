@@ -726,6 +726,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->mo->health <= 0)
 			continue; // dead
 
+		if (player->bot)
+			continue; // ignore bots
+
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away
@@ -4149,9 +4152,9 @@ void A_Invincibility(mobj_t *actor)
 	{
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
