@@ -10546,10 +10546,6 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	else
 		p->viewz = p->mo->z + p->viewheight;
 
-	if (p->powers[pw_carry] != CR_NIGHTSMODE)
-		P_SetPlayerMobjState(p->mo, S_PLAY_STND);
-	p->pflags &= ~PF_SPINNING;
-
 	if (playernum == consoleplayer)
 	{
 		// wake up the status bar
@@ -10634,6 +10630,8 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 			mobj->eflags |= MFE_VERTICALFLIP;
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
+		if (mthing->options & MTF_AMBUSH)
+			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 	}
 	else
 		z = floor;
@@ -10652,7 +10650,12 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	P_SetThingPosition(mobj);
 
 	mobj->z = z;
-	if (mobj->z == mobj->floorz)
+	if (mobj->flags2 & MF2_OBJECTFLIP)
+	{
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
+	else if (mobj->z == mobj->floorz)
 		mobj->eflags |= MFE_ONGROUND;
 
 	mobj->angle = angle;
@@ -10688,17 +10691,29 @@ void P_MovePlayerToStarpost(INT32 playernum)
 	sector->ceilingheight;
 
 	z = p->starpostz << FRACBITS;
-	if (z < floor)
+
+	P_SetScale(mobj, (mobj->destscale = abs(p->starpostscale)));
+
+	if (p->starpostscale < 0)
+	{
+		mobj->flags2 |= MF2_OBJECTFLIP;
+		if (z >= ceiling)
+		{
+			mobj->eflags |= MFE_ONGROUND;
+			z = ceiling;
+		}
+		z -= mobj->height;
+	}
+	else if (z <= floor)
+	{
+		mobj->eflags |= MFE_ONGROUND;
 		z = floor;
-	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
-		z = ceiling - mobjinfo[MT_PLAYER].height;
+	}
 
 	mobj->floorz = floor;
 	mobj->ceilingz = ceiling;
 
 	mobj->z = z;
-	if (mobj->z == mobj->floorz)
-		mobj->eflags |= MFE_ONGROUND;
 
 	mobj->angle = p->starpostangle;
 

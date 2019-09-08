@@ -6466,6 +6466,7 @@ void A_MixUp(mobj_t *actor)
 		INT32 starpostnum;
 		tic_t starposttime;
 		angle_t starpostangle;
+		fixed_t starpostscale;
 
 		INT32 mflags2;
 
@@ -6513,6 +6514,7 @@ void A_MixUp(mobj_t *actor)
 		starposty = players[one].starposty;
 		starpostz = players[one].starpostz;
 		starpostangle = players[one].starpostangle;
+		starpostscale = players[one].starpostscale;
 		starpostnum = players[one].starpostnum;
 		starposttime = players[one].starposttime;
 
@@ -6521,15 +6523,11 @@ void A_MixUp(mobj_t *actor)
 		P_MixUp(players[one].mo, players[two].mo->x, players[two].mo->y, players[two].mo->z, players[two].mo->angle,
 				players[two].starpostx, players[two].starposty, players[two].starpostz,
 				players[two].starpostnum, players[two].starposttime, players[two].starpostangle,
-				players[two].mo->flags2);
-
-		players[one].drawangle = players[two].drawangle;
+				players[two].starpostscale, players[two].drawangle, players[two].mo->flags2);
 
 		P_MixUp(players[two].mo, x, y, z, angle, starpostx, starposty, starpostz,
 				starpostnum, starposttime, starpostangle,
-				mflags2);
-
-		players[two].drawangle = drawangle;
+				starpostscale, drawangle, mflags2);
 
 		//carry set after mixup.  Stupid P_ResetPlayer() takes away some of the stuff we look for...
 		//but not all of it!  So we need to make sure they aren't set wrong or anything.
@@ -6556,6 +6554,7 @@ void A_MixUp(mobj_t *actor)
 		INT32 starpostnum[MAXPLAYERS];
 		tic_t starposttime[MAXPLAYERS];
 		angle_t starpostangle[MAXPLAYERS];
+		fixed_t starpostscale[MAXPLAYERS];
 
 		INT32 flags2[MAXPLAYERS];
 
@@ -6593,6 +6592,7 @@ void A_MixUp(mobj_t *actor)
 				starpostnum[counter] = players[i].starpostnum;
 				starposttime[counter] = players[i].starposttime;
 				starpostangle[counter] = players[i].starpostangle;
+				starpostscale[counter] = players[i].starpostscale;
 
 				flags2[counter] = players[i].mo->flags2;
 
@@ -6633,9 +6633,7 @@ void A_MixUp(mobj_t *actor)
 				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom][0],
 					spposition[teleportfrom][0], spposition[teleportfrom][1], spposition[teleportfrom][2],
 					starpostnum[teleportfrom], starposttime[teleportfrom], starpostangle[teleportfrom],
-					flags2[teleportfrom]);
-
-				players[i].drawangle = anglepos[teleportfrom][1];
+					starpostscale[teleportfrom], anglepos[teleportfrom][1], flags2[teleportfrom]);
 
 				//...carry after.  same reasoning.
 				players[i].powers[pw_carry] = transcarry[teleportfrom];

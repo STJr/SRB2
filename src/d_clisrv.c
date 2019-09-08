@@ -579,6 +579,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->starpostnum = LONG(players[i].starpostnum);
 	rsp->starposttime = (tic_t)LONG(players[i].starposttime);
 	rsp->starpostangle = (angle_t)LONG(players[i].starpostangle);
+	rsp->starpostscale = (fixed_t)LONG(players[i].starpostscale);
 
 	rsp->maxlink = LONG(players[i].maxlink);
 	rsp->dashspeed = (fixed_t)LONG(players[i].dashspeed);
@@ -714,6 +715,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].starpostnum = LONG(rsp->starpostnum);
 	players[i].starposttime = (tic_t)LONG(rsp->starposttime);
 	players[i].starpostangle = (angle_t)LONG(rsp->starpostangle);
+	players[i].starpostscale = (fixed_t)LONG(rsp->starpostscale);
 
 	players[i].maxlink = LONG(rsp->maxlink);
 	players[i].dashspeed = (fixed_t)LONG(rsp->dashspeed);

@@ -262,6 +262,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->starposttime);
 	else if (fastcmp(field,"starpostangle"))
 		lua_pushangle(L, plr->starpostangle);
+	else if (fastcmp(field,"starpostscale"))
+		lua_pushfixed(L, plr->starpostscale);
 	else if (fastcmp(field,"angle_pos"))
 		lua_pushangle(L, plr->angle_pos);
 	else if (fastcmp(field,"old_angle_pos"))
@@ -570,6 +572,8 @@ static int player_set(lua_State *L)
 		plr->starposttime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"starpostangle"))
 		plr->starpostangle = luaL_checkangle(L, 3);
+	else if (fastcmp(field,"starpostscale"))
+		plr->starpostscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"angle_pos"))
 		plr->angle_pos = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"old_angle_pos"))

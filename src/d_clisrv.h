@@ -228,6 +228,7 @@ typedef struct
 	INT32 starpostnum;
 	tic_t starposttime;
 	angle_t starpostangle;
+	fixed_t starpostscale;
 
 	INT32 maxlink;
 	fixed_t dashspeed;
