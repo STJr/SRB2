@@ -215,7 +215,7 @@ UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
 UINT16 nightslinktics = 2*TICRATE;
 
-INT32 gameovertics = 10*TICRATE;
+INT32 gameovertics = 12*TICRATE;
 
 UINT8 ammoremovaltics = 2*TICRATE;
 
