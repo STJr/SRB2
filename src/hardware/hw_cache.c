@@ -60,48 +60,6 @@ static const INT32 format2bpp[16] =
 	2, //14 GR_TEXFMT_AP_88
 };
 
-static RGBA_t astblendpixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
-{
-	RGBA_t output;
-	output.s.alpha = 0xFF;
-
-	if (style == AST_TRANSLUCENT)
-	{
-		if (alpha == 0)
-			output.rgba = background.rgba;
-		else if (alpha == 0xFF)
-			output.rgba = foreground.rgba;
-		else if (alpha < 0xFF)
-		{
-			UINT8 beta = (0xFF - alpha);
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-		}
-		// write foreground pixel alpha
-		// if there's no pixel in here
-		if (!background.rgba)
-			output.s.alpha = foreground.s.alpha;
-	}
-
-	return output;
-}
-
-static UINT8 astblendpixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
-{
-	if ((style == AST_TRANSLUCENT) && (alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-	{
-		UINT8 *mytransmap;
-		if (alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			return background;
-		// The equation's not exact but it works as intended. I'll call it a day for now.
-		mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
-		if (background != 0xFF)
-			return *(mytransmap + (background<<8) + foreground);
-	}
-	return background;
-}
-
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
 // -- Monster Iestyn (13/02/19)
@@ -180,34 +138,34 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			switch (bpp)
 			{
 				case 2 : // uhhhhhhhh..........
-						 if ((originPatch != NULL) && originPatch->style)
-							 texel = astblendpixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
 						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
-						 if ((originPatch != NULL) && originPatch->style)
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp = astblendpixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
-						 if ((originPatch != NULL) && originPatch->style)
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp = astblendpixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
 				default:
-						 if ((originPatch != NULL) && originPatch->style)
-							 *dest = astblendpixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
 						 else
 							 *dest = texel;
 						 break;
@@ -294,34 +252,34 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			switch (bpp)
 			{
 				case 2 : // uhhhhhhhh..........
-						 if ((originPatch != NULL) && originPatch->style)
-							 texel = astblendpixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
 						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
-						 if ((originPatch != NULL) && originPatch->style)
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp = astblendpixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
-						 if ((originPatch != NULL) && originPatch->style)
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp = astblendpixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
 				default:
-						 if ((originPatch != NULL) && originPatch->style)
-							 *dest = astblendpixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
 						 else
 							 *dest = texel;
 						 break;
@@ -410,16 +368,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	/*if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-	{
-		if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			continue;
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawTransFlippedColumnInCache : HWR_DrawTransColumnInCache;
-	}
-	else*/
-	{
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
-	}
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);
