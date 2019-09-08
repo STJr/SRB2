@@ -175,6 +175,3 @@ char *I_ClipboardPaste(void)
 }
 
 void I_RegisterSysCommands(void) {}
-
-#include "../sdl/dosstr.c"
-

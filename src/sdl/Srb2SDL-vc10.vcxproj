@@ -456,7 +456,6 @@
     <ClCompile Include="..\w_wad.c" />
     <ClCompile Include="..\y_inter.c" />
     <ClCompile Include="..\z_zone.c" />
-    <ClCompile Include="dosstr.c" />
     <ClCompile Include="endtxt.c" />
     <ClCompile Include="hwsym_sdl.c" />
     <ClCompile Include="IMG_xpm.c">

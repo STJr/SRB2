@@ -4,22 +4,6 @@
 #include <Windows.h>
 #include "wince_stuff.h"
 
-char* _strlwr( char *string )
-{
-	int i;
-
-	if(!string)
-		return NULL;
-
-	for(i=0 ; i < strlen(string); i++)
-	{
-		if((*(string + i) >= 65) && (*(string + i) <= 90))
-			*(string+i) = *(string+i) + 32;
-	}
-
-	return string;
-}
-
 int _strnicmp(const char *first,const char *last, size_t count )
 {
 	int f, l;
@@ -54,25 +38,6 @@ int _stricmp( const char *dst, const char *src )
 
 	return(f - l);
 }
-
-
-char* _strupr( char *string )
-{
-	int i;
-
-	if(!string)
-		return NULL;
-
-	for(i=0 ; i < strlen(string); i++)
-	{
-		if((*(string + i) >= 97) && (*(string + i) <= 122))
-			*(string + i) = *(string + i) - 32;
-	}
-
-	return string;
-}
-
-
 
 
 int isprint( int c )
