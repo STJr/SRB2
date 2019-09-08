@@ -1431,7 +1431,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						if (special->flags2 & MF2_OBJECTFLIP)
 						{
 							players[i].starpostscale *= -1;
-							players[i].starpostz += (special->height - P_GetPlayerHeight(player))>>FRACBITS;
+							players[i].starpostz += special->height>>FRACBITS;
 						}
 						players[i].starpostnum = special->health;
 
@@ -1453,7 +1453,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (special->flags2 & MF2_OBJECTFLIP)
 				{
 					player->starpostscale *= -1;
-					player->starpostz += (special->height - P_GetPlayerHeight(player))>>FRACBITS;
+					player->starpostz += special->height>>FRACBITS;
 				}
 				player->starpostnum = special->health;
 				S_StartSound(toucher, special->info->painsound);

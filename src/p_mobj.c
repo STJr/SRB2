@@ -10669,24 +10669,26 @@ void P_MovePlayerToStarpost(INT32 playernum)
 
 	P_SetScale(mobj, (mobj->destscale = abs(p->starpostscale)));
 
-	mobj->floorz = floor;
-	mobj->ceilingz = ceiling;
-
-	if (z <= floor)
-		z = floor;
-	else if (z >= ceiling - mobj->height)
-		z = ceiling - mobj->height;
-
-	mobj->z = z;
-
 	if (p->starpostscale < 0)
 	{
 		mobj->flags2 |= MF2_OBJECTFLIP;
-		if (mobj->z + mobj->height == mobj->ceilingz)
+		if (z >= ceiling)
+		{
 			mobj->eflags |= MFE_ONGROUND;
+			z = ceiling;
+		}
+		z -= mobj->height;
 	}
-	else if (mobj->z == mobj->floorz)
+	else if (z <= floor)
+	{
 		mobj->eflags |= MFE_ONGROUND;
+		z = floor;
+	}
+
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
+
+	mobj->z = z;
 
 	mobj->angle = p->starpostangle;
 

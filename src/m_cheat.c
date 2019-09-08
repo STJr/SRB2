@@ -833,7 +833,10 @@ void Command_Savecheckpoint_f(void)
 	players[consoleplayer].starpostangle = players[consoleplayer].mo->angle;
 	players[consoleplayer].starpostscale = players[consoleplayer].mo->destscale;
 	if (players[consoleplayer].mo->flags2 & MF2_OBJECTFLIP)
+	{
 		players[consoleplayer].starpostscale *= -1;
+		players[consoleplayer].starpostz += players[consoleplayer].mo->height;
+	}
 
 	CONS_Printf(M_GetText("Temporary checkpoint created at %d, %d, %d\n"), players[consoleplayer].starpostx, players[consoleplayer].starposty, players[consoleplayer].starpostz);
 }
