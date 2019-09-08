@@ -3956,6 +3956,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 461: // Spawns an object on the map based on texture offsets
 			{
 				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+				mobj_t *mobj;
 
 				fixed_t x, y, z;
 				x = sides[line->sidenum[0]].textureoffset;
@@ -3977,7 +3978,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 				}
 
-				mobj_t *mobj = P_SpawnMobj(x, y, z, type);
+				mobj = P_SpawnMobj(x, y, z, type);
 				if (mobj)
 					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
 				else
