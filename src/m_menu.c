@@ -2252,9 +2252,9 @@ void M_InitMenuPresTables(void)
 			menupres[i].muslooping = true;
 		}
 		if (i == MN_SP_TIMEATTACK)
-			strncpy(menupres[i].musname, "recatk", 7);
+			strncpy(menupres[i].musname, "_recat", 7);
 		else if (i == MN_SP_NIGHTSATTACK)
-			strncpy(menupres[i].musname, "nitatk", 7);
+			strncpy(menupres[i].musname, "_nitat", 7);
 		else if (i == MN_SP_PLAYER)
 			strncpy(menupres[i].musname, "_chsel", 7);
 	}
@@ -8503,7 +8503,7 @@ void M_DrawTimeAttackMenu(void)
 	curbgxspeed = 0;
 	curbgyspeed = 18;
 
-	M_ChangeMenuMusic("recatk", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("_recat", true); // Eww, but needed for when user hits escape during demo playback
 
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
@@ -8714,7 +8714,7 @@ void M_DrawNightsAttackMenu(void)
 
 	M_SetMenuCurBackground("NTSATKBG");
 
-	M_ChangeMenuMusic("nitatk", true); // Eww, but needed for when user hits escape during demo playback
+	M_ChangeMenuMusic("_nitat", true); // Eww, but needed for when user hits escape during demo playback
 
 	M_DrawNightsAttackBackground();
 	if (curfadevalue)
