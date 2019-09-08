@@ -1101,7 +1101,8 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CALL,  NULL,   "Video Modes...",      M_VideoModeMenu,     10},
 
 #ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
+	{IT_STRING|IT_CVAR,    NULL,   "Renderer",            &cv_renderer,        20},
+	//{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
 #endif
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
@@ -2769,11 +2770,11 @@ void M_Init(void)
 	quitmsg[QUIT3MSG5] = M_GetText("You'll be back to play soon, though...\n......right?\n\n(Press 'Y' to quit)");
 	quitmsg[QUIT3MSG6] = M_GetText("Aww, is Egg Rock Zone too\ndifficult for you?\n\n(Press 'Y' to quit)");
 
-#ifdef HWRENDER
+/*#ifdef HWRENDER
 	// Permanently hide some options based on render mode
 	if (rendermode == render_soft)
 		OP_VideoOptionsMenu[1].status = IT_DISABLED;
-#endif
+#endif*/
 
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);

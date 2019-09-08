@@ -60,6 +60,7 @@
 #define PU_HWRPATCHINFO_UNLOCKED 103
 
 void Z_Init(void);
+#define Z_FreeTag(tag) Z_FreeTags(tag, tag)
 void Z_FreeTags(INT32 lowtag, INT32 hightag);
 void Z_CheckMemCleanup(void);
 void Z_CheckHeap(INT32 i);
