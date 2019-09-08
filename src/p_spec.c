@@ -3953,6 +3953,39 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 461: // Spawns an object on the map based on texture offsets
+			{
+				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+				mobj_t *mobj;
+
+				fixed_t x, y, z;
+				x = sides[line->sidenum[0]].textureoffset;
+				y = sides[line->sidenum[0]].rowoffset;
+				z = line->frontsector->floorheight;
+
+				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
+				{
+					if (line->sidenum[1] != 0xffff) // Make sure the linedef has a back side
+					{
+						x = P_RandomRange(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[1]].textureoffset>>FRACBITS)<<FRACBITS;
+						y = P_RandomRange(sides[line->sidenum[0]].rowoffset>>FRACBITS, sides[line->sidenum[1]].rowoffset>>FRACBITS)<<FRACBITS;
+						z = P_RandomRange(line->frontsector->floorheight>>FRACBITS, line->frontsector->ceilingheight>>FRACBITS)<<FRACBITS;
+					}
+					else
+					{
+						CONS_Alert(CONS_WARNING,"Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", line->special);
+						break;
+					}
+				}
+
+				mobj = P_SpawnMobj(x, y, z, type);
+				if (mobj)
+					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
+				else
+					CONS_Alert(CONS_ERROR,"Linedef Type %d - Spawn Object: Object did not spawn!\n", line->special);
+			}
+			break;
+
 #ifdef POLYOBJECTS
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
