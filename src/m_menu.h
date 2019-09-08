@@ -397,6 +397,9 @@ void Screenshot_option_Onchange(void);
 // Addons menu updating
 void Addons_option_Onchange(void);
 
+// Moviemode menu updating
+void Moviemode_option_Onchange(void);
+
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
 {\
