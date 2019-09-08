@@ -1035,7 +1035,7 @@ void I_GetJoystickEvents(void)
 
 
 */
-static int joy_open2(int joyindex)
+static int joy_open(int joyindex)
 {
 	SDL_Joystick *newdev = NULL;
 	int num_joy = 0;
@@ -1069,48 +1069,48 @@ static int joy_open2(int joyindex)
 	// 4. Unplug Controller B -> Index 0 inactive, Index 1 closed
 	// 5. Plug Controller B   -> Index 0 opened
 	// 6. Plug Controller A   -> Index 0 REPLACED, opened as Controller A; Index 1 is now Controller B
-	if (JoyInfo2.dev)
+	if (JoyInfo.dev)
 	{
-		if (JoyInfo2.dev == newdev // same device, nothing to do
-			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo2.dev))) // we failed, but already have a working device
+		if (JoyInfo.dev == newdev // same device, nothing to do
+			|| (newdev == NULL && SDL_JoystickGetAttached(JoyInfo.dev))) // we failed, but already have a working device
 			return JoyInfo.axises;
 		// Else, we're changing devices, so send neutral joy events
-		CONS_Debug(DBG_GAMELOGIC, "Joystick2 device is changing; resetting events...\n");
-		I_ShutdownJoystick2();
+		CONS_Debug(DBG_GAMELOGIC, "Joystick1 device is changing; resetting events...\n");
+		I_ShutdownJoystick();
 	}
 
-	JoyInfo2.dev = newdev;
+	JoyInfo.dev = newdev;
 
-	if (JoyInfo2.dev == NULL)
+	if (JoyInfo.dev == NULL)
 	{
-		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: couldn't open device - %s\n"), SDL_GetError());
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: Couldn't open device - %s\n"), SDL_GetError());
 		return -1;
 	}
 	else
 	{
-		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
-		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
-		if (JoyInfo2.axises > JOYAXISSET*2)
-			JoyInfo2.axises = JOYAXISSET*2;
-/*		if (joyaxes<2)
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Joystick1: %s\n"), SDL_JoystickName(JoyInfo.dev));
+		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
+		if (JoyInfo.axises > JOYAXISSET*2)
+			JoyInfo.axises = JOYAXISSET*2;
+	/*		if (joyaxes<2)
 		{
 			I_OutputMsg("Not enought axes?\n");
 			return 0;
 		}*/
 
-		JoyInfo2.buttons = SDL_JoystickNumButtons(JoyInfo2.dev);
-		if (JoyInfo2.buttons > JOYBUTTONS)
-			JoyInfo2.buttons = JOYBUTTONS;
+		JoyInfo.buttons = SDL_JoystickNumButtons(JoyInfo.dev);
+		if (JoyInfo.buttons > JOYBUTTONS)
+			JoyInfo.buttons = JOYBUTTONS;
 
-		JoyInfo2.hats = SDL_JoystickNumHats(JoyInfo2.dev);
-		if (JoyInfo2.hats > JOYHATS)
-			JoyInfo2.hats = JOYHATS;
+		JoyInfo.hats = SDL_JoystickNumHats(JoyInfo.dev);
+		if (JoyInfo.hats > JOYHATS)
+			JoyInfo.hats = JOYHATS;
 
-		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
+		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo2.dev), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo.dev), "pad");
 
-		return JoyInfo2.axises;
+		return JoyInfo.axises;
 	}
 }
 
