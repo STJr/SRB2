@@ -424,16 +424,16 @@ static void F_IntroDrawScene(void)
 	// DRAW A FULL PIC INSTEAD OF FLAT!
 	if (intro_scenenum == 0);
 	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
+		background = W_CachePatchName("INTRO1", PU_PATCH);
 	else if (intro_scenenum == 2)
 	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
+		background = W_CachePatchName("INTRO2", PU_PATCH);
 		highres = true;
 	}
 	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
+		background = W_CachePatchName("INTRO3", PU_PATCH);
 	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
+		background = W_CachePatchName("INTRO4", PU_PATCH);
 	else if (intro_scenenum == 5)
 	{
 		if (intro_curtime >= 5*TICRATE)
@@ -708,8 +708,8 @@ static void F_IntroDrawScene(void)
 				y += (30*(FRACUNIT-scale));
 			}
 
-			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (worktics % 35)), PU_LEVEL);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(worktics & 1)), PU_LEVEL);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (worktics % 35)), PU_PATCH);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(worktics & 1)), PU_PATCH);
 
 			if (worktics >= 5)
 				trans = (worktics-5)>>1;
@@ -1350,14 +1350,14 @@ void F_GameEvaluationDrawer(void)
 
 		if (goodending)
 		{
-			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (finalecount % 35)), PU_LEVEL);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(finalecount & 1)), PU_LEVEL);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (finalecount % 35)), PU_PATCH);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(finalecount & 1)), PU_PATCH);
 			x -= FRACUNIT;
 		}
 		else
 		{
 			rockpat = W_CachePatchName("ROID0000", PU_LEVEL);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", (finalecount & 1)), PU_LEVEL);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", (finalecount & 1)), PU_PATCH);
 		}
 
 		if (finalecount >= 5)
@@ -1389,20 +1389,20 @@ void F_GameEvaluationDrawer(void)
 					// if j == 0 - alternate between 0 and 1
 					//         1 -                   1 and 2
 					//         2 -                   2 and not rendered
-					V_DrawFixedPatch(x+sparkloffs[j-1][0], y+sparkloffs[j-1][1], FRACUNIT, 0, W_CachePatchName(va("ENDSPKL%.1d", (j - ((sparklloop & 1) ? 0 : 1))), PU_LEVEL), R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_AQUA, GTC_CACHE));
+					V_DrawFixedPatch(x+sparkloffs[j-1][0], y+sparkloffs[j-1][1], FRACUNIT, 0, W_CachePatchName(va("ENDSPKL%.1d", (j - ((sparklloop & 1) ? 0 : 1))), PU_PATCH), R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_AQUA, GTC_CACHE));
 				}
 				j--;
 			}
 		}
 		else
 		{
-			patch_t *eggrock = W_CachePatchName("ENDEGRK5", PU_LEVEL);
+			patch_t *eggrock = W_CachePatchName("ENDEGRK5", PU_PATCH);
 			V_DrawFixedPatch(x, y, scale, 0, eggrock, colormap[0]);
 			if (trans < 10)
 				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, eggrock, colormap[1]);
 			else if (sparklloop)
 				V_DrawFixedPatch(x, y, scale, (10-sparklloop)<<V_ALPHASHIFT,
-					W_CachePatchName("ENDEGRK0", PU_LEVEL), colormap[1]);
+					W_CachePatchName("ENDEGRK0", PU_PATCH), colormap[1]);
 		}
 	}
 
@@ -1416,7 +1416,7 @@ void F_GameEvaluationDrawer(void)
 		eemeralds_cur += (360<<FRACBITS)/7;
 
 		patchname[4] = 'A'+(char)i;
-		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_LEVEL), NULL);
+		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_PATCH), NULL);
 	}
 
 	V_DrawCreditString((BASEVIDWIDTH - V_CreditStringWidth(endingtext))<<(FRACBITS-1), (BASEVIDHEIGHT-100)<<(FRACBITS-1), 0, endingtext);
@@ -1551,32 +1551,32 @@ void F_StartEnding(void)
 	memset(sparkloffs, 0, sizeof(INT32)*3*2);
 	sparklloop = 0;
 
-	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_LEVEL);
+	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_PATCH);
 
-	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_LEVEL);
-	endegrk[1] = W_CachePatchName("ENDEGRK1", PU_LEVEL);
+	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_PATCH);
+	endegrk[1] = W_CachePatchName("ENDEGRK1", PU_PATCH);
 
-	endglow[0] = W_CachePatchName("ENDGLOW0", PU_LEVEL);
-	endglow[1] = W_CachePatchName("ENDGLOW1", PU_LEVEL);
+	endglow[0] = W_CachePatchName("ENDGLOW0", PU_PATCH);
+	endglow[1] = W_CachePatchName("ENDGLOW1", PU_PATCH);
 
-	endbgsp[0] = W_CachePatchName("ENDBGSP0", PU_LEVEL);
-	endbgsp[1] = W_CachePatchName("ENDBGSP1", PU_LEVEL);
-	endbgsp[2] = W_CachePatchName("ENDBGSP2", PU_LEVEL);
+	endbgsp[0] = W_CachePatchName("ENDBGSP0", PU_PATCH);
+	endbgsp[1] = W_CachePatchName("ENDBGSP1", PU_PATCH);
+	endbgsp[2] = W_CachePatchName("ENDBGSP2", PU_PATCH);
 
-	endspkl[0] = W_CachePatchName("ENDSPKL0", PU_LEVEL);
-	endspkl[1] = W_CachePatchName("ENDSPKL1", PU_LEVEL);
-	endspkl[2] = W_CachePatchName("ENDSPKL2", PU_LEVEL);
+	endspkl[0] = W_CachePatchName("ENDSPKL0", PU_PATCH);
+	endspkl[1] = W_CachePatchName("ENDSPKL1", PU_PATCH);
+	endspkl[2] = W_CachePatchName("ENDSPKL2", PU_PATCH);
 
-	endxpld[0] = W_CachePatchName("ENDXPLD0", PU_LEVEL);
-	endxpld[1] = W_CachePatchName("ENDXPLD1", PU_LEVEL);
-	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_LEVEL);
-	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_LEVEL);
+	endxpld[0] = W_CachePatchName("ENDXPLD0", PU_PATCH);
+	endxpld[1] = W_CachePatchName("ENDXPLD1", PU_PATCH);
+	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_PATCH);
+	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_PATCH);
 
-	endescp[0] = W_CachePatchName("ENDESCP0", PU_LEVEL);
-	endescp[1] = W_CachePatchName("ENDESCP1", PU_LEVEL);
-	endescp[2] = W_CachePatchName("ENDESCP2", PU_LEVEL);
-	endescp[3] = W_CachePatchName("ENDESCP3", PU_LEVEL);
-	endescp[4] = W_CachePatchName("ENDESCP4", PU_LEVEL);
+	endescp[0] = W_CachePatchName("ENDESCP0", PU_PATCH);
+	endescp[1] = W_CachePatchName("ENDESCP1", PU_PATCH);
+	endescp[2] = W_CachePatchName("ENDESCP2", PU_PATCH);
+	endescp[3] = W_CachePatchName("ENDESCP3", PU_PATCH);
+	endescp[4] = W_CachePatchName("ENDESCP4", PU_PATCH);
 
 	// so we only need to check once
 	if ((goodending = ALL7EMERALDS(emeralds)))
@@ -1589,27 +1589,27 @@ void F_StartEnding(void)
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[2];
-			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[3];
-			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 			sprframe = &sprdef->spriteframes[4];
-			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		}
 		else // eh, yknow what? too lazy to put MISSINGs here. eggman wins if you don't give your character an ending firework display.
 		{
-			endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_LEVEL);
-			endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_LEVEL);
-			endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_LEVEL);
+			endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_PATCH);
+			endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_PATCH);
+			endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_PATCH);
 		}
 
-		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_LEVEL);
+		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_PATCH);
 	}
 	else
 	{
 		// eggman, skin nonspecific
-		endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_LEVEL);
-		endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_LEVEL);
-		endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_LEVEL);
+		endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_PATCH);
+		endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_PATCH);
+		endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_PATCH);
 
 		endbrdr[0] = W_CachePatchName("ENDBRDR0", PU_LEVEL);
 	}
@@ -1626,13 +1626,13 @@ void F_EndingTicker(void)
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
 	{
-		endegrk[0] = W_CachePatchName("ENDEGRK2", PU_LEVEL);
-		endegrk[1] = W_CachePatchName("ENDEGRK3", PU_LEVEL);
+		endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH);
+		endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH);
 
-		endglow[0] = W_CachePatchName("ENDGLOW2", PU_LEVEL);
-		endglow[1] = W_CachePatchName("ENDGLOW3", PU_LEVEL);
+		endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH);
+		endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH);
 
-		endxpld[0] = W_CachePatchName("ENDEGRK4", PU_LEVEL);
+		endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH);
 	}
 
 	if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
@@ -1653,9 +1653,9 @@ void F_EndingDrawer(void)
 	patch_t *rockpat;
 
 	if (!goodending || finalecount < INFLECTIONPOINT)
-		rockpat = W_CachePatchName("ROID0000", PU_LEVEL);
+		rockpat = W_CachePatchName("ROID0000", PU_PATCH);
 	else
-		rockpat = W_CachePatchName(va("ROID00%.2d", 34 - ((finalecount - INFLECTIONPOINT) % 35)), PU_LEVEL);
+		rockpat = W_CachePatchName(va("ROID00%.2d", 34 - ((finalecount - INFLECTIONPOINT) % 35)), PU_PATCH);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
@@ -2171,6 +2171,25 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 	W_UnlockCachedPatch(pat);
 }
 
+static void F_CacheTitleScreen(void)
+{
+	ttbanner = W_CachePatchName("TTBANNER", PU_PATCH);
+	ttwing = W_CachePatchName("TTWING", PU_PATCH);
+	ttsonic = W_CachePatchName("TTSONIC", PU_PATCH);
+	ttswave1 = W_CachePatchName("TTSWAVE1", PU_PATCH);
+	ttswave2 = W_CachePatchName("TTSWAVE2", PU_PATCH);
+	ttswip1 = W_CachePatchName("TTSWIP1", PU_PATCH);
+	ttsprep1 = W_CachePatchName("TTSPREP1", PU_PATCH);
+	ttsprep2 = W_CachePatchName("TTSPREP2", PU_PATCH);
+	ttspop1 = W_CachePatchName("TTSPOP1", PU_PATCH);
+	ttspop2 = W_CachePatchName("TTSPOP2", PU_PATCH);
+	ttspop3 = W_CachePatchName("TTSPOP3", PU_PATCH);
+	ttspop4 = W_CachePatchName("TTSPOP4", PU_PATCH);
+	ttspop5 = W_CachePatchName("TTSPOP5", PU_PATCH);
+	ttspop6 = W_CachePatchName("TTSPOP6", PU_PATCH);
+	ttspop7 = W_CachePatchName("TTSPOP7", PU_PATCH);
+}
+
 void F_StartTitleScreen(void)
 {
 	if (menupres[MN_MAIN].musname[0])
@@ -2255,21 +2274,7 @@ void F_StartTitleScreen(void)
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
 
-	ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-	ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-	ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-	ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-	ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-	ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-	ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-	ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-	ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-	ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-	ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-	ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-	ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-	ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-	ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+	F_CacheTitleScreen();
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -2279,6 +2284,9 @@ void F_TitleScreenDrawer(void)
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
+
+	if (needpatchrecache)
+		F_CacheTitleScreen();
 
 	// Draw that sky!
 	if (curbgcolor >= 0)

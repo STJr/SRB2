@@ -60,6 +60,7 @@ void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND t
 // ------------------
 viddef_t vid;
 INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set + 1)
+INT32 setrenderneeded = 0;
 
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
@@ -68,6 +69,10 @@ consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE, CV_Unsigned, NULL, 0, NU
 consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static void SCR_ChangeRenderer (void);
+static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
+consvar_t cv_renderer = {"renderer", "Software", CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
 
 static void SCR_ChangeFullscreen (void);
 
@@ -94,19 +99,8 @@ boolean R_3DNow = false;
 boolean R_MMXExt = false;
 boolean R_SSE2 = false;
 
-
-void SCR_SetMode(void)
+void SCR_SetDrawFuncs(void)
 {
-	if (dedicated)
-		return;
-
-	if (!setmodeneeded || WipeInAction)
-		return; // should never happen and don't change it during a wipe, BAD!
-
-	VID_SetMode(--setmodeneeded);
-
-	V_SetPalette(0);
-
 	//
 	//  setup the right draw routines for either 8bpp or 16bpp
 	//
@@ -166,9 +160,33 @@ void SCR_SetMode(void)
 */
 
 	wallcolfunc = walldrawerfunc;
+}
+
+void SCR_SetMode(void)
+{
+	if (dedicated)
+		return;
+
+	if (!(setmodeneeded || setrenderneeded) || WipeInAction)
+		return; // should never happen and don't change it during a wipe, BAD!
+
+	if (setrenderneeded)
+	{
+		needpatchflush = true;
+		needpatchrecache = true;
+		VID_CheckRenderer();
+	}
+
+	if (setmodeneeded)
+		VID_SetMode(--setmodeneeded);
+
+	V_SetPalette(0);
+
+	SCR_SetDrawFuncs();
 
 	// set the apprpriate drawer for the sky (tall or INT16)
 	setmodeneeded = 0;
+	setrenderneeded = 0;
 }
 
 // do some initial settings for the game loading screen
@@ -383,6 +401,29 @@ void SCR_ChangeFullscreen(void)
 	}
 	return;
 #endif
+}
+
+void SCR_ChangeRenderer(void)
+{
+	setrenderneeded = 0;
+
+	if (con_startup)
+	{
+		if (rendermode == render_soft)
+			CV_StealthSetValue(&cv_renderer, 1);
+		else if (rendermode == render_opengl)
+			CV_StealthSetValue(&cv_renderer, 2);
+		return;
+	}
+
+	if (cv_renderer.value == 1)
+		setrenderneeded = render_soft;
+	else if (cv_renderer.value == 2)
+		setrenderneeded = render_opengl;
+
+	// setting the same renderer twice WILL crash your game, so let's not, please
+	if (rendermode == setrenderneeded)
+		setrenderneeded = 0;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

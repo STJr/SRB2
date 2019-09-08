@@ -407,7 +407,7 @@ static int libd_getSpritePatch(lua_State *L)
 		return 0;
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
@@ -502,7 +502,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		return 0;
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }

@@ -2955,16 +2955,8 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
-	{
-#ifdef ALAM_LIGHTING
-		// BP: reset light between levels (we draw preview frame lights on current frame)
-		HWR_ResetLights();
-#endif
-		// Correct missing sidedefs & deep water trick
-		HWR_CorrectSWTricks();
-		HWR_CreatePlanePolygons((INT32)numnodes - 1);
-	}
+	if (rendermode == render_opengl)
+		HWR_SetupLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3119,10 +3111,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// preload graphics
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
-	{
+	if (rendermode == render_opengl)
 		HWR_PrepLevelCache(numtextures);
-	}
 #endif
 
 	P_MapEnd();
@@ -3219,6 +3209,19 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	return true;
 }
+
+#ifdef HWRENDER
+void HWR_SetupLevel(void)
+{
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+	// Correct missing sidedefs & deep water trick
+	HWR_CorrectSWTricks();
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+}
+#endif
 
 //
 // P_RunSOC

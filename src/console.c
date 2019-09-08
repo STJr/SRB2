@@ -1288,7 +1288,7 @@ void CONS_Printf(const char *fmt, ...)
 	if (con_startup)
 	{
 #ifdef _WINDOWS
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_CACHE);
+		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
 
 		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
 		V_DrawScaledPatch(0, 0, 0, con_backpic);
@@ -1545,7 +1545,7 @@ static void CON_DrawConsole(void)
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
 	{
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_CACHE);
+		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
 
 		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
 		V_DrawScaledPatch(0, 0, 0, con_backpic);
@@ -1601,6 +1601,12 @@ void CON_Drawer(void)
 {
 	if (!con_started || !graphics_started)
 		return;
+
+	if (needpatchrecache)
+	{
+		W_FlushCachedPatches();
+		HU_LoadGraphics();
+	}
 
 	if (con_recalc)
 		CON_RecalcSize();

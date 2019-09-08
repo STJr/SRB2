@@ -1161,10 +1161,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
-
-#ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL, "OpenGL Options...", &OP_OpenGLOptionsDef,          21},
-#endif
+	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_renderer,        21},
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,36},
@@ -1202,6 +1199,11 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Diagnostic", NULL, 180},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         186},
 	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      191},
+
+#ifdef HWRENDER
+	{IT_HEADER, NULL, "Renderer", NULL, 200},
+	{IT_SUBMENU|IT_STRING, NULL, "OpenGL Options...", &OP_OpenGLOptionsDef,          206},
+#endif
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -3588,19 +3590,19 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	centerlump[1] = W_GetNumForName("M_THERMM");
 	cursorlump = W_GetNumForName("M_THERMO");
 
-	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_CACHE));
+	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
 	xx += SHORT(p->width) - SHORT(p->leftoffset);
 	for (i = 0; i < 16; i++)
 	{
-		V_DrawScaledPatch(xx, y, V_WRAPX, W_CachePatchNum(centerlump[i & 1], PU_CACHE));
+		V_DrawScaledPatch(xx, y, V_WRAPX, W_CachePatchNum(centerlump[i & 1], PU_PATCH));
 		xx += 8;
 	}
-	V_DrawScaledPatch(xx, y, 0, W_CachePatchNum(rightlump, PU_CACHE));
+	V_DrawScaledPatch(xx, y, 0, W_CachePatchNum(rightlump, PU_PATCH));
 
 	xx = (cv->value - cv->PossibleValue[0].value) * (15*8) /
 		(cv->PossibleValue[1].value - cv->PossibleValue[0].value);
 
-	V_DrawScaledPatch((x + 8) + xx, y, 0, W_CachePatchNum(cursorlump, PU_CACHE));
+	V_DrawScaledPatch((x + 8) + xx, y, 0, W_CachePatchNum(cursorlump, PU_PATCH));
 }
 
 //  A smaller 'Thermo', with range given as percents (0-100)
@@ -3678,15 +3680,15 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 	// draw left side
 	cx = x;
 	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TL], PU_CACHE));
+	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TL], PU_PATCH));
 	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_L], PU_CACHE);
+	p = W_CachePatchNum(viewborderlump[BRDR_L], PU_PATCH);
 	for (n = 0; n < boxlines; n++)
 	{
 		V_DrawScaledPatch(cx, cy, V_WRAPY, p);
 		cy += step;
 	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BL], PU_CACHE));
+	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BL], PU_PATCH));
 
 	// draw middle
 	V_DrawFlatFill(x + boff, y + boff, width*step, boxlines*step, st_borderpatchnum);
@@ -3695,23 +3697,23 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 	cy = y;
 	while (width > 0)
 	{
-		V_DrawScaledPatch(cx, cy, V_WRAPX, W_CachePatchNum(viewborderlump[BRDR_T], PU_CACHE));
-		V_DrawScaledPatch(cx, y + boff + boxlines*step, V_WRAPX, W_CachePatchNum(viewborderlump[BRDR_B], PU_CACHE));
+		V_DrawScaledPatch(cx, cy, V_WRAPX, W_CachePatchNum(viewborderlump[BRDR_T], PU_PATCH));
+		V_DrawScaledPatch(cx, y + boff + boxlines*step, V_WRAPX, W_CachePatchNum(viewborderlump[BRDR_B], PU_PATCH));
 		width--;
 		cx += step;
 	}
 
 	// draw right side
 	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TR], PU_CACHE));
+	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TR], PU_PATCH));
 	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_R], PU_CACHE);
+	p = W_CachePatchNum(viewborderlump[BRDR_R], PU_PATCH);
 	for (n = 0; n < boxlines; n++)
 	{
 		V_DrawScaledPatch(cx, cy, V_WRAPY, p);
 		cy += step;
 	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BR], PU_CACHE));
+	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BR], PU_PATCH));
 */
 }
 
@@ -4781,13 +4783,13 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 		W_UnlockCachedPatch(levselp[1][2]);
 	}
 
-	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
-	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
-	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_PATCH);
+	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_PATCH);
+	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_PATCH);
 
-	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_STATIC);
-	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_STATIC);
-	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_STATIC);
+	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
+	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
+	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
 
 	return true;
 }
@@ -5435,6 +5437,27 @@ static void M_AddonsOptions(INT32 choice)
 #define LOCATIONSTRING1 "Visit \x83SRB2.ORG/MODS\x80 to get & make add-ons!"
 //#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/MODS\x80 to get & make add-ons!"
 
+static void M_LoadAddonsPatches(void)
+{
+	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_PATCH);
+	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_PATCH);
+	addonsp[EXT_NORESULTS] = W_CachePatchName("M_FNOPE", PU_PATCH);
+	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_PATCH);
+	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_PATCH);
+	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_PATCH);
+#ifdef USE_KART
+	addonsp[EXT_KART] = W_CachePatchName("M_FKART", PU_PATCH);
+#endif
+	addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_PATCH);
+	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_PATCH);
+	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_PATCH);
+	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_PATCH);
+	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL", PU_PATCH);
+	addonsp[NUM_EXT+2] = W_CachePatchName("M_FLOAD", PU_PATCH);
+	addonsp[NUM_EXT+3] = W_CachePatchName("M_FSRCH", PU_PATCH);
+	addonsp[NUM_EXT+4] = W_CachePatchName("M_FSAVE", PU_PATCH);
+}
+
 static void M_Addons(INT32 choice)
 {
 	const char *pathname = ".";
@@ -5485,23 +5508,7 @@ static void M_Addons(INT32 choice)
 			W_UnlockCachedPatch(addonsp[i]);
 	}
 
-	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_STATIC);
-	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_STATIC);
-	addonsp[EXT_NORESULTS] = W_CachePatchName("M_FNOPE", PU_STATIC);
-	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_STATIC);
-	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
-	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
-#ifdef USE_KART
-	addonsp[EXT_KART] = W_CachePatchName("M_FKART", PU_STATIC);
-#endif
-	addonsp[EXT_PK3] = W_CachePatchName("M_FPK3", PU_STATIC);
-	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
-	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
-	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_STATIC);
-	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL", PU_STATIC);
-	addonsp[NUM_EXT+2] = W_CachePatchName("M_FLOAD", PU_STATIC);
-	addonsp[NUM_EXT+3] = W_CachePatchName("M_FSRCH", PU_STATIC);
-	addonsp[NUM_EXT+4] = W_CachePatchName("M_FSAVE", PU_STATIC);
+	M_LoadAddonsPatches();
 
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
@@ -5639,6 +5646,9 @@ static void M_DrawAddons(void)
 		M_DrawMessageMenu();
 		return;
 	}
+
+	if (needpatchrecache)
+		M_LoadAddonsPatches();
 
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
@@ -7015,7 +7025,7 @@ static void M_DrawLoadGameData(void)
 				{
 					lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
 					if (lumpnum != LUMPERROR)
-						patch = W_CachePatchNum(lumpnum, PU_CACHE);
+						patch = W_CachePatchNum(lumpnum, PU_PATCH);
 					else
 						patch = savselp[5];
 				}
@@ -7071,7 +7081,7 @@ static void M_DrawLoadGameData(void)
 					goto skipbot;
 				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin, charbotskin->prefcolor, 0);
 				sprframe = &sprdef->spriteframes[0];
-				patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+				patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
 				V_DrawFixedPatch(
 					tempx + (18<<FRACBITS),
@@ -7093,7 +7103,7 @@ skipbot:
 			if (!sprdef->numframes)
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
-			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+			patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 			if ((calc = SHORT(patch->topoffset) - 42) > 0)
 				tempy += ((4+calc)<<FRACBITS);
 
@@ -7119,7 +7129,7 @@ skipsign:
 			if (!sprdef->numframes)
 				goto skiplife;
 			sprframe = &sprdef->spriteframes[0];
-			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+			patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
 			V_DrawFixedPatch(
 				(tempx + 4)<<FRACBITS,
@@ -7374,13 +7384,13 @@ static void M_ReadSaveStrings(void)
 		W_UnlockCachedPatch(savselp[5]);
 	}
 
-	savselp[0] = W_CachePatchName("SAVEBACK", PU_STATIC);
-	savselp[1] = W_CachePatchName("SAVENONE", PU_STATIC);
-	savselp[2] = W_CachePatchName("ULTIMATE", PU_STATIC);
+	savselp[0] = W_CachePatchName("SAVEBACK", PU_PATCH);
+	savselp[1] = W_CachePatchName("SAVENONE", PU_PATCH);
+	savselp[2] = W_CachePatchName("ULTIMATE", PU_PATCH);
 
-	savselp[3] = W_CachePatchName("GAMEDONE", PU_STATIC);
-	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
-	savselp[5] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	savselp[3] = W_CachePatchName("GAMEDONE", PU_PATCH);
+	savselp[4] = W_CachePatchName("BLACXLVL", PU_PATCH);
+	savselp[5] = W_CachePatchName("BLANKLVL", PU_PATCH);
 }
 
 //
@@ -7597,13 +7607,13 @@ static void M_SetupChoosePlayer(INT32 choice)
 					{
 						spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 						spriteframe_t *sprframe = &sprdef->spriteframes[1];
-						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+						description[i].pic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 					}
 					else
-						description[i].pic = W_CachePatchName("MISSING", PU_CACHE);
+						description[i].pic = W_CachePatchName("MISSING", PU_PATCH);
 				}
 				else
-					description[i].pic = W_CachePatchName(description[i].picname, PU_CACHE);
+					description[i].pic = W_CachePatchName(description[i].picname, PU_PATCH);
 			}
 			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
@@ -8044,7 +8054,7 @@ static void M_DrawLevelStats(void)
 		V_DrawString(20, 56, V_GREENMAP, "(complete)");
 
 	V_DrawString(36, 64, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
-	V_DrawSmallScaledPatch(20, 64, 0, W_CachePatchName("EMBLICON", PU_STATIC));
+	V_DrawSmallScaledPatch(20, 64, 0, W_CachePatchName("EMBLICON", PU_PATCH));
 
 	sprintf(beststr, "%u", bestscore);
 	V_DrawString(BASEVIDWIDTH/2, 48, V_YELLOWMAP, "SCORE:");
@@ -9481,7 +9491,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		multi_frame = 0;
 
 	sprframe = &sprdef->spriteframes[multi_frame];
-	patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
@@ -9502,7 +9512,7 @@ faildraw:
 		return; // Can't render!
 
 	sprframe = &sprdef->spriteframes[0];
-	patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 

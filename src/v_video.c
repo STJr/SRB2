@@ -1069,7 +1069,7 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skin
 	else
 	{
 		spriteframe_t *sprframe = &skins[skinnum].sprites[SPR2_WAIT].spriteframes[0];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
 		// No variant for translucency
