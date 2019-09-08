@@ -1139,7 +1139,7 @@ void M_StartMovie(void)
 	else if (cv_movie_option.value == 2)
 		strcpy(pathname, srb2path);
 	else if (cv_movie_option.value == 3 && *cv_movie_folder.string != '\0')
-		strcpy(pathname, cv_screenshot_folder.string);
+		strcpy(pathname, cv_movie_folder.string);
 
 	if (cv_movie_option.value != 3)
 	{
