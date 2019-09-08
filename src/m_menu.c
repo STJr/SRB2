@@ -8479,8 +8479,8 @@ static void M_NightsAttack(INT32 choice)
 	M_PatchSkinNameTable();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
-	M_SetupNextMenu(&SP_NightsAttackDef);
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
+	M_SetupNextMenu(&SP_NightsAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
