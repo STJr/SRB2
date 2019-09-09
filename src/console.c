@@ -1585,12 +1585,15 @@ void CON_Drawer(void)
 
 	if (needpatchrecache)
 	{
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 		HU_LoadGraphics();
 	}
 
 	if (con_recalc)
+	{
 		CON_RecalcSize();
+		CON_ClearHUD();
+	}
 
 	if (con_curlines > 0)
 		CON_DrawConsole();

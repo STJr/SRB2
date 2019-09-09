@@ -571,9 +571,18 @@ static void FreeMipmapColormap(INT32 patchnum, void *patch)
 	}
 }
 
-void HWR_FreeTextureCache(void)
+void HWR_FreeColormaps(void)
 {
 	INT32 i;
+
+	// Alam: free the Z_Blocks before freeing it's users
+	// free all skin after each level: must be done after pfnClearMipMapCache!
+	for (i = 0; i < numwadfiles; i++)
+		M_AATreeIterate(wadfiles[i]->hwrcache, FreeMipmapColormap);
+}
+
+void HWR_FreeTextureCache(void)
+{
 	// free references to the textures
 	HWD.pfnClearMipMapCache();
 
@@ -581,15 +590,6 @@ void HWR_FreeTextureCache(void)
 	// our gool is only the textures since user of the texture is the texture cache
 	Z_FreeTags(PU_HWRCACHE, PU_HWRCACHE);
 	Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRCACHE_UNLOCKED);
-
-	// Alam: free the Z_Blocks before freeing it's users
-
-	// free all skin after each level: must be done after pfnClearMipMapCache!
-	// temp fix, idk why this crashes
-	// is it because the colormaps were already freed anyway?
-	if (!needpatchrecache)
-		for (i = 0; i < numwadfiles; i++)
-			M_AATreeIterate(wadfiles[i]->hwrcache, FreeMipmapColormap);
 
 	// now the heap don't have any 'user' pointing to our
 	// texturecache info, we can free it
@@ -713,7 +713,7 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 	GLMipmap_t *grmip;
 
 	if (needpatchflush)
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 
 	grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 
@@ -752,7 +752,7 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 void HWR_GetPatch(GLPatch_t *gpatch)
 {
 	if (needpatchflush)
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 
 	// is it in hardware cache
 	if (!gpatch->mipmap.downloaded && !gpatch->mipmap.grInfo.data)
@@ -782,7 +782,7 @@ void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap)
 	GLMipmap_t *grmip, *newmip;
 
 	if (needpatchflush)
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 
 	if (colormap == colormaps || colormap == NULL)
 	{
@@ -910,7 +910,7 @@ GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 	GLPatch_t *grpatch;
 
 	if (needpatchflush)
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 
 	grpatch = HWR_GetCachedGLPatch(lumpnum);
 
@@ -1110,7 +1110,7 @@ void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 	GLMipmap_t *grmip;
 
 	if (needpatchflush)
-		W_FlushCachedPatches();
+		Z_FlushCachedPatches();
 
 	grmip = &HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
 

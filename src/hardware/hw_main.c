@@ -6461,6 +6461,7 @@ void HWR_Shutdown(void)
 	HWR_FreeExtraSubsectors();
 	HWR_FreePolyPool();
 	HWR_FreeTextureCache();
+	HWR_FreeColormaps();
 	HWD.pfnFlushScreenTextures();
 }
 

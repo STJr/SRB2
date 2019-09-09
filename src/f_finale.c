@@ -1451,21 +1451,21 @@ void F_GameEndTicker(void)
 // ==============
 static void F_CacheTitleScreen(void)
 {
-	ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-	ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-	ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-	ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-	ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-	ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-	ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-	ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-	ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-	ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-	ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-	ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-	ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-	ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-	ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+	ttbanner = W_CachePatchName("TTBANNER", PU_PATCH);
+	ttwing = W_CachePatchName("TTWING", PU_PATCH);
+	ttsonic = W_CachePatchName("TTSONIC", PU_PATCH);
+	ttswave1 = W_CachePatchName("TTSWAVE1", PU_PATCH);
+	ttswave2 = W_CachePatchName("TTSWAVE2", PU_PATCH);
+	ttswip1 = W_CachePatchName("TTSWIP1", PU_PATCH);
+	ttsprep1 = W_CachePatchName("TTSPREP1", PU_PATCH);
+	ttsprep2 = W_CachePatchName("TTSPREP2", PU_PATCH);
+	ttspop1 = W_CachePatchName("TTSPOP1", PU_PATCH);
+	ttspop2 = W_CachePatchName("TTSPOP2", PU_PATCH);
+	ttspop3 = W_CachePatchName("TTSPOP3", PU_PATCH);
+	ttspop4 = W_CachePatchName("TTSPOP4", PU_PATCH);
+	ttspop5 = W_CachePatchName("TTSPOP5", PU_PATCH);
+	ttspop6 = W_CachePatchName("TTSPOP6", PU_PATCH);
+	ttspop7 = W_CachePatchName("TTSPOP7", PU_PATCH);
 }
 
 void F_StartTitleScreen(void)

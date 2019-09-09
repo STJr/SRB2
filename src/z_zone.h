@@ -70,6 +70,11 @@ void Z_ChangeTag2(void *ptr, INT32 tag, const char *file, INT32 line);
 void Z_ChangeTag2(void *ptr, INT32 tag);
 #endif
 
+// for renderer switching, free a bunch of stuff
+extern boolean needpatchflush;
+extern boolean needpatchrecache;
+void Z_FlushCachedPatches(void);
+
 #ifdef PARANOIA
 void Z_SetUser2(void *ptr, void **newuser, const char *file, INT32 line);
 #else

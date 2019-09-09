@@ -334,7 +334,7 @@ static int libd_patchExists(lua_State *L)
 static int libd_cachePatch(lua_State *L)
 {
 	HUDONLY
-	LUA_PushUserdata(L, W_CachePatchName(luaL_checkstring(L, 1), PU_STATIC), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
 	return 1;
 }
 

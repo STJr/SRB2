@@ -2481,6 +2481,9 @@ void M_Drawer(void)
 	if (currentMenu == &MessageDef)
 		menuactive = true;
 
+	if (needpatchrecache)
+		R_ReloadHUDGraphics();
+
 	if (menuactive)
 	{
 		// now that's more readable with a faded background (yeah like Quake...)
@@ -5709,7 +5712,7 @@ static void M_DrawLevelStats(void)
 	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "PAGE 2 OF 2");
 
 	V_DrawString(72, 48, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
-	V_DrawScaledPatch(40, 48-4, 0, W_CachePatchName("EMBLICON", PU_STATIC));
+	V_DrawScaledPatch(40, 48-4, 0, W_CachePatchName("EMBLICON", PU_PATCH));
 
 	M_DrawStatsMaps(statsLocation);
 }

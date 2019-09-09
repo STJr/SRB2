@@ -95,8 +95,6 @@ size_t numspritelumps, max_spritelumps;
 
 // textures
 INT32 numtextures = 0; // total number of textures found,
-boolean needpatchflush = false;
-boolean needpatchrecache = false;
 // size of following tables
 
 texture_t **textures = NULL;

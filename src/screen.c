@@ -72,11 +72,12 @@ consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NUL
 #endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ChangeRenderer (void);
+static void SCR_ChangeRenderer(void);
+static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
-consvar_t cv_renderer = {"renderer", "Software", CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ChangeFullscreen (void);
+static void SCR_ChangeFullscreen(void);
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
@@ -376,6 +377,8 @@ void SCR_CheckDefaultMode(void)
 		// see note above
 		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
+
+	SCR_ActuallyChangeRenderer();
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
@@ -405,12 +408,28 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
+static int target_renderer = 0;
+
+void SCR_ActuallyChangeRenderer(void)
+{
+	setrenderneeded = target_renderer;
+	// setting the same renderer twice WILL crash your game, so let's not, please
+	if (rendermode == setrenderneeded)
+		setrenderneeded = 0;
+}
+
 void SCR_ChangeRenderer(void)
 {
 	setrenderneeded = 0;
 
 	if (con_startup)
 	{
+		target_renderer = cv_renderer.value;
+		if (M_CheckParm("-opengl"))
+			target_renderer = rendermode = render_opengl;
+		else if (M_CheckParm("-software"))
+			target_renderer = rendermode = render_soft;
+		// set cv_renderer back
 		if (rendermode == render_soft)
 			CV_StealthSetValue(&cv_renderer, 1);
 		else if (rendermode == render_opengl)
@@ -419,13 +438,10 @@ void SCR_ChangeRenderer(void)
 	}
 
 	if (cv_renderer.value == 1)
-		setrenderneeded = render_soft;
+		target_renderer = render_soft;
 	else if (cv_renderer.value == 2)
-		setrenderneeded = render_opengl;
-
-	// setting the same renderer twice WILL crash your game, so let's not, please
-	if (rendermode == setrenderneeded)
-		setrenderneeded = 0;
+		target_renderer = render_opengl;
+	SCR_ActuallyChangeRenderer();
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
