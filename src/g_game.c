@@ -2083,6 +2083,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
+	p->starpostscale = 0;
 	p->starpostangle = 0;
 	p->starposttime = 0;
 	p->starpostx = 0;
@@ -2129,6 +2130,7 @@ void G_PlayerReborn(INT32 player)
 	INT16 starpostz;
 	INT32 starpostnum;
 	INT32 starpostangle;
+	fixed_t starpostscale;
 	fixed_t jumpfactor;
 	fixed_t height;
 	fixed_t spinheight;
@@ -2186,6 +2188,7 @@ void G_PlayerReborn(INT32 player)
 	starpostz = players[player].starpostz;
 	starpostnum = players[player].starpostnum;
 	starpostangle = players[player].starpostangle;
+	starpostscale = players[player].starpostscale;
 	jumpfactor = players[player].jumpfactor;
 	height = players[player].height;
 	spinheight = players[player].spinheight;
@@ -2252,6 +2255,7 @@ void G_PlayerReborn(INT32 player)
 	p->starpostz = starpostz;
 	p->starpostnum = starpostnum;
 	p->starpostangle = starpostangle;
+	p->starpostscale = starpostscale;
 	p->jumpfactor = jumpfactor;
 	p->height = height;
 	p->spinheight = spinheight;
@@ -2669,6 +2673,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
+				players[i].starpostscale = 0;
 				players[i].starpostangle = 0;
 				players[i].starposttime = 0;
 				players[i].starpostx = 0;
@@ -2791,6 +2796,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
+			p->starpostscale = players[i].starpostscale;
 			p->starposttime = players[i].starposttime;
 			p->starpostx = players[i].starpostx;
 			p->starposty = players[i].starposty;
@@ -3878,7 +3884,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
-			players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
+			players[i].starpostscale = players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 
 			if (netgame || multiplayer)

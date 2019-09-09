@@ -1584,22 +1584,22 @@ void F_StartEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 5)
+		if (skins[skinnum].sprites[SPR2_XTRA].numframes >= 7)
 		{
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
-			sprframe = &sprdef->spriteframes[2];
-			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
-			sprframe = &sprdef->spriteframes[3];
-			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 			sprframe = &sprdef->spriteframes[4];
+			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			sprframe = &sprdef->spriteframes[5];
+			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
+			sprframe = &sprdef->spriteframes[6];
 			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		}
-		else // eh, yknow what? too lazy to put MISSINGs here. eggman wins if you don't give your character an ending firework display.
+		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
 		{
-			endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_LEVEL);
-			endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_LEVEL);
-			endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_LEVEL);
+			endfwrk[0] = W_CachePatchName("ENDFWRK3", PU_LEVEL);
+			endfwrk[1] = W_CachePatchName("ENDFWRK4", PU_LEVEL);
+			endfwrk[2] = W_CachePatchName("ENDFWRK5", PU_LEVEL);
 		}
 
 		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_LEVEL);
