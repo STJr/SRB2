@@ -192,7 +192,6 @@ void Y_IntermissionDrawer(void)
 	if (needpatchrecache)
 	{
 		Y_CleanupData();
-		R_ReloadHUDGraphics();
 		safetorender = false;
 	}
 

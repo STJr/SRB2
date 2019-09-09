@@ -3098,10 +3098,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// preload graphics
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode == render_opengl)
-	{
 		HWR_PrepLevelCache(numtextures);
-		//HWR_FreeColormaps();
-	}
 #endif
 
 	P_MapEnd();

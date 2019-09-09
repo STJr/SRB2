@@ -1353,7 +1353,7 @@ void R_InitHardwareMode(void)
 
 void R_ReloadHUDGraphics(void)
 {
-	Z_FlushCachedPatches();
+	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
 	ST_LoadGraphics();
 	HU_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();

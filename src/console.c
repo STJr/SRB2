@@ -1267,7 +1267,7 @@ void CONS_Printf(const char *fmt, ...)
 	con_scrollup = 0;
 
 	// if not in display loop, force screen update
-	if (con_startup)
+	if (con_startup && (!setrenderneeded))
 	{
 #if (defined (_WINDOWS)) || (defined (__OS2__) && !defined (HAVE_SDL))
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
@@ -1584,13 +1584,11 @@ void CON_Drawer(void)
 	if (!con_started || !graphics_started)
 		return;
 
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
-
 	if (con_recalc)
 	{
 		CON_RecalcSize();
-		CON_ClearHUD();
+		if (con_curlines <= 0)
+			CON_ClearHUD();
 	}
 
 	if (con_curlines > 0)

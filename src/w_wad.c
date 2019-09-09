@@ -830,10 +830,10 @@ void W_UnloadWadFile(UINT16 num)
 	lumpcache = delwad->lumpcache;
 	numwadfiles--;
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
-		HWR_FreeTextureCache();
 		HWR_FreeColormaps();
+		HWR_FreeTextureCache();
 	}
 	M_AATreeFree(delwad->hwrcache);
 #endif
@@ -1511,9 +1511,6 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 static inline void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	GLPatch_t *grPatch;
-
-	if (needpatchflush)
-		Z_FlushCachedPatches();
 
 	if (rendermode == render_soft || rendermode == render_none)
 		return W_CacheLumpNumPwad(wad, lump, tag);

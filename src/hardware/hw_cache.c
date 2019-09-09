@@ -712,9 +712,6 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 {
 	GLMipmap_t *grmip;
 
-	if (needpatchflush)
-		Z_FlushCachedPatches();
-
 	grmip = &HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 
 	if (!grmip->downloaded && !grmip->grInfo.data)
@@ -751,9 +748,6 @@ static void HWR_LoadMappedPatch(GLMipmap_t *grmip, GLPatch_t *gpatch)
 // -----------------+
 void HWR_GetPatch(GLPatch_t *gpatch)
 {
-	if (needpatchflush)
-		Z_FlushCachedPatches();
-
 	// is it in hardware cache
 	if (!gpatch->mipmap.downloaded && !gpatch->mipmap.grInfo.data)
 	{
@@ -780,9 +774,6 @@ void HWR_GetPatch(GLPatch_t *gpatch)
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap)
 {
 	GLMipmap_t *grmip, *newmip;
-
-	if (needpatchflush)
-		Z_FlushCachedPatches();
 
 	if (colormap == colormaps || colormap == NULL)
 	{
@@ -908,9 +899,6 @@ static void HWR_DrawPicInCache(UINT8 *block, INT32 pblockwidth, INT32 pblockheig
 GLPatch_t *HWR_GetPic(lumpnum_t lumpnum)
 {
 	GLPatch_t *grpatch;
-
-	if (needpatchflush)
-		Z_FlushCachedPatches();
 
 	grpatch = HWR_GetCachedGLPatch(lumpnum);
 
@@ -1108,9 +1096,6 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 {
 	GLMipmap_t *grmip;
-
-	if (needpatchflush)
-		Z_FlushCachedPatches();
 
 	grmip = &HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
 

@@ -2481,9 +2481,6 @@ void M_Drawer(void)
 	if (currentMenu == &MessageDef)
 		menuactive = true;
 
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
-
 	if (menuactive)
 	{
 		// now that's more readable with a faded background (yeah like Quake...)
