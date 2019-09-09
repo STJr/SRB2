@@ -205,8 +205,8 @@ void P_InitPicAnims(void)
 			if ((W_CheckNumForName(animdefs[i].startname)) == LUMPERROR)
 				continue;
 
-			lastanim->picnum = R_FlatNumForName(animdefs[i].endname);
-			lastanim->basepic = R_FlatNumForName(animdefs[i].startname);
+			lastanim->picnum = R_GetFlatNumForName(animdefs[i].endname);
+			lastanim->basepic = R_GetFlatNumForName(animdefs[i].startname);
 		}
 
 		lastanim->istexture = animdefs[i].istexture;
@@ -464,7 +464,19 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	for (i = 0; i < numlevelflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
-		if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
+		if ((anims[animnum].istexture) && (foundflats->texturenum != 0 && foundflats->texturenum != -1)
+			&& ((UINT16)foundflats->texturenum >= startflatnum && (UINT16)foundflats->texturenum <= endflatnum))
+		{
+			foundflats->basetexturenum = startflatnum;
+			foundflats->animseq = foundflats->texturenum - startflatnum;
+			foundflats->numpics = endflatnum - startflatnum + 1;
+			foundflats->speed = anims[animnum].speed;
+
+			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
+					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
+					foundflats->numpics,foundflats->speed);
+		}
+		else if (foundflats->lumpnum >= startflatnum && foundflats->lumpnum <= endflatnum)
 		{
 			foundflats->baselumpnum = startflatnum;
 			foundflats->animseq = foundflats->lumpnum - startflatnum;
@@ -488,10 +500,7 @@ void P_SetupLevelFlatAnims(void)
 
 	// the original game flat anim sequences
 	for (i = 0; anims[i].istexture != -1; i++)
-	{
-		if (!anims[i].istexture)
-			P_FindAnimatedFlat(i);
-	}
+		P_FindAnimatedFlat(i);
 }
 
 //
@@ -5669,9 +5678,12 @@ void P_UpdateSpecials(void)
 	{
 		if (foundflats->speed) // it is an animated flat
 		{
+			// update the levelflat texture number
+			if (foundflats->basetexturenum != -1)
+				foundflats->texturenum = foundflats->basetexturenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 			// update the levelflat lump number
-			foundflats->lumpnum = foundflats->baselumpnum +
-				((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			else if (foundflats->baselumpnum != LUMPERROR)
+				foundflats->lumpnum = foundflats->baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}
 }
