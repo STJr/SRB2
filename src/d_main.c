@@ -495,6 +495,9 @@ static void D_Display(void)
 		I_FinishUpdate(); // page flip or blit buffer
 	}
 
+	// in the occasion no functions
+	// that require patches to be cached
+	// have been called.
 	if (needpatchrecache)
 		R_ReloadHUDGraphics();
 

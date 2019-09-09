@@ -127,6 +127,11 @@ void I_StartupGraphics(void)
 	if (!dedicated) graphics_started = true;
 }
 
+void I_StartupHardwareGraphics(void)
+{
+	// oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo y
+}
+
 // ------------------
 // I_ShutdownGraphics
 // Close the screen, restore previous video mode.

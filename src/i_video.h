@@ -44,6 +44,7 @@ extern boolean highcolor;
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);
+void I_StartupHardwareGraphics(void);
 
 /**	\brief restore old video mode
 */

@@ -42,24 +42,7 @@ void I_StartupGraphics(void)
 	vid.rowbytes = vid.width * vid.bpp;
 	vid.recalc = true;
 
-	HWD.pfnInit             = NDS3D_Init;
-	HWD.pfnShutdown         = NDS3D_Shutdown;
-	HWD.pfnFinishUpdate     = NDS3D_FinishUpdate;
-	HWD.pfnDraw2DLine       = NDS3D_Draw2DLine;
-	HWD.pfnDrawPolygon      = NDS3D_DrawPolygon;
-	HWD.pfnSetBlend         = NDS3D_SetBlend;
-	HWD.pfnClearBuffer      = NDS3D_ClearBuffer;
-	HWD.pfnSetTexture       = NDS3D_SetTexture;
-	HWD.pfnReadRect         = NDS3D_ReadRect;
-	HWD.pfnGClipRect        = NDS3D_GClipRect;
-	HWD.pfnClearMipMapCache = NDS3D_ClearMipMapCache;
-	HWD.pfnSetSpecialState  = NDS3D_SetSpecialState;
-	HWD.pfnSetPalette       = NDS3D_SetPalette;
-	HWD.pfnGetTextureUsed   = NDS3D_GetTextureUsed;
-	HWD.pfnDrawMD2          = NDS3D_DrawMD2;
-	HWD.pfnDrawMD2i         = NDS3D_DrawMD2i;
-	HWD.pfnSetTransform     = NDS3D_SetTransform;
-	HWD.pfnGetRenderVersion = NDS3D_GetRenderVersion;
+	I_StartupGraphicsHardware();
 
 	videoSetMode(MODE_0_3D);
 	vramSetBankA(VRAM_A_TEXTURE);
@@ -89,6 +72,28 @@ void I_StartupGraphics(void)
 
 	HWD.pfnInit(I_Error);
 	HWR_Startup();
+}
+
+void I_StartupHardwareGraphics(void)
+{
+	HWD.pfnInit             = NDS3D_Init;
+	HWD.pfnShutdown         = NDS3D_Shutdown;
+	HWD.pfnFinishUpdate     = NDS3D_FinishUpdate;
+	HWD.pfnDraw2DLine       = NDS3D_Draw2DLine;
+	HWD.pfnDrawPolygon      = NDS3D_DrawPolygon;
+	HWD.pfnSetBlend         = NDS3D_SetBlend;
+	HWD.pfnClearBuffer      = NDS3D_ClearBuffer;
+	HWD.pfnSetTexture       = NDS3D_SetTexture;
+	HWD.pfnReadRect         = NDS3D_ReadRect;
+	HWD.pfnGClipRect        = NDS3D_GClipRect;
+	HWD.pfnClearMipMapCache = NDS3D_ClearMipMapCache;
+	HWD.pfnSetSpecialState  = NDS3D_SetSpecialState;
+	HWD.pfnSetPalette       = NDS3D_SetPalette;
+	HWD.pfnGetTextureUsed   = NDS3D_GetTextureUsed;
+	HWD.pfnDrawMD2          = NDS3D_DrawMD2;
+	HWD.pfnDrawMD2i         = NDS3D_DrawMD2i;
+	HWD.pfnSetTransform     = NDS3D_SetTransform;
+	HWD.pfnGetRenderVersion = NDS3D_GetRenderVersion;
 }
 
 void I_ShutdownGraphics(void){}
