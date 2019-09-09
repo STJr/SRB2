@@ -3400,7 +3400,7 @@ static void HWR_AddPolyObjectPlanes(void)
 				FBITFIELD blendmode;
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
-				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, po_ptrs[i], false, polyobjsector->floorheight,
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, levelflats[polyobjsector->floorpic].texturenum, po_ptrs[i], false, polyobjsector->floorheight,
 													(light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), Surf.FlatColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 			else
@@ -3408,7 +3408,7 @@ static void HWR_AddPolyObjectPlanes(void)
 				HWR_GetFlat(levelflats[polyobjsector->floorpic].lumpnum);
 				HWR_GetTextureFlat(levelflats[polyobjsector->floorpic].texturenum);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], false, polyobjsector->floorheight, PF_Occlude,
-										(light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->floorpic].lumpnum,
+										(light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->floorpic].lumpnum, levelflats[polyobjsector->floorpic].texturenum,
 										polyobjsector, 255, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 		}
@@ -3424,7 +3424,7 @@ static void HWR_AddPolyObjectPlanes(void)
 				FBITFIELD blendmode;
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
-				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], true, polyobjsector->ceilingheight,
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, levelflats[polyobjsector->floorpic].texturenum, po_ptrs[i], true, polyobjsector->ceilingheight,
 				                                  (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), Surf.FlatColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 			else
@@ -3432,7 +3432,7 @@ static void HWR_AddPolyObjectPlanes(void)
 				HWR_GetFlat(levelflats[polyobjsector->ceilingpic].lumpnum);
 				HWR_GetTextureFlat(levelflats[polyobjsector->ceilingpic].texturenum);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
-				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->floorpic].lumpnum,
+				                          (light == -1 ? gr_frontsector->lightlevel : *gr_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->floorpic].lumpnum, levelflats[polyobjsector->floorpic].texturenum,
 				                          polyobjsector, 255, (light == -1 ? gr_frontsector->extra_colormap : *gr_frontsector->lightlist[light].extra_colormap));
 			}
 		}
