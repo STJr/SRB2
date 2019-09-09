@@ -1228,11 +1228,7 @@ void D_SRB2Main(void)
 		needpatchflush = true;
 		needpatchrecache = true;
 		VID_CheckRenderer();
-		// set cv_renderer back
-		if (setrenderneeded == render_soft)
-			CV_StealthSetValue(&cv_renderer, 1);
-		else if (setrenderneeded == render_opengl)
-			CV_StealthSetValue(&cv_renderer, 2);
+		SCR_ChangeRendererCVars(setrenderneeded);
 	}
 	D_CheckRendererState();
 

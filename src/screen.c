@@ -72,7 +72,6 @@ consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NUL
 #endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ChangeRenderer(void);
 static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
 consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
@@ -430,10 +429,7 @@ void SCR_ChangeRenderer(void)
 		else if (M_CheckParm("-software"))
 			target_renderer = rendermode = render_soft;
 		// set cv_renderer back
-		if (rendermode == render_soft)
-			CV_StealthSetValue(&cv_renderer, 1);
-		else if (rendermode == render_opengl)
-			CV_StealthSetValue(&cv_renderer, 2);
+		SCR_ChangeRendererCVars(rendermode);
 		return;
 	}
 
@@ -442,6 +438,15 @@ void SCR_ChangeRenderer(void)
 	else if (cv_renderer.value == 2)
 		target_renderer = render_opengl;
 	SCR_ActuallyChangeRenderer();
+}
+
+void SCR_ChangeRendererCVars(INT32 mode)
+{
+	// set cv_renderer back
+	if (mode == render_soft)
+		CV_StealthSetValue(&cv_renderer, 1);
+	else if (mode == render_opengl)
+		CV_StealthSetValue(&cv_renderer, 2);
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
