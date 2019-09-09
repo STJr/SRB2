@@ -189,6 +189,7 @@ void Y_IntermissionDrawer(void)
 	if (intertype == int_none || rendermode == render_none)
 		return;
 
+	// Jimita
 	if (needpatchrecache)
 	{
 		Y_CleanupData();

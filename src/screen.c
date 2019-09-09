@@ -172,6 +172,7 @@ void SCR_SetMode(void)
 	if (!(setmodeneeded || setrenderneeded) || WipeInAction)
 		return; // should never happen and don't change it during a wipe, BAD!
 
+	// Jimita
 	if (setrenderneeded)
 	{
 		needpatchflush = true;
@@ -417,6 +418,7 @@ void SCR_ActuallyChangeRenderer(void)
 		setrenderneeded = 0;
 }
 
+// Jimita
 void SCR_ChangeRenderer(void)
 {
 	setrenderneeded = 0;

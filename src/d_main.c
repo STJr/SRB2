@@ -240,6 +240,22 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
+	// Jimita: Switching renderers works by checking
+	// if the game has to do it right when the frame
+	// needs to render. If so, five things will happen:
+	// 1. Interface functions will be called so
+	//    that switching to OpenGL creates a
+	//    GL context, and switching to Software
+	//    allocates screen buffers.
+	// 2. Software will set drawer functions,
+	//    and OpenGL will load textures and
+	//    create plane polygons, if necessary.
+	// 3. Functions related to switching video
+	//    modes (resolution) are called.
+	// 4. Patch data is freed from memory,
+	//    and recached if necessary.
+	// 5. The frame is ready to be drawn!
+
 	// stop movie if needs to change renderer
 	if (setrenderneeded && (moviemode != MM_OFF))
 		M_StopMovie();
@@ -265,6 +281,7 @@ static void D_Display(void)
 		forcerefresh = true; // force background redraw
 	}
 
+	// Jimita
 	D_CheckRendererState();
 
 	// draw buffered stuff to screen
@@ -510,6 +527,8 @@ static void D_Display(void)
 	needpatchrecache = false;
 }
 
+// Jimita: Check the renderer's state
+// after a possible renderer switch.
 void D_CheckRendererState(void)
 {
 	// flush all patches from memory
@@ -1219,9 +1238,8 @@ void D_SRB2Main(void)
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
-	// renderer needs to change?
-	// ok cool please just change it
-	// exactly right now please.
+
+	// Jimita: Does the render mode need to change?
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
 		needpatchflush = true;

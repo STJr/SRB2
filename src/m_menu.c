@@ -4135,6 +4135,7 @@ static void M_DrawAddons(void)
 		return;
 	}
 
+	// Jimita: Load addons menu patches.
 	if (needpatchrecache)
 		M_LoadAddonsPatches();
 

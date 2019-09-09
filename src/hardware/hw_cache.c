@@ -644,6 +644,7 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	if ((unsigned)tex >= gr_numtextures)
 		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
+	// Jimita
 	if (needpatchrecache && (!gr_textures))
 		HWR_PrepLevelCache(gr_numtextures);
 

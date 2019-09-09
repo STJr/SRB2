@@ -1495,6 +1495,7 @@ void F_TitleScreenDrawer(void)
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
+	// Jimita: Load title screen patches.
 	if (needpatchrecache)
 		F_CacheTitleScreen();
 

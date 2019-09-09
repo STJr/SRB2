@@ -1339,6 +1339,7 @@ void R_RenderPlayerView(player_t *player)
 		skyVisible1 = skyVisible;
 }
 
+// Jimita
 #ifdef HWRENDER
 void R_InitHardwareMode(void)
 {

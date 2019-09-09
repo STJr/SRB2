@@ -2943,8 +2943,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	// gotta free this regardless of rendermode.
-	// maybe we're not in opengl anymore.......
+	// Jimita: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
 	if (extrasubsectors)
 		free(extrasubsectors);
 	extrasubsectors = NULL;
@@ -3162,7 +3162,7 @@ void HWR_SetupLevel(void)
 #endif
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
-	// don't do it twice...
+	// Jimita: Don't call this more than once!
 	if (!extrasubsectors)
 		HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
