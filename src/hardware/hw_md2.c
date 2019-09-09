@@ -747,12 +747,10 @@ static void md2_loadTexture(md2_t *model)
 		grpatch->mipmap.width = (UINT16)w;
 		grpatch->mipmap.height = (UINT16)h;
 
-#ifdef GLIDE_API_COMPATIBILITY
 		// not correct!
 		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
 		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
 		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 	}
 	HWD.pfnSetTexture(&grpatch->mipmap);
 	HWR_UnlockCachedPatch(grpatch);
@@ -800,12 +798,10 @@ static void md2_loadBlendTexture(md2_t *model)
 		grpatch->mipmap.width = (UINT16)w;
 		grpatch->mipmap.height = (UINT16)h;
 
-#ifdef GLIDE_API_COMPATIBILITY
 		// not correct!
 		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
 		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
 		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 	}
 	HWD.pfnSetTexture(&grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
 	HWR_UnlockCachedPatch(grpatch);

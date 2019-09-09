@@ -16,7 +16,6 @@
 
 #include "r_defs.h"
 #include "r_state.h"
-#include "p_setup.h" // levelflats
 
 #ifdef __GNUG__
 #pragma interface
@@ -56,17 +55,12 @@ typedef struct
 	texpatch_t patches[0];
 } texture_t;
 
-typedef struct
-{
-	UINT8 *flat;
-	INT16 width, height;
-} textureflat_t;
-
 // all loaded and prepared textures from the start of the game
 extern texture_t **textures;
-extern textureflat_t *texflats;
 
-extern INT32 *texturewidth;
+// texture width is a power of 2, so it can easily repeat along sidedefs using a simple mask
+extern INT32 *texturewidthmask;
+
 extern fixed_t *textureheight; // needed for texture pegging
 
 extern INT16 color8to16[256]; // remap color index to highcolor
@@ -94,6 +88,7 @@ void R_PrecacheLevel(void);
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
 lumpnum_t R_GetFlatNumForName(const char *name);
+#define R_FlatNumForName(x) R_GetFlatNumForName(x)
 
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.
@@ -152,20 +147,6 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaA(a) (a << 24)
 #define R_PutRgbaRGB(r, g, b) (R_PutRgbaR(r) + R_PutRgbaG(g) + R_PutRgbaB(b))
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
-
-boolean R_CheckIfPatch(lumpnum_t lump);
-UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
-
-void R_PatchToFlat(patch_t *patch, UINT8 *flat);
-void R_TextureToFlat(size_t tex, UINT8 *flat);
-
-#ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(UINT8 *d, size_t s);
-
-UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(UINT8 *png, size_t size);
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
-#endif
 
 extern INT32 numtextures;
 
