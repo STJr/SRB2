@@ -287,7 +287,7 @@ static void D_Display(void)
 				F_TitleScreenDrawer();
 				break;
 			}
-			// Intentional fall-through
+			/* FALLTHRU */
 		case GS_LEVEL:
 			if (!gametic)
 				break;

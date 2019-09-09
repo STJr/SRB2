@@ -4583,7 +4583,7 @@ void G_GhostTicker(void)
 				default:
 				case GHC_RETURNSKIN:
 					g->mo->skin = g->oldmo.skin;
-					// fallthru
+					/* FALLTHRU */
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
