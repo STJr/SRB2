@@ -64,6 +64,7 @@ void Command_Teleport_f(void);
 void Command_RTeleport_f(void);
 void Command_Skynum_f(void);
 void Command_Weather_f(void);
+void Command_Toggletwod_f(void);
 #ifdef _DEBUG
 void Command_CauseCfail_f(void);
 #endif

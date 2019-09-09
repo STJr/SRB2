@@ -1088,9 +1088,9 @@ static void R_Subsector(size_t num)
 			{
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
-					polysec->lightlevel, polysec->floor_xoffs, polysec->floor_yoffs,
+					(light == -1 ? frontsector->lightlevel : *frontsector->lightlist[light].lightlevel), polysec->floor_xoffs, polysec->floor_yoffs,
 					polysec->floorpic_angle-po->angle,
-					NULL, NULL, po
+					(light == -1 ? frontsector->extra_colormap : *frontsector->lightlist[light].extra_colormap), NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
@@ -1115,10 +1115,10 @@ static void R_Subsector(size_t num)
 				&& polysec->ceilingheight <= ceilingcenterz
 				&& (viewz > polysec->ceilingheight))
 			{
-				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
+				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
-					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
-					NULL, NULL, po
+					(light == -1 ? frontsector->lightlevel : *frontsector->lightlist[light].lightlevel), polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
+					(light == -1 ? frontsector->extra_colormap : *frontsector->lightlist[light].extra_colormap), NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
