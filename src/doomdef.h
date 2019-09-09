@@ -538,4 +538,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// Cache patches in Lua more safely, so that renderer switching can work.
+#define LUA_PATCH_SAFETY
+
 #endif // __DOOMDEF__
