@@ -9295,6 +9295,7 @@ consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NUL
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_adjust = {"cam_adjust", "Off", CV_SAVE|CV_SHOWMODIF, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_dist = {"cam2_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_height = {"cam2_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -9302,6 +9303,7 @@ consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, N
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_adjust = {"cam2_adjust", "Off", CV_SAVE|CV_SHOWMODIF, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 fixed_t t_cam_dist = -42;
 fixed_t t_cam_height = -42;
@@ -9570,6 +9572,35 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
 
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) // This block here is like 90% Lach's work, thanks bud
+	{
+		if (!cameranoclip && !resetcalled)
+		{
+			if ((P_AproxDistance(mo->x-thiscam->x-thiscam->momx, mo->y-thiscam->y-thiscam->momy) > FixedDiv(mo->momz+dist, camspeed)) || (abs(thiscam->z - player->mo->z) > (FixedDiv(mo->momz+dist, camspeed)))) //If the camera is too far away,
+			{
+				P_ResetCamera(player, thiscam); //Reset the camera
+				return true;
+			}
+		}
+		if ((thiscam == &camera && cv_cam_adjust.value) || (thiscam == &camera2 && cv_cam2_adjust.value))
+		{
+			if (!(mo->eflags & MFE_JUSTHITFLOOR) && (P_IsObjectOnGround(mo)) // Check that player is grounded
+			&& thiscam->ceilingz - thiscam->floorz >= P_GetPlayerHeight(player)) // Check that camera's sector is large enough for the player to fit into, at least
+			{
+				if (mo->eflags & MFE_VERTICALFLIP) // if player is upside-down
+				{
+					//z = min(z, thiscam->ceilingz); // solution 1: change new z coordinate to be at LEAST its ground height
+					z += min(thiscam->ceilingz - mo->z, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+				}
+				else // player is not upside-down
+				{
+					//z = max(z, thiscam->floorz); // solution 1: change new z coordinate to be at LEAST its ground height
+					z += max(thiscam->floorz - mo->z - mo->height, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+				}
+			}
+		}
+	}
+
 	if ((thiscam == &camera && cv_cam_orbit.value) || (thiscam == &camera2 && cv_cam2_orbit.value)) //Sev here, I'm guessing this is where orbital cam lives
 	{
 		distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
@@ -9583,12 +9614,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	x = mo->x - FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
 	y = mo->y - FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
-
-	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE) && !(player->exiting)) //Which is why I'm slapping my cam reset code in here too
-	{
-		if ((P_AproxDistance(player->mo->x-thiscam->x-thiscam->momx, player->mo->y-thiscam->y-thiscam->momy) > ((player->speed+camdist)*2)) || (abs(thiscam->z - player->mo->z) > ((player->speed+camdist)*2)))
-			P_ResetCamera(player, thiscam);
-	}
 
 #if 0
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
