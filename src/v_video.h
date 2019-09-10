@@ -223,6 +223,7 @@ void V_DrawRightAlignedStringAtFixed(fixed_t x, fixed_t y, INT32 option, const c
 
 // draw a string using the hu_font at fixed_t coordinates, 0.5x scale
 void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
+void V_DrawCenteredSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
 void V_DrawRightAlignedSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string);
 
 // draw a string using the tny_font at fixed_t coordinates
