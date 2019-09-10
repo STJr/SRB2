@@ -6913,6 +6913,11 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 		HWRWipeCounter = 1.0f;
 }
 
+void HWR_DoWipeLevel(void)
+{
+	HWD.pfnDoScreenWipeLevel(); // Still send in wipecounter since old stuff might not support multitexturing
+}
+
 void HWR_MakeScreenFinalTexture(void)
 {
     HWD.pfnMakeScreenFinalTexture();

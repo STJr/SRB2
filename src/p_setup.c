@@ -2679,6 +2679,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
 	wipegamestate = FORCEWIPEOFF;
+	wipestyleflags = 0;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
@@ -2699,10 +2700,16 @@ boolean P_SetupLevel(boolean skipprecip)
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		wipestyleflags |= WSF_FADEOUT|WSF_TOWHITE;
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		I_OsPolling();
+		I_FinishUpdate(); // page flip or blit buffer
+		if (moviemode)
+			M_SaveFrame();
 
 		nowtime = lastwipetic;
 
@@ -2737,7 +2744,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		wipestyleflags |= WSF_FADEOUT;
+		//V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
 		// for titlemap: run a specific wipe if specified
@@ -3180,6 +3188,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	}
 
 	// Stage title!
+	wipestyleflags |= WSF_FADEIN;
+	wipestyleflags &= ~WSF_FADEOUT;
+	WipeFreezeGame = false;
 	if (rendermode != render_none
 		&& (!titlemapinaction)
 		&& ranspecialwipe != 2

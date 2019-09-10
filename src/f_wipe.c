@@ -27,6 +27,13 @@
 #include "d_main.h"
 #include "m_misc.h" // movie mode
 
+#include "doomstat.h"
+#include "st_stuff.h"
+
+#ifdef HAVE_BLUA
+#include "lua_hud.h" // level title
+#endif
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
@@ -82,13 +89,21 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 //--------------------------------------------------------------------------
 
 boolean WipeInAction = false;
+boolean WipeFreezeGame = true;
 INT32 lastwipetic = 0;
+
+wipestyle_t wipestyle = WIPESTYLE_NORMAL;
+wipestyleflags_t wipestyleflags = 0;
 
 #ifndef NOWIPE
 static UINT8 *wipe_scr_start; //screen 3
 static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
 static fixed_t paldiv = 0;
+
+static UINT8 curwipetype;
+static UINT8 curwipeframe;
+static UINT8 maxwipeframe;
 
 /** Create fademask_t from lump
   *
@@ -148,7 +163,10 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	{
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
-		*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
+		if (wipestyle == WIPESTYLE_LEVEL)
+			*mask++ = pcolor->s.red/8;		// 0-31 range
+		else
+			*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
 
 	fm.xscale = FixedDiv(vid.width<<FRACBITS, fm.width<<FRACBITS);
@@ -167,6 +185,19 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	}
 
 	return NULL;
+}
+
+static void F_WipeTitleCard(void)
+{
+	if (wipestyle == WIPESTYLE_LEVEL
+		&& (!titlemapinaction)
+		&& (wipestyleflags & WSF_FADEIN)
+		&& *mapheaderinfo[gamemap-1]->lvlttl != '\0'
+#ifdef HAVE_BLUA
+		&& LUA_HudEnabled(hud_stagetitle)
+#endif
+		)
+		ST_drawLevelTitle(TICRATE);
 }
 
 /**	Wipe ticker
@@ -242,7 +273,7 @@ static void F_DoWipe(fademask_t *fademask)
 			relativepos = (draw_linestart * vid.width) + draw_rowstart;
 			draw_linestogo = draw_lineend - draw_linestart;
 
-			if (*mask == 0)
+			if ((*mask == 0) && (wipestyle == WIPESTYLE_NORMAL))
 			{
 				// shortcut - memcpy source to work
 				while (draw_linestogo--)
@@ -251,7 +282,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if (*mask == 10)
+			else if ((*mask >= maxwipeframe) && (wipestyle == WIPESTYLE_NORMAL))
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -262,8 +293,25 @@ static void F_DoWipe(fademask_t *fademask)
 			}
 			else
 			{
-				// pointer to transtable that this mask would use
-				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+				if (wipestyle == WIPESTYLE_LEVEL)
+				{
+					int nmask;
+					UINT8 *fade = fadecolormap;
+
+					if (wipestyleflags & WSF_TOWHITE)
+						fade = fadecolormap + (32 * 256);
+
+					nmask = *mask;
+					if (wipestyleflags & WSF_FADEIN)
+						nmask = 31 - nmask;
+
+					transtbl = fade + (nmask * 256);
+				}
+				else
+				{
+					// pointer to transtable that this mask would use
+					transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+				}
 
 				// DRAWING LOOP
 				while (draw_linestogo--)
@@ -273,8 +321,16 @@ static void F_DoWipe(fademask_t *fademask)
 					e = e_base + relativepos;
 					draw_rowstogo = draw_rowend - draw_rowstart;
 
-					while (draw_rowstogo--)
-						*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
+					if (wipestyle == WIPESTYLE_LEVEL)
+					{
+						while (draw_rowstogo--)
+							*w++ = transtbl[*e++];
+					}
+					else
+					{
+						while (draw_rowstogo--)
+							*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
+					}
 
 					relativepos += vid.width;
 				}
@@ -288,6 +344,7 @@ static void F_DoWipe(fademask_t *fademask)
 		free(scrxpos);
 		free(scrypos);
 	}
+	F_WipeTitleCard();
 }
 #endif
 
@@ -346,6 +403,24 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	WipeInAction = true;
 	wipe_scr = screens[0];
 
+	// don't know where else to put this.
+	// this any good?
+	if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
+	{
+		wipestyle = WIPESTYLE_LEVEL;
+		maxwipeframe = 31;
+	}
+	else
+	{
+		wipestyle = WIPESTYLE_NORMAL;
+		maxwipeframe = 10;
+	}
+
+	curwipetype = wipetype;
+	curwipeframe = 0;
+	if (!WipeFreezeGame)
+		return;
+
 	// lastwipetic should either be 0 or the tic we last wiped
 	// on for fade-to-black
 	for (;;)
@@ -362,10 +437,23 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_DoWipe(wipetype, wipeframe-1); // send in the wipe type and wipeframe because we need to cache the graphic
+		{
+			float frame = wipeframe-1;
+			if (wipestyle == WIPESTYLE_LEVEL)
+			{
+				float length = F_GetWipeLength(wipetype);
+				float strength = (frame / length) * 32.0f;
+				if (wipestyleflags & WSF_FADEIN)
+					strength = 31.0f - strength;
+				HWR_DoWipeLevel();
+				HWR_FadeScreenMenuBack(0xFF00|31, strength);
+			}
+			else
+				HWR_DoWipe(wipetype, frame-1); // send in the wipe type and wipeframe because we need to cache the graphic
+		}
 		else
 #endif
-		F_DoWipe(fmask);
+			F_DoWipe(fmask);
 		I_OsPolling();
 		I_UpdateNoBlit();
 
@@ -378,7 +466,51 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			M_SaveFrame();
 	}
 	WipeInAction = false;
+	WipeFreezeGame = true;
 #endif
+}
+
+// Works On My Machine seal of approval
+void F_WipeTicker(void)
+{
+	fademask_t *fmask;
+
+	// Wait, what?
+	if (!WipeInAction)
+		return;
+
+	if (rendermode == render_soft)
+		wipe_scr_start = wipe_scr_end = screens[0];
+
+	// get fademask first so we can tell if it exists or not
+	fmask = F_GetFadeMask(curwipetype, curwipeframe++);
+	if (!fmask)
+	{
+		// stop
+		WipeInAction = false;
+		WipeFreezeGame = true;
+		return;
+	}
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		float frame = curwipeframe-1;
+		if (wipestyle == WIPESTYLE_LEVEL)
+		{
+			float length = F_GetWipeLength(curwipetype);
+			float strength = (frame / length) * 32.0f;
+			if (wipestyleflags & WSF_FADEIN)
+				strength = 31.0f - strength;
+			HWR_FadeScreenMenuBack(0xFF00|31, strength);
+			F_WipeTitleCard();
+		}
+		else
+			HWR_DoWipe(curwipetype, frame-1); // send in the wipe type and wipeframe because we need to cache the graphic
+	}
+	else
+#endif
+		F_DoWipe(fmask);
 }
 
 /** Returns tic length of wipe

@@ -108,11 +108,28 @@ void F_MenuPresTicker(boolean run);
 #define FORCEWIPEOFF -2
 
 extern boolean WipeInAction;
+extern boolean WipeFreezeGame;
 extern INT32 lastwipetic;
+
+typedef enum
+{
+	WIPESTYLE_NORMAL,
+	WIPESTYLE_LEVEL
+} wipestyle_t;
+extern wipestyle_t wipestyle;
+
+typedef enum
+{
+	WSF_FADEOUT = 1,
+	WSF_FADEIN  = 1<<1,
+	WSF_TOWHITE = 1<<2,
+} wipestyleflags_t;
+extern wipestyleflags_t wipestyleflags;
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+void F_WipeTicker(void);
 tic_t F_GetWipeLength(UINT8 wipetype);
 boolean F_WipeExists(UINT8 wipetype);
 

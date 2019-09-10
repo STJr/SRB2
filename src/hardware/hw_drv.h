@@ -72,6 +72,7 @@ EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
 EXPORT void HWRAPI(EndScreenWipe) (void);
 EXPORT void HWRAPI(DoScreenWipe) (float alpha);
+EXPORT void HWRAPI(DoScreenWipeLevel) (void);
 EXPORT void HWRAPI(DrawIntermissionBG) (void);
 EXPORT void HWRAPI(MakeScreenTexture) (void);
 EXPORT void HWRAPI(MakeScreenFinalTexture) (void);
@@ -114,6 +115,7 @@ struct hwdriver_s
 	StartScreenWipe     pfnStartScreenWipe;
 	EndScreenWipe       pfnEndScreenWipe;
 	DoScreenWipe        pfnDoScreenWipe;
+	DoScreenWipeLevel   pfnDoScreenWipeLevel;
 	DrawIntermissionBG  pfnDrawIntermissionBG;
 	MakeScreenTexture   pfnMakeScreenTexture;
 	MakeScreenFinalTexture  pfnMakeScreenFinalTexture;

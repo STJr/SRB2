@@ -2084,6 +2084,50 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 	}
 }
 
+EXPORT void HWRAPI(DoScreenWipeLevel)(void)
+{
+	INT32 texsize = 2048;
+	float xfix, yfix;
+
+	// Use a power of two texture, dammit
+	if(screen_width <= 1024)
+		texsize = 1024;
+	if(screen_width <= 512)
+		texsize = 512;
+
+	xfix = 1/((float)(texsize)/((float)((screen_width))));
+	yfix = 1/((float)(texsize)/((float)((screen_height))));
+
+	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	SetBlend(PF_Modulated|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+
+	// Draw the original screen
+	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
+	pglBegin(GL_QUADS);
+		pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		// Bottom left
+		pglTexCoord2f(0.0f, 0.0f);
+		pglVertex3f(-1.0f, -1.0f, 1.0f);
+
+		// Top left
+		pglTexCoord2f(0.0f, yfix);
+		pglVertex3f(-1.0f, 1.0f, 1.0f);
+
+		// Top right
+		pglTexCoord2f(xfix, yfix);
+		pglVertex3f(1.0f, 1.0f, 1.0f);
+
+		// Bottom right
+		pglTexCoord2f(xfix, 0.0f);
+		pglVertex3f(1.0f, -1.0f, 1.0f);
+
+	pglEnd();
+
+	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+}
+
 
 // Create a texture from the screen.
 EXPORT void HWRAPI(MakeScreenTexture) (void)

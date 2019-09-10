@@ -461,6 +461,10 @@ static void D_Display(void)
 	if (gamestate != GS_TIMEATTACK)
 		CON_Drawer();
 
+	// Running a wipe, but it doesn't freeze the game
+	if (WipeInAction && (!WipeFreezeGame))
+		F_WipeTicker();
+
 	M_Drawer(); // menu is drawn even on top of everything
 	// focus lost moved to M_Drawer
 

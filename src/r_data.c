@@ -112,6 +112,7 @@ INT32 *texturetranslation;
 sprcache_t *spritecachedinfo;
 
 lighttable_t *colormaps;
+lighttable_t *fadecolormap = NULL;
 
 // for debugging/info purposes
 static size_t flatmemory, spritememory, texturememory;
@@ -1295,16 +1296,80 @@ static void R_InitSpriteLumps(void)
 }
 
 //
+// R_CreateFadeColormaps
+//
+static void R_CreateFadeColormaps(size_t len)
+{
+	UINT8 px, fade;
+	RGBA_t rgba;
+	INT32 r, g, b;
+	size_t i;
+
+	fadecolormap = Z_MallocAlign(len*2, PU_STATIC, NULL, 8);
+
+#define GETCOLOR \
+	px = colormaps[i%256]; \
+	fade = (i/256) * 8; \
+	rgba = V_GetColor(px);
+
+	// to black
+	for (i = 0; i < len; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// subtractive color blending
+		r = rgba.s.red - fade*3;
+		g = rgba.s.green - fade*2;
+		b = rgba.s.blue - fade;
+
+		// clamp values
+		if (r < 0) r = 0;
+		if (g < 0) g = 0;
+		if (b < 0) b = 0;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+
+	// to white
+	for (i = len; i < len*2; i++)
+	{
+		// find pixel and fade amount
+		GETCOLOR;
+
+		// additive color blending
+		r = rgba.s.red + fade*3;
+		g = rgba.s.green + fade*2;
+		b = rgba.s.blue + fade;
+
+		// clamp values
+		if (r > 255) r = 255;
+		if (g > 255) g = 255;
+		if (b > 255) b = 255;
+
+		// find nearest color in palette
+		fadecolormap[i] = NearestColor(r,g,b);
+	}
+#undef GETCOLOR
+}
+
+//
 // R_InitColormaps
 //
 static void R_InitColormaps(void)
 {
+	size_t len;
 	lumpnum_t lump;
 
 	// Load in the light tables
 	lump = W_GetNumForName("COLORMAP");
-	colormaps = Z_MallocAlign(W_LumpLength (lump), PU_STATIC, NULL, 8);
+	len = W_LumpLength(lump);
+	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
+
+	// Make colormap for fades
+	R_CreateFadeColormaps(len);
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -1334,6 +1399,9 @@ void R_ReInitColormaps(UINT16 num)
 	}
 
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
+	if (fadecolormap)
+		Z_Free(fadecolormap);
+	R_CreateFadeColormaps(W_LumpLength(lump));
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -1615,7 +1683,6 @@ extracolormap_t *R_ColormapForName(char *name)
 //
 static double deltas[256][3], map[256][3];
 
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b);
 static int RoundUp(double number);
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
@@ -2027,7 +2094,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 
 // Thanks to quake2 source!
 // utils3/qdata/images.c
-static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
+UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 {
 	int dr, dg, db;
 	int distortion, bestdistortion = 256 * 256 * 4, bestcolor = 0, i;
