@@ -335,3 +335,8 @@ void I_StartupGraphics(void)
 	graphics_started = true;
 
 }
+
+void I_StartupHardwareGraphics(void)
+{
+	// oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo y
+}

@@ -1150,9 +1150,11 @@ void R_RenderPlayerView(player_t *player)
 	free(masks);
 }
 
+// Jimita
 #ifdef HWRENDER
 void R_InitHardwareMode(void)
 {
+	HWR_AddCommands();
 	if (gamestate == GS_LEVEL)
 	{
 		HWR_SetupLevel();
@@ -1163,7 +1165,7 @@ void R_InitHardwareMode(void)
 
 void R_ReloadHUDGraphics(void)
 {
-	W_FlushCachedPatches();
+	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
 	ST_LoadGraphics();
 	HU_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();
@@ -1239,7 +1241,7 @@ void R_RegisterEngineStuff(void)
 #endif
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 		HWR_AddCommands();
 #endif
 }

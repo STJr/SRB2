@@ -2955,6 +2955,12 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	// Jimita: Free extrasubsectors regardless of renderer.
+	// Maybe we're not in OpenGL anymore.
+	if (extrasubsectors)
+		free(extrasubsectors);
+	extrasubsectors = NULL;
+	// stuff like HWR_CreatePlanePolygons is called there
 	if (rendermode == render_opengl)
 		HWR_SetupLevel();
 #endif
@@ -3219,7 +3225,9 @@ void HWR_SetupLevel(void)
 #endif
 	// Correct missing sidedefs & deep water trick
 	HWR_CorrectSWTricks();
-	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+	// Jimita: Don't call this more than once!
+	if (!extrasubsectors)
+		HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
 #endif
 

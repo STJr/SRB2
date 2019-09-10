@@ -95,8 +95,6 @@ size_t numspritelumps, max_spritelumps;
 
 // textures
 INT32 numtextures = 0; // total number of textures found,
-boolean needpatchflush = false;
-boolean needpatchrecache = false;
 // size of following tables
 
 texture_t **textures = NULL;
@@ -1674,7 +1672,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	/////////////////////
 	// This code creates the colormap array used by software renderer
 	/////////////////////
-	//if (rendermode == render_soft)
 	{
 		double r, g, b, cbrightness;
 		int p;

@@ -1528,29 +1528,8 @@ void F_GameEvaluationTicker(void)
 #define INFLECTIONPOINT (6*TICRATE)
 #define SPARKLLOOPTIME 15 // must be odd
 
-void F_StartEnding(void)
+static void F_CacheEnding(void)
 {
-	G_SetGamestate(GS_ENDING);
-	wipetypepost = INT16_MAX;
-
-	// Just in case they're open ... somehow
-	M_ClearMenus(true);
-
-	// Save before the credits sequence.
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
-		G_SaveGame((UINT32)cursaveslot);
-
-	gameaction = ga_nothing;
-	paused = false;
-	CON_ToggleOff();
-	S_StopMusic(); // todo: placeholder
-	S_StopSounds();
-
-	finalecount = -10; // what? this totally isn't a hack. why are you asking?
-
-	memset(sparkloffs, 0, sizeof(INT32)*3*2);
-	sparklloop = 0;
-
 	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_PATCH);
 
 	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_PATCH);
@@ -1615,6 +1594,43 @@ void F_StartEnding(void)
 	}
 }
 
+static void F_CacheGoodEnding(void)
+{
+	endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH);
+	endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH);
+
+	endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH);
+	endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH);
+
+	endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH);
+}
+
+void F_StartEnding(void)
+{
+	G_SetGamestate(GS_ENDING);
+	wipetypepost = INT16_MAX;
+
+	// Just in case they're open ... somehow
+	M_ClearMenus(true);
+
+	// Save before the credits sequence.
+	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
+		G_SaveGame((UINT32)cursaveslot);
+
+	gameaction = ga_nothing;
+	paused = false;
+	CON_ToggleOff();
+	S_StopMusic(); // todo: placeholder
+	S_StopSounds();
+
+	finalecount = -10; // what? this totally isn't a hack. why are you asking?
+
+	memset(sparkloffs, 0, sizeof(INT32)*3*2);
+	sparklloop = 0;
+
+	F_CacheEnding();
+}
+
 void F_EndingTicker(void)
 {
 	if (++finalecount > INFLECTIONPOINT*2)
@@ -1625,15 +1641,7 @@ void F_EndingTicker(void)
 	}
 
 	if (goodending && finalecount == INFLECTIONPOINT) // time to swap some assets
-	{
-		endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH);
-		endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH);
-
-		endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH);
-		endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH);
-
-		endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH);
-	}
+		F_CacheGoodEnding();
 
 	if (++sparklloop == SPARKLLOOPTIME) // time to roll the randomisation again
 	{
@@ -1651,6 +1659,13 @@ void F_EndingDrawer(void)
 {
 	INT32 x, y, i, j, parallaxticker;
 	patch_t *rockpat;
+
+	if (needpatchrecache)
+	{
+		F_CacheEnding();
+		if (goodending && finalecount >= INFLECTIONPOINT) // time to swap some assets
+			F_CacheGoodEnding();
+	}
 
 	if (!goodending || finalecount < INFLECTIONPOINT)
 		rockpat = W_CachePatchName("ROID0000", PU_PATCH);

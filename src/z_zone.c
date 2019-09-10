@@ -490,6 +490,38 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
+// for renderer switching, free a bunch of stuff
+boolean needpatchflush = false;
+boolean needpatchrecache = false;
+
+// flush all patches from memory
+// (also frees memory tagged with PU_CACHE)
+// (which are not necessarily patches but I don't care)
+void Z_FlushCachedPatches(void)
+{
+	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
+	Z_FreeTag(PU_CACHE);
+	Z_FreeTag(PU_PATCH);
+	Z_FreeTag(PU_HUDGFX);
+	Z_FreeTag(PU_HWRPATCHINFO);
+	Z_FreeTag(PU_HWRPATCHCOLMIPMAP);
+	Z_FreeTag(PU_HWRCACHE);
+	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
+	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
+}
+
+//
+// Z_CheckMemCleanup
+//
+// TODO: Currently blocks >= PU_PURGELEVEL are freed every
+// CLEANUPCOUNT. It might be better to keep track of
+// the total size of all purgable memory and free it when the
+// size exceeds some value.
+//
+// This was in Z_Malloc, but was freeing data at
+// unsafe times. Now it is only called when it is safe
+// to cleanup memory.
+
 // starting value of nextcleanup
 #define CLEANUPCOUNT 2000
 

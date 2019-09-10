@@ -20,6 +20,7 @@
 #include "g_input.h"
 #include "hu_stuff.h"
 #include "keys.h"
+#include "r_main.h"
 #include "r_defs.h"
 #include "sounds.h"
 #include "st_stuff.h"
@@ -1285,7 +1286,7 @@ void CONS_Printf(const char *fmt, ...)
 	con_scrollup = 0;
 
 	// if not in display loop, force screen update
-	if (con_startup)
+	if (con_startup && (!setrenderneeded))
 	{
 #ifdef _WINDOWS
 		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
@@ -1609,7 +1610,11 @@ void CON_Drawer(void)
 	}
 
 	if (con_recalc)
+	{
 		CON_RecalcSize();
+		if (con_curlines <= 0)
+			CON_ClearHUD();
+	}
 
 	if (con_curlines > 0)
 		CON_DrawConsole();

@@ -149,7 +149,5 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap);
 #define R_PutRgbaRGBA(r, g, b, a) (R_PutRgbaRGB(r, g, b) + R_PutRgbaA(a))
 
 extern INT32 numtextures;
-extern boolean needpatchflush;
-extern boolean needpatchrecache;
 
 #endif

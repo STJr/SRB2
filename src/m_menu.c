@@ -289,6 +289,7 @@ static void M_ChangeControl(INT32 choice);
 // Video & Sound
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
+static void M_OpenGLOptionsMenu(void);
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
@@ -1202,7 +1203,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 #ifdef HWRENDER
 	{IT_HEADER, NULL, "Renderer", NULL, 200},
-	{IT_SUBMENU|IT_STRING, NULL, "OpenGL Options...", &OP_OpenGLOptionsDef,          206},
+	{IT_CALL|IT_STRING, NULL, "OpenGL Options...", M_OpenGLOptionsMenu,          206},
 #endif
 };
 
@@ -1950,6 +1951,14 @@ menu_t OP_MonitorToggleDef =
 };
 
 #ifdef HWRENDER
+static void M_OpenGLOptionsMenu(void)
+{
+	if (rendermode == render_opengl)
+		M_SetupNextMenu(&OP_OpenGLOptionsDef);
+	else
+		M_StartMessage(M_GetText("You must be in OpenGL mode\nto access this menu.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+}
+
 menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE(
 	MN_OP_MAIN + (MN_OP_VIDEO << 6) + (MN_OP_OPENGL << 12),
 	"M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);
@@ -3523,9 +3532,7 @@ void M_Init(void)
 
 #ifdef HWRENDER
 	// Permanently hide some options based on render mode
-	if (rendermode == render_soft)
-		OP_VideoOptionsMenu[4].status = IT_DISABLED;
-	else if (rendermode == render_opengl)
+	if (rendermode == render_opengl)
 		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
 
@@ -5647,6 +5654,7 @@ static void M_DrawAddons(void)
 		return;
 	}
 
+	// Jimita: Load addons menu patches.
 	if (needpatchrecache)
 		M_LoadAddonsPatches();
 

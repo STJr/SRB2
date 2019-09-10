@@ -6442,13 +6442,18 @@ static void Command_GrStats_f(void)
 //added by Hurdler: console varibale that are saved
 void HWR_AddCommands(void)
 {
-	CV_RegisterVar(&cv_grrounddown);
-	CV_RegisterVar(&cv_grfov);
-	CV_RegisterVar(&cv_grfogdensity);
-	CV_RegisterVar(&cv_grfiltermode);
-	CV_RegisterVar(&cv_granisotropicmode);
-	CV_RegisterVar(&cv_grcorrecttricks);
-	CV_RegisterVar(&cv_grsolvetjoin);
+	static boolean alreadycalled = false;
+	if (!alreadycalled)
+	{
+		CV_RegisterVar(&cv_grrounddown);
+		CV_RegisterVar(&cv_grfov);
+		CV_RegisterVar(&cv_grfogdensity);
+		CV_RegisterVar(&cv_grfiltermode);
+		CV_RegisterVar(&cv_granisotropicmode);
+		CV_RegisterVar(&cv_grcorrecttricks);
+		CV_RegisterVar(&cv_grsolvetjoin);
+	}
+	alreadycalled = true;
 }
 
 static inline void HWR_AddEngineCommands(void)
@@ -6515,6 +6520,7 @@ void HWR_Shutdown(void)
 	HWR_FreeExtraSubsectors();
 	HWR_FreePolyPool();
 	HWR_FreeTextureCache();
+	HWR_FreeColormaps();
 	HWD.pfnFlushScreenTextures();
 }
 

@@ -60,7 +60,7 @@ void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND t
 // ------------------
 viddef_t vid;
 INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set + 1)
-INT32 setrenderneeded = 0;
+UINT8 setrenderneeded = 0;
 
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
@@ -70,11 +70,11 @@ consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, N
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ChangeRenderer (void);
+static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {{1, "Software"}, {2, "OpenGL"}, {0, NULL}};
-consvar_t cv_renderer = {"renderer", "Software", CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
 
-static void SCR_ChangeFullscreen (void);
+static void SCR_ChangeFullscreen(void);
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
@@ -170,6 +170,7 @@ void SCR_SetMode(void)
 	if (!(setmodeneeded || setrenderneeded) || WipeInAction)
 		return; // should never happen and don't change it during a wipe, BAD!
 
+	// Jimita
 	if (setrenderneeded)
 	{
 		needpatchflush = true;
@@ -374,6 +375,8 @@ void SCR_CheckDefaultMode(void)
 		// see note above
 		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
+
+	SCR_ActuallyChangeRenderer();
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
@@ -403,27 +406,47 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
+static int target_renderer = 0;
+
+void SCR_ActuallyChangeRenderer(void)
+{
+	setrenderneeded = target_renderer;
+	// setting the same renderer twice WILL crash your game, so let's not, please
+	if (rendermode == setrenderneeded)
+		setrenderneeded = 0;
+}
+
+// Jimita
 void SCR_ChangeRenderer(void)
 {
 	setrenderneeded = 0;
 
 	if (con_startup)
 	{
-		if (rendermode == render_soft)
-			CV_StealthSetValue(&cv_renderer, 1);
-		else if (rendermode == render_opengl)
-			CV_StealthSetValue(&cv_renderer, 2);
+		target_renderer = cv_renderer.value;
+		if (M_CheckParm("-opengl"))
+			target_renderer = rendermode = render_opengl;
+		else if (M_CheckParm("-software"))
+			target_renderer = rendermode = render_soft;
+		// set cv_renderer back
+		SCR_ChangeRendererCVars(rendermode);
 		return;
 	}
 
 	if (cv_renderer.value == 1)
-		setrenderneeded = render_soft;
+		target_renderer = render_soft;
 	else if (cv_renderer.value == 2)
-		setrenderneeded = render_opengl;
+		target_renderer = render_opengl;
+	SCR_ActuallyChangeRenderer();
+}
 
-	// setting the same renderer twice WILL crash your game, so let's not, please
-	if (rendermode == setrenderneeded)
-		setrenderneeded = 0;
+void SCR_ChangeRendererCVars(INT32 mode)
+{
+	// set cv_renderer back
+	if (mode == render_soft)
+		CV_StealthSetValue(&cv_renderer, 1);
+	else if (mode == render_opengl)
+		CV_StealthSetValue(&cv_renderer, 2);
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
