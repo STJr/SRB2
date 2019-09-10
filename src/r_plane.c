@@ -652,7 +652,13 @@ static void R_DrawSkyPlane(visplane_t *pl)
 
 boolean R_CheckPowersOfTwo(void)
 {
-	return (ds_powersoftwo = ((!((ds_flatwidth & (ds_flatwidth - 1)) || (ds_flatheight & (ds_flatheight - 1)))) && (ds_flatwidth == ds_flatheight)));
+	if (ds_flatwidth & (ds_flatwidth - 1))
+		ds_powersoftwo = false;
+	else if (ds_flatheight & (ds_flatheight - 1))
+		ds_powersoftwo = false;
+	else if (ds_flatwidth == ds_flatheight)
+		ds_powersoftwo = true;
+	return ds_powersoftwo;
 }
 
 void R_CheckFlatLength(size_t size)
@@ -974,7 +980,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	// Check if the flat has dimensions that are powers-of-two numbers.
 	if (R_CheckPowersOfTwo())
+	{
 		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+		if (spanfunc == basespanfunc)
+			spanfunc = mmxspanfunc;
+	}
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;

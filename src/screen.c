@@ -49,6 +49,7 @@ void (*fuzzcolfunc)(void); // standard fuzzy effect column drawer
 void (*transcolfunc)(void); // translation column drawer
 void (*shadecolfunc)(void); // smokie test..
 void (*spanfunc)(void); // span drawer, use a 64x64 tile
+void (*mmxspanfunc)(void); // span drawer in MMX assembly
 void (*splatfunc)(void); // span drawer w/ transparency
 void (*basespanfunc)(void); // default span func for color mode
 void (*transtransfunc)(void); // translucent translated column drawer
@@ -112,7 +113,7 @@ void SCR_SetMode(void)
 	//
 	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
 	{
-		spanfunc = basespanfunc = R_DrawSpan_8;
+		spanfunc = basespanfunc = mmxspanfunc = R_DrawSpan_8;
 		splatfunc = R_DrawSplat_8;
 		transcolfunc = R_DrawTranslatedColumn_8;
 		transtransfunc = R_DrawTranslatedTranslucentColumn_8;
@@ -133,7 +134,7 @@ void SCR_SetMode(void)
 				//fuzzcolfunc = R_DrawTranslucentColumn_8_ASM;
 				walldrawerfunc = R_DrawWallColumn_8_MMX;
 				twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_MMX;
-				//spanfunc = basespanfunc = R_DrawSpan_8_MMX;
+				mmxspanfunc = R_DrawSpan_8_MMX;
 			}
 			else
 			{
