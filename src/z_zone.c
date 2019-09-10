@@ -510,18 +510,6 @@ void Z_FlushCachedPatches(void)
 	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
 }
 
-//
-// Z_CheckMemCleanup
-//
-// TODO: Currently blocks >= PU_PURGELEVEL are freed every
-// CLEANUPCOUNT. It might be better to keep track of
-// the total size of all purgable memory and free it when the
-// size exceeds some value.
-//
-// This was in Z_Malloc, but was freeing data at
-// unsafe times. Now it is only called when it is safe
-// to cleanup memory.
-
 // starting value of nextcleanup
 #define CLEANUPCOUNT 2000
 
