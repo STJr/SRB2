@@ -126,6 +126,13 @@ typedef enum
 } wipestyleflags_t;
 extern wipestyleflags_t wipestyleflags;
 
+#define FADECOLORMAPDIV 8
+#define FADECOLORMAPROWS (256/FADECOLORMAPDIV)
+
+#define FADEREDFACTOR   20
+#define FADEGREENFACTOR 20
+#define FADEBLUEFACTOR  10
+
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);

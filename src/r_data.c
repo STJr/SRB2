@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "f_finale.h" // wipes
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -112,7 +113,7 @@ INT32 *texturetranslation;
 sprcache_t *spritecachedinfo;
 
 lighttable_t *colormaps;
-lighttable_t *fadecolormap = NULL;
+lighttable_t *fadecolormap;
 
 // for debugging/info purposes
 static size_t flatmemory, spritememory, texturememory;
@@ -1298,30 +1299,58 @@ static void R_InitSpriteLumps(void)
 //
 // R_CreateFadeColormaps
 //
-static void R_CreateFadeColormaps(size_t len)
+
+static void R_CreateFadeColormaps()
 {
 	UINT8 px, fade;
 	RGBA_t rgba;
 	INT32 r, g, b;
-	size_t i;
+	size_t len, i;
 
+	len = (256 * FADECOLORMAPROWS);
 	fadecolormap = Z_MallocAlign(len*2, PU_STATIC, NULL, 8);
+	for (i = 0; i < len*2; i++)
+		fadecolormap[i] = (i%256);
+
+	// Load in the light tables, now 64k aligned for smokie...
+	{
+		lumpnum_t lump = W_CheckNumForName("FADECMAP");
+		lumpnum_t wlump = W_CheckNumForName("FADEWMAP");
+
+		// to black
+		if (lump != LUMPERROR)
+			W_ReadLumpHeader(lump, fadecolormap, len, 0U);
+		// to white
+		if (wlump != LUMPERROR)
+			W_ReadLumpHeader(wlump, fadecolormap+len, len, 0U);
+
+		// missing "to white" colormap lump
+		if (lump != LUMPERROR && wlump == LUMPERROR)
+			goto makewhite;
+		// missing "to black" colormap lump
+		else if (lump == LUMPERROR && wlump != LUMPERROR)
+			goto makeblack;
+		// both lumps found
+		else if (lump != LUMPERROR && wlump != LUMPERROR)
+			return;
+	}
 
 #define GETCOLOR \
 	px = colormaps[i%256]; \
-	fade = (i/256) * 8; \
+	fade = (i/256) * (256 / FADECOLORMAPROWS); \
 	rgba = V_GetColor(px);
 
 	// to black
+	makeblack:
 	for (i = 0; i < len; i++)
 	{
 		// find pixel and fade amount
 		GETCOLOR;
 
 		// subtractive color blending
-		r = rgba.s.red - fade*3;
-		g = rgba.s.green - fade*2;
-		b = rgba.s.blue - fade;
+		r = rgba.s.red - FADEREDFACTOR*fade/10;
+		g = rgba.s.green - FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue - FADEBLUEFACTOR*fade/10;
 
 		// clamp values
 		if (r < 0) r = 0;
@@ -1333,15 +1362,16 @@ static void R_CreateFadeColormaps(size_t len)
 	}
 
 	// to white
+	makewhite:
 	for (i = len; i < len*2; i++)
 	{
 		// find pixel and fade amount
 		GETCOLOR;
 
 		// additive color blending
-		r = rgba.s.red + fade*3;
-		g = rgba.s.green + fade*2;
-		b = rgba.s.blue + fade;
+		r = rgba.s.red + FADEREDFACTOR*fade/10;
+		g = rgba.s.green + FADEGREENFACTOR*fade/10;
+		b = rgba.s.blue + FADEBLUEFACTOR*fade/10;
 
 		// clamp values
 		if (r > 255) r = 255;
@@ -1369,7 +1399,7 @@ static void R_InitColormaps(void)
 	W_ReadLump(lump, colormaps);
 
 	// Make colormap for fades
-	R_CreateFadeColormaps(len);
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();
@@ -1401,7 +1431,7 @@ void R_ReInitColormaps(UINT16 num)
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
 	if (fadecolormap)
 		Z_Free(fadecolormap);
-	R_CreateFadeColormaps(W_LumpLength(lump));
+	R_CreateFadeColormaps();
 
 	// Init Boom colormaps.
 	R_ClearColormaps();

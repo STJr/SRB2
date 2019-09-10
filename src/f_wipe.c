@@ -103,7 +103,6 @@ static fixed_t paldiv = 0;
 
 static UINT8 curwipetype;
 static UINT8 curwipeframe;
-static UINT8 maxwipeframe;
 
 /** Create fademask_t from lump
   *
@@ -164,7 +163,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
 		if (wipestyle == WIPESTYLE_LEVEL)
-			*mask++ = pcolor->s.red/8;		// 0-31 range
+			*mask++ = pcolor->s.red / FADECOLORMAPDIV;
 		else
 			*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
@@ -282,7 +281,7 @@ static void F_DoWipe(fademask_t *fademask)
 					relativepos += vid.width;
 				}
 			}
-			else if ((*mask >= maxwipeframe) && (wipestyle == WIPESTYLE_NORMAL))
+			else if ((*mask >= 10) && (wipestyle == WIPESTYLE_NORMAL))
 			{
 				// shortcut - memcpy target to work
 				while (draw_linestogo--)
@@ -299,11 +298,11 @@ static void F_DoWipe(fademask_t *fademask)
 					UINT8 *fade = fadecolormap;
 
 					if (wipestyleflags & WSF_TOWHITE)
-						fade = fadecolormap + (32 * 256);
+						fade = fadecolormap + (FADECOLORMAPROWS * 256);
 
 					nmask = *mask;
 					if (wipestyleflags & WSF_FADEIN)
-						nmask = 31 - nmask;
+						nmask = (FADECOLORMAPROWS-1) - nmask;
 
 					transtbl = fade + (nmask * 256);
 				}
@@ -406,15 +405,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	// don't know where else to put this.
 	// this any good?
 	if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
-	{
 		wipestyle = WIPESTYLE_LEVEL;
-		maxwipeframe = 31;
-	}
 	else
-	{
 		wipestyle = WIPESTYLE_NORMAL;
-		maxwipeframe = 10;
-	}
 
 	curwipetype = wipetype;
 	curwipeframe = 0;
