@@ -1155,7 +1155,7 @@ void R_RenderPlayerView(player_t *player)
 void R_InitHardwareMode(void)
 {
 	HWR_AddCommands();
-	if (gamestate == GS_LEVEL)
+	if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN)
 	{
 		HWR_SetupLevel();
 		HWR_PrepLevelCache(numtextures);
