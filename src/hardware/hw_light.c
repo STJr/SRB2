@@ -186,17 +186,16 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Boss 1, (Greenflower)
 	&lspr[NOLIGHT],     // SPR_EGGM
+	&lspr[NOLIGHT],     // SPR_EGLZ
 
 	// Boss 2, (Techno Hill)
 	&lspr[NOLIGHT],     // SPR_EGGN
-	&lspr[NOLIGHT],     // SPR_TNKA
-	&lspr[NOLIGHT],     // SPR_TNKB
-	&lspr[NOLIGHT],     // SPR_SPNK
+	&lspr[NOLIGHT],     // SPR_TANK
 	&lspr[NOLIGHT],     // SPR_GOOP
 
 	// Boss 3 (Deep Sea)
 	&lspr[NOLIGHT],     // SPR_EGGO
-	&lspr[NOLIGHT],     // SPR_PRPL
+	&lspr[NOLIGHT],     // SPR_SEBH
 	&lspr[NOLIGHT],     // SPR_FAKE
 
 	// Boss 4 (Castle Eggman)

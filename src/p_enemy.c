@@ -726,6 +726,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->mo->health <= 0)
 			continue; // dead
 
+		if (player->bot)
+			continue; // ignore bots
+
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away
@@ -3003,16 +3006,19 @@ void A_Boss7FireMissiles(mobj_t *actor)
 //		0 - Boss 1 Left side
 //		1 - Boss 1 Right side
 //		2 - Triple laser
-//		>3 - Boss 1 Middle
+//		3 - Boss 1 Middle
+//		>=3 - Generic middle
 //
 void A_Boss1Laser(mobj_t *actor)
 {
 	fixed_t x, y, z, floorz, speed;
 	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	INT32 locvar2 = (var2 & 65535);
+	INT32 upperend = (var2>>16);
 	INT32 i;
 	angle_t angle;
 	mobj_t *point;
+	tic_t dur;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Boss1Laser", actor))
@@ -3021,19 +3027,24 @@ void A_Boss1Laser(mobj_t *actor)
 	if (!actor->target)
 		return;
 
+	if ((upperend & 1) && (actor->extravalue2 > 1))
+		actor->extravalue2--;
+
+	dur = actor->extravalue2;
+
 	switch (locvar2)
 	{
 		case 0:
-			x = actor->x + P_ReturnThrustX(actor, actor->angle+ANGLE_90, FixedMul(43*FRACUNIT, actor->scale));
-			y = actor->y + P_ReturnThrustY(actor, actor->angle+ANGLE_90, FixedMul(43*FRACUNIT, actor->scale));
+			x = actor->x + P_ReturnThrustX(actor, actor->angle+ANGLE_90, FixedMul(44*FRACUNIT, actor->scale));
+			y = actor->y + P_ReturnThrustY(actor, actor->angle+ANGLE_90, FixedMul(44*FRACUNIT, actor->scale));
 			if (actor->eflags & MFE_VERTICALFLIP)
 				z = actor->z + actor->height - FixedMul(56*FRACUNIT, actor->scale) - mobjinfo[locvar1].height;
 			else
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
 		case 1:
-			x = actor->x + P_ReturnThrustX(actor, actor->angle-ANGLE_90, FixedMul(43*FRACUNIT, actor->scale));
-			y = actor->y + P_ReturnThrustY(actor, actor->angle-ANGLE_90, FixedMul(43*FRACUNIT, actor->scale));
+			x = actor->x + P_ReturnThrustX(actor, actor->angle-ANGLE_90, FixedMul(44*FRACUNIT, actor->scale));
+			y = actor->y + P_ReturnThrustY(actor, actor->angle-ANGLE_90, FixedMul(44*FRACUNIT, actor->scale));
 			if (actor->eflags & MFE_VERTICALFLIP)
 				z = actor->z + actor->height - FixedMul(56*FRACUNIT, actor->scale) - mobjinfo[locvar1].height;
 			else
@@ -3048,6 +3059,11 @@ void A_Boss1Laser(mobj_t *actor)
 			A_Boss1Laser(actor);
 			return;
 			break;
+		case 3:
+			x = actor->x + P_ReturnThrustX(actor, actor->angle, FixedMul(42*FRACUNIT, actor->scale));
+			y = actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(42*FRACUNIT, actor->scale));
+			z = actor->z + actor->height/2;
+			break;
 		default:
 			x = actor->x;
 			y = actor->y;
@@ -3055,7 +3071,7 @@ void A_Boss1Laser(mobj_t *actor)
 			break;
 	}
 
-	if (!(actor->flags2 & MF2_FIRING) && actor->tics > 1)
+	if (!(actor->flags2 & MF2_FIRING) && dur > 1)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
@@ -3064,7 +3080,7 @@ void A_Boss1Laser(mobj_t *actor)
 		{
 			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
 			point->angle = actor->angle;
-			point->fuse = actor->tics+1;
+			point->fuse = dur+1;
 			P_SetTarget(&point->target, actor->target);
 			P_SetTarget(&actor->target, point);
 		}
@@ -3073,9 +3089,9 @@ void A_Boss1Laser(mobj_t *actor)
 	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);*/
 
-	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
-		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
-	else
+	/*if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
+		angle = FixedAngle(FixedDiv(dur*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
+	else*/
 		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
 
 	point = P_SpawnMobj(x, y, z, locvar1);
@@ -3109,7 +3125,7 @@ void A_Boss1Laser(mobj_t *actor)
 		point->fuse = TICRATE;
 	}
 
-	if (actor->tics > 1)
+	if (dur > 1)
 		actor->flags2 |= MF2_FIRING;
 	else
 		actor->flags2 &= ~MF2_FIRING;
@@ -3253,6 +3269,7 @@ void A_Boss4Raise(mobj_t *actor)
 //		0 - Fly at the player
 //		1 - Fly away from the player
 //		2 - Strafe in relation to the player
+//      3 - Dynamic mode - don't get too close to walls
 // var2:
 //		0 - Fly horizontally and vertically
 //		1 - Fly horizontal-only (momz = 0)
@@ -3283,16 +3300,83 @@ void A_SkullAttack(mobj_t *actor)
 		S_StartSound(actor, actor->info->activesound);
 	A_FaceTarget(actor);
 
+	dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
+
 	if (locvar1 == 1)
 		actor->angle += ANGLE_180;
 	else if (locvar1 == 2)
 		actor->angle += (P_RandomChance(FRACUNIT/2)) ? ANGLE_90 : -ANGLE_90;
+	else if (locvar1 == 3)
+	{
+		statenum_t oldspawnstate = mobjinfo[MT_NULL].spawnstate;
+		UINT32 oldflags = mobjinfo[MT_NULL].flags;
+		fixed_t oldradius = mobjinfo[MT_NULL].radius;
+		fixed_t oldheight = mobjinfo[MT_NULL].height;
+		mobj_t *check;
+		INT32 i, j, k;
+		boolean allow;
+		angle_t testang;
+
+		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
+		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
+		mobjinfo[MT_NULL].radius = mobjinfo[actor->type].radius;
+		mobjinfo[MT_NULL].height = mobjinfo[actor->type].height;
+
+		if (P_RandomChance(FRACUNIT/2)) // port priority 1?
+		{
+			i = 9;
+			j = 27;
+		}
+		else
+		{
+			i = 27;
+			j = 9;
+		}
+
+#define dostuff(q) check = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_NULL);\
+			testang = actor->angle + ((i+(q))*ANG10);\
+			allow = (P_TryMove(check,\
+				P_ReturnThrustX(check, testang, dist + 2*actor->radius),\
+				P_ReturnThrustY(check, testang, dist + 2*actor->radius),\
+				true));\
+			P_RemoveMobj(check);\
+			if (allow)\
+				break;
+
+		if (P_RandomChance(FRACUNIT/2)) // port priority 2?
+		{
+			for (k = 0; k < 9; k++)
+			{
+				dostuff(i+k)
+				dostuff(i-k)
+				dostuff(j+k)
+				dostuff(j-k)
+			}
+		}
+		else
+		{
+			for (k = 0; k < 9; k++)
+			{
+				dostuff(i-k)
+				dostuff(i+k)
+				dostuff(j-k)
+				dostuff(j+k)
+			}
+		}
+		actor->angle = testang;
+
+#undef dostuff
+
+		mobjinfo[MT_NULL].spawnstate = oldspawnstate;
+		mobjinfo[MT_NULL].flags = oldflags;
+		mobjinfo[MT_NULL].radius = oldradius;
+		mobjinfo[MT_NULL].height = oldheight;
+	}
 
 	an = actor->angle >> ANGLETOFINESHIFT;
 
 	actor->momx = FixedMul(speed, FINECOSINE(an));
 	actor->momy = FixedMul(speed, FINESINE(an));
-	dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -3442,11 +3526,13 @@ void A_Pain(mobj_t *actor)
 //
 // Description: Changes a dying object's flags to reflect its having fallen to the ground.
 //
-// var1 = unused
+// var1 = value to set repeat to if nonzero
 // var2 = unused
 //
 void A_Fall(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Fall", actor))
 		return;
@@ -3459,6 +3545,9 @@ void A_Fall(mobj_t *actor)
 
 	// So change this if corpse objects
 	// are meant to be obstacles.
+
+	if (locvar1)
+		actor->extravalue2 = locvar1;
 }
 
 #define LIVESBOXDISPLAYPLAYER // Use displayplayer instead of closest player
@@ -3854,6 +3943,72 @@ bossjustdie:
 	else if (P_MobjWasRemoved(mo))
 		return;
 #endif
+
+	// Spawn your junk
+	switch (mo->type)
+	{
+		default:
+			break;
+		case MT_EGGMOBILE: // twin laser pods
+			{
+				mo2 = P_SpawnMobjFromMobj(mo,
+					P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+					P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+					32<<FRACBITS, MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
+				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+				P_SetMobjState(mo2, S_BOSSEGLZ1);
+
+				mo2 = P_SpawnMobjFromMobj(mo,
+					P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+					P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+					32<<FRACBITS, MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
+				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+				P_SetMobjState(mo2, S_BOSSEGLZ2);
+			}
+			break;
+		case MT_EGGMOBILE2: // twin tanks + spigot
+			{
+				mo2 = P_SpawnMobjFromMobj(mo,
+					P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+					P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+					32<<FRACBITS, MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
+				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+				P_SetMobjState(mo2, S_BOSSTANK1);
+
+				mo2 = P_SpawnMobjFromMobj(mo,
+					P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+					P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+					32<<FRACBITS, MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
+				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+				P_SetMobjState(mo2, S_BOSSTANK2);
+
+				mo2 = P_SpawnMobjFromMobj(mo, 0, 0,
+					mobjinfo[MT_EGGMOBILE2].height + (32<<FRACBITS),
+					MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+				mo2->momz += mo->momz;
+				P_SetMobjState(mo2, S_BOSSSPIGOT);
+			}
+			break;
+		case MT_EGGMOBILE3:
+			{
+				mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
+				mo2->angle = mo->angle;
+				P_SetMobjState(mo2, S_BOSSSEBH1);
+			}
+			break;
+	}
+
+	// now do another switch case for escaping
 	switch (mo->type)
 	{
 		case MT_BLACKEGGMAN:
@@ -3951,7 +4106,7 @@ bossjustdie:
 			mo->movedir = 0;
 			mo->extravalue1 = 35;
 			mo->flags2 |= MF2_BOSSFLEE;
-			mo->momz = 2*mo->scale;
+			mo->momz = P_MobjFlip(mo)*2*mo->scale;
 
 			if (mo->target)
 			{
@@ -3968,50 +4123,6 @@ bossjustdie:
 
 			break;
 		}
-	}
-
-	if (mo->type == MT_EGGMOBILE2)
-	{
-		mo2 = P_SpawnMobj(mo->x + P_ReturnThrustX(mo, mo->angle - ANGLE_90, FixedMul(32*FRACUNIT, mo->scale)),
-			mo->y + P_ReturnThrustY(mo, mo->angle - ANGLE_90, FixedMul(32*FRACUNIT, mo->scale)),
-			mo->z + mo->height/2 + ((mo->eflags & MFE_VERTICALFLIP)? FixedMul(8*FRACUNIT, mo->scale)-mobjinfo[MT_BOSSTANK1].height : -FixedMul(8*FRACUNIT, mo->scale)), MT_BOSSTANK1); // Right tank
-		mo2->angle = mo->angle;
-		mo2->destscale = mo->scale;
-		P_SetScale(mo2, mo2->destscale);
-		if (mo->eflags & MFE_VERTICALFLIP)
-		{
-			mo2->eflags |= MFE_VERTICALFLIP;
-			mo2->flags2 |= MF2_OBJECTFLIP;
-		}
-		P_InstaThrust(mo2, mo2->angle - ANGLE_90, FixedMul(4*FRACUNIT, mo2->scale));
-		P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-
-		mo2 = P_SpawnMobj(mo->x + P_ReturnThrustX(mo, mo->angle + ANGLE_90, FixedMul(32*FRACUNIT, mo->scale)),
-			mo->y + P_ReturnThrustY(mo, mo->angle + ANGLE_90, FixedMul(32*FRACUNIT, mo->scale)),
-			mo->z + mo->height/2 + ((mo->eflags & MFE_VERTICALFLIP)? FixedMul(8*FRACUNIT, mo->scale)-mobjinfo[MT_BOSSTANK2].height : -FixedMul(8*FRACUNIT, mo->scale)), MT_BOSSTANK2); // Left tank
-		mo2->angle = mo->angle;
-		mo2->destscale = mo->scale;
-		P_SetScale(mo2, mo2->destscale);
-		if (mo->eflags & MFE_VERTICALFLIP)
-		{
-			mo2->eflags |= MFE_VERTICALFLIP;
-			mo2->flags2 |= MF2_OBJECTFLIP;
-		}
-		P_InstaThrust(mo2, mo2->angle + ANGLE_90, FixedMul(4*FRACUNIT, mo2->scale));
-		P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-
-		mo2 = P_SpawnMobj(mo->x, mo->y,
-			mo->z + ((mo->eflags & MFE_VERTICALFLIP)? mobjinfo[MT_BOSSSPIGOT].height-FixedMul(32*FRACUNIT,mo->scale): mo->height + FixedMul(32*FRACUNIT, mo->scale)), MT_BOSSSPIGOT);
-		mo2->angle = mo->angle;
-		mo2->destscale = mo->scale;
-		P_SetScale(mo2, mo2->destscale);
-		if (mo->eflags & MFE_VERTICALFLIP)
-		{
-			mo2->eflags |= MFE_VERTICALFLIP;
-			mo2->flags2 |= MF2_OBJECTFLIP;
-		}
-		P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-		return;
 	}
 }
 
@@ -4149,9 +4260,9 @@ void A_Invincibility(mobj_t *actor)
 	{
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
+		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
 		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
-		P_PlayJingle(player, (mariomode) ? JT_MINV : JT_INV);
 	}
 }
 
@@ -6355,6 +6466,7 @@ void A_MixUp(mobj_t *actor)
 		INT32 starpostnum;
 		tic_t starposttime;
 		angle_t starpostangle;
+		fixed_t starpostscale;
 
 		INT32 mflags2;
 
@@ -6402,6 +6514,7 @@ void A_MixUp(mobj_t *actor)
 		starposty = players[one].starposty;
 		starpostz = players[one].starpostz;
 		starpostangle = players[one].starpostangle;
+		starpostscale = players[one].starpostscale;
 		starpostnum = players[one].starpostnum;
 		starposttime = players[one].starposttime;
 
@@ -6410,15 +6523,11 @@ void A_MixUp(mobj_t *actor)
 		P_MixUp(players[one].mo, players[two].mo->x, players[two].mo->y, players[two].mo->z, players[two].mo->angle,
 				players[two].starpostx, players[two].starposty, players[two].starpostz,
 				players[two].starpostnum, players[two].starposttime, players[two].starpostangle,
-				players[two].mo->flags2);
-
-		players[one].drawangle = players[two].drawangle;
+				players[two].starpostscale, players[two].drawangle, players[two].mo->flags2);
 
 		P_MixUp(players[two].mo, x, y, z, angle, starpostx, starposty, starpostz,
 				starpostnum, starposttime, starpostangle,
-				mflags2);
-
-		players[two].drawangle = drawangle;
+				starpostscale, drawangle, mflags2);
 
 		//carry set after mixup.  Stupid P_ResetPlayer() takes away some of the stuff we look for...
 		//but not all of it!  So we need to make sure they aren't set wrong or anything.
@@ -6445,6 +6554,7 @@ void A_MixUp(mobj_t *actor)
 		INT32 starpostnum[MAXPLAYERS];
 		tic_t starposttime[MAXPLAYERS];
 		angle_t starpostangle[MAXPLAYERS];
+		fixed_t starpostscale[MAXPLAYERS];
 
 		INT32 flags2[MAXPLAYERS];
 
@@ -6482,6 +6592,7 @@ void A_MixUp(mobj_t *actor)
 				starpostnum[counter] = players[i].starpostnum;
 				starposttime[counter] = players[i].starposttime;
 				starpostangle[counter] = players[i].starpostangle;
+				starpostscale[counter] = players[i].starpostscale;
 
 				flags2[counter] = players[i].mo->flags2;
 
@@ -6522,9 +6633,7 @@ void A_MixUp(mobj_t *actor)
 				P_MixUp(players[i].mo, position[teleportfrom][0], position[teleportfrom][1], position[teleportfrom][2], anglepos[teleportfrom][0],
 					spposition[teleportfrom][0], spposition[teleportfrom][1], spposition[teleportfrom][2],
 					starpostnum[teleportfrom], starposttime[teleportfrom], starpostangle[teleportfrom],
-					flags2[teleportfrom]);
-
-				players[i].drawangle = anglepos[teleportfrom][1];
+					starpostscale[teleportfrom], anglepos[teleportfrom][1], flags2[teleportfrom]);
 
 				//...carry after.  same reasoning.
 				players[i].powers[pw_carry] = transcarry[teleportfrom];
@@ -8699,7 +8808,7 @@ void A_SetObjectFlags2(mobj_t *actor)
 //
 // var1:
 //		0 - Triple jet fume pattern
-//		1 - Boss 3's propeller
+//		1 - Unused (formerly Boss 3's propeller)
 //		2 - Metal Sonic jet fume
 //		3 - Boss 4 jet flame
 // var2 = unused
@@ -8759,7 +8868,7 @@ void A_BossJetFume(mobj_t *actor)
 
 		P_SetTarget(&actor->tracer, filler);
 	}
-	else if (locvar1 == 1) // Boss 3 propeller
+	/*else if (locvar1 == 1) // Boss 3 propeller
 	{
 		fixed_t jetx, jety, jetz;
 
@@ -8779,14 +8888,14 @@ void A_BossJetFume(mobj_t *actor)
 		filler->angle = actor->angle - ANGLE_180;
 
 		P_SetTarget(&actor->tracer, filler);
-	}
+	}*/
 	else if (locvar1 == 2) // Metal Sonic jet fumes
 	{
 		filler = P_SpawnMobj(actor->x, actor->y, actor->z, MT_JETFUME1);
 		P_SetTarget(&filler->target, actor);
 		filler->fuse = 59;
 		P_SetTarget(&actor->tracer, filler);
-		filler->destscale = actor->scale/2;
+		filler->destscale = actor->scale/3;
 		P_SetScale(filler, filler->destscale);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			filler->flags2 |= MF2_OBJECTFLIP;

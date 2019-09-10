@@ -1960,7 +1960,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 
 static void ST_drawMatchHUD(void)
 {
-	char penaltystr[5];
+	char penaltystr[7];
 	const INT32 y = 176; // HUD_LIVES
 	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 

@@ -509,7 +509,7 @@ extern INT32 ceilmovesound;
 void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 			INT16 starpostx, INT16 starposty, INT16 starpostz,
 			INT32 starpostnum, tic_t starposttime, angle_t starpostangle,
-			INT32 flags2);
+			fixed_t starpostscale, angle_t drawangle, INT32 flags2);
 boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle, boolean flash, boolean dontstopmove);
 boolean P_SetMobjStateNF(mobj_t *mobj, statenum_t state);
 boolean P_CheckMissileSpawn(mobj_t *th);
