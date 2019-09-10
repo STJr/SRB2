@@ -2603,6 +2603,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->followitem = 0;
 
 	skin->highresscale = FRACUNIT;
+	skin->contspeed = 17;
+	skin->contangle = 0;
 
 	skin->availability = 0;
 
@@ -2907,6 +2909,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETINT(thrustfactor)
 	GETINT(accelstart)
 	GETINT(acceleration)
+	GETINT(contspeed)
+	GETINT(contangle)
 #undef GETINT
 
 #define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);

@@ -2465,6 +2465,11 @@ void F_TitleDemoTicker(void)
 // ==========
 //  CONTINUE
 // ==========
+
+static skin_t *contskins[2];
+static UINT8 cont_spr2[2][6];
+static UINT8 *contcolormaps[2];
+
 void F_StartContinue(void)
 {
 	I_Assert(!netgame && !multiplayer);
@@ -2488,7 +2493,44 @@ void F_StartContinue(void)
 	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
-	timetonext = TICRATE*11;
+	contskins[0] = &skins[players[consoleplayer].skin];
+	cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT1, NULL);
+	cont_spr2[0][2] = contskins[0]->contangle & 7;
+	contcolormaps[0] = R_GetTranslationColormap(players[consoleplayer].skin, players[consoleplayer].skincolor, GTC_CACHE);
+	cont_spr2[0][4] = contskins[0]->sprites[cont_spr2[0][0]].numframes;
+	cont_spr2[0][5] = max(1, contskins[0]->contspeed);
+
+	if (botskin)
+	{
+		INT32 secondplaya;
+
+		if (secondarydisplayplayer != consoleplayer)
+			secondplaya = secondarydisplayplayer;
+		else // HACK
+			secondplaya = 1;
+
+		contskins[1] = &skins[players[secondplaya].skin];
+		cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT4, NULL);
+		cont_spr2[1][2] = (contskins[1]->contangle >> 3) & 7;
+		contcolormaps[1] = R_GetTranslationColormap(players[secondplaya].skin, players[secondplaya].skincolor, GTC_CACHE);
+		cont_spr2[1][4] = contskins[1]->sprites[cont_spr2[1][0]].numframes;
+		if (cont_spr2[1][0] == SPR2_CNT4)
+			cont_spr2[1][5] = 4; // sorry, this one is hardcoded
+		else
+			cont_spr2[1][5] = max(1, contskins[1]->contspeed);
+	}
+	else
+	{
+		contskins[1] = NULL;
+		contcolormaps[1] = NULL;
+		cont_spr2[1][0] = cont_spr2[1][2] = cont_spr2[1][4] = cont_spr2[1][5] = 0;
+	}
+
+	cont_spr2[0][1] = cont_spr2[0][3] =\
+	cont_spr2[1][1] = cont_spr2[1][3] = 0;
+
+	timetonext = (11*TICRATE)+11;
+	continuetime = 0;
 }
 
 //
@@ -2497,47 +2539,198 @@ void F_StartContinue(void)
 //
 void F_ContinueDrawer(void)
 {
-	patch_t *contsonic;
-	INT32 i, x = (BASEVIDWIDTH/2) + 4, ncontinues = players[consoleplayer].continues;
-	if (ncontinues > 20)
-		ncontinues = 20;
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	patch_t *patch;
+	INT32 i, x = (BASEVIDWIDTH>>1), ncontinues = players[consoleplayer].continues;
+	char numbuf[9] = "CONTNUM*";
+	tic_t timeleft = (timetonext/TICRATE);
+	INT32 offsx = 0, offsy = 0, lift[2] = {0, 0};
 
-	if (imcontinuing)
-		contsonic = W_CachePatchName("CONT2", PU_CACHE);
-	else
-		contsonic = W_CachePatchName("CONT1", PU_CACHE);
+	if (continuetime >= 3*TICRATE)
+	{
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+		return;
+	}
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-	V_DrawCenteredString(BASEVIDWIDTH/2, 100, 0, "CONTINUE?");
 
-	// Draw a Sonic!
-	V_DrawScaledPatch((BASEVIDWIDTH - SHORT(contsonic->width))/2, 32, 0, contsonic);
+	if (timetonext >= (11*TICRATE)+10)
+		return;
 
-	// Draw the continue markers! Show continues minus one.
-	x -= ncontinues * 6;
-	for (i = 0; i < ncontinues; ++i)
-		V_DrawContinueIcon(x + (i*12), 140, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
+	V_DrawLevelTitle(x - (V_LevelNameWidth("CONTINUE")>>1), 16, 0, "CONTINUE");
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 168, 0, va("\x82*\x80" " %02d " "\x82*\x80", timetonext/TICRATE));
+	// Two stars...
+	patch = W_CachePatchName("CONTSTAR", PU_CACHE);
+	V_DrawScaledPatch(x-32, 160, 0, patch);
+	V_DrawScaledPatch(x+32, 160, 0, patch);
+
+	// Time left!
+	if (timeleft > 9)
+	{
+		numbuf[7] = '1';
+		V_DrawScaledPatch(x - 10, 160, 0, W_CachePatchName(numbuf, PU_CACHE));
+		numbuf[7] = '0';
+		V_DrawScaledPatch(x + 10, 160, 0, W_CachePatchName(numbuf, PU_CACHE));
+	}
+	else
+	{
+		numbuf[7] = '0'+timeleft;
+		V_DrawScaledPatch(x, 160, 0, W_CachePatchName(numbuf, PU_CACHE));
+	}
+
+	// Draw the continue markers! Show continues.
+	if (ncontinues > 10)
+	{
+		if (!(continuetime & 1) || continuetime > 17)
+			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
+		V_DrawScaledPatch(x+12, 68-2, 0, stlivex);
+		V_DrawRightAlignedString(x+36, 69-5, 0,
+			va("%d",(imcontinuing ? ncontinues-1 : ncontinues)));
+	}
+	else
+	{
+		x += (ncontinues/2) * 30;
+		if (!(ncontinues & 1))
+			x -= 15;
+		for (i = 0; i < ncontinues; ++i)
+		{
+			if (i == (ncontinues/2) && ((continuetime & 1) || continuetime > 17))
+				continue;
+			V_DrawContinueIcon(x - (i*30), 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
+		}
+		x = BASEVIDWIDTH>>1;
+	}
+
+	// Spotlight
+	V_DrawScaledPatch(x, 140, 0, W_CachePatchName("CONTSPOT", PU_CACHE));
+
+	// warping laser
+	if (continuetime)
+	{
+		INT32 w = min(continuetime, 28), brightness = (continuetime>>1) & 7;
+		if (brightness > 3)
+			brightness = 8-brightness;
+		V_DrawFadeFill(x-w, 0, w<<1, 140, 0, 0, (3+brightness));
+	}
+
+	if (contskins[1])
+	{
+		if (continuetime > 15)
+		{
+			angle_t work = FixedAngle((10*(continuetime-15))<<FRACBITS)>>ANGLETOFINESHIFT;
+			offsy = FINESINE(work)<<1;
+			offsx = (27*FINECOSINE(work))>>1;
+		}
+		else
+			offsx = 27<<(FRACBITS-1);
+		lift[1] = continuetime-10;
+		if (lift[1] < 0)
+			lift[1] = 0;
+		else if (lift[1] > TICRATE+5)
+			lift[1] = TICRATE+5;
+	}
+
+	lift[0] = continuetime-5;
+	if (lift[0] < 0)
+		lift[0] = 0;
+	else if (lift[0] > TICRATE+5)
+		lift[0] = TICRATE+5;
+
+#define drawchar(dx, dy, n)	{\
+								sprdef = &contskins[n]->sprites[cont_spr2[n][0]];\
+								sprframe = &sprdef->spriteframes[cont_spr2[n][1]];\
+								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_CACHE);\
+								V_DrawFixedPatch((dx), (dy), FRACUNIT, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
+							}
+
+	if (offsy < 0)
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+	if (contskins[1])
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))+offsx, ((140-lift[1])<<FRACBITS)+offsy, 1);
+	if (offsy >= 0)
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+
+#undef drawchar
+
+	if (timetonext > (11*TICRATE))
+		V_DrawFadeScreen(31, timetonext-(11*TICRATE));
+	if (continuetime > ((3*TICRATE) - 10))
+		V_DrawFadeScreen(0, (continuetime - ((3*TICRATE) - 10)));
 }
 
 void F_ContinueTicker(void)
 {
 	if (!imcontinuing)
 	{
-		// note the setup to prevent 2x reloading
-		if (timetonext >= 0)
-			timetonext--;
-		if (timetonext == 0)
-			Command_ExitGame_f();
+		if (timetonext > 0)
+		{
+			if (!(--timetonext))
+			{
+				Command_ExitGame_f();
+				return;
+			}
+		}
 	}
 	else
 	{
-		// note the setup to prevent 2x reloading
-		if (continuetime >= 0)
-			continuetime--;
-		if (continuetime == 0)
+		if (++continuetime == 3*TICRATE)
+		{
 			G_Continue();
+			return;
+		}
+
+		if (continuetime > 5 && ((continuetime & 1) || continuetime > TICRATE) && (++cont_spr2[0][2]) >= 8)
+			cont_spr2[0][2] = 0;
+
+		if (continuetime > 10 && (!(continuetime & 1) || continuetime > TICRATE+5) && (++cont_spr2[1][2]) >= 8)
+			cont_spr2[1][2] = 0;
+
+		if (continuetime == (3*TICRATE)-10)
+			S_StartSound(NULL, sfx_cdfm56); // or 31
+		else if (continuetime == 5)
+		{
+			cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT2, NULL);
+			cont_spr2[0][4] = contskins[0]->sprites[cont_spr2[0][0]].numframes;
+			cont_spr2[0][1] = cont_spr2[0][3] = 0;
+			cont_spr2[0][5] = 2;
+		}
+		else if (continuetime == TICRATE)
+		{
+			cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT3, NULL);
+			cont_spr2[0][4] = contskins[0]->sprites[cont_spr2[0][0]].numframes;
+			cont_spr2[0][1] = cont_spr2[0][3] = 0;
+		}
+		else if (contskins[1])
+		{
+			if (continuetime == 10)
+			{
+				cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT2, NULL);
+				cont_spr2[1][4] = contskins[1]->sprites[cont_spr2[1][0]].numframes;
+				cont_spr2[1][1] = cont_spr2[1][3] = 0;
+				cont_spr2[1][5] = 2;
+			}
+			else if (continuetime == TICRATE+5)
+			{
+				cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT3, NULL);
+				cont_spr2[1][4] = contskins[1]->sprites[cont_spr2[1][0]].numframes;
+				cont_spr2[1][1] = cont_spr2[1][3] = 0;
+			}
+		}
+	}
+
+	if ((++cont_spr2[0][3]) >= cont_spr2[0][5])
+	{
+		cont_spr2[0][3] = 0;
+		if (++cont_spr2[0][1] >= cont_spr2[0][4])
+			cont_spr2[0][1] = 0;
+	}
+
+	if (contskins[1] && (++cont_spr2[1][3]) >= cont_spr2[1][5])
+	{
+		cont_spr2[1][3] = 0;
+		if (++cont_spr2[1][1] >= cont_spr2[1][4])
+			cont_spr2[1][1] = 0;
 	}
 }
 
@@ -2568,8 +2761,9 @@ boolean F_ContinueResponder(event_t *event)
 
 	keypressed = true;
 	imcontinuing = true;
-	continuetime = TICRATE;
-	S_StartSound(NULL, sfx_itemup);
+	S_StartSound(NULL, sfx_kc6b);
+	I_FadeSong(0, MUSICRATE, &S_StopMusic);
+
 	return true;
 }
 

@@ -122,6 +122,8 @@ typedef struct
 	UINT8 prefoppositecolor; // if 0 use tables instead
 
 	fixed_t highresscale; // scale of highres, default is 0.5
+	UINT8 contspeed; // continue screen animation speed
+	UINT8 contangle; // initial angle on continue screen
 
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table

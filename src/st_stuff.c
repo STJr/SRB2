@@ -64,12 +64,12 @@ patch_t *sbotime; // Time logo
 patch_t *sbocolon; // Colon for time
 patch_t *sboperiod; // Period for time centiseconds
 patch_t *livesback; // Lives icon background
+patch_t *stlivex;
 static patch_t *nrec_timer; // Timer for NiGHTS records
 static patch_t *sborings;
 static patch_t *slidgame;
 static patch_t *slidtime;
 static patch_t *slidover;
-static patch_t *stlivex;
 static patch_t *sboredrings;
 static patch_t *sboredtime;
 static patch_t *getall; // Special Stage HUD
