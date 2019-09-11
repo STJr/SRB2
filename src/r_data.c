@@ -2603,15 +2603,38 @@ typedef struct {
 	png_bytep buffer;
 	png_uint_32 bufsize;
 	png_uint_32 current_pos;
-} png_ioread;
+} png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-	png_ioread *f = png_get_io_ptr(png_ptr);
+	png_io_t *f = png_get_io_ptr(png_ptr);
 	if (length > (f->bufsize - f->current_pos))
 		png_error(png_ptr, "PNG_IOReader: buffer overrun");
 	memcpy(data, f->buffer + f->current_pos, length);
 	f->current_pos += length;
+}
+
+typedef struct
+{
+	char name[4];
+	void *data;
+	size_t size;
+} png_chunk_t;
+
+static png_byte *chunkname = NULL;
+static png_chunk_t chunk;
+
+static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
+{
+	if (!memcmp(chonk->name, chunkname, 4))
+	{
+		memcpy(chunk.name, chonk->name, 4);
+		chunk.size = chonk->size;
+		chunk.data = Z_Malloc(chunk.size, PU_STATIC, NULL);
+		memcpy(chunk.data, chonk->data, chunk.size);
+		return 1;
+	}
+	return 0;
 }
 
 static void PNG_error(png_structp PNG, png_const_charp pngtext)
@@ -2638,11 +2661,13 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 	png_bytep *row_pointers;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
+	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+	png_voidp *user_chunk_ptr;
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 	{
 		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
@@ -2677,12 +2702,18 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 	png_io.current_pos = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
+
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
 	png_set_user_limits(png_ptr, 2048, 2048);
 #endif
 
 	png_read_info(png_ptr, png_info_ptr);
-
 	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 
 	if (bit_depth == 16)
@@ -2715,35 +2746,31 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 	// Read grAB chunk
 	if (topoffset || leftoffset)
 	{
-		UINT8 *header = png;
-		while (size--)
-		{
-			if (!memcmp(header, "grAb", 4))
-			{
-				// The grAb chunk stores offsets as big-endian numbers.
-				#ifdef SRB2_BIG_ENDIAN
-					#define ENDIANESS(x) (x)
-				#else
-					#define ENDIANESS(x) ((x>>24)&0xff)|((x<<8)&0xff0000)|((x>>8)&0xff00)|((x<<24)&0xff000000)
-				#endif
-				// skip name
-				header += 4;
-				// read left offset
-				if (leftoffset != NULL)
-					*leftoffset = (INT16)ENDIANESS(*(INT32 *)header);
-				// read top offset
-				header += 4;
-				if (topoffset != NULL)
-					*topoffset = (INT16)ENDIANESS(*(INT32 *)header);
-				#undef ENDIANESS
-				break;
-			}
-			header++;
-		}
+		INT32 *offsets = (INT32 *)chunk.data;
+
+		// The grAb chunk stores offsets as big-endian numbers.
+		#ifdef SRB2_BIG_ENDIAN
+			#define ENDIANESS(x) (x)
+		#else
+			#define ENDIANESS(x) ((x>>24)&0xff)|((x<<8)&0xff0000)|((x>>8)&0xff00)|((x<<24)&0xff000000)
+		#endif
+
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)ENDIANESS(*offsets);
+		offsets++;
+
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)ENDIANESS(*offsets);
+
+		#undef ENDIANESS
 	}
 
 	// bye
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
 
 	*w = (INT32)width;
 	*h = (INT32)height;
@@ -2920,7 +2947,7 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
 		PNG_error, PNG_warn);
