@@ -2280,7 +2280,7 @@ void G_PlayerReborn(INT32 player)
 		}
 
 		// This is in S_Start, but this was not here previously.
-		// if (cv_resetmusic.value)
+		// if (RESETMUSIC)
 		// 	S_StopMusic();
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
