@@ -2720,7 +2720,7 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 		{
 			if (!memcmp(header, "grAb", 4))
 			{
-				// grAb stores numbers as big-endian.
+				// The grAb chunk stores offsets as big-endian numbers.
 				#ifdef SRB2_BIG_ENDIAN
 					#define ENDIANESS(x) (x)
 				#else
@@ -2787,7 +2787,7 @@ UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
 
 // Convert a PNG to a patch.
 static unsigned char imgbuf[1<<26];
-patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean translucency)
+patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean transparency)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
@@ -2830,7 +2830,7 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean translu
 		for (y = 0; y < height; y++)
 		{
 			UINT8 paletteIndex = raw[((y * width) + x)];
-			boolean opaque = translucency ? (paletteIndex != TRANSPARENTPIXEL) : true;
+			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
 
 			// End span if we have a transparent pixel
 			if (!opaque)
