@@ -61,7 +61,6 @@ static const INT32 format2bpp[16] =
 	2, //14 GR_TEXFMT_AP_88
 };
 
-
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
 // -- Monster Iestyn (13/02/19)
@@ -139,18 +138,37 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -234,18 +252,37 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -332,16 +369,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	/*if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-	{
-		if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			continue;
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawTransFlippedColumnInCache : HWR_DrawTransColumnInCache;
-	}
-	else*/
-	{
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
-	}
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);

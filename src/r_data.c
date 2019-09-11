@@ -241,15 +241,110 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+{
+	RGBA_t output;
+	if (style == AST_TRANSLUCENT)
+	{
+		if (alpha == 0)
+			output.rgba = background.rgba;
+		else if (alpha == 0xFF)
+			output.rgba = foreground.rgba;
+		else if (alpha < 0xFF)
+		{
+			UINT8 beta = (0xFF - alpha);
+			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+		}
+		// write foreground pixel alpha
+		// if there's no pixel in here
+		if (!background.rgba)
+			output.s.alpha = foreground.s.alpha;
+	}
+#define clamp(c) max(min(c, 0xFF), 0x00);
+	else
+	{
+		float falpha = ((float)alpha / 256.0f);
+		float fr = ((float)foreground.s.red * falpha);
+		float fg = ((float)foreground.s.green * falpha);
+		float fb = ((float)foreground.s.blue * falpha);
+		if (style == AST_ADD)
+		{
+			output.s.red = clamp((int)(background.s.red + fr));
+			output.s.green = clamp((int)(background.s.green + fg));
+			output.s.blue = clamp((int)(background.s.blue + fb));
+		}
+		else if (style == AST_SUBTRACT)
+		{
+			output.s.red = clamp((int)(background.s.red - fr));
+			output.s.green = clamp((int)(background.s.green - fg));
+			output.s.blue = clamp((int)(background.s.blue - fb));
+		}
+		else if (style == AST_REVERSESUBTRACT)
+		{
+			output.s.red = clamp((int)((-background.s.red) + fr));
+			output.s.green = clamp((int)((-background.s.green) + fg));
+			output.s.blue = clamp((int)((-background.s.blue) + fb));
+		}
+		else if (style == AST_MODULATE)
+		{
+			fr = ((float)foreground.s.red / 256.0f);
+			fg = ((float)foreground.s.green / 256.0f);
+			fb = ((float)foreground.s.blue / 256.0f);
+			output.s.red = clamp((int)(background.s.red * fr));
+			output.s.green = clamp((int)(background.s.green * fg));
+			output.s.blue = clamp((int)(background.s.blue * fb));
+		}
+		// just copy the pixel
+		else if (style == AST_COPY)
+			return background;
+	}
+#undef clamp
+	// unimplemented blend modes return the background pixel
+	output = background;
+	output.s.alpha = 0xFF;
+	return output;
+}
+
+UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	if ((style == AST_TRANSLUCENT) && (alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+	{
+		UINT8 *mytransmap;
+		if (alpha < 255/11) // Is the patch way too translucent? Don't render then.
+			return background;
+		// The equation's not exact but it works as intended. I'll call it a day for now.
+		mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+		if (background != 0xFF)
+			return *(mytransmap + (background<<8) + foreground);
+	}
+	// just copy the pixel
+	else if (style == AST_COPY)
+		return background;
+	// use ASTBlendPixel for all other blend modes
+	// and find the nearest colour in the palette
+	else if (style != AST_TRANSLUCENT)
+	{
+		RGBA_t texel;
+		RGBA_t bg = V_GetColor(background);
+		RGBA_t fg = V_GetColor(foreground);
+		texel = ASTBlendPixel(bg, fg, style, alpha);
+		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
+	}
+	// fallback if all above fails, somehow
+	// return the background pixel
+	return background;
+}
+
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendColumnInCache
 // Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
 //
-static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -279,7 +374,8 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*dest != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -290,11 +386,10 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 // R_DrawTransColumnInCache
 // Similar to the one above except that the column is inverted.
 //
-static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -323,7 +418,8 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+				if (*dest != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -462,16 +558,10 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
 		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
-		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-		{
-			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-				continue;
-			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
-		}
+		if (patch->style != AST_COPY)
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
 		else
-		{
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
-		}
 
 		wadnum = patch->wad;
 		lumpnum = patch->lump;
@@ -917,8 +1007,16 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 				{
 					Z_Free(texturesToken);
 					texturesToken = M_GetToken(NULL);
-					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+					if (stricmp(texturesToken, "TRANSLUCENT")==0)
 						style = AST_TRANSLUCENT;
+					else if (stricmp(texturesToken, "ADD")==0)
+						style = AST_ADD;
+					else if (stricmp(texturesToken, "SUBTRACT")==0)
+						style = AST_SUBTRACT;
+					else if (stricmp(texturesToken, "REVERSESUBTRACT")==0)
+						style = AST_REVERSESUBTRACT;
+					else if (stricmp(texturesToken, "MODULATE")==0)
+						style = AST_MODULATE;
 				}
 				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
