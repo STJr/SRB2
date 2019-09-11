@@ -9357,7 +9357,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
 	INT32 camrotate;
 	boolean camstill, cameranoclip;
 	mobj_t *mo;
@@ -9574,14 +9574,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) // This block here is like 90% Lach's work, thanks bud
 	{
-		if (!cameranoclip && !resetcalled)
-		{
-			if ((P_AproxDistance(mo->x-thiscam->x-thiscam->momx, mo->y-thiscam->y-thiscam->momy) > FixedDiv(mo->momz+dist, camspeed)) || (abs(thiscam->z - player->mo->z) > (FixedDiv(mo->momz+dist, camspeed)))) //If the camera is too far away,
-			{
-				P_ResetCamera(player, thiscam); //Reset the camera
-				return true;
-			}
-		}
 		if ((thiscam == &camera && cv_cam_adjust.value) || (thiscam == &camera2 && cv_cam2_adjust.value))
 		{
 			if (!(mo->eflags & MFE_JUSTHITFLOOR) && (P_IsObjectOnGround(mo)) // Check that player is grounded
@@ -9590,12 +9582,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				if (mo->eflags & MFE_VERTICALFLIP) // if player is upside-down
 				{
 					//z = min(z, thiscam->ceilingz); // solution 1: change new z coordinate to be at LEAST its ground height
-					z += min(thiscam->ceilingz - mo->z, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+					slopez += min(thiscam->ceilingz - mo->z, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
 				}
 				else // player is not upside-down
 				{
 					//z = max(z, thiscam->floorz); // solution 1: change new z coordinate to be at LEAST its ground height
-					z += max(thiscam->floorz - mo->z - mo->height, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+					slopez += max(thiscam->floorz - mo->z - mo->height, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
 				}
 			}
 		}
@@ -9604,12 +9596,12 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if ((thiscam == &camera && cv_cam_orbit.value) || (thiscam == &camera2 && cv_cam2_orbit.value)) //Sev here, I'm guessing this is where orbital cam lives
 	{
 		distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
-		distz = -FixedMul(dist, FINESINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
+		distz = -FixedMul(dist, FINESINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK)) + slopez;
 	}
 	else
 	{
 		distxy = dist;
-		distz = 0;
+		distz = slopez;
 	}
 
 	x = mo->x - FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
