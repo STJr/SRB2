@@ -99,6 +99,8 @@ INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
 INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
+UINT16 ds_flatwidth, ds_flatheight;
+boolean ds_powersoftwo;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
