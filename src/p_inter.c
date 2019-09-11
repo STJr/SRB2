@@ -428,7 +428,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					  || special->state == &states[S_FANG_BOUNCE4]
 					  || special->state == &states[S_FANG_PINCHBOUNCE3]
 					  || special->state == &states[S_FANG_PINCHBOUNCE4])
-					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > 0)
+					&& P_MobjFlip(special)*((special->z + special->height/2) - (toucher->z - toucher->height/2)) > -(special->height/4))
 					{
 						P_DamageMobj(toucher, special, special, 1, 0);
 						P_SetTarget(&special->tracer, toucher);
@@ -1427,6 +1427,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starposty = player->mo->y>>FRACBITS;
 						players[i].starpostz = special->z>>FRACBITS;
 						players[i].starpostangle = special->angle;
+						players[i].starpostscale = player->mo->destscale;
+						if (special->flags2 & MF2_OBJECTFLIP)
+						{
+							players[i].starpostscale *= -1;
+							players[i].starpostz += special->height>>FRACBITS;
+						}
 						players[i].starpostnum = special->health;
 
 						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
@@ -1443,6 +1449,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				player->starposty = toucher->y>>FRACBITS;
 				player->starpostz = special->z>>FRACBITS;
 				player->starpostangle = special->angle;
+				player->starpostscale = player->mo->destscale;
+				if (special->flags2 & MF2_OBJECTFLIP)
+				{
+					player->starpostscale *= -1;
+					player->starpostz += special->height>>FRACBITS;
+				}
 				player->starpostnum = special->health;
 				S_StartSound(toucher, special->info->painsound);
 			}
@@ -2594,6 +2606,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_EGGMOBILE3:
 			{
+				mobj_t *mo2;
 				thinker_t *th;
 				UINT32 i = 0; // to check how many clones we've removed
 
@@ -2614,6 +2627,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					mo->scalespeed = (mo->scale - mo->destscale)/(2*TICRATE);
 					mo->momz = mo->info->speed;
 					mo->angle = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
+
+					mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
+					mo2->angle = mo->angle;
+					P_SetMobjState(mo2, S_BOSSSEBH2);
+
 					if (++i == 2) // we've already removed 2 of these, let's stop now
 						break;
 					else

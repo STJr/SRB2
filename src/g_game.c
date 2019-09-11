@@ -217,6 +217,8 @@ UINT16 nightslinktics = 2*TICRATE;
 
 INT32 gameovertics = 15*TICRATE;
 
+UINT8 ammoremovaltics = 2*TICRATE;
+
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 
@@ -416,49 +418,13 @@ consvar_t cv_spinaxis2 = {"joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_fireaxis2 = {"joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#if MAXPLAYERS > 32
-#error "please update player_name table using the new value for MAXPLAYERS"
-#endif
-
 #ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
 #endif
 
-char player_names[MAXPLAYERS][MAXPLAYERNAME+1] =
-{
-	"Player 1",
-	"Player 2",
-	"Player 3",
-	"Player 4",
-	"Player 5",
-	"Player 6",
-	"Player 7",
-	"Player 8",
-	"Player 9",
-	"Player 10",
-	"Player 11",
-	"Player 12",
-	"Player 13",
-	"Player 14",
-	"Player 15",
-	"Player 16",
-	"Player 17",
-	"Player 18",
-	"Player 19",
-	"Player 20",
-	"Player 21",
-	"Player 22",
-	"Player 23",
-	"Player 24",
-	"Player 25",
-	"Player 26",
-	"Player 27",
-	"Player 28",
-	"Player 29",
-	"Player 30",
-	"Player 31",
-	"Player 32"
-};
+// now automatically allocated in D_RegisterClientCommands
+// so that it doesn't have to be updated depending on the value of MAXPLAYERS
+char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 INT16 rw_maximums[NUM_WEAPONS] =
 {
@@ -2117,6 +2083,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
+	p->starpostscale = 0;
 	p->starpostangle = 0;
 	p->starposttime = 0;
 	p->starpostx = 0;
@@ -2163,6 +2130,7 @@ void G_PlayerReborn(INT32 player)
 	INT16 starpostz;
 	INT32 starpostnum;
 	INT32 starpostangle;
+	fixed_t starpostscale;
 	fixed_t jumpfactor;
 	fixed_t height;
 	fixed_t spinheight;
@@ -2218,6 +2186,7 @@ void G_PlayerReborn(INT32 player)
 	starpostz = players[player].starpostz;
 	starpostnum = players[player].starpostnum;
 	starpostangle = players[player].starpostangle;
+	starpostscale = players[player].starpostscale;
 	jumpfactor = players[player].jumpfactor;
 	height = players[player].height;
 	spinheight = players[player].spinheight;
@@ -2273,6 +2242,7 @@ void G_PlayerReborn(INT32 player)
 	p->starpostz = starpostz;
 	p->starpostnum = starpostnum;
 	p->starpostangle = starpostangle;
+	p->starpostscale = starpostscale;
 	p->jumpfactor = jumpfactor;
 	p->height = height;
 	p->spinheight = spinheight;
@@ -2310,7 +2280,7 @@ void G_PlayerReborn(INT32 player)
 		}
 
 		// This is in S_Start, but this was not here previously.
-		// if (cv_resetmusic.value)
+		// if (RESETMUSIC)
 		// 	S_StopMusic();
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
@@ -2691,6 +2661,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
+				players[i].starpostscale = 0;
 				players[i].starpostangle = 0;
 				players[i].starposttime = 0;
 				players[i].starpostx = 0;
@@ -2813,6 +2784,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
+			p->starpostscale = players[i].starpostscale;
 			p->starposttime = players[i].starposttime;
 			p->starpostx = players[i].starpostx;
 			p->starposty = players[i].starposty;
@@ -3321,9 +3293,11 @@ void G_LoadGameSettings(void)
 {
 	// defaults
 	spstage_start = 1;
-	sstage_start = smpstage_start = 50;
-	sstage_end = smpstage_end = 56; // 7 special stages in vanilla SRB2
+	sstage_start = 50;
+	sstage_end = 56; // 7 special stages in vanilla SRB2
 	sstage_end++; // plus one weirdo
+	smpstage_start = 60;
+	smpstage_end = 66; // 7 multiplayer special stages too
 
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
@@ -3898,7 +3872,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
-			players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
+			players[i].starpostscale = players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 
 			if (netgame || multiplayer)
@@ -4609,7 +4583,7 @@ void G_GhostTicker(void)
 				default:
 				case GHC_RETURNSKIN:
 					g->mo->skin = g->oldmo.skin;
-					// fallthru
+					/* FALLTHRU */
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;

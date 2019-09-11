@@ -285,6 +285,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (spring->info->painchance != 2)
 	{
+		if (object->player)
+			object->player->pflags &= ~PF_APPLYAUTOBRAKE;
+
 		if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 		{
 			object->momx = object->momy = 0;
@@ -2884,7 +2887,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (thing->z != oldz)
 	{
 		if (thing->player)
-			P_PlayerHitFloor(thing->player, false);
+			P_PlayerHitFloor(thing->player, !onfloor);
 	}
 
 	// debug: be sure it falls to the floor
@@ -4136,7 +4139,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 						{
 							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 
-							if (!P_MobjTouchingPolyobj(po, mo))
+							if (!P_MobjInsidePolyobj(po, mo))
 								continue;
 
 							if (!PIT_ChangeSector(mo, false))
@@ -4246,7 +4249,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 						{
 							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 
-							if (!P_MobjTouchingPolyobj(po, mo))
+							if (!P_MobjInsidePolyobj(po, mo))
 								continue;
 
 							PIT_ChangeSector(mo, true);

@@ -1960,6 +1960,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 
 static void ST_drawMatchHUD(void)
 {
+	char penaltystr[7];
 	const INT32 y = 176; // HUD_LIVES
 	INT32 offset = (BASEVIDWIDTH / 2) - (NUM_WEAPONS * 10) - 6;
 
@@ -1986,18 +1987,20 @@ static void ST_drawMatchHUD(void)
 				ST_drawWeaponSelect(offset, y);
 		}
 
-		offset += 20;
-		ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset, y, autoring);
-		offset += 20;
-		ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset, y, bouncering);
-		offset += 20;
-		ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset, y, scatterring);
-		offset += 20;
-		ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset, y, grenadering);
-		offset += 20;
-		ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, y, explosionring);
-		offset += 20;
-		ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, y, railring);
+		ST_drawWeaponRing(pw_automaticring, RW_AUTO, WEP_AUTO, offset + 20, y, autoring);
+		ST_drawWeaponRing(pw_bouncering, RW_BOUNCE, WEP_BOUNCE, offset + 40, y, bouncering);
+		ST_drawWeaponRing(pw_scatterring, RW_SCATTER, WEP_SCATTER, offset + 60, y, scatterring);
+		ST_drawWeaponRing(pw_grenadering, RW_GRENADE, WEP_GRENADE, offset + 80, y, grenadering);
+		ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset + 100, y, explosionring);
+		ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset + 120, y, railring);
+
+		if (stplyr->ammoremovaltimer && leveltime % 8 < 4)
+		{
+			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
+			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
+					V_REDMAP, penaltystr);
+		}
+
 	}
 }
 

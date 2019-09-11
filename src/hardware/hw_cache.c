@@ -30,6 +30,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../p_setup.h"
 
 //Hurdler: 25/04/2000: used for new colormap code in hardware mode
 //static UINT8 *gr_colormap = NULL; // by default it must be NULL ! (because colormap tables are not initialized)
@@ -59,7 +60,6 @@ static const INT32 format2bpp[16] =
 	2, //13 GR_TEXFMT_ALPHA_INTENSITY_88
 	2, //14 GR_TEXFMT_AP_88
 };
-
 
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
@@ -138,18 +138,37 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -233,18 +252,37 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : texelu16 = (UINT16)((alpha<<8) | texel);
+				case 2 : // uhhhhhhhh..........
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 texel = ASTBlendPixel_8bpp(*(dest+1), texel, originPatch->style, originPatch->alpha);
+						 texelu16 = (UINT16)((alpha<<8) | texel);
 						 memcpy(dest, &texelu16, sizeof(UINT16));
 						 break;
 				case 3 : colortemp = V_GetColor(texel);
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
 				case 4 : colortemp = V_GetColor(texel);
 						 colortemp.s.alpha = alpha;
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						 {
+							 RGBA_t rgbatexel;
+							 rgbatexel.rgba = *(UINT32 *)dest;
+							 colortemp = ASTBlendPixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
 				// default is 1
-				default: *dest = texel;
+				default:
+						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+							 *dest = ASTBlendPixel_8bpp(*dest, texel, originPatch->style, originPatch->alpha);
+						 else
+							 *dest = texel;
 						 break;
 			}
 
@@ -331,16 +369,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	/*if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-	{
-		if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			continue;
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawTransFlippedColumnInCache : HWR_DrawTransColumnInCache;
-	}
-	else*/
-	{
-		ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
-	}
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);
@@ -420,6 +449,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	GrTexInfo *grInfo)
 {
+#ifdef GLIDE_API_COMPATIBILITY
 	//   Build the full textures from patches.
 	static const GrLOD_t gr_lods[9] =
 	{
@@ -456,6 +486,9 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 
 	INT32     j,k;
 	INT32     max,min;
+#else
+	(void)grInfo;
+#endif
 
 	// find a power of 2 width/height
 	if (cv_grrounddown.value)
@@ -511,6 +544,7 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	}
 	else
 	{
+#ifdef GLIDE_API_COMPATIBILITY
 		//size up to nearest power of 2
 		blockwidth = 1;
 		while (blockwidth < originalwidth)
@@ -528,9 +562,14 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 		if (blockheight > 2048)
 			blockheight = 2048;
 			//I_Error("3D GenerateTexture : too big");
+#else
+		blockwidth = originalwidth;
+		blockheight = originalheight;
+#endif
 	}
 
 	// do the boring LOD stuff.. blech!
+#ifdef GLIDE_API_COMPATIBILITY
 	if (blockwidth >= blockheight)
 	{
 		max = blockwidth;
@@ -562,6 +601,7 @@ static void HWR_ResizeBlock(INT32 originalwidth, INT32 originalheight,
 	if (blockwidth < blockheight)
 		j += 4;
 	grInfo->aspectRatioLog2 = gr_aspects[j].aspect;
+#endif
 
 	blocksize = blockwidth * blockheight;
 
@@ -650,7 +690,12 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+#endif
 		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
 		                     texture, patch,
@@ -756,11 +801,13 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 
 static size_t gr_numtextures;
 static GLTexture_t *gr_textures; // for ALL Doom textures
+static GLTexture_t *gr_textures2;
 
 void HWR_InitTextureCache(void)
 {
 	gr_numtextures = 0;
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 }
 
 
@@ -799,7 +846,10 @@ void HWR_FreeTextureCache(void)
 	// texturecache info, we can free it
 	if (gr_textures)
 		free(gr_textures);
+	if (gr_textures2)
+		free(gr_textures2);
 	gr_textures = NULL;
+	gr_textures2 = NULL;
 	gr_numtextures = 0;
 }
 
@@ -817,6 +867,9 @@ void HWR_PrepLevelCache(size_t pnumtextures)
 	gr_textures = calloc(pnumtextures, sizeof (*gr_textures));
 	if (gr_textures == NULL)
 		I_Error("3D can't alloc gr_textures");
+	gr_textures2 = calloc(pnumtextures, sizeof (*gr_textures2));
+	if (gr_textures2 == NULL)
+		I_Error("3D can't alloc gr_textures2");
 }
 
 void HWR_SetPalette(RGBA_t *palette)
@@ -847,7 +900,7 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	GLTexture_t *grtex;
 #ifdef PARANOIA
 	if ((unsigned)tex >= gr_numtextures)
-		I_Error(" HWR_GetTexture: tex >= numtextures\n");
+		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
 	grtex = &gr_textures[tex];
 
@@ -862,15 +915,39 @@ GLTexture_t *HWR_GetTexture(INT32 tex)
 	return grtex;
 }
 
+// HWR_RenderPlane and HWR_RenderPolyObjectPlane need this to get the flat dimensions from a patch.
+lumpnum_t gr_patchflat;
+
+static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
+{
+	UINT8 *flat;
+	patch_t *patch = (patch_t *)W_CacheLumpNum(flatlumpnum, PU_STATIC);
+	size_t lumplength = W_LumpLength(flatlumpnum);
+
+#ifndef NO_PNG_LUMPS
+	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
+		patch = R_PNGToPatch((UINT8 *)patch, lumplength);
+#endif
+
+	grMipmap->width  = (UINT16)SHORT(patch->width);
+	grMipmap->height = (UINT16)SHORT(patch->height);
+
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_PatchToFlat(patch, flat);
+}
 
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
 	size_t size, pflatsize;
 
 	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
 	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
 	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
 	grMipmap->grInfo.format = GR_TEXFMT_P_8;
 	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 
@@ -900,14 +977,19 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 			pflatsize = 64;
 			break;
 	}
-	grMipmap->width  = (UINT16)pflatsize;
-	grMipmap->height = (UINT16)pflatsize;
 
-	// the flat raw data needn't be converted with palettized textures
-	W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
-		PU_HWRCACHE, &grMipmap->grInfo.data));
+	if (R_CheckIfPatch(flatlumpnum))
+		HWR_LoadPatchFlat(grMipmap, flatlumpnum);
+	else
+	{
+		grMipmap->width  = (UINT16)pflatsize;
+		grMipmap->height = (UINT16)pflatsize;
+
+		// the flat raw data needn't be converted with palettized textures
+		W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
+			PU_HWRCACHE, &grMipmap->grInfo.data));
+	}
 }
-
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use
 void HWR_GetFlat(lumpnum_t flatlumpnum)
@@ -923,6 +1005,52 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 
 	// The system-memory data can be purged now.
 	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+
+	gr_patchflat = 0;
+	if (R_CheckIfPatch(flatlumpnum))
+		gr_patchflat = flatlumpnum;
+}
+
+static void HWR_LoadTextureFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+{
+	UINT8 *flat;
+
+	// setup the texture info
+#ifdef GLIDE_API_COMPATIBILITY
+	grMipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_64;
+	grMipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+#endif
+	grMipmap->grInfo.format = GR_TEXFMT_P_8;
+	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+
+	grMipmap->width  = (UINT16)textures[texturenum]->width;
+	grMipmap->height = (UINT16)textures[texturenum]->height;
+
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->grInfo.data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_TextureToFlat(texturenum, flat);
+}
+
+void HWR_GetTextureFlat(INT32 texturenum)
+{
+	GLTexture_t *grtex;
+#ifdef PARANOIA
+	if ((unsigned)texturenum >= gr_numtextures)
+		I_Error("HWR_GetTextureFlat: texturenum >= numtextures\n");
+#endif
+	if (texturenum == 0 || texturenum == -1)
+		return;
+	grtex = &gr_textures2[texturenum];
+
+	if (!grtex->mipmap.grInfo.data && !grtex->mipmap.downloaded)
+		HWR_LoadTextureFlat(&grtex->mipmap, texturenum);
+
+	HWD.pfnSetTexture(&grtex->mipmap);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(grtex->mipmap.grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
 //

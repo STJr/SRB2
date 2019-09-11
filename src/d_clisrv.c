@@ -42,6 +42,7 @@
 #include "lzf.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "md5.h"
 
 #ifdef CLIENT_LOADINGSCREEN
 // cl loading screen
@@ -110,6 +111,9 @@ static UINT8 resynch_local_inprogress = false; // WE are desynched and getting p
 static UINT8 player_joining = false;
 UINT8 hu_resynching = 0;
 
+UINT8 adminpassmd5[16];
+boolean adminpasswordset = false;
+
 // Client specific
 static ticcmd_t localcmds;
 static ticcmd_t localcmds2;
@@ -148,7 +152,7 @@ ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
 static textcmdtic_t *textcmds[TEXTCMD_HASH_SIZE] = {NULL};
 
 
-static consvar_t cv_showjoinaddress = {"showjoinaddress", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showjoinaddress = {"showjoinaddress", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = {"playbackspeed", "1", 0, playbackspeed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -509,6 +513,10 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->currentweapon = LONG(players[i].currentweapon);
 	rsp->ringweapons = LONG(players[i].ringweapons);
 
+	rsp->ammoremoval = (UINT16)SHORT(players[i].ammoremoval);
+	rsp->ammoremovaltimer = (tic_t)LONG(players[i].ammoremovaltimer);
+	rsp->ammoremovalweapon = LONG(players[i].ammoremovalweapon);
+
 	for (j = 0; j < NUMPOWERS; ++j)
 		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
 
@@ -571,6 +579,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->starpostnum = LONG(players[i].starpostnum);
 	rsp->starposttime = (tic_t)LONG(players[i].starposttime);
 	rsp->starpostangle = (angle_t)LONG(players[i].starpostangle);
+	rsp->starpostscale = (fixed_t)LONG(players[i].starpostscale);
 
 	rsp->maxlink = LONG(players[i].maxlink);
 	rsp->dashspeed = (fixed_t)LONG(players[i].dashspeed);
@@ -640,6 +649,10 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].currentweapon = LONG(rsp->currentweapon);
 	players[i].ringweapons = LONG(rsp->ringweapons);
 
+	players[i].ammoremoval = (UINT16)SHORT(rsp->ammoremoval);
+	players[i].ammoremovaltimer = (tic_t)LONG(rsp->ammoremovaltimer);
+	players[i].ammoremovalweapon = LONG(rsp->ammoremovalweapon);
+
 	for (j = 0; j < NUMPOWERS; ++j)
 		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
 
@@ -702,6 +715,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].starpostnum = LONG(rsp->starpostnum);
 	players[i].starposttime = (tic_t)LONG(rsp->starposttime);
 	players[i].starpostangle = (angle_t)LONG(rsp->starpostangle);
+	players[i].starpostscale = (fixed_t)LONG(rsp->starpostscale);
 
 	players[i].maxlink = LONG(rsp->maxlink);
 	players[i].dashspeed = (fixed_t)LONG(rsp->dashspeed);
@@ -2934,13 +2948,13 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
-consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
-consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
+consvar_t cv_allownewplayer = {"allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_joinnextround = {"joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = {"maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t resynchattempts_cons_t[] = {{0, "MIN"}, {20, "MAX"}, {0, NULL}};
-consvar_t cv_resynchattempts = {"resynchattempts", "10", 0, resynchattempts_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL	};
-consvar_t cv_blamecfail = {"blamecfail", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_resynchattempts = {"resynchattempts", "10", CV_SAVE, resynchattempts_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL	};
+consvar_t cv_blamecfail = {"blamecfail", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
 
 // max file size to send to a player (in kilobytes)
 static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {51200, "MAX"}, {0, NULL}};
@@ -2981,11 +2995,6 @@ void D_ClientServerInit(void)
 	RegisterNetXCmd(XD_KICK, Got_KickCmd);
 	RegisterNetXCmd(XD_ADDPLAYER, Got_AddPlayer);
 #ifndef NONET
-	CV_RegisterVar(&cv_allownewplayer);
-	CV_RegisterVar(&cv_joinnextround);
-	CV_RegisterVar(&cv_showjoinaddress);
-	CV_RegisterVar(&cv_resynchattempts);
-	CV_RegisterVar(&cv_blamecfail);
 #ifdef DUMPCONSISTENCY
 	CV_RegisterVar(&cv_dumpconsistency);
 #endif
@@ -3784,6 +3793,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 	INT32 netconsole;
 	tic_t realend, realstart;
 	UINT8 *pak, *txtpak, numtxtpak;
+	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
 
 	txtpak = NULL;
 
@@ -3980,6 +3990,32 @@ static void HandlePacketFromPlayer(SINT8 node)
 				M_Memcpy(&textcmd[textcmd[0]+1], netbuffer->u.textcmd+1, netbuffer->u.textcmd[0]);
 				textcmd[0] += (UINT8)netbuffer->u.textcmd[0];
 			}
+			break;
+		case PT_LOGIN:
+			if (client)
+				break;
+
+#ifndef NOMD5
+			if (doomcom->datalength < 16)/* ignore partial sends */
+				break;
+
+			if (!adminpasswordset)
+			{
+				CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
+				break;
+			}
+
+			// Do the final pass to compare with the sent md5
+			D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
+
+			if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+			{
+				CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
+				COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+			}
+			else
+				CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
+#endif
 			break;
 		case PT_NODETIMEOUT:
 		case PT_CLIENTQUIT:
@@ -4857,4 +4893,30 @@ INT32 D_NumPlayers(void)
 tic_t GetLag(INT32 node)
 {
 	return gametic - nettics[node];
+}
+
+void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
+{
+#ifdef NOMD5
+	(void)buffer;
+	(void)len;
+	(void)salt;
+	memset(dest, 0, 16);
+#else
+	char tmpbuf[256];
+	const size_t sl = strlen(salt);
+
+	if (len > 256-sl)
+		len = 256-sl;
+
+	memcpy(tmpbuf, buffer, len);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
+	len += strlen(salt);
+	if (len < 256)
+		memset(&tmpbuf[len],0,256-len);
+
+	// Yes, we intentionally md5 the ENTIRE buffer regardless of size...
+	md5_buffer(tmpbuf, 256, dest);
+#endif
 }
