@@ -1181,6 +1181,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				mapheaderinfo[num-1]->muspostbosspos = (UINT32)get_number(word2);
 			else if (fastcmp(word, "MUSICPOSTBOSSFADEIN"))
 				mapheaderinfo[num-1]->muspostbossfadein = (UINT32)get_number(word2);
+			else if (fastcmp(word, "FORCERESETMUSIC"))
+			{
+				// This is a weird one because "FALSE"/"NO" could either apply to "leave to default preference" (cv_resetmusic)
+				// or "force off". Let's assume it means "force off", and let an unspecified value mean "default preference"
+				if      (fastcmp(word2, "OFF") || word2[0] == 'F' || word2[0] == 'N')  i = 0;
+				else if (fastcmp(word2, "ON") || word2[0] == 'T' || word2[0] == 'Y')   i = 1;
+				else i = -1; // (fastcmp(word2, "DEFAULT"))
+
+				if (i >= -1 && i <= 1) // -1 to force off, 1 to force on, 0 to honor default.
+					// This behavior can be disabled with cv_resetmusicbyheader
+					mapheaderinfo[num-1]->musforcereset = (SINT8)i;
+				else
+					deh_warning("Level header %d: invalid forceresetmusic option %d", num, i);
+			}
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
