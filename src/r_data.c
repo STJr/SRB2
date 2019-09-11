@@ -2744,7 +2744,7 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 	png_read_image(png_ptr, row_pointers);
 
 	// Read grAB chunk
-	if (topoffset || leftoffset)
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
 	{
 		INT32 *offsets = (INT32 *)chunk.data;
 
