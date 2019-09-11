@@ -694,7 +694,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 #endif
 		HWR_DrawTexturePatchInCache(&grtex->mipmap,
 		                     blockwidth, blockheight,
@@ -723,6 +723,13 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
 {
 	INT32 newwidth, newheight;
+
+#ifndef NO_PNG_LUMPS
+	// lump is a png so convert it
+	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
+	if ((patch != NULL) && R_IsLumpPNG((UINT8 *)patch, len))
+		patch = R_PNGToPatch((UINT8 *)patch, len, NULL, true);
+#endif
 
 	// don't do it twice (like a cache)
 	if (grMipmap->width == 0)
@@ -926,7 +933,7 @@ static void HWR_LoadPatchFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 
 #ifndef NO_PNG_LUMPS
 	if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-		patch = R_PNGToPatch((UINT8 *)patch, lumplength);
+		patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL, false);
 #endif
 
 	grMipmap->width  = (UINT16)SHORT(patch->width);

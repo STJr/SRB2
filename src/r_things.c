@@ -254,6 +254,19 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
 			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+#ifndef NO_PNG_LUMPS
+			{
+				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
+				size_t len = W_LumpLengthPwad(wadnum, l);
+				// lump is a png so convert it
+				if (R_IsLumpPNG((UINT8 *)png, len))
+				{
+					png = R_PNGToPatch((UINT8 *)png, len, NULL, true);
+					M_Memcpy(&patch, png, sizeof(INT16)*4);
+				}
+				Z_Free(png);
+			}
+#endif
 			spritecachedinfo[numspritelumps].width = SHORT(patch.width)<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
@@ -701,7 +714,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 texturecolumn;
 #endif
 	fixed_t frac;
-	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch_t *patch = W_CachePatchNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
 	INT64 overflow_test;
@@ -870,7 +883,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
-	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch = W_CachePatchNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
 
