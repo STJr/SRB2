@@ -225,6 +225,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->muspostbosstrack = 0;
 	mapheaderinfo[num]->muspostbosspos = 0;
 	mapheaderinfo[num]->muspostbossfadein = 0;
+	mapheaderinfo[num]->musforcereset = -1;
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -577,6 +578,11 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 
 		// store the flat lump number
 		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+		levelflat->texturenum = R_CheckTextureNumForName(flatname);
+		levelflat->lasttexturenum = levelflat->texturenum;
+
+		levelflat->baselumpnum = LUMPERROR;
+		levelflat->basetexturenum = -1;
 
 #ifndef ZDEBUG
 		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
@@ -621,6 +627,11 @@ INT32 P_AddLevelFlatRuntime(const char *flatname)
 
 		// store the flat lump number
 		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+		levelflat->texturenum = R_CheckTextureNumForName(flatname);
+		levelflat->lasttexturenum = levelflat->texturenum;
+
+		levelflat->baselumpnum = LUMPERROR;
+		levelflat->basetexturenum = -1;
 
 #ifndef ZDEBUG
 		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
@@ -1484,6 +1495,7 @@ static void P_LoadRawSideDefs2(void *data)
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
+			case 461: // Spawns an object on the map based on texture offsets
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -2697,7 +2709,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		S_StartSound(NULL, sfx_s3kaf);
 
 		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (cv_resetmusic.value ||
+		if (RESETMUSIC ||
 			strnicmp(S_MusicName(),
 				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
@@ -2730,7 +2742,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (cv_resetmusic.value ||
+	if (!titlemapinaction && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
 		S_FadeMusic(0, FixedMul(

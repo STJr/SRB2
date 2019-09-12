@@ -274,6 +274,7 @@ static void M_ServerOptions(INT32 choice);
 #ifndef NONET
 static void M_StartServerMenu(INT32 choice);
 static void M_ConnectMenu(INT32 choice);
+static void M_ConnectMenuModChecks(INT32 choice);
 static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
 static void M_ChooseRoom(INT32 choice);
@@ -893,12 +894,12 @@ static menuitem_t MP_SplitServerMenu[] =
 
 static menuitem_t MP_MainMenu[] =
 {
-	{IT_HEADER, NULL, "Host a game", NULL, 0},
-	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      12},
-	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 22},
-	{IT_HEADER, NULL, "Join a game", NULL, 40},
-	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenu,          52},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      62},
+	{IT_HEADER, NULL, "Join a game", NULL, 0},
+	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenuModChecks,          12},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      22},
+	{IT_HEADER, NULL, "Host a game", NULL, 54},
+	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      66},
+	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 76},
 	{IT_HEADER, NULL, "Player setup", NULL, 94},
 	{IT_STRING|IT_CALL,       NULL, "Player 1...",           M_SetupMultiPlayer,    106},
 	{IT_STRING|IT_CALL,       NULL, "Player 2... ",          M_SetupMultiPlayer2,   116},
@@ -957,7 +958,7 @@ enum
 
 static menuitem_t MP_RoomMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "<Offline Mode>", M_ChooseRoom,   9},
+	{IT_STRING | IT_CALL, NULL, "<Unlisted Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  27},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  36},
@@ -1331,6 +1332,12 @@ static menuitem_t OP_SoundOptionsMenu[] =
 #define OPENMPT_MENUOFFSET 0
 #endif
 
+#ifdef HAVE_MIXERX
+#define MIXERX_MENUOFFSET 81
+#else
+#define MIXERX_MENUOFFSET 0
+#endif
+
 static menuitem_t OP_SoundAdvancedMenu[] =
 {
 #ifdef HAVE_OPENMPT
@@ -1342,12 +1349,15 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET+10},
 	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+34},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61}
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+61},
 #endif
+
+	{IT_HEADER, NULL, "Miscellaneous", NULL, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+10},
+	{IT_STRING | IT_CVAR, NULL, "Let Levels Force Reset Music", &cv_resetmusicbyheader, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+22},
 };
 
 #undef OPENMPT_MENUOFFSET
-
+#undef MIXERX_MENUOFFSET
 #endif
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -5877,7 +5887,7 @@ static boolean M_AddonsRefresh(void)
 		{
 			S_StartSound(NULL, sfx_lose);
 			if (refreshdirmenu & REFRESHDIR_MAX)
-				message = va("%c%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
+				message = va("%c%s\x80\nMaximum number of add-ons reached.\nA file could not be loaded.\nIf you wish to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
 			else
 				message = va("%c%s\x80\nA file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", ('\x80' + (highlightflags>>V_CHARCOLORSHIFT)), refreshdirname);
 		}
@@ -8878,8 +8888,8 @@ static void M_NightsAttack(INT32 choice)
 	M_PatchSkinNameTable();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
-	M_SetupNextMenu(&SP_NightsAttackDef);
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
+	M_SetupNextMenu(&SP_NightsAttackDef);
 	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
@@ -9271,7 +9281,7 @@ static void M_DrawConnectMenu(void)
 	// Room name
 	if (ms_RoomId < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
-		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Offline Mode>");
+		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9421,9 +9431,30 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	M_SetupNextMenu(&MP_ConnectDef);
+	if (ms_RoomId < 0)
+	{
+		M_RoomMenu(0); // Select a room instead of staring at an empty list
+		// This prevents us from returning to the modified game alert.
+		currentMenu->prevMenu = &MP_MainDef;
+	}
+	else
+		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
 	M_Refresh(0);
+}
+
+static void M_ConnectMenuModChecks(INT32 choice)
+{
+	(void)choice;
+	// okay never mind we want to COMMUNICATE to the player pre-emptively instead of letting them try and then get confused when it doesn't work
+
+	if (modifiedgame)
+	{
+		M_StartMessage(M_GetText("Add-ons are currently loaded.\n\nYou will only be able to join a server if\nit has the same ones loaded in the same order, which may be unlikely.\n\nIf you wish to play on other servers,\nrestart the game to clear existing add-ons.\n\n(Press a key)\n"),M_ConnectMenu,MM_EVENTHANDLER);
+		return;
+	}
+
+	M_ConnectMenu(-1);
 }
 
 static UINT32 roomIds[NUM_LIST_ROOMS];
@@ -9480,7 +9511,16 @@ static void M_ChooseRoom(INT32 choice)
 	}
 
 	serverlistpage = 0;
-	M_SetupNextMenu(currentMenu->prevMenu);
+	/*
+	We were on the Multiplayer menu? That means that we must have been trying to
+	view the server browser, but we hadn't selected a room yet. So we need to go
+	to the browser next, not back there.
+	*/
+	if (currentMenu->prevMenu == &MP_MainDef)
+		M_SetupNextMenu(&MP_ConnectDef);
+	else
+		M_SetupNextMenu(currentMenu->prevMenu);
+
 	if (currentMenu == &MP_ConnectDef)
 		M_Refresh(0);
 }
@@ -9539,7 +9579,7 @@ static void M_DrawServerMenu(void)
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
-			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
+			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -9646,7 +9686,7 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[16];
+static char setupm_ip[28];
 
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
@@ -9658,30 +9698,26 @@ static void M_DrawMPMainMenu(void)
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
-#if MAXPLAYERS == 32
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+12,
-		((itemOn == 1) ? V_YELLOWMAP : 0), "(2-32 players)");
-#else
-Update the maxplayers label...
-#endif
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+66,
+		((itemOn == 4) ? V_YELLOWMAP : 0), va("(2-%d players)", MAXPLAYERS));
 
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+22,
-		((itemOn == 2) ? V_YELLOWMAP : 0), "(2 players)");
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+76,
+		((itemOn == 5) ? V_YELLOWMAP : 0), "(2 players)");
 
 	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
 		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
 
-	y += 62;
+	y += 22;
 
 	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
 
 	// draw name string
-	V_DrawString(x+8,y+12, V_MONOSPACE, setupm_ip);
+	V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, setupm_ip);
 
 	// draw text cursor for name
-	if (itemOn == 5 //0
+	if (itemOn == 2 //0
 	    && skullAnimCounter < 4)   //blink cursor
-		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_MONOSPACE),y+12,'_',false);
+		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_ALLOWLOWERCASE),y+12,'_',false);
 }
 
 // Tails 11-19-2002
@@ -9752,10 +9788,11 @@ static void M_HandleConnectIP(INT32 choice)
 
 		default:
 			l = strlen(setupm_ip);
-			if (l >= 16-1)
+			if (l >= 28-1)
 				break;
 
-			if (choice == 46 || (choice >= 48 && choice <= 57)) // Rudimentary number and period enforcing
+			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
+			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;
