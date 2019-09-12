@@ -42,8 +42,8 @@
 
 // Big to little endian
 #ifdef SRB2_LITTLE_ENDIAN
-	#define BIGENDIAN_LONG(x) ((INT32)((x>>24)&0xff)|((x<<8)&0xff0000)|((x>>8)&0xff00)|((x<<24)&0xff000000))
-	#define BIGENDIAN_SHORT(x) ((INT16)((x>>8)|(x<<8)))
+	#define BIGENDIAN_LONG(x) ((INT32)(((x)>>24)&0xff)|(((x)<<8)&0xff0000)|(((x)>>8)&0xff00)|(((x)<<24)&0xff000000))
+	#define BIGENDIAN_SHORT(x) ((INT16)(((x)>>8)|((x)<<8)))
 #else
 	#define BIGENDIAN_LONG(x) ((INT32)(x))
 	#define BIGENDIAN_SHORT(x) ((INT16)(x))
