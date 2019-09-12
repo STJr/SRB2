@@ -2747,24 +2747,13 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 	if ((topoffset || leftoffset) && (chunk.data != NULL))
 	{
 		INT32 *offsets = (INT32 *)chunk.data;
-
-		// The grAb chunk stores offsets as big-endian numbers.
-		#ifdef SRB2_BIG_ENDIAN
-			#define ENDIANESS(x) (x)
-		#else
-			#define ENDIANESS(x) ((x>>24)&0xff)|((x<<8)&0xff0000)|((x>>8)&0xff00)|((x<<24)&0xff000000)
-		#endif
-
 		// read left offset
 		if (leftoffset != NULL)
-			*leftoffset = (INT16)ENDIANESS(*offsets);
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
 		offsets++;
-
 		// read top offset
 		if (topoffset != NULL)
-			*topoffset = (INT16)ENDIANESS(*offsets);
-
-		#undef ENDIANESS
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
 	}
 
 	// bye
