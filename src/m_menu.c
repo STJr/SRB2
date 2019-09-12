@@ -8574,10 +8574,10 @@ void M_DrawTimeAttackMenu(void)
 
 	// Character face!
 	{
-		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= 2)
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes >= XTRA_CHARSEL+1)
 		{
 			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
-			spriteframe_t *sprframe = &sprdef->spriteframes[1];
+			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
 			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 		}
 		else
