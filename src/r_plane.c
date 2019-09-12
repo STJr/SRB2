@@ -652,12 +652,18 @@ static void R_DrawSkyPlane(visplane_t *pl)
 
 boolean R_CheckPowersOfTwo(void)
 {
-	if (ds_flatwidth & (ds_flatwidth - 1))
-		ds_powersoftwo = false;
-	else if (ds_flatheight & (ds_flatheight - 1))
-		ds_powersoftwo = false;
-	else if (ds_flatwidth == ds_flatheight)
+	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
+	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+
+	// Initially, the flat isn't powers-of-two-sized.
+	ds_powersoftwo = false;
+
+	// But if the width and height are powers of two,
+	// and are EQUAL, then it's okay :]
+	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
 		ds_powersoftwo = true;
+
+	// Just return ds_powersoftwo.
 	return ds_powersoftwo;
 }
 
@@ -806,6 +812,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	size_t size;
 	ffloor_t *rover;
 	levelflat_t *levelflat;
+	boolean rawflat = false;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -968,6 +975,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	// It's a raw flat.
 	else
 	{
+		rawflat = true;
 		R_CheckFlatLength(size);
 		flat = ds_source;
 	}
@@ -978,8 +986,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (ds_source == NULL)
 		return;
 
-	// Check if the flat has dimensions that are powers-of-two numbers.
-	if (R_CheckPowersOfTwo())
+	// Raw flats always have dimensions that are powers-of-two numbers.
+	if (rawflat)
+		ds_powersoftwo = true;
+	// Otherwise, check if this texture or patch has such dimensions.
+	else if (R_CheckPowersOfTwo())
 	{
 		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
 		if (spanfunc == basespanfunc)
@@ -1116,26 +1127,27 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_sz.z *= focallengthf;
 
 		// Premultiply the texture vectors with the scale factors
+#define SFMULT 65536.f
 		if (ds_powersoftwo)
 		{
-#define SFMULT 65536.f*(1<<nflatshiftup)
+			ds_su.x *= (SFMULT * (1<<nflatshiftup));
+			ds_su.y *= (SFMULT * (1<<nflatshiftup));
+			ds_su.z *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.x *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.y *= (SFMULT * (1<<nflatshiftup));
+			ds_sv.z *= (SFMULT * (1<<nflatshiftup));
+		}
+		else
+		{
+			// I'm essentially multiplying the vectors by FRACUNIT...
 			ds_su.x *= SFMULT;
 			ds_su.y *= SFMULT;
 			ds_su.z *= SFMULT;
 			ds_sv.x *= SFMULT;
 			ds_sv.y *= SFMULT;
 			ds_sv.z *= SFMULT;
+		}
 #undef SFMULT
-		}
-		else
-		{
-			ds_su.x *= 65536.f;
-			ds_su.y *= 65536.f;
-			ds_su.z *= 65536.f;
-			ds_sv.x *= 65536.f;
-			ds_sv.y *= 65536.f;
-			ds_sv.z *= 65536.f;
-		}
 
 		if (spanfunc == R_DrawTranslucentSpan_8)
 			spanfunc = R_DrawTiltedTranslucentSpan_8;
