@@ -2321,6 +2321,8 @@ state_t states[NUMSTATES] =
 	{SPR_CACT, 6, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI7
 	{SPR_CACT, 7, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI8
 	{SPR_CACT, 8, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI9
+	{SPR_CACT, 9, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI10
+	{SPR_CACT, 10, -1, {NULL}, 0, 0, S_NULL}, // S_CACTI11
 
 	// Warning Signs
 	{SPR_WWSG, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_ARIDSIGN_CAUTION
@@ -12291,6 +12293,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI10
+		1230,           // doomednum
+		S_CACTI10,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CACTI11
+		1231,           // doomednum
+		S_CACTI11,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
 		S_NULL          // raisestate
 	},
 

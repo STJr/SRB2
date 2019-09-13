@@ -2442,6 +2442,8 @@ typedef enum state
 	S_CACTI7,
 	S_CACTI8,
 	S_CACTI9,
+	S_CACTI10,
+	S_CACTI11,
 
 	// Warning signs sprites
 	S_ARIDSIGN_CAUTION,
@@ -4246,6 +4248,8 @@ typedef enum mobj_type
 	MT_CACTI7, // Harmful Cactus 3
 	MT_CACTI8, // Harmful Cactus 4
 	MT_CACTI9, // Harmful Cactus 5
+	MT_CACTI10, // Harmful Cactus 6
+	MT_CACTI11, // Harmful Cactus 7
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign
