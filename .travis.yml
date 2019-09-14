@@ -206,7 +206,7 @@ matrix:
               - p7zip-full
               - tcc
           compiler: tcc
-          env: C99=1
+          env: CPPFLAGS=-DSDL_DISABLE_IMMINTRIN_H
           if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #clang version 3.9.X
 #        - os: linux
@@ -692,14 +692,15 @@ before_script:
       -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
       -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
       -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
-      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME} -DSDL2_LIBRARY=/usr/lib/x86_64-linux-gnu -DSDL2_MIXER_LIBRARY=/usr/lib/x86_64-linux-gnu"
+      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}"
+      -DZLIB_LIBRARY=-lz -DPNG_LIBRARY=-lpng -DGME_LIBRARY=lgme -DSDL2_MIXER_LIBRARY=-lSDL2_mixer -DSDL2_LIBRARY=-lSDL2
 
 script:
   # Build our Makefile from Cmake!
   - if [[ "$__DPL_ACTIVE" == "1" ]]; then
       . ../deployer/travis/deployer_build.sh;
     else
-      make -kv;
+      make -k;
     fi;
 
 after_success:
