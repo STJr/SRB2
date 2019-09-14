@@ -56,6 +56,11 @@ macro(copy_files_to_build_dir target dlllist_var)
 	endif()
 endmacro()
 
+# Are we using a strictly C99 compiler?
+if(SRB2_ENABLE_C99 EQUAL 1)
+	add_definitions(-DSDL_DISABLE_IMMINTRIN_H)
+endif()
+
 # bitness check
 set(SRB2_SYSTEM_BITS 0)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

@@ -192,6 +192,22 @@ matrix:
               - clang-3.9
           compiler: clang-3.9
           if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
+          #tcc version 0.9.26
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-dev
+              - libsdl2-mixer-dev
+              - zlib1g-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - tcc
+          compiler: tcc
+          env: C99=1
+          if: env(DPL_ENABLED) != "1" OR env(DPL_TERMINATE_TESTS) != "1" OR NOT branch =~ /^.*deployer.*$/
           #clang version 3.9.X
 #        - os: linux
 #          addons:
@@ -676,14 +692,14 @@ before_script:
       -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
       -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
       -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
-      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}"
+      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME} -DSDL2_LIBRARY=/usr/lib/x86_64-linux-gnu -DSDL2_MIXER_LIBRARY=/usr/lib/x86_64-linux-gnu"
 
 script:
   # Build our Makefile from Cmake!
   - if [[ "$__DPL_ACTIVE" == "1" ]]; then
       . ../deployer/travis/deployer_build.sh;
     else
-      make -k;
+      make -kv;
     fi;
 
 after_success:

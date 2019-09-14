@@ -17,8 +17,6 @@
 /// \file
 /// \brief SDL specific part of the OpenGL API for SRB2
 
-#define SDL_DISABLE_IMMINTRIN_H
-
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
 #endif

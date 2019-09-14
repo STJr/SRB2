@@ -1,5 +1,4 @@
 /* Include the SDL main definition header */
-#define SDL_DISABLE_IMMINTRIN_H
 #include "SDL_main.h"
 
 #ifdef main

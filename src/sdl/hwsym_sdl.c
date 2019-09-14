@@ -22,8 +22,6 @@
 ///	For SDL, we need some function to return the addresses,
 ///	otherwise we have a conflict with the compiler.
 
-#define SDL_DISABLE_IMMINTRIN_H
-
 #include "hwsym_sdl.h"
 #include "../doomdef.h"
 

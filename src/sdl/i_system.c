@@ -23,8 +23,6 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
-#define SDL_DISABLE_IMMINTRIN_H
-
 #ifdef CMAKECONFIG
 #include "config.h"
 #else

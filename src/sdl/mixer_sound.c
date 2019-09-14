@@ -9,8 +9,6 @@
 /// \file
 /// \brief SDL Mixer interface for sound
 
-#define SDL_DISABLE_IMMINTRIN_H
-
 #include "../doomdef.h"
 
 #if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
