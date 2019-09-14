@@ -30,7 +30,7 @@
 #include "lvm.h"
 #include "lzio.h"
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
  #ifndef FUNCNORETURN
   #define FUNCNORETURN __attribute__ ((noreturn))
  #endif

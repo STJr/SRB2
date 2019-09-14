@@ -20,7 +20,7 @@
 
 #include "../../doomdef.h"
 #include "xboxhelp.h"
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #else
 #include <stdlib.h>

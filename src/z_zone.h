@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include "doomtype.h"
 
-#ifdef __GNUC__ // __attribute__ ((X))
+#if defined (__GNUC__) || defined (__TINYC__)
 #if (__GNUC__ > 4) || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 3 || (__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 5)))
 #define FUNCALLOC(X) __attribute__((alloc_size(X)))
 #endif // odd, it is documented in GCC 4.3.0 but it exists in 4.2.4, at least

@@ -43,7 +43,7 @@
 #define WRITEANGLE(p,b)     do { angle_t *p_tmp = (angle_t *)p; *p_tmp = (angle_t)(b); p_tmp++; p = (void *)p_tmp; } while (0)
 #endif
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #ifdef DEALIGNED
 #define READUINT8(p)        ({   UINT8 *p_tmp = (void *)p;   UINT8 b; memcpy(&b, p, sizeof(  UINT8)); p_tmp++; p = (void *)p_tmp; b; })
 #define READSINT8(p)        ({   SINT8 *p_tmp = (void *)p;   SINT8 b; memcpy(&b, p, sizeof(  SINT8)); p_tmp++; p = (void *)p_tmp; b; })

@@ -22,7 +22,7 @@
 #include "../d_main.h"
 #include "../i_system.h"
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #endif
 

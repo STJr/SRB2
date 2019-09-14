@@ -10,7 +10,7 @@
 /// \file  console.c
 /// \brief Console drawing and input
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #ifdef _XBOX
 #include <openxdk/debug.h>

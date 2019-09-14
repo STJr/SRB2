@@ -23,6 +23,8 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#define SDL_DISABLE_IMMINTRIN_H
+
 #ifdef CMAKECONFIG
 #include "config.h"
 #else
@@ -45,7 +47,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #elif defined (_MSC_VER)
 #include <direct.h>

@@ -10,7 +10,7 @@
 /// \file  mserv.c
 /// \brief Commands used for communicate with the master server
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>

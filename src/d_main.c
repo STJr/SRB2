@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #endif
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h> // for getcwd
 #endif
 

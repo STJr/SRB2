@@ -247,7 +247,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 /* Compiler-specific attributes and other macros */
 
-#ifdef __GNUC__ // __attribute__ ((X))
+#if defined (__GNUC__) || defined (__TINYC__)
 	#define FUNCNORETURN __attribute__ ((noreturn))
 
 	#if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && defined (__MINGW32__) // MinGW, >= GCC 4.1

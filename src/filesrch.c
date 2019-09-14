@@ -13,7 +13,7 @@
 ///	        FS_FOUND
 
 #include <stdio.h>
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <dirent.h>
 #endif
 #if defined (_WIN32) && !defined (_XBOX)
@@ -378,7 +378,7 @@ boolean preparefilemenu(boolean samedepth)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth)
 {
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 //NONE?
 	startpath = filename = NULL;
 	wantedmd5sum = NULL;

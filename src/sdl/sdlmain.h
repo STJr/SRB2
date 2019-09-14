@@ -16,6 +16,7 @@
 /// \file
 /// \brief System specific interface stuff.
 
+#define SDL_DISABLE_IMMINTRIN_H
 #ifndef __sdlmain__
 #define __sdlmain__
 

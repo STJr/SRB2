@@ -16,7 +16,7 @@
 /// \file
 /// \brief miscellaneous drawing (mainly 2d)
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #endif
 

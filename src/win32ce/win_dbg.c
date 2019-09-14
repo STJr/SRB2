@@ -474,7 +474,7 @@ int __cdecl RecordExceptionInfo (PEXCEPTION_POINTERS data/*, LPCSTR Message, LPS
 		// Load the top (highest address) of the stack from the
 		// thread information block. It will be found there in
 		// Win9x and Windows NT.
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 		__asm__("movl %%fs : 4, %%eax": "=a"(pStackTop));
 #else
 		__asm

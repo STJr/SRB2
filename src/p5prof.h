@@ -101,7 +101,7 @@
 
 */
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 
 #define RDTSC(_dst) \
 __asm__("

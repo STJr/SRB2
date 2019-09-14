@@ -19,6 +19,8 @@
 /// \file
 /// \brief SRB2 graphics stuff for SDL
 
+#define SDL_DISABLE_IMMINTRIN_H
+
 #include <stdlib.h>
 
 #include <signal.h>

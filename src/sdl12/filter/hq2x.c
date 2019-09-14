@@ -18,7 +18,7 @@
 
 #include "filters.h"
 #include <math.h>
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <stdlib.h>
 #endif
 
@@ -55,7 +55,7 @@ FUNCINLINE static ATTRINLINE void Interp1(Uint8 * pc, int c1, int c2)
 {
 #ifdef HQ2XASM
   //*((int*)pc) = (c1*3+c2)/4;
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   int c3 = c1;
   __asm__("shl $2, %1; add %2, %1; sub %3, %1; shr $2, %1":"=d"(*((int*)pc)):"d"(c1),"r"(c2),"r"(c3):"memory");
 #else
@@ -79,7 +79,7 @@ FUNCINLINE static ATTRINLINE void Interp2(Uint8 * pc, int c1, int c2, int c3)
 {
 #ifdef HQ2XASM
 //  *((int*)pc) = (c1*2+c2+c3) >> 2;
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("shl $1, %1; add %2, %1; add %3, %1; shr $2, %1":"=d"(*((int*)pc)):"d"(c1),"r"(c2),"r"(c3):"memory");
 #else
   __asm
@@ -103,7 +103,7 @@ static inline void Interp5(Uint8 * pc, int c1, int c2)
 {
 #ifdef HQ2XASM
   //*((int*)pc) = (c1+c2)/2;
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("add %2, %1; shr $1, %1":"=d"(*((int*)pc)):"d"(c1),"r"(c2):"memory");
 #else
   __asm
@@ -126,7 +126,7 @@ FUNCINLINE static ATTRINLINE void Interp6(Uint8 * pc, int c1, int c2, int c3)
 #ifdef HQ2XMMXASM
  //*((int*)pc) = (c1*5+c2*2+c3)/8;
  if(hasMMX)
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("movd %1, %%mm1; movd %2, %%mm2, movd %3, %%mm3; punpcklbw $_reg_blank, %%mm1; punpcklbw $_reg_blank, %%mm2; punpcklbw $_reg_blank, %%mm3; pmullw $_const5, %%mm1; psllw $1, %%mm2; paddw %%mm3, %%mm1; paddw %%mm2, %%mm1; psrlw $3, %%mm1; packuswb $_reg_blank, %%mm1; movd %%mm1, %0" : "=r"(*((int*)pc)) : "r" (c1),"r" (c2),"r" (c3) : "memory");
 #else
   __asm
@@ -158,7 +158,7 @@ FUNCINLINE static ATTRINLINE void Interp7(Uint8 * pc, int c1, int c2, int c3)
 #ifdef HQ2XMMXASM
  //*((int*)pc) = (c1*6+c2+c3)/8;
  if(hasMMX)
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("movd %1, %%mm1; movd %2, %%mm2, movd %3, %%mm3; punpcklbw $_reg_blank, %%mm1; punpcklbw $_reg_blank, %%mm2; punpcklbw $_reg_blank, %%mm3; pmull2 $_const6, %%mm1; padw %%mm3, %%mm2; paddw %%mm2, %%mm1; psrlw $3, %%mm1; packuswb $_reg_blank, %%mm1; movd %%mm1, %0 " : "=r" (*((int*)pc)): "r"(c1), "r"(c2), "r"(c3) : "memory");
 #else
   __asm
@@ -189,7 +189,7 @@ FUNCINLINE static ATTRINLINE void Interp9(Uint8 * pc, int c1, int c2, int c3)
 #ifdef HQ2XMMXASM
  //*((int*)pc) = (c1*2+(c2+c3)*3)/8;
  if(hasMMX)
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("movd %1, %%mm1; movd %2, %%mm2, movd %3, %%mm3; punpcklbw $_reg_blank, %%mm1; punpcklbw $_reg_blank, %%mm2; punpcklbw $_reg_blank, %%mm3; psllw $1, %%mm1; paddw %%mm3, %%mm2; pmullw $_const3, %%mm2; padw %%mm2, %%mm1; psrlw $3, %%mm1; packuswb $_reg_blank, %%mm1; movd %%mm1, %0;" : "=r"(*((int*)pc)) : "r" (c1),"r" (c2),"r" (c3) : "memory");
 #else
   __asm
@@ -221,7 +221,7 @@ FUNCINLINE static ATTRINLINE void Interp10(Uint8 * pc, int c1, int c2, int c3)
 #ifdef HQ2XMMXASM
  //*((int*)pc) = (c1*14+c2+c3)/16;
  if(hasMMX)
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   __asm__("movd %1, %%mm1; movd %2, %%mm2, movd %3, %%mm3; punpcklbw $_reg_blank, %%mm1; punpcklbw $_reg_blank, %%mm2; punpcklbw $_reg_blank, %%mm3; pmullw $_const14, %%mm1; paddw %%mm3, %%mm2; paddw %%mm2, %%mm1; psrlw $4, %%mm1; packuswb $_req_blank, %%mm1; movd %%mm1, %0;" : "=r"(*((int*)pc)) : "r" (c1),"r" (c2),"r" (c3) : "memory");
 #else
   __asm
@@ -304,7 +304,7 @@ FUNCINLINE static ATTRINLINE int Diff(Uint32 w1, Uint32 w2)
 #ifdef HQ2XMMXASM
  if(hasMMX)
  {
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
   int diffresult = 0;
   if(w1 != w2)
    __asm__("movd %3+%1*4, %%mm1; movq %%mm1, %%mm5; movd %3+%2*4, %%mm2; psubusb %%mm2, %%mm1; psubusb %%mm5, %%mm2; por %%mm2, %%mm1; psubusb $_treshold, %%mm1; movd %%mm1, %0" : "=c" (diffresult):"d" (w1),"q" (w2),"c" (RGBtoYUV) : "memory");

@@ -31,7 +31,7 @@
 #include <utime.h>
 #endif
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__TINYC__)
 #include <unistd.h>
 #include <limits.h>
 #elif defined (_WIN32) && !defined (_WIN32_WCE)
