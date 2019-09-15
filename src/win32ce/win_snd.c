@@ -186,7 +186,7 @@ static boolean CopySoundData (LPDIRECTSOUNDBUFFER dsbuffer, LPBYTE data, DWORD l
 // Hmmm... May be this function is not too good...
 static void CopyAndInvertMemory(void *dest, void *src, int bytes)
 {
-#if defined (__GNUC__) || defined (__TINYC__)
+#ifdef __GNUC__
 	__asm__("CAIM:;lodsb;neg %%al;stosb;loop CAIM;"::"c"(bytes),"D"(dest),"S"(src): "memory","cc");
 #else
 	_asm

@@ -600,7 +600,7 @@ LONG WINAPI RecordExceptionInfo(PEXCEPTION_POINTERS data/*, LPCSTR Message, LPST
 		// thread information block. It will be found there in
 		// Win9x and Windows NT.
 #ifdef _X86_
-#if defined (__GNUC__) || defined (__TINYC__)
+#ifdef __GNUC__
 		__asm__("movl %%fs : 4, %%eax": "=a"(pStackTop));
 #elif defined (_MSC_VER)
 		__asm

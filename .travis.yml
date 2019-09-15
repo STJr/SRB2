@@ -681,19 +681,33 @@ before_script:
   - mkdir build
   - cd build
   - mkdir package
-  - export CFLAGS="-Wall -W -Werror $WFLAGS"
+  - if [[ "$TRAVIS_COMPILER" == "tcc" ]]; then
+      export CFLAGS="-Wall -W $WFLAGS";
+    else
+      export CFLAGS="-Wall -W -Werror $WFLAGS";
+    fi;
   - export CCACHE_COMPRESS=true
   # If OS X, set -march=core2 to build compatible binaries with old Macs
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       export CFLAGS="${CFLAGS} -march=core2";
     fi;
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
-      -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
-      -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
-      -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
-      -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
-      -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}"
-      -DZLIB_LIBRARY=-lz -DPNG_LIBRARY=-lpng -DGME_LIBRARY=lgme -DSDL2_MIXER_LIBRARY=-lSDL2_mixer -DSDL2_LIBRARY=-lSDL2
+  - if [[ "$TRAVIS_COMPILER" == "tcc" ]]; then
+      cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+        -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
+        -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
+        -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
+        -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
+        -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}"
+        -DZLIB_LIBRARY="/usr/lib/x86_64-linux-gnu/libz.so" -DPNG_LIBRARY="/usr/lib/x86_64-linux-gnu/libpng.so" -DSDL2_MIXER_LIBRARY="/usr/lib/x86_64-linux-gnu/libSDL2_mixer.so" -DSDL2_LIBRARY="/usr/lib/x86_64-linux-gnu/libSDL2.so";
+    else
+      cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PWD/bin -DCPACK_PACKAGE_DIRECTORY=$PWD/package
+        -DSRB2_ASSET_HASHED="${SRB2_ASSET_HASHED}" -DSRB2_ASSET_DOCS="${SRB2_ASSET_DOCS}"
+        -DSRB2_ASSET_DIRECTORY="${SRB2_ASSET_DIRECTORY}"
+        -DCPACK_PACKAGE_DESCRIPTION_SUMMARY="${PROGRAM_NAME}"
+        -DCPACK_PACKAGE_VENDOR="${PROGRAM_VENDOR}"
+        -DSRB2_SDL2_EXE_NAME="${PROGRAM_FILENAME}";
+    fi;
+
 
 script:
   # Build our Makefile from Cmake!
