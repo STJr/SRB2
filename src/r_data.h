@@ -168,7 +168,7 @@ void R_TextureToFlat(size_t tex, UINT8 *flat);
 boolean R_IsLumpPNG(UINT8 *d, size_t s);
 
 UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(UINT8 *png, size_t size);
+patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean transparency);
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 

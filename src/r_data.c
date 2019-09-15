@@ -476,7 +476,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
 		{
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 			goto multipatch;
 		}
 #endif
@@ -569,7 +569,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		realpatch = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength);
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
 #endif
 
 		x1 = patch->originx;
@@ -2603,15 +2603,38 @@ typedef struct {
 	png_bytep buffer;
 	png_uint_32 bufsize;
 	png_uint_32 current_pos;
-} png_ioread;
+} png_io_t;
 
 static void PNG_IOReader(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-	png_ioread *f = png_get_io_ptr(png_ptr);
+	png_io_t *f = png_get_io_ptr(png_ptr);
 	if (length > (f->bufsize - f->current_pos))
 		png_error(png_ptr, "PNG_IOReader: buffer overrun");
 	memcpy(data, f->buffer + f->current_pos, length);
 	f->current_pos += length;
+}
+
+typedef struct
+{
+	char name[4];
+	void *data;
+	size_t size;
+} png_chunk_t;
+
+static png_byte *chunkname = NULL;
+static png_chunk_t chunk;
+
+static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
+{
+	if (!memcmp(chonk->name, chunkname, 4))
+	{
+		memcpy(chunk.name, chonk->name, 4);
+		chunk.size = chonk->size;
+		chunk.data = Z_Malloc(chunk.size, PU_STATIC, NULL);
+		memcpy(chunk.data, chonk->data, chunk.size);
+		return 1;
+	}
+	return 0;
 }
 
 static void PNG_error(png_structp PNG, png_const_charp pngtext)
@@ -2625,7 +2648,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
+static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -2638,11 +2661,13 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 	png_bytep *row_pointers;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
+	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+	png_voidp *user_chunk_ptr;
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 	{
 		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
@@ -2677,14 +2702,19 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 	png_io.current_pos = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
+
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
 	png_set_user_limits(png_ptr, 2048, 2048);
 #endif
 
 	png_read_info(png_ptr, png_info_ptr);
-
-	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type,
-	 NULL, NULL, NULL);
+	png_get_IHDR(png_ptr, png_info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 
 	if (bit_depth == 16)
 		png_set_strip_16(png_ptr);
@@ -2712,7 +2742,24 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 	for (y = 0; y < height; y++)
 		row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, png_info_ptr));
 	png_read_image(png_ptr, row_pointers);
+
+	// Read grAB chunk
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
+	{
+		INT32 *offsets = (INT32 *)chunk.data;
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
+		offsets++;
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
+	}
+
+	// bye
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
 
 	*w = (INT32)width;
 	*h = (INT32)height;
@@ -2720,11 +2767,11 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 }
 
 // Convert a PNG to a raw image.
-static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
+static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	UINT8 *flat;
 	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, size);
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
 	png_uint_32 width = *w, height = *h;
 
 	if (!row_pointers)
@@ -2751,15 +2798,16 @@ static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, size_t size)
 // Convert a PNG to a flat.
 UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
 {
-	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, size);
+	return PNG_RawConvert(png, &levelflat->width, &levelflat->height, NULL, NULL, size);
 }
 
 // Convert a PNG to a patch.
 static unsigned char imgbuf[1<<26];
-patch_t *R_PNGToPatch(UINT8 *png, size_t size)
+patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean transparency)
 {
 	UINT16 width, height;
-	UINT8 *raw = PNG_RawConvert(png, &width, &height, size);
+	INT16 topoffset = 0, leftoffset = 0;
+	UINT8 *raw = PNG_RawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
 	UINT32 x, y;
 	UINT8 *img;
@@ -2776,9 +2824,8 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 	// Write image size and offset
 	WRITE16(imgptr, width);
 	WRITE16(imgptr, height);
-	// no offsets
-	WRITE16(imgptr, 0);
-	WRITE16(imgptr, 0);
+	WRITE16(imgptr, leftoffset);
+	WRITE16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -2799,6 +2846,16 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 		for (y = 0; y < height; y++)
 		{
 			UINT8 paletteIndex = raw[((y * width) + x)];
+			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITE8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
 
 			// Start new column if we need to
 			if (!startofspan || spanSize == 255)
@@ -2857,11 +2914,13 @@ patch_t *R_PNGToPatch(UINT8 *png, size_t size)
 	#undef WRITE32
 
 	size = imgptr-imgbuf;
-	img = malloc(size);
+	img = Z_Malloc(size, PU_STATIC, NULL);
 	memcpy(img, imgbuf, size);
 
 	Z_Free(raw);
 
+	if (destsize != NULL)
+		*destsize = size;
 	return (patch_t *)img;
 }
 
@@ -2877,7 +2936,7 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 #endif
 #endif
 
-	png_ioread png_io;
+	png_io_t png_io;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
 		PNG_error, PNG_warn);
