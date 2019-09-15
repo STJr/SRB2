@@ -345,17 +345,14 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (horizspeed)
 		{
 			object->player->drawangle = spring->angle;
-			if (vertispeed || (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0))
-			{
-				object->angle = spring->angle;
+			object->angle = spring->angle;
 
-				if (!demoplayback || P_AnalogMove(object->player))
-				{
-					if (object->player == &players[consoleplayer])
-						localangle = spring->angle;
-					else if (object->player == &players[secondarydisplayplayer])
-						localangle2 = spring->angle;
-				}
+			if (!demoplayback || P_AnalogMove(object->player))
+			{
+				if (object->player == &players[consoleplayer])
+					localangle = spring->angle;
+				else if (object->player == &players[secondarydisplayplayer])
+					localangle2 = spring->angle;
 			}
 		}
 
