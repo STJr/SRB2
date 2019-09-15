@@ -253,6 +253,7 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	md2texcoord_t *texcoords;
 	md2frame_t *frames;
 	char *fname = NULL;
+	int foffset = 0;
 
 	int t;
 
@@ -331,9 +332,10 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	fname = retModel->framenames;
 	for (i = 0; i < header->numFrames; i++)
 	{
-		memcpy(fname, frames->name, 16);
+		md2frame_t *fr = (md2frame_t*)&buffer[header->offsetFrames + foffset];
+		memcpy(fname, fr->name, 16);
+		foffset += sizeof(md2frame_t) + (sizeof(md2vertex_t) * header->numXYZ);
 		fname += 16;
-		frames++;
 	}
 
 	// Read in textures
