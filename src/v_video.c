@@ -111,6 +111,7 @@ static CV_PossibleValue_t CV_MD2[] = {{0, "Off"}, {1, "On"}, {2, "Old"}, {0, NUL
 // console variables in development
 consvar_t cv_grmodels = {"gr_models", "Off", CV_SAVE, CV_MD2, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_grskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 // local copy of the palette for V_GetColor()
@@ -855,8 +856,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		return;
 
 #ifdef HWRENDER
-	// Done
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawCroppedPatch((GLPatch_t*)patch,x,y,pscale,scrn,sx,sy,w,h);
 		return;
@@ -1044,9 +1045,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			if (topdelta-sy > 0)
+			{
+				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				ofs = 0;
+			}
+			else
+				ofs = (sy-topdelta)<<FRACBITS;
 
-			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
@@ -1173,7 +1180,8 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		return;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Not this again
+	if (rendermode != render_soft)
 	{
 		HWR_DrawFill(x, y, w, h, c);
 		return;
