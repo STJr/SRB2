@@ -5737,6 +5737,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI7",
 	"S_CACTI8",
 	"S_CACTI9",
+	"S_CACTI10",
+	"S_CACTI11",
 
 	// Warning signs sprites
 	"S_ARIDSIGN_CAUTION",
@@ -7519,6 +7521,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI7",
 	"MT_CACTI8",
 	"MT_CACTI9",
+	"MT_CACTI10",
+	"MT_CACTI11",
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",
