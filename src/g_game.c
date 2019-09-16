@@ -172,6 +172,7 @@ static boolean retrying = false;
 UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
+INT32 luabanks[NUM_LUABANKS]; // yes, even in non HAVE_BLUA
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
 boolean gottoken; // Did you get a token? Used for end of act
@@ -3788,7 +3789,29 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 		// File end marker check
 		CHECKPOS
-		if (READUINT8(save_p) != 0x1d) BADSAVE;
+		switch (READUINT8(save_p))
+		{
+			case 0xb7:
+				{
+					UINT8 i, banksinuse;
+					CHECKPOS
+					banksinuse = READUINT8(save_p);
+					CHECKPOS
+					if (banksinuse > NUM_LUABANKS)
+						BADSAVE
+					for (i = 0; i < banksinuse; i++)
+					{
+						(void)READINT32(save_p);
+						CHECKPOS
+					}
+					if (READUINT8(save_p) != 0x1d)
+						BADSAVE
+				}
+			case 0x1d:
+				break;
+			default:
+				BADSAVE
+		}
 
 		// done
 		saved = FIL_WriteFile(backup, savebuffer, length);

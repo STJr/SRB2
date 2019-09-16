@@ -6895,6 +6895,7 @@ static void M_StartTutorial(INT32 choice)
 	tutorialmode = true; // turn on tutorial mode
 
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	gamecomplete = false;
 	cursaveslot = 0;
@@ -7303,7 +7304,29 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 	// File end marker check
 	CHECKPOS
-	if (READUINT8(save_p) != 0x1d) BADSAVE;
+	switch (READUINT8(save_p))
+	{
+		case 0xb7:
+			{
+				UINT8 i, banksinuse;
+				CHECKPOS
+				banksinuse = READUINT8(save_p);
+				CHECKPOS
+				if (banksinuse > NUM_LUABANKS)
+					BADSAVE
+				for (i = 0; i < banksinuse; i++)
+				{
+					(void)READINT32(save_p);
+					CHECKPOS
+				}
+				if (READUINT8(save_p) != 0x1d)
+					BADSAVE
+			}
+		case 0x1d:
+			break;
+		default:
+			BADSAVE
+	}
 
 	// done
 	Z_Free(savebuffer);
@@ -8505,6 +8528,7 @@ static void M_ChooseNightsAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_NIGHTS;
 
@@ -8529,6 +8553,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD;
 

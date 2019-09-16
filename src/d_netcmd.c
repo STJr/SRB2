@@ -1916,7 +1916,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		precache = false;
 
 	if (resetplayer && !FLS)
+	{
 		emeralds = 0;
+		memset(&luabanks, 0, sizeof(luabanks));
+	}
 
 	if (modeattacking)
 	{
@@ -4111,6 +4114,7 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 
 	if (dirmenu)
 		closefilemenu(true);
