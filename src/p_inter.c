@@ -1595,6 +1595,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// Buenos Dias Mandy
 			P_SetPlayerMobjState(toucher, S_PLAY_STUN);
 			player->pflags &= ~PF_APPLYAUTOBRAKE;
+			P_ResetPlayer(player);
 			player->drawangle = special->angle + ANGLE_180;
 			P_InstaThrust(toucher, special->angle, FixedMul(3*special->info->speed, special->scale/2));
 			toucher->z += P_MobjFlip(toucher);
@@ -3436,7 +3437,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
-		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot) || (inflictor && !inflictor->player)))
+		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot)
+		|| (inflictor && inflictor->type >= MT_REDRING && inflictor->type <= MT_GRENADERING)))
 			return false;
 	}
 

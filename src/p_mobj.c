@@ -2954,7 +2954,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		}
 		// Get up if you fell.
 		if (mo->player->panim == PA_PAIN)
-			P_SetPlayerMobjState(mo, S_PLAY_STND);
+			P_SetPlayerMobjState(mo, S_PLAY_WALK);
 
 #ifdef ESLOPE
 		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
