@@ -2482,8 +2482,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				else if (P_IsLocalPlayer(target->player))
 					gameovermus = true;
 
-				if (gameovermus)
-					P_PlayJingle(target->player, JT_GOVER); // Yousa dead now, Okieday? Tails 03-14-2000
+				if (gameovermus) // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicEx("_gover", 0, 0, 0, (2*MUSICRATE) - (MUSICRATE/25), 0); // 1.96 seconds
+					//P_PlayJingle(target->player, JT_GOVER); // can't be used because incompatible with track fadeout
 
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
@@ -3520,7 +3521,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (G_IsSpecialStage(gamemap))
+		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
@@ -3544,10 +3545,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
-		{
 			P_KillPlayer(player, source, damage);
-			player->rings = player->spheres = 0;
-		}
 		else if (metalrecording)
 		{
 			if (!inflictor)

@@ -4520,6 +4520,9 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			if (mapheaderinfo[mapnum]->menuflags & LF2_HIDEINMENU)
 				return false;
 
+			if (G_IsSpecialStage(mapnum+1))
+				return false;
+
 			if (gt == GT_COOP && (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
 				return true;
 
@@ -7062,7 +7065,7 @@ static void M_DrawLoadGameData(void)
 			}
 		}
 
-		y -= 13;
+		y -= 4;
 
 		// character heads, lives, and continues
 		{
@@ -7071,7 +7074,7 @@ static void M_DrawLoadGameData(void)
 			patch_t *patch;
 			UINT8 *colormap = NULL;
 
-			INT32 tempx = (x+40)<<FRACBITS, tempy = y<<FRACBITS, flip = 0, calc;
+			INT32 tempx = (x+40)<<FRACBITS, flip = 0;
 
 			// botskin first
 			if (savegameinfo[savetodraw].botskin)
@@ -7086,13 +7089,13 @@ static void M_DrawLoadGameData(void)
 
 				V_DrawFixedPatch(
 					tempx + (18<<FRACBITS),
-					tempy -  (4<<FRACBITS),
+					y<<FRACBITS,
 					charbotskin->highresscale,
 					0, patch, colormap);
 
 				Z_Free(colormap);
 
-				tempx -= (15<<FRACBITS);
+				tempx -= (20<<FRACBITS);
 				flip = V_FLIP;
 			}
 skipbot:
@@ -7105,17 +7108,15 @@ skipbot:
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
 			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
-			if ((calc = SHORT(patch->topoffset) - 42) > 0)
-				tempy += ((4+calc)<<FRACBITS);
 
 			V_DrawFixedPatch(
 				tempx,
-				tempy,
+				y<<FRACBITS,
 				charskin->highresscale,
 				flip, patch, colormap);
 
 skipsign:
-			y += 25;
+			y += 16;
 
 			tempx = x + 10;
 			if (savegameinfo[savetodraw].lives != INFLIVES

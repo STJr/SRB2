@@ -2253,7 +2253,7 @@ static void P_LevelInitStuff(void)
 		}
 
 		// obliteration station...
-		players[i].rings = players[i].spheres =\
+		players[i].spheres =\
 		 players[i].xtralife = players[i].deadtimer =\
 		 players[i].numboxes = players[i].totalring =\
 		 players[i].laps = players[i].aiming =\
@@ -2278,6 +2278,7 @@ static void P_LevelInitStuff(void)
 
 		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
+		players[i].rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
 
 		P_ResetPlayer(&players[i]);
 		// hit these too

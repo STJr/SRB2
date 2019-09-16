@@ -429,7 +429,7 @@ void Y_IntermissionDrawer(void)
 				{
 					if ((data.spec.continues & 0x80) && i == continues-1 && (endtic < 0 || intertic%20 < 10))
 						break;
-					V_DrawContinueIcon(246 + xoffset5 - (i*12), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
+					V_DrawContinueIcon(246 + xoffset5 - (i*20), 162+yoffset, 0, *data.spec.playerchar, *data.spec.playercolor);
 				}
 			}
 		}

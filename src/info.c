@@ -576,8 +576,14 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TALA",
 	"TALB",
 
+	"CNT1",
+	"CNT2",
+	"CNT3",
+	"CNT4",
+
 	"SIGN",
 	"LIFE",
+
 	"XTRA",
 };
 playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
@@ -673,8 +679,14 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_TAL9, // SPR2_TALA,
 	SPR2_TAL0, // SPR2_TALB,
 
+	SPR2_WAIT, // SPR2_CNT1,
+	SPR2_FALL, // SPR2_CNT2,
+	SPR2_SPNG, // SPR2_CNT3,
+	SPR2_CNT1, // SPR2_CNT4,
+
 	0, // SPR2_SIGN,
 	0, // SPR2_LIFE,
+
 	0, // SPR2_XTRA (should never be referenced)
 };
 

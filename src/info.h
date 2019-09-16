@@ -832,9 +832,15 @@ typedef enum playersprite
 	SPR2_TALA,
 	SPR2_TALB,
 
+	SPR2_CNT1, // continue disappointment
+	SPR2_CNT2, // continue lift
+	SPR2_CNT3, // continue spin
+	SPR2_CNT4, // continue "soooooooniiic!" tugging
+
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon
-	SPR2_XTRA, // stuff that isn't in-game - keep this last in the list
+
+	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,

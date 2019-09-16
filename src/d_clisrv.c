@@ -2417,7 +2417,7 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 	// the remaining players.
 	if (G_IsSpecialStage(gamemap))
 	{
-		INT32 i, count, increment, spheres;
+		INT32 i, count, sincrement, spheres, rincrement, rings;
 
 		for (i = 0, count = 0; i < MAXPLAYERS; i++)
 		{
@@ -2427,18 +2427,35 @@ static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 
 		count--;
 		spheres = players[playernum].spheres;
-		increment = spheres/count;
+		rings = players[playernum].rings;
+		sincrement = spheres/count;
+		rincrement = rings/count;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && i != playernum)
 			{
-				if (spheres < increment)
+				if (spheres < 2*sincrement)
+				{
 					P_GivePlayerSpheres(&players[i], spheres);
+					spheres = 0;
+				}
 				else
-					P_GivePlayerSpheres(&players[i], increment);
+				{
+					P_GivePlayerSpheres(&players[i], sincrement);
+					spheres -= sincrement;
+				}
 
-				spheres -= increment;
+				if (rings < 2*rincrement)
+				{
+					P_GivePlayerRings(&players[i], rings);
+					rings = 0;
+				}
+				else
+				{
+					P_GivePlayerRings(&players[i], rincrement);
+					rings -= rincrement;
+				}
 			}
 		}
 	}
