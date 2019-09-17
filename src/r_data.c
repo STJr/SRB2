@@ -2588,7 +2588,7 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 }
 
 #ifndef NO_PNG_LUMPS
-boolean R_IsLumpPNG(UINT8 *d, size_t s)
+boolean R_IsLumpPNG(const UINT8 *d, size_t s)
 {
 	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
 		return false;
@@ -2599,8 +2599,12 @@ boolean R_IsLumpPNG(UINT8 *d, size_t s)
 }
 
 #ifdef HAVE_PNG
+
+#if PNG_LIBPNG_VER_DLLNUM < 14
+typedef PNG_CONST png_byte *png_const_bytep;
+#endif
 typedef struct {
-	png_bytep buffer;
+	png_const_bytep buffer;
 	png_uint_32 bufsize;
 	png_uint_32 current_pos;
 } png_io_t;
@@ -2626,6 +2630,7 @@ static png_chunk_t chunk;
 
 static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
 {
+	(void)png_ptr;
 	if (!memcmp(chonk->name, chunkname, 4))
 	{
 		memcpy(chunk.name, chonk->name, 4);
@@ -2648,7 +2653,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -2697,7 +2702,7 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 #endif
 
 	// set our own read_function
-	png_io.buffer = (png_bytep)png;
+	png_io.buffer = (png_const_bytep)png;
 	png_io.bufsize = size;
 	png_io.current_pos = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
@@ -2767,7 +2772,7 @@ static png_bytep *PNG_Read(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, I
 }
 
 // Convert a PNG to a raw image.
-static UINT8 *PNG_RawConvert(UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	UINT8 *flat;
 	png_uint_32 x, y;
@@ -2803,7 +2808,7 @@ UINT8 *R_PNGToFlat(levelflat_t *levelflat, UINT8 *png, size_t size)
 
 // Convert a PNG to a patch.
 static unsigned char imgbuf[1<<26];
-patch_t *R_PNGToPatch(UINT8 *png, size_t size, size_t *destsize, boolean transparency)
+patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean transparency)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
