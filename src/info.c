@@ -11599,7 +11599,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		20*FRACUNIT,    // radius
 		128*FRACUNIT,   // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
@@ -11624,9 +11624,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		24*FRACUNIT,    // radius
-		224*FRACUNIT,    // height
+		224*FRACUNIT,   // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
@@ -11651,9 +11651,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		24*FRACUNIT,    // radius
-		256*FRACUNIT,    // height
+		256*FRACUNIT,   // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
@@ -11680,7 +11680,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		48*FRACUNIT,    // radius
 		96*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
@@ -11707,7 +11707,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
@@ -11734,7 +11734,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SCENERY|MF_PAIN, // flags
