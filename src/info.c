@@ -217,6 +217,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"CRL3", // Coral 3
 	"BCRY", // Blue Crystal
 	"KELP", // Kelp
+	"ALGA", // Animated algae top
+	"ALGB", // Animated algae segment
 	"DSTG", // DSZ Stalagmites
 	"LIBE", // DSZ Light beam
 
@@ -2178,6 +2180,11 @@ state_t states[NUMSTATES] =
 
 	// Kelp
 	{SPR_KELP, 0, -1, {NULL}, 0, 0, S_NULL}, // S_KELP
+
+	// Animated algae
+	{SPR_ALGA, 0, 1, {A_ConnectToGround}, MT_ANIMALGAESEG, 0, S_ANIMALGAETOP2}, // S_ANIMALGAETOP1
+	{SPR_ALGA, 0|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 11, 4, S_NULL},          // S_ANIMALGAETOP2
+	{SPR_ALGB, 0|FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 11, 4, S_NULL},          // S_ANIMALGAESEG
 
 	// DSZ Stalagmites
 	{SPR_DSTG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_DSZSTALAGMITE
@@ -10199,6 +10206,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SCENERY|MF_NOBLOCKMAP,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ANIMALGAETOP
+		1013,            // doomednum
+		S_ANIMALGAETOP1, // spawnstate
+		1000,            // spawnhealth
+		S_NULL,          // seestate
+		sfx_None,        // seesound
+		8,               // reactiontime
+		sfx_None,        // attacksound
+		S_NULL,          // painstate
+		0,               // painchance
+		sfx_None,        // painsound
+		S_NULL,          // meleestate
+		S_NULL,          // missilestate
+		S_NULL,          // deathstate
+		S_NULL,          // xdeathstate
+		sfx_None,        // deathsound
+		0,               // speed
+		48*FRACUNIT,     // radius
+		120*FRACUNIT,    // height
+		0,               // display offset
+		4,               // mass
+		0,               // damage
+		sfx_None,        // activesound
+		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_RUNSPAWNFUNC,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ANIMALGAESEG
+		-1,             // doomednum
+		S_ANIMALGAESEG, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		48*FRACUNIT,    // radius
+		120*FRACUNIT,   // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY,     // flags
 		S_NULL          // raisestate
 	},
 

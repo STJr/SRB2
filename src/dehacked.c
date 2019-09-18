@@ -5593,6 +5593,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Kelp,
 	"S_KELP",
 
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
+
 	// DSZ Stalagmites
 	"S_DSZSTALAGMITE",
 	"S_DSZ2STALAGMITE",
@@ -7462,6 +7467,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CORAL3", // Coral 3
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
 	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
 	"MT_LIGHTBEAM", // DSZ Light beam

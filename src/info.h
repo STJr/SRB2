@@ -463,6 +463,8 @@ typedef enum sprite
 	SPR_CRL3, // Coral 3
 	SPR_BCRY, // Blue Crystal
 	SPR_KELP, // Kelp
+	SPR_ALGA, // Animated algae top
+	SPR_ALGB, // Animated algae segment
 	SPR_DSTG, // DSZ Stalagmites
 	SPR_LIBE, // DSZ Light beam
 
@@ -2303,6 +2305,11 @@ typedef enum state
 
 	// Kelp,
 	S_KELP,
+
+	// Animated algae
+	S_ANIMALGAETOP1,
+	S_ANIMALGAETOP2,
+	S_ANIMALGAESEG,
 
 	// DSZ Stalagmites
 	S_DSZSTALAGMITE,
@@ -4195,6 +4202,8 @@ typedef enum mobj_type
 	MT_CORAL3, // Coral 3
 	MT_BLUECRYSTAL, // Blue Crystal
 	MT_KELP, // Kelp
+	MT_ANIMALGAETOP, // Animated algae top
+	MT_ANIMALGAESEG, // Animated algae segment
 	MT_DSZSTALAGMITE, // Deep Sea 1 Stalagmite
 	MT_DSZ2STALAGMITE, // Deep Sea 2 Stalagmite
 	MT_LIGHTBEAM, // DSZ Light beam
