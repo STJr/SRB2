@@ -118,7 +118,7 @@ const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[MAXSKINS];
-INT16 char_on = -1, startchar = 1;
+INT16 char_on = -1, startchar = 0;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
