@@ -1109,7 +1109,7 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 	}
 	else if (P_MobjFlip(player->mo)*(topheight - (thing->z + thing->height/2)) < 0)
 	{
-		if (player->charability == CA_FLY && player->panim == PA_ABILITY && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
+		if (player->charability == CA_FLY && player->panim == PA_ABILITY && !(player->mo->eflags & MFE_UNDERWATER) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
 			return true;
 	}
 
@@ -2964,22 +2964,19 @@ static void P_DoBubbleBreath(player_t *player)
 		P_SetScale(bubble, bubble->destscale);
 	}
 
-	if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS Super doesn't spawn flight bubbles
-		return;
-
 	// Tails stirs up the water while flying in it
 	if (player->powers[pw_tailsfly] && (leveltime & 1) && player->charability != CA_SWIM)
 	{
-		fixed_t radius = (3*player->mo->radius)>>1;
+		fixed_t radius = player->mo->radius;
 		angle_t fa = ((leveltime%45)*FINEANGLES/8) & FINEMASK;
 		fixed_t stirwaterx = FixedMul(FINECOSINE(fa),radius);
 		fixed_t stirwatery = FixedMul(FINESINE(fa),radius);
 		fixed_t stirwaterz;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
-			stirwaterz = player->mo->z + player->mo->height - FixedDiv(player->mo->height,3*FRACUNIT/2);
+			stirwaterz = player->mo->z + player->mo->height - (4<<FRACBITS);
 		else
-			stirwaterz = player->mo->z + FixedDiv(player->mo->height,3*FRACUNIT/2);
+			stirwaterz = player->mo->z + (4<<FRACBITS);
 
 		bubble = P_SpawnMobj(
 			player->mo->x + stirwaterx,
@@ -10604,7 +10601,8 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	angle_t horizangle = player->drawangle;
 	fixed_t zoffs = 0;
 	fixed_t backwards = -1*FRACUNIT;
-	boolean doroll = (player->panim == PA_ROLL || (player->panim == PA_JUMP && !(player->charflags & SF_NOJUMPSPIN)) || player->mo->sprite2 == SPR2_SWIM);
+	boolean doswim = (player->panim == PA_ABILITY && (player->mo->eflags & MFE_UNDERWATER));
+	boolean doroll = (player->panim == PA_ROLL || (player->panim == PA_JUMP && !(player->charflags & SF_NOJUMPSPIN)) || doswim);
 	angle_t rollangle;
 	boolean panimchange;
 	INT32 ticnum = 0;
@@ -10631,14 +10629,17 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 			if (testval < FRACUNIT)
 				testval = FRACUNIT;
 		}
-		if (smilesonground && !player->mo->reactiontime)
+
+		if (doswim)
+			zdist = player->mo->momz<<1;
+		else if (smilesonground && !player->mo->reactiontime)
 			zdist = (player->mo->z - tails->threshold);
 		else
 			zdist = player->mo->momz;
+
 		rollangle = R_PointToAngle2(0, 0, testval, -P_MobjFlip(player->mo)*zdist);
-		if (player->mo->sprite2 == SPR2_SWIM)
-			backwards = -5*FRACUNIT;
-		else
+
+		if (!doswim)
 		{
 			zoffs = 3*FRACUNIT + 12*FINESINE(rollangle >> ANGLETOFINESHIFT);
 			backwards = -12*FINECOSINE(rollangle >> ANGLETOFINESHIFT);
@@ -11819,6 +11820,8 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					if (player->mo->state-states != S_PLAY_RIDE)
 						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+					if (tails->eflags & MFE_UNDERWATER)
+						tails->player->powers[pw_tailsfly] = 0;
 				}
 				else
 					P_SetTarget(&player->mo->tracer, NULL);
