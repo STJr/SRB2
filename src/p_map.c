@@ -3199,7 +3199,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				&& glidesector->sector->ceilingpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < ceilingz)
+			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < floorz)
 				|| (player->mo->z >= ceilingz))
 				floorclimb = true;
 		}
