@@ -2381,21 +2381,41 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 {
+	fixed_t topheight;
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	{
-		fixed_t topheight =
-	#ifdef ESLOPE
-			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
-	#endif
-			*rover->topheight;
+	// not a lava block with solid planes
+	if (!(rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+		&& !(rover->master->flags & ML_BLOCKMONSTERS)))
+		return false;
 
-		if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
-			&& !(rover->master->flags & ML_BLOCKMONSTERS)
-			&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale)))
+	// is solid from the sides
+	if (rover->master->flags & ML_EFFECT3)
+		return true;
+
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		topheight =
+	#ifdef ESLOPE
+			*rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) :
+	#endif
+			*rover->bottomheight;
+
+		if (mo->z+mo->height-mo->momz < topheight + FixedMul(16*FRACUNIT, mo->scale))
 				return true;
+		return false;
 	}
+
+	topheight =
+	#ifdef ESLOPE
+		*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+	#endif
+		*rover->topheight;
+
+	if (mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale))
+		return true;
 
 	return false;
 }
