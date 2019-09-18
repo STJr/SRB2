@@ -8200,7 +8200,7 @@ static void P_MovePlayer(player_t *player)
 		else
 		{
 			// Tails-gets-tired Stuff
-			if (player->panim == PA_ABILITY)
+			if (player->panim == PA_ABILITY && player->mo->state-states != S_PLAY_FLY_TIRED)
 				P_SetPlayerMobjState(player->mo, S_PLAY_FLY_TIRED);
 
 			if (player->charability == CA_FLY && (leveltime % 10 == 0)
@@ -10604,7 +10604,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	angle_t horizangle = player->drawangle;
 	fixed_t zoffs = 0;
 	fixed_t backwards = -1*FRACUNIT;
-	boolean doroll = (player->panim == PA_ROLL || player->panim == PA_JUMP);
+	boolean doroll = (player->panim == PA_ROLL || (player->panim == PA_JUMP && !(player->charflags & SF_NOJUMPSPIN)) || player->mo->sprite2 == SPR2_SWIM);
 	angle_t rollangle;
 	boolean panimchange;
 	INT32 ticnum = 0;
@@ -10636,12 +10636,17 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		else
 			zdist = player->mo->momz;
 		rollangle = R_PointToAngle2(0, 0, testval, -P_MobjFlip(player->mo)*zdist);
-		zoffs = 3*FRACUNIT + 12*FINESINE(rollangle >> ANGLETOFINESHIFT);
-		backwards = -12*FINECOSINE(rollangle >> ANGLETOFINESHIFT);
+		if (player->mo->sprite2 == SPR2_SWIM)
+			backwards = -5*FRACUNIT;
+		else
+		{
+			zoffs = 3*FRACUNIT + 12*FINESINE(rollangle >> ANGLETOFINESHIFT);
+			backwards = -12*FINECOSINE(rollangle >> ANGLETOFINESHIFT);
+		}
 	}
 	else if (player->panim == PA_RUN)
 		backwards = -5*FRACUNIT;
-	else if (player->panim == PA_SPRING)
+	else if (player->panim == PA_SPRING || player->panim == PA_JUMP)
 	{
 		zoffs += 4*FRACUNIT;
 		backwards /= 2;
@@ -10663,7 +10668,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		zoffs = -7*FRACUNIT;
 		backwards = -9*FRACUNIT;
 	}
-	else if (player->mo->sprite2 == SPR2_FLY || player->mo->sprite2 == SPR2_TIRE)
+	else if (player->panim == PA_ABILITY)
 		backwards = -5*FRACUNIT;
 
 	// sprite...
@@ -10680,7 +10685,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		else
 			chosenstate = S_TAILSOVERLAY_0DEGREES;
 	}
-	else if (player->panim == PA_SPRING)
+	else if (player->panim == PA_SPRING || player->panim == PA_JUMP)
 		chosenstate = S_TAILSOVERLAY_MINUS60DEGREES;
 	else if (player->panim == PA_FALL || player->mo->state-states == S_PLAY_RIDE)
 		chosenstate = S_TAILSOVERLAY_PLUS60DEGREES;
@@ -10702,6 +10707,8 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 			chosenstate = S_TAILSOVERLAY_MINUS30DEGREES;
 	}
 	else if (player->mo->sprite2 == SPR2_FLY)
+		chosenstate = S_TAILSOVERLAY_FLY;
+	else if (player->mo->sprite2 == SPR2_SWIM)
 		chosenstate = S_TAILSOVERLAY_FLY;
 	else if (player->mo->sprite2 == SPR2_TIRE)
 		chosenstate = S_TAILSOVERLAY_TIRE;
@@ -11269,8 +11276,8 @@ void P_PlayerThink(player_t *player)
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 
-			if (!player->powers[pw_carry]
-			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
+			if (!player->powers[pw_carry] && !player->powers[pw_nocontrol]
+			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE|PF_STASIS)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
 			&& !(cmd->forwardmove || cmd->sidemove)
 			&& (player->rmomx || player->rmomy)
 			&& (!player->capsule || (player->capsule->reactiontime != (player-players)+1)))
