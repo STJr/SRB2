@@ -10432,7 +10432,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj_t *mobj;
 
 	if (p->playerstate == PST_REBORN)
-		G_PlayerReborn(playernum);
+		G_PlayerReborn(playernum, false);
 
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
