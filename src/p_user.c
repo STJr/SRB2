@@ -8180,12 +8180,18 @@ static void P_MovePlayer(player_t *player)
 					if (P_MobjFlip(player->mo)*player->mo->momz < FixedMul(5*actionspd, player->mo->scale))
 						P_SetObjectMomZ(player->mo, actionspd/2, true);
 
+					P_SetPlayerMobjState(player->mo, player->mo->state->nextstate);
+
 					player->fly1--;
 				}
 			}
 
 			// Tails Put-Put noise
-			if (player->charability == CA_FLY && player->bot != 1 && leveltime % 10 == 0 && !player->spectator)
+			if (player->charability == CA_FLY
+				&& player->bot != 1
+				&& !(player->mo->eflags & MFE_UNDERWATER)
+				&& leveltime % 10 == 0
+				&& !player->spectator)
 				S_StartSound(player->mo, sfx_putput);
 
 			// Descend
@@ -8202,6 +8208,7 @@ static void P_MovePlayer(player_t *player)
 
 			if (player->charability == CA_FLY && (leveltime % 10 == 0)
 				&& player->mo->state-states == S_PLAY_FLY_TIRED
+				&& !(player->mo->eflags & MFE_UNDERWATER)
 				&& !player->spectator)
 				S_StartSound(player->mo, sfx_pudpud);
 		}
@@ -10736,8 +10743,10 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		}
 	}
 
+#if 0
 	if (player->fly1 != 0 && player->powers[pw_tailsfly] != 0 && !smilesonground)
 		P_SetMobjState(tails, chosenstate);
+#endif
 
 	// animation...
 	if (player->panim == PA_SPRING || player->panim == PA_FALL || player->mo->state-states == S_PLAY_RIDE)
@@ -10752,7 +10761,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	else if (player->mo->state-states == S_PLAY_GASP)
 		tails->tics = -1;
 	else if (player->mo->sprite2 == SPR2_TIRE)
-		ticnum = 4;
+		ticnum = (doswim ? 2 : 4);
 	else if (player->panim != PA_IDLE)
 		ticnum = player->mo->tics;
 
