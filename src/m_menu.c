@@ -275,9 +275,10 @@ menu_t MP_MainDef;
 // Split into multiple parts due to size
 // Controls
 menu_t OP_ChangeControlsDef;
-menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
+menu_t OP_MPControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -1002,14 +1003,11 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Orbital"  , &cv_cam_orbit , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 70},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 80},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
 	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  110},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  80},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1018,14 +1016,11 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Orbital"  , &cv_cam2_orbit , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 70},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 80},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
 	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  100},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  110},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  80},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1152,6 +1147,34 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      80},
+};
+
+static menuitem_t OP_CameraOptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
+};
+
+static menuitem_t OP_Camera2OptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1879,6 +1902,13 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
+menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+
 
 menu_t OP_VideoOptionsDef =
 {
@@ -2740,13 +2770,27 @@ static void M_ChangeCvar(INT32 choice)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
 	{
-		CV_SetValue(cv,cv->value+(choice));
+		if (cv->flags & CV_FLOAT && (currentMenu->menuitems[itemOn].status & IT_CV_FLOATSLIDER) == IT_CV_FLOATSLIDER)
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
+		else
+			CV_SetValue(cv,cv->value+(choice));
 	}
 	else if (cv->flags & CV_FLOAT)
 	{
-		char s[20];
-		sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
-		CV_Set(cv,s);
+		if (currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP)
+		{
+			CV_SetValue(cv,FIXED_TO_FLOAT(cv->value)+(choice));
+		}
+		else
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
 	}
 	else
 		CV_AddValue(cv,choice);
@@ -3636,7 +3680,12 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 
 	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
 
-	if ((range = atoi(cv->defaultvalue)) != cv->value)
+	if (cv->flags & CV_FLOAT)
+		range = (INT32)(atof(cv->defaultvalue)*FRACUNIT);
+	else
+		range = atoi(cv->defaultvalue);
+
+	if (range != cv->value)
 	{
 		range = ((range - cv->PossibleValue[0].value) * 100 /
 		 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
