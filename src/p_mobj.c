@@ -4001,6 +4001,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
+#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
 		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
 			mobj->player->pflags &= ~PF_STARTJUMP;
 		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
@@ -4010,6 +4011,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			mobj->player->powers[pw_tailsfly] = 0;
 			P_SetPlayerMobjState(mobj, S_PLAY_WALK);
 		}
+#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
