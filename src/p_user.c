@@ -2217,147 +2217,152 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				player->pflags &= ~PF_SPINNING;
 		}
 
-		if (player->pflags & PF_SPINNING)
-		{
-			if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
-			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				S_StartSound(player->mo, sfx_spin);
-			}
-		}
-		else if (player->pflags & PF_GLIDING) // ground gliding
-		{
-			if (dorollstuff)
-			{
-				player->skidtime = TICRATE;
-				player->mo->tics = -1;
-			}
-			else if (!player->skidtime)
-				player->pflags &= ~PF_GLIDING;
-		}
-		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		{
-			if (player->mo->state-states != S_PLAY_MELEE_LANDING)
-			{
-				mobjtype_t type = player->revitem;
-				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
-				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-				S_StartSound(player->mo, sfx_s3k8b);
-				player->pflags |= PF_FULLSTASIS;
-
-				// hearticles
-				if (type)
-				{
-					UINT8 i = 0;
-					angle_t throwang = -(2*ANG30);
-					fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
-					fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
-					fixed_t zo = 6*player->mo->scale;
-					fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
-					fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
-					fixed_t ev;
-					mobj_t *missile = NULL;
-					if (mu2 < mu)
-						mu2 = mu;
-					ev = (50*FRACUNIT - (mu/25))/50;
-					while (i < 5)
-					{
-						missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
-						P_SetTarget(&missile->target, player->mo);
-						missile->angle = throwang + player->drawangle;
-						P_Thrust(missile, player->drawangle + ANGLE_90,
-							P_ReturnThrustY(missile, throwang, mu)); // side to side component
-						P_Thrust(missile, player->drawangle, mu2); // forward component
-						P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
-						missile->momz += player->mo->pmomz;
-						missile->fuse = TICRATE/2;
-						missile->extravalue2 = ev;
-
-						i++;
-						throwang += ANG30;
-					}
-					if (mobjinfo[type].seesound && missile)
-						S_StartSound(missile, missile->info->seesound);
-				}
-			}
-		}
-		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
-			;
-		else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
-		{
-			if (player->cmomx || player->cmomy)
-			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->rmomx || player->rmomy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			}
-			else
-			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->mo->momx || player->mo->momy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			}
-		}
-
-		if (!(player->pflags & PF_GLIDING))
-			player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-		player->pflags &= ~(PF_STARTJUMP|PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
-		player->secondjump = 0;
-		player->glidetime = 0;
-		player->climbing = 0;
-		player->powers[pw_tailsfly] = 0;
-
-		if (player->pflags & PF_SHIELDABILITY)
-		{
-			player->pflags &= ~PF_SHIELDABILITY;
-
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
-			{
-				if (player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
-					S_StartSound(player->mo, sfx_s3k4c);
-				else // create a fire pattern on the ground
-				{
-					S_StartSound(player->mo, sfx_s3k47);
-					P_ElementalFire(player, true);
-				}
-				P_SetObjectMomZ(player->mo,
-				(player->mo->eflags & MFE_UNDERWATER)
-				? 6*FRACUNIT/5
-				: 5*FRACUNIT/2,
-				false);
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-				player->mo->momx = player->mo->momy = 0;
-				clipmomz = false;
-			}
-			else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
-			{
-				P_DoBubbleBounce(player);
-				clipmomz = false;
-			}
-		}
-
 		if (player->pflags & PF_BOUNCING)
 		{
-			P_MobjCheckWater(player->mo);
-			player->mo->momz *= -1;
-			P_DoAbilityBounce(player, true);
-			if (player->scoreadd)
-				player->scoreadd--;
+			if (dorollstuff && player->mo->state-states != S_PLAY_BOUNCE_LANDING)
+			{
+				P_MobjCheckWater(player->mo);
+				player->mo->momz *= -1;
+				P_DoAbilityBounce(player, true);
+				if (player->scoreadd)
+					player->scoreadd--;
+			}
 			clipmomz = false;
+		}
+		else
+		{
+			if (player->pflags & PF_SPINNING)
+			{
+				if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
+				{
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+					S_StartSound(player->mo, sfx_spin);
+				}
+			}
+			else if (player->pflags & PF_GLIDING) // ground gliding
+			{
+				if (dorollstuff)
+				{
+					player->skidtime = TICRATE;
+					player->mo->tics = -1;
+				}
+				else if (!player->skidtime)
+					player->pflags &= ~PF_GLIDING;
+			}
+			else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+			{
+				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
+				{
+					mobjtype_t type = player->revitem;
+					P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
+					player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+					S_StartSound(player->mo, sfx_s3k8b);
+					player->pflags |= PF_FULLSTASIS;
+
+					// hearticles
+					if (type)
+					{
+						UINT8 i = 0;
+						angle_t throwang = -(2*ANG30);
+						fixed_t xo = P_ReturnThrustX(player->mo, player->drawangle, 16*player->mo->scale);
+						fixed_t yo = P_ReturnThrustY(player->mo, player->drawangle, 16*player->mo->scale);
+						fixed_t zo = 6*player->mo->scale;
+						fixed_t mu = FixedMul(player->maxdash, player->mo->scale);
+						fixed_t mu2 = FixedHypot(player->mo->momx, player->mo->momy);
+						fixed_t ev;
+						mobj_t *missile = NULL;
+						if (mu2 < mu)
+							mu2 = mu;
+						ev = (50*FRACUNIT - (mu/25))/50;
+						while (i < 5)
+						{
+							missile = P_SpawnMobjFromMobj(player->mo, xo, yo, zo, type);
+							P_SetTarget(&missile->target, player->mo);
+							missile->angle = throwang + player->drawangle;
+							P_Thrust(missile, player->drawangle + ANGLE_90,
+								P_ReturnThrustY(missile, throwang, mu)); // side to side component
+							P_Thrust(missile, player->drawangle, mu2); // forward component
+							P_SetObjectMomZ(missile, (4 + ((i&1)<<1))*FRACUNIT, true);
+							missile->momz += player->mo->pmomz;
+							missile->fuse = TICRATE/2;
+							missile->extravalue2 = ev;
+
+							i++;
+							throwang += ANG30;
+						}
+						if (mobjinfo[type].seesound && missile)
+							S_StartSound(missile, missile->info->seesound);
+					}
+				}
+			}
+			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+				;
+			else if (player->panim != PA_IDLE && player->panim != PA_WALK && player->panim != PA_RUN && player->panim != PA_DASH)
+			{
+				if (player->cmomx || player->cmomy)
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->rmomx || player->rmomy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
+				else
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->mo->momx || player->mo->momy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
+			}
+
+			if (!(player->pflags & PF_GLIDING))
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+			player->pflags &= ~(PF_STARTJUMP|PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
+			player->secondjump = 0;
+			player->glidetime = 0;
+			player->climbing = 0;
+			player->powers[pw_tailsfly] = 0;
+
+			if (player->pflags & PF_SHIELDABILITY)
+			{
+				player->pflags &= ~PF_SHIELDABILITY;
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
+				{
+					if (player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
+						S_StartSound(player->mo, sfx_s3k4c);
+					else // create a fire pattern on the ground
+					{
+						S_StartSound(player->mo, sfx_s3k47);
+						P_ElementalFire(player, true);
+					}
+					P_SetObjectMomZ(player->mo,
+					(player->mo->eflags & MFE_UNDERWATER)
+					? 6*FRACUNIT/5
+					: 5*FRACUNIT/2,
+					false);
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+					player->mo->momx = player->mo->momy = 0;
+					clipmomz = false;
+				}
+				else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
+				{
+					P_DoBubbleBounce(player);
+					clipmomz = false;
+				}
+			}
 		}
 	}
 
@@ -8080,7 +8085,7 @@ static void P_MovePlayer(player_t *player)
 	}
 	else if (player->pflags & PF_BOUNCING)
 	{
-		if (!(player->pflags & PF_JUMPDOWN) || (onground && P_MobjFlip(player->mo)*player->mo->momz <= 0)) // If not holding the jump button OR on flat ground
+		if (!(player->pflags & PF_JUMPDOWN)) // If not holding the jump button
 		{
 			P_ResetPlayer(player); // down, stop bouncing.
 			player->pflags |= PF_THOKKED;
