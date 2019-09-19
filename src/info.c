@@ -212,9 +212,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"GARG", // Deep Sea Gargoyle
 	"SEWE", // Deep Sea Seaweed
 	"DRIP", // Dripping water
-	"CRL1", // Coral 1
-	"CRL2", // Coral 2
-	"CRL3", // Coral 3
+	"CORL", // Coral
 	"BCRY", // Blue Crystal
 	"KELP", // Kelp
 	"ALGA", // Animated algae top
@@ -248,7 +246,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	// Arid Canyon Scenery
 	"BTBL", // Big tumbleweed
 	"STBL", // Small tumbleweed
-	"CACT", // Cacti sprites
+	"CACT", // Cacti
 	"WWSG", // Caution Sign
 	"WWS2", // Cacti Sign
 	"WWS3", // Sharp Turn Sign
@@ -2166,14 +2164,12 @@ state_t states[NUMSTATES] =
 	{SPR_DRIP, FF_TRANS30|4,         1, {NULL},                  0, 0, S_DRIPC2}, // S_DRIPC1
 	{SPR_DRIP, FF_TRANS30|5,         1, {NULL},                  0, 0,   S_NULL}, // S_DRIPC2
 
-	// Coral 1
-	{SPR_CRL1, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL1
-
-	// Coral 2
-	{SPR_CRL2, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL2
-
-	// Coral 3
-	{SPR_CRL3, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL3
+	// Coral
+	{SPR_CORL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL1
+	{SPR_CORL, 1, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL2
+	{SPR_CORL, 2, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL3
+	{SPR_CORL, 3, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL4
+	{SPR_CORL, 4, -1, {NULL}, 0, 0, S_NULL}, // S_CORAL5
 
 	// Blue Crystal
 	{SPR_BCRY, FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_BLUECRYSTAL1
@@ -10093,8 +10089,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
+		29*FRACUNIT,     // radius
+		40*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
@@ -10120,8 +10116,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
+		30*FRACUNIT,     // radius
+		53*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
@@ -10147,8 +10143,62 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
+		28*FRACUNIT,     // radius
+		41*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CORAL4
+		1014,           // doomednum
+		S_CORAL4,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		56*FRACUNIT,     // radius
+		112*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CORAL5
+		1015,           // doomednum
+		S_CORAL5,       // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		56*FRACUNIT,     // radius
+		112*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage

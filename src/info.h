@@ -458,9 +458,7 @@ typedef enum sprite
 	SPR_GARG, // Deep Sea Gargoyle
 	SPR_SEWE, // Deep Sea Seaweed
 	SPR_DRIP, // Dripping water
-	SPR_CRL1, // Coral 1
-	SPR_CRL2, // Coral 2
-	SPR_CRL3, // Coral 3
+	SPR_CORL, // Coral
 	SPR_BCRY, // Blue Crystal
 	SPR_KELP, // Kelp
 	SPR_ALGA, // Animated algae top
@@ -494,7 +492,7 @@ typedef enum sprite
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
-	SPR_CACT, // Cacti sprites
+	SPR_CACT, // Cacti
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
@@ -2291,14 +2289,12 @@ typedef enum state
 	S_DRIPC1,
 	S_DRIPC2,
 
-	// Coral 1
+	// Coral
 	S_CORAL1,
-
-	// Coral 2
 	S_CORAL2,
-
-	// Coral 3
 	S_CORAL3,
+	S_CORAL4,
+	S_CORAL5,
 
 	// Blue Crystal
 	S_BLUECRYSTAL1,
@@ -4199,9 +4195,11 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 1
-	MT_CORAL2, // Coral 2
-	MT_CORAL3, // Coral 3
+	MT_CORAL1, // Coral 
+	MT_CORAL2,
+	MT_CORAL3,
+	MT_CORAL4,
+	MT_CORAL5,
 	MT_BLUECRYSTAL, // Blue Crystal
 	MT_KELP, // Kelp
 	MT_ANIMALGAETOP, // Animated algae top

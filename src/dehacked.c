@@ -5578,14 +5578,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
@@ -7464,9 +7462,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
 	"MT_ANIMALGAETOP", // Animated algae top
