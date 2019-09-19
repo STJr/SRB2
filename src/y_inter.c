@@ -261,7 +261,7 @@ void Y_IntermissionDrawer(void)
 
 			// draw time
 			ST_DrawPatchFromHud(HUD_TIME, sbotime);
-			if (cv_timetic.value == 1)
+			if (cv_timetic.value == 3)
 				ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
 			else
 			{
@@ -275,8 +275,7 @@ void Y_IntermissionDrawer(void)
 				ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
 				ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
 
-				// we should show centiseconds on the intermission screen too, if the conditions are right.
-				if (modeattacking || cv_timetic.value == 2)
+				if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
 				{
 					ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
 					ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
