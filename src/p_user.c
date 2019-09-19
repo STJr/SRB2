@@ -10989,7 +10989,8 @@ void P_PlayerThink(player_t *player)
 
 	if (player->exiting == 2 || countdown2 == 2)
 	{
-		if (cv_playersforexit.value) // Count to be sure everyone's exited
+		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+		if (numneeded) // Count to be sure everyone's exited
 		{
 			INT32 i, total = 0, exiting = 0;
 
@@ -11005,7 +11006,7 @@ void P_PlayerThink(player_t *player)
 					exiting++;
 			}
 
-			if (!total || ((4*exiting)/total) >= cv_playersforexit.value)
+			if (!total || ((4*exiting)/total) >= numneeded)
 			{
 				if (server)
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
