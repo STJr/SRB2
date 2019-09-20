@@ -242,7 +242,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
-RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
 	if (style == AST_TRANSLUCENT)
@@ -299,13 +299,13 @@ RGBA_t ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		// just copy the pixel
 		else if (style == AST_COPY)
-			return background;
+			output.rgba = foreground.rgba;
+
+		output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #undef clamp
-	// unimplemented blend modes return the background pixel
-	output = background;
-	output.s.alpha = 0xFF;
-	return output;
+	return 0;
 }
 
 UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
@@ -322,7 +322,7 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 	}
 	// just copy the pixel
 	else if (style == AST_COPY)
-		return background;
+		return foreground;
 	// use ASTBlendPixel for all other blend modes
 	// and find the nearest colour in the palette
 	else if (style != AST_TRANSLUCENT)
@@ -330,7 +330,7 @@ UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 al
 		RGBA_t texel;
 		RGBA_t bg = V_GetColor(background);
 		RGBA_t fg = V_GetColor(foreground);
-		texel = ASTBlendPixel(bg, fg, style, alpha);
+		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
 	// fallback if all above fails, somehow
