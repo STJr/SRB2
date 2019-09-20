@@ -2100,7 +2100,7 @@ static inline void G_PlayerFinishLevel(INT32 player)
 // G_PlayerReborn
 // Called after a player dies. Almost everything is cleared and initialized.
 //
-void G_PlayerReborn(INT32 player)
+void G_PlayerReborn(INT32 player, boolean betweenmaps)
 {
 	player_t *p;
 	INT32 score;
@@ -2205,7 +2205,7 @@ void G_PlayerReborn(INT32 player)
 	bot = players[player].bot;
 	pity = players[player].pity;
 
-	if (!G_IsSpecialStage(gamemap))
+	if (betweenmaps || !G_IsSpecialStage(gamemap))
 	{
 		rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
 		spheres = 0;
@@ -2284,6 +2284,28 @@ void G_PlayerReborn(INT32 player)
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
+	// Check to make sure their color didn't change somehow...
+	if (G_GametypeHasTeams())
+	{
+		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
+		{
+			if (p == &players[consoleplayer])
+				CV_SetValue(&cv_playercolor, skincolor_redteam);
+			else if (p == &players[secondarydisplayplayer])
+				CV_SetValue(&cv_playercolor2, skincolor_redteam);
+		}
+		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
+		{
+			if (p == &players[consoleplayer])
+				CV_SetValue(&cv_playercolor, skincolor_blueteam);
+			else if (p == &players[secondarydisplayplayer])
+				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
+		}
+	}
+
+	if (betweenmaps)
+		return;
+
 	if (p-players == consoleplayer)
 	{
 		if (mapmusflags & MUSIC_RELOADRESET)
@@ -2303,9 +2325,6 @@ void G_PlayerReborn(INT32 player)
 	if (gametype == GT_COOP)
 		P_FindEmerald(); // scan for emeralds to hunt for
 
-	// Reset Nights score and max link to 0 on death
-	p->marescore = p->maxlink = 0;
-
 	// If NiGHTS, find lowest mare to start with.
 	p->mare = P_FindLowestMare();
 
@@ -2313,27 +2332,6 @@ void G_PlayerReborn(INT32 player)
 
 	if (p->mare == 255)
 		p->mare = 0;
-
-	p->marelap = p->marebonuslap = 0;
-
-	// Check to make sure their color didn't change somehow...
-	if (G_GametypeHasTeams())
-	{
-		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_redteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_redteam);
-		}
-		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_blueteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
-		}
-	}
 }
 
 //

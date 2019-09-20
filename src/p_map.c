@@ -2881,11 +2881,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 			thing->z = thing->ceilingz - thing->height;
 	}
 
-	if (thing->z != oldz)
-	{
-		if (thing->player)
-			P_PlayerHitFloor(thing->player, !onfloor);
-	}
+	if (P_MobjFlip(thing)*(thing->z - oldz) > 0 && thing->player)
+		P_PlayerHitFloor(thing->player, !onfloor);
 
 	// debug: be sure it falls to the floor
 	thing->eflags &= ~MFE_ONGROUND;
@@ -3199,7 +3196,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				&& glidesector->sector->ceilingpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < ceilingz)
+			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < floorz)
 				|| (player->mo->z >= ceilingz))
 				floorclimb = true;
 		}
