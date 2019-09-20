@@ -9596,7 +9596,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
-	if ((thiscam == &camera && cv_cam_orbit.value) || (thiscam == &camera2 && cv_cam2_orbit.value)) //Sev here, I'm guessing this is where orbital cam lives
+	if (camorbit) //Sev here, I'm guessing this is where orbital cam lives
 	{
 		if (rendermode == render_opengl)
 			distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
