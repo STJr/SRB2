@@ -131,11 +131,12 @@ int main(int argc, char **argv)
 #ifdef LOGMESSAGES
 	if (!M_CheckParm("-nolog"))
 	{
-		logdir = D_Home();
-
 		time_t my_time;
 		struct tm * timeinfo;
 		char buf[26];
+
+		logdir = D_Home();
+
 		my_time = time(NULL);
 		timeinfo = localtime(&my_time);
 
@@ -183,8 +184,11 @@ int main(int argc, char **argv)
 	// startup SRB2
 	CONS_Printf("Setting up SRB2...\n");
 	D_SRB2Main();
+#ifdef LOGMESSAGES
+	if (!M_CheckParm("-nolog"))
+		CONS_Printf("Logfile: %s\n", logfile);
+#endif
 	CONS_Printf("Entering main game loop...\n");
-	CONS_Printf("%s\n", logfile);
 	// never return
 	D_SRB2Loop();
 
