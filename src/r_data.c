@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
+#include "byteptr.h"
 #include "dehacked.h"
 
 #ifdef _WIN32
@@ -2819,18 +2820,14 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 
-	#define WRITE8(buf, a) ({*buf = (a); buf++;})
-	#define WRITE16(buf, a) ({*buf = (a)&255; buf++; *buf = (a)>>8; buf++;})
-	#define WRITE32(buf, a) ({WRITE16(buf, (a)&65535); WRITE16(buf, (a)>>16);})
-
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
 	// Write image size and offset
-	WRITE16(imgptr, width);
-	WRITE16(imgptr, height);
-	WRITE16(imgptr, leftoffset);
-	WRITE16(imgptr, topoffset);
+	WRITEINT16(imgptr, width);
+	WRITEINT16(imgptr, height);
+	WRITEINT16(imgptr, leftoffset);
+	WRITEINT16(imgptr, topoffset);
 
 	// Leave placeholder to column pointers
 	colpointers = imgptr;
@@ -2845,7 +2842,7 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 		//printf("%d ", x);
 		// Write column pointer (@TODO may be wrong)
-		WRITE32(colpointers, imgptr - imgbuf);
+		WRITEINT32(colpointers, imgptr - imgbuf);
 
 		// Write pixels
 		for (y = 0; y < height; y++)
@@ -2857,7 +2854,7 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 			if (!opaque)
 			{
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 				startofspan = NULL;
 				continue;
 			}
@@ -2869,15 +2866,15 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 				// If we reached the span size limit, finish the previous span
 				if (startofspan)
-					WRITE8(imgptr, 0);
+					WRITEUINT8(imgptr, 0);
 
 				if (y > 254)
 				{
 					// Make sure we're aligned to 254
 					if (lastStartY < 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						lastStartY = 254;
 					}
@@ -2887,15 +2884,15 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 
 					while (writeY > 254)
 					{
-						WRITE8(imgptr, 254);
-						WRITE8(imgptr, 0);
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
 						imgptr += 2;
 						writeY -= 254;
 					}
 				}
 
 				startofspan = imgptr;
-				WRITE8(imgptr, writeY);///@TODO calculate starting y pos
+				WRITEUINT8(imgptr, writeY);///@TODO calculate starting y pos
 				imgptr += 2;
 				spanSize = 0;
 
@@ -2903,20 +2900,16 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize, boolean t
 			}
 
 			// Write the pixel
-			WRITE8(imgptr, paletteIndex);
+			WRITEUINT8(imgptr, paletteIndex);
 			spanSize++;
 			startofspan[1] = spanSize;
 		}
 
 		if (startofspan)
-			WRITE8(imgptr, 0);
+			WRITEUINT8(imgptr, 0);
 
-		WRITE8(imgptr, 0xFF);
+		WRITEUINT8(imgptr, 0xFF);
 	}
-
-	#undef WRITE8
-	#undef WRITE16
-	#undef WRITE32
 
 	size = imgptr-imgbuf;
 	img = Z_Malloc(size, PU_STATIC, NULL);
