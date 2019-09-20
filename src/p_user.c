@@ -9337,12 +9337,16 @@ consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 
 consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_dist = {"cam2_dist", "160", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_height = {"cam2_height", "25", CV_FLOAT|CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 fixed_t t_cam_dist = -42;
 fixed_t t_cam_height = -42;
@@ -9396,9 +9400,9 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
 	INT32 camrotate;
-	boolean camstill, cameranoclip;
+	boolean camstill, cameranoclip, camorbit;
 	mobj_t *mo;
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
@@ -9479,6 +9483,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		// force defaults because we have a camera look section
 		camspeed = (INT32)(atof(cv_cam_speed.defaultvalue) * FRACUNIT);
 		camstill = (!stricmp(cv_cam_still.defaultvalue, "off")) ? false : true;
+		camorbit = (!stricmp(cv_cam_orbit.defaultvalue, "off")) ? false : true;
 		camrotate = atoi(cv_cam_rotate.defaultvalue);
 		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
 		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), FixedMul(player->camerascale, mo->scale));
@@ -9487,6 +9492,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
+		camorbit = cv_cam_orbit.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, mo->scale);
 		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
@@ -9495,6 +9501,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		camspeed = cv_cam2_speed.value;
 		camstill = cv_cam2_still.value;
+		camorbit = cv_cam2_orbit.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
 		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
@@ -9604,13 +9611,50 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			dist <<= 1;
 	}
 
+
+
 	checkdist = (dist = FixedMul(dist, player->camerascale));
 
 	if (checkdist < 128*FRACUNIT)
 		checkdist = 128*FRACUNIT;
 
-	x = mo->x - FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
-	y = mo->y - FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
+	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) // This block here is like 90% Lach's work, thanks bud
+	{
+		if ((thiscam == &camera && cv_cam_adjust.value) || (thiscam == &camera2 && cv_cam2_adjust.value))
+		{
+			if (!(mo->eflags & MFE_JUSTHITFLOOR) && (P_IsObjectOnGround(mo)) // Check that player is grounded
+			&& thiscam->ceilingz - thiscam->floorz >= P_GetPlayerHeight(player)) // Check that camera's sector is large enough for the player to fit into, at least
+			{
+				if (mo->eflags & MFE_VERTICALFLIP) // if player is upside-down
+				{
+					//z = min(z, thiscam->ceilingz); // solution 1: change new z coordinate to be at LEAST its ground height
+					slopez += min(thiscam->ceilingz - mo->z, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+				}
+				else // player is not upside-down
+				{
+					//z = max(z, thiscam->floorz); // solution 1: change new z coordinate to be at LEAST its ground height
+					slopez += max(thiscam->floorz - mo->z - mo->height, 0); // solution 2: change new z coordinate by the difference between camera's ground and top of player
+				}
+			}
+		}
+	}
+
+	if (camorbit) //Sev here, I'm guessing this is where orbital cam lives
+	{
+		if (rendermode == render_opengl)
+			distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
+		else
+			distxy = dist;
+		distz = -FixedMul(dist, FINESINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK)) + slopez;
+	}
+	else
+	{
+		distxy = dist;
+		distz = slopez;
+	}
+
+	x = mo->x - FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
+	y = mo->y - FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), distxy);
 
 #if 0
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
@@ -9647,9 +9691,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	pviewheight = FixedMul(41*player->height/48, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight;
+		z = mo->z + mo->height - pviewheight - camheight + distz;
 	else
-		z = mo->z + pviewheight + camheight;
+		z = mo->z + pviewheight + camheight + distz;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -9962,6 +10006,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
+
 }
 
 boolean P_SpectatorJoinGame(player_t *player)
