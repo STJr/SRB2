@@ -1019,7 +1019,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (tmthing->flags & MF_SHOOTABLE && thing->health > 0)
 		{
-			UINT8 damagetype = (thing->info->mass & 0xFF);
+			UINT32 damagetype = (thing->info->mass & 0xFF);
 			if (!damagetype && thing->flags & MF_FIRE) // BURN!
 				damagetype = DMG_FIRE;
 			if (P_DamageMobj(tmthing, thing, thing, 1, damagetype) && (damagetype = (thing->info->mass>>8)))
@@ -1036,7 +1036,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->flags & MF_SHOOTABLE && tmthing->health > 0)
 		{
-			UINT8 damagetype = (tmthing->info->mass & 0xFF);
+			UINT32 damagetype = (tmthing->info->mass & 0xFF);
 			if (!damagetype && tmthing->flags & MF_FIRE) // BURN!
 				damagetype = DMG_FIRE;
 			if (P_DamageMobj(thing, tmthing, tmthing, 1, damagetype) && (damagetype = (tmthing->info->mass>>8)))
@@ -2881,11 +2881,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 			thing->z = thing->ceilingz - thing->height;
 	}
 
-	if (thing->z != oldz)
-	{
-		if (thing->player)
-			P_PlayerHitFloor(thing->player, !onfloor);
-	}
+	if (P_MobjFlip(thing)*(thing->z - oldz) > 0 && thing->player)
+		P_PlayerHitFloor(thing->player, !onfloor);
 
 	// debug: be sure it falls to the floor
 	thing->eflags &= ~MFE_ONGROUND;
@@ -3199,7 +3196,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				&& glidesector->sector->ceilingpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < ceilingz)
+			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < floorz)
 				|| (player->mo->z >= ceilingz))
 				floorclimb = true;
 		}

@@ -2381,21 +2381,41 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 {
+	fixed_t topheight;
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	{
-		fixed_t topheight =
-	#ifdef ESLOPE
-			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
-	#endif
-			*rover->topheight;
+	// not a lava block with solid planes
+	if (!(rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+		&& !(rover->master->flags & ML_BLOCKMONSTERS)))
+		return false;
 
-		if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
-			&& !(rover->master->flags & ML_BLOCKMONSTERS)
-			&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale)))
+	// is solid from the sides
+	if (rover->master->flags & ML_EFFECT3)
+		return true;
+
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		topheight =
+	#ifdef ESLOPE
+			*rover->b_slope ? P_GetZAt(*rover->b_slope, mo->x, mo->y) :
+	#endif
+			*rover->bottomheight;
+
+		if (mo->z+mo->height-mo->momz < topheight + FixedMul(16*FRACUNIT, mo->scale))
 				return true;
+		return false;
 	}
+
+	topheight =
+	#ifdef ESLOPE
+		*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+	#endif
+		*rover->topheight;
+
+	if (mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale))
+		return true;
 
 	return false;
 }
@@ -3981,6 +4001,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
+#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
 		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
 			mobj->player->pflags &= ~PF_STARTJUMP;
 		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
@@ -3990,6 +4011,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			mobj->player->powers[pw_tailsfly] = 0;
 			P_SetPlayerMobjState(mobj, S_PLAY_WALK);
 		}
+#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -10412,7 +10434,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj_t *mobj;
 
 	if (p->playerstate == PST_REBORN)
-		G_PlayerReborn(playernum);
+		G_PlayerReborn(playernum, false);
 
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())

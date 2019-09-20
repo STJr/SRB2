@@ -739,7 +739,7 @@ state_t states[NUMSTATES] =
 
 	// CA_FLY/CA_SWIM
 	{SPR_PLAY, SPR2_FLY ,                 2, {NULL}, 0,  0, S_PLAY_FLY},  // S_PLAY_FLY
-	{SPR_PLAY, SPR2_SWIM,                 2, {NULL}, 0,  0, S_PLAY_SWIM}, // S_PLAY_SWIM
+	{SPR_PLAY, SPR2_SWIM,                 4, {NULL}, 0,  0, S_PLAY_SWIM}, // S_PLAY_SWIM
 	{SPR_PLAY, SPR2_TIRE,                12, {NULL}, 0,  0, S_PLAY_FLY_TIRED}, // S_PLAY_FLY_TIRED
 
 	// CA_GLIDEANDCLIMB
@@ -10041,7 +10041,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_SPAWNCEILING|MF_NOGRAVITY,  // flags
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SPAWNCEILING|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10068,7 +10068,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SPECIAL|MF_SCENERY,     // flags
+		MF_SPECIAL|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10089,13 +10089,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		29*FRACUNIT,     // radius
+		29*FRACUNIT,    // radius
 		40*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10116,13 +10116,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		30*FRACUNIT,     // radius
+		30*FRACUNIT,    // radius
 		53*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10143,13 +10143,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		28*FRACUNIT,     // radius
+		28*FRACUNIT,    // radius
 		41*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10170,13 +10170,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		56*FRACUNIT,     // radius
-		112*FRACUNIT,    // height
+		56*FRACUNIT,    // radius
+		112*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10197,13 +10197,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		56*FRACUNIT,     // radius
-		112*FRACUNIT,    // height
+		56*FRACUNIT,    // radius
+		112*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10230,13 +10230,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY,     // flags
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
 	{           // MT_KELP
 		1007,           // doomednum
-		S_KELP, // spawnstate
+		S_KELP,         // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10251,13 +10251,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		16*FRACUNIT,     // radius
-		292*FRACUNIT,    // height
+		16*FRACUNIT,    // radius
+		292*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SCENERY|MF_NOBLOCKMAP,     // flags
+		MF_SCENERY|MF_NOBLOCKMAP, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10284,7 +10284,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,               // mass
 		0,               // damage
 		sfx_None,        // activesound
-		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_RUNSPAWNFUNC,     // flags
+		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10311,13 +10311,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY,     // flags
+		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
 	{           // MT_DSZSTALAGMITE
 		1008,           // doomednum
-		S_DSZSTALAGMITE, // spawnstate
+		S_DSZSTALAGMITE,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10333,12 +10333,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		8*FRACUNIT,     // radius
-		116*FRACUNIT,    // height
+		116*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SCENERY|MF_SOLID,     // flags
+		MF_SCENERY|MF_SOLID, // flags
 		S_NULL          // raisestate
 	},
 
@@ -10360,18 +10360,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		8*FRACUNIT,     // radius
-		116*FRACUNIT,    // height
+		116*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SCENERY|MF_SOLID,     // flags
+		MF_SCENERY|MF_SOLID, // flags
 		S_NULL          // raisestate
 	},
 
 	{           // MT_LIGHTBEAM
 		1010,           // doomednum
-		S_LIGHTBEAM1, // spawnstate
+		S_LIGHTBEAM1,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10386,7 +10386,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		16*FRACUNIT,     // radius
+		16*FRACUNIT,    // radius
 		16*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
@@ -10452,7 +10452,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_FLAMEPARTICLE
 		-1,             // doomednum
-		S_FLAMEPARTICLE, // spawnstate
+		S_FLAMEPARTICLE,// spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -11737,7 +11737,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		24*FRACUNIT,    // radius
-		224*FRACUNIT,    // height
+		224*FRACUNIT,   // height
 		0,              // display offset
 		DMG_SPIKE,      // mass
 		0,              // damage
@@ -11764,7 +11764,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		24*FRACUNIT,    // radius
-		256*FRACUNIT,    // height
+		256*FRACUNIT,   // height
 		0,              // display offset
 		DMG_SPIKE,      // mass
 		0,              // damage

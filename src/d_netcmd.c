@@ -637,6 +637,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_screenshot_folder);
 	CV_RegisterVar(&cv_screenshot_colorprofile);
 	CV_RegisterVar(&cv_moviemode);
+	CV_RegisterVar(&cv_movie_option);
+	CV_RegisterVar(&cv_movie_folder);
 	// PNG variables
 	CV_RegisterVar(&cv_zlib_level);
 	CV_RegisterVar(&cv_zlib_memory);
