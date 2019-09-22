@@ -8018,7 +8018,7 @@ static void P_MovePlayer(player_t *player)
 		fixed_t momx = mo->momx, momy = mo->momy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
 
-		if (player->powers[pw_super])
+		if (player->powers[pw_super] || player->powers[pw_sneakers])
 			glidespeed *= 2;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -8036,17 +8036,7 @@ static void P_MovePlayer(player_t *player)
 		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
 		angle = mo->angle - leeway;
 
-		if (player->skidtime) // ground gliding
-		{
-			fixed_t speed = FixedMul(glidespeed, FRACUNIT - (FRACUNIT>>2));
-			if (player->mo->eflags & MFE_UNDERWATER)
-				speed >>= 1;
-			speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
-			if (speed < 0)
-				speed = 0;
-			P_InstaThrust(player->mo, moveangle, speed);
-		}
-		else
+		if (!player->skidtime)
 		{
 			//fixed_t glidex, glidey = 0;
 			fixed_t speed, scale = mo->scale;
