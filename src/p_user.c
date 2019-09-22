@@ -5240,7 +5240,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->glidetime = 0;
 
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-						P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
+						//P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 					}
 					break;
@@ -8010,8 +8010,12 @@ static void P_MovePlayer(player_t *player)
 	// AKA my own gravity. =)
 	if (player->pflags & PF_GLIDING)
 	{
+		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
 		fixed_t leeway;
-		fixed_t glidespeed = player->actionspd;
+		fixed_t glidespeed = player->normalspeed; // TODO: this should be actionspd, but I wanted to play around with making glide less of a flow-killer
+		fixed_t momx = mo->momx, momy = mo->momy;
+		angle_t angle = mo->angle;
+		angle_t moveangle = R_PointToAngle2(0, 0, momx, momy);
 
 		if (player->powers[pw_super])
 			glidespeed *= 2;
@@ -8038,12 +8042,29 @@ static void P_MovePlayer(player_t *player)
 			speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
 			if (speed < 0)
 				speed = 0;
-			P_InstaThrust(player->mo, player->mo->angle-leeway, speed);
+			P_InstaThrust(player->mo, moveangle - leeway, speed);
 		}
-		else if (player->mo->eflags & MFE_UNDERWATER)
-			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((glidespeed>>1) + player->glidetime*750, player->mo->scale));
 		else
-			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(glidespeed + player->glidetime*1500, player->mo->scale));
+		{
+			fixed_t speed, glidex, glidey = 0, scale = mo->scale;
+			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(abs(((angle >> ANGLETOFINESHIFT) & FINEMASK) - ((moveangle >> ANGLETOFINESHIFT) & FINEMASK))); // mamgic number BAD but this feels right
+
+			if (mo->eflags & MFE_UNDERWATER)
+				speed = FixedMul((glidespeed>>1) + player->glidetime*750, scale);
+			else
+				speed = FixedMul(glidespeed + player->glidetime*1500, scale);
+
+			glidex = P_ReturnThrustX(mo, angle, speed);
+
+			if (!(twodlevel || (mo->flags2 & MF2_TWOD)))
+				glidey = P_ReturnThrustY(mo, angle, speed);
+
+			P_Thrust(mo, angle, FixedMul(accelfactor, scale));
+			if (P_AproxDistance(mo->momx, mo->momy) > speed)
+			{
+				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->momx, mo->momy), speed);
+			}
+		}
 
 		player->glidetime++;
 
@@ -11175,7 +11196,7 @@ void P_PlayerThink(player_t *player)
 			;
 		else if (!(player->pflags & PF_DIRECTIONCHAR)
 		|| (player->climbing // stuff where the direction is forced at all times
-		|| (player->pflags & PF_GLIDING))
+		/*|| (player->pflags & PF_GLIDING)*/)
 		|| (P_AnalogMove(player) || twodlevel || player->mo->flags2 & MF2_TWOD) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 		|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 			player->drawangle = player->mo->angle;
@@ -11219,7 +11240,12 @@ void P_PlayerThink(player_t *player)
 			angle_t diff;
 			UINT8 factor;
 
-			if (player->pflags & PF_SLIDING)
+			if (player->pflags & PF_GLIDING)
+			{
+				diff = (R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - player->drawangle);
+				factor = 4;
+			}
+			else if (player->pflags & PF_SLIDING)
 			{
 #if 0 // fun hydrocity style horizontal spin
 				if (player->mo->eflags & MFE_TOUCHWATER || player->powers[pw_flashing] > (flashingtics/4)*3)
