@@ -8014,8 +8014,7 @@ static void P_MovePlayer(player_t *player)
 		fixed_t leeway;
 		fixed_t glidespeed = player->normalspeed; // TODO: this should be actionspd, but I wanted to play around with making glide less of a flow-killer
 		fixed_t momx = mo->momx, momy = mo->momy;
-		angle_t angle = mo->angle;
-		angle_t moveangle = R_PointToAngle2(0, 0, momx, momy);
+		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
 
 		if (player->powers[pw_super])
 			glidespeed *= 2;
@@ -8032,7 +8031,8 @@ static void P_MovePlayer(player_t *player)
 		}
 
 		// Strafing while gliding.
-		leeway = FixedAngle(cmd->sidemove*(FRACUNIT/2));
+		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
+		angle = mo->angle - leeway;
 
 		if (player->skidtime) // ground gliding
 		{
@@ -8042,22 +8042,23 @@ static void P_MovePlayer(player_t *player)
 			speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
 			if (speed < 0)
 				speed = 0;
-			P_InstaThrust(player->mo, moveangle - leeway, speed);
+			P_InstaThrust(player->mo, moveangle, speed);
 		}
 		else
 		{
-			fixed_t speed, glidex, glidey = 0, scale = mo->scale;
-			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(abs(((angle >> ANGLETOFINESHIFT) & FINEMASK) - ((moveangle >> ANGLETOFINESHIFT) & FINEMASK))); // mamgic number BAD but this feels right
+			//fixed_t glidex, glidey = 0;
+			fixed_t speed, scale = mo->scale;
+			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK); // mamgic number BAD but this feels right
 
 			if (mo->eflags & MFE_UNDERWATER)
 				speed = FixedMul((glidespeed>>1) + player->glidetime*750, scale);
 			else
 				speed = FixedMul(glidespeed + player->glidetime*1500, scale);
 
-			glidex = P_ReturnThrustX(mo, angle, speed);
+			/*glidex = P_ReturnThrustX(mo, angle, speed);
 
 			if (!(twodlevel || (mo->flags2 & MF2_TWOD)))
-				glidey = P_ReturnThrustY(mo, angle, speed);
+				glidey = P_ReturnThrustY(mo, angle, speed);*/
 
 			P_Thrust(mo, angle, FixedMul(accelfactor, scale));
 			if (P_AproxDistance(mo->momx, mo->momy) > speed)
@@ -11242,7 +11243,10 @@ void P_PlayerThink(player_t *player)
 
 			if (player->pflags & PF_GLIDING)
 			{
-				diff = (R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - player->drawangle);
+				if (player->speed < player->mo->scale)
+					diff = player->mo->angle - player->drawangle;
+				else
+					diff = (R_PointToAngle2(0, 0, player->rmomx, player->rmomy) - player->drawangle);
 				factor = 4;
 			}
 			else if (player->pflags & PF_SLIDING)
