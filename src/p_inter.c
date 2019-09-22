@@ -1701,13 +1701,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			if (mariomode)
 				return;
+			if (special->state-states != S_EXTRALARGEBUBBLE)
+				return; // Don't grab the bubble during its spawn animation
 			else if (toucher->eflags & MFE_VERTICALFLIP)
 			{
-				if (special->z+special->height < toucher->z + toucher->height / 3
-				 || special->z+special->height > toucher->z + (toucher->height*2/3))
+				if (special->z+special->height < toucher->z
+					|| special->z+special->height > toucher->z + (toucher->height*2/3))
 					return; // Only go in the mouth
 			}
-			else if (special->z < toucher->z + toucher->height / 3
+			else if (special->z < toucher->z
 				|| special->z > toucher->z + (toucher->height*2/3))
 				return; // Only go in the mouth
 

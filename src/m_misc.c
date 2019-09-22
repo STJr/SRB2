@@ -108,6 +108,9 @@ consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAV
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_movie_option = {"movie_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Moviemode_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_movie_folder = {"movie_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t zlib_mem_level_t[] = {
 	{1, "(Min Memory) 1"},
 	{2, "2"}, {3, "3"}, {4, "4"}, {5, "5"}, {6, "6"}, {7, "7"},
@@ -1124,19 +1127,25 @@ static inline moviemode_t M_StartMovieGIF(const char *pathname)
 void M_StartMovie(void)
 {
 #if NUMSCREENS > 2
-	const char *pathname = ".";
+	char pathname[MAX_WADPATH];
 
 	if (moviemode)
 		return;
 
-	if (cv_screenshot_option.value == 0)
-		pathname = usehome ? srb2home : srb2path;
-	else if (cv_screenshot_option.value == 1)
-		pathname = srb2home;
-	else if (cv_screenshot_option.value == 2)
-		pathname = srb2path;
-	else if (cv_screenshot_option.value == 3 && *cv_screenshot_folder.string != '\0')
-		pathname = cv_screenshot_folder.string;
+	if (cv_movie_option.value == 0)
+		strcpy(pathname, usehome ? srb2home : srb2path);
+	else if (cv_movie_option.value == 1)
+		strcpy(pathname, srb2home);
+	else if (cv_movie_option.value == 2)
+		strcpy(pathname, srb2path);
+	else if (cv_movie_option.value == 3 && *cv_movie_folder.string != '\0')
+		strcpy(pathname, cv_movie_folder.string);
+
+	if (cv_movie_option.value != 3)
+	{
+		strcat(pathname, PATHSEP"movies"PATHSEP);
+		I_mkdir(pathname, 0755);
+	}
 
 	if (rendermode == render_none)
 		I_Error("Can't make a movie without a render system\n");
@@ -1474,7 +1483,8 @@ void M_ScreenShot(void)
 void M_DoScreenShot(void)
 {
 #if NUMSCREENS > 2
-	const char *freename = NULL, *pathname = ".";
+	const char *freename = NULL;
+	char pathname[MAX_WADPATH];
 	boolean ret = false;
 	UINT8 *linear = NULL;
 
@@ -1486,13 +1496,19 @@ void M_DoScreenShot(void)
 		return;
 
 	if (cv_screenshot_option.value == 0)
-		pathname = usehome ? srb2home : srb2path;
+		strcpy(pathname, usehome ? srb2home : srb2path);
 	else if (cv_screenshot_option.value == 1)
-		pathname = srb2home;
+		strcpy(pathname, srb2home);
 	else if (cv_screenshot_option.value == 2)
-		pathname = srb2path;
+		strcpy(pathname, srb2path);
 	else if (cv_screenshot_option.value == 3 && *cv_screenshot_folder.string != '\0')
-		pathname = cv_screenshot_folder.string;
+		strcpy(pathname, cv_screenshot_folder.string);
+
+	if (cv_screenshot_option.value != 3)
+	{
+		strcat(pathname, PATHSEP"screenshots"PATHSEP);
+		I_mkdir(pathname, 0755);
+	}
 
 #ifdef USE_PNG
 	freename = Newsnapshotfile(pathname,"png");

@@ -2100,39 +2100,43 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
-	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting && cv_playersforexit.value)
+	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && stplyr->exiting)
 	{
-		INT32 i, total = 0, exiting = 0;
-
-		for (i = 0; i < MAXPLAYERS; i++)
+		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+		if (numneeded)
 		{
-			if (!playeringame[i] || players[i].spectator)
-				continue;
-			if (players[i].lives <= 0)
-				continue;
+			INT32 i, total = 0, exiting = 0;
 
-			total++;
-			if (players[i].exiting)
-				exiting++;
-		}
-
-		if (cv_playersforexit.value != 4)
-		{
-			total *= cv_playersforexit.value;
-			if (total & 3)
-				total += 4; // round up
-			total /= 4;
-		}
-
-		if (exiting < total)
-		{
-			if (!splitscreen && !donef12)
+			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
-				donef12 = true;
+				if (!playeringame[i] || players[i].spectator)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+
+				total++;
+				if (players[i].exiting)
+					exiting++;
 			}
-			total -= exiting;
-			textHUDdraw(va(M_GetText("%d player%s remaining"), total, ((total == 1) ? "" : "s")))
+
+			if (numneeded != 4)
+			{
+				total *= cv_playersforexit.value;
+				if (total & 3)
+					total += 4; // round up
+				total /= 4;
+			}
+
+			if (exiting < total)
+			{
+				if (!splitscreen && !donef12)
+				{
+					textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
+					donef12 = true;
+				}
+				total -= exiting;
+				textHUDdraw(va(M_GetText("%d player%s remaining"), total, ((total == 1) ? "" : "s")))
+			}
 		}
 	}
 	else if ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && (!stplyr->spectator))

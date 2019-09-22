@@ -458,11 +458,11 @@ typedef enum sprite
 	SPR_GARG, // Deep Sea Gargoyle
 	SPR_SEWE, // Deep Sea Seaweed
 	SPR_DRIP, // Dripping water
-	SPR_CRL1, // Coral 1
-	SPR_CRL2, // Coral 2
-	SPR_CRL3, // Coral 3
+	SPR_CORL, // Coral
 	SPR_BCRY, // Blue Crystal
 	SPR_KELP, // Kelp
+	SPR_ALGA, // Animated algae top
+	SPR_ALGB, // Animated algae segment
 	SPR_DSTG, // DSZ Stalagmites
 	SPR_LIBE, // DSZ Light beam
 
@@ -492,7 +492,7 @@ typedef enum sprite
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
-	SPR_CACT, // Cacti sprites
+	SPR_CACT, // Cacti
 	SPR_WWSG, // Caution Sign
 	SPR_WWS2, // Cacti Sign
 	SPR_WWS3, // Sharp Turn Sign
@@ -2289,20 +2289,23 @@ typedef enum state
 	S_DRIPC1,
 	S_DRIPC2,
 
-	// Coral 1
+	// Coral
 	S_CORAL1,
-
-	// Coral 2
 	S_CORAL2,
-
-	// Coral 3
 	S_CORAL3,
+	S_CORAL4,
+	S_CORAL5,
 
 	// Blue Crystal
 	S_BLUECRYSTAL1,
 
 	// Kelp,
 	S_KELP,
+
+	// Animated algae
+	S_ANIMALGAETOP1,
+	S_ANIMALGAETOP2,
+	S_ANIMALGAESEG,
 
 	// DSZ Stalagmites
 	S_DSZSTALAGMITE,
@@ -2438,7 +2441,7 @@ typedef enum state
 	S_LITTLETUMBLEWEED_ROLL7,
 	S_LITTLETUMBLEWEED_ROLL8,
 
-	// Cacti Sprites
+	// Cacti
 	S_CACTI1,
 	S_CACTI2,
 	S_CACTI3,
@@ -2450,8 +2453,10 @@ typedef enum state
 	S_CACTI9,
 	S_CACTI10,
 	S_CACTI11,
+	S_CACTITINYSEG,
+	S_CACTISMALLSEG,
 
-	// Warning signs sprites
+	// Warning signs
 	S_ARIDSIGN_CAUTION,
 	S_ARIDSIGN_CACTI,
 	S_ARIDSIGN_SHARPTURN,
@@ -4190,11 +4195,15 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 1
-	MT_CORAL2, // Coral 2
-	MT_CORAL3, // Coral 3
+	MT_CORAL1, // Coral 
+	MT_CORAL2,
+	MT_CORAL3,
+	MT_CORAL4,
+	MT_CORAL5,
 	MT_BLUECRYSTAL, // Blue Crystal
 	MT_KELP, // Kelp
+	MT_ANIMALGAETOP, // Animated algae top
+	MT_ANIMALGAESEG, // Animated algae segment
 	MT_DSZSTALAGMITE, // Deep Sea 1 Stalagmite
 	MT_DSZ2STALAGMITE, // Deep Sea 2 Stalagmite
 	MT_LIGHTBEAM, // DSZ Light beam
@@ -4245,17 +4254,19 @@ typedef enum mobj_type
 	// Arid Canyon Scenery
 	MT_BIGTUMBLEWEED,
 	MT_LITTLETUMBLEWEED,
-	MT_CACTI1,
-	MT_CACTI2,
-	MT_CACTI3,
-	MT_CACTI4,
-	MT_CACTI5, // Harmful Cactus 1
-	MT_CACTI6, // Harmful Cactus 2
-	MT_CACTI7, // Harmful Cactus 3
-	MT_CACTI8, // Harmful Cactus 4
-	MT_CACTI9, // Harmful Cactus 5
-	MT_CACTI10, // Harmful Cactus 6
-	MT_CACTI11, // Harmful Cactus 7
+	MT_CACTI1, // Tiny Red Flower Cactus
+	MT_CACTI2, // Small Red Flower Cactus
+	MT_CACTI3, // Tiny Blue Flower Cactus
+	MT_CACTI4, // Small Blue Flower Cactus
+	MT_CACTI5, // Prickly Pear
+	MT_CACTI6, // Barrel Cactus
+	MT_CACTI7, // Tall Barrel Cactus
+	MT_CACTI8, // Armed Cactus
+	MT_CACTI9, // Ball Cactus
+	MT_CACTI10, // Tiny Cactus
+	MT_CACTI11, // Small Cactus
+	MT_CACTITINYSEG, // Tiny Cactus Segment
+	MT_CACTISMALLSEG, // Small Cactus Segment
 	MT_ARIDSIGN_CAUTION, // Caution Sign
 	MT_ARIDSIGN_CACTI, // Cacti Sign
 	MT_ARIDSIGN_SHARPTURN, // Sharp Turn Sign

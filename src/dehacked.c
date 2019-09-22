@@ -5578,20 +5578,23 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
 
 	// Kelp,
 	"S_KELP",
+
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
 
 	// DSZ Stalagmites
 	"S_DSZSTALAGMITE",
@@ -5739,6 +5742,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI9",
 	"S_CACTI10",
 	"S_CACTI11",
+	"S_CACTITINYSEG",
+	"S_CACTISMALLSEG",
 
 	// Warning signs sprites
 	"S_ARIDSIGN_CAUTION",
@@ -7457,11 +7462,15 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
 	"MT_KELP", // Kelp
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 	"MT_DSZSTALAGMITE", // Deep Sea 1 Stalagmite
 	"MT_DSZ2STALAGMITE", // Deep Sea 2 Stalagmite
 	"MT_LIGHTBEAM", // DSZ Light beam
@@ -7523,6 +7532,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI9",
 	"MT_CACTI10",
 	"MT_CACTI11",
+	"MT_CACTITINYSEG",
+	"MT_CACTISMALLSEG",
 	"MT_ARIDSIGN_CAUTION",
 	"MT_ARIDSIGN_CACTI",
 	"MT_ARIDSIGN_SHARPTURN",

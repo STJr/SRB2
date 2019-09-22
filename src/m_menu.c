@@ -118,7 +118,7 @@ const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[MAXSKINS];
-INT16 char_on = -1, startchar = 1;
+INT16 char_on = -1, startchar = 0;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -276,9 +276,10 @@ menu_t MP_MainDef;
 // Split into multiple parts due to size
 // Controls
 menu_t OP_ChangeControlsDef;
-menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
+menu_t OP_MPControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -1003,13 +1004,11 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  80},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1018,13 +1017,11 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
 
-	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  90},
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  100},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  100},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  70},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  80},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1151,6 +1148,34 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      80},
+};
+
+static menuitem_t OP_CameraOptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 100},
+};
+
+static menuitem_t OP_Camera2OptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 40},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam2_dist, 60},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam2_height, 70},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", &cv_cam2_speed, 80},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 100},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1363,36 +1388,39 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "General", NULL, 0},
 	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     6},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          11},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 16},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 30},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                36},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 41},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              46},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           51},
+	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 16},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          22},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 27},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                42},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 47},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              52},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           57},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 60},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  66},
+	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 64},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,              70},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	  75},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                 90},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               71},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              76},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,               71},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,                76},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,             81},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,          86},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            105},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         110},
 };
 
 enum
 {
 	op_screenshot_colorprofile = 1,
-	op_screenshot_folder = 3,
-	op_screenshot_capture = 10,
-	op_screenshot_gif_start = 11,
-	op_screenshot_gif_end = 12,
-	op_screenshot_apng_start = 13,
-	op_screenshot_apng_end = 16,
+	op_screenshot_folder = 4,
+	op_movie_folder = 11,
+	op_screenshot_capture = 12,
+	op_screenshot_gif_start = 13,
+	op_screenshot_gif_end = 14,
+	op_screenshot_apng_start = 15,
+	op_screenshot_apng_end = 18,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1887,6 +1915,13 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
+menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+	MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+
 
 menu_t OP_VideoOptionsDef =
 {
@@ -2208,6 +2243,12 @@ void Addons_option_Onchange(void)
 {
 	OP_AddonsOptionsMenu[op_addons_folder].status =
 		(cv_addons_option.value == 3 ? IT_CVAR|IT_STRING|IT_CV_STRING : IT_DISABLED);
+}
+
+void Moviemode_option_Onchange(void)
+{
+	OP_ScreenshotOptionsMenu[op_movie_folder].status =
+		(cv_movie_option.value == 3 ? IT_CVAR|IT_STRING|IT_CV_STRING : IT_DISABLED);
 }
 
 // ==========================================================================
@@ -2748,13 +2789,27 @@ static void M_ChangeCvar(INT32 choice)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_INVISSLIDER)
 	    ||((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_NOMOD))
 	{
-		CV_SetValue(cv,cv->value+(choice));
+		if (cv->flags & CV_FLOAT && (currentMenu->menuitems[itemOn].status & IT_CV_FLOATSLIDER) == IT_CV_FLOATSLIDER)
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
+		else
+			CV_SetValue(cv,cv->value+(choice));
 	}
 	else if (cv->flags & CV_FLOAT)
 	{
-		char s[20];
-		sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
-		CV_Set(cv,s);
+		if (currentMenu->menuitems[itemOn].status & IT_CV_INTEGERSTEP)
+		{
+			CV_SetValue(cv,FIXED_TO_FLOAT(cv->value)+(choice));
+		}
+		else
+		{
+			char s[20];
+			sprintf(s,"%f",FIXED_TO_FLOAT(cv->value)+(choice)*(1.0f/16.0f));
+			CV_Set(cv,s);
+		}
 	}
 	else
 		CV_AddValue(cv,choice);
@@ -3644,7 +3699,12 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 
 	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
 
-	if ((range = atoi(cv->defaultvalue)) != cv->value)
+	if (cv->flags & CV_FLOAT)
+		range = (INT32)(atof(cv->defaultvalue)*FRACUNIT);
+	else
+		range = atoi(cv->defaultvalue);
+
+	if (range != cv->value)
 	{
 		range = ((range - cv->PossibleValue[0].value) * 100 /
 		 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
