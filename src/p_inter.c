@@ -471,6 +471,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momy = -toucher->momy;
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
+				else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_GLIDING && !P_IsObjectOnGround(player->mo))
+				{
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+				}
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 			if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
