@@ -764,6 +764,7 @@ typedef enum playersprite
 	SPR2_TIRE, // tired
 
 	SPR2_GLID, // glide
+	SPR2_LAND, // landing after glide/bounce
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
@@ -771,7 +772,6 @@ typedef enum playersprite
 	SPR2_FRUN, // float run
 
 	SPR2_BNCE, // bounce
-	SPR2_BLND, // bounce landing
 
 	SPR2_FIRE, // fire
 
@@ -893,6 +893,7 @@ typedef enum state
 
 	// CA_GLIDEANDCLIMB
 	S_PLAY_GLIDE,
+	S_PLAY_GLIDE_LANDING,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
@@ -4195,7 +4196,7 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 
+	MT_CORAL1, // Coral
 	MT_CORAL2,
 	MT_CORAL3,
 	MT_CORAL4,

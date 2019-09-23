@@ -2249,6 +2249,19 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				else if (!player->skidtime)
 					player->pflags &= ~PF_GLIDING;
 			}
+			else if (player->charability == CA_GLIDEANDCLIMB && player->pflags & PF_THOKKED && (~player->pflags) & PF_SHIELDABILITY)
+			{
+				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
+				{
+					P_ResetPlayer(player);
+					player->pflags &= ~PF_GLIDING;
+					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
+					S_StartSound(player->mo, sfx_s3k4c);
+					player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
+					player->mo->momx = player->cmomx;
+					player->mo->momy = player->cmomy;
+				}
+			}
 			else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 			{
 				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
@@ -4457,7 +4470,8 @@ static void P_DoSpinDashDust(player_t *player)
 static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 {
 	boolean canstand = true; // can we stand on the ground? (mostly relevant for slopes)
-	if (player->pflags & PF_STASIS)
+	if (player->pflags & PF_STASIS
+		&& (player->pflags & PF_JUMPSTASIS || player->mo->state-states != S_PLAY_GLIDE_LANDING))
 		return;
 
 #ifdef HAVE_BLUA
@@ -4485,6 +4499,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					&& !player->mo->momz && onground && !(player->pflags & (PF_USEDOWN|PF_SPINNING))
 						&& canstand)
 				{
+					if (player->mo->state - states == S_PLAY_GLIDE_LANDING) // dear lord this is a fuckin hack and a half
+						player->powers[pw_nocontrol] = 0;
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
 					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
@@ -5132,6 +5148,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// can't jump while in air, can't jump while jumping
 		if (onground || player->climbing || player->powers[pw_carry])
 		{
+			if (player->mo->state-states == S_PLAY_GLIDE_LANDING && player->powers[pw_nocontrol] & (1<<15))
+			{
+				player->powers[pw_nocontrol] = 0;
+			}
 			P_DoJump(player, true);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
@@ -5685,7 +5705,7 @@ static void P_2dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove != 0)
-			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT,10*FRACUNIT), false);
+			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
 
 		player->mo->momx = 0;
 	}
@@ -5909,7 +5929,7 @@ static void P_3dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove)
-			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 10*FRACUNIT), false);
+			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 15*FRACUNIT>>1), false);
 	}
 	else if (!analogmove
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -5943,7 +5963,7 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 10*FRACUNIT), player->mo->scale));
+		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 15*FRACUNIT>>1), player->mo->scale));
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -7642,10 +7662,12 @@ static void P_SkidStuff(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		}
 		// Get up and brush yourself off, idiot.
-		else if (player->glidetime > 15)
+		else if (player->glidetime > 15 || !(player->cmd.buttons & BT_JUMP))
 		{
 			P_ResetPlayer(player);
-			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+			player->pflags &= ~PF_GLIDING;
+			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
+			player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
 		}
@@ -8014,8 +8036,8 @@ static void P_MovePlayer(player_t *player)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
 		fixed_t leeway;
-		fixed_t glidespeed = player->normalspeed; // TODO: this should be actionspd, but I wanted to play around with making glide less of a flow-killer
-		fixed_t momx = mo->momx, momy = mo->momy;
+		fixed_t glidespeed = player->actionspd; // TODO: this should be actionspd, but I wanted to play around with making glide less of a flow-killer
+		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
 
 		if (player->powers[pw_super] || player->powers[pw_sneakers])
@@ -8040,6 +8062,7 @@ static void P_MovePlayer(player_t *player)
 		{
 			//fixed_t glidex, glidey = 0;
 			fixed_t speed, scale = mo->scale;
+			fixed_t newMagnitude, oldMagnitude = R_PointToDist2(momx, momy, 0, 0);
 			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK); // mamgic number BAD but this feels right
 
 			if (mo->eflags & MFE_UNDERWATER)
@@ -8053,9 +8076,29 @@ static void P_MovePlayer(player_t *player)
 				glidey = P_ReturnThrustY(mo, angle, speed);*/
 
 			P_Thrust(mo, angle, FixedMul(accelfactor, scale));
-			if (P_AproxDistance(mo->momx, mo->momy) > speed)
+
+			newMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
+			if (newMagnitude > speed)
 			{
-				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->momx, mo->momy), speed);
+				fixed_t tempmomx, tempmomy;
+				if (oldMagnitude > speed)
+				{
+					if (newMagnitude > oldMagnitude)
+					{
+						tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), oldMagnitude);
+						tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), oldMagnitude);
+						player->mo->momx = tempmomx + player->cmomx;
+						player->mo->momy = tempmomy + player->cmomy;
+					}
+					// else do nothing
+				}
+				else
+				{
+					tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), speed);
+					tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), speed);
+					player->mo->momx = tempmomx + player->cmomx;
+					player->mo->momy = tempmomy + player->cmomy;
+				}
 			}
 		}
 
@@ -8082,18 +8125,9 @@ static void P_MovePlayer(player_t *player)
 	}
 	else if (player->climbing) // 'Deceleration' for climbing on walls.
 	{
-		if (player->mo->momz > 0)
-		{
-			player->mo->momz -= FixedMul(FRACUNIT/2, player->mo->scale);
-			if (player->mo->momz < 0)
-				player->mo->momz = 0;
-		}
-		else if (player->mo->momz < 0)
-		{
-			player->mo->momz += FixedMul(FRACUNIT/2, player->mo->scale);
-			if (player->mo->momz > 0)
-				player->mo->momz = 0;
-		}
+
+		if (!player->cmd.forwardmove)
+			player->mo->momz = 0;
 	}
 	else if (player->pflags & PF_BOUNCING)
 	{

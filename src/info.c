@@ -511,6 +511,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TIRE",
 
 	"GLID",
+	"LAND",
 	"CLNG",
 	"CLMB",
 
@@ -518,7 +519,6 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"FRUN",
 
 	"BNCE",
-	"BLND",
 
 	"FIRE",
 
@@ -614,6 +614,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_TIRE, (conditional, will never be referenced)
 
 	SPR2_FLY , // SPR2_GLID,
+	SPR2_ROLL, // SPR2_LAND,
 	SPR2_CLMB, // SPR2_CLNG,
 	SPR2_ROLL, // SPR2_CLMB,
 
@@ -621,7 +622,6 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_RUN , // SPR2_FRUN,
 
 	SPR2_FALL, // SPR2_BNCE,
-	SPR2_ROLL, // SPR2_BLND,
 
 	0, // SPR2_FIRE,
 
@@ -744,6 +744,7 @@ state_t states[NUMSTATES] =
 
 	// CA_GLIDEANDCLIMB
 	{SPR_PLAY, SPR2_GLID,                 2, {NULL}, 0,  0, S_PLAY_GLIDE}, // S_PLAY_GLIDE
+	{SPR_PLAY, SPR2_LAND,                 9, {NULL}, 0,  0, S_PLAY_STND},  // S_PLAY_GLIDE_LANDING
 	{SPR_PLAY, SPR2_CLNG|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},       // S_PLAY_CLING
 	{SPR_PLAY, SPR2_CLMB,                 5, {NULL}, 0,  0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
 
@@ -753,7 +754,7 @@ state_t states[NUMSTATES] =
 
 	// CA_BOUNCE
 	{SPR_PLAY, SPR2_BNCE|FF_ANIMATE,     -1, {NULL},             0,  0, S_NULL},                // S_PLAY_BOUNCE
-	{SPR_PLAY, SPR2_BLND|FF_SPR2ENDSTATE, 2, {NULL}, S_PLAY_BOUNCE,  0, S_PLAY_BOUNCE_LANDING}, // S_PLAY_BOUNCE_LANDING
+	{SPR_PLAY, SPR2_LAND|FF_SPR2ENDSTATE, 2, {NULL}, S_PLAY_BOUNCE,  0, S_PLAY_BOUNCE_LANDING}, // S_PLAY_BOUNCE_LANDING
 
 	// CA2_GUNSLINGER
 	{SPR_PLAY, SPR2_FIRE|FF_SPR2ENDSTATE,  2, {NULL}, S_PLAY_FIRE_FINISH, 0, S_PLAY_FIRE},   // S_PLAY_FIRE
