@@ -2256,7 +2256,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					P_ResetPlayer(player);
 					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 					S_StartSound(player->mo, sfx_s3k4c);
-					player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
+					player->pflags |= PF_STASIS;
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
 				}
@@ -4499,7 +4499,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						&& canstand)
 				{
 					if (player->mo->state - states == S_PLAY_GLIDE_LANDING) // dear lord this is a fuckin hack and a half
-						player->powers[pw_nocontrol] = 0;
+						player->pflags &= ~PF_STASIS;
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
 					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
@@ -5147,9 +5147,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// can't jump while in air, can't jump while jumping
 		if (onground || player->climbing || player->powers[pw_carry])
 		{
-			if (player->mo->state-states == S_PLAY_GLIDE_LANDING && player->powers[pw_nocontrol] & (1<<15))
+			if (player->mo->state-states == S_PLAY_GLIDE_LANDING && ((~player->pflags) & PF_JUMPSTASIS))
 			{
-				player->powers[pw_nocontrol] = 0;
+				player->pflags &= ~PF_STASIS;
 			}
 			P_DoJump(player, true);
 			player->secondjump = 0;
@@ -5962,7 +5962,7 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1), player->mo->scale);
+		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1));
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -7665,7 +7665,7 @@ static void P_SkidStuff(player_t *player)
 		{
 			P_ResetPlayer(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
-			player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
+			player->pflags |= PF_STASIS;
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
 		}
@@ -7773,6 +7773,9 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->powers[pw_nocontrol] & (1<<15)))
 			player->pflags |= PF_JUMPSTASIS;
 	}
+	else if (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+		player->pflags |= PF_STASIS;
+
 	// note: don't unset stasis here
 
 	if (!player->spectator && G_TagGametype())
