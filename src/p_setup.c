@@ -221,6 +221,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->muspostbosstrack = 0;
 	mapheaderinfo[num]->muspostbosspos = 0;
 	mapheaderinfo[num]->muspostbossfadein = 0;
+	mapheaderinfo[num]->musforcereset = -1;
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	mapheaderinfo[num]->weather = 0;
 	mapheaderinfo[num]->skynum = 1;
@@ -573,6 +574,11 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 
 		// store the flat lump number
 		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+		levelflat->texturenum = R_CheckTextureNumForName(flatname);
+		levelflat->lasttexturenum = levelflat->texturenum;
+
+		levelflat->baselumpnum = LUMPERROR;
+		levelflat->basetexturenum = -1;
 
 #ifndef ZDEBUG
 		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
@@ -617,6 +623,11 @@ INT32 P_AddLevelFlatRuntime(const char *flatname)
 
 		// store the flat lump number
 		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+		levelflat->texturenum = R_CheckTextureNumForName(flatname);
+		levelflat->lasttexturenum = levelflat->texturenum;
+
+		levelflat->baselumpnum = LUMPERROR;
+		levelflat->basetexturenum = -1;
 
 #ifndef ZDEBUG
 		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
@@ -1480,6 +1491,7 @@ static void P_LoadRawSideDefs2(void *data)
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
+			case 461: // Spawns an object on the map based on texture offsets
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -2234,6 +2246,8 @@ static void P_LevelInitStuff(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		G_PlayerReborn(i, true);
+
 		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
@@ -2241,41 +2255,18 @@ static void P_LevelInitStuff(void)
 		}
 
 		// obliteration station...
-		players[i].rings = players[i].spheres =\
-		 players[i].xtralife = players[i].deadtimer =\
-		 players[i].numboxes = players[i].totalring =\
-		 players[i].laps = players[i].aiming =\
-		 players[i].losstime = players[i].timeshit =\
-		 players[i].marescore = players[i].lastmarescore =\
-		 players[i].maxlink = players[i].startedtime =\
-		 players[i].finishedtime = players[i].finishedspheres =\
-		 players[i].finishedrings = players[i].lastmare =\
-		 players[i].lastmarelap = players[i].lastmarebonuslap =\
-		 players[i].totalmarelap = players[i].totalmarebonuslap =\
-		 players[i].marebegunat = players[i].textvar =\
-		 players[i].texttimer = players[i].linkcount =\
-		 players[i].linktimer = players[i].flyangle =\
-		 players[i].anotherflyangle = players[i].nightstime =\
-		 players[i].oldscale = players[i].mare = players[i].marelap =\
-		 players[i].marebonuslap = players[i].lapbegunat =\
-		 players[i].lapstartedtime = players[i].totalmarescore =\
-		 players[i].realtime = players[i].exiting = 0;
+		players[i].numboxes = players[i].totalring =\
+		 players[i].laps = players[i].marescore = players[i].lastmarescore =\
+		 players[i].mare = players[i].exiting = 0;
 
-		// i guess this could be part of the above but i feel mildly uncomfortable implicitly casting
-		players[i].gotcontinue = false;
-
-		// aha, the first evidence this shouldn't be a memset!
 		players[i].drillmeter = 40*20;
 
-		P_ResetPlayer(&players[i]);
 		// hit these too
-		players[i].pflags &= ~(PF_GAMETYPEOVER|PF_TRANSFERTOCLOSEST);
-
-		// unset ALL the pointers. P_SetTarget isn't needed here because if this
-		// function is being called we're just going to clobber the data anyways
-		players[i].mo = players[i].followmobj = players[i].awayviewmobj =\
-		players[i].capsule = players[i].axis1 = players[i].axis2 = players[i].drone = NULL;
+		players[i].pflags &= ~(PF_GAMETYPEOVER);
 	}
+
+	if (botingame)
+		CV_SetValue(&cv_analog2, true);
 }
 
 //
@@ -2692,7 +2683,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		S_StartSound(NULL, sfx_s3kaf);
 
 		// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-		if (cv_resetmusic.value ||
+		if (RESETMUSIC ||
 			strnicmp(S_MusicName(),
 				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7))
 			S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
@@ -2725,7 +2716,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (cv_resetmusic.value ||
+	if (!titlemapinaction && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
 		S_FadeMusic(0, FixedMul(

@@ -556,9 +556,16 @@ void D_RegisterServerCommands(void)
 
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
+	CV_RegisterVar(&cv_resynchattempts);
 	CV_RegisterVar(&cv_maxsend);
 	CV_RegisterVar(&cv_noticedownload);
 	CV_RegisterVar(&cv_downloadspeed);
+#ifndef NONET
+	CV_RegisterVar(&cv_allownewplayer);
+	CV_RegisterVar(&cv_joinnextround);
+	CV_RegisterVar(&cv_showjoinaddress);
+	CV_RegisterVar(&cv_blamecfail);
+#endif
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
@@ -630,6 +637,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_screenshot_folder);
 	CV_RegisterVar(&cv_screenshot_colorprofile);
 	CV_RegisterVar(&cv_moviemode);
+	CV_RegisterVar(&cv_movie_option);
+	CV_RegisterVar(&cv_movie_folder);
 	// PNG variables
 	CV_RegisterVar(&cv_zlib_level);
 	CV_RegisterVar(&cv_zlib_memory);
@@ -1909,7 +1918,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		precache = false;
 
 	if (resetplayer && !FLS)
+	{
 		emeralds = 0;
+		memset(&luabanks, 0, sizeof(luabanks));
+	}
 
 	if (modeattacking)
 	{
@@ -2705,14 +2717,6 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			else if (playernum == secondarydisplayplayer)
 				CV_SetValue(&cv_playercolor2, NetPacket.packet.newteam + 5);
 		}
-	}
-
-	// Clear player score and rings if a spectator.
-	if (players[playernum].spectator)
-	{
-		players[playernum].score = players[playernum].rings = 0;
-		if (players[playernum].mo)
-			players[playernum].mo->health = 1;
 	}
 
 	// In tag, check to see if you still have a game.
@@ -3601,7 +3605,7 @@ static void CoopLives_OnChange(void)
 	{
 		case 0:
 			CONS_Printf(M_GetText("Players can now respawn indefinitely.\n"));
-			return;
+			break;
 		case 1:
 			CONS_Printf(M_GetText("Lives are now per-player.\n"));
 			return;
@@ -4104,6 +4108,7 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	memset(&luabanks, 0, sizeof(luabanks));
 
 	if (dirmenu)
 		closefilemenu(true);

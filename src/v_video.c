@@ -1045,9 +1045,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
+			if (topdelta-sy > 0)
+			{
+				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				ofs = 0;
+			}
+			else
+				ofs = (sy-topdelta)<<FRACBITS;
 
-			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
@@ -1064,17 +1070,17 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 //
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor)
 {
-	if (skinnum < 0 || skinnum >= numskins || (skins[skinnum].flags & SF_HIRES))
-		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
-	else
+	if (skinnum >= 0 && skinnum < numskins && skins[skinnum].sprites[SPR2_XTRA].numframes >= 4)
 	{
-		spriteframe_t *sprframe = &skins[skinnum].sprites[SPR2_WAIT].spriteframes[0];
-		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spriteframe_t *sprframe = &sprdef->spriteframes[3];
+		patch_t *patch = W_CachePatchNum(sprframe->lumppat[0], PU_LEVEL);
 		const UINT8 *colormap = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
 
-		// No variant for translucency
-		V_DrawTinyMappedPatch(x, y, flags, patch, colormap);
+		V_DrawMappedPatch(x, y, flags, patch, colormap);
 	}
+	else
+		V_DrawScaledPatch(x - 10, y - 14, flags, W_CachePatchName("CONTINS", PU_CACHE));
 }
 
 //

@@ -31,7 +31,16 @@ openmpt_module *openmpt_mhandle;
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
+
 extern consvar_t cv_resetmusic;
+extern consvar_t cv_resetmusicbyheader;
+
+#define RESETMUSIC (!modeattacking && \
+	(cv_resetmusicbyheader.value ? \
+		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
+		: cv_resetmusic.value) \
+	)
+
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
