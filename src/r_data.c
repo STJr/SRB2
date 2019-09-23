@@ -262,7 +262,8 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		// if there's no pixel in here
 		if (!background.rgba)
 			output.s.alpha = foreground.s.alpha;
-		output.s.alpha = 0xFF;
+		else
+			output.s.alpha = 0xFF;
 		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
