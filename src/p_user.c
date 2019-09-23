@@ -2254,7 +2254,6 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				if (player->mo->state-states != S_PLAY_GLIDE_LANDING)
 				{
 					P_ResetPlayer(player);
-					player->pflags &= ~PF_GLIDING;
 					P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 					S_StartSound(player->mo, sfx_s3k4c);
 					player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
@@ -5256,7 +5255,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					// Now Knuckles-type abilities are checked.
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
-						INT32 glidespeed = player->actionspd;
+						//INT32 glidespeed = player->actionspd;
 
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
@@ -5963,7 +5962,7 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 15*FRACUNIT>>1), player->mo->scale));
+		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedDiv(cmd->sidemove*player->mo->scale, 15*FRACUNIT>>1), player->mo->scale);
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -7665,7 +7664,6 @@ static void P_SkidStuff(player_t *player)
 		else if (player->glidetime > 15 || !(player->cmd.buttons & BT_JUMP))
 		{
 			P_ResetPlayer(player);
-			player->pflags &= ~PF_GLIDING;
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE_LANDING);
 			player->powers[pw_nocontrol] = (player->mo->tics) + (1<<15);
 			player->mo->momx = player->cmomx;
@@ -8036,7 +8034,7 @@ static void P_MovePlayer(player_t *player)
 	{
 		mobj_t *mo = player->mo; // seriously why isn't this at the top of the function hngngngng
 		fixed_t leeway;
-		fixed_t glidespeed = player->actionspd; // TODO: this should be actionspd, but I wanted to play around with making glide less of a flow-killer
+		fixed_t glidespeed = player->actionspd;
 		fixed_t momx = mo->momx - player->cmomx, momy = mo->momy - player->cmomy;
 		angle_t angle, moveangle = R_PointToAngle2(0, 0, momx, momy);
 
@@ -8058,9 +8056,8 @@ static void P_MovePlayer(player_t *player)
 		leeway = FixedAngle(cmd->sidemove*(FRACUNIT));
 		angle = mo->angle - leeway;
 
-		if (!player->skidtime)
+		if (!player->skidtime) // TODO: make sure this works in 2D!
 		{
-			//fixed_t glidex, glidey = 0;
 			fixed_t speed, scale = mo->scale;
 			fixed_t newMagnitude, oldMagnitude = R_PointToDist2(momx, momy, 0, 0);
 			fixed_t accelfactor = 4*FRACUNIT - 3*FINECOSINE(((angle-moveangle) >> ANGLETOFINESHIFT) & FINEMASK); // mamgic number BAD but this feels right
@@ -8069,11 +8066,6 @@ static void P_MovePlayer(player_t *player)
 				speed = FixedMul((glidespeed>>1) + player->glidetime*750, scale);
 			else
 				speed = FixedMul(glidespeed + player->glidetime*1500, scale);
-
-			/*glidex = P_ReturnThrustX(mo, angle, speed);
-
-			if (!(twodlevel || (mo->flags2 & MF2_TWOD)))
-				glidey = P_ReturnThrustY(mo, angle, speed);*/
 
 			P_Thrust(mo, angle, FixedMul(accelfactor, scale));
 
