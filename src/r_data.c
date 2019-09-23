@@ -386,7 +386,8 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -429,7 +430,8 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+				if (*source != 0xFF)
+					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
