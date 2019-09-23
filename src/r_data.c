@@ -262,6 +262,8 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		// if there's no pixel in here
 		if (!background.rgba)
 			output.s.alpha = foreground.s.alpha;
+		output.s.alpha = 0xFF;
+		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
 	else
@@ -310,15 +312,23 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 
 UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
 {
-	if ((style == AST_TRANSLUCENT) && (alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
 	{
-		UINT8 *mytransmap;
-		if (alpha < 255/11) // Is the patch way too translucent? Don't render then.
-			return background;
-		// The equation's not exact but it works as intended. I'll call it a day for now.
-		mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
-		if (background != 0xFF)
-			return *(mytransmap + (background<<8) + foreground);
+		// Is the alpha small enough for translucency?
+		if (alpha <= (10*255/11))
+		{
+			UINT8 *mytransmap;
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < 255/11)
+				return background;
+			// The equation's not exact but it works as intended. I'll call it a day for now.
+			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			if (background != 0xFF)
+				return *(mytransmap + (background<<8) + foreground);
+		}
+		else // just copy the pixel
+			return foreground;
 	}
 	// just copy the pixel
 	else if (style == AST_COPY)
@@ -375,8 +385,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				if (*dest != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+				*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -384,7 +393,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 }
 
 //
-// R_DrawTransColumnInCache
+// R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
 static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
@@ -419,8 +428,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				if (*dest != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+				*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
