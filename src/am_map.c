@@ -111,11 +111,6 @@ typedef struct
 	mpoint_t a, b;
 } mline_t;
 
-typedef struct
-{
-	fixed_t slp, islp;
-} islope_t;
-
 //
 // The vector graphics for the automap.
 // A line drawing of the player pointing right,
