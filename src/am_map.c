@@ -816,17 +816,18 @@ static void AM_drawGrid(INT32 color)
 	fixed_t x, y;
 	fixed_t start, end;
 	mline_t ml;
+	fixed_t gridsize = (MAPBLOCKUNITS<<MAPBITS);
 
 	// Figure out start of vertical gridlines
 	start = m_x;
-	if ((start - bmaporgx) % (MAPBLOCKUNITS<<FRACBITS))
-		start += (MAPBLOCKUNITS<<FRACBITS) - ((start - bmaporgx) % (MAPBLOCKUNITS<<FRACBITS));
+	if ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize)
+		start += gridsize - ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize);
 	end = m_x + m_w;
 
 	// draw vertical gridlines
 	ml.a.y = m_y;
 	ml.b.y = m_y + m_h;
-	for (x = start; x < end; x += (MAPBLOCKUNITS<<FRACBITS))
+	for (x = start; x < end; x += gridsize)
 	{
 		ml.a.x = x;
 		ml.b.x = x;
@@ -835,14 +836,14 @@ static void AM_drawGrid(INT32 color)
 
 	// Figure out start of horizontal gridlines
 	start = m_y;
-	if ((start - bmaporgy) % (MAPBLOCKUNITS<<FRACBITS))
-		start += (MAPBLOCKUNITS<<FRACBITS) - ((start - bmaporgy) % (MAPBLOCKUNITS<<FRACBITS));
+	if ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize)
+		start += gridsize - ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize);
 	end = m_y + m_h;
 
 	// draw horizontal gridlines
 	ml.a.x = m_x;
 	ml.b.x = m_x + m_w;
-	for (y = start; y < end; y += (MAPBLOCKUNITS<<FRACBITS))
+	for (y = start; y < end; y += gridsize)
 	{
 		ml.a.y = y;
 		ml.b.y = y;
@@ -1039,7 +1040,7 @@ static inline void AM_drawPlayers(void)
 
 	if (!multiplayer)
 	{
-		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, plr->mo->angle, DWHITE, plr->mo->x, plr->mo->y);
+		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 16<<FRACBITS, plr->mo->angle, DWHITE, plr->mo->x, plr->mo->y);
 		return;
 	}
 
@@ -1053,7 +1054,7 @@ static inline void AM_drawPlayers(void)
 		if (p->skincolor > 0)
 			color = R_GetTranslationColormap(TC_DEFAULT, p->skincolor, GTC_CACHE)[GREENS + 8];
 
-		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->mo->angle, color, p->mo->x, p->mo->y);
+		AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 16<<FRACBITS, p->mo->angle, color, p->mo->x, p->mo->y);
 	}
 }
 
