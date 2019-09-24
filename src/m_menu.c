@@ -1118,14 +1118,7 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2, 130},
 };
 
-static menuitem_t OP_JoystickSetMenu[] =
-{
-	{IT_CALL | IT_NOTHING, "None", NULL, M_AssignJoystick, '0'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '1'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '2'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '3'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '4'},
-};
+static menuitem_t OP_JoystickSetMenu[1+MAX_JOYSTICKS];
 
 static menuitem_t OP_MouseOptionsMenu[] =
 {
@@ -3550,6 +3543,8 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
+	int i;
+
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
 	CV_RegisterVar(&cv_chooseskin);
@@ -3598,6 +3593,17 @@ void M_Init(void)
 	else if (rendermode == render_opengl)
 		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
+
+	/*
+	Well the menu sucks for forcing us to have an item set
+	at all if every item just calls the same function, and
+	nothing more. Now just automate the definition.
+	*/
+	for (i = 0; i <= MAX_JOYSTICKS; ++i)
+	{
+		OP_JoystickSetMenu[i].status = ( IT_NOTHING|IT_CALL );
+		OP_JoystickSetMenu[i].itemaction = M_AssignJoystick;
+	}
 
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
