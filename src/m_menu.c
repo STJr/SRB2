@@ -143,7 +143,7 @@ typedef enum
 levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
-static char joystickInfo[8][29];
+static char joystickInfo[MAX_JOYSTICKS][29];
 #ifndef NONET
 static UINT32 serverlistpage;
 #endif
@@ -9993,7 +9993,7 @@ static void M_DrawJoystick(void)
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	for (i = 0; i <= 4; i++) // See MAX_JOYSTICKS
+	for (i = 0; i <= MAX_JOYSTICKS; i++) // See MAX_JOYSTICKS
 	{
 		M_DrawTextBox(OP_JoystickSetDef.x-8, OP_JoystickSetDef.y+LINEHEIGHT*i-12, 28, 1);
 		//M_DrawSaveLoadBorder(OP_JoystickSetDef.x+4, OP_JoystickSetDef.y+1+LINEHEIGHT*i);
@@ -10036,7 +10036,7 @@ void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-	for (i = 1; i < 8; i++)
+	for (i = 1; i < MAX_JOYSTICKS+1; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
@@ -10113,8 +10113,8 @@ static void M_AssignJoystick(INT32 choice)
 
 				if (oldstringchoice ==
 					(atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
-					M_StartMessage("This joystick is used by another\n"
-					               "player. Reset the joystick\n"
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
 					               "for that player first.\n\n"
 					               "(Press a key)\n", NULL, MM_NOTHING);
 			}
@@ -10143,8 +10143,8 @@ static void M_AssignJoystick(INT32 choice)
 
 				if (oldstringchoice ==
 					(atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
-					M_StartMessage("This joystick is used by another\n"
-					               "player. Reset the joystick\n"
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
 					               "for that player first.\n\n"
 					               "(Press a key)\n", NULL, MM_NOTHING);
 			}
