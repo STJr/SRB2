@@ -143,7 +143,7 @@ typedef enum
 levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
-static char joystickInfo[MAX_JOYSTICKS][29];
+static char joystickInfo[MAX_JOYSTICKS+1][29];
 #ifndef NONET
 static UINT32 serverlistpage;
 #endif
@@ -10036,7 +10036,7 @@ void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-	for (i = 1; i < MAX_JOYSTICKS+1; i++)
+	for (i = 1; i <= MAX_JOYSTICKS; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
