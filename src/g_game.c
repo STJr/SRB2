@@ -1505,7 +1505,6 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
 	if (!forcefullinput && forward && side)
 	{
 		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
