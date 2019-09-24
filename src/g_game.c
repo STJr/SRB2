@@ -886,6 +886,7 @@ static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -959,6 +960,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
@@ -1172,11 +1177,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
-	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -1212,6 +1219,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 {
 	boolean forcestrafe = false;
+	boolean forcefullinput = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
@@ -1283,6 +1291,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
+	if (twodlevel
+		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
+		|| (!demoplayback && (player->pflags & PF_SLIDING)))
+			forcefullinput = true;
 	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
@@ -1494,10 +1506,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	// No additional acceleration when moving forward/backward and strafing simultaneously.
 	// do this AFTER we cap to MAXPLMOVE so people can't find ways to cheese around this.
 	// 9-18-2017: ALSO, only do this when using keys to move. Gamepad analog sticks get severely gimped by this
-	if (!forcestrafe && (((movefkey || movebkey) && side) || ((strafelkey || straferkey) && forward)))
+	if (!forcefullinput && forward && side)
 	{
-		forward = FixedMul(forward, 3*FRACUNIT/4);
-		side = FixedMul(side, 3*FRACUNIT/4);
+		angle_t angle = R_PointToAngle2(0, 0, side << FRACBITS, forward << FRACBITS);
+		INT32 maxforward = abs(P_ReturnThrustY(NULL, angle, MAXPLMOVE));
+		INT32 maxside = abs(P_ReturnThrustX(NULL, angle, MAXPLMOVE));
+		forward = max(min(forward, maxforward), -maxforward);
+		side = max(min(side, maxside), -maxside);
 	}
 
 	//Silly hack to make 2d mode *somewhat* playable with no chasecam.
@@ -6165,4 +6180,3 @@ INT32 G_TicsToMilliseconds(tic_t tics)
 {
 	return (INT32)((tics%TICRATE) * (1000.00f/TICRATE));
 }
-
