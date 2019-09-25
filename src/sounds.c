@@ -212,6 +212,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bouncing"},
   {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork fired"},
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
+  {"alart",  false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Caught red handed!"},
   {"bowl",   false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bowling"},
   {"chuchu", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Train horn"},
   {"bsnipe", false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Home-run smash"},
@@ -609,8 +610,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kcal", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"}, // ditto
   {"s3kcbs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
   {"s3kcbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"}, // ditto
-  {"s3kccs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"},
-  {"s3kccl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Collapsing"}, // ditto
+  {"s3kccs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bursting"},
+  {"s3kccl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bursting"}, // ditto
   {"s3kcds", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"},
   {"s3kcdl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous rumbling"}, // ditto
   {"s3kces", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wind tunnel"},

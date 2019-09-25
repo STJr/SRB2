@@ -261,6 +261,7 @@ typedef enum
 	sfx_boingf,
 	sfx_corkp,
 	sfx_corkh,
+	sfx_alart,
 	sfx_bowl,
 	sfx_chuchu,
 	sfx_bsnipe,

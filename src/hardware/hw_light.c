@@ -205,6 +205,8 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Boss 5 (Arid Canyon)
 	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
+	&lspr[NOLIGHT],     //SPR_BRKN
+	&lspr[NOLIGHT],     //SPR_WHAT
 	&lspr[NOLIGHT],     //SPR_FBOM
 	&lspr[NOLIGHT],     //SPR_FSGN
 	&lspr[REDBALL_L],   //SPR_BARX // bomb explosion (also used by barrel)

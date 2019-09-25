@@ -2431,6 +2431,7 @@ static actionpointer_t actionpointers[] =
 	{{A_Boss5CheckFalling},      "A_BOSS5CHECKFALLING"},
 	{{A_Boss5PinchShot},         "A_BOSS5PINCHSHOT"},
 	{{A_Boss5MakeItRain},        "A_BOSS5MAKEITRAIN"},
+	{{A_Boss5MakeJunk},          "A_BOSS5MAKEJUNK"},
 	{{A_LookForBetter},          "A_LOOKFORBETTER"},
 	{{A_Boss5BombExplode},       "A_BOSS5BOMBEXPLODE"},
 	{{A_DustDevilThink},         "A_DUSTDEVILTHINK"},
@@ -4784,6 +4785,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGROBOJET",
 
 	// Boss 5
+	"S_FANG_SETUP",
+	"S_FANG_INTRO1",
+	"S_FANG_INTRO2",
+	"S_FANG_INTRO3",
+	"S_FANG_INTRO4",
+	"S_FANG_INTRO5",
+	"S_FANG_INTRO6",
+	"S_FANG_INTRO7",
+	"S_FANG_INTRO8",
+	"S_FANG_INTRO9",
+	"S_FANG_INTRO10",
+	"S_FANG_INTRO11",
+	"S_FANG_INTRO12",
+	"S_FANG_IDLE0",
 	"S_FANG_IDLE1",
 	"S_FANG_IDLE2",
 	"S_FANG_IDLE3",
@@ -4854,6 +4869,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_FLEEBOUNCE1",
 	"S_FANG_FLEEBOUNCE2",
 	"S_FANG_KO",
+
+	"S_BROKENROBOTRANDOM",
+	"S_BROKENROBOTA",
+	"S_BROKENROBOTB",
+	"S_BROKENROBOTC",
+	"S_BROKENROBOTD",
+	"S_BROKENROBOTE",
+	"S_BROKENROBOTF",
+
+	"S_ALART1",
+	"S_ALART2",
 
 	"S_FBOMB1",
 	"S_FBOMB2",
@@ -7264,6 +7290,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Boss 5
 	"MT_FANG",
+	"MT_BROKENROBOT",
 	"MT_FBOMB",
 	"MT_TNTDUST", // also used by barrel
 	"MT_FSGNA",

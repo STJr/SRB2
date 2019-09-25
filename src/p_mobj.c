@@ -9098,9 +9098,12 @@ void P_MobjThinker(mobj_t *mobj)
 	{
 		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
-			/*var1 = mobj->state->var1;
-			var2 = mobj->state->var2 & 65535;
-			mobj->state->action.acp1(mobj);*/
+			if (mobj->state->tics > 1)
+			{
+				var1 = mobj->state->var1;
+				var2 = mobj->state->var2 & 65535;
+				mobj->state->action.acp1(mobj);
+			}
 		}
 		else if (leveltime & 1) // Fire mode
 		{
