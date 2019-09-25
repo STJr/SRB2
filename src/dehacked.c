@@ -4742,6 +4742,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOSSSEBH1",
 	"S_BOSSSEBH2",
 
+	// Boss 3 Shockwave
+
+	"S_SHOCKWAVE1",
+	"S_SHOCKWAVE2",
+
 	// Boss 4
 	"S_EGGMOBILE4_STND",
 	"S_EGGMOBILE4_LATK1",
@@ -7253,7 +7258,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Boss 3
 	"MT_EGGMOBILE3",
 	"MT_FAKEMOBILE",
-	"MT_SHOCK",
+	"MT_SHOCKWAVE",
 
 	// Boss 4
 	"MT_EGGMOBILE4",

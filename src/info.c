@@ -85,6 +85,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"EGGO", // Boss 3
 	"SEBH", // Boss 3 Junk
 	"FAKE", // Boss 3 Fakemobile
+	"SHCK", // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	"EGGP",
@@ -1305,6 +1306,11 @@ state_t states[NUMSTATES] =
 
 	{SPR_SEBH, 0, 35, {NULL}, 0, 0, S_NULL}, // S_BOSSSEBH1
 	{SPR_SEBH, 1, 35, {NULL}, 0, 0, S_NULL}, // S_BOSSSEBH2
+
+	// Boss 3 Shockwave
+
+	{SPR_SHCK,   FF_FULLBRIGHT|FF_PAPERSPRITE|FF_ANIMATE, 8, {A_Boss3ShockThink}, 4, 2, S_SHOCKWAVE2}, // S_SHOCKWAVE1
+	{SPR_SHCK, 3|FF_FULLBRIGHT|FF_PAPERSPRITE|FF_ANIMATE, 8, {A_Boss3ShockThink}, 4, 2, S_SHOCKWAVE1}, // S_SHOCKWAVE2
 
 	// Boss 4
 	{SPR_EGGP, 0, -1, {NULL},           0,          0, S_NULL},              // S_EGGMOBILE4_STND
@@ -5461,30 +5467,30 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL              // raisestate
 	},
 
-	{           // MT_SHOCK
+	{           // MT_SHOCKWAVE
 		-1,             // doomednum
-		S_THUNDERCOIN_SPARK, // spawnstate
+		S_SHOCKWAVE1,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_None,       // seesound
+		sfx_s3k5e,      // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		0,              // painchance
+		8*TICRATE,      // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		10*FRACUNIT,    // speed
-		16*FRACUNIT,    // radius
-		35*FRACUNIT,    // height
+		16*FRACUNIT,    // speed
+		48*FRACUNIT,    // radius
+		8*FRACUNIT,     // height
 		0,              // display offset
 		DMG_ELECTRIC|(sfx_buzz2<<8), // mass
-		20,             // damage
+		3,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_PAIN|MF_NOGRAVITY|MF_PAPERCOLLISION, // flags
 		S_NULL          // raisestate
 	},
 

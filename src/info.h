@@ -138,6 +138,7 @@ void A_SetReactionTime();
 void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
+void A_Boss3ShockThink();
 void A_LinedefExecute();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
@@ -331,6 +332,7 @@ typedef enum sprite
 	SPR_EGGO, // Boss 3
 	SPR_SEBH, // Boss 3 Junk
 	SPR_FAKE, // Boss 3 Fakemobile
+	SPR_SHCK, // Boss 3 Shockwave
 
 	// Boss 4 (Castle Eggman)
 	SPR_EGGP,
@@ -1452,6 +1454,10 @@ typedef enum state
 
 	S_BOSSSEBH1,
 	S_BOSSSEBH2,
+
+	// Boss 3 Shockwave
+	S_SHOCKWAVE1,
+	S_SHOCKWAVE2,
 
 	// Boss 4
 	S_EGGMOBILE4_STND,
@@ -3986,7 +3992,7 @@ typedef enum mobj_type
 	// Boss 3
 	MT_EGGMOBILE3,
 	MT_FAKEMOBILE,
-	MT_SHOCK,
+	MT_SHOCKWAVE,
 
 	// Boss 4
 	MT_EGGMOBILE4,
@@ -4195,7 +4201,7 @@ typedef enum mobj_type
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 
+	MT_CORAL1, // Coral
 	MT_CORAL2,
 	MT_CORAL3,
 	MT_CORAL4,

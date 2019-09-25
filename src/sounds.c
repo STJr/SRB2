@@ -484,7 +484,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k5b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Menu beep"},
   {"s3k5c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric spark"},
   {"s3k5d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy hit"},
-  {"s3k5e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
+  {"s3k5e",  false, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Releasing charge"},
   {"s3k5f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crusher stomp"},
   {"s3k60",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Accelerating"},
   {"s3k61",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drilling"},

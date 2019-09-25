@@ -170,6 +170,7 @@ void A_SetReactionTime(mobj_t *actor);
 void A_Boss1Spikeballs(mobj_t *actor);
 void A_Boss3TakeDamage(mobj_t *actor);
 void A_Boss3Path(mobj_t *actor);
+void A_Boss3ShockThink(mobj_t *actor);
 void A_LinedefExecute(mobj_t *actor);
 void A_PlaySeeSound(mobj_t *actor);
 void A_PlayAttackSound(mobj_t *actor);
@@ -8075,6 +8076,57 @@ void A_Boss3Path(mobj_t *actor)
 				P_RemoveMobj(actor); // Cycle completed. Dummy removed.
 				return;
 			}
+		}
+	}
+}
+
+// Function: A_Boss3ShockThink
+//
+// Description: Inserts new interstitial shockwave objects when the space between others spreads too much.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_Boss3ShockThink(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss3ShockThink", actor))
+		return;
+#endif
+
+	if (actor->momx || actor->momy)
+		actor->angle = R_PointToAngle2(0, 0, actor->momx, actor->momy) + ANGLE_90;
+
+	if (actor->hnext && !P_MobjWasRemoved(actor->hnext))
+	{
+		mobj_t *snext = actor->hnext;
+		mobj_t *snew;
+		fixed_t x0, y0, x1, y1;
+
+		// Break the link if movements are too different
+		if (FixedHypot(snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
+		{
+			actor->hnext = NULL;
+			return;
+		}
+
+		// Check distance between shockwave objects to determine whether interstitial ones should be spawned
+		x0 = actor->x;
+		y0 = actor->y;
+		x1 = snext->x;
+		y1 = snext->y;
+		if (FixedHypot(x1 - x0, y1 - y0) > 2*actor->radius)
+		{
+			snew = P_SpawnMobj((x0 + x1) >> 1, (y0 + y1) >> 1, (actor->z + snext->z) >> 1, actor->type);
+			snew->momx = (actor->momx + snext->momx) >> 1;
+			snew->momy = (actor->momy + snext->momy) >> 1;
+			snew->momz = (actor->momz + snext->momz) >> 1; // is this really needed?
+			snew->angle = (actor->angle + snext->angle) >> 1;
+			P_SetTarget(&snew->target, actor->target);
+			snew->fuse = actor->fuse;
+
+			actor->hnext = snew;
+			snew->hnext = snext;
 		}
 	}
 }
