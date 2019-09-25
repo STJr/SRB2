@@ -3582,7 +3582,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
 #endif
-		else if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+		else if (player->powers[pw_shield] || player->bot && !ultimatemode)  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;
