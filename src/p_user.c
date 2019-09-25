@@ -8663,6 +8663,7 @@ static void P_DoRopeHang(player_t *player)
 	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
 	{
 		player->pflags |= P_GetJumpFlags(player);
+		player->pflags |= PF_USEDOWN;
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 		P_SetTarget(&player->mo->tracer, NULL);
