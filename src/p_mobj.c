@@ -7311,7 +7311,7 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_FLAMEAURA_ORB:
 				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
-				if (mobj->state-states < mobj->info->painstate)
+				if ((statenum_t)(mobj->state-states) < mobj->info->painstate)
 					mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
