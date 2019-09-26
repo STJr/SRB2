@@ -4627,8 +4627,8 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					else
 					{
 						if (i == numtospawn - 1)
-							shock->hnext = sfirst;
-						sprev->hnext = shock;
+							P_SetTarget(&shock->hnext, sfirst);
+						P_SetTarget(&sprev->hnext, shock);
 					}
 
 					P_Thrust(shock, ang, shock->info->speed);

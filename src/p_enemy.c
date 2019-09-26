@@ -8106,7 +8106,7 @@ void A_Boss3ShockThink(mobj_t *actor)
 		// Break the link if movements are too different
 		if (FixedHypot(snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
 		{
-			actor->hnext = NULL;
+			P_SetTarget(&actor->hnext, NULL);
 			return;
 		}
 
@@ -8125,8 +8125,8 @@ void A_Boss3ShockThink(mobj_t *actor)
 			P_SetTarget(&snew->target, actor->target);
 			snew->fuse = actor->fuse;
 
-			actor->hnext = snew;
-			snew->hnext = snext;
+			P_SetTarget(&actor->hnext, snew);
+			P_SetTarget(&snew->hnext, snext);
 		}
 	}
 }
