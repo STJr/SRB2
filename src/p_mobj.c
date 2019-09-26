@@ -4607,7 +4607,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			{
 				UINT8 i, numtospawn = 24;
 				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
-				mobj_t *shock, *sfirst, *sprev;
+				mobj_t *shock, *sfirst, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
@@ -4622,7 +4622,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					if (i % 2 == 0)
 					P_SetMobjState(shock, shock->state->nextstate);
 
-					if (i == 0)
+					if (!sprev)
 						sfirst = shock;
 					else
 					{
