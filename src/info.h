@@ -342,6 +342,8 @@ typedef enum sprite
 	SPR_FANG, // replaces EGGQ
 	SPR_BRKN,
 	SPR_WHAT,
+	SPR_VWRE,
+	SPR_PROJ, // projector light
 	SPR_FBOM,
 	SPR_FSGN,
 	SPR_BARX, // bomb explosion (also used by barrel)
@@ -1499,6 +1501,7 @@ typedef enum state
 
 	// Boss 5
 	S_FANG_SETUP,
+	S_FANG_INTRO0,
 	S_FANG_INTRO1,
 	S_FANG_INTRO2,
 	S_FANG_INTRO3,
@@ -1511,6 +1514,10 @@ typedef enum state
 	S_FANG_INTRO10,
 	S_FANG_INTRO11,
 	S_FANG_INTRO12,
+	S_FANG_CLONE1,
+	S_FANG_CLONE2,
+	S_FANG_CLONE3,
+	S_FANG_CLONE4,
 	S_FANG_IDLE0,
 	S_FANG_IDLE1,
 	S_FANG_IDLE2,
@@ -1593,6 +1600,15 @@ typedef enum state
 
 	S_ALART1,
 	S_ALART2,
+
+	S_VWREF,
+	S_VWREB,
+
+	S_PROJECTORLIGHT1,
+	S_PROJECTORLIGHT2,
+	S_PROJECTORLIGHT3,
+	S_PROJECTORLIGHT4,
+	S_PROJECTORLIGHT5,
 
 	S_FBOMB1,
 	S_FBOMB2,
@@ -4026,6 +4042,9 @@ typedef enum mobj_type
 	// Boss 5
 	MT_FANG,
 	MT_BROKENROBOT,
+	MT_VWREF,
+	MT_VWREB,
+	MT_PROJECTORLIGHT,
 	MT_FBOMB,
 	MT_TNTDUST, // also used by barrel
 	MT_FSGNA,

@@ -213,6 +213,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork fired"},
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
   {"alart",  false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Caught red handed!"},
+  {"vwre",   false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Clone fighter!"},
   {"bowl",   false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bowling"},
   {"chuchu", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Train horn"},
   {"bsnipe", false, 200,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Home-run smash"},

@@ -4026,13 +4026,17 @@ bossjustdie:
 		}
 		case MT_FANG:
 		{
+			if (mo->flags2 & MF2_SLIDEPUSH)
+			{
+				P_RemoveMobj(mo);
+				return;
+			}
 			if (mo->tracer)
 			{
 				var1 = var2 = 0;
 				A_Boss5Jump(mo);
 				mo->momx = ((16 - 1)*mo->momx)/16;
 				mo->momy = ((16 - 1)*mo->momy)/16;
-				if (!(mo->spawnpoint && mo->spawnpoint->options & MTF_EXTRA))
 				{
 					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
 					const fixed_t speed = 64*FRACUNIT;
@@ -12980,8 +12984,8 @@ void A_Boss5MakeItRain(mobj_t *actor)
 //
 // Description: Make a mess.
 //
-// var1 = state # to set on MT_BROKENROBOT (if 0 do nothing)
-// var2 = mode (0 = make 1, & 1 make 8, & 2 alart mode)
+// var1 = state # to set on MT_BROKENROBOT (if 0 do nothing, if -1 go to if colorized)
+// var2 = mode (-1 = spin, 0 = make 1, & 1 make 8, & 2 alart mode)
 //
 void A_Boss5MakeJunk(mobj_t *actor)
 {
@@ -12995,8 +12999,45 @@ void A_Boss5MakeJunk(mobj_t *actor)
 		return;
 #endif
 
-	if (leveltime < 2)
+	if (locvar1 < 0 && (actor->flags2 & MF2_SLIDEPUSH)) // this entire action is a hack, don't judge me
+	{
+		INT32 curextravalue2 = actor->extravalue2;
+		P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_PROJECTORLIGHT);
+		actor->z += P_MobjFlip(actor)*actor->height;
+		actor->flags |= MF_NOGRAVITY;
+		S_StartSound(actor, sfx_vwre);
+		actor->extravalue2 = 49;
+		P_SetMobjState(actor, -locvar1);
+		actor->extravalue2 = curextravalue2;
+		actor->angle -= FixedAngle((49*45)<<FRACBITS);
 		return;
+	}
+
+	if (locvar2 == -1)
+	{
+		INT32 trans = (10*actor->extravalue2)/50;
+		if (trans > 9)
+			trans = 9;
+		if (trans < 0)
+			trans = 0;
+		if (!(actor->extravalue2 & 1))
+		{
+			if (actor->extravalue2 > 10)
+			{
+				mobj_t *front = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_VWREF);
+				broked = P_SpawnMobjFromMobj(front, 0, 0, 0, MT_VWREB);
+				front->z = broked->z = front->z - broked->height;
+				P_SetObjectMomZ(front, (4<<FRACBITS), false);
+				broked->momz = front->momz;
+				broked->fuse = front->fuse = (actor->height+(2*front->height))/front->momz;
+			}
+			if (!(actor->colorized = !actor->colorized))
+				actor->frame |= FF_FULLBRIGHT;
+		}
+		actor->angle += ANGLE_45;
+		actor->frame = (actor->frame & ~FF_TRANSMASK)|(trans<<FF_TRANSSHIFT);
+		return;
+	}
 
 	ang = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
 	while (i--)
@@ -13009,7 +13050,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 		broked->angle = ang;
 		P_InstaThrust(broked, ang, ((locvar2 & 2) ? 8 : 5)*actor->scale);
 		P_SetObjectMomZ(broked, (((locvar2) ? 4 : 0) + P_RandomRange(2, 5))<<FRACBITS, false);
-		if (locvar1 != 0)
+		if (locvar1 > 0)
 			P_SetMobjState(broked, locvar1);
 		if (!P_MobjWasRemoved(broked))
 			P_TeleportMove(broked, broked->x + broked->momx, broked->y + broked->momy, broked->z);

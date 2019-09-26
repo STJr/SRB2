@@ -5063,6 +5063,24 @@ static void P_Boss5Thinker(mobj_t *mobj)
 {
 	if (!mobj->health)
 	{
+		if (mobj->fuse)
+		{
+			if (mobj->flags2 & MF2_SLIDEPUSH)
+			{
+				INT32 trans = 10-((10*mobj->fuse)/70);
+				if (trans > 9)
+					trans = 9;
+				if (trans < 0)
+					trans = 0;
+				mobj->frame = (mobj->frame & ~FF_TRANSMASK)|(trans<<FF_TRANSSHIFT);
+				if (!(mobj->fuse & 1))
+				{
+					mobj->colorized = !mobj->colorized;
+					mobj->frame ^= FF_FULLBRIGHT;
+				}
+			}
+			return;
+		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
 		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
@@ -7649,6 +7667,17 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->movedir)
 					mobj->angle += mobj->movedir;
 				break;
+			case MT_VWREF:
+			case MT_VWREB:
+				{
+					INT32 strength;
+					++mobj->movedir;
+					mobj->frame &= ~FF_TRANSMASK;
+					strength = min(mobj->fuse, mobj->movedir)*3;
+					if (strength < 10)
+						mobj->frame |= ((10-strength)<<(FF_TRANSSHIFT));
+				}
+				/* FALLTHRU */
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -9269,6 +9298,18 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					P_RemoveMobj(mobj);
 					return;
+				case MT_FANG:
+					if (mobj->flags2 & MF2_SLIDEPUSH)
+					{
+						var1 = 0;
+						var2 = 0;
+						A_BossDeath(mobj);
+						return;
+					}
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					if (P_MobjWasRemoved(mobj))
+						return;
+					break;
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -9867,7 +9908,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 	}
 
-	if (sc != -1)
+	if (sc != -1 && !(mobj->flags2 & MF2_SLIDEPUSH))
 	{
 		UINT8 i;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -9879,6 +9920,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			{
 				mobj->color = SKINCOLOR_SILVER;
 				mobj->colorized = true;
+				mobj->flags2 |= MF2_SLIDEPUSH;
 				break;
 			}
 		}
@@ -11224,6 +11266,16 @@ You should think about modifying the deathmatch starts to take full advantage of
 			mobj->health = mthing->angle;
 		else
 			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+		break;
+	case MT_FANG:
+	case MT_METALSONIC_RACE:
+	case MT_METALSONIC_BATTLE:
+		if (mthing->options & MTF_EXTRA)
+		{
+			mobj->color = SKINCOLOR_SILVER;
+			mobj->colorized = true;
+			mobj->flags2 |= MF2_SLIDEPUSH;
+		}
 		break;
 	case MT_BALLOON:
 		if (mthing->angle > 0)
