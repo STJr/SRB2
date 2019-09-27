@@ -205,11 +205,15 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EGR1
 
 	// Boss 5 (Arid Canyon)
-	&lspr[NOLIGHT],     //SPR_FANG // replaces EGGQ
-	&lspr[NOLIGHT],     //SPR_FBOM
-	&lspr[NOLIGHT],     //SPR_FSGN
-	&lspr[REDBALL_L],   //SPR_BARX // bomb explosion (also used by barrel)
-	&lspr[NOLIGHT],     //SPR_BARD // bomb dust (also used by barrel)
+	&lspr[NOLIGHT],      // SPR_FANG // replaces EGGQ
+	&lspr[NOLIGHT],      // SPR_BRKN
+	&lspr[NOLIGHT],      // SPR_WHAT
+	&lspr[INVINCIBLE_L], // SPR_VWRE
+	&lspr[INVINCIBLE_L], // SPR_PROJ
+	&lspr[NOLIGHT],      // SPR_FBOM
+	&lspr[NOLIGHT],      // SPR_FSGN
+	&lspr[REDBALL_L],    // SPR_BARX // bomb explosion (also used by barrel)
+	&lspr[NOLIGHT],      // SPR_BARD // bomb dust (also used by barrel)
 
 	// Boss 6 (Red Volcano)
 	&lspr[NOLIGHT],     // SPR_EEGR

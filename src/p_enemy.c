@@ -283,6 +283,7 @@ void A_Boss5CheckOnGround(mobj_t *actor);
 void A_Boss5CheckFalling(mobj_t *actor);
 void A_Boss5PinchShot(mobj_t *actor);
 void A_Boss5MakeItRain(mobj_t *actor);
+void A_Boss5MakeJunk(mobj_t *actor);
 void A_LookForBetter(mobj_t *actor);
 void A_Boss5BombExplode(mobj_t *actor);
 void A_DustDevilThink(mobj_t *actor);
@@ -3028,10 +3029,15 @@ void A_Boss1Laser(mobj_t *actor)
 	if (!actor->target)
 		return;
 
-	if ((upperend & 1) && (actor->extravalue2 > 1))
-		actor->extravalue2--;
+	if (actor->state->tics > 1)
+		dur = actor->tics;
+	else
+	{
+		if ((upperend & 1) && (actor->extravalue2 > 1))
+			actor->extravalue2--;
 
-	dur = actor->extravalue2;
+		dur = actor->extravalue2;
+	}
 
 	switch (locvar2)
 	{
@@ -3077,23 +3083,15 @@ void A_Boss1Laser(mobj_t *actor)
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
 			S_StartSound(actor, mobjinfo[locvar1].seesound);
-		if (!(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
-		{
-			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
-			point->angle = actor->angle;
-			point->fuse = dur+1;
-			P_SetTarget(&point->target, actor->target);
-			P_SetTarget(&actor->target, point);
-		}
-	}
-	/* -- the following was relevant when the MT_EGGMOBILE_TARGET was allowed to move left and right from its path
-	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
-		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);*/
 
-	/*if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
-		angle = FixedAngle(FixedDiv(dur*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
-	else*/
-		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
+		point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
+		point->angle = actor->angle;
+		point->fuse = dur+1;
+		P_SetTarget(&point->target, actor->target);
+		P_SetTarget(&actor->target, point);
+	}
+
+	angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
 
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
@@ -4029,13 +4027,17 @@ bossjustdie:
 		}
 		case MT_FANG:
 		{
+			if (mo->flags2 & MF2_SLIDEPUSH)
+			{
+				P_RemoveMobj(mo);
+				return;
+			}
 			if (mo->tracer)
 			{
 				var1 = var2 = 0;
 				A_Boss5Jump(mo);
 				mo->momx = ((16 - 1)*mo->momx)/16;
 				mo->momy = ((16 - 1)*mo->momy)/16;
-				if (!(mo->flags2 & MF2_AMBUSH))
 				{
 					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
 					const fixed_t speed = 64*FRACUNIT;
@@ -13028,6 +13030,100 @@ void A_Boss5MakeItRain(mobj_t *actor)
 	}
 
 	actor->extravalue2 = 0;
+}
+
+// Function: A_Boss5MakeJunk
+//
+// Description: Make a mess.
+//
+// var1 = state # to set on MT_BROKENROBOT (if 0 do nothing, if -1 go to if colorized)
+// var2 = mode (-1 = spin, 0 = make 1, & 1 make 8, & 2 alart mode)
+//
+void A_Boss5MakeJunk(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *broked;
+	angle_t ang;
+	INT32 i = ((locvar2 & 1) ? 8 : 1);
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Boss5MakeJunk", actor))
+		return;
+#endif
+
+	if (locvar1 < 0 && (actor->flags2 & MF2_SLIDEPUSH)) // this entire action is a hack, don't judge me
+	{
+		INT32 curextravalue2 = actor->extravalue2;
+		P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_PROJECTORLIGHT);
+		actor->z += P_MobjFlip(actor)*actor->height;
+		actor->flags |= MF_NOGRAVITY;
+		S_StartSound(actor, sfx_vwre);
+		actor->extravalue2 = 49;
+		P_SetMobjState(actor, -locvar1);
+		actor->extravalue2 = curextravalue2;
+		actor->angle -= FixedAngle((49*45)<<FRACBITS);
+		return;
+	}
+
+	if (locvar2 == -1)
+	{
+		INT32 trans = (10*actor->extravalue2)/50;
+		if (trans > 9)
+			trans = 9;
+		if (trans < 0)
+			trans = 0;
+		if (!(actor->extravalue2 & 1))
+		{
+			if (actor->extravalue2 > 10)
+			{
+				mobj_t *front = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_VWREF);
+				broked = P_SpawnMobjFromMobj(front, 0, 0, 0, MT_VWREB);
+				front->z = broked->z = front->z - broked->height;
+				P_SetObjectMomZ(front, (4<<FRACBITS), false);
+				broked->momz = front->momz;
+				broked->fuse = front->fuse = (actor->height+(2*front->height))/front->momz;
+			}
+			if (!(actor->colorized = !actor->colorized))
+				actor->frame |= FF_FULLBRIGHT;
+		}
+		actor->angle += ANGLE_45;
+		actor->frame = (actor->frame & ~FF_TRANSMASK)|(trans<<FF_TRANSSHIFT);
+		return;
+	}
+
+	ang = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
+	while (i--)
+	{
+		broked = P_SpawnMobjFromMobj(actor, 0, 0, FRACUNIT, MT_BROKENROBOT);
+		if (locvar2 & 2)
+			broked->fuse = TICRATE;
+		else
+			broked->fuse = (((locvar2 & 1) ? 4 : 2)*TICRATE)/3;
+		broked->angle = ang;
+		P_InstaThrust(broked, ang, ((locvar2 & 2) ? 8 : 5)*actor->scale);
+		P_SetObjectMomZ(broked, (((locvar2) ? 4 : 0) + P_RandomRange(2, 5))<<FRACBITS, false);
+		if (locvar1 > 0)
+			P_SetMobjState(broked, locvar1);
+		if (!P_MobjWasRemoved(broked))
+			P_TeleportMove(broked, broked->x + broked->momx, broked->y + broked->momy, broked->z);
+		ang += ANGLE_45;
+	}
+
+	if (locvar2 & 2)
+	{
+		broked = P_SpawnMobjFromMobj(actor, 0, 0, 64<<FRACBITS, MT_GHOST);
+		S_StartSound(broked, sfx_alart);
+		broked->fuse = states[S_FANG_INTRO12].tics+10;
+		P_SetMobjState(broked, S_ALART1);
+	}
+	else if (locvar2 & 1)
+	{
+		broked->z += broked->momz;
+		S_StartSound(actor, sfx_s3kccs);
+		actor->flags &= ~MF_NOCLIPTHING;
+	}
+	else
+		S_StartSound(actor, sfx_s3kd3s);
 }
 
 // Function: A_LookForBetter

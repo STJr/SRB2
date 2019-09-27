@@ -8890,11 +8890,15 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			continue;
 
 		mo = (mobj_t *)think;
-		if (!((mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (mo->flags & MF_SHOOTABLE)) || (mo->flags & MF_SPRING)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
-			continue; // not a valid target
+
+		if (mo->flags & MF_NOCLIPTHING)
+			continue;
 
 		if (mo->health <= 0) // dead
 			continue;
+
+		if (!((mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR) && (mo->flags & MF_SHOOTABLE)) || (mo->flags & MF_SPRING)) == !(mo->flags2 & MF2_INVERTAIMABLE)) // allows if it has the flags desired XOR it has the invert aimable flag
+			continue; // not a valid target
 
 		if (mo == player->mo)
 			continue;
