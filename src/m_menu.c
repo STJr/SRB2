@@ -66,6 +66,13 @@
 // And just some randomness for the exits.
 #include "m_random.h"
 
+#if defined(HAVE_SDL)
+#include "SDL.h"
+#if SDL_VERSION_ATLEAST(2,0,0)
+#include "sdl/sdlmain.h" // JOYSTICK_HOTPLUG
+#endif
+#endif
+
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
 int	snprintf(char *str, size_t n, const char *fmt, ...);
@@ -136,7 +143,7 @@ typedef enum
 levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
-static char joystickInfo[8][29];
+static char joystickInfo[MAX_JOYSTICKS+1][29];
 #ifndef NONET
 static UINT32 serverlistpage;
 #endif
@@ -1111,14 +1118,7 @@ static menuitem_t OP_Joystick2Menu[] =
 	{IT_STRING | IT_CVAR, NULL, "Third-Person Vert-Look", &cv_chasefreelook2, 130},
 };
 
-static menuitem_t OP_JoystickSetMenu[] =
-{
-	{IT_CALL | IT_NOTHING, "None", NULL, M_AssignJoystick, '0'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '1'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '2'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '3'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '4'},
-};
+static menuitem_t OP_JoystickSetMenu[1+MAX_JOYSTICKS];
 
 static menuitem_t OP_MouseOptionsMenu[] =
 {
@@ -3543,6 +3543,8 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
+	int i;
+
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
 	CV_RegisterVar(&cv_chooseskin);
@@ -3591,6 +3593,17 @@ void M_Init(void)
 	else if (rendermode == render_opengl)
 		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
+
+	/*
+	Well the menu sucks for forcing us to have an item set
+	at all if every item just calls the same function, and
+	nothing more. Now just automate the definition.
+	*/
+	for (i = 0; i <= MAX_JOYSTICKS; ++i)
+	{
+		OP_JoystickSetMenu[i].status = ( IT_NOTHING|IT_CALL );
+		OP_JoystickSetMenu[i].itemaction = M_AssignJoystick;
+	}
 
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
@@ -9981,18 +9994,33 @@ static void M_ScreenshotOptions(INT32 choice)
 
 static void M_DrawJoystick(void)
 {
-	INT32 i;
+	INT32 i, compareval2, compareval;
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	for (i = 0; i <= 4; i++) // See MAX_JOYSTICKS
+	for (i = 0; i <= MAX_JOYSTICKS; i++) // See MAX_JOYSTICKS
 	{
 		M_DrawTextBox(OP_JoystickSetDef.x-8, OP_JoystickSetDef.y+LINEHEIGHT*i-12, 28, 1);
 		//M_DrawSaveLoadBorder(OP_JoystickSetDef.x+4, OP_JoystickSetDef.y+1+LINEHEIGHT*i);
 
-		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
-			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
+#ifdef JOYSTICK_HOTPLUG
+		if (atoi(cv_usejoystick2.string) > I_NumJoys())
+			compareval2 = atoi(cv_usejoystick2.string);
+		else
+			compareval2 = cv_usejoystick2.value;
+
+		if (atoi(cv_usejoystick.string) > I_NumJoys())
+			compareval = atoi(cv_usejoystick.string);
+		else
+			compareval = cv_usejoystick.value;
+#else
+		compareval2 = cv_usejoystick2.value;
+		compareval = cv_usejoystick.value
+#endif
+
+		if ((setupcontrols_secondaryplayer && (i == compareval2))
+			|| (!setupcontrols_secondaryplayer && (i == compareval)))
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,V_GREENMAP,joystickInfo[i]);
 		else
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i-4,0,joystickInfo[i]);
@@ -10005,7 +10033,7 @@ static void M_DrawJoystick(void)
 	}
 }
 
-static void M_SetupJoystickMenu(INT32 choice)
+void M_SetupJoystickMenu(INT32 choice)
 {
 	INT32 i = 0;
 	const char *joyNA = "Unavailable";
@@ -10014,12 +10042,27 @@ static void M_SetupJoystickMenu(INT32 choice)
 
 	strcpy(joystickInfo[i], "None");
 
-	for (i = 1; i < 8; i++)
+	for (i = 1; i <= MAX_JOYSTICKS; i++)
 	{
 		if (i <= n && (I_GetJoyName(i)) != NULL)
 			strncpy(joystickInfo[i], I_GetJoyName(i), 28);
 		else
 			strcpy(joystickInfo[i], joyNA);
+
+#ifdef JOYSTICK_HOTPLUG
+		// We use cv_usejoystick.string as the USER-SET var
+		// and cv_usejoystick.value as the INTERNAL var
+		//
+		// In practice, if cv_usejoystick.string == 0, this overrides
+		// cv_usejoystick.value and always disables
+		//
+		// Update cv_usejoystick.string here so that the user can
+		// properly change this value.
+		if (i == cv_usejoystick.value)
+			CV_SetValue(&cv_usejoystick, i);
+		if (i == cv_usejoystick2.value)
+			CV_SetValue(&cv_usejoystick2, i);
+#endif
 	}
 
 	M_SetupNextMenu(&OP_JoystickSetDef);
@@ -10049,10 +10092,76 @@ static void M_Setup2PJoystickMenu(INT32 choice)
 
 static void M_AssignJoystick(INT32 choice)
 {
+#ifdef JOYSTICK_HOTPLUG
+	INT32 oldchoice, oldstringchoice;
+	INT32 numjoys = I_NumJoys();
+
+	if (setupcontrols_secondaryplayer)
+	{
+		oldchoice = oldstringchoice = atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value;
+		CV_SetValue(&cv_usejoystick2, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
+		{
+			CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
+
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick2.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick2, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
+
+				if (oldstringchoice ==
+					(atoi(cv_usejoystick2.string) > numjoys ? atoi(cv_usejoystick2.string) : cv_usejoystick2.value))
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
+		}
+	}
+	else
+	{
+		oldchoice = oldstringchoice = atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value;
+		CV_SetValue(&cv_usejoystick, choice);
+
+		// Just in case last-minute changes were made to cv_usejoystick.value,
+		// update the string too
+		// But don't do this if we're intentionally setting higher than numjoys
+		if (choice <= numjoys)
+		{
+			CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
+
+			// reset this so the comparison is valid
+			if (oldchoice > numjoys)
+				oldchoice = cv_usejoystick.value;
+
+			if (oldchoice != choice)
+			{
+				if (choice && oldstringchoice > numjoys) // if we did not select "None", we likely selected a used device
+					CV_SetValue(&cv_usejoystick, (oldstringchoice > numjoys ? oldstringchoice : oldchoice));
+
+				if (oldstringchoice ==
+					(atoi(cv_usejoystick.string) > numjoys ? atoi(cv_usejoystick.string) : cv_usejoystick.value))
+					M_StartMessage("This gamepad is used by another\n"
+					               "player. Reset the gamepad\n"
+					               "for that player first.\n\n"
+					               "(Press a key)\n", NULL, MM_NOTHING);
+			}
+		}
+	}
+#else
 	if (setupcontrols_secondaryplayer)
 		CV_SetValue(&cv_usejoystick2, choice);
 	else
 		CV_SetValue(&cv_usejoystick, choice);
+#endif
 }
 
 // =============
