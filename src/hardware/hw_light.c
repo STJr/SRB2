@@ -197,6 +197,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_EGGO
 	&lspr[NOLIGHT],     // SPR_SEBH
 	&lspr[NOLIGHT],     // SPR_FAKE
+	&lspr[NOLIGHT],     // SPR_SHCK
 
 	// Boss 4 (Castle Eggman)
 	&lspr[NOLIGHT],     // SPR_EGGP

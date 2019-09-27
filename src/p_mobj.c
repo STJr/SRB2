@@ -4605,22 +4605,37 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			if (!mobj->movefactor) // to firing mode
 			{
-				UINT8 i;
-				angle_t ang = 0;
+				UINT8 i, numtospawn = 24;
+				angle_t ang = 0, interval = FixedAngle((360 << FRACBITS) / numtospawn);
+				mobj_t *shock, *sfirst, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
 				mobj->movefactor = -512*FRACUNIT;
 
 				// shock the water!
-				for (i = 0; i < 64; i++)
+				for (i = 0; i < numtospawn; i++)
 				{
-					mobj_t *shock = P_SpawnMobjFromMobj(mobj, 0, 0, 4*FRACUNIT, MT_SHOCK);
+					shock = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SHOCKWAVE);
 					P_SetTarget(&shock->target, mobj);
-					P_InstaThrust(shock, ang, shock->info->speed);
-					P_CheckMissileSpawn(shock);
-					ang += (ANGLE_MAX/64);
+					shock->fuse = shock->info->painchance;
+
+					if (i % 2 == 0)
+					P_SetMobjState(shock, shock->state->nextstate);
+
+					if (!sprev)
+						sfirst = shock;
+					else
+					{
+						if (i == numtospawn - 1)
+							P_SetTarget(&shock->hnext, sfirst);
+						P_SetTarget(&sprev->hnext, shock);
+					}
+
+					P_Thrust(shock, ang, shock->info->speed);
+					ang += interval;
+					sprev = shock;
 				}
-				S_StartSound(mobj, sfx_fizzle);
+				S_StartSound(mobj, shock->info->seesound);
 
 				// look for a new target
 				P_BossTargetPlayer(mobj, false);
