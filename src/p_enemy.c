@@ -13104,11 +13104,14 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		if (dustdevil->height - pos > thresh)
 		{
 			fixed_t dist = FixedHypot(thing->x - dustdevil->x, thing->y - dustdevil->y);
-			fixed_t dragamount = 6 * FRACUNIT;
+			fixed_t dragamount = player->speed;
 			fixed_t x, y;
 
 			if (player->powers[pw_nocontrol] == 0)
+			{
+				P_ResetPlayer(player);
 				A_PlayActiveSound(dustdevil);
+			}
 			player->powers[pw_nocontrol] = 2;
 			player->drawangle += ANG20;
 			P_SetPlayerMobjState(thing, S_PLAY_PAIN);

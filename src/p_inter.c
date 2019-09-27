@@ -3408,7 +3408,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		return false;
 
 	// Spectator handling
-	if (netgame)
+	if (multiplayer)
 	{
 		if (damagetype != DMG_SPECTATOR && target->player && target->player->spectator)
 			return false;
