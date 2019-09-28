@@ -53,7 +53,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 void R_AddSpriteDefs(UINT16 wadnum);
 
 #ifdef ROTSPRITE
-void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip);
+void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
 #endif
 
 //SoM: 6/5/2000: Light sprites correctly!
@@ -209,6 +209,8 @@ typedef struct vissprite_s
 
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
+
+extern spriteinfo_t spriteinfo[NUMSPRITES];
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked
 // middle texture. This is used for sorting with sprites.

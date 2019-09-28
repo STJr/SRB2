@@ -5658,7 +5658,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (rollangle > 0)
 	{
 		if (!sprframe->rotsprite.cached[rot])
-			R_CacheRotSprite(sprframe, rot, flip);
+			R_CacheRotSprite(thing->sprite, thing->frame, sprframe, rot, flip);
 		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)

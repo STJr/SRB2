@@ -72,6 +72,8 @@ static lighttable_t **spritelights;
 INT16 negonearray[MAXVIDWIDTH];
 INT16 screenheightarray[MAXVIDWIDTH];
 
+spriteinfo_t spriteinfo[NUMSPRITES];
+
 #ifdef ROTSPRITE
 static fixed_t cosang2rad[ROTANGLES];
 static fixed_t sinang2rad[ROTANGLES];
@@ -217,7 +219,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 }
 
 #ifdef ROTSPRITE
-void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
+void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 {
 	UINT32 i;
 	INT32 angle;
@@ -251,8 +253,13 @@ void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 		height = patch->height;
 
 		// rotation pivot
-		px = SPRITE_XCENTER; //22;
-		py = SPRITE_YCENTER; //47;
+		px = SPRITE_XCENTER;
+		py = SPRITE_YCENTER;
+		if (spriteinfo[sprnum].available)
+		{
+			px = spriteinfo[sprnum].pivot[frame].x;
+			py = spriteinfo[sprnum].pivot[frame].y;
+		}
 		if (flip)
 			px = width - px;
 
@@ -1458,7 +1465,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (rollangle > 0)
 	{
 		if (!sprframe->rotsprite.cached[rot])
-			R_CacheRotSprite(sprframe, rot, flip);
+			R_CacheRotSprite(thing->sprite, thing->frame, sprframe, rot, flip);
 		rollangle /= ROTANGDIFF;
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)

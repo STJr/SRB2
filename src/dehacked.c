@@ -738,11 +738,12 @@ static void readlight(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+#endif // HWRENDER
 
-static void readspritelight(MYFILE *f, INT32 num)
+static void readspriteframe(MYFILE *f, INT32 num, INT32 frame)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
+	char *word, *word2;
 	char *tmp;
 	INT32 value;
 
@@ -753,20 +754,122 @@ static void readspritelight(MYFILE *f, INT32 num)
 			if (s[0] == '\n')
 				break;
 
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			value = searchvalue(s);
+			// Set / reset word
+			word = s;
 
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+			{
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
+			}
 			else
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+			if (frame >= 64)
+			{
+				deh_warning("Sprite %d: invalid frame %d", num, frame);
+				break;
+			}
+
+#ifdef ROTSPRITE
+			if (fastcmp(word, "XPIVOT"))
+				spriteinfo[num].pivot[frame].x = value;
+			else if (fastcmp(word, "YPIVOT"))
+				spriteinfo[num].pivot[frame].y = value;
+			else
+#endif
+			if (fastcmp(word, "END"))
+				break;
+			else
+				deh_warning("Sprite %d frame %d: unknown word '%s'", num, frame, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readspriteinfo(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word, *word2;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
 				break;
 
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Set / reset word
+			word = s;
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+			{
+				*(tmp-1) = '\0';
+				// Now get the part after
+				word2 = tmp += 2;
+			}
+			else
+			{
+				// Get the part before the " "
+				tmp = strchr(s, ' ');
+				if (tmp)
+				{
+					*tmp = '\0';
+					// Now get the part after
+					tmp++;
+					word2 = tmp;
+				}
+				else
+					break;
+			}
+			strupr(word);
+			value = atoi(word2); // used for numerical settings
+
+#ifdef HWRENDER
 			if (fastcmp(word, "LIGHTTYPE"))
 			{
 				INT32 oldvar;
@@ -775,13 +878,19 @@ static void readspritelight(MYFILE *f, INT32 num)
 				t_lspr[num] = &lspr[value];
 			}
 			else
+#endif
+			if (fastcmp(word, "FRAME"))
+			{
+				readspriteframe(f, num, R_Char2Frame(word2[0]));
+				spriteinfo[num].available = true;
+			}
+			else
 				deh_warning("Sprite %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
 }
-#endif // HWRENDER
 
 static void readsprite2(MYFILE *f, INT32 num)
 {
@@ -3898,19 +4007,19 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 						ignorelines(f);
 					}
 				}
+#endif
 				else if (fastcmp(word, "SPRITE"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
 					if (i < NUMSPRITES && i > 0)
-						readspritelight(f, i);
+						readspriteinfo(f, i);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
 				}
-#endif
 				else if (fastcmp(word, "LEVEL"))
 				{
 					// Support using the actual map name,
