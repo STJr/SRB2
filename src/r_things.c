@@ -365,6 +365,49 @@ void R_CacheRotSprite(spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 		I_UpdateNoBlit();
 	}
 }
+
+static void R_FreeRotSprite(spritedef_t *spritedef)
+{
+	UINT8 frame;
+	INT32 rot, ang;
+
+	for (frame = 0; frame < spritedef->numframes; frame++)
+	{
+		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
+		for (rot = 0; rot < 8; rot++)
+		{
+			if (sprframe->rotsprite.cached[rot])
+			{
+				for (ang = 0; ang < ROTANGLES; ang++)
+				{
+					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
+					if (rotsprite)
+					{
+#ifdef HWRENDER
+						if (rendermode == render_opengl)
+						{
+							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
+							if (grPatch->rawpatch)
+							{
+								Z_Free(grPatch->rawpatch);
+								grPatch->rawpatch = NULL;
+							}
+							if (grPatch->mipmap.grInfo.data)
+							{
+								Z_Free(grPatch->mipmap.grInfo.data);
+								grPatch->mipmap.grInfo.data = NULL;
+								grPatch->mipmap.downloaded = 0;
+							}
+						}
+#endif
+						Z_Free(rotsprite);
+					}
+				}
+				sprframe->rotsprite.cached[rot] = false;
+			}
+		}
+	}
+}
 #endif
 
 // Install a single sprite, given its identifying name (4 chars)
@@ -388,9 +431,6 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	lumpinfo_t *lumpinfo;
 	patch_t patch;
 	UINT8 numadded = 0;
-#ifdef ROTSPRITE
-	INT32 rot, ang;
-#endif
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
@@ -399,6 +439,9 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	// if so, it might patch only certain frames, not all
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
+#ifdef ROTSPRITE
+		R_FreeRotSprite(spritedef);
+#endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
 		 spritedef->numframes * sizeof (spriteframe_t));
@@ -547,15 +590,8 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
 #ifdef ROTSPRITE
-		for (frame = 0; frame < spritedef->numframes; frame++)
-		{
-			spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-			for (rot = 0; rot < 8; rot++)
-				if (sprframe->rotsprite.cached[rot])
-					for (ang = 0; ang < ROTANGLES; ang++)
-						Z_Free(sprframe->rotsprite.patch[rot][ang]);
-		}
-#endif // ROTSPRITE
+		R_FreeRotSprite(spritedef);
+#endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;
 	}
